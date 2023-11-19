@@ -710,7 +710,6 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapSpeed       = CFG->GetInt("map_speed", MAPSPEED_FAST);
   m_MapVisibility  = CFG->GetInt("map_visibility", MAPVIS_DEFAULT);
   m_MapObservers   = CFG->GetInt("map_observers", MAPOBS_NONE);
-  m_MapFlags       = CFG->GetInt("map_flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS);
   m_MapFilterMaker = CFG->GetInt("map_filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize  = CFG->GetInt("map_filter_size", MAPFILTER_SIZE_LARGE);
   m_MapFilterObs   = CFG->GetInt("map_filter_obs", MAPFILTER_OBS_NONE);
@@ -726,6 +725,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   }
 
   m_MapOptions = MapOptions;
+  m_MapFlags       = CFG->GetInt("map_flags", MapOptions & MapOptions.MAPOPT_CUSTOMFORCES ? MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS : MAPFLAG_TEAMSTOGETHER);
 
   if (MapWidth.empty())
     MapWidth = ExtractNumbers(CFG->GetString("map_width", string()), 2);
