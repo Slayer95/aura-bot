@@ -570,67 +570,46 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
               ISS.read(reinterpret_cast<char*>(&RawMapNumTeams), 4); // number of teams
 
-              for (uint32_t i = 0; i < RawMapNumTeams; ++i)
+			  // the bot only cares about the following options: melee, fixed player settings, custom forces
+              // let's not confuse the user by displaying erroneous map options so zero them out now
+			  MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
+              Print("[MAP] calculated map_options = " + to_string(MapOptions));
+
+			  if (!(MapOptions & MAPOPT_CUSTOMFORCES))
+				MapNumTeams = RawMapNumPlayers;
+			  else
+				MapNumTeams = RawMapNumTeams;
+
+              for (uint32_t i = 0; i < MapNumTeams; ++i)
               {
                 uint32_t Flags;
                 uint32_t PlayerMask;
 
-                ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
-                ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
+				if (i < RawMapNumTeams) {
+					ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
+					ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
+				}
+				if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
+					Flags = 0;
+				    PlayerMask = 1 << i;
+				}
 
-                for (uint8_t j = 0; j < MAX_SLOTS; ++j)
-                {
-                  if (PlayerMask & 1)
-                  {
-                    for (auto& Slot : Slots)
-                    {
-                      if ((Slot).GetColour() == j)
-                        (Slot).SetTeam(i);
-                    }
-                  }
-
-                  PlayerMask >>= 1;
-                }
+				for (auto& Slot : Slots)
+				{
+				  if ((1 << (Slot).GetColour()) & PlayerMask)
+					(Slot).SetTeam(i);
+				}
 
                 getline(ISS, GarbageString, '\0'); // team name
               }
 
-              // the bot only cares about the following options: melee, fixed player settings, custom forces
-              // let's not confuse the user by displaying erroneous map options so zero them out now
-
-              MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
-              Print("[MAP] calculated map_options = " + to_string(MapOptions));
               MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
-              Print("[MAP] calculated map_width = " + ByteArrayToDecString(MapWidth));
-              MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
-              Print("[MAP] calculated map_height = " + ByteArrayToDecString(MapHeight));
-              MapNumPlayers = RawMapNumPlayers - ClosedSlots;
-              Print("[MAP] calculated map_numplayers = " + to_string(MapNumPlayers));
-              MapNumTeams = RawMapNumTeams;
-              Print("[MAP] calculated map_numteams = " + to_string(MapNumTeams));
-
-              uint32_t SlotNum = 1;
-
-              for (auto& Slot : Slots)
-              {
-                Print("[MAP] calculated map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()));
-                ++SlotNum;
-              }
+			  MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
+			  MapNumPlayers = RawMapNumPlayers - ClosedSlots;
 
               if (MapOptions & MAPOPT_MELEE)
               {
-                Print("[MAP] found melee map, initializing slots");
-
-                // give each slot a different team and set the race to random
-
-                uint8_t Team = 0;
-
-                for (auto& Slot : Slots)
-                {
-                  (Slot).SetTeam(Team++);
-                  (Slot).SetRace(SLOTRACE_RANDOM);
-                }
-
+                Print("[MAP] found melee map");
                 MapFilterType = MAPFILTER_TYPE_MELEE;
               }
 
@@ -640,6 +619,19 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
                 for (auto& Slot : Slots)
                   (Slot).SetRace((Slot).GetRace() | SLOTRACE_SELECTABLE);
+              }
+
+              uint32_t SlotNum = 1;
+
+              Print("[MAP] calculated map_width = " + ByteArrayToDecString(MapWidth));
+              Print("[MAP] calculated map_height = " + ByteArrayToDecString(MapHeight));
+              Print("[MAP] calculated map_numplayers = " + to_string(MapNumPlayers));
+              Print("[MAP] calculated map_numteams = " + to_string(MapNumTeams));
+
+              for (auto& Slot : Slots)
+              {
+                Print("[MAP] calculated map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()));
+                ++SlotNum;
               }
             }
           }
