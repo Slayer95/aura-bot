@@ -1617,37 +1617,42 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 
 bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& payload)
 {
-  const string User = player->GetName();
+  string User = "FakePlayer";
   const std::string& Command = command;
   const std::string& Payload = payload;
-
   bool AdminCheck = false, RootAdminCheck = false;
 
-  for (auto& bnet : m_Aura->m_BNETs)
-  {
-    if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsRootAdmin(User))
-    {
-      RootAdminCheck = true;
-      AdminCheck     = true;
-      break;
-    }
-  }
+  if (player == nullptr) {
+	  RootAdminCheck = true;
+	  AdminCheck = true;
+  } else {
+	  User = player->GetName();
+	  for (auto& bnet : m_Aura->m_BNETs)
+	  {
+		if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsRootAdmin(User))
+		{
+		  RootAdminCheck = true;
+		  AdminCheck     = true;
+		  break;
+		}
+	  }
 
-  if (!RootAdminCheck)
-  {
-    for (auto& bnet : m_Aura->m_BNETs)
-    {
-      if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsAdmin(User))
-      {
-        AdminCheck = true;
-        break;
-      }
-    }
+	  if (!RootAdminCheck)
+	  {
+		for (auto& bnet : m_Aura->m_BNETs)
+		{
+		  if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsAdmin(User))
+		  {
+			AdminCheck = true;
+			break;
+		  }
+		}
+	  }
   }
 
   const uint64_t CommandHash = HashCode(Command);
 
-  if (player->GetSpoofed() && (AdminCheck || RootAdminCheck || IsOwner(User)))
+  if (player == nullptr || player->GetSpoofed() && (AdminCheck || RootAdminCheck || IsOwner(User)))
   {
     Print("[GAME: " + m_GameName + "] admin [" + User + "] sent command [" + Command + "] with payload [" + Payload + "]");
 

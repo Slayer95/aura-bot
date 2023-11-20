@@ -583,6 +583,16 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
         switch (CommandHash)
         {
+		  case HashCode("lobby"):
+		    if (!m_Aura->m_CurrentGame) {
+				QueueChatCommand("Not hosting any game.");
+			} else if (Payload.empty()) {
+				QueueChatCommand("Command to evaluate not specified.");
+			} else {
+				PayloadStart = Payload.find(' ');
+				m_Aura->m_CurrentGame->EventPlayerBotCommand(nullptr, Payload.substr(0, PayloadStart), Payload.substr(PayloadStart + 1));
+			}
+			break;
           //
           // !MAP (load map file)
           //
