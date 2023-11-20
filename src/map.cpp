@@ -709,7 +709,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   m_MapSpeed       = CFG->GetInt("map_speed", MAPSPEED_FAST);
   m_MapVisibility  = CFG->GetInt("map_visibility", MAPVIS_DEFAULT);
-  m_MapObservers   = CFG->GetInt("map_observers", MAPOBS_NONE);
+  m_MapObservers   = CFG->GetInt("map_observers", MAPOBS_ALLOWED);
   m_MapFilterMaker = CFG->GetInt("map_filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize  = CFG->GetInt("map_filter_size", MAPFILTER_SIZE_LARGE);
   m_MapFilterObs   = CFG->GetInt("map_filter_obs", MAPFILTER_OBS_NONE);
