@@ -584,7 +584,9 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
         switch (CommandHash)
         {
 		  case HashCode("lobby"):
-		    if (!m_Aura->m_CurrentGame) {
+		    if (!IsRootAdmin(User)) {
+				QueueChatCommand("Only root admin is allowed to use the lobby command.");
+			} else if (!m_Aura->m_CurrentGame) {
 				QueueChatCommand("Not hosting any game.");
 			} else if (Payload.empty()) {
 				QueueChatCommand("Command to evaluate not specified.");

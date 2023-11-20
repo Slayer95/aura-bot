@@ -2590,8 +2590,9 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
             else
               SendChat(player, "Unable to check player [" + Payload + "]. Found more than one match");
           }
-          else
-            SendAllChat("Checked player [" + User + "]. Ping: " + (player->GetNumPings() > 0 ? to_string(player->GetPing(m_Aura->m_LCPings)) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(player->GetExternalIP(), true)) + ", Admin: " + (AdminCheck || RootAdminCheck ? "Yes" : "No") + ", Owner: " + (IsOwner(User) ? "Yes" : "No") + ", Spoof Checked: " + (player->GetSpoofed() ? "Yes" : "No") + ", Realm: " + (player->GetJoinedRealm().empty() ? "LAN" : player->GetJoinedRealm()) + ", Reserved: " + (player->GetReserved() ? "Yes" : "No"));
+          else {
+            if (player != nullptr) SendAllChat("Checked player [" + User + "]. Ping: " + (player->GetNumPings() > 0 ? to_string(player->GetPing(m_Aura->m_LCPings)) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(player->GetExternalIP(), true)) + ", Admin: " + (AdminCheck || RootAdminCheck ? "Yes" : "No") + ", Owner: " + (IsOwner(User) ? "Yes" : "No") + ", Spoof Checked: " + (player->GetSpoofed() ? "Yes" : "No") + ", Realm: " + (player->GetJoinedRealm().empty() ? "LAN" : player->GetJoinedRealm()) + ", Reserved: " + (player->GetReserved() ? "Yes" : "No"));
+		  }
 
           break;
         }
@@ -3256,7 +3257,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 
     case HashCode("checkme"):
     {
-      SendChat(player, "Checked player [" + User + "]. Ping: " + (player->GetNumPings() > 0 ? to_string(player->GetPing(m_Aura->m_LCPings)) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(player->GetExternalIP(), true)) + ", Admin: " + (AdminCheck || RootAdminCheck ? "Yes" : "No") + ", Owner: " + (IsOwner(User) ? "Yes" : "No") + ", Spoof Checked: " + (player->GetSpoofed() ? "Yes" : "No") + ", Realm: " + (player->GetJoinedRealm().empty() ? "LAN" : player->GetJoinedRealm()) + ", Reserved: " + (player->GetReserved() ? "Yes" : "No"));
+      if (player != nullptr) SendChat(player, "Checked player [" + User + "]. Ping: " + (player->GetNumPings() > 0 ? to_string(player->GetPing(m_Aura->m_LCPings)) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(player->GetExternalIP(), true)) + ", Admin: " + (AdminCheck || RootAdminCheck ? "Yes" : "No") + ", Owner: " + (IsOwner(User) ? "Yes" : "No") + ", Spoof Checked: " + (player->GetSpoofed() ? "Yes" : "No") + ", Realm: " + (player->GetJoinedRealm().empty() ? "LAN" : player->GetJoinedRealm()) + ", Reserved: " + (player->GetReserved() ? "Yes" : "No"));
       break;
     }
 
@@ -3277,7 +3278,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 
         if (GamePlayerSummary)
         {
-          if (player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
+          if (player == nullptr || player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
             SendAllChat("[" + StatsUser + "] has played " + to_string(GamePlayerSummary->GetTotalGames()) + " games with this bot. Average loading time: " + to_string(GamePlayerSummary->GetAvgLoadingTime()) + " seconds. Average stay: " + to_string(GamePlayerSummary->GetAvgLeftPercent()) + " percent");
           else
             SendChat(player, "[" + StatsUser + "] has played " + to_string(GamePlayerSummary->GetTotalGames()) + " games with this bot. Average loading time: " + to_string(GamePlayerSummary->GetAvgLoadingTime()) + " seconds. Average stay: " + to_string(GamePlayerSummary->GetAvgLeftPercent()) + " percent");
@@ -3286,7 +3287,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
         }
         else
         {
-          if (player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
+          if (player == nullptr || player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
             SendAllChat("[" + StatsUser + "] hasn't played any games here");
           else
             SendChat(player, "[" + StatsUser + "] hasn't played any games here");
@@ -3317,7 +3318,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
         {
           const string Summary = StatsUser + " - " + to_string(DotAPlayerSummary->GetTotalGames()) + " games (W/L: " + to_string(DotAPlayerSummary->GetTotalWins()) + "/" + to_string(DotAPlayerSummary->GetTotalLosses()) + ") Hero K/D/A: " + to_string(DotAPlayerSummary->GetTotalKills()) + "/" + to_string(DotAPlayerSummary->GetTotalDeaths()) + "/" + to_string(DotAPlayerSummary->GetTotalAssists()) + " (" + to_string(DotAPlayerSummary->GetAvgKills()) + "/" + to_string(DotAPlayerSummary->GetAvgDeaths()) + "/" + to_string(DotAPlayerSummary->GetAvgAssists()) + ") Creep K/D/N: " + to_string(DotAPlayerSummary->GetTotalCreepKills()) + "/" + to_string(DotAPlayerSummary->GetTotalCreepDenies()) + "/" + to_string(DotAPlayerSummary->GetTotalNeutralKills()) + " (" + to_string(DotAPlayerSummary->GetAvgCreepKills()) + "/" + to_string(DotAPlayerSummary->GetAvgCreepDenies()) + "/" + to_string(DotAPlayerSummary->GetAvgNeutralKills()) + ") T/R/C: " + to_string(DotAPlayerSummary->GetTotalTowerKills()) + "/" + to_string(DotAPlayerSummary->GetTotalRaxKills()) + "/" + to_string(DotAPlayerSummary->GetTotalCourierKills());
 
-          if (player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
+          if (player == nullptr || player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
             SendAllChat(Summary);
           else
             SendChat(player, Summary);
@@ -3326,7 +3327,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
         }
         else
         {
-          if (player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
+          if (player == nullptr || player->GetSpoofed() && (m_Aura->m_DB->AdminCheck(player->GetSpoofedRealm(), User) || RootAdminCheck || IsOwner(User)))
             SendAllChat("[" + StatsUser + "] hasn't played any DotA games here");
           else
             SendChat(player, "[" + StatsUser + "] hasn't played any DotA games here");
@@ -3397,7 +3398,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 
     case HashCode("yes"):
     {
-      if (m_KickVotePlayer.empty() || player->GetName() == m_KickVotePlayer || player->GetKickVote())
+      if (player == nullptr || m_KickVotePlayer.empty() || player->GetName() == m_KickVotePlayer || player->GetKickVote())
         break;
 
       player->SetKickVote(true);
