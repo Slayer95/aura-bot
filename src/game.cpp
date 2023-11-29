@@ -1020,7 +1020,7 @@ void CGame::SendAllActions()
 
 void CGame::AnnounceToAddress(string IP, uint16_t port)
 {
-	m_Aura->m_UDPServer->SendTo(
+	m_Aura->m_UDPSocket->SendTo(
 		IP, port,
 		m_Protocol->SEND_W3GS_GAMEINFO(
 			m_Aura->m_LANWar3Version,

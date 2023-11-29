@@ -37,6 +37,7 @@
 //
 
 class CUDPServer;
+class CUDPSocket;
 class CTCPSocket;
 class CTCPServer;
 class CGPSProtocol;
@@ -53,14 +54,11 @@ class CAura
 {
 public:
   CIRC*                    m_IRC;                        // IRC server
-  CUDPServer*              m_UDPServer;                  // a UDP server for sending broadcasts and other junk (used with !sendlan)
+  CUDPServer*              m_UDPServer;                  // a UDP server for incoming traffic, and sending broadcasts, etc. (used with !sendlan)
+  CUDPSocket*              m_UDPSocket;                  // a UDP socket for proxying UDP traffic
   CTCPServer*              m_ReconnectSocket;            // listening socket for GProxy++ reliable reconnects
   std::vector<CTCPSocket*> m_ReconnectSockets;           // std::vector of sockets attempting to reconnect (connected but not identified yet)
   CGPSProtocol*            m_GPSProtocol;                // class for gproxy protocol
-#ifdef WIN32
-  HANDLE*                  m_UDPNamedPipe;               // UDP traffic on port 6112 is redirected to this named pipe
-  OVERLAPPED*              m_UDPNamedPipeConnection;     // checks whether the named pipe is connected
-#endif
   CCRC32*                  m_CRC;                        // for calculating CRC's
   CSHA1*                   m_SHA;                        // for calculating SHA1's
   std::vector<CBNET*>      m_BNETs;                      // all our battle.net connections (there can be more than one)
@@ -76,6 +74,8 @@ public:
   std::string              m_LanguageFile;               // config value: language file
   std::string              m_Warcraft3Path;              // config value: Warcraft 3 path
   std::string              m_BindAddress;                // config value: the address to host games on
+  std::string              m_UDPForwardAddress;          // config value: the address to forward UDP traffic to
+  uint16_t                 m_UDPForwardPort;             // config value: the port to forward UDP traffic to
   std::string              m_DefaultMap;                 // config value: default map (map.cfg)
   std::vector<std::string> m_IgnoredNotifyJoinPlayers;   // config value: list of player names that won't trigger join notifications
   std::vector<std::string> m_IgnoredDatagramSources;     // config value: list of IPs ignored by m_UDPServer

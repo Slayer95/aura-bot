@@ -186,12 +186,9 @@ int main(const int, const char* argv[])
 CAura::CAura(CConfig* CFG)
   : m_IRC(nullptr),
     m_UDPServer(new CUDPServer()),
+    m_UDPSocket(new CUDPSocket()),
     m_ReconnectSocket(new CTCPServer()),
     m_GPSProtocol(new CGPSProtocol()),
-#ifdef WIN32
-    m_UDPNamedPipe(new HANDLE),
-    m_UDPNamedPipeConnection(new OVERLAPPED),
-#endif
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
     m_CurrentGame(nullptr),
@@ -213,48 +210,10 @@ CAura::CAura(CConfig* CFG)
     m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112);
   }
 
+  m_UDPSocket->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
+  m_UDPSocket->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
+
   m_ReconnectPort = CFG->GetInt("bot_reconnectport", 6113);
-#ifdef WIN32
-
-  SECURITY_DESCRIPTOR sd;
-  if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION)) {
-    Print("Error initializing security descriptor. Code " + to_string((uint32_t)GetLastError()));
-  }
-
-  // Allow everyone to access the named pipe
-  if (!SetSecurityDescriptorDacl(&sd, TRUE, nullptr, FALSE)) {
-    Print("Error modifying security descriptor. Code " + to_string((uint32_t)GetLastError()));
-  }
-
-  SECURITY_ATTRIBUTES sa;
-  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-  sa.lpSecurityDescriptor = &sd;
-  sa.bInheritHandle = FALSE;
-
-  *m_UDPNamedPipe = CreateNamedPipe(
-    L"\\\\.\\pipe\\UDPTrafficWC3Port",           // Named pipe
-    PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED, // Write access
-    PIPE_TYPE_BYTE,                              // Message mode, blocking
-    1,                                           // Number of instances
-    0,                                           // Output buffer size
-    0,                                           // Input buffer size
-    NMPWAIT_USE_DEFAULT_WAIT,                    // Time-out interval
-    &sa                                          // Default security attributes
-  );
-
-  if (*m_UDPNamedPipe == INVALID_HANDLE_VALUE) {
-    Print("Error creating named pipe. Code " + to_string((uint32_t)GetLastError()));
-  }
-  // For non-blocking Linux named pipes.
-  // DWORD mode = PIPE_NOWAIT;
-  // SetNamedPipeHandleState(*m_UDPNamedPipe, &mode, nullptr, nullptr);
-#endif
-
-  memset(m_UDPNamedPipeConnection, 0, sizeof(OVERLAPPED));
-  (*m_UDPNamedPipeConnection).hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-  ConnectNamedPipe(m_UDPNamedPipe, m_UDPNamedPipeConnection);
-  WaitForSingleObject((*m_UDPNamedPipeConnection).hEvent, INFINITE);
-  
 
   if (m_ReconnectSocket->Listen(m_BindAddress, m_ReconnectPort))
     Print("[AURA] listening for GProxy++ reconnects on port " + to_string(m_ReconnectPort));
@@ -413,16 +372,11 @@ CAura::CAura(CConfig* CFG)
 CAura::~CAura()
 {
   delete m_UDPServer;
+  delete m_UDPSocket;
   delete m_CRC;
   delete m_SHA;
   delete m_ReconnectSocket;
   delete m_GPSProtocol;
-#ifdef WIN32
-  if (m_UDPNamedPipe != INVALID_HANDLE_VALUE) {
-    CloseHandle(*m_UDPNamedPipe);
-  }
-  delete m_UDPNamedPipe;
-#endif
 
   if (m_Map)
     delete m_Map;
@@ -594,48 +548,22 @@ bool CAura::Update()
     UDPPkt* pkt = m_UDPServer->Accept(&fd);
     if (pkt != nullptr) {
       char* ipAddress = inet_ntoa(pkt->sender.sin_addr);
-      if (!IsIgnoredDatagramSource(ipAddress)) {
-		if (pkt->length >= 2 && static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT) {
-	      if (static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
-		    Print("Received SEARCH query at port 6112 from IP " + std::string(ipAddress));
-		  } else {
-		    Print("Received " + std::to_string(static_cast<unsigned char>(pkt->buf[1])) + " query at port 6112 from IP " + std::string(ipAddress));
-		  }
-		}
-#ifdef WIN32
-        bool result = GetOverlappedResult(m_UDPNamedPipe, m_UDPNamedPipeConnection, nullptr, FALSE);
-        if (result) {
-          Print("Pipe connected - gonna write to it");
-          std::vector<uint8_t> pipePacket = {0, 0, 0, 0, 0, 0, 0, 0};
-          pipePacket.insert(pipePacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
-          const uint16_t Size = static_cast<uint16_t>(pipePacket.size());
-          pipePacket[0] = static_cast<uint8_t>(Size);
-          pipePacket[1] = static_cast<uint8_t>(Size >> 8);
-          std::memcpy(pipePacket.data() + 2, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
-          std::memcpy(pipePacket.data() + 6, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
-          DWORD bytesWritten;
-          if (WriteFile(*m_UDPNamedPipe, pipePacket.data(), pipePacket.size(), &bytesWritten, NULL)) {
-            Print("Wrote " + to_string(bytesWritten) + " bytes to named pipe");
-			FlushFileBuffers(m_UDPNamedPipe);
-          } else {
-            Print("Error writing to named pipe. Code " + to_string((uint32_t)GetLastError()));
-          }
-        } else {
-			// Error handling
-			DWORD lastError = GetLastError();
-			if (lastError == ERROR_IO_INCOMPLETE) {
-				Print("Cannot write to pipe yet");
-			} else {
-				Print("Error connecting to named pipe. Code " + to_string(lastError));
-			}
-		}
-#endif
-        if (pkt->length >= 2 && (pkt->buf[0]) == W3GS_HEADER_CONSTANT && (pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
+      if (!IsIgnoredDatagramSource(ipAddress) && pkt->length >= 2 && static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT) {
+        std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        relayPacket.insert(relayPacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
+        const uint16_t Size = static_cast<uint16_t>(relayPacket.size());
+        relayPacket[2] = static_cast<uint8_t>(Size);
+        relayPacket[3] = static_cast<uint8_t>(Size >> 8);
+        std::memcpy(relayPacket.data() + 4, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
+        std::memcpy(relayPacket.data() + 8, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
+		m_UDPSocket->SendTo(m_UDPForwardAddress, m_UDPForwardPort, relayPacket);
+
+        if ((pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
           if (m_CurrentGame && !m_CurrentGame->GetCountDownStarted()) {
             m_CurrentGame->AnnounceToAddress(ipAddress, 6112);
           }
 		}
-      }
+	  }
 
       delete pkt;
     }
@@ -799,6 +727,8 @@ void CAura::SetConfigs(CConfig* CFG)
 
   m_Warcraft3Path          = AddPathSeparator(CFG->GetString("bot_war3path", R"(C:\Program Files\Warcraft III\)"));
   m_BindAddress            = CFG->GetString("bot_bindaddress", string());
+  m_UDPForwardAddress      = CFG->GetString("udp_rediraddress", string());
+  m_UDPForwardPort         = CFG->GetInt("udp_redirport", 6111);
   m_ReconnectWaitTime      = CFG->GetInt("bot_reconnectwaittime", 3);
   m_MaxGames               = CFG->GetInt("bot_maxgames", 20);
   string BotCommandTrigger = CFG->GetString("bot_commandtrigger", "!");

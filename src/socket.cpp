@@ -762,7 +762,6 @@ bool CUDPServer::Listen(const string& address, uint16_t port)
 
 UDPPkt* CUDPServer::Accept(fd_set* fd) {
   if (m_Socket == INVALID_SOCKET || m_HasError) {
-    Print("Failed to accept connection");
     return nullptr;
   }
 
