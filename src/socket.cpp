@@ -634,9 +634,10 @@ bool CUDPSocket::Broadcast(uint16_t port, const std::vector<uint8_t>& message)
 
   const string MessageString = string(begin(message), end(message));
 
-  if (sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin)) == -1)
-  {
-    Print("[UDPSOCKET] failed to broadcast packet (port " + to_string(port) + ", size " + to_string(MessageString.size()) + " bytes)");
+  int result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin));
+  if (result == -1) {
+	int error = WSAGetLastError();
+    Print("[UDPSOCKET] failed to broadcast packet (port " + to_string(port) + ", size " + to_string(MessageString.size()) + " bytes) with error: " + to_string(error));
     return false;
   }
 
@@ -689,9 +690,118 @@ void CUDPSocket::Reset()
   // enable broadcast support
 
   int32_t OptVal = 1;
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+#ifdef WIN32
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
+#else
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&OptVal, sizeof(int32_t));
+#endif
 
   // set default broadcast target
 
   m_BroadcastTarget.s_addr = INADDR_BROADCAST;
+}
+
+CUDPServer::CUDPServer()
+  : CUDPSocket()
+{
+// make socket non blocking
+
+#ifdef WIN32
+  int32_t iMode = 1;
+  ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
+#else
+  fcntl(m_Socket, F_SETFL, fcntl(m_Socket, F_GETFL) | O_NONBLOCK);
+#endif
+
+  // set the socket to reuse the address in case it hasn't been released yet
+
+  int32_t optval = 1;
+
+#ifdef WIN32
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&optval, sizeof(int32_t));
+#else
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&optval, sizeof(int32_t));
+#endif
+}
+
+CUDPServer::~CUDPServer()
+{
+}
+
+bool CUDPServer::Listen(const string& address, uint16_t port)
+{
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
+  Print("[UDPSERVER] Failed to listen UDP at 6112");
+    return false;
+  }
+
+  m_SIN.sin_family = AF_INET;
+
+  if (!address.empty())
+  {
+    if ((m_SIN.sin_addr.s_addr = inet_addr(address.c_str())) == INADDR_NONE)
+      m_SIN.sin_addr.s_addr = INADDR_ANY;
+  }
+  else
+    m_SIN.sin_addr.s_addr = INADDR_ANY;
+
+  m_SIN.sin_port = htons(port);
+
+  if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SIN), sizeof(m_SIN)) == SOCKET_ERROR)
+  {
+  Print("[UDPSERVER] error (bind) - " + GetErrorString());
+  m_HasError = true;
+    m_Error    = GetLastError();
+    return false;
+  } else {
+  Print("[UDPSERVER] Listening at 6112");
+  }
+
+  return true;
+}
+
+UDPPkt* CUDPServer::Accept(fd_set* fd) {
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
+    Print("Failed to accept connection");
+    return nullptr;
+  }
+
+  if (!FD_ISSET(m_Socket, fd)){
+    return nullptr;
+  }
+  
+  // a connection is waiting, accept it
+
+  char buffer[1024];
+  struct UDPPkt pkt;
+  struct sockaddr_in clientAddress;
+  int clientAddressLength = sizeof(clientAddress);
+  int receivedBytes;
+
+  receivedBytes = recvfrom(m_Socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&clientAddress, &clientAddressLength);
+#ifdef WIN32
+  if (receivedBytes == SOCKET_ERROR) {
+#else
+  if (receivedBytes < 0) {
+#endif
+    Print("[UDPSERVER] Error receiving data.");
+    return nullptr;
+  }
+
+  if (receivedBytes <= MIN_UDP_PACKET_SIZE) {
+    Print("[UDPSERVER] Error receiving data.");
+    return nullptr;
+  }
+
+  pkt.length = receivedBytes;
+  pkt.sender = clientAddress;
+  std::memcpy(pkt.buf, buffer, receivedBytes);
+
+  // Allocate on the heap and check for allocation failure
+  UDPPkt* result = new(std::nothrow) UDPPkt(pkt);
+  if (result == nullptr) {
+    return nullptr;
+  }
+
+  return result;
 }

@@ -137,7 +137,7 @@ public:
   std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGamePlayer* player);
   std::vector<uint8_t> SEND_W3GS_GAMEINFO(uint8_t war3Version, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapCRC, uint32_t slotsTotal, uint32_t slotsOpen, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
   std::vector<uint8_t> SEND_W3GS_CREATEGAME(uint8_t war3Version);
-  std::vector<uint8_t> SEND_W3GS_REFRESHGAME(uint32_t players, uint32_t playerSlots);
+  std::vector<uint8_t> SEND_W3GS_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots);
   std::vector<uint8_t> SEND_W3GS_DECREATEGAME();
   std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1);
   std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromPID);

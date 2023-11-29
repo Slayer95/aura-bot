@@ -726,7 +726,6 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   m_MapOptions = MapOptions;
   m_MapFlags   = CFG->GetInt("map_flags", MapOptions & MAPOPT_CUSTOMFORCES ? MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS : MAPFLAG_TEAMSTOGETHER);
-  Print("[MAP] Flags = " + to_string(m_MapFlags));
 
   if (MapWidth.empty())
     MapWidth = ExtractNumbers(CFG->GetString("map_width", string()), 2);

@@ -25,11 +25,18 @@
 #include <vector>
 #include <string>
 
+#define NOMINMAX
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#pragma once
+#include <windows.h>
+#endif
+
 //
 // CAura
 //
 
-class CUDPSocket;
+class CUDPServer;
 class CTCPSocket;
 class CTCPServer;
 class CGPSProtocol;
@@ -45,11 +52,15 @@ class CIRC;
 class CAura
 {
 public:
-  CIRC*                    m_IRC;
-  CUDPSocket*              m_UDPSocket;                  // a UDP socket for sending broadcasts and other junk (used with !sendlan)
+  CIRC*                    m_IRC;                        // IRC server
+  CUDPServer*              m_UDPServer;                  // a UDP server for sending broadcasts and other junk (used with !sendlan)
   CTCPServer*              m_ReconnectSocket;            // listening socket for GProxy++ reliable reconnects
   std::vector<CTCPSocket*> m_ReconnectSockets;           // std::vector of sockets attempting to reconnect (connected but not identified yet)
   CGPSProtocol*            m_GPSProtocol;                // class for gproxy protocol
+#ifdef WIN32
+  HANDLE*                  m_UDPNamedPipe;               // UDP traffic on port 6112 is redirected to this named pipe
+  OVERLAPPED*              m_UDPNamedPipeConnection;     // checks whether the named pipe is connected
+#endif
   CCRC32*                  m_CRC;                        // for calculating CRC's
   CSHA1*                   m_SHA;                        // for calculating SHA1's
   std::vector<CBNET*>      m_BNETs;                      // all our battle.net connections (there can be more than one)
@@ -60,11 +71,14 @@ public:
   std::string              m_Version;                    // Aura++ version string
   std::string              m_MapCFGPath;                 // config value: map cfg path
   std::string              m_MapPath;                    // config value: map path
-  std::string              m_VirtualHostName;            // config value: virtual host name
+  std::string              m_IndexVirtualHostName;       // config value: index virtual host name
+  std::string              m_LobbyVirtualHostName;       // config value: lobby virtual host name
   std::string              m_LanguageFile;               // config value: language file
   std::string              m_Warcraft3Path;              // config value: Warcraft 3 path
   std::string              m_BindAddress;                // config value: the address to host games on
   std::string              m_DefaultMap;                 // config value: default map (map.cfg)
+  std::vector<std::string> m_IgnoredNotifyJoinPlayers;   // config value: list of player names that won't trigger join notifications
+  std::vector<std::string> m_IgnoredDatagramSources;     // config value: list of IPs ignored by m_UDPServer
   uint32_t                 m_ReconnectWaitTime;          // config value: the maximum number of minutes to wait for a GProxy++ reliable reconnect
   uint32_t                 m_MaxGames;                   // config value: maximum number of games in progress
   uint32_t                 m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
@@ -78,6 +92,7 @@ public:
   uint32_t                 m_VoteKickPercentage;         // config value: percentage of players required to vote yes for a votekick to pass
   uint32_t                 m_NumPlayersToStartGameOver;  // config value: when this player count is reached, the game over timer will start
   uint16_t                 m_HostPort;                   // config value: the port to host games on
+  uint16_t                 m_PublicHostPort;             // config value: the port to broadcast for hosted games
   uint16_t                 m_ReconnectPort;              // config value: the port to listen for GProxy++ reliable reconnects on
   uint8_t                  m_LANWar3Version;             // config value: LAN warcraft 3 version
   int32_t                  m_CommandTrigger;             // config value: the command trigger inside games
@@ -85,6 +100,8 @@ public:
   bool                     m_Enabled;                    // set to false to prevent new games from being created
   bool                     m_AutoLock;                   // config value: auto lock games when the owner is present
   bool                     m_Ready;                      // indicates if there's lacking configuration info so we can quit
+  bool                     m_NotifyJoins;                // whether the bot should beep when a player joins a hosted game
+  bool                     m_ReplySearches;              // whether the bot should listen to UDP traffic in port 6112, and only reactively send game info to interested clients.
   bool                     m_LCPings;                    // config value: use LC style pings (divide actual pings by two)
 
   explicit CAura(CConfig* CFG);
@@ -111,6 +128,26 @@ public:
   inline bool GetReady() const
   {
     return m_Ready;
+  }
+
+  inline bool GetNotifyJoins() const
+  {
+    return m_NotifyJoins;
+  }
+
+  inline bool GetReplySearches() const
+  {
+    return m_ReplySearches;
+  }
+
+  inline bool IsIgnoredNotifyPlayer(std::string str) const
+  {
+    return std::find(m_IgnoredNotifyJoinPlayers.begin(), m_IgnoredNotifyJoinPlayers.end(), str) != m_IgnoredNotifyJoinPlayers.end();
+  }
+
+  inline bool IsIgnoredDatagramSource(std::string str) const
+  {
+    return std::find(m_IgnoredDatagramSources.begin(), m_IgnoredDatagramSources.end(), str) != m_IgnoredDatagramSources.end();
   }
 };
 

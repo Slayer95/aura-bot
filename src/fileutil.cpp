@@ -26,6 +26,7 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
+#pragma once
 #include <windows.h>
 #else
 #include <dirent.h>

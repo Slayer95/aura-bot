@@ -133,6 +133,15 @@ typedef int32_t SOCKET;
 #define SHUT_RDWR 2
 #endif
 
+#define MIN_UDP_PACKET_SIZE 4
+
+struct UDPPkt
+{
+  sockaddr_in sender;
+  int length;
+  char buf[1024];
+};
+
 //
 // CSocket
 //
@@ -247,7 +256,7 @@ public:
 // CUDPSocket
 //
 
-class CUDPSocket final : public CSocket
+class CUDPSocket : public CSocket
 {
 protected:
   struct in_addr m_BroadcastTarget;
@@ -263,6 +272,16 @@ public:
   void Reset();
   void SetBroadcastTarget(const std::string& subnet);
   void SetDontRoute(bool dontRoute);
+};
+
+class CUDPServer final : public CUDPSocket
+{
+public:
+  CUDPServer();
+  ~CUDPServer();
+
+  bool Listen(const std::string& address, uint16_t port);
+  UDPPkt* Accept(fd_set* fd);
 };
 
 #endif // AURA_SOCKET_H_

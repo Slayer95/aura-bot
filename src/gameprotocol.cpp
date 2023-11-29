@@ -516,9 +516,10 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_CREATEGAME(uint8_t war3Version)
   return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version, 0, 0, 0, 1, 0, 0, 0};
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_REFRESHGAME(uint32_t players, uint32_t playerSlots)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots)
 {
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_REFRESHGAME, 16, 0, 1, 0, 0, 0};
+  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_REFRESHGAME, 16, 0};
+  AppendByteArray(packet, hostCounter, false); // Host Counter
   AppendByteArray(packet, players, false);     // Players
   AppendByteArray(packet, playerSlots, false); // Player Slots
   return packet;

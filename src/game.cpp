@@ -42,7 +42,7 @@ using namespace std;
 // CGame
 //
 
-CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameState, string& nGameName, string& nOwnerName, string& nCreatorName, CBNET* nCreatorServer)
+CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nPublicHostPort, uint8_t nGameState, string& nGameName, string& nOwnerName, string& nCreatorName, CBNET* nCreatorServer)
   : m_Aura(nAura),
     m_Socket(new CTCPServer()),
     m_DBBanLast(nullptr),
@@ -52,7 +52,8 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameState, s
     m_Map(new CMap(*nMap)),
     m_GameName(nGameName),
     m_LastGameName(nGameName),
-    m_VirtualHostName(nAura->m_VirtualHostName),
+    m_IndexVirtualHostName(nAura->m_IndexVirtualHostName),
+    m_LobbyVirtualHostName(nAura->m_LobbyVirtualHostName),
     m_OwnerName(nOwnerName),
     m_CreatorName(nCreatorName),
     m_CreatorServer(nCreatorServer),
@@ -85,6 +86,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameState, s
     m_CountDownCounter(0),
     m_StartPlayers(0),
     m_HostPort(nHostPort),
+    m_PublicHostPort(nPublicHostPort),
     m_GameState(nGameState),
     m_VirtualHostPID(255),
     m_Exiting(false),
@@ -345,7 +347,11 @@ bool CGame::Update(void* fd, void* send_fd)
       // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
       // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
-      m_Aura->m_UDPSocket->Broadcast(6112, m_Protocol->SEND_W3GS_GAMEINFO(m_Aura->m_LANWar3Version, CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false), m_Map->GetMapGameFlags(), m_Map->GetMapWidth(), m_Map->GetMapHeight(), m_GameName, "Clan 007", 0, m_Map->GetMapPath(), m_Map->GetMapCRC(), MAX_SLOTS, MAX_SLOTS, m_HostPort, m_HostCounter & 0x0FFFFFFF, m_EntryKey));
+      if (m_Aura->GetReplySearches()) {
+		m_Aura->m_UDPServer->Broadcast(6112, m_Protocol->SEND_W3GS_REFRESHGAME(m_HostCounter & 0x0FFFFFFF, m_Players.size(), MAX_SLOTS));
+	  } else {
+	    m_Aura->m_UDPServer->Broadcast(6112, m_Protocol->SEND_W3GS_GAMEINFO(m_Aura->m_LANWar3Version, CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false), m_Map->GetMapGameFlags(), m_Map->GetMapWidth(), m_Map->GetMapHeight(), m_GameName, m_IndexVirtualHostName, 0, m_Map->GetMapPath(), m_Map->GetMapCRC(), MAX_SLOTS, MAX_SLOTS, m_PublicHostPort, m_HostCounter & 0x0FFFFFFF, m_EntryKey));
+	  }
     }
 
     m_LastPingTime = Time;
@@ -893,7 +899,7 @@ void CGame::SendVirtualHostPlayerInfo(CGamePlayer* player)
 
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
 
-  Send(player, m_Protocol->SEND_W3GS_PLAYERINFO(m_VirtualHostPID, m_VirtualHostName, IP, IP));
+  Send(player, m_Protocol->SEND_W3GS_PLAYERINFO(m_VirtualHostPID, m_LobbyVirtualHostName, IP, IP));
 }
 
 void CGame::SendFakePlayerInfo(CGamePlayer* player)
@@ -1010,6 +1016,30 @@ void CGame::SendAllActions()
   }
 
   m_LastActionSentTicks = Ticks;
+}
+
+void CGame::AnnounceToAddress(string IP, uint16_t port)
+{
+	m_Aura->m_UDPServer->SendTo(
+		IP, port,
+		m_Protocol->SEND_W3GS_GAMEINFO(
+			m_Aura->m_LANWar3Version,
+			CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
+			m_Map->GetMapGameFlags(),
+			m_Map->GetMapWidth(),
+			m_Map->GetMapHeight(),
+			m_GameName,
+			m_IndexVirtualHostName,
+			0,
+			m_Map->GetMapPath(),
+			m_Map->GetMapCRC(),
+			MAX_SLOTS,
+			MAX_SLOTS,
+			m_PublicHostPort,
+			m_HostCounter & 0x0FFFFFFF,
+			m_EntryKey
+		)
+	);
 }
 
 void CGame::EventPlayerDeleted(CGamePlayer* player)
@@ -1179,7 +1209,7 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
 {
   // check the new player's name
 
-  if (joinPlayer->GetName().empty() || joinPlayer->GetName().size() > 15 || joinPlayer->GetName() == m_VirtualHostName || GetPlayerFromName(joinPlayer->GetName(), false) || joinPlayer->GetName().find(' ') != string::npos || joinPlayer->GetName().find('|') != string::npos)
+  if (joinPlayer->GetName().empty() || joinPlayer->GetName().size() > 15 || joinPlayer->GetName() == m_LobbyVirtualHostName || GetPlayerFromName(joinPlayer->GetName(), false) || joinPlayer->GetName().find(' ') != string::npos || joinPlayer->GetName().find('|') != string::npos)
   {
     Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] invalid name (taken, invalid char, spoofer, too long)");
     potential->Send(m_Protocol->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
@@ -1263,6 +1293,7 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   // try to find an empty slot
 
   uint8_t SID = GetEmptySlot(false);
+  string notifyString = "";
 
   if (SID == 255 && Reserved)
   {
@@ -1338,7 +1369,10 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   // this problem is solved by setting the socket to nullptr before deletion and handling the nullptr case in the destructor
   // we also have to be careful to not modify the m_Potentials vector since we're currently looping through it
 
-  Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] joined the game");
+  if (m_Aura->GetNotifyJoins() && !m_Aura->IsIgnoredNotifyPlayer(joinPlayer->GetName())) {
+	notifyString = "\x07";
+  }
+  Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] joined the game" + notifyString);
   CGamePlayer* Player = new CGamePlayer(potential, GetNewPID(), JoinedRealm, joinPlayer->GetName(), joinPlayer->GetInternalIP(), Reserved);
 
   // consider LAN players to have already spoof checked since they can't
@@ -2679,26 +2713,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
             Print("[GAME: " + m_GameName + "] bad inputs to sendlan command");
           else
           {
-            // construct a fixed host counter which will be used to identify players from this "realm" (i.e. LAN)
-            // the fixed host counter's 4 most significant bits will contain a 4 bit ID (0-15)
-            // the rest of the fixed host counter will contain the 28 least significant bits of the actual host counter
-            // since we're destroying 4 bits of information here the actual host counter should not be greater than 2^28 which is a reasonable assumption
-            // when a player joins a game we can obtain the ID from the received host counter
-            // note: LAN broadcasts use an ID of 0, battle.net refreshes use an ID of 1-10, the rest are unused
-
-            // we send 12 for SlotsTotal because this determines how many PID's Warcraft 3 allocates
-            // we need to make sure Warcraft 3 allocates at least SlotsTotal + 1 but at most 12 PID's
-            // this is because we need an extra PID for the virtual host player (but we always delete the virtual host player when the 12th person joins)
-            // however, we can't send 13 for SlotsTotal because this causes Warcraft 3 to crash when sharing control of units
-            // nor can we send SlotsTotal because then Warcraft 3 crashes when playing maps with less than 12 PID's (because of the virtual host player taking an extra PID)
-            // we also send 12 for SlotsOpen because Warcraft 3 assumes there's always at least one player in the game (the host)
-            // so if we try to send accurate numbers it'll always be off by one and results in Warcraft 3 assuming the game is full when it still needs one more player
-            // the easiest solution is to simply send 12 for both so the game will always show up as (1/12) players
-
-            // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
-            // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
-            
-            m_Aura->m_UDPSocket->SendTo(IP, Port, m_Protocol->SEND_W3GS_GAMEINFO(m_Aura->m_LANWar3Version, CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false), m_Map->GetMapGameFlags(), m_Map->GetMapWidth(), m_Map->GetMapHeight(), m_GameName, "Clan 007", 0, m_Map->GetMapPath(), m_Map->GetMapCRC(), MAX_SLOTS, MAX_SLOTS, m_HostPort, m_HostCounter & 0x0FFFFFFF, m_EntryKey));
+		    AnnounceToAddress(IP, Port);
           }
 
           break;
@@ -3219,13 +3234,13 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
         // !VIRTUALHOST
         //
 
-        case HashCode("virutalhost"):
+        case HashCode("virtualhost"):
         {
           if (Payload.empty() || Payload.size() > 15 || m_CountDownStarted)
             break;
 
           DeleteVirtualHost();
-          m_VirtualHostName = Payload;
+          m_LobbyVirtualHostName = Payload;
           break;
         }
       }
@@ -4665,7 +4680,7 @@ void CGame::CreateVirtualHost()
 
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
 
-  SendAll(m_Protocol->SEND_W3GS_PLAYERINFO(m_VirtualHostPID, m_VirtualHostName, IP, IP));
+  SendAll(m_Protocol->SEND_W3GS_PLAYERINFO(m_VirtualHostPID, m_LobbyVirtualHostName, IP, IP));
 }
 
 void CGame::DeleteVirtualHost()

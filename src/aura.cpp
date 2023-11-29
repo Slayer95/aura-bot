@@ -72,6 +72,12 @@ void Print2(const string& message)
 // main
 //
 
+LPCWSTR StringToLPCWSTR(const std::string& str)
+{
+    std::wstring wideStr(str.begin(), str.end());
+  return wideStr.c_str();
+}
+
 int main(const int, const char* argv[])
 {
   // seed the PRNG
@@ -179,9 +185,13 @@ int main(const int, const char* argv[])
 
 CAura::CAura(CConfig* CFG)
   : m_IRC(nullptr),
-    m_UDPSocket(new CUDPSocket()),
+    m_UDPServer(new CUDPServer()),
     m_ReconnectSocket(new CTCPServer()),
     m_GPSProtocol(new CGPSProtocol()),
+#ifdef WIN32
+    m_UDPNamedPipe(new HANDLE),
+    m_UDPNamedPipeConnection(new OVERLAPPED),
+#endif
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
     m_CurrentGame(nullptr),
@@ -197,10 +207,54 @@ CAura::CAura(CConfig* CFG)
 
   // get the general configuration variables
 
-  m_UDPSocket->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
-  m_UDPSocket->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
+  m_UDPServer->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
+  m_UDPServer->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
+  if (CFG->GetInt("udp_replysearches", 0) == 1) {
+    m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112);
+  }
 
   m_ReconnectPort = CFG->GetInt("bot_reconnectport", 6113);
+#ifdef WIN32
+
+  SECURITY_DESCRIPTOR sd;
+  if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION)) {
+    Print("Error initializing security descriptor. Code " + to_string((uint32_t)GetLastError()));
+  }
+
+  // Allow everyone to access the named pipe
+  if (!SetSecurityDescriptorDacl(&sd, TRUE, nullptr, FALSE)) {
+    Print("Error modifying security descriptor. Code " + to_string((uint32_t)GetLastError()));
+  }
+
+  SECURITY_ATTRIBUTES sa;
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.lpSecurityDescriptor = &sd;
+  sa.bInheritHandle = FALSE;
+
+  *m_UDPNamedPipe = CreateNamedPipe(
+    L"\\\\.\\pipe\\UDPTrafficWC3Port",           // Named pipe
+    PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED, // Write access
+    PIPE_TYPE_BYTE,                              // Message mode, blocking
+    1,                                           // Number of instances
+    0,                                           // Output buffer size
+    0,                                           // Input buffer size
+    NMPWAIT_USE_DEFAULT_WAIT,                    // Time-out interval
+    &sa                                          // Default security attributes
+  );
+
+  if (*m_UDPNamedPipe == INVALID_HANDLE_VALUE) {
+    Print("Error creating named pipe. Code " + to_string((uint32_t)GetLastError()));
+  }
+  // For non-blocking Linux named pipes.
+  // DWORD mode = PIPE_NOWAIT;
+  // SetNamedPipeHandleState(*m_UDPNamedPipe, &mode, nullptr, nullptr);
+#endif
+
+  memset(m_UDPNamedPipeConnection, 0, sizeof(OVERLAPPED));
+  (*m_UDPNamedPipeConnection).hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+  ConnectNamedPipe(m_UDPNamedPipe, m_UDPNamedPipeConnection);
+  WaitForSingleObject((*m_UDPNamedPipeConnection).hEvent, INFINITE);
+  
 
   if (m_ReconnectSocket->Listen(m_BindAddress, m_ReconnectPort))
     Print("[AURA] listening for GProxy++ reconnects on port " + to_string(m_ReconnectPort));
@@ -212,9 +266,10 @@ CAura::CAura(CConfig* CFG)
   }
 
   m_CRC->Initialize();
-  m_HostPort       = CFG->GetInt("bot_hostport", 6112);
-  m_DefaultMap     = CFG->GetString("bot_defaultmap", "dota");
-  m_LANWar3Version = CFG->GetInt("lan_war3version", 27);
+  m_HostPort         = CFG->GetInt("bot_hostport", 6112);
+  m_PublicHostPort = CFG->GetInt("bot_publichostport", m_HostPort);
+  m_DefaultMap       = CFG->GetString("bot_defaultmap", "dota");
+  m_LANWar3Version   = CFG->GetInt("lan_war3version", 27);
   m_NumPlayersToStartGameOver = CFG->GetInt("bot_gameoverplayernumber", 1);
 
   // read the rest of the general configuration
@@ -357,11 +412,17 @@ CAura::CAura(CConfig* CFG)
 
 CAura::~CAura()
 {
-  delete m_UDPSocket;
+  delete m_UDPServer;
   delete m_CRC;
   delete m_SHA;
   delete m_ReconnectSocket;
   delete m_GPSProtocol;
+#ifdef WIN32
+  if (m_UDPNamedPipe != INVALID_HANDLE_VALUE) {
+    CloseHandle(*m_UDPNamedPipe);
+  }
+  delete m_UDPNamedPipe;
+#endif
 
   if (m_Map)
     delete m_Map;
@@ -433,6 +494,12 @@ bool CAura::Update()
   {
     socket->SetFD(&fd, &send_fd, &nfds);
     ++NumFDs;
+  }
+
+  // 7. UDP server
+  if (m_ReplySearches) {
+    m_UDPServer->SetFD(&fd, &send_fd, &nfds);
+  ++NumFDs;
   }
 
   // before we call select we need to determine how long to block for
@@ -522,6 +589,57 @@ bool CAura::Update()
 
   if (m_IRC && m_IRC->Update(&fd, &send_fd))
     Exit = true;
+
+  if (m_ReplySearches) {
+    UDPPkt* pkt = m_UDPServer->Accept(&fd);
+    if (pkt != nullptr) {
+      char* ipAddress = inet_ntoa(pkt->sender.sin_addr);
+      if (!IsIgnoredDatagramSource(ipAddress)) {
+		if (pkt->length >= 2 && static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT) {
+	      if (static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
+		    Print("Received SEARCH query at port 6112 from IP " + std::string(ipAddress));
+		  } else {
+		    Print("Received " + std::to_string(static_cast<unsigned char>(pkt->buf[1])) + " query at port 6112 from IP " + std::string(ipAddress));
+		  }
+		}
+#ifdef WIN32
+        bool result = GetOverlappedResult(m_UDPNamedPipe, m_UDPNamedPipeConnection, nullptr, FALSE);
+        if (result) {
+          Print("Pipe connected - gonna write to it");
+          std::vector<uint8_t> pipePacket = {0, 0, 0, 0, 0, 0, 0, 0};
+          pipePacket.insert(pipePacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
+          const uint16_t Size = static_cast<uint16_t>(pipePacket.size());
+          pipePacket[0] = static_cast<uint8_t>(Size);
+          pipePacket[1] = static_cast<uint8_t>(Size >> 8);
+          std::memcpy(pipePacket.data() + 2, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
+          std::memcpy(pipePacket.data() + 6, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
+          DWORD bytesWritten;
+          if (WriteFile(*m_UDPNamedPipe, pipePacket.data(), pipePacket.size(), &bytesWritten, NULL)) {
+            Print("Wrote " + to_string(bytesWritten) + " bytes to named pipe");
+			FlushFileBuffers(m_UDPNamedPipe);
+          } else {
+            Print("Error writing to named pipe. Code " + to_string((uint32_t)GetLastError()));
+          }
+        } else {
+			// Error handling
+			DWORD lastError = GetLastError();
+			if (lastError == ERROR_IO_INCOMPLETE) {
+				Print("Cannot write to pipe yet");
+			} else {
+				Print("Error connecting to named pipe. Code " + to_string(lastError));
+			}
+		}
+#endif
+        if (pkt->length >= 2 && (pkt->buf[0]) == W3GS_HEADER_CONSTANT && (pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
+          if (m_CurrentGame && !m_CurrentGame->GetCountDownStarted()) {
+            m_CurrentGame->AnnounceToAddress(ipAddress, 6112);
+          }
+		}
+      }
+
+      delete pkt;
+    }
+  }
 
   // update GProxy++ reliable reconnect sockets
 
@@ -688,12 +806,17 @@ void CAura::SetConfigs(CConfig* CFG)
 
   m_MapCFGPath      = AddPathSeparator(CFG->GetString("bot_mapcfgpath", string()));
   m_MapPath         = AddPathSeparator(CFG->GetString("bot_mappath", string()));
-  m_VirtualHostName = CFG->GetString("bot_virtualhostname", "|cFF4080C0Aura");
+  m_IndexVirtualHostName = CFG->GetString("bot_indexvirtualhostname", "Aura Bot");
+  m_LobbyVirtualHostName = CFG->GetString("bot_lobbyvirtualhostname", "|cFF4080C0Aura");
 
-  if (m_VirtualHostName.size() > 15)
-  {
-    m_VirtualHostName = "|cFF4080C0Aura";
-    Print("[AURA] warning - bot_virtualhostname is longer than 15 characters, using default virtual host name");
+  if (m_IndexVirtualHostName.size() > 15) {
+    m_IndexVirtualHostName = "Aura Bot";
+    Print("[AURA] warning - bot_indexvirtualhostname is longer than 15 characters - using default index virtual host name");
+  }
+
+  if (m_LobbyVirtualHostName.size() > 15) {
+    m_LobbyVirtualHostName = "|cFF4080C0Aura";
+    Print("[AURA] warning - bot_lobbyvirtualhostname is longer than 15 characters - using default lobby virtual host name");
   }
 
   m_AutoLock           = CFG->GetInt("bot_autolock", 0) == 0 ? false : true;
@@ -709,6 +832,27 @@ void CAura::SetConfigs(CConfig* CFG)
 
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;
+
+  m_NotifyJoins        = CFG->GetInt("bot_notifyjoins", 0) == 0 ? false : true;
+  m_ReplySearches      = CFG->GetInt("udp_replysearches", 0) == 0 ? false : true;
+
+  stringstream ss(CFG->GetString("bot_notifyjoinsexcept", ""));
+  while (ss.good()) {
+    string substr;
+    getline(ss, substr, ',');
+    if (substr.size() > 0) {
+      m_IgnoredNotifyJoinPlayers.push_back(substr);
+    }
+  }
+
+  stringstream ss2(CFG->GetString("udpblocklist", ""));
+  while (ss2.good()) {
+    string substr;
+    getline(ss2, substr, ',');
+    if (substr.size() > 0) {
+      m_IgnoredDatagramSources.push_back(substr);
+    }
+  }
 }
 
 void CAura::ExtractScripts(const uint8_t War3Version)
@@ -902,7 +1046,7 @@ void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string own
 
   Print2("[AURA] creating game [" + gameName + "]");
 
-  m_CurrentGame = new CGame(this, map, m_HostPort, gameState, gameName, ownerName, creatorName, creatorServer);
+  m_CurrentGame = new CGame(this, map, m_HostPort, m_PublicHostPort, gameState, gameName, ownerName, creatorName, creatorServer);
 
   for (auto& bnet : m_BNETs)
   {

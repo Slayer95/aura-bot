@@ -68,7 +68,8 @@ protected:
   CMap*                          m_Map;                           // map data
   std::string                    m_GameName;                      // game name
   std::string                    m_LastGameName;                  // last game name (the previous game name before it was rehosted)
-  std::string                    m_VirtualHostName;               // host's name
+  std::string                    m_IndexVirtualHostName;          // host's name
+  std::string                    m_LobbyVirtualHostName;          // host's name
   std::string                    m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                    m_CreatorName;                   // name of the player who created this game
   CBNET*                         m_CreatorServer;                 // battle.net server the player who created this game was on
@@ -102,6 +103,7 @@ protected:
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
   uint32_t                       m_StartPlayers;                  // number of players when the game started
   uint16_t                       m_HostPort;                      // the port to host games on
+  uint16_t                       m_PublicHostPort;                // the port to broadcast
   uint8_t                        m_GameState;                     // game state, public or private
   uint8_t                        m_VirtualHostPID;                // host's PID
   uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
@@ -119,7 +121,7 @@ protected:
   bool                           m_Desynced;                      // if the game has desynced or not
 
 public:
-  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nCreatorName, CBNET* nCreatorServer);
+  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nPublicHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nCreatorName, CBNET* nCreatorServer);
   ~CGame();
   CGame(CGame&) = delete;
 
@@ -127,11 +129,13 @@ public:
   inline CGameProtocol* GetProtocol() const { return m_Protocol; }
   inline uint32_t       GetEntryKey() const { return m_EntryKey; }
   inline uint16_t       GetHostPort() const { return m_HostPort; }
+  inline uint16_t       GetPublicPort() const { return m_PublicHostPort; }
   inline uint8_t        GetGameState() const { return m_GameState; }
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
   inline std::string    GetLastGameName() const { return m_LastGameName; }
-  inline std::string    GetVirtualHostName() const { return m_VirtualHostName; }
+  inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
+  inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
   inline std::string    GetOwnerName() const { return m_OwnerName; }
   inline std::string    GetCreatorName() const { return m_CreatorName; }
   inline CBNET*         GetCreatorServer() const { return m_CreatorServer; }
@@ -167,6 +171,7 @@ public:
   void Send(uint8_t PID, const std::vector<uint8_t>& data);
   void Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& data);
   void SendAll(const std::vector<uint8_t>& data);
+ 
 
   // functions to send packets to players
 
@@ -180,6 +185,7 @@ public:
   void SendVirtualHostPlayerInfo(CGamePlayer* player);
   void SendFakePlayerInfo(CGamePlayer* player);
   void SendAllActions();
+  void AnnounceToAddress(std::string IP, uint16_t port);
 
   // events
   // note: these are only called while iterating through the m_Potentials or m_Players std::vectors

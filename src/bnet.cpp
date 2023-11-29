@@ -352,7 +352,7 @@ bool CBNET::Update(void* fd, void* send_fd)
 
                 Print("[BNET: " + m_ServerAlias + "] logon successful");
                 m_LoggedIn = true;
-                m_Socket->PutBytes(m_Protocol->SEND_SID_NETGAMEPORT(m_Aura->m_HostPort));
+                m_Socket->PutBytes(m_Protocol->SEND_SID_NETGAMEPORT(m_Aura->m_PublicHostPort));
                 m_Socket->PutBytes(m_Protocol->SEND_SID_ENTERCHAT());
                 m_Socket->PutBytes(m_Protocol->SEND_SID_FRIENDLIST());
                 m_Socket->PutBytes(m_Protocol->SEND_SID_CLANMEMBERLIST());
@@ -1157,26 +1157,8 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               QueueChatCommand("Bad input to sendlan command", User, Whisper, m_IRC);
             else
             {
-              // construct a fixed host counter which will be used to identify players from this "realm" (i.e. LAN)
-              // the fixed host counter's 4 most significant bits will contain a 4 bit ID (0-15)
-              // the rest of the fixed host counter will contain the 28 least significant bits of the actual host counter
-              // since we're destroying 4 bits of information here the actual host counter should not be greater than 2^28 which is a reasonable assumption
-              // when a player joins a game we can obtain the ID from the received host counter
-              // note: LAN broadcasts use an ID of 0, battle.net refreshes use an ID of 1-10, the rest are unused
-
-              // we send 12 for SlotsTotal because this determines how many PID's Warcraft 3 allocates
-              // we need to make sure Warcraft 3 allocates at least SlotsTotal + 1 but at most 12 PID's
-              // this is because we need an extra PID for the virtual host player (but we always delete the virtual host player when the 12th person joins)
-              // however, we can't send 13 for SlotsTotal because this causes Warcraft 3 to crash when sharing control of units
-              // nor can we send SlotsTotal because then Warcraft 3 crashes when playing maps with less than 12 PID's (because of the virtual host player taking an extra PID)
-              // we also send 12 for SlotsOpen because Warcraft 3 assumes there's always at least one player in the game (the host)
-              // so if we try to send accurate numbers it'll always be off by one and results in Warcraft 3 assuming the game is full when it still needs one more player
-              // the easiest solution is to simply send 12 for both so the game will always show up as (1/12) players
-
-              // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
-              // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
-              
-              m_Aura->m_UDPSocket->SendTo(IP, Port, m_Aura->m_CurrentGame->GetProtocol()->SEND_W3GS_GAMEINFO(m_Aura->m_LANWar3Version, CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false), m_Aura->m_CurrentGame->GetMap()->GetMapGameFlags(), m_Aura->m_CurrentGame->GetMap()->GetMapWidth(), m_Aura->m_CurrentGame->GetMap()->GetMapHeight(), m_Aura->m_CurrentGame->GetGameName(), "Clan 007", 0, m_Aura->m_CurrentGame->GetMap()->GetMapPath(), m_Aura->m_CurrentGame->GetMap()->GetMapCRC(), MAX_SLOTS, MAX_SLOTS, m_Aura->m_CurrentGame->GetHostPort(), m_Aura->m_CurrentGame->GetHostCounter() & 0x0FFFFFFF, m_Aura->m_CurrentGame->GetEntryKey()));
+			  m_Aura->m_CurrentGame->AnnounceToAddress(IP, Port);
+			  
             }
 
             break;
