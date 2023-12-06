@@ -195,7 +195,7 @@ CAura::CAura(CConfig* CFG)
     m_DB(new CAuraDB(CFG)),
     m_Map(nullptr),
     m_Version(VERSION),
-    m_HostCounter(1),
+    m_HostCounter(0),
     m_Exiting(false),
     m_Enabled(true),
     m_Ready(true)
@@ -453,7 +453,7 @@ bool CAura::Update()
   // 7. UDP server
   if (m_ReplySearches) {
     m_UDPServer->SetFD(&fd, &send_fd, &nfds);
-  ++NumFDs;
+    ++NumFDs;
   }
 
   // before we call select we need to determine how long to block for
@@ -728,9 +728,10 @@ void CAura::SetConfigs(CConfig* CFG)
   m_Warcraft3Path          = AddPathSeparator(CFG->GetString("bot_war3path", R"(C:\Program Files\Warcraft III\)"));
   m_BindAddress            = CFG->GetString("bot_bindaddress", string());
   m_UDPForwardAddress      = CFG->GetString("udp_rediraddress", string());
-  m_UDPForwardPort         = CFG->GetInt("udp_redirport", 6111);
+  m_UDPForwardPort         = CFG->GetInt("udp_redirport", 6110);
   m_ReconnectWaitTime      = CFG->GetInt("bot_reconnectwaittime", 3);
   m_MaxGames               = CFG->GetInt("bot_maxgames", 20);
+  m_MinHostCounter         = CFG->GetInt("bot_firstgameid", 100);
   string BotCommandTrigger = CFG->GetString("bot_commandtrigger", "!");
   m_CommandTrigger         = BotCommandTrigger[0];
 

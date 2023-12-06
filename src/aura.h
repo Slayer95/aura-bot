@@ -82,6 +82,7 @@ public:
   uint32_t                 m_ReconnectWaitTime;          // config value: the maximum number of minutes to wait for a GProxy++ reliable reconnect
   uint32_t                 m_MaxGames;                   // config value: maximum number of games in progress
   uint32_t                 m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
+  uint32_t                 m_MinHostCounter;             // config value: defines a subspace for game identifiers
   uint32_t                 m_AllowDownloads;             // config value: allow map downloads or not
   uint32_t                 m_MaxDownloaders;             // config value: maximum number of map downloaders at the same time
   uint32_t                 m_MaxDownloadSpeed;           // config value: maximum total map download speed in KB/sec
@@ -125,6 +126,14 @@ public:
   void LoadIPToCountryData();
   void CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string creatorName, CBNET* nCreatorServer, bool whisper);
 
+  inline uint32_t NextHostCounter()
+  {
+    m_HostCounter = m_HostCounter + 1;
+    if (m_HostCounter < m_MinHostCounter) {
+      m_HostCounter = m_MinHostCounter;
+    }
+    return m_HostCounter;
+  }
   inline bool GetReady() const
   {
     return m_Ready;

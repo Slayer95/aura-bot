@@ -77,7 +77,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nPublicHostP
     m_LastPlayerLeaveTicks(0),
     m_LastLagScreenResetTime(0),
     m_RandomSeed(GetTicks()),
-    m_HostCounter(nAura->m_HostCounter++),
+    m_HostCounter(nAura->NextHostCounter()),
     m_EntryKey(rand()),
     m_Latency(nAura->m_Latency),
     m_SyncLimit(nAura->m_SyncLimit),
@@ -1594,7 +1594,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       {
         // this is a lobby message, print it to the console
 
-        Print("[GAME: " + m_GameName + "] [Lobby] [" + player->GetName() + "] " + chatPlayer->GetMessage());
+        Print2("[GAME: " + m_GameName + "] [Lobby] [" + player->GetName() + "] " + chatPlayer->GetMessage());
 
         if (m_MuteLobby)
           Relay = false;
@@ -2118,7 +2118,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
             m_GameState    = GAME_PRIVATE;
             m_LastGameName = m_GameName;
             m_GameName     = Payload;
-            m_HostCounter  = m_Aura->m_HostCounter++;
+            m_HostCounter  = m_Aura->NextHostCounter();
             m_RefreshError = false;
 
             for (auto& bnet : m_Aura->m_BNETs)
@@ -2164,7 +2164,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
             m_GameState    = GAME_PUBLIC;
             m_LastGameName = m_GameName;
             m_GameName     = Payload;
-            m_HostCounter  = m_Aura->m_HostCounter++;
+            m_HostCounter  = m_Aura->NextHostCounter();
             m_RefreshError = false;
 
             for (auto& bnet : m_Aura->m_BNETs)
