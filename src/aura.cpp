@@ -225,10 +225,16 @@ CAura::CAura(CConfig* CFG)
   }
 
   m_CRC->Initialize();
-  m_HostPort         = CFG->GetInt("bot_hostport", 6112);
-  m_PublicHostPort = CFG->GetInt("bot_publichostport", m_HostPort);
-  m_DefaultMap       = CFG->GetString("bot_defaultmap", "dota");
-  m_LANWar3Version   = CFG->GetInt("lan_war3version", 27);
+  m_HostPort          = CFG->GetInt("bot_hostport", 6112);
+  m_LANHostPort       = CFG->GetInt("bot_lanhostport", m_HostPort);
+  m_EnableTCPTunnel   = CFG->GetInt("bot_enabletcptunnel", 0);
+  m_PublicHostPort    = CFG->GetInt("bot_publichostport", m_HostPort);
+  m_PublicHostAddress = CFG->GetString("bot_publichostaddress", string());
+  if (m_EnableTCPTunnel) {
+    Print("[AURA] TCP tunnel enabled at " + m_PublicHostAddress + ":" + std::string(m_PublicHostPort));
+  }
+  m_DefaultMap        = CFG->GetString("bot_defaultmap", "dota");
+  m_LANWar3Version    = CFG->GetInt("lan_war3version", 27);
   m_NumPlayersToStartGameOver = CFG->GetInt("bot_gameoverplayernumber", 1);
 
   // read the rest of the general configuration
@@ -556,14 +562,14 @@ bool CAura::Update()
         relayPacket[3] = static_cast<uint8_t>(Size >> 8);
         std::memcpy(relayPacket.data() + 4, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
         std::memcpy(relayPacket.data() + 8, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
-		m_UDPSocket->SendTo(m_UDPForwardAddress, m_UDPForwardPort, relayPacket);
+        m_UDPSocket->SendTo(m_UDPForwardAddress, m_UDPForwardPort, relayPacket);
 
-        if ((pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
+        if ((pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME && pkt->length == 16 && pkt->buf[8] == m_LANWar3Version) {
           if (m_CurrentGame && !m_CurrentGame->GetCountDownStarted()) {
             m_CurrentGame->AnnounceToAddress(ipAddress, 6112);
           }
-		}
-	  }
+      }
+    }
 
       delete pkt;
     }
@@ -776,7 +782,7 @@ void CAura::SetConfigs(CConfig* CFG)
     }
   }
 
-  stringstream ss2(CFG->GetString("udpblocklist", ""));
+  stringstream ss2(CFG->GetString("udp_blocklist", ""));
   while (ss2.good()) {
     string substr;
     getline(ss2, substr, ',');
@@ -977,7 +983,7 @@ void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string own
 
   Print2("[AURA] creating game [" + gameName + "]");
 
-  m_CurrentGame = new CGame(this, map, m_HostPort, m_PublicHostPort, gameState, gameName, ownerName, creatorName, creatorServer);
+  m_CurrentGame = new CGame(this, map, m_HostPort, m_LANHostPort, gameState, gameName, ownerName, creatorName, creatorServer);
 
   for (auto& bnet : m_BNETs)
   {

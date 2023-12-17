@@ -443,6 +443,35 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_CHECKAD()
   return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_CHECKAD, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 }
 
+std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(std::string ipString, uint16_t port)
+{
+  std::vector<uint8_t> packet;
+
+  uint32_t ip = inet_addr(ipString.c_str());
+  if (ip == INADDR_NONE) {
+    // Handle invalid IP address
+    Print("[BNETPROTO] Invalid bot_publichostaddress");
+    return packet;
+  }
+
+  const uint8_t Unknown[] = {2, 0};
+  const uint8_t Unknown2[] = {0, 0, 0, 0};
+  const uint8_t Unknown3[] = {0, 0, 0, 0};
+
+  packet.push_back(BNET_HEADER_CONSTANT);                // BNET header constant
+  packet.push_back(SID_PUBLICHOST);                      // SID_PUBLICHOST
+  packet.push_back(0);                                   //
+  packet.push_back(0);                                   //
+  AppendByteArray(packet, Unknown, 2);                   //
+  AppendByteArray(packet, port, false);                  // Custom port
+  AppendByteArray(packet, ip, false);                    // Custom IP
+  AppendByteArray(packet, Unknown2, 4);                  //
+  AppendByteArray(packet, Unknown3, 4);                  //
+  AssignLength(packet);
+
+  return packet;
+}
+
 std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter)
 {
   // TODO: sort out how GameType works, the documentation is horrendous

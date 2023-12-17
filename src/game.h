@@ -103,7 +103,7 @@ protected:
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
   uint32_t                       m_StartPlayers;                  // number of players when the game started
   uint16_t                       m_HostPort;                      // the port to host games on
-  uint16_t                       m_PublicHostPort;                // the port to broadcast
+  uint16_t                       m_LANHostPort;                   // the port to broadcast
   uint8_t                        m_GameState;                     // game state, public or private
   uint8_t                        m_VirtualHostPID;                // host's PID
   uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
@@ -121,7 +121,7 @@ protected:
   bool                           m_Desynced;                      // if the game has desynced or not
 
 public:
-  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nPublicHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nCreatorName, CBNET* nCreatorServer);
+  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nCreatorName, CBNET* nCreatorServer);
   ~CGame();
   CGame(CGame&) = delete;
 
@@ -129,7 +129,7 @@ public:
   inline CGameProtocol* GetProtocol() const { return m_Protocol; }
   inline uint32_t       GetEntryKey() const { return m_EntryKey; }
   inline uint16_t       GetHostPort() const { return m_HostPort; }
-  inline uint16_t       GetPublicPort() const { return m_PublicHostPort; }
+  inline uint16_t       GetLANPort() const { return m_LANHostPort; }
   inline uint8_t        GetGameState() const { return m_GameState; }
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }

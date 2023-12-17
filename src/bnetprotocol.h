@@ -30,6 +30,12 @@
 #include <string>
 #include <vector>
 
+#ifdef WIN32
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
+
 class CIncomingGameHost;
 class CIncomingChatEvent;
 
@@ -46,6 +52,7 @@ public:
     SID_CHATCOMMAND            = 14,  // 0xE
     SID_CHATEVENT              = 15,  // 0xF
     SID_CHECKAD                = 21,  // 0x15
+    SID_PUBLICHOST             = 27,  // 0x1B
     SID_STARTADVEX3            = 28,  // 0x1C
     SID_DISPLAYAD              = 33,  // 0x21
     SID_NOTIFYJOIN             = 34,  // 0x22
@@ -149,6 +156,7 @@ public:
   std::vector<uint8_t> SEND_SID_JOINCHANNEL(const std::string& channel);
   std::vector<uint8_t> SEND_SID_CHATCOMMAND(const std::string& command);
   std::vector<uint8_t> SEND_SID_CHECKAD();
+  std::vector<uint8_t> SEND_SID_PUBLICHOST(std::string ip, uint16_t port);
   std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter);
   std::vector<uint8_t> SEND_SID_NOTIFYJOIN(const std::string& gameName);
   std::vector<uint8_t> SEND_SID_PING(const std::vector<uint8_t>& pingValue);

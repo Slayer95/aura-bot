@@ -93,7 +93,10 @@ public:
   uint32_t                 m_VoteKickPercentage;         // config value: percentage of players required to vote yes for a votekick to pass
   uint32_t                 m_NumPlayersToStartGameOver;  // config value: when this player count is reached, the game over timer will start
   uint16_t                 m_HostPort;                   // config value: the port to host games on
-  uint16_t                 m_PublicHostPort;             // config value: the port to broadcast for hosted games
+  uint16_t                 m_LANHostPort;                // config value: the port to broadcast for hosted games
+  uint32_t                 m_EnableTCPTunnel;            // config value: enable to make peers from pvpgn servers connect to PublicHostAddress:PublicHostPort
+  uint16_t                 m_PublicHostPort;             // config value: the port to broadcast in pvpgn servers
+  std::string              m_PublicHostAddress;          // config value: the address to broadcast in pvpgn servers
   uint16_t                 m_ReconnectPort;              // config value: the port to listen for GProxy++ reliable reconnects on
   uint8_t                  m_LANWar3Version;             // config value: LAN warcraft 3 version
   int32_t                  m_CommandTrigger;             // config value: the command trigger inside games

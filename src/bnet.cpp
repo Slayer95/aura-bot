@@ -264,6 +264,10 @@ bool CBNET::Update(void* fd, void* send_fd)
                   Print("[BNET: " + m_ServerAlias + "] attempting to auth as Warcraft III: The Frozen Throne");
 
                   m_Socket->PutBytes(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), m_BNCSUtil->GetEXEVersion(), m_BNCSUtil->GetEXEVersionHash(), m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), m_BNCSUtil->GetEXEInfo(), "Aura"));
+                  if (m_Aura->m_EnableTCPTunnel) {
+                    m_Socket->PutBytes(m_Protocol->SEND_SID_NULL());
+                    m_Socket->PutBytes(m_Protocol->SEND_SID_PUBLICHOST(m_Aura->m_PublicHostAddress, m_Aura->m_PublicHostPort));
+                  }
                 }
                 else
                 {
@@ -1157,8 +1161,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               QueueChatCommand("Bad input to sendlan command", User, Whisper, m_IRC);
             else
             {
-			  m_Aura->m_CurrentGame->AnnounceToAddress(IP, Port);
-			  
+              m_Aura->m_CurrentGame->AnnounceToAddress(IP, Port);
             }
 
             break;
