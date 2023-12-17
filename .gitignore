@@ -41,7 +41,8 @@ Thumbs.db
 *.db-wal
 *.db-shm
 
-aura.cfg
+aura*.cfg
+!aura-example.cfg
 mapcfgs
 src/Release
 bncsutil/vc8_build/Release
