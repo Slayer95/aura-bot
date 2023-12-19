@@ -69,7 +69,7 @@ private:
   std::string                      m_PasswordHashType;          // password hash type for PvPGN users
   int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
   int64_t                          m_LastConnectionAttemptTime; // GetTime when we last attempted to connect to battle.net
-  int64_t                          m_LastNullTime;              // GetTime when the last null packet was sent for detecting disconnects
+  int64_t                          m_LastGameListTime;          // GetTime when the last game list request was sent
   int64_t                          m_LastOutPacketTicks;        // GetTicks when the last packet was sent for the m_OutPackets queue
   int64_t                          m_LastAdminRefreshTime;      // GetTime when the admin list was last refreshed from the database
   int64_t                          m_LastBanRefreshTime;        // GetTime when the ban list was last refreshed from the database

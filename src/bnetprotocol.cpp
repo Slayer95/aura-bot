@@ -394,12 +394,20 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STOPADV()
   return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_STOPADV, 4, 0};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX(const string& gameName)
+std::vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX()
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_GETADVLISTEX, 0, 0, 255, 3, 0, 0, 255, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0};
-  AppendByteArrayFast(packet, gameName); // Game Name
-  packet.push_back(0);                   // Game Password is NULL
-  packet.push_back(0);                   // Game Stats is NULL
+  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_GETADVLISTEX, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  const uint8_t MaxGames[] = {255, 255, 255, 255};
+  //const uint8_t GameName[] = {};
+  //const uint8_t GamePassword[] = {};
+  //const uint8_t GameStats[] = {};
+  AppendByteArray(packet, MaxGames, 4);
+  //AppendByteArray(packet, GameName, 0);     // Game Name
+  packet.push_back(0);                       // Null terminator
+  //AppendByteArray(packet, GamePassword, 0); // Game Password
+  packet.push_back(0);                       // Null terminator
+  //AppendByteArray(packet, GameStats, 0);    // Game Stats
+  packet.push_back(0);                       // Null terminator
   AssignLength(packet);
   return packet;
 }

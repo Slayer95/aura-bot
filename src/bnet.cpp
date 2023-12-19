@@ -60,7 +60,7 @@ CBNET::CBNET(CAura* nAura, string nServer, const string& nServerAlias, const str
     m_PasswordHashType(move(nPasswordHashType)),
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
-    m_LastNullTime(0),
+    m_LastGameListTime(0),
     m_LastOutPacketTicks(0),
     m_LastAdminRefreshTime(GetTime()),
     m_LastBanRefreshTime(GetTime()),
@@ -163,7 +163,6 @@ bool CBNET::Update(void* fd, void* send_fd)
     std::vector<uint8_t> Bytes           = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
     uint32_t             LengthProcessed = 0;
 
-    CIncomingGameHost*  GameHost;
     CIncomingChatEvent* ChatEvent;
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
@@ -192,12 +191,19 @@ bool CBNET::Update(void* fd, void* send_fd)
               break;
 
             case CBNETProtocol::SID_GETADVLISTEX:
-              GameHost = m_Protocol->RECEIVE_SID_GETADVLISTEX(Data);
+              if (m_Aura->m_UDPForwardGameLists) {
+                std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0, m_War3Version, 0, 0, 0};
+                relayPacket.insert(relayPacket.end(), Data.begin(), Data.end());
+                const uint16_t Size = static_cast<uint16_t>(relayPacket.size());
+                std::vector<uint8_t> IPOctets = m_Socket->GetIP();
+                relayPacket[2] = static_cast<uint8_t>(Size);
+                relayPacket[3] = static_cast<uint8_t>(Size >> 8);
+                std::copy(IPOctets.begin(), IPOctets.end(), relayPacket.begin() + 4);
+                relayPacket[8] = static_cast<uint8_t>(6112 >> 8);
+                relayPacket[9] = static_cast<uint8_t>(6112);
+                m_Aura->m_UDPSocket->SendTo(m_Aura->m_UDPForwardAddress, m_Aura->m_UDPForwardPort, relayPacket);
+              }
 
-              if (GameHost)
-                Print("[BNET: " + m_ServerAlias + "] joining game [" + GameHost->GetGameName() + "]");
-
-              delete GameHost;
               break;
 
             case CBNETProtocol::SID_ENTERCHAT:
@@ -360,6 +366,7 @@ bool CBNET::Update(void* fd, void* send_fd)
                 m_Socket->PutBytes(m_Protocol->SEND_SID_ENTERCHAT());
                 m_Socket->PutBytes(m_Protocol->SEND_SID_FRIENDLIST());
                 m_Socket->PutBytes(m_Protocol->SEND_SID_CLANMEMBERLIST());
+                m_Socket->PutBytes(m_Protocol->SEND_SID_GETADVLISTEX());
               }
               else
               {
@@ -422,12 +429,10 @@ bool CBNET::Update(void* fd, void* send_fd)
       m_LastOutPacketTicks = Ticks;
     }
 
-    // send a null packet every 60 seconds to detect disconnects
-
-    if (Time - m_LastNullTime >= 60 && Ticks - m_LastOutPacketTicks >= 60000)
+    if (Time - m_LastGameListTime >= 60)
     {
-      m_Socket->PutBytes(m_Protocol->SEND_SID_NULL());
-      m_LastNullTime = Time;
+      m_Socket->PutBytes(m_Protocol->SEND_SID_GETADVLISTEX());
+      m_LastGameListTime = Time;
     }
 
     m_Socket->DoSend(static_cast<fd_set*>(send_fd));
@@ -492,7 +497,7 @@ bool CBNET::Update(void* fd, void* send_fd)
       m_Socket->PutBytes(m_Protocol->SEND_PROTOCOL_INITIALIZE_SELECTOR());
       m_Socket->PutBytes(m_Protocol->SEND_SID_AUTH_INFO(m_War3Version, m_LocaleID, m_CountryAbbrev, m_Country));
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
-      m_LastNullTime       = Time;
+      m_LastGameListTime       = Time;
       m_LastOutPacketTicks = Ticks;
 
       while (!m_OutPackets.empty())

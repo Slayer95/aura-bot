@@ -74,8 +74,6 @@ public:
   std::string              m_LanguageFile;               // config value: language file
   std::string              m_Warcraft3Path;              // config value: Warcraft 3 path
   std::string              m_BindAddress;                // config value: the address to host games on
-  std::string              m_UDPForwardAddress;          // config value: the address to forward UDP traffic to
-  uint16_t                 m_UDPForwardPort;             // config value: the port to forward UDP traffic to
   std::string              m_DefaultMap;                 // config value: default map (map.cfg)
   std::vector<std::string> m_IgnoredNotifyJoinPlayers;   // config value: list of player names that won't trigger join notifications
   std::vector<std::string> m_IgnoredDatagramSources;     // config value: list of IPs ignored by m_UDPServer
@@ -105,7 +103,12 @@ public:
   bool                     m_AutoLock;                   // config value: auto lock games when the owner is present
   bool                     m_Ready;                      // indicates if there's lacking configuration info so we can quit
   bool                     m_NotifyJoins;                // whether the bot should beep when a player joins a hosted game
-  bool                     m_ReplySearches;              // whether the bot should listen to UDP traffic in port 6112, and only reactively send game info to interested clients.
+  bool                     m_UDPServerEnabled;           // whether the bot should listen to UDP traffic in port 6112
+  bool                     m_UDPInfoStrictMode;          // set to false to send full game info periodically rather than small refresh packets
+  uint32_t                 m_UDPForwardTraffic;          // config value: whether to forward UDP traffic
+  std::string              m_UDPForwardAddress;          // config value: the address to forward UDP traffic to
+  uint16_t                 m_UDPForwardPort;             // config value: the port to forward UDP traffic to
+  uint32_t                 m_UDPForwardGameLists;        // config value: whether to forward PvPGN game lists through UDP
   bool                     m_LCPings;                    // config value: use LC style pings (divide actual pings by two)
 
   explicit CAura(CConfig* CFG);
@@ -147,9 +150,9 @@ public:
     return m_NotifyJoins;
   }
 
-  inline bool GetReplySearches() const
+  inline bool GetUDPInfoStrictMode() const
   {
-    return m_ReplySearches;
+    return m_UDPInfoStrictMode;
   }
 
   inline bool IsIgnoredNotifyPlayer(std::string str) const

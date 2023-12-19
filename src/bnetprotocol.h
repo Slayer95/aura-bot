@@ -151,7 +151,7 @@ public:
   std::vector<uint8_t> SEND_PROTOCOL_INITIALIZE_SELECTOR();
   std::vector<uint8_t> SEND_SID_NULL();
   std::vector<uint8_t> SEND_SID_STOPADV();
-  std::vector<uint8_t> SEND_SID_GETADVLISTEX(const std::string& gameName);
+  std::vector<uint8_t> SEND_SID_GETADVLISTEX();
   std::vector<uint8_t> SEND_SID_ENTERCHAT();
   std::vector<uint8_t> SEND_SID_JOINCHANNEL(const std::string& channel);
   std::vector<uint8_t> SEND_SID_CHATCOMMAND(const std::string& command);

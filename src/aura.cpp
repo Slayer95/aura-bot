@@ -206,7 +206,7 @@ CAura::CAura(CConfig* CFG)
 
   m_UDPServer->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
   m_UDPServer->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
-  if (CFG->GetInt("udp_replysearches", 0) == 1) {
+  if (CFG->GetInt("udp_enableserver", 0) == 1) {
     m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112);
   }
 
@@ -231,7 +231,7 @@ CAura::CAura(CConfig* CFG)
   m_PublicHostPort    = CFG->GetInt("bot_publichostport", m_HostPort);
   m_PublicHostAddress = CFG->GetString("bot_publichostaddress", string());
   if (m_EnableTCPTunnel) {
-    Print("[AURA] TCP tunnel enabled at " + m_PublicHostAddress + ":" + std::string(m_PublicHostPort));
+    Print("[AURA] TCP tunnel enabled at " + m_PublicHostAddress + ":" + std::to_string(m_PublicHostPort));
   }
   m_DefaultMap        = CFG->GetString("bot_defaultmap", "dota");
   m_LANWar3Version    = CFG->GetInt("lan_war3version", 27);
@@ -457,7 +457,7 @@ bool CAura::Update()
   }
 
   // 7. UDP server
-  if (m_ReplySearches) {
+  if (m_UDPServerEnabled) {
     m_UDPServer->SetFD(&fd, &send_fd, &nfds);
     ++NumFDs;
   }
@@ -550,29 +550,31 @@ bool CAura::Update()
   if (m_IRC && m_IRC->Update(&fd, &send_fd))
     Exit = true;
 
-  if (m_ReplySearches) {
+  if (m_UDPServerEnabled) {
     UDPPkt* pkt = m_UDPServer->Accept(&fd);
     if (pkt != nullptr) {
       char* ipAddress = inet_ntoa(pkt->sender.sin_addr);
       if (!IsIgnoredDatagramSource(ipAddress) && pkt->length >= 2 && static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT) {
-        std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        relayPacket.insert(relayPacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
-        const uint16_t Size = static_cast<uint16_t>(relayPacket.size());
-        relayPacket[2] = static_cast<uint8_t>(Size);
-        relayPacket[3] = static_cast<uint8_t>(Size >> 8);
-        std::memcpy(relayPacket.data() + 4, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
-        std::memcpy(relayPacket.data() + 8, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
-        m_UDPSocket->SendTo(m_UDPForwardAddress, m_UDPForwardPort, relayPacket);
+        if (m_UDPForwardTraffic) {
+          std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+          relayPacket.insert(relayPacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
+          const uint16_t Size = static_cast<uint16_t>(relayPacket.size());
+          relayPacket[2] = static_cast<uint8_t>(Size);
+          relayPacket[3] = static_cast<uint8_t>(Size >> 8);
+          std::memcpy(relayPacket.data() + 4, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
+          std::memcpy(relayPacket.data() + 8, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
+          m_UDPSocket->SendTo(m_UDPForwardAddress, m_UDPForwardPort, relayPacket);
+        }
 
-        if ((pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME && pkt->length == 16 && pkt->buf[8] == m_LANWar3Version) {
+        if (pkt->buf[1] == CGameProtocol::W3GS_SEARCHGAME && pkt->length == 16 && pkt->buf[8] == m_LANWar3Version) {
           if (m_CurrentGame && !m_CurrentGame->GetCountDownStarted()) {
             m_CurrentGame->AnnounceToAddress(ipAddress, 6112);
           }
+        }
       }
     }
 
-      delete pkt;
-    }
+    delete pkt;
   }
 
   // update GProxy++ reliable reconnect sockets
@@ -733,6 +735,9 @@ void CAura::SetConfigs(CConfig* CFG)
 
   m_Warcraft3Path          = AddPathSeparator(CFG->GetString("bot_war3path", R"(C:\Program Files\Warcraft III\)"));
   m_BindAddress            = CFG->GetString("bot_bindaddress", string());
+  m_UDPServerEnabled       = CFG->GetInt("udp_enableserver", 1);
+  m_UDPForwardTraffic      = CFG->GetInt("udp_redirenabled", 0);
+  m_UDPForwardGameLists    = CFG->GetInt("udp_redirgamelists", 0);
   m_UDPForwardAddress      = CFG->GetString("udp_rediraddress", string());
   m_UDPForwardPort         = CFG->GetInt("udp_redirport", 6110);
   m_ReconnectWaitTime      = CFG->GetInt("bot_reconnectwaittime", 3);
@@ -770,8 +775,8 @@ void CAura::SetConfigs(CConfig* CFG)
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;
 
-  m_NotifyJoins        = CFG->GetInt("bot_notifyjoins", 0) == 0 ? false : true;
-  m_ReplySearches      = CFG->GetInt("udp_replysearches", 0) == 0 ? false : true;
+  m_NotifyJoins       = CFG->GetInt("bot_notifyjoins", 0) == 0 ? false : true;
+  m_UDPInfoStrictMode = CFG->GetInt("udp_infostrictmode", 1) == 0 ? false : true;
 
   stringstream ss(CFG->GetString("bot_notifyjoinsexcept", ""));
   while (ss.good()) {
