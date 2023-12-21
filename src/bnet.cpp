@@ -1851,7 +1851,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
                 const vector<string> Matches = MapFilesMatch(Map);
 
                 if (Matches.empty())
-                  QueueChatCommand("No maps found with that name", User, Whisper, m_IRC);
+                  QueueChatCommand("No maps found with that name. Try ,host epicwarlink?", User, Whisper, m_IRC);
                 else if (Matches.size() == 1 || CommandHash == HashCode("host"))
                 {
                   const string File = Matches.at(0);
@@ -1895,6 +1895,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
                     FoundMaps += match + ", ";
 
                   QueueChatCommand("Maps: " + FoundMaps.substr(0, FoundMaps.size() - 2), User, Whisper, m_IRC);
+                  QueueChatCommand("Don't want any of these? Try the epicwar.com link, and I will automatically host it.", User, true, m_IRC);
                 }
               }
             }

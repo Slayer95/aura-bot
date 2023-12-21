@@ -1280,6 +1280,7 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   {
     // check if the player joining via LAN knows the entry key
 
+    Print("Check " + to_string(joinPlayer->GetEntryKey()) + " == " + to_string(m_EntryKey) + "?");
     if (joinPlayer->GetEntryKey() != m_EntryKey)
     {
       Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] is trying to join the game over LAN but used an incorrect entry key");

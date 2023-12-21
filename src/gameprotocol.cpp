@@ -71,6 +71,7 @@ CIncomingJoinPlayer* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint8
     if (!Name.empty() && data.size() >= Name.size() + 30)
     {
       const std::vector<uint8_t> InternalIP = std::vector<uint8_t>(begin(data) + Name.size() + 26, begin(data) + Name.size() + 30);
+      Print("Used EntryKey=" + to_string(EntryKey));
       return new CIncomingJoinPlayer(HostCounter, EntryKey, string(begin(Name), end(Name)), InternalIP);
     }
   }
