@@ -35,6 +35,7 @@
 #include <ctime>
 #include <cmath>
 #include <algorithm>
+#include <random>
 
 using namespace std;
 
@@ -350,7 +351,7 @@ bool CGame::Update(void* fd, void* send_fd)
       if (m_Aura->GetUDPInfoStrictMode()) {
         m_Aura->m_UDPServer->Broadcast(6112, m_Protocol->SEND_W3GS_REFRESHGAME(m_HostCounter & 0x0FFFFFFF, m_Players.size(), MAX_SLOTS));
       } else {
-        m_Aura->m_UDPServer->Broadcast(6112, m_Protocol->SEND_W3GS_GAMEINFO(m_Aura->m_LANWar3Version, CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false), m_Map->GetMapGameFlags(), m_Map->GetMapWidth(), m_Map->GetMapHeight(), m_GameName, m_IndexVirtualHostName, 0, m_Map->GetMapPath(), m_Map->GetMapCRC(), MAX_SLOTS, MAX_SLOTS, m_LANHostPort, m_HostCounter & 0x0FFFFFFF, m_EntryKey));
+        LANBroadcastGameInfo();
       }
     }
 
@@ -575,9 +576,10 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // start the gameover timer if there's only a configured number of players left
-
-  if (m_Players.size() == m_Aura->m_NumPlayersToStartGameOver && m_FakePlayers.empty() && m_GameOverTime == 0 && (m_GameLoading || m_GameLoaded))
-  {
+  if (m_Players.size() == 0 && m_GameOverTime == 0 && (m_GameLoading || m_GameLoaded)) {
+    Print("[GAME: " + m_GameName + "] gameover timer started (" + std::to_string(m_Players.size()) + " player(s) left)");
+    m_GameOverTime = Time;
+  } else if (m_Players.size() <= m_Aura->m_NumPlayersToStartGameOver && m_FakePlayers.empty() && m_GameOverTime == 0 && m_Players.size() != m_StartPlayers && (m_GameLoading || m_GameLoaded)) {
     Print("[GAME: " + m_GameName + "] gameover timer started (" + std::to_string(m_Players.size()) + " player(s) left)");
     m_GameOverTime = Time;
   }
@@ -913,6 +915,24 @@ void CGame::SendFakePlayerInfo(CGamePlayer* player)
     Send(player, m_Protocol->SEND_W3GS_PLAYERINFO(fakeplayer, "Troll[" + to_string(fakeplayer) + "]", IP, IP));
 }
 
+void CGame::SendWelcomeMessage( CGamePlayer *player )
+{
+  for (size_t i = 0; i < m_Aura->m_Greeting.size(); i++) {
+    int matchIndex;
+    string Line = m_Aura->m_Greeting[i];
+    while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
+      Line.replace(matchIndex, 9, m_OwnerName);
+    }
+    while ((matchIndex = Line.find("{REALM}")) != string::npos) {
+      Line.replace(matchIndex, 7, GetCreatorServer()->GetServerAlias());
+    }
+    while ((matchIndex = Line.find("{TRIGGER}")) != string::npos) {
+      Line.replace(matchIndex, 9, std::string(1, m_Aura->m_CommandTrigger));
+    }
+    SendChat(player, Line);
+  }
+}
+
 void CGame::SendAllActions()
 {
   bool UsingGProxy = false;
@@ -1023,6 +1043,30 @@ void CGame::AnnounceToAddress(string IP, uint16_t port)
 	m_Aura->m_UDPSocket->SendTo(
 		IP, port,
 		m_Protocol->SEND_W3GS_GAMEINFO(
+			m_Aura->m_LANWar3Version,
+			CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
+			m_Map->GetMapGameFlags(),
+			m_Map->GetMapWidth(),
+			m_Map->GetMapHeight(),
+			m_GameName,
+			m_IndexVirtualHostName,
+			0,
+			m_Map->GetMapPath(),
+			m_Map->GetMapCRC(),
+			MAX_SLOTS,
+			MAX_SLOTS,
+			m_LANHostPort,
+			m_HostCounter & 0x0FFFFFFF,
+			m_EntryKey
+		)
+	);
+}
+
+void CGame::LANBroadcastGameInfo()
+{
+	m_Aura->m_UDPServer->Broadcast(
+  6112,
+    m_Protocol->SEND_W3GS_GAMEINFO(
 			m_Aura->m_LANWar3Version,
 			CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
 			m_Map->GetMapGameFlags(),
@@ -1209,9 +1253,14 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
 {
   // check the new player's name
 
-  if (joinPlayer->GetName().empty() || joinPlayer->GetName().size() > 15 || joinPlayer->GetName() == m_LobbyVirtualHostName || GetPlayerFromName(joinPlayer->GetName(), false) || joinPlayer->GetName().find(' ') != string::npos || joinPlayer->GetName().find('|') != string::npos)
+  if (joinPlayer->GetName().empty() || joinPlayer->GetName().size() > 15 || GetPlayerFromName(joinPlayer->GetName(), false))
   {
-    Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] invalid name (taken, invalid char, spoofer, too long)");
+    Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] invalid name (taken or too long)");
+    potential->Send(m_Protocol->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    potential->SetDeleteMe(true);
+    return;
+  } else if (joinPlayer->GetName() == m_LobbyVirtualHostName) {
+    Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] invalid name (matches host name)");
     potential->Send(m_Protocol->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     potential->SetDeleteMe(true);
     return;
@@ -1448,6 +1497,10 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
 
   SendAllSlotInfo();
 
+  // send a welcome message
+
+	SendWelcomeMessage( Player );
+
   // check for multiple IP usage
 
   string Others;
@@ -1661,32 +1714,27 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 	  AdminCheck = true;
   } else {
 	  User = player->GetName();
-	  for (auto& bnet : m_Aura->m_BNETs)
-	  {
-		if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsRootAdmin(User))
-		{
-		  RootAdminCheck = true;
-		  AdminCheck     = true;
-		  break;
-		}
+	  for (auto& bnet : m_Aura->m_BNETs) {
+      if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsRootAdmin(User)) {
+        RootAdminCheck = true;
+        AdminCheck     = true;
+        break;
+      }
 	  }
 
-	  if (!RootAdminCheck)
-	  {
-		for (auto& bnet : m_Aura->m_BNETs)
-		{
-		  if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsAdmin(User))
-		  {
-			AdminCheck = true;
-			break;
-		  }
-		}
+	  if (!RootAdminCheck) {
+      for (auto& bnet : m_Aura->m_BNETs) {
+        if ((bnet->GetServer() == player->GetSpoofedRealm() || player->GetJoinedRealm().empty()) && bnet->IsAdmin(User)) {
+          AdminCheck = true;
+          break;
+        }
+      }
 	  }
   }
 
   const uint64_t CommandHash = HashCode(Command);
 
-  if (player == nullptr || player->GetSpoofed() && (AdminCheck || RootAdminCheck || IsOwner(User)))
+  if (player == nullptr || player->GetSpoofed() && (AdminCheck || RootAdminCheck || IsOwner(User) || (CommandHash == HashCode("owner")) && !GetPlayerFromName(m_OwnerName, false)))
   {
     Print("[GAME: " + m_GameName + "] admin [" + User + "] sent command [" + Command + "] with payload [" + Payload + "]");
 
@@ -2406,17 +2454,17 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
             if (Downloads == 0)
             {
               SendAllChat("Map downloads disabled");
-              m_Aura->m_AllowDownloads = 0;
+              m_Aura->m_AllowUploads = 0;
             }
             else if (Downloads == 1)
             {
               SendAllChat("Map downloads enabled");
-              m_Aura->m_AllowDownloads = 1;
+              m_Aura->m_AllowUploads = 1;
             }
             else if (Downloads == 2)
             {
               SendAllChat("Conditional map downloads enabled");
-              m_Aura->m_AllowDownloads = 2;
+              m_Aura->m_AllowUploads = 2;
             }
           }
           catch (...)
@@ -2697,25 +2745,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
           if (Payload.empty() || m_CountDownStarted)
             break;
 
-          // extract the ip and the port
-          // e.g. "1.2.3.4 6112" -> ip: "1.2.3.4", port: "6112"
-
-          string       IP;
-          uint32_t     Port = 6112;
-          stringstream SS;
-          SS << Payload;
-          SS >> IP;
-
-          if (!SS.eof())
-            SS >> Port;
-
-          if (SS.fail())
-            Print("[GAME: " + m_GameName + "] bad inputs to sendlan command");
-          else
-          {
-            AnnounceToAddress(IP, Port);
-          }
-
+          LANBroadcastGameInfo();
           break;
         }
 
@@ -2750,6 +2780,9 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 
         case HashCode("say"):
         {
+          if (!RootAdminCheck)
+            break;
+
           if (Payload.empty())
             break;
 
@@ -3072,6 +3105,9 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 
         case HashCode("w"):
         {
+          if (!RootAdminCheck) {
+            break;
+          }
           if (Payload.empty())
             break;
 
@@ -3087,7 +3123,9 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
             Message = Payload.substr(MessageStart + 1);
 
             for (auto& bnet : m_Aura->m_BNETs)
-              bnet->QueueChatCommand(Message, Name, true, string());
+              if (Name != bnet->GetUserName()) {
+                bnet->QueueChatCommand(Message, Name, true, string());
+              }
           }
 
           break;
@@ -3625,13 +3663,13 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
   {
     // the player doesn't have the map
 
-    if (Admin || m_Aura->m_AllowDownloads)
+    if (Admin || m_Aura->m_AllowUploads)
     {
       string* MapData = m_Map->GetMapData();
 
       if (!MapData->empty())
       {
-        if (Admin || m_Aura->m_AllowDownloads == 1 || (m_Aura->m_AllowDownloads == 2 && player->GetDownloadAllowed()))
+        if (Admin || m_Aura->m_AllowUploads == 1 || (m_Aura->m_AllowUploads == 2 && player->GetDownloadAllowed()))
         {
           if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1)
           {
@@ -4429,7 +4467,9 @@ void CGame::ShuffleSlots()
     for (uint8_t i = 0; i < PlayerSlots.size(); ++i)
       SIDs.push_back(i);
 
-    random_shuffle(begin(SIDs), end(SIDs));
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(begin(SIDs), end(SIDs), g);
 
     // now put the PlayerSlots vector in the same order as the SIDs vector
 
@@ -4447,7 +4487,9 @@ void CGame::ShuffleSlots()
     // regular game
     // it's easy when we're allowed to swap the team/colour/race!
 
-    random_shuffle(begin(PlayerSlots), end(PlayerSlots));
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(begin(PlayerSlots), end(PlayerSlots), g);
   }
 
   // now we put m_Slots back together again

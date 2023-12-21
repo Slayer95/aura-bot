@@ -141,7 +141,7 @@ public:
   inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
   inline uint8_t                GetMapObservers() const { return m_MapObservers; }
-  inline uint8_t                GetMapFlags() const { return m_MapFlags; }
+  inline uint8_t                GetMapFlags() { return m_MapFlags; }
   std::vector<uint8_t>          GetMapGameFlags() const;
   uint32_t                      GetMapGameType() const;
   inline uint32_t               GetMapOptions() const { return m_MapOptions; }
@@ -155,6 +155,7 @@ public:
   inline uint32_t               GetMapNumPlayers() const { return m_MapNumPlayers; }
   inline uint32_t               GetMapNumTeams() const { return m_MapNumTeams; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
+  void                          AddMapFlags(uint32_t ExtraFlags) { m_MapFlags |= ExtraFlags; }
 
   void Load(CConfig* CFG, const std::string& nCFGFile);
   const char* CheckValid();

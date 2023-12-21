@@ -24,6 +24,10 @@
 #include "includes.h"
 
 #include <queue>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cpr/cpr.h>
 
 //
 // CBNET

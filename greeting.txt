@@ -1,0 +1,5 @@
+Game hosted with AuraBot, a GHost++ fork.
+Acquire permissions over this game with: {TRIGGER}owner
+Start the game with: {TRIGGER}start
+
+Game created by {CREATOR} at {REALM}.

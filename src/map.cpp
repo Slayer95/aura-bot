@@ -883,12 +883,14 @@ const char* CMap::CheckValid()
   if (m_MapVisibility != MAPVIS_HIDETERRAIN && m_MapVisibility != MAPVIS_EXPLORED && m_MapVisibility != MAPVIS_ALWAYSVISIBLE && m_MapVisibility != MAPVIS_DEFAULT)
   {
     m_Valid = false;
+    Print("m_MapVisibility = " + to_string(m_MapVisibility));
     return "invalid map_visibility detected";
   }
 
   if (m_MapObservers != MAPOBS_NONE && m_MapObservers != MAPOBS_ONDEFEAT && m_MapObservers != MAPOBS_ALLOWED && m_MapObservers != MAPOBS_REFEREES)
   {
     m_Valid = false;
+    Print("m_MapObservers = " + to_string(m_MapObservers));
     return "invalid map_observers detected";
   }
 

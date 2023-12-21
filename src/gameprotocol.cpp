@@ -427,7 +427,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_CHAT_FROM_HOST(uint8_t fromPID, co
     return packet;
   }
 
-  Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST");
+  Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST: \"" + message + "\"");
   return std::vector<uint8_t>();
 }
 

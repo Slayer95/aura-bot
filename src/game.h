@@ -184,8 +184,10 @@ public:
   void SendAllSlotInfo();
   void SendVirtualHostPlayerInfo(CGamePlayer* player);
   void SendFakePlayerInfo(CGamePlayer* player);
+  void SendWelcomeMessage(CGamePlayer* player);
   void SendAllActions();
   void AnnounceToAddress(std::string IP, uint16_t port);
+  void LANBroadcastGameInfo();
 
   // events
   // note: these are only called while iterating through the m_Potentials or m_Players std::vectors

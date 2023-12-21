@@ -42,8 +42,11 @@ Thumbs.db
 *.db-shm
 
 aura*.cfg
+*.pdb
 !aura-example.cfg
 mapcfgs
+Debug/
+src/Debug
 src/Release
 bncsutil/vc8_build/Release
 log.txt

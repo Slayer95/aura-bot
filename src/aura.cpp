@@ -198,6 +198,7 @@ CAura::CAura(CConfig* CFG)
     m_HostCounter(0),
     m_Exiting(false),
     m_Enabled(true),
+    m_EnabledPublic(false),
     m_Ready(true)
 {
   Print("[AURA] Aura++ version " + m_Version + " - with GProxy++ support");
@@ -745,6 +746,26 @@ void CAura::SetConfigs(CConfig* CFG)
   m_MinHostCounter         = CFG->GetInt("bot_firstgameid", 100);
   string BotCommandTrigger = CFG->GetString("bot_commandtrigger", "!");
   m_CommandTrigger         = BotCommandTrigger[0];
+  m_GreetingPath           = CFG->GetString("bot_greetingpath", string());
+
+  m_Greeting.clear();
+  if (m_GreetingPath.length() > 0) {
+    ifstream in;
+    in.open(m_GreetingPath);
+    if (!in.fail()) {
+      while (!in.eof()) {
+        string Line;
+        getline(in, Line);
+        if (Line.empty()) {
+          if (!in.eof())
+            m_Greeting.push_back(" ");
+        } else {
+          m_Greeting.push_back(Line);
+        }
+      }
+      in.close( );
+    }
+  }
 
   m_MapCFGPath      = AddPathSeparator(CFG->GetString("bot_mapcfgpath", string()));
   m_MapPath         = AddPathSeparator(CFG->GetString("bot_mappath", string()));
@@ -763,6 +784,7 @@ void CAura::SetConfigs(CConfig* CFG)
 
   m_AutoLock           = CFG->GetInt("bot_autolock", 0) == 0 ? false : true;
   m_AllowDownloads     = CFG->GetInt("bot_allowdownloads", 0);
+  m_AllowUploads       = CFG->GetInt("bot_allowuploads", 0);
   m_MaxDownloaders     = CFG->GetInt("bot_maxdownloaders", 3);
   m_MaxDownloadSpeed   = CFG->GetInt("bot_maxdownloadspeed", 100);
   m_LCPings            = CFG->GetInt("bot_lcpings", 1) == 0 ? false : true;
@@ -779,6 +801,7 @@ void CAura::SetConfigs(CConfig* CFG)
   m_UDPInfoStrictMode = CFG->GetInt("udp_infostrictmode", 1) == 0 ? false : true;
 
   stringstream ss(CFG->GetString("bot_notifyjoinsexcept", ""));
+  m_IgnoredNotifyJoinPlayers.clear();
   while (ss.good()) {
     string substr;
     getline(ss, substr, ',');
@@ -788,6 +811,7 @@ void CAura::SetConfigs(CConfig* CFG)
   }
 
   stringstream ss2(CFG->GetString("udp_blocklist", ""));
+  m_IgnoredDatagramSources.clear();
   while (ss2.good()) {
     string substr;
     getline(ss2, substr, ',');

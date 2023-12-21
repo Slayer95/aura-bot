@@ -82,6 +82,7 @@ public:
   uint32_t                 m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
   uint32_t                 m_MinHostCounter;             // config value: defines a subspace for game identifiers
   uint32_t                 m_AllowDownloads;             // config value: allow map downloads or not
+  uint32_t                 m_AllowUploads;               // config value: allow map downloads or not
   uint32_t                 m_MaxDownloaders;             // config value: maximum number of map downloaders at the same time
   uint32_t                 m_MaxDownloadSpeed;           // config value: maximum total map download speed in KB/sec
   uint32_t                 m_AutoKickPing;               // config value: auto kick players with ping higher than this
@@ -98,8 +99,10 @@ public:
   uint16_t                 m_ReconnectPort;              // config value: the port to listen for GProxy++ reliable reconnects on
   uint8_t                  m_LANWar3Version;             // config value: LAN warcraft 3 version
   int32_t                  m_CommandTrigger;             // config value: the command trigger inside games
+  std::string              m_GreetingPath;               // config value: the path of the greeting the bot sends to all players joining a game
   bool                     m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                     m_Enabled;                    // set to false to prevent new games from being created
+  bool                     m_EnabledPublic;              // set to false to allow non-admins to create games
   bool                     m_AutoLock;                   // config value: auto lock games when the owner is present
   bool                     m_Ready;                      // indicates if there's lacking configuration info so we can quit
   bool                     m_NotifyJoins;                // whether the bot should beep when a player joins a hosted game
@@ -110,6 +113,7 @@ public:
   uint16_t                 m_UDPForwardPort;             // config value: the port to forward UDP traffic to
   uint32_t                 m_UDPForwardGameLists;        // config value: whether to forward PvPGN game lists through UDP
   bool                     m_LCPings;                    // config value: use LC style pings (divide actual pings by two)
+  std::vector<std::string> m_Greeting;                   // read from m_GreetingPath
 
   explicit CAura(CConfig* CFG);
   ~CAura();
@@ -163,6 +167,11 @@ public:
   inline bool IsIgnoredDatagramSource(std::string str) const
   {
     return std::find(m_IgnoredDatagramSources.begin(), m_IgnoredDatagramSources.end(), str) != m_IgnoredDatagramSources.end();
+  }
+
+  inline std::vector<std::string> GetGreeting() const
+  {
+    return m_Greeting;
   }
 };
 
