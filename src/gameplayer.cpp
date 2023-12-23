@@ -88,7 +88,7 @@ bool CPotentialPlayer::Update(void* fd)
           if (m_IncomingJoinPlayer)
             m_Game->EventPlayerJoined(this, m_IncomingJoinPlayer);
 
-          // this is the packet which int32_terests us for now, the remainder is left for CGamePlayer
+          // this is the packet which interests us for now, the remainder is left for CGamePlayer
 
           LengthProcessed += Length;
           Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
