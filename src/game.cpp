@@ -31,6 +31,7 @@
 #include "stats.h"
 #include "irc.h"
 #include "hash.h"
+#include "fileutil.h"
 
 #include <ctime>
 #include <cmath>
@@ -72,7 +73,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_LastActionLateBy(0),
     m_StartedLaggingTime(0),
     m_LastLagScreenTime(0),
-    m_LastReservedSeen(GetTime()),
+    m_LastOwnerSeen(GetTime()),
     m_StartedKickVoteTime(0),
     m_GameOverTime(0),
     m_LastPlayerLeaveTicks(0),
@@ -101,7 +102,8 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_GameLoading(false),
     m_GameLoaded(false),
     m_Lagging(false),
-    m_Desynced(false)
+    m_Desynced(false),
+    m_HasMapLock(false)
 {
 
   // wait time of 1 minute  = 0 empty actions required
@@ -126,12 +128,25 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     Print2("[GAME: " + m_GameName + "] error listening on port " + to_string(m_HostPort));
     m_Exiting = true;
   }
+
+  if (!m_Map->GetMapData()->empty()) {
+    m_Aura->m_CurrentMaps.insert(m_Map->GetMapLocalPath());
+    m_HasMapLock = true;
+  }
 }
 
 CGame::~CGame()
 {
   delete m_Socket;
   delete m_Protocol;
+
+  if (m_HasMapLock) {
+    m_Aura->m_CurrentMaps.erase(m_Map->GetMapLocalPath());
+    if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_MaxSavedMapSize && m_Aura->m_CurrentMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_CurrentMaps.end()) {
+      FileDelete(m_Aura->m_MapPath + m_Map->GetMapLocalPath());
+    }
+    m_HasMapLock = false;
+  }
   delete m_Map;
 
   for (auto& potential : m_Potentials)
@@ -720,20 +735,14 @@ bool CGame::Update(void* fd, void* send_fd)
 
   if (!m_GameLoading && !m_GameLoaded && m_Aura->m_LobbyTimeLimit > 0)
   {
-    // check if there's a player with reserved status in the game
-
-    for (auto& player : m_Players)
-    {
-      if (player->GetReserved())
-      {
-        m_LastReservedSeen = Time;
-        break;
-      }
+    // check if there is an owner in the game
+    if (GetPlayerFromName(m_OwnerName, false)) {
+      m_LastOwnerSeen = Time;
     }
 
     // check if we've hit the time limit
 
-    if (Time - m_LastReservedSeen > static_cast<int64_t>(m_Aura->m_LobbyTimeLimit * 60))
+    if (Time - m_LastOwnerSeen > static_cast<int64_t>(m_Aura->m_LobbyTimeLimit * 60))
     {
       Print("[GAME: " + m_GameName + "] is over (lobby time limit hit)");
       return true;
@@ -920,14 +929,36 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
   for (size_t i = 0; i < m_Aura->m_Greeting.size(); i++) {
     int matchIndex;
     string Line = m_Aura->m_Greeting[i];
+    if (Line.substr(0, 6) == "{URL?}") {
+      if (m_Map->GetMapSiteURL().length() == 0) {
+        continue;
+      }
+      Line = Line.substr(6, Line.length());
+    } else if (Line.substr(0, 16) == "{CREATOR==OWNER}" || Line.substr(0, 16) == "{OWNER==CREATOR}") {
+      if (m_OwnerName != m_CreatorName) {
+        continue;
+      }
+      Line = Line.substr(16, Line.length());
+    } else if (Line.substr(0, 16) == "{CREATOR!=OWNER}" || Line.substr(0, 16) == "{OWNER!=CREATOR}") {
+      if (m_OwnerName == m_CreatorName) {
+        continue;
+      }
+      Line = Line.substr(16, Line.length());
+    }
     while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
-      Line.replace(matchIndex, 9, m_OwnerName);
+      Line.replace(matchIndex, 9, m_CreatorName);
+    }
+    while ((matchIndex = Line.find("{OWNER}")) != string::npos) {
+      Line.replace(matchIndex, 7, m_OwnerName);
     }
     while ((matchIndex = Line.find("{REALM}")) != string::npos) {
       Line.replace(matchIndex, 7, GetCreatorServer()->GetServerAlias());
     }
     while ((matchIndex = Line.find("{TRIGGER}")) != string::npos) {
       Line.replace(matchIndex, 9, std::string(1, m_Aura->m_CommandTrigger));
+    }
+    while ((matchIndex = Line.find("{URL}")) != string::npos) {
+      Line.replace(matchIndex, 5, m_Map->GetMapSiteURL());
     }
     SendChat(player, Line);
   }
@@ -1280,7 +1311,6 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   {
     // check if the player joining via LAN knows the entry key
 
-    Print("Check " + to_string(joinPlayer->GetEntryKey()) + " == " + to_string(m_EntryKey) + "?");
     if (joinPlayer->GetEntryKey() != m_EntryKey)
     {
       Print("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] is trying to join the game over LAN but used an incorrect entry key");
@@ -3668,7 +3698,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     {
       string* MapData = m_Map->GetMapData();
 
-      if (!MapData->empty())
+      if (!MapData->empty() && m_Map->GetValidLinkedMap())
       {
         if (Admin || m_Aura->m_AllowUploads == 1 || (m_Aura->m_AllowUploads == 2 && player->GetDownloadAllowed()))
         {
@@ -3873,6 +3903,14 @@ void CGame::EventGameStarted()
   m_Potentials.clear();
 
   // delete the map data
+
+  if (m_HasMapLock) {
+    m_Aura->m_CurrentMaps.erase(m_Map->GetMapLocalPath());
+    if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_MaxSavedMapSize && m_Aura->m_CurrentMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_CurrentMaps.end()) {
+      FileDelete(m_Aura->m_MapPath + m_Map->GetMapLocalPath());
+    }
+    m_HasMapLock = false;
+  }
 
   delete m_Map;
   m_Map = nullptr;

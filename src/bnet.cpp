@@ -1675,6 +1675,8 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             break;
           }
 
+          bool IsHostCommand = CommandHash == HashCode("host");
+
           stringstream SS(Payload);
           string Map, MapObservers, MapVisibility, MapRandomHero, MapGameName;
           std::string gameName = "gogogo";
@@ -1737,166 +1739,203 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             }
           }
 
-          if (Map.empty())
+          if (Map.empty()) {
             QueueChatCommand("The currently loaded map/config file is: [" + m_Aura->m_Map->GetCFGFile() + "]", User, Whisper, m_IRC);
-          else
-          {
-            if (!FileExists(m_Aura->m_MapPath))
-            {
-              Print("[BNET: " + m_ServerAlias + "] error listing maps - map path doesn't exist");
-              QueueChatCommand("Error listing maps - map path doesn't exist", User, Whisper, m_IRC);
-            }
-            else {
+            break;
+          }
+          string MapSiteUri;
+          string MapDownloadUri;
+          string ResolvedCFGPath;
+          string ResolvedCFGName;
+          bool ResolvedCFGExists = false;
+          if (!FileExists(m_Aura->m_MapPath)) {
+            Print("[BNET: " + m_ServerAlias + "] error listing maps - map path doesn't exist");
+            QueueChatCommand("Error listing maps - map path doesn't exist", User, Whisper, m_IRC);
+          } else {
+            if (IsHostCommand) {
               // Parse URL shortcuts
               if (Map.substr(0, 12) == "epicwar.com/") {
-                Map = "https://www." + Map;
-              } else if (Map.substr(0, 16) == "www.epicwar.com/") {
-                Map = "https://" + Map;
+                Map = "https://www." + MapSiteUri;
+              } else if (MapSiteUri.substr(0, 16) == "www.epicwar.com/") {
+                Map = "https://" + MapSiteUri;
               }
               // Only download through HTTPS
               if (Map.substr(0, 7) == "http://") {
-                Map = "https://" + Map.substr(7, Map.length());
+                Map = "https://" + MapSiteUri.substr(7, MapSiteUri.length());
               }
               if (Map.substr(0, 8) == "https://") {
+                MapSiteUri = Map;
                 if (!m_Aura->m_AllowDownloads) {
                   QueueChatCommand("Hosting from websites disabled.", User, Whisper, m_IRC);
-                  return;
+                  break;
                 }
-                if (Map.substr(8, 12) == "epicwar.com/") {
-                  Map = "https://www.epicwar.com/" + Map.substr(20, Map.length());
+                if (MapSiteUri.substr(8, 12) == "epicwar.com/") {
+                  MapSiteUri = "https://www.epicwar.com/" + MapSiteUri.substr(20, MapSiteUri.length());
                 }
-                if (Map.substr(8, 16) == "www.epicwar.com/") {
+                if (MapSiteUri.substr(8, 16) == "www.epicwar.com/") {
                   if (m_Aura->m_Games.size() > 0) {
                     QueueChatCommand("Currently hosting " + to_string(m_Aura->m_Games.size()) + " game(s). Downloads are disabled to prevent high latency.");
-                    return;
+                    break;
                   }
-                  string EpicWarId = Map.substr(29, Map.length());
+                  string EpicWarId = MapSiteUri.substr(29, MapSiteUri.length());
                   int TrailingSlashIndex = EpicWarId.find("/");
                   if (TrailingSlashIndex != string::npos) {
                     EpicWarId = EpicWarId.substr(0, TrailingSlashIndex);
                   }
                   if (EpicWarId.length() == 0 || EpicWarId.find(".") != string::npos || EpicWarId.find("\\") != string::npos) {
                     QueueChatCommand("Map not found in EpicWar.", User, Whisper, m_IRC);
-                    return;
+                    break;
                   }
                   // Check that we don't download the same map multiple times.
-                  string EpicWarSymLinkPath = m_Aura->m_MapPath + "epicwar-" + EpicWarId;
-                  Print("EpicWarSymLinkPath = " + EpicWarSymLinkPath);
-                  std::ifstream EpicWarSymLink(EpicWarSymLinkPath);
-                  if (EpicWarSymLink.is_open()) {
+                  ResolvedCFGName = "epicwar-" + EpicWarId + ".cfg";
+                  ResolvedCFGPath = m_Aura->m_MapCFGPath + ResolvedCFGName;
+                  Print("ResolvedCFGPath: " + ResolvedCFGPath);
+                  std::ifstream ResolvedCFGFile(ResolvedCFGPath);
+                  if (ResolvedCFGFile.is_open()) {
                     // Fix the Map from the URL to our already downloaded map name
-                    getline(EpicWarSymLink, Map);
-                    Print("EpicWarSymLink already points to " + Map);
-                    EpicWarSymLink.close();
+                    ResolvedCFGFile.close();
+                    ResolvedCFGExists = true;
                   } else {
                     // Proceed with the download
-                    auto response = cpr::Get(cpr::Url{Map});
-                    Print("Downloading " + Map + "...");
+                    auto response = cpr::Get(cpr::Url{MapSiteUri});
+                    Print("Downloading " + MapSiteUri + "...");
                     if (response.status_code != 200) {
                       QueueChatCommand("Map not found in EpicWar. Status code " + to_string(response.status_code), User, Whisper, m_IRC);
-                      return;
+                      break;
                     }
-                    Print("Webpage successfully downloaded");
                     
                     int DownloadUriStartIndex = response.text.find("<a href=\"/maps/download/");
                     if (DownloadUriStartIndex == string::npos) {
                       QueueChatCommand("Map not found in EpicWar.", User, Whisper, m_IRC);
-                      return;
+                      break;
                     }
                     int DownloadUriEndIndex = response.text.find("\"", DownloadUriStartIndex + 24);
                     if (DownloadUriEndIndex == string::npos) {
                       QueueChatCommand("Map not found in EpicWar.", User, Whisper, m_IRC);
-                      return;
+                      break;
                     }
                     int MapNameStartIndex = response.text.find("<b>", DownloadUriEndIndex);
                     int MapNameEndIndex = response.text.find("</b>", DownloadUriEndIndex);
                     if (MapNameStartIndex == string::npos || MapNameEndIndex == string::npos) {
                       QueueChatCommand("Map not found in EpicWar.", User, Whisper, m_IRC);
-                      return;
+                      break;
                     }
                     string EpicWarName = response.text.substr(MapNameStartIndex + 3, MapNameEndIndex - (MapNameStartIndex + 3));
                     EpicWarName = RemoveNonAlphanumeric(EpicWarName);
                     if (!EpicWarName.length() || EpicWarName.length() > 80 || EpicWarName.substr(0, 1) == ".") {
                       QueueChatCommand("EpicWar map has an invalid name.", User, Whisper, m_IRC);
-                      return;
+                      break;
                     }
-                    string MapDownloadUri = "https://epicwar.com" + response.text.substr(DownloadUriStartIndex + 9, (DownloadUriEndIndex) - (DownloadUriStartIndex + 9));
+                    MapDownloadUri = "https://epicwar.com" + response.text.substr(DownloadUriStartIndex + 9, (DownloadUriEndIndex) - (DownloadUriStartIndex + 9));
                     Print("Downloading " + MapDownloadUri + "...");
-                    string DestinationPath = m_Aura->m_MapPath + EpicWarName + ".w3x";
-                    std::ofstream MapFile(DestinationPath, std::ios::binary);
-                    if (!MapFile) {
-                      QueueChatCommand("Download failed.", User, Whisper, m_IRC);
-                      return;
+                    string MapSuffix;
+                    bool FoundAvailableSuffix = false;
+                    for (int i = 0; i < 10; i++) {
+                      if (i != 0) {
+                        MapSuffix = "_Alt" + to_string(i);
+                      }
+                      if (FileExists(m_Aura->m_MapPath + EpicWarName + MapSuffix + ".w3x")) {
+                        // Map already exists.
+                        // I'd rather directly open the file with wx flags to avoid racing conditions,
+                        // but there is no standard C++ way to do this, and cstdio isn't very helpful.
+                        continue;
+                      }
+                      if (m_Aura->m_CurrentMaps.find(EpicWarName + MapSuffix + ".w3x") != m_Aura->m_CurrentMaps.end()) {
+                        // Map already hosted.
+                        continue;
+                      }
+                      FoundAvailableSuffix = true;
+                      break;
                     }
-                    std::ofstream EpicWarFakeSymLink(EpicWarSymLinkPath);
-                    if (EpicWarFakeSymLink.is_open()) {
-                      EpicWarFakeSymLink.write((EpicWarName + ".w3x").c_str(), EpicWarName.length());
-                      EpicWarFakeSymLink.close();
+                    if (!FoundAvailableSuffix) {
+                      QueueChatCommand("Download failed. Duplicate map name.", User, Whisper, m_IRC);
+                      break;
                     }
-                    cpr::Response MapResponse = cpr::Download(MapFile, cpr::Url{MapDownloadUri});
+                    string DestinationPath = m_Aura->m_MapPath + EpicWarName + MapSuffix + ".w3x";
+                    std::ofstream MapFile(DestinationPath, std::ios_base::out | std::ios_base::binary);
+                    if (!MapFile.is_open()) {
+                      QueueChatCommand("Download failed. Unable to start write stream.", User, Whisper, m_IRC);
+                      MapFile.close();
+                      break;
+                    }
+                    cpr::Response MapResponse = cpr::Download(MapFile, cpr::Url{MapDownloadUri}, cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}});
                     MapFile.close();
                     if (MapResponse.status_code != 200) {
                       QueueChatCommand("Failed to download map. Status code " + to_string(MapResponse.status_code), User, Whisper, m_IRC);
-                      return;
+                      break;
                     }
-                    QueueChatCommand("Downloaded " + Map + " successfully to " + EpicWarName + ".w3x", User, Whisper, m_IRC);
-                    Map = EpicWarName;
+                    QueueChatCommand("Downloaded " + MapSiteUri + " as " + EpicWarName + MapSuffix + ".w3x", User, Whisper, m_IRC);
+                    Map = EpicWarName + MapSuffix;
                   }
                 } else {
                   QueueChatCommand("Download from the specified domain not supported", User, Whisper, m_IRC);
                   return;
                 }
               }
-              {
-                const vector<string> Matches = MapFilesMatch(Map);
+            }
 
-                if (Matches.empty())
-                  QueueChatCommand("No maps found with that name. Try ,host epicwarlink?", User, Whisper, m_IRC);
-                else if (Matches.size() == 1 || CommandHash == HashCode("host"))
-                {
-                  const string File = Matches.at(0);
-                  QueueChatCommand("Loading map file [" + File + "]", User, Whisper, m_IRC);
+            CConfig MapCFG;
+            if (ResolvedCFGExists) {
+              QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
+              MapCFG.Read(ResolvedCFGPath);
+            } else {
+              const vector<string> Matches = MapFilesMatch(Map);
+              if (Matches.empty()) {
+                QueueChatCommand(Map + " not found. Try ,host epicwarlink?", User, Whisper, m_IRC);
+                break;
+              }
+              if (!(Matches.size() == 1 || IsHostCommand)) {
+                string FoundMaps;
+                for (const auto& match : Matches)
+                  FoundMaps += match + ", ";
 
-                  // hackhack: create a config file in memory with the required information to load the map
+                QueueChatCommand("Maps: " + FoundMaps.substr(0, FoundMaps.size() - 2), User, Whisper, m_IRC);
+                QueueChatCommand("Don't want any of these? Try the epicwar.com link, and I will automatically host it.", User, true, m_IRC);
+                break;
+              }
+              const string File = Matches.at(0);
+              QueueChatCommand("Loading map file [" + File + "]", User, Whisper, m_IRC);
 
-                  CConfig MapCFG;
-                  MapCFG.Set("map_path", R"(Maps\Download\)" + File);
-                  MapCFG.Set("map_localpath", File);
+              MapCFG.Set("cfg_partial", "1");
+              MapCFG.Set("map_path", R"(Maps\Download\)" + File);
+              MapCFG.Set("map_localpath", File);
+              MapCFG.Set("map_site", MapSiteUri);
+              MapCFG.Set("map_url", MapDownloadUri);
+              MapCFG.Set("downloaded_by", User);
 
-                  if (File.find("DotA") != string::npos)
-                    MapCFG.Set("map_type", "dota");
+              if (File.find("DotA") != string::npos)
+                MapCFG.Set("map_type", "dota");
 
-                  if (MapObserversValue != -1)
-                    MapCFG.Set("map_observers", to_string(MapObserversValue));
-                  if (MapVisibilityValue != -1)
-                    MapCFG.Set("map_visibility", to_string(MapVisibilityValue));
+              if (!ResolvedCFGPath.empty()) {
+                std::vector<uint8_t> OutputBytes = MapCFG.Export();
+                FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
+              }
+            }
 
-                  m_Aura->m_Map->Load(&MapCFG, File);
-                  if (MapExtraFlags != 0) {
-                    m_Aura->m_Map->AddMapFlags(MapExtraFlags);
-                  }
+            if (MapObserversValue != -1)
+              MapCFG.Set("map_observers", to_string(MapObserversValue));
+            if (MapVisibilityValue != -1)
+              MapCFG.Set("map_visibility", to_string(MapVisibilityValue));
 
-                  if (m_Aura->m_Map)
-                  {
-                    const char* ErrorMessage = m_Aura->m_Map->CheckValid();
+            m_Aura->m_Map->Load(&MapCFG, ResolvedCFGExists ? ResolvedCFGName : MapCFG.GetString("map_localpath", ""));
+            if (MapExtraFlags != 0) {
+              m_Aura->m_Map->AddMapFlags(MapExtraFlags);
+            }
 
-                    if (ErrorMessage) {
-                      QueueChatCommand(std::string("Error while loading map: [") + ErrorMessage + "]", User, Whisper, m_IRC);
-                    } else if (CommandHash == HashCode("host")) {
-                      m_Aura->CreateGame(m_Aura->m_Map, GAME_PUBLIC, gameName, User, User, this, Whisper);
-                    }
-                  }
-                }
-                else
-                {
-                  string FoundMaps;
+            const char* ErrorMessage = m_Aura->m_Map->CheckValid();
 
-                  for (const auto& match : Matches)
-                    FoundMaps += match + ", ";
-
-                  QueueChatCommand("Maps: " + FoundMaps.substr(0, FoundMaps.size() - 2), User, Whisper, m_IRC);
-                  QueueChatCommand("Don't want any of these? Try the epicwar.com link, and I will automatically host it.", User, true, m_IRC);
-                }
+            if (ErrorMessage) {
+              QueueChatCommand("Error while loading map: [" + std::string(ErrorMessage) + "]", User, Whisper, m_IRC);
+              if (!ResolvedCFGPath.empty()) {
+                FileDelete(ResolvedCFGPath);
+              }
+            } else {
+              if (!ResolvedCFGExists && !ResolvedCFGPath.empty() && MapCFG.GetInt("cfg_partial", 0) == 0) {
+                std::vector<uint8_t> OutputBytes = MapCFG.Export();
+                FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
+              }
+              if (IsHostCommand) {
+                m_Aura->CreateGame(m_Aura->m_Map, GAME_PUBLIC, gameName, User, User, this, Whisper);
               }
             }
           }

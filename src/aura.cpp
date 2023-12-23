@@ -747,6 +747,7 @@ void CAura::SetConfigs(CConfig* CFG)
   string BotCommandTrigger = CFG->GetString("bot_commandtrigger", "!");
   m_CommandTrigger         = BotCommandTrigger[0];
   m_GreetingPath           = CFG->GetString("bot_greetingpath", string());
+  m_MaxSavedMapSize        = CFG->GetInt("bot_maxpersistentsize", 0xFFFFFFFF);
 
   m_Greeting.clear();
   if (m_GreetingPath.length() > 0) {

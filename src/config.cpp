@@ -21,10 +21,13 @@
 #include "aura.h"
 #include "config.h"
 #include "includes.h"
+#include "util.h"
 
 #include <cstdlib>
 #include <fstream>
 #include <algorithm>
+#include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -106,4 +109,31 @@ string CConfig::GetString(const string& key, const string& x)
 void CConfig::Set(const string& key, const string& x)
 {
   m_CFG[key] = x;
+}
+
+void CConfig::SetString(const string& key, const string& x)
+{
+  m_CFG[key] = x;
+}
+
+void CConfig::SetInt(const string& key, const int& x)
+{
+  m_CFG[key] = to_string(x);
+}
+
+void CConfig::SetUint8Vector(const string& key, const std::vector<std::uint8_t> &x)
+{
+  m_CFG[key] = ByteArrayToDecString(x);
+}
+
+std::vector<uint8_t> CConfig::Export()
+{
+  std::ostringstream SS;
+  for (auto it = m_CFG.begin(); it != m_CFG.end(); ++it) {
+    SS << (it->first + "=" + it->second + "\n");
+  }
+
+  std::string str = SS.str();
+  std::vector<uint8_t> bytes(str.begin(), str.end());
+  return bytes;
 }

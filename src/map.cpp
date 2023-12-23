@@ -207,8 +207,17 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapLocalPath = CFG->GetString("map_localpath", string());
   m_MapData.clear();
 
-  if (!m_MapLocalPath.empty())
-    m_MapData = FileRead(m_Aura->m_MapPath + m_MapLocalPath);
+  bool IsPartial = CFG->GetInt("cfg_partial", 0) == 1;
+  int RawMapSize = 0;
+  if (IsPartial || m_Aura->m_AllowUploads) {
+    if (m_MapLocalPath.empty()) {
+      return;
+    }
+    m_MapData = FileRead(m_Aura->m_MapPath + m_MapLocalPath, &RawMapSize);
+    if (m_MapData.empty()) {
+      return;
+    }
+  }
 
   // load the map MPQ
 
@@ -234,14 +243,8 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   std::vector<uint8_t> MapSize, MapInfo, MapCRC, MapSHA1;
 
-  if (!m_MapData.empty())
-  {
+  if (IsPartial || m_Aura->m_AllowUploads) {
     m_Aura->m_SHA->Reset();
-
-    // calculate map_size
-
-    MapSize = CreateByteArray(static_cast<uint32_t>(m_MapData.size()), false);
-    Print("[MAP] calculated map_size = " + ByteArrayToDecString(MapSize));
 
     // calculate map_info (this is actually the CRC)
 
@@ -251,13 +254,13 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     // calculate map_crc (this is not the CRC) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
 
-    string CommonJ = FileRead(m_Aura->m_MapCFGPath + "common.j");
+    string CommonJ = FileRead(m_Aura->m_MapCFGPath + "common.j", nullptr);
 
     if (CommonJ.empty())
       Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_MapCFGPath + "common.j]");
     else
     {
-      string BlizzardJ = FileRead(m_Aura->m_MapCFGPath + "blizzard.j");
+      string BlizzardJ = FileRead(m_Aura->m_MapCFGPath + "blizzard.j", nullptr);
 
       if (BlizzardJ.empty())
         Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_MapCFGPath + "blizzard.j]");
@@ -427,8 +430,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   uint32_t             MapNumTeams   = 0;
   vector<CGameSlot>    Slots;
 
-  if (!m_MapData.empty())
-  {
+  if (IsPartial) {
     if (MapMPQReady)
     {
       HANDLE SubFile;
@@ -570,51 +572,48 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
               ISS.read(reinterpret_cast<char*>(&RawMapNumTeams), 4); // number of teams
 
-			  // the bot only cares about the following options: melee, fixed player settings, custom forces
+              // the bot only cares about the following options: melee, fixed player settings, custom forces
               // let's not confuse the user by displaying erroneous map options so zero them out now
-			  MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
+              MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
               Print("[MAP] calculated map_options = " + to_string(MapOptions));
 
-			  if (!(MapOptions & MAPOPT_CUSTOMFORCES))
-				MapNumTeams = RawMapNumPlayers;
-			  else
-				MapNumTeams = RawMapNumTeams;
+              if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
+                MapNumTeams = RawMapNumPlayers;
+              } else {
+                MapNumTeams = RawMapNumTeams;
+              }
 
-              for (uint32_t i = 0; i < MapNumTeams; ++i)
-              {
+              for (uint32_t i = 0; i < MapNumTeams; ++i) {
                 uint32_t Flags;
                 uint32_t PlayerMask;
 
-				if (i < RawMapNumTeams) {
-					ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
-					ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
-				}
-				if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
-					Flags = 0;
-				    PlayerMask = 1 << i;
-				}
+                if (i < RawMapNumTeams) {
+                  ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
+                  ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
+                }
+                if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
+                  Flags = 0;
+                  PlayerMask = 1 << i;
+                }
 
-				for (auto& Slot : Slots)
-				{
-				  if ((1 << (Slot).GetColour()) & PlayerMask)
-					(Slot).SetTeam(i);
-				}
+                for (auto& Slot : Slots) {
+                  if ((1 << (Slot).GetColour()) & PlayerMask)
+                  (Slot).SetTeam(i);
+                }
 
                 getline(ISS, GarbageString, '\0'); // team name
               }
 
               MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
-			  MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
-			  MapNumPlayers = RawMapNumPlayers - ClosedSlots;
+              MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
+              MapNumPlayers = RawMapNumPlayers - ClosedSlots;
 
-              if (MapOptions & MAPOPT_MELEE)
-              {
+              if (MapOptions & MAPOPT_MELEE) {
                 Print("[MAP] found melee map");
                 MapFilterType = MAPFILTER_TYPE_MELEE;
               }
 
-              if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS))
-              {
+              if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
                 // make races selectable
 
                 for (auto& Slot : Slots)
@@ -628,8 +627,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
               Print("[MAP] calculated map_numplayers = " + to_string(MapNumPlayers));
               Print("[MAP] calculated map_numteams = " + to_string(MapNumTeams));
 
-              for (auto& Slot : Slots)
-              {
+              for (auto& Slot : Slots) {
                 Print("[MAP] calculated map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()));
                 ++SlotNum;
               }
@@ -648,9 +646,9 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     }
     else
       Print("[MAP] unable to calculate map_options, map_width, map_height, map_slot<x>, map_numplayers, map_numteams - map MPQ file not loaded");
+  } else {
+    Print("[MAP] Using mapcfg for map_options, map_width, map_height, map_slot<x>, map_numplayers, map_numteams");
   }
-  else
-    Print("[MAP] no map data available, using config file for map_options, map_width, map_height, map_slot<x>, map_numplayers, map_numteams");
 
   // close the map MPQ
 
@@ -658,55 +656,75 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     SFileCloseArchive(MapMPQ);
 
   m_MapPath = CFG->GetString("map_path", string());
+  std::vector<uint8_t> MapContentMismatch = {0, 0, 0, 0};
 
-  if (MapSize.empty())
-    MapSize = ExtractNumbers(CFG->GetString("map_size", string()), 4);
-  else if (CFG->Exists("map_size"))
-  {
-    Print("[MAP] overriding calculated map_size with config value map_size = " + CFG->GetString("map_size", string()));
-    MapSize = ExtractNumbers(CFG->GetString("map_size", string()), 4);
+  if (CFG->Exists("map_size")) {
+    string CFGValue = CFG->GetString("map_size", string());
+    if (m_Aura->m_AllowUploads) {
+      string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), true));
+      MapContentMismatch[0] = CFGValue != MapValue;
+    }
+    MapSize = ExtractNumbers(CFGValue, 4);
+  } else if (RawMapSize != 0) {
+    MapSize = CreateByteArray(static_cast<uint32_t>(RawMapSize), false);
+    CFG->SetUint8Vector("map_size", MapSize);
   }
 
   m_MapSize = MapSize;
 
-  if (MapInfo.empty())
-    MapInfo = ExtractNumbers(CFG->GetString("map_info", string()), 4);
-  else if (CFG->Exists("map_info"))
-  {
-    Print("[MAP] overriding calculated map_info with config value map_info = " + CFG->GetString("map_info", string()));
-    MapInfo = ExtractNumbers(CFG->GetString("map_info", string()), 4);
+  if (CFG->Exists("map_info")) {
+    string CFGValue = CFG->GetString("map_info", string());
+    if (m_Aura->m_AllowUploads) {
+      string MapValue = ByteArrayToDecString(MapInfo);
+      MapContentMismatch[1] = CFGValue != MapValue;
+    }
+    MapInfo = ExtractNumbers(CFGValue, 4);
+  } else if (!MapInfo.empty()) {
+    CFG->SetUint8Vector("map_info", MapInfo);
   }
 
   m_MapInfo = MapInfo;
 
-  if (MapCRC.empty())
-    MapCRC = ExtractNumbers(CFG->GetString("map_crc", string()), 4);
-  else if (CFG->Exists("map_crc"))
-  {
-    Print("[MAP] overriding calculated map_crc with config value map_crc = " + CFG->GetString("map_crc", string()));
-    MapCRC = ExtractNumbers(CFG->GetString("map_crc", string()), 4);
+  if (CFG->Exists("map_crc")) {
+    string CFGValue = CFG->GetString("map_crc", string());
+    if (m_Aura->m_AllowUploads) {
+      string MapValue = ByteArrayToDecString(MapCRC);
+      MapContentMismatch[2] = CFGValue != MapValue;
+    }
+    MapCRC = ExtractNumbers(CFGValue, 4);
+  } else if (!MapCRC.empty()) {
+    CFG->SetUint8Vector("map_crc", MapCRC);
   }
 
   m_MapCRC = MapCRC;
 
-  if (MapSHA1.empty())
-    MapSHA1 = ExtractNumbers(CFG->GetString("map_sha1", string()), 20);
-  else if (CFG->Exists("map_sha1"))
-  {
-    Print("[MAP] overriding calculated map_sha1 with config value map_sha1 = " + CFG->GetString("map_sha1", string()));
-    MapSHA1 = ExtractNumbers(CFG->GetString("map_sha1", string()), 20);
+  if (CFG->Exists("map_sha1")) {
+    string CFGValue = CFG->GetString("map_sha1", string());
+    if (m_Aura->m_AllowUploads) {
+      string MapValue = ByteArrayToDecString(MapSHA1);
+      MapContentMismatch[3] = CFGValue != MapValue;
+    }
+    MapSHA1 = ExtractNumbers(CFGValue, 20);
+  } else if (!MapSHA1.empty()) {
+    CFG->SetUint8Vector("map_sha1", MapSHA1);
   }
 
   m_MapSHA1 = MapSHA1;
 
-  if (CFG->Exists("map_filter_type"))
-  {
-    Print("[MAP] overriding calculated map_filter_type with config value map_filter_type = " + CFG->GetString("map_filter_type", string()));
+  m_MapContentMismatch = MapContentMismatch;
+
+  m_MapSiteURL = CFG->GetString("map_site", string());
+  m_MapURL     = CFG->GetString("map_url", string());
+
+  if (CFG->Exists("map_filter_type")) {
     MapFilterType = CFG->GetInt("map_filter_type", MAPFILTER_TYPE_SCENARIO);
+  } else {
+    CFG->SetInt("map_filter_type", MapFilterType);
   }
 
   m_MapFilterType = MapFilterType;
 
+  // These are per-game flags. Don't automatically set them in the map config.
   m_MapSpeed       = CFG->GetInt("map_speed", MAPSPEED_FAST);
   m_MapVisibility  = CFG->GetInt("map_visibility", MAPVIS_DEFAULT);
   m_MapObservers   = CFG->GetInt("map_observers", MAPOBS_ALLOWED);
@@ -714,65 +732,56 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapFilterSize  = CFG->GetInt("map_filter_size", MAPFILTER_SIZE_LARGE);
   m_MapFilterObs   = CFG->GetInt("map_filter_obs", MAPFILTER_OBS_NONE);
 
-  // TODO: it might be possible for MapOptions to legitimately be zero so this is not a valid way of checking if it wasn't parsed out earlier
-
-  if (MapOptions == 0)
+  if (CFG->Exists("map_options")) {
     MapOptions = CFG->GetInt("map_options", 0);
-  else if (CFG->Exists("map_options"))
-  {
-    Print("[MAP] overriding calculated map_options with config value map_options = " + CFG->GetString("map_options", string()));
-    MapOptions = CFG->GetInt("map_options", 0);
+  } else {
+    CFG->SetInt("map_options", MapOptions);
   }
 
   m_MapOptions = MapOptions;
-  m_MapFlags   = CFG->GetInt("map_flags", MapOptions & MAPOPT_CUSTOMFORCES ? MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS : MAPFLAG_TEAMSTOGETHER);
+  m_MapFlags = CFG->GetInt("map_flags", MapOptions & MAPOPT_CUSTOMFORCES ? MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS : MAPFLAG_TEAMSTOGETHER);
+  if (!CFG->Exists("map_flags")) {
+    CFG->SetInt("map_flags", m_MapFlags);
+  }
 
-  if (MapWidth.empty())
+  if (CFG->Exists("map_width")) {
     MapWidth = ExtractNumbers(CFG->GetString("map_width", string()), 2);
-  else if (CFG->Exists("map_width"))
-  {
-    Print("[MAP] overriding calculated map_width with config value map_width = " + CFG->GetString("map_width", string()));
-    MapWidth = ExtractNumbers(CFG->GetString("map_width", string()), 2);
+  } else {
+    CFG->SetUint8Vector("map_width", MapWidth);
   }
 
   m_MapWidth = MapWidth;
 
-  if (MapHeight.empty())
+  if (CFG->Exists("map_height")) {
     MapHeight = ExtractNumbers(CFG->GetString("map_height", string()), 2);
-  else if (CFG->Exists("map_height"))
-  {
-    Print("[MAP] overriding calculated map_height with config value map_height = " + CFG->GetString("map_height", string()));
-    MapHeight = ExtractNumbers(CFG->GetString("map_height", string()), 2);
+  } else {
+    CFG->SetUint8Vector("map_height", MapHeight);
   }
 
   m_MapHeight     = MapHeight;
   m_MapType       = CFG->GetString("map_type", string());
   m_MapDefaultHCL = CFG->GetString("map_defaulthcl", string());
 
-  if (MapNumPlayers == 0)
+  if (CFG->Exists("map_numplayers")) {
     MapNumPlayers = CFG->GetInt("map_numplayers", 0);
-  else if (CFG->Exists("map_numplayers"))
-  {
-    Print("[MAP] overriding calculated map_numplayers with config value map_numplayers = " + CFG->GetString("map_numplayers", string()));
-    MapNumPlayers = CFG->GetInt("map_numplayers", 0);
+  } else {
+    CFG->SetInt("map_numplayers", MapNumPlayers);
   }
 
   m_MapNumPlayers = MapNumPlayers;
 
-  if (MapNumTeams == 0)
+  if (CFG->Exists("map_numteams")) {
     MapNumTeams = CFG->GetInt("map_numteams", 0);
-  else if (CFG->Exists("map_numteams"))
-  {
-    Print("[MAP] overriding calculated map_numteams with config value map_numteams = " + CFG->GetString("map_numteams", string()));
-    MapNumTeams = CFG->GetInt("map_numteams", 0);
+  } else {
+    CFG->SetInt("map_numteams", MapNumTeams);
   }
 
   m_MapNumTeams = MapNumTeams;
 
-  if (Slots.empty())
-  {
-    for (uint32_t Slot = 1; Slot <= MAX_SLOTS; ++Slot)
-    {
+  if (CFG->Exists("map_slot1")) {
+    Slots.clear();
+
+    for (uint32_t Slot = 1; Slot <= MAX_SLOTS; ++Slot) {
       string SlotString = CFG->GetString("map_slot" + to_string(Slot), string());
 
       if (SlotString.empty())
@@ -781,30 +790,19 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
       std::vector<uint8_t> SlotData = ExtractNumbers(SlotString, 9);
       Slots.emplace_back(SlotData);
     }
-  }
-  else if (CFG->Exists("map_slot1"))
-  {
-    Print("[MAP] overriding slots");
-    Slots.clear();
-
-    for (uint32_t Slot = 1; Slot <= MAX_SLOTS; ++Slot)
-    {
-      string SlotString = CFG->GetString("map_slot" + to_string(Slot), string());
-
-      if (SlotString.empty())
-        break;
-
-      std::vector<uint8_t> SlotData = ExtractNumbers(SlotString, 9);
-      Slots.emplace_back(SlotData);
+  } else if (!Slots.empty()) {
+    uint32_t SlotNum = 0;
+    for (auto& Slot : Slots) {
+      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetByteArray());
     }
   }
 
   m_Slots = Slots;
 
   // if random races is set force every slot's race to random
+  // (per-game setting, don't save it)
 
-  if (m_MapFlags & MAPFLAG_RANDOMRACES)
-  {
+  if (m_MapFlags & MAPFLAG_RANDOMRACES) {
     Print("[MAP] forcing races to random");
 
     for (auto& slot : m_Slots)
@@ -817,9 +815,8 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     m_MapObservers = MAPOBS_ALLOWED;
 
   // add observer slots
-
-  if (m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES)
-  {
+  // (per-game setting, don't save it)
+  if (m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES) {
     Print("[MAP] adding " + to_string(MAX_SLOTS - m_Slots.size()) + " observer slots");
 
     while (m_Slots.size() < MAX_SLOTS)
@@ -828,8 +825,11 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   const char* ErrorMessage = CheckValid();
 
-  if (ErrorMessage)
+  if (ErrorMessage) {
     Print(std::string("[MAP] ") + ErrorMessage);
+  } else if (IsPartial) {
+    CFG->SetInt("cfg_partial", 0);
+  }
 }
 
 const char* CMap::CheckValid()
@@ -853,7 +853,7 @@ const char* CMap::CheckValid()
   else if (!m_MapData.empty() && m_MapData.size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
-    return "invalid map_size detected - size mismatch with actual map data";
+    return (std::string("invalid map_size detected (") + ByteArrayToDecString(m_MapSize) + std::string(")- size mismatch with actual map data size " + ByteArrayToDecString(CreateByteArray(m_MapData.size(), false)))).c_str();
   }
 
   if (m_MapInfo.size() != 4)

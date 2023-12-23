@@ -113,6 +113,8 @@ private:
   std::string            m_MapType;       // config value: map type (for stats class)
   std::string            m_MapDefaultHCL; // config value: map default HCL to use (this should really be specified elsewhere and not part of the map config)
   std::string            m_MapLocalPath;  // config value: map local path
+  std::string            m_MapURL;
+  std::string            m_MapSiteURL;
   std::string            m_MapData;       // the map data itself, for sending the map to players
   uint32_t               m_MapOptions;
   uint32_t               m_MapNumPlayers; // config value: max map number of players
@@ -125,6 +127,7 @@ private:
   uint8_t                m_MapFilterType;
   uint8_t                m_MapFilterSize;
   uint8_t                m_MapFilterObs;
+  std::vector<uint8_t>   m_MapContentMismatch;
   bool                   m_Valid;
 
 public:
@@ -132,12 +135,15 @@ public:
   ~CMap();
 
   inline bool                   GetValid() const { return m_Valid; }
+  inline bool                   GetValidLinkedMap() const { return m_MapContentMismatch[0] == 0 && m_MapContentMismatch[1] == 0 && m_MapContentMismatch[2] == 0 && m_MapContentMismatch[3] == 0; }
   inline std::string            GetCFGFile() const { return m_CFGFile; }
   inline std::string            GetMapPath() const { return m_MapPath; }
   inline std::vector<uint8_t>   GetMapSize() const { return m_MapSize; }
   inline std::vector<uint8_t>   GetMapInfo() const { return m_MapInfo; }
   inline std::vector<uint8_t>   GetMapCRC() const { return m_MapCRC; }
   inline std::vector<uint8_t>   GetMapSHA1() const { return m_MapSHA1; }
+  std::string                   GetMapURL() const { return m_MapURL; }
+  std::string                   GetMapSiteURL() const { return m_MapSiteURL; }
   inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
   inline uint8_t                GetMapObservers() const { return m_MapObservers; }
@@ -156,6 +162,7 @@ public:
   inline uint32_t               GetMapNumTeams() const { return m_MapNumTeams; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
   void                          AddMapFlags(uint32_t ExtraFlags) { m_MapFlags |= ExtraFlags; }
+  void                          ClearMapData() { m_MapData.clear(); }
 
   void Load(CConfig* CFG, const std::string& nCFGFile);
   const char* CheckValid();

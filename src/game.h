@@ -88,7 +88,7 @@ protected:
   int64_t                        m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
   int64_t                        m_StartedLaggingTime;            // GetTime when the last lag screen started
   int64_t                        m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
-  int64_t                        m_LastReservedSeen;              // GetTime when the last reserved player was seen in the lobby
+  int64_t                        m_LastOwnerSeen;              // GetTime when the last reserved player was seen in the lobby
   int64_t                        m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                        m_GameOverTime;                  // GetTime when the game was over
   int64_t                        m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
@@ -119,6 +119,7 @@ protected:
   bool                           m_GameLoaded;                    // if the game has loaded or not
   bool                           m_Lagging;                       // if the lag screen is active or not
   bool                           m_Desynced;                      // if the game has desynced or not
+  bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
 
 public:
   CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nCreatorName, CBNET* nCreatorServer);

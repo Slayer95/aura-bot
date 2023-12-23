@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 #define NOMINMAX
 #ifdef WIN32
@@ -78,6 +79,7 @@ public:
   std::vector<std::string> m_IgnoredNotifyJoinPlayers;   // config value: list of player names that won't trigger join notifications
   std::vector<std::string> m_IgnoredDatagramSources;     // config value: list of IPs ignored by m_UDPServer
   uint32_t                 m_ReconnectWaitTime;          // config value: the maximum number of minutes to wait for a GProxy++ reliable reconnect
+  uint32_t                 m_MaxSavedMapSize;            // config value: maximum byte size of maps kept persistently in the m_MapPath folder
   uint32_t                 m_MaxGames;                   // config value: maximum number of games in progress
   uint32_t                 m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
   uint32_t                 m_MinHostCounter;             // config value: defines a subspace for game identifiers
@@ -114,6 +116,7 @@ public:
   uint32_t                 m_UDPForwardGameLists;        // config value: whether to forward PvPGN game lists through UDP
   bool                     m_LCPings;                    // config value: use LC style pings (divide actual pings by two)
   std::vector<std::string> m_Greeting;                   // read from m_GreetingPath
+  std::unordered_multiset<std::string> m_CurrentMaps;    //
 
   explicit CAura(CConfig* CFG);
   ~CAura();

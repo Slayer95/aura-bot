@@ -42,6 +42,10 @@ public:
   int32_t GetInt(const std::string& key, int32_t x);
   std::string GetString(const std::string& key, const std::string& x);
   void Set(const std::string& key, const std::string& x);
+  void SetString(const std::string& key, const std::string& x);
+  void SetInt(const std::string& key, const int& x);
+  void SetUint8Vector(const std::string& key, const std::vector<std::uint8_t>& x);
+  std::vector<uint8_t> Export();
 };
 
 #endif // AURA_CONFIG_H_

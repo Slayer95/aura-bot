@@ -282,15 +282,19 @@ void CIRC::ExtractPackets()
 
       string Message = Packets_Packet.substr(Tokens[0].size() + Tokens[1].size() + Tokens[2].size() + 4);
 
-      // relay messages to bnets
+      // relay messages to bnet
 
-      for (auto& bnet : m_Aura->m_BNETs)
-      {
-        if (Message[0] == bnet->GetCommandTrigger())
-        {
-          const CIncomingChatEvent event = CIncomingChatEvent(CBNETProtocol::EID_IRC, Nickname, Channel + " " + Message);
-          bnet->ProcessChatEvent(&event);
-          break;
+      if (!Message.empty() && Message[0] == m_Aura->m_CommandTrigger) {
+        int spaceIndex = Message.find(" ", 1);
+        if (spaceIndex != string::npos) {
+          string targetServer = Message.substr(1, spaceIndex - 1);          
+          for (auto& bnet : m_Aura->m_BNETs) {
+            if (bnet->GetServerAlias() == targetServer) {
+              const CIncomingChatEvent event = CIncomingChatEvent(CBNETProtocol::EID_IRC, Nickname, Channel + " " + bnet->GetCommandTrigger() + Message.substr(spaceIndex + 1, Message.length()));
+              bnet->ProcessChatEvent(&event);
+              break;
+            }
+          }
         }
       }
 
@@ -315,13 +319,12 @@ void CIRC::ExtractPackets()
         }
       }
 
-      if (PayloadStart != string::npos)
-      {
+      if (PayloadStart != string::npos) {
         Command = Message.substr(1, PayloadStart - 1);
         Payload = Message.substr(PayloadStart + 1);
-      }
-      else
+      } else {
         Command = Message.substr(1);
+      }
 
       transform(begin(Command), end(Command), begin(Command), ::tolower);
 
@@ -329,8 +332,7 @@ void CIRC::ExtractPackets()
       // !NICK
       //
 
-      if (Command == "nick" && Root)
-      {
+      if (Command == "nick" && Root) {
         SendIRC("NICK :" + Payload);
         m_Nickname     = Payload;
         m_OriginalNick = false;

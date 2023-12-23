@@ -23,6 +23,7 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
 
 #include "includes.h"
 #include <vector>
+#include <cstdio>
 
 #ifdef WIN32
 bool FileExists(std::string file);
@@ -31,8 +32,9 @@ bool FileExists(const std::string& file);
 #endif
 
 std::vector<std::string> FilesMatch(const std::string& path, const std::string& pattern);
-std::string FileRead(const std::string& file, uint32_t start, uint32_t length);
-std::string FileRead(const std::string& file);
+std::string FileRead(const std::string& file, uint32_t start, uint32_t length, int* byteSize);
+std::string FileRead(const std::string& file, int* byteSize);
 bool FileWrite(const std::string& file, uint8_t* data, uint32_t length);
+bool FileDelete(const std::string& File);
 
 #endif // AURA_FILEUTIL_H_

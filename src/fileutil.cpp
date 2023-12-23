@@ -109,7 +109,7 @@ vector<string> FilesMatch(const string& path, const string& pattern)
   return Files;
 }
 
-string FileRead(const string& file, uint32_t start, uint32_t length)
+string FileRead(const string& file, uint32_t start, uint32_t length, int *byteSize)
 {
   ifstream IS;
   IS.open(file.c_str(), ios::binary);
@@ -124,6 +124,9 @@ string FileRead(const string& file, uint32_t start, uint32_t length)
 
   IS.seekg(0, ios::end);
   uint32_t FileLength = IS.tellg();
+  if (byteSize != nullptr) {
+    (*byteSize) = FileLength;
+  }
 
   if (start > FileLength)
   {
@@ -143,7 +146,7 @@ string FileRead(const string& file, uint32_t start, uint32_t length)
   return BufferString;
 }
 
-string FileRead(const string& file)
+string FileRead(const string& file, int *byteSize)
 {
   ifstream IS;
   IS.open(file.c_str(), ios::binary);
@@ -158,6 +161,9 @@ string FileRead(const string& file)
 
   IS.seekg(0, ios::end);
   uint32_t FileLength = IS.tellg();
+  if (byteSize != nullptr) {
+    (*byteSize) = FileLength;
+  }
   IS.seekg(0, ios::beg);
 
   // read data
@@ -190,4 +196,9 @@ bool FileWrite(const string& file, uint8_t* data, uint32_t length)
   OS.write(reinterpret_cast<const char*>(data), length);
   OS.close();
   return true;
+}
+
+bool FileDelete(const string& file)
+{
+  return std::remove(file.c_str()) == 0;
 }
