@@ -241,6 +241,7 @@ public:
   void ColourSlot(uint8_t SID, uint8_t colour);
   void OpenAllSlots();
   void CloseAllSlots();
+  void ComputerAllSlots(uint8_t skill);
   void ShuffleSlots();
   void AddToSpoofed(const std::string& server, const std::string& name, bool sendMessage);
   void AddToReserved(std::string name);

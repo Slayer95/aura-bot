@@ -647,31 +647,30 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
         case HashCode("load"):
         {
-          if (Payload.empty())
+          if (Payload.empty()) {
+            if (!m_Aura->m_Map) {
+              QueueChatCommand("There is no map/config file loaded.", User, Whisper, m_IRC);
+              break;
+            }
             QueueChatCommand("The currently loaded map/config file is: [" + m_Aura->m_Map->GetCFGFile() + "]", User, Whisper, m_IRC);
-          else
-          {
-            if (!FileExists(m_Aura->m_MapCFGPath))
-            {
+          } else {
+            if (!FileExists(m_Aura->m_MapCFGPath)) {
               Print("[BNET: " + m_ServerAlias + "] error listing map configs - map config path doesn't exist");
               QueueChatCommand("Error listing map configs - map config path doesn't exist", User, Whisper, m_IRC);
-            }
-            else
-            {
+            } else {
               const vector<string> Matches = ConfigFilesMatch(Payload);
 
-              if (Matches.empty())
+              if (Matches.empty()) {
                 QueueChatCommand("No map configs found with that name", User, Whisper, m_IRC);
-              else if (Matches.size() == 1)
-              {
+              } else if (Matches.size() == 1) {
                 const string File = Matches.at(0);
                 QueueChatCommand("Loading config file [" + m_Aura->m_MapCFGPath + File + "]", User, Whisper, m_IRC);
                 CConfig MapCFG;
                 MapCFG.Read(m_Aura->m_MapCFGPath + File);
-                m_Aura->m_Map->Load(&MapCFG, m_Aura->m_MapCFGPath + File);
-              }
-              else
-              {
+                if (m_Aura->m_Map)
+                  delete m_Aura->m_Map;
+                m_Aura->m_Map = new CMap(m_Aura, &MapCFG, m_Aura->m_MapCFGPath + File);
+              } else {
                 string FoundMapConfigs;
 
                 for (const auto& match : Matches)
@@ -1075,25 +1074,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
           if (Payload.empty() || !m_Aura->m_CurrentGame || m_Aura->m_CurrentGame->GetCountDownStarted())
             break;
 
-          // extract the ip and the port
-          // e.g. "1.2.3.4 6112" -> ip: "1.2.3.4", port: "6112"
-
-          string       IP;
-          uint32_t     Port = 6112;
-          stringstream SS;
-          SS << Payload;
-          SS >> IP;
-
-          if (!SS.eof())
-            SS >> Port;
-
-          if (SS.fail())
-            QueueChatCommand("Bad input to sendlan command", User, Whisper, m_IRC);
-          else
-          {
-            m_Aura->m_CurrentGame->AnnounceToAddress(IP, Port);
-          }
-
+          m_Aura->m_CurrentGame->LANBroadcastGameInfo();
           break;
         }
 
@@ -1104,74 +1085,41 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
         case HashCode("countmap"):
         case HashCode("countmaps"):
-        {
-#ifdef WIN32
-          const auto Count = FilesMatch(m_Aura->m_MapPath, ".").size();
-#else
-          const auto Count = FilesMatch(m_Aura->m_MapPath, "").size();
-#endif
-
-          QueueChatCommand("There are currently [" + to_string(Count) + "] maps", User, Whisper, m_IRC);
-          break;
-        }
-
-        //
-        // !COUNTCFG
-        // !COUNTCFGS
-        //
-
         case HashCode("countcfg"):
         case HashCode("countcfgs"):
         {
 #ifdef WIN32
-          const auto Count = FilesMatch(m_Aura->m_MapCFGPath, ".").size();
+          const auto MapCount = FilesMatch(m_Aura->m_MapPath, ".").size();
+          const auto CFGCount = FilesMatch(m_Aura->m_MapCFGPath, ".").size();
 #else
-          const auto Count = FilesMatch(m_Aura->m_MapCFGPath, "").size();
+          const auto MapCount = FilesMatch(m_Aura->m_MapPath, "").size();
+          const auto CFGCount = FilesMatch(m_Aura->m_MapCFGPath, "").size();
 #endif
-          QueueChatCommand("There are currently [" + to_string(Count) + "] cfgs", User, Whisper, m_IRC);
+
+          QueueChatCommand("There are currently " + to_string(CFGCount) + " maps preloaded. " + to_string(MapCount) + " maps available. ", User, Whisper, m_IRC);
           break;
         }
 
         //
         // !DELETECFG
-        //
-
-        case HashCode("deletecfg"):
-        {
-
-          if (Payload.empty() || !IsRootAdmin(User))
-            break;
-
-          QueueChatCommand("Command not available", User, Whisper, m_IRC);
-          break;
-
-          if (Payload.find(".cfg") == string::npos)
-            Payload.append(".cfg");
-
-          if (!remove((m_Aura->m_MapCFGPath + Payload).c_str()))
-            QueueChatCommand("Deleted [" + Payload + "]", User, Whisper, m_IRC);
-          else
-            QueueChatCommand("Removal failed", User, Whisper, m_IRC);
-
-          break;
-        }
-
-        //
         // !DELETEMAP
         //
 
+        case HashCode("deletecfg"):
         case HashCode("deletemap"):
         {
           if (Payload.empty() || !IsRootAdmin(User))
             break;
 
-          QueueChatCommand("Command not available", User, Whisper, m_IRC);
-          break;
+          string DeletionType = CommandHash == HashCode("deletecfg") ? "cfg" : "map";
+          string Folder = DeletionType == "cfg" ? m_Aura->m_MapCFGPath : m_Aura->m_MapPath;
 
-          if (Payload.find(".w3x") == string::npos && Payload.find(".w3m") == string::npos)
-            Payload.append(".w3x");
+          if (DeletionType == "cfg" && !IsValidCFGName(Payload) || DeletionType == "map" &&!IsValidMapName(Payload)) {
+            QueueChatCommand("Removal failed", User, Whisper, m_IRC);
+            break;
+          }
 
-          if (!remove((m_Aura->m_MapPath + Payload).c_str()))
+          if (!remove((Folder + Payload).c_str()))
             QueueChatCommand("Deleted [" + Payload + "]", User, Whisper, m_IRC);
           else
             QueueChatCommand("Removal failed", User, Whisper, m_IRC);
@@ -1241,17 +1189,23 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
           if (Payload.empty())
             break;
 
+          if (!m_Aura->m_Map) {
+            QueueChatCommand("There is no map/config file loaded.", User, Whisper, m_IRC);
+            break;
+          }
+
           // extract the owner and the game name
           // e.g. "Varlock dota 6.54b arem ~~~" -> owner: "Varlock", game name: "dota 6.54b arem ~~~"
 
           string            Owner, GameName;
           string::size_type GameNameStart = Payload.find(' ');
 
-          if (GameNameStart != string::npos)
-          {
+          if (GameNameStart != string::npos) {
             Owner    = Payload.substr(0, GameNameStart);
             GameName = Payload.substr(GameNameStart + 1);
+            
             m_Aura->CreateGame(m_Aura->m_Map, GAME_PRIVATE, GameName, Owner, User, this, Whisper);
+            m_Aura->m_Map = nullptr;
           }
 
           break;
@@ -1266,17 +1220,22 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
           if (Payload.empty())
             break;
 
+          if (!m_Aura->m_Map) {
+            QueueChatCommand("There is no map/config file loaded.", User, Whisper, m_IRC);
+            break;
+          }
+          
           // extract the owner and the game name
           // e.g. "Varlock dota 6.54b arem ~~~" -> owner: "Varlock", game name: "dota 6.54b arem ~~~"
 
           string            Owner, GameName;
           string::size_type GameNameStart = Payload.find(' ');
 
-          if (GameNameStart != string::npos)
-          {
+          if (GameNameStart != string::npos) {
             Owner    = Payload.substr(0, GameNameStart);
             GameName = Payload.substr(GameNameStart + 1);
             m_Aura->CreateGame(m_Aura->m_Map, GAME_PUBLIC, GameName, Owner, User, this, Whisper);
+            m_Aura->m_Map = nullptr;
           }
 
           break;
@@ -1288,13 +1247,12 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
         case HashCode("reload"):
         {
-          if (IsRootAdmin(User))
-          {
+          if (IsRootAdmin(User)) {
             QueueChatCommand("Reloading configuration files", User, Whisper, m_IRC);
             m_Aura->ReloadConfigs();
-          }
-          else
+          } else {
             QueueChatCommand("You don't have access to that command", User, Whisper, m_IRC);
+          }
 
           break;
         }
@@ -1645,6 +1603,17 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
           break;
         }
+
+        case HashCode("getlist"):
+        {
+          if (!IsRootAdmin(User))
+            QueueChatCommand("You don't have access to that command", User, Whisper, m_IRC);
+          else {
+            m_Socket->PutBytes(m_Protocol->SEND_SID_GETADVLISTEX());
+            m_LastGameListTime = GetTime();
+          }
+          break;
+        }
       }
     }
     else
@@ -1671,7 +1640,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
         case HashCode("map"):
         {
           if (!m_Aura->m_EnabledPublic && !IsAdmin(User) && !IsRootAdmin(User)) {
-            QueueChatCommand("Game hosting temporarily disabled.", User, Whisper, m_IRC);
+            QueueChatCommand("Apologies. Game hosting is temporarily unavailable.", User, Whisper, m_IRC);
             break;
           }
 
@@ -1740,9 +1709,14 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
           }
 
           if (Map.empty()) {
+            if (!m_Aura->m_Map) {
+              QueueChatCommand("There is no map/config file loaded.", User, Whisper, m_IRC);
+              break;
+            }
             QueueChatCommand("The currently loaded map/config file is: [" + m_Aura->m_Map->GetCFGFile() + "]", User, Whisper, m_IRC);
             break;
           }
+
           string MapSiteUri;
           string MapDownloadUri;
           string ResolvedCFGPath;
@@ -1753,6 +1727,10 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             QueueChatCommand("Error listing maps - map path doesn't exist", User, Whisper, m_IRC);
           } else {
             if (IsHostCommand) {
+              // Parse autocfg for URLs
+              if (Map.substr(0, 8) == "epicwar-") {
+                Map = "https://www.epicwar.com/maps/" + Map.substr(8, Map.length());
+              }
               // Parse URL shortcuts
               if (Map.substr(0, 12) == "epicwar.com/") {
                 Map = "https://www." + MapSiteUri;
@@ -1797,8 +1775,8 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
                     ResolvedCFGExists = true;
                   } else {
                     // Proceed with the download
-                    auto response = cpr::Get(cpr::Url{MapSiteUri});
                     Print("Downloading " + MapSiteUri + "...");
+                    auto response = cpr::Get(cpr::Url{MapSiteUri});
                     if (response.status_code != 200) {
                       QueueChatCommand("Map not found in EpicWar. Status code " + to_string(response.status_code), User, Whisper, m_IRC);
                       break;
@@ -1879,21 +1857,26 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
               MapCFG.Read(ResolvedCFGPath);
             } else {
-              const vector<string> Matches = MapFilesMatch(Map);
-              if (Matches.empty()) {
-                QueueChatCommand(Map + " not found. Try ,host epicwarlink?", User, Whisper, m_IRC);
+              const vector<string> LocalMatches = MapFilesMatch(Map);
+              if (LocalMatches.empty()) {
+                if (IsHostCommand) {
+                  QueueChatCommand(Map + " not found. Try " + std::string(1, static_cast<char>(m_Aura->m_CommandTrigger)) + "host epicwarlink?", User, Whisper, m_IRC);
+                  break;
+                }
+                QueueChatCommand("Maps: " + GetEpicWarSuggestions(Map, 5), User, Whisper, m_IRC);
                 break;
               }
-              if (!(Matches.size() == 1 || IsHostCommand)) {
+              if (LocalMatches.size() > 1 && !IsHostCommand) {
                 string FoundMaps;
-                for (const auto& match : Matches)
+                for (const auto& match : LocalMatches)
                   FoundMaps += match + ", ";
 
-                QueueChatCommand("Maps: " + FoundMaps.substr(0, FoundMaps.size() - 2), User, Whisper, m_IRC);
-                QueueChatCommand("Don't want any of these? Try the epicwar.com link, and I will automatically host it.", User, true, m_IRC);
+                FoundMaps += GetEpicWarSuggestions(Map, 5);
+
+                QueueChatCommand("Maps: " + FoundMaps, User, Whisper, m_IRC);
                 break;
               }
-              const string File = Matches.at(0);
+              const string File = LocalMatches.at(0);
               QueueChatCommand("Loading map file [" + File + "]", User, Whisper, m_IRC);
 
               MapCFG.Set("cfg_partial", "1");
@@ -1917,7 +1900,10 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             if (MapVisibilityValue != -1)
               MapCFG.Set("map_visibility", to_string(MapVisibilityValue));
 
-            m_Aura->m_Map->Load(&MapCFG, ResolvedCFGExists ? ResolvedCFGName : MapCFG.GetString("map_localpath", ""));
+            if (m_Aura->m_Map) {
+              delete m_Aura->m_Map;
+            }
+            m_Aura->m_Map = new CMap(m_Aura, &MapCFG, ResolvedCFGExists ? "cfg:" + ResolvedCFGName : MapCFG.GetString("map_localpath", ""));
             if (MapExtraFlags != 0) {
               m_Aura->m_Map->AddMapFlags(MapExtraFlags);
             }
@@ -1936,6 +1922,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               }
               if (IsHostCommand) {
                 m_Aura->CreateGame(m_Aura->m_Map, GAME_PUBLIC, gameName, User, User, this, Whisper);
+                m_Aura->m_Map = nullptr;
               }
             }
           }
@@ -1953,6 +1940,10 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             QueueChatCommand("Game hosting temporarily disabled.", User, Whisper, m_IRC);
             break;
           }
+          if (!m_Aura->m_Map) {
+            QueueChatCommand("A map must be loaded with " + std::string(1, static_cast<char>(m_Aura->m_CommandTrigger)) + "map first.", User, Whisper, m_IRC);
+            break;
+          }
           if (!Payload.empty())
             m_Aura->CreateGame(m_Aura->m_Map, GAME_PUBLIC, Payload, User, User, this, Whisper);
 
@@ -1967,6 +1958,10 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
         {
           if (!m_Aura->m_EnabledPublic && !IsAdmin(User) && !IsRootAdmin(User)) {
             QueueChatCommand("Game hosting temporarily disabled.", User, Whisper, m_IRC);
+            break;
+          }
+          if (!m_Aura->m_Map) {
+            QueueChatCommand("A map must be loaded with " + std::string(1, static_cast<char>(m_Aura->m_CommandTrigger)) + "map first.", User, Whisper, m_IRC);
             break;
           }
           if (!Payload.empty())
@@ -2481,4 +2476,60 @@ vector<string> CBNET::ConfigFilesMatch(string pattern)
   }
 
   return Matches;
+}
+
+std::string CBNET::EncodeURIComponent(const std::string &s) {
+  std::ostringstream escaped;
+  escaped.fill('0');
+  escaped << std::hex;
+
+  for (char c : s) {
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+        escaped << c;
+    } else if (c == ' ') {
+        escaped << '+';
+    } else {
+        escaped << '%' << std::setw(2) << int(static_cast<unsigned char>(c));
+    }
+  }
+
+  return escaped.str();
+}
+
+std::vector<std::pair<std::string, int>> CBNET::ExtractEpicWarMaps(const std::string &s, const int maxCount) {
+  std::regex pattern(R"(<a href="/maps/(\d+)/"><b>([^<\n]+)</b></a>)");
+  std::vector<std::pair<std::string, int>> Output;
+
+  std::sregex_iterator iter(s.begin(), s.end(), pattern);
+  std::sregex_iterator end;
+
+  int count = 0;
+  while (iter != end && count < maxCount) {
+    std::smatch match = *iter;
+    Output.emplace_back(std::make_pair(match[2], std::stoi(match[1])));
+    ++iter;
+    ++count;
+  }
+
+  return Output;
+}
+
+std::string CBNET::GetEpicWarSuggestions(string pattern, int maxCount)
+{
+    string SearchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
+    Print("Downloading " + SearchUri + "...");
+    std::string Suggestions;
+    auto response = cpr::Get(cpr::Url{SearchUri});
+    if (response.status_code != 200) {
+      return Suggestions;
+    }
+
+    std::vector<std::pair<std::string, int>> MatchingMaps = ExtractEpicWarMaps(response.text, maxCount);
+
+    for (const auto& element : MatchingMaps) {
+      Suggestions += element.first + " (epicwar-" + to_string(element.second) + "), ";
+    }
+
+    Suggestions = Suggestions.substr(0, Suggestions.length() - 2);
+    return Suggestions;
 }

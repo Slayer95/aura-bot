@@ -198,7 +198,7 @@ CAura::CAura(CConfig* CFG)
     m_HostCounter(0),
     m_Exiting(false),
     m_Enabled(true),
-    m_EnabledPublic(false),
+    m_EnabledPublic(true),
     m_Ready(true)
 {
   Print("[AURA] Aura++ version " + m_Version + " - with GProxy++ support");
@@ -234,7 +234,6 @@ CAura::CAura(CConfig* CFG)
   if (m_EnableTCPTunnel) {
     Print("[AURA] TCP tunnel enabled at " + m_PublicHostAddress + ":" + std::to_string(m_PublicHostPort));
   }
-  m_DefaultMap        = CFG->GetString("bot_defaultmap", "dota");
   m_LANWar3Version    = CFG->GetInt("lan_war3version", 27);
   m_NumPlayersToStartGameOver = CFG->GetInt("bot_gameoverplayernumber", 1);
 
@@ -361,15 +360,6 @@ CAura::CAura(CConfig* CFG)
   // see CMap :: Load for more information
 
   ExtractScripts(HighestWar3Version);
-
-  // load the default maps (note: make sure to run ExtractScripts first)
-
-  if (m_DefaultMap.size() < 4 || m_DefaultMap.substr(m_DefaultMap.size() - 4) != ".cfg")
-    m_DefaultMap += ".cfg";
-
-  CConfig MapCFG;
-  MapCFG.Read(m_MapCFGPath + m_DefaultMap);
-  m_Map = new CMap(this, &MapCFG, m_MapCFGPath + m_DefaultMap);
 
   // load the iptocountry data
 
@@ -919,11 +909,10 @@ void CAura::LoadIPToCountryData()
   ifstream in;
   in.open("ip-to-country.csv");
 
-  if (in.fail())
+  if (in.fail()) {
     Print("[AURA] warning - unable to read file [ip-to-country.csv], iptocountry data not loaded");
-  else
-  {
-    Print("[AURA] started loading [ip-to-country.csv]");
+  } else {
+    Print("[AURA] loading [ip-to-country.csv]");
 
     // the begin and commit statements are optimizations
     // we're about to insert ~4 MB of data into the database so if we allow the database to treat each insert as a transaction it will take a LONG time
@@ -956,17 +945,6 @@ void CAura::LoadIPToCountryData()
         parser >> IP2;
         parser >> Country;
         m_DB->FromAdd(stoul(IP1), stoul(IP2), Country);
-
-        // it's probably going to take awhile to load the iptocountry data (~10 seconds on my 3.2 GHz P4 when using SQLite3)
-        // so let's print a progress meter just to keep the user from getting worried
-
-        uint8_t NewPercent = static_cast<uint8_t>((float)in.tellg() / FileLength * 100);
-
-        if (NewPercent != Percent && NewPercent % 10 == 0)
-        {
-          Percent = NewPercent;
-          Print("[AURA] iptocountry data: " + to_string(Percent) + "% loaded");
-        }
       }
 
       if (!m_DB->Commit())
@@ -1015,27 +993,11 @@ void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string own
 
   m_CurrentGame = new CGame(this, map, m_HostPort, m_LANHostPort, gameState, gameName, ownerName, creatorName, creatorServer);
 
-  for (auto& bnet : m_BNETs)
-  {
-    if (whisper && bnet == creatorServer)
-    {
-      // note that we send this whisper only on the creator server
-
-      if (gameState == GAME_PRIVATE)
-        bnet->QueueChatCommand("Creating private game [" + gameName + "] started by [" + ownerName + "]", creatorName, whisper, string());
-      else
-        bnet->QueueChatCommand("Creating public game [" + gameName + "] started by [" + ownerName + "]", creatorName, whisper, string());
+  for (auto& bnet : m_BNETs) {
+    if (whisper && bnet == creatorServer) {
+      bnet->QueueChatCommand(std::string("Creating ") + (gameState == GAME_PRIVATE ? "private" : "public") + " game of " + map->GetMapLocalPath() + ". (Started by " + ownerName + ": \"" + gameName + "\")", creatorName, whisper, string());
     }
-    else
-    {
-      // note that we send this chat message on all other bnet servers
-
-      if (gameState == GAME_PRIVATE)
-        bnet->QueueChatCommand("Creating private game [" + gameName + "] started by [" + ownerName + "]");
-      else
-        bnet->QueueChatCommand("Creating public game [" + gameName + "] started by [" + ownerName + "]");
-    }
-
+    bnet->QueueChatCommand((gameState == GAME_PRIVATE ? std::string("Private") : std::string("Public")) + " game of " + map->GetMapLocalPath() + " created. (Started by " + ownerName + ": \"" + gameName + "\").");
     bnet->QueueGameCreate(gameState, gameName, map, m_CurrentGame->GetHostCounter());
 
     // hold friends and/or clan members

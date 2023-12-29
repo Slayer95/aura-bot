@@ -402,8 +402,18 @@ inline std::string RemoveNonAlphanumeric(const std::string& s) {
 }
 
 inline bool IsValidMapName(const std::string& s) {
+  if (!s.length()) return false;
+  if (s[0] == '.') return false;
   std::regex invalidChars("[^a-zA-Z0-9_ ().~-]");
   std::regex validExtensions("\\.w3(m|x)$");
+  return !std::regex_search(s, invalidChars) && std::regex_search(s, validExtensions);
+}
+
+inline bool IsValidCFGName(const std::string& s) {
+  if (!s.length()) return false;
+  if (s[0] == '.') return false;
+  std::regex invalidChars("[^a-zA-Z0-9_ ().~-]");
+  std::regex validExtensions("\\.cfg$");
   return !std::regex_search(s, invalidChars) && std::regex_search(s, validExtensions);
 }
 

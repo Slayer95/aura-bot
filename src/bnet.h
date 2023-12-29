@@ -144,6 +144,9 @@ public:
 private:
   std::vector<std::string> MapFilesMatch(std::string pattern);
   std::vector<std::string> ConfigFilesMatch(std::string pattern);
+  std::string EncodeURIComponent(const std::string &s);
+  std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount);
+  std::string GetEpicWarSuggestions(std::string pattern, int maxCount);
 };
 
 #endif // AURA_BNET_H_

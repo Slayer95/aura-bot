@@ -163,6 +163,7 @@ public:
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
   void                          AddMapFlags(uint32_t ExtraFlags) { m_MapFlags |= ExtraFlags; }
   void                          ClearMapData() { m_MapData.clear(); }
+  inline void                   SetMapSiteURL(const std::string& s) { m_MapSiteURL = s; }
 
   void Load(CConfig* CFG, const std::string& nCFGFile);
   const char* CheckValid();

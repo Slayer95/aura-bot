@@ -51,7 +51,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_Stats(nullptr),
     m_Protocol(new CGameProtocol(nAura)),
     m_Slots(nMap->GetSlots()),
-    m_Map(new CMap(*nMap)),
+    m_Map(nMap),
     m_GameName(nGameName),
     m_LastGameName(nGameName),
     m_IndexVirtualHostName(nAura->m_IndexVirtualHostName),
@@ -930,7 +930,7 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
     int matchIndex;
     string Line = m_Aura->m_Greeting[i];
     if (Line.substr(0, 6) == "{URL?}") {
-      if (m_Map->GetMapSiteURL().length() == 0) {
+      if (m_Map->GetMapSiteURL().empty()) {
         continue;
       }
       Line = Line.substr(6, Line.length());
@@ -1943,7 +1943,11 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
         case HashCode("end"):
         case HashCode("e"):
         {
-          if (m_GameLoaded)
+          if (!IsOwner(User)) {
+            break;
+          }
+
+          if (!m_GameLoaded)
             break;
 
           Print("[GAME: " + m_GameName + "] is over (admin ended game)");
@@ -1951,6 +1955,29 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
           break;
         }
 
+        //
+        // !URL
+        //
+
+        case HashCode("url"):
+        case HashCode("link"):
+        {
+          if (Payload.empty()) {
+            if (m_Map->GetMapSiteURL().empty()) {
+              SendAllChat("Download URL unknown");
+            } else {
+              SendAllChat("Download map from " + m_Map->GetMapSiteURL());
+            }
+            break;
+          }
+            
+          if (m_CountDownStarted)
+            break;
+
+          m_Map->SetMapSiteURL(Payload);
+          SendAllChat("Download URL set to [" + Payload + "]");
+          break;
+        }
         //
         // !HCL
         //
@@ -2960,6 +2987,31 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
               }
             }
           }
+
+          break;
+        }
+
+        //
+        // !COMP (fill all open slots with computers)
+        //
+
+        case HashCode("compall"):
+        {
+          if (Payload.empty() || m_GameLoading || m_GameLoaded)
+            break;
+
+          // extract the slot and the skill
+          // e.g. "1 2" -> slot: "1", skill: "2"
+
+          uint32_t     Skill;
+          stringstream SS;
+          SS << Payload;
+          SS >> Skill;
+
+          if (SS.fail())
+            Skill = 2;
+
+          ComputerAllSlots(static_cast<uint8_t>(Skill));
 
           break;
         }
@@ -4470,6 +4522,28 @@ void CGame::CloseAllSlots()
     if (slot.GetSlotStatus() == SLOTSTATUS_OPEN)
     {
       slot.SetSlotStatus(SLOTSTATUS_CLOSED);
+      Changed = true;
+    }
+  }
+
+  if (Changed)
+    SendAllSlotInfo();
+}
+
+void CGame::ComputerAllSlots(uint8_t skill)
+{
+  bool Changed = false;
+
+  uint8_t SID = 0;
+
+  if (SID < m_Slots.size()) {
+    CGameSlot Slot = m_Slots[SID];
+    if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN) {
+      uint8_t Race = Slot.GetRace();
+      if (Race & SLOTRACE_SELECTABLE) {
+        Race = SLOTRACE_RANDOM;
+      }
+      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), Race, skill);
       Changed = true;
     }
   }

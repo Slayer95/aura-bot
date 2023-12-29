@@ -75,7 +75,6 @@ public:
   std::string              m_LanguageFile;               // config value: language file
   std::string              m_Warcraft3Path;              // config value: Warcraft 3 path
   std::string              m_BindAddress;                // config value: the address to host games on
-  std::string              m_DefaultMap;                 // config value: default map (map.cfg)
   std::vector<std::string> m_IgnoredNotifyJoinPlayers;   // config value: list of player names that won't trigger join notifications
   std::vector<std::string> m_IgnoredDatagramSources;     // config value: list of IPs ignored by m_UDPServer
   uint32_t                 m_ReconnectWaitTime;          // config value: the maximum number of minutes to wait for a GProxy++ reliable reconnect
@@ -100,7 +99,7 @@ public:
   std::string              m_PublicHostAddress;          // config value: the address to broadcast in pvpgn servers
   uint16_t                 m_ReconnectPort;              // config value: the port to listen for GProxy++ reliable reconnects on
   uint8_t                  m_LANWar3Version;             // config value: LAN warcraft 3 version
-  int32_t                  m_CommandTrigger;             // config value: the command trigger inside games
+  uint8_t                  m_CommandTrigger;             // config value: the command trigger inside games
   std::string              m_GreetingPath;               // config value: the path of the greeting the bot sends to all players joining a game
   bool                     m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                     m_Enabled;                    // set to false to prevent new games from being created
