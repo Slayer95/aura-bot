@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <map>
 #include <unordered_set>
 
 #define NOMINMAX
@@ -88,6 +89,7 @@ public:
   uint32_t                 m_MaxDownloadSpeed;           // config value: maximum total map download speed in KB/sec
   uint32_t                 m_AutoKickPing;               // config value: auto kick players with ping higher than this
   uint32_t                 m_LobbyTimeLimit;             // config value: auto close the game lobby after this many minutes without any reserved players
+  uint32_t                 m_LobbyNoOwnerTime;           // config value: relinquish game ownership after this many minutes
   uint32_t                 m_Latency;                    // config value: the latency (by default)
   uint32_t                 m_SyncLimit;                  // config value: the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
   uint32_t                 m_VoteKickPercentage;         // config value: percentage of players required to vote yes for a votekick to pass
@@ -97,7 +99,8 @@ public:
   uint32_t                 m_EnableTCPTunnel;            // config value: enable to make peers from pvpgn servers connect to PublicHostAddress:PublicHostPort
   uint16_t                 m_PublicHostPort;             // config value: the port to broadcast in pvpgn servers
   std::string              m_PublicHostAddress;          // config value: the address to broadcast in pvpgn servers
-  uint16_t                 m_ReconnectPort;              // config value: the port to listen for GProxy++ reliable reconnects on
+  bool                     m_ProxyReconnectEnabled;      // config value: whether to listen to GProxy++ reconnects
+  uint16_t                 m_ProxyReconnectPort;         // config value: the port to listen for GProxy++ reliable reconnects on
   uint8_t                  m_LANWar3Version;             // config value: LAN warcraft 3 version
   uint8_t                  m_CommandTrigger;             // config value: the command trigger inside games
   std::string              m_GreetingPath;               // config value: the path of the greeting the bot sends to all players joining a game
@@ -114,8 +117,10 @@ public:
   uint16_t                 m_UDPForwardPort;             // config value: the port to forward UDP traffic to
   uint32_t                 m_UDPForwardGameLists;        // config value: whether to forward PvPGN game lists through UDP
   bool                     m_LCPings;                    // config value: use LC style pings (divide actual pings by two)
+  bool                     m_ResolveMapToConfig;
   std::vector<std::string> m_Greeting;                   // read from m_GreetingPath
-  std::unordered_multiset<std::string> m_CurrentMaps;    //
+  std::map<std::string, std::string> m_CachedMaps;   //
+  std::unordered_multiset<std::string> m_BusyMaps;       //
 
   explicit CAura(CConfig* CFG);
   ~CAura();
@@ -137,6 +142,8 @@ public:
   void ExtractScripts(const uint8_t War3Version);
   void LoadIPToCountryData();
   void CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string creatorName, CBNET* nCreatorServer, bool whisper);
+  std::vector<std::string> MapFilesMatch(std::string pattern);
+  std::vector<std::string> ConfigFilesMatch(std::string pattern);
 
   inline uint32_t NextHostCounter()
   {

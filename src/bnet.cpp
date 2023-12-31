@@ -608,9 +608,13 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             QueueChatCommand("Command to evaluate not specified.", User, Whisper, m_IRC);
           } else {
             PayloadStart = Payload.find(' ');
-            m_Aura->m_CurrentGame->EventPlayerBotCommand(nullptr, Payload.substr(0, PayloadStart), Payload.substr(PayloadStart + 1));
+            if (PayloadStart == string::npos) {
+              m_Aura->m_CurrentGame->EventPlayerBotCommand(nullptr, Payload, string());
+            } else {
+              m_Aura->m_CurrentGame->EventPlayerBotCommand(nullptr, Payload.substr(0, PayloadStart), Payload.substr(PayloadStart + 1, Payload.length()));
+            }
           }
-        break;
+          break;
         }
 
         //
@@ -658,7 +662,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               Print("[BNET: " + m_ServerAlias + "] error listing map configs - map config path doesn't exist");
               QueueChatCommand("Error listing map configs - map config path doesn't exist", User, Whisper, m_IRC);
             } else {
-              const vector<string> Matches = ConfigFilesMatch(Payload);
+              const vector<string> Matches = m_Aura->ConfigFilesMatch(Payload);
 
               if (Matches.empty()) {
                 QueueChatCommand("No map configs found with that name", User, Whisper, m_IRC);
@@ -681,6 +685,63 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             }
           }
 
+          break;
+        }
+
+        case HashCode("synccfg"):
+        case HashCode("initcfg"):
+        {
+          if (!IsRootAdmin(User))
+            break;
+
+          std::vector<std::string> AllMaps = FilesMatch(m_Aura->m_MapPath, ".w3x");
+          std::vector<std::string> ROCMaps = FilesMatch(m_Aura->m_MapPath, ".w3m");
+          AllMaps.insert(AllMaps.end(), ROCMaps.begin(), ROCMaps.end());
+          int counter = 0;
+          
+          for (const auto& File : AllMaps) {
+            if (CommandHash != HashCode("synccfg") && m_Aura->m_CachedMaps.find(File) != m_Aura->m_CachedMaps.end()) {
+              continue;
+            }
+            if (File.find(Payload) == string::npos) {
+              continue;
+            }
+            if (!FileExists(m_Aura->m_MapPath + File)) {
+              continue;
+            }
+
+            CConfig MapCFG;
+            MapCFG.Set("cfg_partial", "1");
+            MapCFG.Set("map_path", R"(Maps\Download\)" + File);
+            MapCFG.Set("map_localpath", File);
+            if (File.find("_evrgrn32") != string::npos) {
+              MapCFG.Set("map_site", "https://www.hiveworkshop.com/threads/351924/");
+            } else {
+              MapCFG.Set("map_site", "");
+            }
+            MapCFG.Set("map_url", "");
+            if (File.find("_evrgrn32") != string::npos) {
+              MapCFG.Set("map_shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
+            } else {
+              MapCFG.Set("map_shortdesc", "");
+            }
+            MapCFG.Set("downloaded_by", User);
+
+            if (File.find("DotA") != string::npos)
+              MapCFG.Set("map_type", "dota");
+
+            CMap* ParsedMap = new CMap(m_Aura, &MapCFG, File);
+            delete ParsedMap;
+
+            std::string CFGName = "local-" + File + ".cfg";
+            std::string CFGPath = m_Aura->m_MapCFGPath + CFGName;
+
+            std::vector<uint8_t> OutputBytes = MapCFG.Export();
+            FileWrite(CFGPath, OutputBytes.data(), OutputBytes.size());
+            m_Aura->m_CachedMaps[File] = CFGName;
+            counter++;
+          }
+          QueueChatCommand("Initialized " + to_string(counter) + " map config files.", User, Whisper, m_IRC);
           break;
         }
 
@@ -1661,7 +1722,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               MapObserversValue = MAPOBS_NONE;
             } else if (MapObservers == "referee" || MapObservers == "referees" || MapObservers == "arbiter" || MapObservers == "arbitro" || MapObservers == "arbitros" || MapObservers == "árbitros") {
               MapObserversValue = MAPOBS_REFEREES;
-            } else if (MapObservers == "observadores derrotados" || MapObservers == "derrotados" || MapObservers == "obs derrotados" || MapObservers == "obs on defeat" || MapObservers == "observers on defeat") {
+            } else if (MapObservers == "observadores derrotados" || MapObservers == "derrotados" || MapObservers == "obs derrotados" || MapObservers == "obs on defeat" || MapObservers == "observers on defeat" || MapObservers == "on defeat" || MapObservers == "defeat") {
               MapObserversValue = MAPOBS_ONDEFEAT;
             } else if (MapObservers == "full observers" || MapObservers == "solo observadores") {
               MapObserversValue = MAPOBS_ALLOWED;
@@ -1709,6 +1770,10 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
           }
 
           if (Map.empty()) {
+            if (IsHostCommand) {
+              QueueChatCommand("Please enter the map in the host command.", User, Whisper, m_IRC);
+              break;
+            }
             if (!m_Aura->m_Map) {
               QueueChatCommand("There is no map/config file loaded.", User, Whisper, m_IRC);
               break;
@@ -1818,7 +1883,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
                         // but there is no standard C++ way to do this, and cstdio isn't very helpful.
                         continue;
                       }
-                      if (m_Aura->m_CurrentMaps.find(EpicWarName + MapSuffix + ".w3x") != m_Aura->m_CurrentMaps.end()) {
+                      if (m_Aura->m_BusyMaps.find(EpicWarName + MapSuffix + ".w3x") != m_Aura->m_BusyMaps.end()) {
                         // Map already hosted.
                         continue;
                       }
@@ -1857,7 +1922,8 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
               MapCFG.Read(ResolvedCFGPath);
             } else {
-              const vector<string> LocalMatches = MapFilesMatch(Map);
+              // Fuzzy-search
+              const vector<string> LocalMatches = m_Aura->MapFilesMatch(Map);
               if (LocalMatches.empty()) {
                 if (IsHostCommand) {
                   QueueChatCommand(Map + " not found. Try " + std::string(1, static_cast<char>(m_Aura->m_CommandTrigger)) + "host epicwarlink?", User, Whisper, m_IRC);
@@ -1877,21 +1943,30 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
                 break;
               }
               const string File = LocalMatches.at(0);
-              QueueChatCommand("Loading map file [" + File + "]", User, Whisper, m_IRC);
+              if (m_Aura->m_ResolveMapToConfig && m_Aura->m_CachedMaps.find(File) != m_Aura->m_CachedMaps.end()) {
+                ResolvedCFGName = m_Aura->m_CachedMaps[File];
+                ResolvedCFGPath = m_Aura->m_MapCFGPath + ResolvedCFGName;
+                QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
+                MapCFG.Read(ResolvedCFGPath);
+                ResolvedCFGExists = true; // TODO: Read should return success
+              } else {
+                QueueChatCommand("Loading map file [" + File + "]", User, Whisper, m_IRC);
 
-              MapCFG.Set("cfg_partial", "1");
-              MapCFG.Set("map_path", R"(Maps\Download\)" + File);
-              MapCFG.Set("map_localpath", File);
-              MapCFG.Set("map_site", MapSiteUri);
-              MapCFG.Set("map_url", MapDownloadUri);
-              MapCFG.Set("downloaded_by", User);
+                MapCFG.Set("cfg_partial", "1");
+                MapCFG.Set("map_path", R"(Maps\Download\)" + File);
+                MapCFG.Set("map_localpath", File);
+                MapCFG.Set("map_site", MapSiteUri);
+                MapCFG.Set("map_url", MapDownloadUri);
+                MapCFG.Set("downloaded_by", User);
 
-              if (File.find("DotA") != string::npos)
-                MapCFG.Set("map_type", "dota");
+                if (File.find("DotA") != string::npos)
+                  MapCFG.Set("map_type", "dota");
 
-              if (!ResolvedCFGPath.empty()) {
-                std::vector<uint8_t> OutputBytes = MapCFG.Export();
-                FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
+                if (!ResolvedCFGPath.empty()) {
+                  std::vector<uint8_t> OutputBytes = MapCFG.Export();
+                  FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
+                  m_Aura->m_CachedMaps[File] = ResolvedCFGName;
+                }
               }
             }
 
@@ -1917,6 +1992,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
               }
             } else {
               if (!ResolvedCFGExists && !ResolvedCFGPath.empty() && MapCFG.GetInt("cfg_partial", 0) == 0) {
+                // Download and parse successful
                 std::vector<uint8_t> OutputBytes = MapCFG.Export();
                 FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
               }
@@ -2382,100 +2458,6 @@ void CBNET::HoldClan(CGame* game)
 {
   for (auto& clanmate : m_Clan)
     game->AddToReserved(clanmate);
-}
-
-vector<string> CBNET::MapFilesMatch(string rawPattern)
-{
-  if (IsValidMapName(rawPattern) && FileExists(m_Aura->m_MapPath + rawPattern)) {
-    return std::vector<std::string>(1, rawPattern);
-  }
-
-  string pattern = RemoveNonAlphanumeric(rawPattern);
-  transform(begin(pattern), end(pattern), begin(pattern), ::tolower);
-
-  auto ROCMaps = FilesMatch(m_Aura->m_MapPath, ".w3m");
-  auto TFTMaps = FilesMatch(m_Aura->m_MapPath, ".w3x");
-
-  vector<string> MapList;
-  MapList.insert(end(MapList), begin(ROCMaps), end(ROCMaps));
-  MapList.insert(end(MapList), begin(TFTMaps), end(TFTMaps));
-
-  vector<string> Matches;
-
-  for (auto& mapName : MapList)
-  {
-    string cmpName = RemoveNonAlphanumeric(mapName);
-    transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
-
-    if (cmpName.find(pattern) != string::npos) {
-      Matches.push_back(mapName);
-      if (Matches.size() >= 10) {
-        break;
-      }
-    }
-  }
-
-  if (Matches.size() > 0) {
-    return Matches;
-  }
-
-  if (pattern.find("w3x") == string::npos && pattern.find("w3m") == string::npos) {
-    pattern.append("w3x");
-  }
-
-  int maxDistance = 10;
-  if (pattern.size() < maxDistance) {
-    maxDistance = pattern.size() / 2;
-  }
-
-  std::vector<std::pair<std::string, int>> distances;
-  for (auto& mapName : MapList) {
-    string cmpName = RemoveNonAlphanumeric(mapName);
-    transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
-    int sizeDifference = cmpName.size() - pattern.size();
-    
-    if ((-maxDistance <= sizeDifference) && (sizeDifference <= maxDistance)) {
-      int distance = GetLevenshteinDistance(cmpName, pattern);
-      if (distance <= maxDistance) {
-        distances.emplace_back(mapName, distance);
-      }
-    }
-  }
-
-  std::partial_sort(
-    distances.begin(),
-    distances.begin() + std::min(5, static_cast<int>(distances.size())),
-    distances.end(),
-    [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
-        return a.second < b.second;
-    }
-  );
-
-  for (int i = 0; i < 5 && i < distances.size(); ++i) {
-    Matches.push_back(distances[i].first);
-  }
-
-  return Matches;
-}
-
-vector<string> CBNET::ConfigFilesMatch(string pattern)
-{
-  transform(begin(pattern), end(pattern), begin(pattern), ::tolower);
-
-  vector<string> ConfigList = FilesMatch(m_Aura->m_MapCFGPath, ".cfg");
-
-  vector<string> Matches;
-
-  for (auto& cfgName : ConfigList)
-  {
-    string lowerCfgName(cfgName);
-    transform(begin(lowerCfgName), end(lowerCfgName), begin(lowerCfgName), ::tolower);
-
-    if (lowerCfgName.find(pattern) != string::npos)
-      Matches.push_back(cfgName);
-  }
-
-  return Matches;
 }
 
 std::string CBNET::EncodeURIComponent(const std::string &s) {

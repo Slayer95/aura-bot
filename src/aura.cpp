@@ -187,7 +187,7 @@ CAura::CAura(CConfig* CFG)
   : m_IRC(nullptr),
     m_UDPServer(new CUDPServer()),
     m_UDPSocket(new CUDPSocket()),
-    m_ReconnectSocket(new CTCPServer()),
+    m_ReconnectSocket(nullptr),
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
@@ -201,7 +201,7 @@ CAura::CAura(CConfig* CFG)
     m_EnabledPublic(true),
     m_Ready(true)
 {
-  Print("[AURA] Aura++ version " + m_Version + " - with GProxy++ support");
+  Print("[AURA] Aura++ version " + m_Version);
 
   // get the general configuration variables
 
@@ -214,15 +214,18 @@ CAura::CAura(CConfig* CFG)
   m_UDPSocket->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
   m_UDPSocket->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
 
-  m_ReconnectPort = CFG->GetInt("bot_reconnectport", 6113);
+  m_ProxyReconnectEnabled = CFG->GetInt("bot_proxyreconnect", 0) == 1;
+  m_ProxyReconnectPort = CFG->GetInt("bot_reconnectport", 6113);
 
-  if (m_ReconnectSocket->Listen(m_BindAddress, m_ReconnectPort))
-    Print("[AURA] listening for GProxy++ reconnects on port " + to_string(m_ReconnectPort));
-  else
-  {
-    Print("[AURA] error listening for GProxy++ reconnects on port " + to_string(m_ReconnectPort));
-    m_Ready = false;
-    return;
+  if (m_ProxyReconnectEnabled) {
+    m_ReconnectSocket = new CTCPServer();
+    if (m_ReconnectSocket->Listen(m_BindAddress, m_ProxyReconnectPort)) {
+      Print("[AURA] listening for GProxy++ reconnects on port " + to_string(m_ProxyReconnectPort));
+    } else {
+      Print("[AURA] error listening for GProxy++ reconnects on port " + to_string(m_ProxyReconnectPort));
+      m_Ready = false;
+      return;
+    }
   }
 
   m_CRC->Initialize();
@@ -364,6 +367,15 @@ CAura::CAura(CConfig* CFG)
   // load the iptocountry data
 
   LoadIPToCountryData();
+
+  // Preload map configs
+  const vector<string> MapConfigFiles = ConfigFilesMatch("");
+  for (const auto& MapConfigFile : MapConfigFiles) {
+    std::string MapLocalPath = CConfig::ReadString(m_MapCFGPath + MapConfigFile, "map_localpath");
+    if (!MapLocalPath.empty()) {
+      m_CachedMaps[MapLocalPath] = MapConfigFile;
+    }
+  }
 }
 
 CAura::~CAura()
@@ -372,7 +384,9 @@ CAura::~CAura()
   delete m_UDPSocket;
   delete m_CRC;
   delete m_SHA;
-  delete m_ReconnectSocket;
+  if (m_ReconnectSocket) {
+    delete m_ReconnectSocket;
+  }
   delete m_GPSProtocol;
 
   if (m_Map)
@@ -428,23 +442,25 @@ bool CAura::Update()
 
   // 5. reconnect socket
 
-  if (m_ReconnectSocket->HasError())
-  {
-    Print("[AURA] GProxy++ reconnect listener error (" + m_ReconnectSocket->GetErrorString() + ")");
-    return true;
-  }
-  else
-  {
-    m_ReconnectSocket->SetFD(&fd, &send_fd, &nfds);
-    ++NumFDs;
-  }
+  if (m_ProxyReconnectEnabled) {
+    if (m_ReconnectSocket->HasError())
+    {
+      Print("[AURA] GProxy++ reconnect listener error (" + m_ReconnectSocket->GetErrorString() + ")");
+      return true;
+    }
+    else
+    {
+      m_ReconnectSocket->SetFD(&fd, &send_fd, &nfds);
+      ++NumFDs;
+    }
 
-  // 6. reconnect sockets
+    // 6. reconnect sockets
 
-  for (auto& socket : m_ReconnectSockets)
-  {
-    socket->SetFD(&fd, &send_fd, &nfds);
-    ++NumFDs;
+    for (auto& socket : m_ReconnectSockets)
+    {
+      socket->SetFD(&fd, &send_fd, &nfds);
+      ++NumFDs;
+    }
   }
 
   // 7. UDP server
@@ -570,71 +586,81 @@ bool CAura::Update()
 
   // update GProxy++ reliable reconnect sockets
 
-  CTCPSocket* NewSocket = m_ReconnectSocket->Accept(&fd);
+  if (m_ProxyReconnectEnabled) {
+    CTCPSocket* NewSocket = m_ReconnectSocket->Accept(&fd);
 
-  if (NewSocket)
-    m_ReconnectSockets.push_back(NewSocket);
+    if (NewSocket)
+      m_ReconnectSockets.push_back(NewSocket);
 
-  for (auto i = begin(m_ReconnectSockets); i != end(m_ReconnectSockets);)
-  {
-    if ((*i)->HasError() || !(*i)->GetConnected() || GetTime() - (*i)->GetLastRecv() >= 10)
+    for (auto i = begin(m_ReconnectSockets); i != end(m_ReconnectSockets);)
     {
-      delete *i;
-      i = m_ReconnectSockets.erase(i);
-      continue;
-    }
-
-    (*i)->DoRecv(&fd);
-    string*                    RecvBuffer = (*i)->GetBytes();
-    const std::vector<uint8_t> Bytes      = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-
-    // a packet is at least 4 bytes
-
-    if (Bytes.size() >= 4)
-    {
-      if (Bytes[0] == GPS_HEADER_CONSTANT)
+      if ((*i)->HasError() || !(*i)->GetConnected() || GetTime() - (*i)->GetLastRecv() >= 10)
       {
-        // bytes 2 and 3 contain the length of the packet
+        delete *i;
+        i = m_ReconnectSockets.erase(i);
+        continue;
+      }
 
-        const uint16_t Length = static_cast<uint16_t>(Bytes[3] << 8 | Bytes[2]);
+      (*i)->DoRecv(&fd);
+      string*                    RecvBuffer = (*i)->GetBytes();
+      const std::vector<uint8_t> Bytes      = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
 
-        if (Bytes.size() >= Length)
+      // a packet is at least 4 bytes
+
+      if (Bytes.size() >= 4)
+      {
+        if (Bytes[0] == GPS_HEADER_CONSTANT)
         {
-          if (Bytes[1] == CGPSProtocol::GPS_RECONNECT && Length == 13)
+          // bytes 2 and 3 contain the length of the packet
+
+          const uint16_t Length = static_cast<uint16_t>(Bytes[3] << 8 | Bytes[2]);
+
+          if (Bytes.size() >= Length)
           {
-            const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
-            const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
-
-            // look for a matching player in a running game
-
-            CGamePlayer* Match = nullptr;
-
-            for (auto& game : m_Games)
+            if (Bytes[1] == CGPSProtocol::GPS_RECONNECT && Length == 13)
             {
-              if (game->GetGameLoaded())
-              {
-                CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
+              const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
+              const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
 
-                if (Player && Player->GetGProxy() && Player->GetGProxyReconnectKey() == ReconnectKey)
+              // look for a matching player in a running game
+
+              CGamePlayer* Match = nullptr;
+
+              for (auto& game : m_Games)
+              {
+                if (game->GetGameLoaded())
                 {
-                  Match = Player;
-                  break;
+                  CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
+
+                  if (Player && Player->GetGProxy() && Player->GetGProxyReconnectKey() == ReconnectKey)
+                  {
+                    Match = Player;
+                    break;
+                  }
                 }
               }
-            }
 
-            if (Match)
-            {
-              // reconnect successful!
+              if (Match)
+              {
+                // reconnect successful!
 
-              *RecvBuffer = RecvBuffer->substr(Length);
-              Match->EventGProxyReconnect(*i, LastPacket);
-              i = m_ReconnectSockets.erase(i);
-              continue;
+                *RecvBuffer = RecvBuffer->substr(Length);
+                Match->EventGProxyReconnect(*i, LastPacket);
+                i = m_ReconnectSockets.erase(i);
+                continue;
+              }
+              else
+              {
+                (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
+                (*i)->DoSend(&send_fd);
+                delete *i;
+                i = m_ReconnectSockets.erase(i);
+                continue;
+              }
             }
             else
             {
-              (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
+              (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_INVALID));
               (*i)->DoSend(&send_fd);
               delete *i;
               i = m_ReconnectSockets.erase(i);
@@ -659,18 +685,10 @@ bool CAura::Update()
           continue;
         }
       }
-      else
-      {
-        (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_INVALID));
-        (*i)->DoSend(&send_fd);
-        delete *i;
-        i = m_ReconnectSockets.erase(i);
-        continue;
-      }
-    }
 
-    (*i)->DoSend(&send_fd);
-    ++i;
+      (*i)->DoSend(&send_fd);
+      ++i;
+    }
   }
 
   return m_Exiting || Exit;
@@ -773,17 +791,19 @@ void CAura::SetConfigs(CConfig* CFG)
     Print("[AURA] warning - bot_lobbyvirtualhostname is longer than 15 characters - using default lobby virtual host name");
   }
 
-  m_AutoLock           = CFG->GetInt("bot_autolock", 0) == 0 ? false : true;
+  m_AutoLock           = CFG->GetInt("bot_autolock", 0) != 0;
   m_AllowDownloads     = CFG->GetInt("bot_allowdownloads", 0);
   m_AllowUploads       = CFG->GetInt("bot_allowuploads", 0);
   m_MaxDownloaders     = CFG->GetInt("bot_maxdownloaders", 3);
   m_MaxDownloadSpeed   = CFG->GetInt("bot_maxdownloadspeed", 100);
   m_LCPings            = CFG->GetInt("bot_lcpings", 1) == 0 ? false : true;
   m_AutoKickPing       = CFG->GetInt("bot_autokickping", 300);
-  m_LobbyTimeLimit     = CFG->GetInt("bot_lobbytimelimit", 2);
+  m_LobbyTimeLimit     = CFG->GetInt("bot_lobbytimelimit", 10);
+  m_LobbyNoOwnerTime   = CFG->GetInt("bot_lobbyownerlesstime", 2);
   m_Latency            = CFG->GetInt("bot_latency", 100);
   m_SyncLimit          = CFG->GetInt("bot_synclimit", 50);
   m_VoteKickPercentage = CFG->GetInt("bot_votekickpercentage", 70);
+  m_ResolveMapToConfig = CFG->GetInt("bot_resolvemaptoconfig", 1) == 1;
 
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;
@@ -1012,4 +1032,110 @@ void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string own
     if (gameState == GAME_PRIVATE && !bnet->GetPvPGN())
       bnet->QueueEnterChat();
   }
+}
+
+vector<string> CAura::MapFilesMatch(string rawPattern)
+{
+  if (IsValidMapName(rawPattern) && FileExists(m_MapPath + rawPattern)) {
+    return std::vector<std::string>(1, rawPattern);
+  }
+
+  string pattern = RemoveNonAlphanumeric(rawPattern);
+  transform(begin(pattern), end(pattern), begin(pattern), ::tolower);
+
+  auto TFTMaps = FilesMatch(m_MapPath, ".w3x");
+  auto ROCMaps = FilesMatch(m_MapPath, ".w3m");
+
+  std::unordered_set<std::string> MapSet(TFTMaps.begin(), TFTMaps.end());
+  MapSet.insert(ROCMaps.begin(), ROCMaps.end());
+  for (const auto& pair : m_CachedMaps) {
+    MapSet.insert(pair.first);
+  }
+
+  vector<string> Matches;
+
+  for (auto& mapName : MapSet)
+  {
+    string cmpName = RemoveNonAlphanumeric(mapName);
+    transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
+
+    if (cmpName.find(pattern) != string::npos) {
+      Matches.push_back(mapName);
+      if (Matches.size() >= 10) {
+        break;
+      }
+    }
+  }
+
+  if (Matches.size() > 0) {
+    return Matches;
+  }
+
+  if (pattern.find("w3x") == string::npos && pattern.find("w3m") == string::npos) {
+    pattern.append("w3x");
+  }
+
+  int maxDistance = 10;
+  if (pattern.size() < maxDistance) {
+    maxDistance = pattern.size() / 2;
+  }
+
+  std::vector<std::pair<std::string, int>> distances;
+  for (auto& mapName : MapSet) {
+    string cmpName = RemoveNonAlphanumeric(mapName);
+    transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
+    int sizeDifference = cmpName.size() - pattern.size();
+    
+    if ((-maxDistance <= sizeDifference) && (sizeDifference <= maxDistance)) {
+      int distance = GetLevenshteinDistance(pattern, cmpName); // source to target
+      if (distance <= maxDistance) {
+        distances.emplace_back(mapName, distance);
+      }
+    }
+  }
+
+  std::partial_sort(
+    distances.begin(),
+    distances.begin() + std::min(5, static_cast<int>(distances.size())),
+    distances.end(),
+    [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+        return a.second < b.second;
+    }
+  );
+
+  std::string PrioritizedString;
+  if (pattern.find("evergreen") != string::npos) {
+    PrioritizedString = "evrgrn";
+  }
+  for (int i = 0; i < 5 && i < distances.size(); ++i) {
+    if (!PrioritizedString.empty() && distances[i].first.find(PrioritizedString) != string::npos) {
+      PrioritizedString = "";
+      Matches.insert(Matches.begin(), distances[i].first);
+    } else {
+      Matches.push_back(distances[i].first);
+    }
+  }
+
+  return Matches;
+}
+
+vector<string> CAura::ConfigFilesMatch(string pattern)
+{
+  transform(begin(pattern), end(pattern), begin(pattern), ::tolower);
+
+  vector<string> ConfigList = FilesMatch(m_MapCFGPath, ".cfg");
+
+  vector<string> Matches;
+
+  for (auto& cfgName : ConfigList)
+  {
+    string lowerCfgName(cfgName);
+    transform(begin(lowerCfgName), end(lowerCfgName), begin(lowerCfgName), ::tolower);
+
+    if (lowerCfgName.find(pattern) != string::npos) {
+      Matches.push_back(cfgName);
+    }
+  }
+
+  return Matches;
 }

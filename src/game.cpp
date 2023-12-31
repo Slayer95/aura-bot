@@ -130,7 +130,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
   }
 
   if (!m_Map->GetMapData()->empty()) {
-    m_Aura->m_CurrentMaps.insert(m_Map->GetMapLocalPath());
+    m_Aura->m_BusyMaps.insert(m_Map->GetMapLocalPath());
     m_HasMapLock = true;
   }
 }
@@ -141,8 +141,8 @@ CGame::~CGame()
   delete m_Protocol;
 
   if (m_HasMapLock) {
-    m_Aura->m_CurrentMaps.erase(m_Map->GetMapLocalPath());
-    if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_MaxSavedMapSize && m_Aura->m_CurrentMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_CurrentMaps.end()) {
+    m_Aura->m_BusyMaps.erase(m_Map->GetMapLocalPath());
+    if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_MaxSavedMapSize && m_Aura->m_BusyMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_BusyMaps.end()) {
       FileDelete(m_Aura->m_MapPath + m_Map->GetMapLocalPath());
     }
     m_HasMapLock = false;
@@ -733,7 +733,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // check if the lobby is "abandoned" and needs to be closed since it will never start
 
-  if (!m_GameLoading && !m_GameLoaded && m_Aura->m_LobbyTimeLimit > 0)
+  if (!m_GameLoading && !m_GameLoaded && (m_Aura->m_LobbyTimeLimit > 0 || m_Aura->m_LobbyNoOwnerTime > 0))
   {
     // check if there is an owner in the game
     if (GetPlayerFromName(m_OwnerName, false)) {
@@ -742,10 +742,16 @@ bool CGame::Update(void* fd, void* send_fd)
 
     // check if we've hit the time limit
 
-    if (Time - m_LastOwnerSeen > static_cast<int64_t>(m_Aura->m_LobbyTimeLimit * 60))
-    {
+    if (Time - m_LastOwnerSeen > static_cast<int64_t>(m_Aura->m_LobbyTimeLimit * 60)) {
       Print("[GAME: " + m_GameName + "] is over (lobby time limit hit)");
       return true;
+    }
+    if (Time - m_LastOwnerSeen > static_cast<int64_t>(m_Aura->m_LobbyNoOwnerTime * 60)) {
+      if (!m_OwnerName.empty()) {
+        m_OwnerName = "";
+        Print("[GAME] Owner removed.");
+        SendAllChat("The game owner has left for too long, so this game is now ownerless. Type " + std::string(1, static_cast<char>(m_Aura->m_CommandTrigger)) + "owner to take ownership of this game.");
+      }
     }
   }
 
@@ -934,12 +940,32 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
         continue;
       }
       Line = Line.substr(6, Line.length());
-    } else if (Line.substr(0, 16) == "{CREATOR==OWNER}" || Line.substr(0, 16) == "{OWNER==CREATOR}") {
+    }
+    if (Line.substr(0, 6) == "{URL!}") {
+      if (!m_Map->GetMapSiteURL().empty()) {
+        continue;
+      }
+      Line = Line.substr(6, Line.length());
+    }
+    if (Line.substr(0, 8) == "{OWNER?}") {
+      if (m_OwnerName.empty()) {
+        continue;
+      }
+      Line = Line.substr(8, Line.length());
+    }
+    if (Line.substr(0, 8) == "{OWNER!}") {
+      if (!m_OwnerName.empty()) {
+        continue;
+      }
+      Line = Line.substr(8, Line.length());
+    }
+    if (Line.substr(0, 16) == "{CREATOR==OWNER}" || Line.substr(0, 16) == "{OWNER==CREATOR}") {
       if (m_OwnerName != m_CreatorName) {
         continue;
       }
       Line = Line.substr(16, Line.length());
-    } else if (Line.substr(0, 16) == "{CREATOR!=OWNER}" || Line.substr(0, 16) == "{OWNER!=CREATOR}") {
+    }
+    if (Line.substr(0, 16) == "{CREATOR!=OWNER}" || Line.substr(0, 16) == "{OWNER!=CREATOR}") {
       if (m_OwnerName == m_CreatorName) {
         continue;
       }
@@ -959,6 +985,9 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
       Line.replace(matchIndex, 5, m_Map->GetMapSiteURL());
+    }
+    while ((matchIndex = Line.find("{SHORTDESC}")) != string::npos) {
+      Line.replace(matchIndex, 11, m_Map->GetMapShortDesc());
     }
     SendChat(player, Line);
   }
@@ -1191,8 +1220,10 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
     {
       int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (GetTime() - m_StartedLaggingTime);
 
-      if (TimeRemaining > (static_cast<int64_t>(m_GProxyEmptyActions) + 1) * 60)
+      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
         TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
+      else if (TimeRemaining < 0)
+        TimeRemaining = 0;
 
       SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
       player->SetLastGProxyWaitNoticeSentTime(GetTime());
@@ -1230,8 +1261,10 @@ void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
     {
       int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (GetTime() - m_StartedLaggingTime);
 
-      if (TimeRemaining > (static_cast<int64_t>(m_GProxyEmptyActions) + 1) * 60)
+      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
         TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
+      else if (TimeRemaining < 0)
+        TimeRemaining = 0;
 
       SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
       player->SetLastGProxyWaitNoticeSentTime(GetTime());
@@ -1262,8 +1295,10 @@ void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
     {
       int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (GetTime() - m_StartedLaggingTime);
 
-      if (TimeRemaining > (static_cast<int64_t>(m_GProxyEmptyActions) + 1) * 60)
+      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
         TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
+      else if (TimeRemaining < 0)
+        TimeRemaining = 0;
 
       SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
       player->SetLastGProxyWaitNoticeSentTime(GetTime());
@@ -1466,14 +1501,10 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   potential->SetSocket(nullptr);
   potential->SetDeleteMe(true);
 
-  if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES)
-    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Slots[SID].GetRace());
-  else
-  {
-    if (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)
-      m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, MAX_SLOTS, MAX_SLOTS, SLOTRACE_RANDOM);
-    else
-      m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, MAX_SLOTS, MAX_SLOTS, SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
+  if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
+    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
+  } else {
+    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, MAX_SLOTS, MAX_SLOTS, m_Map->GetLobbyRace(&m_Slots[SID]));
 
     // try to pick a team and colour
     // make sure there aren't too many other players already
@@ -1765,7 +1796,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 
   const uint64_t CommandHash = HashCode(Command);
 
-  if (player == nullptr || player->GetSpoofed() && (AdminCheck || RootAdminCheck || IsOwner(User) || (CommandHash == HashCode("owner")) && !GetPlayerFromName(m_OwnerName, false)))
+  if (player == nullptr || player->GetSpoofed() && (AdminCheck || RootAdminCheck || IsOwner(User) || (CommandHash == HashCode("owner")) && m_OwnerName.empty()) || CommandHash == HashCode("ping"))
   {
     Print("[GAME: " + m_GameName + "] admin [" + User + "] sent command [" + Command + "] with payload [" + Payload + "]");
 
@@ -2189,7 +2220,7 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
                   if (m_Slots[SID].GetPID() == (*i))
                   {
                     Fake         = true;
-                    m_Slots[SID] = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Slots[SID].GetRace());
+                    m_Slots[SID] = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
                     SendAll(m_Protocol->SEND_W3GS_PLAYERLEAVE_OTHERS(*i, PLAYERLEAVE_LOBBY));
                     m_FakePlayers.erase(i);
                     SendAllSlotInfo();
@@ -2813,21 +2844,18 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
 
         case HashCode("owner"):
         {
-          if (RootAdminCheck || IsOwner(User) || !GetPlayerFromName(m_OwnerName, false))
-          {
-            if (!Payload.empty())
-            {
-              SendAllChat("Setting game owner to [" + Payload + "]");
-              m_OwnerName = Payload;
+          if (RootAdminCheck || IsOwner(User) || m_OwnerName.empty()) {
+            std::string NewOwner = Payload.empty() ? User : Payload;
+            if (m_OwnerName == NewOwner) {
+              SendAllChat(NewOwner + " is already the owner of this game.");
+            } else {
+              SendAllChat("Setting game owner to [" + NewOwner + "]");
+              Print("[GAME] New owner: " + NewOwner);
+              m_OwnerName = NewOwner;
             }
-            else
-            {
-              SendAllChat("Setting game owner to [" + User + "]");
-              m_OwnerName = User;
-            }
+          } else {
+            SendAllChat("The owner is in the game or may still join. The owner is [" + m_OwnerName + "]");
           }
-          else
-            SendAllChat("Unable to set game owner because you are not the owner and the owner is in the game. The owner is [" + m_OwnerName + "]");
 
           break;
         }
@@ -2992,12 +3020,13 @@ bool CGame::EventPlayerBotCommand(CGamePlayer* player, string& command, string& 
         }
 
         //
-        // !COMP (fill all open slots with computers)
+        // !FILL (fill all open slots with computers)
         //
 
+        case HashCode("fill"):
         case HashCode("compall"):
         {
-          if (Payload.empty() || m_GameLoading || m_GameLoaded)
+          if (m_GameLoading || m_GameLoaded)
             break;
 
           // extract the slot and the skill
@@ -3742,20 +3771,15 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
 
   bool Admin = m_Aura->m_DB->AdminCheck(player->GetName()) || m_Aura->m_DB->RootAdminCheck(player->GetName());
 
-  if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != MapSize)
-  {
+  if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != MapSize) {
     // the player doesn't have the map
 
-    if (Admin || m_Aura->m_AllowUploads)
-    {
+    if (Admin || m_Aura->m_AllowUploads) {
       string* MapData = m_Map->GetMapData();
 
-      if (!MapData->empty() && m_Map->GetValidLinkedMap())
-      {
-        if (Admin || m_Aura->m_AllowUploads == 1 || (m_Aura->m_AllowUploads == 2 && player->GetDownloadAllowed()))
-        {
-          if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1)
-          {
+      if (!MapData->empty() && m_Map->GetValidLinkedMap()) {
+        if (Admin || m_Aura->m_AllowUploads == 1 || (m_Aura->m_AllowUploads == 2 && player->GetDownloadAllowed())) {
+          if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
             // inform the client that we are willing to send the map
 
             Print("[GAME: " + m_GameName + "] map download started for player [" + player->GetName() + "]");
@@ -3766,11 +3790,13 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
           else
             player->SetLastMapPartAcked(mapSize->GetMapSize());
         }
-      }
-      else
-      {
+      } else {
         player->SetDeleteMe(true);
-        player->SetLeftReason("doesn't have the map and there is no local copy of the map to send");
+        if (MapData->empty()) {
+          player->SetLeftReason("doesn't have the map and there is no local copy of the map to send");
+        } else {
+          player->SetLeftReason("doesn't have the map and the local copy of the map is invalid");
+        }
         player->SetLeftCode(PLAYERLEAVE_LOBBY);
         OpenSlot(GetSIDFromPID(player->GetPID()), false);
       }
@@ -3957,8 +3983,8 @@ void CGame::EventGameStarted()
   // delete the map data
 
   if (m_HasMapLock) {
-    m_Aura->m_CurrentMaps.erase(m_Map->GetMapLocalPath());
-    if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_MaxSavedMapSize && m_Aura->m_CurrentMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_CurrentMaps.end()) {
+    m_Aura->m_BusyMaps.erase(m_Map->GetMapLocalPath());
+    if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_MaxSavedMapSize && m_Aura->m_BusyMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_BusyMaps.end()) {
       FileDelete(m_Aura->m_MapPath + m_Map->GetMapLocalPath());
     }
     m_HasMapLock = false;
@@ -4408,7 +4434,7 @@ void CGame::OpenSlot(uint8_t SID, bool kick)
     }
 
     CGameSlot Slot = m_Slots[SID];
-    m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, Slot.GetTeam(), Slot.GetColour(), Slot.GetRace());
+    m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
     SendAllSlotInfo();
   }
 }
@@ -4430,7 +4456,7 @@ void CGame::CloseSlot(uint8_t SID, bool kick)
     }
 
     CGameSlot Slot = m_Slots[SID];
-    m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_CLOSED, 0, Slot.GetTeam(), Slot.GetColour(), Slot.GetRace());
+    m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_CLOSED, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
     SendAllSlotInfo();
   }
 }
@@ -4452,7 +4478,7 @@ void CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
     }
 
     CGameSlot Slot = m_Slots[SID];
-    m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), Slot.GetRace(), skill);
+    m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
     SendAllSlotInfo();
   }
 }
@@ -4536,16 +4562,13 @@ void CGame::ComputerAllSlots(uint8_t skill)
 
   uint8_t SID = 0;
 
-  if (SID < m_Slots.size()) {
+  while (SID < m_Slots.size()) {
     CGameSlot Slot = m_Slots[SID];
     if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN) {
-      uint8_t Race = Slot.GetRace();
-      if (Race & SLOTRACE_SELECTABLE) {
-        Race = SLOTRACE_RANDOM;
-      }
-      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), Race, skill);
+      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
       Changed = true;
     }
+    ++SID;
   }
 
   if (Changed)
@@ -4863,7 +4886,7 @@ void CGame::CreateFakePlayer()
     const std::vector<uint8_t> IP            = {0, 0, 0, 0};
 
     SendAll(m_Protocol->SEND_W3GS_PLAYERINFO(FakePlayerPID, "Troll[" + to_string(FakePlayerPID) + "]", IP, IP));
-    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Slots[SID].GetRace());
+    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
     m_FakePlayers.push_back(FakePlayerPID);
     SendAllSlotInfo();
   }
@@ -4880,7 +4903,7 @@ void CGame::DeleteFakePlayers()
     {
       if (slot.GetPID() == fakeplayer)
       {
-        slot = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, slot.GetTeam(), slot.GetColour(), slot.GetRace());
+        slot = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, slot.GetTeam(), slot.GetColour(), m_Map->GetLobbyRace(&slot));
         SendAll(m_Protocol->SEND_W3GS_PLAYERLEAVE_OTHERS(fakeplayer, PLAYERLEAVE_LOBBY));
         break;
       }

@@ -353,7 +353,7 @@ bool CGamePlayer::Update(void* fd)
       else
         break;
     }
-    else if (Bytes[0] == GPS_HEADER_CONSTANT)
+    else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_ProxyReconnectEnabled)
     {
       if (Length >= 4)
       {
@@ -381,7 +381,7 @@ bool CGamePlayer::Update(void* fd)
           else if (Bytes[1] == CGPSProtocol::GPS_INIT)
           {
             m_GProxy = true;
-            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_Game->m_Aura->m_ReconnectPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
+            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_Game->m_Aura->m_ProxyReconnectPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
             Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] is using GProxy++");
           }
         }

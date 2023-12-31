@@ -115,6 +115,7 @@ private:
   std::string            m_MapLocalPath;  // config value: map local path
   std::string            m_MapURL;
   std::string            m_MapSiteURL;
+  std::string            m_MapShortDesc;
   std::string            m_MapData;       // the map data itself, for sending the map to players
   uint32_t               m_MapOptions;
   uint32_t               m_MapNumPlayers; // config value: max map number of players
@@ -144,6 +145,7 @@ public:
   inline std::vector<uint8_t>   GetMapSHA1() const { return m_MapSHA1; }
   std::string                   GetMapURL() const { return m_MapURL; }
   std::string                   GetMapSiteURL() const { return m_MapSiteURL; }
+  std::string                   GetMapShortDesc() const { return m_MapShortDesc; }
   inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
   inline uint8_t                GetMapObservers() const { return m_MapObservers; }
@@ -168,6 +170,7 @@ public:
   void Load(CConfig* CFG, const std::string& nCFGFile);
   const char* CheckValid();
   uint32_t XORRotateLeft(uint8_t* data, uint32_t length);
+  uint8_t GetLobbyRace(const CGameSlot* slot);
 };
 
 #endif // AURA_MAP_H_

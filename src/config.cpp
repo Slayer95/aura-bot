@@ -130,10 +130,58 @@ std::vector<uint8_t> CConfig::Export()
 {
   std::ostringstream SS;
   for (auto it = m_CFG.begin(); it != m_CFG.end(); ++it) {
-    SS << (it->first + "=" + it->second + "\n");
+    SS << (it->first + " =" + it->second + "\n");
   }
 
   std::string str = SS.str();
   std::vector<uint8_t> bytes(str.begin(), str.end());
   return bytes;
 }
+
+std::string CConfig::ReadString(const std::string& file, const std::string& key)
+{
+  std::string Output;
+  ifstream in;
+  in.open(file.c_str());
+
+  if (in.fail())
+    return Output;
+
+  string Line;
+
+  while (!in.eof()) {
+    getline(in, Line);
+
+    // ignore blank lines and comments
+
+    if (Line.empty() || Line[0] == '#' || Line == "\n")
+      continue;
+
+    // remove newlines and partial newlines to help fix issues with Windows formatted config files on Linux systems
+
+    Line.erase(remove(begin(Line), end(Line), '\r'), end(Line));
+    Line.erase(remove(begin(Line), end(Line), '\n'), end(Line));
+
+    string::size_type Split = Line.find('=');
+
+    if (Split == string::npos)
+      continue;
+
+    string::size_type KeyStart   = Line.find_first_not_of(' ');
+    string::size_type KeyEnd     = Line.find(' ', KeyStart);
+    string::size_type ValueStart = Line.find_first_not_of(' ', Split + 1);
+    string::size_type ValueEnd   = Line.size();
+
+    if (ValueStart == string::npos)
+      continue;
+
+    if (Line.substr(KeyStart, KeyEnd - KeyStart) == key) {
+      Output = Line.substr(ValueStart, ValueEnd - ValueStart);
+      break;
+    }
+  }
+
+  in.close();
+  return Output;
+}
+

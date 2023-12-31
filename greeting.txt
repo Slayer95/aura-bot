@@ -1,5 +1,5 @@
-Game hosted with AuraBot, a GHost++ fork.
-Acquire permissions over this game with: {TRIGGER}owner
+Lobby created by {CREATOR} at {REALM}, using AuraBot, a GHost++ fork.
 Start the game with: {TRIGGER}start
-
-Game created by {CREATOR} at {REALM}.
+{OWNER?}{CREATOR!=OWNER}Current admin: {OWNER}
+{OWNER!}There is no admin. You may take over with {TRIGGER}owner
+{URL?}Download at: {URL}

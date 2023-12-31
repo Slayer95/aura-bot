@@ -71,6 +71,8 @@ public:
   inline uint8_t              GetTeam() const { return m_Team; }
   inline uint8_t              GetColour() const { return m_Colour; }
   inline uint8_t              GetRace() const { return m_Race; }
+  inline uint8_t              GetRaceFixed() const { return m_Race &~ SLOTRACE_SELECTABLE; }
+  inline uint8_t              GetRaceSelectable() const { return m_Race & SLOTRACE_SELECTABLE ? SLOTRACE_RANDOM | SLOTRACE_SELECTABLE : m_Race; }
   inline uint8_t              GetComputerType() const { return m_ComputerType; }
   inline uint8_t              GetHandicap() const { return m_Handicap; }
   inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_PID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Colour, m_Race, m_ComputerType, m_Handicap}; }

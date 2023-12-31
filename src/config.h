@@ -46,6 +46,8 @@ public:
   void SetInt(const std::string& key, const int& x);
   void SetUint8Vector(const std::string& key, const std::vector<std::uint8_t>& x);
   std::vector<uint8_t> Export();
+
+  static std::string ReadString(const std::string& file, const std::string& key);
 };
 
 #endif // AURA_CONFIG_H_

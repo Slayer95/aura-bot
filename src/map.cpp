@@ -617,7 +617,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
                 // make races selectable
 
                 for (auto& Slot : Slots)
-                  (Slot).SetRace((Slot).GetRace() | SLOTRACE_SELECTABLE);
+                  (Slot).SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
               }
 
               uint32_t SlotNum = 1;
@@ -661,8 +661,11 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   if (CFG->Exists("map_size")) {
     string CFGValue = CFG->GetString("map_size", string());
     if (m_Aura->m_AllowUploads) {
-      string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), true));
+      string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), false));
       MapContentMismatch[0] = CFGValue != MapValue;
+      if (CFGValue != MapValue) {
+        Print("Got CFG=" + CFGValue + "; Expected (Map) " + MapValue);
+      }
     }
     MapSize = ExtractNumbers(CFGValue, 4);
   } else if (RawMapSize != 0) {
@@ -712,9 +715,13 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapSHA1 = MapSHA1;
 
   m_MapContentMismatch = MapContentMismatch;
+  if (!GetValidLinkedMap()) {
+    Print("[MAP] Content mismatch: " + ByteArrayToDecString(MapContentMismatch));
+  }
 
-  m_MapSiteURL = CFG->GetString("map_site", string());
-  m_MapURL     = CFG->GetString("map_url", string());
+  m_MapSiteURL   = CFG->GetString("map_site", string());
+  m_MapShortDesc = CFG->GetString("map_shortdesc", string());
+  m_MapURL       = CFG->GetString("map_url", string());
 
   if (CFG->Exists("map_filter_type")) {
     MapFilterType = CFG->GetInt("map_filter_type", MAPFILTER_TYPE_SCENARIO);
@@ -739,7 +746,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   }
 
   m_MapOptions = MapOptions;
-  m_MapFlags = CFG->GetInt("map_flags", MapOptions & MAPOPT_CUSTOMFORCES ? MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS : MAPFLAG_TEAMSTOGETHER);
+  m_MapFlags = CFG->GetInt("map_flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS);
   if (!CFG->Exists("map_flags")) {
     CFG->SetInt("map_flags", m_MapFlags);
   }
@@ -853,7 +860,7 @@ const char* CMap::CheckValid()
   else if (!m_MapData.empty() && m_MapData.size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
-    return (std::string("invalid map_size detected (") + ByteArrayToDecString(m_MapSize) + std::string(")- size mismatch with actual map data size " + ByteArrayToDecString(CreateByteArray(m_MapData.size(), false)))).c_str();
+    return "nonmatching map_size detected";
   }
 
   if (m_MapInfo.size() != 4)
@@ -950,4 +957,15 @@ uint32_t CMap::XORRotateLeft(uint8_t* data, uint32_t length)
   }
 
   return Val;
+}
+
+uint8_t CMap::GetLobbyRace(const CGameSlot* slot)
+{
+  bool isFixedRace = GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS;
+  bool isRandomRace = GetMapFlags() & MAPFLAG_RANDOMRACES;
+  if (isFixedRace) return slot->GetRaceFixed();
+  // If the map has fixed player settings, races cannot be randomized.
+  if (isRandomRace) return SLOTRACE_RANDOM;
+  // Note: If the slot was never selectable, it isn't promoted to selectable.
+  return slot->GetRaceSelectable();
 }

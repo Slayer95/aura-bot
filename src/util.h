@@ -373,27 +373,28 @@ inline std::vector<std::string> Tokenize(const std::string& s, const char delim)
 }
 
 inline int GetLevenshteinDistance(const std::string& s1, const std::string& s2) {
-    int m = s1.length();
-    int n = s2.length();
+  int m = s1.length();
+  int n = s2.length();
 
-    // Create a 2D vector to store the distances
-    std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1, 0));
+  // Create a 2D vector to store the distances
+  std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1, 0));
 
-    for (int i = 0; i <= m; ++i) {
-        for (int j = 0; j <= n; ++j) {
-            if (i == 0) {
-                dp[i][j] = j;
-            } else if (j == 0) {
-                dp[i][j] = i;
-            } else if (s1[i - 1] == s2[j - 1]) {
-                dp[i][j] = dp[i - 1][j - 1];
-            } else {
-                dp[i][j] = 1 + std::min({ dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1] });
-            }
-        }
+  for (int i = 0; i <= m; ++i) {
+    for (int j = 0; j <= n; ++j) {
+      if (i == 0) {
+          dp[i][j] = j;
+      } else if (j == 0) {
+          dp[i][j] = i;
+      } else if (s1[i - 1] == s2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        int cost = (s1[i - 1] == s2[j - 1]) ? 0 : (isdigit(s1[i - 1]) || isdigit(s2[j - 1])) ? 3 : 1;
+        dp[i][j] = std::min({ dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost });
+      }
     }
+  }
 
-    return dp[m][n];
+  return dp[m][n];
 }
 
 inline std::string RemoveNonAlphanumeric(const std::string& s) {
