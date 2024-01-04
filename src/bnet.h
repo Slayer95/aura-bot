@@ -135,14 +135,15 @@ public:
 
   // other functions
 
-  bool IsAdmin(std::string name);
-  bool IsRootAdmin(std::string name);
+  bool GetIsAdmin(std::string name);
+  bool GetIsRootAdmin(std::string name);
   CDBBan* IsBannedName(std::string name);
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
 
 private:
   std::string EncodeURIComponent(const std::string &s);
+  std::string DecodeURIComponent(const std::string &s);
   std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount);
   std::string GetEpicWarSuggestions(std::string pattern, int maxCount);
 };

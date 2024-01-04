@@ -1,5 +1,6 @@
-Lobby created by {CREATOR} at {REALM}, using AuraBot, a GHost++ fork.
-Start the game with: {TRIGGER}start
-{OWNER?}{CREATOR!=OWNER}Current admin: {OWNER}
+Lobby created by {CREATOR} at {HOSTREALM}, using AuraBot, a GHost++ fork.
+{OWNER?}{CREATOR!=OWNER}Current admin: {OWNER}{OWNERREALM}
 {OWNER!}There is no admin. You may take over with {TRIGGER}owner
-{URL?}Download at: {URL}
+Start the game with: {TRIGGER}start
+{URL?}{FILENAME?}Visit <{URL}> to download {FILENAME}
+{SHORTDESC?}{SHORTDESC}

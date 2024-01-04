@@ -25,6 +25,9 @@
 
 #include <set>
 #include <queue>
+#include <algorithm>
+#include <random>
+#include <map>
 
 //
 // CGame
@@ -56,9 +59,7 @@ protected:
   CDBBan*                        m_DBBanLast;                     // last ban for the !banlast command - this is a pointer to one of the items in m_DBBans
   std::vector<CDBBan*>           m_DBBans;                        // std::vector of potential ban data for the database
   CStats*                        m_Stats;                         // class to keep track of game stats such as kills/deaths/assists in dota
-  CGameProtocol*                 m_Protocol;                      // game protocol
   std::vector<CGameSlot>         m_Slots;                         // std::vector of slots
-  std::vector<CPotentialPlayer*> m_Potentials;                    // std::vector of potential players (connections that haven't sent a W3GS_REQJOIN packet yet)
   std::vector<CDBGamePlayer*>    m_DBGamePlayers;                 // std::vector of potential gameplayer data for the database
   std::vector<CGamePlayer*>      m_Players;                       // std::vector of players
   std::queue<CIncomingAction*>   m_Actions;                       // queue of actions to be sent
@@ -71,6 +72,7 @@ protected:
   std::string                    m_IndexVirtualHostName;          // host's name
   std::string                    m_LobbyVirtualHostName;          // host's name
   std::string                    m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
+  std::string                    m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
   std::string                    m_CreatorName;                   // name of the player who created this game
   CBNET*                         m_CreatorServer;                 // battle.net server the player who created this game was on
   std::string                    m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
@@ -106,7 +108,7 @@ protected:
   uint16_t                       m_LANHostPort;                   // the port to broadcast
   uint8_t                        m_GameState;                     // game state, public or private
   uint8_t                        m_VirtualHostPID;                // host's PID
-  uint64_t                       m_GProxyEmptyActions;            // empty actions used for gproxy protocol
+  int64_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                           m_Exiting;                       // set to true and this class will be deleted next update
   bool                           m_Saving;                        // if we're currently saving game data to the database
   bool                           m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
@@ -120,20 +122,20 @@ protected:
   bool                           m_Lagging;                       // if the lag screen is active or not
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
+  std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   
 
 public:
-  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nCreatorName, CBNET* nCreatorServer);
+  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nOwnerRealm, std::string& nCreatorName, CBNET* nCreatorServer);
   ~CGame();
   CGame(CGame&) = delete;
 
   inline CMap*          GetMap() const { return m_Map; }
-  inline CGameProtocol* GetProtocol() const { return m_Protocol; }
   inline uint32_t       GetEntryKey() const { return m_EntryKey; }
   inline uint16_t       GetHostPort() const { return m_HostPort; }
   inline uint16_t       GetLANPort() const { return m_LANHostPort; }
   inline uint8_t        GetGameState() const { return m_GameState; }
-  inline uint64_t       GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
+  inline int64_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
   inline std::string    GetLastGameName() const { return m_LastGameName; }
   inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
@@ -148,15 +150,17 @@ public:
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
   inline bool           GetLagging() const { return m_Lagging; }
-
-  int64_t     GetNextTimedActionTicks() const;
-  uint32_t    GetSlotsOccupied() const;
-  uint32_t    GetSlotsOpen() const;
-  uint32_t    GetNumPlayers() const;
-  uint32_t    GetNumHumanPlayers() const;
-  std::string GetDescription() const;
-  std::string GetPlayers() const;
-  std::string GetObservers() const;
+  CGameProtocol* GetProtocol() const;
+  int64_t        GetNextTimedActionTicks() const;
+  uint32_t       GetSlotsOccupied() const;
+  uint32_t       GetSlotsOpen() const;
+  uint32_t       GetNumConnectionsOrFake() const;
+  uint32_t       GetNumHumanPlayers() const;
+  std::string    GetDescription() const;
+  std::string    GetCategory() const;
+  std::string    GetLogPrefix() const;
+  std::string    GetPlayers() const;
+  std::string    GetObservers() const;
 
   inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void SetRefreshError(bool nRefreshError) { m_RefreshError = nRefreshError; }
@@ -199,13 +203,13 @@ public:
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
-  void EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* joinPlayer);
+  bool EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* joinPlayer);
   void EventPlayerLeft(CGamePlayer* player, uint32_t reason);
   void EventPlayerLoaded(CGamePlayer* player);
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
-  bool EventPlayerBotCommand(CGamePlayer* player, std::string& command, std::string& payload);
+  bool EventPlayerBotCommand(std::string& payload, CBNET* bnet, CGamePlayer* player, std::string& command, std::string& serverName, std::string& userName);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
   void EventPlayerChangeColour(CGamePlayer* player, uint8_t colour);
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
@@ -225,6 +229,7 @@ public:
   CGamePlayer* GetPlayerFromPID(uint8_t PID) const;
   CGamePlayer* GetPlayerFromSID(uint8_t SID) const;
   CGamePlayer* GetPlayerFromName(std::string name, bool sensitive) const;
+  bool         HasOwnerInGame() const;
   uint32_t GetPlayerFromNamePartial(std::string name, CGamePlayer** player) const;
   std::string GetDBPlayerNameFromColour(uint8_t colour) const;
   CGamePlayer* GetPlayerFromColour(uint8_t colour) const;
@@ -236,26 +241,30 @@ public:
   uint8_t GetEmptySlot(bool reserved) const;
   uint8_t GetEmptySlot(uint8_t team, uint8_t PID) const;
   void SwapSlots(uint8_t SID1, uint8_t SID2);
-  void OpenSlot(uint8_t SID, bool kick);
-  void CloseSlot(uint8_t SID, bool kick);
-  void ComputerSlot(uint8_t SID, uint8_t skill, bool kick);
+  bool OpenSlot(uint8_t SID, bool kick);
+  bool CloseSlot(uint8_t SID, bool kick);
+  bool ComputerSlot(uint8_t SID, uint8_t skill, bool kick);
   void ColourSlot(uint8_t SID, uint8_t colour);
   void OpenAllSlots();
   void CloseAllSlots();
   void ComputerAllSlots(uint8_t skill);
   void ShuffleSlots();
-  void AddToSpoofed(const std::string& server, const std::string& name, bool sendMessage);
+  void ReportSpoofed(const std::string& server, const std::string& name);
+  void AddToRealmVerified(const std::string& server, const std::string& name, bool sendMessage);
   void AddToReserved(std::string name);
   void RemoveFromReserved(std::string name);
-  bool IsOwner(std::string name) const;
+  bool MatchOwnerName(std::string name) const;
   bool IsReserved(std::string name) const;
   bool IsDownloading() const;
+  void SetOwner(std::string name, std::string realm);
+  void ReleaseOwner();
   void StartCountDown(bool force);
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
   void CreateVirtualHost();
   void DeleteVirtualHost();
-  void CreateFakePlayer();
+  bool CreateFakePlayer();
+  bool DeleteFakePlayer(uint8_t SID);
   void DeleteFakePlayers();
 };
 

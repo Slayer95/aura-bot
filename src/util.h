@@ -372,12 +372,12 @@ inline std::vector<std::string> Tokenize(const std::string& s, const char delim)
   return Tokens;
 }
 
-inline int GetLevenshteinDistance(const std::string& s1, const std::string& s2) {
+inline uint32_t GetLevenshteinDistance(const std::string& s1, const std::string& s2) {
   int m = s1.length();
   int n = s2.length();
 
   // Create a 2D vector to store the distances
-  std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1, 0));
+  std::vector<std::vector<uint32_t>> dp(m + 1, std::vector<uint32_t>(n + 1, 0));
 
   for (int i = 0; i <= m; ++i) {
     for (int j = 0; j <= n; ++j) {

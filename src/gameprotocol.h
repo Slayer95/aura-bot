@@ -22,6 +22,7 @@
 #define AURA_GAMEPROTOCOL_H_
 
 #include "includes.h"
+#include "aura.h"
 
 #include <queue>
 

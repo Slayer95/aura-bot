@@ -50,7 +50,7 @@
 #include <process.h>
 #endif
 
-#define VERSION "1.32"
+#define VERSION "1.34.dev"
 
 using namespace std;
 
@@ -187,15 +187,16 @@ CAura::CAura(CConfig* CFG)
   : m_IRC(nullptr),
     m_UDPServer(new CUDPServer()),
     m_UDPSocket(new CUDPSocket()),
-    m_ReconnectSocket(nullptr),
+    m_GameProtocol(nullptr),
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
-    m_CurrentGame(nullptr),
+    m_CurrentLobby(nullptr),
     m_DB(new CAuraDB(CFG)),
     m_Map(nullptr),
     m_Version(VERSION),
     m_HostCounter(0),
+    m_HostPort(0),
     m_Exiting(false),
     m_Enabled(true),
     m_EnabledPublic(true),
@@ -214,29 +215,27 @@ CAura::CAura(CConfig* CFG)
   m_UDPSocket->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
   m_UDPSocket->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
 
-  m_ProxyReconnectEnabled = CFG->GetInt("bot_proxyreconnect", 0) == 1;
-  m_ProxyReconnectPort = CFG->GetInt("bot_reconnectport", 6113);
-
-  if (m_ProxyReconnectEnabled) {
-    m_ReconnectSocket = new CTCPServer();
-    if (m_ReconnectSocket->Listen(m_BindAddress, m_ProxyReconnectPort)) {
-      Print("[AURA] listening for GProxy++ reconnects on port " + to_string(m_ProxyReconnectPort));
-    } else {
-      Print("[AURA] error listening for GProxy++ reconnects on port " + to_string(m_ProxyReconnectPort));
-      m_Ready = false;
-      return;
-    }
-  }
+  m_GameProtocol = new CGameProtocol(this);
+  m_ProxyReconnectEnabled   = CFG->GetInt("bot_enablegproxy", 0) == 1;
 
   m_CRC->Initialize();
-  m_HostPort          = CFG->GetInt("bot_hostport", 6112);
+
+  m_MinHostPort       = CFG->GetInt("bot_minhostport", CFG->GetInt("bot_hostport", 6112));
+  m_MaxHostPort       = CFG->GetInt("bot_maxhostport", m_MinHostPort);
+
+  // for load balancers or reverse proxies
+  m_EnableLANBalancer = CFG->GetInt("bot_enablelanbalancer", 0) == 1;
   m_LANHostPort       = CFG->GetInt("bot_lanhostport", m_HostPort);
-  m_EnableTCPTunnel   = CFG->GetInt("bot_enabletcptunnel", 0);
+  m_EnablePvPGNTunnel = CFG->GetInt("bot_enablepvpgntunnel", 0) == 1;
   m_PublicHostPort    = CFG->GetInt("bot_publichostport", m_HostPort);
   m_PublicHostAddress = CFG->GetString("bot_publichostaddress", string());
-  if (m_EnableTCPTunnel) {
+  if (m_EnableLANBalancer) {
+    Print("[AURA] Broadcasting games port " + std::to_string(m_LANHostPort) + " over LAN");
+  }
+  if (m_EnablePvPGNTunnel) {
     Print("[AURA] TCP tunnel enabled at " + m_PublicHostAddress + ":" + std::to_string(m_PublicHostPort));
   }
+
   m_LANWar3Version    = CFG->GetInt("lan_war3version", 27);
   m_NumPlayersToStartGameOver = CFG->GetInt("bot_gameoverplayernumber", 1);
 
@@ -382,31 +381,40 @@ CAura::~CAura()
 {
   delete m_UDPServer;
   delete m_UDPSocket;
+  delete m_GameProtocol;
+  delete m_GPSProtocol;
   delete m_CRC;
   delete m_SHA;
-  if (m_ReconnectSocket) {
-    delete m_ReconnectSocket;
-  }
-  delete m_GPSProtocol;
-
-  if (m_Map)
-    delete m_Map;
-
-  for (auto& socket : m_ReconnectSockets)
-    delete socket;
+  delete m_Map;
 
   for (auto& bnet : m_BNETs)
     delete bnet;
 
-  delete m_CurrentGame;
+  delete m_CurrentLobby;
 
   for (auto& game : m_Games)
     delete game;
 
   delete m_DB;
+  delete m_IRC;
+}
 
-  if (m_IRC)
-    delete m_IRC;
+CTCPServer* CAura::GetGameServer(uint16_t port, string& name)
+{
+  auto it = m_GameServers.find(port);
+  if (it != m_GameServers.end()) {
+    Print("[GAME] " + name + " Assigned to port " + to_string(port));
+    return it->second;
+  }
+  m_GameServers[port] = new CTCPServer();
+  std::vector<CPotentialPlayer*> IncomingConnections;
+  m_IncomingConnections[port] = IncomingConnections;
+  if (!m_GameServers[port]->Listen(m_BindAddress, port)) {
+    Print2("[GAME] " + name + " Error listening on port " + to_string(port));
+    return nullptr;
+  }
+  Print("[GAME] " + name + " Listening on port " + to_string(port));
+  return m_GameServers[port];
 }
 
 bool CAura::Update()
@@ -420,53 +428,53 @@ bool CAura::Update()
   FD_ZERO(&fd);
   FD_ZERO(&send_fd);
 
-  // 1. the current game's server and player sockets
+  // 1. all running game servers
 
-  if (m_CurrentGame)
-    NumFDs += m_CurrentGame->SetFD(&fd, &send_fd, &nfds);
+  for (auto& pair : m_GameServers) {
+    pair.second->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+    ++NumFDs;
+  }
 
-  // 2. all running games' player sockets
+  // 2. all unassigned incoming TCP connections
+
+  for (auto& pair : m_IncomingConnections) {
+    // std::pair<uint16_t, std::vector<CPotentialPlayer*>>
+    for (auto& potential : pair.second) {
+      if (potential->GetSocket()) {
+        potential->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+        ++NumFDs;
+      }
+    }
+  }
+
+  // 3. the current lobby's player sockets
+
+  if (m_CurrentLobby)
+    NumFDs += m_CurrentLobby->SetFD(&fd, &send_fd, &nfds);
+
+  // 4. all running games' player sockets
 
   for (auto& game : m_Games)
     NumFDs += game->SetFD(&fd, &send_fd, &nfds);
 
-  // 3. all battle.net sockets
+  // 5. all battle.net sockets
 
   for (auto& bnet : m_BNETs)
     NumFDs += bnet->SetFD(&fd, &send_fd, &nfds);
 
-  // 4. irc socket
+  // 6. UDP server
+  if (m_UDPServerEnabled) {
+    m_UDPServer->SetFD(&fd, &send_fd, &nfds);
+    ++NumFDs;
+  }
+
+  // 7. irc socket
 
   if (m_IRC)
     NumFDs += m_IRC->SetFD(&fd, &send_fd, &nfds);
 
-  // 5. reconnect socket
-
-  if (m_ProxyReconnectEnabled) {
-    if (m_ReconnectSocket->HasError())
-    {
-      Print("[AURA] GProxy++ reconnect listener error (" + m_ReconnectSocket->GetErrorString() + ")");
-      return true;
-    }
-    else
-    {
-      m_ReconnectSocket->SetFD(&fd, &send_fd, &nfds);
-      ++NumFDs;
-    }
-
-    // 6. reconnect sockets
-
-    for (auto& socket : m_ReconnectSockets)
-    {
-      socket->SetFD(&fd, &send_fd, &nfds);
-      ++NumFDs;
-    }
-  }
-
-  // 7. UDP server
-  if (m_UDPServerEnabled) {
-    m_UDPServer->SetFD(&fd, &send_fd, &nfds);
-    ++NumFDs;
+  if (NumFDs > 25) {
+    Print("[AURA] " + to_string(NumFDs) + " file descriptors watched");
   }
 
   // before we call select we need to determine how long to block for
@@ -506,6 +514,76 @@ bool CAura::Update()
 
   bool Exit = false;
 
+  // if hosting a lobby, accept new connections to its game server
+
+  for (auto& pair : m_GameServers) {
+    uint16_t ConnectPort = pair.first;
+    CTCPSocket* NewSocket = pair.second->Accept(static_cast<fd_set*>(&fd));
+    if (NewSocket) {
+      if (m_ProxyReconnectEnabled) {
+        CPotentialPlayer* IncomingConnection = new CPotentialPlayer(m_GameProtocol, this, ConnectPort, NewSocket);
+        m_IncomingConnections[ConnectPort].push_back(IncomingConnection);
+      } else if (!m_CurrentLobby || ConnectPort != m_CurrentLobby->GetHostPort()) {
+        delete NewSocket;
+      } else {
+        CPotentialPlayer* IncomingConnection = new CPotentialPlayer(m_GameProtocol, this, ConnectPort, NewSocket);
+        m_IncomingConnections[ConnectPort].push_back(IncomingConnection);
+      }
+    }
+
+    if (pair.second->HasError())
+      Exit = true;
+  }
+
+  // update unassigned incoming connections
+
+  uint16_t IncomingConnectionsMax = 255;
+  uint16_t IncomingConnectionsCount = 0;
+  for (auto& pair : m_IncomingConnections) {
+    for (auto i = begin(pair.second); i != end(pair.second);) {
+      // *i is a pointer to a CPotentialPlayer
+      uint8_t result = (*i)->Update(&fd, &send_fd);
+      if (result == 0) {
+        ++i;
+      } else {
+        if (result == 1) {
+          // flush the socket (e.g. in case a rejection message is queued)
+          if ((*i)->GetSocket())
+            (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
+
+          delete *i;
+        }
+
+        i = pair.second.erase(i);
+      }
+    }
+    ++IncomingConnectionsCount;
+    if (IncomingConnectionsCount > IncomingConnectionsMax) {
+      Print("[AURA] " + to_string(IncomingConnectionsCount) + " connections established at port " + to_string(pair.first));
+      break;
+    }
+  }
+
+  // update current lobby
+
+  if (m_CurrentLobby)
+  {
+    if (m_CurrentLobby->Update(&fd, &send_fd))
+    {
+      Print2("[AURA] deleting current game [" + m_CurrentLobby->GetGameName() + "]");
+      delete m_CurrentLobby;
+      m_CurrentLobby = nullptr;
+
+      for (auto& bnet : m_BNETs)
+      {
+        bnet->QueueGameUncreate();
+        bnet->QueueEnterChat();
+      }
+    }
+    else if (m_CurrentLobby)
+      m_CurrentLobby->UpdatePost(&send_fd);
+  }
+
   // update running games
 
   for (auto i = begin(m_Games); i != end(m_Games);)
@@ -524,26 +602,6 @@ bool CAura::Update()
     }
   }
 
-  // update current game
-
-  if (m_CurrentGame)
-  {
-    if (m_CurrentGame->Update(&fd, &send_fd))
-    {
-      Print2("[AURA] deleting current game [" + m_CurrentGame->GetGameName() + "]");
-      delete m_CurrentGame;
-      m_CurrentGame = nullptr;
-
-      for (auto& bnet : m_BNETs)
-      {
-        bnet->QueueGameUncreate();
-        bnet->QueueEnterChat();
-      }
-    }
-    else if (m_CurrentGame)
-      m_CurrentGame->UpdatePost(&send_fd);
-  }
-
   // update battle.net connections
 
   for (auto& bnet : m_BNETs)
@@ -552,10 +610,7 @@ bool CAura::Update()
       Exit = true;
   }
 
-  // update irc
-
-  if (m_IRC && m_IRC->Update(&fd, &send_fd))
-    Exit = true;
+  // update UDP server
 
   if (m_UDPServerEnabled) {
     UDPPkt* pkt = m_UDPServer->Accept(&fd);
@@ -574,8 +629,8 @@ bool CAura::Update()
         }
 
         if (pkt->buf[1] == CGameProtocol::W3GS_SEARCHGAME && pkt->length == 16 && pkt->buf[8] == m_LANWar3Version) {
-          if (m_CurrentGame && !m_CurrentGame->GetCountDownStarted()) {
-            m_CurrentGame->AnnounceToAddress(ipAddress, 6112);
+          if (m_CurrentLobby && !m_CurrentLobby->GetCountDownStarted()) {
+            m_CurrentLobby->AnnounceToAddress(ipAddress, 6112);
           }
         }
       }
@@ -584,138 +639,36 @@ bool CAura::Update()
     delete pkt;
   }
 
-  // update GProxy++ reliable reconnect sockets
+  // update irc
 
-  if (m_ProxyReconnectEnabled) {
-    CTCPSocket* NewSocket = m_ReconnectSocket->Accept(&fd);
-
-    if (NewSocket)
-      m_ReconnectSockets.push_back(NewSocket);
-
-    for (auto i = begin(m_ReconnectSockets); i != end(m_ReconnectSockets);)
-    {
-      if ((*i)->HasError() || !(*i)->GetConnected() || GetTime() - (*i)->GetLastRecv() >= 10)
-      {
-        delete *i;
-        i = m_ReconnectSockets.erase(i);
-        continue;
-      }
-
-      (*i)->DoRecv(&fd);
-      string*                    RecvBuffer = (*i)->GetBytes();
-      const std::vector<uint8_t> Bytes      = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-
-      // a packet is at least 4 bytes
-
-      if (Bytes.size() >= 4)
-      {
-        if (Bytes[0] == GPS_HEADER_CONSTANT)
-        {
-          // bytes 2 and 3 contain the length of the packet
-
-          const uint16_t Length = static_cast<uint16_t>(Bytes[3] << 8 | Bytes[2]);
-
-          if (Bytes.size() >= Length)
-          {
-            if (Bytes[1] == CGPSProtocol::GPS_RECONNECT && Length == 13)
-            {
-              const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
-              const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
-
-              // look for a matching player in a running game
-
-              CGamePlayer* Match = nullptr;
-
-              for (auto& game : m_Games)
-              {
-                if (game->GetGameLoaded())
-                {
-                  CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
-
-                  if (Player && Player->GetGProxy() && Player->GetGProxyReconnectKey() == ReconnectKey)
-                  {
-                    Match = Player;
-                    break;
-                  }
-                }
-              }
-
-              if (Match)
-              {
-                // reconnect successful!
-
-                *RecvBuffer = RecvBuffer->substr(Length);
-                Match->EventGProxyReconnect(*i, LastPacket);
-                i = m_ReconnectSockets.erase(i);
-                continue;
-              }
-              else
-              {
-                (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
-                (*i)->DoSend(&send_fd);
-                delete *i;
-                i = m_ReconnectSockets.erase(i);
-                continue;
-              }
-            }
-            else
-            {
-              (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_INVALID));
-              (*i)->DoSend(&send_fd);
-              delete *i;
-              i = m_ReconnectSockets.erase(i);
-              continue;
-            }
-          }
-          else
-          {
-            (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_INVALID));
-            (*i)->DoSend(&send_fd);
-            delete *i;
-            i = m_ReconnectSockets.erase(i);
-            continue;
-          }
-        }
-        else
-        {
-          (*i)->PutBytes(m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_INVALID));
-          (*i)->DoSend(&send_fd);
-          delete *i;
-          i = m_ReconnectSockets.erase(i);
-          continue;
-        }
-      }
-
-      (*i)->DoSend(&send_fd);
-      ++i;
-    }
-  }
+  if (m_IRC && m_IRC->Update(&fd, &send_fd))
+    Exit = true;
 
   return m_Exiting || Exit;
 }
 
 void CAura::EventBNETGameRefreshFailed(CBNET* bnet)
 {
-  if (m_CurrentGame)
+  if (m_CurrentLobby)
   {
     // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
     // Otherwise whisper the game creator that the (re)host failed.
 
-    if (m_CurrentGame->GetNumHumanPlayers() != 0)
-      m_CurrentGame->SendAllChat("Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
+    if (m_CurrentLobby->GetNumHumanPlayers() != 0)
+      m_CurrentLobby->SendAllChat("Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
     else
-      m_CurrentGame->GetCreatorServer()->QueueChatCommand("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentGame->GetCreatorName(), true, string());
+      m_CurrentLobby->GetCreatorServer()->QueueChatCommand("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName(), true, string());
 
-    Print2("[GAME: " + m_CurrentGame->GetGameName() + "] Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
+    Print2("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
 
     // we take the easy route and simply close the lobby if a refresh fails
     // it's possible at least one refresh succeeded and therefore the game is still joinable on at least one battle.net (plus on the local network) but we don't keep track of that
     // we only close the game if it has no players since we support game rehosting (via !priv and !pub in the lobby)
 
-    if (m_CurrentGame->GetNumHumanPlayers() == 0)
-      m_CurrentGame->SetExiting(true);
+    if (m_CurrentLobby->GetNumHumanPlayers() == 0)
+      m_CurrentLobby->SetExiting(true);
 
-    m_CurrentGame->SetRefreshError(true);
+    m_CurrentLobby->SetRefreshError(true);
   }
 }
 
@@ -791,7 +744,6 @@ void CAura::SetConfigs(CConfig* CFG)
     Print("[AURA] warning - bot_lobbyvirtualhostname is longer than 15 characters - using default lobby virtual host name");
   }
 
-  m_AutoLock           = CFG->GetInt("bot_autolock", 0) != 0;
   m_AllowDownloads     = CFG->GetInt("bot_allowdownloads", 0);
   m_AllowUploads       = CFG->GetInt("bot_allowuploads", 0);
   m_MaxDownloaders     = CFG->GetInt("bot_maxdownloaders", 3);
@@ -828,6 +780,20 @@ void CAura::SetConfigs(CConfig* CFG)
     getline(ss2, substr, ',');
     if (substr.size() > 0) {
       m_IgnoredDatagramSources.push_back(substr);
+    }
+  }
+
+  stringstream ss3(CFG->GetString("bot_superusers", ""));
+  m_SudoUsers.clear();
+  while (ss3.good()) {
+    string substr;
+    getline(ss3, substr, ',');
+    int atIndex = substr.find("@");
+    if (atIndex != string::npos) {
+      m_SudoUsers.emplace_back(std::make_pair(
+        substr.substr(0, atIndex),
+        substr.substr(atIndex + 1, substr.length())
+       ));
     }
   }
 }
@@ -977,7 +943,7 @@ void CAura::LoadIPToCountryData()
   }
 }
 
-void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string ownerName, string creatorName, CBNET* creatorServer, bool whisper)
+void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string ownerName, string ownerServer, string creatorName, CBNET* creatorServer, bool whisper)
 {
   if (!m_Enabled)
   {
@@ -997,9 +963,9 @@ void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string own
     return;
   }
 
-  if (m_CurrentGame)
+  if (m_CurrentLobby)
   {
-    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. Another game [" + m_CurrentGame->GetDescription() + "] is in the lobby", creatorName, whisper, string());
+    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby", creatorName, whisper, string());
     return;
   }
 
@@ -1011,19 +977,20 @@ void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string own
 
   Print2("[AURA] creating game [" + gameName + "]");
 
-  m_CurrentGame = new CGame(this, map, m_HostPort, m_LANHostPort, gameState, gameName, ownerName, creatorName, creatorServer);
+  uint16_t HostPort = NextHostPort();
+  m_CurrentLobby = new CGame(this, map, HostPort, m_EnableLANBalancer ? m_LANHostPort : HostPort, gameState, gameName, ownerName, ownerServer, creatorName, creatorServer);
 
   for (auto& bnet : m_BNETs) {
     if (whisper && bnet == creatorServer) {
       bnet->QueueChatCommand(std::string("Creating ") + (gameState == GAME_PRIVATE ? "private" : "public") + " game of " + map->GetMapLocalPath() + ". (Started by " + ownerName + ": \"" + gameName + "\")", creatorName, whisper, string());
     }
     bnet->QueueChatCommand((gameState == GAME_PRIVATE ? std::string("Private") : std::string("Public")) + " game of " + map->GetMapLocalPath() + " created. (Started by " + ownerName + ": \"" + gameName + "\").");
-    bnet->QueueGameCreate(gameState, gameName, map, m_CurrentGame->GetHostCounter());
+    bnet->QueueGameCreate(gameState, gameName, map, m_CurrentLobby->GetHostCounter());
 
     // hold friends and/or clan members
 
-    bnet->HoldFriends(m_CurrentGame);
-    bnet->HoldClan(m_CurrentGame);
+    bnet->HoldFriends(m_CurrentLobby);
+    bnet->HoldClan(m_CurrentLobby);
 
     // if we're creating a private game we don't need to send any game refresh messages so we can rejoin the chat immediately
     // unfortunately this doesn't work on PVPGN servers because they consider an enterchat message to be a gameuncreate message when in a game
@@ -1075,19 +1042,20 @@ vector<string> CAura::MapFilesMatch(string rawPattern)
     pattern.append("w3x");
   }
 
-  int maxDistance = 10;
+  std::string::size_type maxDistance = 10;
   if (pattern.size() < maxDistance) {
     maxDistance = pattern.size() / 2;
   }
 
   std::vector<std::pair<std::string, int>> distances;
+  std::vector<std::pair<std::string, int>>::size_type i;
+  std::vector<std::pair<std::string, int>>::size_type i_max;
+
   for (auto& mapName : MapSet) {
     string cmpName = RemoveNonAlphanumeric(mapName);
     transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
-    int sizeDifference = cmpName.size() - pattern.size();
-    
-    if ((-maxDistance <= sizeDifference) && (sizeDifference <= maxDistance)) {
-      int distance = GetLevenshteinDistance(pattern, cmpName); // source to target
+    if ((pattern.size() <= cmpName.size() + maxDistance) && (cmpName.size() <= maxDistance + pattern.size())) {
+      std::string::size_type distance = GetLevenshteinDistance(pattern, cmpName); // source to target
       if (distance <= maxDistance) {
         distances.emplace_back(mapName, distance);
       }
@@ -1107,7 +1075,12 @@ vector<string> CAura::MapFilesMatch(string rawPattern)
   if (pattern.find("evergreen") != string::npos) {
     PrioritizedString = "evrgrn";
   }
-  for (int i = 0; i < 5 && i < distances.size(); ++i) {
+
+  i_max = distances.size();
+  if (i_max > 5)
+    i_max = 5;
+
+  for (i = 0; i < i_max; ++i) {
     if (!PrioritizedString.empty() && distances[i].first.find(PrioritizedString) != string::npos) {
       PrioritizedString = "";
       Matches.insert(Matches.begin(), distances[i].first);
