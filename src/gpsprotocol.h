@@ -53,6 +53,7 @@ public:
   std::vector<uint8_t> SEND_GPSS_RECONNECT(uint32_t lastPacket);
   std::vector<uint8_t> SEND_GPSS_ACK(uint32_t lastPacket);
   std::vector<uint8_t> SEND_GPSS_REJECT(uint32_t reason);
+  std::vector<uint8_t> SEND_GPSS_DIMENSIONS();
 };
 
 #endif // AURA_GPSPROTOCOL_H_

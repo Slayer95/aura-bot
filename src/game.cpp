@@ -28,6 +28,7 @@
 #include "map.h"
 #include "gameplayer.h"
 #include "gameprotocol.h"
+#include "gpsprotocol.h"
 #include "stats.h"
 #include "irc.h"
 #include "hash.h"
@@ -360,7 +361,11 @@ bool CGame::Update(void* fd, void* send_fd)
       // note: LAN broadcasts use an ID of 0, battle.net refreshes use an ID of 1-10, the rest are unused
 
       if (m_Aura->GetUDPInfoStrictMode()) {
-        m_Aura->m_UDPServer->Broadcast(6112, GetProtocol()->SEND_W3GS_REFRESHGAME(m_HostCounter, m_Players.size(), MAX_SLOTS));
+        m_Aura->m_UDPServer->Broadcast(6112, GetProtocol()->SEND_W3GS_REFRESHGAME(
+          m_HostCounter,
+          m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
+          m_Slots.size()
+        ));
       } else {
         LANBroadcastGameInfo();
       }
@@ -1097,15 +1102,15 @@ void CGame::AnnounceToAddress(string IP, uint16_t port)
 			m_Aura->m_LANWar3Version,
 			CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
 			m_Map->GetMapGameFlags(),
-			m_Map->GetMapWidth(),
-			m_Map->GetMapHeight(),
+      m_Aura->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
+      m_Aura->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
 			m_GameName,
 			m_IndexVirtualHostName,
 			0,
 			m_Map->GetMapPath(),
 			m_Map->GetMapCRC(),
-			MAX_SLOTS,
-			MAX_SLOTS,
+      m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
+			m_Slots.size(), // Total Slots
 			m_LANHostPort,
 			m_HostCounter,
 			m_EntryKey
@@ -1133,15 +1138,15 @@ void CGame::LANBroadcastGameInfo()
 			m_Aura->m_LANWar3Version,
 			CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
 			m_Map->GetMapGameFlags(),
-			m_Map->GetMapWidth(),
-			m_Map->GetMapHeight(),
+      m_Aura->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
+      m_Aura->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
 			m_GameName,
 			m_IndexVirtualHostName,
 			0,
 			m_Map->GetMapPath(),
 			m_Map->GetMapCRC(),
-			MAX_SLOTS,
-			MAX_SLOTS,
+      m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
+			m_Slots.size(), // Total Slots
 			m_LANHostPort,
 			m_HostCounter,
 			m_EntryKey
@@ -1157,16 +1162,17 @@ void CGame::EventPlayerDeleted(CGamePlayer* player)
 
   if (m_GameLoading || m_GameLoaded) {
     for (auto& otherPlayer : m_SyncPlayers[player]) {
-      std::vector<CGamePlayer*> BackList = m_SyncPlayers[otherPlayer];
+      std::vector<CGamePlayer*>& BackList = m_SyncPlayers[otherPlayer];
       auto BackIterator = std::find(BackList.begin(), BackList.end(), player);
       if (BackIterator == BackList.end()) {
-        Print("[ERROR] Player not found in back iterator @ EventPlayerDeleted");
+        Print("[ERROR] Player " + player->GetName() + " not found in back iterator from " + otherPlayer->GetName() + "@ EventPlayerDeleted");
       } else {
         *BackIterator = std::move(BackList.back());
         BackList.pop_back();
       }
     }
     m_SyncPlayers.erase(player);
+    m_HadLeaver = true;
   } else {
     if (MatchOwnerName(player->GetName()) && m_OwnerRealm == player->GetJoinedRealm() && player->GetJoinedRealm().empty()) {
       ReleaseOwner();
@@ -1684,7 +1690,7 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
     return;
 
   bool CanConsumeFrame = true;
-  std::vector<CGamePlayer*> OtherPlayers = m_SyncPlayers[player];
+  std::vector<CGamePlayer*>& OtherPlayers = m_SyncPlayers[player];
   for (auto& otherPlayer: OtherPlayers) {
     if (otherPlayer == player) {
       Print("Same player found in other players vector");
@@ -1704,32 +1710,37 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
   const uint32_t MyCheckSum = player->GetCheckSums()->front();
   player->GetCheckSums()->pop();
 
-  auto it = OtherPlayers.begin();
   bool DesyncDetected = false;
   string DesyncedPlayers;
+  auto& it = OtherPlayers.begin();
   while (it != OtherPlayers.end()) {
     if ((*it)->GetCheckSums()->front() == MyCheckSum) {
       (*it)->GetCheckSums()->pop();
       ++it;
     } else {
       DesyncDetected = true;
-      std::vector<CGamePlayer*> BackList = m_SyncPlayers[*it];
+      std::vector<CGamePlayer*>& BackList = m_SyncPlayers[*it];
       auto BackIterator = std::find(BackList.begin(), BackList.end(), player);
       if (BackIterator == BackList.end()) {
-        Print("[ERROR] Player not found in back iterator @ EventPlayerKeepAlive");
+        Print("[ERROR] Player " + player->GetName() + " not found in back iterator from " + (*it)->GetName() + "@ EventPlayerKeepAlive");
       } else {
         *BackIterator = std::move(BackList.back());
         BackList.pop_back();
       }
 
       DesyncedPlayers += (*it)->GetName() + ", ";
-      *it = std::move(OtherPlayers.back());
+      std::iter_swap(it, OtherPlayers.end() - 1);
       OtherPlayers.pop_back();
     }
   }
   if (DesyncDetected) {
+    string SyncedPlayers;
+    for (auto& sp : m_SyncPlayers[player]) {
+      SyncedPlayers += sp->GetName() + ", ";
+    }
     m_Desynced = true;
     Print(GetLogPrefix() + player->GetName() + " no longer synchronized with " + DesyncedPlayers.substr(0, DesyncedPlayers.length() - 2));
+    Print(GetLogPrefix() + player->GetName() + " still synchronized with " + SyncedPlayers.substr(0, SyncedPlayers.length() - 2));
     SendAllChat("Warning! Desync detected (" + player->GetName() + " is not in the same game as " + DesyncedPlayers.substr(0, DesyncedPlayers.length() - 2) + ")");
   }
 }
@@ -2076,7 +2087,7 @@ bool CGame::EventPlayerBotCommand(string& payload, CBNET* verifiedRealm, CGamePl
    * ADMIN COMMANDS *
    ******************/
 
-  if (m_OwnerName.empty() || IsOwner || IsRootAdmin) {
+  if (m_OwnerName.empty() || IsOwner || IsRootAdmin || CommandHash == HashCode("comp")) {
 
     Print(GetLogPrefix() + "authorized [" + User + "] sent command [" + Command + "] with payload [" + Payload + "]");
 
@@ -2500,6 +2511,14 @@ bool CGame::EventPlayerBotCommand(string& payload, CBNET* verifiedRealm, CGamePl
         else
           SendAllChat("Unable to create game [" + Payload + "]. The game name is too long (the maximum is 31 characters)");
 
+        break;
+      }
+
+      case HashCode("quickstart"):
+      {
+        if (!m_GameLoading && !m_GameLoaded) {
+          EventGameStarted();
+        }
         break;
       }
 

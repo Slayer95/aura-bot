@@ -121,6 +121,7 @@ protected:
   bool                           m_GameLoaded;                    // if the game has loaded or not
   bool                           m_Lagging;                       // if the lag screen is active or not
   bool                           m_Desynced;                      // if the game has desynced or not
+  bool                           m_HadLeaver;                     // if the game has desynced or not
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   

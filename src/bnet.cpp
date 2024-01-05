@@ -29,6 +29,7 @@
 #include "bnetprotocol.h"
 #include "map.h"
 #include "gameprotocol.h"
+#include "gpsprotocol.h"
 #include "game.h"
 #include "irc.h"
 #include "includes.h"
@@ -2389,16 +2390,15 @@ void CBNET::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, u
     if (state == GAME_PRIVATE)
       MapGameType |= MAPGAMETYPE_PRIVATEGAME;
 
-    // use an invalid map width/height to indicate reconnectable games
-
-    std::vector<uint8_t> MapWidth;
-    MapWidth.push_back(192);
-    MapWidth.push_back(7);
-    std::vector<uint8_t> MapHeight;
-    MapHeight.push_back(192);
-    MapHeight.push_back(7);
-
-    m_OutPackets.push(m_Protocol->SEND_SID_STARTADVEX3(state, CreateByteArray(MapGameType, false), map->GetMapGameFlags(), MapWidth, MapHeight, gameName, m_UserName, 0, map->GetMapPath(), map->GetMapCRC(), map->GetMapSHA1(), (hostCounter | (m_HostCounterID << 28))));
+    m_OutPackets.push(m_Protocol->SEND_SID_STARTADVEX3(
+      state, CreateByteArray(MapGameType, false), map->GetMapGameFlags(),
+      // use an invalid map width/height to indicate reconnectable games
+      m_Aura->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapWidth(),
+      m_Aura->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),
+      gameName, m_UserName,
+      0, map->GetMapPath(), map->GetMapCRC(), map->GetMapSHA1(),
+      (hostCounter | (m_HostCounterID << 28))
+    ));
   }
 }
 

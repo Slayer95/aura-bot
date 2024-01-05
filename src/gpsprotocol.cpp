@@ -88,3 +88,9 @@ std::vector<uint8_t> CGPSProtocol::SEND_GPSS_REJECT(uint32_t reason)
   AppendByteArray(packet, reason, false);
   return packet;
 }
+
+std::vector<uint8_t> CGPSProtocol::SEND_GPSS_DIMENSIONS()
+{
+  std::vector<uint8_t> packet = {192, 7};
+  return packet;
+}
