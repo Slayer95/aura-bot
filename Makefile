@@ -44,25 +44,29 @@ endif
 CCFLAGS += $(OFLAGS) -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -I.
 CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ibncsutil/src/ -IStormLib/src/
 
-OBJS = src/bncsutilinterface.o \
-			 src/bnet.o \
-			 src/bnetprotocol.o \
-			 src/config.o \
-			 src/crc32.o \
+OBJS = src/fileutil.o \
+			 src/socket.o \
 			 src/csvparser.o \
-			 src/game.o \
-			 src/gameplayer.o \
+       src/bncsutilinterface.o \
+			 src/bnetprotocol.o \
 			 src/gameprotocol.o \
-			 src/gameslot.o \
 			 src/gpsprotocol.o \
+			 src/config.o \
+			 src/config_bot.o \
+			 src/config_bnet.o \
+			 src/config_game.o 
+			 src/config_irc.o \
+			 src/crc32.o \
+			 src/sha1.o \
+			 src/bnet.o \
+			 src/irc.o \
+			 src/map.o \
+			 src/gameplayer.o \
+			 src/gameslot.o \
+			 src/game.o \
 			 src/aura.o \
 			 src/auradb.o \
-			 src/map.o \
-			 src/sha1.o \
-			 src/socket.o \
-			 src/stats.o \
-			 src/irc.o \
-			 src/fileutil.o
+			 src/stats.o
 
 COBJS = src/sqlite3.o
 
