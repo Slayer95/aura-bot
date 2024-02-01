@@ -19,6 +19,7 @@ CIRCConfig::CIRCConfig(CConfig* CFG)
   m_NickName            = CFG->GetString("irc_nickname", string());
   m_UserName            = CFG->GetString("irc_username", string());
   m_Password            = CFG->GetString("irc_password", string());
+  m_Enabled             = CFG->GetBool("irc_enabled", false);
 
   string CommandTrigger = CFG->GetString("irc_commandtrigger", "!");
   if (CommandTrigger.length() == 1) {

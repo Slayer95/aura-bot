@@ -1125,6 +1125,18 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
       }
       Line = Line.substr(11, Line.length());
     }
+    if (Line.substr(0, 10) == "{CREATOR?}") {
+      if (m_CreatorName.empty()) {
+        continue;
+      }
+      Line = Line.substr(10, Line.length());
+    }
+    if (Line.substr(0, 10) == "{CREATOR!}") {
+      if (!m_CreatorName.empty()) {
+        continue;
+      }
+      Line = Line.substr(10, Line.length());
+    }
     if (Line.substr(0, 8) == "{OWNER?}") {
       if (m_OwnerName.empty()) {
         continue;
@@ -1159,7 +1171,7 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
       Line.replace(matchIndex, 12, m_OwnerRealm.empty() ? "@@@LAN/VPN" : ("@" + m_OwnerRealm));
     }
     while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      Line.replace(matchIndex, 11, GetCreatorServer()->GetCanonicalDisplayName());
+      Line.replace(matchIndex, 11, !m_CreatorServer ? "@@@LAN/VPN" : ("@" + m_CreatorServer->GetCanonicalDisplayName()));
     }
     while ((matchIndex = Line.find("{TRIGGER}")) != string::npos) {
       Line.replace(matchIndex, 9, std::string(1, m_Aura->m_GameDefaultConfig->m_CommandTrigger));
@@ -2363,6 +2375,39 @@ bool CGame::EventPlayerBotCommand(string& payload, CBNET* realm, CGamePlayer* pl
 
       return true;
     }
+
+      //
+      // !INVITE
+      //
+
+      case HashCode("invite"):
+      {
+        if (m_CountDownStarted)
+          break;
+
+        if (Payload.empty())
+          break;
+
+        string PassedMessage;
+        size_t LastSlash = m_Map->GetMapPath().rfind('\\');
+        if (LastSlash != string::npos && LastSlash <= m_Map->GetMapPath().length() - 6) {
+          PassedMessage = User + " invites you to play [" + m_Map->GetMapPath().substr(LastSlash + 1, m_Map->GetMapPath().length()) + "]. Join game \"" + m_GameName + "\"";
+        } else {
+          PassedMessage = User + " invites you to join game \"" + m_GameName + "\"";
+        }
+
+        for (auto& bnet : m_Aura->m_BNETs) {
+          if (bnet->GetIsMirror())
+            continue;
+
+          if (bnet == realm || IsOwner || IsRootAdmin) {
+            bnet->QueueChatCommand(PassedMessage, Payload, true, string());
+          }
+        }
+
+        break;
+      }
+
   }
 
    /*****************
@@ -3955,7 +4000,6 @@ bool CGame::EventPlayerBotCommand(string& payload, CBNET* realm, CGamePlayer* pl
 
         break;
       }
-
       //
       // !WHOIS
       //

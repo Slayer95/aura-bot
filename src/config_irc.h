@@ -19,6 +19,7 @@ public:
   std::string                         m_NickName;
   std::string                         m_UserName;
   std::string                         m_Password;
+  bool                                m_Enabled;
   std::vector<std::string>            m_Channels;
   std::set<std::string>               m_RootAdmins;
   uint16_t                            m_Port;

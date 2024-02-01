@@ -58,7 +58,6 @@ public:
   uint32_t                 m_MaxSavedMapSize;            // maximum byte size of maps kept persistently in the m_MapPath folder
 
   bool                     m_ExitOnStandby;
-  bool                     m_EnableIRC;                  // whether to connect to IRC
   bool                     m_EnableBNET;                 // CLI-only: if false, ignore all bnet configs on startup
 
   explicit CBotConfig(CConfig* CFG);

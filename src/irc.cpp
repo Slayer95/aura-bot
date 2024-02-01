@@ -75,6 +75,14 @@ bool CIRC::Update(void* fd, void* send_fd)
 {
   const int64_t Time = GetTime();
 
+  if (!m_Config->m_Enabled) {
+    if (m_Socket && m_Socket->GetConnected()) {
+      m_Socket->Reset();
+      m_WaitingToConnect = false;
+    }
+    return m_Exiting;
+  }
+
   if (m_Socket->HasError())
   {
     // the socket has an error
@@ -92,7 +100,7 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     if (Time - m_LastPacketTime > 210)
     {
-      Print("[IRC: " + m_Config->m_HostName + "] ping timeout,  reconnecting");
+      Print("[IRC: " + m_Config->m_HostName + "] ping timeout, reconnecting...");
       m_Socket->Reset();
       m_WaitingToConnect = true;
       return m_Exiting;

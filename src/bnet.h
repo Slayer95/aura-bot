@@ -28,7 +28,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cpr/cpr.h>
 
 //
 // CBNET
@@ -103,7 +102,7 @@ public:
   std::string          GetDataBaseID() const;
   std::string          GetLogPrefix() const;
   uint8_t              GetHostCounterID() const;
-  std::string          GetUserName() const;
+  std::string          GetLoginName() const;
   bool                 GetIsMirror() const;
   bool                 GetTunnelEnabled() const;
   uint16_t             GetPublicHostPort() const;
@@ -148,16 +147,7 @@ public:
     m_Config = CFG;
   };
 
-private:
-  std::string EncodeURIComponent(const std::string &s) const;
-  std::string DecodeURIComponent(const std::string &s) const;
-  std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount) const;
-  std::string GetEpicWarSuggestions(std::string & pattern, int maxCount) const;
-  int ParseMapObservers(std::string s, bool & errored) const;
-  int ParseMapVisibility(std::string s, bool & errored) const;
-  int ParseMapRandomHero(std::string s, bool & errored) const;
-  std::pair<std::string, std::string> ParseMapId(const std::string s) const;
-  uint8_t DownloadRemoteMap(const std::string& siteId, const std::string& siteUri, std::string& downloadUri, std::string& downloadFilename) const;
+  private:
 };
 
 #endif // AURA_BNET_H_

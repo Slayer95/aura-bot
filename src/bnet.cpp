@@ -1253,12 +1253,8 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
                   delete m_Aura->m_Map;
                 m_Aura->m_Map = new CMap(m_Aura, &MapCFG, m_Aura->m_Config->m_MapCFGPath + File);
               } else {
-                string FoundMapConfigs;
-
-                for (const auto& match : Matches)
-                  FoundMapConfigs += match + ", ";
-
-                QueueChatCommand("Maps configs: " + FoundMapConfigs.substr(0, FoundMapConfigs.size() - 2), User, Whisper, m_IRC);
+                string FoundMapConfigs = JoinVector(Matches, false);
+                QueueChatCommand("Maps configs: " + FoundMapConfigs, User, Whisper, m_IRC);
               }
             }
           }
@@ -1908,12 +1904,6 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
           bool IsHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
           vector<string> Args = SplitArgs(Payload, 1, 5);
 
-          string Map;
-          string gameName = "gogogo";
-          int MapObserversValue = -1;
-          int MapVisibilityValue = -1;
-          int MapExtraFlags = 0;
-
           if (Args.empty() || Args[0].empty()) {
             if (IsHostCommand) {
               QueueChatCommand("Please enter the map in the host command.", User, Whisper, m_IRC);
@@ -1927,215 +1917,23 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
             return;
           }
 
-          Map = Args[0];
+          const string emptyString;
+          pair<uint8_t, string> LoadResult = m_Aura->LoadMap(
+            User,
+            Args[0],
+            Args.size() >= 2 ? Args[1] : emptyString,
+            Args.size() >= 3 ? Args[2] : emptyString,
+            Args.size() >= 4 ? Args[3] : emptyString,
+            IsHostCommand // I'm gonna be lucky
+          );
+          if (!LoadResult.second.empty())
+            QueueChatCommand(LoadResult.second, User, Whisper, m_IRC);
 
-          bool errored = false;
-          if (Args.size() >= 2 && !Args[1].empty()) {
-            int result = ParseMapObservers(Args[1], errored);
-            if (errored) {
-              QueueChatCommand("Invalid value passed for map observers: \"" + Args[1] + "\"", User, Whisper, m_IRC);
-              return;
+          if (LoadResult.first == 0 && IsHostCommand) {
+            string gameName = "gogogo";
+            if (Args.size() >= 5 && !Args[4].empty()) {
+              gameName = Args[4];
             }
-            MapObserversValue = result;
-          }
-          if (Args.size() >= 3 && !Args[2].empty()) {
-            int result = ParseMapVisibility(Args[2], errored);
-            if (errored) {
-              QueueChatCommand("Invalid value passed for map visibility: \"" + Args[2] + "\"", User, Whisper, m_IRC);
-              return;
-            }
-            MapVisibilityValue = result;
-          }
-          if (Args.size() >= 4 && !Args[3].empty()) {
-            int result = ParseMapRandomHero(Args[3], errored);
-            if (errored) {
-              QueueChatCommand("Invalid value passed for hero randomization: \"" + Args[3] + "\"", User, Whisper, m_IRC);
-              return;
-            }
-            MapExtraFlags = result;
-          }
-          if (Args.size() >= 5 && !Args[4].empty()) {
-            gameName = Args[4];
-          }
-
-          if (!FileExists(m_Aura->m_Config->m_MapPath)) {
-            Print("[BNET: " + m_Config->m_UniqueName + "] error listing maps - map path doesn't exist");
-            QueueChatCommand("Error listing maps - map path doesn't exist", User, Whisper, m_IRC);
-            return;
-          }
-
-          string MapSiteUri;
-          string MapDownloadUri;
-          string ResolvedCFGPath;
-          string ResolvedCFGName;
-          string File;
-          bool ResolvedCFGExists = false;
-
-          pair<string, string> NamespacedMap = ParseMapId(Map);
-          if (NamespacedMap.first == "remote") {
-            QueueChatCommand("Download from the specified domain not supported", User, Whisper, m_IRC);
-            return;
-          }
-          if (NamespacedMap.second.empty()) {
-            QueueChatCommand("Map not valid", User, Whisper, m_IRC);
-            return;
-          }
-
-          CConfig MapCFG;
-
-          // Figure out whether the map pointed at by the URL is already cached locally.
-          if (NamespacedMap.first == "epicwar") {
-            MapSiteUri = "https://www.epicwar.com/maps/" + NamespacedMap.second;
-            // Check that we don't download the same map multiple times.
-            ResolvedCFGName = "epicwar-" + NamespacedMap.second + ".cfg";
-            ResolvedCFGPath = m_Aura->m_Config->m_MapCFGPath + ResolvedCFGName;
-            ResolvedCFGExists = MapCFG.Read(ResolvedCFGPath);
-          }
-
-          if (NamespacedMap.first != "local" && !ResolvedCFGExists) {
-            // Map config not locally available. Download the map so we can calculate it.
-            // But only if we are allowed to.
-            if (!m_Aura->m_Config->m_AllowDownloads) {
-              QueueChatCommand("Map downloads are not allowed.", User, Whisper, m_IRC);
-              return;
-            }
-            if (!m_Aura->m_Games.empty() && m_Aura->m_Config->m_HasBufferBloat) {
-              QueueChatCommand("Currently hosting " + to_string(m_Aura->m_Games.size()) + " game(s). Downloads are disabled to prevent high latency.");
-              return;
-            }
-
-            string MapDownloadUri;
-            uint8_t DownloadResult = DownloadRemoteMap(NamespacedMap.first, MapSiteUri, MapDownloadUri, Map);
-
-            if (DownloadResult == 1) {
-              QueueChatCommand("Map not found in EpicWar.", User, Whisper, m_IRC);
-            } else if (DownloadResult == 2) {
-              QueueChatCommand("Downloaded map invalid.", User, Whisper, m_IRC);
-            } else if (DownloadResult == 3) {
-              QueueChatCommand("Download failed - duplicate map name.", User, Whisper, m_IRC);
-            } else if (DownloadResult == 4) {
-              QueueChatCommand("Download failed - unable to write to disk.", User, Whisper, m_IRC);
-            } else if (DownloadResult != 0) {
-              QueueChatCommand("Download failed - code " + to_string(DownloadResult), User, Whisper, m_IRC);
-            }
-            if (DownloadResult != 0) {
-              return;
-            }
-            QueueChatCommand("Downloaded <" + MapSiteUri + "> as [" + Map + "]", User, Whisper, m_IRC);
-          }
-
-          if (NamespacedMap.first == "local") {
-            Map = NamespacedMap.second;
-          }
-
-          if (ResolvedCFGExists) {
-            // Exact resolution by map identifier.
-            QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
-          } else {
-            // Fuzzy resolution by map name.
-            const vector<string> LocalMatches = m_Aura->MapFilesMatch(Map);
-            if (LocalMatches.empty()) {
-              if (IsHostCommand) {
-                QueueChatCommand(Map + " not found. Try " + GetCommandToken() + "host epicwarlink?", User, Whisper, m_IRC);
-                return;
-              }
-              string Results = GetEpicWarSuggestions(Map, 5);
-              if (Results.empty()) {
-                QueueChatCommand("No matching map found." , User, Whisper, m_IRC);
-              } else {
-                QueueChatCommand("Maps: " + Results, User, Whisper, m_IRC);
-              }
-              return;
-            }
-            if (LocalMatches.size() > 1 && !IsHostCommand) {
-              string FoundMaps;
-              for (const auto& match : LocalMatches)
-                FoundMaps += match + ", ";
-
-              FoundMaps += GetEpicWarSuggestions(Map, 5);
-
-              QueueChatCommand("Maps: " + FoundMaps, User, Whisper, m_IRC);
-              return;
-            }
-            File = LocalMatches.at(0);
-            if (m_Aura->m_CachedMaps.find(File) != m_Aura->m_CachedMaps.end()) {
-              ResolvedCFGName = m_Aura->m_CachedMaps[File];
-              ResolvedCFGPath = m_Aura->m_Config->m_MapCFGPath + ResolvedCFGName;
-              ResolvedCFGExists = MapCFG.Read(ResolvedCFGPath);
-              if (ResolvedCFGExists) {
-                QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
-              } else {
-                // Oops! CFG file is gone!
-                m_Aura->m_CachedMaps.erase(File);
-              }
-            }
-            if (!ResolvedCFGExists) {
-              // CFG nowhere to be found.
-              Print("[AURA] Loading map file [" + File + "]...");
-
-              MapCFG.Set("cfg_partial", "1");
-              if (File.length() > 6 && File[File.length() - 6] == '~' && isdigit(File[File.length() - 5])) {
-                // IDK if this path is okay. Let's give it a try.
-                MapCFG.Set("map_path", R"(Maps\Download\)" + File.substr(0, File.length() - 6) + File.substr(File.length() - 4, File.length()));
-              } else {
-                MapCFG.Set("map_path", R"(Maps\Download\)" + File);
-              }
-              MapCFG.Set("map_localpath", File);
-              MapCFG.Set("map_site", MapSiteUri);
-              MapCFG.Set("map_url", MapDownloadUri);
-              if (NamespacedMap.first != "local")
-                MapCFG.Set("downloaded_by", User);
-
-              if (File.find("DotA") != string::npos)
-                MapCFG.Set("map_type", "dota");
-
-              if (ResolvedCFGName.empty()) {
-                ResolvedCFGName = "local-" + File + ".cfg";
-                ResolvedCFGPath = m_Aura->m_Config->m_MapCFGPath + ResolvedCFGName;
-              }
-
-              vector<uint8_t> OutputBytes = MapCFG.Export();
-              FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
-              m_Aura->m_CachedMaps[File] = ResolvedCFGName;
-            }
-          }
-
-          if (MapObserversValue != -1)
-            MapCFG.Set("map_observers", to_string(MapObserversValue));
-          if (MapVisibilityValue != -1)
-            MapCFG.Set("map_visibility", to_string(MapVisibilityValue));
-
-          if (m_Aura->m_Map) {
-            delete m_Aura->m_Map;
-          }
-          m_Aura->m_Map = new CMap(m_Aura, &MapCFG, ResolvedCFGExists ? "cfg:" + ResolvedCFGName : MapCFG.GetString("map_localpath", ""));
-          if (MapExtraFlags != 0) {
-            m_Aura->m_Map->AddMapFlags(MapExtraFlags);
-          }
-
-          const char* ErrorMessage = m_Aura->m_Map->CheckValid();
-
-          if (ErrorMessage) {
-            QueueChatCommand("Error while loading map: [" + std::string(ErrorMessage) + "]", User, Whisper, m_IRC);
-            if (!ResolvedCFGPath.empty()) {
-              FileDelete(ResolvedCFGPath);
-            }
-            delete m_Aura->m_Map;
-            m_Aura->m_Map = nullptr;
-            return;
-          }
-
-          if (!ResolvedCFGExists) {
-            if (MapCFG.GetInt("cfg_partial", 0) == 0) {
-              // Download and parse successful
-              vector<uint8_t> OutputBytes = MapCFG.Export();
-              if (FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size())) {
-                Print("[AURA] Cached map config for [" + File + "] as [" + ResolvedCFGPath + "]");
-              }
-            }
-            QueueChatCommand("Map file loaded OK [" + File + "]", User, Whisper, m_IRC);
-          }
-          if (IsHostCommand) {
             m_Aura->CreateGame(
               m_Aura->m_Map, GAME_PUBLIC, gameName,
               User, CommandHash == HashCode("hostlan") ? "" : m_HostName,
@@ -2427,7 +2225,7 @@ uint8_t CBNET::GetHostCounterID() const
   return m_ServerID;
 }
 
-string CBNET::GetUserName() const
+string CBNET::GetLoginName() const
 {
   return m_Config->m_UserName;
 }
@@ -2682,242 +2480,3 @@ void CBNET::HoldClan(CGame* game)
     game->AddToReserved(clanmate);
 }
 
-string CBNET::EncodeURIComponent(const string & s) const {
-  std::ostringstream escaped;
-  escaped.fill('0');
-  escaped << std::hex;
-
-  for (char c : s) {
-    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-        escaped << c;
-    } else if (c == ' ') {
-        escaped << '+';
-    } else {
-        escaped << '%' << std::setw(2) << int(static_cast<unsigned char>(c));
-    }
-  }
-
-  return escaped.str();
-}
-
-string CBNET::DecodeURIComponent(const string & encoded) const {
-  std::ostringstream decoded;
-
-  for (std::size_t i = 0; i < encoded.size(); ++i) {
-    if (encoded[i] == '%' && i + 2 < encoded.size() &&
-      isxdigit(encoded[i + 1]) && isxdigit(encoded[i + 2])) {
-      int hexValue;
-      std::istringstream hexStream(encoded.substr(i + 1, 2));
-      hexStream >> std::hex >> hexValue;
-      decoded << static_cast<char>(hexValue);
-      i += 2;
-    } else if (encoded[i] == '+') {
-      decoded << ' ';
-    } else {
-      decoded << encoded[i];
-    }
-  }
-
-  return decoded.str();
-}
-
-vector<pair<string, int>> CBNET::ExtractEpicWarMaps(const string &s, const int maxCount) const {
-  std::regex pattern(R"(<a href="/maps/(\d+)/"><b>([^<\n]+)</b></a>)");
-  std::vector<std::pair<std::string, int>> Output;
-
-  std::sregex_iterator iter(s.begin(), s.end(), pattern);
-  std::sregex_iterator end;
-
-  int count = 0;
-  while (iter != end && count < maxCount) {
-    std::smatch match = *iter;
-    Output.emplace_back(std::make_pair(match[2], std::stoi(match[1])));
-    ++iter;
-    ++count;
-  }
-
-  return Output;
-}
-
-string CBNET::GetEpicWarSuggestions(string & pattern, int maxCount) const
-{
-    string SearchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
-    Print("Downloading " + SearchUri + "...");
-    std::string Suggestions;
-    auto response = cpr::Get(cpr::Url{SearchUri});
-    if (response.status_code != 200) {
-      return Suggestions;
-    }
-
-    std::vector<std::pair<std::string, int>> MatchingMaps = ExtractEpicWarMaps(response.text, maxCount);
-
-    for (const auto& element : MatchingMaps) {
-      Suggestions += element.first + " (epicwar-" + to_string(element.second) + "), ";
-    }
-
-    Suggestions = Suggestions.substr(0, Suggestions.length() - 2);
-    return Suggestions;
-}
-
-int CBNET::ParseMapObservers(string s, bool & errored) const
-{
-  transform(begin(s), end(s), begin(s), ::tolower);
-  int result = MAPOBS_NONE;
-  if (s == "no" || s == "no observers" || s == "no obs" || s == "sin obs" || s == "sin observador" || s == "sin observadores") {
-    result = MAPOBS_NONE;
-  } else if (s == "referee" || s == "referees" || s == "arbiter" || s == "arbitro" || s == "arbitros" || s == "árbitros") {
-    result = MAPOBS_REFEREES;
-  } else if (s == "observadores derrotados" || s == "derrotados" || s == "obs derrotados" || s == "obs on defeat" || s == "observers on defeat" || s == "on defeat" || s == "defeat") {
-    result = MAPOBS_ONDEFEAT;
-  } else if (s == "full observers" || s == "solo observadores") {
-    result = MAPOBS_ALLOWED;
-  } else {
-    errored = true;
-    return result;
-  }
-  errored = false;
-  return result;
-}
-
-int CBNET::ParseMapVisibility(string s, bool & errored) const
-{
-  int result = MAPVIS_DEFAULT;
-  transform(begin(s), end(s), begin(s), ::tolower);
-  if (s == "no" || s == "default" || s == "predeterminado" || s == "fog" || s == "fog of war" || s == "niebla" || s == "niebla de guerra") {
-    result = MAPVIS_DEFAULT;
-  } else if (s == "hide terrain" || s == "hide" || s == "ocultar terreno" || s == "ocultar") {
-    result = MAPVIS_HIDETERRAIN;
-  } else if (s == "map explored" || s == "explored" || s == "mapa explorado" || s == "explorado") {
-    result = MAPVIS_EXPLORED;
-  } else if (s == "always visible" || s == "always" || s == "visible" || s == "todo visible" || s == "todo" || s == "revelar" || s == "todo revelado") {
-    result = MAPVIS_ALWAYSVISIBLE;
-  } else {
-    errored = true;
-    return result;
-  }
-  errored = false;
-  return result;
-}
-
-int CBNET::ParseMapRandomHero(string s, bool & errored) const
-{
-  int result = 0;
-  transform(begin(s), end(s), begin(s), ::tolower);
-  if (s == "random hero" || s == "rh" || s == "yes" || s == "heroe aleatorio" || s == "aleatorio" || s == "héroe aleatorio") {
-    result = MAPFLAG_RANDOMHERO;
-  } else if (s == "default" || s == "no" || s == "predeterminado") {
-    result = 0;
-  } else {
-    errored = true;
-    return result;
-  }
-  errored = false;
-  return result;
-}
-
-pair<string, string> CBNET::ParseMapId(const string s) const
-{
-  string lower = s;
-  transform(begin(lower), end(lower), begin(lower), ::tolower);
-
-  // Custom namespace/protocol
-  if (lower.substr(0, 8) == "epicwar-" || lower.substr(0, 8) == "epicwar:") {
-    return make_pair("epicwar", MaybeBase10(lower.substr(8, lower.length())));
-  }
-  if (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:") {
-    return make_pair("local", s);
-  }
-  
-
-  bool isUri = false;
-  if (lower.substr(0, 7) == "http://") {
-    isUri = true;
-    lower = lower.substr(7, lower.length());
-  } else if (lower.substr(0, 8) == "https://") {
-    isUri = true;
-    lower = lower.substr(8, lower.length());
-  }
-
-  if (lower.substr(0, 12) == "epicwar.com/") {
-    string mapCode = lower.substr(17, lower.length());
-    return make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
-  }
-  if (lower.substr(0, 16) == "www.epicwar.com/") {
-    string mapCode = lower.substr(21, lower.length());
-    return make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
-  }
-  if (isUri) {
-    return make_pair("remote", string());
-  } else {
-    return make_pair("local", s);
-  }
-}
-
-uint8_t CBNET::DownloadRemoteMap(const string & siteId, const string & siteUri, string & downloadUri, string & downloadFilename) const
-{
-  // Proceed with the download
-  Print("[AURA] Downloading <" + siteUri + ">...");
-  if (siteId == "epicwar") {
-    auto response = cpr::Get(cpr::Url{siteUri});
-    if (response.status_code != 200) return 5;
-    
-    size_t DownloadUriStartIndex = response.text.find("<a href=\"/maps/download/");
-    if (DownloadUriStartIndex == string::npos) return 5;
-    size_t DownloadUriEndIndex = response.text.find("\"", DownloadUriStartIndex + 24);
-    if (DownloadUriEndIndex == string::npos) return 5;
-    downloadUri = "https://epicwar.com" + response.text.substr(DownloadUriStartIndex + 9, (DownloadUriEndIndex) - (DownloadUriStartIndex + 9));
-    size_t LastSlashIndex = downloadUri.rfind("/");
-    if (LastSlashIndex == string::npos) return 5;
-    string encodedName = downloadUri.substr(LastSlashIndex + 1, downloadUri.length());
-    downloadFilename = DecodeURIComponent(encodedName);
-  } else {
-    return 5;
-  }
-
-  if (downloadFilename.empty() || downloadFilename[0] == '.' || downloadFilename.length() > 80 ||
-    downloadFilename.find('/') != string::npos || downloadFilename.find('\\') != string::npos ||
-    downloadFilename.find('\0') != string::npos) {
-    return 2;
-  }
-  string DownloadFileExt = downloadFilename.substr(downloadFilename.length() - 4, downloadFilename.length());
-  if (DownloadFileExt != ".w3m" && DownloadFileExt != ".w3x") {
-    return 2;
-  }
-  string MapSuffix;
-  bool FoundAvailableSuffix = false;
-  for (int i = 0; i < 10; i++) {
-    if (i != 0) {
-      MapSuffix = "~" + to_string(i);
-    }
-    if (FileExists(m_Aura->m_Config->m_MapPath + downloadFilename.substr(0, downloadFilename.length() - 4) + MapSuffix + DownloadFileExt)) {
-      // Map already exists.
-      // I'd rather directly open the file with wx flags to avoid racing conditions,
-      // but there is no standard C++ way to do this, and cstdio isn't very helpful.
-      continue;
-    }
-    if (m_Aura->m_BusyMaps.find(downloadFilename.substr(0, downloadFilename.length() - 4) + MapSuffix + DownloadFileExt) != m_Aura->m_BusyMaps.end()) {
-      // Map already hosted.
-      continue;
-    }
-    FoundAvailableSuffix = true;
-    break;
-  }
-  if (!FoundAvailableSuffix) {
-    return 3;
-  }
-  Print("[AURA] Downloading <" + downloadUri + "> as [" + downloadFilename + "]...");
-  downloadFilename = downloadFilename.substr(0, downloadFilename.length() - 4) + MapSuffix + DownloadFileExt;
-  string DestinationPath = m_Aura->m_Config->m_MapPath + downloadFilename;
-  std::ofstream MapFile(DestinationPath, std::ios_base::out | std::ios_base::binary);
-  if (!MapFile.is_open()) {
-    MapFile.close();
-    return 4;
-  }
-  cpr::Response MapResponse = cpr::Download(MapFile, cpr::Url{downloadUri}, cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}});
-  MapFile.close();
-  if (MapResponse.status_code != 200) {
-    return 1;
-  }
-
-  return 0;
-}

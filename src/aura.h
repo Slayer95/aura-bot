@@ -130,9 +130,10 @@ public:
   uint8_t ExtractScripts();
   void LoadIPToCountryData();
   void CacheMapPresets();
-  void CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string ownerServer, std::string creatorName, CBNET* nCreatorServer, bool whisper);
+  bool CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string ownerServer, std::string creatorName, CBNET* nCreatorServer, bool whisper);
   void CreateMirror(CMap* map, uint8_t gameDisplay, std::string gameName, std::string gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, std::string excludedServer, std::string creatorName, CBNET* creatorServer, bool whisper);
   void SendBroadcast(uint16_t port, const std::vector<uint8_t>& message);
+  std::pair<uint8_t, std::string> LoadMap(const std::string& user, const std::string& mapInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomHeroInput, const bool& gonnaBeLucky);
   std::vector<std::string> MapFilesMatch(std::string pattern);
   std::vector<std::string> ConfigFilesMatch(std::string pattern);
 

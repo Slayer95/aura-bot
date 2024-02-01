@@ -30,6 +30,8 @@
 
 #undef min
 
+#pragma once
+
 inline std::string ToHexString(uint32_t i)
 {
   std::string       result;
@@ -518,6 +520,53 @@ inline bool IsBase10Number(const std::string& s) {
 
 inline std::string MaybeBase10(const std::string s) {
   return IsBase10Number(s) ? s : std::string();
+}
+
+inline std::string JoinVector(const std::vector<std::string> list, const bool trailingComma) {
+  std::string Results;
+  for (const auto& element : list)
+    Results += element + ", ";
+  if (!trailingComma) Results = Results.substr(0, 2);
+  return Results;
+}
+
+inline std::string EncodeURIComponent(const std::string & s) {
+  std::ostringstream escaped;
+  escaped.fill('0');
+  escaped << std::hex;
+
+  for (char c : s) {
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+        escaped << c;
+    } else if (c == ' ') {
+        escaped << '+';
+    } else {
+        escaped << '%' << std::setw(2) << int(static_cast<unsigned char>(c));
+    }
+  }
+
+  return escaped.str();
+}
+
+inline std::string DecodeURIComponent(const std::string & encoded) {
+  std::ostringstream decoded;
+
+  for (std::size_t i = 0; i < encoded.size(); ++i) {
+    if (encoded[i] == '%' && i + 2 < encoded.size() &&
+      std::isxdigit(encoded[i + 1]) && std::isxdigit(encoded[i + 2])) {
+      int hexValue;
+      std::istringstream hexStream(encoded.substr(i + 1, 2));
+      hexStream >> std::hex >> hexValue;
+      decoded << static_cast<char>(hexValue);
+      i += 2;
+    } else if (encoded[i] == '+') {
+      decoded << ' ';
+    } else {
+      decoded << encoded[i];
+    }
+  }
+
+  return decoded.str();
 }
 
 #endif // AURA_UTIL_H_

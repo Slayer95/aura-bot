@@ -73,10 +73,9 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_MaxGames               = CFG->GetInt("bot_maxgames", 20);
   m_MaxSavedMapSize        = CFG->GetInt("bot_maxpersistentsize", 0xFFFFFFFF);
 
-  // Master switches mainly intented for CLI. CFG options provided for completeness.
+  // Master switches mainly intended for CLI. CFG options provided for completeness.
   m_ExitOnStandby          = CFG->GetBool("bot_exitonstandby", false);
   m_EnableBNET             = CFG->GetBool("bot_enablebnet", true);
-  m_EnableIRC              = CFG->GetBool("bot_enableirc", true);
 }
 
 CBotConfig::~CBotConfig() = default;
