@@ -20,6 +20,7 @@
 
 #include <utility>
 
+#include "config_bot.h"
 #include "gameplayer.h"
 #include "aura.h"
 #include "bnet.h"
@@ -87,14 +88,14 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
     if (Length < 4 || Bytes.size() < Length) break;
     const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-    if (Bytes[0] == W3GS_HEADER_CONSTANT || Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_ProxyReconnectEnabled) {
-      if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN && m_Aura->m_CurrentLobby) {
+    if (Bytes[0] == W3GS_HEADER_CONSTANT || Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Config->m_ProxyReconnectEnabled) {
+      if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
         delete m_IncomingJoinPlayer;
         m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
         if (!m_IncomingJoinPlayer) {
           // Invalid request
           m_DeleteMe = true;
-        } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x0FFFFFFF)) {
+        } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x00FFFFFF)) {
           // Trying to join the wrong game
           m_DeleteMe = true;
         } else if (m_Aura->m_CurrentLobby->EventPlayerJoined(this, m_IncomingJoinPlayer)) {
@@ -166,11 +167,12 @@ void CPotentialPlayer::Send(const std::vector<uint8_t>& data) const
 // CGamePlayer
 //
 
-CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
+CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID, uint8_t nJoinedRealmID, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
   : m_Protocol(potential->m_Protocol),
     m_Game(nGame),
     m_Socket(potential->GetSocket()),
     m_InternalIP(std::move(nInternalIP)),
+    m_JoinedRealmID(nJoinedRealmID),
     m_JoinedRealm(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
     m_TotalPacketsSent(0),
@@ -186,12 +188,15 @@ CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID
     m_StartedLaggingTicks(0),
     m_LastGProxyWaitNoticeSentTime(0),
     m_GProxyReconnectKey(GetTicks()),
+    m_KickByTime(0),
     m_LastGProxyAckTime(0),
     m_PID(nPID),
     m_Verified(false),
     m_Reserved(nReserved),
     m_WhoisShouldBeSent(false),
     m_WhoisSent(false),
+    m_HasMap(false),
+    m_HasHighPing(false),
     m_DownloadAllowed(false),
     m_DownloadStarted(false),
     m_DownloadFinished(false),
@@ -200,8 +205,11 @@ CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID
     m_DropVote(false),
     m_KickVote(false),
     m_Muted(false),
+    m_Observer(false),
+    m_PowerObserver(false),
     m_LeftMessageSent(false),
     m_GProxy(false),
+    m_GProxyPort(0),
     m_GProxyDisconnectNoticeSent(false),
     m_DeleteMe(false)
 {
@@ -229,6 +237,35 @@ uint32_t CGamePlayer::GetPing() const
   return AvgPing;
 }
 
+string CGamePlayer::GetInternalIPString() const
+{
+  return to_string(m_InternalIP[0]) + "." + to_string(m_InternalIP[1]) + "." + to_string(m_InternalIP[2]) + "." + to_string(m_InternalIP[3]);
+}
+
+CBNET* CGamePlayer::GetRealm(bool mustVerify)
+{
+  if (m_JoinedRealmID < 0x10)
+    return nullptr;
+
+  for (auto& bnet : m_Game->m_Aura->m_BNETs) {
+    if (bnet->GetHostCounterID() == m_JoinedRealmID) {
+      if (mustVerify && !m_Verified) {
+        return nullptr;
+      }
+      return bnet;
+    }
+  }
+
+  return nullptr;
+}
+
+string CGamePlayer::GetRealmDataBaseID(bool mustVerify)
+{
+  CBNET* Realm = GetRealm(mustVerify);
+  if (Realm) return Realm->GetDataBaseID();
+  return "@@LAN/VPN";
+}
+
 bool CGamePlayer::Update(void* fd)
 {
   const int64_t Time = GetTime();
@@ -236,17 +273,13 @@ bool CGamePlayer::Update(void* fd)
   // wait 4 seconds after joining before sending the /whois or /w
   // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
 
-  if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_JoinedRealm.empty() && Time - m_JoinTime >= 4)
-  {
-    for (auto& bnet : m_Game->m_Aura->m_BNETs)
-    {
-      if (bnet->GetServer() == m_JoinedRealm)
-      {
-        if (m_Game->GetGameState() == GAME_PUBLIC || bnet->GetPvPGN())
-          bnet->QueueChatCommand("/whois " + m_Name);
-        else if (m_Game->GetGameState() == GAME_PRIVATE)
-          bnet->QueueChatCommand(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name, true, string());
-      }
+  if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_JoinedRealm.empty() && Time - m_JoinTime >= 4) {
+    CBNET* Realm = GetRealm(false);
+    if (Realm) {
+      if (m_Game->GetGameState() == GAME_PUBLIC || Realm->GetPvPGN())
+        Realm->QueueChatCommand("/whois " + m_Name);
+      else if (m_Game->GetGameState() == GAME_PRIVATE)
+        Realm->QueueChatCommand(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name, true, string());
     }
 
     m_WhoisSent = true;
@@ -329,7 +362,8 @@ bool CGamePlayer::Update(void* fd)
 
         case CGameProtocol::W3GS_OUTGOING_KEEPALIVE:
           m_CheckSums.push(m_Protocol->RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
-          ++m_SyncCounter;
+          if (!m_Game->GetLagging() || m_Lagging)
+            ++m_SyncCounter;
           m_Game->EventPlayerKeepAlive(this);
           break;
 
@@ -372,8 +406,8 @@ bool CGamePlayer::Update(void* fd)
 
             if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 5)) {
               // we also discard pong values when anyone else is downloading if we're configured to
-              if (!m_Game->IsDownloading()) {
-                m_Pings.push_back(m_Game->m_Aura->m_LCPings ? (GetTicks() - Pong) / 2 : GetTicks() - Pong);
+              if (!(m_Game->m_Aura->m_Config->m_HasBufferBloat && m_Game->IsDownloading())) {
+                m_Pings.push_back(m_Game->m_Aura->m_Config->m_RTTPings ? (GetTicks() - Pong) : ((GetTicks() - Pong) / 2));
                 if (m_Pings.size() > 10) {
                   m_Pings.erase(begin(m_Pings));
                 }
@@ -385,7 +419,7 @@ bool CGamePlayer::Update(void* fd)
           break;
       }
     }
-    else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_ProxyReconnectEnabled)
+    else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_Config->m_ProxyReconnectEnabled)
     {
       if (Bytes[1] == CGPSProtocol::GPS_ACK && Data.size() == 8)
       {
@@ -408,11 +442,14 @@ bool CGamePlayer::Update(void* fd)
       }
       else if (Bytes[1] == CGPSProtocol::GPS_INIT)
       {
-        m_GProxy = true;
-        if (GetJoinedRealm().empty()) {
-          m_GProxyPort = m_Game->m_Aura->m_EnableLANBalancer ? m_Game->m_Aura->m_LANHostPort : m_Game->GetHostPort();
+        CBNET* MyRealm = GetRealm(false);
+        if (MyRealm) {
+          m_GProxyPort = MyRealm->GetTunnelEnabled() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
+        } else if (m_JoinedRealmID == 0) {
+          m_GProxyPort = m_Game->m_Aura->m_Config->m_EnableLANBalancer ? m_Game->m_Aura->m_Config->m_LANHostPort : m_Game->GetHostPort();
         } else {
-          m_GProxyPort = m_Game->m_Aura->m_EnablePvPGNTunnel ? m_Game->m_Aura->m_PublicHostPort : m_Game->GetHostPort();
+          // GameRanger??
+          m_GProxyPort = 6112;
         }
         m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
         Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
@@ -430,17 +467,17 @@ bool CGamePlayer::Update(void* fd)
   // It's therefore crucial to check the Abort flag that it sets to avoid modifying it further.
   // As soon as the CGamePlayer::Update() call returns, EventPlayerDeleted takes care of erasing from the m_Players vector.
   if (m_Socket && !Abort) {
-    if (m_Socket->HasError())
-    {
+    if (m_Socket->HasError()) {
       m_Game->EventPlayerDisconnectSocketError(this);
       m_Socket->Reset();
-    }
-    else if (!m_Socket->GetConnected())
-    {
+    } else if (!m_Socket->GetConnected()) {
       m_Game->EventPlayerDisconnectConnectionClosed(this);
       m_Socket->Reset();
     }
   }
+
+  if (GetKickQueued() && m_KickByTime < Time)
+    m_Game->EventPlayerKickHandleQueued(this);
 
   if (m_GProxy && m_Game->GetGameLoaded())
     return m_DeleteMe;

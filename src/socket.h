@@ -251,7 +251,7 @@ public:
   CTCPServer();
   ~CTCPServer();
 
-  bool Listen(const std::string& address, uint16_t port);
+  bool Listen(const std::string& address, uint16_t port, bool retry);
   CTCPSocket* Accept(fd_set* fd);
 };
 
@@ -283,7 +283,7 @@ public:
   CUDPServer();
   ~CUDPServer();
 
-  bool Listen(const std::string& address, uint16_t port);
+  bool Listen(const std::string& address, uint16_t port, bool retry);
   UDPPkt* Accept(fd_set* fd);
 };
 

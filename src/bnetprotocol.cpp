@@ -396,7 +396,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STOPADV()
 
 std::vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX()
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_GETADVLISTEX, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_GETADVLISTEX, 0, 0, /* short */ 0, 0, /* short */ 0, 0, /* unknown */ 0, 0, 0, 0, /* unknown */  0, 0, 0, 0};
   const uint8_t MaxGames[] = {255, 255, 255, 255};
   //const uint8_t GameName[] = {};
   //const uint8_t GamePassword[] = {};
@@ -471,7 +471,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(std::string ipString, ui
   packet.push_back(0);                                   //
   packet.push_back(0);                                   //
   AppendByteArray(packet, Unknown, 2);                   //
-  AppendByteArray(packet, port, false);                  // Custom port
+  AppendByteArray(packet, port, true);                   // Custom port
   AppendByteArray(packet, ip, false);                    // Custom IP
   AppendByteArray(packet, Unknown2, 4);                  //
   AppendByteArray(packet, Unknown3, 4);                  //
@@ -595,7 +595,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_NETGAMEPORT(uint16_t serverPort)
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const string& countryAbbrev, const string& country)
+std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const string& CountryShort, const string& country)
 {
   const uint8_t ProtocolID[]    = {0, 0, 0, 0};
   const uint8_t PlatformID[]    = {54, 56, 88, 73}; // "IX86"
@@ -619,7 +619,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t loc
   AppendByteArray(packet, TimeZoneBias, 4);   // Time Zone Bias
   AppendByteArray(packet, localeID, false);   // Locale ID
   AppendByteArray(packet, localeID, false);   // Language ID (copying the locale ID should be sufficient since we don't care about sublanguages)
-  AppendByteArrayFast(packet, countryAbbrev); // Country Abbreviation
+  AppendByteArrayFast(packet, CountryShort); // Country Abbreviation
   AppendByteArrayFast(packet, country);       // Country
   AssignLength(packet);
 

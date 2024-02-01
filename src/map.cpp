@@ -25,6 +25,7 @@
 #include "crc32.h"
 #include "sha1.h"
 #include "config.h"
+#include "config_bot.h"
 #include "gameslot.h"
 
 #define __STORMLIB_SELF__
@@ -209,41 +210,55 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   bool IsPartial = CFG->GetInt("cfg_partial", 0) == 1;
   int RawMapSize = 0;
-  if (IsPartial || m_Aura->m_AllowUploads) {
+  if (IsPartial || m_Aura->m_Config->m_AllowUploads) {
     if (m_MapLocalPath.empty()) {
       return;
     }
-    m_MapData = FileRead(m_Aura->m_MapPath + m_MapLocalPath, &RawMapSize);
-    if (m_MapData.empty()) {
+    m_MapData = FileRead(m_Aura->m_Config->m_MapPath + m_MapLocalPath, &RawMapSize);
+    if (IsPartial && m_MapData.empty()) {
+      Print("[AURA] Local map not found for partial config file");
       return;
     }
   }
 
   // load the map MPQ
 
-  string MapMPQFileName = m_Aura->m_MapPath + m_MapLocalPath;
+  string MapMPQFileName = m_Aura->m_Config->m_MapPath + m_MapLocalPath;
   HANDLE MapMPQ;
   bool   MapMPQReady = false;
 
 #ifdef WIN32
   const wstring MapMPQFileNameW = wstring(begin(MapMPQFileName), end(MapMPQFileName));
 
-  if (SFileOpenArchive(MapMPQFileNameW.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1, &MapMPQ))
+  if (SFileOpenArchive(MapMPQFileNameW.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
 #else
-  if (SFileOpenArchive(MapMPQFileName.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1, &MapMPQ))
+  if (SFileOpenArchive(MapMPQFileName.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
 #endif
   {
     Print("[MAP] loading MPQ file [" + MapMPQFileName + "]");
     MapMPQReady = true;
+  } else {
+#ifdef WIN32
+    uint32_t ErrorCode = (uint32_t)GetLastError();
+    string ErrorCodeString = (
+      ErrorCode == 2 ? "Map not found" : (
+      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot_mappath is not a valid directory" : (
+      (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
+      "Error code " + to_string(ErrorCode)
+      )))
+    );
+#else
+    int32_t ErrorCode = static_cast<int32_t>(GetLastError());
+    string ErrorCodeString = "Error code " + to_string(ErrorCode);
+#endif
+    Print("[MAP] warning - unable to load MPQ file [" + MapMPQFileName + "] - " + ErrorCodeString);
   }
-  else
-    Print("[MAP] warning - unable to load MPQ file [" + MapMPQFileName + "]");
 
   // try to calculate map_size, map_info, map_crc, map_sha1
 
   std::vector<uint8_t> MapSize, MapInfo, MapCRC, MapSHA1;
 
-  if (IsPartial || m_Aura->m_AllowUploads) {
+  if (!m_MapData.empty()) {
     m_Aura->m_SHA->Reset();
 
     // calculate map_info (this is actually the CRC)
@@ -254,16 +269,16 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     // calculate map_crc (this is not the CRC) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
 
-    string CommonJ = FileRead(m_Aura->m_MapCFGPath + "common.j", nullptr);
+    string CommonJ = FileRead(m_Aura->m_Config->m_MapCFGPath + "common.j", nullptr);
 
     if (CommonJ.empty())
-      Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_MapCFGPath + "common.j]");
+      Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_Config->m_MapCFGPath + "common.j]");
     else
     {
-      string BlizzardJ = FileRead(m_Aura->m_MapCFGPath + "blizzard.j", nullptr);
+      string BlizzardJ = FileRead(m_Aura->m_Config->m_MapCFGPath + "blizzard.j", nullptr);
 
       if (BlizzardJ.empty())
-        Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_MapCFGPath + "blizzard.j]");
+        Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_Config->m_MapCFGPath + "blizzard.j]");
       else
       {
         uint32_t Val = 0;
@@ -660,7 +675,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_size")) {
     string CFGValue = CFG->GetString("map_size", string());
-    if (m_Aura->m_AllowUploads) {
+    if (m_Aura->m_Config->m_AllowUploads) {
       string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), false));
       MapContentMismatch[0] = CFGValue != MapValue;
       if (CFGValue != MapValue) {
@@ -677,7 +692,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_info")) {
     string CFGValue = CFG->GetString("map_info", string());
-    if (m_Aura->m_AllowUploads) {
+    if (m_Aura->m_Config->m_AllowUploads) {
       string MapValue = ByteArrayToDecString(MapInfo);
       MapContentMismatch[1] = CFGValue != MapValue;
     }
@@ -690,7 +705,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_crc")) {
     string CFGValue = CFG->GetString("map_crc", string());
-    if (m_Aura->m_AllowUploads) {
+    if (m_Aura->m_Config->m_AllowUploads) {
       string MapValue = ByteArrayToDecString(MapCRC);
       MapContentMismatch[2] = CFGValue != MapValue;
     }
@@ -703,7 +718,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_sha1")) {
     string CFGValue = CFG->GetString("map_sha1", string());
-    if (m_Aura->m_AllowUploads) {
+    if (m_Aura->m_Config->m_AllowUploads) {
       string MapValue = ByteArrayToDecString(MapSHA1);
       MapContentMismatch[3] = CFGValue != MapValue;
     }
@@ -841,12 +856,16 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
 const char* CMap::CheckValid()
 {
-  // TODO: should this code fix any errors it sees rather than just warning the user?
-
-  if (m_MapPath.empty() || m_MapPath.length() > 53)
+  if (m_MapPath.empty())
   {
     m_Valid = false;
-    return "invalid map_path detected";
+    return "map_path not found";
+  }
+
+  if (m_MapPath.length() > 53)
+  {
+    m_Valid = false;
+    return "map_path too long";
   }
 
   if (m_MapPath.find('/') != string::npos)

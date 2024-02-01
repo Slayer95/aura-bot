@@ -29,6 +29,10 @@
 #include <random>
 #include <map>
 
+#define SLOTS_ALIGNMENT_CHANGED 1 << 0
+#define SLOTS_DOWNLOAD_PROGRESS_CHANGED 1 << 1
+#define SLOTS_HCL_INJECTED 1 << 2
+
 //
 // CGame
 //
@@ -75,6 +79,7 @@ protected:
   std::string                    m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
   std::string                    m_CreatorName;                   // name of the player who created this game
   CBNET*                         m_CreatorServer;                 // battle.net server the player who created this game was on
+  std::string                    m_ExcludedServer;                // battle.net server where the mirrored game is not to be broadcasted
   std::string                    m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
   std::string                    m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
   std::string                    m_MapPath;                       // store the map path to save in the database on game end
@@ -99,23 +104,37 @@ protected:
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
   uint32_t                       m_Latency;                       // the number of ms to wait between sending action packets (we queue any received during this time)
-  uint32_t                       m_SyncLimit;                     // the maximum number of packets a player can fall out of sync before starting the lag screen
+  float                          m_SyncLimit;                     // the maximum number of packets a player can fall out of sync before starting the lag screen
+  float                          m_SyncLimitSafe;                 // stop lag screen if players are within this same amount of packets
+  float                          m_SyncFactor;                    // factor for synchronization formula (keepalive period / bot latency)
   uint32_t                       m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
+  uint32_t                       m_AutoKickPing;                  //
+  uint32_t                       m_WarnHighPing;                  //
   uint32_t                       m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
   uint32_t                       m_StartPlayers;                  // number of players when the game started
+  int64_t                        m_AutoStartMinTime;
+  int64_t                        m_AutoStartMaxTime;
+  uint8_t                        m_AutoStartPlayers;
+  uint8_t                        m_PlayersWithMap;
   uint16_t                       m_HostPort;                      // the port to host games on
-  uint16_t                       m_LANHostPort;                   // the port to broadcast
-  uint8_t                        m_GameState;                     // game state, public or private
+  bool                           m_LANEnabled;                    // whether to broadcast the game to LAN
+  uint16_t                       m_LANHostPort;                   // the port to broadcast over LAN
+  bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CBNET's - disables CBNET mirror instances
+  std::string                    m_PublicHostAddress;
+  uint16_t                       m_PublicHostPort;
+  uint8_t                        m_GameDisplay;                   // game state, public or private
   uint8_t                        m_VirtualHostPID;                // host's PID
   int64_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                           m_Exiting;                       // set to true and this class will be deleted next update
   bool                           m_Saving;                        // if we're currently saving game data to the database
-  bool                           m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
+  uint8_t                        m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
+  bool                           m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                           m_Locked;                        // if the game owner is the only one allowed to run game commands or not
   bool                           m_RefreshError;                  // if the game had a refresh error
   bool                           m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
   bool                           m_MuteLobby;                     // if we should stop forwarding lobby chat messages
+  bool                           m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
   bool                           m_CountDownStarted;              // if the game start countdown has started or not
   bool                           m_GameLoading;                   // if the game is currently loading or not
   bool                           m_GameLoaded;                    // if the game has loaded or not
@@ -127,15 +146,21 @@ protected:
   
 
 public:
+  CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, std::string& nGameName, std::string nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, std::string nExcludedServer);
   CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nOwnerRealm, std::string& nCreatorName, CBNET* nCreatorServer);
   ~CGame();
   CGame(CGame&) = delete;
 
+  bool                  GetExiting() const { return m_Exiting; }
   inline CMap*          GetMap() const { return m_Map; }
   inline uint32_t       GetEntryKey() const { return m_EntryKey; }
   inline uint16_t       GetHostPort() const { return m_HostPort; }
+  inline bool           GetLANEnabled() const { return m_LANEnabled; }
   inline uint16_t       GetLANPort() const { return m_LANHostPort; }
-  inline uint8_t        GetGameState() const { return m_GameState; }
+  inline bool           GetPublicHostOverride() const { return m_PublicHostOverride; }
+  inline std::string    GetPublicHostAddress() const { return m_PublicHostAddress; }
+  inline uint16_t       GetPublicHostPort() const { return m_PublicHostPort; }
+  inline uint8_t        GetGameState() const { return m_GameDisplay; }
   inline int64_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
   inline std::string    GetLastGameName() const { return m_LastGameName; }
@@ -148,6 +173,7 @@ public:
   inline int64_t        GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool           GetLocked() const { return m_Locked; }
   inline bool           GetCountDownStarted() const { return m_CountDownStarted; }
+  inline bool           GetIsMirror() const { return m_IsMirror; }
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
   inline bool           GetLagging() const { return m_Lagging; }
@@ -162,6 +188,7 @@ public:
   std::string    GetLogPrefix() const;
   std::string    GetPlayers() const;
   std::string    GetObservers() const;
+  std::string    GetAutoStartText() const;
 
   inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void SetRefreshError(bool nRefreshError) { m_RefreshError = nRefreshError; }
@@ -190,11 +217,16 @@ public:
   void SendAllChat(const std::string& message);
   void SendAllSlotInfo();
   void SendVirtualHostPlayerInfo(CGamePlayer* player);
-  void SendFakePlayerInfo(CGamePlayer* player);
+  void SendFakePlayersInfo(CGamePlayer* player);
   void SendWelcomeMessage(CGamePlayer* player);
   void SendAllActions();
+  void SendAllAutoStart();
   void AnnounceToAddress(std::string IP, uint16_t port);
+  void AnnounceToAddressForGameRanger(std::string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit);
   void LANBroadcastGameInfo();
+  void LANBroadcastGameRefresh();
+  void LANBroadcastGameCreate();
+  void LANBroadcastGameDecreate();
 
   // events
   // note: these are only called while iterating through the m_Potentials or m_Players std::vectors
@@ -204,13 +236,14 @@ public:
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
+  void EventPlayerKickHandleQueued(CGamePlayer* player);
   bool EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* joinPlayer);
   void EventPlayerLeft(CGamePlayer* player, uint32_t reason);
   void EventPlayerLoaded(CGamePlayer* player);
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
-  bool EventPlayerBotCommand(std::string& payload, CBNET* bnet, CGamePlayer* player, std::string& command, std::string& serverName, std::string& userName);
+  bool EventPlayerBotCommand(std::string& payload, CBNET* bnet, CGamePlayer* player, std::string& command, std::string& serverName, std::string userName);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
   void EventPlayerChangeColour(CGamePlayer* player, uint8_t colour);
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
@@ -250,8 +283,8 @@ public:
   void CloseAllSlots();
   void ComputerAllSlots(uint8_t skill);
   void ShuffleSlots();
-  void ReportSpoofed(const std::string& server, const std::string& name);
-  void AddToRealmVerified(const std::string& server, const std::string& name, bool sendMessage);
+  void ReportSpoofed(const std::string& server, CGamePlayer* player);
+  void AddToRealmVerified(const std::string& server, CGamePlayer* player, bool sendMessage);
   void AddToReserved(std::string name);
   void RemoveFromReserved(std::string name);
   bool MatchOwnerName(std::string name) const;
@@ -259,12 +292,14 @@ public:
   bool IsDownloading() const;
   void SetOwner(std::string name, std::string realm);
   void ReleaseOwner();
+  void ResetSync();
   void StartCountDown(bool force);
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
-  void CreateVirtualHost();
-  void DeleteVirtualHost();
+  bool CreateVirtualHost();
+  bool DeleteVirtualHost();
   bool CreateFakePlayer();
+  bool CreateFakeObserver();
   bool DeleteFakePlayer(uint8_t SID);
   void DeleteFakePlayers();
 };

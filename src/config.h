@@ -23,6 +23,8 @@
 
 #include <map>
 #include <string>
+#include <vector>
+#include <set>
 
 //
 // CConfig
@@ -37,13 +39,24 @@ public:
   CConfig();
   ~CConfig();
 
-  void Read(const std::string& file);
+  bool Read(const std::string& file);
   bool Exists(const std::string& key);
-  int32_t GetInt(const std::string& key, int32_t x);
+
   std::string GetString(const std::string& key, const std::string& x);
+  std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
+  bool GetBool(const std::string& key, bool x);
+  int32_t GetInt(const std::string& key, int32_t x);
+  float GetFloat(const std::string& key, float x);
+  std::vector<std::string> GetList(const std::string& key, char separator, std::vector<std::string> x);
+  std::set<std::string> GetSet(const std::string& key, char separator, std::set<std::string> x);
+  std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
+  std::vector<uint8_t> GetIPv4(const std::string& key, const std::vector<uint8_t>& x);
+
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);
+  void SetBool(const std::string& key, const bool& x);
   void SetInt(const std::string& key, const int& x);
+  void SetFloat(const std::string& key, const float& x);
   void SetUint8Vector(const std::string& key, const std::vector<std::uint8_t>& x);
   std::vector<uint8_t> Export();
 

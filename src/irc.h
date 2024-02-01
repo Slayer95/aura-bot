@@ -21,6 +21,7 @@
 #ifndef AURA_IRC_H_
 #define AURA_IRC_H_
 
+#include "config_irc.h"
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -29,30 +30,24 @@
 
 class CAura;
 class CTCPClient;
+class CIRCConfig;
 
 class CIRC
 {
 public:
   CAura*                   m_Aura;
   CTCPClient*              m_Socket;
-  std::vector<std::string> m_Channels;
-  std::vector<std::string> m_RootAdmins;
-  std::string              m_Server;
-  std::string              m_ServerIP;
-  std::string              m_Nickname;
-  std::string              m_NicknameCpy;
-  std::string              m_Username;
-  std::string              m_Password;
+  CIRCConfig*              m_Config;
+  std::string              m_NickName;
+  std::string              m_ResolvedAddress;                // DNS cache - host name
+  std::string              m_ResolvedHostName;               // DNS cache - resolved IP address
   int64_t                  m_LastConnectionAttemptTime;
   int64_t                  m_LastPacketTime;
   int64_t                  m_LastAntiIdleTime;
-  uint16_t                 m_Port;
-  int8_t                   m_CommandTrigger;
   bool                     m_Exiting;
   bool                     m_WaitingToConnect;
-  bool                     m_OriginalNick;
 
-  CIRC(CAura* nAura, std::string nServer, const std::string& nNickname, const std::string& nUsername, std::string nPassword, std::vector<std::string> nChannels, std::vector<std::string> nRootAdmins, uint16_t nPort, int8_t nCommandTrigger);
+  CIRC(CAura* nAura, CIRCConfig* nConfig);
   ~CIRC();
   CIRC(CIRC&) = delete;
 

@@ -492,10 +492,16 @@ CTCPServer::~CTCPServer()
 {
 }
 
-bool CTCPServer::Listen(const string& address, uint16_t port)
+bool CTCPServer::Listen(const string& address, uint16_t port, bool retry)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError)
+  if (m_Socket == INVALID_SOCKET || m_HasError && !retry)
     return false;
+
+  if (m_HasError) {
+    if (!retry) return false;
+    m_HasError = false;
+    m_Error = 0;
+  }
 
   m_SIN.sin_family = AF_INET;
 
@@ -648,7 +654,6 @@ void CUDPSocket::SetBroadcastTarget(const string& subnet)
 {
   if (subnet.empty())
   {
-    Print("[UDPSOCKET] using default broadcast target");
     m_BroadcastTarget.s_addr = INADDR_BROADCAST;
   }
   else
@@ -728,11 +733,17 @@ CUDPServer::~CUDPServer()
 {
 }
 
-bool CUDPServer::Listen(const string& address, uint16_t port)
+bool CUDPServer::Listen(const string& address, uint16_t port, bool retry)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError) {
-  Print("[UDPSERVER] Failed to listen UDP at 6112");
+  if (m_Socket == INVALID_SOCKET || m_HasError && !retry) {
+    Print("[UDPServer] Failed to listen UDP at port " + to_string(port) + ".");
     return false;
+  }
+
+  if (m_HasError) {
+    if (!retry) return false;
+    m_HasError = false;
+    m_Error = 0;
   }
 
   m_SIN.sin_family = AF_INET;
@@ -749,12 +760,12 @@ bool CUDPServer::Listen(const string& address, uint16_t port)
 
   if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SIN), sizeof(m_SIN)) == SOCKET_ERROR)
   {
-  Print("[UDPSERVER] error (bind) - " + GetErrorString());
-  m_HasError = true;
+    m_HasError = true;
     m_Error    = GetLastError();
+    Print("[UDPSERVER] error (bind) - " + GetErrorString());
     return false;
   } else {
-  Print("[UDPSERVER] Listening at 6112");
+    Print("[UDPSERVER] Listening at port " + to_string(port));
   }
 
   return true;

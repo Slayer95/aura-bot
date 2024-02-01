@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <algorithm>
+#include <string>
 #include <iostream>
 #include <sstream>
 
@@ -41,48 +42,51 @@ CConfig::CConfig()
 
 CConfig::~CConfig() = default;
 
-void CConfig::Read(const string& file)
+bool CConfig::Read(const string& file)
 {
   ifstream in;
-  in.open(file.c_str());
+  in.open(file.c_str(), ios::in);
 
-  if (in.fail())
+  Print("[CONFIG] loading file [" + file + "]");
+  if (in.fail()) {
     Print("[CONFIG] warning - unable to read file [" + file + "]");
-  else
-  {
-    Print("[CONFIG] loading file [" + file + "]");
-    string Line;
-
-    while (!in.eof())
-    {
-      getline(in, Line);
-
-      // ignore blank lines and comments
-
-      if (Line.empty() || Line[0] == '#' || Line == "\n")
-        continue;
-
-      // remove newlines and partial newlines to help fix issues with Windows formatted config files on Linux systems
-
-      Line.erase(remove(begin(Line), end(Line), '\r'), end(Line));
-      Line.erase(remove(begin(Line), end(Line), '\n'), end(Line));
-
-      string::size_type Split = Line.find('=');
-
-      if (Split == string::npos)
-        continue;
-
-      string::size_type KeyStart   = Line.find_first_not_of(' ');
-      string::size_type KeyEnd     = Line.find(' ', KeyStart);
-      string::size_type ValueStart = Line.find_first_not_of(' ', Split + 1);
-      string::size_type ValueEnd   = Line.size();
-
-      if (ValueStart != string::npos)
-        m_CFG[Line.substr(KeyStart, KeyEnd - KeyStart)] = Line.substr(ValueStart, ValueEnd - ValueStart);
-    }
-
-    in.close();
+    return false;
   }
+
+  string Line;
+
+  while (!in.eof())
+  {
+    getline(in, Line);
+
+    // ignore blank lines and comments
+
+    if (Line.empty() || Line[0] == '#' || Line == "\n")
+      continue;
+
+    // remove newlines and partial newlines to help fix issues with Windows formatted config files on Linux systems
+
+    Line.erase(remove(begin(Line), end(Line), '\r'), end(Line));
+    Line.erase(remove(begin(Line), end(Line), '\n'), end(Line));
+
+    string::size_type Split = Line.find('=');
+
+    if (Split == string::npos || Split == 0)
+      continue;
+
+    string::size_type KeyStart   = Line.find_first_not_of(' ');
+    string::size_type KeyEnd     = Line.find_last_not_of(' ', Split - 1) + 1;
+    string::size_type ValueStart = Line.find_first_not_of(' ', Split + 1);
+    string::size_type ValueEnd   = Line.find_last_not_of(' ') + 1;
+
+    if (ValueStart == string::npos)
+      continue;
+
+    m_CFG[Line.substr(KeyStart, KeyEnd - KeyStart)] = Line.substr(ValueStart, ValueEnd - ValueStart);
+  }
+
+  in.close();
+  return true;
 }
 
 bool CConfig::Exists(const string& key)
@@ -90,20 +94,121 @@ bool CConfig::Exists(const string& key)
   return m_CFG.find(key) != end(m_CFG);
 }
 
+bool CConfig::GetBool(const string& key, bool x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  if (m_CFG[key] == "0" || m_CFG[key] == "no")
+    return false;
+  if (m_CFG[key] == "1" || m_CFG[key] == "yes")
+    return true;
+  return x;
+}
+
 int32_t CConfig::GetInt(const string& key, int32_t x)
 {
   if (m_CFG.find(key) == end(m_CFG))
     return x;
-  else
-    return atoi(m_CFG[key].c_str());
+
+  int32_t Value = x;
+  try {
+    Value = atoi(m_CFG[key].c_str());
+  } catch (...) {}
+
+  return Value;
+}
+
+float CConfig::GetFloat(const string& key, float x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  float Value = x;
+  try {
+    Value = stof(m_CFG[key].c_str());
+  } catch (...) {}
+
+  return Value;
+}
+
+vector<string> CConfig::GetList(const string& key, char separator, vector<string> x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  vector<string> Output;
+  stringstream ss(m_CFG[key]);
+  while (ss.good()) {
+    string element;
+    getline(ss, element, separator);
+    if (element.length() > 0) {
+      Output.push_back(element);
+    }
+  }
+  return Output;
+}
+
+set<string> CConfig::GetSet(const string& key, char separator, set<string> x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  set<string> Output;
+  stringstream ss(m_CFG[key]);
+  while (ss.good()) {
+    string element;
+    getline(ss, element, separator);
+    if (element.length() > 0) {
+      Output.insert(element);
+    }
+  }
+  return Output;
+}
+
+vector<uint8_t> CConfig::GetUint8Vector(const string& key, uint32_t count, const std::vector<uint8_t> &x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  vector<uint8_t> Output = ExtractNumbers(m_CFG[key], count);
+  if (Output.size() != count)
+    return x;
+
+  return Output;
+}
+
+vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x) {
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  vector<uint8_t> Output = ExtractIPv4(m_CFG[key]);
+  if (Output.empty())
+    return x;
+
+  return Output;
 }
 
 string CConfig::GetString(const string& key, const string& x)
 {
   if (m_CFG.find(key) == end(m_CFG))
     return x;
-  else
-    return m_CFG[key];
+
+  return m_CFG[key];
+}
+
+string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  if (m_CFG[key].length() < minLength)
+    return x;
+
+  if (m_CFG[key].length() > maxLength)
+    return x;
+
+  return m_CFG[key];
 }
 
 void CConfig::Set(const string& key, const string& x)
@@ -116,7 +221,17 @@ void CConfig::SetString(const string& key, const string& x)
   m_CFG[key] = x;
 }
 
+void CConfig::SetBool(const string& key, const bool& x)
+{
+  m_CFG[key] = x ? "1" : "0";
+}
+
 void CConfig::SetInt(const string& key, const int& x)
+{
+  m_CFG[key] = to_string(x);
+}
+
+void CConfig::SetFloat(const string& key, const float& x)
 {
   m_CFG[key] = to_string(x);
 }
@@ -142,7 +257,7 @@ std::string CConfig::ReadString(const std::string& file, const std::string& key)
 {
   std::string Output;
   ifstream in;
-  in.open(file.c_str());
+  in.open(file.c_str(), ios::in);
 
   if (in.fail())
     return Output;
@@ -164,13 +279,13 @@ std::string CConfig::ReadString(const std::string& file, const std::string& key)
 
     string::size_type Split = Line.find('=');
 
-    if (Split == string::npos)
+    if (Split == string::npos || Split == 0)
       continue;
 
     string::size_type KeyStart   = Line.find_first_not_of(' ');
-    string::size_type KeyEnd     = Line.find(' ', KeyStart);
+    string::size_type KeyEnd     = Line.find_last_not_of(' ', Split - 1) + 1;
     string::size_type ValueStart = Line.find_first_not_of(' ', Split + 1);
-    string::size_type ValueEnd   = Line.size();
+    string::size_type ValueEnd   = Line.find_last_not_of(' ') + 1;
 
     if (ValueStart == string::npos)
       continue;

@@ -18,6 +18,7 @@
 
  */
 
+#include "config_irc.h"
 #include "irc.h"
 #include "aura.h"
 #include "socket.h"
@@ -28,40 +29,32 @@
 #include <utility>
 #include <algorithm>
 
+class CIRCConfig;
+
 using namespace std;
 
 //////////////
 //// CIRC ////
 //////////////
 
-CIRC::CIRC(CAura* nAura, string nServer, const string& nNickname, const string& nUsername, string nPassword, vector<string> nChannels, vector<string> nRootAdmins, uint16_t nPort, int8_t nCommandTrigger)
+CIRC::CIRC(CAura* nAura, CIRCConfig* nConfig)
   : m_Aura(nAura),
-    m_Socket(new CTCPClient),
-    m_Channels(std::move(nChannels)),
-    m_RootAdmins(std::move(nRootAdmins)),
-    m_Server(std::move(nServer)),
-    m_Nickname(nNickname),
-    m_NicknameCpy(nNickname),
-    m_Password(std::move(nPassword)),
+    m_Socket(new CTCPClient()),
+    m_Config(nConfig),
+    m_NickName(nConfig->m_NickName),
+    m_ResolvedAddress(string()),
+    m_ResolvedHostName(string()),
     m_LastConnectionAttemptTime(0),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
-    m_Port(nPort),
-    m_CommandTrigger(nCommandTrigger),
     m_Exiting(false),
-    m_WaitingToConnect(true),
-    m_OriginalNick(true)
+    m_WaitingToConnect(true)
 {
-  sort(begin(m_RootAdmins), end(m_RootAdmins));
-
-  if (!nUsername.empty())
-    m_Username = nUsername;
-  else
-    m_Username = m_Nickname;
 }
 
 CIRC::~CIRC()
 {
+  delete m_Config;
   delete m_Socket;
 }
 
@@ -86,7 +79,7 @@ bool CIRC::Update(void* fd, void* send_fd)
   {
     // the socket has an error
 
-    Print("[IRC: " + m_Server + "] disconnected due to socket error,  waiting 60 seconds to reconnect");
+    Print("[IRC: " + m_Config->m_HostName + "] disconnected due to socket error,  waiting 60 seconds to reconnect");
     m_Socket->Reset();
     m_WaitingToConnect          = true;
     m_LastConnectionAttemptTime = Time;
@@ -99,7 +92,7 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     if (Time - m_LastPacketTime > 210)
     {
-      Print("[IRC: " + m_Server + "] ping timeout,  reconnecting");
+      Print("[IRC: " + m_Config->m_HostName + "] ping timeout,  reconnecting");
       m_Socket->Reset();
       m_WaitingToConnect = true;
       return m_Exiting;
@@ -121,7 +114,7 @@ bool CIRC::Update(void* fd, void* send_fd)
   {
     // the socket was disconnected
 
-    Print("[IRC: " + m_Server + "] disconnected, waiting 60 seconds to reconnect");
+    Print("[IRC: " + m_Config->m_HostName + "] disconnected, waiting 60 seconds to reconnect");
     m_Socket->Reset();
     m_WaitingToConnect          = true;
     m_LastConnectionAttemptTime = Time;
@@ -136,18 +129,17 @@ bool CIRC::Update(void* fd, void* send_fd)
     {
       // the connection attempt completed
 
-      if (!m_OriginalNick)
-        m_Nickname = m_NicknameCpy;
+      m_NickName = m_Config->m_NickName;
 
-      if (m_Server.find("quakenet.org") == string::npos && !m_Password.empty())
-        SendIRC("PASS " + m_Password);
+      if (m_Config->m_HostName.find("quakenet.org") == string::npos && !m_Config->m_Password.empty())
+        SendIRC("PASS " + m_Config->m_Password);
 
-      SendIRC("NICK " + m_Nickname);
-      SendIRC("USER " + m_Username + " " + m_Nickname + " " + m_Username + " :aura-bot");
+      SendIRC("NICK " + m_Config->m_NickName);
+      SendIRC("USER " + m_Config->m_UserName + " " + m_Config->m_NickName + " " + m_Config->m_UserName + " :aura-bot");
 
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
 
-      Print("[IRC: " + m_Server + "] connected");
+      Print("[IRC: " + m_Config->m_HostName + "] connected");
 
       m_LastPacketTime = Time;
 
@@ -157,7 +149,7 @@ bool CIRC::Update(void* fd, void* send_fd)
     {
       // the connection attempt timed out (15 seconds)
 
-      Print("[IRC: " + m_Server + "] connect timed out, waiting 60 seconds to reconnect");
+      Print("[IRC: " + m_Config->m_HostName + "] connect timed out, waiting 60 seconds to reconnect");
       m_Socket->Reset();
       m_LastConnectionAttemptTime = Time;
       m_WaitingToConnect          = true;
@@ -169,22 +161,17 @@ bool CIRC::Update(void* fd, void* send_fd)
   {
     // attempt to connect to irc
 
-    Print("[IRC: " + m_Server + "] connecting to server [" + m_Server + "] on port " + to_string(m_Port));
+    Print("[IRC: " + m_Config->m_HostName + "] connecting to server [" + m_Config->m_HostName + "] on port " + to_string(m_Config->m_Port));
 
-    if (m_ServerIP.empty())
-    {
-      m_Socket->Connect(string(), m_Server, m_Port);
-
-      if (!m_Socket->HasError())
-      {
-        m_ServerIP = m_Socket->GetIPString();
+    if (m_ResolvedHostName == m_Config->m_HostName && !m_ResolvedAddress.empty()) {
+      // DNS resolution is blocking, so use cache if posible
+      m_Socket->Connect(string(), m_ResolvedAddress, m_Config->m_Port);
+    } else {
+      m_Socket->Connect(string(), m_Config->m_HostName, m_Config->m_Port);
+      if (!m_Socket->HasError()) {
+        m_ResolvedHostName = m_Config->m_HostName;
+        m_ResolvedAddress  = m_Socket->GetIPString();
       }
-    }
-    else
-    {
-      // use cached server IP address since resolving takes time and is blocking
-
-      m_Socket->Connect(string(), m_ServerIP, m_Port);
     }
 
     m_WaitingToConnect          = false;
@@ -233,7 +220,7 @@ void CIRC::ExtractPackets()
 
     if (Packets_Packet.compare(0, 6, "NOTICE") == 0)
     {
-      Print("[IRC: " + m_Server + "] " + Packets_Packet);
+      Print("[IRC: " + m_Config->m_HostName + "] " + Packets_Packet);
       continue;
     }
 
@@ -284,58 +271,69 @@ void CIRC::ExtractPackets()
 
       // relay messages to bnet
 
-      if (!Message.empty() && Message[0] == m_Aura->m_CommandTrigger) {
-        int spaceIndex = Message.find(" ", 1);
-        if (spaceIndex != string::npos) {
-          string targetServer = Message.substr(1, spaceIndex - 1);          
-          for (auto& bnet : m_Aura->m_BNETs) {
-            if (bnet->GetServerAlias() == targetServer) {
-              const CIncomingChatEvent event = CIncomingChatEvent(CBNETProtocol::EID_IRC, Nickname, Channel + " " + bnet->GetCommandTrigger() + Message.substr(spaceIndex + 1, Message.length()));
-              bnet->ProcessChatEvent(&event);
-              break;
-            }
-          }
-        }
-      }
-
-      // check if the message isn't a irc command
-
-      if (Tokens[3][1] != m_CommandTrigger)
+      if (Message.empty() || Message[0] != m_Config->m_CommandTrigger)
         continue;
 
-      // extract command and payload
+      bool IsRoot = m_Config->m_RootAdmins.find(Hostname) != m_Config->m_RootAdmins.end();
+      if (!IsRoot) {
+        continue;
+      }
 
-      string                  Command, Payload;
-      const string::size_type PayloadStart = Message.find(' ');
+      size_t StartIndex = 1;
+      size_t EndIndex = Message.find(" ", StartIndex);
+      if (EndIndex == string::npos)
+        continue;
 
-      bool Root = false;
+      string FirstWord = Message.substr(StartIndex, EndIndex - StartIndex);
+      StartIndex = EndIndex + 1;
+      EndIndex = Message.find(" ", StartIndex);
+      if (EndIndex == string::npos)
+        continue;
 
-      for (auto i = begin(m_RootAdmins); i != end(m_RootAdmins) && *i <= Hostname; ++i)
-      {
-        if (*i == Hostname)
-        {
-          Root = true;
-          break;
+      string SecondWord = Message.substr(StartIndex, EndIndex - StartIndex);
+      StartIndex = EndIndex + 1;
+      EndIndex = Message.length();
+
+      transform(begin(FirstWord), end(FirstWord), begin(FirstWord), ::tolower);
+      transform(begin(SecondWord), end(SecondWord), begin(SecondWord), ::tolower);
+
+      string Payload = Message.substr(StartIndex, EndIndex);
+
+      if (FirstWord == "irc") {
+        if (!IsRoot) continue;
+        //
+        // !NICK
+        //
+
+        if (SecondWord == "nick") {
+          SendIRC("NICK :" + Payload);
+          m_NickName     = Payload;
+        }        
+        continue;
+      }
+
+      if (FirstWord == "bnet") {
+        string BNETUser;
+        if (IsRoot) {
+          BNETUser = Nickname; // TODO: Fixme
         }
-      }
 
-      if (PayloadStart != string::npos) {
-        Command = Message.substr(1, PayloadStart - 1);
-        Payload = Message.substr(PayloadStart + 1);
-      } else {
-        Command = Message.substr(1);
-      }
+        CBNET* Realm = nullptr;
 
-      transform(begin(Command), end(Command), begin(Command), ::tolower);
+        for (auto& bnet : m_Aura->m_BNETs) {
+          if (!bnet->GetEnabled())
+            continue;
+          if (bnet->GetInputID() == SecondWord) {
+            Realm = bnet;
+            break;
+          }
+        }
 
-      //
-      // !NICK
-      //
-
-      if (Command == "nick" && Root) {
-        SendIRC("NICK :" + Payload);
-        m_Nickname     = Payload;
-        m_OriginalNick = false;
+        if (Realm) {
+          const CIncomingChatEvent event = CIncomingChatEvent(CBNETProtocol::EID_IRC, BNETUser, Channel + " " + Realm->GetCommandToken() + Payload);
+          Realm->ProcessChatEvent(&event);
+        }
+        continue;
       }
 
       continue;
@@ -348,8 +346,7 @@ void CIRC::ExtractPackets()
 
     if (Tokens.size() == 5 && Tokens[1] == "KICK")
     {
-      if (Tokens[3] == m_Nickname)
-      {
+      if (Tokens[3] == m_NickName) {
         SendIRC("JOIN " + Tokens[2]);
       }
 
@@ -361,19 +358,17 @@ void CIRC::ExtractPackets()
     // out: JOIN #channel
     // join channels and auth and set +x on QuakeNet
 
-    if (Tokens.size() >= 2 && Tokens[1] == "376")
-    {
+    if (Tokens.size() >= 2 && Tokens[1] == "376") {
       // auth if the server is QuakeNet
 
-      if (m_Server.find("quakenet.org") != string::npos && !m_Password.empty())
-      {
-        SendMessageIRC("AUTH " + m_Username + " " + m_Password, "Q@CServe.quakenet.org");
-        SendIRC("MODE " + m_Nickname + " +x");
+      if (m_Config->m_HostName.find("quakenet.org") != string::npos && !m_Config->m_Password.empty()) {
+        SendMessageIRC("AUTH " + m_Config->m_UserName + " " + m_Config->m_Password, "Q@CServe.quakenet.org");
+        SendIRC("MODE " + m_Config->m_NickName + " +x");
       }
 
       // join channels
 
-      for (auto& channel : m_Channels)
+      for (auto& channel : m_Config->m_Channels)
         SendIRC("JOIN " + channel);
 
       continue;
@@ -388,9 +383,8 @@ void CIRC::ExtractPackets()
     {
       // nick taken, append _
 
-      m_OriginalNick = false;
-      m_Nickname += '_';
-      SendIRC("NICK " + m_Nickname);
+      m_NickName += '_';
+      SendIRC("NICK " + m_NickName);
       continue;
     }
   }
@@ -416,7 +410,7 @@ void CIRC::SendMessageIRC(const string& message, const string& target)
   if (m_Socket->GetConnected())
   {
     if (target.empty())
-      for (auto& channel : m_Channels)
+      for (auto& channel : m_Config->m_Channels)
         m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
     else
       m_Socket->PutBytes("PRIVMSG " + target + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);

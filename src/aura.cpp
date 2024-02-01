@@ -23,6 +23,10 @@
 #include "sha1.h"
 #include "csvparser.h"
 #include "config.h"
+#include "config_bot.h"
+#include "config_bnet.h"
+#include "config_game.h"
+#include "config_irc.h"
 #include "socket.h"
 #include "auradb.h"
 #include "bnet.h"
@@ -34,11 +38,15 @@
 #include "irc.h"
 #include "util.h"
 #include "fileutil.h"
+#include "argh.h"
 
 #include <csignal>
 #include <cstdlib>
 #include <thread>
 #include <fstream>
+#include <algorithm>
+#include <string>
+#include <iterator>
 
 #define __STORMLIB_SELF__
 #include <StormLib.h>
@@ -72,13 +80,7 @@ void Print2(const string& message)
 // main
 //
 
-LPCWSTR StringToLPCWSTR(const std::string& str)
-{
-    std::wstring wideStr(str.begin(), str.end());
-  return wideStr.c_str();
-}
-
-int main(const int, const char* argv[])
+int main(const int argc, const char* argv[])
 {
   // seed the PRNG
 
@@ -91,9 +93,17 @@ int main(const int, const char* argv[])
   // read config file
 
   CConfig CFG;
-  CFG.Read("aura.cfg");
-
-  Print("[AURA] starting up");
+  if (!CFG.Read("aura.cfg")) {
+    int FileSize = 0;
+    string CFGExample = FileRead("aura-example.cfg", &FileSize);
+    vector<uint8_t> CFGCopy(CFGExample.begin(), CFGExample.end());
+    Print("[AURA] copying aura-example.cfg to aura.cfg...");
+    FileWrite("aura.cfg", CFGCopy.data(), CFGCopy.size());
+    if (!CFG.Read("aura.cfg")) {
+      Print("[AURA] error initializing aura.cfg");
+      return 1;
+    }
+  }
 
   signal(SIGINT, [](int32_t) -> void {
     Print("[!!!] caught signal SIGINT, exiting NOW");
@@ -115,14 +125,9 @@ int main(const int, const char* argv[])
   signal(SIGPIPE, SIG_IGN);
 #endif
 
-  // print timer resolution
-
-  Print("[AURA] using monotonic timer with resolution " + std::to_string(static_cast<double>(std::chrono::steady_clock::period::num) / std::chrono::steady_clock::period::den * 1e9) + " nanoseconds");
-
 #ifdef WIN32
   // initialize winsock
 
-  Print("[AURA] starting winsock");
   WSADATA wsadata;
 
   if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0)
@@ -132,14 +137,12 @@ int main(const int, const char* argv[])
   }
 
   // increase process priority
-
-  Print("[AURA] setting process priority to \"high\"");
   SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 #endif
 
   // initialize aura
 
-  gAura = new CAura(&CFG);
+  gAura = new CAura(&CFG, argc, argv);
 
   // check if it's properly configured
 
@@ -150,8 +153,6 @@ int main(const int, const char* argv[])
     while (!gAura->Update())
       ;
   }
-  else
-    Print("[AURA] check your aura.cfg and configure Aura properly");
 
   // shutdown aura
 
@@ -161,7 +162,6 @@ int main(const int, const char* argv[])
 #ifdef WIN32
   // shutdown winsock
 
-  Print("[AURA] shutting down winsock");
   WSACleanup();
 #endif
 
@@ -183,9 +183,9 @@ int main(const int, const char* argv[])
 // CAura
 //
 
-CAura::CAura(CConfig* CFG)
+CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   : m_IRC(nullptr),
-    m_UDPServer(new CUDPServer()),
+    m_UDPServer(nullptr),
     m_UDPSocket(new CUDPSocket()),
     m_GameProtocol(nullptr),
     m_GPSProtocol(new CGPSProtocol()),
@@ -194,191 +194,169 @@ CAura::CAura(CConfig* CFG)
     m_CurrentLobby(nullptr),
     m_DB(new CAuraDB(CFG)),
     m_Map(nullptr),
+    m_Config(nullptr),
+    m_BNETDefaultConfig(nullptr),
+    m_GameDefaultConfig(nullptr),
     m_Version(VERSION),
     m_HostCounter(0),
     m_HostPort(0),
+    m_UDPServerEnabled(false),
+    m_MaxGameNameSize(31),
+    m_GameRangerLocalPort(0),
+    m_GameRangerLocalAddress("255.255.255.255"),
+    m_GameRangerRemotePort(0),
+    m_GameRangerRemoteAddress({0xFF, 0xFF, 0xFF, 0xFF}),
     m_Exiting(false),
-    m_Enabled(true),
-    m_EnabledPublic(true),
-    m_Ready(true)
+    m_Ready(true),
+    m_ScriptsExtracted(false)
 {
   Print("[AURA] Aura++ version " + m_Version);
 
   // get the general configuration variables
-
-  m_UDPServer->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
-  m_UDPServer->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
-  if (CFG->GetInt("udp_enableserver", 0) == 1) {
-    m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112);
+  m_UDPServerEnabled = CFG->GetBool("udp_enableserver", false);
+  if (m_UDPServerEnabled) {
+    m_UDPServer = new CUDPServer();
+    m_UDPServer->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
+    m_UDPServer->SetDontRoute(CFG->GetBool("udp_dontroute", false));
+    if (!m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112, false)) {
+      Print("[AURA] waiting for active instances of Warcraft to close... Please release port 6112.");
+      std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+      if (!m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112, true)) {
+        Print("[AURA] error - close active instances of Warcraft, and/or pause LANViewer to initialize Aura.");
+        m_Ready = false;
+        return;
+      }
+    }
   }
 
   m_UDPSocket->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
-  m_UDPSocket->SetDontRoute(CFG->GetInt("udp_dontroute", 0) == 0 ? false : true);
+  m_UDPSocket->SetDontRoute(CFG->GetBool("udp_dontroute", false));
 
   m_GameProtocol = new CGameProtocol(this);
-  m_ProxyReconnectEnabled   = CFG->GetInt("bot_enablegproxy", 0) == 1;
-
   m_CRC->Initialize();
 
-  m_MinHostPort       = CFG->GetInt("bot_minhostport", CFG->GetInt("bot_hostport", 6112));
-  m_MaxHostPort       = CFG->GetInt("bot_maxhostport", m_MinHostPort);
-
-  // for load balancers or reverse proxies
-  m_EnableLANBalancer = CFG->GetInt("bot_enablelanbalancer", 0) == 1;
-  m_LANHostPort       = CFG->GetInt("bot_lanhostport", m_HostPort);
-  m_EnablePvPGNTunnel = CFG->GetInt("bot_enablepvpgntunnel", 0) == 1;
-  m_PublicHostPort    = CFG->GetInt("bot_publichostport", m_HostPort);
-  m_PublicHostAddress = CFG->GetString("bot_publichostaddress", string());
-  if (m_EnableLANBalancer) {
-    Print("[AURA] Broadcasting games port " + std::to_string(m_LANHostPort) + " over LAN");
-  }
-  if (m_EnablePvPGNTunnel) {
-    Print("[AURA] TCP tunnel enabled at " + m_PublicHostAddress + ":" + std::to_string(m_PublicHostPort));
-  }
-
-  m_LANWar3Version    = CFG->GetInt("lan_war3version", 27);
-  m_NumPlayersToStartGameOver = CFG->GetInt("bot_gameoverplayernumber", 1);
-
-  // read the rest of the general configuration
-
-  SetConfigs(CFG);
-
-  // get the irc configuration
-
-  string   IRC_Server         = CFG->GetString("irc_server", string());
-  string   IRC_NickName       = CFG->GetString("irc_nickname", string());
-  string   IRC_UserName       = CFG->GetString("irc_username", string());
-  string   IRC_Password       = CFG->GetString("irc_password", string());
-  string   IRC_CommandTrigger = CFG->GetString("irc_commandtrigger", "!");
-  uint32_t IRC_Port           = CFG->GetInt("irc_port", 6667);
-
-  // get the irc channels and root admins
-
-  vector<string> IRC_Channels, IRC_RootAdmins;
-
-  for (uint32_t i = 1; i <= 10; ++i)
-  {
-    string Channel, RootAdmin;
-
-    if (i == 1)
-    {
-      Channel   = CFG->GetString("irc_channel", string());
-      RootAdmin = CFG->GetString("irc_rootadmin", string());
-    }
-    else
-    {
-      Channel   = CFG->GetString("irc_channel" + to_string(i), string());
-      RootAdmin = CFG->GetString("irc_rootadmin" + to_string(i), string());
-    }
-
-    if (!Channel.empty())
-      IRC_Channels.push_back("#" + Channel);
-
-    if (!RootAdmin.empty())
-      IRC_RootAdmins.push_back(RootAdmin);
-  }
-
-  if (IRC_Server.empty() || IRC_NickName.empty() || IRC_Port == 0 || IRC_Port >= 65535)
-    Print("[AURA] warning - irc connection not found in config file");
-  else
-    m_IRC = new CIRC(this, IRC_Server, IRC_NickName, IRC_UserName, IRC_Password, IRC_Channels, IRC_RootAdmins, IRC_Port, IRC_CommandTrigger[0]);
-
-  uint8_t HighestWar3Version = 0;
-
-  // load the battle.net connections
-  // we're just loading the config data and creating the CBNET classes here, the connections are established later (in the Update function)
-
-  for (uint32_t i = 1; i < 10; ++i)
-  {
-    string Prefix;
-
-    if (i == 1)
-      Prefix = "bnet_";
-    else
-      Prefix = "bnet" + to_string(i) + "_";
-
-    string   Server        = CFG->GetString(Prefix + "server", string());
-    string   ServerAlias   = CFG->GetString(Prefix + "serveralias", string());
-    string   CDKeyROC      = CFG->GetString(Prefix + "cdkeyroc", string());
-    string   CDKeyTFT      = CFG->GetString(Prefix + "cdkeytft", string());
-    string   CountryAbbrev = CFG->GetString(Prefix + "countryabbrev", "DEU");
-    string   Country       = CFG->GetString(Prefix + "country", "Germany");
-    string   Locale        = CFG->GetString(Prefix + "locale", "system");
-    uint32_t LocaleID;
-
-    if (Locale == "system")
-      LocaleID = 1031;
-    else
-      LocaleID = stoul(Locale);
-
-    string UserName     = CFG->GetString(Prefix + "username", string());
-    string UserPassword = CFG->GetString(Prefix + "password", string());
-    string FirstChannel = CFG->GetString(Prefix + "firstchannel", "The Void");
-    string RootAdmins   = CFG->GetString(Prefix + "rootadmins", string());
-
-    // add each root admin to the rootadmin table
-
-    string       User;
-    stringstream SS;
-    SS << RootAdmins;
-
-    while (!SS.eof())
-    {
-      SS >> User;
-      m_DB->RootAdminAdd(Server, User);
-    }
-
-    string               BNETCommandTrigger = CFG->GetString(Prefix + "commandtrigger", "!");
-    uint8_t              War3Version        = CFG->GetInt(Prefix + "custom_war3version", 27);
-    std::vector<uint8_t> EXEVersion         = ExtractNumbers(CFG->GetString(Prefix + "custom_exeversion", string()), 4);
-    std::vector<uint8_t> EXEVersionHash     = ExtractNumbers(CFG->GetString(Prefix + "custom_exeversionhash", string()), 4);
-    string               PasswordHashType   = CFG->GetString(Prefix + "custom_passwordhashtype", string());
-
-    HighestWar3Version = (std::max)(HighestWar3Version, War3Version);
-
-    if (Server.empty())
-      break;
-
-    Print("[AURA] found battle.net connection #" + to_string(i) + " for server [" + Server + "]");
-
-    if (Locale == "system")
-      Print("[AURA] using system locale of " + to_string(LocaleID));
-
-    m_BNETs.push_back(new CBNET(this, Server, ServerAlias, CDKeyROC, CDKeyTFT, CountryAbbrev, Country, LocaleID, UserName, UserPassword, FirstChannel, BNETCommandTrigger[0], War3Version, EXEVersion, EXEVersionHash, PasswordHashType, i));
-  }
-
-  if (m_BNETs.empty())
-    Print("[AURA] warning - no battle.net connections found in config file");
-
-  if (m_BNETs.empty() && !m_IRC)
-  {
-    Print("[AURA] error - no battle.net connections and no irc connection specified");
+  LoadConfigs(CFG);
+  if (LoadCLI(argc, argv)) {
     m_Ready = false;
     return;
   }
 
-  // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
-  // these two files are necessary for calculating "map_crc" when loading maps so we make sure to do it before loading the default map
-  // see CMap :: Load for more information
+  if (m_Config->m_EnableLANBalancer) {
+    Print("[AURA] Broadcasting games port " + std::to_string(m_Config->m_LANHostPort) + " over LAN");
+  }
 
-  ExtractScripts(HighestWar3Version);
+  if (m_Config->m_EnableBNET) {
+    LoadBNETs(CFG);
+  }
+  if (m_Config->m_EnableIRC) {
+    LoadIRC(CFG);
+  }
+
+  if (m_BNETs.empty()) {
+    Print("[AURA] warning - no battle.net connections found in aura.cfg");
+
+    if (!m_IRC) {
+      Print("[AURA] warning - no irc connection found in aura.cfg");
+      Print("[AURA] error - no connections found in aura.cfg");
+      m_Ready = false;
+      return;
+    }
+  } else if (!m_IRC) {
+    Print("[AURA] warning - no irc connection specified");
+  }
+
+  // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
+  // these two files are necessary for calculating "map_crc" when loading maps so we make sure they are available
+  // see CMap :: Load for more information
+  m_ScriptsExtracted = ExtractScripts() == 2;
+  if (!m_ScriptsExtracted && (!FileExists(m_Config->m_MapCFGPath + "common.j") || !FileExists(m_Config->m_MapCFGPath + "blizzard.j"))) {
+    Print("[AURA] error - close active instances of Warcraft and/or WorldEdit to initialize Aura.");
+    m_Ready = false;
+    return;
+  }
 
   // load the iptocountry data
-
   LoadIPToCountryData();
 
-  // Preload map configs
-  const vector<string> MapConfigFiles = ConfigFilesMatch("");
-  for (const auto& MapConfigFile : MapConfigFiles) {
-    std::string MapLocalPath = CConfig::ReadString(m_MapCFGPath + MapConfigFile, "map_localpath");
-    if (!MapLocalPath.empty()) {
-      m_CachedMaps[MapLocalPath] = MapConfigFile;
+  // Read CFG->Map links and cache the reverse.
+  CacheMapPresets();
+}
+
+void CAura::LoadBNETs(CConfig* CFG)
+{
+  // load the battle.net connections
+  // we're just loading the config data and creating the CBNET classes here, the connections are established later (in the Update function)
+
+  size_t LongestGamePrefixSize = 0;
+  bool IsReload = !m_BNETs.empty();
+  for (uint8_t i = 1; i <= 240; ++i) { // uint8_t wraps around and loops forever
+    bool DoResetConnection = false;
+    CBNETConfig* ThisConfig = new CBNETConfig(CFG, m_BNETDefaultConfig, i);
+    if (ThisConfig->m_HostName.empty()) {
+      delete ThisConfig;
+      continue;
     }
+    if (ThisConfig->m_UserName.empty() || ThisConfig->m_PassWord.empty()) {
+      if (!IsReload && ThisConfig->m_Enabled) {
+        Print("[AURA] server #" + to_string(i) + " ignored [" + ThisConfig->m_UniqueName + "] - username and/or password missing");
+      }
+      delete ThisConfig;
+      continue;
+    }
+    if (IsReload && i < m_BNETs.size()) {
+      if (ThisConfig->m_HostName != m_BNETs[i]->GetServer()) {
+        Print("[AURA] ignoring update for battle.net config #" + to_string(i) + "; hostname mismatch - expected [" + m_BNETs[i]->GetServer() + "], but got " + ThisConfig->m_HostName);
+        delete ThisConfig;
+        continue;
+      }
+      DoResetConnection = m_BNETs[i]->GetUserName() != ThisConfig->m_UserName || m_BNETs[i]->GetEnabled() && !ThisConfig->m_Enabled;
+      m_BNETs[i]->SetConfig(ThisConfig);
+    }
+
+    if (ThisConfig->m_CDKeyROC.length() != 26 || ThisConfig->m_CDKeyTFT.length() != 26)
+      Print("[BNET: " + ThisConfig->m_UniqueName + "] warning - your CD keys are not 26 characters long - probably invalid");
+
+    // TODO(IceSandslash): Warn on password reuse
+
+    if (ThisConfig->m_GamePrefix.length() > LongestGamePrefixSize)
+      LongestGamePrefixSize = ThisConfig->m_GamePrefix.length();
+
+    for (auto RootAdmin : ThisConfig->m_RootAdmins) {
+      m_DB->RootAdminAdd(ThisConfig->m_DataBaseID, RootAdmin);
+    }
+
+    if (IsReload && i < m_BNETs.size()) {
+      Print("[AURA] server #" + to_string(i) + " reloaded [" + ThisConfig->m_UniqueName + "]");
+      if (DoResetConnection) {
+        m_BNETs[i]->ResetConnection(false);
+      }
+    } else {
+      Print("[AURA] server #" + to_string(i) + " found [" + ThisConfig->m_UniqueName + "]");
+      m_BNETs.push_back(new CBNET(this, ThisConfig));
+    }
+  }
+
+  m_MaxGameNameSize = 31 - LongestGamePrefixSize;
+}
+
+void CAura::LoadIRC(CConfig* CFG)
+{
+  delete m_IRC;
+  m_IRC = nullptr;
+
+  CIRCConfig* IRCConfig = new CIRCConfig(CFG);
+  if (IRCConfig->m_HostName.empty() || IRCConfig->m_NickName.empty() || IRCConfig->m_Port == 0) {
+    Print("[AURA] warning - irc connection not found in config file");
+  } else {
+    m_IRC = new CIRC(this, IRCConfig);
   }
 }
 
 CAura::~CAura()
 {
+  delete m_Config;
+  delete m_BNETDefaultConfig;
+  delete m_GameDefaultConfig;
   delete m_UDPServer;
   delete m_UDPSocket;
   delete m_GameProtocol;
@@ -409,7 +387,7 @@ CTCPServer* CAura::GetGameServer(uint16_t port, string& name)
   m_GameServers[port] = new CTCPServer();
   std::vector<CPotentialPlayer*> IncomingConnections;
   m_IncomingConnections[port] = IncomingConnections;
-  if (!m_GameServers[port]->Listen(m_BindAddress, port)) {
+  if (!m_GameServers[port]->Listen(m_Config->m_BindAddress, port, false)) {
     Print2("[GAME] " + name + " Error listening on port " + to_string(port));
     return nullptr;
   }
@@ -428,14 +406,34 @@ bool CAura::Update()
   FD_ZERO(&fd);
   FD_ZERO(&send_fd);
 
-  // 1. all running game servers
+  // 1. pending actions
+  for (auto& action : m_PendingActions) {
+    if (action[0] == "exec") {
+    } else if (action[0] == "host") {
+      string MapInput = action[1];
+      string GameName = action[2];
+      string ObsInput = action[3];
+      string VisInput = action[4];
+      string RHInput = action[5];
+      string Owner = action[6];
+      string ExcludedRealm = action[7];
+    } else if (action[0] == "mirror") {
+      string MapInput = action[1];
+      string GameName = action[2];
+      string ExcludedRealm = action[3];
+      string MirrorTarget = action[4];
+    }
+  }
+  m_PendingActions.clear();
+
+  // 2. all running game servers
 
   for (auto& pair : m_GameServers) {
     pair.second->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
     ++NumFDs;
   }
 
-  // 2. all unassigned incoming TCP connections
+  // 3. all unassigned incoming TCP connections
 
   for (auto& pair : m_IncomingConnections) {
     // std::pair<uint16_t, std::vector<CPotentialPlayer*>>
@@ -447,28 +445,28 @@ bool CAura::Update()
     }
   }
 
-  // 3. the current lobby's player sockets
+  // 4. the current lobby's player sockets
 
   if (m_CurrentLobby)
     NumFDs += m_CurrentLobby->SetFD(&fd, &send_fd, &nfds);
 
-  // 4. all running games' player sockets
+  // 5. all running games' player sockets
 
   for (auto& game : m_Games)
     NumFDs += game->SetFD(&fd, &send_fd, &nfds);
 
-  // 5. all battle.net sockets
+  // 6. all battle.net sockets
 
   for (auto& bnet : m_BNETs)
     NumFDs += bnet->SetFD(&fd, &send_fd, &nfds);
 
-  // 6. UDP server
+  // 7. UDP server
   if (m_UDPServerEnabled) {
     m_UDPServer->SetFD(&fd, &send_fd, &nfds);
     ++NumFDs;
   }
 
-  // 7. irc socket
+  // 8. irc socket
 
   if (m_IRC)
     NumFDs += m_IRC->SetFD(&fd, &send_fd, &nfds);
@@ -520,10 +518,10 @@ bool CAura::Update()
     uint16_t ConnectPort = pair.first;
     CTCPSocket* NewSocket = pair.second->Accept(static_cast<fd_set*>(&fd));
     if (NewSocket) {
-      if (m_ProxyReconnectEnabled) {
+      if (m_Config->m_ProxyReconnectEnabled) {
         CPotentialPlayer* IncomingConnection = new CPotentialPlayer(m_GameProtocol, this, ConnectPort, NewSocket);
         m_IncomingConnections[ConnectPort].push_back(IncomingConnection);
-      } else if (!m_CurrentLobby || ConnectPort != m_CurrentLobby->GetHostPort()) {
+      } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || ConnectPort != m_CurrentLobby->GetHostPort()) {
         delete NewSocket;
       } else {
         CPotentialPlayer* IncomingConnection = new CPotentialPlayer(m_GameProtocol, this, ConnectPort, NewSocket);
@@ -571,6 +569,8 @@ bool CAura::Update()
     if (m_CurrentLobby->Update(&fd, &send_fd))
     {
       Print2("[AURA] deleting current game [" + m_CurrentLobby->GetGameName() + "]");
+      if (m_CurrentLobby->GetLANEnabled())
+        m_CurrentLobby->LANBroadcastGameDecreate();
       delete m_CurrentLobby;
       m_CurrentLobby = nullptr;
 
@@ -615,22 +615,57 @@ bool CAura::Update()
   if (m_UDPServerEnabled) {
     UDPPkt* pkt = m_UDPServer->Accept(&fd);
     if (pkt != nullptr) {
-      char* ipAddress = inet_ntoa(pkt->sender.sin_addr);
-      if (!IsIgnoredDatagramSource(ipAddress) && pkt->length >= 2 && static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT) {
-        if (m_UDPForwardTraffic) {
-          std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+      std::string ipAddress(inet_ntoa(pkt->sender.sin_addr));
+      uint16_t remotePort = pkt->sender.sin_port;
+      if (pkt->length > 0 && !IsIgnoredDatagramSource(ipAddress)) {
+        if (m_Config->m_UDPForwardTraffic) {
+          std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // 14 bytes
           relayPacket.insert(relayPacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
           const uint16_t Size = static_cast<uint16_t>(relayPacket.size());
           relayPacket[2] = static_cast<uint8_t>(Size);
           relayPacket[3] = static_cast<uint8_t>(Size >> 8);
           std::memcpy(relayPacket.data() + 4, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
           std::memcpy(relayPacket.data() + 8, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
-          m_UDPSocket->SendTo(m_UDPForwardAddress, m_UDPForwardPort, relayPacket);
+          m_UDPSocket->SendTo(m_Config->m_UDPForwardAddress, m_Config->m_UDPForwardPort, relayPacket);
         }
 
-        if (pkt->buf[1] == CGameProtocol::W3GS_SEARCHGAME && pkt->length == 16 && pkt->buf[8] == m_LANWar3Version) {
-          if (m_CurrentLobby && !m_CurrentLobby->GetCountDownStarted()) {
-            m_CurrentLobby->AnnounceToAddress(ipAddress, 6112);
+        if (pkt->length >= 2 && static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT/* && pkt->buf[8] == m_Config->m_War3Version */) {
+          if (pkt->length >= 16 && static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
+            bool FromGameRanger = false;
+            if (m_Config->m_UDPSupportGameRanger) {
+              FromGameRanger = (
+                static_cast<unsigned char>(pkt->buf[2]) == 0x10 && (pkt->length == 22 || pkt->length == 23) &&
+                !(pkt->buf[16] == static_cast<unsigned char>(W3GS_HEADER_CONSTANT) && pkt->buf[17] != static_cast<unsigned char>(W3GS_HEADER_CONSTANT))
+              );
+            }
+            uint8_t ExtraDigit = pkt->length == 22 ? 0 : 0xFF;
+            if (FromGameRanger) {
+              vector<uint8_t> GameRangerAddress(pkt->buf + 16, pkt->buf + 20);
+              vector<uint8_t> GameRangerPort(pkt->buf + 20, pkt->buf + 22);
+              if (ExtraDigit == 0xFF && static_cast<unsigned char>(pkt->buf[22]) == 0) {
+                // OK; 0xFF signals delete
+              } else {
+                // ?
+              }
+              m_GameRangerLocalPort = remotePort;
+              m_GameRangerLocalAddress = ipAddress;
+              m_GameRangerRemotePort = GameRangerPort[0] << 8 + GameRangerPort[1];
+              m_GameRangerRemoteAddress = GameRangerAddress;
+
+              Print("[AURA] GameRanger client at " + ipAddress + ":" + to_string(remotePort) + " searching for game");
+              Print("[AURA] GameRanger local address: " + m_GameRangerLocalAddress + ":" + to_string(m_GameRangerLocalPort));
+              Print("[AURA] GameRanger remote address: " + ByteArrayToDecString(m_GameRangerRemoteAddress) + ":" + to_string(m_GameRangerRemotePort));
+            }
+
+            if (pkt->buf[8] == m_Config->m_War3Version) {
+              if (m_CurrentLobby && !m_CurrentLobby->GetIsMirror() && !m_CurrentLobby->GetCountDownStarted()) {
+                if (FromGameRanger) {
+                  m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_GameRangerRemoteAddress, m_GameRangerRemotePort, ExtraDigit);
+                } else {
+                  m_CurrentLobby->AnnounceToAddress(ipAddress, 6112);
+                }
+              }
+            }
           }
         }
       }
@@ -685,140 +720,189 @@ void CAura::EventGameDeleted(CGame* game)
 
 void CAura::ReloadConfigs()
 {
-  CConfig CFG;
-  CFG.Read("aura.cfg");
-  SetConfigs(&CFG);
+  uint8_t WasVersion = m_Config->m_War3Version;
+  string WasCFGPath  = m_Config->m_MapCFGPath;
+  CConfig* CFG = new CConfig();
+  CFG->Read("aura.cfg");
+  LoadConfigs(CFG);
+  LoadBNETs(CFG);
+  LoadIRC(CFG);
+
+  if (!m_ScriptsExtracted || m_Config->m_War3Version != WasVersion) {
+    m_ScriptsExtracted = ExtractScripts() == 2;
+  }
+  if (WasCFGPath != m_Config->m_MapCFGPath) {
+    CacheMapPresets();
+  }
 }
 
-void CAura::SetConfigs(CConfig* CFG)
+void CAura::LoadConfigs(CConfig* CFG)
 {
   // this doesn't set EVERY config value since that would potentially require reconfiguring the battle.net connections
   // it just set the easily reloadable values
 
-  m_Warcraft3Path          = AddPathSeparator(CFG->GetString("bot_war3path", R"(C:\Program Files\Warcraft III\)"));
-  m_BindAddress            = CFG->GetString("bot_bindaddress", string());
-  m_UDPServerEnabled       = CFG->GetInt("udp_enableserver", 1);
-  m_UDPForwardTraffic      = CFG->GetInt("udp_redirenabled", 0);
-  m_UDPForwardGameLists    = CFG->GetInt("udp_redirgamelists", 0);
-  m_UDPForwardAddress      = CFG->GetString("udp_rediraddress", string());
-  m_UDPForwardPort         = CFG->GetInt("udp_redirport", 6110);
-  m_ReconnectWaitTime      = CFG->GetInt("bot_reconnectwaittime", 3);
-  m_MaxGames               = CFG->GetInt("bot_maxgames", 20);
-  m_MinHostCounter         = CFG->GetInt("bot_firstgameid", 100);
-  string BotCommandTrigger = CFG->GetString("bot_commandtrigger", "!");
-  m_CommandTrigger         = BotCommandTrigger[0];
-  m_GreetingPath           = CFG->GetString("bot_greetingpath", string());
-  m_MaxSavedMapSize        = CFG->GetInt("bot_maxpersistentsize", 0xFFFFFFFF);
+  delete m_Config;
+  delete m_BNETDefaultConfig;
 
-  m_Greeting.clear();
-  if (m_GreetingPath.length() > 0) {
-    ifstream in;
-    in.open(m_GreetingPath);
-    if (!in.fail()) {
-      while (!in.eof()) {
-        string Line;
-        getline(in, Line);
-        if (Line.empty()) {
-          if (!in.eof())
-            m_Greeting.push_back(" ");
-        } else {
-          m_Greeting.push_back(Line);
-        }
-      }
-      in.close( );
-    }
-  }
+  m_Config = new CBotConfig(CFG);
 
-  m_MapCFGPath      = AddPathSeparator(CFG->GetString("bot_mapcfgpath", string()));
-  m_MapPath         = AddPathSeparator(CFG->GetString("bot_mappath", string()));
-  m_IndexVirtualHostName = CFG->GetString("bot_indexvirtualhostname", "Aura Bot");
-  m_LobbyVirtualHostName = CFG->GetString("bot_lobbyvirtualhostname", "|cFF4080C0Aura");
-
-  if (m_IndexVirtualHostName.size() > 15) {
-    m_IndexVirtualHostName = "Aura Bot";
-    Print("[AURA] warning - bot_indexvirtualhostname is longer than 15 characters - using default index virtual host name");
-  }
-
-  if (m_LobbyVirtualHostName.size() > 15) {
-    m_LobbyVirtualHostName = "|cFF4080C0Aura";
-    Print("[AURA] warning - bot_lobbyvirtualhostname is longer than 15 characters - using default lobby virtual host name");
-  }
-
-  m_AllowDownloads     = CFG->GetInt("bot_allowdownloads", 0);
-  m_AllowUploads       = CFG->GetInt("bot_allowuploads", 0);
-  m_MaxDownloaders     = CFG->GetInt("bot_maxdownloaders", 3);
-  m_MaxDownloadSpeed   = CFG->GetInt("bot_maxdownloadspeed", 100);
-  m_LCPings            = CFG->GetInt("bot_lcpings", 1) == 0 ? false : true;
-  m_AutoKickPing       = CFG->GetInt("bot_autokickping", 300);
-  m_LobbyTimeLimit     = CFG->GetInt("bot_lobbytimelimit", 10);
-  m_LobbyNoOwnerTime   = CFG->GetInt("bot_lobbyownerlesstime", 2);
-  m_Latency            = CFG->GetInt("bot_latency", 100);
-  m_SyncLimit          = CFG->GetInt("bot_synclimit", 50);
-  m_VoteKickPercentage = CFG->GetInt("bot_votekickpercentage", 70);
-  m_ResolveMapToConfig = CFG->GetInt("bot_resolvemaptoconfig", 1) == 1;
-
-  if (m_VoteKickPercentage > 100)
-    m_VoteKickPercentage = 100;
-
-  m_NotifyJoins       = CFG->GetInt("bot_notifyjoins", 0) == 0 ? false : true;
-  m_UDPInfoStrictMode = CFG->GetInt("udp_infostrictmode", 1) == 0 ? false : true;
-
-  stringstream ss(CFG->GetString("bot_notifyjoinsexcept", ""));
-  m_IgnoredNotifyJoinPlayers.clear();
-  while (ss.good()) {
-    string substr;
-    getline(ss, substr, ',');
-    if (substr.size() > 0) {
-      m_IgnoredNotifyJoinPlayers.push_back(substr);
-    }
-  }
-
-  stringstream ss2(CFG->GetString("udp_blocklist", ""));
-  m_IgnoredDatagramSources.clear();
-  while (ss2.good()) {
-    string substr;
-    getline(ss2, substr, ',');
-    if (substr.size() > 0) {
-      m_IgnoredDatagramSources.push_back(substr);
-    }
-  }
-
-  stringstream ss3(CFG->GetString("bot_superusers", ""));
-  m_SudoUsers.clear();
-  while (ss3.good()) {
-    string substr;
-    getline(ss3, substr, ',');
-    int atIndex = substr.find("@");
-    if (atIndex != string::npos) {
-      m_SudoUsers.emplace_back(std::make_pair(
-        substr.substr(0, atIndex),
-        substr.substr(atIndex + 1, substr.length())
-       ));
-    }
-  }
+  m_BNETDefaultConfig = new CBNETConfig(CFG, m_Config);
+  m_GameDefaultConfig = new CGameConfig(CFG);
 }
 
-void CAura::ExtractScripts(const uint8_t War3Version)
+bool CAura::LoadCLI(const int argc, const char* argv[])
 {
+  argh::parser cmdl({
+    /*
+      aura
+      ! --version
+      ! --help
+       --w3version <DIRECTORY> --w3path <DIRECTORY> --mapdir <DIRECTORY> --cfgdir <DIRECTORY>
+      ! --lan <BOOLEAN> --bnet <BOOLEAN> --exit <BOOLEAN> --nolan <BOOLEAN> --nobnet <BOOLEAN> --noexit <BOOLEAN>
+      ! --udp <MODE:(strict|lax|free)>
+       <MAP> <NAME> --exclude <SERVER> --mirror <IP:PORT#ID>
+       <MAP> <NAME> --obs <OBSERVER> --visibility <VISIBILITY> --rh <RANDOM> --owner <USER@SERVER>
+      ! --exec-as <USER@SERVER> --exec-auth <yes|no|auto>
+      ! --exec <COMMAND1> --exec <COMMAND2> --exec <COMMAND3>
+    */
+
+    // Flags
+    //"--version", "--help",
+    //"--lan", "--bnet", "--exit",
+    //"--nolan", "--nobnet", "--noexit",
+
+    // Parameters
+    "--w3version", "--w3path", "--mapdir", "--cfgdir",
+    "--udp",
+    "--exclude", "--mirror",
+    "--obs", "--visibility", "--rh", "--owner",
+    "--exec-as", "--exec-auth", "--exec"
+  });
+
+  cmdl.parse(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+  /* TODO: Switch to another CLI parser library that properly supports flags */
+  if (cmdl("--version")) {
+    Print("--version");
+    return true;
+  } else {
+    Print("...");
+  }
+  if (cmdl("help")) {
+    Print("Uso:");
+    Print("aura DotA.w3x \"juguemos\"");
+    return true;
+  }
+
+  bool noexit = !m_Config->m_ExitOnStandby;
+  bool nobnet = !m_Config->m_EnableBNET;
+  bool nolan = !m_GameDefaultConfig->m_LANEnabled;
+
+  if (!cmdl[1].empty() && !cmdl[2].empty()) {
+    string MirrorTarget, ExcludedRealm;
+    cmdl("mirror") >> MirrorTarget;
+    cmdl("exclude") >> ExcludedRealm;
+    vector<string> Action;
+    if (!MirrorTarget.empty()) {
+      Action.push_back("mirror");
+      Action.push_back(cmdl[1]);
+      Action.push_back(cmdl[2]);
+      Action.push_back(ExcludedRealm);
+      Action.push_back(MirrorTarget);
+    } else {
+      string Obs, Vision, RandomHeroes, Owner;
+      cmdl("obs") >> Obs;
+      cmdl("visibility") >> Vision;
+      cmdl("rh") >> RandomHeroes;
+      cmdl("owner") >> Owner;
+      Action.push_back("host");
+      Action.push_back(cmdl[1]);
+      Action.push_back(cmdl[2]);
+      Action.push_back(Obs);
+      Action.push_back(Vision);
+      Action.push_back(RandomHeroes);
+      Action.push_back(Owner);
+      Action.push_back(ExcludedRealm);
+    }
+    m_PendingActions.push_back(Action);
+    noexit = true;
+  }
+
+  
+  uint32_t War3Version = m_Config->m_War3Version;
+  string War3Path = m_Config->m_Warcraft3Path;
+  string MapPath = m_Config->m_MapPath;
+  string MapCFGPath = m_Config->m_MapCFGPath;
+
+  cmdl("w3version", War3Version) >> War3Version;
+  cmdl("w3path", War3Path) >> War3Path;
+  cmdl("mapdir", MapPath) >> MapPath;
+  cmdl("cfgdir", MapCFGPath) >> MapCFGPath;
+
+  cmdl("noexit", noexit) >> noexit;
+  cmdl("nobnet", nobnet) >> nobnet;
+  cmdl("nolan", nolan) >> nolan;
+
+  m_Config->m_War3Version = War3Version;
+  m_Config->m_Warcraft3Path = War3Path;
+  m_Config->m_MapPath = MapPath;
+  m_Config->m_MapCFGPath = MapCFGPath;
+
+  m_Config->m_ExitOnStandby = !noexit;
+  m_Config->m_EnableBNET = !nobnet;
+  m_GameDefaultConfig->m_LANEnabled = !nolan;
+
+  string ExecCommand, ExecAs, ExecAuth;
+  cmdl("exec", ExecCommand) >> ExecCommand;
+  cmdl("exec-as", ExecAs) >> ExecAs;
+  cmdl("exec-auth", ExecAuth) >> ExecAuth;
+
+  if (!ExecCommand.empty() && !ExecAs.empty() && !ExecAuth.empty()) {
+    vector<string> Action;
+    Action.push_back("exec");
+    Action.push_back(ExecCommand);
+    Action.push_back(ExecAs);
+    Action.push_back(ExecAuth);
+    m_PendingActions.push_back(Action);
+  }
+  /*
+    aura
+  --version
+  --help
+  --w3version <DIRECTORY> --w3path <DIRECTORY> --mapdir <DIRECTORY> --cfgdir <DIRECTORY>
+  * --lan <BOOLEAN> --bnet <BOOLEAN> --exit <BOOLEAN> --nolan <BOOLEAN> --nobnet <BOOLEAN> --noexit <BOOLEAN>
+  * --udp <MODE:(strict|lax|free)>
+  <MAP> <NAME> --exclude <SERVER> --mirror <IP:PORT#ID>
+  <MAP> <NAME> --obs <OBSERVER> --visibility <VISIBILITY> --rh <RANDOM> --owner <USER@SERVER>
+  * --exec-as <USER@SERVER> --exec-auth <yes|no|auto>
+  * --exec <COMMAND1> --exec <COMMAND2> --exec <COMMAND3>
+  */
+
+  return false;
+}
+
+uint8_t CAura::ExtractScripts()
+{
+  uint8_t FilesExtracted = 0;
   void*        MPQ;
   const string MPQFileName = [&]() {
-    if (War3Version >= 28)
-      return m_Warcraft3Path + "War3.mpq";
+    if (m_Config->m_War3Version >= 28)
+      return m_Config->m_Warcraft3Path + "War3.mpq";
     else
-      return m_Warcraft3Path + "War3Patch.mpq";
+      return m_Config->m_Warcraft3Path + "War3Patch.mpq";
   }();
 
 #ifdef WIN32
   const wstring MPQFileNameW = [&]() {
-    if (War3Version >= 28)
-      return wstring(begin(m_Warcraft3Path), end(m_Warcraft3Path)) + _T("War3.mpq");
+    if (m_Config->m_War3Version >= 28)
+      return wstring(begin(m_Config->m_Warcraft3Path), end(m_Config->m_Warcraft3Path)) + _T("War3.mpq");
     else
-      return wstring(begin(m_Warcraft3Path), end(m_Warcraft3Path)) + _T("War3Patch.mpq");
+      return wstring(begin(m_Config->m_Warcraft3Path), end(m_Config->m_Warcraft3Path)) + _T("War3Patch.mpq");
   }();
 
-  if (SFileOpenArchive(MPQFileNameW.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1, &MPQ))
+  if (SFileOpenArchive(MPQFileNameW.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ))
 #else
-  if (SFileOpenArchive(MPQFileName.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1, &MPQ))
+  if (SFileOpenArchive(MPQFileName.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ))
 #endif
   {
     Print("[AURA] loading MPQ file [" + MPQFileName + "]");
@@ -837,8 +921,12 @@ void CAura::ExtractScripts(const uint8_t War3Version)
 
         if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
         {
-          Print(R"([AURA] extracting Scripts\common.j from MPQ file to [)" + m_MapCFGPath + "common.j]");
-          FileWrite(m_MapCFGPath + "common.j", reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
+          if (FileWrite(m_Config->m_MapCFGPath + "common.j", reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
+            Print(R"([AURA] extracted Scripts\common.j to [)" + m_Config->m_MapCFGPath + "common.j]");
+            ++FilesExtracted;
+          } else {
+            Print(R"([AURA] warning - unable to save extracted Scripts\common.j to [)" + m_Config->m_MapCFGPath + "common.j]");
+          }
         }
         else
           Print(R"([AURA] warning - unable to extract Scripts\common.j from MPQ file)");
@@ -864,8 +952,12 @@ void CAura::ExtractScripts(const uint8_t War3Version)
 
         if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
         {
-          Print(R"([AURA] extracting Scripts\blizzard.j from MPQ file to [)" + m_MapCFGPath + "blizzard.j]");
-          FileWrite(m_MapCFGPath + "blizzard.j", reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
+          if (FileWrite(m_Config->m_MapCFGPath + "blizzard.j", reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
+            Print(R"([AURA] extracted Scripts\blizzard.j to [)" + m_Config->m_MapCFGPath + "blizzard.j]");
+            ++FilesExtracted;
+          } else {
+            Print(R"([AURA] warning - unable to save extracted Scripts\blizzard.j to [)" + m_Config->m_MapCFGPath + "blizzard.j]");
+          }
         }
         else
           Print(R"([AURA] warning - unable to extract Scripts\blizzard.j from MPQ file)");
@@ -883,31 +975,40 @@ void CAura::ExtractScripts(const uint8_t War3Version)
   else
   {
 #ifdef WIN32
-    Print("[AURA] warning - unable to load MPQ file [" + MPQFileName + "] - error code " + to_string((uint32_t)GetLastError()));
+    uint32_t ErrorCode = (uint32_t)GetLastError();
+    string ErrorCodeString = (
+      ErrorCode == 2 ? "Config error: bot_war3path is not the WC3 directory" : (
+      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot_war3path is not a valid directory" : (
+      (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
+      "Error code " + to_string(ErrorCode)
+      )))
+    );
 #else
-    Print("[AURA] warning - unable to load MPQ file [" + MPQFileName + "] - error code " + to_string(static_cast<int32_t>(GetLastError())));
+    int32_t ErrorCode = static_cast<int32_t>(GetLastError());
+    string ErrorCodeString = "Error code " + to_string(ErrorCode);
 #endif
+    Print("[AURA] warning - unable to load MPQ file [" + MPQFileName + "] - " + ErrorCodeString);
   }
+
+  return FilesExtracted;
 }
 
 void CAura::LoadIPToCountryData()
 {
   ifstream in;
-  in.open("ip-to-country.csv");
+  in.open("ip-to-country.csv", ios::in);
 
   if (in.fail()) {
-    Print("[AURA] warning - unable to read file [ip-to-country.csv], iptocountry data not loaded");
+    Print("[AURA] warning - unable to read file [ip-to-country.csv], geolocalization data not loaded");
   } else {
-    Print("[AURA] loading [ip-to-country.csv]");
 
     // the begin and commit statements are optimizations
     // we're about to insert ~4 MB of data into the database so if we allow the database to treat each insert as a transaction it will take a LONG time
 
     if (!m_DB->Begin())
-      Print("[AURA] warning - failed to begin database transaction, iptocountry data not loaded");
+      Print("[AURA] warning - failed to begin database transaction, geolocalization data not loaded");
     else
     {
-      uint8_t   Percent = 0;
       string    Line, Skip, IP1, IP2, Country;
       CSVParser parser;
 
@@ -934,58 +1035,78 @@ void CAura::LoadIPToCountryData()
       }
 
       if (!m_DB->Commit())
-        Print("[AURA] warning - failed to commit database transaction, iptocountry data not loaded");
-      else
-        Print("[AURA] finished loading [ip-to-country.csv]");
+        Print("[AURA] warning - failed to commit database transaction, geolocalization data not loaded");
     }
 
     in.close();
   }
 }
 
-void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string ownerName, string ownerServer, string creatorName, CBNET* creatorServer, bool whisper)
+void CAura::CacheMapPresets()
 {
-  if (!m_Enabled)
-  {
+  // Preload map configs
+  m_CachedMaps.clear();
+  const vector<string> MapConfigFiles = ConfigFilesMatch("");
+  for (const auto& MapConfigFile : MapConfigFiles) {
+    std::string MapLocalPath = CConfig::ReadString(m_Config->m_MapCFGPath + MapConfigFile, "map_localpath");
+    if (!MapLocalPath.empty()) {
+      m_CachedMaps[MapLocalPath] = MapConfigFile;
+    }
+  }
+}
+
+void CAura::CreateGame(CMap* map, uint8_t gameDisplay, string gameName, string ownerName, string ownerServer, string creatorName, CBNET* creatorServer, bool whisper)
+{
+  if (!m_Config->m_Enabled) {
     creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The bot is disabled", creatorName, whisper, string());
     return;
   }
 
-  if (gameName.size() > 31)
-  {
-    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The game name is too long (the maximum is 31 characters)", creatorName, whisper, string());
+  if (gameName.size() > m_MaxGameNameSize) {
+    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_MaxGameNameSize) + " characters)", creatorName, whisper, string());
     return;
   }
 
-  if (!map->GetValid())
-  {
+  if (!map->GetValid()) {
     creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The currently loaded map config file is invalid", creatorName, whisper, string());
     return;
   }
 
-  if (m_CurrentLobby)
-  {
+  if (m_CurrentLobby) {
     creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby", creatorName, whisper, string());
     return;
   }
 
-  if (m_Games.size() >= m_MaxGames)
-  {
-    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_MaxGames) + ") has been reached", creatorName, whisper, string());
+  if (m_Games.size() >= m_Config->m_MaxGames) {
+    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_Config->m_MaxGames) + ") has been reached", creatorName, whisper, string());
     return;
   }
 
   Print2("[AURA] creating game [" + gameName + "]");
 
   uint16_t HostPort = NextHostPort();
-  m_CurrentLobby = new CGame(this, map, HostPort, m_EnableLANBalancer ? m_LANHostPort : HostPort, gameState, gameName, ownerName, ownerServer, creatorName, creatorServer);
+  m_CurrentLobby = new CGame(this, map, HostPort, m_Config->m_EnableLANBalancer ? m_Config->m_LANHostPort : HostPort, gameDisplay, gameName, ownerName, ownerServer, creatorName, creatorServer);
+  if (m_CurrentLobby->GetExiting()) {
+    delete m_CurrentLobby;
+    m_CurrentLobby = nullptr;
+    return;
+  }
+
+  m_CurrentLobby->LANBroadcastGameCreate();
 
   for (auto& bnet : m_BNETs) {
+    std::string AnnounceText = (
+      std::string("[1.") + to_string(m_Config->m_War3Version) + ".x] Hosting " + (gameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + map->GetMapLocalPath() +
+      ". (Started by " + ownerName + ": \"" + bnet->GetPrefixedGameName(gameName) + "\")"
+    );
     if (whisper && bnet == creatorServer) {
-      bnet->QueueChatCommand(std::string("Creating ") + (gameState == GAME_PRIVATE ? "private" : "public") + " game of " + map->GetMapLocalPath() + ". (Started by " + ownerName + ": \"" + gameName + "\")", creatorName, whisper, string());
+      bnet->QueueChatCommand(AnnounceText, creatorName, whisper, string());
     }
-    bnet->QueueChatCommand((gameState == GAME_PRIVATE ? std::string("Private") : std::string("Public")) + " game of " + map->GetMapLocalPath() + " created. (Started by " + ownerName + ": \"" + gameName + "\").");
-    bnet->QueueGameCreate(gameState, gameName, map, m_CurrentLobby->GetHostCounter());
+    if (bnet->GetAnnounceHostToChat()) {
+      bnet->QueueChatCommand(AnnounceText);
+    }
+    // QueueGameRefresh at QueueGameCreate handles prefix
+    bnet->QueueGameCreate(gameDisplay, gameName, map, m_CurrentLobby->GetHostCounter(), m_CurrentLobby->GetHostPort());
 
     // hold friends and/or clan members
 
@@ -996,22 +1117,89 @@ void CAura::CreateGame(CMap* map, uint8_t gameState, string gameName, string own
     // unfortunately this doesn't work on PVPGN servers because they consider an enterchat message to be a gameuncreate message when in a game
     // so don't rejoin the chat if we're using PVPGN
 
-    if (gameState == GAME_PRIVATE && !bnet->GetPvPGN())
+    if (gameDisplay == GAME_PRIVATE && !bnet->GetPvPGN()) {
       bnet->QueueEnterChat();
+    }
   }
+}
+
+void CAura::CreateMirror(CMap* map, uint8_t gameDisplay, string gameName, string gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, string excludedServer, string creatorName, CBNET* creatorServer, bool whisper)
+{
+  if (!m_Config->m_Enabled) {
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The bot is disabled", creatorName, whisper, string());
+    return;
+  }
+
+  if (gameName.size() > m_MaxGameNameSize) {
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_MaxGameNameSize) + " characters)", creatorName, whisper, string());
+    return;
+  }
+
+  if (!map->GetValid()) {
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The currently loaded map config file is invalid", creatorName, whisper, string());
+    return;
+  }
+
+  if (m_CurrentLobby) {
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby", creatorName, whisper, string());
+    return;
+  }
+
+  if (m_Games.size() >= m_Config->m_MaxGames) {
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_Config->m_MaxGames) + ") has been reached", creatorName, whisper, string());
+    return;
+  }
+
+  Print2("[AURA] mirroring game [" + gameName + "]");
+
+  m_CurrentLobby = new CGame(this, map, gameDisplay, gameName, gameAddress, gamePort, gameHostCounter, gameEntryKey, excludedServer);
+
+  for (auto& bnet : m_BNETs) {
+    if (bnet->GetInputID() == excludedServer || bnet->GetIsMirror())
+      continue;
+
+    std::string AnnounceText = (
+      std::string("[1.") + to_string(m_Config->m_War3Version) + ".x] Mirroring " + (gameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + map->GetMapLocalPath() +
+      ": \"" + bnet->GetPrefixedGameName(gameName) + "\")"
+    );
+    if (whisper && bnet == creatorServer) {
+      bnet->QueueChatCommand(AnnounceText, creatorName, whisper, string());
+    }
+    if (bnet->GetAnnounceHostToChat()) {
+      bnet->QueueChatCommand(AnnounceText);
+    }
+    // QueueGameRefresh at QueueGameCreate handles prefix
+    bnet->QueueGameMirror(gameDisplay, gameName, map, m_CurrentLobby->GetHostCounter(), m_CurrentLobby->GetPublicHostPort());
+
+    // if we're creating a private game we don't need to send any game refresh messages so we can rejoin the chat immediately
+    // unfortunately this doesn't work on PVPGN servers because they consider an enterchat message to be a gameuncreate message when in a game
+    // so don't rejoin the chat if we're using PVPGN
+
+    if (gameDisplay == GAME_PRIVATE && !bnet->GetPvPGN()) {
+      bnet->QueueEnterChat();
+    }
+  }
+}
+
+void CAura::SendBroadcast(uint16_t port, const vector<uint8_t>& message)
+{
+  if (m_UDPServerEnabled && m_UDPServer->Broadcast(port, message)) {
+    return;
+  }
+  m_UDPSocket->Broadcast(port, message);
 }
 
 vector<string> CAura::MapFilesMatch(string rawPattern)
 {
-  if (IsValidMapName(rawPattern) && FileExists(m_MapPath + rawPattern)) {
+  if (IsValidMapName(rawPattern) && FileExists(m_Config->m_MapPath + rawPattern)) {
     return std::vector<std::string>(1, rawPattern);
   }
 
   string pattern = RemoveNonAlphanumeric(rawPattern);
   transform(begin(pattern), end(pattern), begin(pattern), ::tolower);
 
-  auto TFTMaps = FilesMatch(m_MapPath, ".w3x");
-  auto ROCMaps = FilesMatch(m_MapPath, ".w3m");
+  auto TFTMaps = FilesMatch(m_Config->m_MapPath, ".w3x");
+  auto ROCMaps = FilesMatch(m_Config->m_MapPath, ".w3m");
 
   std::unordered_set<std::string> MapSet(TFTMaps.begin(), TFTMaps.end());
   MapSet.insert(ROCMaps.begin(), ROCMaps.end());
@@ -1096,7 +1284,7 @@ vector<string> CAura::ConfigFilesMatch(string pattern)
 {
   transform(begin(pattern), end(pattern), begin(pattern), ::tolower);
 
-  vector<string> ConfigList = FilesMatch(m_MapCFGPath, ".cfg");
+  vector<string> ConfigList = FilesMatch(m_Config->m_MapCFGPath, ".cfg");
 
   vector<string> Matches;
 
@@ -1111,4 +1299,33 @@ vector<string> CAura::ConfigFilesMatch(string pattern)
   }
 
   return Matches;
+}
+
+uint16_t CAura::NextHostPort()
+{
+  ++m_HostPort;
+  if (m_HostPort > m_Config->m_MaxHostPort || m_HostPort < m_Config->m_MinHostPort) {
+    m_HostPort = m_Config->m_MinHostPort;
+  }
+  return m_HostPort;
+}
+
+uint32_t CAura::NextHostCounter()
+{
+  m_HostCounter = (m_HostCounter + 1) & 0x00FFFFFF;
+  if (m_HostCounter < m_Config->m_MinHostCounter) {
+    m_HostCounter = m_Config->m_MinHostCounter;
+  }
+  return m_HostCounter;
+}
+
+bool CAura::IsIgnoredNotifyPlayer(string playerName)
+{
+  return m_GameDefaultConfig->m_IgnoredNotifyJoinPlayers.find(playerName) != m_GameDefaultConfig->m_IgnoredNotifyJoinPlayers.end();
+}
+
+bool CAura::IsIgnoredDatagramSource(string sourceIp)
+{
+  string element(sourceIp);
+  return m_Config->m_UDPBlockedIPs.find(element) != m_Config->m_UDPBlockedIPs.end();
 }

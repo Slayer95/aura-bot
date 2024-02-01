@@ -27,6 +27,18 @@
     <ClCompile Include="config.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="config_bot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="config_bnet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="config_irc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="config_game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="crc32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -89,6 +101,18 @@
     <ClInclude Include="config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="config_bot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config_bnet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config_irc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config_game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="crc32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -147,6 +171,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="fileutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="argh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

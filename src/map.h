@@ -111,7 +111,7 @@ private:
   std::string            m_CFGFile;
   std::string            m_MapPath;       // config value: map path
   std::string            m_MapType;       // config value: map type (for stats class)
-  std::string            m_MapDefaultHCL; // config value: map default HCL to use (this should really be specified elsewhere and not part of the map config)
+  std::string            m_MapDefaultHCL; // config value: map default HCL to use
   std::string            m_MapLocalPath;  // config value: map local path
   std::string            m_MapURL;
   std::string            m_MapSiteURL;

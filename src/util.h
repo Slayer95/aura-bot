@@ -127,7 +127,7 @@ inline std::string ByteArrayToHexString(const std::vector<uint8_t>& b)
 
   for (auto i = cbegin(b) + 1; i != cend(b); ++i)
   {
-    if (*i < 16)
+    if (*i < 0x10)
       result += " 0" + ToHexString(*i);
     else
       result += " " + ToHexString(*i);
@@ -214,7 +214,7 @@ inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, b
 
   if (start + 1 < b.size())
   {
-    uint32_t    c;
+    uint8_t c = 0;
     std::string temp = std::string(begin(b) + start, begin(b) + start + 2);
 
     if (reverse)
@@ -245,7 +245,8 @@ inline std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t 
 
     SS >> c;
 
-    // TODO: if c > 255 handle the error instead of truncating
+    if (SS.fail() || c > 0xFF)
+      break;
 
     result.push_back(static_cast<uint8_t>(c));
   }
@@ -265,13 +266,94 @@ inline std::vector<uint8_t> ExtractHexNumbers(std::string& s)
   while (!SS.eof())
   {
     SS >> std::hex >> c;
-
-    // TODO: if c > 255 handle the error instead of truncating
+    if (c > 0xFF)
+      break;
 
     result.push_back(static_cast<uint8_t>(c));
   }
 
   return result;
+}
+
+inline std::vector<uint8_t> ExtractIPv4(std::string& s)
+{
+  std::vector<uint8_t> Output;
+  std::stringstream ss(s);
+  while (ss.good()) {
+    std::string element;
+    std::getline(ss, element, '.');
+    if (element.empty())
+      break;
+
+    uint8_t parsedElement = 0;
+    try {
+      parsedElement = std::stoi(element);
+    } catch (...) {
+      break;
+    }
+    if (parsedElement < 0 || parsedElement > 0xFF)
+      break;
+
+    Output.push_back(parsedElement);
+  }
+
+  if (Output.size() != 4)
+    Output.clear();
+
+  return Output;
+}
+
+inline std::string TrimString(const std::string& str) {
+  size_t firstNonSpace = str.find_first_not_of(" ");
+  size_t lastNonSpace = str.find_last_not_of(" ");
+
+  if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
+    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  } else {
+    return std::string();
+  }
+}
+
+inline std::vector<std::string> SplitArgs(std::string& s, uint8_t expectedCount)
+{
+  uint8_t parsedCount = 0;
+  std::stringstream SS(s);
+  std::string NextItem;
+  std::vector<std::string> Output;
+  do {
+    std::getline(SS, NextItem, ',');
+    if (SS.fail()) {
+      break;
+    }
+    Output.push_back(TrimString(NextItem));
+    ++parsedCount;
+  } while (!SS.eof() && parsedCount < expectedCount);
+
+  if (parsedCount != expectedCount)
+    Output.clear();
+
+  return Output;
+}
+
+inline std::vector<std::string> SplitArgs(std::string& s, uint8_t minCount, uint8_t maxCount)
+{
+  uint8_t parsedCount = 0;
+  std::stringstream SS(s);
+  std::string NextItem;
+  std::vector<std::string> Output;
+  do {
+    std::getline(SS, NextItem, ',');
+    if (SS.fail()) {
+      break;
+    }
+    Output.push_back(TrimString(NextItem));
+    ++parsedCount;
+  } while (!SS.eof() && parsedCount < maxCount);
+
+  if (!(minCount <= parsedCount && parsedCount <= maxCount))
+    Output.clear();
+
+  return Output;
 }
 
 inline void AssignLength(std::vector<uint8_t>& content)
@@ -418,15 +500,24 @@ inline bool IsValidCFGName(const std::string& s) {
   return !std::regex_search(s, invalidChars) && std::regex_search(s, validExtensions);
 }
 
-inline std::string TrimString(const std::string& str) {
-    size_t firstNonSpace = str.find_first_not_of(" ");
-    size_t lastNonSpace = str.find_last_not_of(" ");
+inline std::string TrimTrailingSlash(const std::string s) {
+  if (s.empty()) return s;
+  if (s[s.length() - 1] == '/') return s.substr(0, s.length() - 1);
+  return s;
+}
 
-    if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
-        return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
-    } else {
-        return std::string();
-    }
+inline bool IsBase10Number(const std::string& s) {
+  if (s.empty()) return false;
+  if (s[0] == '0') return s.length() == 1;
+
+  for (char ch : s) {
+    if (!isdigit(ch)) return false;
+  }
+  return true;
+}
+
+inline std::string MaybeBase10(const std::string s) {
+  return IsBase10Number(s) ? s : std::string();
 }
 
 #endif // AURA_UTIL_H_

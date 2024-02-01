@@ -1,6 +1,7 @@
 Lobby created by {CREATOR} at {HOSTREALM}, using AuraBot, a GHost++ fork.
 {OWNER?}{CREATOR!=OWNER}Current admin: {OWNER}{OWNERREALM}
-{OWNER!}There is no admin. You may take over with {TRIGGER}owner
-Start the game with: {TRIGGER}start
-{URL?}{FILENAME?}Visit <{URL}> to download {FILENAME}
+{OWNER!}There is no admin. Issue commands with [{TRIGGER}] - take over with [{TRIGGER}owner].
+Start the game with [{TRIGGER}start]
+{URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]
 {SHORTDESC?}{SHORTDESC}
+{AUTOSTART?}Autostart is active. The game will automatically start {AUTOSTART}.

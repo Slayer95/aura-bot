@@ -57,9 +57,7 @@ CAuraDB::CAuraDB(CConfig* CFG)
     RootAdminCheckStmt(nullptr),
     m_HasError(false)
 {
-  Print("[SQLITE3] version " + string(SQLITE_VERSION));
   m_File = CFG->GetString("db_sqlite3_file", "aura.dbs");
-
   Print("[SQLITE3] opening database [" + m_File + "]");
   m_DB = new CSQLITE3(m_File);
 
@@ -138,8 +136,6 @@ CAuraDB::CAuraDB(CConfig* CFG)
     else
       Print("[SQLITE3] prepare error inserting schema number [1] - " + m_DB->GetError());
   }
-  else
-    Print("[SQLITE3] found schema number [" + SchemaNumber + "]");
 
   if (m_DB->Exec("CREATE TEMPORARY TABLE iptocountry ( ip1 INTEGER NOT NULL, ip2 INTEGER NOT NULL, country TEXT NOT NULL, PRIMARY KEY ( ip1, ip2 ) )") != SQLITE_OK)
     Print("[SQLITE3] error creating temporary iptocountry table - " + m_DB->GetError());
@@ -925,7 +921,9 @@ CDBDotAPlayer::CDBDotAPlayer()
 }
 
 CDBDotAPlayer::CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills)
-  : m_Kills(nKills),
+  : m_Colour(0),
+    m_NewColour(0),
+    m_Kills(nKills),
     m_Deaths(nDeaths),
     m_CreepKills(nCreepKills),
     m_CreepDenies(nCreepDenies),

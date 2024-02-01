@@ -497,11 +497,11 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(uint8_t war3Version, cons
     packet.push_back(0);                         // ??? (maybe game password)
     AppendByteArrayFast(packet, StatString);     // Stat String
     packet.push_back(0);                         // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
-    AppendByteArray(packet, slotsAvailableOff, false);   // Slots Available off-by-one
+    AppendByteArray(packet, slotsTotal, false);  // Slots Total
     AppendByteArrayFast(packet, mapGameType);    // Game Type
     AppendByteArray(packet, Unknown2, 4);        // ???
     //AppendByteArray(packet, slotsTaken, false); // Slots Taken again??
-    AppendByteArray(packet, slotsTotal, false);  // Slots Total
+    AppendByteArray(packet, slotsAvailableOff, false);   // Slots Available off-by-one
     AppendByteArray(packet, upTime, false);      // time since creation
     AppendByteArray(packet, port, false);        // port
     AssignLength(packet);
@@ -512,9 +512,32 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(uint8_t war3Version, cons
   return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_CREATEGAME(uint8_t war3Version)
+std::vector<uint8_t> CGameProtocol::SEND_W3GR_GAMEINFO(uint8_t war3Version, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit)
 {
-  return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version, 0, 0, 0, 1, 0, 0, 0};
+  std::vector<uint8_t> packet = SEND_W3GS_GAMEINFO(war3Version, mapGameType, mapFlags, mapWidth, mapHeight, gameName, hostName, upTime, mapPath, mapCRC, slotsTotal, slotsAvailableOff, port, hostCounter, entryKey);
+  AppendByteArrayFast(packet, remoteIP);     // internal IP
+  AppendByteArray(packet, remotePort, true); // internal port
+  //AppendByteArray(packet, static_cast<uint16_t>(6112), true);         // port
+  if (extraBit != 0xFF) {
+    packet.push_back(extraBit);
+  }
+  return packet;
+}
+
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_CREATEGAME(uint8_t war3Version, uint32_t hostCounter)
+{
+  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version, 0, 0, 0};
+  AppendByteArray(packet, hostCounter, false); // Host Counter
+  return packet;
+}
+
+std::vector<uint8_t> CGameProtocol::SEND_W3GR_CREATEGAME(uint8_t war3Version, uint32_t hostCounter)
+{
+  std::vector<uint8_t> packet = SEND_W3GS_CREATEGAME(war3Version, hostCounter);
+  const uint8_t BroadcastAll[] = {255, 255, 255, 255};
+  AppendByteArray(packet, BroadcastAll, 4);
+  AppendByteArray(packet, static_cast<uint16_t>(6112), true);
+  return packet;
 }
 
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots)
@@ -526,9 +549,29 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REFRESHGAME(uint32_t hostCounter, 
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_DECREATEGAME()
+std::vector<uint8_t> CGameProtocol::SEND_W3GR_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots)
 {
-  return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_DECREATEGAME, 8, 0, 1, 0, 0, 0};
+  std::vector<uint8_t> packet = SEND_W3GS_REFRESHGAME(hostCounter, players, playerSlots);
+  const uint8_t BroadcastAll[] = {255, 255, 255, 255};
+  AppendByteArray(packet, BroadcastAll, 4);
+  AppendByteArray(packet, static_cast<uint16_t>(6112), true);         // Player Slots
+  return packet;
+}
+
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_DECREATEGAME(uint32_t hostCounter)
+{
+  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_DECREATEGAME, 8, 0};
+  AppendByteArray(packet, hostCounter, false); // Host Counter
+  return packet;
+}
+
+std::vector<uint8_t> CGameProtocol::SEND_W3GR_DECREATEGAME(uint32_t hostCounter)
+{
+  std::vector<uint8_t> packet = SEND_W3GS_DECREATEGAME(hostCounter);
+  const uint8_t BroadcastAll[] = {255, 255, 255, 255};
+  AppendByteArray(packet, BroadcastAll, 4);
+  AppendByteArray(packet, static_cast<uint16_t>(6112), true);
+  return packet;
 }
 
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1)
@@ -656,6 +699,11 @@ CIncomingJoinPlayer::CIncomingJoinPlayer(uint32_t nHostCounter, uint32_t nEntryK
 {
 }
 
+string CIncomingJoinPlayer::GetInternalIPString() const
+{
+  return to_string(m_InternalIP[0]) + "." + to_string(m_InternalIP[1]) + "." + to_string(m_InternalIP[2]) + "." + to_string(m_InternalIP[3]);
+}
+
 CIncomingJoinPlayer::~CIncomingJoinPlayer() = default;
 
 //
@@ -688,16 +736,17 @@ CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, string nMessage, std::vector<uint8_t> nExtraFlags)
   : m_Message(std::move(nMessage)),
     m_ToPIDs(std::move(nToPIDs)),
-    m_ExtraFlags(std::move(nExtraFlags)),
     m_Type(CTH_MESSAGE),
     m_FromPID(nFromPID),
     m_Flag(nFlag),
-    m_Byte(255)
+    m_Byte(255),
+    m_ExtraFlags(std::move(nExtraFlags))
 {
 }
 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, uint8_t nByte)
   : m_ToPIDs(std::move(nToPIDs)),
+    m_Type(CTH_TEAMCHANGE),
     m_FromPID(nFromPID),
     m_Flag(nFlag),
     m_Byte(nByte)

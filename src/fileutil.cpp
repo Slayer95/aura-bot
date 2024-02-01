@@ -112,7 +112,7 @@ vector<string> FilesMatch(const string& path, const string& pattern)
 string FileRead(const string& file, uint32_t start, uint32_t length, int *byteSize)
 {
   ifstream IS;
-  IS.open(file.c_str(), ios::binary);
+  IS.open(file.c_str(), ios::binary | ios::in);
 
   if (IS.fail())
   {
@@ -149,7 +149,7 @@ string FileRead(const string& file, uint32_t start, uint32_t length, int *byteSi
 string FileRead(const string& file, int *byteSize)
 {
   ifstream IS;
-  IS.open(file.c_str(), ios::binary);
+  IS.open(file.c_str(), ios::binary | ios::in);
 
   if (IS.fail())
   {

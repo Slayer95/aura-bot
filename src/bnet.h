@@ -22,6 +22,7 @@
 #define AURA_BNET_H_
 
 #include "includes.h"
+#include "config_bnet.h"
 
 #include <queue>
 #include <iostream>
@@ -50,6 +51,7 @@ public:
   CAura* m_Aura;
 
 private:
+  CBNETConfig*                     m_Config;
   CTCPClient*                      m_Socket;                    // the connection to battle.net
   CBNETProtocol*                   m_Protocol;                  // battle.net protocol
   CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
@@ -58,19 +60,14 @@ private:
   std::vector<std::string>         m_Clan;                      // std::vector of clan members
   std::vector<uint8_t>             m_EXEVersion;                // custom exe version for PvPGN users
   std::vector<uint8_t>             m_EXEVersionHash;            // custom exe version hash for PvPGN users
-  std::string                      m_Server;                    // battle.net server to connect to
-  std::string                      m_ServerIP;                  // battle.net server to connect to (the IP address so we don't have to resolve it every time we connect)
-  std::string                      m_ServerAlias;               // battle.net server alias (short name, e.g. "USEast")
-  std::string                      m_CDKeyROC;                  // ROC CD key
-  std::string                      m_CDKeyTFT;                  // TFT CD key
-  std::string                      m_CountryAbbrev;             // country abbreviation
-  std::string                      m_Country;                   // country
-  std::string                      m_UserName;                  // battle.net username
-  std::string                      m_UserPassword;              // battle.net password
+  std::string                      m_ResolvedHostName;          // DNS cache - host name
+  std::string                      m_ResolvedAddress;           // DNS cache - resolved IP address
   std::string                      m_FirstChannel;              // the first chat channel to join upon entering chat (note: store the last channel when entering a game)
   std::string                      m_CurrentChannel;            // the current chat channel
+  std::string                      m_HostName;                  // 
+  uint8_t                          m_ServerIndex;               // 
+  uint8_t                          m_ServerID;                  // 
   std::string                      m_IRC;                       // IRC channel we're sending the message to
-  std::string                      m_PasswordHashType;          // password hash type for PvPGN users
   int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
   int64_t                          m_LastConnectionAttemptTime; // GetTime when we last attempted to connect to battle.net
   int64_t                          m_LastGameListTime;          // GetTime when the last game list request was sent
@@ -79,40 +76,42 @@ private:
   int64_t                          m_LastBanRefreshTime;        // GetTime when the ban list was last refreshed from the database
   int64_t                          m_ReconnectDelay;            // interval between two consecutive connect attempts
   uint32_t                         m_LastOutPacketSize;         // byte size of the last packet we sent from the m_OutPackets queue
-  uint32_t                         m_LocaleID;                  // see: http://msdn.microsoft.com/en-us/library/0h88fahh%28VS.85%29.aspx
-  uint32_t                         m_HostCounterID;             // the host counter ID to identify players from this realm
-  uint8_t                          m_War3Version;               // custom warcraft 3 version for PvPGN users
-  char                             m_CommandTrigger;            // the character prefix to identify commands
   bool                             m_Exiting;                   // set to true and this class will be deleted next update
   bool                             m_FirstConnect;              // if we haven't tried to connect to battle.net yet
+  bool                             m_ReconnectNextTick;        // ignore reconnect delay
   bool                             m_WaitingToConnect;          // if we're waiting to reconnect to battle.net after being disconnected
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
   bool                             m_InChat;                    // if we've entered chat or not (but we're not necessarily in a chat channel yet
-  bool                             m_PvPGN;                     // if this BNET connection is actually a PvPGN
+  bool                             m_HadChatActivity;           // whether we've received chat/whisper events
 
 public:
-  CBNET(CAura* nAura, std::string nServer, const std::string& nServerAlias, const std::string& nCDKeyROC, const std::string& nCDKeyTFT, std::string nCountryAbbrev, std::string nCountry, uint32_t nLocaleID, const std::string& nUserName, const std::string& nUserPassword, std::string nFirstChannel, char nCommandTrigger, uint8_t nWar3Version, std::vector<uint8_t> nEXEVersion, std::vector<uint8_t> nEXEVersionHash, std::string nPasswordHashType, uint32_t nHostCounterID);
+  CBNET(CAura* nAura, CBNETConfig* nBNETConfig);
   ~CBNET();
   CBNET(CBNET&) = delete;
 
-  inline bool                 GetExiting() const { return m_Exiting; }
-  inline std::string          GetServer() const { return m_Server; }
-  inline std::string          GetServerAlias() const { return m_ServerAlias; }
-  inline std::string          GetCDKeyROC() const { return m_CDKeyROC; }
-  inline std::string          GetCDKeyTFT() const { return m_CDKeyTFT; }
-  inline std::string          GetUserName() const { return m_UserName; }
-  inline std::string          GetUserPassword() const { return m_UserPassword; }
-  inline std::string          GetFirstChannel() const { return m_FirstChannel; }
-  inline std::string          GetCurrentChannel() const { return m_CurrentChannel; }
-  inline char                 GetCommandTrigger() const { return m_CommandTrigger; }
-  inline std::vector<uint8_t> GetEXEVersion() const { return m_EXEVersion; }
-  inline std::vector<uint8_t> GetEXEVersionHash() const { return m_EXEVersionHash; }
-  inline std::string          GetPasswordHashType() const { return m_PasswordHashType; }
-  inline uint32_t             GetHostCounterID() const { return m_HostCounterID; }
-  inline bool                 GetLoggedIn() const { return m_LoggedIn; }
-  inline bool                 GetInChat() const { return m_InChat; }
-  inline uint32_t             GetOutPacketsQueued() const { return m_OutPackets.size(); }
-  inline bool                 GetPvPGN() const { return m_PvPGN; }
+  inline bool          GetExiting() const { return m_Exiting; }
+  inline bool          GetLoggedIn() const { return m_LoggedIn; }
+  inline bool          GetInChat() const { return m_InChat; }
+  inline uint32_t      GetOutPacketsQueued() const { return m_OutPackets.size(); }
+
+  bool                 GetEnabled() const;
+  bool                 GetPvPGN() const;
+  std::string          GetServer() const;
+  std::string          GetInputID() const;
+  std::string          GetUniqueDisplayName() const;
+  std::string          GetCanonicalDisplayName() const;
+  std::string          GetDataBaseID() const;
+  std::string          GetLogPrefix() const;
+  uint8_t              GetHostCounterID() const;
+  std::string          GetUserName() const;
+  bool                 GetIsMirror() const;
+  bool                 GetTunnelEnabled() const;
+  uint16_t             GetPublicHostPort() const;
+  std::string          GetPublicHostAddress() const;
+  uint32_t             GetMaxUploadSize() const;
+  std::string          GetCommandToken() const;
+  std::string          GetPrefixedGameName(const std::string& gameName) const;
+  bool                 GetAnnounceHostToChat() const;
 
   // processing functions
 
@@ -127,11 +126,14 @@ public:
   void QueueEnterChat();
   void QueueChatCommand(const std::string& chatCommand);
   void QueueChatCommand(const std::string& chatCommand, const std::string& user, bool whisper, const std::string& irc);
-  void QueueGameCreate(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter);
-  void QueueGameRefresh(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter);
+  void QueueGameCreate(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
+  void QueueGameMirror(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
+  void QueueGameRefresh(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace);
   void QueueGameUncreate();
 
   void UnqueueGameRefreshes();
+  void ResetConnection(bool hadError);
+  inline void SetReconnectNextTick(bool nReconnectNextTick) { m_ReconnectNextTick = nReconnectNextTick; };
 
   // other functions
 
@@ -141,11 +143,21 @@ public:
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
 
+  void SetConfig(CBNETConfig* CFG) {
+    delete m_Config;
+    m_Config = CFG;
+  };
+
 private:
-  std::string EncodeURIComponent(const std::string &s);
-  std::string DecodeURIComponent(const std::string &s);
-  std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount);
-  std::string GetEpicWarSuggestions(std::string pattern, int maxCount);
+  std::string EncodeURIComponent(const std::string &s) const;
+  std::string DecodeURIComponent(const std::string &s) const;
+  std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount) const;
+  std::string GetEpicWarSuggestions(std::string & pattern, int maxCount) const;
+  int ParseMapObservers(std::string s, bool & errored) const;
+  int ParseMapVisibility(std::string s, bool & errored) const;
+  int ParseMapRandomHero(std::string s, bool & errored) const;
+  std::pair<std::string, std::string> ParseMapId(const std::string s) const;
+  uint8_t DownloadRemoteMap(const std::string& siteId, const std::string& siteUri, std::string& downloadUri, std::string& downloadFilename) const;
 };
 
 #endif // AURA_BNET_H_

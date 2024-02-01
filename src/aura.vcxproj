@@ -139,7 +139,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -154,6 +154,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <WholeProgramOptimization>false</WholeProgramOptimization>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;cpr.lib;libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -254,52 +255,61 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="bncsutilinterface.cpp" />
-    <ClCompile Include="bnet.cpp" />
-    <ClCompile Include="bnetprotocol.cpp" />
-    <ClCompile Include="config.cpp" />
-    <ClCompile Include="crc32.cpp" />
     <ClCompile Include="csvparser.cpp" />
     <ClCompile Include="fileutil.cpp" />
-    <ClCompile Include="game.cpp" />
-    <ClCompile Include="gameplayer.cpp" />
+    <ClCompile Include="socket.cpp" />
+    <ClCompile Include="config.cpp" />
+    <ClCompile Include="config_bnet.cpp" />
+    <ClCompile Include="config_bot.cpp" />
+    <ClCompile Include="config_game.cpp" />
+    <ClCompile Include="config_irc.cpp" />
+    <ClCompile Include="bnetprotocol.cpp" />
     <ClCompile Include="gameprotocol.cpp" />
     <ClCompile Include="gpsprotocol.cpp" />
-    <ClCompile Include="gameslot.cpp" />
-    <ClCompile Include="aura.cpp" />
-    <ClCompile Include="auradb.cpp" />
+    <ClCompile Include="bncsutilinterface.cpp" />
+    <ClCompile Include="crc32.cpp" />
+    <ClCompile Include="sha1.cpp" />
+    <ClCompile Include="bnet.cpp" />
     <ClCompile Include="irc.cpp" />
     <ClCompile Include="map.cpp" />
-    <ClCompile Include="sha1.cpp" />
-    <ClCompile Include="socket.cpp" />
+    <ClCompile Include="gameplayer.cpp" />
+    <ClCompile Include="gameslot.cpp" />
+    <ClCompile Include="game.cpp" />
+    <ClCompile Include="aura.cpp" />
+    <ClCompile Include="auradb.cpp" />
     <ClCompile Include="sqlite3.c" />
     <ClCompile Include="stats.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bncsutilinterface.h" />
-    <ClInclude Include="bnet.h" />
-    <ClInclude Include="bnetprotocol.h" />
-    <ClInclude Include="config.h" />
-    <ClInclude Include="crc32.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="argh.h" />
     <ClInclude Include="csvparser.h" />
     <ClInclude Include="fileutil.h" />
-    <ClInclude Include="game.h" />
-    <ClInclude Include="gameplayer.h" />
+    <ClInclude Include="socket.h" />
+    <ClInclude Include="config.h" />
+    <ClInclude Include="config_bnet.h" />
+    <ClInclude Include="config_bot.h" />
+    <ClInclude Include="config_game.h" />
+    <ClInclude Include="config_irc.h" />
+    <ClInclude Include="bnetprotocol.h" />
     <ClInclude Include="gameprotocol.h" />
     <ClInclude Include="gpsprotocol.h" />
+    <ClInclude Include="bncsutilinterface.h" />
+    <ClInclude Include="crc32.h" />
+    <ClInclude Include="sha1.h" />
+    <ClInclude Include="bnet.h" />
+    <ClInclude Include="irc.h" />
+    <ClInclude Include="map.h" />
+    <ClInclude Include="gameplayer.h" />
     <ClInclude Include="gameslot.h" />
+    <ClInclude Include="game.h" />
     <ClInclude Include="aura.h" />
     <ClInclude Include="auradb.h" />
     <ClInclude Include="includes.h" />
-    <ClInclude Include="irc.h" />
-    <ClInclude Include="map.h" />
     <ClInclude Include="ms_stdint.h" />
-    <ClInclude Include="sha1.h" />
-    <ClInclude Include="socket.h" />
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="sqlite3ext.h" />
     <ClInclude Include="stats.h" />
-    <ClInclude Include="util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -24,11 +24,13 @@
 #include "socket.h"
 
 #include <queue>
+#include <string>
 
 class CTCPSocket;
 class CGameProtocol;
 class CGame;
 class CIncomingJoinPlayer;
+class CBNET;
 class CAura;
 
 //
@@ -91,7 +93,7 @@ private:
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
   std::queue<std::vector<uint8_t>> m_GProxyBuffer;                 // buffer with data used with GProxy++
   std::string                      m_LeftReason;                   // the reason the player left the game
-  std::string                      m_VerifiedRealm;                 // the realm the player last spoof checked :wq
+  uint8_t                          m_JoinedRealmID;
   std::string                      m_JoinedRealm;                  // the realm the player joined on (probable, can be spoofed)
   std::string                      m_Name;                         // the player's name
   uint32_t                         m_TotalPacketsSent;             // the total number of packets sent to the player
@@ -107,13 +109,17 @@ private:
   int64_t                          m_StartedLaggingTicks;          // GetTicks when the player started laggin
   int64_t                          m_LastGProxyWaitNoticeSentTime; // GetTime when the last disconnection notice has been sent when using GProxy++
   uint32_t                         m_GProxyReconnectKey;           // the GProxy++ reconnect key
+  int64_t                          m_KickByTime;
   int64_t                          m_LastGProxyAckTime;            // GetTime when we last acknowledged GProxy++ packet
   uint8_t                          m_PID;                          // the player's PID
   bool                             m_Verified;                      // if the player has spoof checked or not
   bool                             m_Reserved;                     // if the player is reserved (VIP) or not
   bool                             m_Observer;                     // if the player is an observer
+  bool                             m_PowerObserver;                // if the player is a referee - referees can be demoted to full observers
   bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
   bool                             m_WhoisSent;                    // if we've sent a battle.net /whois for this player yet (for spoof checking)
+  bool                             m_HasMap;                       // if we're allowed to download the map or not (used with permission based map downloads)
+  bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
   bool                             m_DownloadAllowed;              // if we're allowed to download the map or not (used with permission based map downloads)
   bool                             m_DownloadStarted;              // if we've started downloading the map or not
   bool                             m_DownloadFinished;             // if we've finished downloading the map or not
@@ -131,7 +137,7 @@ protected:
   bool m_DeleteMe;
 
 public:
-  CGamePlayer(CGame* game, CPotentialPlayer* potential, uint8_t nPID, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
+  CGamePlayer(CGame* game, CPotentialPlayer* potential, uint8_t nPID, uint8_t nJoinedRealmID, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
   ~CGamePlayer();
 
   uint32_t GetPing() const;
@@ -142,14 +148,17 @@ public:
   inline uint8_t               GetPID() const { return m_PID; }
   inline std::string           GetName() const { return m_Name; }
   inline std::vector<uint8_t>  GetInternalIP() const { return m_InternalIP; }
+  std::string                  GetInternalIPString() const;
   inline uint32_t              GetNumPings() const { return m_Pings.size(); }
   inline uint32_t              GetNumCheckSums() const { return m_CheckSums.size(); }
   inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }
   inline std::string           GetLeftReason() const { return m_LeftReason; }
   inline uint32_t              GetLeftCode() const { return m_LeftCode; }
-  inline std::string           GetJoinedRealm() const { return m_JoinedRealm; }
+  CBNET*                       GetRealm(bool mustVerify);
+  std::string                  GetRealmDataBaseID(bool mustVerify);
+  inline uint8_t               GetRealmID() const { return m_JoinedRealmID; }
+  inline std::string           GetRealmHostName() const { return m_JoinedRealm; }
   inline bool                  IsRealmVerified() const { return m_Verified; }
-  inline std::string           GetRealmVerified() const { return m_VerifiedRealm; }
   inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
   inline int64_t               GetJoinTime() const { return m_JoinTime; }
   inline uint32_t              GetLastMapPartSent() const { return m_LastMapPartSent; }
@@ -164,12 +173,17 @@ public:
   inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
   inline bool                  GetReserved() const { return m_Reserved; }
   inline bool                  GetObserver() const { return m_Observer; }
+  inline bool                  GetPowerObserver() const { return m_PowerObserver; }
   inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
   inline bool                  GetWhoisSent() const { return m_WhoisSent; }
   inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }
   inline bool                  GetDownloadStarted() const { return m_DownloadStarted; }
   inline bool                  GetDownloadFinished() const { return m_DownloadFinished; }
   inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
+  inline bool                  GetHasMap() const { return m_HasMap; }
+  inline bool                  GetHasHighPing() const { return m_HasHighPing; }
+  inline int64_t               GetKickByTime() const { return m_KickByTime; }
+  inline bool                  GetKickQueued() const { return m_KickByTime != 0; }
   inline bool                  GetLagging() const { return m_Lagging; }
   inline bool                  GetDropVote() const { return m_DropVote; }
   inline bool                  GetKickVote() const { return m_KickVote; }
@@ -178,7 +192,6 @@ public:
   inline void SetSocket(CTCPSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
-  inline void SetRealmVerifiedRealm(const std::string& nVerifiedRealm) { m_VerifiedRealm = nVerifiedRealm; }
   inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
   inline void SetSyncCounter(uint32_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
   inline void SetLastMapPartSent(uint32_t nLastMapPartSent) { m_LastMapPartSent = nLastMapPartSent; }
@@ -189,10 +202,13 @@ public:
   inline void SetRealmVerified(bool nVerified) { m_Verified = nVerified; }
   inline void SetReserved(bool nReserved) { m_Reserved = nReserved; }
   inline void SetObserver(bool nObserver) { m_Observer = nObserver; }
+  inline void SetPowerObserver(bool nPowerObserver) { m_PowerObserver = nPowerObserver; }
   inline void SetWhoisShouldBeSent(bool nWhoisShouldBeSent) { m_WhoisShouldBeSent = nWhoisShouldBeSent; }
   inline void SetDownloadAllowed(bool nDownloadAllowed) { m_DownloadAllowed = nDownloadAllowed; }
   inline void SetDownloadStarted(bool nDownloadStarted) { m_DownloadStarted = nDownloadStarted; }
   inline void SetDownloadFinished(bool nDownloadFinished) { m_DownloadFinished = nDownloadFinished; }
+  inline void SetHasMap(bool nHasMap) { m_HasMap = nHasMap; }
+  inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
   inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
   inline void SetKickVote(bool nKickVote) { m_KickVote = nKickVote; }
@@ -200,6 +216,7 @@ public:
   inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
+  inline void SetKickByTime(int64_t nKickByTime) { m_KickByTime = nKickByTime; }
 
   // processing functions
 
