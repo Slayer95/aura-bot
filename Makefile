@@ -64,6 +64,7 @@ OBJS = src/fileutil.o \
 			 src/gameplayer.o \
 			 src/gameslot.o \
 			 src/game.o \
+			 src/command.o \
 			 src/aura.o \
 			 src/auradb.o \
 			 src/stats.o

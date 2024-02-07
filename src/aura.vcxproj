@@ -275,6 +275,7 @@
     <ClCompile Include="gameplayer.cpp" />
     <ClCompile Include="gameslot.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="command.cpp" />
     <ClCompile Include="aura.cpp" />
     <ClCompile Include="auradb.cpp" />
     <ClCompile Include="sqlite3.c" />
@@ -303,6 +304,7 @@
     <ClInclude Include="gameplayer.h" />
     <ClInclude Include="gameslot.h" />
     <ClInclude Include="game.h" />
+    <ClInclude Include="command.h" />
     <ClInclude Include="aura.h" />
     <ClInclude Include="auradb.h" />
     <ClInclude Include="includes.h" />

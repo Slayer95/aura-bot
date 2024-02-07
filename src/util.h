@@ -27,6 +27,7 @@
 #include <sstream>
 #include <iomanip>
 #include <regex>
+#include <filesystem>
 
 #undef min
 
@@ -287,7 +288,7 @@ inline std::vector<uint8_t> ExtractIPv4(std::string& s)
     if (element.empty())
       break;
 
-    uint8_t parsedElement = 0;
+    uint32_t parsedElement = 0;
     try {
       parsedElement = std::stoi(element);
     } catch (...) {
@@ -296,7 +297,7 @@ inline std::vector<uint8_t> ExtractIPv4(std::string& s)
     if (parsedElement < 0 || parsedElement > 0xFF)
       break;
 
-    Output.push_back(parsedElement);
+    Output.push_back(static_cast<uint8_t>(parsedElement));
   }
 
   if (Output.size() != 4)
@@ -316,7 +317,7 @@ inline std::string TrimString(const std::string& str) {
   }
 }
 
-inline std::vector<std::string> SplitArgs(std::string& s, uint8_t expectedCount)
+inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;
   std::stringstream SS(s);
@@ -337,7 +338,7 @@ inline std::vector<std::string> SplitArgs(std::string& s, uint8_t expectedCount)
   return Output;
 }
 
-inline std::vector<std::string> SplitArgs(std::string& s, uint8_t minCount, uint8_t maxCount)
+inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount)
 {
   uint8_t parsedCount = 0;
   std::stringstream SS(s);
@@ -349,6 +350,70 @@ inline std::vector<std::string> SplitArgs(std::string& s, uint8_t minCount, uint
       break;
     }
     Output.push_back(TrimString(NextItem));
+    ++parsedCount;
+  } while (!SS.eof() && parsedCount < maxCount);
+
+  if (!(minCount <= parsedCount && parsedCount <= maxCount))
+    Output.clear();
+
+  return Output;
+}
+
+inline std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t expectedCount)
+{
+  uint8_t parsedCount = 0;
+  std::stringstream SS(s);
+  uint32_t NextItem;
+  std::string NextString;
+  std::vector<uint32_t> Output;
+  do {
+    bool elemOkay = true;
+    std::getline(SS, NextString, ',');
+    if (SS.fail()) {
+      break;
+    }
+    try {
+      NextItem = std::stol(TrimString(NextString));
+    } catch (...) {
+      elemOkay = false;
+    }
+    if (!elemOkay) {
+      Output.clear();
+      break;
+    }
+    Output.push_back(NextItem);
+    ++parsedCount;
+  } while (!SS.eof() && parsedCount < expectedCount);
+
+  if (parsedCount != expectedCount)
+    Output.clear();
+
+  return Output;
+}
+
+inline std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount)
+{
+  uint8_t parsedCount = 0;
+  std::stringstream SS(s);
+  uint32_t NextItem;
+  std::string NextString;
+  std::vector<uint32_t> Output;
+  do {
+    bool elemOkay = true;
+    std::getline(SS, NextString, ',');
+    if (SS.fail()) {
+      break;
+    }
+    try {
+      NextItem = std::stol(TrimString(NextString));
+    } catch (...) {
+      elemOkay = false;
+    }
+    if (!elemOkay) {
+      Output.clear();
+      break;
+    }
+    Output.push_back(NextItem);
     ++parsedCount;
   } while (!SS.eof() && parsedCount < maxCount);
 
@@ -567,6 +632,20 @@ inline std::string DecodeURIComponent(const std::string & encoded) {
   }
 
   return decoded.str();
+}
+
+inline std::string GetFileName(const std::string & inputPath) {
+  std::filesystem::path filePath = inputPath;
+  return filePath.filename().string();
+}
+
+inline bool PathHasNullBytes(const std::filesystem::path & filePath) {
+  for (const auto& c : filePath.native()) {
+    if (c == '\0') {
+      return true; // Found a null byte
+    }
+  }
+  return false; // No null bytes found
 }
 
 #endif // AURA_UTIL_H_

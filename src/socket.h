@@ -184,12 +184,14 @@ class CTCPSocket : public CSocket
 protected:
   std::string m_RecvBuffer;
   std::string m_SendBuffer;
+  std::string m_Name;
+  uint32_t    m_RemoteSocketCounter;
   uint32_t    m_LastRecv;
   bool        m_Connected;
 
 public:
-  CTCPSocket();
-  CTCPSocket(SOCKET nSocket, struct sockaddr_in nSIN);
+  CTCPSocket(std::string nName);
+  CTCPSocket(SOCKET nSocket, struct sockaddr_in nSIN, std::string nName);
   ~CTCPSocket();
 
   inline std::string* GetBytes() { return &m_RecvBuffer; }
@@ -220,7 +222,7 @@ protected:
   bool m_Connecting;
 
 public:
-  CTCPClient();
+  CTCPClient(std::string nName);
   ~CTCPClient();
 
   inline std::string* GetBytes() { return &m_RecvBuffer; }
@@ -248,7 +250,7 @@ public:
 class CTCPServer final : public CTCPSocket
 {
 public:
-  CTCPServer();
+  CTCPServer(std::string nName);
   ~CTCPServer();
 
   bool Listen(const std::string& address, uint16_t port, bool retry);

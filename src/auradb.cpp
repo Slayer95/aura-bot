@@ -57,16 +57,16 @@ CAuraDB::CAuraDB(CConfig* CFG)
     RootAdminCheckStmt(nullptr),
     m_HasError(false)
 {
-  m_File = CFG->GetString("db_sqlite3_file", "aura.dbs");
-  Print("[SQLITE3] opening database [" + m_File + "]");
-  m_DB = new CSQLITE3(m_File);
+  m_File = CFG->GetPath("db_sqlite3_file", GetExeDirectory() / filesystem::path("aura.dbs"));
+  Print("[SQLITE3] opening database [" + m_File.filename().string() + "]");
+  m_DB = new CSQLITE3(m_File.string());
 
   if (!m_DB->GetReady())
   {
     // setting m_HasError to true indicates there's been a critical error and we want Aura to shutdown
     // this is okay here because we're in the constructor so we're not dropping any games or players
 
-    Print(string("[SQLITE3] error opening database [" + m_File + "] - ") + m_DB->GetError());
+    Print(string("[SQLITE3] error opening database [" + m_File.string() + "] - ") + m_DB->GetError());
     m_HasError = true;
     m_Error    = "error opening database";
     return;
@@ -146,7 +146,7 @@ CAuraDB::CAuraDB(CConfig* CFG)
 
 CAuraDB::~CAuraDB()
 {
-  Print("[SQLITE3] closing database [" + m_File + "]");
+  Print("[SQLITE3] closing database [" + m_File.filename().string() + "]");
 
   if (FromAddStmt)
     m_DB->Finalize(FromAddStmt);

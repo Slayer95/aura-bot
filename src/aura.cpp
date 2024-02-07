@@ -93,13 +93,15 @@ int main(const int argc, const char* argv[])
   // read config file
 
   CConfig CFG;
-  if (!CFG.Read("aura.cfg")) {
+  filesystem::path ExeDirectory = GetExeDirectory();
+  filesystem::path ConfigPath = ExeDirectory / filesystem::path("aura.cfg");
+  if (!CFG.Read(ConfigPath)) {
     int FileSize = 0;
-    string CFGExample = FileRead("aura-example.cfg", &FileSize);
+    string CFGExample = FileRead(ExeDirectory / filesystem::path("aura-example.cfg"), &FileSize);
     vector<uint8_t> CFGCopy(CFGExample.begin(), CFGExample.end());
     Print("[AURA] copying aura-example.cfg to aura.cfg...");
-    FileWrite("aura.cfg", CFGCopy.data(), CFGCopy.size());
-    if (!CFG.Read("aura.cfg")) {
+    FileWrite(ConfigPath, CFGCopy.data(), CFGCopy.size());
+    if (!CFG.Read(ConfigPath)) {
       Print("[AURA] error initializing aura.cfg");
       return 1;
     }
@@ -202,6 +204,9 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_HostPort(0),
     m_UDPServerEnabled(false),
     m_MaxGameNameSize(31),
+    m_SudoRealm(nullptr),
+    m_SudoGame(nullptr),
+    m_SudoIRC(nullptr),
     m_GameRangerLocalPort(0),
     m_GameRangerLocalAddress("255.255.255.255"),
     m_GameRangerRemotePort(0),
@@ -219,7 +224,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_UDPServer->SetBroadcastTarget(CFG->GetString("udp_broadcasttarget", string()));
     m_UDPServer->SetDontRoute(CFG->GetBool("udp_dontroute", false));
     if (!m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112, false)) {
-      Print("[AURA] waiting for active instances of Warcraft to close... Please release port 6112.");
+      Print("[UDPSERVER] waiting for active instances of Warcraft to close... Please release port 6112.");
       std::this_thread::sleep_for(std::chrono::milliseconds(5000));
       if (!m_UDPServer->Listen(CFG->GetString("bot_bindaddress", "0.0.0.0"), 6112, true)) {
         Print("[AURA] error - close active instances of Warcraft, and/or pause LANViewer to initialize Aura.");
@@ -245,7 +250,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     Print("[AURA] Broadcasting games port " + std::to_string(m_Config->m_LANHostPort) + " over LAN");
   }
 
-  if (m_Config->m_EnableBNET) {
+  if (m_Config->m_EnableBNET.value_or(true)) {
     LoadBNETs(CFG);
   }
   LoadIRC(CFG);
@@ -267,7 +272,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   // these two files are necessary for calculating "map_crc" when loading maps so we make sure they are available
   // see CMap :: Load for more information
   m_ScriptsExtracted = ExtractScripts() == 2;
-  if (!m_ScriptsExtracted && (!FileExists(m_Config->m_MapCFGPath + "common.j") || !FileExists(m_Config->m_MapCFGPath + "blizzard.j"))) {
+  if (!m_ScriptsExtracted && (!FileExists(m_Config->m_MapCFGPath / filesystem::path("common.j")) || !FileExists(m_Config->m_MapCFGPath / filesystem::path("blizzard.j")))) {
     Print("[AURA] error - close active instances of Warcraft and/or WorldEdit to initialize Aura.");
     m_Ready = false;
     return;
@@ -290,6 +295,9 @@ void CAura::LoadBNETs(CConfig* CFG)
   for (uint8_t i = 1; i <= 240; ++i) { // uint8_t wraps around and loops forever
     bool DoResetConnection = false;
     CBNETConfig* ThisConfig = new CBNETConfig(CFG, m_BNETDefaultConfig, i);
+    if (m_Config->m_EnableBNET.has_value()) {
+      ThisConfig->m_Enabled = m_Config->m_EnableBNET.value();
+    }
     if (ThisConfig->m_HostName.empty()) {
       delete ThisConfig;
       continue;
@@ -352,6 +360,10 @@ void CAura::LoadIRC(CConfig* CFG)
 
 CAura::~CAura()
 {
+  m_SudoGame = nullptr;
+  m_SudoIRC = nullptr;
+  m_SudoRealm = nullptr;  
+
   delete m_Config;
   delete m_BNETDefaultConfig;
   delete m_GameDefaultConfig;
@@ -375,6 +387,36 @@ CAura::~CAura()
   delete m_IRC;
 }
 
+CBNET* CAura::GetRealmByInputId(const string& inputId)
+{
+  for (auto& bnet : m_BNETs) {
+    if (bnet->GetInputID() == inputId) {
+      return bnet;
+    }
+  }
+  return nullptr;
+}
+
+CBNET* CAura::GetRealmByHostName(const string& hostName)
+{
+  for (auto& bnet : m_BNETs) {
+    if (bnet->GetServer() == hostName) {
+      return bnet;
+    }
+  }
+  return nullptr;
+}
+
+CBNET* CAura::GetRealmByHostCounter(const uint8_t hostCounter)
+{
+  for (auto& bnet : m_BNETs) {
+    if (bnet->GetHostCounterID() == hostCounter) {
+      return bnet;
+    }
+  }
+  return nullptr;
+}
+
 CTCPServer* CAura::GetGameServer(uint16_t port, string& name)
 {
   auto it = m_GameServers.find(port);
@@ -382,7 +424,7 @@ CTCPServer* CAura::GetGameServer(uint16_t port, string& name)
     Print("[GAME] " + name + " Assigned to port " + to_string(port));
     return it->second;
   }
-  m_GameServers[port] = new CTCPServer();
+  m_GameServers[port] = new CTCPServer("TCPServer@" + to_string(port));
   std::vector<CPotentialPlayer*> IncomingConnections;
   m_IncomingConnections[port] = IncomingConnections;
   if (!m_GameServers[port]->Listen(m_Config->m_BindAddress, port, false)) {
@@ -393,9 +435,9 @@ CTCPServer* CAura::GetGameServer(uint16_t port, string& name)
   return m_GameServers[port];
 }
 
-pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput, const string& observersInput, const string& visibilityInput, const string& randomHeroInput, const bool& gonnaBeLucky)
+pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput, const string& observersInput, const string& visibilityInput, const string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath)
 {
-  string Map = mapInput;
+  string SearchInput = mapInput;
   int MapObserversValue = -1;
   int MapVisibilityValue = -1;
   int MapExtraFlags = 0;
@@ -430,12 +472,14 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
 
   string MapSiteUri;
   string MapDownloadUri;
-  string ResolvedCFGPath;
+  filesystem::path ResolvedCFGPath;
   string ResolvedCFGName;
-  string File;
+  filesystem::path FilePath;
+  string FileName;
+  string FileNameClient;
   bool ResolvedCFGExists = false;
 
-  pair<string, string> NamespacedMap = ParseMapId(Map);
+  pair<string, string> NamespacedMap = ParseMapId(SearchInput, m_Config->m_StrictPaths);
   if (NamespacedMap.first == "remote") {
     return make_pair(0x30, string("Download from the specified domain not supported"));
   }
@@ -450,7 +494,7 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
     MapSiteUri = "https://www.epicwar.com/maps/" + NamespacedMap.second;
     // Check that we don't download the same map multiple times.
     ResolvedCFGName = "epicwar-" + NamespacedMap.second + ".cfg";
-    ResolvedCFGPath = this->m_Config->m_MapCFGPath + ResolvedCFGName;
+    ResolvedCFGPath = this->m_Config->m_MapCFGPath / filesystem::path(ResolvedCFGName);
     ResolvedCFGExists = MapCFG.Read(ResolvedCFGPath);
   }
 
@@ -464,7 +508,7 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
       return make_pair(0x40, string("Currently hosting ") + to_string(this->m_Games.size()) + " game(s). Downloads are disabled to prevent high latency.");
     }
 
-    uint8_t DownloadResult = DownloadRemoteMap(NamespacedMap.first, MapSiteUri, MapDownloadUri, Map, m_Config->m_MapPath, m_BusyMaps);
+    uint8_t DownloadResult = DownloadRemoteMap(NamespacedMap.first, MapSiteUri, MapDownloadUri, FileName, FileNameClient, m_Config->m_MapPath, m_BusyMaps);
 
     if (DownloadResult == 1) {
       return make_pair(0x50, string("Map not found in EpicWar."));
@@ -478,72 +522,95 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
       return make_pair(0x54, string("Download failed - code ") + to_string(DownloadResult));
     }
     //QueueChatCommand("Downloaded <" + MapSiteUri + "> as [" + Map + "]", User, Whisper, m_IRC);
-    Print("[AURA] Downloaded <" + MapSiteUri + "> as [" + Map + "]");
+    Print("[AURA] Downloaded <" + MapSiteUri + "> as [" + FileName + "]");
+    SearchInput = FileName;
   }
 
   if (NamespacedMap.first == "local") {
-    Map = NamespacedMap.second;
+    SearchInput = NamespacedMap.second;
   }
 
   if (ResolvedCFGExists) {
     // Exact resolution by map identifier.
-    //QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
+    //QueueChatCommand("Loading config file [" + ResolvedCFGPath.string() + "]", User, Whisper, m_IRC);
   } else {
-    // Fuzzy resolution by map name.
-    const vector<string> LocalMatches = this->MapFilesMatch(Map);
-    if (LocalMatches.empty()) {
-      string Suggestions = GetEpicWarSuggestions(Map, 5);
-      if (Suggestions.empty()) {
-        return make_pair(0x61, string("No matching map found."));
-      } else {
-        return make_pair(0x62, string("Suggestions: ") + Suggestions);
+    if (m_Config->m_StrictPaths) {
+      filesystem::path mapPath = SearchInput;
+      if (!allowArbitraryMapPath && mapPath.is_absolute()) {
+        return make_pair(0x60, string("Absolute map path not allowed."));
       }
+      FilePath = (mapPath.is_absolute() ? mapPath : (this->m_Config->m_MapPath / mapPath)).lexically_normal();
+      FileName = FilePath.filename().string();
+      if (PathHasNullBytes(FilePath) || !allowArbitraryMapPath && FilePath.parent_path() != this->m_Config->m_MapPath) {
+        return make_pair(0x61, string("Forbidden map path."));
+      }
+    } else {
+      // Fuzzy resolution by map name.
+      const vector<string> LocalMatches = this->MapFilesMatch(SearchInput);
+      if (LocalMatches.empty()) {
+        string Suggestions = GetEpicWarSuggestions(SearchInput, 5);
+        if (Suggestions.empty()) {
+          return make_pair(0x62, string("No matching map found."));
+        } else {
+          return make_pair(0x63, string("Suggestions: ") + Suggestions);
+        }
+      }
+      if (LocalMatches.size() > 1 && !gonnaBeLucky) {
+        string Suggestions = GetEpicWarSuggestions(SearchInput, 5);
+        string Results = JoinVector(LocalMatches, !Suggestions.empty()) + Suggestions;
+        return make_pair(0x63, string("Suggestions: ") + Results);
+      }
+      filesystem::path FileNameFragment = LocalMatches.at(0);
+      FilePath = this->m_Config->m_MapPath / FileNameFragment;
+      FileName = FilePath.filename().string();
     }
-    if (LocalMatches.size() > 1 && !gonnaBeLucky) {
-      string Suggestions = GetEpicWarSuggestions(Map, 5);
-      string Results = JoinVector(LocalMatches, !Suggestions.empty()) + Suggestions;
-      return make_pair(0x63, string("Suggestions: ") + Results);
-    }
-    File = LocalMatches.at(0);
-    if (this->m_CachedMaps.find(File) != this->m_CachedMaps.end()) {
-      ResolvedCFGName = this->m_CachedMaps[File];
-      ResolvedCFGPath = this->m_Config->m_MapCFGPath + ResolvedCFGName;
+
+    // Load associated CFG if available.
+    if (m_Config->m_EnableCFGCache && this->m_CachedMaps.find(FileName) != this->m_CachedMaps.end()) {
+      ResolvedCFGName = this->m_CachedMaps[FileName];
+      ResolvedCFGPath = this->m_Config->m_MapCFGPath / filesystem::path(ResolvedCFGName);
       ResolvedCFGExists = MapCFG.Read(ResolvedCFGPath);
       if (ResolvedCFGExists) {
-        //QueueChatCommand("Loading config file [" + ResolvedCFGPath + "]", User, Whisper, m_IRC);
+        //QueueChatCommand("Loading config file [" + ResolvedCFGPath.string() + "]", User, Whisper, m_IRC);
       } else {
         // Oops! CFG file is gone!
-        this->m_CachedMaps.erase(File);
+        this->m_CachedMaps.erase(FileName);
       }
     }
     if (!ResolvedCFGExists) {
       // CFG nowhere to be found.
-      Print("[AURA] Loading map file [" + File + "]...");
+      Print("[AURA] Loading map file [" + FileName + "]...");
 
       MapCFG.Set("cfg_partial", "1");
-      if (File.length() > 6 && File[File.length() - 6] == '~' && isdigit(File[File.length() - 5])) {
+      if (FileNameClient.length() > 6 && FileName[FileNameClient.length() - 6] == '~' && isdigit(FileNameClient[FileNameClient.length() - 5])) {
         // IDK if this path is okay. Let's give it a try.
-        MapCFG.Set("map_path", R"(Maps\Download\)" + File.substr(0, File.length() - 6) + File.substr(File.length() - 4, File.length()));
+        MapCFG.Set("map_path", R"(Maps\Download\)" + FileNameClient.substr(0, FileNameClient.length() - 6) + FileNameClient.substr(FileNameClient.length() - 4, FileNameClient.length()));
       } else {
-        MapCFG.Set("map_path", R"(Maps\Download\)" + File);
+        MapCFG.Set("map_path", R"(Maps\Download\)" + FileNameClient);
       }
-      MapCFG.Set("map_localpath", File);
+      if (FilePath.parent_path() == this->m_Config->m_MapPath) {
+        MapCFG.Set("map_localpath", FileName);
+      } else {
+        MapCFG.Set("map_localpath", FilePath.string());
+      }
       MapCFG.Set("map_site", MapSiteUri);
       MapCFG.Set("map_url", MapDownloadUri);
       if (NamespacedMap.first != "local")
         MapCFG.Set("downloaded_by", user);
 
-      if (File.find("DotA") != string::npos)
+      if (FileName.find("DotA") != string::npos)
         MapCFG.Set("map_type", "dota");
 
       if (ResolvedCFGName.empty()) {
-        ResolvedCFGName = "local-" + File + ".cfg";
-        ResolvedCFGPath = this->m_Config->m_MapCFGPath + ResolvedCFGName;
+        ResolvedCFGName = "local-" + FileName + ".cfg";
+        ResolvedCFGPath = this->m_Config->m_MapCFGPath / filesystem::path(ResolvedCFGName);
       }
 
-      vector<uint8_t> OutputBytes = MapCFG.Export();
-      FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
-      this->m_CachedMaps[File] = ResolvedCFGName;
+      if (m_Config->m_EnableCFGCache) {
+        vector<uint8_t> OutputBytes = MapCFG.Export();
+        FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size());
+        this->m_CachedMaps[FileName] = ResolvedCFGName;
+      }
     }
   }
 
@@ -572,18 +639,18 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
   }
 
   if (!ResolvedCFGExists) {
-    if (MapCFG.GetInt("cfg_partial", 0) == 0) {
+    if (m_Config->m_EnableCFGCache && MapCFG.GetInt("cfg_partial", 0) == 0) {
       // Download and parse successful
       vector<uint8_t> OutputBytes = MapCFG.Export();
       if (FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size())) {
-        Print("[AURA] Cached map config for [" + File + "] as [" + ResolvedCFGPath + "]");
+        Print("[AURA] Cached map config for [" + FileName + "] as [" + ResolvedCFGPath.string() + "]");
       }
     }
-    //QueueChatCommand("Map file loaded OK [" + File + "]", User, Whisper, m_IRC);
-    Print("[AURA] Map file loaded OK [" + File + "]");
-    return make_pair(0, string("Map file loaded OK [") + File + "]");
+    //QueueChatCommand("Map file loaded OK [" + FileName + "]", User, Whisper, m_IRC);
+    Print("[AURA] Map file loaded OK [" + FileName + "]");
+    return make_pair(0, string("Map file loaded OK [") + FileName + "]");
   } else {
-    return make_pair(0, string("Config file loaded OK [") + ResolvedCFGPath + "]");
+    return make_pair(0, string("Config file loaded OK [") + ResolvedCFGPath.string() + "]");
   }
 }
 
@@ -603,6 +670,8 @@ bool CAura::Update()
       string RHInput = action[5];
       string OwnerName = action[6];
       string ExcludedRealm = action[7]; // TODO?
+      const bool AllowTraversal = action[8] == "1";
+      const bool GonnaBeLucky = true;
 
       string OwnerRealmName;
       CBNET* OwnerRealm = nullptr;
@@ -612,19 +681,10 @@ bool CAura::Update()
         OwnerName = OwnerName.substr(0, OwnerRealmIndex);
         OwnerRealmName = OwnerName.substr(OwnerRealmIndex + 1, OwnerName.length());
         transform(begin(OwnerRealmName), end(OwnerRealmName), begin(OwnerRealmName), ::tolower);
-        for (auto& bnet : m_BNETs) {
-          if (bnet->GetInputID() == OwnerRealmName) {
-            if (!bnet->GetIsMirror()) {
-              OwnerRealm = bnet;
-              break;
-            } else if (OwnerRealm == nullptr) {
-              OwnerRealm = bnet;
-            }
-          }
-        }
+        OwnerRealm = GetRealmByInputId(OwnerRealmName);
       }
 
-      pair<uint8_t, string> LoadResult = LoadMap(OwnerName, MapInput, ObsInput, VisInput, RHInput, true /* I'm gonna be lucky */);
+      pair<uint8_t, string> LoadResult = LoadMap(OwnerName, MapInput, ObsInput, VisInput, RHInput, GonnaBeLucky, AllowTraversal);
       if (!LoadResult.second.empty()) {
         Print("[AURA] " + LoadResult.second);
       }
@@ -906,7 +966,7 @@ bool CAura::Update()
             }
 
             if (pkt->buf[8] == m_Config->m_War3Version) {
-              if (m_CurrentLobby && !m_CurrentLobby->GetIsMirror() && !m_CurrentLobby->GetCountDownStarted()) {
+              if (m_CurrentLobby && m_CurrentLobby->GetLANEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
                 if (FromGameRanger) {
                   m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_GameRangerRemoteAddress, m_GameRangerRemotePort, ExtraDigit);
                 } else {
@@ -940,7 +1000,7 @@ void CAura::EventBNETGameRefreshFailed(CBNET* bnet)
     if (m_CurrentLobby->GetNumHumanPlayers() != 0)
       m_CurrentLobby->SendAllChat("Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
     else if (m_CurrentLobby->GetCreatorServer()) {
-      m_CurrentLobby->GetCreatorServer()->QueueChatCommand("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName(), true, string());
+      m_CurrentLobby->GetCreatorServer()->QueueChatCommand("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName(), true);
     }
 
     Print2("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
@@ -963,14 +1023,14 @@ void CAura::EventGameDeleted(CGame* game)
     bnet->QueueChatCommand("Game [" + game->GetDescription() + "] is over");
 
     if (bnet == game->GetCreatorServer())
-      bnet->QueueChatCommand("Game [" + game->GetDescription() + "] is over", game->GetCreatorName(), true, string());
+      bnet->QueueChatCommand("Game [" + game->GetDescription() + "] is over", game->GetCreatorName(), true);
   }
 }
 
 void CAura::ReloadConfigs()
 {
   uint8_t WasVersion = m_Config->m_War3Version;
-  string WasCFGPath  = m_Config->m_MapCFGPath;
+  filesystem::path WasCFGPath  = m_Config->m_MapCFGPath;
   CConfig* CFG = new CConfig();
   CFG->Read("aura.cfg");
   LoadConfigs(CFG);
@@ -1006,8 +1066,10 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
       aura
       ! --version
       ! --help
+      ! --stdpaths
        --w3version <DIRECTORY> --w3path <DIRECTORY> --mapdir <DIRECTORY> --cfgdir <DIRECTORY>
-      ! --lan <BOOLEAN> --bnet <BOOLEAN> --exit <BOOLEAN> --nolan <BOOLEAN> --nobnet <BOOLEAN> --noexit <BOOLEAN>
+      ! --lan <BOOLEAN> --bnet <BOOLEAN> --exit <BOOLEAN> --cache <BOOLEAN>
+      ! --nolan <BOOLEAN> --nobnet <BOOLEAN> --noexit <BOOLEAN> --nocache <BOOLEAN>
       ! --udp <MODE:(strict|lax|free)>
        <MAP> <NAME> --exclude <SERVER> --mirror <IP:PORT#ID>
        <MAP> <NAME> --obs <OBSERVER> --visibility <VISIBILITY> --rh <RANDOM> --owner <USER@SERVER>
@@ -1016,9 +1078,9 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
     */
 
     // Flags
-    //"--version", "--help",
-    //"--lan", "--bnet", "--exit",
-    //"--nolan", "--nobnet", "--noexit",
+    //"--version", "--help", "--stdpaths",
+    //"--lan", "--bnet", "--exit", "--cache",
+    //"--nolan", "--nobnet", "--noexit", "--nocache",
 
     // Parameters
     "--w3version", "--w3path", "--mapdir", "--cfgdir",
@@ -1041,45 +1103,16 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
     return true;
   }
 
+  optional<bool> bnet = m_Config->m_EnableBNET;
   bool noexit = !m_Config->m_ExitOnStandby;
-  bool nobnet = !m_Config->m_EnableBNET;
   bool nolan = !m_GameDefaultConfig->m_LANEnabled;
-
-  if (!cmdl[1].empty() && !cmdl[2].empty()) {
-    string MirrorTarget, ExcludedRealm;
-    cmdl("mirror") >> MirrorTarget;
-    cmdl("exclude") >> ExcludedRealm;
-    vector<string> Action;
-    if (!MirrorTarget.empty()) {
-      Action.push_back("mirror");
-      Action.push_back(cmdl[1]);
-      Action.push_back(cmdl[2]);
-      Action.push_back(ExcludedRealm);
-      Action.push_back(MirrorTarget);
-    } else {
-      string Obs, Vision, RandomHeroes, Owner;
-      cmdl("obs") >> Obs;
-      cmdl("visibility") >> Vision;
-      cmdl("rh") >> RandomHeroes;
-      cmdl("owner") >> Owner;
-      Action.push_back("host");
-      Action.push_back(cmdl[1]);
-      Action.push_back(cmdl[2]);
-      Action.push_back(Obs);
-      Action.push_back(Vision);
-      Action.push_back(RandomHeroes);
-      Action.push_back(Owner);
-      Action.push_back(ExcludedRealm);
-    }
-    m_PendingActions.push_back(Action);
-    noexit = false;
-  }
-
+  bool nocache = !m_Config->m_EnableCFGCache;
+  bool stdpaths = false;
   
   uint32_t War3Version = m_Config->m_War3Version;
-  string War3Path = m_Config->m_Warcraft3Path;
-  string MapPath = m_Config->m_MapPath;
-  string MapCFGPath = m_Config->m_MapCFGPath;
+  string War3Path = m_Config->m_Warcraft3Path.string();
+  string MapPath = m_Config->m_MapPath.string();
+  string MapCFGPath = m_Config->m_MapCFGPath.string();
 
   cmdl("w3version", War3Version) >> War3Version;
   cmdl("w3path", War3Path) >> War3Path;
@@ -1087,8 +1120,55 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   cmdl("cfgdir", MapCFGPath) >> MapCFGPath;
 
   cmdl("noexit", noexit) >> noexit;
-  cmdl("nobnet", nobnet) >> nobnet;
+  //cmdl("nobnet", nobnet) >> nobnet;
   cmdl("nolan", nolan) >> nolan;
+  cmdl("nocache", nocache) >> nocache;
+  cmdl("stdpaths") >> stdpaths;
+
+  if (!cmdl[1].empty() && !cmdl[2].empty()) {
+    string MirrorTarget, ExcludedRealm;
+    cmdl("mirror") >> MirrorTarget;
+    cmdl("exclude") >> ExcludedRealm;
+
+    string TargetMapPath = cmdl[1];
+    if (stdpaths) {
+      filesystem::path mapPath = TargetMapPath;
+      TargetMapPath = filesystem::absolute(mapPath).lexically_normal().string();
+    }
+
+    vector<string> Action;
+    if (!MirrorTarget.empty()) {
+      Action.push_back("mirror");
+      Action.push_back(TargetMapPath);
+      Action.push_back(cmdl[2]);
+      Action.push_back(ExcludedRealm);
+
+      Action.push_back(MirrorTarget);
+      Action.push_back(stdpaths ? "1" : "0");
+    } else {
+      string Obs, Vision, RandomHeroes, Owner;
+      cmdl("obs") >> Obs;
+      cmdl("visibility") >> Vision;
+      cmdl("rh") >> RandomHeroes;
+      cmdl("owner") >> Owner;
+
+      Action.push_back("host");
+      Action.push_back(TargetMapPath);
+      Action.push_back(cmdl[2]);
+      Action.push_back(Obs);
+
+      Action.push_back(Vision);
+      Action.push_back(RandomHeroes);
+      Action.push_back(Owner);
+      Action.push_back(ExcludedRealm);
+
+      Action.push_back(stdpaths ? "1" : "0");
+    }
+
+    noexit = false;
+    //nocache = cmdl("stdpaths");
+    m_PendingActions.push_back(Action);
+  }
 
   m_Config->m_War3Version = War3Version;
   m_Config->m_Warcraft3Path = War3Path;
@@ -1096,8 +1176,10 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   m_Config->m_MapCFGPath = MapCFGPath;
 
   m_Config->m_ExitOnStandby = !noexit;
-  m_Config->m_EnableBNET = !nobnet;
+  //m_Config->m_EnableBNET = !nobnet;
   m_GameDefaultConfig->m_LANEnabled = !nolan;
+  m_Config->m_EnableCFGCache = !nocache;
+  m_Config->m_StrictPaths = stdpaths;
 
   string ExecCommand, ExecAs, ExecAuth;
   cmdl("exec", ExecCommand) >> ExecCommand;
@@ -1112,18 +1194,6 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
     Action.push_back(ExecAuth);
     m_PendingActions.push_back(Action);
   }
-  /*
-    aura
-  --version
-  --help
-  --w3version <DIRECTORY> --w3path <DIRECTORY> --mapdir <DIRECTORY> --cfgdir <DIRECTORY>
-  * --lan <BOOLEAN> --bnet <BOOLEAN> --exit <BOOLEAN> --nolan <BOOLEAN> --nobnet <BOOLEAN> --noexit <BOOLEAN>
-  * --udp <MODE:(strict|lax|free)>
-  <MAP> <NAME> --exclude <SERVER> --mirror <IP:PORT#ID>
-  <MAP> <NAME> --obs <OBSERVER> --visibility <VISIBILITY> --rh <RANDOM> --owner <USER@SERVER>
-  * --exec-as <USER@SERVER> --exec-auth <yes|no|auto>
-  * --exec <COMMAND1> --exec <COMMAND2> --exec <COMMAND3>
-  */
 
   return false;
 }
@@ -1132,27 +1202,20 @@ uint8_t CAura::ExtractScripts()
 {
   uint8_t FilesExtracted = 0;
   void*        MPQ;
-  const string MPQFileName = [&]() {
+  const filesystem::path MPQFilePath = [&]() {
     if (m_Config->m_War3Version >= 28)
-      return m_Config->m_Warcraft3Path + "War3.mpq";
+      return m_Config->m_Warcraft3Path / filesystem::path("War3.mpq");
     else
-      return m_Config->m_Warcraft3Path + "War3Patch.mpq";
+      return m_Config->m_Warcraft3Path / filesystem::path("War3Patch.mpq");
   }();
 
 #ifdef WIN32
-  const wstring MPQFileNameW = [&]() {
-    if (m_Config->m_War3Version >= 28)
-      return wstring(begin(m_Config->m_Warcraft3Path), end(m_Config->m_Warcraft3Path)) + _T("War3.mpq");
-    else
-      return wstring(begin(m_Config->m_Warcraft3Path), end(m_Config->m_Warcraft3Path)) + _T("War3Patch.mpq");
-  }();
-
-  if (SFileOpenArchive(MPQFileNameW.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ))
+  if (SFileOpenArchive(MPQFilePath.wstring().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ))
 #else
-  if (SFileOpenArchive(MPQFileName.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ))
+  if (SFileOpenArchive(MPQFilePath.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ))
 #endif
   {
-    Print("[AURA] loading MPQ file [" + MPQFileName + "]");
+    Print("[AURA] loading MPQ file [" + MPQFilePath.string() + "]");
     void* SubFile;
 
     // common.j
@@ -1168,11 +1231,12 @@ uint8_t CAura::ExtractScripts()
 
         if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
         {
-          if (FileWrite(m_Config->m_MapCFGPath + "common.j", reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
-            Print(R"([AURA] extracted Scripts\common.j to [)" + m_Config->m_MapCFGPath + "common.j]");
+          filesystem::path commonPath = m_Config->m_MapCFGPath / filesystem::path("common.j");
+          if (FileWrite(commonPath, reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
+            Print(R"([AURA] extracted Scripts\common.j to [)" + commonPath.string() + "]");
             ++FilesExtracted;
           } else {
-            Print(R"([AURA] warning - unable to save extracted Scripts\common.j to [)" + m_Config->m_MapCFGPath + "common.j]");
+            Print(R"([AURA] warning - unable to save extracted Scripts\common.j to [)" + commonPath.string() + "]");
           }
         }
         else
@@ -1199,11 +1263,12 @@ uint8_t CAura::ExtractScripts()
 
         if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
         {
-          if (FileWrite(m_Config->m_MapCFGPath + "blizzard.j", reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
-            Print(R"([AURA] extracted Scripts\blizzard.j to [)" + m_Config->m_MapCFGPath + "blizzard.j]");
+          filesystem::path blizzardPath = m_Config->m_MapCFGPath / filesystem::path("blizzard.j");
+          if (FileWrite(blizzardPath, reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
+            Print(R"([AURA] extracted Scripts\blizzard.j to [)" + blizzardPath.string() + "]");
             ++FilesExtracted;
           } else {
-            Print(R"([AURA] warning - unable to save extracted Scripts\blizzard.j to [)" + m_Config->m_MapCFGPath + "blizzard.j]");
+            Print(R"([AURA] warning - unable to save extracted Scripts\blizzard.j to [)" + blizzardPath.string() + "]");
           }
         }
         else
@@ -1234,7 +1299,7 @@ uint8_t CAura::ExtractScripts()
     int32_t ErrorCode = static_cast<int32_t>(GetLastError());
     string ErrorCodeString = "Error code " + to_string(ErrorCode);
 #endif
-    Print("[AURA] warning - unable to load MPQ file [" + MPQFileName + "] - " + ErrorCodeString);
+    Print("[AURA] warning - unable to load MPQ file [" + MPQFilePath.string() + "] - " + ErrorCodeString);
   }
 
   return FilesExtracted;
@@ -1243,7 +1308,8 @@ uint8_t CAura::ExtractScripts()
 void CAura::LoadIPToCountryData()
 {
   ifstream in;
-  in.open("ip-to-country.csv", ios::in);
+  filesystem::path GeoFilePath = GetExeDirectory() / filesystem::path("ip-to-country.csv");
+  in.open(GeoFilePath.string(), ios::in);
 
   if (in.fail()) {
     Print("[AURA] warning - unable to read file [ip-to-country.csv], geolocalization data not loaded");
@@ -1295,7 +1361,7 @@ void CAura::CacheMapPresets()
   m_CachedMaps.clear();
   const vector<string> MapConfigFiles = ConfigFilesMatch("");
   for (const auto& MapConfigFile : MapConfigFiles) {
-    std::string MapLocalPath = CConfig::ReadString(m_Config->m_MapCFGPath + MapConfigFile, "map_localpath");
+    std::string MapLocalPath = CConfig::ReadString(m_Config->m_MapCFGPath / filesystem::path(MapConfigFile), "map_localpath");
     if (!MapLocalPath.empty()) {
       m_CachedMaps[MapLocalPath] = MapConfigFile;
     }
@@ -1305,31 +1371,31 @@ void CAura::CacheMapPresets()
 bool CAura::CreateGame(CMap* map, uint8_t gameDisplay, string gameName, string ownerName, string ownerServer, string creatorName, CBNET* creatorServer, bool whisper)
 {
   if (!m_Config->m_Enabled) {
-    if (creatorServer) creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The bot is disabled", creatorName, whisper, string());
+    if (creatorServer) creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The bot is disabled", creatorName, whisper);
     Print("Unable to create game [" + gameName + "]. The bot is disabled");
     return false;
   }
 
   if (gameName.size() > m_MaxGameNameSize) {
-    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_MaxGameNameSize) + " characters)", creatorName, whisper, string());
+    if (creatorServer) creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_MaxGameNameSize) + " characters)", creatorName, whisper);
     Print("Unable to create game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_MaxGameNameSize) + " characters)");
     return false;
   }
 
   if (!map->GetValid()) {
-    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The currently loaded map config file is invalid", creatorName, whisper, string());
+    if (creatorServer) creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The currently loaded map config file is invalid", creatorName, whisper);
     Print("Unable to create game [" + gameName + "]. The currently loaded map config file is invalid");
     return false;
   }
 
   if (m_CurrentLobby) {
-    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby", creatorName, whisper, string());
+    if (creatorServer) creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby", creatorName, whisper);
     Print("Unable to create game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby");
     return false;
   }
 
   if (m_Games.size() >= m_Config->m_MaxGames) {
-    creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_Config->m_MaxGames) + ") has been reached", creatorName, whisper, string());
+    if (creatorServer) creatorServer->QueueChatCommand("Unable to create game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_Config->m_MaxGames) + ") has been reached", creatorName, whisper);
     Print("Unable to create game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_Config->m_MaxGames) + ") has been reached");
     return false;
   }
@@ -1348,11 +1414,11 @@ bool CAura::CreateGame(CMap* map, uint8_t gameDisplay, string gameName, string o
 
   for (auto& bnet : m_BNETs) {
     std::string AnnounceText = (
-      std::string("[1.") + to_string(m_Config->m_War3Version) + ".x] Hosting " + (gameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + map->GetMapLocalPath() +
+      std::string("[1.") + to_string(m_Config->m_War3Version) + ".x] Hosting " + (gameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + GetFileName(map->GetMapLocalPath()) +
       ". (Started by " + ownerName + ": \"" + bnet->GetPrefixedGameName(gameName) + "\")"
     );
     if (whisper && bnet == creatorServer) {
-      bnet->QueueChatCommand(AnnounceText, creatorName, whisper, string());
+      bnet->QueueChatCommand(AnnounceText, creatorName, whisper);
     }
     if (bnet->GetAnnounceHostToChat()) {
       bnet->QueueChatCommand(AnnounceText);
@@ -1380,27 +1446,27 @@ bool CAura::CreateGame(CMap* map, uint8_t gameDisplay, string gameName, string o
 void CAura::CreateMirror(CMap* map, uint8_t gameDisplay, string gameName, string gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, string excludedServer, string creatorName, CBNET* creatorServer, bool whisper)
 {
   if (!m_Config->m_Enabled) {
-    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The bot is disabled", creatorName, whisper, string());
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The bot is disabled", creatorName, whisper);
     return;
   }
 
   if (gameName.size() > m_MaxGameNameSize) {
-    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_MaxGameNameSize) + " characters)", creatorName, whisper, string());
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_MaxGameNameSize) + " characters)", creatorName, whisper);
     return;
   }
 
   if (!map->GetValid()) {
-    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The currently loaded map config file is invalid", creatorName, whisper, string());
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The currently loaded map config file is invalid", creatorName, whisper);
     return;
   }
 
   if (m_CurrentLobby) {
-    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby", creatorName, whisper, string());
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. Another game [" + m_CurrentLobby->GetDescription() + "] is in the lobby", creatorName, whisper);
     return;
   }
 
   if (m_Games.size() >= m_Config->m_MaxGames) {
-    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_Config->m_MaxGames) + ") has been reached", creatorName, whisper, string());
+    creatorServer->QueueChatCommand("Unable to mirror game [" + gameName + "]. The maximum number of simultaneous games (" + to_string(m_Config->m_MaxGames) + ") has been reached", creatorName, whisper);
     return;
   }
 
@@ -1413,11 +1479,11 @@ void CAura::CreateMirror(CMap* map, uint8_t gameDisplay, string gameName, string
       continue;
 
     std::string AnnounceText = (
-      std::string("[1.") + to_string(m_Config->m_War3Version) + ".x] Mirroring " + (gameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + map->GetMapLocalPath() +
+      std::string("[1.") + to_string(m_Config->m_War3Version) + ".x] Mirroring " + (gameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + GetFileName(map->GetMapLocalPath()) +
       ": \"" + bnet->GetPrefixedGameName(gameName) + "\")"
     );
     if (whisper && bnet == creatorServer) {
-      bnet->QueueChatCommand(AnnounceText, creatorName, whisper, string());
+      bnet->QueueChatCommand(AnnounceText, creatorName, whisper);
     }
     if (bnet->GetAnnounceHostToChat()) {
       bnet->QueueChatCommand(AnnounceText);
@@ -1445,7 +1511,7 @@ void CAura::SendBroadcast(uint16_t port, const vector<uint8_t>& message)
 
 vector<string> CAura::MapFilesMatch(string rawPattern)
 {
-  if (IsValidMapName(rawPattern) && FileExists(m_Config->m_MapPath + rawPattern)) {
+  if (IsValidMapName(rawPattern) && FileExists(m_Config->m_MapPath / filesystem::path(rawPattern))) {
     return std::vector<std::string>(1, rawPattern);
   }
 

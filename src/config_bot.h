@@ -20,9 +20,9 @@ public:
   bool                     m_Enabled;                    // set to false to prevent new games from being created
   bool                     m_ProxyReconnectEnabled;      // whether to listen to GProxy++ reconnects
   uint8_t                  m_War3Version;                // warcraft 3 version
-  std::string              m_Warcraft3Path;              // Warcraft 3 path
-  std::string              m_MapCFGPath;                 // map cfg path
-  std::string              m_MapPath;                    // map path
+  std::filesystem::path    m_Warcraft3Path;              // Warcraft 3 path
+  std::filesystem::path    m_MapCFGPath;                 // map cfg path
+  std::filesystem::path    m_MapPath;                    // map path
 
   std::string              m_BindAddress;                // map path
   uint16_t                 m_MinHostPort;                // the min port to host games on
@@ -30,7 +30,7 @@ public:
   bool                     m_EnableLANBalancer;          // enable to make LAN peers connect to m_LANHostPort
   uint16_t                 m_LANHostPort;                // the port to broadcast over LAN
 
-  std::string              m_GreetingPath;               // the path of the greeting the bot sends to all players joining a game
+  std::filesystem::path    m_GreetingPath;               // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string> m_Greeting;                   // read from m_GreetingPath
 
   bool                     m_UDPInfoStrictMode;          // set to false to send full game info periodically rather than small refresh packets
@@ -57,8 +57,11 @@ public:
   uint32_t                 m_MaxGames;                   // maximum number of games in progress
   uint32_t                 m_MaxSavedMapSize;            // maximum byte size of maps kept persistently in the m_MapPath folder
 
+  bool                     m_StrictPaths;                // accept only exact paths (no fuzzy searches) for maps, etc.
+  bool                     m_EnableCFGCache;             // save read map CFGs to disk
+
   bool                     m_ExitOnStandby;
-  bool                     m_EnableBNET;                 // CLI-only: if false, ignore all bnet configs on startup
+  std::optional<bool>      m_EnableBNET;                 // master switch to enable/disable ALL bnet configs on startup
 
   explicit CBotConfig(CConfig* CFG);
   ~CBotConfig();

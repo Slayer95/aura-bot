@@ -20,9 +20,9 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
 
 #include "fileutil.h"
 
-#include <sys/stat.h>
 #include <fstream>
 #include <algorithm>
+#include <iostream>
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -31,34 +31,26 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
 #else
 #include <dirent.h>
 #include <cstring>
+#include <unistd.h>
+#include <limits.h>
 #endif
+
+// unistd.h and limits.h
 
 using namespace std;
 
-#ifdef WIN32
-bool FileExists(string file)
+bool FileExists(const filesystem::path& file)
 {
-  if (file.back() == '\\')
-    file = file.substr(0, file.size() - 1);
-
-  struct stat fileinfo;
-  return (stat(file.c_str(), &fileinfo) == 0);
+  return filesystem::exists(file);
 }
-#else
-bool FileExists(const string& file)
-{
-  struct stat fileinfo;
-  return (stat(file.c_str(), &fileinfo) == 0);
-}
-#endif
 
-vector<string> FilesMatch(const string& path, const string& pattern)
+vector<string> FilesMatch(const filesystem::path& path, const string& pattern)
 {
   vector<string> Files;
 
 #ifdef WIN32
   WIN32_FIND_DATAA data;
-  HANDLE           handle = FindFirstFileA((path + "\\*").c_str(), &data);
+  HANDLE           handle = FindFirstFileA((path.string() + "\\*").c_str(), &data);
   memset(&data, 0, sizeof(WIN32_FIND_DATAA));
 
   while (handle != INVALID_HANDLE_VALUE)
@@ -109,14 +101,14 @@ vector<string> FilesMatch(const string& path, const string& pattern)
   return Files;
 }
 
-string FileRead(const string& file, uint32_t start, uint32_t length, int *byteSize)
+string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, int *byteSize)
 {
   ifstream IS;
   IS.open(file.c_str(), ios::binary | ios::in);
 
   if (IS.fail())
   {
-    Print("[UTIL] warning - unable to read file part [" + file + "]");
+    Print("[UTIL] warning - unable to read file part [" + file.string() + "]");
     return string();
   }
 
@@ -146,14 +138,14 @@ string FileRead(const string& file, uint32_t start, uint32_t length, int *byteSi
   return BufferString;
 }
 
-string FileRead(const string& file, int *byteSize)
+string FileRead(const filesystem::path& file, int *byteSize)
 {
   ifstream IS;
   IS.open(file.c_str(), ios::binary | ios::in);
 
   if (IS.fail())
   {
-    Print("[UTIL] warning - unable to read file [" + file + "]");
+    Print("[UTIL] warning - unable to read file [" + file.string() + "]");
     return string();
   }
 
@@ -180,14 +172,14 @@ string FileRead(const string& file, int *byteSize)
     return string();
 }
 
-bool FileWrite(const string& file, uint8_t* data, uint32_t length)
+bool FileWrite(const filesystem::path& file, uint8_t* data, uint32_t length)
 {
   ofstream OS;
   OS.open(file.c_str(), ios::binary);
 
   if (OS.fail())
   {
-    Print("[UTIL] warning - unable to write file [" + file + "]");
+    Print("[UTIL] warning - unable to write file [" + file.string() + "]");
     return false;
   }
 
@@ -198,7 +190,46 @@ bool FileWrite(const string& file, uint8_t* data, uint32_t length)
   return true;
 }
 
-bool FileDelete(const string& file)
+bool FileDelete(const filesystem::path& file)
 {
-  return std::remove(file.c_str()) == 0;
+  std::error_code e;
+  bool result = std::filesystem::remove(file, e);
+  
+  if (e) {
+    Print("[AURA] Cannot delete " + file.string() + ". " + e.message());
+  }
+
+  return result;
+}
+
+filesystem::path GetExeDirectory()
+{
+  static filesystem::path Memoized;
+  if (!Memoized.empty())
+    return Memoized;
+
+  vector<char> buffer(2048);
+#ifdef WIN32
+  DWORD length = 0;
+#else
+  ssize_t length = 0;
+#endif
+
+  do {
+    buffer.resize(buffer.size() * 2);
+#ifdef WIN32
+    length = GetModuleFileNameA(nullptr, buffer.data(), buffer.size());
+#else
+    length = readlink("/proc/self/exe", buffer.data(), buffer.size());
+#endif
+  } while (length >= buffer.size() - 1);
+
+  if (length == 0) {
+    throw std::runtime_error("Failed to retrieve the module file name.");
+  }
+  buffer.resize(length);
+
+  filesystem::path executablePath(buffer.data());
+  Memoized = executablePath.parent_path().lexically_normal();
+  return Memoized;
 }

@@ -185,10 +185,12 @@ void CSocket::Reset()
 // CTCPSocket
 //
 
-CTCPSocket::CTCPSocket()
+CTCPSocket::CTCPSocket(string nName)
   : CSocket(),
     m_LastRecv(GetTime()),
-    m_Connected(false)
+    m_Connected(false),
+    m_Name(nName),
+    m_RemoteSocketCounter(0)
 {
   Allocate(SOCK_STREAM);
 
@@ -207,10 +209,12 @@ CTCPSocket::CTCPSocket()
   setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
 }
 
-CTCPSocket::CTCPSocket(SOCKET nSocket, struct sockaddr_in nSIN)
+CTCPSocket::CTCPSocket(SOCKET nSocket, struct sockaddr_in nSIN, string nName)
   : CSocket(nSocket, nSIN),
     m_LastRecv(GetTime()),
-    m_Connected(true)
+    m_Connected(true),
+    m_Name(nName),
+    m_RemoteSocketCounter(0)
 {
 // make socket non blocking
 
@@ -273,14 +277,14 @@ void CTCPSocket::DoRecv(fd_set* fd)
 
       m_HasError = true;
       m_Error    = GetLastError();
-      Print("[TCPSOCKET] error (recv) - " + GetErrorString());
+      Print("[TCPSOCKET] (" + m_Name +") error (recv) - " + GetErrorString());
       return;
     }
     else if (c == 0)
     {
       // the other end closed the connection
 
-      Print("[TCPSOCKET] closed by remote host");
+      Print("[TCPSOCKET] (" + m_Name +") closed by remote host");
       m_Connected = false;
     }
   }
@@ -309,7 +313,7 @@ void CTCPSocket::DoSend(fd_set* send_fd)
 
       m_HasError = true;
       m_Error    = GetLastError();
-      Print("[TCPSOCKET] error (send) - " + GetErrorString());
+      Print("[TCPSOCKET] (" + m_Name +") error (send) - " + GetErrorString());
       return;
     }
   }
@@ -327,8 +331,8 @@ void CTCPSocket::Disconnect()
 // CTCPClient
 //
 
-CTCPClient::CTCPClient()
-  : CTCPSocket(),
+CTCPClient::CTCPClient(string nName)
+  : CTCPSocket(nName),
     m_Connecting(false)
 {
 }
@@ -465,8 +469,8 @@ void CTCPClient::DoSend(fd_set* send_fd)
 // CTCPServer
 //
 
-CTCPServer::CTCPServer()
-  : CTCPSocket()
+CTCPServer::CTCPServer(string nName)
+  : CTCPSocket(nName)
 {
 // make socket non blocking
 
@@ -557,7 +561,8 @@ CTCPSocket* CTCPServer::Accept(fd_set* fd)
     {
       // success! return the new socket
 
-      return new CTCPSocket(NewSocket, Addr);
+      ++m_RemoteSocketCounter;
+      return new CTCPSocket(NewSocket, Addr, m_Name + "-C" + to_string(m_RemoteSocketCounter));
     }
   }
 
@@ -765,7 +770,7 @@ bool CUDPServer::Listen(const string& address, uint16_t port, bool retry)
     Print("[UDPSERVER] error (bind) - " + GetErrorString());
     return false;
   } else {
-    Print("[UDPSERVER] Listening at port " + to_string(port));
+    Print("[UDPSERVER] Listening on port " + to_string(port));
   }
 
   return true;

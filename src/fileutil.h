@@ -23,18 +23,16 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
 
 #include "includes.h"
 #include <vector>
+#include <filesystem>
+#include <system_error>
 #include <cstdio>
 
-#ifdef WIN32
-bool FileExists(std::string file);
-#else
-bool FileExists(const std::string& file);
-#endif
-
-std::vector<std::string> FilesMatch(const std::string& path, const std::string& pattern);
-std::string FileRead(const std::string& file, uint32_t start, uint32_t length, int* byteSize);
-std::string FileRead(const std::string& file, int* byteSize);
-bool FileWrite(const std::string& file, uint8_t* data, uint32_t length);
-bool FileDelete(const std::string& File);
+bool FileExists(const std::filesystem::path& file);
+std::vector<std::string> FilesMatch(const std::filesystem::path& path, const std::string& pattern);
+std::string FileRead(const std::filesystem::path& file, uint32_t start, uint32_t length, int* byteSize);
+std::string FileRead(const std::filesystem::path& file, int* byteSize);
+bool FileWrite(const std::filesystem::path& file, uint8_t* data, uint32_t length);
+bool FileDelete(const std::filesystem::path& File);
+std::filesystem::path GetExeDirectory();
 
 #endif // AURA_FILEUTIL_H_

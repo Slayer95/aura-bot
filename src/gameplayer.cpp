@@ -247,16 +247,11 @@ CBNET* CGamePlayer::GetRealm(bool mustVerify)
   if (m_JoinedRealmID < 0x10)
     return nullptr;
 
-  for (auto& bnet : m_Game->m_Aura->m_BNETs) {
-    if (bnet->GetHostCounterID() == m_JoinedRealmID) {
-      if (mustVerify && !m_Verified) {
-        return nullptr;
-      }
-      return bnet;
-    }
+  if (mustVerify && !m_Verified) {
+    return nullptr;
   }
 
-  return nullptr;
+  return m_Game->m_Aura->GetRealmByHostCounter(m_JoinedRealmID);
 }
 
 string CGamePlayer::GetRealmDataBaseID(bool mustVerify)
@@ -279,7 +274,7 @@ bool CGamePlayer::Update(void* fd)
       if (m_Game->GetGameState() == GAME_PUBLIC || Realm->GetPvPGN())
         Realm->QueueChatCommand("/whois " + m_Name);
       else if (m_Game->GetGameState() == GAME_PRIVATE)
-        Realm->QueueChatCommand(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name, true, string());
+        Realm->QueueChatCommand(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name, true);
     }
 
     m_WhoisSent = true;

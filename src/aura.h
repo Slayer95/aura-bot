@@ -92,7 +92,9 @@ public:
   std::map<uint16_t, CTCPServer*>                    m_GameServers;
   std::map<uint16_t, std::vector<CPotentialPlayer*>> m_IncomingConnections; // (connections that haven't sent a W3GS_REQJOIN packet yet)
   std::string                                        m_SudoUser;
-  std::string                                        m_SudoRealm;
+  CGame*                                             m_SudoGame;
+  CIRC*                                              m_SudoIRC;
+  CBNET*                                             m_SudoRealm;
   std::string                                        m_SudoAuthCommand;
   std::string                                        m_SudoExecCommand;
   std::vector<std::vector<std::string>>              m_PendingActions;
@@ -113,6 +115,10 @@ public:
   // processing functions
 
   bool Update();
+
+  CBNET* GetRealmByInputId(const std::string& inputId);
+  CBNET* GetRealmByHostName(const std::string& hostName);
+  CBNET* GetRealmByHostCounter(const uint8_t hostCounter);
   CTCPServer* GetGameServer(uint16_t, std::string& name);
 
   // events
@@ -133,7 +139,7 @@ public:
   bool CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string ownerServer, std::string creatorName, CBNET* nCreatorServer, bool whisper);
   void CreateMirror(CMap* map, uint8_t gameDisplay, std::string gameName, std::string gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, std::string excludedServer, std::string creatorName, CBNET* creatorServer, bool whisper);
   void SendBroadcast(uint16_t port, const std::vector<uint8_t>& message);
-  std::pair<uint8_t, std::string> LoadMap(const std::string& user, const std::string& mapInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomHeroInput, const bool& gonnaBeLucky);
+  std::pair<uint8_t, std::string> LoadMap(const std::string& user, const std::string& mapInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath);
   std::vector<std::string> MapFilesMatch(std::string pattern);
   std::vector<std::string> ConfigFilesMatch(std::string pattern);
 

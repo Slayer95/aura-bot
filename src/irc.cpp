@@ -20,6 +20,7 @@
 
 #include "config_irc.h"
 #include "irc.h"
+#include "command.h"
 #include "aura.h"
 #include "socket.h"
 #include "util.h"
@@ -39,7 +40,7 @@ using namespace std;
 
 CIRC::CIRC(CAura* nAura, CIRCConfig* nConfig)
   : m_Aura(nAura),
-    m_Socket(new CTCPClient()),
+    m_Socket(new CTCPClient("IRC")),
     m_Config(nConfig),
     m_NickName(nConfig->m_NickName),
     m_ResolvedAddress(string()),
@@ -320,28 +321,16 @@ void CIRC::ExtractPackets()
         continue;
       }
 
-      if (FirstWord == "bnet") {
-        string BNETUser;
-        if (IsRoot) {
-          BNETUser = Nickname; // TODO: Fixme
-        }
+      if (FirstWord == "aura") {
+        bool Whisper = false;
+        // const CIncomingChatEvent event = CIncomingChatEvent(CBNETProtocol::EID_IRC, BNETUser, Channel + " " + Realm->GetCommandToken() + Payload);
+        CCommandContext* ctx = new CCommandContext(m_Aura, this, Channel, Nickname, Whisper, &std::cout);
+        Print("[IRC] Running command !" + SecondWord + " with payload [" + Payload + "]");
+        ctx->Run(SecondWord, Payload);
+        delete ctx;
 
-        CBNET* Realm = nullptr;
-
-        for (auto& bnet : m_Aura->m_BNETs) {
-          if (!bnet->GetEnabled())
-            continue;
-          if (bnet->GetInputID() == SecondWord) {
-            Realm = bnet;
-            break;
-          }
-        }
-
-        if (Realm) {
-          const CIncomingChatEvent event = CIncomingChatEvent(CBNETProtocol::EID_IRC, BNETUser, Channel + " " + Realm->GetCommandToken() + Payload);
-          Realm->ProcessChatEvent(&event);
-        }
-        continue;
+        //CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* outputStream)
+        //CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* outputStream)
       }
 
       continue;

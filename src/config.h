@@ -21,10 +21,13 @@
 #ifndef AURA_CONFIG_H_
 #define AURA_CONFIG_H_
 
+#include "fileutil.h"
+
 #include <map>
 #include <string>
 #include <vector>
 #include <set>
+#include <optional>
 
 //
 // CConfig
@@ -39,7 +42,7 @@ public:
   CConfig();
   ~CConfig();
 
-  bool Read(const std::string& file);
+  bool Read(const std::filesystem::path& file);
   bool Exists(const std::string& key);
 
   std::string GetString(const std::string& key, const std::string& x);
@@ -51,6 +54,10 @@ public:
   std::set<std::string> GetSet(const std::string& key, char separator, std::set<std::string> x);
   std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
   std::vector<uint8_t> GetIPv4(const std::string& key, const std::vector<uint8_t>& x);
+  std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
+  std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);
+
+  std::optional<bool> GetMaybeBool(const std::string& key);
 
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);
@@ -60,7 +67,7 @@ public:
   void SetUint8Vector(const std::string& key, const std::vector<std::uint8_t>& x);
   std::vector<uint8_t> Export();
 
-  static std::string ReadString(const std::string& file, const std::string& key);
+  static std::string ReadString(const std::filesystem::path& file, const std::string& key);
 };
 
 #endif // AURA_CONFIG_H_

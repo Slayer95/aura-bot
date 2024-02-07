@@ -103,7 +103,7 @@ std::vector<uint8_t> CMap::GetMapGameFlags() const
 
 uint32_t CMap::GetMapGameType() const
 {
-  /* spec stolen from Strilanc as follows:
+  /* spec by Strilanc as follows:
 
     Public Enum GameTypes As UInteger
         None = 0
@@ -214,7 +214,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     if (m_MapLocalPath.empty()) {
       return;
     }
-    m_MapData = FileRead(m_Aura->m_Config->m_MapPath + m_MapLocalPath, &RawMapSize);
+    m_MapData = FileRead(m_Aura->m_Config->m_MapPath / m_MapLocalPath, &RawMapSize);
     if (IsPartial && m_MapData.empty()) {
       Print("[AURA] Local map not found for partial config file");
       return;
@@ -223,19 +223,17 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   // load the map MPQ
 
-  string MapMPQFileName = m_Aura->m_Config->m_MapPath + m_MapLocalPath;
+  filesystem::path MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
   HANDLE MapMPQ;
   bool   MapMPQReady = false;
 
 #ifdef WIN32
-  const wstring MapMPQFileNameW = wstring(begin(MapMPQFileName), end(MapMPQFileName));
-
-  if (SFileOpenArchive(MapMPQFileNameW.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
+  if (SFileOpenArchive(MapMPQFilePath.wstring().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
 #else
-  if (SFileOpenArchive(MapMPQFileName.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
+  if (SFileOpenArchive(MapMPQFilePath.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
 #endif
   {
-    Print("[MAP] loading MPQ file [" + MapMPQFileName + "]");
+    Print("[MAP] loading MPQ file [" + MapMPQFilePath.string() + "]");
     MapMPQReady = true;
   } else {
 #ifdef WIN32
@@ -251,7 +249,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     int32_t ErrorCode = static_cast<int32_t>(GetLastError());
     string ErrorCodeString = "Error code " + to_string(ErrorCode);
 #endif
-    Print("[MAP] warning - unable to load MPQ file [" + MapMPQFileName + "] - " + ErrorCodeString);
+    Print("[MAP] warning - unable to load MPQ file [" + MapMPQFilePath.string() + "] - " + ErrorCodeString);
   }
 
   // try to calculate map_size, map_info, map_crc, map_sha1
@@ -269,16 +267,18 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     // calculate map_crc (this is not the CRC) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
 
-    string CommonJ = FileRead(m_Aura->m_Config->m_MapCFGPath + "common.j", nullptr);
+    filesystem::path commonPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("common.j");
+    string CommonJ = FileRead(commonPath, nullptr);
 
     if (CommonJ.empty())
-      Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_Config->m_MapCFGPath + "common.j]");
+      Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + commonPath.string() + "]");
     else
     {
-      string BlizzardJ = FileRead(m_Aura->m_Config->m_MapCFGPath + "blizzard.j", nullptr);
+      filesystem::path blizzardPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("blizzard.j");
+      string BlizzardJ = FileRead(blizzardPath, nullptr);
 
       if (BlizzardJ.empty())
-        Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_Aura->m_Config->m_MapCFGPath + "blizzard.j]");
+        Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + blizzardPath.string() + "]");
       else
       {
         uint32_t Val = 0;
@@ -600,7 +600,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
               for (uint32_t i = 0; i < MapNumTeams; ++i) {
                 uint32_t Flags;
-                uint32_t PlayerMask;
+                uint32_t PlayerMask = 0;
 
                 if (i < RawMapNumTeams) {
                   ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
@@ -613,7 +613,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
                 for (auto& Slot : Slots) {
                   if ((1 << (Slot).GetColour()) & PlayerMask)
-                  (Slot).SetTeam(i);
+                    (Slot).SetTeam(i);
                 }
 
                 getline(ISS, GarbageString, '\0'); // team name
@@ -790,7 +790,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     CFG->SetInt("map_numplayers", MapNumPlayers);
   }
 
-  m_MapNumPlayers = MapNumPlayers;
+  m_MapNumPlayers = static_cast<uint8_t>(MapNumPlayers);
 
   if (CFG->Exists("map_numteams")) {
     MapNumTeams = CFG->GetInt("map_numteams", 0);
@@ -798,7 +798,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     CFG->SetInt("map_numteams", MapNumTeams);
   }
 
-  m_MapNumTeams = MapNumTeams;
+  m_MapNumTeams = static_cast<uint8_t>(MapNumTeams);
 
   if (CFG->Exists("map_slot1")) {
     Slots.clear();
@@ -852,6 +852,17 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   } else if (IsPartial) {
     CFG->SetInt("cfg_partial", 0);
   }
+}
+
+bool CMap::DeleteFile()
+{
+  Print("Deleting " + m_MapLocalPath + "...");
+  filesystem::path mapLocalPath = m_MapLocalPath;
+  if (mapLocalPath.is_absolute()) {
+    return FileDelete(mapLocalPath);
+  }
+  filesystem::path resolvedPath =  m_Aura->m_Config->m_MapPath / mapLocalPath;
+  return FileDelete(resolvedPath.lexically_normal());
 }
 
 const char* CMap::CheckValid()

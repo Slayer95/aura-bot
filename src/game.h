@@ -39,6 +39,7 @@
 
 class CAura;
 class CTCPServer;
+class CCommandContext;
 class CGameProtocol;
 class CPotentialPlayer;
 class CGamePlayer;
@@ -57,6 +58,9 @@ class CGame
 {
 public:
   CAura* m_Aura;
+
+private:
+  friend class CCommandContext;
 
 protected:
   CTCPServer*                    m_Socket;                        // listening socket
@@ -100,10 +104,10 @@ protected:
   int64_t                        m_GameOverTime;                  // GetTime when the game was over
   int64_t                        m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
-  int64_t                        m_RandomSeed;                    // the random seed sent to the Warcraft III clients
+  uint32_t                       m_RandomSeed;                    // the random seed sent to the Warcraft III clients
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
-  uint32_t                       m_Latency;                       // the number of ms to wait between sending action packets (we queue any received during this time)
+  uint16_t                       m_Latency;                       // the number of ms to wait between sending action packets (we queue any received during this time)
   float                          m_SyncLimit;                     // the maximum number of packets a player can fall out of sync before starting the lag screen
   float                          m_SyncLimitSafe;                 // stop lag screen if players are within this same amount of packets
   float                          m_SyncFactor;                    // factor for synchronization formula (keepalive period / bot latency)
@@ -176,6 +180,7 @@ public:
   inline bool           GetIsMirror() const { return m_IsMirror; }
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
+  inline bool           GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool           GetLagging() const { return m_Lagging; }
   CGameProtocol* GetProtocol() const;
   int64_t        GetNextTimedActionTicks() const;
@@ -243,7 +248,7 @@ public:
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
-  bool EventPlayerBotCommand(std::string& payload, CBNET* bnet, CGamePlayer* player, std::string& command, std::string& serverName, std::string userName);
+  void EventPlayerBotCommand(CGamePlayer* player, std::string& command, std::string& payload);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
   void EventPlayerChangeColour(CGamePlayer* player, uint8_t colour);
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
@@ -263,9 +268,10 @@ public:
   CGamePlayer* GetPlayerFromPID(uint8_t PID) const;
   CGamePlayer* GetPlayerFromSID(uint8_t SID) const;
   CGamePlayer* GetPlayerFromName(std::string name, bool sensitive) const;
+  bool         HasOwnerSet() const;
   bool         HasOwnerInGame() const;
-  uint32_t GetPlayerFromNamePartial(std::string name, CGamePlayer** player) const;
-  std::string GetDBPlayerNameFromColour(uint8_t colour) const;
+  uint8_t      GetPlayerFromNamePartial(std::string name, CGamePlayer** player) const;
+  std::string  GetDBPlayerNameFromColour(uint8_t colour) const;
   CGamePlayer* GetPlayerFromColour(uint8_t colour) const;
   uint8_t              GetNewPID() const;
   uint8_t              GetNewColour() const;
@@ -278,7 +284,7 @@ public:
   bool OpenSlot(uint8_t SID, bool kick);
   bool CloseSlot(uint8_t SID, bool kick);
   bool ComputerSlot(uint8_t SID, uint8_t skill, bool kick);
-  void ColourSlot(uint8_t SID, uint8_t colour);
+  void ColorSlot(uint8_t SID, uint8_t colour);
   void OpenAllSlots();
   void CloseAllSlots();
   void ComputerAllSlots(uint8_t skill);
@@ -293,6 +299,7 @@ public:
   void SetOwner(std::string name, std::string realm);
   void ReleaseOwner();
   void ResetSync();
+  void CountKickVotes();
   void StartCountDown(bool force);
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);

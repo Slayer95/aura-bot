@@ -21,7 +21,6 @@
 #include "bncsutilinterface.h"
 #include "aura.h"
 #include "util.h"
-#include "fileutil.h"
 
 #include <bncsutil/bncsutil.h>
 
@@ -51,39 +50,38 @@ void CBNCSUtilInterface::Reset(const string& userName, const string& userPasswor
   m_NLS = new NLS(userName, userPassword);
 }
 
-inline static std::string CaseInsensitiveFileExists(const std::string& path, std::string&& file)
+inline static filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const string& file)
 {
   std::string mutated_file = file;
   const size_t NumberOfCombinations = std::pow(2, mutated_file.size());
 
-  for (size_t perm = 0; perm < NumberOfCombinations; ++perm)
-  {
+  for (size_t perm = 0; perm < NumberOfCombinations; ++perm) {
     std::bitset<64> bs(perm);
     std::transform(mutated_file.begin(), mutated_file.end(), mutated_file.begin(), ::tolower);
 
-    for (size_t index = 0; index < bs.size() && index < mutated_file.size(); ++index)
-    {
+    for (size_t index = 0; index < bs.size() && index < mutated_file.size(); ++index) {
       if (bs[index])
         mutated_file[index] = ::toupper(mutated_file[index]);
     }
 
-    if (FileExists(path + mutated_file))
-      return path + mutated_file;
+    filesystem::path testPath = path / filesystem::path(mutated_file);
+    if (FileExists(testPath))
+      return testPath;
   }
 
   return "";
 }
 
-bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const string& war3Path, const string& keyROC, const string& keyTFT, const string& valueStringFormula, const string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version)
+bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const string& keyROC, const string& keyTFT, const string& valueStringFormula, const string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version)
 {
   const string FileWar3EXE = [&]() {
     if (war3Version >= 28)
-      return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe");
+      return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe").string();
     else
-      return CaseInsensitiveFileExists(war3Path, "war3.exe");
+      return CaseInsensitiveFileExists(war3Path, "war3.exe").string();
   }();
-  const string FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll");
-  const string FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll");
+  const string FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll").string();
+  const string FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll").string();
 
   if (!FileWar3EXE.empty() && (war3Version >= 29 || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {

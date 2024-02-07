@@ -19,9 +19,9 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_Enabled                = CFG->GetBool("bot_enabled", true);
   m_ProxyReconnectEnabled  = CFG->GetBool("bot_enablegproxy", true);
   m_War3Version            = CFG->GetInt("bot_war3version", 27);
-  m_Warcraft3Path          = AddPathSeparator(CFG->GetString("bot_war3path", R"(C:\Program Files\Warcraft III\)"));
-  m_MapCFGPath             = AddPathSeparator(CFG->GetString("bot_mapcfgpath", string()));
-  m_MapPath                = AddPathSeparator(CFG->GetString("bot_mappath", string()));
+  m_Warcraft3Path          = CFG->GetPath("bot_war3path", filesystem::path(R"(C:\Program Files\Warcraft III\)"));
+  m_MapCFGPath             = CFG->GetPath("bot_mapcfgpath", filesystem::path());
+  m_MapPath                = CFG->GetPath("bot_mappath", filesystem::path());
 
   m_BindAddress            = CFG->GetString("bot_bindaddress", string());
   m_MinHostPort            = CFG->GetInt("bot_minhostport", CFG->GetInt("bot_hostport", 6112));
@@ -29,11 +29,11 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_EnableLANBalancer      = CFG->GetBool("bot_enablelanbalancer", false);
   m_LANHostPort            = CFG->GetInt("bot_lanhostport", 6112);
 
-  m_GreetingPath           = CFG->GetString("bot_greetingpath", string());
-  m_Greeting.clear();
-  if (m_GreetingPath.length() > 0) {
+  /* Make absolute, lexically normal */
+  m_GreetingPath           = CFG->GetPath("bot_greetingpath", filesystem::path());
+  if (!m_GreetingPath.empty()) {
     ifstream in;
-    in.open(m_GreetingPath, ios::in);
+    in.open(m_GreetingPath.string(), ios::in);
     if (!in.fail()) {
       while (!in.eof()) {
         string Line;
@@ -73,9 +73,12 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_MaxGames               = CFG->GetInt("bot_maxgames", 20);
   m_MaxSavedMapSize        = CFG->GetInt("bot_maxpersistentsize", 0xFFFFFFFF);
 
-  // Master switches mainly intended for CLI. CFG options provided for completeness.
+  m_StrictPaths            = CFG->GetBool("bot_mapstrictpaths", false);
+  m_EnableCFGCache         = CFG->GetBool("bot_mapenablecache", true);
   m_ExitOnStandby          = CFG->GetBool("bot_exitonstandby", false);
-  m_EnableBNET             = CFG->GetBool("bot_enablebnet", true);
+
+  // Master switch mainly intended for CLI. CFG key provided for completeness.
+  m_EnableBNET             = CFG->GetMaybeBool("bot_enablebnet");
 }
 
 CBotConfig::~CBotConfig() = default;

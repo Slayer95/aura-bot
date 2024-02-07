@@ -124,7 +124,7 @@ public:
   void SendGetClanList();
   void QueueEnterChat();
   void QueueChatCommand(const std::string& chatCommand);
-  void QueueChatCommand(const std::string& chatCommand, const std::string& user, bool whisper, const std::string& irc);
+  void QueueChatCommand(const std::string& chatCommand, const std::string& user, bool whisper);
   void QueueGameCreate(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
   void QueueGameMirror(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
   void QueueGameRefresh(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace);
@@ -138,6 +138,7 @@ public:
 
   bool GetIsAdmin(std::string name);
   bool GetIsRootAdmin(std::string name);
+  bool GetIsSudoer(std::string name);
   CDBBan* IsBannedName(std::string name);
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);

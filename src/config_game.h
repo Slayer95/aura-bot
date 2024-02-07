@@ -24,7 +24,7 @@ public:
   uint32_t                 m_WarnHighPing;               // config value: auto kick players with ping higher than this
   uint32_t                 m_LobbyTimeLimit;             // config value: auto close the game lobby after this many minutes without any owner
   uint32_t                 m_LobbyNoOwnerTime;           // config value: relinquish game ownership after this many minutes
-  uint32_t                 m_Latency;                    // config value: the latency (by default)
+  uint16_t                 m_Latency;                    // config value: the latency (by default)
   uint32_t                 m_PerfThreshold;              // config value: the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;
 

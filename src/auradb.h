@@ -23,6 +23,8 @@
 
 #include "sqlite3.h"
 
+#include <filesystem>
+
 /**************
  *** SCHEMA ***
  **************
@@ -127,9 +129,9 @@ class CDBBan;
 class CAuraDB
 {
 private:
-  CSQLITE3*   m_DB;
-  std::string m_File;
-  std::string m_Error;
+  CSQLITE3*             m_DB;
+  std::filesystem::path m_File;
+  std::string           m_Error;
 
   // we keep some prepared statements in memory rather than recreating them each function call
   // this is an optimization because preparing statements takes time

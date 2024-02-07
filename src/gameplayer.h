@@ -125,8 +125,8 @@ private:
   bool                             m_DownloadFinished;             // if we've finished downloading the map or not
   bool                             m_FinishedLoading;              // if the player has finished loading or not
   bool                             m_Lagging;                      // if the player is lagging or not (on the lag screen)
-  bool                             m_DropVote;                     // if the player voted to drop the laggers or not (on the lag screen)
-  bool                             m_KickVote;                     // if the player voted to kick a player or not
+  std::optional<bool>              m_DropVote;                     // if the player voted to drop the laggers or not (on the lag screen)
+  std::optional<bool>              m_KickVote;                     // if the player voted to kick a player or not
   bool                             m_Muted;                        // if the player is muted or not
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
   bool                             m_GProxy;                       // if the player is using GProxy++
@@ -185,8 +185,8 @@ public:
   inline int64_t               GetKickByTime() const { return m_KickByTime; }
   inline bool                  GetKickQueued() const { return m_KickByTime != 0; }
   inline bool                  GetLagging() const { return m_Lagging; }
-  inline bool                  GetDropVote() const { return m_DropVote; }
-  inline bool                  GetKickVote() const { return m_KickVote; }
+  inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
+  inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
   inline bool                  GetMuted() const { return m_Muted; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline void SetSocket(CTCPSocket* nSocket) { m_Socket = nSocket; }

@@ -96,7 +96,6 @@ public:
     EID_INFO                = 18, // broadcast/information message
     EID_ERROR               = 19, // error message
     EID_EMOTE               = 23, // emote
-    EID_IRC                 = -1  // internal flag only
   };
 
 private:

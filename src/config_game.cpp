@@ -21,7 +21,7 @@ CGameConfig::CGameConfig(CConfig* CFG)
   m_WarnHighPing              = CFG->GetInt("bot_warnhighping", 200);
   m_LobbyTimeLimit            = CFG->GetInt("bot_lobbytimelimit", 10);
   m_LobbyNoOwnerTime          = CFG->GetInt("bot_lobbyownerlesstime", 2);
-  m_Latency                   = CFG->GetInt("bot_latency", 100);
+  m_Latency                   = static_cast<uint16_t>(CFG->GetInt("bot_latency", 100));
   m_PerfThreshold             = CFG->GetInt("bot_perflimit", 150);
   m_LacksMapKickDelay         = CFG->GetInt("bot_nomapkickdelay", 60);
 

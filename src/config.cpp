@@ -42,16 +42,17 @@ CConfig::CConfig()
 
 CConfig::~CConfig() = default;
 
-bool CConfig::Read(const string& file)
+bool CConfig::Read(const filesystem::path& file)
 {
   ifstream in;
   in.open(file.c_str(), ios::in);
 
-  Print("[CONFIG] loading file [" + file + "]");
   if (in.fail()) {
-    Print("[CONFIG] warning - unable to read file [" + file + "]");
+    Print("[CONFIG] warning - unable to read file [" + file.string() + "]");
     return false;
   }
+
+  Print("[CONFIG] loading file [" + file.string() + "]");
 
   string Line;
 
@@ -92,6 +93,28 @@ bool CConfig::Read(const string& file)
 bool CConfig::Exists(const string& key)
 {
   return m_CFG.find(key) != end(m_CFG);
+}
+
+string CConfig::GetString(const string& key, const string& x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  return m_CFG[key];
+}
+
+string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x)
+{
+  if (m_CFG.find(key) == end(m_CFG))
+    return x;
+
+  if (m_CFG[key].length() < minLength)
+    return x;
+
+  if (m_CFG[key].length() > maxLength)
+    return x;
+
+  return m_CFG[key];
 }
 
 bool CConfig::GetBool(const string& key, bool x)
@@ -189,26 +212,37 @@ vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x) {
   return Output;
 }
 
-string CConfig::GetString(const string& key, const string& x)
-{
+filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x) {
   if (m_CFG.find(key) == end(m_CFG))
     return x;
 
-  return m_CFG[key];
+  filesystem::path value = m_CFG[key];
+  if (value.is_absolute()) return value;
+  return filesystem::path(GetExeDirectory() / value).lexically_normal();
 }
 
-string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x)
-{
+filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x) {
   if (m_CFG.find(key) == end(m_CFG))
-    return x;
+    return x.empty() ? GetExeDirectory() : x;
 
-  if (m_CFG[key].length() < minLength)
-    return x;
+  filesystem::path value = m_CFG[key];
+  if (value.is_absolute()) return value;
+  return filesystem::path(GetExeDirectory() / value).lexically_normal();
+}
 
-  if (m_CFG[key].length() > maxLength)
-    return x;
+optional<bool> CConfig::GetMaybeBool(const string& key)
+{
+  optional<bool> value;
 
-  return m_CFG[key];
+  if (m_CFG.find(key) == end(m_CFG))
+    return value;
+
+  if (m_CFG[key] == "0" || m_CFG[key] == "no")
+    value = false;
+  if (m_CFG[key] == "1" || m_CFG[key] == "yes")
+    value = true;
+
+  return value;
 }
 
 void CConfig::Set(const string& key, const string& x)
@@ -253,7 +287,7 @@ std::vector<uint8_t> CConfig::Export()
   return bytes;
 }
 
-std::string CConfig::ReadString(const std::string& file, const std::string& key)
+std::string CConfig::ReadString(const std::filesystem::path& file, const std::string& key)
 {
   std::string Output;
   ifstream in;

@@ -126,8 +126,8 @@ private:
   std::string            m_MapShortDesc;
   std::string            m_MapData;       // the map data itself, for sending the map to players
   uint32_t               m_MapOptions;
-  uint32_t               m_MapNumPlayers; // config value: max map number of players
-  uint32_t               m_MapNumTeams;   // config value: max map number of teams
+  uint8_t                m_MapNumPlayers; // config value: max map number of players
+  uint8_t                m_MapNumTeams;   // config value: max map number of teams
   uint8_t                m_MapSpeed;
   uint8_t                m_MapVisibility;
   uint8_t                m_MapObservers;
@@ -168,14 +168,15 @@ public:
   inline std::string            GetMapDefaultHCL() const { return m_MapDefaultHCL; }
   inline std::string            GetMapLocalPath() const { return m_MapLocalPath; }
   inline std::string*           GetMapData() { return &m_MapData; }
-  inline uint32_t               GetMapNumPlayers() const { return m_MapNumPlayers; }
-  inline uint32_t               GetMapNumTeams() const { return m_MapNumTeams; }
+  inline uint8_t                GetMapNumPlayers() const { return m_MapNumPlayers; }
+  inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
   void                          AddMapFlags(uint32_t ExtraFlags) { m_MapFlags |= ExtraFlags; }
   void                          ClearMapData() { m_MapData.clear(); }
   inline void                   SetMapSiteURL(const std::string& s) { m_MapSiteURL = s; }
 
   void Load(CConfig* CFG, const std::string& nCFGFile);
+  bool DeleteFile();
   const char* CheckValid();
   uint32_t XORRotateLeft(uint8_t* data, uint32_t length);
   uint8_t GetLobbyRace(const CGameSlot* slot);
@@ -202,7 +203,7 @@ inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::st
 inline std::string GetEpicWarSuggestions(std::string & pattern, int maxCount)
 {
     std::string SearchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
-    Print("Downloading " + SearchUri + "...");
+    Print("[AURA] Downloading <" + SearchUri + ">...");
     std::string Suggestions;
     auto response = cpr::Get(cpr::Url{SearchUri});
     if (response.status_code != 200) {
@@ -281,7 +282,9 @@ inline int ParseMapRandomHero(const std::string s, bool & errored) {
   return result;
 }
 
-inline std::pair<std::string, std::string> ParseMapId(const std::string s) {
+inline std::pair<std::string, std::string> ParseMapId(const std::string s, const bool forceExactPath) {
+  if (forceExactPath) return make_pair("local", s);
+
   std::string lower = s;
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
@@ -320,7 +323,7 @@ inline std::pair<std::string, std::string> ParseMapId(const std::string s) {
   }
 }
 
-inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string & siteUri, std::string & downloadUri, std::string & downloadFilename, std::string & mapRootPath, std::unordered_multiset<std::string> & forbiddenFileNames) {
+inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string & siteUri, std::string & downloadUri, std::string & downloadFilename, std::string & searchFilename, std::filesystem::path & mapRootPath, std::unordered_multiset<std::string> & forbiddenFileNames) {
   // Proceed with the download
   Print("[AURA] Downloading <" + siteUri + ">...");
   if (siteId == "epicwar") {
@@ -340,22 +343,53 @@ inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string &
     return 5;
   }
 
-  if (downloadFilename.empty() || downloadFilename[0] == '.' || downloadFilename.length() > 80 ||
-    downloadFilename.find('/') != std::string::npos || downloadFilename.find('\\') != std::string::npos ||
-    downloadFilename.find('\0') != std::string::npos) {
+  if (downloadFilename.empty() || downloadFilename[0] == '.' || downloadFilename[0] == '-' || downloadFilename.length() > 80){
     return 2;
   }
-  std::string DownloadFileExt = downloadFilename.substr(downloadFilename.length() - 4, downloadFilename.length());
-  if (DownloadFileExt != ".w3m" && DownloadFileExt != ".w3x") {
+
+  std::string InvalidChars = "/\\\0\"'*?:|<>;,";
+  if (downloadFilename.find_first_of(InvalidChars) != std::string::npos) {
     return 2;
   }
+
+  size_t ExtensionIndex = downloadFilename.find_last_of(".");
+  std::string DownloadFileExt;
+  if (ExtensionIndex == std::string::npos) {
+    return 2;
+  } else {
+    DownloadFileExt = downloadFilename.substr(ExtensionIndex, downloadFilename.length());
+    std::transform(std::begin(DownloadFileExt), std::end(DownloadFileExt), std::begin(DownloadFileExt), [](unsigned char c) {
+      return static_cast<char>(std::tolower(c));
+    });
+    if (DownloadFileExt != ".w3m" && DownloadFileExt != ".w3x") {
+      return 2;
+    }
+    std::string downloadFileNameNoExt = downloadFilename.substr(0, ExtensionIndex);
+    downloadFilename = downloadFileNameNoExt + DownloadFileExt; // case-sensitive name, but lowercase extension
+
+    // CON, PRN, AUX, NUL, etc. are case-insensitive
+    std::transform(std::begin(downloadFileNameNoExt), std::end(downloadFileNameNoExt), std::begin(downloadFileNameNoExt), [](unsigned char c) {
+      return static_cast<char>(std::tolower(c));
+    });
+    if (downloadFileNameNoExt == "con" || downloadFileNameNoExt == "prn" || downloadFileNameNoExt == "aux" || downloadFileNameNoExt == "nul") {
+      return 2;
+    }
+    if (downloadFileNameNoExt.length() == 4 && (downloadFileNameNoExt.substr(0, 3) == "com" || downloadFileNameNoExt.substr(0, 3) == "lpt")) {
+      return 2;
+    }
+  }
+
+  searchFilename = downloadFilename;
+  // TODO: Further sanitize downloadFilename
+
   std::string MapSuffix;
   bool FoundAvailableSuffix = false;
   for (int i = 0; i < 10; i++) {
     if (i != 0) {
       MapSuffix = "~" + std::to_string(i);
     }
-    if (FileExists(mapRootPath + downloadFilename.substr(0, downloadFilename.length() - 4) + MapSuffix + DownloadFileExt)) {
+    std::filesystem::path FileNameFragment = downloadFilename.substr(0, downloadFilename.length() - 4) + MapSuffix + DownloadFileExt;
+    if (FileExists(mapRootPath / FileNameFragment)) {
       // Map already exists.
       // I'd rather directly open the file with wx flags to avoid racing conditions,
       // but there is no standard C++ way to do this, and cstdio isn't very helpful.
@@ -373,8 +407,8 @@ inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string &
   }
   Print("[AURA] Downloading <" + downloadUri + "> as [" + downloadFilename + "]...");
   downloadFilename = downloadFilename.substr(0, downloadFilename.length() - 4) + MapSuffix + DownloadFileExt;
-  std::string DestinationPath = mapRootPath + downloadFilename;
-  std::ofstream MapFile(DestinationPath, std::ios_base::out | std::ios_base::binary);
+  std::filesystem::path DestinationPath = mapRootPath / std::filesystem::path(downloadFilename);
+  std::ofstream MapFile(DestinationPath.string(), std::ios_base::out | std::ios_base::binary);
   if (!MapFile.is_open()) {
     MapFile.close();
     return 4;
