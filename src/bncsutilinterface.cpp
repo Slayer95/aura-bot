@@ -24,7 +24,6 @@
 
 #include <bncsutil/bncsutil.h>
 
-#include <bitset>
 #include <algorithm>
 #include <cmath>
 
@@ -50,26 +49,63 @@ void CBNCSUtilInterface::Reset(const string& userName, const string& userPasswor
   m_NLS = new NLS(userName, userPassword);
 }
 
-inline static filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const string& file)
+optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war3Path)
 {
-  std::string mutated_file = file;
-  const size_t NumberOfCombinations = std::pow(2, mutated_file.size());
-
-  for (size_t perm = 0; perm < NumberOfCombinations; ++perm) {
-    std::bitset<64> bs(perm);
-    std::transform(mutated_file.begin(), mutated_file.end(), mutated_file.begin(), ::tolower);
-
-    for (size_t index = 0; index < bs.size() && index < mutated_file.size(); ++index) {
-      if (bs[index])
-        mutated_file[index] = ::toupper(mutated_file[index]);
+  optional<uint8_t> version;
+  const string FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll").string();
+  const string FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll").string();
+  const string WarcraftIIIExe = CaseInsensitiveFileExists(war3Path, "Warcraft III.exe").string();
+  const string War3Exe = CaseInsensitiveFileExists(war3Path, "war3.exe").string();
+  if (WarcraftIIIExe.empty() && War3Exe.empty()) {
+    Print("[CONFIG] war3.exe, Warcraft III.exe missing at " + war3Path.string() + ". Config required: bot_war3version, bnet_X_auth_*.");
+    return version;
+  }
+  if (FileStormDLL.empty() != FileGameDLL.empty()) {
+    if (FileStormDLL.empty()) {
+      Print("[CONFIG] Game.dll found, but Storm.dll missing at " + war3Path.string() + ". Config required: bot_war3version, bnet_X_auth_*.");
+    } else {
+      Print("[CONFIG] Storm.dll found, but Game.dll missing at " + war3Path.string() + ". Config required: bot_war3version, bnet_X_auth_*.");
     }
-
-    filesystem::path testPath = path / filesystem::path(mutated_file);
-    if (FileExists(testPath))
-      return testPath;
+    return version;
+  }
+  if (FileStormDLL.empty()) {
+    if (WarcraftIIIExe.empty()) {
+      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: bot_war3version, bnet_X_auth_*.");
+      return version;
+    }
+  }
+  if (!War3Exe.empty()) {
+    if (FileStormDLL.empty()) {
+      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: bot_war3version, bnet_X_auth_*.");
+      return version;
+    }
   }
 
-  return "";
+  uint8_t versionMode;
+  if (!War3Exe.empty()) {
+    versionMode = 27;
+  } else if (!FileStormDLL.empty()) {
+    versionMode = 28;
+  } else {
+    versionMode = 29;
+  }
+
+  char     buf[1024];
+  uint32_t EXEVersion;
+  if (versionMode >= 28) {
+    getExeInfo(WarcraftIIIExe.c_str(), buf, 1024, &EXEVersion, BNCSUTIL_PLATFORM_X86);
+  } else {
+    getExeInfo(War3Exe.c_str(), buf, 1024, &EXEVersion, BNCSUTIL_PLATFORM_X86);
+  }
+  uint8_t readVersion = static_cast<uint8_t>(EXEVersion >> 16);
+
+  if ((versionMode == 28) != (readVersion == 28) || versionMode < 28 && readVersion > 28 || versionMode > 28 && readVersion < 28) {
+    Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: bot_war3version, bnet_X_auth_*.");
+    return version;
+  }
+
+  version = readVersion;
+  return version;
 }
 
 bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const string& keyROC, const string& keyTFT, const string& valueStringFormula, const string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version)

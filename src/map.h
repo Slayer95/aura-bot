@@ -167,6 +167,7 @@ public:
   inline std::string            GetMapType() const { return m_MapType; }
   inline std::string            GetMapDefaultHCL() const { return m_MapDefaultHCL; }
   inline std::string            GetMapLocalPath() const { return m_MapLocalPath; }
+  std::string                   GetMapFileName() const;
   inline std::string*           GetMapData() { return &m_MapData; }
   inline uint8_t                GetMapNumPlayers() const { return m_MapNumPlayers; }
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
@@ -202,22 +203,22 @@ inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::st
 
 inline std::string GetEpicWarSuggestions(std::string & pattern, int maxCount)
 {
-    std::string SearchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
-    Print("[AURA] Downloading <" + SearchUri + ">...");
-    std::string Suggestions;
-    auto response = cpr::Get(cpr::Url{SearchUri});
-    if (response.status_code != 200) {
-      return Suggestions;
-    }
-
-    std::vector<std::pair<std::string, int>> MatchingMaps = ExtractEpicWarMaps(response.text, maxCount);
-
-    for (const auto& element : MatchingMaps) {
-      Suggestions += element.first + " (epicwar-" + std::to_string(element.second) + "), ";
-    }
-
-    Suggestions = Suggestions.substr(0, Suggestions.length() - 2);
+  std::string SearchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
+  Print("[AURA] Downloading <" + SearchUri + ">...");
+  std::string Suggestions;
+  auto response = cpr::Get(cpr::Url{SearchUri});
+  if (response.status_code != 200) {
     return Suggestions;
+  }
+
+  std::vector<std::pair<std::string, int>> MatchingMaps = ExtractEpicWarMaps(response.text, maxCount);
+
+  for (const auto& element : MatchingMaps) {
+    Suggestions += element.first + " (epicwar-" + std::to_string(element.second) + "), ";
+  }
+
+  Suggestions = Suggestions.substr(0, Suggestions.length() - 2);
+  return Suggestions;
 }
 
 inline int ParseMapObservers(const std::string s, bool & errored) {
@@ -297,7 +298,7 @@ inline std::pair<std::string, std::string> ParseMapId(const std::string s, const
   if (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:") {
     return make_pair("local", s);
   }
-  
+ 
 
   bool isUri = false;
   if (lower.substr(0, 7) == "http://") {
@@ -380,7 +381,7 @@ inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string &
   }
 
   searchFilename = downloadFilename;
-  // TODO: Further sanitize downloadFilename
+  // TODO(IceSandslash): Further sanitize downloadFilename
 
   std::string MapSuffix;
   bool FoundAvailableSuffix = false;

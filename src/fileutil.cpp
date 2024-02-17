@@ -23,6 +23,7 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
 #include <fstream>
 #include <algorithm>
 #include <iostream>
+#include <bitset>
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -232,4 +233,26 @@ filesystem::path GetExeDirectory()
   filesystem::path executablePath(buffer.data());
   Memoized = executablePath.parent_path().lexically_normal();
   return Memoized;
+}
+
+filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const string& file)
+{
+  std::string mutated_file = file;
+  const size_t NumberOfCombinations = std::pow(2, mutated_file.size());
+
+  for (size_t perm = 0; perm < NumberOfCombinations; ++perm) {
+    std::bitset<64> bs(perm);
+    std::transform(mutated_file.begin(), mutated_file.end(), mutated_file.begin(), ::tolower);
+
+    for (size_t index = 0; index < bs.size() && index < mutated_file.size(); ++index) {
+      if (bs[index])
+        mutated_file[index] = ::toupper(mutated_file[index]);
+    }
+
+    filesystem::path testPath = path / filesystem::path(mutated_file);
+    if (FileExists(testPath))
+      return testPath;
+  }
+
+  return "";
 }

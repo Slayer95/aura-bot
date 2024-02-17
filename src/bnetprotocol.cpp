@@ -480,10 +480,8 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(std::string ipString, ui
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter)
+std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
 {
-  // TODO: sort out how GameType works, the documentation is horrendous
-
   string HostCounterString = ToHexString(hostCounter);
 
   if (HostCounterString.size() < 8)
@@ -528,7 +526,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const st
     AppendByteArray(packet, CustomGame, 4);                // Custom Game
     AppendByteArrayFast(packet, gameName);                 // Game Name
     packet.push_back(0);                                   // Game Password is NULL
-    packet.push_back(98);                                 // Slots Free (ascii 98 = char 'n' = 11 slots free) - note: do not reduce this as this is the # of PID's Warcraft III will allocate
+    packet.push_back(86 + maxSupportedSlots);              // Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of PID's Warcraft III will allocate
     AppendByteArrayFast(packet, HostCounterString, false); // Host Counter
     AppendByteArrayFast(packet, StatString);               // Stat String
     packet.push_back(0);                                   // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
@@ -566,8 +564,6 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_PING(const std::vector<uint8_t>& pi
 
 std::vector<uint8_t> CBNETProtocol::SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const string& accountName)
 {
-  // TODO: check that the passed std::vector<uint8_t> sizes are correct (don't know what they should be right now so I can't do this today)
-
   std::vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);    // BNET header constant
   packet.push_back(SID_LOGONRESPONSE);       // SID_LOGONRESPONSE

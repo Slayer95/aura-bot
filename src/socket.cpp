@@ -376,7 +376,7 @@ void CTCPClient::Connect(const string& localaddress, const string& address, uint
     {
       m_HasError = true;
       m_Error    = GetLastError();
-      Print("[TCPCLIENT] error (bind) - " + GetErrorString());
+      Print("[TCPCLIENT] (" + m_Name +") error (bind) - " + GetErrorString());
       return;
     }
   }
@@ -391,7 +391,7 @@ void CTCPClient::Connect(const string& localaddress, const string& address, uint
   {
     m_HasError = true;
     // m_Error = h_error;
-    Print("[TCPCLIENT] error (gethostbyname)");
+    Print("[TCPCLIENT] (" + m_Name +") error (gethostbyname)");
     return;
   }
 
@@ -411,7 +411,7 @@ void CTCPClient::Connect(const string& localaddress, const string& address, uint
 
       m_HasError = true;
       m_Error    = GetLastError();
-      Print("[TCPCLIENT] error (connect) - " + GetErrorString());
+      Print("[TCPCLIENT] (" + m_Name +") error (connect) - " + GetErrorString());
       return;
     }
   }
@@ -552,6 +552,7 @@ CTCPSocket* CTCPServer::Accept(fd_set* fd)
     struct sockaddr_in Addr;
     int32_t            AddrLen = sizeof(Addr);
     SOCKET             NewSocket;
+    memset(&Addr, 0, AddrLen);
 
 #ifdef WIN32
     if ((NewSocket = accept(m_Socket, (struct sockaddr*)&Addr, &AddrLen)) != INVALID_SOCKET)

@@ -591,7 +591,7 @@ inline std::string JoinVector(const std::vector<std::string> list, const bool tr
   std::string Results;
   for (const auto& element : list)
     Results += element + ", ";
-  if (!trailingComma) Results = Results.substr(0, 2);
+  if (!trailingComma) Results = Results.substr(0, Results.length() - 2);
   return Results;
 }
 

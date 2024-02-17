@@ -20,6 +20,7 @@ public:
   std::string                         m_UserName;
   std::string                         m_Password;
   bool                                m_Enabled;
+  bool                                m_EnablePublicCreate;
   std::vector<std::string>            m_Channels;
   std::set<std::string>               m_RootAdmins;
   uint16_t                            m_Port;

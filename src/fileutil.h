@@ -34,5 +34,6 @@ std::string FileRead(const std::filesystem::path& file, int* byteSize);
 bool FileWrite(const std::filesystem::path& file, uint8_t* data, uint32_t length);
 bool FileDelete(const std::filesystem::path& File);
 std::filesystem::path GetExeDirectory();
+std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
 
 #endif // AURA_FILEUTIL_H_

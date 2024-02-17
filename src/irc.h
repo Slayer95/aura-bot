@@ -54,8 +54,10 @@ public:
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool Update(void* fd, void* send_fd);
   void ExtractPackets();
-  void SendIRC(const std::string& message);
-  void SendMessageIRC(const std::string& message, const std::string& target);
+  void Send(const std::string& message);
+  void SendUser(const std::string& message, const std::string& target);
+  void SendChannel(const std::string& message, const std::string& target);
+  void SendAllChannels(const std::string& message);
 };
 
 #endif // AURA_IRC_H_

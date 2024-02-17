@@ -55,8 +55,6 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
     m_Map(nMap),
     m_GameName(nGameName),
     m_LastGameName(nGameName),
-    m_IndexVirtualHostName(nAura->m_GameDefaultConfig->m_IndexVirtualHostName),
-    m_LobbyVirtualHostName(nAura->m_GameDefaultConfig->m_LobbyVirtualHostName),
     m_OwnerName(string()),
     m_OwnerRealm(string()),
     m_CreatorName(string()),
@@ -84,13 +82,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
     m_RandomSeed(0),
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey),
-    m_Latency(nAura->m_GameDefaultConfig->m_Latency),
-    m_SyncLimit(nAura->m_GameDefaultConfig->m_SyncLimit),
-    m_SyncLimitSafe(nAura->m_GameDefaultConfig->m_SyncLimitSafe),
-    m_SyncFactor(nAura->m_GameDefaultConfig->m_SyncFactor),
     m_SyncCounter(0),
-    m_AutoKickPing(nAura->m_GameDefaultConfig->m_AutoKickPing),
-    m_WarnHighPing(nAura->m_GameDefaultConfig->m_WarnHighPing),
     m_DownloadCounter(0),
     m_CountDownCounter(0),
     m_StartPlayers(0),
@@ -123,6 +115,23 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
     m_HasMapLock(false),
     m_HadLeaver(false)
 {
+  m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
+  m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
+  m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
+  m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
+  m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+  m_SyncFactor = m_Aura->m_GameDefaultConfig->m_SyncFactor;
+  m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
+  m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
+
+  m_VoteKickPercentage = m_Aura->m_GameDefaultConfig->m_VoteKickPercentage;
+  m_CommandTrigger = m_Aura->m_GameDefaultConfig->m_CommandTrigger;
+  m_LacksMapKickDelay = m_Aura->m_GameDefaultConfig->m_LacksMapKickDelay;
+  m_NotifyJoins = m_Aura->m_GameDefaultConfig->m_NotifyJoins;
+  m_PerfThreshold = m_Aura->m_GameDefaultConfig->m_PerfThreshold;
+  m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
+  m_LobbyTimeLimit = m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
+  m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
 }
 
 CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameDisplay, string& nGameName, string& nOwnerName, string& nOwnerRealm, string& nCreatorName, CBNET* nCreatorServer)
@@ -134,8 +143,6 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_Map(nMap),
     m_GameName(nGameName),
     m_LastGameName(nGameName),
-    m_IndexVirtualHostName(nAura->m_GameDefaultConfig->m_IndexVirtualHostName),
-    m_LobbyVirtualHostName(nAura->m_GameDefaultConfig->m_LobbyVirtualHostName),
     m_OwnerName(nOwnerName),
     m_OwnerRealm(nOwnerRealm),
     m_CreatorName(nCreatorName),
@@ -163,13 +170,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_RandomSeed(static_cast<uint32_t>(GetTicks())),
     m_HostCounter(nAura->NextHostCounter()),
     m_EntryKey(rand()),
-    m_Latency(nAura->m_GameDefaultConfig->m_Latency),
-    m_SyncLimit(nAura->m_GameDefaultConfig->m_SyncLimit),
-    m_SyncLimitSafe(nAura->m_GameDefaultConfig->m_SyncLimitSafe),
-    m_SyncFactor(nAura->m_GameDefaultConfig->m_SyncFactor),
     m_SyncCounter(0),
-    m_AutoKickPing(nAura->m_GameDefaultConfig->m_AutoKickPing),
-    m_WarnHighPing(nAura->m_GameDefaultConfig->m_WarnHighPing),
     m_DownloadCounter(0),
     m_CountDownCounter(0),
     m_StartPlayers(0),
@@ -179,7 +180,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_PlayersWithMap(0),
     m_HostPort(nHostPort),
     m_LANHostPort(nLANHostPort),
-    m_LANEnabled(nAura->m_GameDefaultConfig->m_LANEnabled),
+    m_LANEnabled(false),
     m_PublicHostOverride(false),
     m_GameDisplay(nGameDisplay),
     m_VirtualHostPID(255),
@@ -200,6 +201,25 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_HasMapLock(false),
     m_HadLeaver(false)
 {
+  m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
+  m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
+  m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
+  m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
+  m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+  m_SyncFactor = m_Aura->m_GameDefaultConfig->m_SyncFactor;
+  m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
+  m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
+
+  m_VoteKickPercentage = m_Aura->m_GameDefaultConfig->m_VoteKickPercentage;
+  m_CommandTrigger = m_Aura->m_GameDefaultConfig->m_CommandTrigger;
+  m_LacksMapKickDelay = m_Aura->m_GameDefaultConfig->m_LacksMapKickDelay;
+  m_NotifyJoins = m_Aura->m_GameDefaultConfig->m_NotifyJoins;
+  m_PerfThreshold = m_Aura->m_GameDefaultConfig->m_PerfThreshold;
+  m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
+  m_LobbyTimeLimit = m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
+  m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
+
+  m_LANEnabled = nAura->m_GameDefaultConfig->m_LANEnabled;
 
   // wait time of 1 minute  = 0 empty actions required
   // wait time of 2 minutes = 1 empty action required...
@@ -348,12 +368,21 @@ uint32_t CGame::GetNumHumanPlayers() const
   return NumHumanPlayers;
 }
 
+string CGame::GetMapFileName() const
+{
+  size_t LastSlash = m_MapPath.rfind('\\');
+  if (LastSlash == string::npos) {
+    return m_MapPath;
+  }
+  return m_MapPath.substr(LastSlash + 1);
+}
+
 string CGame::GetDescription() const
 {
   if (m_IsMirror)
-     return m_GameName + " [Mirror]";
+     return "[" + GetMapFileName() + "] (Mirror) \"" + m_GameName + "\"";
 
-  string Description = m_GameName + " : " + m_OwnerName + " : " + to_string(GetNumHumanPlayers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size());
+  string Description = "[" + GetMapFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " + to_string(GetNumHumanPlayers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size());
 
   if (m_GameLoading || m_GameLoaded)
     Description += " : " + to_string((m_GameTicks / 1000) / 60) + "min";
@@ -393,7 +422,7 @@ string CGame::GetPlayers() const
   {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
 
-    if (player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() != MAX_SLOTS)
+    if (player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots)
       Players += player->GetName() + ", ";
   }
 
@@ -413,7 +442,7 @@ string CGame::GetObservers() const
   {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
 
-    if (player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() == MAX_SLOTS)
+    if (player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots)
       Observers += player->GetName() + ", ";
   }
 
@@ -688,7 +717,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // start the gameover timer if there's only a configured number of players left
   uint32_t RemainingPlayers = GetNumHumanPlayers() + m_FakePlayers.size();
   if (RemainingPlayers != m_StartPlayers && m_GameOverTime == 0 && (m_GameLoading || m_GameLoaded)) {
-    if (RemainingPlayers == 0 || RemainingPlayers <= m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver) {
+    if (RemainingPlayers == 0 || RemainingPlayers <= m_NumPlayersToStartGameOver) {
       m_GameOverTime = Time;
       Print(GetLogPrefix() + "gameover timer started (" + std::to_string(RemainingPlayers) + " player(s) left)");
       if (GetNumHumanPlayers() > 0) {
@@ -840,19 +869,19 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // release abandoned lobbies, so other players can take ownership
-  if (!m_GameLoading && !m_GameLoaded && (m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit > 0 || m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime > 0)) {
+  if (!m_GameLoading && !m_GameLoaded && !m_IsMirror && (m_LobbyTimeLimit > 0 || m_LobbyNoOwnerTime > 0)) {
     // check if there is an owner in the game
     if (HasOwnerInGame()) {
       m_LastOwnerSeen = Time;
     } else {
       // check if we've hit the time limit
       int64_t TimeSinceSeenOwner = Time - m_LastOwnerSeen;
-      if (TimeSinceSeenOwner > 60 * static_cast<int64_t>(m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime)) {
+      if (TimeSinceSeenOwner > 60 * static_cast<int64_t>(m_LobbyNoOwnerTime)) {
         if (!m_OwnerName.empty()) {
           ReleaseOwner();
         }
       }
-      if (TimeSinceSeenOwner > 60 * static_cast<int64_t>(m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit)) {
+      if (TimeSinceSeenOwner > 60 * static_cast<int64_t>(m_LobbyTimeLimit)) {
         Print(GetLogPrefix() + "is over (lobby time limit hit)");
         return true;
       }
@@ -877,30 +906,36 @@ void CGame::UpdatePost(void* send_fd)
     player->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
 }
 
-void CGame::Send(CGamePlayer* player, const std::vector<uint8_t>& data)
+void CGame::Send(CPotentialPlayer* player, const std::vector<uint8_t>& data) const
 {
   if (player)
     player->Send(data);
 }
 
-void CGame::Send(uint8_t PID, const std::vector<uint8_t>& data)
+void CGame::Send(CGamePlayer* player, const std::vector<uint8_t>& data) const
+{
+  if (player)
+    player->Send(data);
+}
+
+void CGame::Send(uint8_t PID, const std::vector<uint8_t>& data) const
 {
   Send(GetPlayerFromPID(PID), data);
 }
 
-void CGame::Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& data)
+void CGame::Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& data) const
 {
   for (auto& PID : PIDs)
     Send(PID, data);
 }
 
-void CGame::SendAll(const std::vector<uint8_t>& data)
+void CGame::SendAll(const std::vector<uint8_t>& data) const
 {
   for (auto& player : m_Players)
     player->Send(data);
 }
 
-void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message)
+void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message) const
 {
   // send a private message to one player - it'll be marked [Private] in Warcraft 3
   if (message.empty())
@@ -934,41 +969,36 @@ void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message
   }
 }
 
-void CGame::SendChat(uint8_t fromPID, uint8_t toPID, const string& message)
+void CGame::SendChat(uint8_t fromPID, uint8_t toPID, const string& message) const
 {
   SendChat(fromPID, GetPlayerFromPID(toPID), message);
 }
 
-void CGame::SendChat(CGamePlayer* player, const string& message)
+void CGame::SendChat(CGamePlayer* player, const string& message) const
 {
   SendChat(GetHostPID(), player, message);
 }
 
-void CGame::SendChat(uint8_t toPID, const string& message)
+void CGame::SendChat(uint8_t toPID, const string& message) const
 {
   SendChat(GetHostPID(), toPID, message);
 }
 
-void CGame::SendAllChat(uint8_t fromPID, const string& message)
+void CGame::SendAllChat(uint8_t fromPID, const string& message) const
 {
   if (message.empty())
     return;
 
   // send a public message to all players - it'll be marked [All] in Warcraft 3
 
-  if (GetNumHumanPlayers() > 0)
-  {
-    Print(GetLogPrefix() + "[Local] " + message);
-
+  if (GetNumHumanPlayers() > 0) {
     if (!m_GameLoading && !m_GameLoaded)
     {
       if (message.size() > 254)
         SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), message.substr(0, 254)));
       else
         SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), message));
-    }
-    else
-    {
+    } else {
       if (message.size() > 127)
         SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), message.substr(0, 127)));
       else
@@ -977,7 +1007,7 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message)
   }
 }
 
-void CGame::SendAllChat(const string& message)
+void CGame::SendAllChat(const string& message) const
 {
   SendAllChat(GetHostPID(), message);
 }
@@ -990,10 +1020,10 @@ void CGame::SendAllSlotInfo()
   SendAll(GetProtocol()->SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
 
   m_PlayersWithMap = 0;
-  for (uint8_t i = 0; i < m_Slots.size(); ++i){
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
       CGamePlayer* Player = GetPlayerFromSID(i);
-      if (!Player || Player->GetHasMap())
+      if (!Player || Player->GetHasMap() && !Player->GetObserver())
         ++m_PlayersWithMap;
     }
     m_SlotInfoChanged = 0;
@@ -1047,19 +1077,19 @@ string CGame::GetAutoStartText() const
     if (m_AutoStartMinTime != 0) {
       return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + to_string(m_Slots.size()) + " after " + MinTimeString;
     } else {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + to_string(m_Slots.size());
+      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + to_string(m_Slots.size()) + " (AI are counted, but observers are not).";
     }
   } else {
     return "Autostarts in " + MaxTimeString;
   }
 }
 
-void CGame::SendAllAutoStart()
+void CGame::SendAllAutoStart() const
 {
   SendAllChat(GetAutoStartText());
 }
 
-void CGame::SendVirtualHostPlayerInfo(CGamePlayer* player)
+void CGame::SendVirtualHostPlayerInfo(CPotentialPlayer* player) const
 {
   if (m_VirtualHostPID == 255)
     return;
@@ -1069,7 +1099,17 @@ void CGame::SendVirtualHostPlayerInfo(CGamePlayer* player)
   Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostPID, m_LobbyVirtualHostName, IP, IP));
 }
 
-void CGame::SendFakePlayersInfo(CGamePlayer* player)
+void CGame::SendVirtualHostPlayerInfo(CGamePlayer* player) const
+{
+  if (m_VirtualHostPID == 255)
+    return;
+
+  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+
+  Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostPID, m_LobbyVirtualHostName, IP, IP));
+}
+
+void CGame::SendFakePlayersInfo(CPotentialPlayer* player) const
 {
   if (m_FakePlayers.empty())
     return;
@@ -1080,7 +1120,53 @@ void CGame::SendFakePlayersInfo(CGamePlayer* player)
     Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "Placeholder[" + to_string(fakeplayer) + "]", IP, IP));
 }
 
-void CGame::SendWelcomeMessage( CGamePlayer *player )
+void CGame::SendFakePlayersInfo(CGamePlayer* player) const
+{
+  if (m_FakePlayers.empty())
+    return;
+
+  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+
+  for (auto& fakeplayer : m_FakePlayers)
+    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "Placeholder[" + to_string(fakeplayer) + "]", IP, IP));
+}
+
+void CGame::SendJoinedPlayersInfo(CPotentialPlayer* potential) const
+{
+  for (auto& otherPlayer : m_Players) {
+    if (otherPlayer->GetLeftMessageSent())
+      continue;
+    Send(potential,
+      GetProtocol()->SEND_W3GS_PLAYERINFO(otherPlayer->GetPID(), otherPlayer->GetName(), otherPlayer->GetExternalIP(), otherPlayer->GetInternalIP())
+    );
+  }
+}
+
+void CGame::SendJoinedPlayersInfo(CGamePlayer* player) const
+{
+  for (auto& otherPlayer : m_Players) {
+    if (otherPlayer == player)
+      continue;
+    if (otherPlayer->GetLeftMessageSent())
+      continue;
+    Send(player,
+      GetProtocol()->SEND_W3GS_PLAYERINFO(otherPlayer->GetPID(), otherPlayer->GetName(), otherPlayer->GetExternalIP(), otherPlayer->GetInternalIP())
+    );
+  }
+}
+
+void CGame::SendIncomingPlayerInfo(CGamePlayer* player) const
+{
+  for (auto& otherPlayer : m_Players) {
+    if (otherPlayer == player)
+      continue;
+    if (otherPlayer->GetLeftMessageSent())
+      break;
+    otherPlayer->Send(GetProtocol()->SEND_W3GS_PLAYERINFO(player->GetPID(), player->GetName(), player->GetExternalIP(), player->GetInternalIP()));
+  }
+}
+
+void CGame::SendWelcomeMessage(CGamePlayer *player) const
 {
   for (size_t i = 0; i < m_Aura->m_Config->m_Greeting.size(); i++) {
     int matchIndex;
@@ -1110,8 +1196,8 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
       Line = Line.substr(6, Line.length());
     }
     if (Line.substr(0, 11) == "{FILENAME?}") {
-      size_t LastSlash = m_Map->GetMapPath().rfind('\\');
-      if (LastSlash == string::npos || LastSlash > m_Map->GetMapPath().length() - 6) {
+      size_t LastSlash = m_MapPath.rfind('\\');
+      if (LastSlash == string::npos || LastSlash > m_MapPath.length() - 6) {
         continue;
       }
       Line = Line.substr(11, Line.length());
@@ -1123,8 +1209,8 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
       Line = Line.substr(12, Line.length());
     }
     if (Line.substr(0, 11) == "{FILENAME!}") {
-      size_t LastSlash = m_Map->GetMapPath().rfind('\\');
-      if (!(LastSlash == string::npos || LastSlash > m_Map->GetMapPath().length() - 6)) {
+      size_t LastSlash = m_MapPath.rfind('\\');
+      if (!(LastSlash == string::npos || LastSlash > m_MapPath.length() - 6)) {
         continue;
       }
       Line = Line.substr(11, Line.length());
@@ -1178,16 +1264,13 @@ void CGame::SendWelcomeMessage( CGamePlayer *player )
       Line.replace(matchIndex, 11, !m_CreatorServer ? "@@@LAN/VPN" : ("@" + m_CreatorServer->GetCanonicalDisplayName()));
     }
     while ((matchIndex = Line.find("{TRIGGER}")) != string::npos) {
-      Line.replace(matchIndex, 9, std::string(1, m_Aura->m_GameDefaultConfig->m_CommandTrigger));
+      Line.replace(matchIndex, 9, string(1, m_CommandTrigger));
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
       Line.replace(matchIndex, 5, m_Map->GetMapSiteURL());
     }
     while ((matchIndex = Line.find("{FILENAME}")) != string::npos) {
-      size_t LastSlash = m_Map->GetMapPath().rfind('\\');
-      if (LastSlash != string::npos && LastSlash <= m_Map->GetMapPath().length() - 6) {
-        Line.replace(matchIndex, 10, m_Map->GetMapPath().substr(LastSlash + 1, m_Map->GetMapPath().length()));
-      }
+      Line.replace(matchIndex, 10, m_Map->GetMapFileName());
     }
     while ((matchIndex = Line.find("{SHORTDESC}")) != string::npos) {
       Line.replace(matchIndex, 11, m_Map->GetMapShortDesc());
@@ -1284,9 +1367,9 @@ void CGame::SendAllActions()
   const int64_t ExpectedSendInterval = m_Latency - m_LastActionLateBy;
   m_LastActionLateBy                 = ActualSendInterval - ExpectedSendInterval;
 
-  if (m_LastActionLateBy > m_Aura->m_GameDefaultConfig->m_PerfThreshold)
+  if (m_LastActionLateBy > m_PerfThreshold)
   {
-    // something is going terribly wrong - Aura++ is probably starved of resources
+    // something is going terribly wrong - Aura is probably starved of resources
     // print a message because even though this will take more resources it should provide some information to the administrator for future reference
     // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
     Print(GetLogPrefix() + "warning - last update was late by " + to_string(m_LastActionLateBy) + "ms");
@@ -1295,12 +1378,12 @@ void CGame::SendAllActions()
   m_LastActionSentTicks = Ticks;
 }
 
-void CGame::AnnounceToAddress(string IP, uint16_t port)
+void CGame::AnnounceToAddress(string IP, uint16_t port) const
 {
   m_Aura->m_UDPSocket->SendTo(
     IP, port,
     GetProtocol()->SEND_W3GS_GAMEINFO(
-      m_Aura->m_Config->m_War3Version,
+      m_Aura->m_GameVersion,
       CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
       m_Map->GetMapGameFlags(),
       m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
@@ -1308,7 +1391,7 @@ void CGame::AnnounceToAddress(string IP, uint16_t port)
       m_GameName,
       m_IndexVirtualHostName,
       0,
-      m_Map->GetMapPath(),
+      m_MapPath,
       m_Map->GetMapCRC(),
       m_Slots.size(), // Total Slots
       m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
@@ -1319,12 +1402,12 @@ void CGame::AnnounceToAddress(string IP, uint16_t port)
   );
 }
 
-void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit)
+void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
 {
   m_Aura->m_UDPSocket->SendTo(
     tunnelLocalIP, tunnelLocalPort,
     GetProtocol()->SEND_W3GR_GAMEINFO(
-      m_Aura->m_Config->m_War3Version,
+      m_Aura->m_GameVersion,
       CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
       m_Map->GetMapGameFlags(),
       m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
@@ -1332,7 +1415,7 @@ void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnel
       m_GameName,
       m_IndexVirtualHostName,
       0,
-      m_Map->GetMapPath(),
+      m_MapPath,
       m_Map->GetMapCRC(),
       m_Slots.size(), // Total Slots
       m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
@@ -1346,19 +1429,19 @@ void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnel
   );
 }
 
-void CGame::LANBroadcastGameCreate()
+void CGame::LANBroadcastGameCreate() const
 {
-  m_Aura->SendBroadcast(6112, GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_Config->m_War3Version, m_HostCounter));
+  m_Aura->SendBroadcast(6112, GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter));
   if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_GameRangerLocalPort != 0) {
     m_Aura->m_UDPSocket->SendTo(
       m_Aura->m_GameRangerLocalAddress, m_Aura->m_GameRangerLocalPort,
       // Hardcoded remote 255.255.255.255:6112
-      GetProtocol()->SEND_W3GR_CREATEGAME(m_Aura->m_Config->m_War3Version, m_HostCounter)
+      GetProtocol()->SEND_W3GR_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter)
     );
   }
 }
 
-void CGame::LANBroadcastGameDecreate()
+void CGame::LANBroadcastGameDecreate() const
 {
   m_Aura->SendBroadcast(6112, GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter));
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
@@ -1370,7 +1453,7 @@ void CGame::LANBroadcastGameDecreate()
   }
 }
 
-void CGame::LANBroadcastGameRefresh()
+void CGame::LANBroadcastGameRefresh() const
 {
   m_Aura->SendBroadcast(6112, GetProtocol()->SEND_W3GS_REFRESHGAME(
     m_HostCounter,
@@ -1389,7 +1472,7 @@ void CGame::LANBroadcastGameRefresh()
   }
 }
 
-void CGame::LANBroadcastGameInfo()
+void CGame::LANBroadcastGameInfo() const
 {
   // we send 12 for SlotsTotal because this determines how many PID's Warcraft 3 allocates
   // we need to make sure Warcraft 3 allocates at least SlotsTotal + 1 but at most 12 PID's
@@ -1406,7 +1489,7 @@ void CGame::LANBroadcastGameInfo()
 	m_Aura->SendBroadcast(
   6112,
     GetProtocol()->SEND_W3GS_GAMEINFO(
-			m_Aura->m_Config->m_War3Version,
+			m_Aura->m_GameVersion,
 			CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
 			m_Map->GetMapGameFlags(),
       m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
@@ -1414,7 +1497,7 @@ void CGame::LANBroadcastGameInfo()
 			m_GameName,
 			m_IndexVirtualHostName,
 			0,
-			m_Map->GetMapPath(),
+			m_MapPath,
 			m_Map->GetMapCRC(),
       m_Slots.size(), // Total Slots
       m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
@@ -1654,17 +1737,116 @@ void CGame::EventPlayerKickHandleQueued(CGamePlayer* player)
   OpenSlot(GetSIDFromPID(player->GetPID()), false);
 }
 
-bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* joinPlayer)
+CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
+{
+  // Transfer socket from CPotentialPlayer to CGamePlayer
+  CGamePlayer* Player = new CGamePlayer(this, potential, GetNewPID(), HostCounterID, JoinedRealm, joinRequest->GetName(), joinRequest->GetInternalIP(), IsReserved);
+  m_Players.push_back(Player);
+  potential->SetSocket(nullptr);
+  potential->SetDeleteMe(true);
+
+  Player->SetWhoisShouldBeSent(IsUnverifiedAdmin || MatchOwnerName(Player->GetName()));
+
+  if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
+    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
+  } else {
+    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
+
+    // try to pick a team and colour
+    // make sure there aren't too many other players already
+
+    uint8_t NumOtherPlayers = 0;
+
+    for (auto& slot : m_Slots) {
+      if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Aura->m_MaxSlots)
+        ++NumOtherPlayers;
+    }
+
+    if (NumOtherPlayers < m_Map->GetMapNumPlayers()) {
+      if (SID < m_Map->GetMapNumPlayers())
+        m_Slots[SID].SetTeam(SID);
+      else
+        m_Slots[SID].SetTeam(0);
+
+      m_Slots[SID].SetColour(GetNewColour());
+    }
+  }
+
+  // send slot info to the new player
+  // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful
+
+  Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetPID(), Player->GetSocket()->GetPort(), Player->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+
+  SendIncomingPlayerInfo(Player);
+
+  // send virtual host info and fake players info (if present) to the new player
+
+  SendVirtualHostPlayerInfo(Player);
+  SendFakePlayersInfo(Player);
+  SendJoinedPlayersInfo(Player);
+
+  // send a map check packet to the new player
+
+  Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapInfo(), m_Map->GetMapCRC(), m_Map->GetMapSHA1()));
+
+  // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
+  SendAllSlotInfo();
+
+  // send a welcome message
+
+	SendWelcomeMessage(Player);
+
+  // check for multiple IP usage
+
+  string Others;
+
+  bool IsLoopBack = Player->GetExternalIPString() == "127.0.0.1";
+  for (auto& player : m_Players){
+    if (Player == player)
+      continue;
+    if (Player->GetExternalIPString() != player->GetExternalIPString())
+      continue;
+
+    if (!IsLoopBack) {
+      if (Others.empty())
+        Others = player->GetName();
+      else
+        Others += ", " + player->GetName();
+    }
+  }
+
+  if (!Others.empty()) {
+    SendAllChat("Player [" + joinRequest->GetName() + "] has the same IP address as: " + Others);
+  }
+
+  // abort the countdown if there was one in progress
+
+  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded)
+  {
+    SendAllChat("Countdown aborted!");
+    m_CountDownStarted = false;
+  }
+
+  string notifyString = "";
+  if (m_NotifyJoins && !m_Aura->IsIgnoredNotifyPlayer(joinRequest->GetName())) {
+    notifyString = "\x07";
+  }
+  Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] joined - [" + Player->GetSocket()->GetName() + "] (" + Player->GetExternalIPString() + ")" + notifyString);
+
+  return Player;
+}
+
+bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest)
 {
   // check the new player's name
 
-  if (joinPlayer->GetName().empty() || joinPlayer->GetName().size() > 15 || GetPlayerFromName(joinPlayer->GetName(), false))
+  if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15 || GetPlayerFromName(joinRequest->GetName(), false))
   {
-    Print(GetLogPrefix() + "player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] invalid name (taken or too long)");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken or too long) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
-  } else if (joinPlayer->GetName() == m_LobbyVirtualHostName) {
-    Print(GetLogPrefix() + "player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] spoofer (matches host name)");
+  } else if (joinRequest->GetName() == m_LobbyVirtualHostName) {
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
@@ -1675,12 +1857,14 @@ bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   // note: this is not a replacement for spoof checking since it doesn't verify the player's name and it can be spoofed anyway
 
   string         JoinedRealm;
-  uint8_t HostCounterID = joinPlayer->GetHostCounter() >> 24;
+  uint8_t HostCounterID = joinRequest->GetHostCounter() >> 24;
+  bool IsUnverifiedAdmin = false;
 
   if (HostCounterID >= 0x10) {
     CBNET* matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
     if (matchingRealm) {
       JoinedRealm = matchingRealm->GetServer();
+      IsUnverifiedAdmin = matchingRealm->GetIsAdmin(joinRequest->GetName()) || matchingRealm->GetIsRootAdmin(joinRequest->GetName());
     } else {
       // Trying to join from an unknown realm.
       HostCounterID = 0xF;
@@ -1688,25 +1872,34 @@ bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
     matchingRealm = nullptr;
   }
 
-  if (joinPlayer->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
+  if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
-    Print(GetLogPrefix() + "player [" + joinPlayer->GetName() + "|" + JoinedRealm + "|" + potential->GetExternalIPString() + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
-  if (HostCounterID < 0x10 && joinPlayer->GetEntryKey() != m_EntryKey) {
+  if (HostCounterID < 0x10 && joinRequest->GetEntryKey() != m_EntryKey) {
     // check if the player joining via LAN knows the entry key
-    Print(GetLogPrefix() + "player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] is trying to join the game over LAN but used an incorrect entry key");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
     return false;
   }
 
   if (HostCounterID < 0x10 && HostCounterID != 0) {
-    Print(GetLogPrefix() + "player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] is trying to join the game over reserved realm " + to_string(HostCounterID));
-    // 0x1: GameRanger, others undefined
-    if (HostCounterID != 0x1) {
+    // 0x1: Information
+    // 0x2: GameRanger
+    // others: undefined
+    if (HostCounterID == 0x1) {
+      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), potential->GetSocket()->GetPort(), potential->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+      SendVirtualHostPlayerInfo(potential);
+      SendFakePlayersInfo(potential);
+      SendJoinedPlayersInfo(potential);
+      return false;
+    }
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    if (HostCounterID > 0x2) {
       potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
       return false;
     }
@@ -1717,15 +1910,13 @@ bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
 
   CBNET* SourceRealm = m_Aura->GetRealmByHostName(JoinedRealm);
   if (SourceRealm) {
-    CDBBan* Ban = SourceRealm->IsBannedName(joinPlayer->GetName());
+    CDBBan* Ban = SourceRealm->IsBannedName(joinRequest->GetName());
     if (Ban){
-      Print(GetLogPrefix() + "player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "|" + joinPlayer->GetInternalIPString() + "] is banned");
+      Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "|" + potential->GetExternalIPString() + "] is banned");
 
-      if (m_IgnoredNames.find(joinPlayer->GetName()) == end(m_IgnoredNames))
-      {
-        SendAllChat(joinPlayer->GetName() + " is trying to join the game but is banned");
-        SendAllChat("User [" + Ban->GetName() + "] was banned on server [" + Ban->GetServer() + "] on " + Ban->GetDate() + " by [" + Ban->GetAdmin() + "] because [" + Ban->GetReason() + "]");
-        m_IgnoredNames.insert(joinPlayer->GetName());
+      if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
+        SendAllChat("[" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join the game, but is banned");
+        m_ReportedJoinFailNames.insert(joinRequest->GetName());
       }
 
       // let banned players "join" the game with an arbitrary PID then immediately close the connection
@@ -1739,31 +1930,25 @@ bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
     SourceRealm = nullptr;
   }
 
-  // check if the player is an admin or root admin on any connected realm for determining reserved status
-  // we can't just use the spoof checked realm like in EventPlayerBotCommand because the player hasn't spoof checked yet
-
-  const bool AnyAdminCheck = m_Aura->m_DB->RootAdminCheck(joinPlayer->GetName());
-  const bool Reserved      = IsReserved(joinPlayer->GetName()) || AnyAdminCheck || MatchOwnerName(joinPlayer->GetName()) && JoinedRealm == m_OwnerRealm;
+  // Check if the player is an admin or root admin on any connected realm for determining reserved status
+  // Note: vulnerable to spoofing
+  const bool IsReserved = GetIsReserved(joinRequest->GetName()) || MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm;
 
   // try to find an empty slot
 
   uint8_t SID = GetEmptySlot(false);
-  string notifyString = "";
 
-  if (SID == 255 && Reserved)
-  {
+  if (SID == 255 && IsReserved) {
     // a reserved player is trying to join the game but it's full, try to find a reserved slot
 
     SID = GetEmptySlot(true);
-
-    if (SID != 255)
-    {
+    if (SID != 255) {
       CGamePlayer* KickedPlayer = GetPlayerFromSID(SID);
 
       if (KickedPlayer)
       {
         KickedPlayer->SetDeleteMe(true);
-        KickedPlayer->SetLeftReason("was kicked to make room for a reserved player [" + joinPlayer->GetName() + "]");
+        KickedPlayer->SetLeftReason("was kicked to make room for a reserved player [" + joinRequest->GetName() + "]");
         KickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
 
         // send a playerleave message immediately since it won't normally get sent until the player is deleted which is after we send a playerjoin message
@@ -1775,7 +1960,7 @@ bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
     }
   }
 
-  if (SID == 255 && MatchOwnerName(joinPlayer->GetName()) && JoinedRealm == m_OwnerRealm)
+  if (SID == 255 && MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm)
   {
     // the owner player is trying to join the game but it's full and we couldn't even find a reserved slot, kick the player in the lowest numbered slot
     // updated this to try to find a player slot so that we don't end up kicking a computer
@@ -1796,7 +1981,7 @@ bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
     if (KickedPlayer)
     {
       KickedPlayer->SetDeleteMe(true);
-      KickedPlayer->SetLeftReason("was kicked to make room for the owner player [" + joinPlayer->GetName() + "]");
+      KickedPlayer->SetLeftReason("was kicked to make room for the owner player [" + joinRequest->GetName() + "]");
       KickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
 
       // send a playerleave message immediately since it won't normally get sent until the player is deleted which is after we send a playerjoin message
@@ -1819,113 +2004,7 @@ bool CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
     DeleteVirtualHost();
 
-  if (m_Aura->m_GameDefaultConfig->m_NotifyJoins && !m_Aura->IsIgnoredNotifyPlayer(joinPlayer->GetName())) {
-    notifyString = "\x07";
-  }
-  Print(GetLogPrefix() + "player [" + joinPlayer->GetName() + "@" + JoinedRealm + "|" + potential->GetExternalIPString() + "|" + joinPlayer->GetInternalIPString() + "] joined the game" + notifyString);
-
-  // turning the CPotentialPlayer into a CGamePlayer is a bit of a pain because we have to be careful not to close the socket
-  // this problem is solved by setting the socket to nullptr before deletion and handling the nullptr case in the destructor
-  // we also have to be careful to not modify the potentials vector since we're currently looping through it
-
-  CGamePlayer* Player = new CGamePlayer(this, potential, GetNewPID(), HostCounterID, JoinedRealm, joinPlayer->GetName(), joinPlayer->GetInternalIP(), Reserved);
-
-  Player->SetWhoisShouldBeSent(AnyAdminCheck || MatchOwnerName(Player->GetName()));
-  m_Players.push_back(Player);
-  potential->SetSocket(nullptr);
-  potential->SetDeleteMe(true);
-
-  if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
-  } else {
-    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, MAX_SLOTS, MAX_SLOTS, m_Map->GetLobbyRace(&m_Slots[SID]));
-
-    // try to pick a team and colour
-    // make sure there aren't too many other players already
-
-    uint8_t NumOtherPlayers = 0;
-
-    for (auto& slot : m_Slots) {
-      if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != MAX_SLOTS)
-        ++NumOtherPlayers;
-    }
-
-    if (NumOtherPlayers < m_Map->GetMapNumPlayers()) {
-      if (SID < m_Map->GetMapNumPlayers())
-        m_Slots[SID].SetTeam(SID);
-      else
-        m_Slots[SID].SetTeam(0);
-
-      m_Slots[SID].SetColour(GetNewColour());
-    }
-  }
-
-  // send slot info to the new player
-  // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful
-
-  Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetPID(), Player->GetSocket()->GetPort(), Player->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
-
-  // send virtual host info and fake players info (if present) to the new player
-
-  SendVirtualHostPlayerInfo(Player);
-  SendFakePlayersInfo(Player);
-
-  for (auto& player : m_Players)
-  {
-    if (!player->GetLeftMessageSent() && player != Player)
-    {
-      // send info about the new player to every other player
-
-      player->Send(GetProtocol()->SEND_W3GS_PLAYERINFO(Player->GetPID(), Player->GetName(), Player->GetExternalIP(), Player->GetInternalIP()));
-
-      // send info about every other player to the new player
-      Player->Send(GetProtocol()->SEND_W3GS_PLAYERINFO(player->GetPID(), player->GetName(), player->GetExternalIP(), player->GetInternalIP()));
-    }
-  }
-
-  // send a map check packet to the new player
-
-  Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_Map->GetMapPath(), m_Map->GetMapSize(), m_Map->GetMapInfo(), m_Map->GetMapCRC(), m_Map->GetMapSHA1()));
-
-  // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
-
-  SendAllSlotInfo();
-
-  // send a welcome message
-
-	SendWelcomeMessage( Player );
-
-  // check for multiple IP usage
-
-  string Others;
-
-  bool IsLoopBack = Player->GetExternalIPString() == "127.0.0.1";
-  for (auto& player : m_Players){
-    if (Player == player)
-      continue;
-    if (Player->GetExternalIPString() != player->GetExternalIPString())
-      continue;
-
-    if (!IsLoopBack) {
-      if (Others.empty())
-        Others = player->GetName();
-      else
-        Others += ", " + player->GetName();
-    }
-  }
-
-  if (!Others.empty()) {
-    SendAllChat("Player [" + joinPlayer->GetName() + "] has the same IP address as: " + Others);
-  }
-
-  // abort the countdown if there was one in progress
-
-  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded)
-  {
-    SendAllChat("Countdown aborted!");
-    m_CountDownStarted = false;
-  }
-
+  JoinPlayer(potential, joinRequest, SID, HostCounterID, JoinedRealm, IsReserved, IsUnverifiedAdmin);
   return true;
 }
 
@@ -2069,7 +2148,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       {
         // this is a lobby message, print it to the console
 
-        Print2(GetLogPrefix() + "[" + player->GetName() + "] " + chatPlayer->GetMessage());
+        Print(GetLogPrefix() + "[" + player->GetName() + "] " + chatPlayer->GetMessage());
 
         if (m_MuteLobby)
           Relay = false;
@@ -2079,10 +2158,8 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 
       const string Message = chatPlayer->GetMessage();
 
-      if (!Message.empty() && Message[0] == m_Aura->m_GameDefaultConfig->m_CommandTrigger) {
-        // extract the command trigger, the command, and the payload
-        // e.g. "!say hello world" -> command: "say", payload: "hello world"
-
+      if (!Message.empty() && Message[0] == m_CommandTrigger) {
+        char CommandToken = m_CommandTrigger;
         string            Command, Payload;
         string::size_type PayloadStart = Message.find(' ');
 
@@ -2095,7 +2172,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 
         transform(begin(Command), end(Command), begin(Command), ::tolower);
 
-        EventPlayerBotCommand(player, Command, Payload);
+        EventPlayerBotCommand(player, CommandToken, Command, Payload);
       }
 
       if (Relay) {
@@ -2134,9 +2211,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
   }
 }
 
-void CGame::EventPlayerBotCommand(CGamePlayer* player, std::string& command, string& payload)
+void CGame::EventPlayerBotCommand(CGamePlayer* player, char token, std::string& command, string& payload)
 {
-  CCommandContext* ctx = new CCommandContext(m_Aura, this, player, &std::cout);
+  CCommandContext* ctx = new CCommandContext(m_Aura, this, player, &std::cout, token);
   ctx->Run(command, payload);
   delete ctx;
 }
@@ -2153,10 +2230,10 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
   }
   else
   {
-    if (team > MAX_SLOTS)
+    if (team > m_Aura->m_MaxSlots)
       return;
 
-    if (team == MAX_SLOTS)
+    if (team == m_Aura->m_MaxSlots)
     {
       if (m_Map->GetMapObservers() != MAPOBS_ALLOWED && m_Map->GetMapObservers() != MAPOBS_REFEREES)
         return;
@@ -2172,7 +2249,7 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
 
       for (auto& slot : m_Slots)
       {
-        if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != MAX_SLOTS && slot.GetPID() != player->GetPID())
+        if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Aura->m_MaxSlots && slot.GetPID() != player->GetPID())
           ++NumOtherPlayers;
       }
 
@@ -2185,14 +2262,14 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
     if (SID < m_Slots.size())
     {
       m_Slots[SID].SetTeam(team);
-      player->SetObserver(team == MAX_SLOTS);
+      player->SetObserver(team == m_Aura->m_MaxSlots);
       if (player->GetObserver())
         player->SetPowerObserver(player->GetObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
-      if (team == MAX_SLOTS) {
+      if (team == m_Aura->m_MaxSlots) {
         // if they're joining the observer team give them the observer colour
 
-        m_Slots[SID].SetColour(MAX_SLOTS);
-      } else if (m_Slots[SID].GetColour() == MAX_SLOTS) {
+        m_Slots[SID].SetColour(m_Aura->m_MaxSlots);
+      } else if (m_Slots[SID].GetColour() == m_Aura->m_MaxSlots) {
         // if they're joining a regular team give them an unused colour
 
         m_Slots[SID].SetColour(GetNewColour());
@@ -2210,7 +2287,7 @@ void CGame::EventPlayerChangeColour(CGamePlayer* player, uint8_t colour)
   if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS)
     return;
 
-  if (colour > MAX_SLOTS-1)
+  if (colour > m_Aura->m_MaxSlots-1)
     return;
 
   uint8_t SID = GetSIDFromPID(player->GetPID());
@@ -2219,7 +2296,7 @@ void CGame::EventPlayerChangeColour(CGamePlayer* player, uint8_t colour)
   {
     // make sure the player isn't an observer
 
-    if (m_Slots[SID].GetTeam() == MAX_SLOTS)
+    if (m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots)
       return;
 
     ColorSlot(SID, colour);
@@ -2321,7 +2398,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
         player->SetLastMapPartAcked(mapSize->GetMapSize());
       }
     } else if (!player->GetKickQueued()) {
-        player->SetKickByTime(Time + m_Aura->m_GameDefaultConfig->m_LacksMapKickDelay);
+        player->SetKickByTime(Time + m_LacksMapKickDelay);
         if (m_Aura->m_Config->m_AllowUploads != 1) {
           player->SetLeftReason("doesn't have the map and uploads are disabled");
         } else if (IsMapTooLarge) {
@@ -2333,9 +2410,9 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
         }
         player->SetLeftCode(PLAYERLEAVE_LOBBY);
         if (m_Map->GetMapSiteURL().empty()) {
-          SendChat(player, "" + player->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Aura->m_GameDefaultConfig->m_LacksMapKickDelay) + " seconds...)");
+          SendChat(player, "" + player->GetName() + ", please download the map before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
         } else {
-          SendChat(player, "" + player->GetName() + ", please download the map from <" + m_Map->GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Aura->m_GameDefaultConfig->m_LacksMapKickDelay) + " seconds...)");
+          SendChat(player, "" + player->GetName() + ", please download the map from <" + m_Map->GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
         }
     }
   } else if (player->GetDownloadStarted()) {
@@ -2348,11 +2425,13 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     player->SetFinishedDownloadingTime(GetTime());
     if (!player->GetHasMap()) {
       player->SetHasMap(true);
-      ++m_PlayersWithMap;
+      if (!player->GetObserver())
+        ++m_PlayersWithMap;
     }
   } else if (!player->GetHasMap()) {
     player->SetHasMap(true);
-    ++m_PlayersWithMap;
+    if (!player->GetObserver())
+      ++m_PlayersWithMap;
   }
 
   uint8_t       NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / MapSize * 100.f);
@@ -2415,7 +2494,7 @@ void CGame::EventPlayerPongToHost(CGamePlayer* player)
 
 void CGame::EventGameStarted()
 {
-  Print2(GetLogPrefix() + "started loading with " + to_string(GetNumHumanPlayers()) + " players");
+  Print(GetLogPrefix() + "started loading with " + to_string(GetNumHumanPlayers()) + " players");
 
   if (m_LANEnabled)
     LANBroadcastGameDecreate();
@@ -2477,29 +2556,30 @@ void CGame::EventGameStarted()
       Print(GetLogPrefix() + "encoding HCL command string [" + m_HCLCommandString + "] failed because there aren't enough occupied slots");
   }
 
-  // send a final slot info update for HCL, or in case there are pending updates
-  if (m_SlotInfoChanged != 0)
-    SendAllSlotInfo();
-
   m_StartedLoadingTicks    = GetTicks();
   m_LastLagScreenResetTime = GetTime();
 
   if (GetNumConnectionsOrFake() >= 2) {
     // Remove the virtual host player to ensure consistent game state and networking.
     DeleteVirtualHost();
-  } else if (m_Map->GetMapObservers() == MAPOBS_REFEREES && GetSlotsOpen() > 0) {
-    // Replace the virtual host player by a fake referee.
-    DeleteVirtualHost();
-    CreateFakeObserver();
   } else if (GetSlotsOpen() > 0) {
-    // Replace the virtual host player by a fake player.
+    // Assign an available slot to our virtual host.
+    // That makes it a fake player.
     DeleteVirtualHost();
-    CreateFakePlayer();
+    if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
+      CreateFakeObserver();
+    } else {
+      CreateFakePlayer();
+    }
   } else {
-    // This is formally a single player game.
-    // Add a virtual host to ensure game commands are sent through the network.
-    CreateVirtualHost();
+    // This is a single-player game. Neither chat events nor bot commands will work.
+    // Keeping the virtual host does no good - The game client then refuses to remain in the game.
+    DeleteVirtualHost();
   }
+
+  // send a final slot info update for HCL, or in case there are pending updates
+  if (m_SlotInfoChanged != 0)
+    SendAllSlotInfo();
 
   m_GameLoading            = true;
 
@@ -2616,6 +2696,11 @@ void CGame::EventGameLoaded()
 
   for (auto& player : m_Players)
     SendChat(player, "Your load time was " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+
+  if (GetNumConnectionsOrFake() < 2) {
+    // This creates a lag spike client-side.
+    StopPlayers("single-player game untracked");
+  }
 }
 
 uint8_t CGame::GetSIDFromPID(uint8_t PID) const
@@ -2796,7 +2881,7 @@ uint8_t CGame::GetNewColour() const
 {
   // find an unused colour for a player to use
 
-  for (uint8_t TestColour = 0; TestColour < MAX_SLOTS; ++TestColour)
+  for (uint8_t TestColour = 0; TestColour < m_Aura->m_MaxSlots; ++TestColour)
   {
     bool InUse = false;
 
@@ -2815,7 +2900,7 @@ uint8_t CGame::GetNewColour() const
 
   // this should never happen
 
-  return MAX_SLOTS;
+  return m_Aura->m_MaxSlots;
 }
 
 std::vector<uint8_t> CGame::GetPIDs() const
@@ -3010,12 +3095,12 @@ void CGame::SwapSlots(uint8_t SID1, uint8_t SID2)
       CGamePlayer* PlayerOne = GetPlayerFromSID(SID1);
       CGamePlayer* PlayerTwo = GetPlayerFromSID(SID2);
       if (PlayerOne) {
-        PlayerOne->SetObserver(Slot2.GetTeam() == MAX_SLOTS);
+        PlayerOne->SetObserver(Slot2.GetTeam() == m_Aura->m_MaxSlots);
         if (PlayerOne->GetObserver())
           PlayerOne->SetPowerObserver(PlayerOne->GetObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       }
       if (PlayerTwo) {
-        PlayerTwo->SetObserver(Slot1.GetTeam() == MAX_SLOTS);
+        PlayerTwo->SetObserver(Slot1.GetTeam() == m_Aura->m_MaxSlots);
         if (PlayerTwo->GetObserver())
           PlayerTwo->SetPowerObserver(PlayerTwo->GetObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       }
@@ -3087,7 +3172,7 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
 
 void CGame::ColorSlot(uint8_t SID, uint8_t colour)
 {
-  if (SID < m_Slots.size() && colour < MAX_SLOTS)
+  if (SID < m_Slots.size() && colour < m_Aura->m_MaxSlots)
   {
     // make sure the requested colour isn't already taken
 
@@ -3177,7 +3262,7 @@ void CGame::ShuffleSlots()
 
   for (auto& slot : m_Slots)
   {
-    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetComputer() == 0 && slot.GetTeam() != MAX_SLOTS)
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetComputer() == 0 && slot.GetTeam() != m_Aura->m_MaxSlots)
       PlayerSlots.push_back(slot);
   }
 
@@ -3227,7 +3312,7 @@ void CGame::ShuffleSlots()
 
   for (auto& slot : m_Slots)
   {
-    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetComputer() == 0 && slot.GetTeam() != MAX_SLOTS)
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetComputer() == 0 && slot.GetTeam() != m_Aura->m_MaxSlots)
     {
       Slots.push_back(*CurrentPlayer);
       ++CurrentPlayer;
@@ -3242,7 +3327,13 @@ void CGame::ShuffleSlots()
 
 void CGame::ReportSpoofed(const string& server, CGamePlayer* Player)
 {
-  SendAllChat("Name spoof detected. The real [" + Player->GetName() + "@" + server + "] is in another game.");
+  SendAllChat("Name spoof detected. The real [" + Player->GetName() + "@" + server + "] is not in this game.");
+  if (GetIsLobby() && MatchOwnerName(Player->GetName())) {
+    Player->SetDeleteMe(true);
+    Player->SetLeftReason("was kicked for spoofing the game owner");
+    Player->SetLeftCode(PLAYERLEAVE_LOBBY);
+    OpenSlot(GetSIDFromPID(Player->GetPID()), false);
+  }
 }
 
 void CGame::AddToRealmVerified(const string& server, CGamePlayer* Player, bool sendMessage)
@@ -3315,7 +3406,7 @@ bool CGame::MatchOwnerName(string name) const
   return name == OwnerLower;
 }
 
-bool CGame::IsReserved(string name) const
+bool CGame::GetIsReserved(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
@@ -3353,7 +3444,7 @@ void CGame::ReleaseOwner()
   m_OwnerName = "";
   m_OwnerRealm = "";
   m_Locked = false;
-  SendAllChat("This game is now ownerless. Type " + std::string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "owner to take ownership of this game.");
+  SendAllChat("This game is now ownerless. Type " + string(1, m_CommandTrigger) + "owner to take ownership of this game.");
 }
 
 void CGame::ResetSync()
@@ -3366,7 +3457,7 @@ void CGame::ResetSync()
 
 void CGame::CountKickVotes()
 {
-  uint32_t Votes = 0, VotesNeeded = static_cast<uint32_t>(ceil((GetNumHumanPlayers() - 1) * static_cast<float>(m_Aura->m_GameDefaultConfig->m_VoteKickPercentage) / 100));
+  uint32_t Votes = 0, VotesNeeded = static_cast<uint32_t>(ceil((GetNumHumanPlayers() - 1) * static_cast<float>(m_VoteKickPercentage) / 100));
   for (auto& eachPlayer : m_Players) {
     if (eachPlayer->GetKickVote().value_or(false))
       ++Votes;
@@ -3465,7 +3556,7 @@ void CGame::StartCountDown(bool force)
       ChecksPassed = false;
     }
     if (GetNumConnectionsOrFake() == 1 && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
-      SendAllChat("Single-player game requires map observers set to referees. Or add a fake player instead (type " + std::string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "fp)");
+      SendAllChat("Single-player game requires map observers set to referees. Or add a fake player instead (type " + string(1, m_CommandTrigger) + "fp)");
       ChecksPassed = false;
     }
 
@@ -3576,7 +3667,7 @@ bool CGame::CreateFakeObserver()
     const std::vector<uint8_t> IP            = {0, 0, 0, 0};
 
     SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, "Placeholder[" + to_string(FakePlayerPID) + "]", IP, IP));
-    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, MAX_SLOTS, MAX_SLOTS, m_Map->GetLobbyRace(&m_Slots[SID]));
+    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
     m_FakePlayers.push_back(FakePlayerPID);
     m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
     return true;

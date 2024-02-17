@@ -56,7 +56,7 @@
 
 class CAura;
 class CGamePlayer;
-class CIncomingJoinPlayer;
+class CIncomingJoinRequest;
 class CIncomingAction;
 class CIncomingChatPlayer;
 class CIncomingMapSize;
@@ -112,7 +112,7 @@ public:
 
   // receive functions
 
-  CIncomingJoinPlayer* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
+  CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
   uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data);
   bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
   CIncomingAction* RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t PID);
@@ -157,10 +157,10 @@ private:
 };
 
 //
-// CIncomingJoinPlayer
+// CIncomingJoinRequest
 //
 
-class CIncomingJoinPlayer
+class CIncomingJoinRequest
 {
 private:
   std::string          m_Name;
@@ -169,8 +169,8 @@ private:
   uint32_t             m_EntryKey;
 
 public:
-  CIncomingJoinPlayer(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::vector<uint8_t> nInternalIP);
-  ~CIncomingJoinPlayer();
+  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::vector<uint8_t> nInternalIP);
+  ~CIncomingJoinRequest();
 
   inline uint32_t             GetHostCounter() const { return m_HostCounter; }
   inline uint32_t             GetEntryKey() const { return m_EntryKey; }

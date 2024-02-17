@@ -156,7 +156,7 @@ public:
   std::vector<uint8_t> SEND_SID_CHATCOMMAND(const std::string& command);
   std::vector<uint8_t> SEND_SID_CHECKAD();
   std::vector<uint8_t> SEND_SID_PUBLICHOST(std::string ip, uint16_t port);
-  std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter);
+  std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
   std::vector<uint8_t> SEND_SID_NOTIFYJOIN(const std::string& gameName);
   std::vector<uint8_t> SEND_SID_PING(const std::vector<uint8_t>& pingValue);
   std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);

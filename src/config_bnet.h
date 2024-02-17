@@ -27,6 +27,7 @@ public:
   std::string m_CDKeyTFT;
 
   // Inheritable
+
   std::string m_CountryShort;                    // 2-3 letter country code for pvpgn servers
   std::string m_Country;                         // country name
   std::string m_Locale;                          // locale used: numeric or "system"
@@ -54,7 +55,10 @@ public:
   std::set<std::string> m_RootAdmins;            //
   std::string m_GamePrefix;                      // string prepended to game names
   uint32_t m_MaxUploadSize;                      // in KB
-  uint8_t m_ServerIndex;                            // unique server ID to identify players' realms through host counters
+  bool m_FloodImmune;                            // whether we are allowed to send unlimited commands to the server
+
+  // Automatically-assigned values
+  uint8_t m_ServerIndex;                         // unique server ID to identify players' realms through host counters
   std::string m_CFGKeyPrefix;                    // 
 
 

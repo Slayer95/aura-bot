@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <optional>
 
 //
 // CBNCSUtilInterface
@@ -67,6 +68,8 @@ public:
   bool HELP_SID_AUTH_ACCOUNTLOGON();
   bool HELP_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& salt, const std::vector<uint8_t>& serverKey);
   bool HELP_PvPGNPasswordHash(const std::string& userPassword);
+
+  static std::optional<uint8_t> GetGameVersion(const std::filesystem::path& war3Path);
 
 private:
   std::vector<uint8_t> CreateKeyInfo(const std::string& key, uint32_t clientToken, uint32_t serverToken);

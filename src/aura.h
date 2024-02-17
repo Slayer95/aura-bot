@@ -25,6 +25,7 @@
 #include "config_bot.h"
 #include "config_bnet.h"
 #include "config_game.h"
+#include "command.h"
 
 #include <cstdint>
 #include <vector>
@@ -56,6 +57,7 @@ class CCRC32;
 class CSHA1;
 class CBNET;
 class CGame;
+class CCommandContext;
 class CAuraDB;
 class CMap;
 class CIRC;
@@ -78,6 +80,7 @@ public:
   CMap*                                              m_Map;                        // the currently loaded map
   std::string                                        m_Version;                    // Aura++ version string
 
+  uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
   uint16_t                                           m_HostPort;                   // the port of the last hosted game
   bool                                               m_UDPServerEnabled;           // whether the bot should listen to UDP traffic in port 6112)
@@ -95,7 +98,7 @@ public:
   CGame*                                             m_SudoGame;
   CIRC*                                              m_SudoIRC;
   CBNET*                                             m_SudoRealm;
-  std::string                                        m_SudoAuthCommand;
+  std::string                                        m_SudoAuthPayload;
   std::string                                        m_SudoExecCommand;
   std::vector<std::vector<std::string>>              m_PendingActions;
 
@@ -103,6 +106,9 @@ public:
   std::string                                        m_GameRangerLocalAddress;
   uint16_t                                           m_GameRangerRemotePort;
   std::vector<uint8_t>                               m_GameRangerRemoteAddress;
+
+  uint8_t                                            m_GameVersion;
+  std::filesystem::path                              m_GameInstallPath;
 
   CBotConfig*                                        m_Config;
   CBNETConfig*                                       m_BNETDefaultConfig;
@@ -134,12 +140,14 @@ public:
   void LoadBNETs(CConfig* CFG);
   void LoadIRC(CConfig* CFG);
   uint8_t ExtractScripts();
+  bool CopyScripts();
   void LoadIPToCountryData();
   void CacheMapPresets();
-  bool CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string ownerServer, std::string creatorName, CBNET* nCreatorServer, bool whisper);
-  void CreateMirror(CMap* map, uint8_t gameDisplay, std::string gameName, std::string gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, std::string excludedServer, std::string creatorName, CBNET* creatorServer, bool whisper);
+  bool CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string ownerServer, std::string creatorName, CBNET* nCreatorServer, CCommandContext* ctx);
+  bool CreateMirror(CMap* map, uint8_t gameDisplay, std::string gameName, std::string gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, std::string excludedServer, std::string creatorName, CBNET* creatorServer, CCommandContext* ctx);
   void SendBroadcast(uint16_t port, const std::vector<uint8_t>& message);
   std::pair<uint8_t, std::string> LoadMap(const std::string& user, const std::string& mapInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath);
+  std::pair<uint8_t, std::string> LoadMapConfig(const std::string& user, const std::string& cfgInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomHeroInput, const bool& allowArbitraryMapPath);
   std::vector<std::string> MapFilesMatch(std::string pattern);
   std::vector<std::string> ConfigFilesMatch(std::string pattern);
 
@@ -150,15 +158,14 @@ public:
   bool IsIgnoredDatagramSource(std::string sourceIp);
   inline bool GetReady() const { return m_Ready; }
 
-  inline std::string GetSudoAuthCommand(const std::string& Payload, char CommandTrigger) {
+  inline std::string GetSudoAuthPayload(const std::string& Payload) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 15);
 
     // Generate random hex digits
     std::string result;
-    result.reserve(27 + Payload.length());
-    result += std::string(1, CommandTrigger) + "sudo ";
+    result.reserve(21 + Payload.length());
 
     for (std::size_t i = 0; i < 20; ++i) {
         const int randomDigit = dis(gen);
@@ -166,7 +173,7 @@ public:
     }
 
     result += " " + Payload;
-    m_SudoAuthCommand = result;
+    m_SudoAuthPayload = result;
     return result;
   }
 };

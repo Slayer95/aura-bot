@@ -40,7 +40,8 @@
 #define SLOTCOMP_NORMAL 1
 #define SLOTCOMP_HARD 2
 
-constexpr int MAX_SLOTS = 12;
+constexpr int MAX_SLOTS_MODERN = 24;
+constexpr int MAX_SLOTS_LEGACY = 12;
 
 //
 // CGameSlot

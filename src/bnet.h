@@ -28,12 +28,21 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <tuple>
+
+#define PACKET_TYPE_GAME_LIST 10
+#define PACKET_TYPE_GAME_REFRESH 8
+#define PACKET_TYPE_CHAT_BLOCKING 6
+#define PACKET_TYPE_CHAT_JOIN 2
+#define PACKET_TYPE_PRIORITY 1
+#define PACKET_TYPE_DEFAULT 0
 
 //
 // CBNET
 //
 
 class CAura;
+class CCommandContext;
 class CTCPClient;
 class CBNCSUtilInterface;
 class CBNETProtocol;
@@ -51,17 +60,17 @@ public:
 
 private:
   CBNETConfig*                     m_Config;
-  CTCPClient*                      m_Socket;                    // the connection to battle.net
-  CBNETProtocol*                   m_Protocol;                  // battle.net protocol
-  CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
-  std::queue<std::vector<uint8_t>> m_OutPackets;                // queue of outgoing packets to be sent (to prevent getting kicked for flooding)
-  std::vector<std::string>         m_Friends;                   // std::vector of friends
-  std::vector<std::string>         m_Clan;                      // std::vector of clan members
-  std::vector<uint8_t>             m_EXEVersion;                // custom exe version for PvPGN users
-  std::vector<uint8_t>             m_EXEVersionHash;            // custom exe version hash for PvPGN users
-  std::string                      m_ResolvedHostName;          // DNS cache - host name
-  std::string                      m_ResolvedAddress;           // DNS cache - resolved IP address
-  std::string                      m_FirstChannel;              // the first chat channel to join upon entering chat (note: store the last channel when entering a game)
+  CTCPClient*                      m_Socket;                                               // the connection to battle.net
+  CBNETProtocol*                   m_Protocol;                                             // battle.net protocol
+  CBNCSUtilInterface*              m_BNCSUtil;                                             // the interface to the bncsutil library (used for logging into battle.net)
+  std::queue<std::tuple<int64_t, uint32_t, uint8_t, std::vector<uint8_t>>> m_OutPackets;   // queue of outgoing packets to be sent (to prevent getting kicked for flooding)
+  std::vector<std::string>         m_Friends;                                              // std::vector of friends
+  std::vector<std::string>         m_Clan;                                                 // std::vector of clan members
+  std::vector<uint8_t>             m_EXEVersion;                                           // custom exe version for PvPGN users
+  std::vector<uint8_t>             m_EXEVersionHash;                                       // custom exe version hash for PvPGN users
+  std::string                      m_ResolvedHostName;                                     // DNS cache - host name
+  std::string                      m_ResolvedAddress;                                      // DNS cache - resolved IP address
+  std::string                      m_FirstChannel;                                         // the first chat channel to join upon entering chat (note: store the last channel when entering a game)
   std::string                      m_CurrentChannel;            // the current chat channel
   std::string                      m_HostName;                  // 
   uint8_t                          m_ServerIndex;               // 
@@ -75,13 +84,16 @@ private:
   int64_t                          m_LastBanRefreshTime;        // GetTime when the ban list was last refreshed from the database
   int64_t                          m_ReconnectDelay;            // interval between two consecutive connect attempts
   uint32_t                         m_LastOutPacketSize;         // byte size of the last packet we sent from the m_OutPackets queue
+  uint32_t                         m_SessionID;                 // reconnection counter
   bool                             m_Exiting;                   // set to true and this class will be deleted next update
   bool                             m_FirstConnect;              // if we haven't tried to connect to battle.net yet
-  bool                             m_ReconnectNextTick;        // ignore reconnect delay
+  bool                             m_ReconnectNextTick;         // ignore reconnect delay
   bool                             m_WaitingToConnect;          // if we're waiting to reconnect to battle.net after being disconnected
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
   bool                             m_InChat;                    // if we've entered chat or not (but we're not necessarily in a chat channel yet
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
+
+  friend class CCommandContext;
 
 public:
   CBNET(CAura* nAura, CBNETConfig* nBNETConfig);
@@ -108,6 +120,7 @@ public:
   uint16_t             GetPublicHostPort() const;
   std::string          GetPublicHostAddress() const;
   uint32_t             GetMaxUploadSize() const;
+  bool                 GetIsFloodImmune() const;
   std::string          GetCommandToken() const;
   std::string          GetPrefixedGameName(const std::string& gameName) const;
   bool                 GetAnnounceHostToChat() const;
@@ -122,15 +135,20 @@ public:
 
   void SendGetFriendsList();
   void SendGetClanList();
+  void JoinFirstChannel();
+  void QueuePacket(const std::vector<uint8_t> message, uint8_t mode);
+  void QueuePacket(const std::vector<uint8_t> message);
   void QueueEnterChat();
-  void QueueChatCommand(const std::string& chatCommand);
-  void QueueChatCommand(const std::string& chatCommand, const std::string& user, bool whisper);
+  void SendCommand(const std::string& chatCommand);
+  void SendChatChannel(const std::string& chatCommand);
+  void SendWhisper(const std::string& message, const std::string& user);
+  void SendChatOrWhisper(const std::string& chatCommand, const std::string& user, bool whisper);
+  void TrySendChat(const std::string& chatCommand, const std::string& user, bool isPrivate, std::ostream* errorLog);
   void QueueGameCreate(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
   void QueueGameMirror(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
   void QueueGameRefresh(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace);
   void QueueGameUncreate();
 
-  void UnqueueGameRefreshes();
   void ResetConnection(bool hadError);
   inline void SetReconnectNextTick(bool nReconnectNextTick) { m_ReconnectNextTick = nReconnectNextTick; };
 

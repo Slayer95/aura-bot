@@ -98,7 +98,7 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
         } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x00FFFFFF)) {
           // Trying to join the wrong game
           m_DeleteMe = true;
-        } else if (m_Aura->m_CurrentLobby->EventPlayerJoined(this, m_IncomingJoinPlayer)) {
+        } else if (m_Aura->m_CurrentLobby->EventRequestJoin(this, m_IncomingJoinPlayer)) {
           IsPromotedToPlayer = true;
         } else {
           // Join failed
@@ -272,9 +272,9 @@ bool CGamePlayer::Update(void* fd)
     CBNET* Realm = GetRealm(false);
     if (Realm) {
       if (m_Game->GetGameState() == GAME_PUBLIC || Realm->GetPvPGN())
-        Realm->QueueChatCommand("/whois " + m_Name);
+        Realm->SendCommand("/whois " + m_Name);
       else if (m_Game->GetGameState() == GAME_PRIVATE)
-        Realm->QueueChatCommand(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name, true);
+        Realm->SendWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
     }
 
     m_WhoisSent = true;
@@ -443,7 +443,7 @@ bool CGamePlayer::Update(void* fd)
         } else if (m_JoinedRealmID == 0) {
           m_GProxyPort = m_Game->m_Aura->m_Config->m_EnableLANBalancer ? m_Game->m_Aura->m_Config->m_LANHostPort : m_Game->GetHostPort();
         } else {
-          // GameRanger??
+          // TODO(IceSandslash): GameRanger??
           m_GProxyPort = 6112;
         }
         m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));

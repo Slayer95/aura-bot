@@ -24,8 +24,11 @@
  */
 
 #include "command.h"
+#include "bnetprotocol.h"
 #include "gameprotocol.h"
 #include "hash.h"
+
+#include <random>
 
 using namespace std;
 
@@ -34,153 +37,203 @@ using namespace std;
 //
 
 /* In-game command */
-CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, ostream* outputStream)
+CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(player->GetName()),
     m_FromWhisper(false),
-    m_Game(game),
+    m_FromType(FROM_GAME),
+    m_Token(nToken),
+
+    m_SourceGame(game),
+    m_TargetGame(game),
     m_Permissions(0),
 
     m_Player(player),
 
     m_HostName(player->GetRealmHostName()),
-    m_Realm(player->GetRealm(false)),
+    m_SourceRealm(player->GetRealm(false)),
+    m_TargetRealm(nullptr),
 
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(outputStream)
+    m_Output(nOutputStream)
 {
 }
 
 /* Command received from BNET but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CBNET* fromRealm, string& fromName, bool& isWhisper, ostream* outputStream)
+CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CBNET* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(fromName),
     m_FromWhisper(isWhisper),
-    m_Game(targetGame),
+    m_FromType(FROM_BNET),
+    m_Token(nToken),
+
+    m_SourceGame(nullptr),
+    m_TargetGame(targetGame),
     m_Permissions(0),
 
     m_Player(nullptr),
 
     m_HostName(fromRealm->GetServer()),
-    m_Realm(fromRealm),
+    m_SourceRealm(fromRealm),
+    m_TargetRealm(nullptr),
 
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(outputStream)
+    m_Output(nOutputStream)
 {
 }
 
 /* Command received from IRC but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* outputStream)
+CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(userName),
     m_FromWhisper(isWhisper),
-    m_Game(targetGame),
+    m_FromType(FROM_IRC),
+    m_Token(nToken),
+
+    m_SourceGame(nullptr),
+    m_TargetGame(targetGame),
     m_Permissions(0),    
 
     m_Player(nullptr),
 
     m_HostName(string()),
-    m_Realm(nullptr),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
 
     m_IRC(ircNetwork),
     m_ChannelName(channelName),
 
-    m_Output(outputStream)
+    m_Output(nOutputStream)
 {
 }
 
 /* Command received from elsewhere but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* outputStream)
+CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(string()),
     m_FromWhisper(false),
-    m_Game(targetGame),
+    m_FromType(FROM_OTHER),
+    m_Token(nToken),
+
+    m_SourceGame(nullptr),
+    m_TargetGame(targetGame),
     m_Permissions(0),
 
     m_Player(nullptr),
 
     m_HostName(string()),
-    m_Realm(nullptr),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
 
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(outputStream)
+    m_Output(nOutputStream)
 {
 }
 
 /* BNET command */
-CCommandContext::CCommandContext(CAura* nAura, CBNET* fromRealm, string& fromName, bool& isWhisper, ostream* outputStream)
+CCommandContext::CCommandContext(CAura* nAura, CBNET* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(fromName),
     m_FromWhisper(isWhisper),
-    m_Game(nullptr),
+    m_FromType(FROM_BNET),
+    m_Token(nToken),
+
+    m_SourceGame(nullptr),
+    m_TargetGame(nullptr),
     m_Permissions(0),
 
     m_Player(nullptr),
 
     m_HostName(fromRealm->GetServer()),
-    m_Realm(fromRealm),
+    m_SourceRealm(fromRealm),
+    m_TargetRealm(nullptr),
 
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(outputStream)
+    m_Output(nOutputStream)
 {
 }
 
 /* IRC command */
-CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* outputStream)
+CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(userName),
     m_FromWhisper(isWhisper),
-    m_Game(nullptr),
+    m_FromType(FROM_IRC),
+    m_Token(nToken),
+
+    m_SourceGame(nullptr),
+    m_TargetGame(nullptr),
     m_Permissions(0),
 
     m_Player(nullptr),
 
     m_HostName(string()),
-    m_Realm(nullptr),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
 
     m_IRC(ircNetwork),
     m_ChannelName(channelName),
 
-    m_Output(outputStream)
+    m_Output(nOutputStream)
 {
 }
 
 /* Generic command */
-CCommandContext::CCommandContext(CAura* nAura, ostream* outputStream)
+CCommandContext::CCommandContext(CAura* nAura, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(string()),
     m_FromWhisper(false),
-    m_Game(nullptr),
+    m_FromType(FROM_OTHER),
+    m_Token(nToken),
+
+    m_SourceGame(nullptr),
+    m_TargetGame(nullptr),
     m_Permissions(0),
 
     m_Player(nullptr),
 
     m_HostName(string()),
-    m_Realm(nullptr),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
 
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(outputStream)
+    m_Output(nOutputStream)
 {
 }
 
 bool CCommandContext::SetIdentity(const string& userName, const string& realmId)
 {
-  m_Realm = m_Aura->GetRealmByInputId(realmId);
-  if (m_Realm == nullptr)
+  m_SourceRealm = m_Aura->GetRealmByInputId(realmId);
+  if (m_SourceRealm == nullptr)
     return false;
   m_FromName = userName;
-  m_HostName = m_Realm->GetServer();
+  m_HostName = m_SourceRealm->GetServer();
   return true;
+}
+
+string CCommandContext::GetUserAttribution()
+{
+  if (m_Player) {
+    return m_TargetGame->GetLogPrefix() + "Player [" + m_FromName + "@" + (m_HostName.empty() ? "@@LAN/VPN" : m_HostName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
+  } else if (m_SourceRealm) {
+    return m_SourceRealm->GetLogPrefix() + "User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
+  } else if (m_IRC) {
+    return "[IRC] User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
+  } else if (!m_FromName.empty()) {
+    return "[SYSTEM] User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
+  } else {
+    return "[ANONYMOUS] (Mode " + ToHexString(m_Permissions) + ") ";
+  }
 }
 
 void CCommandContext::SetAuthenticated(const bool& nAuthenticated)
@@ -205,49 +258,59 @@ void CCommandContext::UpdatePermissions()
   if (m_OverrideVerified.has_value()) {
     IsRealmVerified = m_OverrideVerified.value();
   } else {
-    IsRealmVerified = m_Player ? m_Player->IsRealmVerified() : m_Realm != nullptr;
+    IsRealmVerified = m_Player ? m_Player->IsRealmVerified() : m_SourceRealm != nullptr;
   }
 
-  // Trust PvPGN servers on player identities for admin powers. Impersonation is not an issue.
+  // Trust PvPGN servers on player identities for admin powers. Their impersonation is not a threat we worry about.
   // However, do NOT trust them regarding sudo access, since those commands may cause data deletion or worse.
-  // Note also that sudo permissions must be ephemeral, since neither WC3 nor PvPGN TCP connections are encrypted.
-  bool IsOwner = m_Game && m_Game->MatchOwnerName(m_FromName) && (
-    IsRealmVerified && m_HostName == m_Game->m_OwnerRealm ||
-    m_HostName.empty() && m_Game->m_OwnerRealm.empty()
+  // Note also that sudo permissions must be ephemeral, since neither WC3 nor PvPGN TCP connections are secure.
+  bool IsOwner = m_TargetGame && m_TargetGame->MatchOwnerName(m_FromName) && m_HostName == m_TargetGame->m_OwnerRealm && (
+    IsRealmVerified || m_Player && m_HostName.empty()
   );
-  bool IsAdmin = IsRealmVerified && m_Realm != nullptr && m_Realm->GetIsAdmin(m_FromName);
-  bool IsRootAdmin = IsRealmVerified && m_Realm != nullptr && m_Realm->GetIsRootAdmin(m_FromName);
-  bool IsSudoSpoofable = IsRealmVerified && m_Realm != nullptr && m_Realm->GetIsSudoer(m_FromName);
+  bool IsAdmin = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsAdmin(m_FromName);
+  bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsRootAdmin(m_FromName);
+  bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
+  // bool IsIRCAdmin = m_IRC != nullptr && m_IRC->GetIsRootAdmin(m_FromName);
 
   // Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
-  if (m_Player || IsOwner && m_Game->GetIsLobby()) m_Permissions |= PERM_GAME_PLAYER;
+  if (m_Player || IsOwner && m_TargetGame && m_TargetGame->GetIsLobby()) m_Permissions |= PERM_GAME_PLAYER;
 
   // Leaver or absent owners are automatically demoted.
-  if (IsOwner && (m_Player || m_Game->GetIsLobby())) m_Permissions |= PERM_GAME_OWNER;
+  if (IsOwner && (m_Player || m_TargetGame && m_TargetGame->GetIsLobby())) m_Permissions |= PERM_GAME_OWNER;
   if (IsAdmin || IsRootAdmin) m_Permissions |= PERM_BNET_ADMIN;
   if (IsRootAdmin) m_Permissions |= PERM_BNET_ROOTADMIN;
+  // if (IsIRCAdmin) m_Permissions |= PERM_IRC_ADMIN;
 
   // Sudo is a separate permission system.
   if (IsSudoSpoofable) m_Permissions |= PERM_BOT_SUDO_SPOOFABLE;
 }
 
+void CCommandContext::SetIRCAdmin(const bool& isAdmin)
+{
+  if (isAdmin) {
+    m_Permissions |= PERM_IRC_ADMIN;
+  } else {
+    m_Permissions &= ~PERM_IRC_ADMIN;
+  }
+}
+
 optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
 {
   optional<pair<string, string>> Result;
-  if (!(m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+  if (!m_HostName.empty() && !(m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
     return Result;
   }
   bool isValidCaller = false;
   if (m_FromName == m_Aura->m_SudoUser) {
     if (m_Aura->m_SudoGame) {
-      isValidCaller = m_Player && m_Game == m_Aura->m_SudoGame;
+      isValidCaller = m_Player && m_TargetGame == m_Aura->m_SudoGame;
     } else if (m_Aura->m_SudoRealm) {
-      isValidCaller = m_Realm == m_Aura->m_SudoRealm;
+      isValidCaller = m_SourceRealm == m_Aura->m_SudoRealm;
     } else if (m_Aura->m_SudoIRC) {
       isValidCaller = m_IRC = m_Aura->m_SudoIRC;
     }
   }
-  if (isValidCaller && message == m_Aura->m_SudoAuthCommand) {
+  if (isValidCaller && message == m_Aura->m_SudoAuthPayload) {
     (*m_Output) << "[AURA] Confirmed " + m_FromName + " command \"" + m_Aura->m_SudoExecCommand + "\"" << std::endl;
     size_t PayloadStart = m_Aura->m_SudoExecCommand.find(' ');
     string Command, Payload;
@@ -259,10 +322,11 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     }
     transform(begin(Command), end(Command), begin(Command), ::tolower);
     Result = make_pair(Command, Payload);
-    m_Permissions |= PERM_BOT_SUDO_OK;
+    //m_Permissions |= PERM_BOT_SUDO_OK;
+    m_Permissions = 0xFFFF;
   }
   m_Aura->m_SudoUser.clear();
-  m_Aura->m_SudoAuthCommand.clear();
+  m_Aura->m_SudoAuthPayload.clear();
   m_Aura->m_SudoExecCommand.clear();
   m_Aura->m_SudoGame = nullptr;
   m_Aura->m_SudoRealm = nullptr;
@@ -275,41 +339,82 @@ void CCommandContext::SendReply(const string& message)
   if (message.empty())
     return;
 
-  if (m_Player) {
-    if (message.length() <= 100) {
-      m_Game->SendChat(m_Player, message);
-    } else {
-      string leftMessage = message;
-      do {
-        m_Game->SendChat(m_Player, leftMessage.substr(0, 100));
-        leftMessage = leftMessage.substr(100, leftMessage.length());
-      } while (!leftMessage.empty());
+  switch (m_FromType) {
+    case FROM_GAME: {
+      if (message.length() <= 100) {
+        m_TargetGame->SendChat(m_Player, message);
+      } else {
+        string leftMessage = message;
+        do {
+          m_TargetGame->SendChat(m_Player, leftMessage.substr(0, 100));
+          leftMessage = leftMessage.substr(100, leftMessage.length());
+        } while (!leftMessage.empty());
+      }
+      break;
     }
-  } else if (m_Realm) {
-    m_Realm->QueueChatCommand(message, m_FromName, m_FromWhisper);
-  } else if (m_IRC) {
-    if (m_FromWhisper) {
-      // TODO(IceSandslash)
-      m_IRC->SendMessageIRC(message, string());
-    } else {
-      m_IRC->SendMessageIRC(message, string());
+
+    case FROM_BNET: {
+      m_SourceRealm->TrySendChat(message, m_FromName, true, m_Output);
+      break;
     }
-  } else {
-    (*m_Output) << "[AURA] " + message << std::endl;
+
+    case FROM_IRC: {
+      if (m_FromWhisper) {
+        m_IRC->SendUser(message, m_FromName);
+      } else {
+        m_IRC->SendChannel(message, m_ChannelName);
+      }
+      break;
+    }
+
+    default: {
+      (*m_Output) << "[AURA] " + message << std::endl;
+    }
   }
 }
 
 void CCommandContext::SendReply(const string& message, const uint8_t ccFlags) {
-  if (m_Player && (ccFlags & CHAT_SEND_ALL)) {
-    m_Game->SendAllChat(message);
-  } else {
+  bool AllTarget = ccFlags & CHAT_SEND_TARGET_ALL;
+  bool AllSource = ccFlags & CHAT_SEND_SOURCE_ALL;
+  bool AllSourceSuccess = false;
+  if (AllTarget) {
+    if (m_TargetGame) {
+      m_TargetGame->SendAllChat(message);
+      if (m_TargetGame == m_SourceGame) {
+        AllSourceSuccess = true;
+      }
+    }
+    if (m_TargetRealm) {
+      m_TargetRealm->TrySendChat(message, m_FromName, false, m_Output);
+      if (m_TargetRealm == m_SourceRealm) {
+        AllSourceSuccess = true;
+      }
+    }
+    // IRC is not a valid target.
+  }
+  if (AllSource && !AllSourceSuccess && !m_FromWhisper) {
+    if (m_SourceGame) {
+      m_SourceGame->SendAllChat(message);
+      AllSourceSuccess = true;
+    }
+    if (m_SourceRealm) {
+      m_SourceRealm->TrySendChat(message, m_FromName, false, m_Output);
+      AllSourceSuccess = true;
+    }
+    if (m_IRC) {
+      m_IRC->SendChannel(message, m_ChannelName);
+      AllSourceSuccess = true;
+    }
+  }
+  if (!AllSourceSuccess) {
     SendReply(message);
   }
-  if ((m_Player || m_Realm || m_IRC) && (ccFlags & CHAT_LOG_CONSOLE)) {
-    if (m_Game) {
-      (*m_Output) << m_Game->GetLogPrefix() + message << std::endl;
-    } else if (m_Realm) {
-      (*m_Output) << m_Realm->GetLogPrefix() + message << std::endl;
+
+  if (m_FromType != FROM_OTHER && (ccFlags & CHAT_LOG_CONSOLE)) {
+    if (m_TargetGame) {
+      (*m_Output) << m_TargetGame->GetLogPrefix() + message << std::endl;
+    } else if (m_SourceRealm) {
+      (*m_Output) << m_SourceRealm->GetLogPrefix() + message << std::endl;
     } else if (m_IRC) {
       (*m_Output) << "[IRC] " + message << std::endl;
     } else {
@@ -323,24 +428,28 @@ void CCommandContext::ErrorReply(const string& message)
   SendReply("Error: " + message);
 }
 
+void CCommandContext::ErrorReply(const string& message, const uint8_t ccFlags) {
+  SendReply("Error: " + message, ccFlags);
+}
+
 void CCommandContext::SendAll(const string& message)
 {
-  SendReply(message, CHAT_SEND_ALL);
+  SendReply(message, CHAT_SEND_TARGET_ALL);
 }
 
 void CCommandContext::ErrorAll(const string& message)
 {
-  SendReply("Error: " + message, CHAT_SEND_ALL);
+  ErrorReply(message, CHAT_SEND_TARGET_ALL);
 }
 
 CGamePlayer* CCommandContext::GetTargetPlayer(const string& target)
 {
   CGamePlayer* TargetPlayer = nullptr;
-  if (target.empty() || !m_Game) {
+  if (target.empty() || !m_TargetGame) {
     return TargetPlayer;
   }
 
-  uint8_t Matches = m_Game->GetPlayerFromNamePartial(target, &TargetPlayer);
+  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, &TargetPlayer);
   if (Matches > 1) {
     TargetPlayer = nullptr;
   }
@@ -354,34 +463,114 @@ CGamePlayer* CCommandContext::GetTargetPlayerOrSelf(const string& target)
   }
 
   CGamePlayer* TargetPlayer = nullptr;
-  if (!m_Game) return TargetPlayer;
-  uint8_t Matches = m_Game->GetPlayerFromNamePartial(target, &TargetPlayer);
+  if (!m_TargetGame) return TargetPlayer;
+  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, &TargetPlayer);
   if (Matches > 1) {
     TargetPlayer = nullptr;
   }
   return TargetPlayer;
 }
 
+CBNET* CCommandContext::GetTargetRealmOrCurrent(const string& target)
+{
+  if (target.empty()) {
+    return m_SourceRealm;
+  }
+  string realmId = target;
+  transform(begin(realmId), end(realmId), begin(realmId), ::tolower);
+  return m_Aura->GetRealmByInputId(realmId);
+}
+
+CGame* CCommandContext::GetTargetGame(const string& target)
+{
+  if (target.empty()) {
+    return nullptr;
+  }
+  string gameId = target;
+  transform(begin(gameId), end(gameId), begin(gameId), ::tolower);
+  if (gameId == "lobby") {
+    return m_Aura->m_CurrentLobby;
+  }
+  if (gameId.substr(0, 5) == "game#") {
+    gameId = gameId.substr(5, gameId.length());
+  }
+  uint32_t GameNumber = 0;
+  try {
+    GameNumber = stoul(gameId);
+  } catch (...) {
+  }
+  if (GameNumber == 0 || GameNumber > m_Aura->m_Games.size()) {
+    return nullptr;
+  }
+  return m_Aura->m_Games[GameNumber - 1];
+}
+
 void CCommandContext::UseImplicitHostedGame()
 {
-  if (!m_Game) return;
-  m_Game = m_Aura->m_CurrentLobby;
-  if (m_Game && 0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+  if (m_TargetGame) return;
+
+  m_TargetGame = m_Aura->m_CurrentLobby;
+  if (m_TargetGame && 0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
     UpdatePermissions();
   }
 }
 
 void CCommandContext::Run(const string& command, const string& payload)
 {
-  const std::string& Command = command;
-  const std::string& Payload = payload;
-  if (m_Game->m_Locked && 0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-    (*m_Output) << m_Game->GetLogPrefix() + "Command ignored, the game is locked" << std::endl;
+  UpdatePermissions();
+
+  string Command = command;
+  string Payload = payload;
+
+  uint64_t CommandHash = HashCode(Command);
+
+  if (CommandHash == HashCode("su")) {
+    if (!m_HostName.empty() && 0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+      ErrorReply("Forbidden");
+      return;
+    }
+    m_Aura->m_SudoUser = m_FromName;
+    m_Aura->m_SudoGame = m_TargetGame;
+    m_Aura->m_SudoRealm = m_SourceRealm;
+    m_Aura->m_SudoIRC = m_IRC;
+    // TODO(IceSandslash): GetSudoAuthPayload should only be executed after some local input.
+    m_Aura->m_SudoAuthPayload = m_Aura->GetSudoAuthPayload(Payload);
+    m_Aura->m_SudoExecCommand = Payload;
+    Print("[AURA] Sudoer " + m_FromName + " requests command \"" + Payload + "\"");
+    if (m_SourceRealm && m_FromWhisper) {
+      Print("[AURA] Confirm from [" + m_HostName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + GetToken() + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+    } else if (m_IRC) {
+      Print("[AURA] Confirm from [" + m_IRC->m_ResolvedHostName + "] with: \"" + GetToken() + "aura sudo " + m_Aura->m_SudoAuthPayload + "\"");
+    } else {
+      Print("[AURA] Confirm from the game client with: \"" + GetToken() + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+    }
+    return;
+  }
+
+  if (CommandHash == HashCode("sudo")) {
+    optional<pair<string, string>> RunOverride = CheckSudo(Payload);
+    if (RunOverride.has_value()) {
+      Command = RunOverride.value().first;
+      Payload = RunOverride.value().second;
+      CommandHash = HashCode(Command);
+    } else {
+      ErrorReply("Sudo check failure.");
+      Print(m_FromName + "@" + m_HostName + " failed sudo authentication.");
+      return;
+    }
+  }
+
+  if (m_TargetGame && m_TargetGame->m_Locked && 0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    (*m_Output) << m_TargetGame->GetLogPrefix() + "Command ignored, the game is locked" << std::endl;
     ErrorReply("Only the game owner and root admins can run game commands when the game is locked.");
     return;
   }
 
-  const uint64_t CommandHash = HashCode(Command);
+  if (Payload.empty()) {
+    (*m_Output) << GetUserAttribution() + "sent command [" + GetToken() + Command + "]" << std::endl;
+  } else {
+    (*m_Output) << GetUserAttribution() + "sent command [" + GetToken() + Command + "] with payload [" + Payload + "]" << std::endl;
+  }
 
   /*********************
    * NON ADMIN COMMANDS *
@@ -405,7 +594,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("checkme"):
     case HashCode("check"): {
-      if (!m_Game || m_Game->GetIsMirror()) {
+      if (!m_TargetGame || m_TargetGame->GetIsMirror()) {
         break;
       }
       CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
@@ -415,34 +604,34 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
       CBNET* targetPlayerRealm = targetPlayer->GetRealm(true);
       bool IsRealmVerified = targetPlayerRealm != nullptr;
-      bool IsOwner = m_Game->MatchOwnerName(targetPlayer->GetName()) && m_Game->HasOwnerInGame();
+      bool IsOwner = m_TargetGame->MatchOwnerName(targetPlayer->GetName()) && m_TargetGame->HasOwnerInGame();
       bool IsAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName);
       bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsRootAdmin(m_FromName);
       string SyncStatus;
-      if (m_Game->GetGameLoaded()) {
-        if (m_Game->m_SyncPlayers[targetPlayer].size() + 1 == m_Game->m_Players.size()) {
+      if (m_TargetGame->GetGameLoaded()) {
+        if (m_TargetGame->m_SyncPlayers[targetPlayer].size() + 1 == m_TargetGame->m_Players.size()) {
           SyncStatus = "Full";
-        } else if (m_Game->m_SyncPlayers[targetPlayer].empty()) {
+        } else if (m_TargetGame->m_SyncPlayers[targetPlayer].empty()) {
           SyncStatus = "Alone";
         } else {
           SyncStatus = "With: ";
-          for (auto& otherPlayer: m_Game->m_SyncPlayers[targetPlayer]) {
+          for (auto& otherPlayer: m_TargetGame->m_SyncPlayers[targetPlayer]) {
             SyncStatus += otherPlayer->GetName() + ", ";
           }
           SyncStatus = SyncStatus.substr(0, SyncStatus.length() - 2);
         }
       }
-      bool IsForwards = m_Game->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter()) >= static_cast<float>(m_Game->m_SyncCounter);
+      bool IsForwards = m_TargetGame->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter()) >= static_cast<float>(m_TargetGame->m_SyncCounter);
       float OffsetAbs = (
-        IsForwards ? m_Game->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter()) - static_cast<float>(m_Game->m_SyncCounter) :
-        static_cast<float>(m_Game->m_SyncCounter) - m_Game->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter())
+        IsForwards ? m_TargetGame->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter()) - static_cast<float>(m_TargetGame->m_SyncCounter) :
+        static_cast<float>(m_TargetGame->m_SyncCounter) - m_TargetGame->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter())
       );
       string SyncOffsetText = IsForwards ? " +" + to_string(OffsetAbs) : " -" + to_string(OffsetAbs);
       string SlotFragment;
-      if (m_Game->GetIsLobby()) {
-        SlotFragment = "Slot #" + to_string(1 + m_Game->GetSIDFromPID(targetPlayer->GetPID())) + ". ";
+      if (m_TargetGame->GetIsLobby()) {
+        SlotFragment = "Slot #" + to_string(1 + m_TargetGame->GetSIDFromPID(targetPlayer->GetPID())) + ". ";
       }
-      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetExternalIP(), true)) + (m_Game->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
+      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetExternalIP(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Owner: " + (IsOwner ? "Yes" : "No")+ ", Reserved: " + (targetPlayer->GetReserved() ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       break;
     }
@@ -456,13 +645,13 @@ void CCommandContext::Run(const string& command, const string& payload)
       // kick players with ping higher than payload if payload isn't empty
       // we only do this if the game hasn't started since we don't want to kick players from a game in progress
 
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       uint32_t KickedCount = 0;
       optional<uint32_t> KickPing;
       if (!Payload.empty()) {
-        if (!m_Game->GetIsLobby() || 0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_OK))) {
+        if (!m_TargetGame->GetIsLobby() || 0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_OK))) {
           ErrorReply("Not allowed to set maximum ping.");
           break;
         }
@@ -479,11 +668,11 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (KickPing.has_value())
-        m_Game->m_AutoKickPing = KickPing.value();
+        m_TargetGame->m_AutoKickPing = KickPing.value();
 
       // copy the m_Players vector so we can sort by descending ping so it's easier to find players with high pings
 
-      vector<CGamePlayer*> SortedPlayers = m_Game->m_Players;
+      vector<CGamePlayer*> SortedPlayers = m_TargetGame->m_Players;
       sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
         return a->GetPing() < b->GetPing();
       });
@@ -500,10 +689,10 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (NumPings > 0) {
           PingsText += to_string((*i)->GetPing());
 
-          if (m_Game->GetIsLobby() && !(*i)->GetReserved()) {
-            if (KickPing.has_value() && (*i)->GetPing() > m_Game->m_AutoKickPing) {
+          if (m_TargetGame->GetIsLobby() && !(*i)->GetReserved()) {
+            if (KickPing.has_value() && (*i)->GetPing() > m_TargetGame->m_AutoKickPing) {
               (*i)->SetKickByTime(GetTime() + 5);
-              (*i)->SetLeftReason("was kicked for excessive ping " + to_string((*i)->GetPing()) + " > " + to_string(m_Game->m_AutoKickPing));
+              (*i)->SetLeftReason("was kicked for excessive ping " + to_string((*i)->GetPing()) + " > " + to_string(m_TargetGame->m_AutoKickPing));
               (*i)->SetLeftCode(PLAYERLEAVE_LOBBY);
               ++KickedCount;
             } else if ((*i)->GetKickQueued() && ((*i)->GetHasMap() || (*i)->GetDownloadStarted())) {
@@ -524,8 +713,39 @@ void CCommandContext::Run(const string& command, const string& payload)
       SendAll(PingsText);
 
       if (KickedCount > 0)
-        SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_Game->m_AutoKickPing) + "...");
+        SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_TargetGame->m_AutoKickPing) + "...");
 
+      break;
+    }
+
+    //
+    // !GETPLAYERS
+    // !GETOBSERVERS
+    //
+
+    case HashCode("getplayers"):
+    case HashCode("getobservers"):
+    {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+        break;
+
+      if (m_TargetGame->m_GameDisplay == GAME_PRIVATE && !m_Player) {
+        if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+          ErrorReply("This game is private.");
+          break;
+        }
+      }
+      string Players = m_TargetGame->GetPlayers();
+      string Observers = m_TargetGame->GetObservers();
+      if (Players.empty() && Observers.empty()) {
+        SendReply("Nobody is in the game.");
+        break;
+      }
+      string PlayersFragment = Players.empty() ? "No players. " : "Players: " + Players + ". ";
+      string ObserversFragment = Observers.empty() ? "No observers" : "Observers: " + Observers + ".";
+        SendReply(PlayersFragment + ObserversFragment);
       break;
     }
 
@@ -535,14 +755,14 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("votekick"):
     {
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (m_Game->GetCountDownStarted() && !m_Game->GetGameLoaded())
+      if (m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
         break;
 
       if (Payload.empty()){
-        ErrorReply("Usage: !votekick [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "votekick [PLAYERNAME]");
         break;
       }
 
@@ -552,11 +772,11 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (!m_Game->m_KickVotePlayer.empty()) {
+      if (!m_TargetGame->m_KickVotePlayer.empty()) {
         ErrorReply("Unable to start votekick. Another votekick is in progress");
         break;
       }
-      if (m_Game->m_Players.size() <= 2) {
+      if (m_TargetGame->m_Players.size() <= 2) {
         ErrorReply("Unable to start votekick. There aren't enough players in the game for a votekick");
         break;
       }
@@ -565,18 +785,18 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_Game->m_KickVotePlayer      = targetPlayer->GetName();
-      m_Game->m_StartedKickVoteTime = GetTime();
+      m_TargetGame->m_KickVotePlayer      = targetPlayer->GetName();
+      m_TargetGame->m_StartedKickVoteTime = GetTime();
 
-      for (auto& it : m_Game->m_Players)
+      for (auto& it : m_TargetGame->m_Players)
         it->SetKickVote(false);
 
-      SendReply("Votekick against player [" + m_Game->m_KickVotePlayer + "] started by player [" + m_FromName + "]", CHAT_SEND_ALL | CHAT_LOG_CONSOLE);
+      SendReply("Votekick against player [" + m_TargetGame->m_KickVotePlayer + "] started by player [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       if (m_Player && m_Player != targetPlayer) {
         m_Player->SetKickVote(true);
-        SendAll("Player [" + m_Player->GetName() + "] voted to kick player [" + m_Game->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil((m_Game->GetNumHumanPlayers() - 1) * static_cast<float>(m_Aura->m_GameDefaultConfig->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
+        SendAll("Player [" + m_Player->GetName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil((m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
       }
-      SendAll("Type " + string(1, m_Aura->m_GameDefaultConfig->m_CommandTrigger) + "yes or " + string(1, m_Aura->m_GameDefaultConfig->m_CommandTrigger) + "no to vote.");
+      SendAll("Type " + GetToken() + "yes or " + GetToken() + "no to vote.");
 
       break;
     }
@@ -587,13 +807,13 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("yes"):
     {
-      if (!m_Player || m_Game->m_KickVotePlayer.empty() || m_Player->GetKickVote().value_or(false))
+      if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || m_Player->GetKickVote().value_or(false))
         break;
 
-      uint32_t VotesNeeded = static_cast<uint32_t>(ceil((m_Game->GetNumHumanPlayers() - 1) * static_cast<float>(m_Aura->m_GameDefaultConfig->m_VoteKickPercentage) / 100));
+      uint32_t VotesNeeded = static_cast<uint32_t>(ceil((m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100));
       m_Player->SetKickVote(true);
-      m_Game->SendAllChat("Player [" + m_Player->GetName() + "] voted for kicking player [" + m_Game->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
-      m_Game->CountKickVotes();
+      m_TargetGame->SendAllChat("Player [" + m_Player->GetName() + "] voted for kicking player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
+      m_TargetGame->CountKickVotes();
       break;
     }
 
@@ -603,12 +823,11 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("no"):
     {
-      if (!m_Player || m_Game->m_KickVotePlayer.empty() || !m_Player->GetKickVote().value_or(true))
+      if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || !m_Player->GetKickVote().value_or(true))
         break;
 
-      uint32_t VotesNeeded = static_cast<uint32_t>(ceil((m_Game->GetNumHumanPlayers() - 1) * static_cast<float>(m_Aura->m_GameDefaultConfig->m_VoteKickPercentage) / 100));
       m_Player->SetKickVote(false);
-      m_Game->SendAllChat("Player [" + m_Player->GetName() + "] voted against kicking player [" + m_Game->m_KickVotePlayer + "].");
+      m_TargetGame->SendAllChat("Player [" + m_Player->GetName() + "] voted against kicking player [" + m_TargetGame->m_KickVotePlayer + "].");
       break;
     }
 
@@ -620,23 +839,23 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetCountDownStarted()) {
+      if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         // Intentionally allows !invite to fake (mirror) lobbies.
         break;
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !invite [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "invite [PLAYERNAME]");
         break;
       }
 
-      const string MapPath = m_Game->m_Map->GetMapPath();
+      const string MapPath = m_TargetGame->m_Map->GetMapPath();
       string PassedMessage;
       size_t LastSlash = MapPath.rfind('\\');
       if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
-        PassedMessage = m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1, MapPath.length()) + "]. Join game \"" + m_Game->m_GameName + "\"";
+        PassedMessage = m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1, MapPath.length()) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
       } else {
-        PassedMessage = m_FromName + " invites you to join game \"" + m_Game->m_GameName + "\"";
+        PassedMessage = m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
       }
 
       bool CanInviteGlobally = 0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE));
@@ -644,11 +863,113 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (bnet->GetIsMirror())
           continue;
 
-        if (bnet == m_Realm || CanInviteGlobally) {
-          bnet->QueueChatCommand(PassedMessage, Payload, true);
+        if (bnet == m_SourceRealm || CanInviteGlobally) {
+          bnet->SendWhisper(PassedMessage, Payload);
         }
       }
 
+      break;
+    }
+
+    //
+    // !COINFLIP
+    //
+
+    case HashCode("coin"):
+    case HashCode("coinflip"):
+    {
+      double chance = 0.5;
+      if (!Payload.empty()) {
+        double chancePercent;
+        try {
+          chancePercent = stod(Payload);
+        } catch (...) {
+          ErrorReply("Usage: !coin [CHANCE%]");
+          break;
+        }
+        if (chancePercent < 0. || chancePercent > 100.) {
+          ErrorReply("Usage: !coin [CHANCE%]");
+          break;
+        }
+        chance = chancePercent / 100.;
+      }
+
+      // Max 5pm
+
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::bernoulli_distribution bernoulliDist(chance);
+      bool result = bernoulliDist(gen);
+
+      SendAll(m_FromName + " flipped a coin and got " + (result ? "heads" : "tails") + ".");
+      break;
+    }
+
+    //
+    // !ROLL
+    //
+
+    case HashCode("roll"):
+    {
+      size_t diceStart = Payload.find('d');
+      uint16_t rollFaces = 0;
+      uint8_t rollCount = 1;
+
+      string rawRollCount = diceStart == string::npos ? "1" : Payload.substr(0, diceStart);
+      string rawRollFaces = Payload.empty() ? "100" : diceStart == string::npos ? Payload : Payload.substr(diceStart + 1, Payload.length());
+
+      try {
+        rollCount = stoi(rawRollCount);
+        rollFaces = stoi(rawRollFaces);
+      } catch (...) {
+        ErrorReply("Usage: !roll [FACES]");
+        break;
+      }
+
+      if (!(0 < rollCount && rollCount <= 8)) {
+        ErrorReply("Invalid dice count: " + to_string(rollCount));
+        break;
+      }
+      if (!(0 < rollFaces && rollFaces <= 10000)) {
+        ErrorReply("Invalid dice faces: " + to_string(rollFaces));
+        break;
+      }
+
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_int_distribution<> distribution(1, rollFaces);
+
+      vector<string> gotRolls;
+      for (uint8_t i = 1; i <= rollCount; ++i) {
+        gotRolls.push_back(to_string(distribution(gen)));
+      }
+
+      SendAll(m_FromName + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinVector(gotRolls, false));
+      break;
+    }
+
+    //
+    // !PICK
+    //
+
+    case HashCode("pick"):
+    {
+      if (Payload.empty()) {
+        ErrorReply("Usage: !pick [OPTION], [OPTION], [OPTION], ...");
+        break;
+      }
+
+      vector<string> options = SplitArgs(Payload, 1, 24);
+      if (options.empty()) {
+        ErrorReply("Empty options list.");
+        break;
+      }
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_int_distribution<> distribution(1, options.size());
+
+      string randomPick = options[distribution(gen) - 1];
+      SendAll("Randomly picked: " + randomPick);
       break;
     }
 
@@ -663,17 +984,17 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("from"):
     case HashCode("f"):
     {
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & ((m_Game->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to check players geolocalization.");
         break;
       }
 
       string Froms;
 
-      for (auto i = begin(m_Game->m_Players); i != end(m_Game->m_Players); ++i) {
+      for (auto i = begin(m_TargetGame->m_Players); i != end(m_TargetGame->m_Players); ++i) {
         // we reverse the byte order on the IP because it's stored in network byte order
 
         Froms += (*i)->GetName();
@@ -681,7 +1002,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32((*i)->GetExternalIP(), true));
         Froms += ")";
 
-        if (i != end(m_Game->m_Players) - 1)
+        if (i != end(m_TargetGame->m_Players) - 1)
           Froms += ", ";
       }
 
@@ -696,14 +1017,14 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("banlast"):
     case HashCode("bl"):
     {
-      if (!m_Game || !m_Game->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to ban players.");
         break;
       }
-      if (!m_Game->m_DBBanLast) {
+      if (!m_TargetGame->m_DBBanLast) {
         ErrorReply("No ban candidates stored.");
         break;
       }
@@ -712,8 +1033,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_Aura->m_DB->BanAdd(m_Game->m_DBBanLast->GetServer(), m_Game->m_DBBanLast->GetName(), m_FromName, Payload);
-      SendAll("Player [" + m_Game->m_DBBanLast->GetName() + "] was banned by player [" + m_FromName + "] on server [" + m_Game->m_DBBanLast->GetServer() + "]");
+      m_Aura->m_DB->BanAdd(m_TargetGame->m_DBBanLast->GetServer(), m_TargetGame->m_DBBanLast->GetName(), m_FromName, Payload);
+      SendAll("Player [" + m_TargetGame->m_DBBanLast->GetName() + "] was banned by player [" + m_FromName + "] on server [" + m_TargetGame->m_DBBanLast->GetServer() + "]");
       break;
     }
 
@@ -726,7 +1047,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -735,24 +1056,24 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "c [SLOTNUM]");
+        ErrorReply("Usage: " + GetToken() + "c [SLOTNUM]");
         break;
       }
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 12u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "c [SLOTNUM]");
+        ErrorReply("Usage: " + GetToken() + "c [SLOTNUM]");
         break;
       }
 
       for (auto& elem : Args) {
         if (elem == 0 || elem > 12) {
-          ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "o [SLOTNUM]");
+          ErrorReply("Usage: " + GetToken() + "c [SLOTNUM]");
           break;
         }
         uint8_t SID = static_cast<uint8_t>(elem) - 1;
-        m_Game->DeleteFakePlayer(SID);
-        m_Game->CloseSlot(SID, CommandHash == HashCode("close"));
+        m_TargetGame->DeleteFakePlayer(SID);
+        m_TargetGame->CloseSlot(SID, CommandHash == HashCode("close"));
       }
       break;
     }
@@ -763,7 +1084,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("end"):
     {
-      if (!m_Game || !m_Game->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -777,8 +1098,11 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      (*m_Output) << m_Game->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]" << std::endl;
-      m_Game->StopPlayers("was disconnected (admin ended game)");
+      // TODO? Allow root admins to end the game if the game owner isn't in the game
+      // Add concept of game bound to a realm.
+
+      (*m_Output) << m_TargetGame->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]" << std::endl;
+      m_TargetGame->StopPlayers("was disconnected (admin ended game)");
       break;
     }
 
@@ -789,26 +1113,30 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("url"):
     case HashCode("link"):
     {
-      if (!m_Game || !m_Game->GetIsLobby())
+      if (!m_TargetGame)
         break;
 
       const string TargetUrl = TrimString(Payload);
 
       if (TargetUrl.empty()) {
-        if (m_Game->m_Map->GetMapSiteURL().empty()) {
+        // TODO(IceSandslash): Make this available after game has loaded.
+        if (!m_TargetGame->m_Map || m_TargetGame->m_Map->GetMapSiteURL().empty()) {
           SendAll("Download URL unknown");
         } else {
-          SendAll("Download map from <" + m_Game->m_Map->GetMapSiteURL() + ">");
+          SendAll("Download [" + m_TargetGame->m_Map->GetMapFileName() + "] from <" + m_TargetGame->m_Map->GetMapSiteURL() + ">");
         }
         break;
       }
+
+      if (!m_TargetGame->GetIsLobby())
+        break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("You are not the game owner, and therefore change the map settings.");
         break;
       }
 
-      m_Game->m_Map->SetMapSiteURL(TargetUrl);
+      m_TargetGame->m_Map->SetMapSiteURL(TargetUrl);
       SendAll("Download URL set to [" + TargetUrl + "]");
       break;
     }
@@ -819,11 +1147,11 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("hcl"):
     {
-      if (!m_Game || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
         break;
 
       if (Payload.empty()) {
-        SendReply("The HCL command string is [" + m_Game->m_HCLCommandString + "]");
+        SendReply("The HCL command string is [" + m_TargetGame->m_HCLCommandString + "]");
         break;
       }
 
@@ -832,7 +1160,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (Payload.size() > m_Game->m_Slots.size()) {
+      if (Payload.size() > m_TargetGame->m_Slots.size()) {
         ErrorReply("Unable to set HCL command string because it's too long - it must not exceed the amount of occupied game slots");
         break;
       }
@@ -841,12 +1169,12 @@ void CCommandContext::Run(const string& command, const string& payload)
       size_t IllegalIndex = Payload.find_first_not_of(HCLChars);
 
       if (IllegalIndex != string::npos) {
-        ErrorReply("Unable to set HCL command string because it contains invalid character [" + string(1, static_cast<char>(Payload[IllegalIndex])) + "]");
+        ErrorReply("Unable to set HCL command string because it contains invalid character [" + GetToken() + "]");
         break;
       }
 
-      m_Game->m_HCLCommandString = Payload;
-      SendAll("Setting game mode to HCL [" + m_Game->m_HCLCommandString + "]");
+      m_TargetGame->m_HCLCommandString = Payload;
+      SendAll("Setting game mode to HCL [" + m_TargetGame->m_HCLCommandString + "]");
       break;
     }
 
@@ -857,7 +1185,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("hold"):
     {
       UseImplicitHostedGame();
-      if (!m_Game || !m_Game->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -868,7 +1196,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       vector<string> Args = SplitArgs(Payload, 1u, 12u);
 
       if (Args.empty()) {
-        ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "hold [PLAYER1], [PLAYER2], ...");
+        ErrorReply("Usage: " + GetToken() + "hold [PLAYER1], [PLAYER2], ...");
         break;
       }
 
@@ -876,7 +1204,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (PlayerName.empty())
           continue;
         Args.push_back("[" + PlayerName + "]");
-        m_Game->AddToReserved(PlayerName);
+        m_TargetGame->AddToReserved(PlayerName);
       }
 
       SendAll("Added player(s) to the hold list: " + JoinVector(Args, false));
@@ -890,7 +1218,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("unhold"):
     {
       UseImplicitHostedGame();
-      if (!m_Game || !m_Game->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -901,14 +1229,14 @@ void CCommandContext::Run(const string& command, const string& payload)
       vector<string> Args = SplitArgs(Payload, 1u, 12u);
 
       if (Args.empty()) {
-        ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "hold [PLAYER1], [PLAYER2], ...");
+        ErrorReply("Usage: " + GetToken() + "hold [PLAYER1], [PLAYER2], ...");
         break;
       }
 
       for (auto& PlayerName: Args) {
         if (PlayerName.empty())
           continue;
-        m_Game->RemoveFromReserved(PlayerName);
+        m_TargetGame->RemoveFromReserved(PlayerName);
       }
       SendAll("Removed player(s) from the hold list: " + JoinVector(Args, false));
       break;
@@ -924,7 +1252,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("k"):
     {
       UseImplicitHostedGame();
-      if (!m_Game || m_Game->GetIsMirror() || m_Game->GetCountDownStarted() && !m_Game->GetGameLoaded())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -933,7 +1261,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "kick [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "kick [PLAYERNAME]");
         break;
       }
 
@@ -946,17 +1274,17 @@ void CCommandContext::Run(const string& command, const string& payload)
       targetPlayer->SetDeleteMe(true);
       targetPlayer->SetLeftReason("was kicked by player [" + m_FromName + "]");
 
-      if (m_Game->GetIsLobby())
+      if (m_TargetGame->GetIsLobby())
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
       else
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOST);
 
-      if (m_Game->GetIsLobby()) {
+      if (m_TargetGame->GetIsLobby()) {
         bool KickAndClose = CommandHash == HashCode("ckick") || CommandHash == HashCode("closekick");
         if (KickAndClose) {
-          m_Game->CloseSlot(m_Game->GetSIDFromPID(targetPlayer->GetPID()), false);
+          m_TargetGame->CloseSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
         } else {
-          m_Game->OpenSlot(m_Game->GetSIDFromPID(targetPlayer->GetPID()), false);
+          m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
         }
       }
 
@@ -969,11 +1297,11 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("latency"):
     {
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (Payload.empty()) {
-        SendReply("The game latency is " + to_string(m_Game->m_Latency) + " ms");
+        SendReply("The game latency is " + to_string(m_TargetGame->m_Latency) + " ms");
         break;
       }
 
@@ -989,20 +1317,20 @@ void CCommandContext::Run(const string& command, const string& payload)
           ErrorReply("Invalid game latency [" + to_string(TargetValue) + "ms].");
           break;
         }
-        m_Game->m_Latency = static_cast<uint16_t>(TargetValue);
+        m_TargetGame->m_Latency = static_cast<uint16_t>(TargetValue);
       } catch (...) {
         ErrorReply("Invalid game latency [" + Payload + "].");
         break;
       }
 
-      if (m_Game->m_Latency <= 10) {
-        m_Game->m_Latency = 10;
+      if (m_TargetGame->m_Latency <= 10) {
+        m_TargetGame->m_Latency = 10;
         SendAll("Setting game latency to the minimum of 10 ms");
-      } else if (m_Game->m_Latency >= 500) {
-        m_Game->m_Latency = 500;
+      } else if (m_TargetGame->m_Latency >= 500) {
+        m_TargetGame->m_Latency = 500;
         SendAll("Setting game latency to the maximum of 500 ms");
       } else {
-        SendAll("Setting game latency to " + to_string(m_Game->m_Latency) + " ms");
+        SendAll("Setting game latency to " + to_string(m_TargetGame->m_Latency) + " ms");
       }
 
       break;
@@ -1017,7 +1345,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1026,43 +1354,60 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "o [SLOTNUM]");
+        ErrorReply("Usage: " + GetToken() + "o [SLOTNUM]");
         break;
       }
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 12u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "o [SLOTNUM]");
+        ErrorReply("Usage: " + GetToken() + "o [SLOTNUM]");
         break;
       }
 
       for (auto& elem : Args) {
         if (elem == 0 || elem > 12) {
-          ErrorReply("Usage: " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "o [SLOTNUM]");
+          ErrorReply("Usage: " + GetToken() + "o [SLOTNUM]");
           break;
         }
         uint8_t SID = static_cast<uint8_t>(elem) - 1;
-        if (!m_Game->DeleteFakePlayer(SID)) {
-          m_Game->OpenSlot(SID, CommandHash == HashCode("open"));
+        if (!m_TargetGame->DeleteFakePlayer(SID)) {
+          m_TargetGame->OpenSlot(SID, CommandHash == HashCode("open"));
         }
       }
       break;
     }
 
     //
-    // !PRIV (rehost as private game)
+    // !PUB (host or rehost as public game)
+    // !PRIV (host or rehost as private game)
     //
 
+    case HashCode("pub"):
     case HashCode("priv"):
     {
-      UseImplicitHostedGame();
-
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
-        break;
-
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("You are not the game owner, and therefore cannot rehost the game.");
-        break;
+      if (m_TargetGame) {
+        if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
+          break;
+        }
+        if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+          ErrorReply("You are not the game owner, and therefore cannot rehost the game.");
+          break;
+        }
+      } else {
+        if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
+          if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+            ErrorReply("Not allowed to host games.");
+            break;
+          }
+        }
+        if (!m_Aura->m_Map) {
+          ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
+          break;
+        }
+        if (Payload.empty()) {
+          ErrorReply("Usage: " + GetToken() + "pub [GAMENAME]");
+          break;
+        }
       }
 
       if (Payload.length() >= 31) {
@@ -1070,82 +1415,77 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      SendReply("Trying to rehost as private game [" + Payload + "]. (This will take a few seconds)", CHAT_SEND_ALL | CHAT_LOG_CONSOLE);
-      m_Game->m_GameDisplay  = GAME_PRIVATE;
-      m_Game->m_LastGameName = m_Game->m_GameName;
-      m_Game->m_GameName     = Payload;
-      m_Game->m_HostCounter  = m_Aura->NextHostCounter();
-      m_Game->m_RefreshError = false;
+      SendReply("Trying to rehost as private game [" + Payload + "]. (This will take a few seconds)", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
 
-      for (auto& bnet : m_Aura->m_BNETs) {
-        if (m_Game->m_IsMirror && bnet->GetIsMirror())
-          continue;
+      bool IsPrivate = CommandHash == HashCode("priv");
+      if (m_TargetGame) {
+        m_TargetGame->m_GameDisplay  = IsPrivate ? GAME_PRIVATE : GAME_PUBLIC;
+        m_TargetGame->m_LastGameName = m_TargetGame->m_GameName;
+        m_TargetGame->m_GameName     = Payload;
+        m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
+        m_TargetGame->m_RefreshError = false;
 
-        // unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
-        // this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
-        // we assume this won't happen very often since the only downside is a potential false positive
+        for (auto& bnet : m_Aura->m_BNETs) {
+          if (m_TargetGame->m_IsMirror && bnet->GetIsMirror())
+            continue;
 
-        bnet->UnqueueGameRefreshes();
-        bnet->QueueGameUncreate();
-        bnet->QueueEnterChat();
+          // unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
+          // this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
+          // we assume this won't happen very often since the only downside is a potential false positive
 
-        // we need to send the game creation message now because private games are not refreshed
-
-        bnet->QueueGameCreate(m_Game->m_GameDisplay, m_Game->m_GameName, m_Game->m_Map, m_Game->m_HostCounter, m_Game->m_HostPort);
-
-        if (!bnet->GetPvPGN())
+          bnet->QueueGameUncreate();
           bnet->QueueEnterChat();
+
+          // we need to send the game creation message now because private games are not refreshed
+
+          bnet->QueueGameCreate(m_TargetGame->m_GameDisplay, m_TargetGame->m_GameName, m_TargetGame->m_Map, m_TargetGame->m_HostCounter, m_TargetGame->m_HostPort);
+
+          if (!bnet->GetPvPGN())
+            bnet->QueueEnterChat();
+        }
+
+        m_TargetGame->m_CreationTime = m_TargetGame->m_LastRefreshTime = GetTime();
+      } else {
+        m_Aura->CreateGame(m_Aura->m_Map, IsPrivate ? GAME_PRIVATE : GAME_PUBLIC, Payload, m_FromName, m_HostName, m_FromName, m_SourceRealm, this);
+        m_Aura->m_Map = nullptr;
       }
-
-      m_Game->m_CreationTime = m_Game->m_LastRefreshTime = GetTime();
-
       break;
     }
 
     //
-    // !PUB (rehost as public game)
+    // !PUBBY (host public game by other player)
+    // !PRIVBY (host private game by other player)
     //
 
-    case HashCode("pub"):
+    case HashCode("pubby"):
+    case HashCode("privby"):
     {
-      UseImplicitHostedGame();
-
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
+        if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+          ErrorReply("Not allowed to host games.");
+          break;
+        }
+      }
+      if (!m_Aura->m_Map) {
+        ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
         break;
-
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("You are not the game owner, and therefore cannot rehost the game.");
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "pubby [OWNER], [GAMENAME]");
         break;
       }
 
-      if (Payload.length() >= 31) {
-        ErrorReply("Unable to create game [" + Payload + "]. The game name is too long (the maximum is 31 characters)");
-        break;
+      string            Owner, GameName;
+      string::size_type GameNameStart = Payload.find(',');
+
+      bool IsPrivate = CommandHash == HashCode("privby");
+      if (GameNameStart != string::npos) {
+        Owner    = Payload.substr(0, GameNameStart);
+        GameName = Payload.substr(GameNameStart + 1);
+        
+        m_Aura->CreateGame(m_Aura->m_Map, IsPrivate ? GAME_PRIVATE : GAME_PUBLIC, GameName, Owner, m_HostName, m_FromName, m_SourceRealm, this);
+        m_Aura->m_Map = nullptr;
       }
-      SendReply("Trying to rehost as public game [" + Payload + "]. (This will take a few seconds)", CHAT_SEND_ALL | CHAT_LOG_CONSOLE);
-      m_Game->m_GameDisplay  = GAME_PUBLIC;
-      m_Game->m_LastGameName = m_Game->m_GameName;
-      m_Game->m_GameName     = Payload;
-      m_Game->m_HostCounter  = m_Aura->NextHostCounter();
-      m_Game->m_RefreshError = false;
-
-      for (auto& bnet : m_Aura->m_BNETs) {
-        if (m_Game->m_IsMirror && bnet->GetIsMirror())
-          continue;
-
-        // unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
-        // this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
-        // we assume this won't happen very often since the only downside is a potential false positive
-
-        bnet->UnqueueGameRefreshes();
-        bnet->QueueGameUncreate();
-        bnet->QueueEnterChat();
-
-        // the game creation message will be sent on the next refresh
-      }
-
-      m_Game->m_CreationTime = m_Game->m_LastRefreshTime = GetTime();
-
       break;
     }
 
@@ -1158,15 +1498,15 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & ((m_Game->HasOwnerSet() && !m_Game->m_PublicStart ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() && !m_TargetGame->m_PublicStart ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("You are not allowed to start this game.");
         break;
       }
 
-      uint32_t ConnectionCount = m_Game->GetNumConnectionsOrFake();
+      uint32_t ConnectionCount = m_TargetGame->GetNumConnectionsOrFake();
       if (ConnectionCount == 0) {
         ErrorReply("Not enough players have joined.");
         break;
@@ -1178,7 +1518,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_Game->StartCountDown(IsForce);
+      m_TargetGame->StartCountDown(IsForce);
 
       break;
     }
@@ -1189,7 +1529,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("quickstart"):
     {
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1197,12 +1537,12 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (GetTicks() - m_Game->m_LastPlayerLeaveTicks < 2000) {
+      if (GetTicks() - m_TargetGame->m_LastPlayerLeaveTicks < 2000) {
         ErrorReply("Someone left the game less than two seconds ago.");
         break;
       }
-      m_Game->StartCountDown(true);
-      m_Game->m_CountDownCounter = 1;
+      m_TargetGame->StartCountDown(true);
+      m_TargetGame->m_CountDownCounter = 1;
       // 500 ms countdown
       break;
     }
@@ -1215,7 +1555,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1233,11 +1573,11 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Unrecognized setting [" + Payload + "].");
         break;
       }
-      m_Game->m_PublicStart = TargetValue.value();
-      if (m_Game->m_PublicStart) {
-        SendAll("Anybody may now use the " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "start command.");
+      m_TargetGame->m_PublicStart = TargetValue.value();
+      if (m_TargetGame->m_PublicStart) {
+        SendAll("Anybody may now use the " + GetToken() + "start command.");
       } else {
-        SendAll("Only the game owner may now use the " + string(1, static_cast<char>(m_Aura->m_GameDefaultConfig->m_CommandTrigger)) + "start command.");
+        SendAll("Only the game owner may now use the " + GetToken() + "start command.");
       }
       break;
     }
@@ -1250,7 +1590,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1259,7 +1599,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        m_Game->SendAllAutoStart();
+        m_TargetGame->SendAllAutoStart();
         break;
       }
 
@@ -1270,11 +1610,11 @@ void CCommandContext::Run(const string& command, const string& payload)
       SS >> MinSlots;
 
       if (SS.fail()) {
-        ErrorReply("Usage: !autostart <slots>, <minutes>");
+        ErrorReply("Usage: " + GetToken() + "autostart <slots>, <minutes>");
         break;
       }
 
-      if (MinSlots > m_Game->m_Slots.size()) {
+      if (MinSlots > m_TargetGame->m_Slots.size()) {
         ErrorReply("This map does not allow " + to_string(MinSlots) + " slots.");
         break;
       }
@@ -1283,15 +1623,21 @@ void CCommandContext::Run(const string& command, const string& payload)
         SS >> MinMinutes;
       }
 
-      int64_t Time = GetTime();
-      m_Game->m_AutoStartPlayers = MinSlots;
-      m_Game->m_AutoStartMinTime = Time + static_cast<int64_t>(MinMinutes) * 60;
-      if (m_Game->m_AutoStartMinTime <= Time)
-        m_Game->m_AutoStartMinTime = 0;
-      if (m_Game->m_AutoStartMaxTime <= m_Game->m_AutoStartMinTime)
-        m_Game->m_AutoStartMaxTime = 0;
+      if (MinSlots <= m_TargetGame->m_PlayersWithMap) {
+        // Misuse protection. Make sure the user understands AI players are added.
+        ErrorReply("There are already " + to_string(m_TargetGame->m_PlayersWithMap) + " players. Use " + GetToken() + "start instead.");
+        break;
+      }
 
-      m_Game->SendAllAutoStart();
+      int64_t Time = GetTime();
+      m_TargetGame->m_AutoStartPlayers = static_cast<uint8_t>(MinSlots);
+      m_TargetGame->m_AutoStartMinTime = Time + static_cast<int64_t>(MinMinutes) * 60;
+      if (m_TargetGame->m_AutoStartMinTime <= Time)
+        m_TargetGame->m_AutoStartMinTime = 0;
+      if (m_TargetGame->m_AutoStartMaxTime <= m_TargetGame->m_AutoStartMinTime)
+        m_TargetGame->m_AutoStartMaxTime = 0;
+
+      m_TargetGame->SendAllAutoStart();
       break;
     }
 
@@ -1302,7 +1648,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("forceautostart"):
     {
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1311,7 +1657,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !forceautostart <minutes>");
+        ErrorReply("Usage: " + GetToken() + "forceautostart <minutes>");
         break;
       }
 
@@ -1321,18 +1667,18 @@ void CCommandContext::Run(const string& command, const string& payload)
       SS >> MaxMinutes;
 
       if (SS.fail() || MaxMinutes == 0) {
-        ErrorReply("Usage: !forceautostart <minutes>");
+        ErrorReply("Usage: " + GetToken() + "forceautostart <minutes>");
         break;
       }
 
       int64_t Time = GetTime();
-      m_Game->m_AutoStartMaxTime = Time + static_cast<int64_t>(MaxMinutes) * 60;
-      if (m_Game->m_AutoStartMaxTime <= Time)
-        m_Game->m_AutoStartMaxTime = 0;
-      if (m_Game->m_AutoStartMinTime >= m_Game->m_AutoStartMaxTime)
-        m_Game->m_AutoStartMinTime = 0;
+      m_TargetGame->m_AutoStartMaxTime = Time + static_cast<int64_t>(MaxMinutes) * 60;
+      if (m_TargetGame->m_AutoStartMaxTime <= Time)
+        m_TargetGame->m_AutoStartMaxTime = 0;
+      if (m_TargetGame->m_AutoStartMinTime >= m_TargetGame->m_AutoStartMaxTime)
+        m_TargetGame->m_AutoStartMinTime = 0;
 
-      m_Game->SendAllAutoStart();
+      m_TargetGame->SendAllAutoStart();
       break;
     }
 
@@ -1345,7 +1691,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1355,18 +1701,18 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       vector<uint32_t> Slots = SplitNumericArgs(Payload, 2u, 2u);
       if (Slots.empty()) {
-        ErrorReply("Usage: !swap <SLOTNUM>, <SLOTNUM>");
+        ErrorReply("Usage: " + GetToken() + "swap <SLOTNUM>, <SLOTNUM>");
         break;
       }
 
       if (Slots[0] == 0 || Slots[1] == 0 || Slots[0] > 12 || Slots[1] > 12) {
-        ErrorReply("Usage: !swap <SLOTNUM>, <SLOTNUM>");
+        ErrorReply("Usage: " + GetToken() + "swap <SLOTNUM>, <SLOTNUM>");
         break;
       }
 
       uint8_t SID1 = static_cast<uint8_t>(Slots[0]) - 1;
       uint8_t SID2 = static_cast<uint8_t>(Slots[1]) - 1;
-      m_Game->SwapSlots(SID1, SID2);
+      m_TargetGame->SwapSlots(SID1, SID2);
       break;
     }
 
@@ -1376,7 +1722,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("sync"):
     {
-      if (!m_Game || !m_Game->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1389,22 +1735,22 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
-      if (m_Game->m_SyncCounter == 0 || targetPlayer->GetSyncCounter() == 0)
+      if (m_TargetGame->m_SyncCounter == 0 || targetPlayer->GetSyncCounter() == 0)
         break;
 
-      m_Game->m_SyncFactor = static_cast<float>(m_Game->m_SyncCounter) / static_cast<float>(targetPlayer->GetSyncCounter());
-      SendReply("Sync rate updated to " + to_string(m_Game->m_SyncFactor) + ".", CHAT_SEND_ALL | CHAT_LOG_CONSOLE);
+      m_TargetGame->m_SyncFactor = static_cast<float>(m_TargetGame->m_SyncCounter) / static_cast<float>(targetPlayer->GetSyncCounter());
+      SendReply("Sync rate updated to " + to_string(m_TargetGame->m_SyncFactor) + ".", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
 
       uint32_t LeastSyncCounter = 0xFFFFFFFF;
       CGamePlayer* LeastSyncPlayer = nullptr;
-      for (auto& eachPlayer: m_Game->m_Players) {
+      for (auto& eachPlayer: m_TargetGame->m_Players) {
         if (eachPlayer->GetSyncCounter() < LeastSyncCounter) {
           LeastSyncCounter = eachPlayer->GetSyncCounter();
           LeastSyncPlayer = eachPlayer;
         }
       }
-      if (LeastSyncPlayer && (static_cast<float>(m_Game->m_SyncCounter) > m_Game->m_SyncFactor * static_cast<float>(LeastSyncCounter))) {
-        float FramesBehind = static_cast<float>(m_Game->m_SyncCounter) / m_Game->m_SyncFactor - static_cast<float>(LeastSyncCounter);
+      if (LeastSyncPlayer && (static_cast<float>(m_TargetGame->m_SyncCounter) > m_TargetGame->m_SyncFactor * static_cast<float>(LeastSyncCounter))) {
+        float FramesBehind = static_cast<float>(m_TargetGame->m_SyncCounter) / m_TargetGame->m_SyncFactor - static_cast<float>(LeastSyncCounter);
         SendReply("Player [" + targetPlayer->GetName() + "] is " + to_string(FramesBehind) + " frame(s) behind.", CHAT_LOG_CONSOLE);
       }
 
@@ -1418,7 +1764,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("syncreset"):
     case HashCode("sr"):
     {
-      if (!m_Game || !m_Game->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1426,12 +1772,12 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_Lagging) {
+      if (m_TargetGame->m_Lagging) {
         ErrorReply("Cannot reset sync counters while there are players lagging.");
         break;
       }
 
-      m_Game->ResetSync();
+      m_TargetGame->ResetSync();
       SendReply("Sync counters reset.", CHAT_LOG_CONSOLE);
       break;
     }
@@ -1443,8 +1789,11 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("synclimit"):
     case HashCode("sl"):
     {
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+        break;
+
       if (Payload.empty()) {
-        SendReply("Sync limit: " + to_string(m_Game->m_SyncLimit) + " packets. Rate: " + to_string(m_Game->m_SyncFactor));
+        SendReply("Sync limit: " + to_string(m_TargetGame->m_SyncLimit) + " packets. Rate: " + to_string(m_TargetGame->m_SyncFactor));
         break;
       }
 
@@ -1464,11 +1813,11 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       if (SS.eof()) {
-        Rate = m_Game->m_SyncFactor;
+        Rate = m_TargetGame->m_SyncFactor;
       } else {
         SS >> Rate;
         if (SS.fail() || Rate < 0.1f)
-          Rate = m_Game->m_SyncFactor;
+          Rate = m_TargetGame->m_SyncFactor;
       }
 
       if (Packets < 2)
@@ -1476,10 +1825,10 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (Packets > 10000)
         Packets = 10000;
 
-      m_Game->m_SyncLimit = static_cast<float>(Packets);
-      m_Game->m_SyncFactor = Rate;
+      m_TargetGame->m_SyncLimit = static_cast<float>(Packets);
+      m_TargetGame->m_SyncFactor = Rate;
 
-      SendAll("Sync limit updated: " + to_string(m_Game->m_SyncLimit) + " packets. Rate: " + to_string(m_Game->m_SyncFactor));
+      SendAll("Sync limit updated: " + to_string(m_TargetGame->m_SyncLimit) + " packets. Rate: " + to_string(m_TargetGame->m_SyncFactor));
       break;
     }
 
@@ -1492,17 +1841,18 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetCountDownStarted()) {
+      if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         // Intentionally allows !unhost for fake (mirror) lobbies.
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (PERM_GAME_OWNER | (m_TargetGame->HasOwnerInGame() ? PERM_BNET_ROOTADMIN : PERM_BNET_ADMIN) | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("You are not the game owner, and therefore cannot unhost this game lobby.");
         break;
       }
 
-      m_Game->m_Exiting = true;
+      m_TargetGame->m_Exiting = true;
+      SendReply("Aborting " + m_TargetGame->GetDescription());
       break;
     }
 
@@ -1514,7 +1864,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("download"):
     case HashCode("dl"):
     {
-      if (!m_Game || !m_Game->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1522,12 +1872,12 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      bool IsMapAvailable = !m_Game->m_Map->GetMapData()->empty() && m_Game->m_Map->GetValidLinkedMap();
+      bool IsMapAvailable = !m_TargetGame->m_Map->GetMapData()->empty() && m_TargetGame->m_Map->GetValidLinkedMap();
       if (m_Aura->m_Config->m_AllowUploads == 0 || !IsMapAvailable) {
-        if (m_Game->m_Map->GetMapSiteURL().empty()) {
+        if (m_TargetGame->m_Map->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
-          ErrorAll("Cannot transfer the map. Please download it from <" + m_Game->m_Map->GetMapSiteURL() + ">");
+          ErrorAll("Cannot transfer the map. Please download it from <" + m_TargetGame->m_Map->GetMapSiteURL() + ">");
         }
         break;
       }
@@ -1543,16 +1893,15 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      const uint8_t SID = m_Game->GetSIDFromPID(targetPlayer->GetPID());
+      const uint8_t SID = m_TargetGame->GetSIDFromPID(targetPlayer->GetPID());
 
-      if (SID >= m_Game->m_Slots.size() || m_Game->m_Slots[SID].GetDownloadStatus() == 100) {
-        // TODO(IceSandslash): ErrorReply
-        SendReply("Error: Map transfer failed unexpectedly.", CHAT_LOG_CONSOLE);
+      if (SID >= m_TargetGame->m_Slots.size() || m_TargetGame->m_Slots[SID].GetDownloadStatus() == 100) {
+        ErrorReply("Map transfer failed unexpectedly.", CHAT_LOG_CONSOLE);
         break;
       }
 
-      SendReply("Map download started for player [" + targetPlayer->GetName() + "]", CHAT_SEND_ALL | CHAT_LOG_CONSOLE);
-      m_Game->Send(targetPlayer, m_Game->GetProtocol()->SEND_W3GS_STARTDOWNLOAD(m_Game->GetHostPID()));
+      SendReply("Map download started for player [" + targetPlayer->GetName() + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      m_TargetGame->Send(targetPlayer, m_TargetGame->GetProtocol()->SEND_W3GS_STARTDOWNLOAD(m_TargetGame->GetHostPID()));
       targetPlayer->SetDownloadAllowed(true);
       targetPlayer->SetDownloadStarted(true);
       targetPlayer->SetStartedDownloadingTicks(GetTicks());
@@ -1566,15 +1915,15 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("drop"):
     {
-      if (!m_Game || m_Game->GetGameLoaded())
+      if (!m_TargetGame || m_TargetGame->GetGameLoaded())
         break;
 
-      if (!m_Game->GetLagging()) {
+      if (!m_TargetGame->GetLagging()) {
         ErrorReply("No player is currently lagging.");
         break;
       }
 
-      m_Game->StopLaggers("lagged out (dropped by admin)");
+      m_TargetGame->StopLaggers("lagged out (dropped by admin)");
       break;
     }
 
@@ -1586,7 +1935,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetIsMirror() || m_Game->GetCountDownStarted() && !m_Game->GetGameLoaded())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
         break;
 
       CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
@@ -1599,7 +1948,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      for (auto& otherPlayer: m_Game->m_Players) {
+      for (auto& otherPlayer: m_TargetGame->m_Players) {
         if (otherPlayer->GetObserver())
           otherPlayer->SetPowerObserver(false);
       }
@@ -1614,7 +1963,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("mute"):
     {
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1623,7 +1972,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !mute [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "mute [PLAYERNAME]");
         break;
       }
 
@@ -1652,7 +2001,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("muteall"):
     {
-      if (!m_Game || m_Game->GetIsMirror() || !m_Game->GetGameLoaded())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1660,13 +2009,13 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_MuteAll) {
+      if (m_TargetGame->m_MuteAll) {
         ErrorReply("Global chat is already muted.");
         break;
       }
 
       SendAll("Global chat muted (allied and private chat is unaffected)");
-      m_Game->m_MuteAll = true;
+      m_TargetGame->m_MuteAll = true;
       break;
     }
 
@@ -1678,7 +2027,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("abort"):
     case HashCode("a"):
     {
-      if (!m_Game || m_Game->GetIsMirror() || m_Game->GetGameLoading() || m_Game->GetGameLoaded())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetGameLoading() || m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1686,100 +2035,14 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->GetCountDownStarted()) {
+      if (m_TargetGame->GetCountDownStarted()) {
         SendAll("Countdown aborted!");
-        m_Game->m_CountDownStarted = false;
+        m_TargetGame->m_CountDownStarted = false;
       } else {
-        m_Game->m_AutoStartMinTime = 0;
-        m_Game->m_AutoStartMaxTime = 0;
-        m_Game->m_AutoStartPlayers = 0;
+        m_TargetGame->m_AutoStartMinTime = 0;
+        m_TargetGame->m_AutoStartMaxTime = 0;
+        m_TargetGame->m_AutoStartPlayers = 0;
       }
-      break;
-    }
-
-    //
-    // !ADDBAN
-    // !BAN
-    //
-
-    case HashCode("addban"):
-    case HashCode("ban"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("Not allowed to ban players.");
-        break;
-      }
-      if (m_Aura->m_BNETs.empty()) {
-        ErrorReply("No realms joined.");
-        break;
-      }
-      if (Payload.empty()) {
-        ErrorReply("Usage: !ban [PLAYERNAME]");
-        break;
-      }
-
-      // extract the victim and the reason
-      // e.g. "Varlock leaver after dying" -> victim: "Varlock", reason: "leaver after dying"
-
-      string       Victim, Reason;
-      stringstream SS;
-      SS << Payload;
-      SS >> Victim;
-
-      if (!SS.eof())
-      {
-        getline(SS, Reason);
-        string::size_type Start = Reason.find_first_not_of(' ');
-
-        if (Start != string::npos)
-          Reason = Reason.substr(Start);
-      }
-
-      if (m_Game && m_Game->GetGameLoaded()) {
-        string VictimLower = Victim;
-        transform(begin(VictimLower), end(VictimLower), begin(VictimLower), ::tolower);
-        uint32_t Matches   = 0;
-        CDBBan*  LastMatch = nullptr;
-
-        // try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
-        // we use the m_DBBans vector for this in case the player already left and thus isn't in the m_Players vector anymore
-
-        for (auto& ban : m_Game->m_DBBans) {
-          string TestName = ban->GetName();
-          transform(begin(TestName), end(TestName), begin(TestName), ::tolower);
-
-          if (TestName.find(VictimLower) != string::npos) {
-            ++Matches;
-            LastMatch = ban;
-
-            // if the name matches exactly stop any further matching
-
-            if (TestName == VictimLower) {
-              Matches = 1;
-              break;
-            }
-          }
-        }
-
-        if (Matches == 0) {
-          ErrorReply("Unable to ban player [" + Victim + "]. No matches found");
-        } else if (Matches > 1) {
-          ErrorReply("Unable to ban player [" + Victim + "]. Found more than one match");
-        } else {
-          m_Aura->m_DB->BanAdd(LastMatch->GetServer(), LastMatch->GetName(), m_FromName, Reason);
-          SendAll("Player [" + LastMatch->GetName() + "] was banned by player [" + m_FromName + "] on server [" + LastMatch->GetServer() + "]");
-        }
-      } else if (m_Game) {
-        CGamePlayer* targetPlayer = GetTargetPlayer(Victim);
-        if (!targetPlayer) {
-          ErrorReply("Player [" + Victim + "] not found.");
-          break;
-        }
-        m_Aura->m_DB->BanAdd(targetPlayer->GetRealmDataBaseID(false), targetPlayer->GetName(), m_FromName, Reason);
-        SendAll("Player [" + targetPlayer->GetName() + "] was banned by player [" + m_FromName + "] on server [" + targetPlayer->GetRealmHostName() + "]");
-      } else {
-      }
-
       break;
     }
 
@@ -1798,7 +2061,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !checkban [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "checkban [PLAYERNAME]");
         break;
       }
 
@@ -1823,12 +2086,177 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
+    // !LISTBANS
+    //
+
+    case HashCode("listbans"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Only root admins may list bans.");
+        break;
+      }
+      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      if (!targetRealm) {
+        ErrorReply("Usage: " + GetToken() + "listbans [REALM]");
+        break;
+      }
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+        ErrorReply("Not allowed to list bans in arbitrary realms.");
+        break;
+      }
+      // TODO(IceSandslash)
+      ErrorReply("Unimplemented.");
+      break;
+    }
+
+    //
+    // !ADDBAN
+    // !BAN
+    //
+
+    case HashCode("addban"):
+    case HashCode("ban"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Not allowed to ban players.");
+        break;
+      }
+      if (m_Aura->m_BNETs.empty()) {
+        ErrorReply("No realms joined.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "ban [PLAYERNAME]");
+        break;
+      }
+
+      // extract the victim and the reason
+      // e.g. "Varlock leaver after dying" -> victim: "Varlock", reason: "leaver after dying"
+
+      string       Victim, Reason;
+      stringstream SS;
+      SS << Payload;
+      SS >> Victim;
+
+      if (!SS.eof())
+      {
+        getline(SS, Reason);
+        string::size_type Start = Reason.find_first_not_of(' ');
+
+        if (Start != string::npos)
+          Reason = Reason.substr(Start);
+      }
+
+      if (m_TargetGame && m_TargetGame->GetGameLoaded()) {
+        string VictimLower = Victim;
+        transform(begin(VictimLower), end(VictimLower), begin(VictimLower), ::tolower);
+        uint32_t Matches   = 0;
+        CDBBan*  LastMatch = nullptr;
+
+        // try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
+        // we use the m_DBBans vector for this in case the player already left and thus isn't in the m_Players vector anymore
+
+        for (auto& ban : m_TargetGame->m_DBBans) {
+          string TestName = ban->GetName();
+          transform(begin(TestName), end(TestName), begin(TestName), ::tolower);
+
+          if (TestName.find(VictimLower) != string::npos) {
+            ++Matches;
+            LastMatch = ban;
+
+            // if the name matches exactly stop any further matching
+
+            if (TestName == VictimLower) {
+              Matches = 1;
+              break;
+            }
+          }
+        }
+
+        if (Matches == 0) {
+          ErrorReply("Unable to ban player [" + Victim + "]. No matches found");
+        } else if (Matches > 1) {
+          ErrorReply("Unable to ban player [" + Victim + "]. Found more than one match");
+        } else {
+          m_Aura->m_DB->BanAdd(LastMatch->GetServer(), LastMatch->GetName(), m_FromName, Reason);
+          SendAll("Player [" + LastMatch->GetName() + "] was banned by player [" + m_FromName + "] on server [" + LastMatch->GetServer() + "]");
+        }
+        break;
+      } else if (m_TargetGame) {
+        CGamePlayer* targetPlayer = GetTargetPlayer(Victim);
+        if (!targetPlayer) {
+          ErrorReply("Player [" + Victim + "] not found.");
+          break;
+        }
+        m_Aura->m_DB->BanAdd(targetPlayer->GetRealmDataBaseID(false), targetPlayer->GetName(), m_FromName, Reason);
+        SendAll("Player [" + targetPlayer->GetName() + "] was banned by player [" + m_FromName + "] on server [" + targetPlayer->GetRealmHostName() + "]");
+        break;
+      } else if (m_SourceRealm) {
+        if (m_SourceRealm->GetIsRootAdmin(Victim) || m_SourceRealm->GetIsAdmin(Victim) && (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE)))) {
+          ErrorReply("User [" + Victim + "] is an admin on server [" + m_HostName + "]");
+          break;
+        }
+
+        CDBBan* Ban = m_SourceRealm->IsBannedName(Victim);
+        if (Ban) {
+          ErrorReply("User [" + Victim + "] is already banned on server [" + m_HostName + "]");
+          delete Ban; // TODO(IceSandslash): ??
+          break;
+        }
+        if (m_SourceRealm->GetIsAdmin(Victim)) {
+          if (!m_Aura->m_DB->AdminRemove(m_SourceRealm->GetDataBaseID(), Victim)) {
+            ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_HostName + "]");
+            break;
+          }
+        }
+        if (!m_Aura->m_DB->BanAdd(m_SourceRealm->GetDataBaseID(), Victim, m_FromName, Reason)) {
+          ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_HostName + "]");
+          break;
+        }
+        SendAll("User [" + Victim + "] banned on server [" + m_HostName + "]");
+        break;
+      } else {
+        ErrorReply("Realm unknown.");
+        break;
+      }
+      break;
+    }
+
+    //
+    // !UNBAN
+    //
+
+    case HashCode("unban"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Not allowed to ban players.");
+        break;
+      }
+      if (m_Aura->m_BNETs.empty()) {
+        ErrorReply("No realms joined.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "ban [PLAYERNAME]");
+        break;
+      }
+
+      if (!m_Aura->m_DB->BanRemove(Payload)) {
+        ErrorReply("Unbanning user [" + Payload + "] on all realms.");
+        break;
+      }
+
+      SendReply("Unbanned user [" + Payload + "] on all realms.");
+      break;
+    }
+
+    //
     // !CLEARHCL
     //
 
     case HashCode("clearhcl"):
     {
-      if (!m_Game || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1836,12 +2264,12 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_HCLCommandString.empty()) {
+      if (m_TargetGame->m_HCLCommandString.empty()) {
         ErrorReply("There was no game mode set.");
         break;
       }
 
-      m_Game->m_HCLCommandString.clear();
+      m_TargetGame->m_HCLCommandString.clear();
       SendAll("Game mode reset");
       break;
     }
@@ -1872,7 +2300,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetCountDownStarted()) {
+      if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         break;
       }
 
@@ -1881,7 +2309,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->GetIsMirror()) {
+      if (m_TargetGame->GetIsMirror()) {
         // This is not obvious.
         ErrorReply("Mirrored games cannot be broadcast to LAN");
         break;
@@ -1899,12 +2327,12 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_Game->m_LANEnabled = TargetValue.value();
+      m_TargetGame->m_LANEnabled = TargetValue.value();
       if (TargetValue) {
-        m_Game->LANBroadcastGameCreate();
-        m_Game->LANBroadcastGameRefresh();
+        m_TargetGame->LANBroadcastGameCreate();
+        m_TargetGame->LANBroadcastGameRefresh();
         if (!m_Aura->m_UDPServerEnabled)
-          m_Game->LANBroadcastGameInfo();
+          m_TargetGame->LANBroadcastGameInfo();
       }
       break;
     }
@@ -1917,7 +2345,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetCountDownStarted()) {
+      if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         break;
       }
 
@@ -1926,14 +2354,14 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->GetIsMirror()) {
+      if (m_TargetGame->GetIsMirror()) {
         // This is not obvious.
         ErrorReply("Mirrored games cannot be broadcast to LAN");
         break;
       }
 
-      m_Game->m_LANEnabled = true;
-      m_Game->LANBroadcastGameInfo();
+      m_TargetGame->m_LANEnabled = true;
+      m_TargetGame->LANBroadcastGameInfo();
       break;
     }
 
@@ -1945,12 +2373,12 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & ((m_Game->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-        if (Payload.empty() && m_Game->HasOwnerSet()) {
-          SendReply("The owner is [" + m_Game->m_OwnerName + "@" + (m_Game->m_OwnerRealm.empty() ? "@@LAN/VPN" : m_Game->m_OwnerRealm) + "]");
+      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        if (Payload.empty() && m_TargetGame->HasOwnerSet()) {
+          SendReply("The owner is [" + m_TargetGame->m_OwnerName + "@" + (m_TargetGame->m_OwnerRealm.empty() ? "@@LAN/VPN" : m_TargetGame->m_OwnerRealm) + "]");
         }
         ErrorReply("You are not allowed to change the owner of this game.");
         break;
@@ -1959,15 +2387,15 @@ void CCommandContext::Run(const string& command, const string& payload)
       CGamePlayer* TargetPlayer = GetTargetPlayerOrSelf(Payload);
       string TargetName = TargetPlayer ? TargetPlayer->GetName() : Payload;
       if (TargetName.empty()) {
-        ErrorReply("Usage : !owner [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "owner [PLAYERNAME]");
         break;
       }
       string TargetRealm = TargetPlayer ? TargetPlayer->GetRealmHostName() : m_HostName;
-      if (m_Game->m_OwnerName == TargetName && m_Game->m_OwnerRealm == TargetRealm) {
+      if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
         SendAll(TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game.");
       } else {
-        m_Game->SetOwner(TargetName, TargetRealm);
-        SendReply("Setting game owner to [" + TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + "]", CHAT_SEND_ALL | CHAT_LOG_CONSOLE);
+        m_TargetGame->SetOwner(TargetName, TargetRealm);
+        SendReply("Setting game owner to [" + TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       }
       if (TargetPlayer) TargetPlayer->SetWhoisShouldBeSent(true);
       break;
@@ -1979,27 +2407,121 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("say"):
     {
+      if (m_Aura->m_BNETs.empty())
+        break;
+
       if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("You are not allowed to advertise.");
         break;
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage : !say [MESSAGE]");
+        ErrorReply("Usage: " + GetToken() + "say [REALM], [MESSAGE]");
         break;
       }
 
       if (m_Aura->m_CurrentLobby) {
-        ErrorReply("Cannot send chat messages while hosting a game lobby.");
+        ErrorReply("Cannot send bnet chat messages while the bot is hosting a game lobby.");
         break;
       }
+
+      string::size_type MessageStart = Payload.find(',');
+      string RealmId = TrimString(Payload.substr(0, MessageStart));
+      string Message = TrimString(Payload.substr(MessageStart + 1));
+      if (Message.empty()) {
+        ErrorReply("Usage: " + GetToken() + "say [REALM], [MESSAGE]");
+        break;
+      }
+      bool IsCommand = Message[0] == '/';
+      if (IsCommand && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+        ErrorReply("You are not allowed to send bnet commands.");
+        break;
+      }
+      transform(begin(RealmId), end(RealmId), begin(RealmId), ::tolower);
+
+      const bool ToAllRealms = RealmId.length() == 1 && RealmId[0] == '*';
+      bool Success = false;
 
       for (auto& bnet : m_Aura->m_BNETs) {
         if (bnet->GetIsMirror())
           continue;
-        bnet->QueueChatCommand(Payload);
+        if (ToAllRealms || bnet->GetInputID() == RealmId) {
+          if (IsCommand) {
+            bnet->SendCommand(Message);
+          } else {
+            bnet->SendChatChannel(Message);
+          }
+          Success = true;
+        }
       }
 
+      if (!Success) {
+        ErrorReply("Realm [" + RealmId + "] not found.");
+        break;
+      }
+      break;
+    }
+
+    //
+    // !ANNOUNCE
+    //
+
+    case HashCode("announce"):
+    {
+      UseImplicitHostedGame();
+
+      if (m_Aura->m_BNETs.empty())
+        break;
+
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+        break;
+
+      if (m_TargetGame->m_GameDisplay == GAME_PRIVATE) {
+        ErrorReply("This game is private.");
+        break;
+      }
+
+      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("You are not the game owner, and therefore cannot advertise.");
+        break;
+      }
+
+      bool ToAllRealms = Payload == "*";
+      CBNET* targetRealm = nullptr;
+      if (ToAllRealms) {
+        if (0 != (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+          ErrorReply("Announcing on all realms requires sudo permissions."); // But not really
+          break;
+        }
+      } else {
+        targetRealm = GetTargetRealmOrCurrent(Payload);
+        if (!targetRealm) {
+          ErrorReply("Usage: " + GetToken() + "announce [REALM]");
+          break;
+        }
+      }
+
+      if (ToAllRealms) {
+        for (auto& bnet : m_Aura->m_BNETs) {
+          string AnnounceText = (
+            string("[1.") + to_string(m_Aura->m_GameVersion) + ".x] Hosting public game of " + m_TargetGame->GetMapFileName() +
+          ". (Started by " + m_TargetGame->m_OwnerName + ": \"" + bnet->GetPrefixedGameName(m_TargetGame->m_GameName) + "\")"
+          );
+          bnet->QueueGameUncreate();
+          bnet->QueueEnterChat();
+          bnet->SendChatChannel(AnnounceText);
+        }
+      } else {
+        string AnnounceText = (
+            string("[1.") + to_string(m_Aura->m_GameVersion) + ".x] Hosting public game of " + m_TargetGame->GetMapFileName() +
+          ". (Started by " + m_TargetGame->m_OwnerName + ": \"" + targetRealm->GetPrefixedGameName(m_TargetGame->m_GameName) + "\")"
+        );
+        targetRealm->QueueGameUncreate();
+        targetRealm->QueueEnterChat();
+        targetRealm->SendChatChannel(AnnounceText);
+      }
+
+      SendReply("Announcement sent.");
       break;
     }
 
@@ -2011,7 +2533,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2019,7 +2541,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_Game->CloseAllSlots();
+      m_TargetGame->CloseAllSlots();
       break;
     }
 
@@ -2031,7 +2553,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2040,26 +2562,26 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
+        ErrorReply("Usage: " + GetToken() + "comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
         break;
       }
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: !comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
+        ErrorReply("Usage: " + GetToken() + "comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_Game->m_Slots.size() || Args[1] > 2) {
-        ErrorReply("Usage: !comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
+      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] > 2) {
+        ErrorReply("Usage: " + GetToken() + "comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
         break;
       }
 
       uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
       uint8_t Skill = static_cast<uint8_t>(Args[1]);
 
-      m_Game->DeleteFakePlayer(SID);
-      m_Game->ComputerSlot(SID, Skill, false);
+      m_TargetGame->DeleteFakePlayer(SID);
+      m_TargetGame->ComputerSlot(SID, Skill, false);
       break;
     }
 
@@ -2072,7 +2594,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2081,22 +2603,22 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
+        ErrorReply("Usage: " + GetToken() + "compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
         break;
       }
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: !compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
+        ErrorReply("Usage: " + GetToken() + "compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_Game->m_Slots.size() || Args[1] >= 12) {
-        ErrorReply("Usage: !compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
+      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] >= 12) {
+        ErrorReply("Usage: " + GetToken() + "compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
         break;
       }
 
-      if (m_Game->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
         ErrorReply("This map has Fixed Player Settings enabled.");
         break;
       }
@@ -2104,12 +2626,12 @@ void CCommandContext::Run(const string& command, const string& payload)
       uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
       uint8_t Color = static_cast<uint8_t>(Args[1]);
 
-      if (m_Game->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED || m_Game->m_Slots[SID].GetComputer() != 1) {
+      if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED || m_TargetGame->m_Slots[SID].GetComputer() != 1) {
         ErrorReply("There is no computer in slot " + to_string(Args[0]));
         break;
       }
 
-      m_Game->ColorSlot(SID, Color);
+      m_TargetGame->ColorSlot(SID, Color);
       break;
     }
 
@@ -2123,7 +2645,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2132,22 +2654,22 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
+        ErrorReply("Usage: " + GetToken() + "comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
         break;
       }
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: !comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
+        ErrorReply("Usage: " + GetToken() + "comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_Game->m_Slots.size() || Args[1] % 10 != 0 || !(50 <= Args[1] && Args[1] <= 100)) {
-        ErrorReply("Usage: !comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
+      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] % 10 != 0 || !(50 <= Args[1] && Args[1] <= 100)) {
+        ErrorReply("Usage: " + GetToken() + "comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
         break;
       }
 
-      if (m_Game->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
         ErrorReply("This map has Fixed Player Settings enabled.");
         break;
       }
@@ -2155,13 +2677,13 @@ void CCommandContext::Run(const string& command, const string& payload)
       uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
       uint8_t Handicap = static_cast<uint8_t>(Args[1]);
 
-      if (m_Game->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+      if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
         ErrorReply("Slot " + to_string(Args[0]) + " is empty.");
         break;
       }
 
-      m_Game->m_Slots[SID].SetHandicap(Handicap);
-      m_Game->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      m_TargetGame->m_Slots[SID].SetHandicap(Handicap);
+      m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
 
@@ -2173,7 +2695,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2182,59 +2704,59 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + GetToken() + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: !comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + GetToken() + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
       uint32_t Slot = 0;
       try {
         Slot = stoul(Args[0]);
-        if (Slot == 0 || Slot > m_Game->m_Slots.size()) {
-          ErrorReply("Usage: !comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+        if (Slot == 0 || Slot > m_TargetGame->m_Slots.size()) {
+          ErrorReply("Usage: " + GetToken() + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
           break;
         }
       } catch (...) {
-        ErrorReply("Usage: !comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + GetToken() + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
       if (Args[1] != "random" && Args[1] != "human" && Args[1] != "orc" && Args[1] != "undead" && Args[1] != "elf" && Args[1] != "nightelf" && Args[1] != "night elf") {
-        ErrorReply("Usage: !comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + GetToken() + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
       uint8_t SID = static_cast<uint8_t>(Slot) - 1;
       string Race = Args[1];
 
-      if (m_Game->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
         ErrorReply("This map has Fixed Player Settings enabled.");
         break;
       }
 
-      if (m_Game->m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+      if (m_TargetGame->m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES) {
         ErrorReply("This game has Random Races enabled.");
         break;
       }
 
       if (Race == "human") {
-        m_Game->m_Slots[SID].SetRace(SLOTRACE_HUMAN | SLOTRACE_SELECTABLE);
+        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_HUMAN | SLOTRACE_SELECTABLE);
       } else if (Race == "orc") {
-        m_Game->m_Slots[SID].SetRace(SLOTRACE_ORC | SLOTRACE_SELECTABLE);
+        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_ORC | SLOTRACE_SELECTABLE);
       } else if (Race == "elf" || Race == "nightelf" || Race == "night elf") {
-        m_Game->m_Slots[SID].SetRace(SLOTRACE_NIGHTELF | SLOTRACE_SELECTABLE);
+        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_NIGHTELF | SLOTRACE_SELECTABLE);
       } else if (Race == "undead") {
-        m_Game->m_Slots[SID].SetRace(SLOTRACE_UNDEAD | SLOTRACE_SELECTABLE);
+        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_UNDEAD | SLOTRACE_SELECTABLE);
       } else if (Race == "random") {
-        m_Game->m_Slots[SID].SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
+        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
         
       }
-      m_Game->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
 
@@ -2247,7 +2769,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2256,36 +2778,36 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !compteam [SLOT], [TEAM]");
+        ErrorReply("Usage: " + GetToken() + "compteam [SLOT], [TEAM]");
         break;
       }
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: !compteam [SLOT], [TEAM]");
+        ErrorReply("Usage: " + GetToken() + "compteam [SLOT], [TEAM]");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_Game->m_Slots.size() || Args[1] >= 14) {
-        ErrorReply("Usage: !compteam [SLOT], [TEAM]");
+      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] >= 14) {
+        ErrorReply("Usage: " + GetToken() + "compteam [SLOT], [TEAM]");
         break;
       }
 
       uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
       uint8_t Team = static_cast<uint8_t>(Args[1]) - 1;
 
-      if (m_Game->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
         ErrorReply("This map has Fixed Player Settings enabled.");
         break;
       }
 
-      if (m_Game->m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
+      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
         ErrorReply("This map has Custom Forces enabled.");
         break;
       }
 
-      m_Game->m_Slots[SID].SetTeam(Team);
-      m_Game->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      m_TargetGame->m_Slots[SID].SetTeam(Team);
+      m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
 
@@ -2298,7 +2820,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2310,12 +2832,12 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (Payload.empty()) Args.push_back(2);
 
       if (Args.empty() || Args[0] > 2) {
-        ErrorReply("Usage: !fill [SKILL] - Skill is any of: 0, 1, 2");
+        ErrorReply("Usage: " + GetToken() + "fill [SKILL] - Skill is any of: 0, 1, 2");
         break;
       }
 
       uint8_t Skill = static_cast<uint8_t>(Args[0]);
-      m_Game->ComputerAllSlots(Skill);
+      m_TargetGame->ComputerAllSlots(Skill);
       break;
     }
 
@@ -2328,7 +2850,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2336,7 +2858,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (!m_Game->CreateFakePlayer()) {
+      if (!m_TargetGame->CreateFakePlayer()) {
         ErrorReply("Cannot add another fake player");
         break;
       }
@@ -2352,7 +2874,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2360,12 +2882,12 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_FakePlayers.empty()) {
+      if (m_TargetGame->m_FakePlayers.empty()) {
         ErrorReply("No fake players found.");
         break;
       }
 
-      m_Game->DeleteFakePlayers();
+      m_TargetGame->DeleteFakePlayers();
       break;
     }
 
@@ -2377,7 +2899,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2386,7 +2908,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool Success = false;
-      while (m_Game->CreateFakePlayer()) {
+      while (m_TargetGame->CreateFakePlayer()) {
         Success = true;
       }
 
@@ -2405,7 +2927,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2413,14 +2935,14 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_FakePlayers.empty()) {
+      if (m_TargetGame->m_FakePlayers.empty()) {
         ErrorReply("Fake player not found.");
         break;
       }
 
-      std::vector<uint8_t> CRC, Action;
+      vector<uint8_t> CRC, Action;
       Action.push_back(1);
-      m_Game->m_Actions.push(new CIncomingAction(m_Game->m_FakePlayers[rand() % m_Game->m_FakePlayers.size()], CRC, Action));
+      m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[rand() % m_TargetGame->m_FakePlayers.size()], CRC, Action));
       break;
     }
 
@@ -2433,7 +2955,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2441,14 +2963,14 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_FakePlayers.empty()) {
+      if (m_TargetGame->m_FakePlayers.empty()) {
         ErrorReply("Fake player not found.");
         break;
       }
 
-      std::vector<uint8_t> CRC, Action;
+      vector<uint8_t> CRC, Action;
       Action.push_back(2);
-      m_Game->m_Actions.push(new CIncomingAction(m_Game->m_FakePlayers[0], CRC, Action));
+      m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[0], CRC, Action));
       break;
     }
 
@@ -2460,7 +2982,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2469,7 +2991,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       SendAll("Shuffling players");
-      m_Game->ShuffleSlots();
+      m_TargetGame->ShuffleSlots();
       break;
     }
 
@@ -2481,14 +3003,17 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+        break;
+
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("You are not the game owner, and therefore cannot lock the game.");
         break;
       }
 
-      string Warning = m_Game->m_OwnerRealm.empty() ? " (Owner joined over LAN - will get removed if they leave.)" : "";
+      string Warning = m_TargetGame->m_OwnerRealm.empty() ? " (Owner joined over LAN - will get removed if they leave.)" : "";
       SendAll("Game locked. Only the game owner and root admins may run game commands." + Warning);
-      m_Game->m_Locked = true;
+      m_TargetGame->m_Locked = true;
       break;
     }
 
@@ -2500,7 +3025,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2508,7 +3033,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_Game->OpenAllSlots();
+      m_TargetGame->OpenAllSlots();
       break;
     }
 
@@ -2520,7 +3045,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2529,7 +3054,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       SendAll("Game unlocked. All admins may now run game commands");
-      m_Game->m_Locked = false;
+      m_TargetGame->m_Locked = false;
       break;
     }
 
@@ -2541,7 +3066,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2550,7 +3075,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !unmute [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "unmute [PLAYERNAME]");
         break;
       }
       CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
@@ -2580,7 +3105,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2588,13 +3113,13 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_MuteAll) {
+      if (m_TargetGame->m_MuteAll) {
         ErrorReply("Global chat is not muted.");
         break;
       }
 
       SendAll("Global chat unmuted");
-      m_Game->m_MuteAll = false;
+      m_TargetGame->m_MuteAll = false;
       break;
     }
 
@@ -2606,7 +3131,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2614,14 +3139,14 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (m_Game->m_KickVotePlayer.empty()) {
+      if (m_TargetGame->m_KickVotePlayer.empty()) {
         ErrorReply("There is no active votekick.");
         break;
       }
 
-      SendReply("A votekick against player [" + m_Game->m_KickVotePlayer + "] has been cancelled by [" + m_FromName + "]", CHAT_SEND_ALL | CHAT_LOG_CONSOLE);
-      m_Game->m_KickVotePlayer.clear();
-      m_Game->m_StartedKickVoteTime = 0;
+      SendReply("A votekick against player [" + m_TargetGame->m_KickVotePlayer + "] has been cancelled by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      m_TargetGame->m_KickVotePlayer.clear();
+      m_TargetGame->m_StartedKickVoteTime = 0;
       break;
     }
 
@@ -2634,7 +3159,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2643,29 +3168,45 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !w [PLAYERNAME], [MESSAGE]");
+        ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
         break;
       }
 
       string::size_type MessageStart = Payload.find(',');
 
       if (MessageStart == string::npos) {
-        ErrorReply("Usage: !w [PLAYERNAME], [MESSAGE]");
+        ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
         break;
       }
 
       string Name = TrimString(Payload.substr(0, MessageStart));
       string SubMessage = TrimString(Payload.substr(MessageStart + 1));
+      string TargetRealm;
       if (Name.empty() || SubMessage.empty()) {
-        ErrorReply("Usage: !w [PLAYERNAME], [MESSAGE]");
+        ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
         break;
       }
 
-      string PassedMessage = m_FromName + " at " + (m_HostName.empty() ? "LAN/VPN" : m_HostName) + " says to you: \"" + SubMessage + "\"";
+      string::size_type RealmStart = Name.find('@');
+      if (RealmStart != string::npos) {
+        TargetRealm = TrimString(Name.substr(RealmStart + 1));
+        Name = TrimString(Name.substr(0, RealmStart));
+      }
+
+      if (Name.empty()) {
+        ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
+        break;
+      }
+
+      bool ToAllRealms = TargetRealm.empty() || TargetRealm.length() == 1 && TargetRealm[0] == '*';
+
+      string Message = m_FromName + " at " + (m_HostName.empty() ? "LAN/VPN" : m_HostName) + " says to you: \"" + SubMessage + "\"";
       for (auto& bnet : m_Aura->m_BNETs) {
         if (bnet->GetIsMirror())
           continue;
-        bnet->QueueChatCommand(PassedMessage, Name, true);
+        if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
+          bnet->SendWhisper(Message, Name);
+        }
       }
 
       break;
@@ -2678,7 +3219,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || m_Game->GetIsMirror())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2687,14 +3228,33 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: !whois [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "whois [PLAYERNAME]");
         break;
       }
+
+      string Name = Payload;
+      string TargetRealm;
+
+      string::size_type RealmStart = Name.find('@');
+      if (RealmStart != string::npos) {
+        TargetRealm = TrimString(Name.substr(RealmStart + 1));
+        Name = TrimString(Name.substr(0, RealmStart));
+      }
+
+      if (Name.empty()) {
+        ErrorReply("Usage: " + GetToken() + "whois [PLAYERNAME]");
+        break;
+      }
+
+      bool ToAllRealms = TargetRealm.empty() || TargetRealm.length() == 1 && TargetRealm[0] == '*';
+      const string Message = "/whois " + Name;
 
       for (auto& bnet : m_Aura->m_BNETs) {
         if (bnet->GetIsMirror())
           continue;
-        bnet->QueueChatCommand("/whois " + Payload);
+        if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
+          bnet->SendCommand(Message);
+        }
       }
 
       break;
@@ -2708,7 +3268,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (!m_Game || !m_Game->GetIsLobby() || m_Game->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2717,40 +3277,919 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty() || Payload.length() > 15) {
-        ErrorReply("Usage: !virtualhost [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "virtualhost [PLAYERNAME]");
         break;
       }
 
-      m_Game->m_LobbyVirtualHostName = Payload;
-      if (m_Game->DeleteVirtualHost()) {
-        m_Game->CreateVirtualHost();
+      m_TargetGame->m_LobbyVirtualHostName = Payload;
+      if (m_TargetGame->DeleteVirtualHost()) {
+        m_TargetGame->CreateVirtualHost();
       }
       break;
     }
-  }
 
-  // TODO(IceSandslash): CLear this shit.
-  if (m_Game) {
-    if (0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-      (*m_Output) << m_Game->GetLogPrefix() + "authorized [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
-    } else if (m_Game && m_Game->MatchOwnerName(m_FromName) && CommandHash != HashCode("owner")) {
-      (*m_Output) << m_Game->GetLogPrefix() + "non-verified maybe-owner [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
-      //SendReply("You have not been verified as the owner yet. Type the following to verify your identity: sc");
-    } else if (m_Player && m_Player->IsRealmVerified()) {
-      (*m_Output) << m_Game->GetLogPrefix() + "verified [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
-    } else {
-      (*m_Output) << m_Game->GetLogPrefix() + "non-verified [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
+  /*****************
+   * SUDOER COMMANDS *
+   ******************/
+
+    // !GETCLAN
+    case HashCode("getclan"):
+    {
+      if (!m_SourceRealm)
+        break;
+
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      m_SourceRealm->SendGetClanList();
+      SendReply("Fetching clan member list from " + m_HostName + "...");
+      break;
     }
-  } else if (m_Realm) {
-    if (0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-      (*m_Output) << m_Realm->GetLogPrefix() + "authorized [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
-    } else if (m_Game && m_Game->MatchOwnerName(m_FromName)) {
-      (*m_Output) << m_Realm->GetLogPrefix() + "non-verified maybe-owner [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
-      SendReply("You have not been verified as the owner yet. Type the following to verify your identity: sc");
-    } else if (m_Player && m_Player->IsRealmVerified()) {
-      (*m_Output) << m_Realm->GetLogPrefix() + "verified [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
-    } else {
-      (*m_Output) << m_Realm->GetLogPrefix() + "non-verified [" + m_FromName + "] sent command [" + Command + "] with payload [" + Payload + "]" << std::endl;
+
+    // !GETFRIENDS
+    case HashCode("getfriends"):
+    {
+      if (!m_SourceRealm)
+        break;
+
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      m_SourceRealm->SendGetFriendsList();
+      SendReply("Fetching friends list from " + m_HostName + "...");
+      break;
+    }
+
+    case HashCode("game"):
+    {
+      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      size_t CommandStart = Payload.find(',');
+      if (CommandStart == string::npos) {
+        ErrorReply("Usage: " + GetToken() + "game [GAMEID], [COMMAND] - See game ids with !listgames");
+        break;
+      }
+      string GameId = TrimString(Payload.substr(0, CommandStart));
+      string ExecString = TrimString(Payload.substr(CommandStart + 1, Payload.length()));
+      if (GameId.empty() || ExecString.empty()) {
+        ErrorReply("Usage: " + GetToken() + "game [GAMEID], [COMMAND] - See game ids with !listgames");
+        break;
+      }
+      CGame* targetGame = GetTargetGame(GameId);
+      if (!targetGame) {
+        ErrorReply("Game [" + GameId + "] not found. - See game ids with !listgames");
+        break;
+      }
+      size_t PayloadStart = ExecString.find(' ');
+      const string SubCmd = PayloadStart == string::npos ? ExecString : ExecString.substr(0, PayloadStart);
+      const string SubPayload = PayloadStart == string::npos ? string() : ExecString.substr(PayloadStart + 1, ExecString.length());
+      CCommandContext* ctx;
+      if (m_IRC) {
+        ctx = new CCommandContext(m_Aura, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, &std::cout, m_Token);
+      } else if (m_SourceRealm) {
+        ctx = new CCommandContext(m_Aura, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, &std::cout, m_Token);
+      } else {
+        ctx = new CCommandContext(m_Aura, targetGame, &std::cout, m_Token);
+      }
+      ctx->Run(SubCmd, SubPayload);
+      delete ctx;
+      break;
+    }
+
+    case HashCode("synccfg"):
+    case HashCode("initcfg"):
+    {
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+      vector<string> AllMaps = FilesMatch(m_Aura->m_Config->m_MapPath, ".w3x");
+      vector<string> ROCMaps = FilesMatch(m_Aura->m_Config->m_MapPath, ".w3m");
+      AllMaps.insert(AllMaps.end(), ROCMaps.begin(), ROCMaps.end());
+      int counter = 0;
+      
+      for (const auto& FileName : AllMaps) {
+        if (CommandHash != HashCode("synccfg") && m_Aura->m_CachedMaps.find(FileName) != m_Aura->m_CachedMaps.end()) {
+          continue;
+        }
+        if (FileName.find(Payload) == string::npos) {
+          continue;
+        }
+        if (!FileExists(m_Aura->m_Config->m_MapPath / filesystem::path(FileName))) {
+          continue;
+        }
+
+        CConfig MapCFG;
+        MapCFG.Set("cfg_partial", "1");
+        MapCFG.Set("map_path", R"(Maps\Download\)" + FileName);
+        MapCFG.Set("map_localpath", FileName);
+        if (FileName.find("_evrgrn32") != string::npos) {
+          MapCFG.Set("map_site", "https://www.hiveworkshop.com/threads/351924/");
+        } else {
+          MapCFG.Set("map_site", "");
+        }
+        MapCFG.Set("map_url", "");
+        if (FileName.find("_evrgrn32") != string::npos) {
+          MapCFG.Set("map_shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
+        } else {
+          MapCFG.Set("map_shortdesc", "");
+        }
+        MapCFG.Set("downloaded_by", m_FromName);
+
+        if (FileName.find("DotA") != string::npos)
+          MapCFG.Set("map_type", "dota");
+
+        CMap* ParsedMap = new CMap(m_Aura, &MapCFG, FileName);
+        delete ParsedMap;
+
+        string CFGName = "local-" + FileName + ".cfg";
+        filesystem::path CFGPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path(CFGName);
+
+        vector<uint8_t> OutputBytes = MapCFG.Export();
+        FileWrite(CFGPath, OutputBytes.data(), OutputBytes.size());
+        m_Aura->m_CachedMaps[FileName] = CFGName;
+        counter++;
+      }
+      SendReply("Initialized " + to_string(counter) + " map config files.");
+      return;
+    }
+
+    //
+    // !COUNTMAPS
+    // !COUNTCFGS
+    //
+
+    case HashCode("countmaps"):
+    case HashCode("countcfgs"):
+    {
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+#ifdef WIN32
+      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, ".").size();
+      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, ".cfg").size();
+#else
+      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, "").size();
+      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, ".cfg").size();
+#endif
+
+      SendReply(to_string(MapCount) + " maps on disk, " + to_string(CFGCount) + " presets on disk, " + to_string(m_Aura->m_CachedMaps.size()) + " preloaded.");
+      return;
+    }
+
+    //
+    // !DELETECFG
+    // !DELETEMAP
+    //
+
+    case HashCode("deletecfg"):
+    case HashCode("deletemap"):
+    {
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+      if (Payload.empty())
+        return;
+
+      string DeletionType = CommandHash == HashCode("deletecfg") ? "cfg" : "map";
+      filesystem::path Folder = DeletionType == "cfg" ? m_Aura->m_Config->m_MapCFGPath : m_Aura->m_Config->m_MapPath;
+
+      if (DeletionType == "cfg" && !IsValidCFGName(Payload) || DeletionType == "map" &&!IsValidMapName(Payload)) {
+        ErrorReply("Removal failed");
+        break;
+      }
+      filesystem::path FileFragment = Payload;
+      if (FileFragment.is_absolute()) {
+        ErrorReply("Removal failed");
+        break;
+      }
+
+      string InvalidChars = "/\\\0\"'*?:|<>;,";
+      if (FileFragment.string().find_first_of(InvalidChars) != string::npos) {
+        ErrorReply("Removal failed");
+        break;
+      }
+
+      filesystem::path TargetPath = Folder / FileFragment;
+      if (TargetPath.parent_path() != Folder || PathHasNullBytes(TargetPath)) {
+        ErrorReply("Removal failed");
+        break;
+      }
+
+      if (!FileDelete(TargetPath)) {
+        ErrorReply("Removal failed");
+        break;
+      }
+      SendReply("Deleted [" + Payload + "]");
+      break;
+    }
+
+    //
+    // !SAYGAME
+    //
+
+    case HashCode("saygame"):
+    case HashCode("saygameraw"):
+    {
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      string::size_type MessageStart = Payload.find(',');
+      if (MessageStart == string::npos) {
+        ErrorReply("Usage: " + GetToken() + "saygame [GAMEID], [MESSAGE]");
+        break;
+      }
+      bool IsRaw = CommandHash == HashCode("saygameraw");
+      string GameId = TrimString(Payload.substr(0, MessageStart));
+      string Message = TrimString(Payload.substr(MessageStart + 1));
+      if (!IsRaw) Message = "[ADMIN] " + Message;
+      if (GameId == "*") {
+        bool Success = false;
+        if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
+          Success = true;
+          m_Aura->m_CurrentLobby->SendAllChat(Message);
+        }
+        if (m_Aura->m_Games.size()) {
+          Success = true;
+          for (auto& targetGame : m_Aura->m_Games)
+            targetGame->SendAllChat(Message);
+        }
+        if (!Success) {
+          ErrorReply("No games found.");
+          break;
+        }
+      } else {
+        CGame* targetGame = GetTargetGame(GameId);
+        if (!targetGame) {
+          ErrorReply("Game [" + GameId + "] not found.");
+          break;
+        }
+        if (targetGame->GetIsMirror()) {
+          ErrorReply("Game [" + GameId + "] is a mirror game.");
+          break;
+        }
+        targetGame->SendAllChat(Message);
+      }
+      break;
+    }
+
+    //
+    // !DISABLE
+    //
+
+    case HashCode("disable"):
+    {
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+      SendReply("Creation of new games has been disabled. (Active lobbies will not be unhosted.)");
+      m_Aura->m_Config->m_Enabled = false;
+      break;
+    }
+
+    //
+    // !ENABLE
+    //
+
+    case HashCode("enable"):
+    {
+      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+      SendReply("Creation of new games has been enabled");
+      m_Aura->m_Config->m_Enabled = true;
+      break;
+    }
+
+    //
+    // !DISABLEPUB
+    //
+
+    case HashCode("disablepub"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Only root admins may toggle public game creation.");
+        break;
+      }
+      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      if (!targetRealm) {
+        ErrorReply("Usage: " + GetToken() + "disablepub [REALM]");
+        break;
+      }
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+        ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
+        break;
+      }
+      SendReply("Creation of new games has been temporarily disabled for non-admins at " + targetRealm->GetCanonicalDisplayName() + ". (Active lobbies will not be unhosted.)");
+      targetRealm->m_Config->m_EnablePublicCreate = false;
+      break;
+    }
+
+    //
+    // !DISABLEPUB
+    //
+
+    case HashCode("enablepub"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Only root admins may toggle public game creation.");
+        break;
+      }
+      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      if (!targetRealm) {
+        ErrorReply("Usage: " + GetToken() + "disablepub [REALM]");
+        break;
+      }
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+        ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
+        break;
+      }
+      SendReply("Creation of new games has been enabled for non-admins at " + targetRealm->GetCanonicalDisplayName());
+      targetRealm->m_Config->m_EnablePublicCreate = true;
+      break;
+    }
+
+    //
+    // !MAPTRANSFERS
+    //
+
+    case HashCode("setdownloads"):
+    case HashCode("maptransfers"):
+    {
+      if (Payload.empty()) {
+        if (m_Aura->m_Config->m_AllowUploads == 0) {
+          SendReply("Map transfers are disabled");
+        } else if (m_Aura->m_Config->m_AllowUploads == 1) {
+          SendReply("Map transfers are enabled");
+        } else {
+          SendReply("Map transfers are set to manual");
+        }
+        break;
+      }
+
+      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      optional<uint32_t> TargetValue;
+      try {
+        TargetValue = stoul(Payload);
+      } catch (...) {
+      }
+
+      if (!TargetValue.has_value()) {
+        ErrorReply("Usage: " + GetToken() + "maptransfers [MODE]: Mode is 0/1/2.");
+        break;
+      }
+
+      if (TargetValue.value() != 0 && TargetValue.value() != 1 && TargetValue.value() != 2) {
+        ErrorReply("Usage: " + GetToken() + "maptransfers [MODE]: Mode is 0/1/2.");
+        break;
+      }
+
+      m_Aura->m_Config->m_AllowUploads = static_cast<uint8_t>(TargetValue.value());
+      if (m_Aura->m_Config->m_AllowUploads == 0) {
+        SendAll("Map transfers disabled.");
+      } else if (m_Aura->m_Config->m_AllowUploads == 1) {
+        SendAll("Map transfers enabled.");
+      } else {
+        SendAll("Map transfers set to manual.");
+      }
+      break;
+    }
+
+    //
+    // !RELOAD
+    //
+
+    case HashCode("reload"):
+    {
+      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+      SendReply("Reloading configuration files...");
+      m_Aura->ReloadConfigs();
+      return;
+    }
+
+    //
+    // !EXIT
+    // !QUIT
+    //
+
+    case HashCode("exit"):
+    case HashCode("quit"):
+    {
+      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
+        if (Payload != "force") {
+          ErrorReply("At least one game is in the lobby or in progress. Use '!exit force' to shutdown anyway");
+          break;
+        }
+      }
+      m_Aura->m_Exiting = true;
+      break;
+    }
+
+    //
+    // !RESTART
+    //
+
+    case HashCode("restart"):
+    {
+      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
+        if (Payload != "force") {
+          ErrorReply("At least one game is in the lobby or in progress. Use '!restart force' to restart anyway");
+          break;
+        }
+      }
+
+      m_Aura->m_Exiting = true;
+
+      // gRestart is defined in aura.cpp
+      extern bool gRestart;
+      gRestart = true;
+      break;
+    }
+
+    /*********************
+     * ROOTADMIN COMMANDS *
+     *********************/
+
+    //
+    // !CHECKADMIN
+    //
+
+    case HashCode("checkadmin"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Only root admins may list admins.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "checkadmin [NAME]");
+        break;
+      }
+
+      if (!m_SourceRealm) {
+        ErrorReply("Realm not found.");
+        break;
+      }
+      bool IsAdmin = m_SourceRealm->GetIsAdmin(Payload);
+      bool IsRootAdmin = m_SourceRealm->GetIsRootAdmin(Payload);
+      if (!IsAdmin && !IsRootAdmin)
+        SendReply("User [" + Payload + "] is not an admin on server [" + m_HostName + "]");
+      else if (IsRootAdmin)
+        SendReply("User [" + Payload + "] is a root admin on server [" + m_HostName + "]");
+      else
+        SendReply("User [" + Payload + "] is an admin on server [" + m_HostName + "]");
+
+      break;
+    }
+
+    //
+    // !LISTADMINS
+    //
+
+    case HashCode("listadmins"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Only root admins may list admins.");
+        break;
+      }
+      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      if (!targetRealm) {
+        ErrorReply("Usage: " + GetToken() + "listadmins [REALM]");
+        break;
+      }
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+        ErrorReply("Not allowed to list admins in arbitrary realms.");
+        break;
+      }
+      // TODO(IceSandslash)
+      ErrorReply("Unimplemented.");
+      break;
+    }
+
+    //
+    // !ADDADMIN
+    //
+
+    case HashCode("addadmin"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Only root admins may add admins.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "addadmin [NAME]");
+        break;
+      }
+      if (!m_SourceRealm) {
+        ErrorReply("Realm not found.");
+        break;
+      }
+      if (m_SourceRealm->GetIsAdmin(Payload)) {
+        ErrorReply("User [" + Payload + "] is already an admin on server [" + m_HostName + "]");
+        break;
+      }
+      if (!m_Aura->m_DB->AdminAdd(m_SourceRealm->GetDataBaseID(), Payload)) {
+        ErrorReply("Failed to add user [" + Payload + "] as admin [" + m_HostName + "]");
+        break;
+      }
+      SendReply("Added user [" + Payload + "] to the admin database on server [" + m_HostName + "]");
+      break;
+    }
+
+    //
+    // !DELADMIN
+    //
+
+    case HashCode("deladmin"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Only root admins may list admins.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "deladmin [NAME]");
+        break;
+      }
+
+      if (!m_SourceRealm) {
+        ErrorReply("Realm not found.");
+        break;
+      }
+      if (!m_SourceRealm->GetIsAdmin(Payload)) {
+        ErrorReply("User [" + Payload + "] is not an admin on server [" + m_HostName + "]");
+        break;
+      }
+      if (!m_Aura->m_DB->AdminRemove(m_SourceRealm->GetDataBaseID(), Payload)) {
+        ErrorReply("Error deleting user [" + Payload + "] from the admin database on server [" + m_HostName + "]");
+        break;
+      }
+      SendReply("Deleted user [" + Payload + "] from the admin database on server [" + m_HostName + "]");
+      break;
+    }
+
+    /*********************
+     * ADMIN COMMANDS *
+     *********************/
+
+    //
+    // !LOAD (load config file)
+    //
+
+    case HashCode("load"):
+    {
+      if (Payload.empty()) {
+        if (!m_Aura->m_Map) {
+          SendReply("There is no map/config file loaded.");
+          break;
+        }
+        SendReply("The currently loaded map/config file is: [" + m_Aura->m_Map->GetCFGFile() + "]");
+        break;
+      }
+
+      if (!FileExists(m_Aura->m_Config->m_MapCFGPath)) {
+        ErrorReply("Map config path doesn't exist", CHAT_LOG_CONSOLE);
+        break;
+      }
+      const vector<string> Matches = m_Aura->ConfigFilesMatch(Payload);
+
+      if (Matches.empty()) {
+        ErrorReply("No map configs found with that name.");
+        break;
+      }
+      if (Matches.size() > 1) {
+        string FoundMapConfigs = JoinVector(Matches, false);
+        SendReply("Map configs: " + FoundMapConfigs);
+        break;
+      }
+      const string File = Matches.at(0);
+      filesystem::path ConfigPath = m_Aura->m_Config->m_MapCFGPath / File;
+      SendReply("Loading config file [" + ConfigPath.string() + "]");
+      CConfig MapCFG;
+      MapCFG.Read(ConfigPath);
+      if (m_Aura->m_Map)
+        delete m_Aura->m_Map;
+      m_Aura->m_Map = new CMap(m_Aura, &MapCFG, ConfigPath.string());
+      break;
+    }
+
+    //
+    // !GAMERANGER
+    //
+
+    case HashCode("gameranger"):
+    {
+      if (Payload.empty()) {
+        SendReply("GameRanger IP: " + ByteArrayToDecString(m_Aura->m_GameRangerRemoteAddress) + " (proxy at " + to_string(m_Aura->m_GameRangerLocalPort) + ")");
+        break;
+      }
+      stringstream SS;
+      string GameRangerIPString;
+      uint16_t GameRangerPort;
+
+      SS << Payload;
+      SS >> GameRangerIPString;
+      if (SS.fail() || SS.eof())
+        return;
+
+      SS >> GameRangerPort;
+      if (SS.fail())
+        return;
+        
+      vector<uint8_t> GameRangerAddress = ExtractIPv4(GameRangerIPString);
+      if (GameRangerAddress.empty())
+        return;
+
+      m_Aura->m_GameRangerLocalPort = GameRangerPort;
+      m_Aura->m_GameRangerRemoteAddress = GameRangerAddress;
+      SendReply("GameRanger IP set to " + ByteArrayToDecString(m_Aura->m_GameRangerRemoteAddress) + "(proxy at " + to_string(m_Aura->m_GameRangerLocalPort) + ")");
+      break;
+    }
+
+    //
+    // !NETINFO
+    //
+
+    case HashCode("netinfo"):
+    {
+      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      if (!targetRealm) {
+        ErrorReply("Usage: " + GetToken() + "netinfo [REALM]");
+        break;
+      }
+      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+        ErrorReply("Requires sudo permissions."); // But not really
+        break;
+      }
+
+      targetRealm->SendCommand("/netinfo");
+      break;
+    }
+
+    //
+    // !PRINTGAMES
+    //
+
+    case HashCode("printgames"):
+    {
+      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      if (!targetRealm) {
+        ErrorReply("Usage: " + GetToken() + "printgames [REALM]");
+        break;
+      }
+      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+        ErrorReply("Requires sudo permissions."); // But not really
+        break;
+      }
+
+      targetRealm->SendCommand("/games");
+      break;
+    }
+
+    //
+    // !QUERYGAMES
+    //
+
+    case HashCode("querygames"):
+    {
+      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      if (!targetRealm) {
+        ErrorReply("Usage: " + GetToken() + "querygames [REALM]");
+        break;
+      }
+      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+        ErrorReply("Requires sudo permissions."); // But not really
+        break;
+      }
+
+      int64_t Time = GetTime();
+      if (Time - targetRealm->m_LastGameListTime >= 30) {
+        targetRealm->QueuePacket(targetRealm->m_Protocol->SEND_SID_GETADVLISTEX());
+      }
+      break;
+    }
+
+    // !CHANNEL (change channel)
+    //
+
+    case HashCode("channel"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Not allowed to invite the bot to another channel.");
+        break;
+      }
+      if (m_Aura->m_CurrentLobby)  {
+        ErrorReply("Cannot join a chat channel while hosting a lobby.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "channel [CHANNEL]");
+        break;
+      }
+      if (!m_SourceRealm) {
+        ErrorReply("Realm not found.");
+        break;
+      }
+      m_SourceRealm->SendCommand("/join " + Payload);
+      break;
+    }
+
+    //
+    // !LISTGAMES
+    //
+
+    case HashCode("listgames"):
+    case HashCode("getgames"):
+    {
+      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Not allowed to list games.");
+        break;
+      }
+      vector<string> CurrentGames;
+      if (m_Aura->m_CurrentLobby) {
+        CurrentGames.push_back(string("Lobby: ") + m_Aura->m_CurrentLobby->GetDescription());
+      }
+      for (size_t i = 0; i < m_Aura->m_Games.size(); ++i) {
+        CGame* game = m_Aura->m_Games[i];
+        CurrentGames.push_back(string("Game#") + to_string(i) + ": " + game->GetDescription());
+      }
+      if (CurrentGames.empty()) {
+        SendReply("No games are active.");
+        break;
+      }
+      SendReply(JoinVector(CurrentGames, false), CHAT_LOG_CONSOLE);
+      break;
+    }
+
+    //
+    // !MAP (load map file)
+    //
+
+    case HashCode("hostlan"):
+    case HashCode("host"):
+    case HashCode("map"):
+    {
+      if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
+        if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+          ErrorReply("Not allowed to host games.");
+          break;
+        }
+      }
+
+      bool IsHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
+      vector<string> Args = SplitArgs(Payload, 1, 5);
+
+      if (Args.empty() || Args[0].empty()) {
+        if (IsHostCommand) {
+          ErrorReply("Please enter the map in the host command.");
+          break;
+        }
+        if (!m_Aura->m_Map) {
+          SendReply("There is no map/config file loaded.", CHAT_SEND_SOURCE_ALL);
+          break;
+        }
+        SendReply("The currently loaded map/config file is: [" + m_Aura->m_Map->GetCFGFile() + "]", CHAT_SEND_SOURCE_ALL);
+        break;
+      }
+
+      const string emptyString;
+      pair<uint8_t, string> LoadResult = m_Aura->LoadMap(
+        m_FromName,
+        Args[0],
+        Args.size() >= 2 ? Args[1] : emptyString,
+        Args.size() >= 3 ? Args[2] : emptyString,
+        Args.size() >= 4 ? Args[3] : emptyString,
+        IsHostCommand, // I'm gonna be lucky
+        false // Directory traversal protection
+      );
+
+      if (!LoadResult.second.empty()) {
+        if (LoadResult.first == 0) {
+          SendReply(LoadResult.second, CHAT_SEND_SOURCE_ALL);
+        } else {
+          ErrorReply(LoadResult.second, CHAT_SEND_SOURCE_ALL);
+        }
+      }
+
+      if (LoadResult.first == 0 && IsHostCommand) {
+        string gameName = "gogogo";
+        if (Args.size() >= 5 && !Args[4].empty()) {
+          gameName = Args[4];
+        }
+        if (m_Aura->m_CurrentLobby)  {
+          ErrorReply("Already hosting a game.");
+          break;
+        }
+        m_Aura->CreateGame(
+          m_Aura->m_Map, GAME_PUBLIC, gameName,
+          m_FromName, CommandHash == HashCode("hostlan") ? "" : m_HostName,
+          m_FromName, m_SourceRealm, this
+        );
+        m_Aura->m_Map = nullptr;
+      }
+      break;
+    }
+
+    //
+    // !MIRROR (mirror game from another server)
+    //
+
+    case HashCode("mirror"):
+    {
+      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+        ErrorReply("Not allowed to mirror games.");
+        break;
+      }
+
+      if (!m_Aura->m_Map) {
+        ErrorReply("A map must first be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
+        break;
+      }
+
+      vector<string> Args = SplitArgs(Payload, 6);
+
+      uint16_t gamePort = 6112;
+      uint32_t gameHostCounter = 1;
+      uint32_t gameEntryKey = 0;
+
+      string excludedServer = Args[0];
+      transform(begin(excludedServer), end(excludedServer), begin(excludedServer), ::tolower);
+
+      if (ExtractIPv4(Args[1]).empty()) {
+        ErrorReply("Not a IPv4 address.");
+        break;
+      }
+      string gameAddress = Args[1];
+
+      try {
+        gamePort = static_cast<uint16_t>(stoi(Args[2]));
+        size_t posId, posKey;
+        gameHostCounter = stoul(Args[3], &posId, 16);
+        if (posId != Args[3].length()) {
+          ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
+          break;
+        }
+        gameEntryKey = stoul(Args[4], &posKey, 16);
+        if (posKey != Args[4].length()) {
+          ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
+          break;
+        }
+      } catch (...) {
+        ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
+        break;
+      }
+
+     string gameName = Args[5];
+
+      m_Aura->CreateMirror(m_Aura->m_Map, GAME_PUBLIC, gameName, gameAddress, gamePort, gameHostCounter, gameEntryKey, excludedServer, m_FromName, m_SourceRealm, this);
+      m_Aura->m_Map = nullptr;
+      for (auto& bnet : m_Aura->m_BNETs) {
+        if (bnet->GetInputID() != excludedServer && !bnet->GetIsMirror()) {
+          bnet->ResetConnection(false);
+          bnet->SetReconnectNextTick(true);
+        }
+      }
+      break;
+    }
+
+    default: {
+      ErrorReply("Unrecognized command [" + Command + "].");
+      break;
     }
   }
 }
@@ -2759,9 +4198,11 @@ void CCommandContext::Run(const string& command, const string& payload)
 CCommandContext::~CCommandContext()
 {
   m_Aura = nullptr;
-  m_Game = nullptr;
+  m_SourceGame = nullptr;
+  m_TargetGame = nullptr;
   m_Player = nullptr;
-  m_Realm = nullptr;
+  m_SourceRealm = nullptr;
+  m_TargetRealm = nullptr;
   m_IRC = nullptr;
   m_Output = nullptr;
 }

@@ -38,6 +38,7 @@ CBNETConfig::CBNETConfig(CConfig* CFG, CBotConfig* AuraCFG)
     m_RootAdmins({}),
     m_GamePrefix(string()),
     m_MaxUploadSize(AuraCFG->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
+    m_FloodImmune(false),
 
     m_BindAddress(string()),
     m_Enabled(true),
@@ -84,6 +85,7 @@ CBNETConfig::CBNETConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "rootadmins", ',', m_RootAdmins);
   m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "gameprefix", m_GamePrefix);
   m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "maxuploadsize", m_MaxUploadSize);
+  m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "floodimmune", m_FloodImmune);
 
   m_BindAddress            = CFG->GetString(m_CFGKeyPrefix + "bindaddress", string());
   m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", true);
@@ -117,6 +119,7 @@ CBNETConfig::CBNETConfig(CConfig* CFG, CBNETConfig* nRootConfig, uint8_t nServer
     m_RootAdmins(nRootConfig->m_RootAdmins),
     m_GamePrefix(nRootConfig->m_GamePrefix),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
+    m_FloodImmune(nRootConfig->m_FloodImmune),
 
     m_BindAddress(string()),
     m_Enabled(nRootConfig->m_Enabled),
@@ -180,6 +183,7 @@ CBNETConfig::CBNETConfig(CConfig* CFG, CBNETConfig* nRootConfig, uint8_t nServer
   m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "rootadmins", ',', m_RootAdmins);
   m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "gameprefix", m_GamePrefix);
   m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "maxuploadsize", m_MaxUploadSize);
+  m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "floodimmune", m_FloodImmune);
 
   m_BindAddress            = CFG->GetString(m_CFGKeyPrefix + "bindaddress", m_BindAddress);
   m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);

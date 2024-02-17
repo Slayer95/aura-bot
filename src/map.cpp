@@ -198,6 +198,15 @@ uint8_t CMap::GetMapLayoutStyle() const
   return 3;
 }
 
+string CMap::GetMapFileName() const
+{
+  size_t LastSlash = m_MapPath.rfind('\\');
+  if (LastSlash == string::npos) {
+    return m_MapPath;
+  }
+  return m_MapPath.substr(LastSlash + 1);
+}
+
 void CMap::Load(CConfig* CFG, const string& nCFGFile)
 {
   m_Valid   = true;
@@ -267,14 +276,14 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     // calculate map_crc (this is not the CRC) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
 
-    filesystem::path commonPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("common.j");
+    filesystem::path commonPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
     string CommonJ = FileRead(commonPath, nullptr);
 
     if (CommonJ.empty())
       Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + commonPath.string() + "]");
     else
     {
-      filesystem::path blizzardPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("blizzard.j");
+      filesystem::path blizzardPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
       string BlizzardJ = FileRead(blizzardPath, nullptr);
 
       if (BlizzardJ.empty())
@@ -803,7 +812,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   if (CFG->Exists("map_slot1")) {
     Slots.clear();
 
-    for (uint32_t Slot = 1; Slot <= MAX_SLOTS; ++Slot) {
+    for (uint32_t Slot = 1; Slot <= m_Aura->m_MaxSlots; ++Slot) {
       string SlotString = CFG->GetString("map_slot" + to_string(Slot), string());
 
       if (SlotString.empty())
@@ -839,10 +848,10 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   // add observer slots
   // (per-game setting, don't save it)
   if (m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES) {
-    Print("[MAP] adding " + to_string(MAX_SLOTS - m_Slots.size()) + " observer slots");
+    Print("[MAP] adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
 
-    while (m_Slots.size() < MAX_SLOTS)
-      m_Slots.emplace_back(0, 255, SLOTSTATUS_OPEN, 0, MAX_SLOTS, MAX_SLOTS, SLOTRACE_RANDOM);
+    while (m_Slots.size() < m_Aura->m_MaxSlots)
+      m_Slots.emplace_back(0, 255, SLOTSTATUS_OPEN, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
   }
 
   const char* ErrorMessage = CheckValid();
@@ -943,19 +952,19 @@ const char* CMap::CheckValid()
     return "invalid map_height detected";
   }
 
-  if (m_MapNumPlayers == 0 || m_MapNumPlayers > MAX_SLOTS)
+  if (m_MapNumPlayers == 0 || m_MapNumPlayers > m_Aura->m_MaxSlots)
   {
     m_Valid = false;
     return "invalid map_numplayers detected";
   }
 
-  if (m_MapNumTeams == 0 || m_MapNumTeams > MAX_SLOTS)
+  if (m_MapNumTeams == 0 || m_MapNumTeams > m_Aura->m_MaxSlots)
   {
     m_Valid = false;
     return "invalid map_numteams detected";
   }
 
-  if (m_Slots.empty() || m_Slots.size() > MAX_SLOTS)
+  if (m_Slots.empty() || m_Slots.size() > m_Aura->m_MaxSlots)
   {
     m_Valid = false;
     return "invalid map_slot<x> detected";

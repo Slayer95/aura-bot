@@ -58,6 +58,8 @@ public:
   std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);
 
   std::optional<bool> GetMaybeBool(const std::string& key);
+  std::optional<uint32_t> GetMaybeInt(const std::string& key);
+  std::optional<std::filesystem::path> GetMaybePath(const std::string &key);
 
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);

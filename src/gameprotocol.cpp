@@ -45,7 +45,7 @@ CGameProtocol::~CGameProtocol() = default;
 // RECEIVE FUNCTIONS //
 ///////////////////////
 
-CIncomingJoinPlayer* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data)
+CIncomingJoinRequest* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED W3GS_REQJOIN" );
   // DEBUG_Print( data );
@@ -71,7 +71,7 @@ CIncomingJoinPlayer* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint8
     if (!Name.empty() && data.size() >= Name.size() + 30)
     {
       const std::vector<uint8_t> InternalIP = std::vector<uint8_t>(begin(data) + Name.size() + 26, begin(data) + Name.size() + 30);
-      return new CIncomingJoinPlayer(HostCounter, EntryKey, string(begin(Name), end(Name)), InternalIP);
+      return new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(Name), end(Name)), InternalIP);
     }
   }
 
@@ -688,10 +688,10 @@ std::vector<uint8_t> CGameProtocol::EncodeSlotInfo(const vector<CGameSlot>& slot
 }
 
 //
-// CIncomingJoinPlayer
+// CIncomingJoinRequest
 //
 
-CIncomingJoinPlayer::CIncomingJoinPlayer(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::vector<uint8_t> nInternalIP)
+CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::vector<uint8_t> nInternalIP)
   : m_Name(std::move(nName)),
     m_InternalIP(std::move(nInternalIP)),
     m_HostCounter(nHostCounter),
@@ -699,12 +699,12 @@ CIncomingJoinPlayer::CIncomingJoinPlayer(uint32_t nHostCounter, uint32_t nEntryK
 {
 }
 
-string CIncomingJoinPlayer::GetInternalIPString() const
+string CIncomingJoinRequest::GetInternalIPString() const
 {
   return to_string(m_InternalIP[0]) + "." + to_string(m_InternalIP[1]) + "." + to_string(m_InternalIP[2]) + "." + to_string(m_InternalIP[3]);
 }
 
-CIncomingJoinPlayer::~CIncomingJoinPlayer() = default;
+CIncomingJoinRequest::~CIncomingJoinRequest() = default;
 
 //
 // CIncomingAction

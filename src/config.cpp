@@ -232,17 +232,45 @@ filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path
 
 optional<bool> CConfig::GetMaybeBool(const string& key)
 {
-  optional<bool> value;
+  optional<bool> result;
 
   if (m_CFG.find(key) == end(m_CFG))
-    return value;
+    return result;
 
   if (m_CFG[key] == "0" || m_CFG[key] == "no")
-    value = false;
+    result = false;
   if (m_CFG[key] == "1" || m_CFG[key] == "yes")
-    value = true;
+    result = true;
 
-  return value;
+  return result;
+}
+
+optional<uint32_t> CConfig::GetMaybeInt(const string& key)
+{
+  optional<uint32_t> result;
+
+  if (m_CFG.find(key) == end(m_CFG))
+    return result;
+
+  try {
+    result = atoi(m_CFG[key].c_str());
+  } catch (...) {}
+
+  return result;
+}
+
+optional<filesystem::path> CConfig::GetMaybePath(const string &key) {
+  optional<filesystem::path> result;
+
+  if (m_CFG.find(key) == end(m_CFG))
+    return result;
+
+  result = m_CFG[key];
+  if (result.value().is_absolute()) {
+    return result;
+  }
+  result = filesystem::path(GetExeDirectory() / result.value()).lexically_normal();
+  return result;
 }
 
 void CConfig::Set(const string& key, const string& x)

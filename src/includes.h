@@ -54,6 +54,4 @@ inline void Print(const char* message)
   std::cout << message << std::endl;
 }
 
-void Print2(const std::string& message); // outputs to console and irc
-
 #endif // AURA_INCLUDES_H_

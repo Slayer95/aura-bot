@@ -166,7 +166,10 @@ public:
     if (m_SIN.sin_family != AF_INET) return {0, 0, 0, 0};
     return CreateByteArray(static_cast<uint32_t>(m_SIN.sin_addr.s_addr), false);
   }
-  inline std::string          GetIPString() const { return inet_ntoa(m_SIN.sin_addr); }
+  inline std::string          GetIPString() const {
+    if (m_SIN.sin_family != AF_INET) return std::string("0.0.0.0");
+    return inet_ntoa(m_SIN.sin_addr);
+  }
   inline int32_t              GetError() const { return m_Error; }
   inline bool                 HasError() const { return m_HasError; }
 
@@ -197,9 +200,16 @@ public:
   inline std::string* GetBytes() { return &m_RecvBuffer; }
   inline uint32_t     GetLastRecv() const { return m_LastRecv; }
   inline bool         GetConnected() const { return m_Connected; }
+  inline std::string  GetName() { return m_Name; }
 
-  inline void PutBytes(const std::string& bytes) { m_SendBuffer += bytes; }
-  inline void PutBytes(const std::vector<uint8_t>& bytes) { m_SendBuffer += std::string(begin(bytes), end(bytes)); }
+  inline uint32_t PutBytes(const std::string& bytes) {
+    m_SendBuffer += bytes;
+    return bytes.size();
+  }
+  inline uint32_t PutBytes(const std::vector<uint8_t>& bytes) {
+    m_SendBuffer += std::string(begin(bytes), end(bytes));
+    return bytes.size();
+  }
 
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
   inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
@@ -230,8 +240,14 @@ public:
   inline bool         GetConnecting() const { return m_Connecting; }
 
   void        Reset();
-  inline void PutBytes(const std::string& bytes) { m_SendBuffer += bytes; }
-  inline void PutBytes(const std::vector<uint8_t>& bytes) { m_SendBuffer += std::string(begin(bytes), end(bytes)); }
+  inline uint32_t PutBytes(const std::string& bytes) {
+    m_SendBuffer += bytes;
+    return bytes.size();
+  }
+  inline uint32_t PutBytes(const std::vector<uint8_t>& bytes) {
+    m_SendBuffer += std::string(begin(bytes), end(bytes));
+    return bytes.size();
+  }
 
   bool        CheckConnect();
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }

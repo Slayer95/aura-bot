@@ -109,7 +109,7 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     if (Time - m_LastAntiIdleTime > 60)
     {
-      SendIRC("TIME");
+      Send("TIME");
       m_LastAntiIdleTime = Time;
     }
 
@@ -141,10 +141,10 @@ bool CIRC::Update(void* fd, void* send_fd)
       m_NickName = m_Config->m_NickName;
 
       if (m_Config->m_HostName.find("quakenet.org") == string::npos && !m_Config->m_Password.empty())
-        SendIRC("PASS " + m_Config->m_Password);
+        Send("PASS " + m_Config->m_Password);
 
-      SendIRC("NICK " + m_Config->m_NickName);
-      SendIRC("USER " + m_Config->m_UserName + " " + m_Config->m_NickName + " " + m_Config->m_UserName + " :aura-bot");
+      Send("NICK " + m_Config->m_NickName);
+      Send("USER " + m_Config->m_UserName + " " + m_Config->m_NickName + " " + m_Config->m_UserName + " :aura-bot");
 
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
 
@@ -219,7 +219,7 @@ void CIRC::ExtractPackets()
 
     if (Packets_Packet.compare(0, 4, "PING") == 0)
     {
-      SendIRC("PONG :" + Packets_Packet.substr(6));
+      Send("PONG :" + Packets_Packet.substr(6));
       continue;
     }
 
@@ -280,57 +280,50 @@ void CIRC::ExtractPackets()
 
       // relay messages to bnet
 
-      if (Message.empty() || Message[0] != m_Config->m_CommandTrigger)
+      if (Message.empty() || Channel.empty() || Message[0] != m_Config->m_CommandTrigger)
         continue;
 
-      bool IsRoot = m_Config->m_RootAdmins.find(Hostname) != m_Config->m_RootAdmins.end();
-      if (!IsRoot) {
+      char CommandToken = m_Config->m_CommandTrigger;
+
+      bool IsRootAdmin = m_Config->m_RootAdmins.find(Hostname) != m_Config->m_RootAdmins.end();
+
+      size_t NSIndex = Message.find(" ", 1);
+      if (NSIndex == string::npos)
         continue;
+
+      string CmdNameSpace = Message.substr(1, NSIndex - 1);
+      string Command = Message.substr(NSIndex + 1, Message.length());
+      string Payload;
+      size_t PayloadStart = Command.find(" ");
+      if (PayloadStart != string::npos) {
+         Payload = Command.substr(PayloadStart + 1, Command.length());
+         Command = Command.substr(0, PayloadStart);
       }
 
-      size_t StartIndex = 1;
-      size_t EndIndex = Message.find(" ", StartIndex);
-      if (EndIndex == string::npos)
-        continue;
+      transform(begin(CmdNameSpace), end(CmdNameSpace), begin(CmdNameSpace), ::tolower);
+      transform(begin(Command), end(Command), begin(Command), ::tolower);
 
-      string FirstWord = Message.substr(StartIndex, EndIndex - StartIndex);
-      StartIndex = EndIndex + 1;
-      EndIndex = Message.find(" ", StartIndex);
-      if (EndIndex == string::npos)
-        continue;
-
-      string SecondWord = Message.substr(StartIndex, EndIndex - StartIndex);
-      StartIndex = EndIndex + 1;
-      EndIndex = Message.length();
-
-      transform(begin(FirstWord), end(FirstWord), begin(FirstWord), ::tolower);
-      transform(begin(SecondWord), end(SecondWord), begin(SecondWord), ::tolower);
-
-      string Payload = Message.substr(StartIndex, EndIndex);
-
-      if (FirstWord == "irc") {
-        if (!IsRoot) continue;
+      if (CmdNameSpace == "irc") {
+        if (!IsRootAdmin) continue;
         //
         // !NICK
         //
 
-        if (SecondWord == "nick") {
-          SendIRC("NICK :" + Payload);
+        if (Command == "nick") {
+          Send("NICK :" + Payload);
           m_NickName     = Payload;
         }        
         continue;
       }
 
-      if (FirstWord == "aura") {
-        bool Whisper = false;
-        // const CIncomingChatEvent event = CIncomingChatEvent(CBNETProtocol::EID_IRC, BNETUser, Channel + " " + Realm->GetCommandToken() + Payload);
-        CCommandContext* ctx = new CCommandContext(m_Aura, this, Channel, Nickname, Whisper, &std::cout);
-        Print("[IRC] Running command !" + SecondWord + " with payload [" + Payload + "]");
-        ctx->Run(SecondWord, Payload);
+      if (CmdNameSpace == "aura") {
+        bool IsWhisper = Channel[0] != '#';
+        CCommandContext* ctx = new CCommandContext(m_Aura, this, Channel, Nickname, IsWhisper, &std::cout, CommandToken);
+        Print("[IRC] Running command !" + Command + " with payload [" + Payload + "]");
+        ctx->UpdatePermissions();
+        ctx->SetIRCAdmin(IsRootAdmin);
+        ctx->Run(Command, Payload);
         delete ctx;
-
-        //CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* outputStream)
-        //CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* outputStream)
       }
 
       continue;
@@ -344,7 +337,7 @@ void CIRC::ExtractPackets()
     if (Tokens.size() == 5 && Tokens[1] == "KICK")
     {
       if (Tokens[3] == m_NickName) {
-        SendIRC("JOIN " + Tokens[2]);
+        Send("JOIN " + Tokens[2]);
       }
 
       continue;
@@ -359,14 +352,14 @@ void CIRC::ExtractPackets()
       // auth if the server is QuakeNet
 
       if (m_Config->m_HostName.find("quakenet.org") != string::npos && !m_Config->m_Password.empty()) {
-        SendMessageIRC("AUTH " + m_Config->m_UserName + " " + m_Config->m_Password, "Q@CServe.quakenet.org");
-        SendIRC("MODE " + m_Config->m_NickName + " +x");
+        SendUser("AUTH " + m_Config->m_UserName + " " + m_Config->m_Password, "Q@CServe.quakenet.org");
+        Send("MODE " + m_Config->m_NickName + " +x");
       }
 
       // join channels
 
       for (auto& channel : m_Config->m_Channels)
-        SendIRC("JOIN " + channel);
+        Send("JOIN " + channel);
 
       continue;
     }
@@ -381,7 +374,7 @@ void CIRC::ExtractPackets()
       // nick taken, append _
 
       m_NickName += '_';
-      SendIRC("NICK " + m_NickName);
+      Send("NICK " + m_NickName);
       continue;
     }
   }
@@ -392,7 +385,7 @@ void CIRC::ExtractPackets()
   m_Socket->ClearRecvBuffer();
 }
 
-void CIRC::SendIRC(const string& message)
+void CIRC::Send(const string& message)
 {
   // max message length is 512 bytes including the trailing CRLF
 
@@ -400,16 +393,24 @@ void CIRC::SendIRC(const string& message)
     m_Socket->PutBytes(message + LF);
 }
 
-void CIRC::SendMessageIRC(const string& message, const string& target)
+void CIRC::SendUser(const string& message, const string& target)
 {
   // max message length is 512 bytes including the trailing CRLF
 
-  if (m_Socket->GetConnected())
-  {
-    if (target.empty())
-      for (auto& channel : m_Config->m_Channels)
-        m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
-    else
-      m_Socket->PutBytes("PRIVMSG " + target + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
-  }
+  if (!m_Socket->GetConnected())
+    return;
+
+  m_Socket->PutBytes("PRIVMSG " + target + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
+}
+
+void CIRC::SendChannel(const string& message, const string& target)
+{
+  // Sending messages to channels or to user works exactly the same, except that channels start with #.
+  return SendUser(message, target);
+}
+
+void CIRC::SendAllChannels(const string& message)
+{
+  for (auto& channel : m_Config->m_Channels)
+    m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
 }

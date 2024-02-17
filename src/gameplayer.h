@@ -29,7 +29,7 @@
 class CTCPSocket;
 class CGameProtocol;
 class CGame;
-class CIncomingJoinPlayer;
+class CIncomingJoinRequest;
 class CBNET;
 class CAura;
 
@@ -49,7 +49,7 @@ protected:
   // it also allows us to convert CPotentialPlayers to CGamePlayers without the CPotentialPlayer's destructor closing the socket
 
   CTCPSocket*          m_Socket;
-  CIncomingJoinPlayer* m_IncomingJoinPlayer;
+  CIncomingJoinRequest* m_IncomingJoinPlayer;
   bool                 m_DeleteMe;
 
 public:
@@ -60,7 +60,7 @@ public:
   inline std::vector<uint8_t> GetExternalIP() const { return m_Socket->GetIP(); }
   inline std::string          GetExternalIPString() const { return m_Socket->GetIPString(); }
   inline bool                 GetDeleteMe() const { return m_DeleteMe; }
-  inline CIncomingJoinPlayer* GetJoinPlayer() const { return m_IncomingJoinPlayer; }
+  inline CIncomingJoinRequest* GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
   inline void SetSocket(CTCPSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }

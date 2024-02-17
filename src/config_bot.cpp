@@ -18,8 +18,8 @@ CBotConfig::CBotConfig(CConfig* CFG)
 {
   m_Enabled                = CFG->GetBool("bot_enabled", true);
   m_ProxyReconnectEnabled  = CFG->GetBool("bot_enablegproxy", true);
-  m_War3Version            = CFG->GetInt("bot_war3version", 27);
-  m_Warcraft3Path          = CFG->GetPath("bot_war3path", filesystem::path(R"(C:\Program Files\Warcraft III\)"));
+  m_War3Version            = CFG->GetMaybeInt("bot_war3version"/*, 27*/);
+  m_Warcraft3Path          = CFG->GetMaybePath("bot_war3path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
   m_MapCFGPath             = CFG->GetPath("bot_mapcfgpath", filesystem::path());
   m_MapPath                = CFG->GetPath("bot_mappath", filesystem::path());
 

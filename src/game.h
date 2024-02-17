@@ -44,7 +44,7 @@ class CGameProtocol;
 class CPotentialPlayer;
 class CGamePlayer;
 class CMap;
-class CIncomingJoinPlayer;
+class CIncomingJoinRequest;
 class CIncomingAction;
 class CIncomingChatPlayer;
 class CIncomingMapSize;
@@ -72,7 +72,7 @@ protected:
   std::vector<CGamePlayer*>      m_Players;                       // std::vector of players
   std::queue<CIncomingAction*>   m_Actions;                       // queue of actions to be sent
   std::vector<std::string>       m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
-  std::set<std::string>          m_IgnoredNames;                  // set of player names to NOT print ban messages for when joining because they've already been printed
+  std::set<std::string>          m_ReportedJoinFailNames;                  // set of player names to NOT print ban messages for when joining because they've already been printed
   std::vector<uint8_t>           m_FakePlayers;                   // the fake player's PIDs (if present)
   CMap*                          m_Map;                           // map data
   std::string                    m_GameName;                      // game name
@@ -99,7 +99,7 @@ protected:
   int64_t                        m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
   int64_t                        m_StartedLaggingTime;            // GetTime when the last lag screen started
   int64_t                        m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
-  int64_t                        m_LastOwnerSeen;              // GetTime when the last reserved player was seen in the lobby
+  int64_t                        m_LastOwnerSeen;                 // GetTime when the last reserved player was seen in the lobby
   int64_t                        m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                        m_GameOverTime;                  // GetTime when the game was over
   int64_t                        m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
@@ -114,6 +114,16 @@ protected:
   uint32_t                       m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
   uint32_t                       m_AutoKickPing;                  //
   uint32_t                       m_WarnHighPing;                  //
+
+  char                           m_CommandTrigger;
+  uint32_t                       m_VoteKickPercentage;            // percentage of players required to vote yes for a votekick to pass
+  uint32_t                       m_LacksMapKickDelay;
+  bool                           m_NotifyJoins;                   // whether the bot should beep when a player joins a hosted game
+  uint32_t                       m_PerfThreshold;                 // the max expected delay between updates - if exceeded it means performance is suffering
+  uint32_t                       m_LobbyNoOwnerTime;              // relinquish game ownership after this many minutes
+  uint32_t                       m_LobbyTimeLimit;                // auto close the game lobby after this many minutes without any owner
+  uint32_t                       m_NumPlayersToStartGameOver;     // when this player count is reached, the game over timer will start
+
   uint32_t                       m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
   uint32_t                       m_StartPlayers;                  // number of players when the game started
@@ -188,6 +198,7 @@ public:
   uint32_t       GetSlotsOpen() const;
   uint32_t       GetNumConnectionsOrFake() const;
   uint32_t       GetNumHumanPlayers() const;
+  std::string    GetMapFileName() const;
   std::string    GetDescription() const;
   std::string    GetCategory() const;
   std::string    GetLogPrefix() const;
@@ -206,32 +217,37 @@ public:
 
   // generic functions to send packets to players
 
-  void Send(CGamePlayer* player, const std::vector<uint8_t>& data);
-  void Send(uint8_t PID, const std::vector<uint8_t>& data);
-  void Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& data);
-  void SendAll(const std::vector<uint8_t>& data);
+  void Send(CPotentialPlayer* player, const std::vector<uint8_t>& data) const;
+  void Send(CGamePlayer* player, const std::vector<uint8_t>& data) const;
+  void Send(uint8_t PID, const std::vector<uint8_t>& data) const;
+  void Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& data) const;
+  void SendAll(const std::vector<uint8_t>& data) const;
  
 
   // functions to send packets to players
 
-  void SendChat(uint8_t fromPID, CGamePlayer* player, const std::string& message);
-  void SendChat(uint8_t fromPID, uint8_t toPID, const std::string& message);
-  void SendChat(CGamePlayer* player, const std::string& message);
-  void SendChat(uint8_t toPID, const std::string& message);
-  void SendAllChat(uint8_t fromPID, const std::string& message);
-  void SendAllChat(const std::string& message);
+  void SendChat(uint8_t fromPID, CGamePlayer* player, const std::string& message) const;
+  void SendChat(uint8_t fromPID, uint8_t toPID, const std::string& message) const;
+  void SendChat(CGamePlayer* player, const std::string& message) const;
+  void SendChat(uint8_t toPID, const std::string& message) const;
+  void SendAllChat(uint8_t fromPID, const std::string& message) const;
+  void SendAllChat(const std::string& message) const;
   void SendAllSlotInfo();
-  void SendVirtualHostPlayerInfo(CGamePlayer* player);
-  void SendFakePlayersInfo(CGamePlayer* player);
-  void SendWelcomeMessage(CGamePlayer* player);
+  void SendVirtualHostPlayerInfo(CGamePlayer* player) const;
+  void SendFakePlayersInfo(CGamePlayer* player) const;
+  void SendJoinedPlayersInfo(CGamePlayer* player) const;
+  void SendVirtualHostPlayerInfo(CPotentialPlayer* player) const;
+  void SendFakePlayersInfo(CPotentialPlayer* player) const;
+  void SendJoinedPlayersInfo(CPotentialPlayer* player) const;
+  void SendWelcomeMessage(CGamePlayer* player) const;
   void SendAllActions();
-  void SendAllAutoStart();
-  void AnnounceToAddress(std::string IP, uint16_t port);
-  void AnnounceToAddressForGameRanger(std::string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit);
-  void LANBroadcastGameInfo();
-  void LANBroadcastGameRefresh();
-  void LANBroadcastGameCreate();
-  void LANBroadcastGameDecreate();
+  void SendAllAutoStart() const;
+  void AnnounceToAddress(std::string IP, uint16_t port) const;
+  void AnnounceToAddressForGameRanger(std::string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
+  void LANBroadcastGameInfo() const;
+  void LANBroadcastGameRefresh() const;
+  void LANBroadcastGameCreate() const;
+  void LANBroadcastGameDecreate() const;
 
   // events
   // note: these are only called while iterating through the m_Potentials or m_Players std::vectors
@@ -242,13 +258,13 @@ public:
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
   void EventPlayerKickHandleQueued(CGamePlayer* player);
-  bool EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* joinPlayer);
+  bool EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest);
   void EventPlayerLeft(CGamePlayer* player, uint32_t reason);
   void EventPlayerLoaded(CGamePlayer* player);
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
-  void EventPlayerBotCommand(CGamePlayer* player, std::string& command, std::string& payload);
+  void EventPlayerBotCommand(CGamePlayer* player, char token, std::string& command, std::string& payload);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
   void EventPlayerChangeColour(CGamePlayer* player, uint8_t colour);
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
@@ -283,6 +299,8 @@ public:
   void SwapSlots(uint8_t SID1, uint8_t SID2);
   bool OpenSlot(uint8_t SID, bool kick);
   bool CloseSlot(uint8_t SID, bool kick);
+  void SendIncomingPlayerInfo(CGamePlayer* player) const;
+  CGamePlayer* JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);
   bool ComputerSlot(uint8_t SID, uint8_t skill, bool kick);
   void ColorSlot(uint8_t SID, uint8_t colour);
   void OpenAllSlots();
@@ -294,7 +312,7 @@ public:
   void AddToReserved(std::string name);
   void RemoveFromReserved(std::string name);
   bool MatchOwnerName(std::string name) const;
-  bool IsReserved(std::string name) const;
+  bool GetIsReserved(std::string name) const;
   bool IsDownloading() const;
   void SetOwner(std::string name, std::string realm);
   void ReleaseOwner();
