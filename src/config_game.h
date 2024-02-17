@@ -19,7 +19,6 @@ public:
   uint32_t                 m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
   float                    m_SyncLimit;                  // the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
   float                    m_SyncLimitSafe;              // the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
-  float                    m_SyncFactor;                 // ratio of clients keepalive period / bot_latency
   uint32_t                 m_AutoKickPing;               // auto kick players with ping higher than this
   uint32_t                 m_WarnHighPing;               // auto kick players with ping higher than this
   uint32_t                 m_LobbyTimeLimit;             // auto close the game lobby after this many minutes without any owner

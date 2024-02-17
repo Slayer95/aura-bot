@@ -267,8 +267,8 @@ void CCommandContext::UpdatePermissions()
   bool IsOwner = m_TargetGame && m_TargetGame->MatchOwnerName(m_FromName) && m_HostName == m_TargetGame->m_OwnerRealm && (
     IsRealmVerified || m_Player && m_HostName.empty()
   );
-  bool IsAdmin = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsAdmin(m_FromName);
   bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsRootAdmin(m_FromName);
+  bool IsAdmin = IsRootAdmin || IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsAdmin(m_FromName);
   bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
   // bool IsIRCAdmin = m_IRC != nullptr && m_IRC->GetIsRootAdmin(m_FromName);
 
@@ -277,7 +277,7 @@ void CCommandContext::UpdatePermissions()
 
   // Leaver or absent owners are automatically demoted.
   if (IsOwner && (m_Player || m_TargetGame && m_TargetGame->GetIsLobby())) m_Permissions |= PERM_GAME_OWNER;
-  if (IsAdmin || IsRootAdmin) m_Permissions |= PERM_BNET_ADMIN;
+  if (IsAdmin) m_Permissions |= PERM_BNET_ADMIN;
   if (IsRootAdmin) m_Permissions |= PERM_BNET_ROOTADMIN;
   // if (IsIRCAdmin) m_Permissions |= PERM_IRC_ADMIN;
 
@@ -347,8 +347,11 @@ void CCommandContext::SendReply(const string& message)
         string leftMessage = message;
         do {
           m_TargetGame->SendChat(m_Player, leftMessage.substr(0, 100));
-          leftMessage = leftMessage.substr(100, leftMessage.length());
-        } while (!leftMessage.empty());
+          leftMessage = leftMessage.substr(100);
+        } while (leftMessage.length() > 100);
+        if (!leftMessage.empty()) {
+          m_TargetGame->SendChat(m_Player, leftMessage);
+        }
       }
       break;
     }
@@ -492,7 +495,7 @@ CGame* CCommandContext::GetTargetGame(const string& target)
     return m_Aura->m_CurrentLobby;
   }
   if (gameId.substr(0, 5) == "game#") {
-    gameId = gameId.substr(5, gameId.length());
+    gameId = gameId.substr(5);
   }
   uint32_t GameNumber = 0;
   try {
@@ -605,8 +608,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       CBNET* targetPlayerRealm = targetPlayer->GetRealm(true);
       bool IsRealmVerified = targetPlayerRealm != nullptr;
       bool IsOwner = m_TargetGame->MatchOwnerName(targetPlayer->GetName()) && m_TargetGame->HasOwnerInGame();
-      bool IsAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName);
       bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsRootAdmin(m_FromName);
+      bool IsAdmin = IsRootAdmin || IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName);
       string SyncStatus;
       if (m_TargetGame->GetGameLoaded()) {
         if (m_TargetGame->m_SyncPlayers[targetPlayer].size() + 1 == m_TargetGame->m_Players.size()) {
@@ -621,10 +624,10 @@ void CCommandContext::Run(const string& command, const string& payload)
           SyncStatus = SyncStatus.substr(0, SyncStatus.length() - 2);
         }
       }
-      bool IsForwards = m_TargetGame->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter()) >= static_cast<float>(m_TargetGame->m_SyncCounter);
-      float OffsetAbs = (
-        IsForwards ? m_TargetGame->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter()) - static_cast<float>(m_TargetGame->m_SyncCounter) :
-        static_cast<float>(m_TargetGame->m_SyncCounter) - m_TargetGame->m_SyncFactor * static_cast<float>(targetPlayer->GetSyncCounter())
+      bool IsForwards = targetPlayer->GetSyncCounter() >= m_TargetGame->m_SyncCounter;
+      uint32_t OffsetAbs = (
+        IsForwards ? targetPlayer->GetSyncCounter() - m_TargetGame->m_SyncCounter :
+        m_TargetGame->m_SyncCounter - targetPlayer->GetSyncCounter()
       );
       string SyncOffsetText = IsForwards ? " +" + to_string(OffsetAbs) : " -" + to_string(OffsetAbs);
       string SlotFragment;
@@ -632,7 +635,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         SlotFragment = "Slot #" + to_string(1 + m_TargetGame->GetSIDFromPID(targetPlayer->GetPID())) + ". ";
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetExternalIP(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
-      SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Owner: " + (IsOwner ? "Yes" : "No")+ ", Reserved: " + (targetPlayer->GetReserved() ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
+      SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetReserved() ? "Yes" : "No"));
+      SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       break;
     }
 
@@ -853,7 +857,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       string PassedMessage;
       size_t LastSlash = MapPath.rfind('\\');
       if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
-        PassedMessage = m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1, MapPath.length()) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
+        PassedMessage = m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
       } else {
         PassedMessage = m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
       }
@@ -916,7 +920,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       uint8_t rollCount = 1;
 
       string rawRollCount = diceStart == string::npos ? "1" : Payload.substr(0, diceStart);
-      string rawRollFaces = Payload.empty() ? "100" : diceStart == string::npos ? Payload : Payload.substr(diceStart + 1, Payload.length());
+      string rawRollFaces = Payload.empty() ? "100" : diceStart == string::npos ? Payload : Payload.substr(diceStart + 1);
 
       try {
         rollCount = stoi(rawRollCount);
@@ -1203,7 +1207,6 @@ void CCommandContext::Run(const string& command, const string& payload)
       for (auto& PlayerName: Args) {
         if (PlayerName.empty())
           continue;
-        Args.push_back("[" + PlayerName + "]");
         m_TargetGame->AddToReserved(PlayerName);
       }
 
@@ -1717,47 +1720,6 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
-    // !SYNC
-    //
-
-    case HashCode("sync"):
-    {
-      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
-        break;
-
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("You are not the game owner, and therefore cannot edit game settings.");
-        break;
-      }
-
-      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
-      if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
-        break;
-      }
-      if (m_TargetGame->m_SyncCounter == 0 || targetPlayer->GetSyncCounter() == 0)
-        break;
-
-      m_TargetGame->m_SyncFactor = static_cast<float>(m_TargetGame->m_SyncCounter) / static_cast<float>(targetPlayer->GetSyncCounter());
-      SendReply("Sync rate updated to " + to_string(m_TargetGame->m_SyncFactor) + ".", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
-
-      uint32_t LeastSyncCounter = 0xFFFFFFFF;
-      CGamePlayer* LeastSyncPlayer = nullptr;
-      for (auto& eachPlayer: m_TargetGame->m_Players) {
-        if (eachPlayer->GetSyncCounter() < LeastSyncCounter) {
-          LeastSyncCounter = eachPlayer->GetSyncCounter();
-          LeastSyncPlayer = eachPlayer;
-        }
-      }
-      if (LeastSyncPlayer && (static_cast<float>(m_TargetGame->m_SyncCounter) > m_TargetGame->m_SyncFactor * static_cast<float>(LeastSyncCounter))) {
-        float FramesBehind = static_cast<float>(m_TargetGame->m_SyncCounter) / m_TargetGame->m_SyncFactor - static_cast<float>(LeastSyncCounter);
-        SendReply("Player [" + targetPlayer->GetName() + "] is " + to_string(FramesBehind) + " frame(s) behind.", CHAT_LOG_CONSOLE);
-      }
-
-      break;
-    }
-
-    //
     // !SYNCRESET
     //
 
@@ -1793,7 +1755,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
 
       if (Payload.empty()) {
-        SendReply("Sync limit: " + to_string(m_TargetGame->m_SyncLimit) + " packets. Rate: " + to_string(m_TargetGame->m_SyncFactor));
+        SendReply("Sync limit: " + to_string(m_TargetGame->m_SyncLimit) + " packets.");
         break;
       }
 
@@ -1803,7 +1765,6 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       uint32_t     Packets;
-      float        Rate;
       stringstream SS;
       SS << Payload;
       SS >> Packets;
@@ -1812,13 +1773,6 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("bad input #1 to !sl command");
         break;
       }
-      if (SS.eof()) {
-        Rate = m_TargetGame->m_SyncFactor;
-      } else {
-        SS >> Rate;
-        if (SS.fail() || Rate < 0.1f)
-          Rate = m_TargetGame->m_SyncFactor;
-      }
 
       if (Packets < 2)
         Packets = 2;
@@ -1826,9 +1780,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         Packets = 10000;
 
       m_TargetGame->m_SyncLimit = static_cast<float>(Packets);
-      m_TargetGame->m_SyncFactor = Rate;
 
-      SendAll("Sync limit updated: " + to_string(m_TargetGame->m_SyncLimit) + " packets. Rate: " + to_string(m_TargetGame->m_SyncFactor));
+      SendAll("Sync limit updated: " + to_string(m_TargetGame->m_SyncLimit) + " packets.");
       break;
     }
 
@@ -3337,7 +3290,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       string GameId = TrimString(Payload.substr(0, CommandStart));
-      string ExecString = TrimString(Payload.substr(CommandStart + 1, Payload.length()));
+      string ExecString = TrimString(Payload.substr(CommandStart + 1));
       if (GameId.empty() || ExecString.empty()) {
         ErrorReply("Usage: " + GetToken() + "game [GAMEID], [COMMAND] - See game ids with !listgames");
         break;
@@ -3349,7 +3302,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
       size_t PayloadStart = ExecString.find(' ');
       const string SubCmd = PayloadStart == string::npos ? ExecString : ExecString.substr(0, PayloadStart);
-      const string SubPayload = PayloadStart == string::npos ? string() : ExecString.substr(PayloadStart + 1, ExecString.length());
+      const string SubPayload = PayloadStart == string::npos ? string() : ExecString.substr(PayloadStart + 1);
       CCommandContext* ctx;
       if (m_IRC) {
         ctx = new CCommandContext(m_Aura, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, &std::cout, m_Token);
@@ -3761,8 +3714,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Realm not found.");
         break;
       }
-      bool IsAdmin = m_SourceRealm->GetIsAdmin(Payload);
       bool IsRootAdmin = m_SourceRealm->GetIsRootAdmin(Payload);
+      bool IsAdmin = IsRootAdmin || m_SourceRealm->GetIsAdmin(Payload);
       if (!IsAdmin && !IsRootAdmin)
         SendReply("User [" + Payload + "] is not an admin on server [" + m_HostName + "]");
       else if (IsRootAdmin)

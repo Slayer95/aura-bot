@@ -325,8 +325,6 @@ void CAura::LoadBNETs(CConfig* CFG)
     if (ThisConfig->m_CDKeyROC.length() != 26 || ThisConfig->m_CDKeyTFT.length() != 26)
       Print("[BNET: " + ThisConfig->m_UniqueName + "] warning - your CD keys are not 26 characters long - probably invalid");
 
-    // TODO(IceSandslash): Warn on password reuse
-
     if (ThisConfig->m_GamePrefix.length() > LongestGamePrefixSize)
       LongestGamePrefixSize = ThisConfig->m_GamePrefix.length();
 
@@ -618,7 +616,7 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
       MapCFG.Set("cfg_partial", "1");
       if (FileNameClient.length() > 6 && FileName[FileNameClient.length() - 6] == '~' && isdigit(FileNameClient[FileNameClient.length() - 5])) {
         // IDK if this path is okay. Let's give it a try.
-        MapCFG.Set("map_path", R"(Maps\Download\)" + FileNameClient.substr(0, FileNameClient.length() - 6) + FileNameClient.substr(FileNameClient.length() - 4, FileNameClient.length()));
+        MapCFG.Set("map_path", R"(Maps\Download\)" + FileNameClient.substr(0, FileNameClient.length() - 6) + FileNameClient.substr(FileNameClient.length() - 4));
       } else {
         MapCFG.Set("map_path", R"(Maps\Download\)" + FileNameClient);
       }
@@ -750,7 +748,7 @@ bool CAura::Update()
       size_t OwnerRealmIndex = OwnerName.find('@');
       if (OwnerRealmIndex != string::npos) {
         OwnerName = OwnerName.substr(0, OwnerRealmIndex);
-        OwnerRealmName = OwnerName.substr(OwnerRealmIndex + 1, OwnerName.length());
+        OwnerRealmName = OwnerName.substr(OwnerRealmIndex + 1);
         transform(begin(OwnerRealmName), end(OwnerRealmName), begin(OwnerRealmName), ::tolower);
         OwnerRealm = GetRealmByInputId(OwnerRealmName);
       }

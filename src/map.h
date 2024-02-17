@@ -293,7 +293,7 @@ inline std::pair<std::string, std::string> ParseMapId(const std::string s, const
 
   // Custom namespace/protocol
   if (lower.substr(0, 8) == "epicwar-" || lower.substr(0, 8) == "epicwar:") {
-    return make_pair("epicwar", MaybeBase10(lower.substr(8, lower.length())));
+    return make_pair("epicwar", MaybeBase10(lower.substr(8)));
   }
   if (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:") {
     return make_pair("local", s);
@@ -303,18 +303,18 @@ inline std::pair<std::string, std::string> ParseMapId(const std::string s, const
   bool isUri = false;
   if (lower.substr(0, 7) == "http://") {
     isUri = true;
-    lower = lower.substr(7, lower.length());
+    lower = lower.substr(7);
   } else if (lower.substr(0, 8) == "https://") {
     isUri = true;
-    lower = lower.substr(8, lower.length());
+    lower = lower.substr(8);
   }
 
   if (lower.substr(0, 12) == "epicwar.com/") {
-    std::string mapCode = lower.substr(17, lower.length());
+    std::string mapCode = lower.substr(17);
     return make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
   }
   if (lower.substr(0, 16) == "www.epicwar.com/") {
-    std::string mapCode = lower.substr(21, lower.length());
+    std::string mapCode = lower.substr(21);
     return make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
   }
   if (isUri) {
@@ -338,7 +338,7 @@ inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string &
     downloadUri = "https://epicwar.com" + response.text.substr(DownloadUriStartIndex + 9, (DownloadUriEndIndex) - (DownloadUriStartIndex + 9));
     size_t LastSlashIndex = downloadUri.rfind("/");
     if (LastSlashIndex == std::string::npos) return 5;
-    std::string encodedName = downloadUri.substr(LastSlashIndex + 1, downloadUri.length());
+    std::string encodedName = downloadUri.substr(LastSlashIndex + 1);
     downloadFilename = DecodeURIComponent(encodedName);
   } else {
     return 5;
@@ -358,7 +358,7 @@ inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string &
   if (ExtensionIndex == std::string::npos) {
     return 2;
   } else {
-    DownloadFileExt = downloadFilename.substr(ExtensionIndex, downloadFilename.length());
+    DownloadFileExt = downloadFilename.substr(ExtensionIndex);
     std::transform(std::begin(DownloadFileExt), std::end(DownloadFileExt), std::begin(DownloadFileExt), [](unsigned char c) {
       return static_cast<char>(std::tolower(c));
     });

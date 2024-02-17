@@ -292,11 +292,11 @@ void CIRC::ExtractPackets()
         continue;
 
       string CmdNameSpace = Message.substr(1, NSIndex - 1);
-      string Command = Message.substr(NSIndex + 1, Message.length());
+      string Command = Message.substr(NSIndex + 1);
       string Payload;
       size_t PayloadStart = Command.find(" ");
       if (PayloadStart != string::npos) {
-         Payload = Command.substr(PayloadStart + 1, Command.length());
+         Payload = Command.substr(PayloadStart + 1);
          Command = Command.substr(0, PayloadStart);
       }
 
@@ -380,8 +380,6 @@ void CIRC::ExtractPackets()
   }
 
   // clear the whole buffer
-  //TODO: delete only full packets we've processed and leave partial ones in buffer
-
   m_Socket->ClearRecvBuffer();
 }
 

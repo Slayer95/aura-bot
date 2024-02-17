@@ -16,7 +16,6 @@ CGameConfig::CGameConfig(CConfig* CFG)
   m_NumPlayersToStartGameOver = CFG->GetInt("bot_gameoverplayernumber", 1);
   m_SyncLimit                 = CFG->GetFloat("bot_synclimit", 10.0f);
   m_SyncLimitSafe             = CFG->GetFloat("bot_synclimitsafe", 3.0f);
-  m_SyncFactor                = CFG->GetFloat("bot_syncfactor", 1.0f);
   m_AutoKickPing              = CFG->GetInt("bot_autokickping", 300);
   m_WarnHighPing              = CFG->GetInt("bot_warnhighping", 200);
   m_LobbyTimeLimit            = CFG->GetInt("bot_lobbytimelimit", 10);
@@ -36,9 +35,6 @@ CGameConfig::CGameConfig(CConfig* CFG)
 
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;
-
-  if (m_SyncFactor < 0.1f)
-    m_SyncFactor = 1.0f;
 }
 
 CGameConfig::~CGameConfig() = default;

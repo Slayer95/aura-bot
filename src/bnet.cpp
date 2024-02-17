@@ -627,8 +627,9 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
           } else {
             m_Aura->m_CurrentLobby->ReportSpoofed(m_HostName, AboutPlayer);
           }
-        } else if (false) {
-          // TODO(IceSandslash): Player offline
+        } else {
+          // [ERROR] Unknown user.
+          // [INFO] User was last seen on:
         }
       }
     }
@@ -785,12 +786,12 @@ void CBNET::SendCommand(const string& message)
 
   Print("[BNET: " + m_Config->m_UniqueName + "] Queued \"" + message + "\"");
 
-  if (GetPvPGN())
-    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message.substr(0, 200)));
-  else if (message.size() > 255)
-    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message.substr(0, 255)));
-  else
+  size_t MaxMessageSize = GetPvPGN() ? 200 : 255;
+  if (message.length() > MaxMessageSize) {
+    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message.substr(0, MaxMessageSize)));
+  } else {
     QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message));
+  }
 
   m_HadChatActivity = true;
 }
@@ -802,12 +803,12 @@ void CBNET::SendChatChannel(const string& message)
 
   Print("[BNET: " + m_Config->m_UniqueName + "] Queued \"" + message + "\"");
 
-  if (GetPvPGN())
-    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message.substr(0, 200)), PACKET_TYPE_CHAT_BLOCKING);
-  else if (message.size() > 255)
-    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message.substr(0, 255)), PACKET_TYPE_CHAT_BLOCKING);
-  else
+  size_t MaxMessageSize = GetPvPGN() ? 200 : 255;
+  if (message.length() > MaxMessageSize) {
+    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message.substr(0, MaxMessageSize)), PACKET_TYPE_CHAT_BLOCKING);
+  } else {
     QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message), PACKET_TYPE_CHAT_BLOCKING);
+  }
 
   m_HadChatActivity = true;
 }
@@ -840,7 +841,7 @@ void CBNET::TrySendChat(const string& message, const string& user, bool isPrivat
   }
 
   (*errorLog) << GetLogPrefix() + message << std::endl;
-  (*errorLog) << "[AURA] Message exceeding quota was dropped." << std::endl;
+  (*errorLog) << "[AURA] Quota exceeded (reply dropped.)" << std::endl;
   if (m_OutPackets.size() <= 5) {
     // TODO(IceSandslash): Throttle these.
     SendWhisper("[Antiflood] Too many messages (reply dropped.)", user);

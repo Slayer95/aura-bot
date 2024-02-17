@@ -120,7 +120,6 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
   m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
   m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
   m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
-  m_SyncFactor = m_Aura->m_GameDefaultConfig->m_SyncFactor;
   m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
   m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
 
@@ -206,7 +205,6 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
   m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
   m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
   m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
-  m_SyncFactor = m_Aura->m_GameDefaultConfig->m_SyncFactor;
   m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
   m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
 
@@ -533,7 +531,7 @@ bool CGame::Update(void* fd, void* send_fd)
       for (auto& player : m_Players) {
         if (player->GetObserver())
           continue;
-        float FramesBehind = static_cast<float>(m_SyncCounter) / m_SyncFactor - static_cast<float>(player->GetSyncCounter());
+        uint32_t FramesBehind = m_SyncCounter - player->GetSyncCounter();
         if (FramesBehind > m_SyncLimit) {
           player->SetLagging(true);
           player->SetStartedLaggingTicks(Ticks);
@@ -633,7 +631,7 @@ bool CGame::Update(void* fd, void* send_fd)
           continue;
         }
 
-        float FramesBehind = static_cast<float>(m_SyncCounter) / m_SyncFactor - static_cast<float>(player->GetSyncCounter());
+        uint32_t FramesBehind = m_SyncCounter - player->GetSyncCounter();
         if (FramesBehind >= m_SyncLimitSafe) {
           ++PlayersStillLagging;
         } else {
@@ -1175,81 +1173,81 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       if (m_Map->GetMapShortDesc().empty()) {
         continue;
       }
-      Line = Line.substr(12, Line.length());
+      Line = Line.substr(12);
     }
     if (Line.substr(0, 12) == "{SHORTDESC!}") {
       if (!m_Map->GetMapShortDesc().empty()) {
         continue;
       }
-      Line = Line.substr(12, Line.length());
+      Line = Line.substr(12);
     }
     if (Line.substr(0, 6) == "{URL?}") {
       if (m_Map->GetMapSiteURL().empty()) {
         continue;
       }
-      Line = Line.substr(6, Line.length());
+      Line = Line.substr(6);
     }
     if (Line.substr(0, 6) == "{URL!}") {
       if (!m_Map->GetMapSiteURL().empty()) {
         continue;
       }
-      Line = Line.substr(6, Line.length());
+      Line = Line.substr(6);
     }
     if (Line.substr(0, 11) == "{FILENAME?}") {
       size_t LastSlash = m_MapPath.rfind('\\');
       if (LastSlash == string::npos || LastSlash > m_MapPath.length() - 6) {
         continue;
       }
-      Line = Line.substr(11, Line.length());
+      Line = Line.substr(11);
     }
     if (Line.substr(0, 12) == "{AUTOSTART?}") {
       if (m_AutoStartMinTime == 0 && m_AutoStartPlayers == 0) {
         continue;
       }
-      Line = Line.substr(12, Line.length());
+      Line = Line.substr(12);
     }
     if (Line.substr(0, 11) == "{FILENAME!}") {
       size_t LastSlash = m_MapPath.rfind('\\');
       if (!(LastSlash == string::npos || LastSlash > m_MapPath.length() - 6)) {
         continue;
       }
-      Line = Line.substr(11, Line.length());
+      Line = Line.substr(11);
     }
     if (Line.substr(0, 10) == "{CREATOR?}") {
       if (m_CreatorName.empty()) {
         continue;
       }
-      Line = Line.substr(10, Line.length());
+      Line = Line.substr(10);
     }
     if (Line.substr(0, 10) == "{CREATOR!}") {
       if (!m_CreatorName.empty()) {
         continue;
       }
-      Line = Line.substr(10, Line.length());
+      Line = Line.substr(10);
     }
     if (Line.substr(0, 8) == "{OWNER?}") {
       if (m_OwnerName.empty()) {
         continue;
       }
-      Line = Line.substr(8, Line.length());
+      Line = Line.substr(8);
     }
     if (Line.substr(0, 8) == "{OWNER!}") {
       if (!m_OwnerName.empty()) {
         continue;
       }
-      Line = Line.substr(8, Line.length());
+      Line = Line.substr(8);
     }
     if (Line.substr(0, 16) == "{CREATOR==OWNER}" || Line.substr(0, 16) == "{OWNER==CREATOR}") {
       if (m_OwnerName != m_CreatorName) {
         continue;
       }
-      Line = Line.substr(16, Line.length());
+      Line = Line.substr(16);
     }
     if (Line.substr(0, 16) == "{CREATOR!=OWNER}" || Line.substr(0, 16) == "{OWNER!=CREATOR}") {
       if (m_OwnerName == m_CreatorName) {
         continue;
       }
-      Line = Line.substr(16, Line.length());
+      Line = Line.substr(16);
     }
     while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
       Line.replace(matchIndex, 9, m_CreatorName);

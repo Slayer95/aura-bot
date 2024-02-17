@@ -171,7 +171,7 @@ CBNETConfig::CBNETConfig(CConfig* CFG, CBNETConfig* nRootConfig, uint8_t nServer
   m_PublicHostAddress      = CFG->GetString(m_CFGKeyPrefix + "publicip", m_PublicHostAddress);
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
-  m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord); // TODO(IceSandslash): Deprecate inheritance
+  m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
   m_AuthWar3Version        = CFG->GetInt(m_CFGKeyPrefix + "auth_war3version", m_AuthWar3Version);
   m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exeversion", 4, m_AuthExeVersion);

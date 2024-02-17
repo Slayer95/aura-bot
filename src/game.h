@@ -108,9 +108,8 @@ protected:
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
   uint16_t                       m_Latency;                       // the number of ms to wait between sending action packets (we queue any received during this time)
-  float                          m_SyncLimit;                     // the maximum number of packets a player can fall out of sync before starting the lag screen
-  float                          m_SyncLimitSafe;                 // stop lag screen if players are within this same amount of packets
-  float                          m_SyncFactor;                    // factor for synchronization formula (keepalive period / bot latency)
+  uint32_t                       m_SyncLimit;                     // the maximum number of packets a player can fall out of sync before starting the lag screen
+  uint32_t                       m_SyncLimitSafe;                 // stop lag screen if players are within this same amount of packets
   uint32_t                       m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
   uint32_t                       m_AutoKickPing;                  //
   uint32_t                       m_WarnHighPing;                  //
