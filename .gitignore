@@ -46,6 +46,7 @@ aura*.cfg
 !aura-example.cfg
 mapcfgs/
 Debug/
+Share/
 src/Debug
 src/Release
 bncsutil/vc8_build/Release
