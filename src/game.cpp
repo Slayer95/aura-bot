@@ -2388,7 +2388,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     string* MapData = m_Map->GetMapData();
     bool IsMapAvailable = !MapData->empty() && m_Map->GetValidLinkedMap();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
-    if (IsMapAvailable && m_Aura->m_Config->m_AllowUploads != 0 && (player->GetDownloadAllowed() || m_Aura->m_Config->m_AllowUploads == 1 && !IsMapTooLarge)) {
+    if (IsMapAvailable && m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER && (player->GetDownloadAllowed() || m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) {
       if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
         // inform the client that we are willing to send the map
 
@@ -2401,7 +2401,8 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
       }
     } else if (!player->GetKickQueued()) {
         player->SetKickByTime(Time + m_LacksMapKickDelay);
-        if (m_Aura->m_Config->m_AllowUploads != 1) {
+        if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
+          // Even if manual, claim they are disabled.
           player->SetLeftReason("doesn't have the map and uploads are disabled");
         } else if (IsMapTooLarge) {
           player->SetLeftReason("doesn't have the map and the map is too large to send");

@@ -49,9 +49,9 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_MapPath                = CFG->GetPath("bot_maps_path", filesystem::path());
 
   m_BindAddress            = CFG->GetString("net_bind_address", string());
-  m_MinHostPort            = CFG->GetInt("bot_minhostport", CFG->GetInt("net_host_port", 6112));
-  m_MaxHostPort            = CFG->GetInt("bot_maxhostport", m_MinHostPort);
-  m_EnableLANBalancer      = CFG->GetBool("bot_enablelanbalancer", false);
+  m_MinHostPort            = CFG->GetInt("bot_min_host_port", CFG->GetInt("net_host_port", 6112));
+  m_MaxHostPort            = CFG->GetInt("bot_max_host_port", m_MinHostPort);
+  m_EnableLANBalancer      = CFG->GetBool("bot_enable_lan_balancer", false);
   m_LANHostPort            = CFG->GetInt("net_net_udp_lan_host_port", 6112);
 
   /* Make absolute, lexically normal */
@@ -76,7 +76,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   m_UDPInfoStrictMode      = CFG->GetBool("net_udp_info_strict_mode", true);
   m_UDPForwardTraffic      = CFG->GetBool("net_udp_enable_redirect", false);
-  m_UDPForwardAddress      = CFG->GetString("net_udp_rediraddress", string());
+  m_UDPForwardAddress      = CFG->GetString("net_udp_redirect_address", string());
   m_UDPForwardPort         = CFG->GetInt("net_udp_redirect_port", 6110);
   m_UDPForwardGameLists    = CFG->GetBool("net_udp_redirect_game_lists", false);
   m_UDPBlockedIPs          = CFG->GetSet("net_udp_block_list", ',', {});
@@ -85,11 +85,11 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_UDPGameRangerPort      = CFG->GetInt("net_udp_gameranger_port_but_its_hardcoded", 6112);
 
   m_AllowDownloads         = CFG->GetBool("bot_allow_downloads", false);
-  m_AllowUploads           = CFG->GetInt("bot_allow_map_transfers", 0); // no|yes|conditional
-  m_MaxDownloaders         = CFG->GetInt("bot_max_players_downloading", 3);
-  m_MaxUploadSize          = CFG->GetInt("bot_max_map_transfer_size", 8192);
-  m_MaxUploadSpeed         = CFG->GetInt("bot_max_map_transfer_speed", 1024);
-  m_MaxParallelMapPackets  = CFG->GetInt("bot_maxparallelmappackets", 1000);
+  m_AllowTransfers         = CFG->GetInt("bot_allow_map_transfers", MAP_TRANSFERS_AUTOMATIC);
+  m_MaxDownloaders         = CFG->GetInt("bot_map_transfer_max_players", 3);
+  m_MaxUploadSize          = CFG->GetInt("bot_map_transfer_max_size", 8192);
+  m_MaxUploadSpeed         = CFG->GetInt("bot_map_transfer_max_speed", 1024);
+  m_MaxParallelMapPackets  = CFG->GetInt("bot_map_transfer_max_parallel_packets", 1000);
   m_RTTPings               = CFG->GetBool("bot_rtt_pings", false);
   m_HasBufferBloat         = CFG->GetBool("bot_has_buffer_bloat", false);
   m_ReconnectWaitTime      = CFG->GetInt("net_player_reconnect_wait", 3);

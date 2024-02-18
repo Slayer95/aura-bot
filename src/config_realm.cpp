@@ -100,7 +100,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = CFG->GetInt(m_CFGKeyPrefix + "auth_war3_version", m_AuthWar3Version);
+  m_AuthWar3Version        = CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
   m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
   m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
   m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);
@@ -198,7 +198,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = CFG->GetInt(m_CFGKeyPrefix + "auth_war3_version", m_AuthWar3Version);
+  m_AuthWar3Version        = CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
   m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
   m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
   m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);

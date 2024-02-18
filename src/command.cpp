@@ -1779,7 +1779,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (Packets > 10000)
         Packets = 10000;
 
-      m_TargetGame->m_SyncLimit = static_cast<float>(Packets);
+      m_TargetGame->m_SyncLimit = Packets;
 
       SendAll("Sync limit updated: " + to_string(m_TargetGame->m_SyncLimit) + " packets.");
       break;
@@ -1826,7 +1826,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool IsMapAvailable = !m_TargetGame->m_Map->GetMapData()->empty() && m_TargetGame->m_Map->GetValidLinkedMap();
-      if (m_Aura->m_Config->m_AllowUploads == 0 || !IsMapAvailable) {
+      if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable) {
         if (m_TargetGame->m_Map->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
@@ -3646,9 +3646,9 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("maptransfers"):
     {
       if (Payload.empty()) {
-        if (m_Aura->m_Config->m_AllowUploads == 0) {
+        if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
           SendReply("Map transfers are disabled");
-        } else if (m_Aura->m_Config->m_AllowUploads == 1) {
+        } else if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
           SendReply("Map transfers are enabled");
         } else {
           SendReply("Map transfers are set to manual");
@@ -3672,15 +3672,15 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (TargetValue.value() != 0 && TargetValue.value() != 1 && TargetValue.value() != 2) {
+      if (TargetValue.value() != MAP_TRANSFERS_NEVER && TargetValue.value() != MAP_TRANSFERS_AUTOMATIC && TargetValue.value() != MAP_TRANSFERS_MANUAL) {
         ErrorReply("Usage: " + GetToken() + "maptransfers [MODE]: Mode is 0/1/2.");
         break;
       }
 
-      m_Aura->m_Config->m_AllowUploads = static_cast<uint8_t>(TargetValue.value());
-      if (m_Aura->m_Config->m_AllowUploads == 0) {
+      m_Aura->m_Config->m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
+      if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
         SendAll("Map transfers disabled.");
-      } else if (m_Aura->m_Config->m_AllowUploads == 1) {
+      } else if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
         SendAll("Map transfers enabled.");
       } else {
         SendAll("Map transfers set to manual.");

@@ -34,6 +34,10 @@
 #include <map>
 #include <unordered_set>
 
+#define MAP_TRANSFERS_NEVER 0
+#define MAP_TRANSFERS_AUTOMATIC 1
+#define MAP_TRANSFERS_MANUAL 2
+
 //
 // CBotConfig
 //
@@ -69,7 +73,7 @@ public:
   uint16_t                                m_UDPGameRangerPort;          // 
 
   bool                                    m_AllowDownloads;             // allow map downloads or not
-  uint8_t                                 m_AllowUploads;               // allow map downloads or not
+  uint8_t                                 m_AllowTransfers;             // map transfers mode
   uint32_t                                m_MaxDownloaders;             // maximum number of map downloaders at the same time
   uint32_t                                m_MaxUploadSize;              // maximum total map size that we may transfer to players in lobbies
   uint32_t                                m_MaxUploadSpeed;             // maximum total map upload speed in KB/sec
