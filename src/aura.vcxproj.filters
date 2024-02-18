@@ -18,7 +18,7 @@
     <ClCompile Include="bncsutilinterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bnet.cpp">
+    <ClCompile Include="realm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="bnetprotocol.cpp">
@@ -30,7 +30,7 @@
     <ClCompile Include="config_bot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_bnet.cpp">
+    <ClCompile Include="config_realm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="config_irc.cpp">
@@ -75,6 +75,9 @@
     <ClCompile Include="socket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="net.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="sqlite3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -92,7 +95,7 @@
     <ClInclude Include="bncsutilinterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bnet.h">
+    <ClInclude Include="realm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bnetprotocol.h">
@@ -104,7 +107,7 @@
     <ClInclude Include="config_bot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_bnet.h">
+    <ClInclude Include="config_realm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config_irc.h">
@@ -153,6 +156,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="socket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="sqlite3.h">

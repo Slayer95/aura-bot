@@ -90,78 +90,84 @@ bool CConfig::Read(const filesystem::path& file)
   return true;
 }
 
-bool CConfig::Exists(const string& key)
+bool CConfig::Exists(const string& key) const
 {
   return m_CFG.find(key) != end(m_CFG);
 }
 
-string CConfig::GetString(const string& key, const string& x)
+string CConfig::GetString(const string& key, const string& x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
-  return m_CFG[key];
+  return it->second;
 }
 
-string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x)
+string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
-  if (m_CFG[key].length() < minLength)
+  if (it->second.length() < minLength)
     return x;
 
-  if (m_CFG[key].length() > maxLength)
+  if (it->second.length() > maxLength)
     return x;
 
-  return m_CFG[key];
+  return it->second;
 }
 
-bool CConfig::GetBool(const string& key, bool x)
+bool CConfig::GetBool(const string& key, bool x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
-  if (m_CFG[key] == "0" || m_CFG[key] == "no")
+  if (it->second == "0" || it->second == "no")
     return false;
-  if (m_CFG[key] == "1" || m_CFG[key] == "yes")
+  if (it->second == "1" || it->second == "yes")
     return true;
   return x;
 }
 
-int32_t CConfig::GetInt(const string& key, int32_t x)
+int32_t CConfig::GetInt(const string& key, int32_t x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
   int32_t Value = x;
   try {
-    Value = atoi(m_CFG[key].c_str());
+    Value = atoi(it->second.c_str());
   } catch (...) {}
 
   return Value;
 }
 
-float CConfig::GetFloat(const string& key, float x)
+float CConfig::GetFloat(const string& key, float x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
   float Value = x;
   try {
-    Value = stof(m_CFG[key].c_str());
+    Value = stof(it->second.c_str());
   } catch (...) {}
 
   return Value;
 }
 
-vector<string> CConfig::GetList(const string& key, char separator, vector<string> x)
+vector<string> CConfig::GetList(const string& key, char separator, vector<string> x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
   vector<string> Output;
-  stringstream ss(m_CFG[key]);
+  stringstream ss(it->second);
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
@@ -172,13 +178,14 @@ vector<string> CConfig::GetList(const string& key, char separator, vector<string
   return Output;
 }
 
-set<string> CConfig::GetSet(const string& key, char separator, set<string> x)
+set<string> CConfig::GetSet(const string& key, char separator, set<string> x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
   set<string> Output;
-  stringstream ss(m_CFG[key]);
+  stringstream ss(it->second);
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
@@ -189,83 +196,94 @@ set<string> CConfig::GetSet(const string& key, char separator, set<string> x)
   return Output;
 }
 
-vector<uint8_t> CConfig::GetUint8Vector(const string& key, uint32_t count, const std::vector<uint8_t> &x)
+vector<uint8_t> CConfig::GetUint8Vector(const string& key, uint32_t count, const std::vector<uint8_t> &x) const
 {
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
-  vector<uint8_t> Output = ExtractNumbers(m_CFG[key], count);
+  vector<uint8_t> Output = ExtractNumbers(it->second, count);
   if (Output.size() != count)
     return x;
 
   return Output;
 }
 
-vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x) {
-  if (m_CFG.find(key) == end(m_CFG))
+vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x) const
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
-  vector<uint8_t> Output = ExtractIPv4(m_CFG[key]);
+  vector<uint8_t> Output = ExtractIPv4(it->second);
   if (Output.empty())
     return x;
 
   return Output;
 }
 
-filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x) {
-  if (m_CFG.find(key) == end(m_CFG))
+filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x) const
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x;
 
-  filesystem::path value = m_CFG[key];
+  filesystem::path value = it->second;
   if (value.is_absolute()) return value;
   return filesystem::path(GetExeDirectory() / value).lexically_normal();
 }
 
-filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x) {
-  if (m_CFG.find(key) == end(m_CFG))
+filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x) const
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return x.empty() ? GetExeDirectory() : x;
 
-  filesystem::path value = m_CFG[key];
+  filesystem::path value = it->second;
   if (value.is_absolute()) return value;
   return filesystem::path(GetExeDirectory() / value).lexically_normal();
 }
 
-optional<bool> CConfig::GetMaybeBool(const string& key)
+optional<bool> CConfig::GetMaybeBool(const string& key) const
 {
   optional<bool> result;
 
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return result;
 
-  if (m_CFG[key] == "0" || m_CFG[key] == "no")
+  if (it->second == "0" || it->second == "no")
     result = false;
-  if (m_CFG[key] == "1" || m_CFG[key] == "yes")
+  if (it->second == "1" || it->second == "yes")
     result = true;
 
   return result;
 }
 
-optional<uint32_t> CConfig::GetMaybeInt(const string& key)
+optional<uint32_t> CConfig::GetMaybeInt(const string& key) const
 {
   optional<uint32_t> result;
 
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return result;
 
   try {
-    result = atoi(m_CFG[key].c_str());
+    result = atoi(it->second.c_str());
   } catch (...) {}
 
   return result;
 }
 
-optional<filesystem::path> CConfig::GetMaybePath(const string &key) {
+optional<filesystem::path> CConfig::GetMaybePath(const string &key) const
+{
   optional<filesystem::path> result;
 
-  if (m_CFG.find(key) == end(m_CFG))
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
     return result;
 
-  result = m_CFG[key];
+  result = it->second;
   if (result.value().is_absolute()) {
     return result;
   }
@@ -303,7 +321,7 @@ void CConfig::SetUint8Vector(const string& key, const std::vector<std::uint8_t> 
   m_CFG[key] = ByteArrayToDecString(x);
 }
 
-std::vector<uint8_t> CConfig::Export()
+std::vector<uint8_t> CConfig::Export() const
 {
   std::ostringstream SS;
   for (auto it = m_CFG.begin(); it != m_CFG.end(); ++it) {

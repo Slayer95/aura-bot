@@ -46,6 +46,7 @@ CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ibncsutil/src/ -IStormLib/src/
 
 OBJS = src/fileutil.o \
 			 src/socket.o \
+			 src/net.o \
 			 src/csvparser.o \
        src/bncsutilinterface.o \
 			 src/bnetprotocol.o \
@@ -53,12 +54,12 @@ OBJS = src/fileutil.o \
 			 src/gpsprotocol.o \
 			 src/config.o \
 			 src/config_bot.o \
-			 src/config_bnet.o \
+			 src/config_realm.o \
 			 src/config_game.o 
 			 src/config_irc.o \
 			 src/crc32.o \
 			 src/sha1.o \
-			 src/bnet.o \
+			 src/realm.o \
 			 src/irc.o \
 			 src/map.o \
 			 src/gameplayer.o \

@@ -249,7 +249,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     uint32_t ErrorCode = (uint32_t)GetLastError();
     string ErrorCodeString = (
       ErrorCode == 2 ? "Map not found" : (
-      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot_mappath is not a valid directory" : (
+      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot_maps_path is not a valid directory" : (
       (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
       "Error code " + to_string(ErrorCode)
       )))

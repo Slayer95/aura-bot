@@ -258,8 +258,9 @@
     <ClCompile Include="csvparser.cpp" />
     <ClCompile Include="fileutil.cpp" />
     <ClCompile Include="socket.cpp" />
+    <ClCompile Include="net.cpp" />
     <ClCompile Include="config.cpp" />
-    <ClCompile Include="config_bnet.cpp" />
+    <ClCompile Include="config_realm.cpp" />
     <ClCompile Include="config_bot.cpp" />
     <ClCompile Include="config_game.cpp" />
     <ClCompile Include="config_irc.cpp" />
@@ -269,7 +270,7 @@
     <ClCompile Include="bncsutilinterface.cpp" />
     <ClCompile Include="crc32.cpp" />
     <ClCompile Include="sha1.cpp" />
-    <ClCompile Include="bnet.cpp" />
+    <ClCompile Include="realm.cpp" />
     <ClCompile Include="irc.cpp" />
     <ClCompile Include="map.cpp" />
     <ClCompile Include="gameplayer.cpp" />
@@ -287,8 +288,9 @@
     <ClInclude Include="csvparser.h" />
     <ClInclude Include="fileutil.h" />
     <ClInclude Include="socket.h" />
+    <ClInclude Include="net.h" />
     <ClInclude Include="config.h" />
-    <ClInclude Include="config_bnet.h" />
+    <ClInclude Include="config_realm.h" />
     <ClInclude Include="config_bot.h" />
     <ClInclude Include="config_game.h" />
     <ClInclude Include="config_irc.h" />
@@ -298,7 +300,7 @@
     <ClInclude Include="bncsutilinterface.h" />
     <ClInclude Include="crc32.h" />
     <ClInclude Include="sha1.h" />
-    <ClInclude Include="bnet.h" />
+    <ClInclude Include="realm.h" />
     <ClInclude Include="irc.h" />
     <ClInclude Include="map.h" />
     <ClInclude Include="gameplayer.h" />

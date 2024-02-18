@@ -1,5 +1,30 @@
-#ifndef AURA_CONFIG_BNET_H_
-#define AURA_CONFIG_BNET_H_
+/*
+
+  Copyright [2024] [Leonardo Julca]
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
+#ifndef AURA_CONFIG_REALM_H_
+#define AURA_CONFIG_REALM_H_
 
 #include "config.h"
 #include "config_bot.h"
@@ -10,10 +35,10 @@
 #include <unordered_set>
 
 //
-// CBNETConfig
+// CRealmConfig
 //
 
-class CBNETConfig
+class CRealmConfig
 {
 public:
   std::string m_HostName;                        // server address to connect to
@@ -40,7 +65,7 @@ public:
 
   bool m_EnableTunnel;                           // enable to make peers from pvpgn servers connect to m_PublicHostAddress:m_PublicHostPort
   uint16_t m_PublicHostPort;                     // the port to broadcast in pvpgn servers
-  std::string m_PublicHostAddress;               // the address to broadcast in pvpgn servers
+  std::vector<uint8_t> m_PublicHostAddress;      // the address to broadcast in pvpgn servers
 
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
@@ -62,9 +87,9 @@ public:
   std::string m_CFGKeyPrefix;                    // 
 
 
-  CBNETConfig(CConfig* CFG, CBotConfig* nBotConfig);
-  CBNETConfig(CConfig* CFG, CBNETConfig* nRootConfig, uint8_t nServerIndex);
-  ~CBNETConfig();
+  CRealmConfig(CConfig* CFG, CBotConfig* nBotConfig);
+  CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);
+  ~CRealmConfig();
 };
 
 #endif

@@ -23,7 +23,7 @@
 #include "config_bot.h"
 #include "gameplayer.h"
 #include "aura.h"
-#include "bnet.h"
+#include "realm.h"
 #include "map.h"
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
@@ -242,7 +242,7 @@ string CGamePlayer::GetInternalIPString() const
   return to_string(m_InternalIP[0]) + "." + to_string(m_InternalIP[1]) + "." + to_string(m_InternalIP[2]) + "." + to_string(m_InternalIP[3]);
 }
 
-CBNET* CGamePlayer::GetRealm(bool mustVerify)
+CRealm* CGamePlayer::GetRealm(bool mustVerify)
 {
   if (m_JoinedRealmID < 0x10)
     return nullptr;
@@ -256,7 +256,7 @@ CBNET* CGamePlayer::GetRealm(bool mustVerify)
 
 string CGamePlayer::GetRealmDataBaseID(bool mustVerify)
 {
-  CBNET* Realm = GetRealm(mustVerify);
+  CRealm* Realm = GetRealm(mustVerify);
   if (Realm) return Realm->GetDataBaseID();
   return "@@LAN/VPN";
 }
@@ -269,7 +269,7 @@ bool CGamePlayer::Update(void* fd)
   // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
 
   if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_JoinedRealm.empty() && Time - m_JoinTime >= 4) {
-    CBNET* Realm = GetRealm(false);
+    CRealm* Realm = GetRealm(false);
     if (Realm) {
       if (m_Game->GetGameState() == GAME_PUBLIC || Realm->GetPvPGN())
         Realm->SendCommand("/whois " + m_Name);
@@ -437,7 +437,7 @@ bool CGamePlayer::Update(void* fd)
       }
       else if (Bytes[1] == CGPSProtocol::GPS_INIT)
       {
-        CBNET* MyRealm = GetRealm(false);
+        CRealm* MyRealm = GetRealm(false);
         if (MyRealm) {
           m_GProxyPort = MyRealm->GetTunnelEnabled() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
         } else if (m_JoinedRealmID == 0) {

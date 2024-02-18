@@ -140,8 +140,8 @@ CAuraDB::CAuraDB(CConfig* CFG)
   if (m_DB->Exec("CREATE TEMPORARY TABLE iptocountry ( ip1 INTEGER NOT NULL, ip2 INTEGER NOT NULL, country TEXT NOT NULL, PRIMARY KEY ( ip1, ip2 ) )") != SQLITE_OK)
     Print("[SQLITE3] error creating temporary iptocountry table - " + m_DB->GetError());
 
-  if (m_DB->Exec(R"(CREATE TEMPORARY TABLE rootadmins ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "" ))") != SQLITE_OK)
-    Print("[SQLITE3] error creating temporary rootadmins table - " + m_DB->GetError());
+  if (m_DB->Exec(R"(CREATE TEMPORARY TABLE root_admins ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "" ))") != SQLITE_OK)
+    Print("[SQLITE3] error creating temporary root_admins table - " + m_DB->GetError());
 }
 
 CAuraDB::~CAuraDB()
@@ -256,7 +256,7 @@ bool CAuraDB::RootAdminCheck(const string& server, string user)
   transform(begin(user), end(user), begin(user), ::tolower);
 
   if (!RootAdminCheckStmt)
-    m_DB->Prepare("SELECT * FROM rootadmins WHERE server=? AND name=?", &RootAdminCheckStmt);
+    m_DB->Prepare("SELECT * FROM root_admins WHERE server=? AND name=?", &RootAdminCheckStmt);
 
   if (RootAdminCheckStmt)
   {
@@ -286,7 +286,7 @@ bool CAuraDB::RootAdminCheck(string user)
   transform(begin(user), end(user), begin(user), ::tolower);
 
   sqlite3_stmt* Statement;
-  m_DB->Prepare("SELECT * FROM rootadmins WHERE name=?", reinterpret_cast<void**>(&Statement));
+  m_DB->Prepare("SELECT * FROM root_admins WHERE name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
   {
@@ -343,7 +343,7 @@ bool CAuraDB::RootAdminAdd(const string& server, string user)
   transform(begin(user), end(user), begin(user), ::tolower);
 
   sqlite3_stmt* Statement;
-  m_DB->Prepare("INSERT INTO rootadmins ( server, name ) VALUES ( ?, ? )", reinterpret_cast<void**>(&Statement));
+  m_DB->Prepare("INSERT INTO root_admins ( server, name ) VALUES ( ?, ? )", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
   {

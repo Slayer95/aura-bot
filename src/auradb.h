@@ -77,7 +77,7 @@ CREATE TEMPORARY TABLE iptocountry (
     PRIMARY KEY ( ip1, ip2 )
 )
 
-CREATE TEMPORARY TABLE rootadmins (
+CREATE TEMPORARY TABLE root_admins (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     server TEXT NOT NULL DEFAULT ""

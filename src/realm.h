@@ -22,7 +22,7 @@
 #define AURA_BNET_H_
 
 #include "includes.h"
-#include "config_bnet.h"
+#include "config_realm.h"
 
 #include <queue>
 #include <iostream>
@@ -38,7 +38,7 @@
 #define PACKET_TYPE_DEFAULT 0
 
 //
-// CBNET
+// CRealm
 //
 
 class CAura;
@@ -53,13 +53,13 @@ class CDBBan;
 class CIRC;
 class CMap;
 
-class CBNET
+class CRealm
 {
 public:
   CAura* m_Aura;
 
 private:
-  CBNETConfig*                     m_Config;
+  CRealmConfig*                     m_Config;
   CTCPClient*                      m_Socket;                                               // the connection to battle.net
   CBNETProtocol*                   m_Protocol;                                             // battle.net protocol
   CBNCSUtilInterface*              m_BNCSUtil;                                             // the interface to the bncsutil library (used for logging into battle.net)
@@ -96,9 +96,9 @@ private:
   friend class CCommandContext;
 
 public:
-  CBNET(CAura* nAura, CBNETConfig* nBNETConfig);
-  ~CBNET();
-  CBNET(CBNET&) = delete;
+  CRealm(CAura* nAura, CRealmConfig* nBNETConfig);
+  ~CRealm();
+  CRealm(CRealm&) = delete;
 
   inline bool          GetExiting() const { return m_Exiting; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
@@ -118,7 +118,7 @@ public:
   bool                 GetIsMirror() const;
   bool                 GetTunnelEnabled() const;
   uint16_t             GetPublicHostPort() const;
-  std::string          GetPublicHostAddress() const;
+  std::vector<uint8_t> GetPublicHostAddress() const;
   uint32_t             GetMaxUploadSize() const;
   bool                 GetIsFloodImmune() const;
   std::string          GetCommandToken() const;
@@ -161,7 +161,7 @@ public:
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
 
-  void SetConfig(CBNETConfig* CFG) {
+  void SetConfig(CRealmConfig* CFG) {
     delete m_Config;
     m_Config = CFG;
   };

@@ -18,13 +18,13 @@
 
  */
 
-#include "bnet.h"
+#include "realm.h"
 #include "command.h"
 #include "aura.h"
 #include "util.h"
 #include "fileutil.h"
 #include "config.h"
-#include "config_bnet.h"
+#include "config_realm.h"
 #include "socket.h"
 #include "auradb.h"
 #include "bncsutilinterface.h"
@@ -44,10 +44,10 @@
 using namespace std;
 
 //
-// CBNET
+// CRealm
 //
 
-CBNET::CBNET(CAura* nAura, CBNETConfig* nBNETConfig)
+CRealm::CRealm(CAura* nAura, CRealmConfig* nBNETConfig)
   : m_Aura(nAura),
     m_Config(nBNETConfig),
     m_Socket(new CTCPClient(nBNETConfig->m_HostName)),
@@ -76,15 +76,19 @@ CBNET::CBNET(CAura* nAura, CBNETConfig* nBNETConfig)
   m_ReconnectDelay = GetPvPGN() ? 90 : 240;
 }
 
-CBNET::~CBNET()
+CRealm::~CRealm()
 {
   delete m_Config;
   delete m_Socket;
   delete m_Protocol;
   delete m_BNCSUtil;
+
+  if (m_Aura->m_SudoRealm == this) {
+    m_Aura->m_SudoRealm = nullptr;
+  }
 }
 
-uint32_t CBNET::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
   if (!m_Socket->HasError() && m_Socket->GetConnected())
   {
@@ -95,7 +99,7 @@ uint32_t CBNET::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return 0;
 }
 
-bool CBNET::Update(void* fd, void* send_fd)
+bool CRealm::Update(void* fd, void* send_fd)
 {
   const int64_t Ticks = GetTicks(), Time = GetTime();
 
@@ -159,7 +163,7 @@ bool CBNET::Update(void* fd, void* send_fd)
               AppendByteArrayFast(relayPacket, Data);
               AssignLength(relayPacket);
               //Print("[BNET: " + m_Config->m_UniqueName + "] sending game list to " + m_Aura->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
-              m_Aura->m_UDPSocket->SendTo(m_Aura->m_Config->m_UDPForwardAddress, m_Aura->m_Config->m_UDPForwardPort, relayPacket);
+              m_Aura->m_Net->m_UDPSocket->SendTo(m_Aura->m_Config->m_UDPForwardAddress, m_Aura->m_Config->m_UDPForwardPort, relayPacket);
             }
 
             break;
@@ -224,15 +228,15 @@ bool CBNET::Update(void* fd, void* send_fd)
               QueuePacket(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), m_BNCSUtil->GetEXEVersion(), m_BNCSUtil->GetEXEVersionHash(), m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), m_BNCSUtil->GetEXEInfo(), "Aura"), PACKET_TYPE_PRIORITY);
               //QueuePacket(m_Protocol->SEND_SID_NULL());
               if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsMirror() && !m_Config->m_IsMirror) {
-                QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(m_Aura->m_CurrentLobby->GetPublicHostAddress(), m_Aura->m_CurrentLobby->GetPublicHostPort()), PACKET_TYPE_PRIORITY);
+                QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(IPv4ToString(m_Aura->m_CurrentLobby->GetPublicHostAddress()), m_Aura->m_CurrentLobby->GetPublicHostPort()), PACKET_TYPE_PRIORITY);
               } else if (m_Config->m_EnableTunnel) {
-                QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(m_Config->m_PublicHostAddress, m_Config->m_PublicHostPort), PACKET_TYPE_PRIORITY);
+                QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(IPv4ToString(m_Config->m_PublicHostAddress), m_Config->m_PublicHostPort), PACKET_TYPE_PRIORITY);
               }
             } else {
               if (m_Config->m_AuthPasswordHashType == "pvpgn") {
-                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured bot_war3path");
+                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured game_install_path");
               } else {
-                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured bot_war3path, or bnet_" + to_string(m_ServerIndex) + "_cdkeyroc, or bnet_" + to_string(m_ServerIndex) + "_cdkeytft");
+                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured game_install_path, or realm_" + to_string(m_ServerIndex) + "_cdkeyroc, or realm_" + to_string(m_ServerIndex) + "_cdkeytft");
               }
               Print("[BNET: " + m_Config->m_UniqueName + "] bncsutil key hash failed, disconnecting...");
               m_Socket->Disconnect();
@@ -264,8 +268,8 @@ bool CBNET::Update(void* fd, void* send_fd)
 
                 case CBNETProtocol::KR_OLD_GAME_VERSION:
                 case CBNETProtocol::KR_INVALID_VERSION:
-                  Print("[BNET: " + m_Config->m_UniqueName + "] config error - rejected bnet_" + to_string(m_ServerIndex) + "_auth_exeversion = " + ByteArrayToDecString(m_Config->m_AuthExeVersion));
-                  Print("[BNET: " + m_Config->m_UniqueName + "] config error - rejected bnet_" + to_string(m_ServerIndex) + "_auth_exeversionhash = " + ByteArrayToDecString(m_Config->m_AuthExeVersionHash));
+                  Print("[BNET: " + m_Config->m_UniqueName + "] config error - rejected realm_" + to_string(m_ServerIndex) + "_auth_exe_version = " + ByteArrayToDecString(m_Config->m_AuthExeVersion));
+                  Print("[BNET: " + m_Config->m_UniqueName + "] config error - rejected realm_" + to_string(m_ServerIndex) + "_auth_exe_version_hash = " + ByteArrayToDecString(m_Config->m_AuthExeVersionHash));
                   Print("[BNET: " + m_Config->m_UniqueName + "] logon failed - version not supported, or version hash invalid, disconnecting...");
                   break;
 
@@ -495,7 +499,7 @@ bool CBNET::Update(void* fd, void* send_fd)
   return m_Exiting;
 }
 
-void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
+void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 {
   CBNETProtocol::IncomingChatEvent Event    = chatEvent->GetChatEvent();
   bool                             Whisper  = (Event == CBNETProtocol::EID_WHISPER);
@@ -524,7 +528,7 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
   }
 
   if (Event == CBNETProtocol::EID_TALK) {
-    // Bots on servers with bnet_x_mirror = yes ignore commands at channels (but not whispers).
+    // Bots on servers with realm_x_mirror = yes ignore commands at channels (but not whispers).
     if (m_Config->m_IsMirror)
       return;
   }
@@ -641,87 +645,87 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
   }
 }
 
-bool CBNET::GetEnabled() const
+bool CRealm::GetEnabled() const
 {
   return m_Config->m_Enabled;
 }
 
-bool CBNET::GetPvPGN() const
+bool CRealm::GetPvPGN() const
 {
   return m_Config->m_AuthPasswordHashType == "pvpgn";
 }
 
-string CBNET::GetServer() const
+string CRealm::GetServer() const
 {
   return m_Config->m_HostName;
 }
 
-string CBNET::GetInputID() const
+string CRealm::GetInputID() const
 {
   return m_Config->m_InputID;
 }
 
-string CBNET::GetUniqueDisplayName() const
+string CRealm::GetUniqueDisplayName() const
 {
   return m_Config->m_UniqueName;
 }
 
-string CBNET::GetCanonicalDisplayName() const
+string CRealm::GetCanonicalDisplayName() const
 {
   return m_Config->m_CanonicalName;
 }
 
-string CBNET::GetDataBaseID() const
+string CRealm::GetDataBaseID() const
 {
   return m_Config->m_DataBaseID;
 }
 
-string CBNET::GetLogPrefix() const
+string CRealm::GetLogPrefix() const
 {
   return "[BNET: " + m_Config->m_UniqueName + "] ";
 }
 
-uint8_t CBNET::GetHostCounterID() const
+uint8_t CRealm::GetHostCounterID() const
 {
   return m_ServerID;
 }
 
-string CBNET::GetLoginName() const
+string CRealm::GetLoginName() const
 {
   return m_Config->m_UserName;
 }
 
-bool CBNET::GetIsMirror() const
+bool CRealm::GetIsMirror() const
 {
   return m_Config->m_IsMirror;
 }
 
-bool CBNET::GetTunnelEnabled() const
+bool CRealm::GetTunnelEnabled() const
 {
   return m_Config->m_EnableTunnel;
 }
 
-string CBNET::GetPublicHostAddress() const
+vector<uint8_t> CRealm::GetPublicHostAddress() const
 {
   return m_Config->m_PublicHostAddress;
 }
 
-uint16_t CBNET::GetPublicHostPort() const
+uint16_t CRealm::GetPublicHostPort() const
 {
   return m_Config->m_PublicHostPort;
 }
 
-uint32_t CBNET::GetMaxUploadSize() const
+uint32_t CRealm::GetMaxUploadSize() const
 {
   return m_Config->m_MaxUploadSize;
 }
 
-bool CBNET::GetIsFloodImmune() const
+bool CRealm::GetIsFloodImmune() const
 {
   return m_Config->m_FloodImmune;
 }
 
-string CBNET::GetPrefixedGameName(const string& gameName) const
+string CRealm::GetPrefixedGameName(const string& gameName) const
 {
   if (gameName.length() + m_Config->m_GamePrefix.length() < 31) {
     // Check again just in case m_GamePrefix was reloaded and became prohibitively large.
@@ -731,34 +735,34 @@ string CBNET::GetPrefixedGameName(const string& gameName) const
   }
 }
 
-bool CBNET::GetAnnounceHostToChat() const
+bool CRealm::GetAnnounceHostToChat() const
 {
   return m_Config->m_AnnounceHostToChat;
 }
 
-string CBNET::GetCommandToken() const
+string CRealm::GetCommandToken() const
 {
   return std::string(1, m_Config->m_CommandTrigger);
 }
 
-void CBNET::SendGetFriendsList()
+void CRealm::SendGetFriendsList()
 {
   if (m_LoggedIn)
     QueuePacket(m_Protocol->SEND_SID_FRIENDLIST());
 }
 
-void CBNET::SendGetClanList()
+void CRealm::SendGetClanList()
 {
   if (m_LoggedIn)
     QueuePacket(m_Protocol->SEND_SID_CLANMEMBERLIST());
 }
 
-void CBNET::JoinFirstChannel()
+void CRealm::JoinFirstChannel()
 {
   m_Socket->PutBytes(m_Protocol->SEND_SID_JOINCHANNEL(m_FirstChannel));
 }
 
-void CBNET::QueuePacket(const vector<uint8_t> message, uint8_t mode)
+void CRealm::QueuePacket(const vector<uint8_t> message, uint8_t mode)
 {
   if (mode == PACKET_TYPE_GAME_REFRESH) {
     if (!m_Aura->m_CurrentLobby) return; // Should never happen.
@@ -768,18 +772,18 @@ void CBNET::QueuePacket(const vector<uint8_t> message, uint8_t mode)
   }
 }
 
-void CBNET::QueuePacket(const vector<uint8_t> message)
+void CRealm::QueuePacket(const vector<uint8_t> message)
 {
   QueuePacket(message, PACKET_TYPE_DEFAULT);
 }
 
-void CBNET::QueueEnterChat()
+void CRealm::QueueEnterChat()
 {
   if (m_LoggedIn)
     QueuePacket(m_Protocol->SEND_SID_ENTERCHAT());
 }
 
-void CBNET::SendCommand(const string& message)
+void CRealm::SendCommand(const string& message)
 {
   if (message.empty() || !m_LoggedIn)
     return;
@@ -796,7 +800,7 @@ void CBNET::SendCommand(const string& message)
   m_HadChatActivity = true;
 }
 
-void CBNET::SendChatChannel(const string& message)
+void CRealm::SendChatChannel(const string& message)
 {
   if (message.empty() || !m_LoggedIn)
     return;
@@ -813,12 +817,12 @@ void CBNET::SendChatChannel(const string& message)
   m_HadChatActivity = true;
 }
 
-void CBNET::SendWhisper(const string& message, const string& user)
+void CRealm::SendWhisper(const string& message, const string& user)
 {
   SendCommand("/w " + user + " " + message); 
 }
 
-void CBNET::SendChatOrWhisper(const string& message, const string& user, bool whisper)
+void CRealm::SendChatOrWhisper(const string& message, const string& user, bool whisper)
 {
   if (whisper) {
     SendWhisper(message, user);
@@ -827,7 +831,7 @@ void CBNET::SendChatOrWhisper(const string& message, const string& user, bool wh
   }
 }
 
-void CBNET::TrySendChat(const string& message, const string& user, bool isPrivate, ostream* errorLog)
+void CRealm::TrySendChat(const string& message, const string& user, bool isPrivate, ostream* errorLog)
 {
   // don't respond to non admins if there are more than 3 messages already in the queue
   // this prevents malicious users from filling up the bot's chat queue and crippling the bot
@@ -848,7 +852,7 @@ void CBNET::TrySendChat(const string& message, const string& user, bool isPrivat
   }
 }
 
-void CBNET::QueueGameCreate(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
+void CRealm::QueueGameCreate(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
 {
   if (!m_LoggedIn || !map)
     return;
@@ -864,7 +868,7 @@ void CBNET::QueueGameCreate(uint8_t state, const string& gameName, CMap* map, ui
   QueueGameRefresh(state, gameName, map, hostCounter, true);
 }
 
-void CBNET::QueueGameMirror(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
+void CRealm::QueueGameMirror(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
 {
   if (!m_LoggedIn || !map)
     return;
@@ -876,7 +880,7 @@ void CBNET::QueueGameMirror(uint8_t state, const string& gameName, CMap* map, ui
   QueueGameRefresh(state, gameName, map, hostCounter, false);
 }
 
-void CBNET::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace)
+void CRealm::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace)
 {
   if (m_LoggedIn && map)
   {
@@ -906,13 +910,13 @@ void CBNET::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, u
   }
 }
 
-void CBNET::QueueGameUncreate()
+void CRealm::QueueGameUncreate()
 {
   if (m_LoggedIn)
     QueuePacket(m_Protocol->SEND_SID_STOPADV());
 }
 
-void CBNET::ResetConnection(bool Errored)
+void CRealm::ResetConnection(bool Errored)
 {
   if (Errored)
     Print("[BNET: " + m_Config->m_UniqueName + "] disconnected due to socket error");
@@ -926,7 +930,7 @@ void CBNET::ResetConnection(bool Errored)
   m_WaitingToConnect = true;
 }
 
-bool CBNET::GetIsAdmin(string name)
+bool CRealm::GetIsAdmin(string name)
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
@@ -936,7 +940,7 @@ bool CBNET::GetIsAdmin(string name)
   return false;
 }
 
-bool CBNET::GetIsRootAdmin(string name)
+bool CRealm::GetIsRootAdmin(string name)
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
@@ -946,13 +950,13 @@ bool CBNET::GetIsRootAdmin(string name)
   return false;
 }
 
-bool CBNET::GetIsSudoer(string name)
+bool CRealm::GetIsSudoer(string name)
 {
   // Case-sensitive
   return m_Config->m_SudoUsers.find(name) != m_Config->m_SudoUsers.end();
 }
 
-CDBBan* CBNET::IsBannedName(string name)
+CDBBan* CRealm::IsBannedName(string name)
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
@@ -962,13 +966,13 @@ CDBBan* CBNET::IsBannedName(string name)
   return nullptr;
 }
 
-void CBNET::HoldFriends(CGame* game)
+void CRealm::HoldFriends(CGame* game)
 {
   for (auto& friend_ : m_Friends)
     game->AddToReserved(friend_);
 }
 
-void CBNET::HoldClan(CGame* game)
+void CRealm::HoldClan(CGame* game)
 {
   for (auto& clanmate : m_Clan)
     game->AddToReserved(clanmate);

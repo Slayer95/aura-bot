@@ -25,7 +25,7 @@
 #include "socket.h"
 #include "util.h"
 #include "bnetprotocol.h"
-#include "bnet.h"
+#include "realm.h"
 
 #include <utility>
 #include <algorithm>
@@ -57,6 +57,10 @@ CIRC::~CIRC()
 {
   delete m_Config;
   delete m_Socket;
+
+  if (m_Aura->m_SudoIRC == this) {
+    m_Aura->m_SudoIRC = nullptr;
+  }
 }
 
 uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds)

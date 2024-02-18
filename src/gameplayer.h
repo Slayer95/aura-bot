@@ -25,12 +25,13 @@
 
 #include <queue>
 #include <string>
+#include <optional>
 
 class CTCPSocket;
 class CGameProtocol;
 class CGame;
 class CIncomingJoinRequest;
-class CBNET;
+class CRealm;
 class CAura;
 
 //
@@ -154,7 +155,7 @@ public:
   inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }
   inline std::string           GetLeftReason() const { return m_LeftReason; }
   inline uint32_t              GetLeftCode() const { return m_LeftCode; }
-  CBNET*                       GetRealm(bool mustVerify);
+  CRealm*                       GetRealm(bool mustVerify);
   std::string                  GetRealmDataBaseID(bool mustVerify);
   inline uint8_t               GetRealmID() const { return m_JoinedRealmID; }
   inline std::string           GetRealmHostName() const { return m_JoinedRealm; }

@@ -43,23 +43,23 @@ public:
   ~CConfig();
 
   bool Read(const std::filesystem::path& file);
-  bool Exists(const std::string& key);
+  bool Exists(const std::string& key) const;
 
-  std::string GetString(const std::string& key, const std::string& x);
-  std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
-  bool GetBool(const std::string& key, bool x);
-  int32_t GetInt(const std::string& key, int32_t x);
-  float GetFloat(const std::string& key, float x);
-  std::vector<std::string> GetList(const std::string& key, char separator, std::vector<std::string> x);
-  std::set<std::string> GetSet(const std::string& key, char separator, std::set<std::string> x);
-  std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
-  std::vector<uint8_t> GetIPv4(const std::string& key, const std::vector<uint8_t>& x);
-  std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
-  std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);
+  std::string GetString(const std::string& key, const std::string& x) const;
+  std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x) const;
+  bool GetBool(const std::string& key, bool x) const;
+  int32_t GetInt(const std::string& key, int32_t x) const;
+  float GetFloat(const std::string& key, float x) const;
+  std::vector<std::string> GetList(const std::string& key, char separator, std::vector<std::string> x) const;
+  std::set<std::string> GetSet(const std::string& key, char separator, std::set<std::string> x) const;
+  std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x) const;
+  std::vector<uint8_t> GetIPv4(const std::string& key, const std::vector<uint8_t>& x) const;
+  std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x) const;
+  std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x) const;
 
-  std::optional<bool> GetMaybeBool(const std::string& key);
-  std::optional<uint32_t> GetMaybeInt(const std::string& key);
-  std::optional<std::filesystem::path> GetMaybePath(const std::string &key);
+  std::optional<bool> GetMaybeBool(const std::string& key) const;
+  std::optional<uint32_t> GetMaybeInt(const std::string& key) const;
+  std::optional<std::filesystem::path> GetMaybePath(const std::string &key) const;
 
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);
@@ -67,7 +67,7 @@ public:
   void SetInt(const std::string& key, const int& x);
   void SetFloat(const std::string& key, const float& x);
   void SetUint8Vector(const std::string& key, const std::vector<std::uint8_t>& x);
-  std::vector<uint8_t> Export();
+  std::vector<uint8_t> Export() const;
 
   static std::string ReadString(const std::filesystem::path& file, const std::string& key);
 };

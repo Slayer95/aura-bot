@@ -1,9 +1,34 @@
+/*
+
+  Copyright [2024] [Leonardo Julca]
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
 #ifndef AURA_COMMAND_H_
 #define AURA_COMMAND_H_
 
 #include "aura.h"
 #include "auradb.h"
-#include "bnet.h"
+#include "realm.h"
 #include "game.h"
 #include "gameplayer.h"
 #include "irc.h"
@@ -50,8 +75,8 @@ protected:
   CGamePlayer*                  m_Player;
 
   std::string                   m_HostName;
-  CBNET*                        m_SourceRealm;
-  CBNET*                        m_TargetRealm;
+  CRealm*                        m_SourceRealm;
+  CRealm*                        m_TargetRealm;
 
   CIRC*                         m_IRC;
   std::string                   m_ChannelName;
@@ -63,10 +88,10 @@ protected:
 
 public:
   CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CGame* targetGame, CBNET* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
   CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::ostream* outputStream, char nToken);
   CCommandContext(CAura* nAura, CGame* targetGame, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CBNET* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
   CCommandContext(CAura* nAura, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::ostream* outputStream, char nToken);
   CCommandContext(CAura* nAura, std::ostream* outputStream, char nToken);
 
@@ -91,7 +116,7 @@ public:
   void ErrorAll(const std::string& message);
   CGamePlayer* GetTargetPlayer(const std::string& target);
   CGamePlayer* GetTargetPlayerOrSelf(const std::string& target);
-  CBNET* GetTargetRealmOrCurrent(const std::string& target);
+  CRealm* GetTargetRealmOrCurrent(const std::string& target);
   CGame* GetTargetGame(const std::string& target);
   void UseImplicitHostedGame();
   void Run(const std::string& command, const std::string& payload);

@@ -1,3 +1,28 @@
+/*
+
+  Copyright [2024] [Leonardo Julca]
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
 #ifndef AURA_CONFIG_BOT_H_
 #define AURA_CONFIG_BOT_
 
@@ -17,20 +42,20 @@ using namespace std;
 CBotConfig::CBotConfig(CConfig* CFG)
 {
   m_Enabled                = CFG->GetBool("bot_enabled", true);
-  m_ProxyReconnectEnabled  = CFG->GetBool("bot_enablegproxy", true);
-  m_War3Version            = CFG->GetMaybeInt("bot_war3version"/*, 27*/);
-  m_Warcraft3Path          = CFG->GetMaybePath("bot_war3path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
-  m_MapCFGPath             = CFG->GetPath("bot_mapcfgpath", filesystem::path());
-  m_MapPath                = CFG->GetPath("bot_mappath", filesystem::path());
+  m_ProxyReconnectEnabled  = CFG->GetBool("net_enable_gproxy", true);
+  m_War3Version            = CFG->GetMaybeInt("game_version"/*, 27*/);
+  m_Warcraft3Path          = CFG->GetMaybePath("game_install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
+  m_MapCFGPath             = CFG->GetPath("bot_map_configs_path", filesystem::path());
+  m_MapPath                = CFG->GetPath("bot_maps_path", filesystem::path());
 
-  m_BindAddress            = CFG->GetString("bot_bindaddress", string());
-  m_MinHostPort            = CFG->GetInt("bot_minhostport", CFG->GetInt("bot_hostport", 6112));
+  m_BindAddress            = CFG->GetString("net_bind_address", string());
+  m_MinHostPort            = CFG->GetInt("bot_minhostport", CFG->GetInt("net_host_port", 6112));
   m_MaxHostPort            = CFG->GetInt("bot_maxhostport", m_MinHostPort);
   m_EnableLANBalancer      = CFG->GetBool("bot_enablelanbalancer", false);
-  m_LANHostPort            = CFG->GetInt("bot_lanhostport", 6112);
+  m_LANHostPort            = CFG->GetInt("net_net_udp_lan_host_port", 6112);
 
   /* Make absolute, lexically normal */
-  m_GreetingPath           = CFG->GetPath("bot_greetingpath", filesystem::path());
+  m_GreetingPath           = CFG->GetPath("bot_greeting_path", filesystem::path());
   if (!m_GreetingPath.empty()) {
     ifstream in;
     in.open(m_GreetingPath.string(), ios::in);
@@ -49,29 +74,29 @@ CBotConfig::CBotConfig(CConfig* CFG)
     }
   }
 
-  m_UDPInfoStrictMode      = CFG->GetBool("udp_infostrictmode", true);
-  m_UDPForwardTraffic      = CFG->GetBool("udp_redirenabled", false);
-  m_UDPForwardAddress      = CFG->GetString("udp_rediraddress", string());
-  m_UDPForwardPort         = CFG->GetInt("udp_redirport", 6110);
-  m_UDPForwardGameLists    = CFG->GetBool("udp_redirgamelists", false);
-  m_UDPBlockedIPs          = CFG->GetSet("udp_blocklist", ',', {});
-  m_UDPSupportGameRanger   = CFG->GetBool("udp_enablegameranger", false);
-  m_UDPGameRangerAddress   = CFG->GetIPv4("udp_gamerangeraddress", {255, 255, 255, 255});
-  m_UDPGameRangerPort      = CFG->GetInt("udp_gamerangerport_but_its_hardcoded", 6112);
+  m_UDPInfoStrictMode      = CFG->GetBool("net_udp_info_strict_mode", true);
+  m_UDPForwardTraffic      = CFG->GetBool("net_udp_enable_redirect", false);
+  m_UDPForwardAddress      = CFG->GetString("net_udp_rediraddress", string());
+  m_UDPForwardPort         = CFG->GetInt("net_udp_redirect_port", 6110);
+  m_UDPForwardGameLists    = CFG->GetBool("net_udp_redirect_game_lists", false);
+  m_UDPBlockedIPs          = CFG->GetSet("net_udp_block_list", ',', {});
+  m_UDPSupportGameRanger   = CFG->GetBool("net_udp_enable_gameranger", false);
+  m_UDPGameRangerAddress   = CFG->GetIPv4("net_udp_gameranger_ip", {255, 255, 255, 255});
+  m_UDPGameRangerPort      = CFG->GetInt("net_udp_gameranger_port_but_its_hardcoded", 6112);
 
-  m_AllowDownloads         = CFG->GetBool("bot_allowdownloads", false);
-  m_AllowUploads           = CFG->GetInt("bot_allowuploads", 0); // no|yes|conditional
-  m_MaxDownloaders         = CFG->GetInt("bot_maxdownloaders", 3);
-  m_MaxUploadSize          = CFG->GetInt("bot_maxuploadsize", 8192);
-  m_MaxUploadSpeed         = CFG->GetInt("bot_maxuploadspeed", 1024);
+  m_AllowDownloads         = CFG->GetBool("bot_allow_downloads", false);
+  m_AllowUploads           = CFG->GetInt("bot_allow_map_transfers", 0); // no|yes|conditional
+  m_MaxDownloaders         = CFG->GetInt("bot_max_players_downloading", 3);
+  m_MaxUploadSize          = CFG->GetInt("bot_max_map_transfer_size", 8192);
+  m_MaxUploadSpeed         = CFG->GetInt("bot_max_map_transfer_speed", 1024);
   m_MaxParallelMapPackets  = CFG->GetInt("bot_maxparallelmappackets", 1000);
-  m_RTTPings               = CFG->GetBool("bot_rttpings", false);
-  m_HasBufferBloat         = CFG->GetBool("bot_hasbufferbloat", false);
-  m_ReconnectWaitTime      = CFG->GetInt("bot_reconnectwaittime", 3);
+  m_RTTPings               = CFG->GetBool("bot_rtt_pings", false);
+  m_HasBufferBloat         = CFG->GetBool("bot_has_buffer_bloat", false);
+  m_ReconnectWaitTime      = CFG->GetInt("net_player_reconnect_wait", 3);
 
-  m_MinHostCounter         = CFG->GetInt("bot_firstgameid", 100);
-  m_MaxGames               = CFG->GetInt("bot_maxgames", 20);
-  m_MaxSavedMapSize        = CFG->GetInt("bot_maxpersistentsize", 0xFFFFFFFF);
+  m_MinHostCounter         = CFG->GetInt("bot_first_game_id", 100);
+  m_MaxGames               = CFG->GetInt("bot_max_games", 20);
+  m_MaxSavedMapSize        = CFG->GetInt("bot_max_persistent_size", 0xFFFFFFFF);
 
   m_StrictPaths            = CFG->GetBool("bot_mapstrictpaths", false);
   m_EnableCFGCache         = CFG->GetBool("bot_mapenablecache", true);

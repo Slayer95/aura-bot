@@ -62,7 +62,7 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player,
 }
 
 /* Command received from BNET but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CBNET* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(fromName),
     m_FromWhisper(isWhisper),
@@ -137,7 +137,7 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutp
 }
 
 /* BNET command */
-CCommandContext::CCommandContext(CAura* nAura, CBNET* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
     m_FromName(fromName),
     m_FromWhisper(isWhisper),
@@ -474,7 +474,7 @@ CGamePlayer* CCommandContext::GetTargetPlayerOrSelf(const string& target)
   return TargetPlayer;
 }
 
-CBNET* CCommandContext::GetTargetRealmOrCurrent(const string& target)
+CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
 {
   if (target.empty()) {
     return m_SourceRealm;
@@ -605,7 +605,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
-      CBNET* targetPlayerRealm = targetPlayer->GetRealm(true);
+      CRealm* targetPlayerRealm = targetPlayer->GetRealm(true);
       bool IsRealmVerified = targetPlayerRealm != nullptr;
       bool IsOwner = m_TargetGame->MatchOwnerName(targetPlayer->GetName()) && m_TargetGame->HasOwnerInGame();
       bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsRootAdmin(m_FromName);
@@ -863,7 +863,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool CanInviteGlobally = 0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE));
-      for (auto& bnet : m_Aura->m_BNETs) {
+      for (auto& bnet : m_Aura->m_Realms) {
         if (bnet->GetIsMirror())
           continue;
 
@@ -1032,7 +1032,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("No ban candidates stored.");
         break;
       }
-      if (m_Aura->m_BNETs.empty()) {
+      if (m_Aura->m_Realms.empty()) {
         ErrorReply("No realms joined.");
         break;
       }
@@ -1428,7 +1428,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
         m_TargetGame->m_RefreshError = false;
 
-        for (auto& bnet : m_Aura->m_BNETs) {
+        for (auto& bnet : m_Aura->m_Realms) {
           if (m_TargetGame->m_IsMirror && bnet->GetIsMirror())
             continue;
 
@@ -2000,12 +2000,74 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
+    // !CHECKNETWORK
+    //
+    case HashCode("checknetwork"):
+    {
+      UseImplicitHostedGame();
+      if (!m_TargetGame) {
+        ErrorReply("Use in a hosted game.");
+        break;
+      }
+
+      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Not allowed to check network status.");
+        break;
+      }
+      const bool TargetAllRealms = Payload == "*";
+      CRealm* targetRealm = nullptr;
+      if (!TargetAllRealms) {
+        targetRealm = GetTargetRealmOrCurrent(Payload);
+        if (!targetRealm) {
+          ErrorReply("Usage: " + GetToken() + "checknetwork *");
+          ErrorReply("Usage: " + GetToken() + "checknetwork [REALM]");
+          break;
+        }
+      }
+
+      vector<pair<string, vector<uint8_t>>> testServers;
+      if (TargetAllRealms) {
+        uint16_t port = m_TargetGame->GetHostPort();
+        vector<uint8_t> loopbackHost = {127, 0, 0, 1, static_cast<uint8_t>(port >> 8), static_cast<uint8_t>(port)};
+        testServers.push_back(make_pair(string("[Loopback]"), loopbackHost));
+      }
+      for (auto& realm : m_Aura->m_Realms) {
+        if (!TargetAllRealms && realm != targetRealm) {
+          continue;
+        }
+        if (!realm->GetLoggedIn()) {
+          SendReply("[Network] Not connected to " + realm->GetUniqueDisplayName(), CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+          continue;
+        }
+        vector<uint8_t> ip;
+        uint16_t port;
+        string TestName = realm->GetUniqueDisplayName();
+        if (realm->GetTunnelEnabled()) {
+          ip = realm->GetPublicHostAddress();
+          port = realm->GetPublicHostPort();
+          TestName += " [Tunnel]";
+        } else {
+          ip = m_Aura->m_Net->GetPublicIP();
+          port = m_TargetGame->GetHostPort();
+          TestName += " [Direct]";
+        }
+
+        vector<uint8_t> host = ip;
+        host.push_back(static_cast<uint8_t>(port >> 8));
+        host.push_back(static_cast<uint8_t>(port));
+        testServers.push_back(make_pair(TestName, host));
+      }
+      m_Aura->m_Net->StartHealthCheck(testServers);
+      break;
+    }
+
+    //
     // !CHECKBAN
     //
 
     case HashCode("checkban"):
     {
-      if (m_Aura->m_BNETs.empty())
+      if (m_Aura->m_Realms.empty())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2019,7 +2081,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       vector<string> CheckResult;
-      for (auto& bnet : m_Aura->m_BNETs) {
+      for (auto& bnet : m_Aura->m_Realms) {
         if (bnet->GetIsMirror())
           continue;
 
@@ -2048,7 +2110,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Only root admins may list bans.");
         break;
       }
-      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "listbans [REALM]");
         break;
@@ -2074,7 +2136,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Not allowed to ban players.");
         break;
       }
-      if (m_Aura->m_BNETs.empty()) {
+      if (m_Aura->m_Realms.empty()) {
         ErrorReply("No realms joined.");
         break;
       }
@@ -2185,7 +2247,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Not allowed to ban players.");
         break;
       }
-      if (m_Aura->m_BNETs.empty()) {
+      if (m_Aura->m_Realms.empty()) {
         ErrorReply("No realms joined.");
         break;
       }
@@ -2235,7 +2297,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       string message = "Status: ";
 
-      for (const auto& bnet : m_Aura->m_BNETs)
+      for (const auto& bnet : m_Aura->m_Realms)
         message += "[" + bnet->GetServer() + "]" + (bnet->GetLoggedIn() ? " - online " : " - offline ");
 
       if (m_Aura->m_IRC)
@@ -2284,7 +2346,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (TargetValue) {
         m_TargetGame->LANBroadcastGameCreate();
         m_TargetGame->LANBroadcastGameRefresh();
-        if (!m_Aura->m_UDPServerEnabled)
+        if (!m_Aura->m_Net->m_UDPServerEnabled)
           m_TargetGame->LANBroadcastGameInfo();
       }
       break;
@@ -2360,7 +2422,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("say"):
     {
-      if (m_Aura->m_BNETs.empty())
+      if (m_Aura->m_Realms.empty())
         break;
 
       if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2395,7 +2457,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       const bool ToAllRealms = RealmId.length() == 1 && RealmId[0] == '*';
       bool Success = false;
 
-      for (auto& bnet : m_Aura->m_BNETs) {
+      for (auto& bnet : m_Aura->m_Realms) {
         if (bnet->GetIsMirror())
           continue;
         if (ToAllRealms || bnet->GetInputID() == RealmId) {
@@ -2423,7 +2485,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     {
       UseImplicitHostedGame();
 
-      if (m_Aura->m_BNETs.empty())
+      if (m_Aura->m_Realms.empty())
         break;
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
@@ -2440,7 +2502,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool ToAllRealms = Payload == "*";
-      CBNET* targetRealm = nullptr;
+      CRealm* targetRealm = nullptr;
       if (ToAllRealms) {
         if (0 != (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
           ErrorReply("Announcing on all realms requires sudo permissions."); // But not really
@@ -2455,7 +2517,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (ToAllRealms) {
-        for (auto& bnet : m_Aura->m_BNETs) {
+        for (auto& bnet : m_Aura->m_Realms) {
           string AnnounceText = (
             string("[1.") + to_string(m_Aura->m_GameVersion) + ".x] Hosting public game of " + m_TargetGame->GetMapFileName() +
           ". (Started by " + m_TargetGame->m_OwnerName + ": \"" + bnet->GetPrefixedGameName(m_TargetGame->m_GameName) + "\")"
@@ -3154,7 +3216,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       bool ToAllRealms = TargetRealm.empty() || TargetRealm.length() == 1 && TargetRealm[0] == '*';
 
       string Message = m_FromName + " at " + (m_HostName.empty() ? "LAN/VPN" : m_HostName) + " says to you: \"" + SubMessage + "\"";
-      for (auto& bnet : m_Aura->m_BNETs) {
+      for (auto& bnet : m_Aura->m_Realms) {
         if (bnet->GetIsMirror())
           continue;
         if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
@@ -3202,7 +3264,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       bool ToAllRealms = TargetRealm.empty() || TargetRealm.length() == 1 && TargetRealm[0] == '*';
       const string Message = "/whois " + Name;
 
-      for (auto& bnet : m_Aura->m_BNETs) {
+      for (auto& bnet : m_Aura->m_Realms) {
         if (bnet->GetIsMirror())
           continue;
         if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
@@ -3538,7 +3600,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
-      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "disablepub [REALM]");
         break;
@@ -3562,7 +3624,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
-      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "disablepub [REALM]");
         break;
@@ -3736,7 +3798,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Only root admins may list admins.");
         break;
       }
-      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "listadmins [REALM]");
         break;
@@ -3863,7 +3925,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("gameranger"):
     {
       if (Payload.empty()) {
-        SendReply("GameRanger IP: " + ByteArrayToDecString(m_Aura->m_GameRangerRemoteAddress) + " (proxy at " + to_string(m_Aura->m_GameRangerLocalPort) + ")");
+        SendReply("GameRanger IP: " + ByteArrayToDecString(m_Aura->m_Net->m_GameRangerRemoteAddress) + " (proxy at " + to_string(m_Aura->m_Net->m_GameRangerLocalPort) + ")");
         break;
       }
       stringstream SS;
@@ -3883,9 +3945,9 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (GameRangerAddress.empty())
         return;
 
-      m_Aura->m_GameRangerLocalPort = GameRangerPort;
-      m_Aura->m_GameRangerRemoteAddress = GameRangerAddress;
-      SendReply("GameRanger IP set to " + ByteArrayToDecString(m_Aura->m_GameRangerRemoteAddress) + "(proxy at " + to_string(m_Aura->m_GameRangerLocalPort) + ")");
+      m_Aura->m_Net->m_GameRangerLocalPort = GameRangerPort;
+      m_Aura->m_Net->m_GameRangerRemoteAddress = GameRangerAddress;
+      SendReply("GameRanger IP set to " + ByteArrayToDecString(m_Aura->m_Net->m_GameRangerRemoteAddress) + "(proxy at " + to_string(m_Aura->m_Net->m_GameRangerLocalPort) + ")");
       break;
     }
 
@@ -3895,7 +3957,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("netinfo"):
     {
-      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "netinfo [REALM]");
         break;
@@ -3915,7 +3977,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("printgames"):
     {
-      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "printgames [REALM]");
         break;
@@ -3935,7 +3997,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("querygames"):
     {
-      CBNET* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "querygames [REALM]");
         break;
@@ -4103,11 +4165,11 @@ void CCommandContext::Run(const string& command, const string& payload)
       string excludedServer = Args[0];
       transform(begin(excludedServer), end(excludedServer), begin(excludedServer), ::tolower);
 
-      if (ExtractIPv4(Args[1]).empty()) {
+      vector<uint8_t> gameAddress = ExtractIPv4(Args[1]);
+      if (gameAddress.empty()) {
         ErrorReply("Not a IPv4 address.");
         break;
       }
-      string gameAddress = Args[1];
 
       try {
         gamePort = static_cast<uint16_t>(stoi(Args[2]));
@@ -4131,7 +4193,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       m_Aura->CreateMirror(m_Aura->m_Map, GAME_PUBLIC, gameName, gameAddress, gamePort, gameHostCounter, gameEntryKey, excludedServer, m_FromName, m_SourceRealm, this);
       m_Aura->m_Map = nullptr;
-      for (auto& bnet : m_Aura->m_BNETs) {
+      for (auto& bnet : m_Aura->m_Realms) {
         if (bnet->GetInputID() != excludedServer && !bnet->GetIsMirror()) {
           bnet->ResetConnection(false);
           bnet->SetReconnectNextTick(true);

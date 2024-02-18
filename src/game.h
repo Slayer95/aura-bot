@@ -52,7 +52,7 @@ class CDBBan;
 class CDBGamePlayer;
 class CStats;
 class CIRC;
-class CBNET;
+class CRealm;
 
 class CGame
 {
@@ -82,7 +82,7 @@ protected:
   std::string                    m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                    m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
   std::string                    m_CreatorName;                   // name of the player who created this game
-  CBNET*                         m_CreatorServer;                 // battle.net server the player who created this game was on
+  CRealm*                         m_CreatorServer;                 // battle.net server the player who created this game was on
   std::string                    m_ExcludedServer;                // battle.net server where the mirrored game is not to be broadcasted
   std::string                    m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
   std::string                    m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
@@ -133,8 +133,8 @@ protected:
   uint16_t                       m_HostPort;                      // the port to host games on
   bool                           m_LANEnabled;                    // whether to broadcast the game to LAN
   uint16_t                       m_LANHostPort;                   // the port to broadcast over LAN
-  bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CBNET's - disables CBNET mirror instances
-  std::string                    m_PublicHostAddress;
+  bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's - disables CRealm mirror instances
+  std::vector<uint8_t>           m_PublicHostAddress;
   uint16_t                       m_PublicHostPort;
   uint8_t                        m_GameDisplay;                   // game state, public or private
   uint8_t                        m_VirtualHostPID;                // host's PID
@@ -159,8 +159,8 @@ protected:
   
 
 public:
-  CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, std::string& nGameName, std::string nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, std::string nExcludedServer);
-  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nOwnerRealm, std::string& nCreatorName, CBNET* nCreatorServer);
+  CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, std::string& nGameName, std::vector<uint8_t> nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, std::string nExcludedServer);
+  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nOwnerRealm, std::string& nCreatorName, CRealm* nCreatorServer);
   ~CGame();
   CGame(CGame&) = delete;
 
@@ -171,7 +171,7 @@ public:
   inline bool           GetLANEnabled() const { return m_LANEnabled; }
   inline uint16_t       GetLANPort() const { return m_LANHostPort; }
   inline bool           GetPublicHostOverride() const { return m_PublicHostOverride; }
-  inline std::string    GetPublicHostAddress() const { return m_PublicHostAddress; }
+  inline std::vector<uint8_t>    GetPublicHostAddress() const { return m_PublicHostAddress; }
   inline uint16_t       GetPublicHostPort() const { return m_PublicHostPort; }
   inline uint8_t        GetGameState() const { return m_GameDisplay; }
   inline int64_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
@@ -181,7 +181,7 @@ public:
   inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
   inline std::string    GetOwnerName() const { return m_OwnerName; }
   inline std::string    GetCreatorName() const { return m_CreatorName; }
-  inline CBNET*         GetCreatorServer() const { return m_CreatorServer; }
+  inline CRealm*         GetCreatorServer() const { return m_CreatorServer; }
   inline uint32_t       GetHostCounter() const { return m_HostCounter; }
   inline int64_t        GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool           GetLocked() const { return m_Locked; }

@@ -27,7 +27,7 @@
 #include "config_game.h"
 #include "socket.h"
 #include "auradb.h"
-#include "bnet.h"
+#include "realm.h"
 #include "map.h"
 #include "gameplayer.h"
 #include "gameprotocol.h"
@@ -46,7 +46,7 @@ using namespace std;
 //
 
 
-CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, string nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, string nExcludedServer)
+CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, vector<uint8_t> nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, string nExcludedServer)
   : m_Aura(nAura),
     m_Socket(nullptr),
     m_DBBanLast(nullptr),
@@ -133,7 +133,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
 }
 
-CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameDisplay, string& nGameName, string& nOwnerName, string& nOwnerRealm, string& nCreatorName, CBNET* nCreatorServer)
+CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameDisplay, string& nGameName, string& nOwnerName, string& nOwnerRealm, string& nCreatorName, CRealm* nCreatorServer)
   : m_Aura(nAura),
     m_Socket(nullptr),
     m_DBBanLast(nullptr),
@@ -285,6 +285,10 @@ CGame::~CGame()
     delete ban;
 
   delete m_Stats;
+
+  if (m_Aura->m_SudoGame == this) {
+    m_Aura->m_SudoGame = nullptr;
+  }
 }
 
 CGameProtocol* CGame::GetProtocol() const
@@ -492,7 +496,7 @@ bool CGame::Update(void* fd, void* send_fd)
       // when a player joins a game we can obtain the ID from the received host counter
       // note: LAN broadcasts use an ID of 0, battle.net refreshes use IDs of 16-255, the rest are reserved
 
-      if (m_Aura->m_UDPServerEnabled && m_Aura->m_Config->m_UDPInfoStrictMode) {
+      if (m_Aura->m_Net->m_UDPServerEnabled && m_Aura->m_Config->m_UDPInfoStrictMode) {
         LANBroadcastGameRefresh();
       } else {
         LANBroadcastGameInfo();
@@ -532,7 +536,7 @@ bool CGame::Update(void* fd, void* send_fd)
         if (player->GetObserver())
           continue;
         uint32_t FramesBehind = m_SyncCounter - player->GetSyncCounter();
-        if (FramesBehind > m_SyncLimit) {
+        if (m_SyncCounter > player->GetSyncCounter() && FramesBehind > m_SyncLimit) {
           player->SetLagging(true);
           player->SetStartedLaggingTicks(Ticks);
           m_Lagging            = true;
@@ -632,7 +636,7 @@ bool CGame::Update(void* fd, void* send_fd)
         }
 
         uint32_t FramesBehind = m_SyncCounter - player->GetSyncCounter();
-        if (FramesBehind >= m_SyncLimitSafe) {
+        if (m_SyncCounter > player->GetSyncCounter() && FramesBehind >= m_SyncLimitSafe) {
           ++PlayersStillLagging;
         } else {
           Print(GetLogPrefix() + "stopped lagging on [" + player->GetName() + "] (" + to_string(player->GetSyncCounter()) + "/" + to_string(m_SyncCounter) + ")");
@@ -753,7 +757,7 @@ bool CGame::Update(void* fd, void* send_fd)
   if (!m_RefreshError && !m_CountDownStarted && m_GameDisplay == GAME_PUBLIC && GetSlotsOpen() > 0 && Time - m_LastRefreshTime >= 3) {
     // send a game refresh packet to each battle.net connection
 
-    for (auto& bnet : m_Aura->m_BNETs) {
+    for (auto& bnet : m_Aura->m_Realms) {
       if (bnet->GetInputID() == m_ExcludedServer)
         continue;
 
@@ -1378,7 +1382,7 @@ void CGame::SendAllActions()
 
 void CGame::AnnounceToAddress(string IP, uint16_t port) const
 {
-  m_Aura->m_UDPSocket->SendTo(
+  m_Aura->m_Net->m_UDPSocket->SendTo(
     IP, port,
     GetProtocol()->SEND_W3GS_GAMEINFO(
       m_Aura->m_GameVersion,
@@ -1402,7 +1406,7 @@ void CGame::AnnounceToAddress(string IP, uint16_t port) const
 
 void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
 {
-  m_Aura->m_UDPSocket->SendTo(
+  m_Aura->m_Net->m_UDPSocket->SendTo(
     tunnelLocalIP, tunnelLocalPort,
     GetProtocol()->SEND_W3GR_GAMEINFO(
       m_Aura->m_GameVersion,
@@ -1429,10 +1433,10 @@ void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnel
 
 void CGame::LANBroadcastGameCreate() const
 {
-  m_Aura->SendBroadcast(6112, GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter));
-  if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_GameRangerLocalPort != 0) {
-    m_Aura->m_UDPSocket->SendTo(
-      m_Aura->m_GameRangerLocalAddress, m_Aura->m_GameRangerLocalPort,
+  m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter));
+  if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_Net->m_GameRangerLocalPort != 0) {
+    m_Aura->m_Net->m_UDPSocket->SendTo(
+      m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
       // Hardcoded remote 255.255.255.255:6112
       GetProtocol()->SEND_W3GR_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter)
     );
@@ -1441,10 +1445,10 @@ void CGame::LANBroadcastGameCreate() const
 
 void CGame::LANBroadcastGameDecreate() const
 {
-  m_Aura->SendBroadcast(6112, GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter));
+  m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter));
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
-    m_Aura->m_UDPSocket->SendTo(
-      m_Aura->m_GameRangerLocalAddress, m_Aura->m_GameRangerLocalPort,
+    m_Aura->m_Net->m_UDPSocket->SendTo(
+      m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
       // Hardcoded remote 255.255.255.255:6112
       GetProtocol()->SEND_W3GR_DECREATEGAME(m_HostCounter)
     );
@@ -1453,14 +1457,14 @@ void CGame::LANBroadcastGameDecreate() const
 
 void CGame::LANBroadcastGameRefresh() const
 {
-  m_Aura->SendBroadcast(6112, GetProtocol()->SEND_W3GS_REFRESHGAME(
+  m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_REFRESHGAME(
     m_HostCounter,
     m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
     m_Slots.size()
   ));
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
-    m_Aura->m_UDPSocket->SendTo(
-      m_Aura->m_GameRangerLocalAddress, m_Aura->m_GameRangerLocalPort,
+    m_Aura->m_Net->m_UDPSocket->SendTo(
+      m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
       GetProtocol()->SEND_W3GR_REFRESHGAME(
         m_HostCounter,
         m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
@@ -1484,7 +1488,7 @@ void CGame::LANBroadcastGameInfo() const
   // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
   // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
-	m_Aura->SendBroadcast(
+	m_Aura->m_Net->SendBroadcast(
   6112,
     GetProtocol()->SEND_W3GS_GAMEINFO(
 			m_Aura->m_GameVersion,
@@ -1859,7 +1863,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
   bool IsUnverifiedAdmin = false;
 
   if (HostCounterID >= 0x10) {
-    CBNET* matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
+    CRealm* matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
     if (matchingRealm) {
       JoinedRealm = matchingRealm->GetServer();
       IsUnverifiedAdmin = matchingRealm->GetIsAdmin(joinRequest->GetName()) || matchingRealm->GetIsRootAdmin(joinRequest->GetName());
@@ -1906,7 +1910,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
   // check if the new player's name is banned
   // don't allow the player to spam the chat by attempting to join the game multiple times in a row
 
-  CBNET* SourceRealm = m_Aura->GetRealmByHostName(JoinedRealm);
+  CRealm* SourceRealm = m_Aura->GetRealmByHostName(JoinedRealm);
   if (SourceRealm) {
     CDBBan* Ban = SourceRealm->IsBannedName(joinRequest->GetName());
     if (Ban){
@@ -2373,7 +2377,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
   int64_t Time = GetTime();
   uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
-  CBNET* JoinedRealm = player->GetRealm(false);
+  CRealm* JoinedRealm = player->GetRealm(false);
   uint32_t MaxUploadSize = m_Aura->m_Config->m_MaxUploadSize;
   if (JoinedRealm)
     MaxUploadSize = JoinedRealm->GetMaxUploadSize();
@@ -2622,7 +2626,7 @@ void CGame::EventGameStarted()
   // delete any potential players that are still hanging around
   // only one lobby at a time is supported, so we can just do it from here
 
-  for (auto& pair : m_Aura->m_IncomingConnections) {
+  for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
     for (auto& potential : pair.second)
       delete potential;
 
@@ -2650,7 +2654,7 @@ void CGame::EventGameStarted()
 
   // and finally reenter battle.net chat
 
-  for (auto& bnet : m_Aura->m_BNETs) {
+  for (auto& bnet : m_Aura->m_Realms) {
     if (m_IsMirror && bnet->GetIsMirror())
       continue;
 

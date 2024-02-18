@@ -257,7 +257,7 @@ inline std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t 
   return result;
 }
 
-inline std::vector<uint8_t> ExtractHexNumbers(std::string& s)
+inline std::vector<uint8_t> ExtractHexNumbers(const std::string& s)
 {
   // consider the std::string to contain a bytearray in hex-text form, e.g. "4e 17 b7 e6"
 
@@ -278,7 +278,7 @@ inline std::vector<uint8_t> ExtractHexNumbers(std::string& s)
   return result;
 }
 
-inline std::vector<uint8_t> ExtractIPv4(std::string& s)
+inline std::vector<uint8_t> ExtractIPv4(const std::string& s)
 {
   std::vector<uint8_t> Output;
   std::stringstream ss(s);
@@ -593,6 +593,13 @@ inline std::string JoinVector(const std::vector<std::string> list, const bool tr
     Results += element + ", ";
   if (!trailingComma) Results = Results.substr(0, Results.length() - 2);
   return Results;
+}
+
+inline std::string IPv4ToString(const std::vector<uint8_t> ip) {
+  if (ip.size() != 4) {
+    return std::string();
+  }
+  return std::to_string(static_cast<int>(ip[0])) + "." + std::to_string(static_cast<int>(ip[1])) + "." + std::to_string(static_cast<int>(ip[2])) + "." + std::to_string(static_cast<int>(ip[3]));
 }
 
 inline std::string EncodeURIComponent(const std::string & s) {

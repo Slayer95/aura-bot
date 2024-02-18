@@ -57,26 +57,26 @@ optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
   const string WarcraftIIIExe = CaseInsensitiveFileExists(war3Path, "Warcraft III.exe").string();
   const string War3Exe = CaseInsensitiveFileExists(war3Path, "war3.exe").string();
   if (WarcraftIIIExe.empty() && War3Exe.empty()) {
-    Print("[CONFIG] war3.exe, Warcraft III.exe missing at " + war3Path.string() + ". Config required: bot_war3version, bnet_X_auth_*.");
+    Print("[CONFIG] war3.exe, Warcraft III.exe missing at " + war3Path.string() + ". Config required: game_version, realm_X_auth_*.");
     return version;
   }
   if (FileStormDLL.empty() != FileGameDLL.empty()) {
     if (FileStormDLL.empty()) {
-      Print("[CONFIG] Game.dll found, but Storm.dll missing at " + war3Path.string() + ". Config required: bot_war3version, bnet_X_auth_*.");
+      Print("[CONFIG] Game.dll found, but Storm.dll missing at " + war3Path.string() + ". Config required: game_version, realm_X_auth_*.");
     } else {
-      Print("[CONFIG] Storm.dll found, but Game.dll missing at " + war3Path.string() + ". Config required: bot_war3version, bnet_X_auth_*.");
+      Print("[CONFIG] Storm.dll found, but Game.dll missing at " + war3Path.string() + ". Config required: game_version, realm_X_auth_*.");
     }
     return version;
   }
   if (FileStormDLL.empty()) {
     if (WarcraftIIIExe.empty()) {
-      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: bot_war3version, bnet_X_auth_*.");
+      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: game_version, realm_X_auth_*.");
       return version;
     }
   }
   if (!War3Exe.empty()) {
     if (FileStormDLL.empty()) {
-      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: bot_war3version, bnet_X_auth_*.");
+      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: game_version, realm_X_auth_*.");
       return version;
     }
   }
@@ -100,7 +100,7 @@ optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
   uint8_t readVersion = static_cast<uint8_t>(EXEVersion >> 16);
 
   if ((versionMode == 28) != (readVersion == 28) || versionMode < 28 && readVersion > 28 || versionMode > 28 && readVersion < 28) {
-    Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: bot_war3version, bnet_X_auth_*.");
+    Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: game_version, realm_X_auth_*.");
     return version;
   }
 
