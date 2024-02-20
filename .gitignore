@@ -52,3 +52,5 @@ src/Release
 bncsutil/vc8_build/Release
 log.txt
 patch.diff
+miniupnpc/
+miniupnpc-2.2.6/
