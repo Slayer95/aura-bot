@@ -520,6 +520,8 @@ void CCommandContext::UseImplicitHostedGame()
 
 void CCommandContext::Run(const string& command, const string& payload)
 {
+  const static string emptyString;
+
   UpdatePermissions();
 
   string Command = command;
@@ -701,7 +703,7 @@ void CCommandContext::Run(const string& command, const string& payload)
               ++KickedCount;
             } else if ((*i)->GetKickQueued() && ((*i)->GetHasMap() || (*i)->GetDownloadStarted())) {
               (*i)->SetKickByTime(0);
-              (*i)->SetLeftReason(string());
+              (*i)->SetLeftReason(emptyString);
             }
           }
 
@@ -923,8 +925,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       string rawRollFaces = Payload.empty() ? "100" : diceStart == string::npos ? Payload : Payload.substr(diceStart + 1);
 
       try {
-        rollCount = stoi(rawRollCount);
-        rollFaces = stoi(rawRollFaces);
+        rollCount = static_cast<uint8_t>(stoi(rawRollCount));
+        rollFaces = static_cast<uint16_t>(stoi(rawRollFaces));
       } catch (...) {
         ErrorReply("Usage: !roll [FACES]");
         break;
@@ -2031,6 +2033,9 @@ void CCommandContext::Run(const string& command, const string& payload)
         vector<uint8_t> loopbackHost = {127, 0, 0, 1, static_cast<uint8_t>(port >> 8), static_cast<uint8_t>(port)};
         testServers.push_back(make_pair(string("[Loopback]"), loopbackHost));
       }
+      vector<uint8_t> publicIp = m_Aura->m_Net->GetPublicIP();
+      uint8_t gamePort = m_TargetGame->GetHostPort();
+      bool anySendsPublicIp = false;
       for (auto& realm : m_Aura->m_Realms) {
         if (!TargetAllRealms && realm != targetRealm) {
           continue;
@@ -2039,25 +2044,68 @@ void CCommandContext::Run(const string& command, const string& payload)
           SendReply("[Network] Not connected to " + realm->GetUniqueDisplayName(), CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
           continue;
         }
-        vector<uint8_t> ip;
-        uint16_t port;
-        string TestName = realm->GetUniqueDisplayName();
-        if (realm->GetTunnelEnabled()) {
-          ip = realm->GetPublicHostAddress();
-          port = realm->GetPublicHostPort();
-          TestName += " [Tunnel]";
-        } else {
-          ip = m_Aura->m_Net->GetPublicIP();
-          port = m_TargetGame->GetHostPort();
-          TestName += " [Direct]";
-        }
+        vector<uint8_t> ip = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIp;
+        uint16_t port = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : gamePort;
+        string TestName = realm->GetUniqueDisplayName() + (realm->GetUsesCustomIPAddress() || realm->GetUsesCustomPort() ? " [Tunnel]" : " [Direct]");
 
         vector<uint8_t> host = ip;
         host.push_back(static_cast<uint8_t>(port >> 8));
         host.push_back(static_cast<uint8_t>(port));
         testServers.push_back(make_pair(TestName, host));
+        if (ip == publicIp) {
+          anySendsPublicIp = true;
+        }
+      }
+      if (!anySendsPublicIp) {
+        vector<uint8_t> host = publicIp;
+        host.push_back(static_cast<uint8_t>(gamePort >> 8));
+        host.push_back(static_cast<uint8_t>(gamePort));
+        testServers.push_back(make_pair("[PublicIp]", host));
       }
       m_Aura->m_Net->StartHealthCheck(testServers);
+      break;
+    }
+
+    //
+    // !UPNP
+    //
+
+    case HashCode("upnp"):
+    {
+      UseImplicitHostedGame();
+
+      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        ErrorReply("Not allowed to trigger UPnP.");
+        break;
+      }
+
+      uint32_t targetValue = 0;
+      if (Payload.empty()) {
+        if (!m_TargetGame) {
+          ErrorReply("Usage: " + GetToken() + "upnp [PORT]");
+          break;
+        }
+        targetValue = m_TargetGame->GetHostPort();
+      } else {
+        try {
+          targetValue = stoi(Payload);
+        } catch (...) {
+          ErrorReply("Usage: " + GetToken() + "upnp [PORT]");
+          break;
+        }
+      }
+      if (targetValue == 0 || 65535 < targetValue) {
+        ErrorReply("Usage: " + GetToken() + "upnp [PORT]");
+        break;
+      }
+      const string portAsString = to_string(targetValue);
+      const char* targetPort = portAsString.c_str();
+      SendReply("Trying to enable port-forwarding for port " + portAsString + "...");
+      if (m_Aura->m_Net->EnableUPnP(targetPort)) {
+        SendReply("Opened port " + portAsString + " with Universal Plug and Play");
+      } else {
+        ErrorReply("Universal Plug and Play is not supported by the host router.");
+      }
       break;
     }
 
@@ -2873,7 +2921,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (!m_TargetGame->CreateFakePlayer()) {
+      if (!m_TargetGame->CreateFakePlayer(false)) {
         ErrorReply("Cannot add another fake player");
         break;
       }
@@ -2923,7 +2971,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool Success = false;
-      while (m_TargetGame->CreateFakePlayer()) {
+      while (m_TargetGame->CreateFakePlayer(false)) {
         Success = true;
       }
 
@@ -2957,6 +3005,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       vector<uint8_t> CRC, Action;
       Action.push_back(1);
+      // Randomize because each fake player has up to 3 chances to pause the game.
       m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[rand() % m_TargetGame->m_FakePlayers.size()], CRC, Action));
       break;
     }
@@ -2985,7 +3034,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       vector<uint8_t> CRC, Action;
       Action.push_back(2);
-      m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[0], CRC, Action));
+      m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[m_TargetGame->m_FakePlayers.size() - 1], CRC, Action));
       break;
     }
 

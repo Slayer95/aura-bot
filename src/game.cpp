@@ -222,11 +222,11 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
   // wait time of 1 minute  = 0 empty actions required
   // wait time of 2 minutes = 1 empty action required...
 
-  m_GProxyEmptyActions = static_cast<int64_t>(m_Aura->m_Config->m_ReconnectWaitTime) - 1;
-  if (m_GProxyEmptyActions < 0)
-    m_GProxyEmptyActions = 0;
-  else if (m_GProxyEmptyActions > 9)
-    m_GProxyEmptyActions = 9;
+  if (m_GProxyEmptyActions > 0) {
+    m_GProxyEmptyActions = m_GProxyEmptyActions - 1;
+    if (m_GProxyEmptyActions > 9)
+      m_GProxyEmptyActions = 9;
+  }
 
   // start listening for connections
 
@@ -530,7 +530,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
     if (!m_Lagging) {
       string LaggingString;
-      float MaxAbsFramesBehind = 0.0;
+      uint32_t MaxAbsFramesBehind = 0;
 
       for (auto& player : m_Players) {
         if (player->GetObserver())
@@ -555,7 +555,7 @@ bool CGame::Update(void* fd, void* send_fd)
       if (m_Lagging) {
         // start the lag screen
 
-        Print(GetLogPrefix() + "started lagging on [" + LaggingString + "] (" + to_string(static_cast<uint32_t>(MaxAbsFramesBehind)) + " frames)");
+        Print(GetLogPrefix() + "started lagging on [" + LaggingString + "] (" + to_string(MaxAbsFramesBehind) + " frames)");
         SendAll(GetProtocol()->SEND_W3GS_START_LAG(m_Players));
 
         // reset everyone's drop vote
@@ -1119,7 +1119,7 @@ void CGame::SendFakePlayersInfo(CPotentialPlayer* player) const
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
 
   for (auto& fakeplayer : m_FakePlayers)
-    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "Placeholder[" + to_string(fakeplayer) + "]", IP, IP));
+    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "User[" + to_string(fakeplayer) + "]", IP, IP));
 }
 
 void CGame::SendFakePlayersInfo(CGamePlayer* player) const
@@ -1130,7 +1130,7 @@ void CGame::SendFakePlayersInfo(CGamePlayer* player) const
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
 
   for (auto& fakeplayer : m_FakePlayers)
-    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "Placeholder[" + to_string(fakeplayer) + "]", IP, IP));
+    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "User[" + to_string(fakeplayer) + "]", IP, IP));
 }
 
 void CGame::SendJoinedPlayersInfo(CPotentialPlayer* potential) const
@@ -1382,7 +1382,8 @@ void CGame::SendAllActions()
 
 void CGame::AnnounceToAddress(string IP, uint16_t port) const
 {
-  m_Aura->m_Net->m_UDPSocket->SendTo(
+  Print("AnnounceToAddress(" + IP + ")");
+  bool result = m_Aura->m_Net->m_UDPSocket->SendTo(
     IP, port,
     GetProtocol()->SEND_W3GS_GAMEINFO(
       m_Aura->m_GameVersion,
@@ -1402,6 +1403,11 @@ void CGame::AnnounceToAddress(string IP, uint16_t port) const
       m_EntryKey
     )
   );
+  if (result) {
+    Print("Result: Okay");
+  } else {
+    Print("Result: Error");
+  }
 }
 
 void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
@@ -1433,6 +1439,7 @@ void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnel
 
 void CGame::LANBroadcastGameCreate() const
 {
+  Print("LANBroadcastGameCreate()");
   m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter));
   if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_Net->m_GameRangerLocalPort != 0) {
     m_Aura->m_Net->m_UDPSocket->SendTo(
@@ -1457,6 +1464,7 @@ void CGame::LANBroadcastGameDecreate() const
 
 void CGame::LANBroadcastGameRefresh() const
 {
+  Print("LANBroadcastGameRefresh()");
   m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_REFRESHGAME(
     m_HostCounter,
     m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
@@ -1840,15 +1848,8 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
 
 bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest)
 {
-  // check the new player's name
-
-  if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15 || GetPlayerFromName(joinRequest->GetName(), false))
-  {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken or too long) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
-  } else if (joinRequest->GetName() == m_LobbyVirtualHostName) {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+  if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
@@ -1874,14 +1875,6 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
     matchingRealm = nullptr;
   }
 
-  if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
-    // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
-    // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
-  }
-
   if (HostCounterID < 0x10 && joinRequest->GetEntryKey() != m_EntryKey) {
     // check if the player joining via LAN knows the entry key
     Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
@@ -1905,6 +1898,22 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
       potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
       return false;
     }
+  }
+
+  if (GetPlayerFromName(joinRequest->GetName(), false)) {
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    return false;
+  } else if (joinRequest->GetName() == m_LobbyVirtualHostName || joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[") {
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    return false;
+  } else if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
+    // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
+    // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    return false;
   }
 
   // check if the new player's name is banned
@@ -2015,7 +2024,7 @@ void CGame::EventPlayerLeft(CGamePlayer* player, uint32_t reason)
   // this function is only called when a player leave packet is received, not when there's a socket error, kick, etc...
 
   player->SetDeleteMe(true);
-  player->SetLeftReason("has left the game voluntarily");
+  player->SetLeftReason("has left the game voluntarily (code " + to_string(reason) + ")");
   player->SetLeftCode(PLAYERLEAVE_LOST);
 
   if (!m_GameLoading && !m_GameLoaded) {
@@ -2565,14 +2574,18 @@ void CGame::EventGameStarted()
   if (GetNumConnectionsOrFake() >= 2) {
     // Remove the virtual host player to ensure consistent game state and networking.
     DeleteVirtualHost();
+    if (m_FakePlayers.size()) {
+      DeleteFakePlayer(m_FakePlayers[m_FakePlayers.size() - 1]);
+      CreateFakePlayer(true);
+    }
   } else if (GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake player.
     DeleteVirtualHost();
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-      CreateFakeObserver();
+      CreateFakeObserver(true);
     } else {
-      CreateFakePlayer();
+      CreateFakePlayer(true);
     }
   } else {
     // This is a single-player game. Neither chat events nor bot commands will work.
@@ -2943,7 +2956,7 @@ uint8_t CGame::GetHostPID() const
   // try to find the fakeplayer next
 
   if (!m_FakePlayers.empty())
-    return m_FakePlayers[0];
+    return m_FakePlayers[m_FakePlayers.size() - 1];
 
   // try to find the owner player next
 
@@ -3631,7 +3644,7 @@ bool CGame::DeleteVirtualHost()
   return true;
 }
 
-bool CGame::CreateFakePlayer()
+bool CGame::CreateFakePlayer(const bool useVirtualHostName)
 {
   if (m_FakePlayers.size() + 1 == m_Slots.size())
     return false;
@@ -3645,7 +3658,7 @@ bool CGame::CreateFakePlayer()
     const uint8_t              FakePlayerPID = GetNewPID();
     const std::vector<uint8_t> IP            = {0, 0, 0, 0};
 
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, "Placeholder[" + to_string(FakePlayerPID) + "]", IP, IP));
+    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]", IP, IP));
     m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
     m_FakePlayers.push_back(FakePlayerPID);
     m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
@@ -3655,7 +3668,7 @@ bool CGame::CreateFakePlayer()
   return false;
 }
 
-bool CGame::CreateFakeObserver()
+bool CGame::CreateFakeObserver(const bool useVirtualHostName)
 {
   if (m_FakePlayers.size() + 1 == m_Slots.size())
     return false;
@@ -3669,7 +3682,7 @@ bool CGame::CreateFakeObserver()
     const uint8_t              FakePlayerPID = GetNewPID();
     const std::vector<uint8_t> IP            = {0, 0, 0, 0};
 
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, "Placeholder[" + to_string(FakePlayerPID) + "]", IP, IP));
+    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]", IP, IP));
     m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
     m_FakePlayers.push_back(FakePlayerPID);
     m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;

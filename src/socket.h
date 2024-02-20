@@ -24,6 +24,7 @@
 #include "util.h"
 
 #ifdef WIN32
+#include <ws2tcpip.h>
 #include <winsock2.h>
 #include <errno.h>
 
@@ -134,6 +135,7 @@ typedef int32_t SOCKET;
 #endif
 
 #define MIN_UDP_PACKET_SIZE 4
+#define INET_ADDRSTRLEN_IPV4 16
 
 struct UDPPkt
 {
@@ -168,7 +170,10 @@ public:
   }
   inline std::string          GetIPString() const {
     if (m_SIN.sin_family != AF_INET) return std::string("0.0.0.0");
-    return inet_ntoa(m_SIN.sin_addr);
+    char ipStr[INET_ADDRSTRLEN_IPV4];
+    inet_ntop(AF_INET, &(m_SIN.sin_addr), ipStr, INET_ADDRSTRLEN_IPV4);
+    if (ipStr == NULL) return std::string("0.0.0.0");
+    return std::string(ipStr);
   }
   inline int32_t              GetError() const { return m_Error; }
   inline bool                 HasError() const { return m_HasError; }
@@ -189,7 +194,7 @@ protected:
   std::string m_SendBuffer;
   std::string m_Name;
   uint32_t    m_RemoteSocketCounter;
-  uint32_t    m_LastRecv;
+  int64_t     m_LastRecv;
   bool        m_Connected;
 
 public:
@@ -198,7 +203,7 @@ public:
   ~CTCPSocket();
 
   inline std::string* GetBytes() { return &m_RecvBuffer; }
-  inline uint32_t     GetLastRecv() const { return m_LastRecv; }
+  inline int64_t      GetLastRecv() const { return m_LastRecv; }
   inline bool         GetConnected() const { return m_Connected; }
   inline std::string  GetName() { return m_Name; }
 
@@ -287,7 +292,7 @@ public:
   ~CUDPSocket();
 
   bool SendTo(struct sockaddr_in sin, const std::vector<uint8_t>& message);
-  bool SendTo(const std::string& address, uint16_t port, const std::vector<uint8_t>& message);
+  bool SendTo(const std::string& hostName, uint16_t port, const std::vector<uint8_t>& message);
   bool Broadcast(uint16_t port, const std::vector<uint8_t>& message);
 
   void Reset();
@@ -304,5 +309,18 @@ public:
   bool Listen(const std::string& address, uint16_t port, bool retry);
   UDPPkt* Accept(fd_set* fd);
 };
+
+inline uint32_t ipAddressToUint32(const std::string& inputPath) {
+  // Emulate inet_addr
+  struct sockaddr_in sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sin_family = AF_INET;
+
+  if (inet_pton(AF_INET, inputPath.c_str(), &(sa.sin_addr)) != 1) {
+    return INADDR_NONE; // Return INADDR_NONE if the input string is not a valid IPv4 address
+  }
+
+  return sa.sin_addr.s_addr;
+}
 
 #endif // AURA_SOCKET_H_

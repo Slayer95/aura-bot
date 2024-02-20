@@ -125,9 +125,9 @@ bool CConfig::GetBool(const string& key, bool x) const
   if (it == end(m_CFG))
     return x;
 
-  if (it->second == "0" || it->second == "no")
+  if (it->second == "0" || it->second == "no" || it->second == "false")
     return false;
-  if (it->second == "1" || it->second == "yes")
+  if (it->second == "1" || it->second == "yes" || it->second == "true")
     return true;
   return x;
 }
@@ -252,10 +252,10 @@ optional<bool> CConfig::GetMaybeBool(const string& key) const
   if (it == end(m_CFG))
     return result;
 
-  if (it->second == "0" || it->second == "no")
-    result = false;
-  if (it->second == "1" || it->second == "yes")
-    result = true;
+  if (it->second == "0" || it->second == "no" || it->second == "false")
+    return false;
+  if (it->second == "1" || it->second == "yes" || it->second == "true")
+    return true;
 
   return result;
 }
@@ -272,6 +272,22 @@ optional<uint32_t> CConfig::GetMaybeInt(const string& key) const
     result = atoi(it->second.c_str());
   } catch (...) {}
 
+  return result;
+}
+
+optional<vector<uint8_t>> CConfig::GetMaybeIPv4(const string &key) const
+{
+  optional<vector<uint8_t>> result;
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
+    return result;
+
+  vector<uint8_t> Output = ExtractIPv4(it->second);
+  if (Output.empty())
+    return result;
+
+  result = Output;
   return result;
 }
 

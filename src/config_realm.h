@@ -63,9 +63,11 @@ public:
   bool m_AnnounceHostToChat;
   bool m_IsMirror;
 
-  bool m_EnableTunnel;                           // enable to make peers from pvpgn servers connect to m_PublicHostAddress:m_PublicHostPort
-  uint16_t m_PublicHostPort;                     // the port to broadcast in pvpgn servers
+  bool m_EnableCustomAddress;                    // enable to make peers from pvpgn servers connect to m_PublicHostAddress
   std::vector<uint8_t> m_PublicHostAddress;      // the address to broadcast in pvpgn servers
+
+  bool m_EnableCustomPort;                       // enable to make peers from pvpgn servers connect to m_PublicHostPort
+  uint16_t m_PublicHostPort;                     // the port to broadcast in pvpgn servers
 
   std::string m_UserName;                        //
   std::string m_PassWord;                        //

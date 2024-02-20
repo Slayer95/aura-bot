@@ -39,15 +39,16 @@ CIRCConfig::CIRCConfig(CConfig* CFG)
   : m_Port(6667),
   m_CommandTrigger('!')
 {
-  m_HostName            = CFG->GetString("irc_host_name", string());
-  m_Port                = CFG->GetInt("irc_port", 6667);
-  m_NickName            = CFG->GetString("irc_nickname", string());
-  m_UserName            = CFG->GetString("irc_username", string());
-  m_Password            = CFG->GetString("irc_password", string());
-  m_Enabled             = CFG->GetBool("irc_enabled", false);
-  m_EnablePublicCreate  = CFG->GetBool("irc_allow_host_non_admins", false);
+  const static string emptyString;
+  m_HostName            = CFG->GetString("irc.host_name", emptyString);
+  m_Port                = CFG->GetInt("irc.port", 6667);
+  m_NickName            = CFG->GetString("irc.nickname", emptyString);
+  m_UserName            = CFG->GetString("irc.username", emptyString);
+  m_Password            = CFG->GetString("irc.password", emptyString);
+  m_Enabled             = CFG->GetBool("irc.enabled", false);
+  m_EnablePublicCreate  = CFG->GetBool("irc.allow_host_non_admins", false);
 
-  string CommandTrigger = CFG->GetString("irc_command_trigger", "!");
+  string CommandTrigger = CFG->GetString("irc.command_trigger", "!");
   if (CommandTrigger.length() == 1) {
     m_CommandTrigger = CommandTrigger[0];
   }
@@ -57,8 +58,8 @@ CIRCConfig::CIRCConfig(CConfig* CFG)
   if (m_NickName.empty())
     m_NickName = m_UserName;
 
-  m_Channels = CFG->GetList("irc_channels", ',', m_Channels);
-  m_RootAdmins = CFG->GetSet("irc_root_admins", ',', m_RootAdmins);
+  m_Channels = CFG->GetList("irc.channels", ',', m_Channels);
+  m_RootAdmins = CFG->GetSet("irc.root_admins", ',', m_RootAdmins);
 
   for (uint8_t i = 0; i < m_Channels.size(); ++i) {
     if (m_Channels[i].length() > 0 && m_Channels[i][0] != '#') {

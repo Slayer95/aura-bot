@@ -78,6 +78,7 @@ uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds)
 
 bool CIRC::Update(void* fd, void* send_fd)
 {
+  const static string emptyString;
   const int64_t Time = GetTime();
 
   if (!m_Config->m_Enabled) {
@@ -178,9 +179,9 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     if (m_ResolvedHostName == m_Config->m_HostName && !m_ResolvedAddress.empty()) {
       // DNS resolution is blocking, so use cache if posible
-      m_Socket->Connect(string(), m_ResolvedAddress, m_Config->m_Port);
+      m_Socket->Connect(emptyString, m_ResolvedAddress, m_Config->m_Port);
     } else {
-      m_Socket->Connect(string(), m_Config->m_HostName, m_Config->m_Port);
+      m_Socket->Connect(emptyString, m_Config->m_HostName, m_Config->m_Port);
       if (!m_Socket->HasError()) {
         m_ResolvedHostName = m_Config->m_HostName;
         m_ResolvedAddress  = m_Socket->GetIPString();

@@ -63,6 +63,7 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
 
   const int64_t Time = GetTime();
   if (Time - m_Socket->GetLastRecv() >= 5) {
+    //Print("Delete CPotentialPlayer after 5 secs inactivity");
     return 1;
   }
 
@@ -83,6 +84,7 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
 
   while (Bytes.size() >= 4)
   {
+    //Print("Got bytes: " + ByteArrayToDecString(Bytes));
     // bytes 2 and 3 contain the length of the packet
     const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
     if (Length < 4 || Bytes.size() < Length) break;
@@ -90,6 +92,7 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
 
     if (Bytes[0] == W3GS_HEADER_CONSTANT || Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Config->m_ProxyReconnectEnabled) {
       if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
+        //Print("Got REQJOIN " + ByteArrayToDecString(Bytes));
         delete m_IncomingJoinPlayer;
         m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
         if (!m_IncomingJoinPlayer) {
@@ -187,7 +190,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID
     m_FinishedLoadingTicks(0),
     m_StartedLaggingTicks(0),
     m_LastGProxyWaitNoticeSentTime(0),
-    m_GProxyReconnectKey(GetTicks()),
+    m_GProxyReconnectKey(rand()),
     m_KickByTime(0),
     m_LastGProxyAckTime(0),
     m_PID(nPID),
@@ -402,7 +405,7 @@ bool CGamePlayer::Update(void* fd)
             if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 5)) {
               // we also discard pong values when anyone else is downloading if we're configured to
               if (!(m_Game->m_Aura->m_Config->m_HasBufferBloat && m_Game->IsDownloading())) {
-                m_Pings.push_back(m_Game->m_Aura->m_Config->m_RTTPings ? (GetTicks() - Pong) : ((GetTicks() - Pong) / 2));
+                m_Pings.push_back(m_Game->m_Aura->m_Config->m_RTTPings ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
                 if (m_Pings.size() > 10) {
                   m_Pings.erase(begin(m_Pings));
                 }
@@ -439,11 +442,13 @@ bool CGamePlayer::Update(void* fd)
       {
         CRealm* MyRealm = GetRealm(false);
         if (MyRealm) {
-          m_GProxyPort = MyRealm->GetTunnelEnabled() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
+          m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
         } else if (m_JoinedRealmID == 0) {
           m_GProxyPort = m_Game->m_Aura->m_Config->m_EnableLANBalancer ? m_Game->m_Aura->m_Config->m_LANHostPort : m_Game->GetHostPort();
-        } else {
+        } else if (m_JoinedRealmID == 0x02) {
           // TODO(IceSandslash): GameRanger??
+          m_GProxyPort = 6112;
+        } else {
           m_GProxyPort = 6112;
         }
         m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));

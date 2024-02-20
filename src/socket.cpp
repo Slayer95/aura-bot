@@ -367,7 +367,7 @@ void CTCPClient::Connect(const string& localaddress, const string& address, uint
     memset(&LocalSIN, 0, sizeof(LocalSIN));
     LocalSIN.sin_family = AF_INET;
 
-    if ((LocalSIN.sin_addr.s_addr = inet_addr(localaddress.c_str())) == INADDR_NONE)
+    if ((LocalSIN.sin_addr.s_addr = ipAddressToUint32(localaddress)) == INADDR_NONE)
       LocalSIN.sin_addr.s_addr = INADDR_ANY;
 
     LocalSIN.sin_port = htons(0);
@@ -381,32 +381,17 @@ void CTCPClient::Connect(const string& localaddress, const string& address, uint
     }
   }
 
-  // get IP address
-
-  struct hostent* HostInfo;
-  uint32_t        HostAddress;
-  HostInfo = gethostbyname(address.c_str());
-
-  if (!HostInfo)
-  {
+  optional<sockaddr_in> resolvedIpAddress = CNet::ResolveHost(address);
+  if (!resolvedIpAddress.has_value()) {
     m_HasError = true;
-    // m_Error = h_error;
-    Print("[TCPCLIENT] (" + m_Name +") error (gethostbyname)");
+    Print("[TCPCLIENT] (" + m_Name +") error (unable to resolve " + address + ")");
     return;
   }
+  m_SIN = resolvedIpAddress.value();
+  m_SIN.sin_port = htons(port);
 
-  memcpy(&HostAddress, HostInfo->h_addr, HostInfo->h_length);
-
-  // connect
-
-  m_SIN.sin_family      = AF_INET;
-  m_SIN.sin_addr.s_addr = HostAddress;
-  m_SIN.sin_port        = htons(port);
-
-  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SIN), sizeof(m_SIN)) == SOCKET_ERROR)
-  {
-    if (GetLastError() != EINPROGRESS && GetLastError() != EWOULDBLOCK)
-    {
+  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SIN), sizeof(m_SIN)) == SOCKET_ERROR) {
+    if (GetLastError() != EINPROGRESS && GetLastError() != EWOULDBLOCK) {
       // connect error
 
       m_HasError = true;
@@ -511,7 +496,7 @@ bool CTCPServer::Listen(const string& address, uint16_t port, bool retry)
 
   if (!address.empty())
   {
-    if ((m_SIN.sin_addr.s_addr = inet_addr(address.c_str())) == INADDR_NONE)
+    if ((m_SIN.sin_addr.s_addr = ipAddressToUint32(address)) == INADDR_NONE)
       m_SIN.sin_addr.s_addr = INADDR_ANY;
   }
   else
@@ -600,44 +585,30 @@ bool CUDPSocket::SendTo(struct sockaddr_in sin, const std::vector<uint8_t>& mess
 
   const string MessageString = string(begin(message), end(message));
 
-  if (sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin)) == -1)
-    return false;
-
-  return true;
+  return sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin)) != -1;
 }
 
-bool CUDPSocket::SendTo(const string& address, uint16_t port, const std::vector<uint8_t>& message)
+bool CUDPSocket::SendTo(const string& hostName, uint16_t port, const std::vector<uint8_t>& message)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError)
     return false;
 
-  // get IP address
-
-  struct hostent* HostInfo;
-  uint32_t        HostAddress;
-  HostInfo = gethostbyname(address.c_str());
-
-  if (!HostInfo)
-  {
+  optional<sockaddr_in> resolvedIpAddress = CNet::ResolveHost(hostName);
+  if (!resolvedIpAddress.has_value()) {
     m_HasError = true;
-    // m_Error = h_error;
-    Print("[UDPSOCKET] error (gethostbyname)");
+    Print("[UDPSOCKET] error (unable to resolve " + hostName + ")");
     return false;
   }
 
-  memcpy(&HostAddress, HostInfo->h_addr, HostInfo->h_length);
-  struct sockaddr_in sin;
-  sin.sin_family      = AF_INET;
-  sin.sin_addr.s_addr = HostAddress;
-  sin.sin_port        = htons(port);
-
-  return SendTo(sin, message);
+  return SendTo(resolvedIpAddress.value(), message);
 }
 
 bool CUDPSocket::Broadcast(uint16_t port, const std::vector<uint8_t>& message)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError)
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
+    Print("Broadcast failed");
     return false;
+  }
 
   struct sockaddr_in sin;
   sin.sin_family      = AF_INET;
@@ -652,6 +623,7 @@ bool CUDPSocket::Broadcast(uint16_t port, const std::vector<uint8_t>& message)
     Print("[UDPSOCKET] failed to broadcast packet (port " + to_string(port) + ", size " + to_string(MessageString.size()) + " bytes) with error: " + to_string(error));
     return false;
   }
+  Print("Broadcast()" + ByteArrayToHexString(message));
 
   return true;
 }
@@ -668,12 +640,9 @@ void CUDPSocket::SetBroadcastTarget(const string& subnet)
     // convert string representation of ip/subnet to in_addr
 
     Print("[UDPSOCKET] using broadcast target [" + subnet + "]");
-    m_BroadcastTarget.s_addr = inet_addr(subnet.c_str());
+    m_BroadcastTarget.s_addr = ipAddressToUint32(subnet);
 
-    // if conversion fails, inet_addr( ) returns INADDR_NONE
-
-    if (m_BroadcastTarget.s_addr == INADDR_NONE)
-    {
+    if (m_BroadcastTarget.s_addr == INADDR_NONE) {
       Print("[UDPSOCKET] invalid broadcast target, using default broadcast target");
       m_BroadcastTarget.s_addr = INADDR_BROADCAST;
     }
@@ -756,7 +725,7 @@ bool CUDPServer::Listen(const string& address, uint16_t port, bool retry)
 
   if (!address.empty())
   {
-    if ((m_SIN.sin_addr.s_addr = inet_addr(address.c_str())) == INADDR_NONE)
+    if ((m_SIN.sin_addr.s_addr = ipAddressToUint32(address)) == INADDR_NONE)
       m_SIN.sin_addr.s_addr = INADDR_ANY;
   }
   else

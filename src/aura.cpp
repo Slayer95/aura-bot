@@ -185,7 +185,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
     m_IRC(nullptr),
-    m_Net(new CNet()),
+    m_Net(nullptr),
     m_CurrentLobby(nullptr),
     m_DB(new CAuraDB(CFG)),
     m_Map(nullptr),
@@ -208,10 +208,12 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   Print("[AURA] Aura++ version " + m_Version);
 
   m_GameProtocol = new CGameProtocol(this);
+  m_Net = new CNet(this);
+
   m_CRC->Initialize();
 
   LoadConfigs(CFG);
-  m_Net->m_UDPServerEnabled = CFG->GetBool("net_udp_enable_server", false);
+  m_Net->m_UDPServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
   if (LoadCLI(argc, argv)) {
     m_Ready = false;
     return;
@@ -234,21 +236,22 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   }
 
   if (m_Config->m_EnableBNET.value_or(true)) {
+    Print("[AURA] Starting up BNET");
     LoadBNETs(CFG);
+  } else {
+    Print("[AURA] BNET realms disabled");
   }
   LoadIRC(CFG);
 
-  if (m_Realms.empty()) {
-    Print("[AURA] warning - no battle.net connections found in aura.cfg");
+  if (m_Realms.empty() && !m_Config->m_EnableBNET.value_or(true))
+    Print("[AURA] warning - no enabled battle.net connections found in aura.cfg");
+  if (!m_IRC)
+    Print("[AURA] warning - no irc connection found in aura.cfg");
 
-    if (!m_IRC) {
-      Print("[AURA] warning - no irc connection found in aura.cfg");
-      Print("[AURA] error - no connections found in aura.cfg");
-      m_Ready = false;
-      return;
-    }
-  } else if (!m_IRC) {
-    Print("[AURA] warning - no irc connection specified");
+  if (m_Realms.empty() && !m_IRC && m_PendingActions.empty()) {
+    Print("[AURA] Input disconnected.");
+    m_Ready = false;
+    return;
   }
 
   // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
@@ -341,7 +344,7 @@ void CAura::LoadIRC(CConfig* CFG)
 }
 bool CAura::CopyScripts()
 {
-  // Try to use manually extracted files already available in bot_map_configs_path
+  // Try to use manually extracted files already available in bot.map_configs_path
   filesystem::path autoExtractedCommonPath = m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j");
   filesystem::path autoExtractedBlizzardPath = m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j");
   bool commonExists = FileExists(autoExtractedCommonPath);
@@ -355,7 +358,7 @@ bool CAura::CopyScripts()
     try {
       filesystem::copy_file(manuallyExtractedCommonPath, autoExtractedCommonPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
-      Print("[AURA] error - file not found: " + manuallyExtractedCommonPath.string());
+      Print("[AURA] File system error at " + manuallyExtractedCommonPath.string() + ": " + string(e.what()));
       return false;
     }
   }
@@ -364,7 +367,7 @@ bool CAura::CopyScripts()
     try {
       filesystem::copy_file(manuallyExtractedBlizzardPath, autoExtractedBlizzardPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
-      Print("[AURA] error - file not found: " + manuallyExtractedBlizzardPath.string());
+      Print("[AURA] File system error at " + manuallyExtractedBlizzardPath.string() + ": " + string(e.what()));
       return false;
     }
   }
@@ -887,6 +890,7 @@ bool CAura::Update()
     if (NewSocket) {
       if (m_Config->m_ProxyReconnectEnabled) {
         CPotentialPlayer* IncomingConnection = new CPotentialPlayer(m_GameProtocol, this, ConnectPort, NewSocket);
+        //Print("Incoming connection from " + IncomingConnection->GetExternalIPString());
         m_Net->m_IncomingConnections[ConnectPort].push_back(IncomingConnection);
       } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || ConnectPort != m_CurrentLobby->GetHostPort()) {
         delete NewSocket;
@@ -988,23 +992,33 @@ bool CAura::Update()
     if (!anyPending) {
       bool hasDirectAttempts = false;
       bool anyDirectSuccess = false;
+      vector<string> ChatReport;
       for (auto& testConnection : m_Net->m_HealthCheckClients) {
         const bool success = testConnection->m_Passed.value_or(false);
+        const bool canConnect = testConnection->m_CanConnect.value_or(false);
         const bool isDirect = testConnection->m_Name.substr(testConnection->m_Name.length() - 8) == "[Direct]";
-        if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-          m_CurrentLobby->SendAllChat("[Network] Listed game at " + testConnection->m_Name + " - " + (success ? "OK" : "Unreachable"));
-        }
-        Print("[AURA] Listed game at " + testConnection->m_Name + " - " + (success ? "OK" : "Unreachable"));
+        ChatReport.push_back(testConnection->m_Name + " - " + (success ? "OK" : (canConnect ? "Cannot join" : "Cannot connect")));
+        Print("[AURA] Game at " + testConnection->m_Name + " - " + (success ? "OK" : (canConnect ? "Cannot join" : "Cannot connect")));
         if (isDirect) {
           hasDirectAttempts = true;
           if (success) anyDirectSuccess = true;
         }
       }
-      if (hasDirectAttempts && !anyDirectSuccess) {
-        if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-          m_CurrentLobby->SendAllChat("[Network] Host unreachable. Please setup port-forwarding to allow direct connections, or use a tunnel.");
+      if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+        string LeftMessage = JoinVector(ChatReport, " | ", false);
+        while (LeftMessage.length() > 254) {
+          m_CurrentLobby->SendAllChat(LeftMessage.substr(0, 254));
+          LeftMessage = LeftMessage.substr(254);
         }
-        Print("[Network] Host unreachable. Please setup port-forwarding to allow direct connections, or use a tunnel.");
+        if (LeftMessage.length()) {
+          m_CurrentLobby->SendAllChat(LeftMessage);
+        }
+      }
+      if (hasDirectAttempts && !anyDirectSuccess) {
+        Print("[Network] Host unreachable. Please setup port-forwarding to allow direct connections, or use a tunnel.. Also, make sure the firewall allows Aura connections.");
+        if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+          m_CurrentLobby->SendAllChat("[Network] Host unreachable. Please setup port-forwarding to allow direct connections, or use a tunnel. Also, make sure the firewall allows Aura connections.");
+        }
       }
       m_Net->ResetHealthCheck();
     }
@@ -1014,8 +1028,6 @@ bool CAura::Update()
 
   if (m_IRC && m_IRC->Update(&fd, &send_fd))
     Exit = true;
-
-  
 
   // update UDP server
 
@@ -1056,7 +1068,7 @@ bool CAura::Update()
               }
               m_Net->m_GameRangerLocalPort = remotePort;
               m_Net->m_GameRangerLocalAddress = ipAddress;
-              m_Net->m_GameRangerRemotePort = GameRangerPort[0] << 8 + GameRangerPort[1];
+              m_Net->m_GameRangerRemotePort = (GameRangerPort[0] << 8) + GameRangerPort[1];
               m_Net->m_GameRangerRemoteAddress = GameRangerAddress;
 
               Print("[AURA] GameRanger client at " + ipAddress + ":" + to_string(remotePort) + " searching for game");
@@ -1174,7 +1186,7 @@ void CAura::LoadConfigs(CConfig* CFG)
         if (dwType == REG_SZ && 0 < dwSize && dwSize < 1024) {
           success = true;
           string installPath(szValue, dwSize - 1);
-          Print("[AURA] Using game_install_path = " + installPath);
+          Print("[AURA] Using game.install_path = " + installPath);
           m_GameInstallPath = installPath;
         }
       }
@@ -1183,7 +1195,7 @@ void CAura::LoadConfigs(CConfig* CFG)
     }
     if (!success) {
       // Make sure this error message can be looked up.
-      Print("[AURA] Registry error loading key 'Warcraft III\InstallPath'");
+      Print("[AURA] Registry error loading key 'Warcraft III\\InstallPath'");
     }
 #endif
   }
@@ -1446,8 +1458,8 @@ uint8_t CAura::ExtractScripts()
 #ifdef WIN32
     uint32_t ErrorCode = (uint32_t)GetLastError();
     string ErrorCodeString = (
-      ErrorCode == 2 ? "Config error: game_install_path is not the WC3 directory" : (
-      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: game_install_path is not a valid directory" : (
+      ErrorCode == 2 ? "Config error: game.install_path is not the WC3 directory" : (
+      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: game.install_path is not a valid directory" : (
       (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
       "Error code " + to_string(ErrorCode)
       )))
@@ -1485,7 +1497,7 @@ void CAura::LoadIPToCountryData()
       // get length of file for the progress meter
 
       in.seekg(0, ios::end);
-      const uint32_t FileLength = in.tellg();
+      const uint32_t FileLength = static_cast<uint32_t>(in.tellg());
       in.seekg(0, ios::beg);
 
       while (!in.eof())

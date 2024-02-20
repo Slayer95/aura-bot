@@ -257,6 +257,29 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_PING_FROM_HOST()
   return packet;
 }
 
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, const std::string& Name)
+{
+  const uint8_t              Zeros[]  = {0, 0, 0, 0};
+  std::vector<uint8_t> packet;
+  packet.push_back(W3GS_HEADER_CONSTANT);                    // W3GS header constant
+  packet.push_back(W3GS_REQJOIN);                            // W3GS_REQJOIN
+  packet.push_back(0);                                       // packet length will be assigned later
+  packet.push_back(0);                                       // packet length will be assigned later
+  AppendByteArray(packet, HostCounter, false);               // SlotInfo length
+  AppendByteArray(packet, EntryKey, false);                  // SlotInfo length
+  packet.push_back(0);                                       //
+  AppendByteArray(packet, static_cast<uint16_t>(6112), false);  
+  AppendByteArray(packet, Zeros, 4);
+  AppendByteArrayFast(packet, Name, true);
+  AppendByteArray(packet, Zeros, 4);                          // ???
+  AppendByteArray(packet, static_cast<uint16_t>(6112), true); //  
+  AppendByteArray(packet, Zeros, 4);                          // ???
+  AppendByteArray(packet, Zeros, 4);                          // ???
+  AppendByteArray(packet, Zeros, 4);                          // ???
+  AssignLength(packet);
+  return packet;
+}
+
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_SLOTINFOJOIN(uint8_t PID, const std::vector<uint8_t>& port, const std::vector<uint8_t>& externalIP, const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
 {
   std::vector<uint8_t> packet;

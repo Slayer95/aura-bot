@@ -28,6 +28,7 @@
 
 #include "config_bot.h"
 #include "util.h"
+#include "net.h"
 
 #include <utility>
 #include <algorithm>
@@ -41,21 +42,23 @@ using namespace std;
 
 CBotConfig::CBotConfig(CConfig* CFG)
 {
-  m_Enabled                = CFG->GetBool("bot_enabled", true);
-  m_ProxyReconnectEnabled  = CFG->GetBool("net_enable_gproxy", true);
-  m_War3Version            = CFG->GetMaybeInt("game_version"/*, 27*/);
-  m_Warcraft3Path          = CFG->GetMaybePath("game_install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
-  m_MapCFGPath             = CFG->GetPath("bot_map_configs_path", filesystem::path());
-  m_MapPath                = CFG->GetPath("bot_maps_path", filesystem::path());
+  const static string emptyString;
 
-  m_BindAddress            = CFG->GetString("net_bind_address", string());
-  m_MinHostPort            = CFG->GetInt("bot_min_host_port", CFG->GetInt("net_host_port", 6112));
-  m_MaxHostPort            = CFG->GetInt("bot_max_host_port", m_MinHostPort);
-  m_EnableLANBalancer      = CFG->GetBool("bot_enable_lan_balancer", false);
-  m_LANHostPort            = CFG->GetInt("net_net_udp_lan_host_port", 6112);
+  m_Enabled                = CFG->GetBool("hosting.enabled", true);
+  m_ProxyReconnectEnabled  = CFG->GetBool("net.gproxy.enabled", true);
+  m_War3Version            = CFG->GetMaybeInt("game.version"/*, 27*/);
+  m_Warcraft3Path          = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
+  m_MapCFGPath             = CFG->GetPath("bot.map_configs_path", filesystem::path());
+  m_MapPath                = CFG->GetPath("bot.maps_path", filesystem::path());
+
+  m_BindAddress            = CFG->GetString("net.bind_address", emptyString);
+  m_MinHostPort            = static_cast<uint16_t>(CFG->GetInt("net.host_port.min", CFG->GetInt("net.host_port.only", 6112)));
+  m_MaxHostPort            = static_cast<uint16_t>(CFG->GetInt("net.host_port.max", m_MinHostPort));
+  m_EnableLANBalancer      = CFG->GetBool("net.game_discovery.udp.balancer_port.enabled", false);
+  m_LANHostPort            = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.balancer_port.value", 6112));
 
   /* Make absolute, lexically normal */
-  m_GreetingPath           = CFG->GetPath("bot_greeting_path", filesystem::path());
+  m_GreetingPath           = CFG->GetPath("bot.greeting_path", filesystem::path());
   if (!m_GreetingPath.empty()) {
     ifstream in;
     in.open(m_GreetingPath.string(), ios::in);
@@ -74,36 +77,62 @@ CBotConfig::CBotConfig(CConfig* CFG)
     }
   }
 
-  m_UDPInfoStrictMode      = CFG->GetBool("net_udp_info_strict_mode", true);
-  m_UDPForwardTraffic      = CFG->GetBool("net_udp_enable_redirect", false);
-  m_UDPForwardAddress      = CFG->GetString("net_udp_redirect_address", string());
-  m_UDPForwardPort         = CFG->GetInt("net_udp_redirect_port", 6110);
-  m_UDPForwardGameLists    = CFG->GetBool("net_udp_redirect_game_lists", false);
-  m_UDPBlockedIPs          = CFG->GetSet("net_udp_block_list", ',', {});
-  m_UDPSupportGameRanger   = CFG->GetBool("net_udp_enable_gameranger", false);
-  m_UDPGameRangerAddress   = CFG->GetIPv4("net_udp_gameranger_ip", {255, 255, 255, 255});
-  m_UDPGameRangerPort      = CFG->GetInt("net_udp_gameranger_port_but_its_hardcoded", 6112);
+  m_UDPInfoStrictMode      = CFG->GetBool("net.game_discovery.udp.strict", true);
+  m_UDPForwardTraffic      = CFG->GetBool("net.udp_redirect.enabled", false);
+  m_UDPForwardAddress      = CFG->GetString("net.udp_redirect.ip_address", emptyString);
+  m_UDPForwardPort         = static_cast<uint16_t>(CFG->GetInt("net.udp_redirect.port", 6110));
+  m_UDPForwardGameLists    = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
+  m_UDPBlockedIPs          = CFG->GetSet("net.udp_server.block_list", ',', {});
+  m_UDPSupportGameRanger   = CFG->GetBool("net.game_discovery.udp.gameranger.enabled", false);
+  m_UDPGameRangerAddress   = CFG->GetIPv4("net.game_discovery.udp.gameranger.ip_address", {255, 255, 255, 255});
+  m_UDPGameRangerPort      = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112));
 
-  m_AllowDownloads         = CFG->GetBool("bot_allow_downloads", false);
-  m_AllowTransfers         = CFG->GetInt("bot_allow_map_transfers", MAP_TRANSFERS_AUTOMATIC);
-  m_MaxDownloaders         = CFG->GetInt("bot_map_transfer_max_players", 3);
-  m_MaxUploadSize          = CFG->GetInt("bot_map_transfer_max_size", 8192);
-  m_MaxUploadSpeed         = CFG->GetInt("bot_map_transfer_max_speed", 1024);
-  m_MaxParallelMapPackets  = CFG->GetInt("bot_map_transfer_max_parallel_packets", 1000);
-  m_RTTPings               = CFG->GetBool("bot_rtt_pings", false);
-  m_HasBufferBloat         = CFG->GetBool("bot_has_buffer_bloat", false);
-  m_ReconnectWaitTime      = CFG->GetInt("net_player_reconnect_wait", 3);
+  m_AllowDownloads         = CFG->GetBool("bot.allow_downloads", false);
+  m_AllowTransfers         = static_cast<uint8_t>(CFG->GetInt("hosting.map_transfers.enabled", MAP_TRANSFERS_AUTOMATIC));
+  m_MaxDownloaders         = CFG->GetInt("hosting.map_transfers.max_players", 3);
+  m_MaxUploadSize          = CFG->GetInt("hosting.map_transfers.max_size", 8192);
+  m_MaxUploadSpeed         = CFG->GetInt("hosting.map_transfers.max_speed", 1024);
+  m_MaxParallelMapPackets  = CFG->GetInt("hosting.map_transfers.max_parallel_packets", 1000);
+  m_RTTPings               = CFG->GetBool("metrics.rtt_pings", false);
+  m_HasBufferBloat         = CFG->GetBool("net.has_buffer_bloat", false);
+  m_ReconnectWaitTime      = static_cast<uint8_t>(CFG->GetInt("net.player_reconnect.wait", 3));
 
-  m_MinHostCounter         = CFG->GetInt("bot_first_game_id", 100);
-  m_MaxGames               = CFG->GetInt("bot_max_games", 20);
-  m_MaxSavedMapSize        = CFG->GetInt("bot_max_persistent_size", 0xFFFFFFFF);
+  m_MinHostCounter         = CFG->GetInt("hosting.namepace.first_game_id", 100);
+  m_MaxGames               = CFG->GetInt("hosting.max_games", 20);
+  m_MaxSavedMapSize        = CFG->GetInt("bot.max_persistent_size", 0xFFFFFFFF);
 
-  m_StrictPaths            = CFG->GetBool("bot_mapstrictpaths", false);
-  m_EnableCFGCache         = CFG->GetBool("bot_mapenablecache", true);
-  m_ExitOnStandby          = CFG->GetBool("bot_exitonstandby", false);
+  m_StrictPaths            = CFG->GetBool("bot.load_maps.strict_paths", false);
+  m_EnableCFGCache         = CFG->GetBool("bot.load_maps.cache.enabled", true);
+  m_EnableUPnP             = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
+
+  string ipAlgorithm       = CFG->GetString("net.public_ip_address.algorithm", "api");
+  if (ipAlgorithm == "manual") {
+    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+  } else if (ipAlgorithm == "api") {
+    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+  } else if (ipAlgorithm == "none") {
+    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+  } else {
+    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+  }
+  m_PublicIPValue          = CFG->GetString("net.public_ip_address.value",
+    m_PublicIPAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API ? "https://api.ipify.org" : ""
+  );
+
+  m_ExitOnStandby          = CFG->GetBool("bot.exit_on_standby", false);
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
-  m_EnableBNET             = CFG->GetMaybeBool("bot_enablebnet");
+  m_EnableBNET             = CFG->GetMaybeBool("bot.enable_bnet");
+  if (m_EnableBNET.has_value()) {
+    Print("m_EnableBNET has value");
+    if (m_EnableBNET.value()) {
+      Print("m_EnableBNET true");
+    } else {
+      Print("m_EnableBNET false");
+    }
+  } else {
+    Print("m_EnableBNET has no value");
+  }
 }
 
 CBotConfig::~CBotConfig() = default;

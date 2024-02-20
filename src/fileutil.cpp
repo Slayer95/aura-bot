@@ -116,7 +116,11 @@ string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, i
   // get length of file
 
   IS.seekg(0, ios::end);
+
+#pragma warning(push)
+#pragma warning(disable: 4244)
   uint32_t FileLength = IS.tellg();
+#pragma warning(pop)
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
@@ -153,7 +157,10 @@ string FileRead(const filesystem::path& file, int *byteSize)
   // get length of file
 
   IS.seekg(0, ios::end);
+#pragma warning(push)
+#pragma warning(disable: 4244)
   uint32_t FileLength = IS.tellg();
+#pragma warning(pop)
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
@@ -238,7 +245,7 @@ filesystem::path GetExeDirectory()
 filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const string& file)
 {
   std::string mutated_file = file;
-  const size_t NumberOfCombinations = std::pow(2, mutated_file.size());
+  const size_t NumberOfCombinations = static_cast<size_t>(std::pow(2, mutated_file.size()));
 
   for (size_t perm = 0; perm < NumberOfCombinations; ++perm) {
     std::bitset<64> bs(perm);
@@ -246,7 +253,7 @@ filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const s
 
     for (size_t index = 0; index < bs.size() && index < mutated_file.size(); ++index) {
       if (bs[index])
-        mutated_file[index] = ::toupper(mutated_file[index]);
+        mutated_file[index] = static_cast<char>(::toupper(mutated_file[index]));
     }
 
     filesystem::path testPath = path / filesystem::path(mutated_file);

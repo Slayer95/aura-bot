@@ -47,9 +47,11 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
     m_AnnounceHostToChat(true),
     m_IsMirror(false),
 
-    m_EnableTunnel(false),
-    m_PublicHostPort(6112),
+    m_EnableCustomAddress(false),
     m_PublicHostAddress({255, 255, 255, 255}),
+
+    m_EnableCustomPort(false),
+    m_PublicHostPort(6112),
 
     m_UserName(string()),
     m_PassWord(string()),
@@ -69,8 +71,9 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
     m_Enabled(true),
 
     m_ServerIndex(0), // m_ServerIndex is one-based
-    m_CFGKeyPrefix("global_realm_")
+    m_CFGKeyPrefix("global_realm.")
 {
+  const static string emptyString;
   m_CountryShort           = CFG->GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
   m_Country                = CFG->GetString(m_CFGKeyPrefix + "country", m_Country);
   m_Locale                 = CFG->GetString(m_CFGKeyPrefix + "locale", m_Locale);
@@ -93,14 +96,16 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
 
-  m_EnableTunnel           = CFG->GetBool(m_CFGKeyPrefix + "enable_tunnel", m_EnableTunnel);
-  m_PublicHostPort         = CFG->GetInt(m_CFGKeyPrefix + "bot_public_port", m_PublicHostPort);
-  m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "bot_public_ip", m_PublicHostAddress);
+  m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
+  m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);
+
+  m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
+  m_PublicHostPort         = static_cast<uint16_t>(CFG->GetInt(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort));
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
+  m_AuthWar3Version        = static_cast<uint8_t>(CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version));
   m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
   m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
   m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);
@@ -109,10 +114,10 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
   m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
   m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
-  m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "max_map_transfer_size", m_MaxUploadSize);
+  m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
-  m_BindAddress            = CFG->GetString(m_CFGKeyPrefix + "bind_address", string());
+  m_BindAddress            = CFG->GetString(m_CFGKeyPrefix + "bind_address", emptyString);
   m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", true);
 }
 
@@ -127,9 +132,11 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_AnnounceHostToChat(nRootConfig->m_AnnounceHostToChat),
     m_IsMirror(nRootConfig->m_IsMirror),
 
-    m_EnableTunnel(nRootConfig->m_EnableTunnel),
-    m_PublicHostPort(nRootConfig->m_PublicHostPort),
+    m_EnableCustomAddress(nRootConfig->m_EnableCustomAddress),
     m_PublicHostAddress(nRootConfig->m_PublicHostAddress),
+
+    m_EnableCustomPort(nRootConfig->m_EnableCustomPort),
+    m_PublicHostPort(nRootConfig->m_PublicHostPort),
 
     m_UserName(nRootConfig->m_UserName),
     m_PassWord(nRootConfig->m_PassWord),    
@@ -150,16 +157,17 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_Enabled(nRootConfig->m_Enabled),
 
     m_ServerIndex(nServerIndex),
-    m_CFGKeyPrefix("realm_" + to_string(nServerIndex) + "_")
+    m_CFGKeyPrefix("realm_" + to_string(nServerIndex) + ".")
 {
-  m_HostName               = CFG->GetString(m_CFGKeyPrefix + "host_name", string());
+  const static string emptyString;
+  m_HostName               = CFG->GetString(m_CFGKeyPrefix + "host_name", emptyString);
   m_UniqueName             = CFG->GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
   m_CanonicalName          = CFG->GetString(m_CFGKeyPrefix + "canonical_name", m_UniqueName); // may be shared by several servers
   m_InputID                = CFG->GetString(m_CFGKeyPrefix + "input_id", m_UniqueName); // expected unique
   transform(begin(m_InputID), end(m_InputID), begin(m_InputID), ::tolower);
   m_DataBaseID             = CFG->GetString(m_CFGKeyPrefix + "db_id", m_HostName); // may be shared by several servers
-  m_CDKeyROC               = CFG->GetString(m_CFGKeyPrefix + "cd_key_roc", "FFFFFFFFFFFFFFFFFFFFFFFFFF");
-  m_CDKeyTFT               = CFG->GetString(m_CFGKeyPrefix + "cd_key_tft", "FFFFFFFFFFFFFFFFFFFFFFFFFF");
+  m_CDKeyROC               = CFG->GetString(m_CFGKeyPrefix + "cd_key.roc", "FFFFFFFFFFFFFFFFFFFFFFFFFF");
+  m_CDKeyTFT               = CFG->GetString(m_CFGKeyPrefix + "cd_key.tft", "FFFFFFFFFFFFFFFFFFFFFFFFFF");
 
   // remove dashes and spaces from CD keys and convert to uppercase
   m_CDKeyROC.erase(remove(begin(m_CDKeyROC), end(m_CDKeyROC), '-'), end(m_CDKeyROC));
@@ -191,14 +199,16 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
 
-  m_EnableTunnel           = CFG->GetBool(m_CFGKeyPrefix + "enable_tunnel", m_EnableTunnel);
-  m_PublicHostPort         = CFG->GetInt(m_CFGKeyPrefix + "bot_public_port", m_PublicHostPort);
-  m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "bot_public_ip", m_PublicHostAddress);
+  m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
+  m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);
+
+  m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
+  m_PublicHostPort         = static_cast<uint16_t>(CFG->GetInt(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort));
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
+  m_AuthWar3Version        = static_cast<uint8_t>(CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version));
   m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
   m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
   m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);
@@ -207,7 +217,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
   m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
   m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
-  m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "max_map_transfer_size", m_MaxUploadSize);
+  m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
   m_BindAddress            = CFG->GetString(m_CFGKeyPrefix + "bind_address", m_BindAddress);

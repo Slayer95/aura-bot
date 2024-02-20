@@ -116,7 +116,8 @@ public:
   uint8_t              GetHostCounterID() const;
   std::string          GetLoginName() const;
   bool                 GetIsMirror() const;
-  bool                 GetTunnelEnabled() const;
+  bool                 GetUsesCustomIPAddress() const;
+  bool                 GetUsesCustomPort() const;
   uint16_t             GetPublicHostPort() const;
   std::vector<uint8_t> GetPublicHostAddress() const;
   uint32_t             GetMaxUploadSize() const;
@@ -135,6 +136,7 @@ public:
 
   void SendGetFriendsList();
   void SendGetClanList();
+  void SendNetworkConfig();
   void JoinFirstChannel();
   void QueuePacket(const std::vector<uint8_t> message, uint8_t mode);
   void QueuePacket(const std::vector<uint8_t> message);

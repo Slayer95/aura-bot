@@ -138,7 +138,7 @@ protected:
   uint16_t                       m_PublicHostPort;
   uint8_t                        m_GameDisplay;                   // game state, public or private
   uint8_t                        m_VirtualHostPID;                // host's PID
-  int64_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
+  uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                           m_Exiting;                       // set to true and this class will be deleted next update
   bool                           m_Saving;                        // if we're currently saving game data to the database
   uint8_t                        m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
@@ -174,7 +174,7 @@ public:
   inline std::vector<uint8_t>    GetPublicHostAddress() const { return m_PublicHostAddress; }
   inline uint16_t       GetPublicHostPort() const { return m_PublicHostPort; }
   inline uint8_t        GetGameState() const { return m_GameDisplay; }
-  inline int64_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
+  inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
   inline std::string    GetLastGameName() const { return m_LastGameName; }
   inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
@@ -322,8 +322,8 @@ public:
   void StopLaggers(const std::string& reason);
   bool CreateVirtualHost();
   bool DeleteVirtualHost();
-  bool CreateFakePlayer();
-  bool CreateFakeObserver();
+  bool CreateFakePlayer(const bool useVirtualHostName);
+  bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);
   void DeleteFakePlayers();
 };

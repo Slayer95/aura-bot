@@ -647,7 +647,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>

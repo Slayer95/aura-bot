@@ -227,16 +227,12 @@ bool CRealm::Update(void* fd, void* send_fd)
 
               QueuePacket(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), m_BNCSUtil->GetEXEVersion(), m_BNCSUtil->GetEXEVersionHash(), m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), m_BNCSUtil->GetEXEInfo(), "Aura"), PACKET_TYPE_PRIORITY);
               //QueuePacket(m_Protocol->SEND_SID_NULL());
-              if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsMirror() && !m_Config->m_IsMirror) {
-                QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(IPv4ToString(m_Aura->m_CurrentLobby->GetPublicHostAddress()), m_Aura->m_CurrentLobby->GetPublicHostPort()), PACKET_TYPE_PRIORITY);
-              } else if (m_Config->m_EnableTunnel) {
-                QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(IPv4ToString(m_Config->m_PublicHostAddress), m_Config->m_PublicHostPort), PACKET_TYPE_PRIORITY);
-              }
+              SendNetworkConfig();
             } else {
               if (m_Config->m_AuthPasswordHashType == "pvpgn") {
-                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured game_install_path");
+                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured game.install_path");
               } else {
-                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured game_install_path, or realm_" + to_string(m_ServerIndex) + "_cdkeyroc, or realm_" + to_string(m_ServerIndex) + "_cdkeytft");
+                Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured game.install_path, or realm_" + to_string(m_ServerIndex) + "_cdkeyroc, or realm_" + to_string(m_ServerIndex) + "_cdkeytft");
               }
               Print("[BNET: " + m_Config->m_UniqueName + "] bncsutil key hash failed, disconnecting...");
               m_Socket->Disconnect();
@@ -700,9 +696,14 @@ bool CRealm::GetIsMirror() const
   return m_Config->m_IsMirror;
 }
 
-bool CRealm::GetTunnelEnabled() const
+bool CRealm::GetUsesCustomIPAddress() const
 {
-  return m_Config->m_EnableTunnel;
+  return m_Config->m_EnableCustomAddress;
+}
+
+bool CRealm::GetUsesCustomPort() const
+{
+  return m_Config->m_EnableCustomPort;
 }
 
 vector<uint8_t> CRealm::GetPublicHostAddress() const
@@ -755,6 +756,23 @@ void CRealm::SendGetClanList()
 {
   if (m_LoggedIn)
     QueuePacket(m_Protocol->SEND_SID_CLANMEMBERLIST());
+}
+
+void CRealm::SendNetworkConfig()
+{
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsMirror() && !m_Config->m_IsMirror) {
+    QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(m_Aura->m_CurrentLobby->GetPublicHostAddress(), m_Aura->m_CurrentLobby->GetPublicHostPort()), PACKET_TYPE_PRIORITY);
+  } else if (m_Config->m_EnableCustomAddress) {
+    uint16_t port = 6112;
+    if (m_Config->m_EnableCustomPort) {
+      port = m_Config->m_PublicHostPort;
+    } else if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
+      port = m_Aura->m_CurrentLobby->GetHostPort();
+    }
+    QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(m_Config->m_PublicHostAddress, port), PACKET_TYPE_PRIORITY);
+  } else if (m_Config->m_EnableCustomPort) {
+    QueuePacket(m_Protocol->SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort), PACKET_TYPE_PRIORITY);
+  }
 }
 
 void CRealm::JoinFirstChannel()
@@ -860,7 +878,7 @@ void CRealm::QueueGameCreate(uint8_t state, const string& gameName, CMap* map, u
   if (!m_CurrentChannel.empty())
     m_FirstChannel = m_CurrentChannel;
 
-  if (m_Config->m_EnableTunnel) {
+  if (m_Config->m_EnableCustomPort) {
     QueuePacket(m_Protocol->SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort));
   } else {
     QueuePacket(m_Protocol->SEND_SID_NETGAMEPORT(hostPort));

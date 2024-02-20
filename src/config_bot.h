@@ -80,7 +80,7 @@ public:
   uint32_t                                m_MaxParallelMapPackets;      // map pieces sent in parallel to downloading users
   bool                                    m_RTTPings;                   // use LC style pings (divide actual pings by two
   bool                                    m_HasBufferBloat;
-  uint32_t                                m_ReconnectWaitTime;          // the maximum number of minutes to wait for a GProxy++ reliable reconnect
+  uint8_t                                 m_ReconnectWaitTime;          // the maximum number of minutes to wait for a GProxy++ reliable reconnect
 
   uint32_t                                m_MinHostCounter;             // defines a subspace for game identifiers
   uint32_t                                m_MaxGames;                   // maximum number of games in progress
@@ -88,6 +88,10 @@ public:
 
   bool                                    m_StrictPaths;                // accept only exact paths (no fuzzy searches) for maps, etc.
   bool                                    m_EnableCFGCache;             // save read map CFGs to disk
+
+  bool                                    m_EnableUPnP;
+  uint8_t                                 m_PublicIPAlgorithm;
+  std::string                             m_PublicIPValue;
 
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                 // master switch to enable/disable ALL bnet configs on startup

@@ -211,10 +211,11 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 {
   m_Valid   = true;
   m_CFGFile = nCFGFile;
+  const static string emptyString;
 
   // load the map data
 
-  m_MapLocalPath = CFG->GetString("map_localpath", string());
+  m_MapLocalPath = CFG->GetString("map_localpath", emptyString);
   m_MapData.clear();
 
   bool IsPartial = CFG->GetInt("cfg_partial", 0) == 1;
@@ -249,7 +250,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     uint32_t ErrorCode = (uint32_t)GetLastError();
     string ErrorCodeString = (
       ErrorCode == 2 ? "Map not found" : (
-      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot_maps_path is not a valid directory" : (
+      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot.maps_path is not a valid directory" : (
       (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
       "Error code " + to_string(ErrorCode)
       )))
@@ -450,7 +451,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   std::vector<uint8_t> MapHeight;
   uint32_t             MapOptions    = 0;
   uint32_t             MapNumPlayers = 0;
-  uint32_t             MapFilterType = MAPFILTER_TYPE_SCENARIO;
+  uint8_t              MapFilterType = MAPFILTER_TYPE_SCENARIO;
   uint32_t             MapNumTeams   = 0;
   vector<CGameSlot>    Slots;
 
@@ -553,7 +554,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
                 uint32_t  Race;
 
                 ISS.read(reinterpret_cast<char*>(&Colour), 4); // colour
-                Slot.SetColour(Colour);
+                Slot.SetColour(static_cast<uint8_t>(Colour));
                 ISS.read(reinterpret_cast<char*>(&Status), 4); // status
 
                 if (Status == 1)
@@ -622,7 +623,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
                 for (auto& Slot : Slots) {
                   if ((1 << (Slot).GetColour()) & PlayerMask)
-                    (Slot).SetTeam(i);
+                    (Slot).SetTeam(static_cast<uint8_t>(i));
                 }
 
                 getline(ISS, GarbageString, '\0'); // team name
@@ -679,11 +680,11 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   if (MapMPQReady)
     SFileCloseArchive(MapMPQ);
 
-  m_MapPath = CFG->GetString("map_path", string());
+  m_MapPath = CFG->GetString("map_path", emptyString);
   std::vector<uint8_t> MapContentMismatch = {0, 0, 0, 0};
 
   if (CFG->Exists("map_size")) {
-    string CFGValue = CFG->GetString("map_size", string());
+    string CFGValue = CFG->GetString("map_size", emptyString);
     if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), false));
       MapContentMismatch[0] = CFGValue != MapValue;
@@ -700,7 +701,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapSize = MapSize;
 
   if (CFG->Exists("map_info")) {
-    string CFGValue = CFG->GetString("map_info", string());
+    string CFGValue = CFG->GetString("map_info", emptyString);
     if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(MapInfo);
       MapContentMismatch[1] = CFGValue != MapValue;
@@ -713,7 +714,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapInfo = MapInfo;
 
   if (CFG->Exists("map_crc")) {
-    string CFGValue = CFG->GetString("map_crc", string());
+    string CFGValue = CFG->GetString("map_crc", emptyString);
     if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(MapCRC);
       MapContentMismatch[2] = CFGValue != MapValue;
@@ -726,7 +727,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapCRC = MapCRC;
 
   if (CFG->Exists("map_sha1")) {
-    string CFGValue = CFG->GetString("map_sha1", string());
+    string CFGValue = CFG->GetString("map_sha1", emptyString);
     if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(MapSHA1);
       MapContentMismatch[3] = CFGValue != MapValue;
@@ -743,12 +744,12 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     Print("[MAP] Content mismatch: " + ByteArrayToDecString(MapContentMismatch));
   }
 
-  m_MapSiteURL   = CFG->GetString("map_site", string());
-  m_MapShortDesc = CFG->GetString("map_shortdesc", string());
-  m_MapURL       = CFG->GetString("map_url", string());
+  m_MapSiteURL   = CFG->GetString("map_site", emptyString);
+  m_MapShortDesc = CFG->GetString("map_shortdesc", emptyString);
+  m_MapURL       = CFG->GetString("map_url", emptyString);
 
   if (CFG->Exists("map_filter_type")) {
-    MapFilterType = CFG->GetInt("map_filter_type", MAPFILTER_TYPE_SCENARIO);
+    MapFilterType = static_cast<uint8_t>(CFG->GetInt("map_filter_type", MAPFILTER_TYPE_SCENARIO));
   } else {
     CFG->SetInt("map_filter_type", MapFilterType);
   }
@@ -756,12 +757,12 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapFilterType = MapFilterType;
 
   // These are per-game flags. Don't automatically set them in the map config.
-  m_MapSpeed       = CFG->GetInt("map_speed", MAPSPEED_FAST);
-  m_MapVisibility  = CFG->GetInt("map_visibility", MAPVIS_DEFAULT);
-  m_MapObservers   = CFG->GetInt("map_observers", MAPOBS_ALLOWED);
-  m_MapFilterMaker = CFG->GetInt("map_filter_maker", MAPFILTER_MAKER_USER);
-  m_MapFilterSize  = CFG->GetInt("map_filter_size", MAPFILTER_SIZE_LARGE);
-  m_MapFilterObs   = CFG->GetInt("map_filter_obs", MAPFILTER_OBS_NONE);
+  m_MapSpeed       = static_cast<uint8_t>(CFG->GetInt("map_speed", MAPSPEED_FAST));
+  m_MapVisibility  = static_cast<uint8_t>(CFG->GetInt("map_visibility", MAPVIS_DEFAULT));
+  m_MapObservers   = static_cast<uint8_t>(CFG->GetInt("map_observers", MAPOBS_ALLOWED));
+  m_MapFilterMaker = static_cast<uint8_t>(CFG->GetInt("map_filter_maker", MAPFILTER_MAKER_USER));
+  m_MapFilterSize  = static_cast<uint8_t>(CFG->GetInt("map_filter_size", MAPFILTER_SIZE_LARGE));
+  m_MapFilterObs   = static_cast<uint8_t>(CFG->GetInt("map_filter_obs", MAPFILTER_OBS_NONE));
 
   if (CFG->Exists("map_options")) {
     MapOptions = CFG->GetInt("map_options", 0);
@@ -770,13 +771,13 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   }
 
   m_MapOptions = MapOptions;
-  m_MapFlags = CFG->GetInt("map_flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS);
+  m_MapFlags = static_cast<uint8_t>(CFG->GetInt("map_flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS));
   if (!CFG->Exists("map_flags")) {
     CFG->SetInt("map_flags", m_MapFlags);
   }
 
   if (CFG->Exists("map_width")) {
-    MapWidth = ExtractNumbers(CFG->GetString("map_width", string()), 2);
+    MapWidth = ExtractNumbers(CFG->GetString("map_width", emptyString), 2);
   } else {
     CFG->SetUint8Vector("map_width", MapWidth);
   }
@@ -784,14 +785,14 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapWidth = MapWidth;
 
   if (CFG->Exists("map_height")) {
-    MapHeight = ExtractNumbers(CFG->GetString("map_height", string()), 2);
+    MapHeight = ExtractNumbers(CFG->GetString("map_height", emptyString), 2);
   } else {
     CFG->SetUint8Vector("map_height", MapHeight);
   }
 
   m_MapHeight     = MapHeight;
-  m_MapType       = CFG->GetString("map_type", string());
-  m_MapDefaultHCL = CFG->GetString("map_defaulthcl", string());
+  m_MapType       = CFG->GetString("map_type", emptyString);
+  m_MapDefaultHCL = CFG->GetString("map_defaulthcl", emptyString);
 
   if (CFG->Exists("map_numplayers")) {
     MapNumPlayers = CFG->GetInt("map_numplayers", 0);
@@ -813,7 +814,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     Slots.clear();
 
     for (uint32_t Slot = 1; Slot <= m_Aura->m_MaxSlots; ++Slot) {
-      string SlotString = CFG->GetString("map_slot" + to_string(Slot), string());
+      string SlotString = CFG->GetString("map_slot" + to_string(Slot), emptyString);
 
       if (SlotString.empty())
         break;

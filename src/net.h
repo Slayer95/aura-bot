@@ -29,20 +29,28 @@
 #include "socket.h"
 #include "gameplayer.h"
 #include "config.h"
+#include "aura.h"
 
 #include <map>
 #include <optional>
 #include <utility>
+
+#pragma once
 
 #define HEALTH_STANDBY 0
 #define HEALTH_PROGRESS 1
 #define HEALTH_OKAY 2
 #define HEALTH_ERROR 3
 
+#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE 0
+#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL 1
+#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_API 2
+
 //
 // CNet
 //
 
+class CAura;
 class CUDPServer;
 class CUDPSocket;
 class CTCPSocket;
@@ -52,26 +60,31 @@ class CConfig;
 class CTestConnection
 {
 public:
-  CTestConnection(const std::vector<uint8_t> nAddress, const uint16_t nPort, const std::string nName);
+  CTestConnection(CAura* nAura, const std::vector<uint8_t> nAddress, const uint16_t nPort, const std::string nName);
   ~CTestConnection();
 
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool      Update(void* fd, void* send_fd);
+  bool      QueryGameInfo();
 
+  CAura*                      m_Aura;
   std::vector<uint8_t>        m_Address;
   uint16_t                    m_Port;
   std::string                 m_Name;
   CTCPClient*                 m_Socket;
   std::optional<bool>         m_Passed;
+  std::optional<bool>         m_CanConnect;
   int64_t                     m_Timeout;
+  bool                        m_SentJoinRequest;
 };
 
 class CNet
 {
 public:
-  CNet();
+  CNet(CAura* nAura);
   ~CNet();
 
+  CAura*                                                      m_Aura;
   bool                                                        m_UDPServerEnabled;           // whether the bot should listen to UDP traffic in port 6112)
   CUDPServer*                                                 m_UDPServer;                  // a UDP server for incoming traffic, and sending broadcasts, etc. (used with !sendlan)
   CUDPSocket*                                                 m_UDPSocket;                  // a UDP socket for proxying UDP traffic, or broadcasting game info without blocking port 6112
@@ -90,8 +103,11 @@ public:
   void SendBroadcast(uint16_t port, const std::vector<uint8_t>& message);
 
   std::vector<uint8_t> GetPublicIP();
+  bool EnableUPnP(const char* port);
   void StartHealthCheck(const std::vector<std::pair<std::string, std::vector<uint8_t>>> testServers);
   void ResetHealthCheck();
+
+  static std::optional<sockaddr_in> ResolveHost(const std::string& hostName);
 };
 
 #endif // AURA_NET_H_

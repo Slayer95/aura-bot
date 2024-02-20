@@ -37,26 +37,26 @@ using namespace std;
 
 CGameConfig::CGameConfig(CConfig* CFG)
 {
-  m_VoteKickPercentage        = CFG->GetInt("bot_vote_kick_percentage", 70);
-  m_NumPlayersToStartGameOver = CFG->GetInt("bot_game_over_player_count", 1);
-  m_SyncLimit                 = CFG->GetInt("net_player_sync_limit", 10);
-  m_SyncLimitSafe             = CFG->GetInt("net_player_sync_limit_safe", 3);
-  m_AutoKickPing              = CFG->GetInt("bot_auto_kick_ping", 300);
-  m_WarnHighPing              = CFG->GetInt("bot_warn_high_ping", 200);
-  m_LobbyTimeLimit            = CFG->GetInt("bot_lobby_time_limit", 10);
-  m_LobbyNoOwnerTime          = CFG->GetInt("bot_lobby_ownerless_time", 2);
-  m_Latency                   = static_cast<uint16_t>(CFG->GetInt("bot_latency", 100));
-  m_PerfThreshold             = CFG->GetInt("bot_perf_limit", 150);
-  m_LacksMapKickDelay         = CFG->GetInt("bot_kick_delay_map_missing", 60); // default: 1 minute
+  m_VoteKickPercentage        = CFG->GetInt("hosting.vote_kick.min_percent", 70);
+  m_NumPlayersToStartGameOver = CFG->GetInt("hosting.game_over.player_count", 1);
+  m_SyncLimit                 = CFG->GetInt("net.start_lag.sync_limit", 10);
+  m_SyncLimitSafe             = CFG->GetInt("net.stop_lag.sync_limit", 3);
+  m_AutoKickPing              = CFG->GetInt("hosting.high_ping.kick_ms", 300);
+  m_WarnHighPing              = CFG->GetInt("hosting.high_ping.warn_ms", 200);
+  m_LobbyTimeLimit            = CFG->GetInt("hosting.abandoned_lobby.game_expiry_time", 10);
+  m_LobbyNoOwnerTime          = CFG->GetInt("hosting.abandoned_lobby.owner_expiry_time", 2);
+  m_Latency                   = static_cast<uint16_t>(CFG->GetInt("bot.latency", 100));
+  m_PerfThreshold             = CFG->GetInt("bot.perf_limit", 150);
+  m_LacksMapKickDelay         = CFG->GetInt("hosting.map_missing.kick_delay", 60); // default: 1 minute
 
-  string BotCommandTrigger    = CFG->GetString("bot_command_trigger", "!");
+  string BotCommandTrigger    = CFG->GetString("hosting.command_trigger", "!");
   m_CommandTrigger            = BotCommandTrigger[0];
-  m_IndexVirtualHostName      = CFG->GetString("bot_index_virtual_host_name", 1, 15, "Aura Bot");
-  m_LobbyVirtualHostName      = CFG->GetString("bot_lobby_virtual_host_name", 1, 15, "|cFF4080C0Aura");
+  m_IndexVirtualHostName      = CFG->GetString("hosting.index.creator_name", 1, 15, "Aura Bot");
+  m_LobbyVirtualHostName      = CFG->GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
-  m_NotifyJoins               = CFG->GetBool("bot_notify_joins", false);
-  m_IgnoredNotifyJoinPlayers  = CFG->GetSet("bot_notify_joins_exceptions", ',', {});
-  m_LANEnabled                = CFG->GetBool("bot_enable_lan", true);
+  m_NotifyJoins               = CFG->GetBool("ui.notify_joins.enabled", false);
+  m_IgnoredNotifyJoinPlayers  = CFG->GetSet("ui.notify_joins.exceptions", ',', {});
+  m_LANEnabled                = CFG->GetBool("bot.enable_lan", true);
 
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;

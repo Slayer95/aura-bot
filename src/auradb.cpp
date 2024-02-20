@@ -57,7 +57,7 @@ CAuraDB::CAuraDB(CConfig* CFG)
     RootAdminCheckStmt(nullptr),
     m_HasError(false)
 {
-  m_File = CFG->GetPath("db_sqlite3_file", GetExeDirectory() / filesystem::path("aura.dbs"));
+  m_File = CFG->GetPath("db.storage_file", GetExeDirectory() / filesystem::path("aura.dbs"));
   Print("[SQLITE3] opening database [" + m_File.filename().string() + "]");
   m_DB = new CSQLITE3(m_File.string());
 
@@ -640,7 +640,10 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(string name)
         const uint64_t Left        = sqlite3_column_int64(Statement, 2);
         const uint64_t Duration    = sqlite3_column_int64(Statement, 3);
 
-        GamePlayerSummary = new CDBGamePlayerSummary(TotalGames, static_cast<double>(LoadingTime) / TotalGames / 1000, static_cast<double>(Duration) / Left * 100);
+        float AvgLoadingTime = static_cast<float>(static_cast<double>(LoadingTime) / TotalGames / 1000);
+        uint32_t AvgLeftPercent = static_cast<uint32_t>(static_cast<double>(Duration) / Left * 100);
+
+        GamePlayerSummary = new CDBGamePlayerSummary(TotalGames, AvgLoadingTime, AvgLeftPercent);
       }
       else
         Print("[SQLITE3] error checking gameplayersummary [" + name + "] - row doesn't have 4 columns");

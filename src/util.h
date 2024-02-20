@@ -587,12 +587,16 @@ inline std::string MaybeBase10(const std::string s) {
   return IsBase10Number(s) ? s : std::string();
 }
 
-inline std::string JoinVector(const std::vector<std::string> list, const bool trailingComma) {
+inline std::string JoinVector(const std::vector<std::string> list, const std::string connector, const bool trailingConnector) {
   std::string Results;
   for (const auto& element : list)
-    Results += element + ", ";
-  if (!trailingComma) Results = Results.substr(0, Results.length() - 2);
+    Results += element + connector;
+  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
   return Results;
+}
+
+inline std::string JoinVector(const std::vector<std::string> list, const bool trailingComma) {
+  return JoinVector(list, ", ", trailingComma);
 }
 
 inline std::string IPv4ToString(const std::vector<uint8_t> ip) {

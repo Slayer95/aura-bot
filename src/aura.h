@@ -57,6 +57,7 @@ class CRealm;
 class CGame;
 class CCommandContext;
 class CAuraDB;
+class CNet;
 class CMap;
 class CIRC;
 
