@@ -42,9 +42,8 @@
 using namespace std;
 
 //
-// CGame
+// CGame mirror constructor
 //
-
 
 CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, vector<uint8_t> nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, string nExcludedServer)
   : m_Aura(nAura),
@@ -133,6 +132,10 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
 }
 
+//
+// CGame lobby constructor
+//
+
 CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameDisplay, string& nGameName, string& nOwnerName, string& nOwnerRealm, string& nCreatorName, CRealm* nCreatorServer)
   : m_Aura(nAura),
     m_Socket(nullptr),
@@ -216,6 +219,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
   m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
   m_LobbyTimeLimit = m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
+  m_ClientDiscoveryIPs = m_Aura->m_GameDefaultConfig->m_ClientDiscoveryIPs;
 
   m_LANEnabled = nAura->m_GameDefaultConfig->m_LANEnabled;
 
@@ -497,9 +501,9 @@ bool CGame::Update(void* fd, void* send_fd)
       // note: LAN broadcasts use an ID of 0, battle.net refreshes use IDs of 16-255, the rest are reserved
 
       if (m_Aura->m_Net->m_UDPServerEnabled && m_Aura->m_Config->m_UDPInfoStrictMode) {
-        LANBroadcastGameRefresh();
+        SendGameDiscoveryRefresh();
       } else {
-        LANBroadcastGameInfo();
+        SendGameDiscoveryInfo();
       }
     }
 
@@ -1382,67 +1386,57 @@ void CGame::SendAllActions()
 
 void CGame::AnnounceToAddress(string IP, uint16_t port) const
 {
-  Print("AnnounceToAddress(" + IP + ")");
-  bool result = m_Aura->m_Net->m_UDPSocket->SendTo(
-    IP, port,
-    GetProtocol()->SEND_W3GS_GAMEINFO(
-      m_Aura->m_GameVersion,
-      CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
-      m_Map->GetMapGameFlags(),
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
-      m_GameName,
-      m_IndexVirtualHostName,
-      0,
-      m_MapPath,
-      m_Map->GetMapCRC(),
-      m_Slots.size(), // Total Slots
-      m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
-      m_LANHostPort,
-      m_HostCounter,
-      m_EntryKey
-    )
+  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_GAMEINFO(
+    m_Aura->m_GameVersion,
+    CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
+    m_Map->GetMapGameFlags(),
+    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
+    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
+    m_GameName,
+    m_IndexVirtualHostName,
+    0,
+    m_MapPath,
+    m_Map->GetMapCRC(),
+    m_Slots.size(), // Total Slots
+    m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
+    m_LANHostPort,
+    m_HostCounter,
+    m_EntryKey
   );
-  if (result) {
-    Print("Result: Okay");
-  } else {
-    Print("Result: Error");
-  }
+
+  m_Aura->m_Net->Send(IP, port, packet);
 }
 
 void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
 {
-  m_Aura->m_Net->m_UDPSocket->SendTo(
-    tunnelLocalIP, tunnelLocalPort,
-    GetProtocol()->SEND_W3GR_GAMEINFO(
-      m_Aura->m_GameVersion,
-      CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
-      m_Map->GetMapGameFlags(),
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
-      m_GameName,
-      m_IndexVirtualHostName,
-      0,
-      m_MapPath,
-      m_Map->GetMapCRC(),
-      m_Slots.size(), // Total Slots
-      m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
-      m_LANHostPort,
-      m_HostCounter | (1 << 24),
-      m_EntryKey,
-      remoteIP,
-      remotePort,
-      extraBit
-    )
+  vector<uint8_t> packet = GetProtocol()->SEND_W3GR_GAMEINFO(
+    m_Aura->m_GameVersion,
+    CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
+    m_Map->GetMapGameFlags(),
+    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
+    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
+    m_GameName,
+    m_IndexVirtualHostName,
+    0,
+    m_MapPath,
+    m_Map->GetMapCRC(),
+    m_Slots.size(), // Total Slots
+    m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
+    m_LANHostPort,
+    m_HostCounter | (1 << 24),
+    m_EntryKey,
+    remoteIP,
+    remotePort,
+    extraBit
   );
+  m_Aura->m_Net->Send(tunnelLocalIP, tunnelLocalPort, packet);
 }
 
-void CGame::LANBroadcastGameCreate() const
+void CGame::SendGameDiscoveryCreate() const
 {
-  Print("LANBroadcastGameCreate()");
-  m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter));
+  m_Aura->m_Net->SendGameDiscovery(GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter), m_ClientDiscoveryIPs);
   if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_Net->m_GameRangerLocalPort != 0) {
-    m_Aura->m_Net->m_UDPSocket->SendTo(
+    m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
       // Hardcoded remote 255.255.255.255:6112
       GetProtocol()->SEND_W3GR_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter)
@@ -1450,11 +1444,11 @@ void CGame::LANBroadcastGameCreate() const
   }
 }
 
-void CGame::LANBroadcastGameDecreate() const
+void CGame::SendGameDiscoveryDecreate() const
 {
-  m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter));
+  m_Aura->m_Net->SendGameDiscovery(GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter), m_ClientDiscoveryIPs);
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
-    m_Aura->m_Net->m_UDPSocket->SendTo(
+    m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
       // Hardcoded remote 255.255.255.255:6112
       GetProtocol()->SEND_W3GR_DECREATEGAME(m_HostCounter)
@@ -1462,16 +1456,15 @@ void CGame::LANBroadcastGameDecreate() const
   }
 }
 
-void CGame::LANBroadcastGameRefresh() const
+void CGame::SendGameDiscoveryRefresh() const
 {
-  Print("LANBroadcastGameRefresh()");
-  m_Aura->m_Net->SendBroadcast(6112, GetProtocol()->SEND_W3GS_REFRESHGAME(
+  m_Aura->m_Net->SendGameDiscovery(GetProtocol()->SEND_W3GS_REFRESHGAME(
     m_HostCounter,
     m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
     m_Slots.size()
-  ));
+  ), m_ClientDiscoveryIPs);
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
-    m_Aura->m_Net->m_UDPSocket->SendTo(
+    m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
       GetProtocol()->SEND_W3GR_REFRESHGAME(
         m_HostCounter,
@@ -1482,7 +1475,7 @@ void CGame::LANBroadcastGameRefresh() const
   }
 }
 
-void CGame::LANBroadcastGameInfo() const
+void CGame::SendGameDiscoveryInfo() const
 {
   // we send 12 for SlotsTotal because this determines how many PID's Warcraft 3 allocates
   // we need to make sure Warcraft 3 allocates at least SlotsTotal + 1 but at most 12 PID's
@@ -1496,26 +1489,24 @@ void CGame::LANBroadcastGameInfo() const
   // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
   // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
-	m_Aura->m_Net->SendBroadcast(
-  6112,
-    GetProtocol()->SEND_W3GS_GAMEINFO(
-			m_Aura->m_GameVersion,
-			CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
-			m_Map->GetMapGameFlags(),
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
-			m_GameName,
-			m_IndexVirtualHostName,
-			0,
-			m_MapPath,
-			m_Map->GetMapCRC(),
-      m_Slots.size(), // Total Slots
-      m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
-			m_LANHostPort,
-			m_HostCounter,
-			m_EntryKey
-		)
-	);
+  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_GAMEINFO(
+    m_Aura->m_GameVersion,
+    CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
+    m_Map->GetMapGameFlags(),
+    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
+    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
+    m_GameName,
+    m_IndexVirtualHostName,
+    0,
+    m_MapPath,
+    m_Map->GetMapCRC(),
+    m_Slots.size(), // Total Slots
+    m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
+    m_LANHostPort,
+    m_HostCounter,
+    m_EntryKey
+  );
+	m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
 }
 
 void CGame::EventPlayerDeleted(CGamePlayer* player)
@@ -2509,7 +2500,7 @@ void CGame::EventGameStarted()
   Print(GetLogPrefix() + "started loading with " + to_string(GetNumHumanPlayers()) + " players");
 
   if (m_LANEnabled)
-    LANBroadcastGameDecreate();
+    SendGameDiscoveryDecreate();
 
   // encode the HCL command string in the slot handicaps
   // here's how it works:

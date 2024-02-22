@@ -62,6 +62,7 @@ public:
   bool m_EnablePublicCreate;                     // whether non-admins are allowed to create games
   bool m_AnnounceHostToChat;
   bool m_IsMirror;
+  bool m_IsVPN;
 
   bool m_EnableCustomAddress;                    // enable to make peers from pvpgn servers connect to m_PublicHostAddress
   std::vector<uint8_t> m_PublicHostAddress;      // the address to broadcast in pvpgn servers

@@ -46,6 +46,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
     m_EnablePublicCreate(true),
     m_AnnounceHostToChat(true),
     m_IsMirror(false),
+    m_IsVPN(false),
 
     m_EnableCustomAddress(false),
     m_PublicHostAddress({255, 255, 255, 255}),
@@ -95,6 +96,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);
   m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
+  m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
 
   m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
   m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);
@@ -131,6 +133,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_EnablePublicCreate(nRootConfig->m_EnablePublicCreate),
     m_AnnounceHostToChat(nRootConfig->m_AnnounceHostToChat),
     m_IsMirror(nRootConfig->m_IsMirror),
+    m_IsVPN(nRootConfig->m_IsVPN),
 
     m_EnableCustomAddress(nRootConfig->m_EnableCustomAddress),
     m_PublicHostAddress(nRootConfig->m_PublicHostAddress),
@@ -198,6 +201,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);
   m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
+  m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
 
   m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
   m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);

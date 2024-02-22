@@ -308,6 +308,7 @@ public:
 
   bool Listen(const std::string& address, uint16_t port, bool retry);
   UDPPkt* Accept(fd_set* fd);
+  void Discard(fd_set* fd);
 };
 
 inline uint32_t ipAddressToUint32(const std::string& inputPath) {

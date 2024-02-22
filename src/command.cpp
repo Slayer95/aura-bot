@@ -29,6 +29,7 @@
 #include "hash.h"
 
 #include <random>
+#include <tuple>
 
 using namespace std;
 
@@ -2007,12 +2008,10 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("checknetwork"):
     {
       UseImplicitHostedGame();
-      if (!m_TargetGame) {
-        ErrorReply("Use in a hosted game.");
-        break;
-      }
 
-      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      uint16_t gamePort = m_TargetGame ? m_TargetGame->GetHostPort() : m_Aura->NextHostPort();
+
+      if (0 == (m_Permissions & ((m_TargetGame && m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to check network status.");
         break;
       }
@@ -2026,15 +2025,18 @@ void CCommandContext::Run(const string& command, const string& payload)
           break;
         }
       }
+      if (m_Aura->m_Net->m_HealthCheckInProgress) {
+        ErrorReply("Already testing the network configuration.");
+        break;
+      }
 
-      vector<pair<string, vector<uint8_t>>> testServers;
+      vector<tuple<string, uint8_t, vector<uint8_t>, uint16_t>> testServers;
       if (TargetAllRealms) {
-        uint16_t port = m_TargetGame->GetHostPort();
-        vector<uint8_t> loopbackHost = {127, 0, 0, 1, static_cast<uint8_t>(port >> 8), static_cast<uint8_t>(port)};
-        testServers.push_back(make_pair(string("[Loopback]"), loopbackHost));
+        vector<uint8_t> loopBackIp = {127, 0, 0, 1};
+        tuple<string, uint8_t, vector<uint8_t>, uint16_t> testHost("[Loopback]", CONNECTION_TYPE_LOOPBACK, loopBackIp, gamePort);
+        testServers.push_back(testHost);
       }
       vector<uint8_t> publicIp = m_Aura->m_Net->GetPublicIP();
-      uint8_t gamePort = m_TargetGame->GetHostPort();
       bool anySendsPublicIp = false;
       for (auto& realm : m_Aura->m_Realms) {
         if (!TargetAllRealms && realm != targetRealm) {
@@ -2045,22 +2047,38 @@ void CCommandContext::Run(const string& command, const string& payload)
           continue;
         }
         vector<uint8_t> ip = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIp;
+        if (ip.empty()) {
+          continue;
+        }
+        uint8_t connectionType = 0;
         uint16_t port = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : gamePort;
-        string TestName = realm->GetUniqueDisplayName() + (realm->GetUsesCustomIPAddress() || realm->GetUsesCustomPort() ? " [Tunnel]" : " [Direct]");
+        string NameSuffix;
+        if (realm->GetIsVPN()) {
+          NameSuffix = " [VPN]";
+          connectionType = connectionType | CONNECTION_TYPE_VPN;
+        }
+        if (realm->GetUsesCustomIPAddress()) {
+          if (NameSuffix.empty()) NameSuffix = " [Tunnel]";
+          connectionType = connectionType | CONNECTION_TYPE_CUSTOM_IP_ADDRESS;
+        }
+        if (realm->GetUsesCustomPort()) {
+          if (NameSuffix.empty()) NameSuffix = " [Tunnel]";
+          connectionType = connectionType | CONNECTION_TYPE_CUSTOM_PORT;
+        }
 
-        vector<uint8_t> host = ip;
-        host.push_back(static_cast<uint8_t>(port >> 8));
-        host.push_back(static_cast<uint8_t>(port));
-        testServers.push_back(make_pair(TestName, host));
+        tuple<string, uint8_t, vector<uint8_t>, uint16_t> testHost(realm->GetUniqueDisplayName() + NameSuffix, connectionType, ip, port);
+        testServers.push_back(testHost);
+
         if (ip == publicIp) {
           anySendsPublicIp = true;
         }
       }
-      if (!anySendsPublicIp) {
-        vector<uint8_t> host = publicIp;
-        host.push_back(static_cast<uint8_t>(gamePort >> 8));
-        host.push_back(static_cast<uint8_t>(gamePort));
-        testServers.push_back(make_pair("[PublicIp]", host));
+      if (!anySendsPublicIp && !publicIp.empty()) {
+        tuple<string, uint8_t, vector<uint8_t>, uint16_t> testHost("[Public IP]", 0, publicIp, gamePort);
+        testServers.push_back(testHost);
+      }
+      if (!m_TargetGame) {
+        SendReply("Network check started... Check output in the console.");
       }
       m_Aura->m_Net->StartHealthCheck(testServers);
       break;
@@ -2079,32 +2097,38 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      uint32_t targetValue = 0;
-      if (Payload.empty()) {
-        if (!m_TargetGame) {
-          ErrorReply("Usage: " + GetToken() + "upnp [PORT]");
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1, 2);
+      if (Args.size() == 1) {
+        if (Args[0] == 0 || Args[0] > 0xFFFF) {
+          ErrorReply("Usage: " + GetToken() + "upnp [EXTPORT] [INTPORT]");
           break;
         }
-        targetValue = m_TargetGame->GetHostPort();
+        Args.push_back(Args[0]);
+      } else if (Args.empty()) {
+        if (!Payload.empty() || !m_TargetGame) {
+          ErrorReply("Usage: " + GetToken() + "upnp [EXTPORT] [INTPORT]");
+          break;
+        }
+        Args.push_back(m_TargetGame->GetHostPort());
+        Args.push_back(m_TargetGame->GetHostPort());
       } else {
-        try {
-          targetValue = stoi(Payload);
-        } catch (...) {
-          ErrorReply("Usage: " + GetToken() + "upnp [PORT]");
+        if (Args[0] == 0 || Args[0] > 0xFFFF || Args[1] == 0 || Args[1] > 0xFFFF) {
+          ErrorReply("Usage: " + GetToken() + "upnp [EXTPORT] [INTPORT]");
           break;
         }
       }
-      if (targetValue == 0 || 65535 < targetValue) {
-        ErrorReply("Usage: " + GetToken() + "upnp [PORT]");
-        break;
-      }
-      const string portAsString = to_string(targetValue);
-      const char* targetPort = portAsString.c_str();
-      SendReply("Trying to enable port-forwarding for port " + portAsString + "...");
-      if (m_Aura->m_Net->EnableUPnP(targetPort)) {
-        SendReply("Opened port " + portAsString + " with Universal Plug and Play");
-      } else {
+
+      uint16_t extPort = static_cast<uint16_t>(Args[0]);
+      uint16_t intPort = static_cast<uint16_t>(Args[1]);
+
+      SendReply("Trying to forward external port " + to_string(extPort) + " to internal port " + to_string(intPort) + "...");
+      uint8_t result = m_Aura->m_Net->EnableUPnP(extPort, intPort);
+      if (result == 0) {
         ErrorReply("Universal Plug and Play is not supported by the host router.");
+      } else if (result == 1) {
+        SendReply("Opened port " + to_string(extPort) + " with Universal Plug and Play");
+      } else {
+        SendReply("Unknown results. Try " + GetToken() + "checknetwork *");
       }
       break;
     }
@@ -2392,10 +2416,10 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       m_TargetGame->m_LANEnabled = TargetValue.value();
       if (TargetValue) {
-        m_TargetGame->LANBroadcastGameCreate();
-        m_TargetGame->LANBroadcastGameRefresh();
+        m_TargetGame->SendGameDiscoveryCreate();
+        m_TargetGame->SendGameDiscoveryRefresh();
         if (!m_Aura->m_Net->m_UDPServerEnabled)
-          m_TargetGame->LANBroadcastGameInfo();
+          m_TargetGame->SendGameDiscoveryInfo();
       }
       break;
     }
@@ -2424,7 +2448,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       m_TargetGame->m_LANEnabled = true;
-      m_TargetGame->LANBroadcastGameInfo();
+      m_TargetGame->SendGameDiscoveryInfo();
       break;
     }
 

@@ -32,8 +32,10 @@
 #include "aura.h"
 
 #include <map>
+#include <set>
 #include <optional>
 #include <utility>
+#include <tuple>
 
 #pragma once
 
@@ -41,6 +43,12 @@
 #define HEALTH_PROGRESS 1
 #define HEALTH_OKAY 2
 #define HEALTH_ERROR 3
+
+#define CONNECTION_TYPE_DEFAULT 0
+#define CONNECTION_TYPE_LOOPBACK 1 << 0 
+#define CONNECTION_TYPE_CUSTOM_PORT 1 << 1
+#define CONNECTION_TYPE_CUSTOM_IP_ADDRESS 1 << 2
+#define CONNECTION_TYPE_VPN 1 << 3
 
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE 0
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL 1
@@ -60,7 +68,7 @@ class CConfig;
 class CTestConnection
 {
 public:
-  CTestConnection(CAura* nAura, const std::vector<uint8_t> nAddress, const uint16_t nPort, const std::string nName);
+  CTestConnection(CAura* nAura, const std::vector<uint8_t> nAddress, const uint16_t nPort, const uint8_t nType, const std::string nName);
   ~CTestConnection();
 
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
@@ -70,6 +78,7 @@ public:
   CAura*                      m_Aura;
   std::vector<uint8_t>        m_Address;
   uint16_t                    m_Port;
+  uint8_t                     m_Type;
   std::string                 m_Name;
   CTCPClient*                 m_Socket;
   std::optional<bool>         m_Passed;
@@ -86,8 +95,8 @@ public:
 
   CAura*                                                      m_Aura;
   bool                                                        m_UDPServerEnabled;           // whether the bot should listen to UDP traffic in port 6112)
-  CUDPServer*                                                 m_UDPServer;                  // a UDP server for incoming traffic, and sending broadcasts, etc. (used with !sendlan)
-  CUDPSocket*                                                 m_UDPSocket;                  // a UDP socket for proxying UDP traffic, or broadcasting game info without blocking port 6112
+  CUDPServer*                                                 m_UDPServer;                  // a UDP server for i/o: incoming traffic, and sending broadcasts, etc. (used with !sendlan), proxying UDP game traffic, game lists, etc
+  CUDPServer*                                                 m_UDPSocket;                  // a UDP server for outgoing traffic, meant not to block port 6112
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CPotentialPlayer*>>          m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
@@ -100,11 +109,14 @@ public:
   std::vector<uint8_t>                                        m_GameRangerRemoteAddress;
 
   bool Init(const CConfig* CFG);
-  void SendBroadcast(uint16_t port, const std::vector<uint8_t>& message);
+  void SendBroadcast(const uint16_t port, const std::vector<uint8_t>& packet);
+  void Send(const std::string& address, const uint16_t port, const std::vector<uint8_t>& packet);
+  void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
 
   std::vector<uint8_t> GetPublicIP();
-  bool EnableUPnP(const char* port);
-  void StartHealthCheck(const std::vector<std::pair<std::string, std::vector<uint8_t>>> testServers);
+  std::vector<uint16_t> GetPotentialGamePorts();
+  uint8_t EnableUPnP(const uint16_t externalPort, const uint16_t internalPort);
+  void StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, std::vector<uint8_t>, uint16_t>> testServers);
   void ResetHealthCheck();
 
   static std::optional<sockaddr_in> ResolveHost(const std::string& hostName);

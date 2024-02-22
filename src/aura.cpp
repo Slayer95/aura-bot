@@ -235,11 +235,15 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     Print("[AURA] Broadcasting games port " + to_string(m_Config->m_LANHostPort) + " over LAN");
   }
 
+  if (m_Config->m_EnableBNET.has_value()) {
+    if (m_Config->m_EnableBNET.value()) {
+      Print("[AURA] All realms forcibly set to ENABLED (bot.toggle_every_realm)");
+    } else {
+      Print("[AURA] All realms forcibly set to DISABLED (bot.toggle_every_realm)");
+    }
+  }
   if (m_Config->m_EnableBNET.value_or(true)) {
-    Print("[AURA] Starting up BNET");
     LoadBNETs(CFG);
-  } else {
-    Print("[AURA] BNET realms disabled");
   }
   LoadIRC(CFG);
 
@@ -383,8 +387,7 @@ CAura::~CAura()
   delete m_Config;
   delete m_BNETDefaultConfig;
   delete m_GameDefaultConfig;
-  delete m_Net->m_UDPServer;
-  delete m_Net->m_UDPSocket;
+  delete m_Net;
   delete m_GameProtocol;
   delete m_GPSProtocol;
   delete m_CRC;
@@ -831,13 +834,15 @@ bool CAura::Update()
     NumFDs += connection->SetFD(&fd, &send_fd, &nfds);
 
   // 8. irc socket
-
   if (m_IRC)
     NumFDs += m_IRC->SetFD(&fd, &send_fd, &nfds);
 
-  // 9. UDP server
+  // 9. UDP sockets
   if (m_Net->m_UDPServerEnabled) {
     m_Net->m_UDPServer->SetFD(&fd, &send_fd, &nfds);
+    ++NumFDs;
+  } else if (m_Net->m_UDPSocket) {
+    m_Net->m_UDPSocket->SetFD(&fd, &send_fd, &nfds);
     ++NumFDs;
   }
 
@@ -941,7 +946,7 @@ bool CAura::Update()
     {
       Print("[AURA] deleting current game [" + m_CurrentLobby->GetGameName() + "]");
       if (m_CurrentLobby->GetLANEnabled())
-        m_CurrentLobby->LANBroadcastGameDecreate();
+        m_CurrentLobby->SendGameDiscoveryDecreate();
       delete m_CurrentLobby;
       m_CurrentLobby = nullptr;
 
@@ -993,15 +998,27 @@ bool CAura::Update()
       bool hasDirectAttempts = false;
       bool anyDirectSuccess = false;
       vector<string> ChatReport;
+      vector<uint16_t> FailPorts;
       for (auto& testConnection : m_Net->m_HealthCheckClients) {
-        const bool success = testConnection->m_Passed.value_or(false);
-        const bool canConnect = testConnection->m_CanConnect.value_or(false);
-        const bool isDirect = testConnection->m_Name.substr(testConnection->m_Name.length() - 8) == "[Direct]";
-        ChatReport.push_back(testConnection->m_Name + " - " + (success ? "OK" : (canConnect ? "Cannot join" : "Cannot connect")));
-        Print("[AURA] Game at " + testConnection->m_Name + " - " + (success ? "OK" : (canConnect ? "Cannot join" : "Cannot connect")));
-        if (isDirect) {
+        bool success = false;
+        string ResultText;
+        if (testConnection->m_Passed.value_or(false)) {
+          success = true;
+          ResultText = "OK";
+        } else if (testConnection->m_CanConnect.value_or(false)) {
+          ResultText = "Cannot join";
+        } else {
+          ResultText = "Cannot connect";
+        }
+        ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
+        Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
+        if (testConnection->m_Type == CONNECTION_TYPE_DEFAULT) {
           hasDirectAttempts = true;
           if (success) anyDirectSuccess = true;
+        }
+        if (!success) {
+          if (std::find(FailPorts.begin(), FailPorts.end(), testConnection->m_Port) == FailPorts.end())
+            FailPorts.push_back(testConnection->m_Port);
         }
       }
       if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
@@ -1014,10 +1031,23 @@ bool CAura::Update()
           m_CurrentLobby->SendAllChat(LeftMessage);
         }
       }
+      string portForwardInstructions;
+      if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+        portForwardInstructions = "[Network] About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(m_Net->GetPotentialGamePorts(), false) + "}";
+      }
       if (hasDirectAttempts && !anyDirectSuccess) {
-        Print("[Network] Host unreachable. Please setup port-forwarding to allow direct connections, or use a tunnel.. Also, make sure the firewall allows Aura connections.");
+        Print("[Network] Host public IP address unreachable.");
+        Print("[Network] Host: Please setup port-forwarding to allow connections. The command [upnp] could do it.");
+        if (!portForwardInstructions.empty())
+          Print(portForwardInstructions);
+        Print("[Network] Note that you may still play online if you got a VPN or an active tunnel.");
+        Print("[Network] But make sure the firewall allows Aura inbound TCP connections.");
         if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-          m_CurrentLobby->SendAllChat("[Network] Host unreachable. Please setup port-forwarding to allow direct connections, or use a tunnel. Also, make sure the firewall allows Aura connections.");
+          m_CurrentLobby->SendAllChat("[Network] Host public IP address unreachable.");
+          m_CurrentLobby->SendAllChat("[Network] Host: Please setup port-forwarding to allow connections. The command [upnp] could do it.");
+          m_CurrentLobby->SendAllChat(portForwardInstructions);
+          m_CurrentLobby->SendAllChat("[Network] Note that you may still play online if you got a VPN or an active tunnel.");
+          m_CurrentLobby->SendAllChat("[Network] But make sure the firewall allows Aura inbound TCP connections.");
         }
       }
       m_Net->ResetHealthCheck();
@@ -1029,14 +1059,15 @@ bool CAura::Update()
   if (m_IRC && m_IRC->Update(&fd, &send_fd))
     Exit = true;
 
-  // update UDP server
+  // update UDP sockets
 
   if (m_Net->m_UDPServerEnabled) {
     UDPPkt* pkt = m_Net->m_UDPServer->Accept(&fd);
     if (pkt != nullptr) {
+      // pkt->buf->length at least MIN_UDP_PACKET_SIZE
       string ipAddress(inet_ntoa(pkt->sender.sin_addr));
       uint16_t remotePort = pkt->sender.sin_port;
-      if (pkt->length > 0 && !IsIgnoredDatagramSource(ipAddress)) {
+      if (!IsIgnoredDatagramSource(ipAddress)) {
         if (m_Config->m_UDPForwardTraffic) {
           vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // 14 bytes
           relayPacket.insert(relayPacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
@@ -1045,10 +1076,10 @@ bool CAura::Update()
           relayPacket[3] = static_cast<uint8_t>(Size >> 8);
           memcpy(relayPacket.data() + 4, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
           memcpy(relayPacket.data() + 8, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
-          m_Net->m_UDPSocket->SendTo(m_Config->m_UDPForwardAddress, m_Config->m_UDPForwardPort, relayPacket);
+          m_Net->Send(m_Config->m_UDPForwardAddress, m_Config->m_UDPForwardPort, relayPacket);
         }
 
-        if (pkt->length >= 2 && static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT/* && pkt->buf[8] == m_GameVersion */) {
+        if (static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT/* && pkt->buf[8] == m_GameVersion */) {
           if (pkt->length >= 16 && static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
             bool FromGameRanger = false;
             if (m_Config->m_UDPSupportGameRanger) {
@@ -1091,6 +1122,8 @@ bool CAura::Update()
     }
 
     delete pkt;
+  } else if (m_Net->m_UDPSocket) {
+    m_Net->m_UDPSocket->Discard(&fd);
   }
 
   return m_Exiting || Exit;
@@ -1574,7 +1607,7 @@ bool CAura::CreateGame(CMap* map, uint8_t gameDisplay, string gameName, string o
     return false;
   }
 
-  m_CurrentLobby->LANBroadcastGameCreate();
+  m_CurrentLobby->SendGameDiscoveryCreate();
 
   for (auto& bnet : m_Realms) {
     string AnnounceText = (

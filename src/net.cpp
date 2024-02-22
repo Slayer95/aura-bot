@@ -40,10 +40,11 @@ using namespace std;
 // CTestConnection
 //
 
-CTestConnection::CTestConnection(CAura* nAura, const vector<uint8_t> nAddress, const uint16_t nPort, const string nName)
+CTestConnection::CTestConnection(CAura* nAura, const vector<uint8_t> nAddress, const uint16_t nPort, const uint8_t nType, const string nName)
   : m_Aura(nAura),
     m_Address(nAddress),
     m_Port(nPort),
+    m_Type(nType),
     m_Name(nName),
     m_Timeout(0),
     m_SentJoinRequest(false),
@@ -151,19 +152,12 @@ bool CNet::Init(const CConfig* CFG)
   // m_UDPServerEnabled may be overriden by the cli.
   bool useDoNotRoute = CFG->GetBool("net.game_discovery.udp.do_not_route", false);
   string emptyString;
-  string broadcastTarget = CFG->GetString("net.game_discovery.broadcast_target", emptyString);
-  if (useDoNotRoute) {
-    Print("Using DNR");
-  } else {
-    Print("Using automatic routing");
-  }
-  Print("Broadcast target: [" + broadcastTarget + "]");
+  string broadcastTarget = CFG->GetString("net.game_discovery.udp.broadcast.target", emptyString);
+  string bindAddress = CFG->GetString("net.bind_address", "0.0.0.0");
   if (m_UDPServerEnabled) {
     m_UDPServer = new CUDPServer();
     m_UDPServer->SetBroadcastTarget(broadcastTarget);
     m_UDPServer->SetDontRoute(useDoNotRoute);
-    string bindAddress = CFG->GetString("net.bind_address", "0.0.0.0");
-    Print("Bind address: " + bindAddress);
     if (!m_UDPServer->Listen(bindAddress, 6112, false)) {
       Print("[UDPSERVER] waiting for active instances of Warcraft to close... Please release port 6112.");
       this_thread::sleep_for(chrono::milliseconds(5000));
@@ -173,22 +167,47 @@ bool CNet::Init(const CConfig* CFG)
     }
   }
 
-  m_UDPSocket = new CUDPSocket();
+  uint16_t socketPort = static_cast<uint16_t>(CFG->GetInt("net.udp_fallback.outbound_port", 6113));
+  m_UDPSocket = new CUDPServer();
   m_UDPSocket->SetBroadcastTarget(broadcastTarget);
   m_UDPSocket->SetDontRoute(useDoNotRoute);
+  if (!m_UDPSocket->Listen(bindAddress, socketPort, true) && !m_UDPServerEnabled) {
+    Print("[UDPFALLBACK] failed to bind to port " + to_string(socketPort) + ".");
+    Print("[UDPFALLBACK] for a random available port, set net.udp_fallback.outbound_port = 0");
+    return false;
+  }
   return true;
 }
 
-void CNet::SendBroadcast(uint16_t port, const vector<uint8_t>& message)
+void CNet::SendBroadcast(const uint16_t port, const vector<uint8_t>& packet)
 {
-  Print("SendBroadcast()");
-  /*
-  if (!m_UDPServerEnabled || !m_UDPServer->Broadcast(port, message)) {
-    m_UDPSocket->Broadcast(port, message);
-  }*/
-  if (m_UDPServerEnabled)
-    m_UDPServer->Broadcast(port, message);
-  m_UDPSocket->Broadcast(port, message);
+  if (!m_UDPServerEnabled || !m_UDPServer->Broadcast(port, packet)) {
+    m_UDPSocket->Broadcast(port, packet);
+  }
+}
+
+void CNet::Send(const string& address, const uint16_t port, const vector<uint8_t>& packet)
+{
+  if (m_UDPServerEnabled) {
+    m_UDPServer->SendTo(address, port, packet);
+  } else {
+    m_UDPSocket->SendTo(address, port, packet);
+  }
+}
+
+void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& clientIps)
+{
+  if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
+    m_Aura->m_Net->SendBroadcast(6112, packet);
+  }
+
+  for (auto& clientIp: clientIps) {
+    if (m_UDPServerEnabled) {
+      m_UDPServer->SendTo(clientIp, 6112, packet);
+    } else {
+      m_UDPSocket->SendTo(clientIp, 6112, packet);
+    }
+  }
 }
 
 optional<sockaddr_in> CNet::ResolveHost(const string& hostName)
@@ -248,7 +267,7 @@ vector<uint8_t> CNet::GetPublicIP()
   }
 }
 
-bool CNet::EnableUPnP(const char* port)
+uint8_t CNet::EnableUPnP(const uint16_t externalPort, const uint16_t internalPort)
 {
   struct UPNPDev* devlist = NULL;
   struct UPNPDev* device;
@@ -257,17 +276,18 @@ bool CNet::EnableUPnP(const char* port)
   char lanaddr[64];
 
   devlist = upnpDiscover(2000, NULL, NULL, 0, 0, 2, 0);
-  bool anySuccess = false;
+  uint8_t success = 0;
+
+  string extPort = to_string(externalPort);
+  string intPort = to_string(internalPort);
 
   // Iterate through the discovered devices
   for (device = devlist; device; device = device->pNext) {
     // Get the UPnP URLs and IGD data for this device
     int checkIGD = UPNP_GetValidIGD(device, &urls, &data, lanaddr, sizeof(lanaddr));
-    if (checkIGD != 1) {
+    if (checkIGD != 1 && checkIGD != 2) {
       if (checkIGD == 0) {
         printf("Found UPnP Device: %s - but no IGD found\n", device->descURL);
-      } else if (checkIGD == 2) {
-        printf("Found UPnP Device: %s - but the IGD is not connected\n", device->descURL);
       } else if (checkIGD == 3) {
         printf("Found UPnP Device: %s - but not recognized as an IGD\n", device->descURL);
       } else {
@@ -275,16 +295,20 @@ bool CNet::EnableUPnP(const char* port)
       }
       continue;
     }
-    printf("Found Internet Gateway Device at %s\n", urls.controlURL);
+    if (checkIGD == 2) {
+      printf("Found unconnected Internet Gateway Device at %s\n", urls.controlURL);
+    } else {
+      printf("Found connected Internet Gateway Device at %s\n", urls.controlURL);
+    }
     printf("LAN address: %s\n", lanaddr);
 
-    int r = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, port, port, lanaddr, "Warcraft 3 game hosting", "TCP", NULL, "3600");
+    int r = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", "TCP", NULL, "86400");
 
     if (r != UPNPCOMMAND_SUCCESS) {
       printf("Failed to add port mapping: %d\n", r);
     } else {
       printf("Port mapping added successfully!\n");
-      anySuccess = true;
+      success = success | (1 << (checkIGD - 1));
     }
 
     // Free UPnP URLs and IGD data
@@ -294,17 +318,13 @@ bool CNet::EnableUPnP(const char* port)
 
   // Free the UPnP device list
   freeUPNPDevlist(devlist);
-  return anySuccess;
+  return success;
 }
 
-void CNet::StartHealthCheck(const vector<pair<string, vector<uint8_t>>> testServers)
+void CNet::StartHealthCheck(const vector<tuple<string, uint8_t, vector<uint8_t>, uint16_t>> testServers)
 {
-  for (uint16_t i = 0; i < testServers.size(); ++i) {
-    const string id = testServers[i].first;
-    vector<uint8_t> ip(testServers[i].second.begin(), testServers[i].second.begin() + 4);
-    uint16_t port = testServers[i].second[4];
-    port = (port << 8) + static_cast<uint16_t>(testServers[i].second[5]);
-    m_HealthCheckClients.push_back(new CTestConnection(m_Aura, ip, port, id));
+  for (auto& testServer: testServers) {
+    m_HealthCheckClients.push_back(new CTestConnection(m_Aura, get<2>(testServer), get<3>(testServer), get<1>(testServer), get<0>(testServer)));
   }
   m_HealthCheckInProgress = true;
 }
@@ -318,4 +338,27 @@ void CNet::ResetHealthCheck()
   m_HealthCheckInProgress = false;
 }
 
-CNet::~CNet() = default;
+vector<uint16_t> CNet::GetPotentialGamePorts()
+{
+  vector<uint16_t> result;
+
+  uint16_t port = m_Aura->m_Config->m_MinHostPort;
+  if (m_Aura->m_Config->m_EnableLANBalancer && m_Aura->m_Config->m_LANHostPort < port) {
+    result.push_back(m_Aura->m_Config->m_LANHostPort);
+  }
+  while (port <= m_Aura->m_Config->m_MaxHostPort) {
+    result.push_back(port);
+    ++port;
+  }
+  if (m_Aura->m_Config->m_EnableLANBalancer && m_Aura->m_Config->m_LANHostPort > port) {
+    result.push_back(m_Aura->m_Config->m_LANHostPort);
+  }
+  
+  return result;
+}
+
+CNet::~CNet()
+{
+  delete m_UDPServer;
+  delete m_UDPSocket;
+}

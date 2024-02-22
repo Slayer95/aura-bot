@@ -122,6 +122,7 @@ protected:
   uint32_t                       m_LobbyNoOwnerTime;              // relinquish game ownership after this many minutes
   uint32_t                       m_LobbyTimeLimit;                // auto close the game lobby after this many minutes without any owner
   uint32_t                       m_NumPlayersToStartGameOver;     // when this player count is reached, the game over timer will start
+  std::set<std::string>          m_ClientDiscoveryIPs;
 
   uint32_t                       m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
@@ -243,10 +244,10 @@ public:
   void SendAllAutoStart() const;
   void AnnounceToAddress(std::string IP, uint16_t port) const;
   void AnnounceToAddressForGameRanger(std::string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
-  void LANBroadcastGameInfo() const;
-  void LANBroadcastGameRefresh() const;
-  void LANBroadcastGameCreate() const;
-  void LANBroadcastGameDecreate() const;
+  void SendGameDiscoveryInfo() const;
+  void SendGameDiscoveryRefresh() const;
+  void SendGameDiscoveryCreate() const;
+  void SendGameDiscoveryDecreate() const;
 
   // events
   // note: these are only called while iterating through the m_Potentials or m_Players std::vectors

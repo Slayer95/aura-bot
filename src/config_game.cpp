@@ -49,6 +49,8 @@ CGameConfig::CGameConfig(CConfig* CFG)
   m_PerfThreshold             = CFG->GetInt("bot.perf_limit", 150);
   m_LacksMapKickDelay         = CFG->GetInt("hosting.map_missing.kick_delay", 60); // default: 1 minute
 
+  m_ClientDiscoveryIPs        = CFG->GetIPv4Set("net.game_discovery.udp.client_ip_addresses", ',', {});
+
   string BotCommandTrigger    = CFG->GetString("hosting.command_trigger", "!");
   m_CommandTrigger            = BotCommandTrigger[0];
   m_IndexVirtualHostName      = CFG->GetString("hosting.index.creator_name", 1, 15, "Aura Bot");

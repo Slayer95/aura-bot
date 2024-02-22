@@ -381,17 +381,32 @@ void CTCPClient::Connect(const string& localaddress, const string& address, uint
     }
   }
 
-  optional<sockaddr_in> resolvedIpAddress = CNet::ResolveHost(address);
-  if (!resolvedIpAddress.has_value()) {
+  // get IP address
+
+  struct hostent* HostInfo;
+  uint32_t        HostAddress;
+  HostInfo = gethostbyname(address.c_str());
+
+  if (!HostInfo)
+  {
     m_HasError = true;
-    Print("[TCPCLIENT] (" + m_Name +") error (unable to resolve " + address + ")");
+    // m_Error = h_error;
+    Print("[TCPCLIENT] (" + m_Name +") error (gethostbyname)");
     return;
   }
-  m_SIN = resolvedIpAddress.value();
-  m_SIN.sin_port = htons(port);
 
-  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SIN), sizeof(m_SIN)) == SOCKET_ERROR) {
-    if (GetLastError() != EINPROGRESS && GetLastError() != EWOULDBLOCK) {
+  memcpy(&HostAddress, HostInfo->h_addr, HostInfo->h_length);
+
+  // connect
+
+  m_SIN.sin_family      = AF_INET;
+  m_SIN.sin_addr.s_addr = HostAddress;
+  m_SIN.sin_port        = htons(port);
+
+  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SIN), sizeof(m_SIN)) == SOCKET_ERROR)
+  {
+    if (GetLastError() != EINPROGRESS && GetLastError() != EWOULDBLOCK)
+    {
       // connect error
 
       m_HasError = true;
@@ -585,30 +600,44 @@ bool CUDPSocket::SendTo(struct sockaddr_in sin, const std::vector<uint8_t>& mess
 
   const string MessageString = string(begin(message), end(message));
 
-  return sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin)) != -1;
+  if (sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin)) == -1)
+    return false;
+
+  return true;
 }
 
-bool CUDPSocket::SendTo(const string& hostName, uint16_t port, const std::vector<uint8_t>& message)
+bool CUDPSocket::SendTo(const string& address, uint16_t port, const std::vector<uint8_t>& message)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError)
     return false;
 
-  optional<sockaddr_in> resolvedIpAddress = CNet::ResolveHost(hostName);
-  if (!resolvedIpAddress.has_value()) {
+  // get IP address
+
+  struct hostent* HostInfo;
+  uint32_t        HostAddress;
+  HostInfo = gethostbyname(address.c_str());
+
+  if (!HostInfo)
+  {
     m_HasError = true;
-    Print("[UDPSOCKET] error (unable to resolve " + hostName + ")");
+    // m_Error = h_error;
+    Print("[UDPSOCKET] error (gethostbyname)");
     return false;
   }
 
-  return SendTo(resolvedIpAddress.value(), message);
+  memcpy(&HostAddress, HostInfo->h_addr, HostInfo->h_length);
+  struct sockaddr_in sin;
+  sin.sin_family      = AF_INET;
+  sin.sin_addr.s_addr = HostAddress;
+  sin.sin_port        = htons(port);
+
+  return SendTo(sin, message);
 }
 
 bool CUDPSocket::Broadcast(uint16_t port, const std::vector<uint8_t>& message)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError) {
-    Print("Broadcast failed");
+  if (m_Socket == INVALID_SOCKET || m_HasError)
     return false;
-  }
 
   struct sockaddr_in sin;
   sin.sin_family      = AF_INET;
@@ -619,11 +648,10 @@ bool CUDPSocket::Broadcast(uint16_t port, const std::vector<uint8_t>& message)
 
   int result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin));
   if (result == -1) {
-	int error = WSAGetLastError();
+    int error = WSAGetLastError();
     Print("[UDPSOCKET] failed to broadcast packet (port " + to_string(port) + ", size " + to_string(MessageString.size()) + " bytes) with error: " + to_string(error));
     return false;
   }
-  Print("Broadcast()" + ByteArrayToHexString(message));
 
   return true;
 }
@@ -748,17 +776,15 @@ bool CUDPServer::Listen(const string& address, uint16_t port, bool retry)
 
 UDPPkt* CUDPServer::Accept(fd_set* fd) {
   if (m_Socket == INVALID_SOCKET || m_HasError) {
+    Print("Accept() failed socket has error.");
     return nullptr;
   }
 
-  if (!FD_ISSET(m_Socket, fd)){
+  if (!FD_ISSET(m_Socket, fd)) {
     return nullptr;
   }
-  
-  // a connection is waiting, accept it
 
   char buffer[1024];
-  struct UDPPkt pkt;
   struct sockaddr_in clientAddress;
   int clientAddressLength = sizeof(clientAddress);
   int receivedBytes;
@@ -766,18 +792,20 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
   receivedBytes = recvfrom(m_Socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&clientAddress, &clientAddressLength);
 #ifdef WIN32
   if (receivedBytes == SOCKET_ERROR) {
+    int error = WSAGetLastError();
 #else
   if (receivedBytes < 0) {
+    int error = errno;
 #endif
-    Print("[UDPSERVER] Error receiving data.");
+    Print("[UDPSERVER] Error receiving data. Error code " + to_string(error));
     return nullptr;
   }
 
   if (receivedBytes <= MIN_UDP_PACKET_SIZE) {
-    Print("[UDPSERVER] Error receiving data.");
     return nullptr;
   }
 
+  struct UDPPkt pkt;
   pkt.length = receivedBytes;
   pkt.sender = clientAddress;
   std::memcpy(pkt.buf, buffer, receivedBytes);
@@ -789,4 +817,28 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
   }
 
   return result;
+}
+
+void CUDPServer::Discard(fd_set* fd) {
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
+    return;
+  }
+
+  if (!FD_ISSET(m_Socket, fd)){
+    return;
+  }
+  
+  char buffer[1024];
+  struct sockaddr_in clientAddress;
+  int clientAddressLength = sizeof(clientAddress);
+  int receivedBytes;
+
+  receivedBytes = recvfrom(m_Socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&clientAddress, &clientAddressLength);
+#ifdef WIN32
+  if (receivedBytes == SOCKET_ERROR) {
+#else
+  if (receivedBytes < 0) {
+#endif
+    return;
+  }
 }

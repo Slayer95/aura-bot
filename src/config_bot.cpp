@@ -77,35 +77,37 @@ CBotConfig::CBotConfig(CConfig* CFG)
     }
   }
 
-  m_UDPInfoStrictMode      = CFG->GetBool("net.game_discovery.udp.strict", true);
-  m_UDPForwardTraffic      = CFG->GetBool("net.udp_redirect.enabled", false);
-  m_UDPForwardAddress      = CFG->GetString("net.udp_redirect.ip_address", emptyString);
-  m_UDPForwardPort         = static_cast<uint16_t>(CFG->GetInt("net.udp_redirect.port", 6110));
-  m_UDPForwardGameLists    = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
-  m_UDPBlockedIPs          = CFG->GetSet("net.udp_server.block_list", ',', {});
-  m_UDPSupportGameRanger   = CFG->GetBool("net.game_discovery.udp.gameranger.enabled", false);
-  m_UDPGameRangerAddress   = CFG->GetIPv4("net.game_discovery.udp.gameranger.ip_address", {255, 255, 255, 255});
-  m_UDPGameRangerPort      = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112));
+  m_UDPInfoStrictMode            = CFG->GetBool("net.game_discovery.udp.strict", true);
+  m_UDPForwardTraffic            = CFG->GetBool("net.udp_redirect.enabled", false);
+  m_UDPForwardAddress            = CFG->GetString("net.udp_redirect.ip_address", emptyString);
+  m_UDPForwardPort               = static_cast<uint16_t>(CFG->GetInt("net.udp_redirect.port", 6110));
+  m_UDPForwardGameLists          = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
+  m_UDPBroadcastEnabled          = CFG->GetBool("net.game_discovery.udp.broadcast.enabled", true);
+  m_UDPBlockedIPs                = CFG->GetIPv4Set("net.udp_server.block_list", ',', {});
 
-  m_AllowDownloads         = CFG->GetBool("bot.allow_downloads", false);
-  m_AllowTransfers         = static_cast<uint8_t>(CFG->GetInt("hosting.map_transfers.enabled", MAP_TRANSFERS_AUTOMATIC));
-  m_MaxDownloaders         = CFG->GetInt("hosting.map_transfers.max_players", 3);
-  m_MaxUploadSize          = CFG->GetInt("hosting.map_transfers.max_size", 8192);
-  m_MaxUploadSpeed         = CFG->GetInt("hosting.map_transfers.max_speed", 1024);
-  m_MaxParallelMapPackets  = CFG->GetInt("hosting.map_transfers.max_parallel_packets", 1000);
-  m_RTTPings               = CFG->GetBool("metrics.rtt_pings", false);
-  m_HasBufferBloat         = CFG->GetBool("net.has_buffer_bloat", false);
-  m_ReconnectWaitTime      = static_cast<uint8_t>(CFG->GetInt("net.player_reconnect.wait", 3));
+  m_UDPSupportGameRanger         = CFG->GetBool("net.game_discovery.udp.gameranger.enabled", false);
+  m_UDPGameRangerAddress         = CFG->GetIPv4("net.game_discovery.udp.gameranger.ip_address", {255, 255, 255, 255});
+  m_UDPGameRangerPort            = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112));
 
-  m_MinHostCounter         = CFG->GetInt("hosting.namepace.first_game_id", 100);
-  m_MaxGames               = CFG->GetInt("hosting.max_games", 20);
-  m_MaxSavedMapSize        = CFG->GetInt("bot.max_persistent_size", 0xFFFFFFFF);
+  m_AllowDownloads               = CFG->GetBool("bot.allow_downloads", false);
+  m_AllowTransfers               = static_cast<uint8_t>(CFG->GetInt("hosting.map_transfers.enabled", MAP_TRANSFERS_AUTOMATIC));
+  m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);
+  m_MaxUploadSize                = CFG->GetInt("hosting.map_transfers.max_size", 8192);
+  m_MaxUploadSpeed               = CFG->GetInt("hosting.map_transfers.max_speed", 1024);
+  m_MaxParallelMapPackets        = CFG->GetInt("hosting.map_transfers.max_parallel_packets", 1000);
+  m_RTTPings                     = CFG->GetBool("metrics.rtt_pings", false);
+  m_HasBufferBloat               = CFG->GetBool("net.has_buffer_bloat", false);
+  m_ReconnectWaitTime            = static_cast<uint8_t>(CFG->GetInt("net.player_reconnect.wait", 3));
 
-  m_StrictPaths            = CFG->GetBool("bot.load_maps.strict_paths", false);
-  m_EnableCFGCache         = CFG->GetBool("bot.load_maps.cache.enabled", true);
-  m_EnableUPnP             = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
+  m_MinHostCounter               = CFG->GetInt("hosting.namepace.first_game_id", 100);
+  m_MaxGames                     = CFG->GetInt("hosting.max_games", 20);
+  m_MaxSavedMapSize              = CFG->GetInt("bot.max_persistent_size", 0xFFFFFFFF);
 
-  string ipAlgorithm       = CFG->GetString("net.public_ip_address.algorithm", "api");
+  m_StrictPaths                  = CFG->GetBool("bot.load_maps.strict_paths", false);
+  m_EnableCFGCache               = CFG->GetBool("bot.load_maps.cache.enabled", true);
+  m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
+
+  string ipAlgorithm             = CFG->GetString("net.public_ip_address.algorithm", "api");
   if (ipAlgorithm == "manual") {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
   } else if (ipAlgorithm == "api") {
@@ -115,14 +117,15 @@ CBotConfig::CBotConfig(CConfig* CFG)
   } else {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
   }
-  m_PublicIPValue          = CFG->GetString("net.public_ip_address.value",
+
+  m_PublicIPValue                = CFG->GetString("net.public_ip_address.value",
     m_PublicIPAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API ? "https://api.ipify.org" : ""
   );
 
-  m_ExitOnStandby          = CFG->GetBool("bot.exit_on_standby", false);
+  m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
-  m_EnableBNET             = CFG->GetMaybeBool("bot.enable_bnet");
+  m_EnableBNET                   = CFG->GetMaybeBool("bot.toggle_every_realm");
   if (m_EnableBNET.has_value()) {
     Print("m_EnableBNET has value");
     if (m_EnableBNET.value()) {

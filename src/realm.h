@@ -59,7 +59,7 @@ public:
   CAura* m_Aura;
 
 private:
-  CRealmConfig*                     m_Config;
+  CRealmConfig*                    m_Config;
   CTCPClient*                      m_Socket;                                               // the connection to battle.net
   CBNETProtocol*                   m_Protocol;                                             // battle.net protocol
   CBNCSUtilInterface*              m_BNCSUtil;                                             // the interface to the bncsutil library (used for logging into battle.net)
@@ -116,6 +116,7 @@ public:
   uint8_t              GetHostCounterID() const;
   std::string          GetLoginName() const;
   bool                 GetIsMirror() const;
+  bool                 GetIsVPN() const;
   bool                 GetUsesCustomIPAddress() const;
   bool                 GetUsesCustomPort() const;
   uint16_t             GetPublicHostPort() const;

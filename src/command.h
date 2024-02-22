@@ -33,6 +33,7 @@
 #include "gameplayer.h"
 #include "irc.h"
 #include "map.h"
+#include "net.h"
 
 #include <optional>
 #include <ostream>

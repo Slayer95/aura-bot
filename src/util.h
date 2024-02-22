@@ -595,7 +595,19 @@ inline std::string JoinVector(const std::vector<std::string> list, const std::st
   return Results;
 }
 
+inline std::string JoinVector(const std::vector<uint16_t> list, const std::string connector, const bool trailingConnector) {
+  std::string Results;
+  for (const auto& element : list)
+    Results += std::to_string(element) + connector;
+  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
+  return Results;
+}
+
 inline std::string JoinVector(const std::vector<std::string> list, const bool trailingComma) {
+  return JoinVector(list, ", ", trailingComma);
+}
+
+inline std::string JoinVector(const std::vector<uint16_t> list, const bool trailingComma) {
   return JoinVector(list, ", ", trailingComma);
 }
 

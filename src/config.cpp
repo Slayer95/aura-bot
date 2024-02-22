@@ -221,6 +221,24 @@ vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x) co
 
   return Output;
 }
+set<string> CConfig::GetIPv4Set(const string& key, char separator, set<string> x) const
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG))
+    return x;
+
+  set<string> Output;
+  stringstream ss(it->second);
+  while (ss.good()) {
+    string element;
+    getline(ss, element, separator);
+    if (element.length() > 0 && !ExtractIPv4(element).empty()) {
+      Output.insert(element);
+    }
+  }
+  return Output;
+}
+
 
 filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x) const
 {

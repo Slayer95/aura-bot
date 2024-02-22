@@ -163,7 +163,7 @@ bool CRealm::Update(void* fd, void* send_fd)
               AppendByteArrayFast(relayPacket, Data);
               AssignLength(relayPacket);
               //Print("[BNET: " + m_Config->m_UniqueName + "] sending game list to " + m_Aura->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
-              m_Aura->m_Net->m_UDPSocket->SendTo(m_Aura->m_Config->m_UDPForwardAddress, m_Aura->m_Config->m_UDPForwardPort, relayPacket);
+              m_Aura->m_Net->Send(m_Aura->m_Config->m_UDPForwardAddress, m_Aura->m_Config->m_UDPForwardPort, relayPacket);
             }
 
             break;
@@ -380,14 +380,12 @@ bool CRealm::Update(void* fd, void* send_fd)
       switch (packetType) {
         case PACKET_TYPE_GAME_REFRESH: {
           if (!m_Aura->m_CurrentLobby || get<1>(curPacket) != m_Aura->m_CurrentLobby->GetHostCounter()) {
-            Print(GetLogPrefix() + "stale game refresh packet dropped");
             skipIteration = true;
           }
           break;
         }
         default: {
           if (m_SessionID != get<1>(curPacket)) {
-            Print(GetLogPrefix() + "stale packet dropped");
             skipIteration = true;
           }
           break;
@@ -694,6 +692,11 @@ string CRealm::GetLoginName() const
 bool CRealm::GetIsMirror() const
 {
   return m_Config->m_IsMirror;
+}
+
+bool CRealm::GetIsVPN() const
+{
+  return m_Config->m_IsVPN;
 }
 
 bool CRealm::GetUsesCustomIPAddress() const
