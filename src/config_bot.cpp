@@ -44,18 +44,20 @@ CBotConfig::CBotConfig(CConfig* CFG)
 {
   const static string emptyString;
 
-  m_Enabled                = CFG->GetBool("hosting.enabled", true);
-  m_ProxyReconnectEnabled  = CFG->GetBool("net.gproxy.enabled", true);
-  m_War3Version            = CFG->GetMaybeInt("game.version"/*, 27*/);
-  m_Warcraft3Path          = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
-  m_MapCFGPath             = CFG->GetPath("bot.map_configs_path", filesystem::path());
-  m_MapPath                = CFG->GetPath("bot.maps_path", filesystem::path());
+  m_Enabled                 = CFG->GetBool("hosting.enabled", true);
+  m_ProxyReconnectEnabled   = CFG->GetBool("net.gproxy.enabled", true);
+  m_War3Version             = CFG->GetMaybeInt("game.version"/*, 27*/);
+  m_Warcraft3Path           = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
+  m_MapCFGPath              = CFG->GetPath("bot.map_configs_path", filesystem::path());
+  m_MapPath                 = CFG->GetPath("bot.maps_path", filesystem::path());
 
-  m_BindAddress            = CFG->GetString("net.bind_address", emptyString);
-  m_MinHostPort            = static_cast<uint16_t>(CFG->GetInt("net.host_port.min", CFG->GetInt("net.host_port.only", 6112)));
-  m_MaxHostPort            = static_cast<uint16_t>(CFG->GetInt("net.host_port.max", m_MinHostPort));
-  m_EnableLANBalancer      = CFG->GetBool("net.game_discovery.udp.balancer_port.enabled", false);
-  m_LANHostPort            = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.balancer_port.value", 6112));
+  m_BindAddress             = CFG->GetString("net.bind_address", emptyString);
+  m_MinHostPort             = static_cast<uint16_t>(CFG->GetInt("net.host_port.min", CFG->GetInt("net.host_port.only", 6112)));
+  m_MaxHostPort             = static_cast<uint16_t>(CFG->GetInt("net.host_port.max", m_MinHostPort));
+  m_UDPEnableCustomPortTCP4 = CFG->GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
+  m_UDPCustomPortTCP4       = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.tcp4_custom_port.value", 6112));
+  m_UDPEnableCustomPortTCP6 = CFG->GetBool("net.game_discovery.udp.tcp6_custom_port.enabled", false);
+  m_UDPCustomPortTCP6       = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.tcp6_custom_port.value", 5678));
 
   /* Make absolute, lexically normal */
   m_GreetingPath           = CFG->GetPath("bot.greeting_path", filesystem::path());
@@ -84,6 +86,8 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_UDPForwardGameLists          = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
   m_UDPBroadcastEnabled          = CFG->GetBool("net.game_discovery.udp.broadcast.enabled", true);
   m_UDPBlockedIPs                = CFG->GetIPv4Set("net.udp_server.block_list", ',', {});
+
+  m_UDP6TargetPort               = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.ipv6.target_port", 5678));
 
   m_UDPSupportGameRanger         = CFG->GetBool("net.game_discovery.udp.gameranger.enabled", false);
   m_UDPGameRangerAddress         = CFG->GetIPv4("net.game_discovery.udp.gameranger.ip_address", {255, 255, 255, 255});
@@ -126,16 +130,6 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
   m_EnableBNET                   = CFG->GetMaybeBool("bot.toggle_every_realm");
-  if (m_EnableBNET.has_value()) {
-    Print("m_EnableBNET has value");
-    if (m_EnableBNET.value()) {
-      Print("m_EnableBNET true");
-    } else {
-      Print("m_EnableBNET false");
-    }
-  } else {
-    Print("m_EnableBNET has no value");
-  }
 }
 
 CBotConfig::~CBotConfig() = default;

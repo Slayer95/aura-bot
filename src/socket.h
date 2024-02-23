@@ -150,20 +150,49 @@ struct UDPPkt
 
 class CSocket
 {
-protected:
+public:
   SOCKET             m_Socket;
   struct sockaddr_in m_SIN;
   bool               m_HasError;
   int                m_Error;
+  std::string        m_Name;
 
-  CSocket();
-  CSocket(SOCKET nSocket, struct sockaddr_in nSIN);
-
-public:
+  CSocket(SOCKET nSocket);
+  CSocket(std::string nName);
+  CSocket(SOCKET nSocket, std::string nName);
   ~CSocket();
 
   std::string                 GetErrorString() const;
   inline std::vector<uint8_t> GetPort() const { return CreateByteArray(m_SIN.sin_port, false); }
+  inline int32_t              GetError() const { return m_Error; }
+  inline bool                 HasError() const { return m_HasError; }
+
+  void SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
+  void Reset();
+  void Allocate(int type);
+
+  inline std::string  GetName() { return m_Name; }
+};
+
+//
+// CStreamIOSocket
+//
+
+class CStreamIOSocket : public CSocket
+{
+public:
+  std::string m_RecvBuffer;
+  std::string m_SendBuffer;
+  uint32_t    m_RemoteSocketCounter;
+  int64_t     m_LastRecv;
+  bool        m_Connected;
+
+  CStreamIOSocket(std::string nName);
+  CStreamIOSocket(SOCKET nSocket, struct sockaddr_in nSIN, std::string nName);
+  ~CStreamIOSocket();
+
+  inline int64_t      GetLastRecv() const { return m_LastRecv; }
+
   inline std::vector<uint8_t> GetIP() const {
     if (m_SIN.sin_family != AF_INET) return {0, 0, 0, 0};
     return CreateByteArray(static_cast<uint32_t>(m_SIN.sin_addr.s_addr), false);
@@ -175,37 +204,14 @@ public:
     if (ipStr == NULL) return std::string("0.0.0.0");
     return std::string(ipStr);
   }
-  inline int32_t              GetError() const { return m_Error; }
-  inline bool                 HasError() const { return m_HasError; }
 
-  void SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
-  void Reset();
-  void Allocate(int type);
-};
-
-//
-// CTCPSocket
-//
-
-class CTCPSocket : public CSocket
-{
-protected:
-  std::string m_RecvBuffer;
-  std::string m_SendBuffer;
-  std::string m_Name;
-  uint32_t    m_RemoteSocketCounter;
-  int64_t     m_LastRecv;
-  bool        m_Connected;
-
-public:
-  CTCPSocket(std::string nName);
-  CTCPSocket(SOCKET nSocket, struct sockaddr_in nSIN, std::string nName);
-  ~CTCPSocket();
+  inline bool         GetConnected() const { return m_Connected; }
+  void Disconnect();
 
   inline std::string* GetBytes() { return &m_RecvBuffer; }
-  inline int64_t      GetLastRecv() const { return m_LastRecv; }
-  inline bool         GetConnected() const { return m_Connected; }
-  inline std::string  GetName() { return m_Name; }
+  inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
+  inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
+  void DoRecv(fd_set* fd);
 
   inline uint32_t PutBytes(const std::string& bytes) {
     m_SendBuffer += bytes;
@@ -215,14 +221,8 @@ public:
     m_SendBuffer += std::string(begin(bytes), end(bytes));
     return bytes.size();
   }
-
-  inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
-  inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
   inline void                           ClearSendBuffer() { m_SendBuffer.clear(); }
-
-  void DoRecv(fd_set* fd);
   void DoSend(fd_set* send_fd);
-  void Disconnect();
 
   void Reset();
 };
@@ -231,51 +231,37 @@ public:
 // CTCPClient
 //
 
-class CTCPClient final : public CTCPSocket
+class CTCPClient final : public CStreamIOSocket
 {
-protected:
+public:
   bool m_Connecting;
 
-public:
   CTCPClient(std::string nName);
   ~CTCPClient();
 
-  inline std::string* GetBytes() { return &m_RecvBuffer; }
-  inline bool         GetConnected() const { return m_Connected; }
   inline bool         GetConnecting() const { return m_Connecting; }
+  bool                CheckConnect();
+  void                Connect(const std::string& localaddress, const std::string& address, uint16_t port);
 
-  void        Reset();
-  inline uint32_t PutBytes(const std::string& bytes) {
-    m_SendBuffer += bytes;
-    return bytes.size();
-  }
-  inline uint32_t PutBytes(const std::vector<uint8_t>& bytes) {
-    m_SendBuffer += std::string(begin(bytes), end(bytes));
-    return bytes.size();
-  }
-
-  bool        CheckConnect();
-  inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
-  inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
-  inline void                           ClearSendBuffer() { m_SendBuffer.clear(); }
-  void DoRecv(fd_set* fd);
-  void DoSend(fd_set* send_fd);
-  void Disconnect();
-  void Connect(const std::string& localaddress, const std::string& address, uint16_t port);
+  // Overrides
+  void                Reset();
+  void                Disconnect();
 };
 
 //
 // CTCPServer
 //
 
-class CTCPServer final : public CTCPSocket
+class CTCPServer final : public CSocket
 {
 public:
+  uint32_t                          m_AcceptCounter;
+
   CTCPServer(std::string nName);
   ~CTCPServer();
 
   bool Listen(const std::string& address, uint16_t port, bool retry);
-  CTCPSocket* Accept(fd_set* fd);
+  CStreamIOSocket* Accept(fd_set* fd);
 };
 
 //
@@ -284,11 +270,10 @@ public:
 
 class CUDPSocket : public CSocket
 {
-protected:
+public:
   struct in_addr m_BroadcastTarget;
 
-public:
-  CUDPSocket();
+  CUDPSocket(std::string nName);
   ~CUDPSocket();
 
   bool SendTo(struct sockaddr_in sin, const std::vector<uint8_t>& message);
@@ -303,7 +288,7 @@ public:
 class CUDPServer final : public CUDPSocket
 {
 public:
-  CUDPServer();
+  CUDPServer(std::string nName);
   ~CUDPServer();
 
   bool Listen(const std::string& address, uint16_t port, bool retry);

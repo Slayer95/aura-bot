@@ -37,20 +37,30 @@ int32_t GetLastError()
 // CSocket
 //
 
-CSocket::CSocket()
-  : m_Socket(INVALID_SOCKET),
+CSocket::CSocket(SOCKET nSocket)
+  : m_Socket(nSocket),
     m_HasError(false),
     m_Error(0)
 {
   memset(&m_SIN, 0, sizeof(m_SIN));
 }
 
-CSocket::CSocket(SOCKET nSocket, struct sockaddr_in nSIN)
-  : m_Socket(nSocket),
-    m_SIN(nSIN),
+CSocket::CSocket(string nName)
+  : m_Socket(INVALID_SOCKET),
     m_HasError(false),
+    m_Name(nName),
     m_Error(0)
 {
+  memset(&m_SIN, 0, sizeof(m_SIN));
+}
+
+CSocket::CSocket(SOCKET nSocket, string nName)
+  : m_Socket(nSocket),
+    m_HasError(false),
+    m_Name(nName),
+    m_Error(0)
+{
+  memset(&m_SIN, 0, sizeof(m_SIN));
 }
 
 CSocket::~CSocket()
@@ -182,15 +192,13 @@ void CSocket::Reset()
 }
 
 //
-// CTCPSocket
+// CStreamIOSocket
 //
 
-CTCPSocket::CTCPSocket(string nName)
-  : CSocket(),
+CStreamIOSocket::CStreamIOSocket(string nName)
+  : CSocket(nName),
     m_LastRecv(GetTime()),
-    m_Connected(false),
-    m_Name(nName),
-    m_RemoteSocketCounter(0)
+    m_Connected(false)
 {
   Allocate(SOCK_STREAM);
 
@@ -209,12 +217,11 @@ CTCPSocket::CTCPSocket(string nName)
   setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
 }
 
-CTCPSocket::CTCPSocket(SOCKET nSocket, struct sockaddr_in nSIN, string nName)
-  : CSocket(nSocket, nSIN),
+CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, struct sockaddr_in nSIN, string nName)
+  : CSocket(nSocket, nName),
+    //m_SIN(std::move(nSIN)),
     m_LastRecv(GetTime()),
-    m_Connected(true),
-    m_Name(nName),
-    m_RemoteSocketCounter(0)
+    m_Connected(true)
 {
 // make socket non blocking
 
@@ -226,13 +233,13 @@ CTCPSocket::CTCPSocket(SOCKET nSocket, struct sockaddr_in nSIN, string nName)
 #endif
 }
 
-CTCPSocket::~CTCPSocket()
+CStreamIOSocket::~CStreamIOSocket()
 {
   if (m_Socket != INVALID_SOCKET)
     closesocket(m_Socket);
 }
 
-void CTCPSocket::Reset()
+void CStreamIOSocket::Reset()
 {
   CSocket::Reset();
   Allocate(SOCK_STREAM);
@@ -252,7 +259,7 @@ void CTCPSocket::Reset()
 #endif
 }
 
-void CTCPSocket::DoRecv(fd_set* fd)
+void CStreamIOSocket::DoRecv(fd_set* fd)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected)
     return;
@@ -290,7 +297,7 @@ void CTCPSocket::DoRecv(fd_set* fd)
   }
 }
 
-void CTCPSocket::DoSend(fd_set* send_fd)
+void CStreamIOSocket::DoSend(fd_set* send_fd)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected || m_SendBuffer.empty())
     return;
@@ -319,7 +326,7 @@ void CTCPSocket::DoSend(fd_set* send_fd)
   }
 }
 
-void CTCPSocket::Disconnect()
+void CStreamIOSocket::Disconnect()
 {
   if (m_Socket != INVALID_SOCKET)
     shutdown(m_Socket, SHUT_RDWR);
@@ -332,7 +339,7 @@ void CTCPSocket::Disconnect()
 //
 
 CTCPClient::CTCPClient(string nName)
-  : CTCPSocket(nName),
+  : CStreamIOSocket(nName),
     m_Connecting(false)
 {
 }
@@ -343,7 +350,7 @@ CTCPClient::~CTCPClient()
 
 void CTCPClient::Reset()
 {
-  CTCPSocket::Reset();
+  CStreamIOSocket::Reset();
   m_Connecting = false;
 }
 
@@ -455,25 +462,15 @@ bool CTCPClient::CheckConnect()
   return false;
 }
 
-void CTCPClient::DoRecv(fd_set* fd)
-{
-  CTCPSocket::DoRecv(fd);
-}
-
-void CTCPClient::DoSend(fd_set* send_fd)
-{
-  CTCPSocket::DoSend(send_fd);
-}
-
 //
 // CTCPServer
 //
 
 CTCPServer::CTCPServer(string nName)
-  : CTCPSocket(nName)
+  : CSocket(nName),
+    m_AcceptCounter(0)
 {
-// make socket non blocking
-
+  // make socket non blocking
 #ifdef WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
@@ -482,9 +479,7 @@ CTCPServer::CTCPServer(string nName)
 #endif
 
   // set the socket to reuse the address in case it hasn't been released yet
-
   int32_t optval = 1;
-
 #ifdef WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(int32_t));
 #else
@@ -540,7 +535,7 @@ bool CTCPServer::Listen(const string& address, uint16_t port, bool retry)
   return true;
 }
 
-CTCPSocket* CTCPServer::Accept(fd_set* fd)
+CStreamIOSocket* CTCPServer::Accept(fd_set* fd)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError)
     return nullptr;
@@ -562,8 +557,8 @@ CTCPSocket* CTCPServer::Accept(fd_set* fd)
     {
       // success! return the new socket
 
-      ++m_RemoteSocketCounter;
-      return new CTCPSocket(NewSocket, Addr, m_Name + "-C" + to_string(m_RemoteSocketCounter));
+      ++m_AcceptCounter;
+      return new CStreamIOSocket(NewSocket, Addr, m_Name + "-C" + to_string(m_AcceptCounter));
     }
   }
 
@@ -574,8 +569,8 @@ CTCPSocket* CTCPServer::Accept(fd_set* fd)
 // CUDPSocket
 //
 
-CUDPSocket::CUDPSocket()
-  : CSocket()
+CUDPSocket::CUDPSocket(string nName)
+  : CSocket(nName)
 {
   Allocate(SOCK_DGRAM);
 
@@ -709,8 +704,8 @@ void CUDPSocket::Reset()
   m_BroadcastTarget.s_addr = INADDR_BROADCAST;
 }
 
-CUDPServer::CUDPServer()
-  : CUDPSocket()
+CUDPServer::CUDPServer(string nName)
+  : CUDPSocket(nName)
 {
 // make socket non blocking
 
@@ -744,7 +739,6 @@ bool CUDPServer::Listen(const string& address, uint16_t port, bool retry)
   }
 
   if (m_HasError) {
-    if (!retry) return false;
     m_HasError = false;
     m_Error = 0;
   }
@@ -797,7 +791,14 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
   if (receivedBytes < 0) {
     int error = errno;
 #endif
-    Print("[UDPSERVER] Error receiving data. Error code " + to_string(error));
+    string ipAddress = "0.0.0.0";
+    if (clientAddress.sin_family == AF_INET) {
+      char ipStr[INET_ADDRSTRLEN_IPV4];
+      inet_ntop(AF_INET, &(clientAddress.sin_addr), ipStr, INET_ADDRSTRLEN_IPV4);
+      if (ipStr != NULL)
+        ipAddress = string(ipStr);
+      Print("[UDPSERVER] Error receiving data sent by " + ipAddress + ". Error code " + to_string(error));
+    }
     return nullptr;
   }
 
@@ -820,25 +821,10 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
 }
 
 void CUDPServer::Discard(fd_set* fd) {
-  if (m_Socket == INVALID_SOCKET || m_HasError) {
-    return;
-  }
-
   if (!FD_ISSET(m_Socket, fd)){
     return;
   }
   
   char buffer[1024];
-  struct sockaddr_in clientAddress;
-  int clientAddressLength = sizeof(clientAddress);
-  int receivedBytes;
-
-  receivedBytes = recvfrom(m_Socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&clientAddress, &clientAddressLength);
-#ifdef WIN32
-  if (receivedBytes == SOCKET_ERROR) {
-#else
-  if (receivedBytes < 0) {
-#endif
-    return;
-  }
+  recv(m_Socket, buffer, sizeof(buffer), 0);
 }

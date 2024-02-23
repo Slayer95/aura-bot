@@ -597,6 +597,23 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GR_DECREATEGAME(uint32_t hostCounter)
   return packet;
 }
 
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC)
+{
+  if (!mapPath.empty() && mapSize.size() == 4 && mapInfo.size() == 4 && mapCRC.size() == 4)
+  {
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
+    AppendByteArrayFast(packet, mapPath); // map path
+    AppendByteArrayFast(packet, mapSize); // map size
+    AppendByteArrayFast(packet, mapInfo); // map info
+    AppendByteArrayFast(packet, mapCRC);  // map crc
+    AssignLength(packet);
+    return packet;
+  }
+
+  Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
+  return std::vector<uint8_t>();
+}
+
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1)
 {
   if (!mapPath.empty() && mapSize.size() == 4 && mapInfo.size() == 4 && mapCRC.size() == 4 && mapSHA1.size() == 20)

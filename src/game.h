@@ -132,9 +132,8 @@ protected:
   uint8_t                        m_AutoStartPlayers;
   uint8_t                        m_PlayersWithMap;
   uint16_t                       m_HostPort;                      // the port to host games on
-  bool                           m_LANEnabled;                    // whether to broadcast the game to LAN
-  uint16_t                       m_LANHostPort;                   // the port to broadcast over LAN
-  bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's - disables CRealm mirror instances
+  bool                           m_UDPEnabled;                    // whether this game should be listed in "Local Area Network"
+  bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
   std::vector<uint8_t>           m_PublicHostAddress;
   uint16_t                       m_PublicHostPort;
   uint8_t                        m_GameDisplay;                   // game state, public or private
@@ -161,7 +160,7 @@ protected:
 
 public:
   CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, std::string& nGameName, std::vector<uint8_t> nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, std::string nExcludedServer);
-  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nOwnerRealm, std::string& nCreatorName, CRealm* nCreatorServer);
+  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nOwnerRealm, std::string& nCreatorName, CRealm* nCreatorServer);
   ~CGame();
   CGame(CGame&) = delete;
 
@@ -169,8 +168,7 @@ public:
   inline CMap*          GetMap() const { return m_Map; }
   inline uint32_t       GetEntryKey() const { return m_EntryKey; }
   inline uint16_t       GetHostPort() const { return m_HostPort; }
-  inline bool           GetLANEnabled() const { return m_LANEnabled; }
-  inline uint16_t       GetLANPort() const { return m_LANHostPort; }
+  inline bool           GetUDPEnabled() const { return m_UDPEnabled; }
   inline bool           GetPublicHostOverride() const { return m_PublicHostOverride; }
   inline std::vector<uint8_t>    GetPublicHostAddress() const { return m_PublicHostAddress; }
   inline uint16_t       GetPublicHostPort() const { return m_PublicHostPort; }
@@ -205,6 +203,8 @@ public:
   std::string    GetPlayers() const;
   std::string    GetObservers() const;
   std::string    GetAutoStartText() const;
+
+  uint16_t       GetHostPortForUDP(const uint8_t ipVersion) const;
 
   inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void SetRefreshError(bool nRefreshError) { m_RefreshError = nRefreshError; }
@@ -242,8 +242,13 @@ public:
   void SendWelcomeMessage(CGamePlayer* player) const;
   void SendAllActions();
   void SendAllAutoStart() const;
-  void AnnounceToAddress(std::string IP, uint16_t port) const;
-  void AnnounceToAddressForGameRanger(std::string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
+
+  std::vector<uint8_t> GetGameDiscoveryInfo(const uint16_t hostPort) const;
+  std::vector<uint8_t> GetGameDiscoveryInfoForGameRanger(const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
+
+  void AnnounceToAddress(std::string& address) const;
+  void AnnounceToAddress(std::string& address, uint16_t port) const;
+  void AnnounceToAddressForGameRanger(std::string& tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
   void SendGameDiscoveryInfo() const;
   void SendGameDiscoveryRefresh() const;
   void SendGameDiscoveryCreate() const;

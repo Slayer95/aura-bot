@@ -27,7 +27,7 @@
 #include <string>
 #include <optional>
 
-class CTCPSocket;
+class CStreamIOSocket;
 class CGameProtocol;
 class CGame;
 class CIncomingJoinRequest;
@@ -49,21 +49,21 @@ protected:
   // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
   // it also allows us to convert CPotentialPlayers to CGamePlayers without the CPotentialPlayer's destructor closing the socket
 
-  CTCPSocket*          m_Socket;
+  CStreamIOSocket*          m_Socket;
   CIncomingJoinRequest* m_IncomingJoinPlayer;
   bool                 m_DeleteMe;
 
 public:
-  CPotentialPlayer(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CTCPSocket* nSocket);
+  CPotentialPlayer(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
   ~CPotentialPlayer();
 
-  inline CTCPSocket*          GetSocket() const { return m_Socket; }
+  inline CStreamIOSocket*          GetSocket() const { return m_Socket; }
   inline std::vector<uint8_t> GetExternalIP() const { return m_Socket->GetIP(); }
   inline std::string          GetExternalIPString() const { return m_Socket->GetIPString(); }
   inline bool                 GetDeleteMe() const { return m_DeleteMe; }
   inline CIncomingJoinRequest* GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
-  inline void SetSocket(CTCPSocket* nSocket) { m_Socket = nSocket; }
+  inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
 
   // processing functions
@@ -86,7 +86,7 @@ public:
   CGame*         m_Game;
 
 protected:
-  CTCPSocket* m_Socket; // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
+  CStreamIOSocket* m_Socket; // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
 
 private:
   std::vector<uint8_t>             m_InternalIP;                   // the player's internal IP address as reported by the player when connecting
@@ -142,7 +142,7 @@ public:
   ~CGamePlayer();
 
   uint32_t GetPing() const;
-  inline CTCPSocket*           GetSocket() const { return m_Socket; }
+  inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
   inline std::vector<uint8_t>  GetExternalIP() const { return m_Socket->GetIP(); }
   inline std::string           GetExternalIPString() const { return m_Socket->GetIPString(); }
   inline bool                  GetDeleteMe() const { return m_DeleteMe; }
@@ -190,7 +190,7 @@ public:
   inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
   inline bool                  GetMuted() const { return m_Muted; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
-  inline void SetSocket(CTCPSocket* nSocket) { m_Socket = nSocket; }
+  inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
   inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
@@ -226,7 +226,7 @@ public:
   // other functions
 
   void Send(const std::vector<uint8_t>& data);
-  void EventGProxyReconnect(CTCPSocket* NewSocket, uint32_t LastPacket);
+  void EventGProxyReconnect(CStreamIOSocket* NewSocket, uint32_t LastPacket);
 };
 
 #endif // AURA_GAMEPLAYER_H_

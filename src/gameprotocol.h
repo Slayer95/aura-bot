@@ -146,6 +146,7 @@ public:
   std::vector<uint8_t> SEND_W3GR_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots);
   std::vector<uint8_t> SEND_W3GS_DECREATEGAME(uint32_t hostCounter);
   std::vector<uint8_t> SEND_W3GR_DECREATEGAME(uint32_t hostCounter);
+  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC);
   std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1);
   std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromPID);
   std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromPID, uint8_t toPID, uint32_t start, const std::string* mapData);

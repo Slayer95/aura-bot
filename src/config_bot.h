@@ -56,8 +56,13 @@ public:
   std::string                             m_BindAddress;                // map path
   uint16_t                                m_MinHostPort;                // the min port to host games on
   uint16_t                                m_MaxHostPort;                // the max port to host games on
-  bool                                    m_EnableLANBalancer;          // enable to make LAN peers connect to m_LANHostPort
-  uint16_t                                m_LANHostPort;                // the port to broadcast over LAN
+
+  bool                                    m_UDPEnableCustomPortTCP4;    // enable to make IPv4 peers connect to m_UDPCustomPortTCP4
+  uint16_t                                m_UDPCustomPortTCP4;          // the TCP port to broadcast over LAN, or to specific IPv4 clients
+  bool                                    m_UDPEnableCustomPortTCP6;    // enable to make IPv6 peers connect to m_UDPCustomPortTCP6
+  uint16_t                                m_UDPCustomPortTCP6;          // the TCP port to announce to IPv6 clients
+
+  uint16_t                                m_UDP6TargetPort;             // the remote UDP port to which we send unicast game discovery messages over IPv6
 
   std::filesystem::path                   m_GreetingPath;               // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                   // read from m_GreetingPath

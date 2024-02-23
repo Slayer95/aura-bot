@@ -35,7 +35,7 @@ using namespace std;
 // CPotentialPlayer
 //
 
-CPotentialPlayer::CPotentialPlayer(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CTCPSocket* nSocket)
+CPotentialPlayer::CPotentialPlayer(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
   : m_Aura(nAura),
     m_Port(nPort),
     m_Protocol(nProtocol),
@@ -444,7 +444,7 @@ bool CGamePlayer::Update(void* fd)
         if (MyRealm) {
           m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
         } else if (m_JoinedRealmID == 0) {
-          m_GProxyPort = m_Game->m_Aura->m_Config->m_EnableLANBalancer ? m_Game->m_Aura->m_Config->m_LANHostPort : m_Game->GetHostPort();
+          m_GProxyPort = m_Game->m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Config->m_UDPCustomPortTCP4 : m_Game->GetHostPort();
         } else if (m_JoinedRealmID == 0x02) {
           // TODO(IceSandslash): GameRanger??
           m_GProxyPort = 6112;
@@ -505,7 +505,7 @@ void CGamePlayer::Send(const std::vector<uint8_t>& data)
   m_Socket->PutBytes(data);
 }
 
-void CGamePlayer::EventGProxyReconnect(CTCPSocket* NewSocket, uint32_t LastPacket)
+void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, uint32_t LastPacket)
 {
   delete m_Socket;
   m_Socket = NewSocket;

@@ -90,8 +90,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
     m_AutoStartPlayers(0),
     m_PlayersWithMap(0),
     m_HostPort(0),
-    m_LANHostPort(0),
-    m_LANEnabled(false),
+    m_UDPEnabled(false),
     m_PublicHostOverride(true),
     m_PublicHostAddress(nPublicHostAddress),
     m_PublicHostPort(nPublicHostPort),
@@ -136,7 +135,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
 // CGame lobby constructor
 //
 
-CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort, uint8_t nGameDisplay, string& nGameName, string& nOwnerName, string& nOwnerRealm, string& nCreatorName, CRealm* nCreatorServer)
+CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameDisplay, string& nGameName, string& nOwnerName, string& nOwnerRealm, string& nCreatorName, CRealm* nCreatorServer)
   : m_Aura(nAura),
     m_Socket(nullptr),
     m_DBBanLast(nullptr),
@@ -181,8 +180,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
     m_AutoStartPlayers(0),
     m_PlayersWithMap(0),
     m_HostPort(nHostPort),
-    m_LANHostPort(nLANHostPort),
-    m_LANEnabled(false),
+    m_UDPEnabled(false),
     m_PublicHostOverride(false),
     m_GameDisplay(nGameDisplay),
     m_VirtualHostPID(255),
@@ -221,7 +219,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint16_t nLANHostPort
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
   m_ClientDiscoveryIPs = m_Aura->m_GameDefaultConfig->m_ClientDiscoveryIPs;
 
-  m_LANEnabled = nAura->m_GameDefaultConfig->m_LANEnabled;
+  m_UDPEnabled = nAura->m_GameDefaultConfig->m_UDPEnabled;
 
   // wait time of 1 minute  = 0 empty actions required
   // wait time of 2 minutes = 1 empty action required...
@@ -491,7 +489,7 @@ bool CGame::Update(void* fd, void* send_fd)
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
     // however we only want to broadcast if the countdown hasn't started
 
-    if (!m_CountDownStarted && m_LANEnabled)
+    if (!m_CountDownStarted && m_UDPEnabled)
     {
       // construct a fixed host counter which will be used to identify players from this realm
       // the fixed host counter's highest-order byte will contain a 8 bit ID (0-255)
@@ -1384,9 +1382,32 @@ void CGame::SendAllActions()
   m_LastActionSentTicks = Ticks;
 }
 
-void CGame::AnnounceToAddress(string IP, uint16_t port) const
+uint16_t CGame::GetHostPortForUDP(const uint8_t ipVersion) const
 {
-  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_GAMEINFO(
+  if (ipVersion == 4)
+    return m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Aura->m_Config->m_UDPCustomPortTCP4 : m_HostPort;
+
+  if (ipVersion == 6)
+    return m_Aura->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
+
+  return m_HostPort;
+}
+
+vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
+{
+  // we send 12 for SlotsTotal because this determines how many PID's Warcraft 3 allocates
+  // we need to make sure Warcraft 3 allocates at least SlotsTotal + 1 but at most 12 PID's
+  // this is because we need an extra PID for the virtual host player (but we always delete the virtual host player when the 12th person joins)
+  // however, we can't send 13 for SlotsTotal because this causes Warcraft 3 to crash when sharing control of units
+  // nor can we send SlotsTotal because then Warcraft 3 crashes when playing maps with less than 12 PID's (because of the virtual host player taking an extra PID)
+  // we also send 12 for SlotsOpen because Warcraft 3 assumes there's always at least one player in the game (the host)
+  // so if we try to send accurate numbers it'll always be off by one and results in Warcraft 3 assuming the game is full when it still needs one more player
+  // the easiest solution is to simply send 12 for both so the game will always show up as (1/12) players
+
+  // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
+  // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
+
+  return GetProtocol()->SEND_W3GS_GAMEINFO(
     m_Aura->m_GameVersion,
     CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
     m_Map->GetMapGameFlags(),
@@ -1399,17 +1420,15 @@ void CGame::AnnounceToAddress(string IP, uint16_t port) const
     m_Map->GetMapCRC(),
     m_Slots.size(), // Total Slots
     m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
-    m_LANHostPort,
+    hostPort,
     m_HostCounter,
     m_EntryKey
   );
-
-  m_Aura->m_Net->Send(IP, port, packet);
 }
 
-void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
+vector<uint8_t> CGame::GetGameDiscoveryInfoForGameRanger(const vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
 {
-  vector<uint8_t> packet = GetProtocol()->SEND_W3GR_GAMEINFO(
+  return GetProtocol()->SEND_W3GR_GAMEINFO(
     m_Aura->m_GameVersion,
     CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
     m_Map->GetMapGameFlags(),
@@ -1422,19 +1441,45 @@ void CGame::AnnounceToAddressForGameRanger(string tunnelLocalIP, uint16_t tunnel
     m_Map->GetMapCRC(),
     m_Slots.size(), // Total Slots
     m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
-    m_LANHostPort,
+    m_HostPort, // Loopback connection may directly use m_HostPort
     m_HostCounter | (1 << 24),
     m_EntryKey,
     remoteIP,
     remotePort,
     extraBit
   );
+}
+
+void CGame::AnnounceToAddress(string& address) const
+{
+  if (address == "127.0.0.1") {
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(m_HostPort));
+  } else {
+    const uint8_t ipVersion = ExtractIPv4(address).empty() ? 6 : 4;
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForUDP(ipVersion)));
+  }
+}
+
+void CGame::AnnounceToAddress(string& address, uint16_t port) const
+{
+  if (address == "127.0.0.1") {
+    m_Aura->m_Net->Send(address, port, GetGameDiscoveryInfo(m_HostPort));
+  } else {
+    const uint8_t ipVersion = ExtractIPv4(address).empty() ? 6 : 4;
+    m_Aura->m_Net->Send(address, port, GetGameDiscoveryInfo(GetHostPortForUDP(ipVersion)));
+  }
+}
+
+void CGame::AnnounceToAddressForGameRanger(string& tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
+{  
+  vector<uint8_t> packet = GetGameDiscoveryInfoForGameRanger(remoteIP, remotePort, extraBit);
   m_Aura->m_Net->Send(tunnelLocalIP, tunnelLocalPort, packet);
 }
 
 void CGame::SendGameDiscoveryCreate() const
 {
-  m_Aura->m_Net->SendGameDiscovery(GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter), m_ClientDiscoveryIPs);
+  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
   if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_Net->m_GameRangerLocalPort != 0) {
     m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
@@ -1446,7 +1491,8 @@ void CGame::SendGameDiscoveryCreate() const
 
 void CGame::SendGameDiscoveryDecreate() const
 {
-  m_Aura->m_Net->SendGameDiscovery(GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter), m_ClientDiscoveryIPs);
+  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
     m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
@@ -1458,11 +1504,12 @@ void CGame::SendGameDiscoveryDecreate() const
 
 void CGame::SendGameDiscoveryRefresh() const
 {
-  m_Aura->m_Net->SendGameDiscovery(GetProtocol()->SEND_W3GS_REFRESHGAME(
+  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_REFRESHGAME(
     m_HostCounter,
     m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
     m_Slots.size()
-  ), m_ClientDiscoveryIPs);
+  );
+  m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
     m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
@@ -1477,36 +1524,34 @@ void CGame::SendGameDiscoveryRefresh() const
 
 void CGame::SendGameDiscoveryInfo() const
 {
-  // we send 12 for SlotsTotal because this determines how many PID's Warcraft 3 allocates
-  // we need to make sure Warcraft 3 allocates at least SlotsTotal + 1 but at most 12 PID's
-  // this is because we need an extra PID for the virtual host player (but we always delete the virtual host player when the 12th person joins)
-  // however, we can't send 13 for SlotsTotal because this causes Warcraft 3 to crash when sharing control of units
-  // nor can we send SlotsTotal because then Warcraft 3 crashes when playing maps with less than 12 PID's (because of the virtual host player taking an extra PID)
-  // we also send 12 for SlotsOpen because Warcraft 3 assumes there's always at least one player in the game (the host)
-  // so if we try to send accurate numbers it'll always be off by one and results in Warcraft 3 assuming the game is full when it still needs one more player
-  // the easiest solution is to simply send 12 for both so the game will always show up as (1/12) players
+  // See CNet::SendGameDiscovery()
+  bool loopbackIsIPv4Port = !m_Aura->m_Config->m_UDPEnableCustomPortTCP4 || m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP4;
+  bool loopbackIsIPv6Port = !m_Aura->m_Config->m_UDPEnableCustomPortTCP6 || m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP6;
+  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || m_ClientDiscoveryIPs.empty())) {
+    vector<uint8_t> packet = GetGameDiscoveryInfo(m_HostPort);
+    m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
+    return;
+  }
 
-  // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
-  // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
+  vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort); // Ensure the game is available at loopback.
+  vector<uint8_t> ipv4Packet = GetGameDiscoveryInfo(GetHostPortForUDP(4)); // Uses <net.game_discovery.udp.tcp4_custom_port.value>
+  vector<uint8_t> ipv6Packet = GetGameDiscoveryInfo(GetHostPortForUDP(6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
 
-  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_GAMEINFO(
-    m_Aura->m_GameVersion,
-    CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
-    m_Map->GetMapGameFlags(),
-    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
-    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
-    m_GameName,
-    m_IndexVirtualHostName,
-    0,
-    m_MapPath,
-    m_Map->GetMapCRC(),
-    m_Slots.size(), // Total Slots
-    m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
-    m_LANHostPort,
-    m_HostCounter,
-    m_EntryKey
-  );
-	m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
+  if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
+    m_Aura->m_Net->SendBroadcast(m_Aura->m_Net->m_UDP4TargetPort, ipv4Packet);
+  }
+
+  m_Aura->m_Net->Send("127.0.0.1", m_Aura->m_Net->m_UDP4TargetPort, hostPortPacket);
+
+  for (auto& clientIp : m_ClientDiscoveryIPs) {
+    if (clientIp == "127.0.0.1") continue;
+    const bool isIPv6 = ExtractIPv4(clientIp).empty();
+    if (isIPv6) {
+      m_Aura->m_Net->Send(clientIp, m_Aura->m_Net->m_UDP6TargetPort, ipv6Packet);
+    } else {
+      m_Aura->m_Net->Send(clientIp, m_Aura->m_Net->m_UDP4TargetPort, ipv4Packet);
+    }
+  }
 }
 
 void CGame::EventPlayerDeleted(CGamePlayer* player)
@@ -1788,7 +1833,11 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
 
   // send a map check packet to the new player
 
-  Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapInfo(), m_Map->GetMapCRC(), m_Map->GetMapSHA1()));
+  if (m_Aura->m_GameVersion >= 23) {
+    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapInfo(), m_Map->GetMapCRC(), m_Map->GetMapSHA1()));
+  } else {
+    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapInfo(), m_Map->GetMapCRC()));
+  }
 
   // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
   SendAllSlotInfo();
@@ -2499,7 +2548,7 @@ void CGame::EventGameStarted()
 {
   Print(GetLogPrefix() + "started loading with " + to_string(GetNumHumanPlayers()) + " players");
 
-  if (m_LANEnabled)
+  if (m_UDPEnabled)
     SendGameDiscoveryDecreate();
 
   // encode the HCL command string in the slot handicaps

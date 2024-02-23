@@ -137,6 +137,8 @@ CNet::CNet(CAura* nAura)
     m_UDPServerEnabled(false),
     m_UDPServer(nullptr),
     m_UDPSocket(nullptr),
+    m_UDP4TargetPort(6112),
+    m_UDP6TargetPort(5678), // <net.game_discovery.udp.ipv6.target_port>
 
     m_HealthCheckInProgress(false),
 
@@ -155,7 +157,7 @@ bool CNet::Init(const CConfig* CFG)
   string broadcastTarget = CFG->GetString("net.game_discovery.udp.broadcast.target", emptyString);
   string bindAddress = CFG->GetString("net.bind_address", "0.0.0.0");
   if (m_UDPServerEnabled) {
-    m_UDPServer = new CUDPServer();
+    m_UDPServer = new CUDPServer("UDPv4-" + to_string(6112));
     m_UDPServer->SetBroadcastTarget(broadcastTarget);
     m_UDPServer->SetDontRoute(useDoNotRoute);
     if (!m_UDPServer->Listen(bindAddress, 6112, false)) {
@@ -168,7 +170,7 @@ bool CNet::Init(const CConfig* CFG)
   }
 
   uint16_t socketPort = static_cast<uint16_t>(CFG->GetInt("net.udp_fallback.outbound_port", 6113));
-  m_UDPSocket = new CUDPServer();
+  m_UDPSocket = new CUDPServer("UDPv4-" + to_string(socketPort));
   m_UDPSocket->SetBroadcastTarget(broadcastTarget);
   m_UDPSocket->SetDontRoute(useDoNotRoute);
   if (!m_UDPSocket->Listen(bindAddress, socketPort, true) && !m_UDPServerEnabled) {
@@ -186,6 +188,16 @@ void CNet::SendBroadcast(const uint16_t port, const vector<uint8_t>& packet)
   }
 }
 
+void CNet::Send(const string& address, const vector<uint8_t>& packet)
+{
+  const bool isIPv6 = ExtractIPv4(address).empty();
+  if (m_UDPServerEnabled) {
+    m_UDPServer->SendTo(address, isIPv6 ? m_UDP6TargetPort : m_UDP4TargetPort, packet);
+  } else {
+    m_UDPSocket->SendTo(address, isIPv6 ? m_UDP6TargetPort : m_UDP4TargetPort, packet);
+  }
+}
+
 void CNet::Send(const string& address, const uint16_t port, const vector<uint8_t>& packet)
 {
   if (m_UDPServerEnabled) {
@@ -198,15 +210,11 @@ void CNet::Send(const string& address, const uint16_t port, const vector<uint8_t
 void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& clientIps)
 {
   if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
-    m_Aura->m_Net->SendBroadcast(6112, packet);
+    m_Aura->m_Net->SendBroadcast(m_UDP4TargetPort, packet);
   }
 
-  for (auto& clientIp: clientIps) {
-    if (m_UDPServerEnabled) {
-      m_UDPServer->SendTo(clientIp, 6112, packet);
-    } else {
-      m_UDPSocket->SendTo(clientIp, 6112, packet);
-    }
+  for (auto& clientIp : clientIps) {
+    Send(clientIp, packet);
   }
 }
 
@@ -343,15 +351,15 @@ vector<uint16_t> CNet::GetPotentialGamePorts()
   vector<uint16_t> result;
 
   uint16_t port = m_Aura->m_Config->m_MinHostPort;
-  if (m_Aura->m_Config->m_EnableLANBalancer && m_Aura->m_Config->m_LANHostPort < port) {
-    result.push_back(m_Aura->m_Config->m_LANHostPort);
+  if (m_Aura->m_Config->m_UDPEnableCustomPortTCP4 && m_Aura->m_Config->m_UDPCustomPortTCP4 < port) {
+    result.push_back(m_Aura->m_Config->m_UDPCustomPortTCP4);
   }
   while (port <= m_Aura->m_Config->m_MaxHostPort) {
     result.push_back(port);
     ++port;
   }
-  if (m_Aura->m_Config->m_EnableLANBalancer && m_Aura->m_Config->m_LANHostPort > port) {
-    result.push_back(m_Aura->m_Config->m_LANHostPort);
+  if (m_Aura->m_Config->m_UDPEnableCustomPortTCP4 && m_Aura->m_Config->m_UDPCustomPortTCP4 > port) {
+    result.push_back(m_Aura->m_Config->m_UDPCustomPortTCP4);
   }
   
   return result;

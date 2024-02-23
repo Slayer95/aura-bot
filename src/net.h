@@ -61,7 +61,7 @@
 class CAura;
 class CUDPServer;
 class CUDPSocket;
-class CTCPSocket;
+class CStreamIOSocket;
 class CPotentialPlayer;
 class CConfig;
 
@@ -97,6 +97,8 @@ public:
   bool                                                        m_UDPServerEnabled;           // whether the bot should listen to UDP traffic in port 6112)
   CUDPServer*                                                 m_UDPServer;                  // a UDP server for i/o: incoming traffic, and sending broadcasts, etc. (used with !sendlan), proxying UDP game traffic, game lists, etc
   CUDPServer*                                                 m_UDPSocket;                  // a UDP server for outgoing traffic, meant not to block port 6112
+  uint16_t                                                    m_UDP4TargetPort;
+  uint16_t                                                    m_UDP6TargetPort;
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CPotentialPlayer*>>          m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
@@ -110,6 +112,7 @@ public:
 
   bool Init(const CConfig* CFG);
   void SendBroadcast(const uint16_t port, const std::vector<uint8_t>& packet);
+  void Send(const std::string& address, const std::vector<uint8_t>& packet);
   void Send(const std::string& address, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
 

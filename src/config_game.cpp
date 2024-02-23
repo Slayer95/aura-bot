@@ -58,7 +58,7 @@ CGameConfig::CGameConfig(CConfig* CFG)
 
   m_NotifyJoins               = CFG->GetBool("ui.notify_joins.enabled", false);
   m_IgnoredNotifyJoinPlayers  = CFG->GetSet("ui.notify_joins.exceptions", ',', {});
-  m_LANEnabled                = CFG->GetBool("bot.enable_lan", true);
+  m_UDPEnabled                = CFG->GetBool("net.game_discovery.udp.enabled", true);
 
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;

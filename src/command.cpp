@@ -1570,9 +1570,9 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       optional<bool> TargetValue;
-      if (Payload.empty() || Payload == "on") {
+      if (Payload.empty() || Payload == "on" || Payload == "ON") {
         TargetValue = true;
-      } else if (Payload == "off") {
+      } else if (Payload == "off" || Payload == "OFF") {
         TargetValue = false;
       }
       if (!TargetValue.has_value()) {
@@ -2015,7 +2015,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Not allowed to check network status.");
         break;
       }
-      const bool TargetAllRealms = Payload == "*";
+      const bool TargetAllRealms = Payload == "*" || Payload.empty() && !m_SourceRealm;
       CRealm* targetRealm = nullptr;
       if (!TargetAllRealms) {
         targetRealm = GetTargetRealmOrCurrent(Payload);
@@ -2050,7 +2050,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (ip.empty()) {
           continue;
         }
-        uint8_t connectionType = 0;
+        uint8_t connectionType = CONNECTION_TYPE_DEFAULT;
         uint16_t port = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : gamePort;
         string NameSuffix;
         if (realm->GetIsVPN()) {
@@ -2384,6 +2384,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("sendlan"):
+    case HashCode("sendudp"):
     {
       UseImplicitHostedGame();
 
@@ -2403,32 +2404,51 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       optional<bool> TargetValue;
-      if (Payload.empty() || Payload == "on") {
+      if (Payload.empty() || Payload == "on" || Payload == "ON") {
         TargetValue = true;
-      } else if (Payload == "off") {
+      } else if (Payload == "off" || payload == "OFF") {
         TargetValue = false;
       }
 
       if (!TargetValue.has_value()) {
-        ErrorReply("Unrecognized setting [" + Payload + "].");
+        if (ExtractIPv4(Payload).empty()) {
+          ErrorReply("Usage: !sendlan ON/OFF");
+          ErrorReply("Usage: !sendlan [IP]");
+          break;
+        }
+        if (m_TargetGame->m_ClientDiscoveryIPs.find(Payload) != m_TargetGame->m_ClientDiscoveryIPs.end()) {
+          ErrorReply("Already sending game info to " + Payload);
+          break;
+        }
+        if (!m_TargetGame->m_UDPEnabled)
+          SendReply("This lobby will now be displayed in the Local Area Network game list");
+        m_TargetGame->m_UDPEnabled = true;
+        m_TargetGame->m_ClientDiscoveryIPs.insert(Payload);
+        SendReply("This lobby will be displayed in the Local Area Network game list for IP " + Payload + ". Make sure your peer has done UDP hole-punching.");
         break;
       }
 
-      m_TargetGame->m_LANEnabled = TargetValue.value();
+      m_TargetGame->m_UDPEnabled = TargetValue.value();
       if (TargetValue) {
         m_TargetGame->SendGameDiscoveryCreate();
         m_TargetGame->SendGameDiscoveryRefresh();
         if (!m_Aura->m_Net->m_UDPServerEnabled)
           m_TargetGame->SendGameDiscoveryInfo();
       }
+      if (m_TargetGame->m_UDPEnabled) {
+        SendReply("This lobby will now be displayed in the Local Area Network game list");
+      } else {
+        SendReply("This lobby will no longer be displayed in the Local Area Network game list");
+      }
       break;
     }
 
     //
-    // !SENDLAN
+    // !SENDLANINFO
     //
 
     case HashCode("sendlaninfo"):
+    case HashCode("sendudpinfo"):
     {
       UseImplicitHostedGame();
 
@@ -2441,14 +2461,21 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
+      if (!Payload.empty()) {
+        ErrorReply("Usage: !sendlaninfo");
+        ErrorReply("You may want !sendlan [IP] or !sendlan on/off instead");
+        break;
+      }
+
       if (m_TargetGame->GetIsMirror()) {
         // This is not obvious.
         ErrorReply("Mirrored games cannot be broadcast to LAN");
         break;
       }
 
-      m_TargetGame->m_LANEnabled = true;
+      m_TargetGame->m_UDPEnabled = true;
       m_TargetGame->SendGameDiscoveryInfo();
+      SendReply("Sent game info to peers.");
       break;
     }
 

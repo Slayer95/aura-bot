@@ -231,8 +231,8 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     return;
   }
 
-  if (m_Config->m_EnableLANBalancer) {
-    Print("[AURA] Broadcasting games port " + to_string(m_Config->m_LANHostPort) + " over LAN");
+  if (m_Config->m_UDPEnableCustomPortTCP4) {
+    Print("[AURA] Broadcasting games port " + to_string(m_Config->m_UDPCustomPortTCP4) + " over LAN");
   }
 
   if (m_Config->m_EnableBNET.has_value()) {
@@ -316,7 +316,7 @@ void CAura::LoadBNETs(CConfig* CFG)
     if (ThisConfig->m_GamePrefix.length() > LongestGamePrefixSize)
       LongestGamePrefixSize = ThisConfig->m_GamePrefix.length();
 
-    for (auto RootAdmin : ThisConfig->m_RootAdmins) {
+    for (auto& RootAdmin : ThisConfig->m_RootAdmins) {
       m_DB->RootAdminAdd(ThisConfig->m_DataBaseID, RootAdmin);
     }
 
@@ -890,18 +890,18 @@ bool CAura::Update()
   // if hosting a lobby, accept new connections to its game server
 
   for (auto& pair : m_Net->m_GameServers) {
-    uint16_t ConnectPort = pair.first;
-    CTCPSocket* NewSocket = pair.second->Accept(static_cast<fd_set*>(&fd));
-    if (NewSocket) {
+    uint16_t localPort = pair.first;
+    CStreamIOSocket* socket = pair.second->Accept(static_cast<fd_set*>(&fd));
+    if (socket) {
       if (m_Config->m_ProxyReconnectEnabled) {
-        CPotentialPlayer* IncomingConnection = new CPotentialPlayer(m_GameProtocol, this, ConnectPort, NewSocket);
-        //Print("Incoming connection from " + IncomingConnection->GetExternalIPString());
-        m_Net->m_IncomingConnections[ConnectPort].push_back(IncomingConnection);
-      } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || ConnectPort != m_CurrentLobby->GetHostPort()) {
-        delete NewSocket;
+        CPotentialPlayer* incomingConnection = new CPotentialPlayer(m_GameProtocol, this, localPort, socket);
+        //Print("Incoming connection from " + incomingConnection->GetExternalIPString());
+        m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
+      } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
+        delete socket;
       } else {
-        CPotentialPlayer* IncomingConnection = new CPotentialPlayer(m_GameProtocol, this, ConnectPort, NewSocket);
-        m_Net->m_IncomingConnections[ConnectPort].push_back(IncomingConnection);
+        CPotentialPlayer* incomingConnection = new CPotentialPlayer(m_GameProtocol, this, localPort, socket);
+        m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       }
     }
 
@@ -942,10 +942,9 @@ bool CAura::Update()
 
   if (m_CurrentLobby)
   {
-    if (m_CurrentLobby->Update(&fd, &send_fd))
-    {
+    if (m_CurrentLobby->Update(&fd, &send_fd)) {
       Print("[AURA] deleting current game [" + m_CurrentLobby->GetGameName() + "]");
-      if (m_CurrentLobby->GetLANEnabled())
+      if (m_CurrentLobby->GetUDPEnabled())
         m_CurrentLobby->SendGameDiscoveryDecreate();
       delete m_CurrentLobby;
       m_CurrentLobby = nullptr;
@@ -955,8 +954,7 @@ bool CAura::Update()
         bnet->QueueGameUncreate();
         bnet->QueueEnterChat();
       }
-    }
-    else if (m_CurrentLobby)
+    } else if (m_CurrentLobby)
       m_CurrentLobby->UpdatePost(&send_fd);
   }
 
@@ -1012,13 +1010,36 @@ bool CAura::Update()
         }
         ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
         Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
-        if (testConnection->m_Type == CONNECTION_TYPE_DEFAULT) {
+        if (0 == (testConnection->m_Type & CONNECTION_TYPE_CUSTOM_IP_ADDRESS)) {
           hasDirectAttempts = true;
           if (success) anyDirectSuccess = true;
         }
         if (!success) {
           if (std::find(FailPorts.begin(), FailPorts.end(), testConnection->m_Port) == FailPorts.end())
             FailPorts.push_back(testConnection->m_Port);
+        }
+      }
+      string portForwardInstructions;
+      if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+        portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(m_Net->GetPotentialGamePorts(), false) + "}";
+      }
+      if (hasDirectAttempts && !anyDirectSuccess) {
+        Print("[Network] This bot is disconnected from the Internet, because its public IP address is unreachable.");
+        Print("[Network] Please setup port-forwarding to allow connections.");
+        if (!portForwardInstructions.empty())
+          Print("[Network] " + portForwardInstructions);
+        Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+        Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel.");
+        Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
+        if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+          m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
+          m_CurrentLobby->SendAllChat("This bot is disconnected from the Internet, because its public IP address is unreachable.");
+          m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
+          m_CurrentLobby->SendAllChat(portForwardInstructions);
+          m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+          m_CurrentLobby->SendAllChat("Note that you may still play online if you got a VPN, or an active tunnel.");
+          m_CurrentLobby->SendAllChat("But make sure your firewall allows Aura inbound TCP connections.");
+          m_CurrentLobby->SendAllChat("=================================================================================");
         }
       }
       if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
@@ -1029,25 +1050,6 @@ bool CAura::Update()
         }
         if (LeftMessage.length()) {
           m_CurrentLobby->SendAllChat(LeftMessage);
-        }
-      }
-      string portForwardInstructions;
-      if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-        portForwardInstructions = "[Network] About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(m_Net->GetPotentialGamePorts(), false) + "}";
-      }
-      if (hasDirectAttempts && !anyDirectSuccess) {
-        Print("[Network] Host public IP address unreachable.");
-        Print("[Network] Host: Please setup port-forwarding to allow connections. The command [upnp] could do it.");
-        if (!portForwardInstructions.empty())
-          Print(portForwardInstructions);
-        Print("[Network] Note that you may still play online if you got a VPN or an active tunnel.");
-        Print("[Network] But make sure the firewall allows Aura inbound TCP connections.");
-        if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-          m_CurrentLobby->SendAllChat("[Network] Host public IP address unreachable.");
-          m_CurrentLobby->SendAllChat("[Network] Host: Please setup port-forwarding to allow connections. The command [upnp] could do it.");
-          m_CurrentLobby->SendAllChat(portForwardInstructions);
-          m_CurrentLobby->SendAllChat("[Network] Note that you may still play online if you got a VPN or an active tunnel.");
-          m_CurrentLobby->SendAllChat("[Network] But make sure the firewall allows Aura inbound TCP connections.");
         }
       }
       m_Net->ResetHealthCheck();
@@ -1108,11 +1110,15 @@ bool CAura::Update()
             }
 
             if (pkt->buf[8] == m_GameVersion) {
-              if (m_CurrentLobby && m_CurrentLobby->GetLANEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
+              if (m_CurrentLobby && m_CurrentLobby->GetUDPEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
                 if (FromGameRanger) {
                   m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_Net->m_GameRangerRemoteAddress, m_Net->m_GameRangerRemotePort, ExtraDigit);
                 } else {
-                  m_CurrentLobby->AnnounceToAddress(ipAddress, 6112);
+                  Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+                  m_CurrentLobby->AnnounceToAddress(ipAddress, remotePort);
+                  if (remotePort != 6112) {
+                    m_CurrentLobby->AnnounceToAddress(ipAddress);
+                  }
                 }
               }
             }
@@ -1242,6 +1248,7 @@ void CAura::LoadConfigs(CConfig* CFG)
     }
   }
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
+  m_Net->m_UDP6TargetPort = m_Config->m_UDP6TargetPort;
 }
 
 bool CAura::LoadCLI(const int argc, const char* argv[])
@@ -1291,7 +1298,7 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
 
   optional<bool> bnet = m_Config->m_EnableBNET;
   bool noexit = !m_Config->m_ExitOnStandby;
-  bool nolan = !m_GameDefaultConfig->m_LANEnabled;
+  bool nolan = !m_GameDefaultConfig->m_UDPEnabled;
   bool nocache = !m_Config->m_EnableCFGCache;
   bool stdpaths = false;
   
@@ -1371,7 +1378,7 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
 
   m_Config->m_ExitOnStandby = !noexit;
   //m_Config->m_EnableBNET = !nobnet;
-  m_GameDefaultConfig->m_LANEnabled = !nolan;
+  m_GameDefaultConfig->m_UDPEnabled = !nolan;
   m_Config->m_EnableCFGCache = !nocache;
   m_Config->m_StrictPaths = stdpaths;
 
@@ -1600,14 +1607,15 @@ bool CAura::CreateGame(CMap* map, uint8_t gameDisplay, string gameName, string o
   Print("[AURA] creating game [" + gameName + "]");
 
   uint16_t HostPort = NextHostPort();
-  m_CurrentLobby = new CGame(this, map, HostPort, m_Config->m_EnableLANBalancer ? m_Config->m_LANHostPort : HostPort, gameDisplay, gameName, ownerName, ownerServer, creatorName, creatorServer);
+  m_CurrentLobby = new CGame(this, map, HostPort, gameDisplay, gameName, ownerName, ownerServer, creatorName, creatorServer);
   if (m_CurrentLobby->GetExiting()) {
     delete m_CurrentLobby;
     m_CurrentLobby = nullptr;
     return false;
   }
 
-  m_CurrentLobby->SendGameDiscoveryCreate();
+  if (m_CurrentLobby->GetUDPEnabled())
+    m_CurrentLobby->SendGameDiscoveryCreate();
 
   for (auto& bnet : m_Realms) {
     string AnnounceText = (
