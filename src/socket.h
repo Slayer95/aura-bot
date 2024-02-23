@@ -152,7 +152,7 @@ class CSocket
 {
 public:
   SOCKET             m_Socket;
-  struct sockaddr_in m_SIN;
+  uint16_t           m_Port;
   bool               m_HasError;
   int                m_Error;
   std::string        m_Name;
@@ -163,7 +163,9 @@ public:
   ~CSocket();
 
   std::string                 GetErrorString() const;
-  inline std::vector<uint8_t> GetPort() const { return CreateByteArray(m_SIN.sin_port, false); }
+  inline uint16_t             GetPort() const { return m_Port; }
+  inline std::vector<uint8_t> GetPortLE() const { return CreateByteArray(m_Port, false); }
+  inline std::vector<uint8_t> GetPortBE() const { return CreateByteArray(m_Port, true); }
   inline int32_t              GetError() const { return m_Error; }
   inline bool                 HasError() const { return m_HasError; }
 
@@ -181,6 +183,7 @@ public:
 class CStreamIOSocket : public CSocket
 {
 public:
+  struct sockaddr_in m_SIN;
   std::string m_RecvBuffer;
   std::string m_SendBuffer;
   uint32_t    m_RemoteSocketCounter;
@@ -255,6 +258,7 @@ public:
 class CTCPServer final : public CSocket
 {
 public:
+  struct sockaddr_in                m_SIN;
   uint32_t                          m_AcceptCounter;
 
   CTCPServer(std::string nName);
@@ -288,6 +292,8 @@ public:
 class CUDPServer final : public CUDPSocket
 {
 public:
+  struct sockaddr_in                m_SIN;
+
   CUDPServer(std::string nName);
   ~CUDPServer();
 

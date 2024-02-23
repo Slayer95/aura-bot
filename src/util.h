@@ -62,47 +62,47 @@ inline std::vector<uint8_t> CreateByteArray(const uint8_t c)
   return std::vector<uint8_t>{c};
 }
 
-inline std::vector<uint8_t> CreateByteArray(const uint16_t i, bool reverse)
+inline std::vector<uint8_t> CreateByteArray(const uint16_t i, bool bigEndian)
 {
-  if (!reverse)
+  if (!bigEndian)
     return std::vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8)};
   else
     return std::vector<uint8_t>{static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
 }
 
-inline std::vector<uint8_t> CreateByteArray(const uint32_t i, bool reverse)
+inline std::vector<uint8_t> CreateByteArray(const uint32_t i, bool bigEndian)
 {
-  if (!reverse)
+  if (!bigEndian)
     return std::vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
   else
     return std::vector<uint8_t>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
 }
 
-inline std::vector<uint8_t> CreateByteArray(const int64_t i, bool reverse)
+inline std::vector<uint8_t> CreateByteArray(const int64_t i, bool bigEndian)
 {
-  if (!reverse)
+  if (!bigEndian)
     return std::vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
   else
     return std::vector<uint8_t>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
 }
 
-inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool reverse, const uint32_t start = 0)
+inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
 {
   if (b.size() < start + 2)
     return 0;
 
-  if (!reverse)
+  if (!bigEndian)
     return static_cast<uint16_t>(b[start + 1] << 8 | b[start]);
   else
     return static_cast<uint16_t>(b[start] << 8 | b[start + 1]);
 }
 
-inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool reverse, const uint32_t start = 0)
+inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
 {
   if (b.size() < start + 4)
     return 0;
 
-  if (!reverse)
+  if (!bigEndian)
     return static_cast<uint32_t>(b[start + 3] << 24 | b[start + 2] << 16 | b[start + 1] << 8 | b[start]);
   else
     return static_cast<uint32_t>(b[start] << 24 | b[start + 1] << 16 | b[start + 2] << 8 | b[start + 3]);
@@ -174,19 +174,19 @@ inline void AppendByteArrayFast(std::vector<uint8_t>& b, const std::string& appe
     b.push_back(0);
 }
 
-inline void AppendByteArray(std::vector<uint8_t>& b, const uint16_t i, bool reverse)
+inline void AppendByteArray(std::vector<uint8_t>& b, const uint16_t i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, reverse));
+  AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
 
-inline void AppendByteArray(std::vector<uint8_t>& b, const uint32_t i, bool reverse)
+inline void AppendByteArray(std::vector<uint8_t>& b, const uint32_t i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, reverse));
+  AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
 
-inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool reverse)
+inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, reverse));
+  AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
 
 inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const uint32_t start)
@@ -210,7 +210,7 @@ inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const 
   return std::vector<uint8_t>();
 }
 
-inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, bool reverse)
+inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, bool bigEndian)
 {
   // consider the byte array to contain a 2 character ASCII encoded hex value at b[start] and b[start + 1] e.g. "FF"
   // extract it as a single decoded byte
@@ -220,7 +220,7 @@ inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, b
     uint8_t c = 0;
     std::string temp = std::string(begin(b) + start, begin(b) + start + 2);
 
-    if (reverse)
+    if (bigEndian)
       temp = std::string(temp.rend(), temp.rbegin());
 
     std::stringstream SS;

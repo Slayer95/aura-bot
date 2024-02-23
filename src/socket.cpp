@@ -42,7 +42,6 @@ CSocket::CSocket(SOCKET nSocket)
     m_HasError(false),
     m_Error(0)
 {
-  memset(&m_SIN, 0, sizeof(m_SIN));
 }
 
 CSocket::CSocket(string nName)
@@ -51,7 +50,6 @@ CSocket::CSocket(string nName)
     m_Name(nName),
     m_Error(0)
 {
-  memset(&m_SIN, 0, sizeof(m_SIN));
 }
 
 CSocket::CSocket(SOCKET nSocket, string nName)
@@ -60,7 +58,6 @@ CSocket::CSocket(SOCKET nSocket, string nName)
     m_Name(nName),
     m_Error(0)
 {
-  memset(&m_SIN, 0, sizeof(m_SIN));
 }
 
 CSocket::~CSocket()
@@ -186,7 +183,6 @@ void CSocket::Reset()
     closesocket(m_Socket);
 
   m_Socket = INVALID_SOCKET;
-  memset(&m_SIN, 0, sizeof(m_SIN));
   m_HasError = false;
   m_Error    = 0;
 }
@@ -200,10 +196,10 @@ CStreamIOSocket::CStreamIOSocket(string nName)
     m_LastRecv(GetTime()),
     m_Connected(false)
 {
+  memset(&m_SIN, 0, sizeof(m_SIN));
   Allocate(SOCK_STREAM);
 
-// make socket non blocking
-
+  // make socket non blocking
 #ifdef WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
@@ -219,12 +215,11 @@ CStreamIOSocket::CStreamIOSocket(string nName)
 
 CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, struct sockaddr_in nSIN, string nName)
   : CSocket(nSocket, nName),
-    //m_SIN(std::move(nSIN)),
+    m_SIN(std::move(nSIN)),
     m_LastRecv(GetTime()),
     m_Connected(true)
 {
-// make socket non blocking
-
+  // make socket non blocking
 #ifdef WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
@@ -242,6 +237,8 @@ CStreamIOSocket::~CStreamIOSocket()
 void CStreamIOSocket::Reset()
 {
   CSocket::Reset();
+
+  memset(&m_SIN, 0, sizeof(m_SIN));
   Allocate(SOCK_STREAM);
 
   m_Connected = false;
@@ -470,6 +467,10 @@ CTCPServer::CTCPServer(string nName)
   : CSocket(nName),
     m_AcceptCounter(0)
 {
+  memset(&m_SIN, 0, sizeof(m_SIN));
+
+  Allocate(SOCK_STREAM);
+
   // make socket non blocking
 #ifdef WIN32
   int32_t iMode = 1;
@@ -485,6 +486,10 @@ CTCPServer::CTCPServer(string nName)
 #else
   setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int32_t));
 #endif
+
+  // disable Nagle's algorithm
+  int32_t OptVal = 1;
+  setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
 }
 
 CTCPServer::~CTCPServer()
@@ -493,8 +498,14 @@ CTCPServer::~CTCPServer()
 
 bool CTCPServer::Listen(const string& address, uint16_t port, bool retry)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError && !retry)
+  if (m_Socket == INVALID_SOCKET) {
+    Print("Socket invalid");
     return false;
+  }
+  if (m_HasError && !retry) {
+    Print("Has error: " + to_string(m_Error));
+    return false;
+  }
 
   if (m_HasError) {
     if (!retry) return false;
@@ -691,7 +702,6 @@ void CUDPSocket::Reset()
   Allocate(SOCK_DGRAM);
 
   // enable broadcast support
-
   int32_t OptVal = 1;
 #ifdef WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
@@ -700,15 +710,15 @@ void CUDPSocket::Reset()
 #endif
 
   // set default broadcast target
-
   m_BroadcastTarget.s_addr = INADDR_BROADCAST;
 }
 
 CUDPServer::CUDPServer(string nName)
   : CUDPSocket(nName)
 {
-// make socket non blocking
+  memset(&m_SIN, 0, sizeof(m_SIN));
 
+  // make socket non blocking
 #ifdef WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
@@ -797,7 +807,8 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
       inet_ntop(AF_INET, &(clientAddress.sin_addr), ipStr, INET_ADDRSTRLEN_IPV4);
       if (ipStr != NULL)
         ipAddress = string(ipStr);
-      Print("[UDPSERVER] Error receiving data sent by " + ipAddress + ". Error code " + to_string(error));
+        if (ipAddress != "127.0.0.1")
+          Print("[UDPSERVER] Error receiving data sent by " + ipAddress + ". Error code " + to_string(error));
     }
     return nullptr;
   }

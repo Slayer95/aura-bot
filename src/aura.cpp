@@ -237,9 +237,9 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
 
   if (m_Config->m_EnableBNET.has_value()) {
     if (m_Config->m_EnableBNET.value()) {
-      Print("[AURA] All realms forcibly set to ENABLED (bot.toggle_every_realm)");
+      Print("[AURA] All realms forcibly set to ENABLED <bot.toggle_every_realm = on>");
     } else {
-      Print("[AURA] All realms forcibly set to DISABLED (bot.toggle_every_realm)");
+      Print("[AURA] All realms forcibly set to DISABLED <bot.toggle_every_realm = off>");
     }
   }
   if (m_Config->m_EnableBNET.value_or(true)) {

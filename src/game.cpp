@@ -1821,7 +1821,7 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
   // send slot info to the new player
   // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful
 
-  Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetPID(), Player->GetSocket()->GetPort(), Player->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+  Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetPID(), Player->GetSocket()->GetPortLE(), Player->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
 
   SendIncomingPlayerInfo(Player);
 
@@ -1927,7 +1927,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
     // 0x2: GameRanger
     // others: undefined
     if (HostCounterID == 0x1) {
-      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), potential->GetSocket()->GetPort(), potential->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), potential->GetSocket()->GetPortLE(), potential->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
       SendVirtualHostPlayerInfo(potential);
       SendFakePlayersInfo(potential);
       SendJoinedPlayersInfo(potential);
@@ -1974,7 +1974,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
       // this causes them to be kicked back to the chat channel on battle.net
 
       vector<CGameSlot> Slots = m_Map->GetSlots();
-      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, potential->GetSocket()->GetPort(), potential->GetExternalIP(), Slots, 0, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, potential->GetSocket()->GetPortLE(), potential->GetExternalIP(), Slots, 0, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
       delete Ban;
       return false;
     }
