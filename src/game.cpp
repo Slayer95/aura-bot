@@ -233,6 +233,8 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameDisplay,
   // start listening for connections
 
   m_Socket = m_Aura->GetGameServer(m_HostPort, m_GameName);
+  m_HostPort = m_Socket->GetPort();
+
   if (!m_Socket) {
     m_Exiting = true;
   }
@@ -1141,7 +1143,7 @@ void CGame::SendJoinedPlayersInfo(CPotentialPlayer* potential) const
     if (otherPlayer->GetLeftMessageSent())
       continue;
     Send(potential,
-      GetProtocol()->SEND_W3GS_PLAYERINFO(otherPlayer->GetPID(), otherPlayer->GetName(), otherPlayer->GetExternalIP(), otherPlayer->GetInternalIP())
+      GetProtocol()->SEND_W3GS_PLAYERINFO(otherPlayer->GetPID(), otherPlayer->GetName(), otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal())
     );
   }
 }
@@ -1154,7 +1156,7 @@ void CGame::SendJoinedPlayersInfo(CGamePlayer* player) const
     if (otherPlayer->GetLeftMessageSent())
       continue;
     Send(player,
-      GetProtocol()->SEND_W3GS_PLAYERINFO(otherPlayer->GetPID(), otherPlayer->GetName(), otherPlayer->GetExternalIP(), otherPlayer->GetInternalIP())
+      GetProtocol()->SEND_W3GS_PLAYERINFO(otherPlayer->GetPID(), otherPlayer->GetName(), otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal())
     );
   }
 }
@@ -1166,7 +1168,7 @@ void CGame::SendIncomingPlayerInfo(CGamePlayer* player) const
       continue;
     if (otherPlayer->GetLeftMessageSent())
       break;
-    otherPlayer->Send(GetProtocol()->SEND_W3GS_PLAYERINFO(player->GetPID(), player->GetName(), player->GetExternalIP(), player->GetInternalIP()));
+    otherPlayer->Send(GetProtocol()->SEND_W3GS_PLAYERINFO(player->GetPID(), player->GetName(), player->GetIPv4(), player->GetIPv4Internal()));
   }
 }
 
@@ -1786,7 +1788,7 @@ void CGame::EventPlayerKickHandleQueued(CGamePlayer* player)
 CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
 {
   // Transfer socket from CPotentialPlayer to CGamePlayer
-  CGamePlayer* Player = new CGamePlayer(this, potential, GetNewPID(), HostCounterID, JoinedRealm, joinRequest->GetName(), joinRequest->GetInternalIP(), IsReserved);
+  CGamePlayer* Player = new CGamePlayer(this, potential, GetNewPID(), HostCounterID, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
   m_Players.push_back(Player);
   potential->SetSocket(nullptr);
   potential->SetDeleteMe(true);
@@ -1821,7 +1823,7 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
   // send slot info to the new player
   // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful
 
-  Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetPID(), Player->GetSocket()->GetPortLE(), Player->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+  Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetPID(), Player->GetSocket()->GetPortLE(), Player->GetIPv4(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
 
   SendIncomingPlayerInfo(Player);
 
@@ -1850,11 +1852,11 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
 
   string Others;
 
-  bool IsLoopBack = Player->GetExternalIPString() == "127.0.0.1";
+  bool IsLoopBack = Player->GetIPString() == "127.0.0.1";
   for (auto& player : m_Players){
     if (Player == player)
       continue;
-    if (Player->GetExternalIPString() != player->GetExternalIPString())
+    if (Player->GetIPString() != player->GetIPString())
       continue;
 
     if (!IsLoopBack) {
@@ -1881,7 +1883,7 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
   if (m_NotifyJoins && !m_Aura->IsIgnoredNotifyPlayer(joinRequest->GetName())) {
     notifyString = "\x07";
   }
-  Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] joined - [" + Player->GetSocket()->GetName() + "] (" + Player->GetExternalIPString() + ")" + notifyString);
+  Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] joined - [" + Player->GetSocket()->GetName() + "] (" + Player->GetIPString() + ")" + notifyString);
 
   return Player;
 }
@@ -1889,7 +1891,7 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
 bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest)
 {
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
@@ -1917,7 +1919,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
 
   if (HostCounterID < 0x10 && joinRequest->GetEntryKey() != m_EntryKey) {
     // check if the player joining via LAN knows the entry key
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
     return false;
   }
@@ -1927,13 +1929,13 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
     // 0x2: GameRanger
     // others: undefined
     if (HostCounterID == 0x1) {
-      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), potential->GetSocket()->GetPortLE(), potential->GetExternalIP(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), potential->GetSocket()->GetPortLE(), potential->GetIPv4(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
       SendVirtualHostPlayerInfo(potential);
       SendFakePlayersInfo(potential);
       SendJoinedPlayersInfo(potential);
       return false;
     }
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
     if (HostCounterID > 0x2) {
       potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
       return false;
@@ -1941,17 +1943,17 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
   }
 
   if (GetPlayerFromName(joinRequest->GetName(), false)) {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName() == m_LobbyVirtualHostName || joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[") {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetExternalIPString() + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
     potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
@@ -1963,7 +1965,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
   if (SourceRealm) {
     CDBBan* Ban = SourceRealm->IsBannedName(joinRequest->GetName());
     if (Ban){
-      Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "|" + potential->GetExternalIPString() + "] is banned");
+      Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "|" + potential->GetIPString() + "] is banned");
 
       if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
         SendAllChat("[" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join the game, but is banned");
@@ -1974,7 +1976,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
       // this causes them to be kicked back to the chat channel on battle.net
 
       vector<CGameSlot> Slots = m_Map->GetSlots();
-      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, potential->GetSocket()->GetPortLE(), potential->GetExternalIP(), Slots, 0, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, potential->GetSocket()->GetPortLE(), potential->GetIPv4(), Slots, 0, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
       delete Ban;
       return false;
     }

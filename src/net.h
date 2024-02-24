@@ -65,19 +65,21 @@ class CStreamIOSocket;
 class CPotentialPlayer;
 class CConfig;
 
+struct sockaddr_storage;
+
 class CTestConnection
 {
 public:
-  CTestConnection(CAura* nAura, const std::vector<uint8_t> nAddress, const uint16_t nPort, const uint8_t nType, const std::string nName);
+  CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const std::string nName);
   ~CTestConnection();
 
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool      Update(void* fd, void* send_fd);
   bool      QueryGameInfo();
+  uint16_t  GetPort();
 
   CAura*                      m_Aura;
-  std::vector<uint8_t>        m_Address;
-  uint16_t                    m_Port;
+  sockaddr_storage            m_TargetHost;
   uint8_t                     m_Type;
   std::string                 m_Name;
   CTCPClient*                 m_Socket;
@@ -102,6 +104,8 @@ public:
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CPotentialPlayer*>>          m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
+  std::map<std::string, sockaddr_storage>                     m_DNSCache;
+
   std::vector<CTestConnection*>                               m_HealthCheckClients;
   bool                                                        m_HealthCheckInProgress;
   
@@ -110,19 +114,23 @@ public:
   uint16_t                                                    m_GameRangerRemotePort;
   std::vector<uint8_t>                                        m_GameRangerRemoteAddress;
 
-  bool Init(const CConfig* CFG);
+  bool Init(CConfig* CFG);
   void SendBroadcast(const uint16_t port, const std::vector<uint8_t>& packet);
   void Send(const std::string& address, const std::vector<uint8_t>& packet);
   void Send(const std::string& address, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
 
-  std::vector<uint8_t> GetPublicIP();
-  std::vector<uint16_t> GetPotentialGamePorts();
+  std::vector<uint8_t>            GetPublicIP();
+  std::vector<uint16_t>           GetPotentialGamePorts();
+
+  std::optional<sockaddr_storage> ResolveHostName(const std::string& hostName);
+  void             FlushDNS();
+
   uint8_t EnableUPnP(const uint16_t externalPort, const uint16_t internalPort);
   void StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, std::vector<uint8_t>, uint16_t>> testServers);
   void ResetHealthCheck();
 
-  static std::optional<sockaddr_in> ResolveHost(const std::string& hostName);
+  static std::optional<sockaddr_storage> ParseAddress(const std::string& address);
 };
 
 #endif // AURA_NET_H_

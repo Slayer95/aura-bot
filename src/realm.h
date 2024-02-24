@@ -68,8 +68,6 @@ private:
   std::vector<std::string>         m_Clan;                                                 // std::vector of clan members
   std::vector<uint8_t>             m_EXEVersion;                                           // custom exe version for PvPGN users
   std::vector<uint8_t>             m_EXEVersionHash;                                       // custom exe version hash for PvPGN users
-  std::string                      m_ResolvedHostName;                                     // DNS cache - host name
-  std::string                      m_ResolvedAddress;                                      // DNS cache - resolved IP address
   std::string                      m_FirstChannel;                                         // the first chat channel to join upon entering chat (note: store the last channel when entering a game)
   std::string                      m_CurrentChannel;            // the current chat channel
   std::string                      m_HostName;                  // 
@@ -96,7 +94,7 @@ private:
   friend class CCommandContext;
 
 public:
-  CRealm(CAura* nAura, CRealmConfig* nBNETConfig);
+  CRealm(CAura* nAura, CRealmConfig* nRealmConfig);
   ~CRealm();
   CRealm(CRealm&) = delete;
 

@@ -39,8 +39,6 @@ public:
   CTCPClient*              m_Socket;
   CIRCConfig*              m_Config;
   std::string              m_NickName;
-  std::string              m_ResolvedAddress;                // DNS cache - host name
-  std::string              m_ResolvedHostName;               // DNS cache - resolved IP address
   int64_t                  m_LastConnectionAttemptTime;
   int64_t                  m_LastPacketTime;
   int64_t                  m_LastAntiIdleTime;

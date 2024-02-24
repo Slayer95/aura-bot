@@ -58,8 +58,8 @@ public:
   ~CPotentialPlayer();
 
   inline CStreamIOSocket*          GetSocket() const { return m_Socket; }
-  inline std::vector<uint8_t> GetExternalIP() const { return m_Socket->GetIP(); }
-  inline std::string          GetExternalIPString() const { return m_Socket->GetIPString(); }
+  inline std::vector<uint8_t> GetIPv4() const { return m_Socket->GetIPv4(); }
+  inline std::string          GetIPString() const { return m_Socket->GetIPString(); }
   inline bool                 GetDeleteMe() const { return m_DeleteMe; }
   inline CIncomingJoinRequest* GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
@@ -89,7 +89,7 @@ protected:
   CStreamIOSocket* m_Socket; // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
 
 private:
-  std::vector<uint8_t>             m_InternalIP;                   // the player's internal IP address as reported by the player when connecting
+  std::vector<uint8_t>             m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
   std::vector<uint32_t>            m_Pings;                        // store the last few (10) pings received so we can take an average
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
   std::queue<std::vector<uint8_t>> m_GProxyBuffer;                 // buffer with data used with GProxy++
@@ -143,13 +143,12 @@ public:
 
   uint32_t GetPing() const;
   inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
-  inline std::vector<uint8_t>  GetExternalIP() const { return m_Socket->GetIP(); }
-  inline std::string           GetExternalIPString() const { return m_Socket->GetIPString(); }
+  inline std::vector<uint8_t>  GetIPv4() const { return m_Socket->GetIPv4(); }
+  inline std::string           GetIPString() const { return m_Socket->GetIPString(); }
   inline bool                  GetDeleteMe() const { return m_DeleteMe; }
   inline uint8_t               GetPID() const { return m_PID; }
   inline std::string           GetName() const { return m_Name; }
-  inline std::vector<uint8_t>  GetInternalIP() const { return m_InternalIP; }
-  std::string                  GetInternalIPString() const;
+  inline std::vector<uint8_t>  GetIPv4Internal() const { return m_IPv4Internal; }
   inline uint32_t              GetNumPings() const { return m_Pings.size(); }
   inline uint32_t              GetNumCheckSums() const { return m_CheckSums.size(); }
   inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }

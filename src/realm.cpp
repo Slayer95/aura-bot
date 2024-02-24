@@ -47,16 +47,16 @@ using namespace std;
 // CRealm
 //
 
-CRealm::CRealm(CAura* nAura, CRealmConfig* nBNETConfig)
+CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
   : m_Aura(nAura),
-    m_Config(nBNETConfig),
-    m_Socket(new CTCPClient(nBNETConfig->m_HostName)),
+    m_Config(nRealmConfig),
+    m_Socket(nullptr),
     m_Protocol(new CBNETProtocol()),
-    m_BNCSUtil(new CBNCSUtilInterface(nBNETConfig->m_UserName, nBNETConfig->m_PassWord)),
-    m_FirstChannel(nBNETConfig->m_FirstChannel),
-    m_HostName(nBNETConfig->m_HostName),
-    m_ServerIndex(nBNETConfig->m_ServerIndex),
-    m_ServerID(nBNETConfig->m_ServerIndex + 15),
+    m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
+    m_FirstChannel(nRealmConfig->m_FirstChannel),
+    m_HostName(nRealmConfig->m_HostName),
+    m_ServerIndex(nRealmConfig->m_ServerIndex),
+    m_ServerID(nRealmConfig->m_ServerIndex + 15),
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
     m_LastGameListTime(0),
@@ -90,7 +90,7 @@ CRealm::~CRealm()
 
 uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
-  if (!m_Socket->HasError() && m_Socket->GetConnected())
+  if (m_Socket && !m_Socket->HasError() && m_Socket->GetConnected())
   {
     m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
     return 1;
@@ -106,6 +106,11 @@ bool CRealm::Update(void* fd, void* send_fd)
   // we return at the end of each if statement so we don't have to deal with errors related to the order of the if statements
   // that means it might take a few ms longer to complete a task involving multiple steps (in this case, reconnecting) due to blocking or sleeping
   // but it's not a big deal at all, maybe 100ms in the worst possible case (based on a 50ms blocking time)
+
+  if (!m_Socket) {
+    // TODO: Add IPv6 support.
+    m_Socket = new CTCPClient(AF_INET, m_Config->m_HostName);
+  }
 
   if (m_Socket->HasError())
   {
@@ -154,15 +159,14 @@ bool CRealm::Update(void* fd, void* send_fd)
           case CBNETProtocol::SID_GETADVLISTEX:
             if (m_Aura->m_Config->m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
-              std::vector<uint8_t> IPOctets = m_Socket->GetIP();
-              std::vector<uint8_t> ServerPort = {static_cast<uint8_t>(6112 >> 8), static_cast<uint8_t>(6112)};
               std::vector<uint8_t> War3Version = {m_Aura->m_GameVersion, 0, 0, 0};
-              AppendByteArray(relayPacket, IPOctets);
-              AppendByteArray(relayPacket, ServerPort);
+              std::string ipString = m_Socket->GetIPString();
+              AppendByteArray(relayPacket, ipString, true);
+              AppendByteArray(relayPacket, static_cast<uint16_t>(6112u), true);
               AppendByteArray(relayPacket, War3Version);
               AppendByteArrayFast(relayPacket, Data);
               AssignLength(relayPacket);
-              //Print("[BNET: " + m_Config->m_UniqueName + "] sending game list to " + m_Aura->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
+              Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + m_Aura->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
               m_Aura->m_Net->Send(m_Aura->m_Config->m_UDPForwardAddress, m_Aura->m_Config->m_UDPForwardPort, relayPacket);
             }
 
@@ -436,23 +440,23 @@ bool CRealm::Update(void* fd, void* send_fd)
     if (!m_FirstConnect) {
       Print("[BNET: " + m_Config->m_UniqueName + "] reconnecting to [" + m_HostName + ":6112]...");
     } else {
-      if (!m_Config->m_BindAddress.empty())
-        Print("[BNET: " + m_Config->m_UniqueName + "] connecting with local address [" + m_Config->m_BindAddress + "]...");
+      if (!m_Config->m_BindAddress.has_value()) {
+        // TODO(IceSandslash) ??
+        //Print("[BNET: " + m_Config->m_UniqueName + "] connecting with local address [" + m_Config->m_BindAddress + "]...");
+      }
     }
     m_FirstConnect = false;
     m_ReconnectNextTick = false;
 
-    if (m_ResolvedHostName == m_Config->m_HostName && !m_ResolvedAddress.empty()) {
-      // DNS resolution is blocking, so use cache if posible
-      m_Socket->Connect(m_Config->m_BindAddress, m_ResolvedAddress, 6112);
+    optional<sockaddr_storage> resolvedAddress = m_Aura->m_Net->ResolveHostName(m_Config->m_HostName);
+    if (!resolvedAddress.has_value()) {
+      m_Socket->m_HasError = true;
+    } else if (resolvedAddress.value().ss_family == AF_INET6) {
+      Print(GetLogPrefix() + "Provide IPv4 addresses for realms.");
+      m_Socket->m_HasError = true;
     } else {
-      m_Socket->Connect(m_Config->m_BindAddress, m_Config->m_HostName, 6112);
-
-      if (!m_Socket->HasError()) {
-        m_ResolvedHostName = m_Config->m_HostName;
-        m_ResolvedAddress = m_Socket->GetIPString();
-        //Print("[BNET: " + m_Config->m_UniqueName + "] resolved and cached server IP address " + m_ResolvedAddress);
-      }
+      optional<sockaddr_storage> emptyBindAddress;
+      m_Socket->Connect(emptyBindAddress, resolvedAddress.value(), 6112);
     }
 
     m_WaitingToConnect          = false;
@@ -481,7 +485,7 @@ bool CRealm::Update(void* fd, void* send_fd)
     {
       // the connection attempt timed out (10 seconds)
 
-      Print("[BNET: " + m_Config->m_UniqueName + "] failed to connect to [" + m_HostName + ":6112] (" + m_ResolvedAddress + ")");
+      Print("[BNET: " + m_Config->m_UniqueName + "] failed to connect to [" + m_HostName + ":6112]");
       Print("[BNET: " + m_Config->m_UniqueName + "] waiting 90 seconds to retry...");
       m_Socket->Reset();
       m_LastDisconnectedTime = Time;

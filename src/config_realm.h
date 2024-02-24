@@ -28,11 +28,15 @@
 
 #include "config.h"
 #include "config_bot.h"
+#include "socket.h"
 
 #include <vector>
 #include <string>
+#include <optional>
 #include <map>
 #include <unordered_set>
+
+struct sockaddr_storage;
 
 //
 // CRealmConfig
@@ -42,7 +46,7 @@ class CRealmConfig
 {
 public:
   std::string m_HostName;                        // server address to connect to
-  std::string m_BindAddress;                     // the local address to connect with
+  std::optional<sockaddr_storage> m_BindAddress; // the local address from which we connect
   bool        m_Enabled;
   std::string m_InputID;                         // for IRC commands
   std::string m_UniqueName;                      // displayed on the console

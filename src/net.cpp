@@ -40,15 +40,14 @@ using namespace std;
 // CTestConnection
 //
 
-CTestConnection::CTestConnection(CAura* nAura, const vector<uint8_t> nAddress, const uint16_t nPort, const uint8_t nType, const string nName)
+CTestConnection::CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const string nName)
   : m_Aura(nAura),
-    m_Address(nAddress),
-    m_Port(nPort),
+    m_TargetHost(nTargetHost),
     m_Type(nType),
     m_Name(nName),
     m_Timeout(0),
     m_SentJoinRequest(false),
-    m_Socket(new CTCPClient(nName))
+    m_Socket(new CTCPClient(AF_INET, nName))
 {
 }
 
@@ -66,6 +65,12 @@ uint32_t CTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
   }
 
   return 0;
+}
+
+uint16_t CTestConnection::GetPort()
+{
+  sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&m_TargetHost);
+  return ntohs(addr4->sin_port);
 }
 
 bool CTestConnection::QueryGameInfo()
@@ -89,7 +94,7 @@ bool CTestConnection::QueryGameInfo()
 
 bool CTestConnection::Update(void* fd, void* send_fd)
 {
-  const static string emptyBindAddress;
+  static optional<sockaddr_storage> emptyBindAddress;
 
   if (m_Passed.has_value()) {
     return !m_Passed.has_value();
@@ -121,7 +126,7 @@ bool CTestConnection::Update(void* fd, void* send_fd)
     m_Passed = false;
     m_Socket->Reset();
   } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value()) {
-    m_Socket->Connect(emptyBindAddress, IPv4ToString(m_Address), m_Port);
+    m_Socket->Connect(emptyBindAddress, m_TargetHost);
     m_Timeout = Ticks + 3000;
   }
 
@@ -149,15 +154,22 @@ CNet::CNet(CAura* nAura)
 {
 }
 
-bool CNet::Init(const CConfig* CFG)
+bool CNet::Init(CConfig* CFG)
 {
   // m_UDPServerEnabled may be overriden by the cli.
   bool useDoNotRoute = CFG->GetBool("net.game_discovery.udp.do_not_route", false);
-  string emptyString;
-  string broadcastTarget = CFG->GetString("net.game_discovery.udp.broadcast.target", emptyString);
-  string bindAddress = CFG->GetString("net.bind_address", "0.0.0.0");
+  sockaddr_storage broadcastTarget = CFG->GetAddress("net.game_discovery.udp.broadcast.target", "255.255.255.255");
+  if (CFG->GetError() || broadcastTarget.ss_family != AF_INET) {
+    Print("[CONFIG] Error: Invalid value for <net.game_discovery.udp.broadcast.target>. Provide an IPv4 subnet or 255.255.255.255");
+    return false;
+  }
+  sockaddr_storage bindAddress = CFG->GetAddress("net.bind_address", "0.0.0.0");
+  if (CFG->GetError() || bindAddress.ss_family != AF_INET) {
+    Print("[CONFIG] Error: Invalid value for <net.game_discovery.udp.broadcast.target>. Provide an IP address or 0.0.0.0");
+    return false;
+  }
   if (m_UDPServerEnabled) {
-    m_UDPServer = new CUDPServer("UDPv4-" + to_string(6112));
+    m_UDPServer = new CUDPServer(AF_INET);
     m_UDPServer->SetBroadcastTarget(broadcastTarget);
     m_UDPServer->SetDontRoute(useDoNotRoute);
     if (!m_UDPServer->Listen(bindAddress, 6112, false)) {
@@ -169,8 +181,8 @@ bool CNet::Init(const CConfig* CFG)
     }
   }
 
-  uint16_t socketPort = static_cast<uint16_t>(CFG->GetInt("net.udp_fallback.outbound_port", 6113));
-  m_UDPSocket = new CUDPServer("UDPv4-" + to_string(socketPort));
+  uint16_t socketPort = CFG->GetUint16("net.udp_fallback.outbound_port", 6113);
+  m_UDPSocket = new CUDPServer(AF_INET);
   m_UDPSocket->SetBroadcastTarget(broadcastTarget);
   m_UDPSocket->SetDontRoute(useDoNotRoute);
   if (!m_UDPSocket->Listen(bindAddress, socketPort, true) && !m_UDPServerEnabled) {
@@ -216,31 +228,6 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
   for (auto& clientIp : clientIps) {
     Send(clientIp, packet);
   }
-}
-
-optional<sockaddr_in> CNet::ResolveHost(const string& hostName)
-{
-  optional<sockaddr_in> maybeSin;
-
-  // get IP address
-
-  struct hostent* HostInfo;
-  uint32_t        HostAddress;
-  HostInfo = gethostbyname(hostName.c_str());
-
-  if (!HostInfo) {
-    return maybeSin;
-  }
-
-  memcpy(&HostAddress, HostInfo->h_addr, HostInfo->h_length);
-
-  struct sockaddr_in sin;
-  sin.sin_family      = AF_INET;
-  sin.sin_addr.s_addr = HostAddress;
-  sin.sin_port        = htons(80);
-  maybeSin = sin;
-
-  return maybeSin;
 }
 
 vector<uint8_t> CNet::GetPublicIP()
@@ -332,7 +319,14 @@ uint8_t CNet::EnableUPnP(const uint16_t externalPort, const uint16_t internalPor
 void CNet::StartHealthCheck(const vector<tuple<string, uint8_t, vector<uint8_t>, uint16_t>> testServers)
 {
   for (auto& testServer: testServers) {
-    m_HealthCheckClients.push_back(new CTestConnection(m_Aura, get<2>(testServer), get<3>(testServer), get<1>(testServer), get<0>(testServer)));
+    vector<uint8_t> ipBytes = get<2>(testServer);
+    sockaddr_storage targetHost;
+    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&targetHost);
+    memset(addr4, 0, sizeof(sockaddr_in));
+    addr4->sin_family = AF_INET;
+    addr4->sin_port = htons(get<3>(testServer));
+    addr4->sin_addr.s_addr = *reinterpret_cast<const uint32_t*>(ipBytes.data());
+    m_HealthCheckClients.push_back(new CTestConnection(m_Aura, targetHost, get<1>(testServer), get<0>(testServer)));
   }
   m_HealthCheckInProgress = true;
 }
@@ -363,6 +357,75 @@ vector<uint16_t> CNet::GetPotentialGamePorts()
   }
   
   return result;
+}
+
+optional<sockaddr_storage> CNet::ParseAddress(const string& address)
+{
+  std::optional<sockaddr_storage> result;
+  // Try IPv4
+  sockaddr_in addr4;
+  memset(&addr4, 0, sizeof(addr4));
+  addr4.sin_family = AF_INET;
+  if (inet_pton(AF_INET, address.c_str(), &addr4.sin_addr) == 1) {
+    struct sockaddr_storage ipv4;
+    memset(&ipv4, 0, sizeof(ipv4));
+    ipv4.ss_family = AF_INET;
+    memcpy(&ipv4, &addr4, sizeof(addr4));
+    result = ipv4;
+    return result;
+  }
+
+  // Try IPv6
+  sockaddr_in6 addr6;
+  memset(&addr6, 0, sizeof(addr6));
+  addr6.sin6_family = AF_INET6;
+  if (inet_pton(AF_INET6, address.c_str(), &addr6.sin6_addr) == 1) {
+    struct sockaddr_storage ipv6;
+    memset(&ipv6, 0, sizeof(ipv6));
+    ipv6.ss_family = AF_INET6;
+    memcpy(&ipv6, &addr6, sizeof(addr6));
+    result = ipv6;
+    return result;
+  }
+
+  return result;
+}
+
+optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName)
+{
+  optional<sockaddr_storage> result = ParseAddress(hostName);
+  if (result.has_value()) {
+    return result;
+  }
+
+  auto it = m_DNSCache.find(hostName);
+  if (it != end(m_DNSCache)) {
+    result = it->second;
+    return result;
+  }
+
+  struct hostent* HostInfo;
+  HostInfo = gethostbyname(hostName.c_str());
+
+  if (!HostInfo) {
+    Print("DNS resolution failed for " + hostName);
+    return result;
+  }
+
+  struct sockaddr_storage address;
+  struct sockaddr_in *addr4 = (struct sockaddr_in *)&address;
+  addr4->sin_family = AF_INET;
+  addr4->sin_port = 0;
+  memcpy(&(addr4->sin_addr.s_addr), HostInfo->h_addr, HostInfo->h_length);
+
+  m_DNSCache[hostName] = address;
+  result = address;
+  return result;
+}
+
+void CNet::FlushDNS()
+{
+  m_DNSCache.clear();
 }
 
 CNet::~CNet()

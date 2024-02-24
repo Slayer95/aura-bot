@@ -68,7 +68,6 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
     m_MaxUploadSize(AuraCFG->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
     m_FloodImmune(false),
 
-    m_BindAddress(string()),
     m_Enabled(true),
 
     m_ServerIndex(0), // m_ServerIndex is one-based
@@ -102,12 +101,12 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);
 
   m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
-  m_PublicHostPort         = static_cast<uint16_t>(CFG->GetInt(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort));
+  m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = static_cast<uint8_t>(CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version));
+  m_AuthWar3Version        = CFG->GetUint8(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
   m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
   m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
   m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);
@@ -119,7 +118,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
-  m_BindAddress            = CFG->GetString(m_CFGKeyPrefix + "bind_address", emptyString);
+  m_BindAddress            = CFG->GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
   m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", true);
 }
 
@@ -156,7 +155,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
     m_FloodImmune(nRootConfig->m_FloodImmune),
 
-    m_BindAddress(string()),
+    m_BindAddress(nRootConfig->m_BindAddress),
     m_Enabled(nRootConfig->m_Enabled),
 
     m_ServerIndex(nServerIndex),
@@ -207,12 +206,12 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);
 
   m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
-  m_PublicHostPort         = static_cast<uint16_t>(CFG->GetInt(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort));
+  m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = static_cast<uint8_t>(CFG->GetInt(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version));
+  m_AuthWar3Version        = CFG->GetUint8(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
   m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
   m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
   m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);
@@ -224,7 +223,10 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
-  m_BindAddress            = CFG->GetString(m_CFGKeyPrefix + "bind_address", m_BindAddress);
+  optional<sockaddr_storage> customBindAddress = CFG->GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
+  if (customBindAddress.has_value())
+    m_BindAddress            = customBindAddress.value();
+
   m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
 }
 

@@ -61,6 +61,8 @@ class CNet;
 class CMap;
 class CIRC;
 
+struct UDPPkt;
+
 class CAura
 {
 public:
@@ -109,6 +111,9 @@ public:
 
   // processing functions
 
+  void HandleHealthCheck();
+  bool HandleAction(std::vector<std::string> action);
+  void HandleUDP(UDPPkt* pkt);
   bool Update();
   inline bool GetReady() const { return m_Ready; }
 

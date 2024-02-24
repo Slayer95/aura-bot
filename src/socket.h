@@ -21,6 +21,8 @@
 #ifndef AURA_SOCKET_H_
 #define AURA_SOCKET_H_
 
+#include <optional>
+
 #include "util.h"
 
 #ifdef WIN32
@@ -139,10 +141,13 @@ typedef int32_t SOCKET;
 
 struct UDPPkt
 {
-  sockaddr_in sender;
+  sockaddr_storage sender;
   int length;
   char buf[1024];
 };
+
+class CTCPServer;
+class CStreamIOSocket;
 
 //
 // CSocket
@@ -152,28 +157,28 @@ class CSocket
 {
 public:
   SOCKET             m_Socket;
+  uint8_t            m_Family;
   uint16_t           m_Port;
   bool               m_HasError;
   int                m_Error;
   std::string        m_Name;
 
-  CSocket(SOCKET nSocket);
-  CSocket(std::string nName);
-  CSocket(SOCKET nSocket, std::string nName);
+  CSocket(const uint8_t nFamily);
+  CSocket(const uint8_t nFamily, SOCKET nSocket);
+  CSocket(const uint8_t nFamily, std::string nName);
   ~CSocket();
 
   std::string                 GetErrorString() const;
+  std::string                 GetName() const;
   inline uint16_t             GetPort() const { return m_Port; }
   inline std::vector<uint8_t> GetPortLE() const { return CreateByteArray(m_Port, false); }
-  inline std::vector<uint8_t> GetPortBE() const { return CreateByteArray(m_Port, true); }
+  inline std::vector<uint8_t> GetPortBE() const { return CreateByteArray(m_Port, true); } // Network-byte-order
   inline int32_t              GetError() const { return m_Error; }
   inline bool                 HasError() const { return m_HasError; }
 
   void SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
   void Reset();
-  void Allocate(int type);
-
-  inline std::string  GetName() { return m_Name; }
+  void Allocate(const uint8_t family, int type);
 };
 
 //
@@ -183,44 +188,58 @@ public:
 class CStreamIOSocket : public CSocket
 {
 public:
-  struct sockaddr_in m_SIN;
-  std::string m_RecvBuffer;
-  std::string m_SendBuffer;
-  uint32_t    m_RemoteSocketCounter;
-  int64_t     m_LastRecv;
-  bool        m_Connected;
+  std::string               m_RecvBuffer;
+  std::string               m_SendBuffer;
+  uint32_t                  m_RemoteSocketCounter;
+  int64_t                   m_LastRecv;
+  bool                      m_Connected;
 
-  CStreamIOSocket(std::string nName);
-  CStreamIOSocket(SOCKET nSocket, struct sockaddr_in nSIN, std::string nName);
+  sockaddr_storage*         m_RemoteHost;
+  CTCPServer*               m_Server;
+  uint16_t                  m_Counter;
+
+  CStreamIOSocket(uint8_t nFamily, std::string nName);
+  CStreamIOSocket(SOCKET nSocket, sockaddr_in& nSIN, CTCPServer* nServer, const uint32_t nCounter);
+  CStreamIOSocket(SOCKET nSocket, sockaddr_in6& nSIN, CTCPServer* nServer, const uint32_t nCounter);
   ~CStreamIOSocket();
 
-  inline int64_t      GetLastRecv() const { return m_LastRecv; }
+  inline int64_t                    GetLastRecv() const { return m_LastRecv; }
+  std::string                       GetName() const;
 
-  inline std::vector<uint8_t> GetIP() const {
-    if (m_SIN.sin_family != AF_INET) return {0, 0, 0, 0};
-    return CreateByteArray(static_cast<uint32_t>(m_SIN.sin_addr.s_addr), false);
+  inline std::vector<uint8_t>       GetIPv4() const {
+    if (m_RemoteHost->ss_family != AF_INET) return {0, 0, 0, 0};
+    std::vector<uint8_t> ipBytes(4);
+    const sockaddr_in* ipv4_addr = reinterpret_cast<const sockaddr_in*>(m_RemoteHost);
+    memcpy(ipBytes.data(), &ipv4_addr->sin_addr.s_addr, 4);
+    return ipBytes;
   }
-  inline std::string          GetIPString() const {
-    if (m_SIN.sin_family != AF_INET) return std::string("0.0.0.0");
-    char ipStr[INET_ADDRSTRLEN_IPV4];
-    inet_ntop(AF_INET, &(m_SIN.sin_addr), ipStr, INET_ADDRSTRLEN_IPV4);
-    if (ipStr == NULL) return std::string("0.0.0.0");
-    return std::string(ipStr);
+  inline std::string                GetIPString() const {
+    char ipString[INET6_ADDRSTRLEN];
+    if (m_RemoteHost->ss_family == AF_INET) { // IPv4
+        const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(m_RemoteHost);
+        inet_ntop(AF_INET, &(addr->sin_addr), ipString, INET_ADDRSTRLEN);
+    } else if (m_RemoteHost->ss_family == AF_INET6) { // IPv6
+        const sockaddr_in6* addr = reinterpret_cast<const sockaddr_in6*>(m_RemoteHost);
+        inet_ntop(AF_INET6, &(addr->sin6_addr), ipString, INET6_ADDRSTRLEN);
+    } else {
+        return std::string();
+    }
+    return std::string(ipString);
   }
 
-  inline bool         GetConnected() const { return m_Connected; }
+  inline bool                       GetConnected() const { return m_Connected; }
   void Disconnect();
 
-  inline std::string* GetBytes() { return &m_RecvBuffer; }
+  inline std::string*               GetBytes() { return &m_RecvBuffer; }
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
   inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
   void DoRecv(fd_set* fd);
 
-  inline uint32_t PutBytes(const std::string& bytes) {
+  inline uint32_t                   PutBytes(const std::string& bytes) {
     m_SendBuffer += bytes;
     return bytes.size();
   }
-  inline uint32_t PutBytes(const std::vector<uint8_t>& bytes) {
+  inline uint32_t                   PutBytes(const std::vector<uint8_t>& bytes) {
     m_SendBuffer += std::string(begin(bytes), end(bytes));
     return bytes.size();
   }
@@ -237,14 +256,14 @@ public:
 class CTCPClient final : public CStreamIOSocket
 {
 public:
-  bool m_Connecting;
+  bool                      m_Connecting;
 
-  CTCPClient(std::string nName);
+  CTCPClient(uint8_t nFamily, std::string nName);
   ~CTCPClient();
 
   inline bool         GetConnecting() const { return m_Connecting; }
   bool                CheckConnect();
-  void                Connect(const std::string& localaddress, const std::string& address, uint16_t port);
+  void                Connect(std::optional<sockaddr_storage>& localAddress, sockaddr_storage& remoteHost, const uint16_t port = 0);
 
   // Overrides
   void                Reset();
@@ -258,14 +277,14 @@ public:
 class CTCPServer final : public CSocket
 {
 public:
-  struct sockaddr_in                m_SIN;
-  uint32_t                          m_AcceptCounter;
+  uint32_t                        m_AcceptCounter;
 
-  CTCPServer(std::string nName);
+  CTCPServer(uint8_t nFamily);
   ~CTCPServer();
 
-  bool Listen(const std::string& address, uint16_t port, bool retry);
-  CStreamIOSocket* Accept(fd_set* fd);
+  std::string                     GetName() const;
+  bool                            Listen(sockaddr_storage& address, uint16_t port, bool retry);
+  CStreamIOSocket*                Accept(fd_set* fd);
 };
 
 //
@@ -275,31 +294,30 @@ public:
 class CUDPSocket : public CSocket
 {
 public:
-  struct in_addr m_BroadcastTarget;
+  struct in_addr              m_BroadcastTarget;
 
-  CUDPSocket(std::string nName);
+  CUDPSocket(uint8_t nFamily);
   ~CUDPSocket();
 
-  bool SendTo(struct sockaddr_in sin, const std::vector<uint8_t>& message);
-  bool SendTo(const std::string& hostName, uint16_t port, const std::vector<uint8_t>& message);
-  bool Broadcast(uint16_t port, const std::vector<uint8_t>& message);
+  bool                        SendTo(struct sockaddr_in sin, const std::vector<uint8_t>& message);
+  bool                        SendTo(const std::string& hostName, uint16_t port, const std::vector<uint8_t>& message);
+  bool                        Broadcast(uint16_t port, const std::vector<uint8_t>& message);
 
-  void Reset();
-  void SetBroadcastTarget(const std::string& subnet);
-  void SetDontRoute(bool dontRoute);
+  void                        Reset();
+  void                        SetBroadcastTarget(sockaddr_storage& subnet);
+  void                        SetDontRoute(bool dontRoute);
 };
 
 class CUDPServer final : public CUDPSocket
 {
 public:
-  struct sockaddr_in                m_SIN;
-
-  CUDPServer(std::string nName);
+  CUDPServer(uint8_t nFamily);
   ~CUDPServer();
 
-  bool Listen(const std::string& address, uint16_t port, bool retry);
-  UDPPkt* Accept(fd_set* fd);
-  void Discard(fd_set* fd);
+  std::string                 GetName() const;
+  bool                        Listen(sockaddr_storage& address, uint16_t port, bool retry);
+  UDPPkt*                     Accept(fd_set* fd);
+  void                        Discard(fd_set* fd);
 };
 
 inline uint32_t ipAddressToUint32(const std::string& inputPath) {

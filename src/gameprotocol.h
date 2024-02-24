@@ -166,19 +166,18 @@ class CIncomingJoinRequest
 {
 private:
   std::string          m_Name;
-  std::vector<uint8_t> m_InternalIP;
+  std::vector<uint8_t> m_IPv4Internal;
   uint32_t             m_HostCounter;
   uint32_t             m_EntryKey;
 
 public:
-  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::vector<uint8_t> nInternalIP);
+  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::vector<uint8_t> nIPv4Internal);
   ~CIncomingJoinRequest();
 
   inline uint32_t             GetHostCounter() const { return m_HostCounter; }
   inline uint32_t             GetEntryKey() const { return m_EntryKey; }
   inline std::string          GetName() const { return m_Name; }
-  inline std::vector<uint8_t> GetInternalIP() const { return m_InternalIP; }
-  std::string                 GetInternalIPString() const;
+  inline std::vector<uint8_t> GetIPv4Internal() const { return m_IPv4Internal; }
 };
 
 //

@@ -174,7 +174,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID
   : m_Protocol(potential->m_Protocol),
     m_Game(nGame),
     m_Socket(potential->GetSocket()),
-    m_InternalIP(std::move(nInternalIP)),
+    m_IPv4Internal(std::move(nInternalIP)),
     m_JoinedRealmID(nJoinedRealmID),
     m_JoinedRealm(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
@@ -238,11 +238,6 @@ uint32_t CGamePlayer::GetPing() const
   AvgPing /= m_Pings.size();
 
   return AvgPing;
-}
-
-string CGamePlayer::GetInternalIPString() const
-{
-  return to_string(m_InternalIP[0]) + "." + to_string(m_InternalIP[1]) + "." + to_string(m_InternalIP[2]) + "." + to_string(m_InternalIP[3]);
 }
 
 CRealm* CGamePlayer::GetRealm(bool mustVerify)

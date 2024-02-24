@@ -218,7 +218,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapLocalPath = CFG->GetString("map_localpath", emptyString);
   m_MapData.clear();
 
-  bool IsPartial = CFG->GetInt("cfg_partial", 0) == 1;
+  bool IsPartial = CFG->GetBool("cfg_partial", false);
   int RawMapSize = 0;
   if (IsPartial || m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapLocalPath.empty()) {
@@ -749,31 +749,31 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapURL       = CFG->GetString("map_url", emptyString);
 
   if (CFG->Exists("map_filter_type")) {
-    MapFilterType = static_cast<uint8_t>(CFG->GetInt("map_filter_type", MAPFILTER_TYPE_SCENARIO));
+    MapFilterType = CFG->GetUint8("map_filter_type", MAPFILTER_TYPE_SCENARIO);
   } else {
-    CFG->SetInt("map_filter_type", MapFilterType);
+    CFG->SetUint8("map_filter_type", MapFilterType);
   }
 
   m_MapFilterType = MapFilterType;
 
   // These are per-game flags. Don't automatically set them in the map config.
-  m_MapSpeed       = static_cast<uint8_t>(CFG->GetInt("map_speed", MAPSPEED_FAST));
-  m_MapVisibility  = static_cast<uint8_t>(CFG->GetInt("map_visibility", MAPVIS_DEFAULT));
-  m_MapObservers   = static_cast<uint8_t>(CFG->GetInt("map_observers", MAPOBS_ALLOWED));
-  m_MapFilterMaker = static_cast<uint8_t>(CFG->GetInt("map_filter_maker", MAPFILTER_MAKER_USER));
-  m_MapFilterSize  = static_cast<uint8_t>(CFG->GetInt("map_filter_size", MAPFILTER_SIZE_LARGE));
-  m_MapFilterObs   = static_cast<uint8_t>(CFG->GetInt("map_filter_obs", MAPFILTER_OBS_NONE));
+  m_MapSpeed       = CFG->GetUint8("map_speed", MAPSPEED_FAST);
+  m_MapVisibility  = CFG->GetUint8("map_visibility", MAPVIS_DEFAULT);
+  m_MapObservers   = CFG->GetUint8("map_observers", MAPOBS_ALLOWED);
+  m_MapFilterMaker = CFG->GetUint8("map_filter_maker", MAPFILTER_MAKER_USER);
+  m_MapFilterSize  = CFG->GetUint8("map_filter_size", MAPFILTER_SIZE_LARGE);
+  m_MapFilterObs   = CFG->GetUint8("map_filter_obs", MAPFILTER_OBS_NONE);
 
   if (CFG->Exists("map_options")) {
-    MapOptions = CFG->GetInt("map_options", 0);
+    MapOptions = CFG->GetUint32("map_options", 0);
   } else {
-    CFG->SetInt("map_options", MapOptions);
+    CFG->SetUint32("map_options", MapOptions);
   }
 
   m_MapOptions = MapOptions;
-  m_MapFlags = static_cast<uint8_t>(CFG->GetInt("map_flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS));
+  m_MapFlags = CFG->GetUint8("map_flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS);
   if (!CFG->Exists("map_flags")) {
-    CFG->SetInt("map_flags", m_MapFlags);
+    CFG->SetUint8("map_flags", m_MapFlags);
   }
 
   if (CFG->Exists("map_width")) {
@@ -795,17 +795,17 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   m_MapDefaultHCL = CFG->GetString("map_defaulthcl", emptyString);
 
   if (CFG->Exists("map_numplayers")) {
-    MapNumPlayers = CFG->GetInt("map_numplayers", 0);
+    MapNumPlayers = CFG->GetUint8("map_numplayers", 0);
   } else {
-    CFG->SetInt("map_numplayers", MapNumPlayers);
+    CFG->SetUint8("map_numplayers", MapNumPlayers);
   }
 
   m_MapNumPlayers = static_cast<uint8_t>(MapNumPlayers);
 
   if (CFG->Exists("map_numteams")) {
-    MapNumTeams = CFG->GetInt("map_numteams", 0);
+    MapNumTeams = CFG->GetUint8("map_numteams", 0);
   } else {
-    CFG->SetInt("map_numteams", MapNumTeams);
+    CFG->SetUint8("map_numteams", MapNumTeams);
   }
 
   m_MapNumTeams = static_cast<uint8_t>(MapNumTeams);
@@ -860,7 +860,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   if (ErrorMessage) {
     Print(std::string("[MAP] ") + ErrorMessage);
   } else if (IsPartial) {
-    CFG->SetInt("cfg_partial", 0);
+    CFG->SetBool("cfg_partial", false);
   }
 }
 

@@ -53,7 +53,7 @@ public:
   std::filesystem::path                   m_MapCFGPath;                 // map cfg path
   std::filesystem::path                   m_MapPath;                    // map path
 
-  std::string                             m_BindAddress;                // map path
+  sockaddr_storage                        m_BindAddress;                // map path
   uint16_t                                m_MinHostPort;                // the min port to host games on
   uint16_t                                m_MaxHostPort;                // the max port to host games on
 

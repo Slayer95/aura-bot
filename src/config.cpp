@@ -1,5 +1,30 @@
 /*
 
+  Copyright [2024] [Leonardo Julca]
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
+/*
+
    Copyright [2010] [Josko Nikolic]
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +47,7 @@
 #include "config.h"
 #include "includes.h"
 #include "util.h"
+#include "net.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -32,11 +58,35 @@
 
 using namespace std;
 
+#define SUCCESS(T) \
+    do { \
+        m_Error = false; \
+        return T; \
+    } while(0);
+
+
+#define CONFIG_ERROR(key, T) \
+    do { \
+        m_Error = true; \
+        Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        return T; \
+    } while(0);
+
+
+#define END(T) \
+    do { \
+        if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        m_Error = errored; \
+        return T; \
+    } while(0);
+
+
 //
 // CConfig
 //
 
 CConfig::CConfig()
+ : m_Error(false)
 {
 }
 
@@ -56,14 +106,14 @@ bool CConfig::Read(const filesystem::path& file)
 
   string Line;
 
-  while (!in.eof())
-  {
+  while (!in.eof()) {
     getline(in, Line);
 
     // ignore blank lines and comments
 
-    if (Line.empty() || Line[0] == '#' || Line == "\n")
+    if (Line.empty() || Line[0] == '#' || Line == "\n") {
       continue;
+    }
 
     // remove newlines and partial newlines to help fix issues with Windows formatted config files on Linux systems
 
@@ -72,16 +122,18 @@ bool CConfig::Read(const filesystem::path& file)
 
     string::size_type Split = Line.find('=');
 
-    if (Split == string::npos || Split == 0)
+    if (Split == string::npos || Split == 0) {
       continue;
+    }
 
     string::size_type KeyStart   = Line.find_first_not_of(' ');
     string::size_type KeyEnd     = Line.find_last_not_of(' ', Split - 1) + 1;
     string::size_type ValueStart = Line.find_first_not_of(' ', Split + 1);
     string::size_type ValueEnd   = Line.find_last_not_of(' ') + 1;
 
-    if (ValueStart == string::npos)
+    if (ValueStart == string::npos) {
       continue;
+    }
 
     m_CFG[Line.substr(KeyStart, KeyEnd - KeyStart)] = Line.substr(ValueStart, ValueEnd - ValueStart);
   }
@@ -95,76 +147,156 @@ bool CConfig::Exists(const string& key) const
   return m_CFG.find(key) != end(m_CFG);
 }
 
-string CConfig::GetString(const string& key, const string& x) const
+string CConfig::GetString(const string& key, const string& x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
-  return it->second;
+  SUCCESS(it->second)
 }
 
-string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x) const
+string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
-  if (it->second.length() < minLength)
-    return x;
+  if (it->second.length() < minLength) {
+    CONFIG_ERROR(key, x)
+  }
 
-  if (it->second.length() > maxLength)
-    return x;
+  if (it->second.length() > maxLength) {
+    CONFIG_ERROR(key, x)
+  }
 
-  return it->second;
+  SUCCESS(it->second)
 }
 
-bool CConfig::GetBool(const string& key, bool x) const
+bool CConfig::GetBool(const string& key, bool x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
-  if (it->second == "0" || it->second == "no" || it->second == "false")
-    return false;
-  if (it->second == "1" || it->second == "yes" || it->second == "true")
-    return true;
-  return x;
+  if (it->second == "0" || it->second == "no" || it->second == "false") {
+    SUCCESS(false);
+  }
+  if (it->second == "1" || it->second == "yes" || it->second == "true") {
+    SUCCESS(true);
+  }
+
+  CONFIG_ERROR(key, x)
 }
 
-int32_t CConfig::GetInt(const string& key, int32_t x) const
+int32_t CConfig::GetInt32(const string& key, int32_t x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
   int32_t Value = x;
   try {
     Value = atoi(it->second.c_str());
-  } catch (...) {}
+  } catch (...) {
+    CONFIG_ERROR(key, x)
+  }
 
-  return Value;
+  SUCCESS(Value)
 }
 
-float CConfig::GetFloat(const string& key, float x) const
+uint32_t CConfig::GetUint32(const string& key, uint32_t x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  uint32_t Value = x;
+  try {
+    Value = stoi(it->second);
+    if (Value < 0) {
+      CONFIG_ERROR(key, x)
+    }
+  } catch (...) {
+    CONFIG_ERROR(key, x)
+  }
+
+  SUCCESS(Value)
+}
+
+uint16_t CConfig::GetUint16(const string& key, uint16_t x)
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  int32_t Value = x;
+  try {
+    Value = stoi(it->second);
+    if (Value < 0 || 0xFFFF < Value) {
+      CONFIG_ERROR(key, x)
+    }
+  } catch (...) {
+    CONFIG_ERROR(key, x)
+  }
+
+  SUCCESS(static_cast<uint16_t>(Value))
+}
+
+uint8_t CConfig::GetUint8(const string& key, uint8_t x)
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  int32_t Value = x;
+  try {
+    Value = stoi(it->second);
+    if (Value < 0 || 0xFF < Value) {
+      CONFIG_ERROR(key, x)
+    }
+  } catch (...) {
+    CONFIG_ERROR(key, x)
+  }
+
+  SUCCESS(static_cast<uint8_t>(Value))
+}
+
+float CConfig::GetFloat(const string& key, float x)
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
   float Value = x;
   try {
     Value = stof(it->second.c_str());
-  } catch (...) {}
+  } catch (...) {
+    CONFIG_ERROR(key, x)
+  }
 
-  return Value;
+  SUCCESS(Value)
 }
 
-vector<string> CConfig::GetList(const string& key, char separator, vector<string> x) const
+int32_t CConfig::GetInt(const string& key, int32_t x)
+{
+  return GetInt32(key, x);
+}
+
+vector<string> CConfig::GetList(const string& key, char separator, const vector<string> x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
   vector<string> Output;
   stringstream ss(it->second);
@@ -175,154 +307,230 @@ vector<string> CConfig::GetList(const string& key, char separator, vector<string
       Output.push_back(element);
     }
   }
-  return Output;
+  SUCCESS(Output)
 }
 
-set<string> CConfig::GetSet(const string& key, char separator, set<string> x) const
+set<string> CConfig::GetSet(const string& key, char separator, const set<string> x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
+  bool errored = false;
   set<string> Output;
   stringstream ss(it->second);
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
-    if (element.length() > 0) {
-      Output.insert(element);
-    }
+    if (element.empty())
+      continue;
+    if (!Output.insert(element).second)
+      errored = true;
   }
-  return Output;
+
+  END(Output)
 }
 
-vector<uint8_t> CConfig::GetUint8Vector(const string& key, uint32_t count, const std::vector<uint8_t> &x) const
+vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count, const std::vector<uint8_t> &x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
   vector<uint8_t> Output = ExtractNumbers(it->second, count);
-  if (Output.size() != count)
-    return x;
+  if (Output.size() != count) {
+    CONFIG_ERROR(key, x)
+  }
 
-  return Output;
+  SUCCESS(Output)
 }
 
-vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x) const
+vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
   vector<uint8_t> Output = ExtractIPv4(it->second);
-  if (Output.empty())
-    return x;
+  if (Output.empty()) {
+    CONFIG_ERROR(key, x)
+  }
 
-  return Output;
+  SUCCESS(Output)
 }
-set<string> CConfig::GetIPv4Set(const string& key, char separator, set<string> x) const
+
+set<string> CConfig::GetIPv4Set(const string& key, char separator, const set<string> x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
+  bool errored = false;
   set<string> Output;
   stringstream ss(it->second);
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
-    if (element.length() > 0 && !ExtractIPv4(element).empty()) {
-      Output.insert(element);
+    if (element.empty())
+      continue;
+
+    if (ExtractIPv4(element).empty()) {
+      errored = true;
+      continue;
+    }
+    if (!Output.insert(element).second) {
+      errored = true;
     }
   }
-  return Output;
+  END(Output)
 }
 
 
-filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x) const
+filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
 
   filesystem::path value = it->second;
-  if (value.is_absolute()) return value;
-  return filesystem::path(GetExeDirectory() / value).lexically_normal();
+  if (value.is_absolute()) {
+    SUCCESS(value)
+  }
+
+  SUCCESS(filesystem::path(GetExeDirectory() / value).lexically_normal())
 }
 
-filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x) const
+filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x)
 {
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return x.empty() ? GetExeDirectory() : x;
+  if (it == end(m_CFG)) {
+    SUCCESS(x.empty() ? GetExeDirectory() : x)
+  }
 
   filesystem::path value = it->second;
-  if (value.is_absolute()) return value;
-  return filesystem::path(GetExeDirectory() / value).lexically_normal();
+  if (value.is_absolute()) {
+    SUCCESS(value)
+  }
+
+  SUCCESS(filesystem::path(GetExeDirectory() / value).lexically_normal())
 }
 
-optional<bool> CConfig::GetMaybeBool(const string& key) const
+sockaddr_storage CConfig::GetAddress(const string& key, const string& x)
+{
+  auto it = m_CFG.find(key);
+  vector<string> tryAddresses;
+  if (it != end(m_CFG)) tryAddresses.push_back(it->second);
+  tryAddresses.push_back(x);
+
+  for (uint8_t i = 0; i < 2; ++i) {
+    optional<sockaddr_storage> result = CNet::ParseAddress(tryAddresses[i]);
+    if (result.has_value()) {
+      if (i == 0) {
+        SUCCESS(result.value())
+      } else {
+        CONFIG_ERROR(key, result.value());
+      }
+    }
+  }
+
+  struct sockaddr_storage fallback;
+  memset(&fallback, 0, sizeof(fallback));
+  CONFIG_ERROR(key, fallback)
+}
+
+optional<bool> CConfig::GetMaybeBool(const string& key)
 {
   optional<bool> result;
 
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return result;
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
 
-  if (it->second == "0" || it->second == "no" || it->second == "false")
-    return false;
-  if (it->second == "1" || it->second == "yes" || it->second == "true")
-    return true;
+  if (it->second == "0" || it->second == "no" || it->second == "false") {
+    result = false;
+    SUCCESS(result)
+  }
+  if (it->second == "1" || it->second == "yes" || it->second == "true") {
+    result = true;
+    SUCCESS(result)
+  }
 
-  return result;
+  CONFIG_ERROR(key, result)
 }
 
-optional<uint32_t> CConfig::GetMaybeInt(const string& key) const
+optional<uint32_t> CConfig::GetMaybeInt(const string& key)
 {
   optional<uint32_t> result;
 
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return result;
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
 
   try {
     result = atoi(it->second.c_str());
-  } catch (...) {}
+  } catch (...) {
+    CONFIG_ERROR(key, result)
+  }
 
-  return result;
+  SUCCESS(result)
 }
 
-optional<vector<uint8_t>> CConfig::GetMaybeIPv4(const string &key) const
+optional<vector<uint8_t>> CConfig::GetMaybeIPv4(const string &key)
 {
   optional<vector<uint8_t>> result;
 
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return result;
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
 
   vector<uint8_t> Output = ExtractIPv4(it->second);
-  if (Output.empty())
-    return result;
+  if (Output.empty()) {
+    CONFIG_ERROR(key, result)
+  }
 
   result = Output;
-  return result;
+  SUCCESS(result)
 }
 
-optional<filesystem::path> CConfig::GetMaybePath(const string &key) const
+optional<filesystem::path> CConfig::GetMaybePath(const string &key)
 {
   optional<filesystem::path> result;
 
   auto it = m_CFG.find(key);
-  if (it == end(m_CFG))
-    return result;
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
 
   result = it->second;
   if (result.value().is_absolute()) {
-    return result;
+    SUCCESS(result)
   }
   result = filesystem::path(GetExeDirectory() / result.value()).lexically_normal();
-  return result;
+  SUCCESS(result)
+}
+
+optional<sockaddr_storage> CConfig::GetMaybeAddress(const string& key)
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    optional<sockaddr_storage> empty;
+    SUCCESS(empty);
+  }
+
+  optional<sockaddr_storage> result = CNet::ParseAddress(it->second);
+  if (result.has_value()) {
+    SUCCESS(result);
+  }
+
+  CONFIG_ERROR(key, result)
 }
 
 void CConfig::Set(const string& key, const string& x)
@@ -340,7 +548,21 @@ void CConfig::SetBool(const string& key, const bool& x)
   m_CFG[key] = x ? "1" : "0";
 }
 
-void CConfig::SetInt(const string& key, const int& x)
+void CConfig::SetInt32(const string& key, const int32_t& x)
+{
+  m_CFG[key] = to_string(x);
+}
+
+void CConfig::SetUint32(const string& key, const uint32_t& x)
+{
+  m_CFG[key] = to_string(x);
+}
+
+void CConfig::SetUint16(const string& key, const uint16_t& x)
+{
+  m_CFG[key] = to_string(x);
+}
+void CConfig::SetUint8(const string& key, const uint8_t& x)
 {
   m_CFG[key] = to_string(x);
 }

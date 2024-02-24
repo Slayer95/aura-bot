@@ -51,13 +51,15 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_MapCFGPath              = CFG->GetPath("bot.map_configs_path", filesystem::path());
   m_MapPath                 = CFG->GetPath("bot.maps_path", filesystem::path());
 
-  m_BindAddress             = CFG->GetString("net.bind_address", emptyString);
-  m_MinHostPort             = static_cast<uint16_t>(CFG->GetInt("net.host_port.min", CFG->GetInt("net.host_port.only", 6112)));
-  m_MaxHostPort             = static_cast<uint16_t>(CFG->GetInt("net.host_port.max", m_MinHostPort));
+  m_BindAddress             = CFG->GetAddress("net.bind_address", "0.0.0.0");
+  m_MinHostPort             = CFG->GetUint16("net.host_port.min", CFG->GetInt("net.host_port.only", 6112));
+  m_MaxHostPort             = CFG->GetUint16("net.host_port.max", m_MinHostPort);
   m_UDPEnableCustomPortTCP4 = CFG->GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
-  m_UDPCustomPortTCP4       = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.tcp4_custom_port.value", 6112));
+  m_UDPCustomPortTCP4       = CFG->GetUint16("net.game_discovery.udp.tcp4_custom_port.value", 6112);
   m_UDPEnableCustomPortTCP6 = CFG->GetBool("net.game_discovery.udp.tcp6_custom_port.enabled", false);
-  m_UDPCustomPortTCP6       = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.tcp6_custom_port.value", 5678));
+  m_UDPCustomPortTCP6       = CFG->GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678);
+
+  m_UDPCustomPortTCP6       = CFG->GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678);
 
   /* Make absolute, lexically normal */
   m_GreetingPath           = CFG->GetPath("bot.greeting_path", filesystem::path());
@@ -82,26 +84,26 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_UDPInfoStrictMode            = CFG->GetBool("net.game_discovery.udp.strict", true);
   m_UDPForwardTraffic            = CFG->GetBool("net.udp_redirect.enabled", false);
   m_UDPForwardAddress            = CFG->GetString("net.udp_redirect.ip_address", emptyString);
-  m_UDPForwardPort               = static_cast<uint16_t>(CFG->GetInt("net.udp_redirect.port", 6110));
+  m_UDPForwardPort               = CFG->GetUint16("net.udp_redirect.port", 6110);
   m_UDPForwardGameLists          = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
   m_UDPBroadcastEnabled          = CFG->GetBool("net.game_discovery.udp.broadcast.enabled", true);
   m_UDPBlockedIPs                = CFG->GetIPv4Set("net.udp_server.block_list", ',', {});
 
-  m_UDP6TargetPort               = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.ipv6.target_port", 5678));
+  m_UDP6TargetPort               = CFG->GetUint16("net.game_discovery.udp.ipv6.target_port", 5678);
 
   m_UDPSupportGameRanger         = CFG->GetBool("net.game_discovery.udp.gameranger.enabled", false);
   m_UDPGameRangerAddress         = CFG->GetIPv4("net.game_discovery.udp.gameranger.ip_address", {255, 255, 255, 255});
-  m_UDPGameRangerPort            = static_cast<uint16_t>(CFG->GetInt("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112));
+  m_UDPGameRangerPort            = CFG->GetUint16("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112);
 
   m_AllowDownloads               = CFG->GetBool("bot.allow_downloads", false);
-  m_AllowTransfers               = static_cast<uint8_t>(CFG->GetInt("hosting.map_transfers.enabled", MAP_TRANSFERS_AUTOMATIC));
+  m_AllowTransfers               = CFG->GetUint8("hosting.map_transfers.enabled", MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);
   m_MaxUploadSize                = CFG->GetInt("hosting.map_transfers.max_size", 8192);
   m_MaxUploadSpeed               = CFG->GetInt("hosting.map_transfers.max_speed", 1024);
   m_MaxParallelMapPackets        = CFG->GetInt("hosting.map_transfers.max_parallel_packets", 1000);
   m_RTTPings                     = CFG->GetBool("metrics.rtt_pings", false);
   m_HasBufferBloat               = CFG->GetBool("net.has_buffer_bloat", false);
-  m_ReconnectWaitTime            = static_cast<uint8_t>(CFG->GetInt("net.player_reconnect.wait", 3));
+  m_ReconnectWaitTime            = CFG->GetUint8("net.player_reconnect.wait", 3);
 
   m_MinHostCounter               = CFG->GetInt("hosting.namepace.first_game_id", 100);
   m_MaxGames                     = CFG->GetInt("hosting.max_games", 20);
@@ -114,17 +116,15 @@ CBotConfig::CBotConfig(CConfig* CFG)
   string ipAlgorithm             = CFG->GetString("net.public_ip_address.algorithm", "api");
   if (ipAlgorithm == "manual") {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+    m_PublicIPValue = IPv4ToString(CFG->GetIPv4("net.public_ip_address.value", {10, 9, 8, 7}));
   } else if (ipAlgorithm == "api") {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+    m_PublicIPValue = CFG->GetString("net.public_ip_address.value", "https://api.ipify.org");
   } else if (ipAlgorithm == "none") {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
   } else {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
   }
-
-  m_PublicIPValue                = CFG->GetString("net.public_ip_address.value",
-    m_PublicIPAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API ? "https://api.ipify.org" : ""
-  );
 
   m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);
 

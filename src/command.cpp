@@ -546,7 +546,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     if (m_SourceRealm && m_FromWhisper) {
       Print("[AURA] Confirm from [" + m_HostName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + GetToken() + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC) {
-      Print("[AURA] Confirm from [" + m_IRC->m_ResolvedHostName + "] with: \"" + GetToken() + "aura sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_IRC->m_Config->m_HostName + "] with: \"" + GetToken() + "aura sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
       Print("[AURA] Confirm from the game client with: \"" + GetToken() + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     }
@@ -637,7 +637,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (m_TargetGame->GetIsLobby()) {
         SlotFragment = "Slot #" + to_string(1 + m_TargetGame->GetSIDFromPID(targetPlayer->GetPID())) + ". ";
       }
-      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetExternalIP(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
+      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetReserved() ? "Yes" : "No"));
       SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       break;
@@ -1006,7 +1006,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
         Froms += (*i)->GetName();
         Froms += ": (";
-        Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32((*i)->GetExternalIP(), true));
+        Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32((*i)->GetIPv4(), true));
         Froms += ")";
 
         if (i != end(m_TargetGame->m_Players) - 1)
@@ -4048,6 +4048,21 @@ void CCommandContext::Run(const string& command, const string& payload)
       m_Aura->m_Net->m_GameRangerLocalPort = GameRangerPort;
       m_Aura->m_Net->m_GameRangerRemoteAddress = GameRangerAddress;
       SendReply("GameRanger IP set to " + ByteArrayToDecString(m_Aura->m_Net->m_GameRangerRemoteAddress) + "(proxy at " + to_string(m_Aura->m_Net->m_GameRangerLocalPort) + ")");
+      break;
+    }
+
+    //
+    // !FLUSHDNS
+    //
+
+    case HashCode("flushdns"):
+    {
+      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+      m_Aura->m_Net->FlushDNS();
+      SendReply("Cleared DNS entries");
       break;
     }
 

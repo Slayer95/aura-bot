@@ -731,17 +731,12 @@ std::vector<uint8_t> CGameProtocol::EncodeSlotInfo(const vector<CGameSlot>& slot
 // CIncomingJoinRequest
 //
 
-CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::vector<uint8_t> nInternalIP)
+CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::vector<uint8_t> nIPv4Internal)
   : m_Name(std::move(nName)),
-    m_InternalIP(std::move(nInternalIP)),
+    m_IPv4Internal(std::move(nIPv4Internal)),
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey)
 {
-}
-
-string CIncomingJoinRequest::GetInternalIPString() const
-{
-  return to_string(m_InternalIP[0]) + "." + to_string(m_InternalIP[1]) + "." + to_string(m_InternalIP[2]) + "." + to_string(m_InternalIP[3]);
 }
 
 CIncomingJoinRequest::~CIncomingJoinRequest() = default;

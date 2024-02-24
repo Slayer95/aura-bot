@@ -40,11 +40,9 @@ using namespace std;
 
 CIRC::CIRC(CAura* nAura, CIRCConfig* nConfig)
   : m_Aura(nAura),
-    m_Socket(new CTCPClient("IRC")),
+    m_Socket(new CTCPClient(AF_INET, "IRC")),
     m_Config(nConfig),
     m_NickName(nConfig->m_NickName),
-    m_ResolvedAddress(string()),
-    m_ResolvedHostName(string()),
     m_LastConnectionAttemptTime(0),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
@@ -78,7 +76,6 @@ uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds)
 
 bool CIRC::Update(void* fd, void* send_fd)
 {
-  const static string emptyString;
   const int64_t Time = GetTime();
 
   if (!m_Config->m_Enabled) {
@@ -171,21 +168,16 @@ bool CIRC::Update(void* fd, void* send_fd)
     }
   }
 
-  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && (Time - m_LastConnectionAttemptTime > 60))
-  {
+  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && (Time - m_LastConnectionAttemptTime > 60)) {
     // attempt to connect to irc
 
     Print("[IRC: " + m_Config->m_HostName + "] connecting to server [" + m_Config->m_HostName + "] on port " + to_string(m_Config->m_Port));
-
-    if (m_ResolvedHostName == m_Config->m_HostName && !m_ResolvedAddress.empty()) {
-      // DNS resolution is blocking, so use cache if posible
-      m_Socket->Connect(emptyString, m_ResolvedAddress, m_Config->m_Port);
+    optional<sockaddr_storage> emptyBindAddress;
+    optional<sockaddr_storage> resolvedAddress = m_Aura->m_Net->ResolveHostName(m_Config->m_HostName);
+    if (resolvedAddress.has_value()) {
+      m_Socket->Connect(emptyBindAddress, resolvedAddress.value(), m_Config->m_Port);
     } else {
-      m_Socket->Connect(emptyString, m_Config->m_HostName, m_Config->m_Port);
-      if (!m_Socket->HasError()) {
-        m_ResolvedHostName = m_Config->m_HostName;
-        m_ResolvedAddress  = m_Socket->GetIPString();
-      }
+      m_Socket->m_HasError = true;
     }
 
     m_WaitingToConnect          = false;

@@ -436,22 +436,25 @@ CRealm* CAura::GetRealmByHostCounter(const uint8_t hostCounter)
   return nullptr;
 }
 
-CTCPServer* CAura::GetGameServer(uint16_t port, string& name)
+CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
 {
-  auto it = m_Net->m_GameServers.find(port);
+  auto it = m_Net->m_GameServers.find(inputPort);
   if (it != m_Net->m_GameServers.end()) {
-    Print("[GAME] " + name + " Assigned to port " + to_string(port));
+    Print("[GAME] " + name + " Assigned to port " + to_string(inputPort));
     return it->second;
   }
-  m_Net->m_GameServers[port] = new CTCPServer("TCPServer@" + to_string(port));
-  vector<CPotentialPlayer*> IncomingConnections;
-  m_Net->m_IncomingConnections[port] = IncomingConnections;
-  if (!m_Net->m_GameServers[port]->Listen(m_Config->m_BindAddress, port, false)) {
-    Print("[GAME] " + name + " Error listening on port " + to_string(port));
+  CTCPServer* gameServer = new CTCPServer(AF_INET);
+  if (!gameServer->Listen(m_Config->m_BindAddress, inputPort, false)) {
+    Print("[GAME] " + name + " Error listening on port " + to_string(inputPort));
     return nullptr;
   }
-  Print("[GAME] " + name + " Listening on port " + to_string(port));
-  return m_Net->m_GameServers[port];
+  uint16_t assignedPort = gameServer->GetPort();
+  m_Net->m_GameServers[assignedPort] = gameServer;
+  vector<CPotentialPlayer*> IncomingConnections;
+  m_Net->m_IncomingConnections[assignedPort] = IncomingConnections;
+
+  Print("[GAME] " + name + " Listening on port " + to_string(assignedPort));
+  return gameServer;
 }
 
 pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput, const string& observersInput, const string& visibilityInput, const string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath)
@@ -600,7 +603,7 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
       // CFG nowhere to be found.
       Print("[AURA] Loading map file [" + FileName + "]...");
 
-      MapCFG.Set("cfg_partial", "1");
+      MapCFG.SetBool("cfg_partial", true);
       if (FileNameClient.length() > 6 && FileName[FileNameClient.length() - 6] == '~' && isdigit(FileNameClient[FileNameClient.length() - 5])) {
         // IDK if this path is okay. Let's give it a try.
         MapCFG.Set("map_path", R"(Maps\Download\)" + FileNameClient.substr(0, FileNameClient.length() - 6) + FileNameClient.substr(FileNameClient.length() - 4));
@@ -658,7 +661,7 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
   }
 
   if (!ResolvedCFGExists) {
-    if (m_Config->m_EnableCFGCache && MapCFG.GetInt("cfg_partial", 0) == 0) {
+    if (m_Config->m_EnableCFGCache && !MapCFG.GetBool("cfg_partial", false)) {
       // Download and parse successful
       vector<uint8_t> OutputBytes = MapCFG.Export();
       if (FileWrite(ResolvedCFGPath, OutputBytes.data(), OutputBytes.size())) {
@@ -710,76 +713,241 @@ pair<uint8_t, string> CAura::LoadMapConfig(const string& user, const string& cfg
   return make_pair(0, string("Config file loaded OK [") + FilePath.string() + "]");
 }
 
+void CAura::HandleHealthCheck()
+{
+  bool hasDirectAttempts = false;
+  bool anyDirectSuccess = false;
+  vector<string> ChatReport;
+  vector<uint16_t> FailPorts;
+  for (auto& testConnection : m_Net->m_HealthCheckClients) {
+    bool success = false;
+    string ResultText;
+    if (testConnection->m_Passed.value_or(false)) {
+      success = true;
+      ResultText = "OK";
+    } else if (testConnection->m_CanConnect.value_or(false)) {
+      ResultText = "Cannot join";
+    } else {
+      ResultText = "Cannot connect";
+    }
+    ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
+    Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
+    if (0 == (testConnection->m_Type & CONNECTION_TYPE_CUSTOM_IP_ADDRESS) && 0 != (testConnection->m_Type & CONNECTION_TYPE_VPN)) {
+      hasDirectAttempts = true;
+      if (success) anyDirectSuccess = true;
+    }
+    if (!success) {
+      uint16_t port = testConnection->GetPort();
+      if (std::find(FailPorts.begin(), FailPorts.end(), port) == FailPorts.end())
+        FailPorts.push_back(port);
+    }
+  }
+  string portForwardInstructions;
+  if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+    portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(m_Net->GetPotentialGamePorts(), false) + "}";
+  }
+  if (hasDirectAttempts && !anyDirectSuccess) {
+    Print("[Network] This bot is disconnected from the Internet, because its public IP address is unreachable.");
+    Print("[Network] Please setup port-forwarding to allow connections.");
+    if (!portForwardInstructions.empty())
+      Print("[Network] " + portForwardInstructions);
+    Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+    Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel.");
+    Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
+    if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+      m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
+      m_CurrentLobby->SendAllChat("This bot is disconnected from the Internet, because its public IP address is unreachable.");
+      m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
+      m_CurrentLobby->SendAllChat(portForwardInstructions);
+      m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+      m_CurrentLobby->SendAllChat("Note that you may still play online if you got a VPN, or an active tunnel.");
+      m_CurrentLobby->SendAllChat("But make sure your firewall allows Aura inbound TCP connections.");
+      m_CurrentLobby->SendAllChat("=================================================================================");
+    }
+  }
+  if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+    string LeftMessage = JoinVector(ChatReport, " | ", false);
+    while (LeftMessage.length() > 254) {
+      m_CurrentLobby->SendAllChat(LeftMessage.substr(0, 254));
+      LeftMessage = LeftMessage.substr(254);
+    }
+    if (LeftMessage.length()) {
+      m_CurrentLobby->SendAllChat(LeftMessage);
+    }
+  }
+  m_Net->ResetHealthCheck();
+}
+
+bool CAura::HandleAction(vector<string> action)
+{
+  if (action[0] == "exec") {
+    Print("[AURA] Exec cli unsupported yet");
+    return true;
+  } else if (action[0] == "hostmap" || action[0] == "hostcfg") {
+    string DownloadedBy;
+    string SearchInput = action[1];
+    string GameName = action[2];
+    string ObsInput = action[3];
+    string VisInput = action[4];
+    string RHInput = action[5];
+    string OwnerName = action[6];
+    string ExcludedRealm = action[7]; // TODO?
+    const bool AllowTraversal = action[8] == "1";
+    const bool GonnaBeLucky = true;
+
+    string OwnerRealmName;
+    CRealm* OwnerRealm = nullptr;
+
+    size_t OwnerRealmIndex = OwnerName.find('@');
+    if (OwnerRealmIndex != string::npos) {
+      OwnerName = OwnerName.substr(0, OwnerRealmIndex);
+      OwnerRealmName = OwnerName.substr(OwnerRealmIndex + 1);
+      transform(begin(OwnerRealmName), end(OwnerRealmName), begin(OwnerRealmName), ::tolower);
+      OwnerRealm = GetRealmByInputId(OwnerRealmName);
+    }
+
+    pair<uint8_t, string> LoadResult;
+    if (action[0] == "hostmap") {
+      LoadResult = LoadMap(OwnerName, SearchInput, ObsInput, VisInput, RHInput, GonnaBeLucky, AllowTraversal);
+    } else if (action[0] == "hostcfg") {
+      LoadResult = LoadMapConfig(OwnerName, SearchInput, ObsInput, VisInput, RHInput, AllowTraversal);
+    }
+    if (!LoadResult.second.empty()) {
+      Print("[AURA] " + LoadResult.second);
+    }
+
+    if (LoadResult.first != 0) {
+      return true; // Exit
+    }
+
+    if (GameName.empty())
+      GameName = "gogogo";
+
+    bool success = CreateGame(
+      m_Map, GAME_PUBLIC, GameName,
+      OwnerName, OwnerRealm ? OwnerRealm->GetServer() : "",
+      OwnerName, OwnerRealm, false
+    );
+    m_Map = nullptr;
+    if (!success) {
+      return true;
+    }
+  } else if (action[0] == "mirror") {
+    string MapInput = action[1];
+    string GameName = action[2];
+    string ExcludedRealm = action[3];
+    string MirrorTarget = action[4];
+
+    Print("[AURA] Mirror cli unsupported yet");
+    return true;
+  } else {
+    Print("[AURA] Action type unsupported");
+    return true;
+  }
+  return false;
+}
+
+void CAura::HandleUDP(UDPPkt* pkt)
+{
+  // pkt->buf->length at least MIN_UDP_PACKET_SIZE
+
+  if (pkt->sender.ss_family != AF_INET && pkt->sender.ss_family != AF_INET6) {
+    Print("Got UDP traffic over unknown IP protocol.");
+    return;
+  }
+
+  uint16_t remotePort;
+  string ipAddress;
+
+  char ip_str[INET6_ADDRSTRLEN];
+  if (pkt->sender.ss_family == AF_INET) { // IPv4
+    const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(&(pkt->sender));
+    inet_ntop(AF_INET, &(addr4->sin_addr), ip_str, INET_ADDRSTRLEN);
+    ipAddress = string(ip_str);
+    remotePort = ntohs(addr4->sin_port);
+  } else { // IPv6
+    Print("Got UDP traffic over IPv6!");
+    const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(&(pkt->sender));
+    inet_ntop(AF_INET6, &(addr6->sin6_addr), ip_str, INET6_ADDRSTRLEN);
+    ipAddress = string(ip_str);
+    remotePort = ntohs(addr6->sin6_port);
+  }
+
+  if (IsIgnoredDatagramSource(ipAddress)) {
+    return;
+  }
+
+  if (m_Config->m_UDPForwardTraffic) {
+    vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
+    AppendByteArray(relayPacket, ipAddress, true);
+    size_t portOffset = relayPacket.size();
+    relayPacket.resize(portOffset + 6 + pkt->length);
+    relayPacket[portOffset] = static_cast<uint8_t>(remotePort >> 8); // Network-byte-order (Big-endian)
+    relayPacket[portOffset + 1] = static_cast<uint8_t>(remotePort);
+    memset(relayPacket.data() + portOffset + 2, 0, 4); // No version info at this level.
+    memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
+    AssignLength(relayPacket);
+    m_Net->Send(m_Config->m_UDPForwardAddress, m_Config->m_UDPForwardPort, relayPacket);
+  }
+
+  if (static_cast<unsigned char>(pkt->buf[0]) != W3GS_HEADER_CONSTANT) {
+    return;
+  }
+
+  if (!(pkt->length >= 16 && static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME)) {
+    return;
+  }
+
+  bool FromGameRanger = false;
+  if (m_Config->m_UDPSupportGameRanger) {
+    FromGameRanger = (
+      static_cast<unsigned char>(pkt->buf[2]) == 0x10 && (pkt->length == 22 || pkt->length == 23) &&
+      !(pkt->buf[16] == static_cast<unsigned char>(W3GS_HEADER_CONSTANT) && pkt->buf[17] != static_cast<unsigned char>(W3GS_HEADER_CONSTANT))
+    );
+  }
+  uint8_t ExtraDigit = pkt->length == 22 ? 0 : 0xFF;
+  if (FromGameRanger) {
+    vector<uint8_t> GameRangerAddress(pkt->buf + 16, pkt->buf + 20);
+    vector<uint8_t> GameRangerPort(pkt->buf + 20, pkt->buf + 22);
+    if (ExtraDigit == 0xFF && static_cast<unsigned char>(pkt->buf[22]) == 0) {
+      // OK; 0xFF signals delete
+    } else {
+      // ?
+    }
+    m_Net->m_GameRangerLocalPort = remotePort;
+    m_Net->m_GameRangerLocalAddress = ipAddress;
+    m_Net->m_GameRangerRemotePort = (GameRangerPort[0] << 8) + GameRangerPort[1];
+    m_Net->m_GameRangerRemoteAddress = GameRangerAddress;
+
+    Print("[AURA] GameRanger client at " + ipAddress + ":" + to_string(remotePort) + " searching for game");
+    Print("[AURA] GameRanger local address: " + m_Net->m_GameRangerLocalAddress + ":" + to_string(m_Net->m_GameRangerLocalPort));
+    Print("[AURA] GameRanger remote address: " + ByteArrayToDecString(m_Net->m_GameRangerRemoteAddress) + ":" + to_string(m_Net->m_GameRangerRemotePort));
+  }
+
+  if (pkt->buf[8] == m_GameVersion) {
+    if (m_CurrentLobby && m_CurrentLobby->GetUDPEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
+      if (FromGameRanger) {
+        m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_Net->m_GameRangerRemoteAddress, m_Net->m_GameRangerRemotePort, ExtraDigit);
+      } else {
+        Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+        m_CurrentLobby->AnnounceToAddress(ipAddress, remotePort);
+        if (remotePort != 6112) {
+          m_CurrentLobby->AnnounceToAddress(ipAddress);
+        }
+      }
+    }
+  }
+}
+
 bool CAura::Update()
 {
   // 1. pending actions
+
   for (auto& action : m_PendingActions) {
-    if (action[0] == "exec") {
-      Print("[AURA] Exec cli unsupported yet");
-      return true;
-    } else if (action[0] == "hostmap" || action[0] == "hostcfg") {
-      string DownloadedBy;
-      string SearchInput = action[1];
-      string GameName = action[2];
-      string ObsInput = action[3];
-      string VisInput = action[4];
-      string RHInput = action[5];
-      string OwnerName = action[6];
-      string ExcludedRealm = action[7]; // TODO?
-      const bool AllowTraversal = action[8] == "1";
-      const bool GonnaBeLucky = true;
-
-      string OwnerRealmName;
-      CRealm* OwnerRealm = nullptr;
-
-      size_t OwnerRealmIndex = OwnerName.find('@');
-      if (OwnerRealmIndex != string::npos) {
-        OwnerName = OwnerName.substr(0, OwnerRealmIndex);
-        OwnerRealmName = OwnerName.substr(OwnerRealmIndex + 1);
-        transform(begin(OwnerRealmName), end(OwnerRealmName), begin(OwnerRealmName), ::tolower);
-        OwnerRealm = GetRealmByInputId(OwnerRealmName);
-      }
-
-      pair<uint8_t, string> LoadResult;
-      if (action[0] == "hostmap") {
-        LoadResult = LoadMap(OwnerName, SearchInput, ObsInput, VisInput, RHInput, GonnaBeLucky, AllowTraversal);
-      } else if (action[0] == "hostcfg") {
-        LoadResult = LoadMapConfig(OwnerName, SearchInput, ObsInput, VisInput, RHInput, AllowTraversal);
-      }
-      if (!LoadResult.second.empty()) {
-        Print("[AURA] " + LoadResult.second);
-      }
-
-      if (LoadResult.first != 0) {
-        return true; // Exit
-      }
-
-      if (GameName.empty())
-        GameName = "gogogo";
-
-      bool success = CreateGame(
-        m_Map, GAME_PUBLIC, GameName,
-        OwnerName, OwnerRealm ? OwnerRealm->GetServer() : "",
-        OwnerName, OwnerRealm, false
-      );
-      m_Map = nullptr;
-      if (!success) {
-        return true;
-      }
-    } else if (action[0] == "mirror") {
-      string MapInput = action[1];
-      string GameName = action[2];
-      string ExcludedRealm = action[3];
-      string MirrorTarget = action[4];
-
-      Print("[AURA] Mirror cli unsupported yet");
-      return true;
-    } else {
-      Print("[AURA] Action type unsupported");
+    if (HandleAction(action)) {
       return true;
     }
   }
-
   m_PendingActions.clear();
 
   if (m_Config->m_ExitOnStandby && !m_CurrentLobby && m_Games.empty()) {
@@ -895,7 +1063,7 @@ bool CAura::Update()
     if (socket) {
       if (m_Config->m_ProxyReconnectEnabled) {
         CPotentialPlayer* incomingConnection = new CPotentialPlayer(m_GameProtocol, this, localPort, socket);
-        //Print("Incoming connection from " + incomingConnection->GetExternalIPString());
+        //Print("Incoming connection from " + incomingConnection->GetIPString());
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
         delete socket;
@@ -993,66 +1161,7 @@ bool CAura::Update()
       }
     }
     if (!anyPending) {
-      bool hasDirectAttempts = false;
-      bool anyDirectSuccess = false;
-      vector<string> ChatReport;
-      vector<uint16_t> FailPorts;
-      for (auto& testConnection : m_Net->m_HealthCheckClients) {
-        bool success = false;
-        string ResultText;
-        if (testConnection->m_Passed.value_or(false)) {
-          success = true;
-          ResultText = "OK";
-        } else if (testConnection->m_CanConnect.value_or(false)) {
-          ResultText = "Cannot join";
-        } else {
-          ResultText = "Cannot connect";
-        }
-        ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
-        Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
-        if (0 == (testConnection->m_Type & CONNECTION_TYPE_CUSTOM_IP_ADDRESS)) {
-          hasDirectAttempts = true;
-          if (success) anyDirectSuccess = true;
-        }
-        if (!success) {
-          if (std::find(FailPorts.begin(), FailPorts.end(), testConnection->m_Port) == FailPorts.end())
-            FailPorts.push_back(testConnection->m_Port);
-        }
-      }
-      string portForwardInstructions;
-      if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-        portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(m_Net->GetPotentialGamePorts(), false) + "}";
-      }
-      if (hasDirectAttempts && !anyDirectSuccess) {
-        Print("[Network] This bot is disconnected from the Internet, because its public IP address is unreachable.");
-        Print("[Network] Please setup port-forwarding to allow connections.");
-        if (!portForwardInstructions.empty())
-          Print("[Network] " + portForwardInstructions);
-        Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
-        Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel.");
-        Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
-        if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-          m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
-          m_CurrentLobby->SendAllChat("This bot is disconnected from the Internet, because its public IP address is unreachable.");
-          m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
-          m_CurrentLobby->SendAllChat(portForwardInstructions);
-          m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
-          m_CurrentLobby->SendAllChat("Note that you may still play online if you got a VPN, or an active tunnel.");
-          m_CurrentLobby->SendAllChat("But make sure your firewall allows Aura inbound TCP connections.");
-          m_CurrentLobby->SendAllChat("=================================================================================");
-        }
-      }
-      if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-        string LeftMessage = JoinVector(ChatReport, " | ", false);
-        while (LeftMessage.length() > 254) {
-          m_CurrentLobby->SendAllChat(LeftMessage.substr(0, 254));
-          LeftMessage = LeftMessage.substr(254);
-        }
-        if (LeftMessage.length()) {
-          m_CurrentLobby->SendAllChat(LeftMessage);
-        }
-      }
-      m_Net->ResetHealthCheck();
+      HandleHealthCheck();
     }
   }
 
@@ -1066,67 +1175,8 @@ bool CAura::Update()
   if (m_Net->m_UDPServerEnabled) {
     UDPPkt* pkt = m_Net->m_UDPServer->Accept(&fd);
     if (pkt != nullptr) {
-      // pkt->buf->length at least MIN_UDP_PACKET_SIZE
-      string ipAddress(inet_ntoa(pkt->sender.sin_addr));
-      uint16_t remotePort = pkt->sender.sin_port;
-      if (!IsIgnoredDatagramSource(ipAddress)) {
-        if (m_Config->m_UDPForwardTraffic) {
-          vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // 14 bytes
-          relayPacket.insert(relayPacket.end(), reinterpret_cast<const uint8_t*>(pkt->buf), reinterpret_cast<const uint8_t*>(pkt->buf + pkt->length));
-          const uint16_t Size = static_cast<uint16_t>(relayPacket.size());
-          relayPacket[2] = static_cast<uint8_t>(Size);
-          relayPacket[3] = static_cast<uint8_t>(Size >> 8);
-          memcpy(relayPacket.data() + 4, &(pkt->sender.sin_addr.s_addr), sizeof(pkt->sender.sin_addr.s_addr));
-          memcpy(relayPacket.data() + 8, &(pkt->sender.sin_port), sizeof(pkt->sender.sin_port));
-          m_Net->Send(m_Config->m_UDPForwardAddress, m_Config->m_UDPForwardPort, relayPacket);
-        }
-
-        if (static_cast<unsigned char>(pkt->buf[0]) == W3GS_HEADER_CONSTANT/* && pkt->buf[8] == m_GameVersion */) {
-          if (pkt->length >= 16 && static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME) {
-            bool FromGameRanger = false;
-            if (m_Config->m_UDPSupportGameRanger) {
-              FromGameRanger = (
-                static_cast<unsigned char>(pkt->buf[2]) == 0x10 && (pkt->length == 22 || pkt->length == 23) &&
-                !(pkt->buf[16] == static_cast<unsigned char>(W3GS_HEADER_CONSTANT) && pkt->buf[17] != static_cast<unsigned char>(W3GS_HEADER_CONSTANT))
-              );
-            }
-            uint8_t ExtraDigit = pkt->length == 22 ? 0 : 0xFF;
-            if (FromGameRanger) {
-              vector<uint8_t> GameRangerAddress(pkt->buf + 16, pkt->buf + 20);
-              vector<uint8_t> GameRangerPort(pkt->buf + 20, pkt->buf + 22);
-              if (ExtraDigit == 0xFF && static_cast<unsigned char>(pkt->buf[22]) == 0) {
-                // OK; 0xFF signals delete
-              } else {
-                // ?
-              }
-              m_Net->m_GameRangerLocalPort = remotePort;
-              m_Net->m_GameRangerLocalAddress = ipAddress;
-              m_Net->m_GameRangerRemotePort = (GameRangerPort[0] << 8) + GameRangerPort[1];
-              m_Net->m_GameRangerRemoteAddress = GameRangerAddress;
-
-              Print("[AURA] GameRanger client at " + ipAddress + ":" + to_string(remotePort) + " searching for game");
-              Print("[AURA] GameRanger local address: " + m_Net->m_GameRangerLocalAddress + ":" + to_string(m_Net->m_GameRangerLocalPort));
-              Print("[AURA] GameRanger remote address: " + ByteArrayToDecString(m_Net->m_GameRangerRemoteAddress) + ":" + to_string(m_Net->m_GameRangerRemotePort));
-            }
-
-            if (pkt->buf[8] == m_GameVersion) {
-              if (m_CurrentLobby && m_CurrentLobby->GetUDPEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
-                if (FromGameRanger) {
-                  m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_Net->m_GameRangerRemoteAddress, m_Net->m_GameRangerRemotePort, ExtraDigit);
-                } else {
-                  Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
-                  m_CurrentLobby->AnnounceToAddress(ipAddress, remotePort);
-                  if (remotePort != 6112) {
-                    m_CurrentLobby->AnnounceToAddress(ipAddress);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+      HandleUDP(pkt);
     }
-
     delete pkt;
   } else if (m_Net->m_UDPSocket) {
     m_Net->m_UDPSocket->Discard(&fd);
