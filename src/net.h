@@ -54,6 +54,10 @@
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL 1
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_API 2
 
+#define ACCEPT_IPV4 1 << 0
+#define ACCEPT_IPV6 1 << 1
+#define ACCEPT_ANY 3
+
 //
 // CNet
 //
@@ -66,6 +70,7 @@ class CPotentialPlayer;
 class CConfig;
 
 struct sockaddr_storage;
+struct UDPPkt;
 
 class CTestConnection
 {
@@ -96,9 +101,14 @@ public:
   ~CNet();
 
   CAura*                                                      m_Aura;
-  bool                                                        m_UDPServerEnabled;           // whether the bot should listen to UDP traffic in port 6112)
-  CUDPServer*                                                 m_UDPServer;                  // a UDP server for i/o: incoming traffic, and sending broadcasts, etc. (used with !sendlan), proxying UDP game traffic, game lists, etc
-  CUDPServer*                                                 m_UDPSocket;                  // a UDP server for outgoing traffic, meant not to block port 6112
+
+  bool                                                        m_UDP4ServerEnabled;      // (IPv4) whether the bot should listen to UDP traffic in port 6112)
+  CUDPServer*                                                 m_UDP4Server;             // (IPv4) UDP I/O at port 6112. Supports broadcasts. May also act as reverse-proxy for UDP traffic.
+  CUDPServer*                                                 m_UDP4Socket;             // (IPv4) UDP outbound traffic. Uses <net.udp_fallback.outbound_port> (should NOT be 6112). Supports broadcasts.
+
+  bool                                                        m_UDP6ServerEnabled;      // (IPv4+6) whether to listen to UDP traffic at <net.ipv6.udp.port> (should NOT be 6112, it must also be different from <net.udp_fallback.outbound_port>).
+  CUDPServer*                                                 m_UDP6Server;             // (IPv4+6) UDP I/O. Does not support broadcasts.
+
   uint16_t                                                    m_UDP4TargetPort;
   uint16_t                                                    m_UDP6TargetPort;
 
@@ -115,9 +125,12 @@ public:
   std::vector<uint8_t>                                        m_GameRangerRemoteAddress;
 
   bool Init(CConfig* CFG);
-  void SendBroadcast(const uint16_t port, const std::vector<uint8_t>& packet);
-  void Send(const std::string& address, const std::vector<uint8_t>& packet);
-  void Send(const std::string& address, const uint16_t port, const std::vector<uint8_t>& packet);
+  uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
+  bool Update(void* fd, void* send_fd);
+  void SendBroadcast(const std::vector<uint8_t>& packet);
+  void Send(sockaddr_storage& address, const std::vector<uint8_t>& packet);
+  void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet);
+  void Send(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
 
   std::vector<uint8_t>            GetPublicIP();
@@ -130,7 +143,7 @@ public:
   void StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, std::vector<uint8_t>, uint16_t>> testServers);
   void ResetHealthCheck();
 
-  static std::optional<sockaddr_storage> ParseAddress(const std::string& address);
+  static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
 };
 
 #endif // AURA_NET_H_

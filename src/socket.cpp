@@ -205,11 +205,10 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
   : CSocket(nFamily, nName),
     m_LastRecv(GetTime()),
     m_Connected(false),
-    m_RemoteHost(new sockaddr_storage()),
     m_Server(nullptr),
     m_Counter(0)
 {
-  memset(m_RemoteHost, 0, sizeof(sockaddr_storage));
+  memset(&m_RemoteHost, 0, sizeof(sockaddr_storage));
 
   Allocate(nFamily, SOCK_STREAM);
 
@@ -227,41 +226,14 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
   setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
 }
 
-CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_in& nSIN, CTCPServer* nServer, const uint32_t nCounter)
-  : CSocket(AF_INET, nSocket),
+CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTCPServer* nServer, const uint16_t nCounter)
+  : CSocket(nAddress.ss_family, nSocket),
     m_LastRecv(GetTime()),
     m_Connected(true),
-    m_RemoteHost(new sockaddr_storage()),
+    m_RemoteHost(move(nAddress)),
     m_Server(nServer),
     m_Counter(nCounter)
 {
-  memcpy(m_RemoteHost, &nSIN, sizeof(sockaddr_in));
-  if (sizeof(m_RemoteHost) > sizeof(sockaddr_in)) {
-    memset(reinterpret_cast<char*>(m_RemoteHost) + sizeof(sockaddr_in), 0, sizeof(m_RemoteHost) - sizeof(sockaddr_in));
-  }
-
-  // make socket non blocking
-#ifdef WIN32
-  int32_t iMode = 1;
-  ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
-#else
-  fcntl(m_Socket, F_SETFL, fcntl(m_Socket, F_GETFL) | O_NONBLOCK);
-#endif
-}
-
-CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_in6& nSIN, CTCPServer* nServer, const uint32_t nCounter)
-  : CSocket(AF_INET6, nSocket),
-    m_LastRecv(GetTime()),
-    m_Connected(true),
-    m_RemoteHost(new sockaddr_storage()),
-    m_Server(nServer),
-    m_Counter(nCounter)
-{
-  memcpy(m_RemoteHost, &nSIN, sizeof(sockaddr_in6));
-  if (sizeof(m_RemoteHost) > sizeof(sockaddr_in6)) {
-    memset(reinterpret_cast<char*>(m_RemoteHost) + sizeof(sockaddr_in6), 0, sizeof(m_RemoteHost) - sizeof(sockaddr_in6));
-  }
-
   // make socket non blocking
 #ifdef WIN32
   int32_t iMode = 1;
@@ -286,7 +258,6 @@ CStreamIOSocket::~CStreamIOSocket()
     closesocket(m_Socket);
 
   m_Server = nullptr;
-  delete m_RemoteHost;
 }
 
 void CStreamIOSocket::Reset()
@@ -299,9 +270,8 @@ void CStreamIOSocket::Reset()
   m_RecvBuffer.clear();
   m_SendBuffer.clear();
   m_LastRecv = GetTime();
-  m_RemoteHost = nullptr;
 
-  memset(m_RemoteHost, 0, sizeof(sockaddr_storage));
+  memset(&m_RemoteHost, 0, sizeof(sockaddr_storage));
 
 // make socket non blocking
 
@@ -345,7 +315,7 @@ void CStreamIOSocket::DoRecv(fd_set* fd)
     {
       // the other end closed the connection
 
-      Print("[TCPSOCKET] (" + GetName() +") closed by remote host");
+      Print("[TCPSOCKET] (" + GetName() +") closed by remote host " + GetIPString());
       m_Connected = false;
     }
   }
@@ -443,14 +413,14 @@ void CTCPClient::Connect(optional<sockaddr_storage>& localAddress, sockaddr_stor
     }
   }
 
-  memcpy(m_RemoteHost, &remoteHost, sizeof(sockaddr_in));
+  memcpy(&m_RemoteHost, &remoteHost, sizeof(sockaddr_in));
   if (port != 0) {
-    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(m_RemoteHost);
+    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&m_RemoteHost);
     addr4->sin_port = htons(port);
   }
 
   // connect
-  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(m_RemoteHost), sizeof(sockaddr_in)) == SOCKET_ERROR)
+  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_RemoteHost), sizeof(sockaddr_in)) == SOCKET_ERROR)
   {
     if (GetLastError() != EINPROGRESS && GetLastError() != EWOULDBLOCK)
     {
@@ -528,6 +498,12 @@ CTCPServer::CTCPServer(uint8_t nFamily)
   setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int32_t));
 #endif
 
+  // accept IPv4 additionally to IPv6
+  if (m_Family == AF_INET6) {
+    int32_t OptVal = 0;
+    setsockopt(m_Socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  }
+
   // disable Nagle's algorithm
   int32_t OptVal = 1;
   setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
@@ -541,39 +517,32 @@ string CTCPServer::GetName() const
 {
   string name = CSocket::GetName();
   if (name.empty()) {
-    if (m_Family == AF_INET6) {
-      return "TCPServer-IPv6@" + to_string(m_Port);
-    } else {
-      return "TCPServer@" + to_string(m_Port);
-    }
+    return "TCPServer@" + to_string(m_Port);
   }
   return name;
 }
 
-bool CTCPServer::Listen(sockaddr_storage& address, uint16_t port, bool retry)
+bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool retry)
 {
   if (m_Socket == INVALID_SOCKET) {
-    Print("Socket invalid");
+    Print("[TCPServer] Socket invalid");
     return false;
   }
+
   if (m_HasError && !retry) {
-    Print("Has error: " + to_string(m_Error));
+    Print("[TCPServer] Failed to listen TCP at port " + to_string(port) + ". Error " + to_string(m_Error));
     return false;
   }
 
   if (m_HasError) {
-    if (!retry) return false;
     m_HasError = false;
     m_Error = 0;
   }
 
-  struct sockaddr_in addr4;
-  addr4.sin_family = AF_INET;
-  sockaddr_in* remoteAddress = reinterpret_cast<sockaddr_in*>(&address);
-  addr4.sin_addr = remoteAddress->sin_addr;
-  addr4.sin_port = htons(port);
+  ADDRESS_LENGTH_TYPE addressLength = GetAddressLength();
+  SetAddressPort(address, port);
 
-  if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&addr4), sizeof(addr4)) == SOCKET_ERROR) {
+  if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
     Print("[TCPSERVER] error (bind) - " + GetErrorString());
@@ -590,19 +559,22 @@ bool CTCPServer::Listen(sockaddr_storage& address, uint16_t port, bool retry)
   }
 
   if (port == 0) {
-    socklen_t addr4_len = sizeof(addr4);
-    if (getsockname(m_Socket, (struct sockaddr*)&addr4, &addr4_len) == -1) {
+    if (getsockname(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength) == -1) {
       m_HasError = true;
       m_Error = GetLastError();
       Print("[TCPSERVER] error (getsockname) - " + GetErrorString());
       return false;
     }
-    m_Port = ntohs(addr4.sin_port);
+    m_Port = GetAddressPort(address);
   } else {
     m_Port = port;
   }
 
-  Print("[TCPSERVER] listening on port " + to_string(m_Port));
+  if (m_Family == AF_INET6) {
+    Print("[TCPSERVER] IPv6 listening on port " + to_string(m_Port) + " (IPv4 too)");
+  } else {
+    Print("[TCPSERVER] IPv4 listening on port " + to_string(m_Port));
+  }
   return true;
 }
 
@@ -611,25 +583,17 @@ CStreamIOSocket* CTCPServer::Accept(fd_set* fd)
   if (m_Socket == INVALID_SOCKET || m_HasError)
     return nullptr;
 
-  if (FD_ISSET(m_Socket, fd))
-  {
+  if (FD_ISSET(m_Socket, fd)) {
     // a connection is waiting, accept it
 
-    struct sockaddr_in Addr;
-    int32_t            AddrLen = sizeof(Addr);
-    SOCKET             NewSocket;
-    memset(&Addr, 0, AddrLen);
+    sockaddr_storage         address;
+    ADDRESS_LENGTH_TYPE      addressLength = GetAddressLength();
+    SOCKET                   NewSocket;
+    memset(&address, 0, addressLength);
 
-#ifdef WIN32
-    if ((NewSocket = accept(m_Socket, (struct sockaddr*)&Addr, &AddrLen)) != INVALID_SOCKET)
-#else
-    if ((NewSocket = accept(m_Socket, reinterpret_cast<struct sockaddr*>(&Addr), reinterpret_cast<socklen_t*>(&AddrLen))) != INVALID_SOCKET)
-#endif
-    {
-      // success! return the new socket
-
+    if ((NewSocket = accept(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength)) != INVALID_SOCKET) {
       ++m_AcceptCounter;
-      return new CStreamIOSocket(NewSocket, Addr, this, m_AcceptCounter);
+      return new CStreamIOSocket(NewSocket, address, this, m_AcceptCounter);
     }
   }
 
@@ -645,72 +609,52 @@ CUDPSocket::CUDPSocket(uint8_t nFamily)
 {
   Allocate(m_Family, SOCK_DGRAM);
 
-  // enable broadcast support
+  if (m_Family == AF_INET6) {
+    int32_t OptVal = 0;
+    setsockopt(m_Socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  }
 
-  int32_t OptVal = 1;
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
-
-  // set default broadcast target
-
-  m_BroadcastTarget.s_addr = INADDR_BROADCAST;
+  if (m_Family == AF_INET) {
+    EnableBroadcast();
+    m_BroadcastTarget.s_addr = INADDR_BROADCAST;
+  }
 }
 
 CUDPSocket::~CUDPSocket()
 {
 }
 
-string CUDPServer::GetName() const
-{
-  string name = CSocket::GetName();
-  if (name.empty()) {
-    if (m_Family == AF_INET6) {
-      return "UDPServer-IPv6@" + to_string(m_Port);
-    } else {
-      return "UDPServer@" + to_string(m_Port);
-    }
-  }
-  return name;
-}
-
-bool CUDPSocket::SendTo(struct sockaddr_in sin, const vector<uint8_t>& message)
+bool CUDPSocket::SendTo(sockaddr_storage& address, const vector<uint8_t>& message)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError)
     return false;
+
+  if (m_Family != address.ss_family && !(m_Family == AF_INET6 && address.ss_family == AF_INET)) {
+    Print("Error - Attempt to send UDP6 message from UDP4 socket");
+    return false;
+  }
 
   const string MessageString = string(begin(message), end(message));
-
-  if (sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin)) == -1)
-    return false;
-
-  return true;
+  return -1 != sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<struct sockaddr*>(&address), sizeof(address));
 }
 
-bool CUDPSocket::SendTo(const string& address, uint16_t port, const vector<uint8_t>& message)
+bool CUDPSocket::SendTo(const string& addressLiteral, uint16_t port, const vector<uint8_t>& message)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError)
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
     return false;
+  }
 
-  // get IP address
-
-  struct hostent* HostInfo;
-  uint32_t        HostAddress;
-  HostInfo = gethostbyname(address.c_str());
-
-  if (!HostInfo)
-  {
+  optional<sockaddr_storage> address = CNet::ParseAddress(addressLiteral);
+  if (!address.has_value()) {
     m_HasError = true;
     // m_Error = h_error;
     Print("[UDPSOCKET] error (gethostbyname)");
     return false;
   }
-
-  memcpy(&HostAddress, HostInfo->h_addr, HostInfo->h_length);
-  struct sockaddr_in sin;
-  sin.sin_family      = AF_INET;
-  sin.sin_addr.s_addr = HostAddress;
-  sin.sin_port        = htons(port);
-
-  return SendTo(sin, message);
+  
+  sockaddr_storage targetAddress = address.value();
+  SetAddressPort(targetAddress, port);
+  return SendTo(targetAddress, message);
 }
 
 bool CUDPSocket::Broadcast(uint16_t port, const vector<uint8_t>& message)
@@ -718,6 +662,10 @@ bool CUDPSocket::Broadcast(uint16_t port, const vector<uint8_t>& message)
   if (m_Socket == INVALID_SOCKET || m_HasError)
     return false;
 
+  if (m_Family != AF_INET) {
+    Print("Error - Cannot send broadcast from UDPv6 socket.");
+    return false;
+  }
   struct sockaddr_in sin;
   sin.sin_family      = AF_INET;
   sin.sin_addr.s_addr = m_BroadcastTarget.s_addr;
@@ -735,6 +683,16 @@ bool CUDPSocket::Broadcast(uint16_t port, const vector<uint8_t>& message)
   return true;
 }
 
+void CUDPSocket::EnableBroadcast()
+{
+  int32_t OptVal = 1;
+#ifdef WIN32
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
+#else
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&OptVal, sizeof(int32_t));
+#endif
+}
+
 void CUDPSocket::SetBroadcastTarget(sockaddr_storage& subnet)
 {
   sockaddr_in* ipv4BroadcastTarget = reinterpret_cast<sockaddr_in*>(&subnet);
@@ -749,14 +707,9 @@ void CUDPSocket::SetBroadcastTarget(sockaddr_storage& subnet)
 
 void CUDPSocket::SetDontRoute(bool dontRoute)
 {
-  int32_t OptVal = 0;
-
-  if (dontRoute)
-    OptVal = 1;
-
-  // don't route packets; make them ignore routes set by routing table and send them to the interface
-  // belonging to the target address directly
-
+  // whether to let packets ignore routes set by routing table
+  // if DONTROUTE is enabled, packets are sent directly to the interface belonging to the target address
+  int32_t OptVal = dontRoute;
   setsockopt(m_Socket, SOL_SOCKET, SO_DONTROUTE, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
 }
 
@@ -765,16 +718,10 @@ void CUDPSocket::Reset()
   CSocket::Reset();
   Allocate(m_Family, SOCK_DGRAM);
 
-  // enable broadcast support
-  int32_t OptVal = 1;
-#ifdef WIN32
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
-#else
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&OptVal, sizeof(int32_t));
-#endif
-
-  // set default broadcast target
-  m_BroadcastTarget.s_addr = INADDR_BROADCAST;
+  if (m_Family == AF_INET) {
+    EnableBroadcast();
+    m_BroadcastTarget.s_addr = INADDR_BROADCAST;
+  }
 }
 
 CUDPServer::CUDPServer(uint8_t nFamily)
@@ -788,39 +735,45 @@ CUDPServer::CUDPServer(uint8_t nFamily)
   fcntl(m_Socket, F_SETFL, fcntl(m_Socket, F_GETFL) | O_NONBLOCK);
 #endif
 
-  // set the socket to reuse the address in case it hasn't been released yet
-
-  int32_t optval = 1;
-
-#ifdef WIN32
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&optval, sizeof(int32_t));
-#else
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&optval, sizeof(int32_t));
-#endif
+  if (m_Family == AF_INET) {
+    EnableBroadcast();
+  }
 }
 
 CUDPServer::~CUDPServer()
 {
 }
 
-bool CUDPServer::Listen(sockaddr_storage& address, uint16_t port, bool retry)
+string CUDPServer::GetName() const
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError && !retry) {
-    Print("[UDPServer] Failed to listen UDP at port " + to_string(port) + ".");
+  string name = CSocket::GetName();
+  if (name.empty()) {
+    return "UDPServer@" + to_string(m_Port);
+  }
+  return name;
+}
+
+bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool retry)
+{
+  if (m_Socket == INVALID_SOCKET) {
+    Print("[UDPServer] Socket invalid");
     return false;
   }
+
+  if (m_HasError && !retry) {
+    Print("[UDPServer] Failed to listen UDP at port " + to_string(port) + ". Error " + to_string(m_Error));
+    return false;
+  }  
+
   if (m_HasError) {
     m_HasError = false;
     m_Error = 0;
   }
 
-  struct sockaddr_in addr4;
-  addr4.sin_family = AF_INET;
-  sockaddr_in* remoteAddress = reinterpret_cast<sockaddr_in*>(&address);
-  addr4.sin_addr = remoteAddress->sin_addr;
-  addr4.sin_port = htons(port);
+  ADDRESS_LENGTH_TYPE addressLength = GetAddressLength();
+  SetAddressPort(address, port);
 
-  if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&addr4), sizeof(addr4)) == SOCKET_ERROR) {
+  if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
     Print("[UDPSERVER] error (bind) - " + GetErrorString());
@@ -828,19 +781,22 @@ bool CUDPServer::Listen(sockaddr_storage& address, uint16_t port, bool retry)
   }
 
   if (port == 0) {
-    socklen_t addr4_len = sizeof(addr4);
-    if (getsockname(m_Socket, (struct sockaddr*)&addr4, &addr4_len) == -1) {
+    if (getsockname(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength) == -1) {
       m_HasError = true;
       m_Error = GetLastError();
       Print("[UDPSERVER] error (getsockname) - " + GetErrorString());
       return false;
     }
-    m_Port = ntohs(addr4.sin_port);
+    m_Port = GetAddressPort(address);
   } else {
     m_Port = port;
   }
 
-  Print("[UDPSERVER] Using port " + to_string(m_Port));
+  if (m_Family == AF_INET6) {
+    Print("[UDPSERVER] IPv6 using port " + to_string(m_Port) + " (IPv4 too)");
+  } else {
+    Print("[UDPSERVER] IPv4 using port " + to_string(m_Port));
+  }
   return true;
 }
 
@@ -855,25 +811,21 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
   }
 
   char buffer[1024];
-  int receivedBytes;
 
   struct UDPPkt pkt;
-  pkt.length = 0;
+  pkt.socket = nullptr;
   memset(&(pkt.sender), 0, sizeof(sockaddr_storage));
-#ifdef WIN32
-  int addressLength = sizeof(sockaddr_storage);
-#else
-  socklen_t addressLength = sizeof(sockaddr_storage);
-#endif
+  ADDRESS_LENGTH_TYPE addressLength = sizeof(sockaddr_storage);
 
-  receivedBytes = recvfrom(m_Socket, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr*>(&(pkt.sender)), &addressLength);
+  pkt.length = recvfrom(m_Socket, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr*>(&(pkt.sender)), &addressLength);
 #ifdef WIN32
-  if (receivedBytes == SOCKET_ERROR) {
-    int error = WSAGetLastError();
+  if (pkt.length == SOCKET_ERROR) {
+    //int error = WSAGetLastError();
 #else
-  if (receivedBytes < 0) {
-    int error = errno;
+  if (pkt.length < 0) {
+    //int error = errno;
 #endif
+     /*
     if (pkt.sender.ss_family == AF_INET) {
       struct sockaddr_in* sender_ipv4 = reinterpret_cast<struct sockaddr_in*>(&pkt.sender);
       char ipAddress[INET_ADDRSTRLEN];
@@ -885,14 +837,15 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
       inet_ntop(AF_INET6, &(sender_ipv6->sin6_addr), ipAddress, INET6_ADDRSTRLEN);
       Print("[UDPServer] Error receiving data from " + string(ipAddress));
     }
+    */
     return nullptr;
   }
-  if (receivedBytes <= MIN_UDP_PACKET_SIZE) {
+  if (pkt.length <= MIN_UDP_PACKET_SIZE) {
     return nullptr;
   }
 
-  pkt.length = receivedBytes;
-  memcpy(pkt.buf, buffer, receivedBytes);
+  memcpy(pkt.buf, buffer, pkt.length);
+  pkt.socket = this;
 
   // Allocate on the heap and check for allocation failure
   UDPPkt* result = new(std::nothrow) UDPPkt(pkt);

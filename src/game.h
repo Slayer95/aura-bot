@@ -22,6 +22,7 @@
 #define AURA_GAME_H_
 
 #include "gameslot.h"
+#include "socket.h"
 
 #include <set>
 #include <queue>
@@ -39,6 +40,7 @@
 
 class CAura;
 class CTCPServer;
+class CUDPServer;
 class CCommandContext;
 class CGameProtocol;
 class CPotentialPlayer;
@@ -204,7 +206,7 @@ public:
   std::string    GetObservers() const;
   std::string    GetAutoStartText() const;
 
-  uint16_t       GetHostPortForUDP(const uint8_t ipVersion) const;
+  uint16_t       GetHostPortForUDP(const uint8_t protocol) const;
 
   inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void SetRefreshError(bool nRefreshError) { m_RefreshError = nRefreshError; }
@@ -247,8 +249,8 @@ public:
   std::vector<uint8_t> GetGameDiscoveryInfoForGameRanger(const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
 
   void AnnounceToAddress(std::string& address) const;
-  void AnnounceToAddress(std::string& address, uint16_t port) const;
   void AnnounceToAddressForGameRanger(std::string& tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
+  void ReplySearch(sockaddr_storage& address, CUDPServer* server) const;
   void SendGameDiscoveryInfo() const;
   void SendGameDiscoveryRefresh() const;
   void SendGameDiscoveryCreate() const;

@@ -190,7 +190,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_DB(new CAuraDB(CFG)),
     m_Map(nullptr),
     m_Config(nullptr),
-    m_BNETDefaultConfig(nullptr),
+    m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
     m_Version(VERSION),
     m_MaxSlots(MAX_SLOTS_LEGACY),
@@ -212,8 +212,13 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
 
   m_CRC->Initialize();
 
-  LoadConfigs(CFG);
-  m_Net->m_UDPServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
+  if (!LoadConfigs(CFG)) {
+    Print("[CONFIG] Error: Critical errors found in aura.cfg");
+    m_Ready = false;
+    return;
+  }
+  m_Net->m_UDP4ServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
+  m_Net->m_UDP6ServerEnabled = CFG->GetBool("net.ipv6.udp.enabled", false);
   if (LoadCLI(argc, argv)) {
     m_Ready = false;
     return;
@@ -245,7 +250,9 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   if (m_Config->m_EnableBNET.value_or(true)) {
     LoadBNETs(CFG);
   }
-  LoadIRC(CFG);
+  if (!LoadIRC(CFG)) {
+    Print("[CONFIG] warning - irc server misconfigured");
+  }
 
   if (m_Realms.empty() && !m_Config->m_EnableBNET.value_or(true))
     Print("[AURA] warning - no enabled battle.net connections found in aura.cfg");
@@ -276,7 +283,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   CacheMapPresets();
 }
 
-void CAura::LoadBNETs(CConfig* CFG)
+bool CAura::LoadBNETs(CConfig* CFG)
 {
   // load the battle.net connections
   // we're just loading the config data and creating the CRealm classes here, the connections are established later (in the Update function)
@@ -285,7 +292,7 @@ void CAura::LoadBNETs(CConfig* CFG)
   bool IsReload = !m_Realms.empty();
   for (uint8_t i = 1; i <= 240; ++i) { // uint8_t wraps around and loops forever
     bool DoResetConnection = false;
-    CRealmConfig* ThisConfig = new CRealmConfig(CFG, m_BNETDefaultConfig, i);
+    CRealmConfig* ThisConfig = new CRealmConfig(CFG, m_RealmDefaultConfig, i);
     if (m_Config->m_EnableBNET.has_value()) {
       ThisConfig->m_Enabled = m_Config->m_EnableBNET.value();
     }
@@ -332,19 +339,20 @@ void CAura::LoadBNETs(CConfig* CFG)
   }
 
   m_MaxGameNameSize = 31 - LongestGamePrefixSize;
+  return true;
 }
 
-void CAura::LoadIRC(CConfig* CFG)
+bool CAura::LoadIRC(CConfig* CFG)
 {
-  delete m_IRC;
-  m_IRC = nullptr;
-
   CIRCConfig* IRCConfig = new CIRCConfig(CFG);
-  if (IRCConfig->m_Enabled && (IRCConfig->m_HostName.empty() || IRCConfig->m_NickName.empty() || IRCConfig->m_Port == 0)) {
-    Print("[AURA] config error - irc connection misconfigured");
-  } else {
-    m_IRC = new CIRC(this, IRCConfig);
+  if (!CFG->GetSuccess()) {
+    delete IRCConfig;
+    return false;
   }
+
+  delete m_IRC;
+  m_IRC = new CIRC(this, IRCConfig);
+  return true;
 }
 bool CAura::CopyScripts()
 {
@@ -385,7 +393,7 @@ CAura::~CAura()
   m_SudoRealm = nullptr;  
 
   delete m_Config;
-  delete m_BNETDefaultConfig;
+  delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
   delete m_Net;
   delete m_GameProtocol;
@@ -443,8 +451,8 @@ CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
     Print("[GAME] " + name + " Assigned to port " + to_string(inputPort));
     return it->second;
   }
-  CTCPServer* gameServer = new CTCPServer(AF_INET);
-  if (!gameServer->Listen(m_Config->m_BindAddress, inputPort, false)) {
+  CTCPServer* gameServer = new CTCPServer(m_Config->m_IPv6GameServersEnabled ? AF_INET6 : AF_INET);
+  if (!gameServer->Listen(m_Config->m_IPv6GameServersEnabled ? m_Config->m_BindAddress6 : m_Config->m_BindAddress4, inputPort, false)) {
     Print("[GAME] " + name + " Error listening on port " + to_string(inputPort));
     return nullptr;
   }
@@ -823,10 +831,11 @@ bool CAura::HandleAction(vector<string> action)
     if (GameName.empty())
       GameName = "gogogo";
 
+    CCommandContext* ctx = new CCommandContext(this, &cout, '!');
     bool success = CreateGame(
       m_Map, GAME_PUBLIC, GameName,
       OwnerName, OwnerRealm ? OwnerRealm->GetServer() : "",
-      OwnerName, OwnerRealm, false
+      OwnerName, OwnerRealm, ctx
     );
     m_Map = nullptr;
     if (!success) {
@@ -866,7 +875,6 @@ void CAura::HandleUDP(UDPPkt* pkt)
     ipAddress = string(ip_str);
     remotePort = ntohs(addr4->sin_port);
   } else { // IPv6
-    Print("Got UDP traffic over IPv6!");
     const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(&(pkt->sender));
     inet_ntop(AF_INET6, &(addr6->sin6_addr), ip_str, INET6_ADDRSTRLEN);
     ipAddress = string(ip_str);
@@ -924,13 +932,13 @@ void CAura::HandleUDP(UDPPkt* pkt)
     Print("[AURA] GameRanger remote address: " + ByteArrayToDecString(m_Net->m_GameRangerRemoteAddress) + ":" + to_string(m_Net->m_GameRangerRemotePort));
   }
 
-  if (pkt->buf[8] == m_GameVersion) {
+  if (pkt->buf[8] == m_GameVersion || pkt->buf[8] == 0) {
     if (m_CurrentLobby && m_CurrentLobby->GetUDPEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
       if (FromGameRanger) {
         m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_Net->m_GameRangerRemoteAddress, m_Net->m_GameRangerRemotePort, ExtraDigit);
       } else {
-        Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
-        m_CurrentLobby->AnnounceToAddress(ipAddress, remotePort);
+        //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+        m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
         if (remotePort != 6112) {
           m_CurrentLobby->AnnounceToAddress(ipAddress);
         }
@@ -950,7 +958,7 @@ bool CAura::Update()
   }
   m_PendingActions.clear();
 
-  if (m_Config->m_ExitOnStandby && !m_CurrentLobby && m_Games.empty()) {
+  if (m_Config->m_ExitOnStandby && !m_CurrentLobby && m_Games.empty() && !m_Net->m_HealthCheckInProgress) {
     return true;
   }
 
@@ -997,22 +1005,12 @@ bool CAura::Update()
   for (auto& bnet : m_Realms)
     NumFDs += bnet->SetFD(&fd, &send_fd, &nfds);
 
-  // 7. outgoing test connections
-  for (auto& connection : m_Net->m_HealthCheckClients)
-    NumFDs += connection->SetFD(&fd, &send_fd, &nfds);
-
-  // 8. irc socket
+  // 7. irc socket
   if (m_IRC)
     NumFDs += m_IRC->SetFD(&fd, &send_fd, &nfds);
 
-  // 9. UDP sockets
-  if (m_Net->m_UDPServerEnabled) {
-    m_Net->m_UDPServer->SetFD(&fd, &send_fd, &nfds);
-    ++NumFDs;
-  } else if (m_Net->m_UDPSocket) {
-    m_Net->m_UDPSocket->SetFD(&fd, &send_fd, &nfds);
-    ++NumFDs;
-  }
+  // 8. UDP sockets, outgoing test connections
+  NumFDs += m_Net->SetFD(&fd, &send_fd, &nfds);
 
   if (NumFDs > 40) {
     Print("[AURA] " + to_string(NumFDs) + " file descriptors watched");
@@ -1151,36 +1149,13 @@ bool CAura::Update()
       Exit = true;
   }
 
-  // update test connections
-
-  if (m_Net->m_HealthCheckInProgress) {
-    bool anyPending = false;
-    for (auto& testConnection : m_Net->m_HealthCheckClients) {
-      if (testConnection->Update(&fd, &send_fd)) {
-        anyPending = true;
-      }
-    }
-    if (!anyPending) {
-      HandleHealthCheck();
-    }
-  }
-
   // update irc
 
   if (m_IRC && m_IRC->Update(&fd, &send_fd))
     Exit = true;
 
-  // update UDP sockets
-
-  if (m_Net->m_UDPServerEnabled) {
-    UDPPkt* pkt = m_Net->m_UDPServer->Accept(&fd);
-    if (pkt != nullptr) {
-      HandleUDP(pkt);
-    }
-    delete pkt;
-  } else if (m_Net->m_UDPSocket) {
-    m_Net->m_UDPSocket->Discard(&fd);
-  }
+  // update UDP sockets, outgoing test connections
+  m_Net->Update(&fd, &send_fd);
 
   return m_Exiting || Exit;
 }
@@ -1221,15 +1196,25 @@ void CAura::EventGameDeleted(CGame* game)
   }
 }
 
-void CAura::ReloadConfigs()
+bool CAura::ReloadConfigs()
 {
+  bool success = true;
   uint8_t WasVersion = m_GameVersion;
   filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
   CConfig* CFG = new CConfig();
   CFG->Read("aura.cfg");
-  LoadConfigs(CFG);
-  LoadBNETs(CFG);
-  LoadIRC(CFG);
+  if (!LoadConfigs(CFG)) {
+    Print("[CONFIG] error - bot configuration invalid: not reloaded");
+    success = false;
+  }
+  if (!LoadBNETs(CFG)) {
+    Print("[CONFIG] error - realms misconfigured: not reloaded");
+    success = false;
+  }
+  if (!LoadIRC(CFG)) {
+    Print("[CONFIG] error - irc server misconfigured: not reloaded");
+    success = false;
+  }
 
   if (m_GameVersion != WasVersion) {
     Print("[AURA] Running game version 1." + to_string(m_GameVersion));
@@ -1243,20 +1228,33 @@ void CAura::ReloadConfigs()
   if (WasCFGPath != m_Config->m_MapCFGPath) {
     CacheMapPresets();
   }
+
+  return success;
 }
 
-void CAura::LoadConfigs(CConfig* CFG)
+bool CAura::LoadConfigs(CConfig* CFG)
 {
   // this doesn't set EVERY config value since that would potentially require reconfiguring the battle.net connections
   // it just set the easily reloadable values
 
+  CBotConfig* BotConfig = new CBotConfig(CFG);
+  CRealmConfig* RealmDefaultConfig = new CRealmConfig(CFG, BotConfig);
+  CGameConfig* GameDefaultConfig = new CGameConfig(CFG);
+
+  if (!CFG->GetSuccess()) {
+    delete BotConfig;
+    delete RealmDefaultConfig;
+    delete GameDefaultConfig;
+    return false;
+  }
+  
   delete m_Config;
-  delete m_BNETDefaultConfig;
+  delete m_RealmDefaultConfig;
+  delete m_GameDefaultConfig;
 
-  m_Config = new CBotConfig(CFG);
-
-  m_BNETDefaultConfig = new CRealmConfig(CFG, m_Config);
-  m_GameDefaultConfig = new CGameConfig(CFG);
+  m_Config = BotConfig;
+  m_RealmDefaultConfig = RealmDefaultConfig;
+  m_GameDefaultConfig = GameDefaultConfig;
 
   if (m_Config->m_Warcraft3Path.has_value()) {
     m_GameInstallPath = m_Config->m_Warcraft3Path.value();
@@ -1275,7 +1273,7 @@ void CAura::LoadConfigs(CConfig* CFG)
         if (dwType == REG_SZ && 0 < dwSize && dwSize < 1024) {
           success = true;
           string installPath(szValue, dwSize - 1);
-          Print("[AURA] Using game.install_path = " + installPath);
+          Print("[AURA] Using <game.install_path = " + installPath + ">");
           m_GameInstallPath = installPath;
         }
       }
@@ -1299,6 +1297,8 @@ void CAura::LoadConfigs(CConfig* CFG)
   }
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
   m_Net->m_UDP6TargetPort = m_Config->m_UDP6TargetPort;
+
+  return true;
 }
 
 bool CAura::LoadCLI(const int argc, const char* argv[])
@@ -1357,14 +1357,14 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   string MapPath = m_Config->m_MapPath.string();
   string MapCFGPath = m_Config->m_MapCFGPath.string();
   string MapFileType = "map";
-  string UDPMode = m_Net->m_UDPServerEnabled ? "strict": "free";
+  string UDP4Mode = m_Net->m_UDP4ServerEnabled ? "strict": "free";
 
   cmdl("w3version", War3Version) >> War3Version;
   cmdl("w3path", War3Path) >> War3Path;
   cmdl("mapdir", MapPath) >> MapPath;
   cmdl("cfgdir", MapCFGPath) >> MapCFGPath;
   cmdl("filetype", MapFileType) >> MapFileType;
-  cmdl("udp", UDPMode) >> UDPMode;
+  cmdl("udp", UDP4Mode) >> UDP4Mode;
 
   cmdl("noexit", noexit) >> noexit;
   //cmdl("nobnet", nobnet) >> nobnet;
@@ -1432,12 +1432,12 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   m_Config->m_EnableCFGCache = !nocache;
   m_Config->m_StrictPaths = stdpaths;
 
-  if (UDPMode == "strict" || UDPMode == "lax") {
-    m_Net->m_UDPServerEnabled = true;
-  } else if (UDPMode == "free") {
-    m_Net->m_UDPServerEnabled = false;
+  if (UDP4Mode == "strict" || UDP4Mode == "lax") {
+    m_Net->m_UDP4ServerEnabled = true;
+  } else if (UDP4Mode == "free") {
+    m_Net->m_UDP4ServerEnabled = false;
   } else {
-    Print("Bad UDPMode: " + UDPMode);
+    Print("Bad UDPMode: " + UDP4Mode);
   }
 
   string ExecCommand, ExecAs, ExecAuth;

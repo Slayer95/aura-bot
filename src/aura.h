@@ -102,7 +102,7 @@ public:
   std::filesystem::path                              m_GameInstallPath;
 
   CBotConfig*                                        m_Config;
-  CRealmConfig*                                      m_BNETDefaultConfig;
+  CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
 
   explicit CAura(CConfig* CFG, const int argc, const char* argv[]);
@@ -129,11 +129,11 @@ public:
 
   // other functions
 
-  void ReloadConfigs();
-  void LoadConfigs(CConfig* CFG);
+  bool ReloadConfigs();
+  bool LoadConfigs(CConfig* CFG);
   bool LoadCLI(const int argc, const char* argv[]);
-  void LoadBNETs(CConfig* CFG);
-  void LoadIRC(CConfig* CFG);
+  bool LoadBNETs(CConfig* CFG);
+  bool LoadIRC(CConfig* CFG);
 
   uint8_t ExtractScripts();
   bool CopyScripts();

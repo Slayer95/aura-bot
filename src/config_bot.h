@@ -53,7 +53,8 @@ public:
   std::filesystem::path                   m_MapCFGPath;                 // map cfg path
   std::filesystem::path                   m_MapPath;                    // map path
 
-  sockaddr_storage                        m_BindAddress;                // map path
+  sockaddr_storage                        m_BindAddress4;               // Defaults to 0.0.0.0
+  sockaddr_storage                        m_BindAddress6;               // Defaults to ::
   uint16_t                                m_MinHostPort;                // the min port to host games on
   uint16_t                                m_MaxHostPort;                // the max port to host games on
 
@@ -102,6 +103,9 @@ public:
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                 // master switch to enable/disable ALL bnet configs on startup
 
+  sockaddr_storage                        m_BroadcastTarget;
+  bool                                    m_IPv6GameServersEnabled;
+  
   explicit CBotConfig(CConfig* CFG);
   ~CBotConfig();
 };

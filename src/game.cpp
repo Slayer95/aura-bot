@@ -26,6 +26,7 @@
 #include "config_bot.h"
 #include "config_game.h"
 #include "socket.h"
+#include "net.h"
 #include "auradb.h"
 #include "realm.h"
 #include "map.h"
@@ -500,7 +501,7 @@ bool CGame::Update(void* fd, void* send_fd)
       // when a player joins a game we can obtain the ID from the received host counter
       // note: LAN broadcasts use an ID of 0, battle.net refreshes use IDs of 16-255, the rest are reserved
 
-      if (m_Aura->m_Net->m_UDPServerEnabled && m_Aura->m_Config->m_UDPInfoStrictMode) {
+      if (m_Aura->m_Net->m_UDP4ServerEnabled && m_Aura->m_Config->m_UDPInfoStrictMode) {
         SendGameDiscoveryRefresh();
       } else {
         SendGameDiscoveryInfo();
@@ -1384,12 +1385,12 @@ void CGame::SendAllActions()
   m_LastActionSentTicks = Ticks;
 }
 
-uint16_t CGame::GetHostPortForUDP(const uint8_t ipVersion) const
+uint16_t CGame::GetHostPortForUDP(const uint8_t protocol) const
 {
-  if (ipVersion == 4)
+  if (protocol == AF_INET)
     return m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Aura->m_Config->m_UDPCustomPortTCP4 : m_HostPort;
 
-  if (ipVersion == 6)
+  if (protocol == AF_INET6)
     return m_Aura->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
 
   return m_HostPort;
@@ -1452,23 +1453,27 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoForGameRanger(const vector<uint8_t>& 
   );
 }
 
-void CGame::AnnounceToAddress(string& address) const
+void CGame::AnnounceToAddress(string& addressLiteral) const
 {
-  if (address == "127.0.0.1") {
+  optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(addressLiteral);
+  if (!maybeAddress.has_value())
+    return;
+
+  sockaddr_storage address = maybeAddress.value();
+  SetAddressPort(address, 6112);
+  if (isLoopbackAddress(address)) {
     m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(m_HostPort));
   } else {
-    const uint8_t ipVersion = ExtractIPv4(address).empty() ? 6 : 4;
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForUDP(ipVersion)));
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForUDP(address.ss_family)));
   }
 }
 
-void CGame::AnnounceToAddress(string& address, uint16_t port) const
+void CGame::ReplySearch(sockaddr_storage& address, CUDPServer* server) const
 {
-  if (address == "127.0.0.1") {
-    m_Aura->m_Net->Send(address, port, GetGameDiscoveryInfo(m_HostPort));
+  if (isLoopbackAddress(address)/* && address.ss_family == AF_INET*/) { // TODO(IceSandslash): Do not restrict to AF_INET
+    server->SendTo(address, GetGameDiscoveryInfo(m_HostPort));
   } else {
-    const uint8_t ipVersion = ExtractIPv4(address).empty() ? 6 : 4;
-    m_Aura->m_Net->Send(address, port, GetGameDiscoveryInfo(GetHostPortForUDP(ipVersion)));
+    server->SendTo(address, GetGameDiscoveryInfo(GetHostPortForUDP(address.ss_family)));
   }
 }
 
@@ -1536,23 +1541,21 @@ void CGame::SendGameDiscoveryInfo() const
   }
 
   vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort); // Ensure the game is available at loopback.
-  vector<uint8_t> ipv4Packet = GetGameDiscoveryInfo(GetHostPortForUDP(4)); // Uses <net.game_discovery.udp.tcp4_custom_port.value>
-  vector<uint8_t> ipv6Packet = GetGameDiscoveryInfo(GetHostPortForUDP(6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
+  vector<uint8_t> ipv4Packet = GetGameDiscoveryInfo(GetHostPortForUDP(AF_INET)); // Uses <net.game_discovery.udp.tcp4_custom_port.value>
+  vector<uint8_t> ipv6Packet = GetGameDiscoveryInfo(GetHostPortForUDP(AF_INET6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
 
   if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
-    m_Aura->m_Net->SendBroadcast(m_Aura->m_Net->m_UDP4TargetPort, ipv4Packet);
+    m_Aura->m_Net->SendBroadcast(ipv4Packet);
   }
 
-  m_Aura->m_Net->Send("127.0.0.1", m_Aura->m_Net->m_UDP4TargetPort, hostPortPacket);
+  //m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
 
   for (auto& clientIp : m_ClientDiscoveryIPs) {
-    if (clientIp == "127.0.0.1") continue;
-    const bool isIPv6 = ExtractIPv4(clientIp).empty();
-    if (isIPv6) {
-      m_Aura->m_Net->Send(clientIp, m_Aura->m_Net->m_UDP6TargetPort, ipv6Packet);
-    } else {
-      m_Aura->m_Net->Send(clientIp, m_Aura->m_Net->m_UDP4TargetPort, ipv4Packet);
-    }
+    optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(clientIp);
+    if (!maybeAddress.has_value()) continue;
+    sockaddr_storage& address = maybeAddress.value();
+    if (isLoopbackAddress(address)) continue;
+    m_Aura->m_Net->Send(address, address.ss_family == AF_INET6 ? ipv6Packet : ipv4Packet);
   }
 }
 
@@ -1849,26 +1852,23 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
 	SendWelcomeMessage(Player);
 
   // check for multiple IP usage
+  if (!Player->GetSocket()->GetIsLoopback()) {
+    string Others;
+    for (auto& player : m_Players){
+      if (Player == player)
+        continue;
+      if (Player->GetIPString() != player->GetIPString())
+        continue;
 
-  string Others;
-
-  bool IsLoopBack = Player->GetIPString() == "127.0.0.1";
-  for (auto& player : m_Players){
-    if (Player == player)
-      continue;
-    if (Player->GetIPString() != player->GetIPString())
-      continue;
-
-    if (!IsLoopBack) {
       if (Others.empty())
         Others = player->GetName();
       else
         Others += ", " + player->GetName();
     }
-  }
 
-  if (!Others.empty()) {
-    SendAllChat("Player [" + joinRequest->GetName() + "] has the same IP address as: " + Others);
+    if (!Others.empty()) {
+      SendAllChat("Player [" + joinRequest->GetName() + "] has the same IP address as: " + Others);
+    }
   }
 
   // abort the countdown if there was one in progress

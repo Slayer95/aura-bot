@@ -2411,11 +2411,14 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (!TargetValue.has_value()) {
-        if (ExtractIPv4(Payload).empty()) {
+        optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(Payload);
+        if (!maybeAddress.has_value()) {
           ErrorReply("Usage: !sendlan ON/OFF");
           ErrorReply("Usage: !sendlan [IP]");
           break;
         }
+        sockaddr_storage& address = maybeAddress.value();
+        // ...
         if (m_TargetGame->m_ClientDiscoveryIPs.find(Payload) != m_TargetGame->m_ClientDiscoveryIPs.end()) {
           ErrorReply("Already sending game info to " + Payload);
           break;
@@ -2432,8 +2435,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (TargetValue) {
         m_TargetGame->SendGameDiscoveryCreate();
         m_TargetGame->SendGameDiscoveryRefresh();
-        if (!m_Aura->m_Net->m_UDPServerEnabled)
-          m_TargetGame->SendGameDiscoveryInfo();
+        if (!m_Aura->m_Net->m_UDP4ServerEnabled)
+          m_TargetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
       }
       if (m_TargetGame->m_UDPEnabled) {
         SendReply("This lobby will now be displayed in the Local Area Network game list");
@@ -3799,7 +3802,11 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       SendReply("Reloading configuration files...");
-      m_Aura->ReloadConfigs();
+      if (m_Aura->ReloadConfigs()) {
+        SendReply("Reloaded successfully.");
+      } else {
+        ErrorReply("Reload failed. See the console output.");
+      }
       return;
     }
 

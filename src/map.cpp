@@ -450,9 +450,9 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   std::vector<uint8_t> MapWidth;
   std::vector<uint8_t> MapHeight;
   uint32_t             MapOptions    = 0;
-  uint32_t             MapNumPlayers = 0;
+  uint8_t              MapNumPlayers = 0;
   uint8_t              MapFilterType = MAPFILTER_TYPE_SCENARIO;
-  uint32_t             MapNumTeams   = 0;
+  uint8_t              MapNumTeams   = 0;
   vector<CGameSlot>    Slots;
 
   if (IsPartial) {

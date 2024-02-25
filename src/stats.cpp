@@ -89,7 +89,7 @@ bool CStats::ProcessAction(CIncomingAction* Action)
             Value                     = std::vector<uint8_t>(ActionData->begin() + i + 8 + Data.size() + Key.size(), ActionData->begin() + i + 12 + Data.size() + Key.size());
             const string   DataString = string(begin(Data), end(Data));
             const string   KeyString  = string(begin(Key), end(Key));
-            const uint32_t ValueInt   = ByteArrayToUInt32(Value, false);
+            const uint32_t ValueInt   = static_cast<uint8_t>(ByteArrayToUInt32(Value, false));
 
             //Print( "[STATS] " + DataString + ", " + KeyString + ", " + to_string( ValueInt ) );
 
@@ -104,8 +104,12 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                 // a hero died
 
                 const string   VictimName   = KeyString.substr(4);
-                const uint32_t KillerColour = ValueInt;
-                const uint32_t VictimColour = stoul(VictimName);
+                uint8_t  KillerColour       = static_cast<uint8_t>(ValueInt);
+                uint8_t  VictimColour = 0;
+                try {
+                  VictimColour = static_cast<uint8_t>(stoul(VictimName));
+                } catch (...) {
+                }
                 CGamePlayer*   Killer       = m_Game->GetPlayerFromColour(ValueInt);
                 CGamePlayer*   Victim       = m_Game->GetPlayerFromColour(VictimColour);
 
@@ -144,7 +148,11 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                 if (m_Game->GetPlayerFromColour(ValueInt))
                 {
                   string         AssisterName   = KeyString.substr(6);
-                  const uint32_t AssisterColour = stoul(AssisterName);
+                  uint8_t  AssisterColour       = 0;
+                  try {
+                    AssisterColour = static_cast<uint8_t>(stoul(AssisterName));
+                  } catch (...) {
+                  }
 
                   if (!m_Players[AssisterColour])
                     m_Players[AssisterColour] = new CDBDotAPlayer();
@@ -212,7 +220,11 @@ bool CStats::ProcessAction(CIncomingAction* Action)
             {
               // these are only received at the end of the game
 
-              const uint32_t ID = stoul(DataString);
+              uint8_t ID = 0;
+              try {
+                ID = static_cast<uint8_t>(stoul(DataString));
+              } catch (...) {
+              }
 
               if ((ID >= 1 && ID <= 5) || (ID >= 7 && ID <= 11))
               {
@@ -297,7 +309,7 @@ void CStats::Save(CAura* Aura, CAuraDB* DB)
     {
       if (m_Players[i])
       {
-        const uint32_t Colour = m_Players[i]->GetNewColour();
+        const uint8_t Colour = m_Players[i]->GetNewColour();
 
         if (!((Colour >= 1 && Colour <= 5) || (Colour >= 7 && Colour <= 11)))
         {
@@ -323,7 +335,7 @@ void CStats::Save(CAura* Aura, CAuraDB* DB)
     {
       if (player)
       {
-        const uint32_t Colour = player->GetNewColour();
+        const uint8_t  Colour = player->GetNewColour();
         const string   Name   = m_Game->GetDBPlayerNameFromColour(Colour);
 
         if (Name.empty())

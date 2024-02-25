@@ -64,7 +64,8 @@ struct sockaddr_storage;
 class CConfig
 {
 private:
-  bool                               m_Error;
+  bool                               m_ErrorLast;
+  bool                               m_CriticalError;
   std::map<std::string, std::string> m_CFG;
 
 public:
@@ -73,7 +74,12 @@ public:
 
   bool Read(const std::filesystem::path& file);
   bool Exists(const std::string& key) const;
-  inline bool GetError() const { return m_Error; };
+  inline bool GetErrorLast() const { return m_ErrorLast; };
+  inline bool GetSuccess() const { return !m_CriticalError; };
+  inline void FailIfErrorLast() {
+    if (m_ErrorLast) m_CriticalError = true;
+  };
+  inline void SetFailed() { m_CriticalError = true; };
 
   std::string GetString(const std::string& key, const std::string& x);
   std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
@@ -96,10 +102,17 @@ public:
 
   std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
   std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);
+  sockaddr_storage GetAddressOfType(const std::string &key, const uint8_t acceptMode, const std::string& x);
+  sockaddr_storage GetAddressIPv4(const std::string &key, const std::string& x);
+  sockaddr_storage GetAddressIPv6(const std::string &key, const std::string& x);
   sockaddr_storage GetAddress(const std::string &key, const std::string& x);
+  std::vector<sockaddr_storage> GetAddressList(const std::string& key, char separator, const std::vector<std::string> x);
 
   std::optional<bool> GetMaybeBool(const std::string& key);
   std::optional<uint32_t> GetMaybeInt(const std::string& key);
+  std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);
+  std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
+  std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);
   std::optional<sockaddr_storage> GetMaybeAddress(const std::string& key);
   std::optional<std::vector<uint8_t>> GetMaybeIPv4(const std::string& key);
   std::optional<std::filesystem::path> GetMaybePath(const std::string &key);

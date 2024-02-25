@@ -136,18 +136,60 @@ typedef int32_t SOCKET;
 #define SHUT_RDWR 2
 #endif
 
+#ifdef WIN32
+#define ADDRESS_LENGTH_TYPE int
+#else
+#define ADDRESS_LENGTH_TYPE socklen_t
+#endif
+
 #define MIN_UDP_PACKET_SIZE 4
 #define INET_ADDRSTRLEN_IPV4 16
+
+class CStreamIOSocket;
+class CTCPServer;
+class CUDPServer;
 
 struct UDPPkt
 {
   sockaddr_storage sender;
   int length;
   char buf[1024];
+  CUDPServer* socket;
 };
 
-class CTCPServer;
-class CStreamIOSocket;
+inline bool isLoopbackAddress(const sockaddr_storage& addr) {
+  if (addr.ss_family == AF_INET) {
+    const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(&addr);
+    return (addr4->sin_addr.s_addr == htonl(INADDR_LOOPBACK));
+  } else if (addr.ss_family == AF_INET6) {
+    const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(&addr);
+    if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr)) {
+      const in_addr* addr4 = reinterpret_cast<const in_addr*>(addr6->sin6_addr.s6_addr + 12);
+      return (addr4->s_addr == htonl(INADDR_LOOPBACK));
+    } else {
+      return (memcmp(&addr6->sin6_addr, &in6addr_loopback, sizeof(in6_addr)) == 0);
+    }
+  }
+  return false;
+}
+
+inline void SetAddressPort(sockaddr_storage& address, const uint16_t port)
+{
+  if (address.ss_family == AF_INET6) {
+    reinterpret_cast<struct sockaddr_in6*>(&address)->sin6_port = htons(port);
+  } else {
+    reinterpret_cast<struct sockaddr_in*>(&address)->sin_port = htons(port);
+  }
+}
+
+inline uint16_t GetAddressPort(sockaddr_storage& address)
+{
+  if (address.ss_family == AF_INET6) {
+    return ntohs(reinterpret_cast<struct sockaddr_in6*>(&address)->sin6_port);
+  } else {
+    return ntohs(reinterpret_cast<struct sockaddr_in*>(&address)->sin_port);
+  }
+}
 
 //
 // CSocket
@@ -176,6 +218,12 @@ public:
   inline int32_t              GetError() const { return m_Error; }
   inline bool                 HasError() const { return m_HasError; }
 
+  inline ADDRESS_LENGTH_TYPE  GetAddressLength() const {
+    if (m_Family == AF_INET6)
+      return sizeof(sockaddr_in6);
+    return sizeof(sockaddr_in);
+  }
+
   void SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
   void Reset();
   void Allocate(const uint8_t family, int type);
@@ -194,38 +242,54 @@ public:
   int64_t                   m_LastRecv;
   bool                      m_Connected;
 
-  sockaddr_storage*         m_RemoteHost;
+  sockaddr_storage          m_RemoteHost;
   CTCPServer*               m_Server;
   uint16_t                  m_Counter;
 
   CStreamIOSocket(uint8_t nFamily, std::string nName);
-  CStreamIOSocket(SOCKET nSocket, sockaddr_in& nSIN, CTCPServer* nServer, const uint32_t nCounter);
-  CStreamIOSocket(SOCKET nSocket, sockaddr_in6& nSIN, CTCPServer* nServer, const uint32_t nCounter);
+  CStreamIOSocket(SOCKET nSocket, sockaddr_storage& remoteAddress, CTCPServer* nServer, const uint16_t nCounter);
   ~CStreamIOSocket();
 
   inline int64_t                    GetLastRecv() const { return m_LastRecv; }
   std::string                       GetName() const;
 
   inline std::vector<uint8_t>       GetIPv4() const {
-    if (m_RemoteHost->ss_family != AF_INET) return {0, 0, 0, 0};
-    std::vector<uint8_t> ipBytes(4);
-    const sockaddr_in* ipv4_addr = reinterpret_cast<const sockaddr_in*>(m_RemoteHost);
-    memcpy(ipBytes.data(), &ipv4_addr->sin_addr.s_addr, 4);
-    return ipBytes;
+    if (m_RemoteHost.ss_family == AF_INET) {
+      std::vector<uint8_t> ipBytes(4);
+      const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(&m_RemoteHost);
+      memcpy(ipBytes.data(), &addr4->sin_addr.s_addr, 4);
+      return ipBytes;
+    } else if (m_RemoteHost.ss_family == AF_INET6) {
+      const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(&m_RemoteHost);
+      if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr)) {
+        std::vector<uint8_t> ipBytes(4);
+        const in_addr* addr4 = reinterpret_cast<const in_addr*>(addr6->sin6_addr.s6_addr + 12);
+        memcpy(ipBytes.data(), &addr4->s_addr, 4);
+        return ipBytes;
+      }
+    }
+    return {0, 0, 0, 0};
   }
+
   inline std::string                GetIPString() const {
     char ipString[INET6_ADDRSTRLEN];
-    if (m_RemoteHost->ss_family == AF_INET) { // IPv4
-        const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(m_RemoteHost);
-        inet_ntop(AF_INET, &(addr->sin_addr), ipString, INET_ADDRSTRLEN);
-    } else if (m_RemoteHost->ss_family == AF_INET6) { // IPv6
-        const sockaddr_in6* addr = reinterpret_cast<const sockaddr_in6*>(m_RemoteHost);
-        inet_ntop(AF_INET6, &(addr->sin6_addr), ipString, INET6_ADDRSTRLEN);
+    if (m_RemoteHost.ss_family == AF_INET) { // IPv4
+      const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(&m_RemoteHost);
+      inet_ntop(AF_INET, &(addr4->sin_addr), ipString, INET_ADDRSTRLEN);
+    } else if (m_RemoteHost.ss_family == AF_INET6) { // IPv6
+      const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(&m_RemoteHost);
+      if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr)) {
+        const in_addr* addr4 = reinterpret_cast<const in_addr*>(addr6->sin6_addr.s6_addr + 12);
+        inet_ntop(AF_INET, addr4, ipString, INET_ADDRSTRLEN);
+      } else {
+        inet_ntop(AF_INET6, &(addr6->sin6_addr), ipString, INET6_ADDRSTRLEN);
+      }
     } else {
-        return std::string();
+      return std::string();
     }
     return std::string(ipString);
   }
+  inline bool GetIsLoopback() const { return isLoopbackAddress(m_RemoteHost); }
 
   inline bool                       GetConnected() const { return m_Connected; }
   void Disconnect();
@@ -277,13 +341,13 @@ public:
 class CTCPServer final : public CSocket
 {
 public:
-  uint32_t                        m_AcceptCounter;
+  uint16_t                        m_AcceptCounter;
 
   CTCPServer(uint8_t nFamily);
   ~CTCPServer();
 
   std::string                     GetName() const;
-  bool                            Listen(sockaddr_storage& address, uint16_t port, bool retry);
+  bool                            Listen(sockaddr_storage& address, const uint16_t port, bool retry);
   CStreamIOSocket*                Accept(fd_set* fd);
 };
 
@@ -299,12 +363,13 @@ public:
   CUDPSocket(uint8_t nFamily);
   ~CUDPSocket();
 
-  bool                        SendTo(struct sockaddr_in sin, const std::vector<uint8_t>& message);
-  bool                        SendTo(const std::string& hostName, uint16_t port, const std::vector<uint8_t>& message);
+  bool                        SendTo(sockaddr_storage& address, const std::vector<uint8_t>& message);
+  bool                        SendTo(const std::string& addressLiteral, uint16_t port, const std::vector<uint8_t>& message);
   bool                        Broadcast(uint16_t port, const std::vector<uint8_t>& message);
 
   void                        Reset();
-  void                        SetBroadcastTarget(sockaddr_storage& subnet);
+  void                        EnableBroadcast(); // IPv4-only
+  void                        SetBroadcastTarget(sockaddr_storage& subnet); // IPv4-only
   void                        SetDontRoute(bool dontRoute);
 };
 
@@ -315,22 +380,9 @@ public:
   ~CUDPServer();
 
   std::string                 GetName() const;
-  bool                        Listen(sockaddr_storage& address, uint16_t port, bool retry);
+  bool                        Listen(sockaddr_storage& address, const uint16_t port, bool retry);
   UDPPkt*                     Accept(fd_set* fd);
   void                        Discard(fd_set* fd);
 };
-
-inline uint32_t ipAddressToUint32(const std::string& inputPath) {
-  // Emulate inet_addr
-  struct sockaddr_in sa;
-  memset(&sa, 0, sizeof(sa));
-  sa.sin_family = AF_INET;
-
-  if (inet_pton(AF_INET, inputPath.c_str(), &(sa.sin_addr)) != 1) {
-    return INADDR_NONE; // Return INADDR_NONE if the input string is not a valid IPv4 address
-  }
-
-  return sa.sin_addr.s_addr;
-}
 
 #endif // AURA_SOCKET_H_

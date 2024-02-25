@@ -166,7 +166,7 @@ bool CRealm::Update(void* fd, void* send_fd)
               AppendByteArray(relayPacket, War3Version);
               AppendByteArrayFast(relayPacket, Data);
               AssignLength(relayPacket);
-              Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + m_Aura->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
+              //Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + m_Aura->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
               m_Aura->m_Net->Send(m_Aura->m_Config->m_UDPForwardAddress, m_Aura->m_Config->m_UDPForwardPort, relayPacket);
             }
 

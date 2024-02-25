@@ -46,12 +46,16 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   m_Enabled                 = CFG->GetBool("hosting.enabled", true);
   m_ProxyReconnectEnabled   = CFG->GetBool("net.gproxy.enabled", true);
-  m_War3Version             = CFG->GetMaybeInt("game.version"/*, 27*/);
+  m_War3Version             = CFG->GetMaybeInt("game.version");
+  CFG->FailIfErrorLast();
   m_Warcraft3Path           = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
   m_MapCFGPath              = CFG->GetPath("bot.map_configs_path", filesystem::path());
   m_MapPath                 = CFG->GetPath("bot.maps_path", filesystem::path());
 
-  m_BindAddress             = CFG->GetAddress("net.bind_address", "0.0.0.0");
+  m_BindAddress4            = CFG->GetAddressIPv4("net.bind_address", "0.0.0.0");
+  CFG->FailIfErrorLast();
+  m_BindAddress6            = CFG->GetAddressIPv6("net.bind_address6", "::");
+  CFG->FailIfErrorLast();
   m_MinHostPort             = CFG->GetUint16("net.host_port.min", CFG->GetInt("net.host_port.only", 6112));
   m_MaxHostPort             = CFG->GetUint16("net.host_port.max", m_MinHostPort);
   m_UDPEnableCustomPortTCP4 = CFG->GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
@@ -130,6 +134,10 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
   m_EnableBNET                   = CFG->GetMaybeBool("bot.toggle_every_realm");
+
+  // TODO(IceSandslash) Split to config-net.cpp. These cannot be reloaded
+  m_BroadcastTarget              = CFG->GetAddressIPv4("net.game_discovery.udp.broadcast.target", "255.255.255.255");
+  m_IPv6GameServersEnabled       = CFG->GetBool("net.ipv6.tcp.enabled", false);
 }
 
 CBotConfig::~CBotConfig() = default;

@@ -60,14 +60,14 @@ using namespace std;
 
 #define SUCCESS(T) \
     do { \
-        m_Error = false; \
+        m_ErrorLast = false; \
         return T; \
     } while(0);
 
 
 #define CONFIG_ERROR(key, T) \
     do { \
-        m_Error = true; \
+        m_ErrorLast = true; \
         Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
         return T; \
     } while(0);
@@ -76,7 +76,7 @@ using namespace std;
 #define END(T) \
     do { \
         if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
-        m_Error = errored; \
+        m_ErrorLast = errored; \
         return T; \
     } while(0);
 
@@ -86,7 +86,8 @@ using namespace std;
 //
 
 CConfig::CConfig()
- : m_Error(false)
+ : m_ErrorLast(false),
+   m_CriticalError(false)
 {
 }
 
@@ -420,7 +421,7 @@ filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path
   SUCCESS(filesystem::path(GetExeDirectory() / value).lexically_normal())
 }
 
-sockaddr_storage CConfig::GetAddress(const string& key, const string& x)
+sockaddr_storage CConfig::GetAddressOfType(const string& key, const uint8_t acceptMode, const string& x)
 {
   auto it = m_CFG.find(key);
   vector<string> tryAddresses;
@@ -428,7 +429,7 @@ sockaddr_storage CConfig::GetAddress(const string& key, const string& x)
   tryAddresses.push_back(x);
 
   for (uint8_t i = 0; i < 2; ++i) {
-    optional<sockaddr_storage> result = CNet::ParseAddress(tryAddresses[i]);
+    optional<sockaddr_storage> result = CNet::ParseAddress(tryAddresses[i], acceptMode);
     if (result.has_value()) {
       if (i == 0) {
         SUCCESS(result.value())
@@ -441,6 +442,21 @@ sockaddr_storage CConfig::GetAddress(const string& key, const string& x)
   struct sockaddr_storage fallback;
   memset(&fallback, 0, sizeof(fallback));
   CONFIG_ERROR(key, fallback)
+}
+
+sockaddr_storage CConfig::GetAddressIPv4(const string& key, const string& x)
+{
+  return GetAddressOfType(key, ACCEPT_IPV4, x);
+}
+
+sockaddr_storage CConfig::GetAddressIPv6(const string& key, const string& x)
+{
+  return GetAddressOfType(key, ACCEPT_IPV6, x);
+}
+
+sockaddr_storage CConfig::GetAddress(const string& key, const string& x)
+{
+  return GetAddressOfType(key, ACCEPT_ANY, x);
 }
 
 optional<bool> CConfig::GetMaybeBool(const string& key)
@@ -517,7 +533,7 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
   SUCCESS(result)
 }
 
-optional<sockaddr_storage> CConfig::GetMaybeAddress(const string& key)
+optional<sockaddr_storage> CConfig::GetMaybeAddressOfType(const string& key, const uint8_t acceptMode)
 {
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
@@ -525,12 +541,27 @@ optional<sockaddr_storage> CConfig::GetMaybeAddress(const string& key)
     SUCCESS(empty);
   }
 
-  optional<sockaddr_storage> result = CNet::ParseAddress(it->second);
+  optional<sockaddr_storage> result = CNet::ParseAddress(it->second, acceptMode);
   if (result.has_value()) {
     SUCCESS(result);
   }
 
   CONFIG_ERROR(key, result)
+}
+
+optional<sockaddr_storage> CConfig::GetMaybeAddressIPv4(const string& key)
+{
+  return GetMaybeAddressOfType(key, ACCEPT_IPV4);
+}
+
+optional<sockaddr_storage> CConfig::GetMaybeAddressIPv6(const string& key)
+{
+  return GetMaybeAddressOfType(key, ACCEPT_IPV6);
+}
+
+optional<sockaddr_storage> CConfig::GetMaybeAddress(const string& key)
+{
+  return GetMaybeAddressOfType(key, ACCEPT_ANY);
 }
 
 void CConfig::Set(const string& key, const string& x)

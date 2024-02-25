@@ -66,6 +66,10 @@ CIRCConfig::CIRCConfig(CConfig* CFG)
       m_Channels[i] = "#" + m_Channels[i];
     }
   }
+
+  if (m_Enabled && (m_HostName.empty() || m_NickName.empty() || m_Port == 0)) {
+    CFG->SetFailed();
+  }
 }
 
 CIRCConfig::~CIRCConfig() = default;
