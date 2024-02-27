@@ -63,19 +63,22 @@ public:
   bool                                    m_UDPEnableCustomPortTCP6;    // enable to make IPv6 peers connect to m_UDPCustomPortTCP6
   uint16_t                                m_UDPCustomPortTCP6;          // the TCP port to announce to IPv6 clients
 
+  bool                                    m_EnableTCPWrapUDP;
+  bool                                    m_EnableTCPScanUDP;
+
   uint16_t                                m_UDP6TargetPort;             // the remote UDP port to which we send unicast game discovery messages over IPv6
 
   std::filesystem::path                   m_GreetingPath;               // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                   // read from m_GreetingPath
 
-  bool                                    m_UDPInfoStrictMode;          // set to false to send full game info periodically rather than small refresh packets
+  bool                                    m_UDPBroadcastStrictMode;          // set to false to send full game info periodically rather than small refresh packets
   bool                                    m_UDPForwardTraffic;          // whether to forward UDP traffic
   std::string                             m_UDPForwardAddress;          // the address to forward UDP traffic to
   uint16_t                                m_UDPForwardPort;             // the port to forward UDP traffic to
   bool                                    m_UDPForwardGameLists;        // whether to forward PvPGN game lists through UDP unicast.
   bool                                    m_UDPBroadcastEnabled;        // whether to perform UDP broadcasts to announce hosted games. (unicast is in config_game)
   std::set<std::string>                   m_UDPBlockedIPs;              // list of IPs ignored by Aura's UDP server
-  bool                                    m_UDPSupportGameRanger;       // enable to send refresh packets compatible with GameRanger - requires m_UDPInfoStrictMode
+  bool                                    m_UDPSupportGameRanger;       // enable to send refresh packets compatible with GameRanger - requires m_UDPBroadcastStrictMode
   std::vector<uint8_t>                    m_UDPGameRangerAddress;       // 
   uint16_t                                m_UDPGameRangerPort;          // 
 
@@ -87,7 +90,12 @@ public:
   uint32_t                                m_MaxParallelMapPackets;      // map pieces sent in parallel to downloading users
   bool                                    m_RTTPings;                   // use LC style pings (divide actual pings by two
   bool                                    m_HasBufferBloat;
-  uint8_t                                 m_ReconnectWaitTime;          // the maximum number of minutes to wait for a GProxy++ reliable reconnect
+
+  uint8_t                                 m_ReconnectWaitTime;          // the maximum number of minutes to wait for a GProxyDLL reconnect
+  uint8_t                                 m_ReconnectWaitTimeLegacy;    // the maximum number of minutes to wait for a GProxy++ reconnect
+
+  bool                                    m_AnnounceGProxy;
+  std::string                             m_AnnounceGProxySite;
 
   uint32_t                                m_MinHostCounter;             // defines a subspace for game identifiers
   uint32_t                                m_MaxGames;                   // maximum number of games in progress
@@ -104,7 +112,6 @@ public:
   std::optional<bool>                     m_EnableBNET;                 // master switch to enable/disable ALL bnet configs on startup
 
   sockaddr_storage                        m_BroadcastTarget;
-  bool                                    m_IPv6GameServersEnabled;
   
   explicit CBotConfig(CConfig* CFG);
   ~CBotConfig();

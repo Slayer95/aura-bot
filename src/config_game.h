@@ -52,7 +52,8 @@ public:
   uint16_t                 m_Latency;                    // the latency (by default)
   uint32_t                 m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;
-  std::set<std::string>    m_ClientDiscoveryIPs;         // list of addresses Aura announces hosted games to through UDP unicast.
+  std::set<std::string>    m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
+  bool                     m_ExtraDiscoveryStrict;
 
   char                     m_CommandTrigger;             // the command trigger inside games
   std::string              m_IndexVirtualHostName;       // index virtual host name

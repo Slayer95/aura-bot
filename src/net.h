@@ -66,7 +66,7 @@ class CAura;
 class CUDPServer;
 class CUDPSocket;
 class CStreamIOSocket;
-class CPotentialPlayer;
+class CGameConnection;
 class CConfig;
 
 struct sockaddr_storage;
@@ -102,18 +102,19 @@ public:
 
   CAura*                                                      m_Aura;
 
-  bool                                                        m_UDP4ServerEnabled;      // (IPv4) whether the bot should listen to UDP traffic in port 6112)
-  CUDPServer*                                                 m_UDP4Server;             // (IPv4) UDP I/O at port 6112. Supports broadcasts. May also act as reverse-proxy for UDP traffic.
-  CUDPServer*                                                 m_UDP4Socket;             // (IPv4) UDP outbound traffic. Uses <net.udp_fallback.outbound_port> (should NOT be 6112). Supports broadcasts.
-
-  bool                                                        m_UDP6ServerEnabled;      // (IPv4+6) whether to listen to UDP traffic at <net.ipv6.udp.port> (should NOT be 6112, it must also be different from <net.udp_fallback.outbound_port>).
-  CUDPServer*                                                 m_UDP6Server;             // (IPv4+6) UDP I/O. Does not support broadcasts.
+  bool                                                        m_SupportUDPOverIPv6;
+  bool                                                        m_SupportTCPOverIPv6;
+  bool                                                        m_UDPMainServerEnabled;      // (IPv4) whether the bot should listen to UDP traffic in port 6112)
+  CUDPServer*                                                 m_UDPMainServer;             // (IPv4) UDP I/O at port 6112. Supports broadcasts. May also act as reverse-proxy for UDP traffic.
+  CUDPServer*                                                 m_UDPDeafSocket;             // (IPv4) UDP outbound traffic. Uses <net.udp_fallback.outbound_port> (should NOT be 6112). Supports broadcasts.
 
   uint16_t                                                    m_UDP4TargetPort;
   uint16_t                                                    m_UDP6TargetPort;
+  sockaddr_storage*                                           m_UDP4BroadcastTarget;
+  sockaddr_storage*                                           m_UDP6BroadcastTarget;
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
-  std::map<uint16_t, std::vector<CPotentialPlayer*>>          m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
+  std::map<uint16_t, std::vector<CGameConnection*>>          m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
   std::map<std::string, sockaddr_storage>                     m_DNSCache;
 
   std::vector<CTestConnection*>                               m_HealthCheckClients;
@@ -127,10 +128,11 @@ public:
   bool Init(CConfig* CFG);
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool Update(void* fd, void* send_fd);
-  void SendBroadcast(const std::vector<uint8_t>& packet);
-  void Send(sockaddr_storage& address, const std::vector<uint8_t>& packet);
+  bool SendBroadcast(const std::vector<uint8_t>& packet);
+  void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet);
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet);
   void Send(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
+  void SendArbitraryUnicast(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
 
   std::vector<uint8_t>            GetPublicIP();
@@ -144,6 +146,9 @@ public:
   void ResetHealthCheck();
 
   static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
+  void                                   SetBroadcastTarget(sockaddr_storage& subnet);
+  void                                   PropagateBroadcastEnabled(const bool nEnable);
+  void                                   OnConfigReload();
 };
 
 #endif // AURA_NET_H_

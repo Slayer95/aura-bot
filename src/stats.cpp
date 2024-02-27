@@ -110,11 +110,11 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                   VictimColour = static_cast<uint8_t>(stoul(VictimName));
                 } catch (...) {
                 }
-                CGamePlayer*   Killer       = m_Game->GetPlayerFromColour(ValueInt);
+                CGamePlayer*   Killer       = m_Game->GetPlayerFromColour(KillerColour);
                 CGamePlayer*   Victim       = m_Game->GetPlayerFromColour(VictimColour);
 
-                if (!m_Players[ValueInt])
-                  m_Players[ValueInt] = new CDBDotAPlayer();
+                if (!m_Players[KillerColour])
+                  m_Players[KillerColour] = new CDBDotAPlayer();
 
                 if (!m_Players[VictimColour])
                   m_Players[VictimColour] = new CDBDotAPlayer();
@@ -145,7 +145,7 @@ bool CStats::ProcessAction(CIncomingAction* Action)
               {
                 // check if the assist was on a non-leaver
 
-                if (m_Game->GetPlayerFromColour(ValueInt))
+                if (m_Game->GetPlayerFromColour(static_cast<uint8_t>(ValueInt)))
                 {
                   string         AssisterName   = KeyString.substr(6);
                   uint8_t  AssisterColour       = 0;
@@ -206,7 +206,7 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                 // Value 1 -> sentinel
                 // Value 2 -> scourge
 
-                m_Winner = ValueInt;
+                m_Winner = static_cast<uint8_t>(ValueInt);
 
                 if (m_Winner == 1)
                   Print("[STATS: " + m_Game->GetGameName() + "] detected winner: Sentinel");

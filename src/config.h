@@ -55,8 +55,6 @@
 #include <set>
 #include <optional>
 
-struct sockaddr_storage;
-
 //
 // CConfig
 //
@@ -98,7 +96,7 @@ public:
 
   std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
   std::vector<uint8_t> GetIPv4(const std::string& key, const std::vector<uint8_t>& x);
-  std::set<std::string> GetIPv4Set(const std::string& key, char separator, const std::set<std::string> x);
+  std::set<std::string> GetIPStringSet(const std::string& key, char separator, const std::set<std::string> x);
 
   std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
   std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);

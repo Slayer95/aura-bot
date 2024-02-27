@@ -637,7 +637,15 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (m_TargetGame->GetIsLobby()) {
         SlotFragment = "Slot #" + to_string(1 + m_TargetGame->GetSIDFromPID(targetPlayer->GetPID())) + ". ";
       }
-      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
+      string GProxyFragment;
+      if (targetPlayer->GetGProxyExtended()) {
+        GProxyFragment = "Extended";
+      } else if (targetPlayer->GetGProxyAny()) {
+        GProxyFragment = "Yes";
+      } else {
+        GProxyFragment = "No";
+      }
+      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetReserved() ? "Yes" : "No"));
       SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       break;
@@ -1149,6 +1157,24 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
+    // !GPROXY
+    //
+
+    case HashCode("reconnect"):
+    case HashCode("gproxy"):
+    {
+      if (!m_TargetGame)
+        break;
+
+      bool isOwner = (0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE)));
+      SendReply(
+        "Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">",
+        isOwner ? CHAT_SEND_TARGET_ALL : 0
+      );
+      break;
+    }
+
+    //
     // !HCL
     //
 
@@ -1421,7 +1447,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      SendReply("Trying to rehost as private game [" + Payload + "]. (This will take a few seconds)", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      SendReply("Trying to rehost with name [" + Payload + "]. (This will take a few seconds)", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
 
       bool IsPrivate = CommandHash == HashCode("priv");
       if (m_TargetGame) {
@@ -2417,16 +2443,20 @@ void CCommandContext::Run(const string& command, const string& payload)
           ErrorReply("Usage: !sendlan [IP]");
           break;
         }
-        sockaddr_storage& address = maybeAddress.value();
-        // ...
-        if (m_TargetGame->m_ClientDiscoveryIPs.find(Payload) != m_TargetGame->m_ClientDiscoveryIPs.end()) {
+        sockaddr_storage* address = &(maybeAddress.value());
+        if (address->ss_family == AF_INET6 && isSpecialIPv6Address(reinterpret_cast<struct sockaddr_in6*>(address)) ||
+          address->ss_family == AF_INET && isSpecialIPv4Address(reinterpret_cast<struct sockaddr_in*>(address))) {
+          ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> if you are sure about this.");
+          break;
+        }
+        if (m_TargetGame->m_ExtraDiscoveryAddresses.find(Payload) != m_TargetGame->m_ExtraDiscoveryAddresses.end()) {
           ErrorReply("Already sending game info to " + Payload);
           break;
         }
         if (!m_TargetGame->m_UDPEnabled)
           SendReply("This lobby will now be displayed in the Local Area Network game list");
         m_TargetGame->m_UDPEnabled = true;
-        m_TargetGame->m_ClientDiscoveryIPs.insert(Payload);
+        m_TargetGame->m_ExtraDiscoveryAddresses.insert(Payload);
         SendReply("This lobby will be displayed in the Local Area Network game list for IP " + Payload + ". Make sure your peer has done UDP hole-punching.");
         break;
       }
@@ -2435,7 +2465,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (TargetValue) {
         m_TargetGame->SendGameDiscoveryCreate();
         m_TargetGame->SendGameDiscoveryRefresh();
-        if (!m_Aura->m_Net->m_UDP4ServerEnabled)
+        if (!m_Aura->m_Net->m_UDPMainServerEnabled)
           m_TargetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
       }
       if (m_TargetGame->m_UDPEnabled) {
@@ -4219,7 +4249,6 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      const string emptyString;
       pair<uint8_t, string> LoadResult = m_Aura->LoadMap(
         m_FromName,
         Args[0],

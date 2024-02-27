@@ -272,7 +272,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     // calculate map_info (this is actually the CRC)
 
     MapInfo = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
-    Print("[MAP] calculated map_info = " + ByteArrayToDecString(MapInfo));
+    Print("[MAP] calculated <map_info = " + ByteArrayToDecString(MapInfo) + ">");
 
     // calculate map_crc (this is not the CRC) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
@@ -428,14 +428,14 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
             Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ file, calculated map_crc/sha1 is probably wrong)");
 
           MapCRC = CreateByteArray(Val, false);
-          Print("[MAP] calculated map_crc = " + ByteArrayToDecString(MapCRC));
+          Print("[MAP] calculated <map_crc = " + ByteArrayToDecString(MapCRC) + ">");
 
           m_Aura->m_SHA->Final();
           uint8_t SHA1[20];
           memset(SHA1, 0, sizeof(uint8_t) * 20);
           m_Aura->m_SHA->GetHash(SHA1);
           MapSHA1 = CreateByteArray(SHA1, 20);
-          Print("[MAP] calculated map_sha1 = " + ByteArrayToDecString(MapSHA1));
+          Print("[MAP] calculated <map_sha1 = " + ByteArrayToDecString(MapSHA1) + ">");
         }
         else
           Print("[MAP] unable to calculate map_crc/sha1 - map MPQ file not loaded");
@@ -477,11 +477,9 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
             string   GarbageString;
             uint32_t FileFormat;
-            uint32_t RawMapWidth;
-            uint32_t RawMapHeight;
             uint32_t RawMapFlags;
-            uint32_t RawMapNumPlayers;
-            uint32_t RawMapNumTeams;
+            uint32_t RawMapWidth, RawMapHeight;
+            uint32_t RawMapNumPlayers, RawMapNumTeams;
 
             ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT)
 
@@ -544,15 +542,12 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
               }
 
               ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
-              uint32_t ClosedSlots = 0;
+              uint8_t ClosedSlots = 0;
 
               for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
               {
                 CGameSlot Slot(0, 255, SLOTSTATUS_OPEN, 0, 0, 1, SLOTRACE_RANDOM);
-                uint32_t  Colour;
-                uint32_t  Status;
-                uint32_t  Race;
-
+                uint32_t  Colour, Status, Race;
                 ISS.read(reinterpret_cast<char*>(&Colour), 4); // colour
                 Slot.SetColour(static_cast<uint8_t>(Colour));
                 ISS.read(reinterpret_cast<char*>(&Status), 4); // status
@@ -600,12 +595,12 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
               // the bot only cares about the following options: melee, fixed player settings, custom forces
               // let's not confuse the user by displaying erroneous map options so zero them out now
               MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
-              Print("[MAP] calculated map_options = " + to_string(MapOptions));
+              Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
 
               if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
-                MapNumTeams = RawMapNumPlayers;
+                MapNumTeams = static_cast<uint8_t>(RawMapNumPlayers);
               } else {
-                MapNumTeams = RawMapNumTeams;
+                MapNumTeams = static_cast<uint8_t>(RawMapNumTeams);
               }
 
               for (uint32_t i = 0; i < MapNumTeams; ++i) {
@@ -631,7 +626,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
               MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
               MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
-              MapNumPlayers = RawMapNumPlayers - ClosedSlots;
+              MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - ClosedSlots;
 
               if (MapOptions & MAPOPT_MELEE) {
                 Print("[MAP] found melee map");
@@ -647,19 +642,19 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
               uint32_t SlotNum = 1;
 
-              Print("[MAP] calculated map_width = " + ByteArrayToDecString(MapWidth));
-              Print("[MAP] calculated map_height = " + ByteArrayToDecString(MapHeight));
-              Print("[MAP] calculated map_numplayers = " + to_string(MapNumPlayers));
-              Print("[MAP] calculated map_numteams = " + to_string(MapNumTeams));
+              Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
+              Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
+              Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
+              Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
 
               for (auto& Slot : Slots) {
-                Print("[MAP] calculated map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()));
+                Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
                 ++SlotNum;
               }
             }
           }
           else
-            Print("[MAP] unable to calculate map_options, map_width, map_height, map_slot<x>, map_numplayers, map_numteams - unable to extract war3map.w3i from MPQ file");
+            Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from MPQ file");
 
           delete[] SubFileData;
         }
@@ -667,12 +662,12 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
         SFileCloseFile(SubFile);
       }
       else
-        Print("[MAP] unable to calculate map_options, map_width, map_height, map_slot<x>, map_numplayers, map_numteams - couldn't find war3map.w3i in MPQ file");
+        Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - couldn't find war3map.w3i in MPQ file");
     }
     else
-      Print("[MAP] unable to calculate map_options, map_width, map_height, map_slot<x>, map_numplayers, map_numteams - map MPQ file not loaded");
+      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map MPQ file not loaded");
   } else {
-    Print("[MAP] Using mapcfg for map_options, map_width, map_height, map_slot<x>, map_numplayers, map_numteams");
+    Print("[MAP] Using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
   }
 
   // close the map MPQ

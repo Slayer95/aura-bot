@@ -211,7 +211,7 @@ private:
   std::string m_Name;
   uint64_t    m_LoadingTime;
   uint64_t    m_Left;
-  uint32_t    m_Colour;
+  uint8_t     m_Colour;
 
 public:
   CDBGamePlayer(std::string name, uint64_t nLoadingTime, uint64_t nLeft, uint32_t nColour);
@@ -220,7 +220,7 @@ public:
   inline std::string GetName() const { return m_Name; }
   inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
   inline uint64_t    GetLeft() const { return m_Left; }
-  inline uint32_t    GetColour() const { return m_Colour; }
+  inline uint8_t     GetColour() const { return m_Colour; }
 
   inline void SetLoadingTime(uint64_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
   inline void SetLeft(uint64_t nLeft) { m_Left = nLeft; }
@@ -253,7 +253,7 @@ public:
 class CDBDotAPlayer
 {
 private:
-  uint32_t m_Colour;
+  uint8_t  m_Colour;
   uint32_t m_NewColour;
   uint32_t m_Kills;
   uint32_t m_Deaths;
@@ -270,8 +270,8 @@ public:
   CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills);
   ~CDBDotAPlayer();
 
-  inline uint32_t GetColour() const { return m_Colour; }
-  inline uint32_t GetNewColour() const { return m_NewColour; }
+  inline uint8_t GetColour() const { return m_Colour; }
+  inline uint8_t GetNewColour() const { return m_NewColour; }
   inline uint32_t GetKills() const { return m_Kills; }
   inline uint32_t GetDeaths() const { return m_Deaths; }
   inline uint32_t GetCreepKills() const { return m_CreepKills; }

@@ -49,7 +49,8 @@ CGameConfig::CGameConfig(CConfig* CFG)
   m_PerfThreshold             = CFG->GetInt("bot.perf_limit", 150);
   m_LacksMapKickDelay         = CFG->GetInt("hosting.map_missing.kick_delay", 60); // default: 1 minute
 
-  m_ClientDiscoveryIPs        = CFG->GetIPv4Set("net.game_discovery.udp.client_ip_addresses", ',', {});
+  m_ExtraDiscoveryAddresses   = CFG->GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
+  m_ExtraDiscoveryStrict      = CFG->GetBool("net.game_discovery.udp.extra_clients.strict", false);
 
   string BotCommandTrigger    = CFG->GetString("hosting.command_trigger", "!");
   m_CommandTrigger            = BotCommandTrigger[0];

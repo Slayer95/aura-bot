@@ -363,7 +363,7 @@ vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x)
   SUCCESS(Output)
 }
 
-set<string> CConfig::GetIPv4Set(const string& key, char separator, const set<string> x)
+set<string> CConfig::GetIPStringSet(const string& key, char separator, const set<string> x)
 {
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
@@ -379,11 +379,13 @@ set<string> CConfig::GetIPv4Set(const string& key, char separator, const set<str
     if (element.empty())
       continue;
 
-    if (ExtractIPv4(element).empty()) {
+    optional<sockaddr_storage> result = CNet::ParseAddress(element, ACCEPT_ANY);
+    if (!result.has_value()) {
       errored = true;
       continue;
     }
-    if (!Output.insert(element).second) {
+    string normalIp = AddressToString(result.value());
+    if (!Output.insert(normalIp).second) {
       errored = true;
     }
   }

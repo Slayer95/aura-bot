@@ -45,7 +45,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   const static string emptyString;
 
   m_Enabled                 = CFG->GetBool("hosting.enabled", true);
-  m_ProxyReconnectEnabled   = CFG->GetBool("net.gproxy.enabled", true);
+  m_ProxyReconnectEnabled   = CFG->GetBool("net.tcp_extensions.gproxy.enabled", true);
   m_War3Version             = CFG->GetMaybeInt("game.version");
   CFG->FailIfErrorLast();
   m_Warcraft3Path           = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
@@ -56,7 +56,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   CFG->FailIfErrorLast();
   m_BindAddress6            = CFG->GetAddressIPv6("net.bind_address6", "::");
   CFG->FailIfErrorLast();
-  m_MinHostPort             = CFG->GetUint16("net.host_port.min", CFG->GetInt("net.host_port.only", 6112));
+  m_MinHostPort             = CFG->GetUint16("net.host_port.min", CFG->GetUint16("net.host_port.only", 6112));
   m_MaxHostPort             = CFG->GetUint16("net.host_port.max", m_MinHostPort);
   m_UDPEnableCustomPortTCP4 = CFG->GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
   m_UDPCustomPortTCP4       = CFG->GetUint16("net.game_discovery.udp.tcp4_custom_port.value", 6112);
@@ -64,6 +64,9 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_UDPCustomPortTCP6       = CFG->GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678);
 
   m_UDPCustomPortTCP6       = CFG->GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678);
+
+  m_EnableTCPWrapUDP        = CFG->GetBool("net.tcp_extensions.udp_tunnel.enabled", true);
+  m_EnableTCPScanUDP        = CFG->GetBool("net.tcp_extensions.udp_scan.enabled", true);
 
   /* Make absolute, lexically normal */
   m_GreetingPath           = CFG->GetPath("bot.greeting_path", filesystem::path());
@@ -85,13 +88,13 @@ CBotConfig::CBotConfig(CConfig* CFG)
     }
   }
 
-  m_UDPInfoStrictMode            = CFG->GetBool("net.game_discovery.udp.strict", true);
+  m_UDPBroadcastStrictMode            = CFG->GetBool("net.game_discovery.udp.broadcast.strict", true);
   m_UDPForwardTraffic            = CFG->GetBool("net.udp_redirect.enabled", false);
   m_UDPForwardAddress            = CFG->GetString("net.udp_redirect.ip_address", emptyString);
   m_UDPForwardPort               = CFG->GetUint16("net.udp_redirect.port", 6110);
   m_UDPForwardGameLists          = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
   m_UDPBroadcastEnabled          = CFG->GetBool("net.game_discovery.udp.broadcast.enabled", true);
-  m_UDPBlockedIPs                = CFG->GetIPv4Set("net.udp_server.block_list", ',', {});
+  m_UDPBlockedIPs                = CFG->GetIPStringSet("net.udp_server.block_list", ',', {});
 
   m_UDP6TargetPort               = CFG->GetUint16("net.game_discovery.udp.ipv6.target_port", 5678);
 
@@ -107,7 +110,12 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_MaxParallelMapPackets        = CFG->GetInt("hosting.map_transfers.max_parallel_packets", 1000);
   m_RTTPings                     = CFG->GetBool("metrics.rtt_pings", false);
   m_HasBufferBloat               = CFG->GetBool("net.has_buffer_bloat", false);
-  m_ReconnectWaitTime            = CFG->GetUint8("net.player_reconnect.wait", 3);
+
+  m_ReconnectWaitTime            = CFG->GetUint8("net.player_reconnect.wait", 5);
+  m_ReconnectWaitTimeLegacy      = CFG->GetUint8("net.player_reconnect.legacy_wait", 3);
+
+  m_AnnounceGProxy               = CFG->GetBool("net.tcp_extensions.gproxy.announce", true);
+  m_AnnounceGProxySite           = CFG->GetString("net.tcp_extensions.gproxy.site", "https://www.mymgn.com/gproxy/");
 
   m_MinHostCounter               = CFG->GetInt("hosting.namepace.first_game_id", 100);
   m_MaxGames                     = CFG->GetInt("hosting.max_games", 20);
@@ -120,7 +128,14 @@ CBotConfig::CBotConfig(CConfig* CFG)
   string ipAlgorithm             = CFG->GetString("net.public_ip_address.algorithm", "api");
   if (ipAlgorithm == "manual") {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-    m_PublicIPValue = IPv4ToString(CFG->GetIPv4("net.public_ip_address.value", {10, 9, 8, 7}));
+    if (!CFG->Exists("net.public_ip_address.value")) {
+      Print("[CONFIG] <net.public_ip_address.value> is missing. Set <net.public_ip_address.algorithm = none> if this is intended.");
+      CFG->SetFailed();
+    } else {
+      sockaddr_storage inputIPv4 = CFG->GetAddressIPv4("net.public_ip_address.value", "10.9.8.7");
+      CFG->FailIfErrorLast();
+      m_PublicIPValue = AddressToString(inputIPv4);
+    }
   } else if (ipAlgorithm == "api") {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
     m_PublicIPValue = CFG->GetString("net.public_ip_address.value", "https://api.ipify.org");
@@ -136,8 +151,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_EnableBNET                   = CFG->GetMaybeBool("bot.toggle_every_realm");
 
   // TODO(IceSandslash) Split to config-net.cpp. These cannot be reloaded
-  m_BroadcastTarget              = CFG->GetAddressIPv4("net.game_discovery.udp.broadcast.target", "255.255.255.255");
-  m_IPv6GameServersEnabled       = CFG->GetBool("net.ipv6.tcp.enabled", false);
+  m_BroadcastTarget              = CFG->GetAddressIPv4("net.game_discovery.udp.broadcast.address", "255.255.255.255");
 }
 
 CBotConfig::~CBotConfig() = default;

@@ -41,7 +41,7 @@ CIRCConfig::CIRCConfig(CConfig* CFG)
 {
   const static string emptyString;
   m_HostName            = CFG->GetString("irc.host_name", emptyString);
-  m_Port                = CFG->GetInt("irc.port", 6667);
+  m_Port                = CFG->GetUint16("irc.port", 6667);
   m_NickName            = CFG->GetString("irc.nickname", emptyString);
   m_UserName            = CFG->GetString("irc.username", emptyString);
   m_Password            = CFG->GetString("irc.password", emptyString);

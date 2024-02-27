@@ -43,7 +43,7 @@ class CTCPServer;
 class CUDPServer;
 class CCommandContext;
 class CGameProtocol;
-class CPotentialPlayer;
+class CGameConnection;
 class CGamePlayer;
 class CMap;
 class CIncomingJoinRequest;
@@ -124,7 +124,8 @@ protected:
   uint32_t                       m_LobbyNoOwnerTime;              // relinquish game ownership after this many minutes
   uint32_t                       m_LobbyTimeLimit;                // auto close the game lobby after this many minutes without any owner
   uint32_t                       m_NumPlayersToStartGameOver;     // when this player count is reached, the game over timer will start
-  std::set<std::string>          m_ClientDiscoveryIPs;
+  std::set<std::string>          m_ExtraDiscoveryAddresses;
+  bool                           m_ExtraDiscoveryStrict;
 
   uint32_t                       m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
@@ -192,6 +193,7 @@ public:
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
   inline bool           GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool           GetLagging() const { return m_Lagging; }
+  inline bool           GetIsGameOver() const { return m_GameOverTime != 0; }
   CGameProtocol* GetProtocol() const;
   int64_t        GetNextTimedActionTicks() const;
   uint32_t       GetSlotsOccupied() const;
@@ -205,6 +207,7 @@ public:
   std::string    GetPlayers() const;
   std::string    GetObservers() const;
   std::string    GetAutoStartText() const;
+  CTCPServer*    GetSocket() const { return m_Socket; };
 
   uint16_t       GetHostPortForUDP(const uint8_t protocol) const;
 
@@ -219,7 +222,7 @@ public:
 
   // generic functions to send packets to players
 
-  void Send(CPotentialPlayer* player, const std::vector<uint8_t>& data) const;
+  void Send(CGameConnection* player, const std::vector<uint8_t>& data) const;
   void Send(CGamePlayer* player, const std::vector<uint8_t>& data) const;
   void Send(uint8_t PID, const std::vector<uint8_t>& data) const;
   void Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& data) const;
@@ -238,9 +241,9 @@ public:
   void SendVirtualHostPlayerInfo(CGamePlayer* player) const;
   void SendFakePlayersInfo(CGamePlayer* player) const;
   void SendJoinedPlayersInfo(CGamePlayer* player) const;
-  void SendVirtualHostPlayerInfo(CPotentialPlayer* player) const;
-  void SendFakePlayersInfo(CPotentialPlayer* player) const;
-  void SendJoinedPlayersInfo(CPotentialPlayer* player) const;
+  void SendVirtualHostPlayerInfo(CGameConnection* player) const;
+  void SendFakePlayersInfo(CGameConnection* player) const;
+  void SendJoinedPlayersInfo(CGameConnection* player) const;
   void SendWelcomeMessage(CGamePlayer* player) const;
   void SendAllActions();
   void SendAllAutoStart() const;
@@ -250,7 +253,7 @@ public:
 
   void AnnounceToAddress(std::string& address) const;
   void AnnounceToAddressForGameRanger(std::string& tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
-  void ReplySearch(sockaddr_storage& address, CUDPServer* server) const;
+  void ReplySearch(sockaddr_storage* address, CSocket* socket) const;
   void SendGameDiscoveryInfo() const;
   void SendGameDiscoveryRefresh() const;
   void SendGameDiscoveryCreate() const;
@@ -265,7 +268,8 @@ public:
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
   void EventPlayerKickHandleQueued(CGamePlayer* player);
-  bool EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest);
+  void EventPlayerCheckStatus(CGamePlayer* player);
+  bool EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest);
   void EventPlayerLeft(CGamePlayer* player, uint32_t reason);
   void EventPlayerLoaded(CGamePlayer* player);
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
@@ -307,7 +311,7 @@ public:
   bool OpenSlot(uint8_t SID, bool kick);
   bool CloseSlot(uint8_t SID, bool kick);
   void SendIncomingPlayerInfo(CGamePlayer* player) const;
-  CGamePlayer* JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);
+  CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);
   bool ComputerSlot(uint8_t SID, uint8_t skill, bool kick);
   void ColorSlot(uint8_t SID, uint8_t colour);
   void OpenAllSlots();

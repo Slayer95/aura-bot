@@ -218,7 +218,8 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameDisplay,
   m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
   m_LobbyTimeLimit = m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
-  m_ClientDiscoveryIPs = m_Aura->m_GameDefaultConfig->m_ClientDiscoveryIPs;
+  m_ExtraDiscoveryAddresses = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses;
+  m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;
 
   m_UDPEnabled = nAura->m_GameDefaultConfig->m_UDPEnabled;
 
@@ -494,14 +495,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
     if (!m_CountDownStarted && m_UDPEnabled)
     {
-      // construct a fixed host counter which will be used to identify players from this realm
-      // the fixed host counter's highest-order byte will contain a 8 bit ID (0-255)
-      // the rest of the fixed host counter will contain the 24 least significant bits of the actual host counter
-      // since we're destroying 8 bits of information here the actual host counter should not be greater than 2^24 which is a reasonable assumption
-      // when a player joins a game we can obtain the ID from the received host counter
-      // note: LAN broadcasts use an ID of 0, battle.net refreshes use IDs of 16-255, the rest are reserved
-
-      if (m_Aura->m_Net->m_UDP4ServerEnabled && m_Aura->m_Config->m_UDPInfoStrictMode) {
+      if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Config->m_UDPBroadcastStrictMode) {
         SendGameDiscoveryRefresh();
       } else {
         SendGameDiscoveryInfo();
@@ -573,17 +567,17 @@ bool CGame::Update(void* fd, void* send_fd)
     }
 
     if (m_Lagging) {
-      bool UsingGProxy = false;
+      bool UsingLegacyGProxy = false;
       for (auto& player : m_Players) {
-        if (player->GetGProxy()) {
-          UsingGProxy = true;
+        if (player->GetGProxyLegacy()) {
+          UsingLegacyGProxy = true;
           break;
         }
       }
 
       int64_t WaitTime = 60;
 
-      if (UsingGProxy)
+      if (UsingLegacyGProxy)
         WaitTime = (m_GProxyEmptyActions + 1) * 60;
 
       if (Time - m_StartedLaggingTime >= WaitTime)
@@ -605,7 +599,7 @@ bool CGame::Update(void* fd, void* send_fd)
           // send an empty update
           // this resets the lag screen timer
 
-          if (UsingGProxy && !(_i)->GetGProxy()) {
+          if (UsingLegacyGProxy && !(_i)->GetGProxyAny()) {
             // we must send additional empty actions to non-GProxy++ players
             // GProxy++ will insert these itself so we don't need to send them to GProxy++ players
             // empty actions are used to extend the time a player can use when reconnecting
@@ -913,7 +907,7 @@ void CGame::UpdatePost(void* send_fd)
     player->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
 }
 
-void CGame::Send(CPotentialPlayer* player, const std::vector<uint8_t>& data) const
+void CGame::Send(CGameConnection* player, const std::vector<uint8_t>& data) const
 {
   if (player)
     player->Send(data);
@@ -1096,7 +1090,7 @@ void CGame::SendAllAutoStart() const
   SendAllChat(GetAutoStartText());
 }
 
-void CGame::SendVirtualHostPlayerInfo(CPotentialPlayer* player) const
+void CGame::SendVirtualHostPlayerInfo(CGameConnection* player) const
 {
   if (m_VirtualHostPID == 255)
     return;
@@ -1116,7 +1110,7 @@ void CGame::SendVirtualHostPlayerInfo(CGamePlayer* player) const
   Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostPID, m_LobbyVirtualHostName, IP, IP));
 }
 
-void CGame::SendFakePlayersInfo(CPotentialPlayer* player) const
+void CGame::SendFakePlayersInfo(CGameConnection* player) const
 {
   if (m_FakePlayers.empty())
     return;
@@ -1138,12 +1132,12 @@ void CGame::SendFakePlayersInfo(CGamePlayer* player) const
     Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "User[" + to_string(fakeplayer) + "]", IP, IP));
 }
 
-void CGame::SendJoinedPlayersInfo(CPotentialPlayer* potential) const
+void CGame::SendJoinedPlayersInfo(CGameConnection* connection) const
 {
   for (auto& otherPlayer : m_Players) {
     if (otherPlayer->GetLeftMessageSent())
       continue;
-    Send(potential,
+    Send(connection,
       GetProtocol()->SEND_W3GS_PLAYERINFO(otherPlayer->GetPID(), otherPlayer->GetName(), otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal())
     );
   }
@@ -1291,31 +1285,30 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
 
 void CGame::SendAllActions()
 {
-  bool UsingGProxy = false;
+  bool UsingGProxyAny = false;
   for (auto& player : m_Players) {
-    if (player->GetGProxy()) {
-      UsingGProxy = true;
+    if (player->GetGProxyAny()) {
+      UsingGProxyAny = true;
       break;
     }
   }
 
   m_GameTicks += m_Latency;
 
-  if (UsingGProxy) {
+  if (UsingGProxyAny) {
     // we must send empty actions to non-GProxy++ players
     // GProxy++ will insert these itself so we don't need to send them to GProxy++ players
     // empty actions are used to extend the time a player can use when reconnecting
 
     for (auto& player : m_Players) {
-      if (!player->GetGProxy()) {
+      if (!player->GetGProxyAny()) {
         for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j)
           Send(player, GetProtocol()->SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0));
       }
     }
   }
 
-  if (!m_Lagging)
-    ++m_SyncCounter;
+  ++m_SyncCounter;
 
   // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
 
@@ -1459,21 +1452,25 @@ void CGame::AnnounceToAddress(string& addressLiteral) const
   if (!maybeAddress.has_value())
     return;
 
-  sockaddr_storage address = maybeAddress.value();
+  sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, 6112);
   if (isLoopbackAddress(address)) {
     m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(m_HostPort));
   } else {
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForUDP(address.ss_family)));
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForUDP(address->ss_family)));
   }
 }
 
-void CGame::ReplySearch(sockaddr_storage& address, CUDPServer* server) const
+void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket) const
 {
-  if (isLoopbackAddress(address)/* && address.ss_family == AF_INET*/) { // TODO(IceSandslash): Do not restrict to AF_INET
-    server->SendTo(address, GetGameDiscoveryInfo(m_HostPort));
-  } else {
-    server->SendTo(address, GetGameDiscoveryInfo(GetHostPortForUDP(address.ss_family)));
+  if (CUDPServer* server = dynamic_cast<CUDPServer*>(socket)) {
+    if (isLoopbackAddress(address)/* && address.ss_family == AF_INET*/) { // TODO(IceSandslash): Do not restrict to AF_INET
+      server->SendReply(address, GetGameDiscoveryInfo(m_HostPort));
+    } else {
+      server->SendReply(address, GetGameDiscoveryInfo(GetHostPortForUDP(address->ss_family)));
+    }
+  } else if (CStreamIOSocket* tcpSocket = dynamic_cast<CStreamIOSocket*>(socket)) {
+    tcpSocket->SendReply(address, GetGameDiscoveryInfo(GetHostPortForUDP(address->ss_family)));
   }
 }
 
@@ -1486,8 +1483,9 @@ void CGame::AnnounceToAddressForGameRanger(string& tunnelLocalIP, uint16_t tunne
 void CGame::SendGameDiscoveryCreate() const
 {
   vector<uint8_t> packet = GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter);
-  m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
   if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_Net->m_GameRangerLocalPort != 0) {
+    // TODO: Do we really want to broadcast or not?
     m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
       // Hardcoded remote 255.255.255.255:6112
@@ -1499,7 +1497,7 @@ void CGame::SendGameDiscoveryCreate() const
 void CGame::SendGameDiscoveryDecreate() const
 {
   vector<uint8_t> packet = GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter);
-  m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
     m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
@@ -1516,7 +1514,7 @@ void CGame::SendGameDiscoveryRefresh() const
     m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
     m_Slots.size()
   );
-  m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
   if (m_Aura->m_Config->m_UDPSupportGameRanger) {
     m_Aura->m_Net->Send(
       m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
@@ -1532,30 +1530,37 @@ void CGame::SendGameDiscoveryRefresh() const
 void CGame::SendGameDiscoveryInfo() const
 {
   // See CNet::SendGameDiscovery()
-  bool loopbackIsIPv4Port = !m_Aura->m_Config->m_UDPEnableCustomPortTCP4 || m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP4;
-  bool loopbackIsIPv6Port = !m_Aura->m_Config->m_UDPEnableCustomPortTCP6 || m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP6;
-  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || m_ClientDiscoveryIPs.empty())) {
+  bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Config->m_UDPEnableCustomPortTCP4;
+  bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Config->m_UDPEnableCustomPortTCP6;
+  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || m_ExtraDiscoveryAddresses.empty())) {
     vector<uint8_t> packet = GetGameDiscoveryInfo(m_HostPort);
-    m_Aura->m_Net->SendGameDiscovery(packet, m_ClientDiscoveryIPs);
+    m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
     return;
   }
 
-  vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort); // Ensure the game is available at loopback.
   vector<uint8_t> ipv4Packet = GetGameDiscoveryInfo(GetHostPortForUDP(AF_INET)); // Uses <net.game_discovery.udp.tcp4_custom_port.value>
-  vector<uint8_t> ipv6Packet = GetGameDiscoveryInfo(GetHostPortForUDP(AF_INET6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
+  vector<uint8_t> ipv6Packet;
+  if (m_Aura->m_Net->m_SupportTCPOverIPv6)
+    ipv6Packet = GetGameDiscoveryInfo(GetHostPortForUDP(AF_INET6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
 
-  if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
-    m_Aura->m_Net->SendBroadcast(ipv4Packet);
+  if (!m_Aura->m_Net->SendBroadcast(ipv4Packet)) {
+    Print("[AURA] Game info broadcast failed @ CGame::SendGameDiscoveryInfo");
+    // Ensure the game is available at loopback.
+    if (loopbackIsIPv4Port) {
+      m_Aura->m_Net->Send("127.0.0.1", ipv4Packet);
+    } else {
+      vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
+      m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
+    }
   }
 
-  //m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
-
-  for (auto& clientIp : m_ClientDiscoveryIPs) {
+  for (auto& clientIp : m_ExtraDiscoveryAddresses) {
     optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(clientIp);
     if (!maybeAddress.has_value()) continue;
-    sockaddr_storage& address = maybeAddress.value();
+    sockaddr_storage* address = &(maybeAddress.value());
     if (isLoopbackAddress(address)) continue;
-    m_Aura->m_Net->Send(address, address.ss_family == AF_INET6 ? ipv6Packet : ipv4Packet);
+    if (address->ss_family == AF_INET6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) continue;
+    m_Aura->m_Net->Send(address, address->ss_family == AF_INET6 ? ipv6Packet : ipv4Packet);
   }
 }
 
@@ -1586,8 +1591,13 @@ void CGame::EventPlayerDeleted(CGamePlayer* player)
 
   // in some cases we're forced to send the left message early so don't send it again
   if (!player->GetLeftMessageSent()) {
-    if (m_GameLoaded)
-      SendAllChat(player->GetName() + " " + player->GetLeftReason() + ".");
+    if (m_GameLoaded) {
+      if (player->GetQuitGame()) {
+        SendAllChat(player->GetPID(), player->GetLeftReason() + ".");
+      } else {
+        SendAllChat(player->GetName() + " " + player->GetLeftReason() + ".");
+      }
+    }
 
     if (player->GetLagging())
       SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(player));
@@ -1633,15 +1643,18 @@ void CGame::EventPlayerDeleted(CGamePlayer* player)
 
 void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
 {
-  if (player->GetGProxy() && m_GameLoaded)
+  if (player->GetGProxyAny() && m_GameLoaded)
   {
-    if (!player->GetGProxyDisconnectNoticeSent())
-    {
-      SendAllChat(player->GetName() + " " + "has lost the connection (timed out) but is using GProxy++ and may reconnect");
+    if (!player->GetGProxyDisconnectNoticeSent()) {
+      if (player->GetGProxyExtended()) {
+        SendAllChat(player->GetName() + " " + "has disconnected, but is using GProxyDLL and may reconnect while others keep playing");
+      } else {
+        SendAllChat(player->GetName() + " " + "has disconnected, but is using GProxy++ and may reconnect");
+      }
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
-    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20) {
+    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
       int64_t Time = GetTime();
       if (!player->GetLagging()) {
         player->SetLagging(true);
@@ -1673,7 +1686,7 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
   // this is because Warcraft 3 stops sending packets during the lag screen
   // so when the lag screen finishes we would immediately disconnect everyone if we didn't give them some extra time
 
-  if (GetTime() - m_LastLagScreenTime >= 10) {
+  if (GetTime() - m_LastLagScreenTime >= 10 && !player->GetGProxyExtended()) {
     player->SetDeleteMe(true);
     player->SetLeftReason("has lost the connection (timed out)");
     player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
@@ -1685,15 +1698,14 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
 
 void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
 {
-  if (player->GetGProxy() && m_GameLoaded)
-  {
+  if (player->GetGProxyAny() && m_GameLoaded) {
     if (!player->GetGProxyDisconnectNoticeSent())
     {
-      SendAllChat(player->GetName() + " " + "has lost the connection (connection error - " + player->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
+      SendAllChat(player->GetName() + " " + "has disconnected (connection error - " + player->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
-    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20) {
+    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
       int64_t Time = GetTime();
       if (!player->GetLagging()) {
         player->SetLagging(true);
@@ -1731,15 +1743,15 @@ void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
 
 void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
 {
-  if (player->GetGProxy() && m_GameLoaded)
+  if (player->GetGProxyAny() && m_GameLoaded)
   {
     if (!player->GetGProxyDisconnectNoticeSent())
     {
-      SendAllChat(player->GetName() + " " + "has lost the connection (connection closed by remote host) but is using GProxy++ and may reconnect");
+      SendAllChat(player->GetName() + " " + "has terminated the connection, but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
-    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20) {
+    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
       int64_t Time = GetTime();
       if (!player->GetLagging()) {
         player->SetLagging(true);
@@ -1768,7 +1780,7 @@ void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
   }
 
   player->SetDeleteMe(true);
-  player->SetLeftReason("has lost the connection (connection closed by remote host)");
+  player->SetLeftReason("has terminated the connection");
   player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
 
   if (!m_GameLoading && !m_GameLoaded)
@@ -1780,21 +1792,66 @@ void CGame::EventPlayerKickHandleQueued(CGamePlayer* player)
   if (player->GetDeleteMe())
     return;
 
-  if (m_CountDownStarted)
+  if (m_CountDownStarted) {
+    player->SetKickByTime(0);
     return;
+  }
 
   player->SetDeleteMe(true);
   // left reason, left code already assigned when queued
   OpenSlot(GetSIDFromPID(player->GetPID()), false);
 }
 
-CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
+void CGame::EventPlayerCheckStatus(CGamePlayer* player)
 {
-  // Transfer socket from CPotentialPlayer to CGamePlayer
-  CGamePlayer* Player = new CGamePlayer(this, potential, GetNewPID(), HostCounterID, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
+  if (player->GetDeleteMe())
+    return;
+
+  if (m_CountDownStarted) {
+    player->SetStatusMessageSent(true);
+    return;
+  }
+
+  bool IsOwnerName = MatchOwnerName(player->GetName());
+  bool IsOwner = IsOwnerName && HasOwnerInGame();
+  string OwnerFragment;
+  if (IsOwner) {
+    OwnerFragment = " (game owner)";
+  } else if (IsOwnerName) {
+    OwnerFragment = " (unverified game owner, send me a whisper: \"sc\")";
+  }
+
+  string GProxyFragment;
+  if (m_Aura->m_Config->m_AnnounceGProxy) {
+    if (player->GetGProxyExtended()) {
+      GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">";
+    } else if (player->GetGProxyAny()) {
+      GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">";
+    } else if (m_Aura->m_GameVersion < 26 || 29 < m_Aura->m_GameVersion) {
+      GProxyFragment = " is not using disconnection protection. You may download it at: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">";
+    }
+  }
+  
+  player->SetStatusMessageSent(true);
+  if (OwnerFragment.empty() && GProxyFragment.empty())
+    return;
+
+  if (!OwnerFragment.empty() && !GProxyFragment.empty()) {
+    SendAllChat(player->GetName() + OwnerFragment + GProxyFragment);
+  } else if (!OwnerFragment.empty()) {
+    SendAllChat(player->GetName() + OwnerFragment + " joined the game.");
+  } else {
+    SendAllChat(player->GetName() + GProxyFragment);
+  }
+}
+
+CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
+{
+  // Transfer socket from CGameConnection to CGamePlayer
+  CGamePlayer* Player = new CGamePlayer(this, connection, GetNewPID(), HostCounterID, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
   m_Players.push_back(Player);
-  potential->SetSocket(nullptr);
-  potential->SetDeleteMe(true);
+  connection->SetSocket(nullptr);
+  connection->SetDeleteMe(true);
 
   Player->SetWhoisShouldBeSent(IsUnverifiedAdmin || MatchOwnerName(Player->GetName()));
 
@@ -1888,11 +1945,11 @@ CGamePlayer* CGame::JoinPlayer(CPotentialPlayer* potential, CIncomingJoinRequest
   return Player;
 }
 
-bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* joinRequest)
+bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest)
 {
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
@@ -1919,8 +1976,8 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
 
   if (HostCounterID < 0x10 && joinRequest->GetEntryKey() != m_EntryKey) {
     // check if the player joining via LAN knows the entry key
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
     return false;
   }
 
@@ -1929,32 +1986,32 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
     // 0x2: GameRanger
     // others: undefined
     if (HostCounterID == 0x1) {
-      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), potential->GetSocket()->GetPortLE(), potential->GetIPv4(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
-      SendVirtualHostPlayerInfo(potential);
-      SendFakePlayersInfo(potential);
-      SendJoinedPlayersInfo(potential);
+      connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+      SendVirtualHostPlayerInfo(connection);
+      SendFakePlayersInfo(connection);
+      SendJoinedPlayersInfo(connection);
       return false;
     }
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     if (HostCounterID > 0x2) {
-      potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
+      connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
       return false;
     }
   }
 
   if (GetPlayerFromName(joinRequest->GetName(), false)) {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName() == m_LobbyVirtualHostName || joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[") {
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + potential->GetSocket()->GetName() + "] (" + potential->GetIPString() + ")");
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
@@ -1965,7 +2022,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
   if (SourceRealm) {
     CDBBan* Ban = SourceRealm->IsBannedName(joinRequest->GetName());
     if (Ban){
-      Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "|" + potential->GetIPString() + "] is banned");
+      Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "|" + connection->GetIPString() + "] is banned");
 
       if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
         SendAllChat("[" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join the game, but is banned");
@@ -1976,7 +2033,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
       // this causes them to be kicked back to the chat channel on battle.net
 
       vector<CGameSlot> Slots = m_Map->GetSlots();
-      potential->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, potential->GetSocket()->GetPortLE(), potential->GetIPv4(), Slots, 0, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
+      connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
       delete Ban;
       return false;
     }
@@ -2047,7 +2104,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
 
   if (SID >= m_Slots.size())
   {
-    potential->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
@@ -2057,7 +2114,7 @@ bool CGame::EventRequestJoin(CPotentialPlayer* potential, CIncomingJoinRequest* 
   if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
     DeleteVirtualHost();
 
-  JoinPlayer(potential, joinRequest, SID, HostCounterID, JoinedRealm, IsReserved, IsUnverifiedAdmin);
+  JoinPlayer(connection, joinRequest, SID, HostCounterID, JoinedRealm, IsReserved, IsUnverifiedAdmin);
   return true;
 }
 
@@ -2066,8 +2123,9 @@ void CGame::EventPlayerLeft(CGamePlayer* player, uint32_t reason)
   // this function is only called when a player leave packet is received, not when there's a socket error, kick, etc...
 
   player->SetDeleteMe(true);
-  player->SetLeftReason("has left the game voluntarily (code " + to_string(reason) + ")");
+  player->SetLeftReason("Leaving the game voluntarily");
   player->SetLeftCode(PLAYERLEAVE_LOST);
+  player->SetQuitGame(true);
 
   if (!m_GameLoading && !m_GameLoaded) {
     OpenSlot(GetSIDFromPID(player->GetPID()), false);
@@ -2683,8 +2741,8 @@ void CGame::EventGameStarted()
   // only one lobby at a time is supported, so we can just do it from here
 
   for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
-    for (auto& potential : pair.second)
-      delete potential;
+    for (auto& connection : pair.second)
+      delete connection;
 
     pair.second.clear();
   }

@@ -28,24 +28,26 @@
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
 #include "game.h"
+#include "socket.h"
 
 using namespace std;
 
 //
-// CPotentialPlayer
+// CGameConnection
 //
 
-CPotentialPlayer::CPotentialPlayer(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
+CGameConnection::CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
   : m_Aura(nAura),
     m_Port(nPort),
     m_Protocol(nProtocol),
     m_Socket(nSocket),
     m_IncomingJoinPlayer(nullptr),
-    m_DeleteMe(false)
+    m_DeleteMe(false),
+    m_IsUDPTunnel(false)
 {
 }
 
-CPotentialPlayer::~CPotentialPlayer()
+CGameConnection::~CGameConnection()
 {
   if (m_Socket)
     delete m_Socket;
@@ -53,7 +55,7 @@ CPotentialPlayer::~CPotentialPlayer()
   delete m_IncomingJoinPlayer;
 }
 
-uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
+uint8_t CGameConnection::Update(void* fd, void* send_fd)
 {
   if (m_DeleteMe)
     return 1;
@@ -63,7 +65,7 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
 
   const int64_t Time = GetTime();
   if (Time - m_Socket->GetLastRecv() >= 5) {
-    //Print("Delete CPotentialPlayer after 5 secs inactivity");
+    //Print("Delete CGameConnection after 5 secs inactivity");
     return 1;
   }
 
@@ -107,6 +109,15 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
           // Join failed
           m_DeleteMe = true;
         }
+      } else if (m_IsUDPTunnel && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
+        if (Length <= 1024) {
+          struct UDPPkt pkt;
+          pkt.socket = m_Socket;
+          pkt.sender = &(m_Socket->m_RemoteHost);
+          memcpy(pkt.buf, &Bytes, Length);
+          pkt.length = Length;
+          m_Aura->HandleUDP(&pkt);
+        } 
       } else if (Length == 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT) {
         const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
         const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
@@ -118,20 +129,34 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
         for (auto& game : m_Aura->m_Games) {
           if (game->GetGameLoaded()) {
             CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
-            if (Player && Player->GetGProxy() && Player->GetGProxyReconnectKey() == ReconnectKey) {
+            if (Player && Player->GetGProxyAny() && Player->GetGProxyReconnectKey() == ReconnectKey) {
               Match = Player;
               break;
             }
           }
         }
 
-        if (!Match) {
+        if (!Match || Match->m_Game->GetIsGameOver()) {
           m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
           m_DeleteMe = true;
         } else {
           // reconnect successful!
           Match->EventGProxyReconnect(m_Socket, LastPacket);
           IsPromotedToPlayer = true;
+        }
+      } else if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
+        if (m_Aura->m_Config->m_EnableTCPScanUDP) {
+          vector<uint8_t> packet;
+          m_Socket->PutBytes(packet);
+        } else {
+          m_DeleteMe = true;
+        }
+
+      } else if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPBRIDGE) {
+        if (m_Aura->m_Config->m_EnableTCPWrapUDP) {
+          m_IsUDPTunnel = true;
+        } else {
+          m_DeleteMe = true;
         }
       }
       LengthProcessed += Length;
@@ -146,21 +171,19 @@ uint8_t CPotentialPlayer::Update(void* fd, void* send_fd)
     RecvBuffer->clear();
   }
 
-  // don't call DoSend here because some other players may not have updated yet and may generate a packet for this player
-  // also m_Socket may have been set to nullptr during ProcessPackets but we're banking on the fact that m_DeleteMe has been set to true as well so it'll short circuit before dereferencing
-
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError()) {
-    return 1;
+    return PREPLAYER_CONNECTION_DESTROY;
   }
 
   if (IsPromotedToPlayer) {
-    return 2;
+    return PREPLAYER_CONNECTION_PROMOTED;
   }
 
-  return 0;
+  m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+  return PREPLAYER_CONNECTION_OK;
 }
 
-void CPotentialPlayer::Send(const std::vector<uint8_t>& data) const
+void CGameConnection::Send(const std::vector<uint8_t>& data) const
 {
   if (m_Socket)
     m_Socket->PutBytes(data);
@@ -170,10 +193,10 @@ void CPotentialPlayer::Send(const std::vector<uint8_t>& data) const
 // CGamePlayer
 //
 
-CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID, uint8_t nJoinedRealmID, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
-  : m_Protocol(potential->m_Protocol),
+CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID, uint8_t nJoinedRealmID, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
+  : m_Protocol(connection->m_Protocol),
     m_Game(nGame),
-    m_Socket(potential->GetSocket()),
+    m_Socket(connection->GetSocket()),
     m_IPv4Internal(std::move(nInternalIP)),
     m_JoinedRealmID(nJoinedRealmID),
     m_JoinedRealm(std::move(nJoinedRealm)),
@@ -181,6 +204,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID
     m_TotalPacketsSent(0),
     m_TotalPacketsReceived(1),
     m_LeftCode(PLAYERLEAVE_LOBBY),
+    m_QuitGame(false),
     m_SyncCounter(0),
     m_JoinTime(GetTime()),
     m_LastMapPartSent(0),
@@ -211,10 +235,19 @@ CGamePlayer::CGamePlayer(CGame* nGame, CPotentialPlayer* potential, uint8_t nPID
     m_Observer(false),
     m_PowerObserver(false),
     m_LeftMessageSent(false),
+    m_StatusMessageSent(false),
+    m_CheckStatusByTime(GetTime() + 5),
+    m_DeleteMe(false),
+
     m_GProxy(false),
     m_GProxyPort(0),
     m_GProxyDisconnectNoticeSent(false),
-    m_DeleteMe(false)
+
+    m_GProxyExtended(false),
+    m_GProxyVersion(0),
+    m_TotalDisconnectTime(0),
+    m_LastDisconnectTime(0),
+    m_Disconnected(false)
 {
 }
 
@@ -259,6 +292,15 @@ string CGamePlayer::GetRealmDataBaseID(bool mustVerify)
   return "@@LAN/VPN";
 }
 
+void CGamePlayer::ResetConnection()
+{
+  if (!m_Disconnected) {
+    m_LastDisconnectTime = GetTime();
+  }
+  m_Disconnected = true;
+  m_Socket->Reset();
+}
+
 bool CGamePlayer::Update(void* fd)
 {
   const int64_t Time = GetTime();
@@ -283,13 +325,14 @@ bool CGamePlayer::Update(void* fd)
   // this works because in the lobby we send pings every 5 seconds and expect a response to each one
   // and in the game the Warcraft 3 client sends keepalives frequently (at least once per second it looks like)
 
-  if (m_Socket && Time - m_Socket->GetLastRecv() >= 30)
+  if (m_Socket && Time - m_Socket->GetLastRecv() >= 30) {
     m_Game->EventPlayerDisconnectTimedOut(this);
+    ResetConnection();
+  }
 
   // GProxy++ acks
 
-  if (m_GProxy && Time - m_LastGProxyAckTime >= 10)
-  {
+  if (m_GProxy && Time - m_LastGProxyAckTime >= 10) {
     m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_ACK(m_TotalPacketsReceived));
     m_LastGProxyAckTime = Time;
   }
@@ -412,10 +455,8 @@ bool CGamePlayer::Update(void* fd)
           break;
       }
     }
-    else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_Config->m_ProxyReconnectEnabled)
-    {
-      if (Bytes[1] == CGPSProtocol::GPS_ACK && Data.size() == 8)
-      {
+    else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_Config->m_ProxyReconnectEnabled) {
+      if (Bytes[1] == CGPSProtocol::GPS_ACK && Length == 8) {
         const uint32_t LastPacket             = ByteArrayToUInt32(Data, false, 4);
         const uint32_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
 
@@ -432,9 +473,7 @@ bool CGamePlayer::Update(void* fd)
             --PacketsToUnqueue;
           }
         }
-      }
-      else if (Bytes[1] == CGPSProtocol::GPS_INIT)
-      {
+      } else if (Bytes[1] == CGPSProtocol::GPS_INIT) {
         CRealm* MyRealm = GetRealm(false);
         if (MyRealm) {
           m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
@@ -446,8 +485,19 @@ bool CGamePlayer::Update(void* fd)
         } else {
           m_GProxyPort = 6112;
         }
+        m_GProxy = true;
+        if (Length >= 8) {
+          m_GProxyVersion = ByteArrayToUInt32(Bytes, false, 4);
+        }
         m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
+        if (m_GProxyVersion >= 2) {
+          m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Config->m_ReconnectWaitTime * 60));
+        }
         Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
+      } else if (Bytes[1] == CGPSProtocol::GPS_SUPPORT_EXTENDED && Length >= 8) {
+        uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
+				m_GProxyExtended = true;
+        Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] is using GProxy Extended");
       }
     }
     Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
@@ -464,15 +514,25 @@ bool CGamePlayer::Update(void* fd)
   if (m_Socket && !Abort) {
     if (m_Socket->HasError()) {
       m_Game->EventPlayerDisconnectSocketError(this);
-      m_Socket->Reset();
+      ResetConnection();
     } else if (!m_Socket->GetConnected()) {
       m_Game->EventPlayerDisconnectConnectionClosed(this);
-      m_Socket->Reset();
+      ResetConnection();
     }
   }
 
   if (GetKickQueued() && m_KickByTime < Time)
     m_Game->EventPlayerKickHandleQueued(this);
+
+  if (!m_StatusMessageSent && m_CheckStatusByTime < Time)
+    m_Game->EventPlayerCheckStatus(this);
+
+  if (m_Disconnected && m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Config->m_ReconnectWaitTime * 60) {
+    m_DeleteMe = true;
+    m_LeftReason = GetName( ) + " has been kicked because he didn't reconnect in time";
+    m_LeftCode = PLAYERLEAVE_DISCONNECT;
+    m_Game->SendAllChat(GetName() + " has been kicked because he didn't reconnect in time." );
+  }
 
   if (m_GProxy && m_Game->GetGameLoaded())
     return m_DeleteMe;
@@ -497,7 +557,8 @@ void CGamePlayer::Send(const std::vector<uint8_t>& data)
   if (m_GProxy && m_Game->GetGameLoaded())
     m_GProxyBuffer.push(data);
 
-  m_Socket->PutBytes(data);
+  if (!m_Disconnected)
+    m_Socket->PutBytes(data);
 }
 
 void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, uint32_t LastPacket)
@@ -535,5 +596,18 @@ void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, uint32_t Last
 
   m_GProxyBuffer               = TempBuffer;
   m_GProxyDisconnectNoticeSent = false;
+  m_Disconnected = false;
+  if (m_LastDisconnectTime > 0)
+    m_TotalDisconnectTime += GetTime() - m_LastDisconnectTime;
+
   m_Game->SendAllChat("Player [" + m_Name + "] reconnected with GProxy++!");
+}
+
+int64_t CGamePlayer::GetTotalDisconnectTime() const
+{
+  if (!m_Disconnected || !m_LastDisconnectTime) {
+    return m_TotalDisconnectTime;
+  } else {
+    return m_TotalDisconnectTime + GetTime() - m_LastDisconnectTime;
+  }
 }

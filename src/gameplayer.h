@@ -34,32 +34,38 @@ class CIncomingJoinRequest;
 class CRealm;
 class CAura;
 
+#define PREPLAYER_CONNECTION_OK 0
+#define PREPLAYER_CONNECTION_DESTROY 1
+#define PREPLAYER_CONNECTION_PROMOTED 2
+
 //
-// CPotentialPlayer
+// CGameConnection
 //
 
-class CPotentialPlayer
+class CGameConnection
 {
 public:
   CGameProtocol* m_Protocol;
   CAura*         m_Aura;
   uint16_t       m_Port;
+  bool           m_IsUDPTunnel;
 
 protected:
   // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
-  // it also allows us to convert CPotentialPlayers to CGamePlayers without the CPotentialPlayer's destructor closing the socket
+  // it also allows us to convert CGameConnections to CGamePlayers without the CGameConnection's destructor closing the socket
 
   CStreamIOSocket*          m_Socket;
   CIncomingJoinRequest* m_IncomingJoinPlayer;
   bool                 m_DeleteMe;
 
 public:
-  CPotentialPlayer(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
-  ~CPotentialPlayer();
+  CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
+  ~CGameConnection();
 
   inline CStreamIOSocket*          GetSocket() const { return m_Socket; }
   inline std::vector<uint8_t> GetIPv4() const { return m_Socket->GetIPv4(); }
   inline std::string          GetIPString() const { return m_Socket->GetIPString(); }
+  inline sockaddr_storage*    GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
   inline bool                 GetDeleteMe() const { return m_DeleteMe; }
   inline CIncomingJoinRequest* GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
@@ -100,6 +106,7 @@ private:
   uint32_t                         m_TotalPacketsSent;             // the total number of packets sent to the player
   uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
   uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
+  bool                             m_QuitGame;
   uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
   int64_t                          m_JoinTime;                     // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
   uint32_t                         m_LastMapPartSent;              // the last mappart sent to the player (for sending more than one part at a time)
@@ -130,15 +137,24 @@ private:
   std::optional<bool>              m_KickVote;                     // if the player voted to kick a player or not
   bool                             m_Muted;                        // if the player is muted or not
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
+  bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
+  uint64_t                         m_CheckStatusByTime;
+
   bool                             m_GProxy;                       // if the player is using GProxy++
   uint16_t                         m_GProxyPort;                   // port where GProxy will try to reconnect
   bool                             m_GProxyDisconnectNoticeSent;   // if a disconnection notice has been sent or not when using GProxy++
+
+  bool                             m_GProxyExtended;               // if the player is using GProxyDLL
+  uint32_t                         m_GProxyVersion;
+  bool                             m_Disconnected;
+  int64_t                          m_TotalDisconnectTime;
+  int64_t                          m_LastDisconnectTime;
 
 protected:
   bool m_DeleteMe;
 
 public:
-  CGamePlayer(CGame* game, CPotentialPlayer* potential, uint8_t nPID, uint8_t nJoinedRealmID, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
+  CGamePlayer(CGame* game, CGameConnection* connection, uint8_t nPID, uint8_t nJoinedRealmID, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
   ~CGamePlayer();
 
   uint32_t GetPing() const;
@@ -154,7 +170,8 @@ public:
   inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }
   inline std::string           GetLeftReason() const { return m_LeftReason; }
   inline uint32_t              GetLeftCode() const { return m_LeftCode; }
-  CRealm*                       GetRealm(bool mustVerify);
+  inline bool                  GetQuitGame() const { return m_QuitGame; }
+  CRealm*                      GetRealm(bool mustVerify);
   std::string                  GetRealmDataBaseID(bool mustVerify);
   inline uint8_t               GetRealmID() const { return m_JoinedRealmID; }
   inline std::string           GetRealmHostName() const { return m_JoinedRealm; }
@@ -166,11 +183,19 @@ public:
   inline int64_t               GetStartedDownloadingTicks() const { return m_StartedDownloadingTicks; }
   inline int64_t               GetFinishedDownloadingTime() const { return m_FinishedDownloadingTime; }
   inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
+
   inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
   inline int64_t               GetLastGProxyWaitNoticeSentTime() const { return m_LastGProxyWaitNoticeSentTime; }
   inline uint32_t              GetGProxyReconnectKey() const { return m_GProxyReconnectKey; }
-  inline bool                  GetGProxy() const { return m_GProxy; }
+  inline bool                  GetGProxyAny() const { return m_GProxy; }
+  inline bool                  GetGProxyLegacy() const { return m_GProxy && !m_GProxyExtended; }
+  inline bool                  GetGProxyExtended() const { return m_GProxyExtended; }
   inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
+  
+	bool                         GetDisconnected() const { return m_Disconnected; }
+	int64_t                      GetLastDisconnectTime() const { return m_LastDisconnectTime; }
+	int64_t                      GetTotalDisconnectTime() const;
+  
   inline bool                  GetReserved() const { return m_Reserved; }
   inline bool                  GetObserver() const { return m_Observer; }
   inline bool                  GetPowerObserver() const { return m_PowerObserver; }
@@ -188,11 +213,13 @@ public:
   inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
   inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
   inline bool                  GetMuted() const { return m_Muted; }
+  inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
   inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
+  inline void SetQuitGame(bool nQuitGame) { m_QuitGame = nQuitGame; }
   inline void SetSyncCounter(uint32_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
   inline void SetLastMapPartSent(uint32_t nLastMapPartSent) { m_LastMapPartSent = nLastMapPartSent; }
   inline void SetLastMapPartAcked(uint32_t nLastMapPartAcked) { m_LastMapPartAcked = nLastMapPartAcked; }
@@ -213,6 +240,7 @@ public:
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
   inline void SetKickVote(bool nKickVote) { m_KickVote = nKickVote; }
   inline void SetMuted(bool nMuted) { m_Muted = nMuted; }
+  inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
   inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
@@ -226,6 +254,7 @@ public:
 
   void Send(const std::vector<uint8_t>& data);
   void EventGProxyReconnect(CStreamIOSocket* NewSocket, uint32_t LastPacket);
+  void ResetConnection();
 };
 
 #endif // AURA_GAMEPLAYER_H_

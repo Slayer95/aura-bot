@@ -217,8 +217,6 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_Ready = false;
     return;
   }
-  m_Net->m_UDP4ServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
-  m_Net->m_UDP6ServerEnabled = CFG->GetBool("net.ipv6.udp.enabled", false);
   if (LoadCLI(argc, argv)) {
     m_Ready = false;
     return;
@@ -451,14 +449,14 @@ CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
     Print("[GAME] " + name + " Assigned to port " + to_string(inputPort));
     return it->second;
   }
-  CTCPServer* gameServer = new CTCPServer(m_Config->m_IPv6GameServersEnabled ? AF_INET6 : AF_INET);
-  if (!gameServer->Listen(m_Config->m_IPv6GameServersEnabled ? m_Config->m_BindAddress6 : m_Config->m_BindAddress4, inputPort, false)) {
+  CTCPServer* gameServer = new CTCPServer(m_Net->m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
+  if (!gameServer->Listen(m_Net->m_SupportTCPOverIPv6 ? m_Config->m_BindAddress6 : m_Config->m_BindAddress4, inputPort, false)) {
     Print("[GAME] " + name + " Error listening on port " + to_string(inputPort));
     return nullptr;
   }
   uint16_t assignedPort = gameServer->GetPort();
   m_Net->m_GameServers[assignedPort] = gameServer;
-  vector<CPotentialPlayer*> IncomingConnections;
+  vector<CGameConnection*> IncomingConnections;
   m_Net->m_IncomingConnections[assignedPort] = IncomingConnections;
 
   Print("[GAME] " + name + " Listening on port " + to_string(assignedPort));
@@ -860,26 +858,13 @@ void CAura::HandleUDP(UDPPkt* pkt)
 {
   // pkt->buf->length at least MIN_UDP_PACKET_SIZE
 
-  if (pkt->sender.ss_family != AF_INET && pkt->sender.ss_family != AF_INET6) {
+  if (pkt->sender->ss_family != AF_INET && pkt->sender->ss_family != AF_INET6) {
     Print("Got UDP traffic over unknown IP protocol.");
     return;
   }
 
-  uint16_t remotePort;
-  string ipAddress;
-
-  char ip_str[INET6_ADDRSTRLEN];
-  if (pkt->sender.ss_family == AF_INET) { // IPv4
-    const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(&(pkt->sender));
-    inet_ntop(AF_INET, &(addr4->sin_addr), ip_str, INET_ADDRSTRLEN);
-    ipAddress = string(ip_str);
-    remotePort = ntohs(addr4->sin_port);
-  } else { // IPv6
-    const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(&(pkt->sender));
-    inet_ntop(AF_INET6, &(addr6->sin6_addr), ip_str, INET6_ADDRSTRLEN);
-    ipAddress = string(ip_str);
-    remotePort = ntohs(addr6->sin6_port);
-  }
+  uint16_t remotePort = GetAddressPort(*(pkt->sender));
+  string ipAddress = AddressToString(*(pkt->sender));
 
   if (IsIgnoredDatagramSource(ipAddress)) {
     return;
@@ -892,7 +877,7 @@ void CAura::HandleUDP(UDPPkt* pkt)
     relayPacket.resize(portOffset + 6 + pkt->length);
     relayPacket[portOffset] = static_cast<uint8_t>(remotePort >> 8); // Network-byte-order (Big-endian)
     relayPacket[portOffset + 1] = static_cast<uint8_t>(remotePort);
-    memset(relayPacket.data() + portOffset + 2, 0, 4); // No version info at this level.
+    memset(relayPacket.data() + portOffset + 2, 0, 4); // Game version unknown at this layer.
     memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
     AssignLength(relayPacket);
     m_Net->Send(m_Config->m_UDPForwardAddress, m_Config->m_UDPForwardPort, relayPacket);
@@ -939,7 +924,7 @@ void CAura::HandleUDP(UDPPkt* pkt)
       } else {
         //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
         m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
-        if (remotePort != 6112) {
+        if (remotePort != m_Net->m_UDP4TargetPort && pkt->sender->ss_family == AF_INET) {
           m_CurrentLobby->AnnounceToAddress(ipAddress);
         }
       }
@@ -981,10 +966,10 @@ bool CAura::Update()
   // 3. all unassigned incoming TCP connections
 
   for (auto& pair : m_Net->m_IncomingConnections) {
-    // pair<uint16_t, vector<CPotentialPlayer*>>
-    for (auto& potential : pair.second) {
-      if (potential->GetSocket()) {
-        potential->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+    // pair<uint16_t, vector<CGameConnection*>>
+    for (auto& connection : pair.second) {
+      if (connection->GetSocket()) {
+        connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
         ++NumFDs;
       }
     }
@@ -1060,13 +1045,13 @@ bool CAura::Update()
     CStreamIOSocket* socket = pair.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
       if (m_Config->m_ProxyReconnectEnabled) {
-        CPotentialPlayer* incomingConnection = new CPotentialPlayer(m_GameProtocol, this, localPort, socket);
+        CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
         //Print("Incoming connection from " + incomingConnection->GetIPString());
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
         delete socket;
       } else {
-        CPotentialPlayer* incomingConnection = new CPotentialPlayer(m_GameProtocol, this, localPort, socket);
+        CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       }
     }
@@ -1081,21 +1066,22 @@ bool CAura::Update()
   uint16_t IncomingConnectionsCount = 0;
   for (auto& pair : m_Net->m_IncomingConnections) {
     for (auto i = begin(pair.second); i != end(pair.second);) {
-      // *i is a pointer to a CPotentialPlayer
+      // *i is a pointer to a CGameConnection
       uint8_t result = (*i)->Update(&fd, &send_fd);
-      if (result == 0) {
+      if (result == PREPLAYER_CONNECTION_OK) {
         ++i;
-      } else {
-        if (result == 1) {
-          // flush the socket (e.g. in case a rejection message is queued)
-          if ((*i)->GetSocket())
-            (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
-
-          delete *i;
-        }
-
-        i = pair.second.erase(i);
+        continue;
       }
+
+      if (result == PREPLAYER_CONNECTION_DESTROY) {
+        // flush the socket (e.g. in case a rejection message is queued)
+        if ((*i)->GetSocket())
+          (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
+
+        delete *i;
+      }
+
+      i = pair.second.erase(i);
     }
     ++IncomingConnectionsCount;
     if (IncomingConnectionsCount > IncomingConnectionsMax) {
@@ -1228,7 +1214,7 @@ bool CAura::ReloadConfigs()
   if (WasCFGPath != m_Config->m_MapCFGPath) {
     CacheMapPresets();
   }
-
+  m_Net->OnConfigReload();
   return success;
 }
 
@@ -1296,8 +1282,6 @@ bool CAura::LoadConfigs(CConfig* CFG)
     }
   }
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
-  m_Net->m_UDP6TargetPort = m_Config->m_UDP6TargetPort;
-
   return true;
 }
 
@@ -1357,7 +1341,7 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   string MapPath = m_Config->m_MapPath.string();
   string MapCFGPath = m_Config->m_MapCFGPath.string();
   string MapFileType = "map";
-  string UDP4Mode = m_Net->m_UDP4ServerEnabled ? "strict": "free";
+  string UDP4Mode = m_Net->m_UDPMainServerEnabled ? "strict": "free";
 
   cmdl("w3version", War3Version) >> War3Version;
   cmdl("w3path", War3Path) >> War3Path;
@@ -1433,9 +1417,9 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   m_Config->m_StrictPaths = stdpaths;
 
   if (UDP4Mode == "strict" || UDP4Mode == "lax") {
-    m_Net->m_UDP4ServerEnabled = true;
+    m_Net->m_UDPMainServerEnabled = true;
   } else if (UDP4Mode == "free") {
-    m_Net->m_UDP4ServerEnabled = false;
+    m_Net->m_UDPMainServerEnabled = false;
   } else {
     Print("Bad UDPMode: " + UDP4Mode);
   }

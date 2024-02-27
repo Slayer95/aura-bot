@@ -139,12 +139,14 @@ bool CTestConnection::Update(void* fd, void* send_fd)
 
 CNet::CNet(CAura* nAura)
   : m_Aura(nAura),
-    m_UDP4ServerEnabled(false),
-    m_UDP4Server(nullptr),
-    m_UDP4Socket(nullptr),
-    m_UDP6Server(nullptr),
+    m_SupportUDPOverIPv6(false),
+    m_UDPMainServerEnabled(false),
+    m_UDPMainServer(nullptr),
+    m_UDPDeafSocket(nullptr),
     m_UDP4TargetPort(6112), // Constant
-    m_UDP6TargetPort(5678), // <net.game_discovery.udp.ipv6.target_port>
+    m_UDP6TargetPort(5678), // Only unicast. <net.game_discovery.udp.ipv6.target_port>
+    m_UDP4BroadcastTarget(new sockaddr_storage()),
+    m_UDP6BroadcastTarget(new sockaddr_storage()),
 
     m_HealthCheckInProgress(false),
 
@@ -157,42 +159,41 @@ CNet::CNet(CAura* nAura)
 
 bool CNet::Init(CConfig* CFG)
 {
-  // m_UDP4ServerEnabled may be overriden by the cli.
+  // m_UDPMainServerEnabled may be overriden by the cli.
   bool useDoNotRoute = CFG->GetBool("net.game_discovery.udp.do_not_route", false);
-  if (m_UDP4ServerEnabled) {
-    m_UDP4Server = new CUDPServer(AF_INET);
-    m_UDP4Server->SetBroadcastTarget(m_Aura->m_Config->m_BroadcastTarget);
-    m_UDP4Server->SetDontRoute(useDoNotRoute);
-    if (!m_UDP4Server->Listen(m_Aura->m_Config->m_BindAddress4, 6112, false)) {
+
+  // Main server is the only one that can send W3GS_REFRESHGAME packets. 
+  // If disabled, UDP communication is one-way, and can only be through W3GS_GAMEINFO.
+  m_UDPMainServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
+  m_SupportTCPOverIPv6 = CFG->GetBool("net.ipv6.tcp.enabled", true);
+  m_SupportUDPOverIPv6 = CFG->GetBool("net.ipv6.udp.enabled", true);
+
+  if (m_UDPMainServerEnabled) {
+    m_UDPMainServer = new CUDPServer(m_SupportUDPOverIPv6 ? AF_INET6 : AF_INET);
+    m_UDPMainServer->SetDontRoute(useDoNotRoute);
+    if (!m_UDPMainServer->Listen(m_SupportUDPOverIPv6 ? m_Aura->m_Config->m_BindAddress6 : m_Aura->m_Config->m_BindAddress4, 6112, false)) {
       Print("[UDPSERVER] waiting for active instances of Warcraft to close... Please release port 6112.");
       this_thread::sleep_for(chrono::milliseconds(5000));
-      if (!m_UDP4Server->Listen(m_Aura->m_Config->m_BindAddress4, 6112, true)) {
+      if (!m_UDPMainServer->Listen(m_Aura->m_Config->m_BindAddress4, 6112, true)) {
         return false;
       }
     }
   }
-  if (m_UDP6ServerEnabled) {
-    uint16_t port = CFG->GetUint16("net.ipv6.udp.port", 6111);
-    m_UDP6Server = new CUDPServer(AF_INET6);
-    m_UDP6Server->SetDontRoute(useDoNotRoute);
-    if (!m_UDP6Server->Listen(m_Aura->m_Config->m_BindAddress6, port, false)) {
-      Print("[UDPServer] Failed to start IPv6 server at port " + to_string(port) + ". Fix the network configuration or set <net.ipv6.udp.enabled = no>");
-      return false;
-    }
-  }
 
-  if (!m_UDP4ServerEnabled) {
+  if (!m_UDPMainServerEnabled) {
     uint16_t port = CFG->GetUint16("net.udp_fallback.outbound_port", 6113);
-    m_UDP4Socket = new CUDPServer(AF_INET);
-    m_UDP4Socket->SetBroadcastTarget(m_Aura->m_Config->m_BroadcastTarget);
-    m_UDP4Socket->SetDontRoute(useDoNotRoute);
-    if (!m_UDP4Socket->Listen(m_Aura->m_Config->m_BindAddress4, port, true) && !m_UDP4ServerEnabled) {
+    m_UDPDeafSocket = new CUDPServer(m_SupportUDPOverIPv6 ? AF_INET6 : AF_INET);
+    m_UDPDeafSocket->SetDontRoute(useDoNotRoute);
+    if (!m_UDPDeafSocket->Listen(m_SupportUDPOverIPv6 ? m_Aura->m_Config->m_BindAddress6 : m_Aura->m_Config->m_BindAddress4, port, true)) {
       Print("[UDPFALLBACK] failed to bind to port " + to_string(port) + ".");
       Print("[UDPFALLBACK] for a random available port, set <net.udp_fallback.outbound_port = 0>");
       return false;
     }
   }
 
+  m_UDP6TargetPort = m_Aura->m_Config->m_UDP6TargetPort;
+  if (m_Aura->m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
+  SetBroadcastTarget(m_Aura->m_Config->m_BroadcastTarget);
   return true;
 }
 
@@ -203,16 +204,11 @@ uint32_t CNet::SetFD(void* fd, void* send_fd, int32_t* nfds)
   for (auto& connection : m_HealthCheckClients)
     NumFDs += connection->SetFD(fd, send_fd, nfds);
 
-  if (m_UDP4ServerEnabled) {
-    m_UDP4Server->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+  if (m_UDPMainServerEnabled) {
+    m_UDPMainServer->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
     ++NumFDs;
-  } else if (m_UDP4Socket) {
-    m_UDP4Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
-    ++NumFDs;
-  }
-
-  if (m_UDP6ServerEnabled) {
-    m_UDP6Server->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+  } else if (m_UDPDeafSocket) {
+    m_UDPDeafSocket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
     ++NumFDs;
   }
 
@@ -233,45 +229,61 @@ bool CNet::Update(void* fd, void* send_fd)
     }
   }
 
-  if (m_UDP4ServerEnabled) {
-    UDPPkt* pkt = m_UDP4Server->Accept(static_cast<fd_set*>(fd));
+  if (m_UDPMainServerEnabled) {
+    UDPPkt* pkt = m_UDPMainServer->Accept(static_cast<fd_set*>(fd));
     if (pkt != nullptr) {
       m_Aura->HandleUDP(pkt);
-      pkt->socket = nullptr;
+      delete pkt->sender;
       delete pkt;
     }
-  } else if (m_UDP4Socket) {
-    m_UDP4Socket->Discard(static_cast<fd_set*>(fd));
-  }
-
-  if (m_UDP6ServerEnabled) {
-    UDPPkt* pkt = m_UDP6Server->Accept(static_cast<fd_set*>(fd));
-    if (pkt != nullptr) {
-      m_Aura->HandleUDP(pkt);
-      pkt->socket = nullptr;
-      delete pkt;
-    }
+  } else if (m_UDPDeafSocket) {
+    m_UDPDeafSocket->Discard(static_cast<fd_set*>(fd));
   }
 
   return false;
 }
 
-void CNet::SendBroadcast(const vector<uint8_t>& packet)
+void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
 {
-  if (!m_UDP4ServerEnabled || !m_UDP4Server->Broadcast(m_UDP4TargetPort, packet)) {
-    m_UDP4Socket->Broadcast(m_UDP4TargetPort, packet);
+  if (subnet.ss_family != AF_INET) {
+    Print("Must use IPv4 address for broadcast target");
+    return;
   }
+  memcpy(m_UDP4BroadcastTarget, &subnet, sizeof(subnet));
+
+  if (reinterpret_cast<sockaddr_in*>(&subnet)->sin_addr.s_addr != htonl(INADDR_BROADCAST))
+    Print("[UDPSOCKET] using broadcast target [" + AddressToString(subnet) + "]");
+
+  sockaddr_storage addr6 = IPv4ToIPv6(&subnet);
+  memcpy(m_UDP6BroadcastTarget, &addr6, sizeof(addr6));
 }
 
-void CNet::Send(sockaddr_storage& address, const vector<uint8_t>& packet)
+bool CNet::SendBroadcast(const vector<uint8_t>& packet)
 {
-  if (address.ss_family == AF_INET6) {
-    if (m_UDP6ServerEnabled)
-      m_UDP6Server->SendTo(address, packet);
-  } else if (m_UDP4ServerEnabled) {
-    m_UDP4Server->SendTo(address, packet);
+  if (!m_Aura->m_Config->m_UDPBroadcastEnabled)
+    return false;
+
+  if (m_UDPMainServerEnabled) {
+    if (m_UDPMainServer->Broadcast(m_UDP4BroadcastTarget, m_UDP6BroadcastTarget, packet)) {
+      return true;
+    }
   } else {
-    m_UDP4Socket->SendTo(address, packet);
+    if (m_UDPDeafSocket->Broadcast(m_UDP4BroadcastTarget, m_UDP6BroadcastTarget, packet))
+      return true;
+  }
+
+  return false;
+}
+
+void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet)
+{
+  if (address->ss_family == AF_INET6 && !m_SupportUDPOverIPv6)
+    return;
+
+  if (m_UDPMainServerEnabled) {
+    m_UDPMainServer->SendTo(address, packet);
+  } else {
+    m_UDPDeafSocket->SendTo(address, packet);
   }
 }
 
@@ -281,8 +293,8 @@ void CNet::Send(const string& addressLiteral, const vector<uint8_t>& packet)
   if (!maybeAddress.has_value())
     return;
 
-  sockaddr_storage& address = maybeAddress.value();
-  SetAddressPort(address, address.ss_family == AF_INET6 ? m_UDP6TargetPort : m_UDP4TargetPort);
+  sockaddr_storage* address = &(maybeAddress.value());
+  SetAddressPort(address, address->ss_family == AF_INET6 ? m_UDP6TargetPort : m_UDP4TargetPort);
   Send(address, packet);
 }
 
@@ -292,20 +304,45 @@ void CNet::Send(const string& addressLiteral, const uint16_t port, const vector<
   if (!maybeAddress.has_value())
     return;
 
-  sockaddr_storage& address = maybeAddress.value();
+  sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, port);
   Send(address, packet);
 }
 
+void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t port, const vector<uint8_t>& packet)
+{
+  optional<sockaddr_storage> maybeAddress = ParseAddress(addressLiteral);
+  if (!maybeAddress.has_value())
+    return;
+
+  sockaddr_storage* address = &(maybeAddress.value());
+  SetAddressPort(address, port);
+
+  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+    PropagateBroadcastEnabled(false);
+
+  Send(address, packet);
+
+  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+    PropagateBroadcastEnabled(true);
+}
+
 void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& clientIps)
 {
-  if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
-    m_Aura->m_Net->SendBroadcast(packet);
-  }
+  if (!SendBroadcast(packet))
+    Print("[AURA] UDP Broadcast failed @ CNet::SendGameDiscovery.");
 
-  for (auto& clientIp : clientIps) {
+  if (clientIps.empty())
+    return;
+
+  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+    PropagateBroadcastEnabled(false);
+
+  for (auto& clientIp : clientIps)
     Send(clientIp, packet);
-  }
+
+  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+    PropagateBroadcastEnabled(true);
 }
 
 vector<uint8_t> CNet::GetPublicIP()
@@ -508,8 +545,26 @@ void CNet::FlushDNS()
   m_DNSCache.clear();
 }
 
+void CNet::PropagateBroadcastEnabled(const bool nEnable)
+{
+  if (m_UDPMainServerEnabled) {
+    m_UDPMainServer->SetBroadcastEnabled(nEnable);
+  } else {
+    m_UDPDeafSocket->SetBroadcastEnabled(nEnable);
+  }
+}
+
+void CNet::OnConfigReload()
+{
+  m_UDP6TargetPort = m_Aura->m_Config->m_UDP6TargetPort;
+  PropagateBroadcastEnabled(m_Aura->m_Config->m_UDPBroadcastEnabled);
+  SetBroadcastTarget(m_Aura->m_Config->m_BroadcastTarget);
+}
+
 CNet::~CNet()
 {
-  delete m_UDP4Server;
-  delete m_UDP4Socket;
+  delete m_UDPMainServer;
+  delete m_UDPDeafSocket;
+  delete m_UDP4BroadcastTarget;
+  delete m_UDP6BroadcastTarget;
 }

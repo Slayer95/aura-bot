@@ -226,7 +226,7 @@ bool CRealm::Update(void* fd, void* send_fd)
                 "[BNET: " + m_Config->m_UniqueName + "] attempting to auth as WC3: TFT v" +
                 to_string(m_Config->m_AuthExeVersion[3]) + "." + to_string(m_Config->m_AuthExeVersion[2]) + std::string(1, char(97 + m_Config->m_AuthExeVersion[1])) +
                 " (Build " + to_string(m_Config->m_AuthExeVersion[0]) + ") - " +
-                "version hash " + ByteArrayToDecString(m_Config->m_AuthExeVersionHash)
+                "version hash <" + ByteArrayToDecString(m_Config->m_AuthExeVersionHash) + ">"
               );
 
               QueuePacket(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), m_BNCSUtil->GetEXEVersion(), m_BNCSUtil->GetEXEVersionHash(), m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), m_BNCSUtil->GetEXEInfo(), "Aura"), PACKET_TYPE_PRIORITY);
@@ -440,9 +440,8 @@ bool CRealm::Update(void* fd, void* send_fd)
     if (!m_FirstConnect) {
       Print("[BNET: " + m_Config->m_UniqueName + "] reconnecting to [" + m_HostName + ":6112]...");
     } else {
-      if (!m_Config->m_BindAddress.has_value()) {
-        // TODO(IceSandslash) ??
-        //Print("[BNET: " + m_Config->m_UniqueName + "] connecting with local address [" + m_Config->m_BindAddress + "]...");
+      if (m_Config->m_BindAddress.has_value()) {
+        Print("[BNET: " + m_Config->m_UniqueName + "] connecting with local address [" + AddressToString(m_Config->m_BindAddress.value()) + "]...");
       }
     }
     m_FirstConnect = false;
@@ -455,8 +454,7 @@ bool CRealm::Update(void* fd, void* send_fd)
       Print(GetLogPrefix() + "Provide IPv4 addresses for realms.");
       m_Socket->m_HasError = true;
     } else {
-      optional<sockaddr_storage> emptyBindAddress;
-      m_Socket->Connect(emptyBindAddress, resolvedAddress.value(), 6112);
+      m_Socket->Connect(m_Config->m_BindAddress, resolvedAddress.value(), 6112);
     }
 
     m_WaitingToConnect          = false;

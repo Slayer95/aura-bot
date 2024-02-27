@@ -33,10 +33,13 @@ class CGPSProtocol
 public:
   enum Protocol
   {
-    GPS_INIT      = 1,
-    GPS_RECONNECT = 2,
-    GPS_ACK       = 3,
-    GPS_REJECT    = 4
+    GPS_INIT              = 1,
+    GPS_RECONNECT         = 2,
+    GPS_ACK               = 3,
+    GPS_REJECT            = 4,
+    GPS_UDPSCAN           = 10,
+    GPS_UDPBRIDGE         = 11,
+    GPS_SUPPORT_EXTENDED	= 50,
   };
 
   CGPSProtocol();
@@ -46,14 +49,15 @@ public:
 
   // send functions
 
-  std::vector<uint8_t> SEND_GPSC_INIT(uint32_t version);
-  std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t PID, uint32_t reconnectKey, uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSC_ACK(uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSS_INIT(uint16_t reconnectPort, uint8_t PID, uint32_t reconnectKey, uint8_t numEmptyActions);
-  std::vector<uint8_t> SEND_GPSS_RECONNECT(uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSS_ACK(uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSS_REJECT(uint32_t reason);
-  std::vector<uint8_t> SEND_GPSS_DIMENSIONS();
+  std::vector<uint8_t> SEND_GPSC_INIT(const uint32_t version) const;
+  std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t PID, const uint32_t reconnectKey, const uint32_t lastPacket) const;
+  std::vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket) const;
+  std::vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t PID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const;
+  std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket) const;
+  std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket) const;
+  std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason) const;
+  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const uint32_t seconds) const;
+  std::vector<uint8_t> SEND_GPSS_DIMENSIONS() const;
 };
 
 #endif // AURA_GPSPROTOCOL_H_
