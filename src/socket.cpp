@@ -846,7 +846,7 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
     return nullptr;
   }
 
-  struct UDPPkt* pkt = (struct UDPPkt*)malloc(sizeof(struct UDPPkt));
+  UDPPkt* pkt = new UDPPkt();
   if (pkt == nullptr)
     return nullptr;
 
