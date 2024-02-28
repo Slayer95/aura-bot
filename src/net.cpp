@@ -143,6 +143,7 @@ CNet::CNet(CAura* nAura)
     m_UDPMainServerEnabled(false),
     m_UDPMainServer(nullptr),
     m_UDPDeafSocket(nullptr),
+    m_UDPIPv6Server(nullptr),
     m_UDP4TargetPort(6112), // Constant
     m_UDP6TargetPort(5678), // Only unicast. <net.game_discovery.udp.ipv6.target_port>
     m_UDP4BroadcastTarget(new sockaddr_storage()),
@@ -169,12 +170,22 @@ bool CNet::Init(CConfig* CFG)
   m_SupportUDPOverIPv6 = CFG->GetBool("net.ipv6.udp.enabled", true);
 
   if (m_UDPMainServerEnabled) {
-    m_UDPMainServer = new CUDPServer(m_SupportUDPOverIPv6 ? AF_INET6 : AF_INET);
+    m_UDPMainServer = new CUDPServer(AF_INET);
     m_UDPMainServer->SetDontRoute(useDoNotRoute);
-    if (!m_UDPMainServer->Listen(m_SupportUDPOverIPv6 ? m_Aura->m_Config->m_BindAddress6 : m_Aura->m_Config->m_BindAddress4, 6112, false)) {
-      Print("[UDPSERVER] waiting for active instances of Warcraft to close... Please release port 6112.");
+    if (!m_UDPMainServer->Listen(m_Aura->m_Config->m_BindAddress4, 6112, false)) {
+      Print("====================================================================");
+      Print("[DISCOVERY] <net.udp_server.enabled = yes> requires active instances of Warcraft to be closed...");
+      Print("[DISCOVERY] Please release port 6112, or set <net.udp_server.enabled = no>");
+      Print("====================================================================");
+      Print("[DISCOVERY] Waiting...");
       this_thread::sleep_for(chrono::milliseconds(5000));
       if (!m_UDPMainServer->Listen(m_Aura->m_Config->m_BindAddress4, 6112, true)) {
+        if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
+          Print("[DISCOVERY] Failed to start UDP/IPv4 service on port 6112. Cannot start broadcast service.");
+        } else {
+          Print("[DISCOVERY] Failed to start UDP/IPv4 service on port 6112");
+        }
+        Print("====================================================================");
         return false;
       }
     }
@@ -182,11 +193,32 @@ bool CNet::Init(CConfig* CFG)
 
   if (!m_UDPMainServerEnabled) {
     uint16_t port = CFG->GetUint16("net.udp_fallback.outbound_port", 6113);
-    m_UDPDeafSocket = new CUDPServer(m_SupportUDPOverIPv6 ? AF_INET6 : AF_INET);
+    m_UDPDeafSocket = new CUDPServer(AF_INET);
     m_UDPDeafSocket->SetDontRoute(useDoNotRoute);
-    if (!m_UDPDeafSocket->Listen(m_SupportUDPOverIPv6 ? m_Aura->m_Config->m_BindAddress6 : m_Aura->m_Config->m_BindAddress4, port, true)) {
-      Print("[UDPFALLBACK] failed to bind to port " + to_string(port) + ".");
-      Print("[UDPFALLBACK] for a random available port, set <net.udp_fallback.outbound_port = 0>");
+    if (!m_UDPDeafSocket->Listen(m_Aura->m_Config->m_BindAddress4, port, true)) {
+      Print("====================================================================");
+      Print("[DISCOVERY] Failed to bind to fallback port " + to_string(port) + ".");
+      Print("[DISCOVERY] For a random available port, set <net.udp_fallback.outbound_port = 0>");
+      if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
+        Print("[DISCOVERY] Failed to start UDP/IPv4 service. Cannot start broadcast service.");
+      } else {
+        Print("[DISCOVERY] Failed to start UDP/IPv4 service");
+      }
+      Print("====================================================================");
+      return false;
+    }
+  }
+
+  if (m_SupportUDPOverIPv6) {
+    uint16_t port = CFG->GetUint16("net.ipv6.udp.port", 6110);
+    m_UDPIPv6Server = new CUDPServer(AF_INET6);
+    m_UDPIPv6Server->SetDontRoute(useDoNotRoute);
+    if (!m_UDPIPv6Server->Listen(m_Aura->m_Config->m_BindAddress6, port, true)) {
+      Print("====================================================================");
+      Print("[DISCOVERY] Failed to bind to port " + to_string(port) + ".");
+      Print("[DISCOVERY] For a random available port, set <net.ipv6.udp.port = 0>");
+      Print("[DISCOVERY] Failed to start UDP/IPv6 service");
+      Print("====================================================================");
       return false;
     }
   }
@@ -249,6 +281,7 @@ void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
     Print("Must use IPv4 address for broadcast target");
     return;
   }
+  SetAddressPort(&subnet, m_UDP4TargetPort);
   memcpy(m_UDP4BroadcastTarget, &subnet, sizeof(subnet));
 
   if (reinterpret_cast<sockaddr_in*>(&subnet)->sin_addr.s_addr != htonl(INADDR_BROADCAST))
@@ -277,8 +310,11 @@ bool CNet::SendBroadcast(const vector<uint8_t>& packet)
 
 void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet)
 {
-  if (address->ss_family == AF_INET6 && !m_SupportUDPOverIPv6)
+  if (address->ss_family == AF_INET6 && !m_SupportUDPOverIPv6) {
+    Print("[CONFIG] Game discovery message to " + AddressToStringStrict(*address) + " cannot be sent, because IPv6 support hasn't been enabled");
+    Print("[CONFIG] Set <net.ipv6.udp.enabled = yes> if you want to enable it.");
     return;
+  }
 
   if (m_UDPMainServerEnabled) {
     m_UDPMainServer->SendTo(address, packet);
@@ -332,17 +368,25 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
   if (!SendBroadcast(packet))
     Print("[AURA] UDP Broadcast failed @ CNet::SendGameDiscovery.");
 
-  if (clientIps.empty())
-    return;
+  if (!clientIps.empty()) {
+    if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+      PropagateBroadcastEnabled(false);
 
-  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
-    PropagateBroadcastEnabled(false);
+    for (auto& clientIp : clientIps)
+      Send(clientIp, packet);
 
-  for (auto& clientIp : clientIps)
-    Send(clientIp, packet);
+    if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+      PropagateBroadcastEnabled(true);
+  }
 
-  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
-    PropagateBroadcastEnabled(true);
+  if (m_Aura->m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_IncomingConnections) {
+    for (auto& connection : pair.second) {
+      if (connection->GetDeleteMe()) continue;
+      if (connection->m_IsUDPTunnel) {
+        connection->Send(packet);
+      }
+    }
+  }
 }
 
 vector<uint8_t> CNet::GetPublicIP()
@@ -455,7 +499,19 @@ void CNet::ResetHealthCheck()
   m_HealthCheckInProgress = false;
 }
 
-vector<uint16_t> CNet::GetPotentialGamePorts()
+uint16_t CNet::GetUDPPort(const uint8_t protocol) const
+{
+  if (protocol == AF_INET) {
+    return m_UDPMainServerEnabled ? m_UDPMainServer->GetPort() : m_UDPDeafSocket->GetPort();
+  } else if (protocol == AF_INET6) {
+    if (m_SupportUDPOverIPv6) {
+      return m_UDPIPv6Server->GetPort();
+    }
+  }
+  return 0;
+}
+
+vector<uint16_t> CNet::GetPotentialGamePorts() const
 {
   vector<uint16_t> result;
 

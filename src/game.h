@@ -171,6 +171,7 @@ public:
   inline CMap*          GetMap() const { return m_Map; }
   inline uint32_t       GetEntryKey() const { return m_EntryKey; }
   inline uint16_t       GetHostPort() const { return m_HostPort; }
+  uint16_t              GetDiscoveryPort(const uint8_t protocol) const;
   inline bool           GetUDPEnabled() const { return m_UDPEnabled; }
   inline bool           GetPublicHostOverride() const { return m_PublicHostOverride; }
   inline std::vector<uint8_t>    GetPublicHostAddress() const { return m_PublicHostAddress; }
@@ -183,7 +184,7 @@ public:
   inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
   inline std::string    GetOwnerName() const { return m_OwnerName; }
   inline std::string    GetCreatorName() const { return m_CreatorName; }
-  inline CRealm*         GetCreatorServer() const { return m_CreatorServer; }
+  inline CRealm*        GetCreatorServer() const { return m_CreatorServer; }
   inline uint32_t       GetHostCounter() const { return m_HostCounter; }
   inline int64_t        GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool           GetLocked() const { return m_Locked; }
@@ -209,7 +210,7 @@ public:
   std::string    GetAutoStartText() const;
   CTCPServer*    GetSocket() const { return m_Socket; };
 
-  uint16_t       GetHostPortForUDP(const uint8_t protocol) const;
+  uint16_t       GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
 
   inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void SetRefreshError(bool nRefreshError) { m_RefreshError = nRefreshError; }

@@ -224,6 +224,30 @@ inline sockaddr_storage IPv4ToIPv6(const sockaddr_storage* inputAddress) {
   return outputAddress;
 }
 
+inline sockaddr_storage IPv4ToIPv6Compat(const sockaddr_storage* inputAddress) {
+  sockaddr_storage outputAddress;
+  std::memset(&outputAddress, 0, sizeof(outputAddress));
+
+  sockaddr_in6* addr6 = reinterpret_cast<struct sockaddr_in6*>(&outputAddress);
+  addr6->sin6_family = AF_INET6;
+
+  const sockaddr_in* addr4 = reinterpret_cast<const struct sockaddr_in*>(inputAddress);
+  std::memcpy(&(addr6->sin6_addr.s6_addr[12]), &(addr4->sin_addr), sizeof(in_addr));
+  addr6->sin6_port = addr4->sin_port;
+
+  return outputAddress;
+}
+
+inline bool GetInnerIPVersion(const sockaddr_storage* inputAddress) {
+  if (inputAddress->ss_family == AF_INET) return AF_INET;
+  if (inputAddress->ss_family == AF_INET6) {
+    const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(inputAddress);
+    if (isIPv4MappedAddress(addr6)) return AF_INET;
+    return AF_INET6;
+  }
+  return inputAddress->ss_family;
+}
+
 inline std::string AddressToString(const sockaddr_storage& address)
 {
   char ipString[INET6_ADDRSTRLEN];
@@ -340,6 +364,8 @@ public:
 
   inline int64_t                    GetLastRecv() const { return m_LastRecv; }
   std::string                       GetName() const;
+
+  inline bool                       GetIsInnerIPv4() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET; }
 
   inline std::vector<uint8_t>       GetIPv4() const {
     if (m_RemoteHost.ss_family == AF_INET) {

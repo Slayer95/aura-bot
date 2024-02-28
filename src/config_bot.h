@@ -96,6 +96,7 @@ public:
 
   bool                                    m_AnnounceGProxy;
   std::string                             m_AnnounceGProxySite;
+  bool                                    m_AnnounceIPv6;
 
   uint32_t                                m_MinHostCounter;             // defines a subspace for game identifiers
   uint32_t                                m_MaxGames;                   // maximum number of games in progress

@@ -662,7 +662,7 @@ bool CUDPSocket::SendTo(const string& addressLiteral, uint16_t port, const vecto
   if (!address.has_value()) {
     m_HasError = true;
     // m_Error = h_error;
-    Print("[UDPSERVER] error (gethostbyname)");
+    Print("[DISCOVERY] error (gethostbyname)");
     return false;
   }
   
@@ -677,30 +677,26 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const sockaddr_storage
     Print("Broadcast critical error");
     return false;
   }
-
-  if (addr4->ss_family != AF_INET) {
-    Print("[DEBUG] Wrong first address type to CUDPSocket::Broadcast()");
-    return false;
-  }
-  if (addr6->ss_family != AF_INET6) {
-    Print("[DEBUG] Wrong second address type to CUDPSocket::Broadcast()");
-    return false;
-  }
   if (!isIPv4MappedAddress(addr6)) {
-    Print("[DEBUG] Second address type is not IPv4-mapped: " + AddressToStringStrict(*addr6));
+    Print("[DEBUG] Broadcast is only allowed to IPv4 addresses");
     return false;
+  }
+  const in6_addr* _addr6 = &(reinterpret_cast<const sockaddr_in6*>(addr6)->sin6_addr);
+  if (!IN6_IS_ADDR_V4MAPPED(_addr6)) {
+    Print("[DEBUG] Wrong IN6_IS_ADDR_V4MAPPED macro usage.");
   }
 
   const string MessageString = string(begin(message), end(message));
   int result;
   if (m_Family == AF_INET6) {
+    // TODO: This doesn't work in my system, and I can't tell whether it works in any system at all.
     result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(addr6), sizeof(sockaddr_in6));
   } else {
     result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
   }
   if (result == -1) {
     int error = WSAGetLastError();
-    Print("[UDPSERVER] failed to broadcast packet to " + AddressToString(*addr4) + ", size " + to_string(MessageString.size()) + " bytes) with error: " + to_string(error));
+    Print("[DISCOVERY] failed to broadcast packet to " + AddressToString(*addr4) + ", size " + to_string(MessageString.size()) + " bytes) with error: " + to_string(error));
     return false;
   }
 
@@ -711,11 +707,6 @@ void CUDPSocket::SetBroadcastEnabled(const bool nEnable)
 {
   // Broadcast is only defined over IPv4, but a subset of IPv6 maps to IPv6.
 
-  if (nEnable) {
-    Print("[UDPSERVER] Broadcast enabled");
-  } else {
-    Print("[UDPSERVER] Broadcast disabled");
-  }
   int32_t OptVal = nEnable;
 #ifdef WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
@@ -791,7 +782,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
-    Print("[UDPSERVER] error (bind) - " + GetErrorString());
+    Print("[DISCOVERY] error (bind) - " + GetErrorString());
     return false;
   }
 
@@ -799,7 +790,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
     if (getsockname(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength) == -1) {
       m_HasError = true;
       m_Error = GetLastError();
-      Print("[UDPSERVER] error (getsockname) - " + GetErrorString());
+      Print("[DISCOVERY] error (getsockname) - " + GetErrorString());
       return false;
     }
     m_Port = GetAddressPort(address);
@@ -808,9 +799,9 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   }
 
   if (m_Family == AF_INET6) {
-    Print("[UDPSERVER] IPv6 using port " + to_string(m_Port) + " (IPv4 too)");
+    Print("[DISCOVERY] Listening IPv4/IPv6 UDP traffic on port " + to_string(m_Port));
   } else {
-    Print("[UDPSERVER] IPv4 using port " + to_string(m_Port));
+    Print("[DISCOVERY] Listening IPv4-only UDP traffic on port " + to_string(m_Port));
   }
   return true;
 }

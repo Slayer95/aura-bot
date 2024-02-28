@@ -114,8 +114,9 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_ReconnectWaitTime            = CFG->GetUint8("net.player_reconnect.wait", 5);
   m_ReconnectWaitTimeLegacy      = CFG->GetUint8("net.player_reconnect.legacy_wait", 3);
 
-  m_AnnounceGProxy               = CFG->GetBool("net.tcp_extensions.gproxy.announce", true);
+  m_AnnounceGProxy               = CFG->GetBool("net.tcp_extensions.gproxy.announce_chat", true);
   m_AnnounceGProxySite           = CFG->GetString("net.tcp_extensions.gproxy.site", "https://www.mymgn.com/gproxy/");
+  m_AnnounceIPv6                 = CFG->GetBool("net.ipv6.tcp.announce_chat", true);
 
   m_MinHostCounter               = CFG->GetInt("hosting.namepace.first_game_id", 100);
   m_MaxGames                     = CFG->GetInt("hosting.max_games", 20);

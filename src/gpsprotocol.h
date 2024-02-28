@@ -38,8 +38,10 @@ public:
     GPS_ACK               = 3,
     GPS_REJECT            = 4,
     GPS_UDPSCAN           = 10,
-    GPS_UDPBRIDGE         = 11,
-    GPS_SUPPORT_EXTENDED	= 50,
+    GPS_UDPSYN            = 11,
+    GPS_UDPACK            = 12,
+    GPS_UDPFIN            = 13,
+    GPS_SUPPORT_EXTENDED	= 50
   };
 
   CGPSProtocol();

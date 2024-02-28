@@ -922,9 +922,9 @@ void CAura::HandleUDP(UDPPkt* pkt)
       if (FromGameRanger) {
         m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_Net->m_GameRangerRemoteAddress, m_Net->m_GameRangerRemotePort, ExtraDigit);
       } else {
-        //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+        Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
         m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
-        if (remotePort != m_Net->m_UDP4TargetPort && pkt->sender->ss_family == AF_INET) {
+        if (remotePort != m_Net->m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
           m_CurrentLobby->AnnounceToAddress(ipAddress);
         }
       }

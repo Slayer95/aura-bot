@@ -63,6 +63,7 @@ public:
   ~CGameConnection();
 
   inline CStreamIOSocket*          GetSocket() const { return m_Socket; }
+  inline bool                 GetUsingIPv6() const { return !m_Socket->GetIsInnerIPv4(); }
   inline std::vector<uint8_t> GetIPv4() const { return m_Socket->GetIPv4(); }
   inline std::string          GetIPString() const { return m_Socket->GetIPString(); }
   inline sockaddr_storage*    GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
@@ -159,6 +160,7 @@ public:
 
   uint32_t GetPing() const;
   inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
+  inline bool                  GetUsingIPv6() const { return !m_Socket->GetIsInnerIPv4(); }
   inline std::vector<uint8_t>  GetIPv4() const { return m_Socket->GetIPv4(); }
   inline std::string           GetIPString() const { return m_Socket->GetIPString(); }
   inline bool                  GetDeleteMe() const { return m_DeleteMe; }

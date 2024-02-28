@@ -65,7 +65,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
   const int64_t Time = GetTime();
   if (Time - m_Socket->GetLastRecv() >= 5) {
-    //Print("Delete CGameConnection after 5 secs inactivity");
+    Print("Delete CGameConnection after 5 secs inactivity");
     return 1;
   }
 
@@ -144,21 +144,30 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
           Match->EventGProxyReconnect(m_Socket, LastPacket);
           IsPromotedToPlayer = true;
         }
-      } else if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
-        if (m_Aura->m_Config->m_EnableTCPScanUDP) {
-          vector<uint8_t> packet;
-          m_Socket->PutBytes(packet);
-        } else {
-          m_DeleteMe = true;
-        }
-
-      } else if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPBRIDGE) {
-        if (m_Aura->m_Config->m_EnableTCPWrapUDP) {
-          m_IsUDPTunnel = true;
-        } else {
-          m_DeleteMe = true;
+      } else {
+        bool anyExtensions = m_Aura->m_Config->m_EnableTCPScanUDP || m_Aura->m_Config->m_EnableTCPWrapUDP;
+        if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
+          if (m_Aura->m_Config->m_EnableTCPScanUDP) {
+            if (m_Aura->m_CurrentLobby->GetIsLobby()) {
+              vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPSCAN, 6, 0};
+              uint16_t port = m_Aura->m_CurrentLobby->GetDiscoveryPort(GetInnerIPVersion(&(m_Socket->m_RemoteHost)));
+              AppendByteArray(packet, port, false);
+              m_Socket->PutBytes(packet);
+            }
+          } else if (!anyExtensions) {
+            m_DeleteMe = true;
+          }
+        } else if (Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
+          if (m_Aura->m_Config->m_EnableTCPWrapUDP) {
+            vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
+            m_Socket->PutBytes(packet);
+            m_IsUDPTunnel = true;
+          } else if (!anyExtensions) {
+            m_DeleteMe = true;
+          }
         }
       }
+      
       LengthProcessed += Length;
       Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }

@@ -1378,7 +1378,7 @@ void CGame::SendAllActions()
   m_LastActionSentTicks = Ticks;
 }
 
-uint16_t CGame::GetHostPortForUDP(const uint8_t protocol) const
+uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
 {
   if (protocol == AF_INET)
     return m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Aura->m_Config->m_UDPCustomPortTCP4 : m_HostPort;
@@ -1387,6 +1387,11 @@ uint16_t CGame::GetHostPortForUDP(const uint8_t protocol) const
     return m_Aura->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
 
   return m_HostPort;
+}
+
+uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
+{
+  return m_Aura->m_Net->GetUDPPort(protocol);
 }
 
 vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
@@ -1457,7 +1462,7 @@ void CGame::AnnounceToAddress(string& addressLiteral) const
   if (isLoopbackAddress(address)) {
     m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(m_HostPort));
   } else {
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForUDP(address->ss_family)));
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
 
@@ -1467,10 +1472,10 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket) const
     if (isLoopbackAddress(address)/* && address.ss_family == AF_INET*/) { // TODO(IceSandslash): Do not restrict to AF_INET
       server->SendReply(address, GetGameDiscoveryInfo(m_HostPort));
     } else {
-      server->SendReply(address, GetGameDiscoveryInfo(GetHostPortForUDP(address->ss_family)));
+      server->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
     }
   } else if (CStreamIOSocket* tcpSocket = dynamic_cast<CStreamIOSocket*>(socket)) {
-    tcpSocket->SendReply(address, GetGameDiscoveryInfo(GetHostPortForUDP(address->ss_family)));
+    tcpSocket->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
 
@@ -1532,36 +1537,57 @@ void CGame::SendGameDiscoveryInfo() const
   // See CNet::SendGameDiscovery()
   bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Config->m_UDPEnableCustomPortTCP4;
   bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Config->m_UDPEnableCustomPortTCP6;
-  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || m_ExtraDiscoveryAddresses.empty())) {
+  bool thereCouldBeUDPTunnelsOverTCP = m_Aura->m_Config->m_EnableTCPWrapUDP && !m_Aura->m_Net->m_IncomingConnections.empty();
+  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || m_ExtraDiscoveryAddresses.empty() && !thereCouldBeUDPTunnelsOverTCP)) {
     vector<uint8_t> packet = GetGameDiscoveryInfo(m_HostPort);
     m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
     return;
   }
 
-  vector<uint8_t> ipv4Packet = GetGameDiscoveryInfo(GetHostPortForUDP(AF_INET)); // Uses <net.game_discovery.udp.tcp4_custom_port.value>
+  vector<uint8_t> ipv4Packet = GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(AF_INET)); // Uses <net.game_discovery.udp.tcp4_custom_port.value>
   vector<uint8_t> ipv6Packet;
   if (m_Aura->m_Net->m_SupportTCPOverIPv6)
-    ipv6Packet = GetGameDiscoveryInfo(GetHostPortForUDP(AF_INET6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
+    ipv6Packet = GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(AF_INET6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
 
   if (!m_Aura->m_Net->SendBroadcast(ipv4Packet)) {
     Print("[AURA] Game info broadcast failed @ CGame::SendGameDiscoveryInfo");
     // Ensure the game is available at loopback.
     if (loopbackIsIPv4Port) {
+      Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
       m_Aura->m_Net->Send("127.0.0.1", ipv4Packet);
     } else {
+      Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(m_HostPort) + ")");
       vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
       m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
     }
+  } else {
+    Print("Broadcasting IPv4 GAMEINFO packet (port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
   }
 
   for (auto& clientIp : m_ExtraDiscoveryAddresses) {
     optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(clientIp);
-    if (!maybeAddress.has_value()) continue;
+    if (!maybeAddress.has_value()) continue; // Should never happen.
     sockaddr_storage* address = &(maybeAddress.value());
-    if (isLoopbackAddress(address)) continue;
-    if (address->ss_family == AF_INET6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) continue;
-    m_Aura->m_Net->Send(address, address->ss_family == AF_INET6 ? ipv6Packet : ipv4Packet);
+    if (isLoopbackAddress(address)) continue; // We already secure sending loopback packets above.
+    bool isIPv6 = GetInnerIPVersion(address) == AF_INET6;
+    if (isIPv6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) {
+      // TODO(IceSandslash): Validate in config-net.cpp
+      Print("[CONFIG] Game discovery message to " + clientIp + " at <net.game_discovery.udp.extra_clients.ip_addresses> cannot be sent, because IPv6 support hasn't been enabled");
+      Print("[CONFIG] Set <net.ipv6.tcp.enabled = yes>, and <net.ipv6.udp.enabled = yes> if you want to enable it.");
+      continue;
+    }
+    m_Aura->m_Net->Send(address, isIPv6 ? ipv6Packet : ipv4Packet);
   }
+
+  if (thereCouldBeUDPTunnelsOverTCP) for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
+    for (auto& connection : pair.second) {
+      if (connection->GetDeleteMe()) continue;
+      if (connection->m_IsUDPTunnel) {
+        connection->Send(connection->GetUsingIPv6() ? ipv6Packet : ipv4Packet);
+      }
+    }
+  }
+  // Send to active UDP in TCP tunnels
 }
 
 void CGame::EventPlayerDeleted(CGamePlayer* player)
@@ -1833,15 +1859,25 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   }
   
   player->SetStatusMessageSent(true);
-  if (OwnerFragment.empty() && GProxyFragment.empty())
+  if (OwnerFragment.empty() && GProxyFragment.empty()) {
+    if (m_Aura->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
+      Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPString() + ").");
+      SendAllChat(player->GetName() + " joined the game over IPv6.");
+    }
     return;
+  }
 
+  string IPv6Fragment;
+  if (player->GetUsingIPv6()) {
+    Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPString() + ").");
+    IPv6Fragment = ". (Joined over IPv6).";
+  }
   if (!OwnerFragment.empty() && !GProxyFragment.empty()) {
-    SendAllChat(player->GetName() + OwnerFragment + GProxyFragment);
+    SendAllChat(player->GetName() + OwnerFragment + GProxyFragment + IPv6Fragment);
   } else if (!OwnerFragment.empty()) {
-    SendAllChat(player->GetName() + OwnerFragment + " joined the game.");
+    SendAllChat(player->GetName() + OwnerFragment + " joined the game over IPv6.");
   } else {
-    SendAllChat(player->GetName() + GProxyFragment);
+    SendAllChat(player->GetName() + GProxyFragment + IPv6Fragment);
   }
 }
 

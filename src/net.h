@@ -107,6 +107,7 @@ public:
   bool                                                        m_UDPMainServerEnabled;      // (IPv4) whether the bot should listen to UDP traffic in port 6112)
   CUDPServer*                                                 m_UDPMainServer;             // (IPv4) UDP I/O at port 6112. Supports broadcasts. May also act as reverse-proxy for UDP traffic.
   CUDPServer*                                                 m_UDPDeafSocket;             // (IPv4) UDP outbound traffic. Uses <net.udp_fallback.outbound_port> (should NOT be 6112). Supports broadcasts.
+  CUDPServer*                                                 m_UDPIPv6Server;
 
   uint16_t                                                    m_UDP4TargetPort;
   uint16_t                                                    m_UDP6TargetPort;
@@ -136,7 +137,8 @@ public:
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
 
   std::vector<uint8_t>            GetPublicIP();
-  std::vector<uint16_t>           GetPotentialGamePorts();
+  std::vector<uint16_t>           GetPotentialGamePorts() const;
+  uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
   std::optional<sockaddr_storage> ResolveHostName(const std::string& hostName);
   void             FlushDNS();
