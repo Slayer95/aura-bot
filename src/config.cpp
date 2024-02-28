@@ -143,13 +143,31 @@ bool CConfig::Read(const filesystem::path& file)
   return true;
 }
 
-bool CConfig::Exists(const string& key) const
+bool CConfig::Exists(const string& key)
 {
+  m_ValidKeys.insert(key);
   return m_CFG.find(key) != end(m_CFG);
+}
+
+void CConfig::Accept(const string& key)
+{
+  m_ValidKeys.insert(key);
+}
+
+vector<string> CConfig::GetInvalidKeys() const
+{
+  vector<string> invalidKeys;
+  for (const auto& entry : m_CFG) {
+    if (m_ValidKeys.find(entry.first) == m_ValidKeys.end()) {
+      invalidKeys.push_back("<" + entry.first + ">");
+    }
+  }
+  return invalidKeys;
 }
 
 string CConfig::GetString(const string& key, const string& x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -160,6 +178,7 @@ string CConfig::GetString(const string& key, const string& x)
 
 string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -178,6 +197,7 @@ string CConfig::GetString(const string& key, const uint32_t minLength, const uin
 
 bool CConfig::GetBool(const string& key, bool x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -195,6 +215,7 @@ bool CConfig::GetBool(const string& key, bool x)
 
 int32_t CConfig::GetInt32(const string& key, int32_t x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -212,6 +233,7 @@ int32_t CConfig::GetInt32(const string& key, int32_t x)
 
 uint32_t CConfig::GetUint32(const string& key, uint32_t x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -232,6 +254,7 @@ uint32_t CConfig::GetUint32(const string& key, uint32_t x)
 
 uint16_t CConfig::GetUint16(const string& key, uint16_t x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -252,6 +275,7 @@ uint16_t CConfig::GetUint16(const string& key, uint16_t x)
 
 uint8_t CConfig::GetUint8(const string& key, uint8_t x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -272,6 +296,7 @@ uint8_t CConfig::GetUint8(const string& key, uint8_t x)
 
 float CConfig::GetFloat(const string& key, float x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -294,6 +319,7 @@ int32_t CConfig::GetInt(const string& key, int32_t x)
 
 vector<string> CConfig::GetList(const string& key, char separator, const vector<string> x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -313,6 +339,7 @@ vector<string> CConfig::GetList(const string& key, char separator, const vector<
 
 set<string> CConfig::GetSet(const string& key, char separator, const set<string> x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -335,6 +362,7 @@ set<string> CConfig::GetSet(const string& key, char separator, const set<string>
 
 vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count, const std::vector<uint8_t> &x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -350,6 +378,7 @@ vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count,
 
 vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -365,6 +394,7 @@ vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x)
 
 set<string> CConfig::GetIPStringSet(const string& key, char separator, const set<string> x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -395,6 +425,7 @@ set<string> CConfig::GetIPStringSet(const string& key, char separator, const set
 
 filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x)
@@ -410,6 +441,7 @@ filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
 
 filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     SUCCESS(x.empty() ? GetExeDirectory() : x)
@@ -425,6 +457,7 @@ filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path
 
 sockaddr_storage CConfig::GetAddressOfType(const string& key, const uint8_t acceptMode, const string& x)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   vector<string> tryAddresses;
   if (it != end(m_CFG)) tryAddresses.push_back(it->second);
@@ -463,6 +496,7 @@ sockaddr_storage CConfig::GetAddress(const string& key, const string& x)
 
 optional<bool> CConfig::GetMaybeBool(const string& key)
 {
+  m_ValidKeys.insert(key);
   optional<bool> result;
 
   auto it = m_CFG.find(key);
@@ -484,6 +518,7 @@ optional<bool> CConfig::GetMaybeBool(const string& key)
 
 optional<uint32_t> CConfig::GetMaybeInt(const string& key)
 {
+  m_ValidKeys.insert(key);
   optional<uint32_t> result;
 
   auto it = m_CFG.find(key);
@@ -502,6 +537,7 @@ optional<uint32_t> CConfig::GetMaybeInt(const string& key)
 
 optional<vector<uint8_t>> CConfig::GetMaybeIPv4(const string &key)
 {
+  m_ValidKeys.insert(key);
   optional<vector<uint8_t>> result;
 
   auto it = m_CFG.find(key);
@@ -520,6 +556,7 @@ optional<vector<uint8_t>> CConfig::GetMaybeIPv4(const string &key)
 
 optional<filesystem::path> CConfig::GetMaybePath(const string &key)
 {
+  m_ValidKeys.insert(key);
   optional<filesystem::path> result;
 
   auto it = m_CFG.find(key);
@@ -537,6 +574,7 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
 
 optional<sockaddr_storage> CConfig::GetMaybeAddressOfType(const string& key, const uint8_t acceptMode)
 {
+  m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
     optional<sockaddr_storage> empty;

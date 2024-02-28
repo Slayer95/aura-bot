@@ -251,6 +251,10 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   if (!LoadIRC(CFG)) {
     Print("[CONFIG] warning - irc server misconfigured");
   }
+  vector<string> invalidKeys = CFG->GetInvalidKeys();
+  if (!invalidKeys.empty()) {
+    Print("[CONFIG] warning - some keys are misnamed: " + JoinVector(invalidKeys, false));
+  }
 
   if (m_Realms.empty() && !m_Config->m_EnableBNET.value_or(true))
     Print("[AURA] warning - no enabled battle.net connections found in aura.cfg");
@@ -1200,6 +1204,10 @@ bool CAura::ReloadConfigs()
   if (!LoadIRC(CFG)) {
     Print("[CONFIG] error - irc server misconfigured: not reloaded");
     success = false;
+  }
+  vector<string> invalidKeys = CFG->GetInvalidKeys();
+  if (!invalidKeys.empty()) {
+    Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinVector(invalidKeys, false));
   }
 
   if (m_GameVersion != WasVersion) {

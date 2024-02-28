@@ -224,21 +224,7 @@ inline sockaddr_storage IPv4ToIPv6(const sockaddr_storage* inputAddress) {
   return outputAddress;
 }
 
-inline sockaddr_storage IPv4ToIPv6Compat(const sockaddr_storage* inputAddress) {
-  sockaddr_storage outputAddress;
-  std::memset(&outputAddress, 0, sizeof(outputAddress));
-
-  sockaddr_in6* addr6 = reinterpret_cast<struct sockaddr_in6*>(&outputAddress);
-  addr6->sin6_family = AF_INET6;
-
-  const sockaddr_in* addr4 = reinterpret_cast<const struct sockaddr_in*>(inputAddress);
-  std::memcpy(&(addr6->sin6_addr.s6_addr[12]), &(addr4->sin_addr), sizeof(in_addr));
-  addr6->sin6_port = addr4->sin_port;
-
-  return outputAddress;
-}
-
-inline bool GetInnerIPVersion(const sockaddr_storage* inputAddress) {
+inline uint8_t GetInnerIPVersion(const sockaddr_storage* inputAddress) {
   if (inputAddress->ss_family == AF_INET) return AF_INET;
   if (inputAddress->ss_family == AF_INET6) {
     const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(inputAddress);
@@ -366,6 +352,7 @@ public:
   std::string                       GetName() const;
 
   inline bool                       GetIsInnerIPv4() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET; }
+  inline bool                       GetIsInnerIPv6() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET6; }
 
   inline std::vector<uint8_t>       GetIPv4() const {
     if (m_RemoteHost.ss_family == AF_INET) {
@@ -386,6 +373,7 @@ public:
   }
 
   inline std::string                GetIPString() const { return AddressToString(m_RemoteHost); }
+  inline std::string                GetIPStringStrict() const { return AddressToStringStrict(m_RemoteHost); }
   inline bool GetIsLoopback() const { return isLoopbackAddress(&m_RemoteHost); }
 
   inline bool                       GetConnected() const { return m_Connected; }
@@ -394,7 +382,7 @@ public:
   inline std::string*               GetBytes() { return &m_RecvBuffer; }
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
   inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
-  void DoRecv(fd_set* fd);
+  bool DoRecv(fd_set* fd);
 
   inline uint32_t                   PutBytes(const std::string& bytes) {
     m_SendBuffer += bytes;

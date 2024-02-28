@@ -587,7 +587,7 @@ inline std::string MaybeBase10(const std::string s) {
   return IsBase10Number(s) ? s : std::string();
 }
 
-inline std::string JoinVector(const std::vector<std::string> list, const std::string connector, const bool trailingConnector) {
+inline std::string JoinVector(const std::vector<std::string>& list, const std::string connector, const bool trailingConnector) {
   std::string Results;
   for (const auto& element : list)
     Results += element + connector;
@@ -595,7 +595,7 @@ inline std::string JoinVector(const std::vector<std::string> list, const std::st
   return Results;
 }
 
-inline std::string JoinVector(const std::vector<uint16_t> list, const std::string connector, const bool trailingConnector) {
+inline std::string JoinVector(const std::vector<uint16_t>& list, const std::string connector, const bool trailingConnector) {
   std::string Results;
   for (const auto& element : list)
     Results += std::to_string(element) + connector;
@@ -603,11 +603,11 @@ inline std::string JoinVector(const std::vector<uint16_t> list, const std::strin
   return Results;
 }
 
-inline std::string JoinVector(const std::vector<std::string> list, const bool trailingComma) {
+inline std::string JoinVector(const std::vector<std::string>& list, const bool trailingComma) {
   return JoinVector(list, ", ", trailingComma);
 }
 
-inline std::string JoinVector(const std::vector<uint16_t> list, const bool trailingComma) {
+inline std::string JoinVector(const std::vector<uint16_t>& list, const bool trailingComma) {
   return JoinVector(list, ", ", trailingComma);
 }
 

@@ -65,13 +65,16 @@ private:
   bool                               m_ErrorLast;
   bool                               m_CriticalError;
   std::map<std::string, std::string> m_CFG;
+  std::set<std::string>              m_ValidKeys;
 
 public:
   CConfig();
   ~CConfig();
 
   bool Read(const std::filesystem::path& file);
-  bool Exists(const std::string& key) const;
+  bool Exists(const std::string& key);
+  void Accept(const std::string& key);
+  std::vector<std::string> GetInvalidKeys() const;
   inline bool GetErrorLast() const { return m_ErrorLast; };
   inline bool GetSuccess() const { return !m_CriticalError; };
   inline void FailIfErrorLast() {

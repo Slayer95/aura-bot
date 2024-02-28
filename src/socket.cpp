@@ -287,42 +287,35 @@ void CStreamIOSocket::Reset()
 #endif
 }
 
-void CStreamIOSocket::DoRecv(fd_set* fd)
+bool CStreamIOSocket::DoRecv(fd_set* fd)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected)
-    return;
+    return false;
 
-  if (FD_ISSET(m_Socket, fd))
-  {
-    // data is waiting, receive it
+  if (!FD_ISSET(m_Socket, fd))
+    return false;
 
-    char    buffer[1024];
-    int32_t c = recv(m_Socket, buffer, 1024, 0);
+  // data is waiting, receive it
+  char    buffer[1024];
+  int32_t c = recv(m_Socket, buffer, 1024, 0);
 
-    if (c > 0)
-    {
-      // success! add the received data to the buffer
-
-      m_RecvBuffer += string(buffer, c);
-      m_LastRecv = GetTime();
-    }
-    else if (c == SOCKET_ERROR && GetLastError() != EWOULDBLOCK)
-    {
-      // receive error
-
-      m_HasError = true;
-      m_Error    = GetLastError();
-      Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
-      return;
-    }
-    else if (c == 0)
-    {
-      // the other end closed the connection
-
-      Print("[TCPSOCKET] (" + GetName() +") terminated the connection");
-      m_Connected = false;
-    }
+  if (c > 0) {
+    // success! add the received data to the buffer
+    m_RecvBuffer += string(buffer, c);
+    m_LastRecv = GetTime();
+    return true;
   }
+
+  if (c == SOCKET_ERROR && GetLastError() != EWOULDBLOCK) {
+    // receive error
+    m_HasError = true;
+    m_Error    = GetLastError();
+    Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
+  } else if (c == 0) {
+    // the other end closed the connection
+    Print("[TCPSOCKET] (" + GetName() +") terminated the connection");
+  }
+  return false;
 }
 
 void CStreamIOSocket::DoSend(fd_set* send_fd)

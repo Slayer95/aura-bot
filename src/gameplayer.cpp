@@ -58,127 +58,138 @@ CGameConnection::~CGameConnection()
 uint8_t CGameConnection::Update(void* fd, void* send_fd)
 {
   if (m_DeleteMe)
-    return 1;
+    return PREPLAYER_CONNECTION_DESTROY;
 
   if (!m_Socket)
-    return 0;
+    return PREPLAYER_CONNECTION_OK;
 
   const int64_t Time = GetTime();
   if (Time - m_Socket->GetLastRecv() >= 5) {
     Print("Delete CGameConnection after 5 secs inactivity");
-    return 1;
+    return PREPLAYER_CONNECTION_DESTROY;
   }
 
-  m_Socket->DoRecv(static_cast<fd_set*>(fd));
+  bool IsPromotedToPlayer = false;
+  bool Abort = false;
+  if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+    // extract as many packets as possible from the socket's receive buffer and process them
+    string*              RecvBuffer         = m_Socket->GetBytes();
+    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
+    uint32_t             LengthProcessed    = 0;
 
-  // extract as many packets as possible from the socket's receive buffer and process them
+    // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-  string*              RecvBuffer      = m_Socket->GetBytes();
-  if (RecvBuffer->size() == 0) {
-    return 0;
-  }
-
-  std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-  uint32_t             LengthProcessed    = 0;
-  bool                 IsPromotedToPlayer = false;
-
-  // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
-
-  while (Bytes.size() >= 4)
-  {
-    //Print("Got bytes: " + ByteArrayToDecString(Bytes));
-    // bytes 2 and 3 contain the length of the packet
-    const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
-    if (Length < 4 || Bytes.size() < Length) break;
-    const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
-
-    if (Bytes[0] == W3GS_HEADER_CONSTANT || Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Config->m_ProxyReconnectEnabled) {
-      if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
-        //Print("Got REQJOIN " + ByteArrayToDecString(Bytes));
-        delete m_IncomingJoinPlayer;
-        m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
-        if (!m_IncomingJoinPlayer) {
-          // Invalid request
-          m_DeleteMe = true;
-        } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x00FFFFFF)) {
-          // Trying to join the wrong game
-          m_DeleteMe = true;
-        } else if (m_Aura->m_CurrentLobby->EventRequestJoin(this, m_IncomingJoinPlayer)) {
-          IsPromotedToPlayer = true;
-        } else {
-          // Join failed
-          m_DeleteMe = true;
-        }
-      } else if (m_IsUDPTunnel && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
-        if (Length <= 1024) {
-          struct UDPPkt pkt;
-          pkt.socket = m_Socket;
-          pkt.sender = &(m_Socket->m_RemoteHost);
-          memcpy(pkt.buf, &Bytes, Length);
-          pkt.length = Length;
-          m_Aura->HandleUDP(&pkt);
-        } 
-      } else if (Length == 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT) {
-        const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
-        const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
-
-        // look for a matching player in a running game
-
-        CGamePlayer* Match = nullptr;
-
-        for (auto& game : m_Aura->m_Games) {
-          if (game->GetGameLoaded()) {
-            CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
-            if (Player && Player->GetGProxyAny() && Player->GetGProxyReconnectKey() == ReconnectKey) {
-              Match = Player;
-              break;
-            }
-          }
-        }
-
-        if (!Match || Match->m_Game->GetIsGameOver()) {
-          m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
-          m_DeleteMe = true;
-        } else {
-          // reconnect successful!
-          Match->EventGProxyReconnect(m_Socket, LastPacket);
-          IsPromotedToPlayer = true;
-        }
-      } else {
-        bool anyExtensions = m_Aura->m_Config->m_EnableTCPScanUDP || m_Aura->m_Config->m_EnableTCPWrapUDP;
-        if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
-          if (m_Aura->m_Config->m_EnableTCPScanUDP) {
-            if (m_Aura->m_CurrentLobby->GetIsLobby()) {
-              vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPSCAN, 6, 0};
-              uint16_t port = m_Aura->m_CurrentLobby->GetDiscoveryPort(GetInnerIPVersion(&(m_Socket->m_RemoteHost)));
-              AppendByteArray(packet, port, false);
-              m_Socket->PutBytes(packet);
-            }
-          } else if (!anyExtensions) {
-            m_DeleteMe = true;
-          }
-        } else if (Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
-          if (m_Aura->m_Config->m_EnableTCPWrapUDP) {
-            vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
-            m_Socket->PutBytes(packet);
-            m_IsUDPTunnel = true;
-          } else if (!anyExtensions) {
-            m_DeleteMe = true;
-          }
-        }
+    while (Bytes.size() >= 4) {
+      // bytes 2 and 3 contain the length of the packet
+      const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
+      if (Length < 4) {
+        Abort = true;
+        break;
       }
-      
-      LengthProcessed += Length;
-      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
+      if (Bytes.size() < Length) break;
+      const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+
+      if (Bytes[0] == W3GS_HEADER_CONSTANT || Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Config->m_ProxyReconnectEnabled) {
+        if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
+          if (m_IsUDPTunnel) {
+            m_IsUDPTunnel = false;
+            vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};
+            m_Socket->PutBytes(packet);
+          }
+
+          //Print("Got REQJOIN " + ByteArrayToDecString(Bytes));
+          delete m_IncomingJoinPlayer;
+          m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
+          if (!m_IncomingJoinPlayer) {
+            // Invalid request
+            Abort = true;
+          } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x00FFFFFF)) {
+            // Trying to join the wrong game
+            Abort = true;
+          } else if (m_Aura->m_CurrentLobby->EventRequestJoin(this, m_IncomingJoinPlayer)) {
+            IsPromotedToPlayer = true;
+          } else {
+            // Join failed
+            Abort = true;
+          }
+        } else if (m_IsUDPTunnel && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
+          if (Length <= 1024) {
+            struct UDPPkt pkt;
+            pkt.socket = m_Socket;
+            pkt.sender = &(m_Socket->m_RemoteHost);
+            memcpy(pkt.buf, &Bytes, Length);
+            pkt.length = Length;
+            m_Aura->HandleUDP(&pkt);
+          } 
+        } else if (Length == 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT) {
+          const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
+          const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
+
+          // look for a matching player in a running game
+
+          CGamePlayer* Match = nullptr;
+
+          for (auto& game : m_Aura->m_Games) {
+            if (game->GetGameLoaded()) {
+              CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
+              if (Player && Player->GetGProxyAny() && Player->GetGProxyReconnectKey() == ReconnectKey) {
+                Match = Player;
+                break;
+              }
+            }
+          }
+
+          if (!Match || Match->m_Game->GetIsGameOver()) {
+            m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
+            Abort = true;
+          } else {
+            // reconnect successful!
+            Match->EventGProxyReconnect(m_Socket, LastPacket);
+            IsPromotedToPlayer = true;
+          }
+        } else {
+          bool anyExtensions = m_Aura->m_Config->m_EnableTCPScanUDP || m_Aura->m_Config->m_EnableTCPWrapUDP;
+          if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
+            if (m_Aura->m_Config->m_EnableTCPScanUDP) {
+              if (m_Aura->m_CurrentLobby->GetIsLobby()) {
+                vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPSCAN, 6, 0};
+                uint16_t port = m_Aura->m_CurrentLobby->GetDiscoveryPort(GetInnerIPVersion(&(m_Socket->m_RemoteHost)));
+                AppendByteArray(packet, port, false);
+                m_Socket->PutBytes(packet);
+              }
+            } else if (!anyExtensions) {
+              Abort = true;
+            }
+          } else if (Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
+            if (m_Aura->m_Config->m_EnableTCPWrapUDP) {
+              vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
+              m_Socket->PutBytes(packet);
+              m_IsUDPTunnel = true;
+            } else if (!anyExtensions) {
+              Abort = true;
+            }
+          }
+        }
+
+        if (Abort) {
+          // Process no more packets
+          break;
+        }
+
+        LengthProcessed += Length;
+        Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
+      }
+    }
+
+    if (Abort) {
+      RecvBuffer->clear();
+    } else {
+      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
   }
 
-  if (IsPromotedToPlayer) {
-    // Let CGamePlayer process the remnant
-    *RecvBuffer = RecvBuffer->substr(LengthProcessed);
-  } else {
-    RecvBuffer->clear();
-  }
+  if (Abort)
+    m_DeleteMe = true;
 
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError()) {
     return PREPLAYER_CONNECTION_DESTROY;
@@ -346,195 +357,213 @@ bool CGamePlayer::Update(void* fd)
     m_LastGProxyAckTime = Time;
   }
 
-  m_Socket->DoRecv(static_cast<fd_set*>(fd));
+  bool Abort = false;
+  if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+    // extract as many packets as possible from the socket's receive buffer and process them
 
-  // extract as many packets as possible from the socket's receive buffer and process them
+    string*              RecvBuffer         = m_Socket->GetBytes();
+    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
+    uint32_t             LengthProcessed    = 0;
 
-  string*              RecvBuffer      = m_Socket->GetBytes();
-  std::vector<uint8_t> Bytes           = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
+    // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-  // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
+    CIncomingAction*     Action;
+    CIncomingChatPlayer* ChatPlayer;
+    CIncomingMapSize*    MapSize;
+    uint32_t             Pong;
 
-  CIncomingAction*     Action;
-  CIncomingChatPlayer* ChatPlayer;
-  CIncomingMapSize*    MapSize;
-  uint32_t             Pong;
-  bool                 Abort = false;
-
-
-  while (Bytes.size() >= 4 && !Abort)
-  {
-    // bytes 2 and 3 contain the length of the packet
-    const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
-    if (Length < 4 || Bytes.size() < Length) break;
-    const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
-
-    if (Bytes[0] == W3GS_HEADER_CONSTANT)
+    while (Bytes.size() >= 4)
     {
-      ++m_TotalPacketsReceived;
+      // bytes 2 and 3 contain the length of the packet
+      const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
+      if (Length < 4) {
+        m_Game->EventPlayerDisconnectGameProtocolError(this);
+        ResetConnection();
+        Abort = true;
+        break;
+      }
+      if (Bytes.size() < Length) break;
+      const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-      // byte 1 contains the packet ID
-
-      switch (Bytes[1])
+      if (Bytes[0] == W3GS_HEADER_CONSTANT)
       {
-        case CGameProtocol::W3GS_LEAVEGAME:
-          m_Game->EventPlayerLeft(this, m_Protocol->RECEIVE_W3GS_LEAVEGAME(Data));
-          Abort = true;
-          break;
+        ++m_TotalPacketsReceived;
 
-        case CGameProtocol::W3GS_GAMELOADED_SELF:
-          if (m_Protocol->RECEIVE_W3GS_GAMELOADED_SELF(Data))
-          {
-            if (!m_FinishedLoading)
+        // byte 1 contains the packet ID
+
+        switch (Bytes[1])
+        {
+          case CGameProtocol::W3GS_LEAVEGAME:
+            m_Game->EventPlayerLeft(this, m_Protocol->RECEIVE_W3GS_LEAVEGAME(Data));
+            Abort = true;
+            break;
+
+          case CGameProtocol::W3GS_GAMELOADED_SELF:
+            if (m_Protocol->RECEIVE_W3GS_GAMELOADED_SELF(Data))
             {
-              m_FinishedLoading      = true;
-              m_FinishedLoadingTicks = GetTicks();
-              m_Game->EventPlayerLoaded(this);
+              if (!m_FinishedLoading)
+              {
+                m_FinishedLoading      = true;
+                m_FinishedLoadingTicks = GetTicks();
+                m_Game->EventPlayerLoaded(this);
+              }
             }
-          }
 
-          break;
+            break;
 
-        case CGameProtocol::W3GS_OUTGOING_ACTION:
-          Action = m_Protocol->RECEIVE_W3GS_OUTGOING_ACTION(Data, m_PID);
+          case CGameProtocol::W3GS_OUTGOING_ACTION:
+            Action = m_Protocol->RECEIVE_W3GS_OUTGOING_ACTION(Data, m_PID);
 
-          if (Action)
-            m_Game->EventPlayerAction(this, Action);
+            if (Action)
+              m_Game->EventPlayerAction(this, Action);
 
-          // don't delete Action here because the game is going to store it in a queue and delete it later
+            // don't delete Action here because the game is going to store it in a queue and delete it later
 
-          break;
+            break;
 
-        case CGameProtocol::W3GS_OUTGOING_KEEPALIVE:
-          m_CheckSums.push(m_Protocol->RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
-          if (!m_Game->GetLagging() || m_Lagging)
-            ++m_SyncCounter;
-          m_Game->EventPlayerKeepAlive(this);
-          break;
+          case CGameProtocol::W3GS_OUTGOING_KEEPALIVE:
+            m_CheckSums.push(m_Protocol->RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+            if (!m_Game->GetLagging() || m_Lagging)
+              ++m_SyncCounter;
+            m_Game->EventPlayerKeepAlive(this);
+            break;
 
-        case CGameProtocol::W3GS_CHAT_TO_HOST:
-          ChatPlayer = m_Protocol->RECEIVE_W3GS_CHAT_TO_HOST(Data);
+          case CGameProtocol::W3GS_CHAT_TO_HOST:
+            ChatPlayer = m_Protocol->RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
-          if (ChatPlayer)
-            m_Game->EventPlayerChatToHost(this, ChatPlayer);
+            if (ChatPlayer)
+              m_Game->EventPlayerChatToHost(this, ChatPlayer);
 
-          delete ChatPlayer;
-          break;
+            delete ChatPlayer;
+            break;
 
-        case CGameProtocol::W3GS_DROPREQ:
-          if (!m_DropVote)
-          {
-            m_DropVote = true;
-            m_Game->EventPlayerDropRequest(this);
-          }
+          case CGameProtocol::W3GS_DROPREQ:
+            if (!m_DropVote)
+            {
+              m_DropVote = true;
+              m_Game->EventPlayerDropRequest(this);
+            }
 
-          break;
+            break;
 
-        case CGameProtocol::W3GS_MAPSIZE:
-          MapSize = m_Protocol->RECEIVE_W3GS_MAPSIZE(Data);
+          case CGameProtocol::W3GS_MAPSIZE:
+            MapSize = m_Protocol->RECEIVE_W3GS_MAPSIZE(Data);
 
-          if (MapSize)
-            m_Game->EventPlayerMapSize(this, MapSize);
+            if (MapSize)
+              m_Game->EventPlayerMapSize(this, MapSize);
 
-          delete MapSize;
-          break;
+            delete MapSize;
+            break;
 
-        case CGameProtocol::W3GS_PONG_TO_HOST:
-          Pong = m_Protocol->RECEIVE_W3GS_PONG_TO_HOST(Data);
+          case CGameProtocol::W3GS_PONG_TO_HOST:
+            Pong = m_Protocol->RECEIVE_W3GS_PONG_TO_HOST(Data);
 
-          // we discard pong values of 1
-          // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
+            // we discard pong values of 1
+            // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
 
-          if (Pong != 1) {
-            // we also discard pong values when we're downloading because they're almost certainly inaccurate
-            // this statement also gives the player a 5 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
+            if (Pong != 1) {
+              // we also discard pong values when we're downloading because they're almost certainly inaccurate
+              // this statement also gives the player a 5 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
 
-            if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 5)) {
-              // we also discard pong values when anyone else is downloading if we're configured to
-              if (!(m_Game->m_Aura->m_Config->m_HasBufferBloat && m_Game->IsDownloading())) {
-                m_Pings.push_back(m_Game->m_Aura->m_Config->m_RTTPings ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
-                if (m_Pings.size() > 10) {
-                  m_Pings.erase(begin(m_Pings));
+              if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 5)) {
+                // we also discard pong values when anyone else is downloading if we're configured to
+                if (!(m_Game->m_Aura->m_Config->m_HasBufferBloat && m_Game->IsDownloading())) {
+                  m_Pings.push_back(m_Game->m_Aura->m_Config->m_RTTPings ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
+                  if (m_Pings.size() > 10) {
+                    m_Pings.erase(begin(m_Pings));
+                  }
                 }
               }
             }
-          }
 
-          m_Game->EventPlayerPongToHost(this);
-          break;
+            m_Game->EventPlayerPongToHost(this);
+            break;
+        }
       }
-    }
-    else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_Config->m_ProxyReconnectEnabled) {
-      if (Bytes[1] == CGPSProtocol::GPS_ACK && Length == 8) {
-        const uint32_t LastPacket             = ByteArrayToUInt32(Data, false, 4);
-        const uint32_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
+      else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_Config->m_ProxyReconnectEnabled) {
+        if (Bytes[1] == CGPSProtocol::GPS_ACK && Length == 8) {
+          const uint32_t LastPacket             = ByteArrayToUInt32(Data, false, 4);
+          const uint32_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
 
-        if (LastPacket > PacketsAlreadyUnqueued)
-        {
-          uint32_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
-
-          if (PacketsToUnqueue > m_GProxyBuffer.size())
-            PacketsToUnqueue = m_GProxyBuffer.size();
-
-          while (PacketsToUnqueue > 0)
+          if (LastPacket > PacketsAlreadyUnqueued)
           {
-            m_GProxyBuffer.pop();
-            --PacketsToUnqueue;
+            uint32_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
+
+            if (PacketsToUnqueue > m_GProxyBuffer.size())
+              PacketsToUnqueue = m_GProxyBuffer.size();
+
+            while (PacketsToUnqueue > 0)
+            {
+              m_GProxyBuffer.pop();
+              --PacketsToUnqueue;
+            }
           }
+        } else if (Bytes[1] == CGPSProtocol::GPS_INIT) {
+          CRealm* MyRealm = GetRealm(false);
+          if (MyRealm) {
+            m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
+          } else if (m_JoinedRealmID == 0) {
+            m_GProxyPort = m_Game->m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Config->m_UDPCustomPortTCP4 : m_Game->GetHostPort();
+          } else if (m_JoinedRealmID == 0x02) {
+            // TODO(IceSandslash): GameRanger??
+            m_GProxyPort = 6112;
+          } else {
+            m_GProxyPort = 6112;
+          }
+          m_GProxy = true;
+          if (Length >= 8) {
+            m_GProxyVersion = ByteArrayToUInt32(Bytes, false, 4);
+          }
+          m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
+          if (m_GProxyVersion >= 2) {
+            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Config->m_ReconnectWaitTime * 60));
+          }
+          Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
+        } else if (Bytes[1] == CGPSProtocol::GPS_SUPPORT_EXTENDED && Length >= 8) {
+          uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
+          m_GProxyExtended = true;
+          Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] is using GProxy Extended");
         }
-      } else if (Bytes[1] == CGPSProtocol::GPS_INIT) {
-        CRealm* MyRealm = GetRealm(false);
-        if (MyRealm) {
-          m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
-        } else if (m_JoinedRealmID == 0) {
-          m_GProxyPort = m_Game->m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Config->m_UDPCustomPortTCP4 : m_Game->GetHostPort();
-        } else if (m_JoinedRealmID == 0x02) {
-          // TODO(IceSandslash): GameRanger??
-          m_GProxyPort = 6112;
-        } else {
-          m_GProxyPort = 6112;
-        }
-        m_GProxy = true;
-        if (Length >= 8) {
-          m_GProxyVersion = ByteArrayToUInt32(Bytes, false, 4);
-        }
-        m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
-        if (m_GProxyVersion >= 2) {
-          m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Config->m_ReconnectWaitTime * 60));
-        }
-        Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
-      } else if (Bytes[1] == CGPSProtocol::GPS_SUPPORT_EXTENDED && Length >= 8) {
-        uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
-				m_GProxyExtended = true;
-        Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] is using GProxy Extended");
       }
+
+      if (Abort) {
+        // Process no more packets
+        break;
+      }
+      
+      LengthProcessed += Length;
+      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
-    Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
+
+    if (Abort) {
+      RecvBuffer->clear();
+    } else {
+      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
+    }
   }
-
-  RecvBuffer->clear();
-
-  // try to find out why we're requesting deletion
-  // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
 
   // EventPlayerLeft sets the game in an state where this player is still in m_Players, but it has no associated slot.
   // It's therefore crucial to check the Abort flag that it sets to avoid modifying it further.
   // As soon as the CGamePlayer::Update() call returns, EventPlayerDeleted takes care of erasing from the m_Players vector.
-  if (m_Socket && !Abort) {
-    if (m_Socket->HasError()) {
-      m_Game->EventPlayerDisconnectSocketError(this);
-      ResetConnection();
-    } else if (!m_Socket->GetConnected()) {
-      m_Game->EventPlayerDisconnectConnectionClosed(this);
-      ResetConnection();
+  if (!Abort) {
+    if (m_Socket) {
+      // try to find out why we're requesting deletion
+      // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
+      if (m_Socket->HasError()) {
+        m_Game->EventPlayerDisconnectSocketError(this);
+        ResetConnection();
+      } else if (!m_Socket->GetConnected()) {
+        m_Game->EventPlayerDisconnectConnectionClosed(this);
+        ResetConnection();
+      }
     }
+
+    if (GetKickQueued() && m_KickByTime < Time)
+      m_Game->EventPlayerKickHandleQueued(this);
+
+    if (!m_StatusMessageSent && m_CheckStatusByTime < Time)
+      m_Game->EventPlayerCheckStatus(this);
   }
-
-  if (GetKickQueued() && m_KickByTime < Time)
-    m_Game->EventPlayerKickHandleQueued(this);
-
-  if (!m_StatusMessageSent && m_CheckStatusByTime < Time)
-    m_Game->EventPlayerCheckStatus(this);
 
   if (m_Disconnected && m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Config->m_ReconnectWaitTime * 60) {
     m_DeleteMe = true;

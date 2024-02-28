@@ -647,9 +647,9 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
       string IPVersionFragment;
       if (targetPlayer->GetUsingIPv6()) {
-        IPVersionFragment = "IPv4";
+        IPVersionFragment = ", IPv6";
       } else {
-        IPVersionFragment = "IPv6";
+        IPVersionFragment = ", IPv4";
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + IPVersionFragment + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetReserved() ? "Yes" : "No"));

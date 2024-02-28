@@ -1550,18 +1550,15 @@ void CGame::SendGameDiscoveryInfo() const
     ipv6Packet = GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(AF_INET6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
 
   if (!m_Aura->m_Net->SendBroadcast(ipv4Packet)) {
-    Print("[AURA] Game info broadcast failed @ CGame::SendGameDiscoveryInfo");
     // Ensure the game is available at loopback.
     if (loopbackIsIPv4Port) {
-      Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
+      //Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
       m_Aura->m_Net->Send("127.0.0.1", ipv4Packet);
     } else {
-      Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(m_HostPort) + ")");
+      //Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(m_HostPort) + ")");
       vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
       m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
     }
-  } else {
-    Print("Broadcasting IPv4 GAMEINFO packet (port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
   }
 
   for (auto& clientIp : m_ExtraDiscoveryAddresses) {
@@ -1813,6 +1810,51 @@ void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
     OpenSlot(GetSIDFromPID(player->GetPID()), false);
 }
 
+void CGame::EventPlayerDisconnectGameProtocolError(CGamePlayer* player)
+{
+  if (player->GetGProxyAny() && m_GameLoaded) {
+    if (!player->GetGProxyDisconnectNoticeSent())
+    {
+      SendAllChat(player->GetName() + " " + "has disconnected (protocol error) but is using GProxy++ and may reconnect");
+      player->SetGProxyDisconnectNoticeSent(true);
+    }
+
+    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
+      int64_t Time = GetTime();
+      if (!player->GetLagging()) {
+        player->SetLagging(true);
+        player->SetStartedLaggingTicks(GetTicks());
+        if (!GetLagging()) {
+          m_Lagging = true;
+          m_StartedLaggingTime = Time;
+          m_LastLagScreenResetTime = Time;
+        }
+        for (auto& eachPlayer : m_Players)
+          eachPlayer->SetDropVote(false);
+        SendAll(GetProtocol()->SEND_W3GS_START_LAG(m_Players));
+      }
+      int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
+
+      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
+        TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
+      else if (TimeRemaining < 0)
+        TimeRemaining = 0;
+
+      SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
+      player->SetLastGProxyWaitNoticeSentTime(GetTime());
+    }
+
+    return;
+  }
+
+  player->SetDeleteMe(true);
+  player->SetLeftReason("has lost the connection (protocol error)");
+  player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+
+  if (!m_GameLoading && !m_GameLoaded)
+    OpenSlot(GetSIDFromPID(player->GetPID()), false);
+}
+
 void CGame::EventPlayerKickHandleQueued(CGamePlayer* player)
 {
   if (player->GetDeleteMe())
@@ -1861,7 +1903,7 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   player->SetStatusMessageSent(true);
   if (OwnerFragment.empty() && GProxyFragment.empty()) {
     if (m_Aura->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
-      Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPString() + ").");
+      Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPStringStrict() + ").");
       SendAllChat(player->GetName() + " joined the game over IPv6.");
     }
     return;
@@ -1869,7 +1911,7 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
 
   string IPv6Fragment;
   if (player->GetUsingIPv6()) {
-    Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPString() + ").");
+    Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPStringStrict() + ").");
     IPv6Fragment = ". (Joined over IPv6).";
   }
   if (!OwnerFragment.empty() && !GProxyFragment.empty()) {

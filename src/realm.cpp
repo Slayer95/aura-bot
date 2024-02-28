@@ -248,7 +248,7 @@ bool CRealm::Update(void* fd, void* send_fd)
             if (m_Protocol->RECEIVE_SID_AUTH_CHECK(Data))
             {
               // cd keys accepted
-              Print("[BNET: " + m_Config->m_UniqueName + "] game OK");
+              //Print("[BNET: " + m_Config->m_UniqueName + "] game OK");
               m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
               QueuePacket(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName), PACKET_TYPE_PRIORITY);
             }
@@ -286,13 +286,13 @@ bool CRealm::Update(void* fd, void* send_fd)
           case CBNETProtocol::SID_AUTH_ACCOUNTLOGON:
             if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data))
             {
-              Print("[BNET: " + m_Config->m_UniqueName + "] username [" + m_Config->m_UserName + "] OK");
+              //Print("[BNET: " + m_Config->m_UniqueName + "] username [" + m_Config->m_UserName + "] OK");
 
               if (m_Config->m_AuthPasswordHashType == "pvpgn")
               {
                 // pvpgn logon
 
-                Print("[BNET: " + m_Config->m_UniqueName + "] using pvpgn logon type");
+                //Print("[BNET: " + m_Config->m_UniqueName + "] using pvpgn logon type");
                 m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
                 QueuePacket(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()), PACKET_TYPE_PRIORITY);
               }
@@ -300,7 +300,7 @@ bool CRealm::Update(void* fd, void* send_fd)
               {
                 // battle.net logon
 
-                Print("[BNET: " + m_Config->m_UniqueName + "] using battle.net logon type");
+                //Print("[BNET: " + m_Config->m_UniqueName + "] using battle.net logon type");
                 m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(m_Protocol->GetSalt(), m_Protocol->GetServerPublicKey());
                 QueuePacket(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()), PACKET_TYPE_PRIORITY);
               }

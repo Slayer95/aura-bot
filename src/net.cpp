@@ -366,7 +366,7 @@ void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t por
 void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& clientIps)
 {
   if (!SendBroadcast(packet))
-    Print("[AURA] UDP Broadcast failed @ CNet::SendGameDiscovery.");
+    return;
 
   if (!clientIps.empty()) {
     if (m_Aura->m_Config->m_UDPBroadcastEnabled)

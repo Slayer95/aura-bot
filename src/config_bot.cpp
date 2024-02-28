@@ -88,7 +88,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
     }
   }
 
-  m_UDPBroadcastStrictMode            = CFG->GetBool("net.game_discovery.udp.broadcast.strict", true);
+  m_UDPBroadcastStrictMode       = CFG->GetBool("net.game_discovery.udp.broadcast.strict", true);
   m_UDPForwardTraffic            = CFG->GetBool("net.udp_redirect.enabled", false);
   m_UDPForwardAddress            = CFG->GetString("net.udp_redirect.ip_address", emptyString);
   m_UDPForwardPort               = CFG->GetUint16("net.udp_redirect.port", 6110);
@@ -142,8 +142,10 @@ CBotConfig::CBotConfig(CConfig* CFG)
     m_PublicIPValue = CFG->GetString("net.public_ip_address.value", "https://api.ipify.org");
   } else if (ipAlgorithm == "none") {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG->Accept("net.public_ip_address.value");
   } else {
     m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG->Accept("net.public_ip_address.value");
   }
 
   m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);
