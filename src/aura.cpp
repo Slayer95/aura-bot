@@ -1,5 +1,30 @@
 /*
 
+  Copyright [2024] [Leonardo Julca]
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
+/*
+
    Copyright [2010] [Josko Nikolic]
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +85,7 @@
 #include <process.h>
 #endif
 
-#define VERSION "1.34.dev"
+#define VERSION "2.0.0.dev"
 
 using namespace std;
 
@@ -927,7 +952,7 @@ void CAura::HandleUDP(UDPPkt* pkt)
       if (FromGameRanger) {
         m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_Net->m_GameRangerRemoteAddress, m_Net->m_GameRangerRemotePort, ExtraDigit);
       } else {
-        Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+        //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
         m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
         if (remotePort != m_Net->m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
           m_CurrentLobby->AnnounceToAddress(ipAddress);

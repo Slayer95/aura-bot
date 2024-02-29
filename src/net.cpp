@@ -191,13 +191,13 @@ bool CNet::Init(CConfig* CFG)
     }
   }
 
+  uint16_t fallbackPort = CFG->GetUint16("net.udp_fallback.outbound_port", 6113);
   if (!m_UDPMainServerEnabled) {
-    uint16_t port = CFG->GetUint16("net.udp_fallback.outbound_port", 6113);
     m_UDPDeafSocket = new CUDPServer(AF_INET);
     m_UDPDeafSocket->SetDontRoute(useDoNotRoute);
-    if (!m_UDPDeafSocket->Listen(m_Aura->m_Config->m_BindAddress4, port, true)) {
+    if (!m_UDPDeafSocket->Listen(m_Aura->m_Config->m_BindAddress4, fallbackPort, true)) {
       Print("====================================================================");
-      Print("[DISCOVERY] Failed to bind to fallback port " + to_string(port) + ".");
+      Print("[DISCOVERY] Failed to bind to fallback port " + to_string(fallbackPort) + ".");
       Print("[DISCOVERY] For a random available port, set <net.udp_fallback.outbound_port = 0>");
       if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
         Print("[DISCOVERY] Failed to start UDP/IPv4 service. Cannot start broadcast service.");
@@ -209,13 +209,13 @@ bool CNet::Init(CConfig* CFG)
     }
   }
 
+  uint16_t ipv6Port = CFG->GetUint16("net.udp_ipv6.port", 6110);
   if (m_SupportUDPOverIPv6) {
-    uint16_t port = CFG->GetUint16("net.udp_ipv6.port", 6110);
     m_UDPIPv6Server = new CUDPServer(AF_INET6);
     m_UDPIPv6Server->SetDontRoute(useDoNotRoute);
-    if (!m_UDPIPv6Server->Listen(m_Aura->m_Config->m_BindAddress6, port, true)) {
+    if (!m_UDPIPv6Server->Listen(m_Aura->m_Config->m_BindAddress6, ipv6Port, true)) {
       Print("====================================================================");
-      Print("[DISCOVERY] Failed to bind to port " + to_string(port) + ".");
+      Print("[DISCOVERY] Failed to bind to port " + to_string(ipv6Port) + ".");
       Print("[DISCOVERY] For a random available port, set <net.udp_ipv6.port = 0>");
       Print("[DISCOVERY] Failed to start UDP/IPv6 service");
       Print("====================================================================");

@@ -1,13 +1,10 @@
 ﻿Aura
 ====
-[![Build Status](https://secure.travis-ci.org/Josko/aura-bot.png?branch=master)](http://travis-ci.org/Josko/aura-bot)
-[![Build Status](https://ci.appveyor.com/api/projects/status/u67db01q5nbt172l/branch/master?svg=true)](https://ci.appveyor.com/project/Josko/aura-bot/branch/master)
-[![Build Status](https://scan.coverity.com/projects/1748/badge.svg)](https://scan.coverity.com/projects/josko-aura-bot)
 
 Overview
 --------
 
-Aura is a Warcraft III hosting-bot based on GHost++ by Varlock. It's a complete
+Aura is a Warcraft III hosting-bot based on Varlock's GHost++. It's a complete
 overhaul with speed and efficiency in mind and packed with fewer dependencies.
 
 Removed features from GHost++:
@@ -22,12 +19,11 @@ Removed features from GHost++:
 * No boost required
 
 Other changes:
-* Uses C++14
+* Uses C++17
 * Single-threaded
 * Has a Windows 64-bit build
 * Uses SQLite and a different database organization.
 * Tested on OS X (see [Building -> OS X](#os-x) for detailed requirements)
-* A lot of code removed, about 1 MB smaller binary on Linux
 * Updated libraries: StormLib, SQLite, zlib
 * Connects to and can be controlled via IRC
 * Using aggressive optimizations
@@ -47,7 +43,7 @@ Building
 
 ### Windows
 
-Windows users must use VS2015 or later. Visual Studio 2015 Community edition works.
+Windows users must use VS2015 or later. Visual Studio 2019 Community edition works.
 Neccessary .sln and .vcxproj files are provided. Before building, choose the Release configuration and Win32 or x64 as the platform.
 The binary shall be generated in the `..\aura-bot\aura\Release` folder.
 
@@ -134,4 +130,4 @@ That would be lovely.
 5. Create an [Issue][1] with a link to your branch or make Pull Request
 6. Enjoy a beer and wait
 
-[1]: https://github.com/Josko/aura-bot/issues
+[1]: https://gitlab.com/ivojulca/aura-bot/
