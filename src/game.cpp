@@ -1570,7 +1570,7 @@ void CGame::SendGameDiscoveryInfo() const
     if (isIPv6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) {
       // TODO(IceSandslash): Validate in config-net.cpp
       Print("[CONFIG] Game discovery message to " + clientIp + " at <net.game_discovery.udp.extra_clients.ip_addresses> cannot be sent, because IPv6 support hasn't been enabled");
-      Print("[CONFIG] Set <net.ipv6.tcp.enabled = yes>, and <net.ipv6.udp.enabled = yes> if you want to enable it.");
+      Print("[CONFIG] Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
       continue;
     }
     m_Aura->m_Net->Send(address, isIPv6 ? ipv6Packet : ipv4Packet);

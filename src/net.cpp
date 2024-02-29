@@ -167,7 +167,7 @@ bool CNet::Init(CConfig* CFG)
   // If disabled, UDP communication is one-way, and can only be through W3GS_GAMEINFO.
   m_UDPMainServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
   m_SupportTCPOverIPv6 = CFG->GetBool("net.ipv6.tcp.enabled", true);
-  m_SupportUDPOverIPv6 = CFG->GetBool("net.ipv6.udp.enabled", true);
+  m_SupportUDPOverIPv6 = CFG->GetBool("net.udp_ipv6.enabled", true);
 
   if (m_UDPMainServerEnabled) {
     m_UDPMainServer = new CUDPServer(AF_INET);
@@ -210,13 +210,13 @@ bool CNet::Init(CConfig* CFG)
   }
 
   if (m_SupportUDPOverIPv6) {
-    uint16_t port = CFG->GetUint16("net.ipv6.udp.port", 6110);
+    uint16_t port = CFG->GetUint16("net.udp_ipv6.port", 6110);
     m_UDPIPv6Server = new CUDPServer(AF_INET6);
     m_UDPIPv6Server->SetDontRoute(useDoNotRoute);
     if (!m_UDPIPv6Server->Listen(m_Aura->m_Config->m_BindAddress6, port, true)) {
       Print("====================================================================");
       Print("[DISCOVERY] Failed to bind to port " + to_string(port) + ".");
-      Print("[DISCOVERY] For a random available port, set <net.ipv6.udp.port = 0>");
+      Print("[DISCOVERY] For a random available port, set <net.udp_ipv6.port = 0>");
       Print("[DISCOVERY] Failed to start UDP/IPv6 service");
       Print("====================================================================");
       return false;
@@ -312,7 +312,7 @@ void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet)
 {
   if (address->ss_family == AF_INET6 && !m_SupportUDPOverIPv6) {
     Print("[CONFIG] Game discovery message to " + AddressToStringStrict(*address) + " cannot be sent, because IPv6 support hasn't been enabled");
-    Print("[CONFIG] Set <net.ipv6.udp.enabled = yes> if you want to enable it.");
+    Print("[CONFIG] Set <net.udp_ipv6.enabled = yes> if you want to enable it.");
     return;
   }
 
@@ -394,15 +394,15 @@ vector<uint8_t> CNet::GetPublicIP()
   static pair<string, vector<uint8_t>> memoized = make_pair(string(), vector<uint8_t>());
   vector<uint8_t> emptyIP;
 
-  switch (m_Aura->m_Config->m_PublicIPAlgorithm) {
+  switch (m_Aura->m_Config->m_PublicIPv4Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      return ExtractIPv4(m_Aura->m_Config->m_PublicIPValue);
+      return ExtractIPv4(m_Aura->m_Config->m_PublicIPv4Value);
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (memoized.first == m_Aura->m_Config->m_PublicIPValue) {
+      if (memoized.first == m_Aura->m_Config->m_PublicIPv4Value) {
         return memoized.second;
       }
-      auto response = cpr::Get(cpr::Url{m_Aura->m_Config->m_PublicIPValue});
+      auto response = cpr::Get(cpr::Url{m_Aura->m_Config->m_PublicIPv4Value});
       if (response.status_code != 200) {
         return emptyIP;
       }
@@ -412,7 +412,7 @@ vector<uint8_t> CNet::GetPublicIP()
         return emptyIP;
       }
 
-      memoized = make_pair(m_Aura->m_Config->m_PublicIPValue, result);
+      memoized = make_pair(m_Aura->m_Config->m_PublicIPv4Value, result);
       return memoized.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:

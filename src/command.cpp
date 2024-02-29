@@ -2451,7 +2451,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
         sockaddr_storage* address = &(maybeAddress.value());
         if (GetInnerIPVersion(address) == AF_INET6 && !(m_Aura->m_Net->m_SupportUDPOverIPv6 && m_Aura->m_Net->m_SupportTCPOverIPv6)) {
-          ErrorReply("IPv6 support hasn't been enabled. Set <net.ipv6.tcp.enabled = yes>, and <net.ipv6.udp.enabled = yes> if you want to enable it.");
+          ErrorReply("IPv6 support hasn't been enabled. Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
           break;
         }
         if (address->ss_family == AF_INET6 && isSpecialIPv6Address(reinterpret_cast<struct sockaddr_in6*>(address)) ||

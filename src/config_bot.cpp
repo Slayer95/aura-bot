@@ -102,7 +102,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_UDPGameRangerAddress         = CFG->GetIPv4("net.game_discovery.udp.gameranger.ip_address", {255, 255, 255, 255});
   m_UDPGameRangerPort            = CFG->GetUint16("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112);
 
-  m_AllowDownloads               = CFG->GetBool("bot.allow_downloads", false);
+  m_AllowDownloads               = CFG->GetBool("hosting.map_downloads.enabled", false);
   m_AllowTransfers               = CFG->GetUint8("hosting.map_transfers.enabled", MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);
   m_MaxUploadSize                = CFG->GetInt("hosting.map_transfers.max_size", 8192);
@@ -111,8 +111,8 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_RTTPings                     = CFG->GetBool("metrics.rtt_pings", false);
   m_HasBufferBloat               = CFG->GetBool("net.has_buffer_bloat", false);
 
-  m_ReconnectWaitTime            = CFG->GetUint8("net.player_reconnect.wait", 5);
-  m_ReconnectWaitTimeLegacy      = CFG->GetUint8("net.player_reconnect.legacy_wait", 3);
+  m_ReconnectWaitTime            = CFG->GetUint8("net.tcp_extensions.gproxy.reconnect_wait", 5);
+  m_ReconnectWaitTimeLegacy      = CFG->GetUint8("net.tcp_extensions.gproxy_legacy.reconnect_wait", 3);
 
   m_AnnounceGProxy               = CFG->GetBool("net.tcp_extensions.gproxy.announce_chat", true);
   m_AnnounceGProxySite           = CFG->GetString("net.tcp_extensions.gproxy.site", "https://www.mymgn.com/gproxy/");
@@ -126,26 +126,48 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_EnableCFGCache               = CFG->GetBool("bot.load_maps.cache.enabled", true);
   m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
 
-  string ipAlgorithm             = CFG->GetString("net.public_ip_address.algorithm", "api");
-  if (ipAlgorithm == "manual") {
-    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-    if (!CFG->Exists("net.public_ip_address.value")) {
-      Print("[CONFIG] <net.public_ip_address.value> is missing. Set <net.public_ip_address.algorithm = none> if this is intended.");
+  string ipv4Algorithm             = CFG->GetString("net.ipv4.public_address.algorithm", "api");
+  if (ipv4Algorithm == "manual") {
+    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+    if (!CFG->Exists("net.ipv4.public_address.value")) {
+      Print("[CONFIG] <net.ipv4.public_address.value> is missing. Set <net.ipv4.public_address.algorithm = none> if this is intended.");
       CFG->SetFailed();
     } else {
-      sockaddr_storage inputIPv4 = CFG->GetAddressIPv4("net.public_ip_address.value", "10.9.8.7");
+      sockaddr_storage inputIPv4 = CFG->GetAddressIPv4("net.ipv4.public_address.value", "0.0.0.0");
       CFG->FailIfErrorLast();
-      m_PublicIPValue = AddressToString(inputIPv4);
+      m_PublicIPv4Value = AddressToString(inputIPv4);
     }
-  } else if (ipAlgorithm == "api") {
-    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
-    m_PublicIPValue = CFG->GetString("net.public_ip_address.value", "https://api.ipify.org");
-  } else if (ipAlgorithm == "none") {
-    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.public_ip_address.value");
+  } else if (ipv4Algorithm == "api") {
+    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+    m_PublicIPv4Value = CFG->GetString("net.ipv4.public_address.value", "https://api.ipify.org");
+  } else if (ipv4Algorithm == "none") {
+    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG->Accept("net.ipv4.public_address.value");
   } else {
-    m_PublicIPAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.public_ip_address.value");
+    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG->Accept("net.ipv4.public_address.value");
+  }
+
+  string ipv6Algorithm             = CFG->GetString("net.ipv6.public_address.algorithm", "api");
+  if (ipv6Algorithm == "manual") {
+    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+    if (!CFG->Exists("net.ipv6.public_address.value")) {
+      Print("[CONFIG] <net.ipv6.public_address.value> is missing. Set <net.ipv6.public_address.algorithm = none> if this is intended.");
+      CFG->SetFailed();
+    } else {
+      sockaddr_storage inputIPv6 = CFG->GetAddressIPv6("net.ipv6.public_address.value", "::");
+      CFG->FailIfErrorLast();
+      m_PublicIPv6Value = AddressToString(inputIPv6);
+    }
+  } else if (ipv6Algorithm == "api") {
+    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+    m_PublicIPv6Value = CFG->GetString("net.ipv6.public_address.value", "https://api6.ipify.org");
+  } else if (ipv6Algorithm == "none") {
+    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG->Accept("net.ipv6.public_address.value");
+  } else {
+    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG->Accept("net.ipv6.public_address.value");
   }
 
   m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);

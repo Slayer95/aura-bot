@@ -766,7 +766,7 @@ void CAura::HandleHealthCheck()
     Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
     if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
       m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
-      m_CurrentLobby->SendAllChat("This bot is disconnected from the Internet, because its public IP address is unreachable.");
+      m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv4 Internet, because its public IP address is unreachable.");
       m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
       m_CurrentLobby->SendAllChat(portForwardInstructions);
       m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
@@ -775,6 +775,7 @@ void CAura::HandleHealthCheck()
       m_CurrentLobby->SendAllChat("=================================================================================");
     }
   }
+  // TODO(IceSandslash): Show IPv4 information, IPv6 too.
   if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
     string LeftMessage = JoinVector(ChatReport, " | ", false);
     while (LeftMessage.length() > 254) {

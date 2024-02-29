@@ -106,8 +106,10 @@ public:
   bool                                    m_EnableCFGCache;             // save read map CFGs to disk
 
   bool                                    m_EnableUPnP;
-  uint8_t                                 m_PublicIPAlgorithm;
-  std::string                             m_PublicIPValue;
+  uint8_t                                 m_PublicIPv4Algorithm;
+  std::string                             m_PublicIPv4Value;
+  uint8_t                                 m_PublicIPv6Algorithm;
+  std::string                             m_PublicIPv6Value;
 
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                 // master switch to enable/disable ALL bnet configs on startup
