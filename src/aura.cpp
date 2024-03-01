@@ -39,7 +39,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
+   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
  */
 
@@ -86,6 +86,7 @@
 #endif
 
 #define VERSION "2.0.0.dev"
+#define REPOSITORY "https://gitlab.com/ivojulca/aura-bot"
 
 using namespace std;
 
@@ -218,6 +219,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
     m_Version(VERSION),
+    m_RepositoryURL(REPOSITORY),
     m_MaxSlots(MAX_SLOTS_LEGACY),
     m_HostCounter(0),
     m_LastHostPort(0),
@@ -230,7 +232,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_Ready(true),
     m_ScriptsExtracted(false)
 {
-  Print("[AURA] Aura++ version " + m_Version);
+  Print("[AURA] Aura version " + m_Version);
 
   m_GameProtocol = new CGameProtocol(this);
   m_Net = new CNet(this);
@@ -722,17 +724,20 @@ pair<uint8_t, string> CAura::LoadMapConfig(const string& user, const string& cfg
   filesystem::path FilePath = (cfgPath.is_absolute() ? cfgPath : (this->m_Config->m_MapCFGPath / cfgPath)).lexically_normal();
   string FileName = FilePath.filename().string();
   if (PathHasNullBytes(FilePath) || !allowArbitraryMapPath && FilePath.parent_path() != this->m_Config->m_MapCFGPath) {
-    Print(FilePath.string());
     return make_pair(0x61, string("Forbidden config path."));
   }
 
   int MapExtraFlags = 0;
 
   bool ResolvedCFGExists = MapCFG.Read(FilePath);
+  if (!ResolvedCFGExists) {
+    return make_pair(0x62, string("Config file not found."));
+  }
+
   if (this->m_Map) {
     delete this->m_Map;
   }
-  this->m_Map = new CMap(this, &MapCFG, ResolvedCFGExists ? "cfg:" + FileName : MapCFG.GetString("map_localpath", ""));
+  this->m_Map = new CMap(this, &MapCFG, "cfg:" + FileName);
   if (MapExtraFlags != 0) {
     this->m_Map->AddMapFlags(MapExtraFlags);
   }
@@ -814,7 +819,7 @@ void CAura::HandleHealthCheck()
   m_Net->ResetHealthCheck();
 }
 
-bool CAura::HandleAction(vector<string> action)
+bool CAura::HandleAction(vector<string>& action)
 {
   if (action[0] == "exec") {
     Print("[AURA] Exec cli unsupported yet");

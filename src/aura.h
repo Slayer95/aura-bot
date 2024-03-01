@@ -39,7 +39,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
+   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
  */
 
@@ -102,7 +102,8 @@ public:
   std::vector<CGame*>                                m_Games;                      // these games are in progress
   CAuraDB*                                           m_DB;                         // database
   CMap*                                              m_Map;                        // the currently loaded map
-  std::string                                        m_Version;                    // Aura++ version string
+  std::string                                        m_Version;                    // Aura version string
+  std::string                                        m_RepositoryURL;              // Aura repository URL
 
   uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
@@ -137,7 +138,7 @@ public:
   // processing functions
 
   void HandleHealthCheck();
-  bool HandleAction(std::vector<std::string> action);
+  bool HandleAction(std::vector<std::string>& action);
   void HandleUDP(UDPPkt* pkt);
   bool Update();
   inline bool GetReady() const { return m_Ready; }

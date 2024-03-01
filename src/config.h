@@ -39,7 +39,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
+   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
  */
 
@@ -93,6 +93,7 @@ public:
   uint8_t GetUint8(const std::string& key, uint8_t x);
 
   float GetFloat(const std::string& key, float x);
+  uint8_t GetStringIndex(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);
 
   std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
   std::set<std::string> GetSet(const std::string& key, char separator, const std::set<std::string> x);

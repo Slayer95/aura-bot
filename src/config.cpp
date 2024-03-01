@@ -39,7 +39,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
+   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
  */
 
@@ -193,6 +193,24 @@ string CConfig::GetString(const string& key, const uint32_t minLength, const uin
   }
 
   SUCCESS(it->second)
+}
+
+uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromList, const uint8_t x)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  uint8_t maxIndex = fromList.size();
+  for (uint8_t i = 0; i < maxIndex; ++i) {
+    if (it->second == fromList[i]) {
+      SUCCESS(i)
+    }
+  }
+
+  CONFIG_ERROR(key, x)
 }
 
 bool CConfig::GetBool(const string& key, bool x)

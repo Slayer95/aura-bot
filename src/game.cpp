@@ -39,7 +39,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
+   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
  */
 
@@ -330,7 +330,7 @@ CGameProtocol* CGame::GetProtocol() const
 int64_t CGame::GetNextTimedActionTicks() const
 {
   // return the number of ticks (ms) until the next "timed action", which for our purposes is the next game update
-  // the main Aura++ loop will make sure the next loop update happens at or before this value
+  // the main Aura loop will make sure the next loop update happens at or before this value
   // note: there's no reason this function couldn't take into account the game's other timers too but they're far less critical
   // warning: this function must take into account when actions are not being sent (e.g. during loading or lagging)
 

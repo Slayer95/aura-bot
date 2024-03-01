@@ -103,7 +103,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_UDPGameRangerPort            = CFG->GetUint16("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112);
 
   m_AllowDownloads               = CFG->GetBool("hosting.map_downloads.enabled", false);
-  m_AllowTransfers               = CFG->GetUint8("hosting.map_transfers.enabled", MAP_TRANSFERS_AUTOMATIC);
+  m_AllowTransfers               = CFG->GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);
   m_MaxUploadSize                = CFG->GetInt("hosting.map_transfers.max_size", 8192);
   m_MaxUploadSpeed               = CFG->GetInt("hosting.map_transfers.max_speed", 1024);

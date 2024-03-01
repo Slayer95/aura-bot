@@ -585,11 +585,12 @@ void CCommandContext::Run(const string& command, const string& payload)
   switch (CommandHash)
   {
     //
-    // !VERSION
+    // !ABOUT
     //
 
-    case HashCode("version"): {
-      SendReply("Version: Aura " + m_Aura->m_Version);
+    case HashCode("version"):
+    case HashCode("about"): {
+      SendReply("Aura " + m_Aura->m_Version + "is permissive-licensed open source. See " + m_Aura->m_RepositoryURL);
       break;
     }
 

@@ -39,7 +39,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT: http://ghost.pwner.org/
+   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
  */
 
@@ -708,9 +708,6 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), false));
       MapContentMismatch[0] = CFGValue != MapValue;
-      if (CFGValue != MapValue) {
-        Print("Got CFG=" + CFGValue + "; Expected (Map) " + MapValue);
-      }
     }
     MapSize = ExtractNumbers(CFGValue, 4);
   } else if (RawMapSize != 0) {
