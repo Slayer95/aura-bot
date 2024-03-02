@@ -1,10 +1,6 @@
 ﻿Aura
 ====
 
-DISCLAIMER: A significant part of this README conveys project intent, and not
-necessarily the current status of the code base. I am just writing this up now,
-so I don't get lazy later. Proceed with caution.
-
 Overview
 --------
 
@@ -33,13 +29,13 @@ Type this into the command line:
 cd LOCATION
 ```
 
-Replace LOCATION with the location Aura is in (ending up with, for instance, cd "~/Downloads/aura-bot" 
-or cd "C:\Users\Jon\Downloads\aura-bot\").
+Replace ``LOCATION`` with the location Aura is in (ending up with, for instance, ``cd "~/Downloads/aura-bot"`` 
+or ``cd "C:\Users\Jon\Downloads\aura-bot\")``.
 
 This will set your command line's location to Aura's folder. You'll have to do this each time you open 
 a command line to run Aura.
 
-Copy aura-example.cfg into aura.cfg, and edit as you please. Aura is capable of autoconfiguration to some
+Copy ``aura-example.cfg`` into ``aura.cfg``, and edit as you please. Aura is capable of autoconfiguration to some
 extent, but you will need to provide it with ``bot.maps_path`` to let it find your maps folder. This should 
 be in the same format as ``LOCATION`` above. See [CONFIG.md][5] for documentation regarding config options.
 

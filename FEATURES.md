@@ -3,6 +3,8 @@
 
 [Aura][1] has a revamped core, and has had features not only added, but also removed.
 
+TODO: Update this feature list for Aura 2.0
+
 Removed features from [GHost++][2]:
 * No MySQL support
 * No autohost
