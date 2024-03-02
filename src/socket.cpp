@@ -341,10 +341,10 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
   } else if (c == 0) {
     // the other end closed the connection
-    m_HasFin = true;
     if (!m_HasFin) {
       Print("[TCPSOCKET] (" + GetName() +") terminated the connection");
     }
+    m_HasFin = true;
   }
   return false;
 }
