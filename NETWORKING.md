@@ -93,8 +93,8 @@ global_realm.custom_port.value = <PORT>
 
 Type the following command, replacing two values:
 
-* <PORT>: The same as displayed above.
-* <net.host_port.only>: It must match the value for ``net.host_port.only`` in your ``aura.cfg``. By default, 6113.
+- ``<PORT>``: The same as displayed above.
+- ``<net.host_port.only>``: It must match the value for ``net.host_port.only`` in your ``aura.cfg``. By default, 6113.
 
 ```
 pktriot tunnel tcp forward --port <PORT> --destination 127.0.0.1 --dstport <net.host_port.only>
