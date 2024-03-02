@@ -17,13 +17,13 @@ Below is a detailed explanation of each flag and parameter along with usage exam
 # Positional arguments
 
 ## `<MAP> <NAME>`
-Specifies the map and the name for the hosted game. 
+Hosts a game with the given name, using a given map file.
 
 - `<MAP>`: The name or identifier of the map to be hosted.
 - `<NAME>`: The desired name for the hosted game session.
 
 ## `<CONFIG> <NAME>`
-Specifies the configuration and the name for the hosted game.
+Hosts a game with the given name, using a given map config/metadata file.
 
 - `<CONFIG>`: The configuration settings for the game.
 - `<NAME>`: The desired name for the hosted game session.
@@ -46,6 +46,8 @@ will be available to players on the same network, as well as players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
+This option is equivalent to ``<net.game_discovery.udp.enabled = yes>`` in \`aura.cfg\`
+
 This flag is enabled by default.
 
 ## \`--no-lan\`
@@ -56,6 +58,8 @@ will NOT be available to players on the same network, nor to players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
+This option is equivalent to ``<net.game_discovery.udp.enabled = no>`` in \`aura.cfg\`
+
 ## \`--bnet\`
 
 Sets all Battle.net/PvPGN realms registered in \`aura.cfg\` to enabled. This flag overrides 
@@ -63,11 +67,15 @@ any ``realm_N.enabled = no`` entries in the configuration file. This forces host
 to be playable over the internet through Blizzard's Battle.net platform, as well as 
 through alternative PvPGN servers.
 
+This option is equivalent to ``<bot.toggle_every_realm = yes>`` in \`aura.cfg\`
+
 ## \`--no-bnet\`
 
 Sets all Battle.net/PvPGN realms registered in \`aura.cfg\` to disabled. This prevents Aura from 
 connecting to them. If this flag is enabled, games cannot be played over the internet through 
 Blizzard's Battle.net platform, nor through alternative PvPGN servers.
+
+This option is equivalent to ``<bot.toggle_every_realm = no>`` in \`aura.cfg\`
 
 ## \`--exit\`
 
@@ -101,15 +109,21 @@ when hosting games from the CLI.
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
 compatibility. This parameter allows the host bot to switch versions on the spot.
 
+This option is equivalent to ``<game.version>`` in \`aura.cfg\`
+
 ## \`--w3path <DIRECTORY>\` 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows the host bot 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
 
+This option is equivalent to ``<game.install_path>`` in \`aura.cfg\`
+
 ## \`--mapdir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 maps are stored. This parameter allows the host bot to locate  
 and load maps for hosting games.
+
+This option is equivalent to ``<bot.maps_path>`` in \`aura.cfg\`
 
 ## \`--cfgdir <DIRECTORY>\`
 
@@ -117,7 +131,32 @@ Specifies the directory where the metadata of Warcraft 3 maps is stored. Aura on
 in order to host games, even after the actual map files are gone. This parameter allows the host bot 
 to locate the metadata files, also referred to as "map config" files, or \`mapcfg\` for short.
 
-## \`--udp <strict|lax|free>\`
+This option is equivalent to ``<bot.map_configs_path>`` in \`aura.cfg\`
+
+## \`--lan-mode <MODE>\`
+
+Specifies how hosted games available for "Local Area Network" should be made known to potential players.
+
+**Options:**
+
+- strict: Exclusively uses back-and-forth communication with interested game clients. Aura's server sends 
+tiny periodic messages over the network that prompts open Warcraft III clients to request further 
+information. Once Aura provides them with that information, game clients may join your hosted game.
+
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = yes>`` in \`aura.cfg\`
+
+- lax: Aura periodically sends the full information needed to join a hosted game to all machines in the 
+same network. Additionally, it will reply to the information request that happens when a game client first 
+opens the "Local Area Network" menu.
+
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = no>`` in \`aura.cfg\`
+
+- free: Aura periodically sends the full information needed to join a hosted game to all machines in the 
+same network. It will not reply to any information requests, nor process any UDP traffic. Port 6112 is not 
+used by Aura's UDP server. This is the only UDP mode that allows a Warcraft III game client in the host 
+machine to connect to the Local Area Network.
+
+This option is equivalent to ``<net.udp_server.enabled = no>`` in \`aura.cfg\`
 
 # Flags for CLI games
 
@@ -174,7 +213,9 @@ Aura will remain in game mirroring mode until the process finishes.
 ## \`--observers <OBSERVER>\`
 
 This parameter sets the observer mode for the hosted game. Observer mode determines how spectators are 
-allowed to observe the game. Here are the available options:
+allowed to observe the game.
+
+**Options:**
 
 - none: No observers allowed. Spectators cannot join the game.
 - full observers: Allows spectators to exclusively observe the game, and chat among themselves.
@@ -184,7 +225,9 @@ allowed to observe the game. Here are the available options:
 ## \`--visibility <VISIBILITY>\`
 
 This parameter sets the visibility mode for the hosted game, determining how much of the map is visible 
-to players and observers. Here are the available options:
+to players and observers.
+
+**Options:**
 
 - default: Standard visibility mode where players can only see areas of the map revealed by their units and structures.
 - hide terrain: Hides terrain from players and observers, making the entire map appear as black fog of war.
@@ -230,7 +273,8 @@ It allows the execution of commands as a specific user on a particular server. H
 ## \`--exec-auth <AUTH>\`
 
 This parameter sets the authentication mode for executing commands specified by --exec.
-The available authentication modes are:
+
+**Options:**
 
 - spoofed: Treats the user as unverified by their respective server.
 - verified: Treats the user as verified by their respective server.
@@ -241,7 +285,8 @@ The available authentication modes are:
 ## \`--exec-scope <SCOPE>\`
 
 This parameter determines where the command specified by --exec will be run.
-There are four ways to specify the scope:
+
+**Options:**
 
 - none: The command runs without any specific scope. This is the default behavior.
 - lobby: The command runs in the currently hosted game lobby.

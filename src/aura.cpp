@@ -1345,7 +1345,7 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
 
     // Parameters
     "--w3version", "--w3path", "--mapdir", "--cfgdir", "--filetype",
-    "--udp",
+    "--lan-mode",
     "--exclude", "--mirror",
     "--observers", "--visibility", "--random-races", "--random-heroes", "--owner",
     "--exec-as", "--exec-auth", "exec-scope", "--exec"
@@ -1374,14 +1374,14 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   string MapPath = m_Config->m_MapPath.string();
   string MapCFGPath = m_Config->m_MapCFGPath.string();
   string MapFileType = "map";
-  string UDP4Mode = m_Net->m_UDPMainServerEnabled ? "strict": "free";
+  string LANMode = m_Net->m_UDPMainServerEnabled ? "strict": "free";
 
   cmdl("w3version", War3Version) >> War3Version;
   cmdl("w3path", War3Path) >> War3Path;
   cmdl("mapdir", MapPath) >> MapPath;
   cmdl("cfgdir", MapCFGPath) >> MapCFGPath;
   cmdl("filetype", MapFileType) >> MapFileType;
-  cmdl("udp", UDP4Mode) >> UDP4Mode;
+  cmdl("lan-mode", LANMode) >> LANMode;
 
   cmdl("no-exit", noexit) >> noexit;
   //cmdl("no-bnet", nobnet) >> nobnet;
@@ -1456,12 +1456,12 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   m_Config->m_EnableCFGCache = !nocache;
   m_Config->m_StrictPaths = stdpaths;
 
-  if (UDP4Mode == "strict" || UDP4Mode == "lax") {
+  if (LANMode == "strict" || LANMode == "lax") {
     m_Net->m_UDPMainServerEnabled = true;
-  } else if (UDP4Mode == "free") {
+  } else if (LANMode == "free") {
     m_Net->m_UDPMainServerEnabled = false;
   } else {
-    Print("Bad UDPMode: " + UDP4Mode);
+    Print("Bad UDPMode: " + LANMode);
   }
 
   string execCommand, execAs, execScope, execAuth;
