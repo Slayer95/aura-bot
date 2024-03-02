@@ -278,10 +278,28 @@ inline int ParseMapVisibility(const std::string s, bool & errored) {
     result = MAPVIS_DEFAULT;
   } else if (lower == "hide terrain" || lower == "hide" || lower == "ocultar terreno" || lower == "ocultar") {
     result = MAPVIS_HIDETERRAIN;
-  } else if (lower == "map explored" || lower == "explored" || lower == "mapa explorado" || lower == "explorado") {
+  } else if (lower == "explored map" || lower == "map explored" || lower == "explored" || lower == "mapa explorado" || lower == "explorado") {
     result = MAPVIS_EXPLORED;
   } else if (lower == "always visible" || lower == "always" || lower == "visible" || lower == "todo visible" || lower == "todo" || lower == "revelar" || lower == "todo revelado") {
     result = MAPVIS_ALWAYSVISIBLE;
+  } else {
+    errored = true;
+    return result;
+  }
+  errored = false;
+  return result;
+}
+
+inline int ParseMapRandomRaces(const std::string s, bool & errored) {
+  int result = 0;
+  std::string lower = s;
+  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  if (lower == "random race" || lower == "rr" || lower == "yes" || lower == "random" || lower == "random races") {
+    result = MAPFLAG_RANDOMRACES;
+  } else if (lower == "default" || lower == "no" || lower == "predeterminado") {
+    result = 0;
   } else {
     errored = true;
     return result;
@@ -296,7 +314,7 @@ inline int ParseMapRandomHero(const std::string s, bool & errored) {
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
-  if (lower == "random hero" || lower == "rh" || lower == "yes" || lower == "heroe aleatorio" || lower == "aleatorio" || lower == "héroe aleatorio") {
+  if (lower == "random hero" || lower == "rh" || lower == "yes" || lower == "random" || lower == "random heroes") {
     result = MAPFLAG_RANDOMHERO;
   } else if (lower == "default" || lower == "no" || lower == "predeterminado") {
     result = 0;

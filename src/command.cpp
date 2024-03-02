@@ -590,7 +590,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("version"):
     case HashCode("about"): {
-      SendReply("Aura " + m_Aura->m_Version + "is permissive-licensed open source. See " + m_Aura->m_RepositoryURL);
+      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project. See " + m_Aura->m_RepositoryURL);
       break;
     }
 
@@ -4265,6 +4265,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         Args[0],
         Args.size() >= 2 ? Args[1] : emptyString,
         Args.size() >= 3 ? Args[2] : emptyString,
+        "default",
         Args.size() >= 4 ? Args[3] : emptyString,
         IsHostCommand, // I'm gonna be lucky
         false // Directory traversal protection

@@ -169,8 +169,8 @@ public:
   void CacheMapPresets();
   bool CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string ownerServer, std::string creatorName, CRealm* nCreatorServer, CCommandContext* ctx);
   bool CreateMirror(CMap* map, uint8_t gameDisplay, std::string gameName, std::vector<uint8_t> gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, std::string excludedServer, std::string creatorName, CRealm* creatorServer, CCommandContext* ctx);
-  std::pair<uint8_t, std::string> LoadMap(const std::string& user, const std::string& mapInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath);
-  std::pair<uint8_t, std::string> LoadMapConfig(const std::string& user, const std::string& cfgInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomHeroInput, const bool& allowArbitraryMapPath);
+  std::pair<uint8_t, std::string> LoadMap(const std::string& user, const std::string& mapInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomRaceInput, const std::string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath);
+  std::pair<uint8_t, std::string> LoadMapConfig(const std::string& user, const std::string& cfgInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomRaceInput, const std::string& randomHeroInput, const bool& allowArbitraryMapPath);
   std::vector<std::string> MapFilesMatch(std::string pattern);
   std::vector<std::string> ConfigFilesMatch(std::string pattern);
 

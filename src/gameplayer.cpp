@@ -176,7 +176,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
           bool anyExtensions = m_Aura->m_Config->m_EnableTCPScanUDP || m_Aura->m_Config->m_EnableTCPWrapUDP;
           if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
             if (m_Aura->m_Config->m_EnableTCPScanUDP) {
-              if (m_Aura->m_CurrentLobby->GetIsLobby()) {
+              if (m_Aura->m_CurrentLobby->GetIsLobby() && m_Aura->m_CurrentLobby->GetUDPEnabled()) {
                 vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPSCAN, 6, 0};
                 uint16_t port = m_Aura->m_CurrentLobby->GetDiscoveryPort(GetInnerIPVersion(&(m_Socket->m_RemoteHost)));
                 AppendByteArray(packet, port, false);

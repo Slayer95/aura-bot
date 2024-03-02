@@ -494,7 +494,7 @@ CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
   return gameServer;
 }
 
-pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput, const string& observersInput, const string& visibilityInput, const string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath)
+pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput, const string& observersInput, const string& visibilityInput, const string& randomRaceInput, const string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath)
 {
   string SearchInput = mapInput;
   int MapObserversValue = -1;
@@ -515,6 +515,13 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
       return make_pair(0x11, string("Invalid value passed for map visibility: \"" + visibilityInput + "\""));
     }
     MapVisibilityValue = result;
+  }
+  if (!randomRaceInput.empty()) {
+    int result = ParseMapRandomRaces(randomRaceInput, errored);
+    if (errored) {
+      return make_pair(0x12, string("Invalid value passed for race randomization: \"" + randomRaceInput + "\""));
+    }
+    MapExtraFlags = result;
   }
   if (!randomHeroInput.empty()) {
     int result = ParseMapRandomHero(randomHeroInput, errored);
@@ -713,7 +720,7 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
   }
 }
 
-pair<uint8_t, string> CAura::LoadMapConfig(const string& user, const string& cfgInput, const string& observersInput, const string& visibilityInput, const string& randomHeroInput, const bool& allowArbitraryMapPath)
+pair<uint8_t, string> CAura::LoadMapConfig(const string& user, const string& cfgInput, const string& observersInput, const string& visibilityInput, const string& randomRaceInput, const string& randomHeroInput, const bool& allowArbitraryMapPath)
 {
   CConfig MapCFG;
 
@@ -727,8 +734,9 @@ pair<uint8_t, string> CAura::LoadMapConfig(const string& user, const string& cfg
     return make_pair(0x61, string("Forbidden config path."));
   }
 
-  int MapExtraFlags = 0;
+  // TODO(IceSandslash): Use inputs
 
+  int MapExtraFlags = 0;
   bool ResolvedCFGExists = MapCFG.Read(FilePath);
   if (!ResolvedCFGExists) {
     return make_pair(0x62, string("Config file not found."));
@@ -830,10 +838,11 @@ bool CAura::HandleAction(vector<string>& action)
     string GameName = action[2];
     string ObsInput = action[3];
     string VisInput = action[4];
-    string RHInput = action[5];
-    string OwnerName = action[6];
-    string ExcludedRealm = action[7]; // TODO?
-    const bool AllowTraversal = action[8] == "1";
+    string RRInput = action[5];
+    string RHInput = action[6];
+    string OwnerName = action[7];
+    string ExcludedRealm = action[8]; // TODO?
+    const bool AllowTraversal = action[9] == "1";
     const bool GonnaBeLucky = true;
 
     string OwnerRealmName;
@@ -849,9 +858,9 @@ bool CAura::HandleAction(vector<string>& action)
 
     pair<uint8_t, string> LoadResult;
     if (action[0] == "hostmap") {
-      LoadResult = LoadMap(OwnerName, SearchInput, ObsInput, VisInput, RHInput, GonnaBeLucky, AllowTraversal);
+      LoadResult = LoadMap(OwnerName, SearchInput, ObsInput, VisInput, RRInput, RHInput, GonnaBeLucky, AllowTraversal);
     } else if (action[0] == "hostcfg") {
-      LoadResult = LoadMapConfig(OwnerName, SearchInput, ObsInput, VisInput, RHInput, AllowTraversal);
+      LoadResult = LoadMapConfig(OwnerName, SearchInput, ObsInput, VisInput, RRInput, RHInput, AllowTraversal);
     }
     if (!LoadResult.second.empty()) {
       Print("[AURA] " + LoadResult.second);
@@ -1328,37 +1337,22 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
 {
   // CLI overrides Config overrides Registry
   argh::parser cmdl({
-    /*
-      aura
-      ! --version
-      ! --help
-      ! --stdpaths
-       --w3version <DIRECTORY> --w3path <DIRECTORY> --mapdir <DIRECTORY> --cfgdir <DIRECTORY> --filetype <MAP|CONFIG>
-      ! --lan <BOOLEAN> --bnet <BOOLEAN> --exit <BOOLEAN> --cache <BOOLEAN>
-      ! --nolan <BOOLEAN> --nobnet <BOOLEAN> --noexit <BOOLEAN> --nocache <BOOLEAN>
-      ! --udp <MODE:(strict|lax|free)>
-       <MAP> <NAME> --exclude <SERVER> --mirror <IP:PORT#ID>
-       <MAP> <NAME> --obs <OBSERVER> --visibility <VISIBILITY> --rh <RANDOM> --owner <USER@SERVER>
-      ! --exec-as <USER@SERVER> --exec-auth <yes|no|auto>
-      ! --exec <COMMAND1> --exec <COMMAND2> --exec <COMMAND3>
-    */
-
+    // TODO(IceSandslash): Switch to another CLI parser library that properly supports flags
     // Flags
     //"--version", "--help", "--stdpaths",
     //"--lan", "--bnet", "--exit", "--cache",
-    //"--nolan", "--nobnet", "--noexit", "--nocache",
+    //"--no-lan", "--no-bnet", "--no-exit", "--no-cache",
 
     // Parameters
     "--w3version", "--w3path", "--mapdir", "--cfgdir", "--filetype",
     "--udp",
     "--exclude", "--mirror",
-    "--obs", "--visibility", "--rh", "--owner",
-    "--exec-as", "--exec-auth", "--exec"
+    "--observers", "--visibility", "--random-races", "--random-heroes", "--owner",
+    "--exec-as", "--exec-auth", "exec-scope", "--exec"
   });
 
   cmdl.parse(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
-  /* TODO(IceSandslash): Switch to another CLI parser library that properly supports flags */
   if (cmdl("--version")) {
     Print("--version");
     return true;
@@ -1389,54 +1383,61 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
   cmdl("filetype", MapFileType) >> MapFileType;
   cmdl("udp", UDP4Mode) >> UDP4Mode;
 
-  cmdl("noexit", noexit) >> noexit;
-  //cmdl("nobnet", nobnet) >> nobnet;
-  cmdl("nolan", nolan) >> nolan;
-  cmdl("nocache", nocache) >> nocache;
+  cmdl("no-exit", noexit) >> noexit;
+  //cmdl("no-bnet", nobnet) >> nobnet;
+  cmdl("no-lan", nolan) >> nolan;
+  cmdl("no-cache", nocache) >> nocache;
   cmdl("stdpaths") >> stdpaths;
 
-  if (!cmdl[1].empty() && !cmdl[2].empty()) {
-    string MirrorTarget, ExcludedRealm;
-    cmdl("mirror") >> MirrorTarget;
-    cmdl("exclude") >> ExcludedRealm;
+  string rawFirstArgument = cmdl[1];
+  if (!rawFirstArgument.empty()) {
+    string gameName = cmdl[2].empty() ? "Join and play" : cmdl[2];
+    string mirrorTarget, excludedRealm;
+    cmdl("mirror") >> mirrorTarget;
+    cmdl("exclude") >> excludedRealm;
 
-    string TargetMapPath = cmdl[1];
+    string targetMapPath = rawFirstArgument;
     if (stdpaths) {
-      filesystem::path mapPath = TargetMapPath;
-      TargetMapPath = filesystem::absolute(mapPath).lexically_normal().string();
+      filesystem::path mapPath = targetMapPath;
+      targetMapPath = filesystem::absolute(mapPath).lexically_normal().string();
     }
 
     vector<string> Action;
-    if (!MirrorTarget.empty()) {
+    if (!mirrorTarget.empty()) {
       Action.push_back("mirror");
-      Action.push_back(TargetMapPath);
-      Action.push_back(cmdl[2]);
-      Action.push_back(ExcludedRealm);
+      Action.push_back(targetMapPath);
+      Action.push_back(gameName);
+      Action.push_back(excludedRealm);
 
-      Action.push_back(MirrorTarget);
+      Action.push_back(mirrorTarget);
       Action.push_back(stdpaths ? "1" : "0");
     } else if (MapFileType == "map" || MapFileType == "config") {
-      string Obs, Vision, RandomHeroes, Owner;
-      cmdl("obs") >> Obs;
-      cmdl("visibility") >> Vision;
-      cmdl("rh") >> RandomHeroes;
-      cmdl("owner") >> Owner;
+      string observerMode, visionMode, randomRaces, randomHeroes, owner;
+      cmdl("observers") >> observerMode;
+      cmdl("visibility") >> visionMode;
+      cmdl("random-races") >> randomRaces;
+      cmdl("random-heroes") >> randomHeroes;
+      cmdl("owner") >> owner;
 
       if (MapFileType == "map") {
         Action.push_back("hostmap");
       } else {
         Action.push_back("hostcfg");
       }
-      Action.push_back(TargetMapPath);
+      Action.push_back(targetMapPath);
       Action.push_back(cmdl[2]);
-      Action.push_back(Obs);
+      Action.push_back(observerMode);
 
-      Action.push_back(Vision);
-      Action.push_back(RandomHeroes);
-      Action.push_back(Owner);
-      Action.push_back(ExcludedRealm);
+      Action.push_back(visionMode);
+      Action.push_back(randomRaces);
+      Action.push_back(randomHeroes);
+      Action.push_back(owner);
+      Action.push_back(excludedRealm);
 
       Action.push_back(stdpaths ? "1" : "0");
+    } else {
+      Print("Invalid game hosting parameters. Please see CLI.md");
+      return true;
     }
 
     noexit = false;
@@ -1463,17 +1464,19 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
     Print("Bad UDPMode: " + UDP4Mode);
   }
 
-  string ExecCommand, ExecAs, ExecAuth;
-  cmdl("exec", ExecCommand) >> ExecCommand;
-  cmdl("exec-as", ExecAs) >> ExecAs;
-  cmdl("exec-auth", ExecAuth) >> ExecAuth;
+  string execCommand, execAs, execScope, execAuth;
+  cmdl("exec", execCommand) >> execCommand;
+  cmdl("exec-as", execAs) >> execAs;
+  cmdl("exec-scope", execScope) >> execScope;
+  cmdl("exec-auth", execAuth) >> execAuth;
 
-  if (!ExecCommand.empty() && !ExecAs.empty() && !ExecAuth.empty()) {
+  if (!execCommand.empty() && !execAs.empty() && !execAuth.empty()) {
     vector<string> Action;
     Action.push_back("exec");
-    Action.push_back(ExecCommand);
-    Action.push_back(ExecAs);
-    Action.push_back(ExecAuth);
+    Action.push_back(execCommand);
+    Action.push_back(execAs);
+    Action.push_back(execScope);
+    Action.push_back(execAuth);
     m_PendingActions.push_back(Action);
   }
 
