@@ -67,6 +67,7 @@ CSocket::CSocket(const uint8_t nFamily)
     m_Family(nFamily),
     m_Port(0),
     m_HasError(false),
+    m_HasFin(false),
     m_Error(0)
 {
 }
@@ -76,6 +77,7 @@ CSocket::CSocket(const uint8_t nFamily, SOCKET nSocket)
     m_Family(nFamily),
     m_Port(0),
     m_HasError(false),
+    m_HasFin(false),
     m_Error(0)
 {
 }
@@ -85,6 +87,7 @@ CSocket::CSocket(const uint8_t nFamily, string nName)
     m_Family(nFamily),
     m_Port(0),
     m_HasError(false),
+    m_HasFin(false),
     m_Name(nName),
     m_Error(0)
 {
@@ -338,7 +341,10 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
   } else if (c == 0) {
     // the other end closed the connection
-    Print("[TCPSOCKET] (" + GetName() +") terminated the connection");
+    m_HasFin = true;
+    if (!m_HasFin) {
+      Print("[TCPSOCKET] (" + GetName() +") terminated the connection");
+    }
   }
   return false;
 }
@@ -443,13 +449,10 @@ void CTCPClient::Connect(optional<sockaddr_storage>& localAddress, sockaddr_stor
     }
   }
 
-  memcpy(&m_RemoteHost, &remoteHost, sizeof(sockaddr_in));
+  memcpy(&m_RemoteHost, &remoteHost, sizeof(sockaddr_storage));
   if (port != 0) {
     SetAddressPort(&m_RemoteHost, port);
   }
-
-  //sockaddr_storage* heapHost = new sockaddr_storage();
-  //memcpy(heapHost, &m_RemoteHost, sizeof(sockaddr_storage));
 
   // connect
   if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_RemoteHost), sizeof(sockaddr_storage)) == SOCKET_ERROR)

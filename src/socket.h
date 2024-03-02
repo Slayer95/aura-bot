@@ -341,6 +341,7 @@ public:
   uint8_t            m_Family;
   uint16_t           m_Port;
   bool               m_HasError;
+  bool               m_HasFin;
   int                m_Error;
   std::string        m_Name;
 

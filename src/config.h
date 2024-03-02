@@ -74,7 +74,7 @@ public:
   bool Read(const std::filesystem::path& file);
   bool Exists(const std::string& key);
   void Accept(const std::string& key);
-  std::vector<std::string> GetInvalidKeys() const;
+  std::vector<std::string> GetInvalidKeys(const bool checkRealmKeys) const;
   inline bool GetErrorLast() const { return m_ErrorLast; };
   inline bool GetSuccess() const { return !m_CriticalError; };
   inline void FailIfErrorLast() {

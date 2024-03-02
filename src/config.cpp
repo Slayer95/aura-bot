@@ -154,10 +154,13 @@ void CConfig::Accept(const string& key)
   m_ValidKeys.insert(key);
 }
 
-vector<string> CConfig::GetInvalidKeys() const
+vector<string> CConfig::GetInvalidKeys(const bool checkRealmKeys) const
 {
   vector<string> invalidKeys;
   for (const auto& entry : m_CFG) {
+    if (!checkRealmKeys && entry.first.length() >= 9 && entry.first.substr(0, 6) == "realm_") {
+      continue;
+    }
     if (m_ValidKeys.find(entry.first) == m_ValidKeys.end()) {
       invalidKeys.push_back("<" + entry.first + ">");
     }
@@ -221,10 +224,10 @@ bool CConfig::GetBool(const string& key, bool x)
     SUCCESS(x)
   }
 
-  if (it->second == "0" || it->second == "no" || it->second == "false") {
+  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off") {
     SUCCESS(false);
   }
-  if (it->second == "1" || it->second == "yes" || it->second == "true") {
+  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on") {
     SUCCESS(true);
   }
 
@@ -522,11 +525,11 @@ optional<bool> CConfig::GetMaybeBool(const string& key)
     SUCCESS(result)
   }
 
-  if (it->second == "0" || it->second == "no" || it->second == "false") {
+  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off") {
     result = false;
     SUCCESS(result)
   }
-  if (it->second == "1" || it->second == "yes" || it->second == "true") {
+  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on") {
     result = true;
     SUCCESS(result)
   }
