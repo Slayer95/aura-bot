@@ -30,15 +30,15 @@ Specifies the configuration and the name for the hosted game.
 
 # Flags
 
-\`--about\`
+**``\`--about\```**
 
 Displays the information of the host bot, including its version.
 
-\`--help\`
+**``\`--help\```**
 
 Displays usage information and a list of available flags and parameters.
 
-\`--lan\`
+**``\`--lan\```**
 
 This flag indicates that any hosted games should be available in the 
 "Local Area Network" game menu. When this flag is used, hosted games 
@@ -48,7 +48,7 @@ See [NETWORKING.md][2] for more information.
 
 This flag is enabled by default.
 
-\`--no-lan\`
+**``\`--no-lan\```**
 
 Conversely, this flag indicates that the game should NOT be available in the 
 "Local Area Network" game menu. When this flag is used, hosted games 
@@ -56,31 +56,31 @@ will NOT be available to players on the same network, nor to players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
-\`--bnet\`
+**``\`--bnet\```**
 
 Sets all Battle.net/PvPGN realms registered in \`aura.cfg\` to enabled. This flag overrides 
 any ``realm_N.enabled = no`` entries in the configuration file. This forces hosted games 
 to be playable over the internet through Blizzard's Battle.net platform, as well as 
 through alternative PvPGN servers.
 
-\`--no-bnet\`
+**``\`--no-bnet\```**
 
 Sets all Battle.net/PvPGN realms registered in \`aura.cfg\` to disabled. This prevents Aura from 
 connecting to them. If this flag is enabled, games cannot be played over the internet through 
 Blizzard's Battle.net platform, nor through alternative PvPGN servers.
 
-\`--exit\`
+**``\`--exit\```**
 
 Enables the option to automatically exit the bot after hosting all games queued through the CLI. 
 When this option is enabled, the bot will terminate itself once the hosting process is completed. 
 When any games are created from the CLI, this option is automatically enabled by default.
 
-\`--no-exit\`
+**``\`--no-exit\```**
 
 Disables the option to automatically exit the bot after hosting all games queued through the CLI. 
 When this option is enabled, the bot will terminate itself once the hosting process is completed.
 
-\`--cache\`
+**``\`--cache\```**
 
 Enables caching of map metadata for faster loading times and improved performance during gameplay. 
 When caching is enabled, certain map data is stored locally to reduce loading times for subsequent 
@@ -88,7 +88,7 @@ sessions.
 
 This option is enabled by default when no games are hosted from the CLI.
 
-\`--no-cache\`
+**``\`--no-cache\```**
 
 Disables caching of map metadata. When caching is disabled, game data is not stored locally, and 
 each session may experience longer loading times as a result. This option is enabled by default 
@@ -96,32 +96,32 @@ when hosting games from the CLI.
 
 # Parameters
 
-\`--w3version <NUMBER>\`
+**``\`--w3version <NUMBER>\```**
 
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
 compatibility. This parameter allows the host bot to switch versions on the spot.
 
-\`--w3path <DIRECTORY>\` 
+**``\`--w3path <DIRECTORY>\```** 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows the host bot 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
 
-\`--mapdir <DIRECTORY>\`
+**``\`--mapdir <DIRECTORY>\```**
 
 Specifies the directory where Warcraft 3 maps are stored. This parameter allows the host bot to locate  
 and load maps for hosting games.
 
-\`--cfgdir <DIRECTORY>\`
+**``\`--cfgdir <DIRECTORY>\```**
 
 Specifies the directory where the metadata of Warcraft 3 maps is stored. Aura only needs the metadata 
 in order to host games, even after the actual map files are gone. This parameter allows the host bot 
 to locate the metadata files, also referred to as "map config" files, or \`mapcfg\` for short.
 
-\`--udp <strict|lax|free>\`
+**``\`--udp <strict|lax|free>\```**
 
 # Flags for CLI games
 
-\`--stdpaths\`
+**``\`--stdpaths\```**
 
 When enabled, this flag instructs the host bot to utilize standard paths for directories and files 
 entered from the CLI. Notably, it ensures that map and configuration file paths are interpreted 
@@ -131,13 +131,13 @@ directory, instead of the root path of the bot.
 However, it's important to note that this flag removes protection against [arbitrary directory traversal][3]. 
 Therefore, it should only be used for paths that have been thoroughly validated.
 
-\`--random-races
+**``\`--random-races
 
 This flag enables randomization of player races in the hosted game. When this flag is used, each player's 
 race will be randomly assigned at the start of the game session. This adds an element of unpredictability 
 and variety to the game, as players may need to adapt their strategies based on their randomly assigned race.
 
-\`--random-heroes
+\```**--random-heroes
 
 This flag enables randomization of player heroes in the hosted game. With this flag, each player's hero will 
 be randomly selected at the beginning of the game session. Randomizing heroes adds excitement and diversity 
@@ -146,7 +146,7 @@ assigned hero.
 
 # Parameters for CLI games
 
-\`--filetype <TYPE>\`
+**``\`--filetype <TYPE>\```**
 
 Specifies the type of file being referenced. This parameter helps the host bot determine how to handle 
 the specified files, whether they are maps or configuration files.
@@ -157,13 +157,13 @@ the specified files, whether they are maps or configuration files.
 - config: Indicates that the specified file is a map config/metadata file.
 - any: Indicates that the specified file may be either a Warcraft 3 map or config file. This is the default.
 
-\`--exclude <SERVER>\`
+**``\`--exclude <SERVER>\```**
 
 This makes hosted games invisible in the specified server. The server is to be specified through their 
 unique `Input ID`, which corresponds to ``realm_N.input_id`` in \`aura.cfg\`. Note that this value may be 
 missing, and thus defaults to ``realm_N.unique_name`` (which defaults to \`realm_N.host_name\`).
 
-\`--mirror <IP:PORT#ID>\`
+**``\`--mirror <IP:PORT#ID>\```**
 
 This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 
 instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms. The actual host is identified 
@@ -171,7 +171,7 @@ by their IPv4 address and PORT. The game ID, also known as "host counter", must 
 
 Aura will remain in game mirroring mode until the process finishes.
 
-\`--observers <OBSERVER>\`
+**``\`--observers <OBSERVER>\```**
 
 This parameter sets the observer mode for the hosted game. Observer mode determines how spectators are 
 allowed to observe the game. Here are the available options:
@@ -181,7 +181,7 @@ allowed to observe the game. Here are the available options:
 - referees: Allows spectators to observe the game, and communicate with the players, either in public chat, or private chat.
 - observers on defeat: Players that lose the game are allowed to remain in the game, as spectators.
 
-\`--visibility <VISIBILITY>\`
+**``\`--visibility <VISIBILITY>\```**
 
 This parameter sets the visibility mode for the hosted game, determining how much of the map is visible 
 to players and observers. Here are the available options:
@@ -191,7 +191,7 @@ to players and observers. Here are the available options:
 - map explored: Reveals the entire map to players, allowing them to see all terrain but not enemy units or structures unless they have vision of them.
 - always visible: Grants players and observers full visibility of the entire map, including enemy units and structures, without the need for vision.
 
-\`--owner <USER@SERVER>\`
+**``\`--owner <USER@SERVER>\```**
 
 This parameter specifies the owner of the hosted game. The owner is typically the user who has 
 administrative control over the game session. Here's the format for specifying the owner:
@@ -201,7 +201,7 @@ administrative control over the game session. Here's the format for specifying t
 
 # Flags for CLI commands
 
-\`--exec-broadcast\`
+**``\`--exec-broadcast\```**
 
 This flag enables broadcasting the command execution to all users or players involved in the game 
 session. When activated, the command specified by --exec will be broadcasted to all participants, 
@@ -212,14 +212,14 @@ a collaborative and informed environment during the game session.
 
 # Parameters for CLI commands
 
-\`--exec <COMMAND>\`
+**``\`--exec <COMMAND>\```**
 
 This parameter allows the execution of a specific command after the bot start up, and the CLI game (if any) 
 has been created. Here's how it works:
 
 - <COMMAND>: The command to be executed. The command token is not to be included (e.g. ! or .)
 
-\`--exec-as <USER@SERVER>\`
+**``\`--exec-as <USER@SERVER>\```**
 
 This parameter specifies the user and server on which the command specified by --exec should be executed. 
 It allows the execution of commands as a specific user on a particular server. Here's the format:
@@ -227,7 +227,7 @@ It allows the execution of commands as a specific user on a particular server. H
 - <USER>: The username to whom the command is attributed.
 - <SERVER>: The server the user is registered in.
 
-\`--exec-auth <AUTH>\`
+**``\`--exec-auth <AUTH>\```**
 
 This parameter sets the authentication mode for executing commands specified by --exec.
 The available authentication modes are:
@@ -238,7 +238,7 @@ The available authentication modes are:
 - rootadmin: Treats the user as a root admin of their server.
 - sudo: Treats the user as a bot sudoer. These are the highest privileges.
 
-\`--exec-scope <SCOPE>\`
+**``\`--exec-scope <SCOPE>\```**
 
 This parameter determines where the command specified by --exec will be run.
 There are four ways to specify the scope:
