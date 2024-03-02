@@ -5,7 +5,7 @@ Overview
 --------
 
 [Aura][1] is a modern cross-platform hosting bot for Warcraft III The Frozen Throne Ⓡ.
-It's based on [GHost++][2] by Trevor "Varlock" Hogan. After several overhauls across 
+It's based on [GHost++][2] by Trevor Hogan. After several overhauls across 
 the entire code base, it now has excellent performance, and extensive networking, 
 configuration, and input capabilities, making it very easy to use not only by players, 
 but also bot owners, even behind the most strict [NATs][3].
@@ -45,7 +45,7 @@ Now, to test your setup, run the command:
 aura wormwar.cfg "my first hosted game" --filetype config 
 ```
 
-Open your game client, and go to ``Local Area Network``. You should see your Worm War game hosted there. 
+Open your game client, and go to **Local Area Network**. You should see your Worm War game hosted there. 
 Join it and type to the chat ``!owner``. This is a bot command. You may use them from many channels, 
 including Battle.net, PvPGN public chats, whispers, IRC networks, and your system command line.
 
@@ -57,23 +57,24 @@ Run the commmand:
 aura "Lost Temple" "testing config"
 ```
 
-Open your game client, and go to ``Local Area Network``. If you have properly configured ``bot.maps_path``, 
+Open your game client, and go to ``Local Area Network``. If you have properly configured ``<bot.maps_path>``, 
 you should see your Lost Temple game hosted there.
 
 Join it, and take ownership by running the command ``!owner``. Afterwards, diagnostic your network 
 connectivity with ``!checknetwork *``. See [NETWORKING.md][6] for additional information and troubleshooting.
 
-Once you are satisfied, you may add fake players (``!fp``), or computers (``!fill``), in order to be 
-able to start the game (it cannot start with you alone.) Games may be started with ``!start``, or a 
-few alternative commands, which you may find at [COMMANDS.md][7].
+Once you are satisfied, you may add fake players or computers (``!fp``, or ``!fill``) before starting 
+the game (it cannot start with you alone.) Games may be started with ``!start`` or a few alternative 
+commands, which you may find at [COMMANDS.md][7].
 
 In both CLI examples so far, we have seen how to:
-a. Host a known game from a config file at ``bot.map_configs_path``.
-b. Host a known game from a map file at ``bot.maps_path``.
+a. Host a known game from a config file at ``<bot.map_configs_path>``.
+b. Host a known game from a map file at ``<bot.maps_path>``.
 
-There are more CLI features available ([CLI.md][8]). However, you likely want to start it, and 
-let authorized people, also known as admins, (or everyone if so you wish) host any number of games. 
-For that, setup your ``aura.cfg`` conto connect to one or more realms, and/or to an IRC network. Then, 
+There are more CLI features available at [CLI.md][8].
+
+However, you likely want to start Aura and let authorized people host any number of games. 
+For that, setup your ``aura.cfg`` to connect to one or more realms, or to an IRC network. Then, 
 just run the command:
 
 ```
@@ -92,7 +93,7 @@ Credits
 
 * Leonardo Julca -- [Aura v2.0][1] author
 * Josko Nikolic -- [Aura v1.32][9] author
-* Trevor Hogan -- GHost++ author
+* Trevor "Varlock" Hogan -- GHost++ author
 * MrJag -- [Ghost][10] author
 
 Contributing
