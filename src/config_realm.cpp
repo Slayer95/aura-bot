@@ -49,7 +49,6 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
     m_IsVPN(false),
 
     m_EnableCustomAddress(false),
-    m_PublicHostAddress({255, 255, 255, 255}),
 
     m_EnableCustomPort(false),
     m_PublicHostPort(6112),
@@ -98,10 +97,14 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
   m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
 
   m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
-  m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);
+  m_PublicHostAddress      = CFG->GetAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value", "0.0.0.0");
+  if (m_EnableCustomAddress)
+    CFG->FailIfErrorLast();
 
   m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
   m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
+  if (m_EnableCustomPort)
+    CFG->FailIfErrorLast();
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
@@ -203,10 +206,17 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
 
   m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
-  m_PublicHostAddress      = CFG->GetIPv4(m_CFGKeyPrefix + "custom_ip_address.value", m_PublicHostAddress);
+  optional<sockaddr_storage> maybeAddress = CFG->GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
+  if (m_EnableCustomAddress)
+    CFG->FailIfErrorLast();
+  if (maybeAddress.has_value()) {
+    m_PublicHostAddress    = maybeAddress.value();
+  }
 
   m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
   m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
+  if (m_EnableCustomPort)
+    CFG->FailIfErrorLast();
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);

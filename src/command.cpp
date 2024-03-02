@@ -746,9 +746,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("getplayers"):
-    case HashCode("getobservers"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("getobservers"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -775,9 +774,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !VOTEKICK
     //
 
-    case HashCode("votekick"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+    case HashCode("votekick"): {
+          if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
@@ -827,9 +825,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !YES
     //
 
-    case HashCode("yes"):
-    {
-      if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || m_Player->GetKickVote().value_or(false))
+    case HashCode("yes"): {
+          if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || m_Player->GetKickVote().value_or(false))
         break;
 
       uint32_t VotesNeeded = static_cast<uint32_t>(ceil((m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100));
@@ -843,9 +840,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !NO
     //
 
-    case HashCode("no"):
-    {
-      if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || !m_Player->GetKickVote().value_or(true))
+    case HashCode("no"): {
+          if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || !m_Player->GetKickVote().value_or(true))
         break;
 
       m_Player->SetKickVote(false);
@@ -857,9 +853,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !INVITE
     //
 
-    case HashCode("invite"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("invite"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         // Intentionally allows !invite to fake (mirror) lobbies.
@@ -898,9 +893,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("coin"):
-    case HashCode("coinflip"):
-    {
-      double chance = 0.5;
+    case HashCode("coinflip"): {
+          double chance = 0.5;
       if (!Payload.empty()) {
         double chancePercent;
         try {
@@ -931,9 +925,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !ROLL
     //
 
-    case HashCode("roll"):
-    {
-      size_t diceStart = Payload.find('d');
+    case HashCode("roll"): {
+          size_t diceStart = Payload.find('d');
       uint16_t rollFaces = 0;
       uint8_t rollCount = 1;
 
@@ -974,9 +967,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !PICK
     //
 
-    case HashCode("pick"):
-    {
-      if (Payload.empty()) {
+    case HashCode("pick"): {
+          if (Payload.empty()) {
         ErrorReply("Usage: !pick [OPTION], [OPTION], [OPTION], ...");
         break;
       }
@@ -1004,9 +996,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("from"):
-    case HashCode("f"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+    case HashCode("f"): {
+          if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1037,9 +1028,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("banlast"):
-    case HashCode("bl"):
-    {
-      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
+    case HashCode("bl"): {
+          if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1065,9 +1055,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("close"):
-    case HashCode("c"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("c"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -1104,9 +1093,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !END
     //
 
-    case HashCode("end"):
-    {
-      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
+    case HashCode("end"): {
+          if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1133,9 +1121,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("url"):
-    case HashCode("link"):
-    {
-      if (!m_TargetGame)
+    case HashCode("link"): {
+          if (!m_TargetGame)
         break;
 
       const string TargetUrl = TrimString(Payload);
@@ -1168,9 +1155,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("reconnect"):
-    case HashCode("gproxy"):
-    {
-      if (!m_TargetGame)
+    case HashCode("gproxy"): {
+          if (!m_TargetGame)
         break;
 
       bool isOwner = (0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE)));
@@ -1185,9 +1171,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !HCL
     //
 
-    case HashCode("hcl"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
+    case HashCode("hcl"): {
+          if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
         break;
 
       if (Payload.empty()) {
@@ -1222,9 +1207,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !HOLD (hold a slot for someone)
     //
 
-    case HashCode("hold"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("hold"): {
+          UseImplicitHostedGame();
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
@@ -1254,9 +1238,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !UNHOLD
     //
 
-    case HashCode("unhold"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("unhold"): {
+          UseImplicitHostedGame();
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
@@ -1268,7 +1251,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       vector<string> Args = SplitArgs(Payload, 1u, 12u);
 
       if (Args.empty()) {
-        ErrorReply("Usage: " + GetToken() + "hold [PLAYER1], [PLAYER2], ...");
+        ErrorReply("Usage: " + GetToken() + "unhold [PLAYER1], [PLAYER2], ...");
         break;
       }
 
@@ -1288,9 +1271,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("closekick"):
     case HashCode("ckick"):
     case HashCode("kick"):
-    case HashCode("k"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("k"): {
+          UseImplicitHostedGame();
       if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
         break;
 
@@ -1334,9 +1316,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !LATENCY (set game latency)
     //
 
-    case HashCode("latency"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+    case HashCode("latency"): {
+          if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (Payload.empty()) {
@@ -1380,9 +1361,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("open"):
-    case HashCode("o"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("o"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -1422,9 +1402,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("pub"):
-    case HashCode("priv"):
-    {
-      if (m_TargetGame) {
+    case HashCode("priv"): {
+          if (m_TargetGame) {
         if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
           break;
         }
@@ -1445,6 +1424,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
         if (Payload.empty()) {
           ErrorReply("Usage: " + GetToken() + "pub [GAMENAME]");
+          ErrorReply("Usage: " + GetToken() + "priv [GAMENAME]");
           break;
         }
       }
@@ -1497,9 +1477,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("pubby"):
-    case HashCode("privby"):
-    {
-      if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
+    case HashCode("privby"): {
+          if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
         if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
           ErrorReply("Not allowed to host games.");
           break;
@@ -1511,6 +1490,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
       if (Payload.empty()) {
         ErrorReply("Usage: " + GetToken() + "pubby [OWNER], [GAMENAME]");
+        ErrorReply("Usage: " + GetToken() + "privby [OWNER], [GAMENAME]");
         break;
       }
 
@@ -1533,9 +1513,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("start"):
-    case HashCode("go"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("go"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -1566,9 +1545,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !QUICKSTART
     //
 
-    case HashCode("quickstart"):
-    {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+    case HashCode("quickstart"): {
+          if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1590,9 +1568,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !FREESTART
     //
 
-    case HashCode("freestart"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("freestart"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -1625,9 +1602,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !AUTOSTART
     //
 
-    case HashCode("autostart"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("autostart"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -1685,9 +1661,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
 
-    case HashCode("forceautostart"):
-    {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+    case HashCode("forceautostart"): {
+          if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1726,9 +1701,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("swap"):
-    case HashCode("sw"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("sw"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -1760,9 +1734,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("syncreset"):
-    case HashCode("sr"):
-    {
-      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
+    case HashCode("sr"): {
+          if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1785,9 +1758,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("synclimit"):
-    case HashCode("sl"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+    case HashCode("sl"): {
+          if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (Payload.empty()) {
@@ -1826,9 +1798,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("unhost"):
-    case HashCode("uh"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("uh"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         // Intentionally allows !unhost for fake (mirror) lobbies.
@@ -1851,9 +1822,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("download"):
-    case HashCode("dl"):
-    {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+    case HashCode("dl"): {
+          if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1902,9 +1872,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !DROP
     //
 
-    case HashCode("drop"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetGameLoaded())
+    case HashCode("drop"): {
+          if (!m_TargetGame || m_TargetGame->GetGameLoaded())
         break;
 
       if (!m_TargetGame->GetLagging()) {
@@ -1920,9 +1889,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !REFEREE
     //
 
-    case HashCode("referee"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("referee"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
         break;
@@ -1950,9 +1918,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !MUTE
     //
 
-    case HashCode("mute"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+    case HashCode("mute"): {
+          if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1988,9 +1955,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !MUTEALL
     //
 
-    case HashCode("muteall"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror() || !m_TargetGame->GetGameLoaded())
+    case HashCode("muteall"): {
+          if (!m_TargetGame || m_TargetGame->GetIsMirror() || !m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2014,9 +1980,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("abort"):
-    case HashCode("a"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetGameLoading() || m_TargetGame->GetGameLoaded())
+    case HashCode("a"): {
+          if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetGameLoading() || m_TargetGame->GetGameLoaded())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2038,9 +2003,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
     // !CHECKNETWORK
     //
-    case HashCode("checknetwork"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("checknetwork"): {
+          UseImplicitHostedGame();
 
       uint16_t gamePort = m_TargetGame ? m_TargetGame->GetHostPort() : m_Aura->NextHostPort();
 
@@ -2063,13 +2027,20 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      vector<tuple<string, uint8_t, vector<uint8_t>, uint16_t>> testServers;
+      vector<tuple<string, uint8_t, sockaddr_storage>> testServers;
       if (TargetAllRealms) {
-        vector<uint8_t> loopBackIp = {127, 0, 0, 1};
-        tuple<string, uint8_t, vector<uint8_t>, uint16_t> testHost("[Loopback]", CONNECTION_TYPE_LOOPBACK, loopBackIp, gamePort);
+        sockaddr_storage loopBackAddress;
+        memset(&loopBackAddress, 0, sizeof(sockaddr_storage));
+        loopBackAddress.ss_family = AF_INET;
+        sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&loopBackAddress);
+        addr4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        addr4->sin_port = htons(gamePort);
+        tuple<string, uint8_t, sockaddr_storage> testHost("[Loopback]", CONNECTION_TYPE_LOOPBACK, loopBackAddress);
         testServers.push_back(testHost);
       }
-      vector<uint8_t> publicIp = m_Aura->m_Net->GetPublicIP();
+      sockaddr_storage* publicIPv4 = m_Aura->m_Net->GetPublicIPv4();
+      sockaddr_storage* publicIPv6 = m_Aura->m_Net->GetPublicIPv6();
+
       bool anySendsPublicIp = false;
       for (auto& realm : m_Aura->m_Realms) {
         if (!TargetAllRealms && realm != targetRealm) {
@@ -2079,8 +2050,8 @@ void CCommandContext::Run(const string& command, const string& payload)
           SendReply("[Network] Not connected to " + realm->GetUniqueDisplayName(), CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
           continue;
         }
-        vector<uint8_t> ip = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIp;
-        if (ip.empty()) {
+        sockaddr_storage* selfIPInThisRealm = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIPv4;
+        if (publicIPv4 == nullptr) {
           continue;
         }
         uint8_t connectionType = CONNECTION_TYPE_DEFAULT;
@@ -2099,15 +2070,28 @@ void CCommandContext::Run(const string& command, const string& payload)
           connectionType = connectionType | CONNECTION_TYPE_CUSTOM_PORT;
         }
 
-        tuple<string, uint8_t, vector<uint8_t>, uint16_t> testHost(realm->GetUniqueDisplayName() + NameSuffix, connectionType, ip, port);
+        sockaddr_storage targetHost;
+        memcpy(&targetHost, selfIPInThisRealm, sizeof(sockaddr_storage));
+        SetAddressPort(&targetHost, port);
+        tuple<string, uint8_t, sockaddr_storage> testHost(realm->GetUniqueDisplayName() + NameSuffix, connectionType, targetHost);
         testServers.push_back(testHost);
 
-        if (ip == publicIp) {
+        if (reinterpret_cast<sockaddr_in*>(selfIPInThisRealm)->sin_addr.s_addr == reinterpret_cast<sockaddr_in*>(publicIPv4)->sin_addr.s_addr) {
           anySendsPublicIp = true;
         }
       }
-      if (!anySendsPublicIp && !publicIp.empty()) {
-        tuple<string, uint8_t, vector<uint8_t>, uint16_t> testHost("[Public IP]", 0, publicIp, gamePort);
+      if (!anySendsPublicIp && publicIPv4 != nullptr) {
+        sockaddr_storage targetHost;
+        memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
+        SetAddressPort(&targetHost, gamePort);
+        tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv4]", 0, targetHost);
+        testServers.push_back(testHost);
+      }
+      if (publicIPv6 != nullptr && !IN6_IS_ADDR_UNSPECIFIED(&(reinterpret_cast<sockaddr_in6*>(publicIPv6)->sin6_addr))) {
+        sockaddr_storage targetHost;
+        memcpy(&targetHost, publicIPv6, sizeof(sockaddr_storage));
+        SetAddressPort(&targetHost, gamePort);
+        tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv6]", CONNECTION_TYPE_IPV6, targetHost);
         testServers.push_back(testHost);
       }
       if (!m_TargetGame) {
@@ -2121,9 +2105,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !UPNP
     //
 
-    case HashCode("upnp"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("upnp"): {
+          UseImplicitHostedGame();
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to trigger UPnP.");
@@ -2170,9 +2153,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !CHECKBAN
     //
 
-    case HashCode("checkban"):
-    {
-      if (m_Aura->m_Realms.empty())
+    case HashCode("checkban"): {
+          if (m_Aura->m_Realms.empty())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2209,9 +2191,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !LISTBANS
     //
 
-    case HashCode("listbans"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("listbans"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list bans.");
         break;
       }
@@ -2235,9 +2216,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("addban"):
-    case HashCode("ban"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("ban"): {
+          if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to ban players.");
         break;
       }
@@ -2346,9 +2326,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !UNBAN
     //
 
-    case HashCode("unban"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("unban"): {
+          if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to ban players.");
         break;
       }
@@ -2357,7 +2336,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + GetToken() + "ban [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "unban [PLAYERNAME]");
         break;
       }
 
@@ -2374,9 +2353,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !CLEARHCL
     //
 
-    case HashCode("clearhcl"):
-    {
-      if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
+    case HashCode("clearhcl"): {
+          if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2398,9 +2376,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !STATUS
     //
 
-    case HashCode("status"):
-    {
-      string message = "Status: ";
+    case HashCode("status"): {
+          string message = "Status: ";
 
       for (const auto& bnet : m_Aura->m_Realms)
         message += "[" + bnet->GetServer() + "]" + (bnet->GetLoggedIn() ? " - online " : " - offline ");
@@ -2417,9 +2394,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("sendlan"):
-    case HashCode("sendudp"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("sendudp"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         break;
@@ -2492,9 +2468,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("sendlaninfo"):
-    case HashCode("sendudpinfo"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("sendudpinfo"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
         break;
@@ -2527,9 +2502,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !OWNER (set game owner)
     //
 
-    case HashCode("owner"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("owner"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -2563,9 +2537,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !SAY
     //
 
-    case HashCode("say"):
-    {
-      if (m_Aura->m_Realms.empty())
+    case HashCode("say"): {
+          if (m_Aura->m_Realms.empty())
         break;
 
       if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -2624,9 +2597,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !ANNOUNCE
     //
 
-    case HashCode("announce"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("announce"): {
+          UseImplicitHostedGame();
 
       if (m_Aura->m_Realms.empty())
         break;
@@ -2687,9 +2659,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !CLOSEALL
     //
 
-    case HashCode("closeall"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("closeall"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
@@ -2707,9 +2678,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !COMP (computer slot)
     //
 
-    case HashCode("comp"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("comp"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -2744,13 +2714,12 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
-    // !COMPCOLOUR (computer colour change)
+    // !COMPCOLOR (computer colour change)
     //
 
-    case HashCode("compcolor"):
     case HashCode("compcolour"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("compcolor"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -2799,9 +2768,8 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("handicap"):
     case HashCode("sethandicap"):
-    case HashCode("comphandicap"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("comphandicap"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -2849,9 +2817,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !COMPRACE (computer race change)
     //
 
-    case HashCode("comprace"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("comprace"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -2923,9 +2890,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("setteam"):
-    case HashCode("compteam"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("compteam"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -2973,10 +2939,9 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !FILL (fill all open slots with computers)
     //
 
-    case HashCode("fill"):
     case HashCode("compall"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("fill"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3004,9 +2969,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("fakeplayer"):
-    case HashCode("fp"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("fp"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3028,9 +2992,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !DELETEFAKE
 
     case HashCode("deletefake"):
-    case HashCode("deletefakes"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("deletefakes"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3053,9 +3016,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !FILLFAKE
     //
 
-    case HashCode("fillfake"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("fillfake"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3081,9 +3043,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("pause"):
-    case HashCode("fppause"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("fppause"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
@@ -3110,9 +3071,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("resume"):
-    case HashCode("fpresume"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("fpresume"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
@@ -3137,9 +3097,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !SP
     //
 
-    case HashCode("sp"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("sp"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3158,9 +3117,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !LOCK
     //
 
-    case HashCode("lock"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("lock"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -3180,9 +3138,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !OPENALL
     //
 
-    case HashCode("openall"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("openall"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3200,9 +3157,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !UNLOCK
     //
 
-    case HashCode("unlock"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("unlock"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3221,9 +3177,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !UNMUTE
     //
 
-    case HashCode("unmute"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("unmute"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -3260,9 +3215,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !UNMUTEALL
     //
 
-    case HashCode("unmuteall"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("unmuteall"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -3286,9 +3240,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !VOTECANCEL
     //
 
-    case HashCode("votecancel"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("votecancel"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -3314,9 +3267,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("tell"):
-    case HashCode("w"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("w"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -3374,9 +3326,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !WHOIS
     //
 
-    case HashCode("whois"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("whois"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -3423,9 +3374,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !VIRTUALHOST
     //
 
-    case HashCode("virtualhost"):
-    {
-      UseImplicitHostedGame();
+    case HashCode("virtualhost"): {
+          UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -3452,9 +3402,8 @@ void CCommandContext::Run(const string& command, const string& payload)
    ******************/
 
     // !GETCLAN
-    case HashCode("getclan"):
-    {
-      if (!m_SourceRealm)
+    case HashCode("getclan"): {
+          if (!m_SourceRealm)
         break;
 
       if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
@@ -3468,9 +3417,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     // !GETFRIENDS
-    case HashCode("getfriends"):
-    {
-      if (!m_SourceRealm)
+    case HashCode("getfriends"): {
+          if (!m_SourceRealm)
         break;
 
       if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
@@ -3483,9 +3431,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       break;
     }
 
-    case HashCode("game"):
-    {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+    case HashCode("game"): {
+          if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3523,9 +3470,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     case HashCode("synccfg"):
-    case HashCode("initcfg"):
-    {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+    case HashCode("initcfg"): {
+          if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3586,9 +3532,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("countmaps"):
-    case HashCode("countcfgs"):
-    {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+    case HashCode("countcfgs"): {
+          if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3611,9 +3556,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("deletecfg"):
-    case HashCode("deletemap"):
-    {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+    case HashCode("deletemap"): {
+          if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3657,10 +3601,9 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !SAYGAME
     //
 
-    case HashCode("saygame"):
     case HashCode("saygameraw"):
-    {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+    case HashCode("saygame"): {
+          if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3708,9 +3651,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !DISABLE
     //
 
-    case HashCode("disable"):
-    {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+    case HashCode("disable"): {
+          if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3723,9 +3665,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !ENABLE
     //
 
-    case HashCode("enable"):
-    {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+    case HashCode("enable"): {
+          if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3738,9 +3679,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !DISABLEPUB
     //
 
-    case HashCode("disablepub"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("disablepub"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
@@ -3759,18 +3699,17 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
-    // !DISABLEPUB
+    // !ENABLEPUB
     //
 
-    case HashCode("enablepub"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("enablepub"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + GetToken() + "disablepub [REALM]");
+        ErrorReply("Usage: " + GetToken() + "enablepub [REALM]");
         break;
       }
       if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
@@ -3787,9 +3726,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("setdownloads"):
-    case HashCode("maptransfers"):
-    {
-      if (Payload.empty()) {
+    case HashCode("maptransfers"): {
+          if (Payload.empty()) {
         if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
           SendReply("Map transfers are disabled");
         } else if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
@@ -3836,9 +3774,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !RELOAD
     //
 
-    case HashCode("reload"):
-    {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+    case HashCode("reload"): {
+          if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3857,9 +3794,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("exit"):
-    case HashCode("quit"):
-    {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+    case HashCode("quit"): {
+          if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3878,9 +3814,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !RESTART
     //
 
-    case HashCode("restart"):
-    {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+    case HashCode("restart"): {
+          if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3908,9 +3843,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !CHECKADMIN
     //
 
-    case HashCode("checkadmin"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("checkadmin"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list admins.");
         break;
       }
@@ -3940,9 +3874,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !LISTADMINS
     //
 
-    case HashCode("listadmins"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("listadmins"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list admins.");
         break;
       }
@@ -3964,9 +3897,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !ADDADMIN
     //
 
-    case HashCode("addadmin"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("addadmin"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may add admins.");
         break;
       }
@@ -3994,9 +3926,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !DELADMIN
     //
 
-    case HashCode("deladmin"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("deladmin"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list admins.");
         break;
       }
@@ -4029,9 +3960,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !LOAD (load config file)
     //
 
-    case HashCode("load"):
-    {
-      if (Payload.empty()) {
+    case HashCode("load"): {
+          if (Payload.empty()) {
         if (!m_Aura->m_Map) {
           SendReply("There is no map/config file loaded.");
           break;
@@ -4070,9 +4000,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !GAMERANGER
     //
 
-    case HashCode("gameranger"):
-    {
-      if (Payload.empty()) {
+    case HashCode("gameranger"): {
+          if (Payload.empty()) {
         SendReply("GameRanger IP: " + ByteArrayToDecString(m_Aura->m_Net->m_GameRangerRemoteAddress) + " (proxy at " + to_string(m_Aura->m_Net->m_GameRangerLocalPort) + ")");
         break;
       }
@@ -4103,9 +4032,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !FLUSHDNS
     //
 
-    case HashCode("flushdns"):
-    {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+    case HashCode("flushdns"): {
+          if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4118,9 +4046,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !NETINFO
     //
 
-    case HashCode("netinfo"):
-    {
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+    case HashCode("netinfo"): {
+          CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "netinfo [REALM]");
         break;
@@ -4138,9 +4065,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !PRINTGAMES
     //
 
-    case HashCode("printgames"):
-    {
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+    case HashCode("printgames"): {
+          CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "printgames [REALM]");
         break;
@@ -4158,9 +4084,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !QUERYGAMES
     //
 
-    case HashCode("querygames"):
-    {
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+    case HashCode("querygames"): {
+          CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
         ErrorReply("Usage: " + GetToken() + "querygames [REALM]");
         break;
@@ -4180,9 +4105,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !CHANNEL (change channel)
     //
 
-    case HashCode("channel"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("channel"): {
+          if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to invite the bot to another channel.");
         break;
       }
@@ -4207,9 +4131,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("listgames"):
-    case HashCode("getgames"):
-    {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+    case HashCode("getgames"): {
+          if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to list games.");
         break;
       }
@@ -4235,9 +4158,8 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("hostlan"):
     case HashCode("host"):
-    case HashCode("map"):
-    {
-      if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
+    case HashCode("map"): {
+          if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
         if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
           ErrorReply("Not allowed to host games.");
           break;
@@ -4302,9 +4224,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !MIRROR (mirror game from another server)
     //
 
-    case HashCode("mirror"):
-    {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+    case HashCode("mirror"): {
+          if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Not allowed to mirror games.");
         break;
       }

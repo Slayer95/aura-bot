@@ -69,7 +69,7 @@ public:
   bool m_IsVPN;
 
   bool m_EnableCustomAddress;                    // enable to make peers from pvpgn servers connect to m_PublicHostAddress
-  std::vector<uint8_t> m_PublicHostAddress;      // the address to broadcast in pvpgn servers
+  sockaddr_storage m_PublicHostAddress;          // the address to broadcast in pvpgn servers
 
   bool m_EnableCustomPort;                       // enable to make peers from pvpgn servers connect to m_PublicHostPort
   uint16_t m_PublicHostPort;                     // the port to broadcast in pvpgn servers

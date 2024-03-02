@@ -49,6 +49,7 @@
 #define CONNECTION_TYPE_CUSTOM_PORT 1 << 1
 #define CONNECTION_TYPE_CUSTOM_IP_ADDRESS 1 << 2
 #define CONNECTION_TYPE_VPN 1 << 3
+#define CONNECTION_TYPE_IPV6 1 << 4
 
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE 0
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL 1
@@ -91,6 +92,7 @@ public:
   std::optional<bool>         m_Passed;
   std::optional<bool>         m_CanConnect;
   int64_t                     m_Timeout;
+  int64_t                     m_LastConnectionFailure;
   bool                        m_SentJoinRequest;
 };
 
@@ -136,7 +138,9 @@ public:
   void SendArbitraryUnicast(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
 
-  std::vector<uint8_t>            GetPublicIP();
+  sockaddr_storage*               GetPublicIPv4();
+  sockaddr_storage*               GetPublicIPv6();
+  
   std::vector<uint16_t>           GetPotentialGamePorts() const;
   uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
@@ -144,7 +148,7 @@ public:
   void             FlushDNS();
 
   uint8_t EnableUPnP(const uint16_t externalPort, const uint16_t internalPort);
-  void StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, std::vector<uint8_t>, uint16_t>> testServers);
+  void StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers);
   void ResetHealthCheck();
 
   static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);

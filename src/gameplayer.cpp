@@ -142,7 +142,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             struct UDPPkt pkt;
             pkt.socket = m_Socket;
             pkt.sender = &(m_Socket->m_RemoteHost);
-            memcpy(pkt.buf, &Bytes, Length);
+            memcpy(pkt.buf, Bytes.data(), Length);
             pkt.length = Length;
             m_Aura->HandleUDP(&pkt);
           } 

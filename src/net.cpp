@@ -46,8 +46,9 @@ CTestConnection::CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, con
     m_Type(nType),
     m_Name(nName),
     m_Timeout(0),
+    m_LastConnectionFailure(0),
     m_SentJoinRequest(false),
-    m_Socket(new CTCPClient(AF_INET, nName))
+    m_Socket(new CTCPClient(nTargetHost.ss_family, nName))
 {
 }
 
@@ -69,8 +70,15 @@ uint32_t CTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
 
 uint16_t CTestConnection::GetPort()
 {
-  sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&m_TargetHost);
-  return ntohs(addr4->sin_port);
+  if (m_TargetHost.ss_family == AF_INET6) {
+    sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&m_TargetHost);
+    return ntohs(addr6->sin6_port);
+  } else if (m_TargetHost.ss_family == AF_INET) {
+    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&m_TargetHost);
+    return ntohs(addr4->sin_port);
+  } else {
+    return 0;
+  }
 }
 
 bool CTestConnection::QueryGameInfo()
@@ -101,9 +109,11 @@ bool CTestConnection::Update(void* fd, void* send_fd)
   }
 
   const int64_t Ticks = GetTicks();
+  // TODO(IceSandslash): Add minimum delay between connection attempts
   if (m_Socket->HasError()) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
     m_Passed = false;
+    m_LastConnectionFailure = Ticks;
     m_Socket->Reset();
   } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
     m_Socket->DoRecv(static_cast<fd_set*>(fd));
@@ -124,8 +134,9 @@ bool CTestConnection::Update(void* fd, void* send_fd)
   } else if (m_Timeout <= Ticks && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
     m_Passed = false;
+    m_LastConnectionFailure = Ticks;
     m_Socket->Reset();
-  } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value()) {
+  } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && (Ticks - m_LastConnectionFailure > 900)) {
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
     m_Timeout = Ticks + 3000;
   }
@@ -389,35 +400,77 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
   }
 }
 
-vector<uint8_t> CNet::GetPublicIP()
+sockaddr_storage* CNet::GetPublicIPv4()
 {
-  static pair<string, vector<uint8_t>> memoized = make_pair(string(), vector<uint8_t>());
-  vector<uint8_t> emptyIP;
+  static pair<string, sockaddr_storage*> memoized = make_pair(string(), nullptr);
 
   switch (m_Aura->m_Config->m_PublicIPv4Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      return ExtractIPv4(m_Aura->m_Config->m_PublicIPv4Value);
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Aura->m_Config->m_PublicIPv4Value, ACCEPT_IPV4);
+      if (!maybeAddress.has_value()) return nullptr; // should never happen
+      return &(maybeAddress.value());
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
       if (memoized.first == m_Aura->m_Config->m_PublicIPv4Value) {
         return memoized.second;
       }
+      if (memoized.second != nullptr) {
+        delete memoized.second;
+        memoized = make_pair(string(), nullptr);
+      }
       auto response = cpr::Get(cpr::Url{m_Aura->m_Config->m_PublicIPv4Value});
       if (response.status_code != 200) {
-        return emptyIP;
+        return nullptr;
       }
 
-      vector<uint8_t> result = ExtractIPv4(response.text);
-      if (result.size() != 4) {
-        return emptyIP;
-      }
-
-      memoized = make_pair(m_Aura->m_Config->m_PublicIPv4Value, result);
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(response.text, ACCEPT_IPV4);
+      if (!maybeAddress.has_value()) return nullptr;
+      sockaddr_storage* cachedAddress = new sockaddr_storage();
+      memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
+      memoized = make_pair(m_Aura->m_Config->m_PublicIPv4Value, cachedAddress);
       return memoized.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
     default:
-      return emptyIP;
+      return nullptr;
+  }
+}
+
+sockaddr_storage* CNet::GetPublicIPv6()
+{
+  static pair<string, sockaddr_storage*> memoized = make_pair(string(), nullptr);
+
+  switch (m_Aura->m_Config->m_PublicIPv6Algorithm) {
+    case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Aura->m_Config->m_PublicIPv6Value, ACCEPT_IPV6);
+      if (!maybeAddress.has_value()) return nullptr; // should never happen
+      return &(maybeAddress.value());
+    }
+    case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
+      if (memoized.first == m_Aura->m_Config->m_PublicIPv6Value) {
+        return memoized.second;
+      }
+      if (memoized.second != nullptr) {
+        delete memoized.second;
+        memoized = make_pair(string(), nullptr);
+      }
+      auto response = cpr::Get(cpr::Url{m_Aura->m_Config->m_PublicIPv6Value});
+      if (response.status_code != 200) {
+        return nullptr;
+      }
+
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(response.text, ACCEPT_IPV6);
+      if (!maybeAddress.has_value()) {
+        return nullptr;
+      }
+      sockaddr_storage* cachedAddress = new sockaddr_storage();
+      memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
+      memoized = make_pair(m_Aura->m_Config->m_PublicIPv6Value, cachedAddress);
+      return memoized.second;
+    }
+    case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
+    default:
+      return nullptr;
   }
 }
 
@@ -475,17 +528,10 @@ uint8_t CNet::EnableUPnP(const uint16_t externalPort, const uint16_t internalPor
   return success;
 }
 
-void CNet::StartHealthCheck(const vector<tuple<string, uint8_t, vector<uint8_t>, uint16_t>> testServers)
+void CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage>> testServers)
 {
   for (auto& testServer: testServers) {
-    vector<uint8_t> ipBytes = get<2>(testServer);
-    sockaddr_storage targetHost;
-    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&targetHost);
-    memset(addr4, 0, sizeof(sockaddr_in));
-    addr4->sin_family = AF_INET;
-    addr4->sin_port = htons(get<3>(testServer));
-    addr4->sin_addr.s_addr = *reinterpret_cast<const uint32_t*>(ipBytes.data());
-    m_HealthCheckClients.push_back(new CTestConnection(m_Aura, targetHost, get<1>(testServer), get<0>(testServer)));
+    m_HealthCheckClients.push_back(new CTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer)));
   }
   m_HealthCheckInProgress = true;
 }

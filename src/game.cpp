@@ -1494,7 +1494,7 @@ void CGame::AnnounceToAddress(string& addressLiteral) const
 void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket) const
 {
   if (CUDPServer* server = dynamic_cast<CUDPServer*>(socket)) {
-    if (isLoopbackAddress(address)/* && address.ss_family == AF_INET*/) { // TODO(IceSandslash): Do not restrict to AF_INET
+    if (isLoopbackAddress(address)) {
       server->SendReply(address, GetGameDiscoveryInfo(m_HostPort));
     } else {
       server->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
@@ -1942,7 +1942,12 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   if (!OwnerFragment.empty() && !GProxyFragment.empty()) {
     SendAllChat(player->GetName() + OwnerFragment + GProxyFragment + IPv6Fragment);
   } else if (!OwnerFragment.empty()) {
-    SendAllChat(player->GetName() + OwnerFragment + " joined the game over IPv6.");
+    if (player->GetUsingIPv6()) {
+      Print(player->GetName() + OwnerFragment + " joined the game over IPv6 (" + player->GetIPStringStrict() + ").");
+      SendAllChat(player->GetName() + OwnerFragment + " joined the game over IPv6.");
+    } else {
+      SendAllChat(player->GetName() + OwnerFragment + " joined the game.");
+    }
   } else {
     SendAllChat(player->GetName() + GProxyFragment + IPv6Fragment);
   }

@@ -133,7 +133,6 @@ bool CRealm::Update(void* fd, void* send_fd)
   // but it's not a big deal at all, maybe 100ms in the worst possible case (based on a 50ms blocking time)
 
   if (!m_Socket) {
-    // TODO: Add IPv6 support.
     m_Socket = new CTCPClient(AF_INET, m_Config->m_HostName);
   }
 
@@ -393,10 +392,10 @@ bool CRealm::Update(void* fd, void* send_fd)
       if (!GetIsFloodImmune() && (0 == (packetType & PACKET_TYPE_PRIORITY)) && Ticks < m_LastOutPacketTicks + WaitTicks) {
         break;
       }
-      if (get<0>(curPacket) + 60000 < Ticks) {
+      if (get<0>(curPacket) + 30000 < Ticks) {
         // Expired
         m_OutPackets.pop();
-        Print(GetLogPrefix() + "packet dropped after 60s in queue.");
+        Print(GetLogPrefix() + "packet dropped after 30s in queue.");
         continue;
       }
       if (!GetIsFloodImmune() && m_OutPackets.size() > 20 && (0 == (packetType & PACKET_TYPE_PRIORITY))) {
@@ -736,9 +735,9 @@ bool CRealm::GetUsesCustomPort() const
   return m_Config->m_EnableCustomPort;
 }
 
-vector<uint8_t> CRealm::GetPublicHostAddress() const
+sockaddr_storage* CRealm::GetPublicHostAddress() const
 {
-  return m_Config->m_PublicHostAddress;
+  return &(m_Config->m_PublicHostAddress);
 }
 
 uint16_t CRealm::GetPublicHostPort() const
@@ -799,7 +798,7 @@ void CRealm::SendNetworkConfig()
     } else if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
       port = m_Aura->m_CurrentLobby->GetHostPort();
     }
-    QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(m_Config->m_PublicHostAddress, port), PACKET_TYPE_PRIORITY);
+    QueuePacket(m_Protocol->SEND_SID_PUBLICHOST(AddressToIPv4Vector(&(m_Config->m_PublicHostAddress)), port), PACKET_TYPE_PRIORITY);
   } else if (m_Config->m_EnableCustomPort) {
     QueuePacket(m_Protocol->SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort), PACKET_TYPE_PRIORITY);
   }

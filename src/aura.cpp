@@ -767,6 +767,7 @@ void CAura::HandleHealthCheck()
   bool anyDirectSuccess = false;
   vector<string> ChatReport;
   vector<uint16_t> FailPorts;
+  bool isIPv6Reachable = false;
   for (auto& testConnection : m_Net->m_HealthCheckClients) {
     bool success = false;
     string ResultText;
@@ -780,9 +781,12 @@ void CAura::HandleHealthCheck()
     }
     ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
     Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
-    if (0 == (testConnection->m_Type & CONNECTION_TYPE_CUSTOM_IP_ADDRESS) && 0 != (testConnection->m_Type & CONNECTION_TYPE_VPN)) {
+    if (0 == (testConnection->m_Type & ~(CONNECTION_TYPE_CUSTOM_PORT))) {
       hasDirectAttempts = true;
       if (success) anyDirectSuccess = true;
+    }
+    if (0 != (testConnection->m_Type & (CONNECTION_TYPE_IPV6))) {
+      if (success) isIPv6Reachable = true;
     }
     if (!success) {
       uint16_t port = testConnection->GetPort();
@@ -790,30 +794,51 @@ void CAura::HandleHealthCheck()
         FailPorts.push_back(port);
     }
   }
-  string portForwardInstructions;
-  if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-    portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(m_Net->GetPotentialGamePorts(), false) + "}";
-  }
-  if (hasDirectAttempts && !anyDirectSuccess) {
-    Print("[Network] This bot is disconnected from the Internet, because its public IP address is unreachable.");
-    Print("[Network] Please setup port-forwarding to allow connections.");
-    if (!portForwardInstructions.empty())
-      Print("[Network] " + portForwardInstructions);
-    Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
-    Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel.");
-    Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
+  sockaddr_storage* publicIPv4 = m_Net->GetPublicIPv4();
+  if (publicIPv4 != nullptr && hasDirectAttempts) {
+    string portForwardInstructions;
     if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
-      m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
-      m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv4 Internet, because its public IP address is unreachable.");
-      m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
-      m_CurrentLobby->SendAllChat(portForwardInstructions);
-      m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
-      m_CurrentLobby->SendAllChat("Note that you may still play online if you got a VPN, or an active tunnel.");
-      m_CurrentLobby->SendAllChat("But make sure your firewall allows Aura inbound TCP connections.");
+      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(m_Net->GetPotentialGamePorts(), false) + "}";
+    }
+    if (anyDirectSuccess) {
+      Print("[Network] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4) + ".");
+      m_CurrentLobby->SendAllChat("This bot CAN be reached through the IPv4 Internet.");
+    } else {
+      Print("[Network] This bot is disconnected from the IPv4 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv4) + ".");
+      Print("[Network] Please setup port-forwarding to allow connections.");
+      if (!portForwardInstructions.empty())
+        Print("[Network] " + portForwardInstructions);
+      Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+      Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
+      Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
+      if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
+        m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
+        m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
+        m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
+        m_CurrentLobby->SendAllChat(portForwardInstructions);
+        m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+        m_CurrentLobby->SendAllChat("Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
+        m_CurrentLobby->SendAllChat("But make sure your firewall allows Aura inbound TCP connections.");
+        m_CurrentLobby->SendAllChat("=================================================================================");
+      }
+    }
+  } else {
+    Print("Public IPv4 is null");
+  }
+  sockaddr_storage* publicIPv6 = m_Net->GetPublicIPv6();
+  if (publicIPv6 != nullptr) {
+    if (isIPv6Reachable) {
+      Print("[Network] This bot CAN be reached through the IPv6 Internet. Address: " + AddressToString(*publicIPv6) + ".");
+      Print("[Network] See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
+      m_CurrentLobby->SendAllChat("This bot CAN be reached through the IPv6 Internet.");
+      m_CurrentLobby->SendAllChat("See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
+      m_CurrentLobby->SendAllChat("=================================================================================");
+    } else {
+      Print("[Network] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
+      m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv6 Internet, because its public address is unreachable.");
       m_CurrentLobby->SendAllChat("=================================================================================");
     }
   }
-  // TODO(IceSandslash): Show IPv4 information, IPv6 too.
   if (m_CurrentLobby && m_CurrentLobby->GetIsLobby()) {
     string LeftMessage = JoinVector(ChatReport, " | ", false);
     while (LeftMessage.length() > 254) {
@@ -900,10 +925,10 @@ bool CAura::HandleAction(vector<string>& action)
 
 void CAura::HandleUDP(UDPPkt* pkt)
 {
+  std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)pkt->buf, pkt->length);
   // pkt->buf->length at least MIN_UDP_PACKET_SIZE
 
   if (pkt->sender->ss_family != AF_INET && pkt->sender->ss_family != AF_INET6) {
-    Print("Got UDP traffic over unknown IP protocol.");
     return;
   }
 

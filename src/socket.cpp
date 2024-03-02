@@ -445,12 +445,14 @@ void CTCPClient::Connect(optional<sockaddr_storage>& localAddress, sockaddr_stor
 
   memcpy(&m_RemoteHost, &remoteHost, sizeof(sockaddr_in));
   if (port != 0) {
-    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&m_RemoteHost);
-    addr4->sin_port = htons(port);
+    SetAddressPort(&m_RemoteHost, port);
   }
 
+  //sockaddr_storage* heapHost = new sockaddr_storage();
+  //memcpy(heapHost, &m_RemoteHost, sizeof(sockaddr_storage));
+
   // connect
-  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_RemoteHost), sizeof(sockaddr_in)) == SOCKET_ERROR)
+  if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_RemoteHost), sizeof(sockaddr_storage)) == SOCKET_ERROR)
   {
     if (GetLastError() != EINPROGRESS && GetLastError() != EWOULDBLOCK)
     {

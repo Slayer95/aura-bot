@@ -143,7 +143,7 @@ public:
   bool                 GetUsesCustomIPAddress() const;
   bool                 GetUsesCustomPort() const;
   uint16_t             GetPublicHostPort() const;
-  std::vector<uint8_t> GetPublicHostAddress() const;
+  sockaddr_storage*    GetPublicHostAddress() const;
   uint32_t             GetMaxUploadSize() const;
   bool                 GetIsFloodImmune() const;
   std::string          GetCommandToken() const;
