@@ -2300,7 +2300,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         CDBBan* Ban = m_SourceRealm->IsBannedName(Victim);
         if (Ban) {
           ErrorReply("User [" + Victim + "] is already banned on server [" + m_HostName + "]");
-          delete Ban; // TODO(IceSandslash): ??
+          delete Ban;
           break;
         }
         if (m_SourceRealm->GetIsAdmin(Victim)) {
