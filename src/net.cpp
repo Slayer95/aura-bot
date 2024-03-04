@@ -160,12 +160,7 @@ CNet::CNet(CAura* nAura)
     m_UDP4BroadcastTarget(new sockaddr_storage()),
     m_UDP6BroadcastTarget(new sockaddr_storage()),
 
-    m_HealthCheckInProgress(false),
-
-    m_GameRangerLocalPort(0),
-    m_GameRangerLocalAddress("255.255.255.255"),
-    m_GameRangerRemotePort(0),
-    m_GameRangerRemoteAddress({0xFF, 0xFF, 0xFF, 0xFF})
+    m_HealthCheckInProgress(false)
 {
 }
 

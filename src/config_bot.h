@@ -78,9 +78,6 @@ public:
   bool                                    m_UDPForwardGameLists;        // whether to forward PvPGN game lists through UDP unicast.
   bool                                    m_UDPBroadcastEnabled;        // whether to perform UDP broadcasts to announce hosted games. (unicast is in config_game)
   std::set<std::string>                   m_UDPBlockedIPs;              // list of IPs ignored by Aura's UDP server
-  bool                                    m_UDPSupportGameRanger;       // enable to send refresh packets compatible with GameRanger - requires m_UDPBroadcastStrictMode
-  std::vector<uint8_t>                    m_UDPGameRangerAddress;       // 
-  uint16_t                                m_UDPGameRangerPort;          // 
 
   bool                                    m_AllowDownloads;             // allow map downloads or not
   uint8_t                                 m_AllowTransfers;             // map transfers mode

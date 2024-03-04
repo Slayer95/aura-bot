@@ -275,10 +275,8 @@ public:
   void SendAllAutoStart() const;
 
   std::vector<uint8_t> GetGameDiscoveryInfo(const uint16_t hostPort) const;
-  std::vector<uint8_t> GetGameDiscoveryInfoForGameRanger(const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
 
   void AnnounceToAddress(std::string& address) const;
-  void AnnounceToAddressForGameRanger(std::string& tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const;
   void ReplySearch(sockaddr_storage* address, CSocket* socket) const;
   void SendGameDiscoveryInfo() const;
   void SendGameDiscoveryRefresh() const;

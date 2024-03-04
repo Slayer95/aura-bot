@@ -960,42 +960,14 @@ void CAura::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  bool FromGameRanger = false;
-  if (m_Config->m_UDPSupportGameRanger) {
-    FromGameRanger = (
-      static_cast<unsigned char>(pkt->buf[2]) == 0x10 && (pkt->length == 22 || pkt->length == 23) &&
-      !(pkt->buf[16] == static_cast<unsigned char>(W3GS_HEADER_CONSTANT) && pkt->buf[17] != static_cast<unsigned char>(W3GS_HEADER_CONSTANT))
-    );
-  }
   uint8_t ExtraDigit = pkt->length == 22 ? 0 : 0xFF;
-  if (FromGameRanger) {
-    vector<uint8_t> GameRangerAddress(pkt->buf + 16, pkt->buf + 20);
-    vector<uint8_t> GameRangerPort(pkt->buf + 20, pkt->buf + 22);
-    if (ExtraDigit == 0xFF && static_cast<unsigned char>(pkt->buf[22]) == 0) {
-      // OK; 0xFF signals delete
-    } else {
-      // ?
-    }
-    m_Net->m_GameRangerLocalPort = remotePort;
-    m_Net->m_GameRangerLocalAddress = ipAddress;
-    m_Net->m_GameRangerRemotePort = (GameRangerPort[0] << 8) + GameRangerPort[1];
-    m_Net->m_GameRangerRemoteAddress = GameRangerAddress;
-
-    Print("[AURA] GameRanger client at " + ipAddress + ":" + to_string(remotePort) + " searching for game");
-    Print("[AURA] GameRanger local address: " + m_Net->m_GameRangerLocalAddress + ":" + to_string(m_Net->m_GameRangerLocalPort));
-    Print("[AURA] GameRanger remote address: " + ByteArrayToDecString(m_Net->m_GameRangerRemoteAddress) + ":" + to_string(m_Net->m_GameRangerRemotePort));
-  }
 
   if (pkt->buf[8] == m_GameVersion || pkt->buf[8] == 0) {
     if (m_CurrentLobby && m_CurrentLobby->GetUDPEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
-      if (FromGameRanger) {
-        m_CurrentLobby->AnnounceToAddressForGameRanger(ipAddress, remotePort, m_Net->m_GameRangerRemoteAddress, m_Net->m_GameRangerRemotePort, ExtraDigit);
-      } else {
-        //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
-        m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
-        if (remotePort != m_Net->m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
-          m_CurrentLobby->AnnounceToAddress(ipAddress);
-        }
+      //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+      m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
+      if (remotePort != m_Net->m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
+        m_CurrentLobby->AnnounceToAddress(ipAddress);
       }
     }
   }

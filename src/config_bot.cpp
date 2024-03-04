@@ -98,10 +98,6 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   m_UDP6TargetPort               = CFG->GetUint16("net.game_discovery.udp.ipv6.target_port", 5678);
 
-  m_UDPSupportGameRanger         = CFG->GetBool("net.game_discovery.udp.gameranger.enabled", false);
-  m_UDPGameRangerAddress         = CFG->GetIPv4("net.game_discovery.udp.gameranger.ip_address", {255, 255, 255, 255});
-  m_UDPGameRangerPort            = CFG->GetUint16("net.game_discovery.udp.gameranger.port--but_its_hardcoded", 6112);
-
   m_AllowDownloads               = CFG->GetBool("hosting.map_downloads.enabled", false);
   m_AllowTransfers               = CFG->GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);

@@ -529,9 +529,6 @@ bool CGamePlayer::Update(void* fd)
             m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
           } else if (m_JoinedRealmID == 0) {
             m_GProxyPort = m_Game->m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Config->m_UDPCustomPortTCP4 : m_Game->GetHostPort();
-          } else if (m_JoinedRealmID == 0x02) {
-            // TODO(IceSandslash): GameRanger??
-            m_GProxyPort = 6112;
           } else {
             m_GProxyPort = 6112;
           }

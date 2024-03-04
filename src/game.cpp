@@ -1452,29 +1452,6 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
   );
 }
 
-vector<uint8_t> CGame::GetGameDiscoveryInfoForGameRanger(const vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
-{
-  return GetProtocol()->SEND_W3GR_GAMEINFO(
-    m_Aura->m_GameVersion,
-    CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
-    m_Map->GetMapGameFlags(),
-    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
-    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
-    m_GameName,
-    m_IndexVirtualHostName,
-    0,
-    m_MapPath,
-    m_Map->GetMapCRC(),
-    m_Slots.size(), // Total Slots
-    m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
-    m_HostPort, // Loopback connection may directly use m_HostPort
-    m_HostCounter | (1 << 24),
-    m_EntryKey,
-    remoteIP,
-    remotePort,
-    extraBit
-  );
-}
 
 void CGame::AnnounceToAddress(string& addressLiteral) const
 {
@@ -1504,37 +1481,16 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket) const
   }
 }
 
-void CGame::AnnounceToAddressForGameRanger(string& tunnelLocalIP, uint16_t tunnelLocalPort, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit) const
-{  
-  vector<uint8_t> packet = GetGameDiscoveryInfoForGameRanger(remoteIP, remotePort, extraBit);
-  m_Aura->m_Net->Send(tunnelLocalIP, tunnelLocalPort, packet);
-}
-
 void CGame::SendGameDiscoveryCreate() const
 {
   vector<uint8_t> packet = GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter);
   m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
-  if (m_Aura->m_Config->m_UDPSupportGameRanger && m_Aura->m_Net->m_GameRangerLocalPort != 0) {
-    // TODO: Do we really want to broadcast or not?
-    m_Aura->m_Net->Send(
-      m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
-      // Hardcoded remote 255.255.255.255:6112
-      GetProtocol()->SEND_W3GR_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter)
-    );
-  }
 }
 
 void CGame::SendGameDiscoveryDecreate() const
 {
   vector<uint8_t> packet = GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter);
   m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
-  if (m_Aura->m_Config->m_UDPSupportGameRanger) {
-    m_Aura->m_Net->Send(
-      m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
-      // Hardcoded remote 255.255.255.255:6112
-      GetProtocol()->SEND_W3GR_DECREATEGAME(m_HostCounter)
-    );
-  }
 }
 
 void CGame::SendGameDiscoveryRefresh() const
@@ -1545,16 +1501,6 @@ void CGame::SendGameDiscoveryRefresh() const
     m_Slots.size()
   );
   m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
-  if (m_Aura->m_Config->m_UDPSupportGameRanger) {
-    m_Aura->m_Net->Send(
-      m_Aura->m_Net->m_GameRangerLocalAddress, m_Aura->m_Net->m_GameRangerLocalPort,
-      GetProtocol()->SEND_W3GR_REFRESHGAME(
-        m_HostCounter,
-        m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
-        m_Slots.size()
-      )
-    );
-  }
 }
 
 void CGame::SendGameDiscoveryInfo() const
@@ -2091,7 +2037,6 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
   if (HostCounterID < 0x10 && HostCounterID != 0) {
     // 0x1: Information
-    // 0x2: GameRanger
     // others: undefined
     if (HostCounterID == 0x1) {
       connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));

@@ -3997,38 +3997,6 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
-    // !GAMERANGER
-    //
-
-    case HashCode("gameranger"): {
-          if (Payload.empty()) {
-        SendReply("GameRanger IP: " + ByteArrayToDecString(m_Aura->m_Net->m_GameRangerRemoteAddress) + " (proxy at " + to_string(m_Aura->m_Net->m_GameRangerLocalPort) + ")");
-        break;
-      }
-      stringstream SS;
-      string GameRangerIPString;
-      uint16_t GameRangerPort;
-
-      SS << Payload;
-      SS >> GameRangerIPString;
-      if (SS.fail() || SS.eof())
-        return;
-
-      SS >> GameRangerPort;
-      if (SS.fail())
-        return;
-        
-      vector<uint8_t> GameRangerAddress = ExtractIPv4(GameRangerIPString);
-      if (GameRangerAddress.empty())
-        return;
-
-      m_Aura->m_Net->m_GameRangerLocalPort = GameRangerPort;
-      m_Aura->m_Net->m_GameRangerRemoteAddress = GameRangerAddress;
-      SendReply("GameRanger IP set to " + ByteArrayToDecString(m_Aura->m_Net->m_GameRangerRemoteAddress) + "(proxy at " + to_string(m_Aura->m_Net->m_GameRangerLocalPort) + ")");
-      break;
-    }
-
-    //
     // !FLUSHDNS
     //
 

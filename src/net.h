@@ -123,11 +123,6 @@ public:
   std::vector<CTestConnection*>                               m_HealthCheckClients;
   bool                                                        m_HealthCheckInProgress;
   
-  uint16_t                                                    m_GameRangerLocalPort;
-  std::string                                                 m_GameRangerLocalAddress;
-  uint16_t                                                    m_GameRangerRemotePort;
-  std::vector<uint8_t>                                        m_GameRangerRemoteAddress;
-
   bool Init(CConfig* CFG);
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool Update(void* fd, void* send_fd);
