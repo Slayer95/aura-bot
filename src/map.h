@@ -391,7 +391,7 @@ inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string &
     return 2;
   }
 
-  std::string InvalidChars = "/\\\0\"'*?:|<>;,";
+  std::string InvalidChars = "/\\\0\"*?:|<>;,";
   if (downloadFilename.find_first_of(InvalidChars) != std::string::npos) {
     return 2;
   }
@@ -424,7 +424,6 @@ inline uint8_t DownloadRemoteMap(const std::string & siteId, const std::string &
   }
 
   searchFilename = downloadFilename;
-  // TODO(IceSandslash): Further sanitize downloadFilename
 
   std::string MapSuffix;
   bool FoundAvailableSuffix = false;
