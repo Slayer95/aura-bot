@@ -712,7 +712,7 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const sockaddr_storage
   const string MessageString = string(begin(message), end(message));
   int result;
   if (m_Family == AF_INET6) {
-    // TODO: This doesn't work in my system, and I can't tell whether it works in any system at all.
+    // FIXME: Dead code path. This probably doesn't work because IPv6 doesn't support broadcast at all.
     result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(addr6), sizeof(sockaddr_in6));
   } else {
     result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
