@@ -94,6 +94,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_UDPForwardPort               = CFG->GetUint16("net.udp_redirect.port", 6110);
   m_UDPForwardGameLists          = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
   m_UDPBroadcastEnabled          = CFG->GetBool("net.game_discovery.udp.broadcast.enabled", true);
+  m_UDPBroadcastTarget           = CFG->GetAddressIPv4("net.game_discovery.udp.broadcast.address", "255.255.255.255");
   m_UDPBlockedIPs                = CFG->GetIPStringSet("net.udp_server.block_list", ',', {});
 
   m_UDP6TargetPort               = CFG->GetUint16("net.game_discovery.udp.ipv6.target_port", 5678);
@@ -170,9 +171,6 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
   m_EnableBNET                   = CFG->GetMaybeBool("bot.toggle_every_realm");
-
-  // TODO(IceSandslash) Split to config-net.cpp. These cannot be reloaded
-  m_BroadcastTarget              = CFG->GetAddressIPv4("net.game_discovery.udp.broadcast.address", "255.255.255.255");
 }
 
 CBotConfig::~CBotConfig() = default;

@@ -77,6 +77,7 @@ public:
   uint16_t                                m_UDPForwardPort;             // the port to forward UDP traffic to
   bool                                    m_UDPForwardGameLists;        // whether to forward PvPGN game lists through UDP unicast.
   bool                                    m_UDPBroadcastEnabled;        // whether to perform UDP broadcasts to announce hosted games. (unicast is in config_game)
+  sockaddr_storage                        m_UDPBroadcastTarget;
   std::set<std::string>                   m_UDPBlockedIPs;              // list of IPs ignored by Aura's UDP server
 
   bool                                    m_AllowDownloads;             // allow map downloads or not
@@ -110,8 +111,6 @@ public:
 
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                 // master switch to enable/disable ALL bnet configs on startup
-
-  sockaddr_storage                        m_BroadcastTarget;
   
   explicit CBotConfig(CConfig* CFG);
   ~CBotConfig();

@@ -231,7 +231,7 @@ bool CNet::Init(CConfig* CFG)
 
   m_UDP6TargetPort = m_Aura->m_Config->m_UDP6TargetPort;
   if (m_Aura->m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
-  SetBroadcastTarget(m_Aura->m_Config->m_BroadcastTarget);
+  SetBroadcastTarget(m_Aura->m_Config->m_UDPBroadcastTarget);
   return true;
 }
 
@@ -655,7 +655,7 @@ void CNet::OnConfigReload()
 {
   m_UDP6TargetPort = m_Aura->m_Config->m_UDP6TargetPort;
   PropagateBroadcastEnabled(m_Aura->m_Config->m_UDPBroadcastEnabled);
-  SetBroadcastTarget(m_Aura->m_Config->m_BroadcastTarget);
+  SetBroadcastTarget(m_Aura->m_Config->m_UDPBroadcastTarget);
 }
 
 CNet::~CNet()
