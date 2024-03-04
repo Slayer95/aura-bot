@@ -146,13 +146,22 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
 
   if (!FileWar3EXE.empty() && (war3Version >= 29 || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {
-    // TODO: check getExeInfo return value to ensure 1024 bytes was enough
+    int bufferSize = 512;
+    int requiredSize = 0;
+    vector<char> buffer(bufferSize);
 
-    char     buf[1024];
     uint32_t EXEVersion;
     unsigned long EXEVersionHash;
 
-    getExeInfo(FileWar3EXE.c_str(), buf, 1024, &EXEVersion, BNCSUTIL_PLATFORM_X86);
+    do {
+      bufferSize *= 2;
+      buffer.resize(bufferSize);
+      requiredSize = getExeInfo(FileWar3EXE.c_str(), buffer.data(), bufferSize, &EXEVersion, BNCSUTIL_PLATFORM_X86);
+    } while (0 < requiredSize && bufferSize < requiredSize);
+
+    if (requiredSize == 0) {
+      return false;
+    }
 
     if (war3Version >= 29)
     {
@@ -162,7 +171,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
     else 
       checkRevisionFlat(valueStringFormula.c_str(), FileWar3EXE.c_str(), FileStormDLL.c_str(), FileGameDLL.c_str(), extractMPQNumber(mpqFileName.c_str()), &EXEVersionHash);
 
-    m_EXEInfo        = buf;
+    m_EXEInfo        = buffer.data();
     m_EXEVersion     = CreateByteArray(EXEVersion, false);
     m_EXEVersionHash = CreateByteArray(int64_t(EXEVersionHash), false);
     m_KeyInfoROC     = CreateKeyInfo(keyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
