@@ -24,7 +24,8 @@ function getKeyType(keyName) {
   return subName.toLowerCase();
 }
 
-function getDefaultValue(rest) {
+function getDefaultValue(rest, keyName) {
+  if (keyName === `net.host_port.max`) return `<net.host_port.min>`;
   let parts = rest.split(',');
   rest = parts[parts.length - 1].trim();
   if (rest == "emptyString") {
@@ -61,12 +62,26 @@ async function main() {
     const filePath = path.resolve(__dirname, fileName);
     const fileContent = await fs.readFile(filePath, 'utf8');
     let lastConfigName = '';
+    let lineNum = 0;
+    let isRealmN = false;
     for (const line of fileContent.split(/\r?\n/g)) {
-      const trimmed = line.trim();
+      lineNum++;
+      let trimmed = line.trim();
+      if (trimmed === `CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)`) {
+        isRealmN = true;
+      }
+      if (fileName === `src/config_realm.cpp`) {
+        if (isRealmN) {
+          trimmed = trimmed.replace(`m_CFGKeyPrefix + "`, `"realm_N.`);
+        } else {
+          trimmed = trimmed.replace(`m_CFGKeyPrefix + "`, `"global_realm.`);
+        }
+      }
       let maybeKeyMatch = configMaybeKeyRegexp.exec(trimmed);
       if (maybeKeyMatch) {
         const [, fnName, keyName] = maybeKeyMatch;
         lastConfigName = keyName;
+        if (!optionsMeta.has(lastConfigName)) optionsMeta.set(lastConfigName, {});
         configOptions.push({keyName, fnName});
         continue;
       }
@@ -83,11 +98,9 @@ async function main() {
         }
         continue;
       }
-      if (trimmed === 'CFG->FailIfErrorLast();') {
-        if (!optionsMeta.has(lastConfigName)) {
-          optionsMeta.set(lastConfigName, {});
-          optionsMeta.get(lastConfigName).failIfError = true;
-        }
+      if (trimmed.endsWith(`CFG->FailIfErrorLast();`)) {
+        if (!optionsMeta.has(lastConfigName)) console.error({fileName, lineNum, lastConfigName});
+        optionsMeta.get(lastConfigName).failIfError = true;
       }
       if (trimmed === `// == SECTION START: Cannot be reloaded ==`) {
         isCannotBeReloadedOn = true;
@@ -120,7 +133,11 @@ async function main() {
     } else {
       const failIfError = optionsMeta.get(configEntry.keyName)?.failIfError;
       if (configEntry.restArgs) {
-        outContents.push(`Default value: ${getDefaultValue(configEntry.restArgs)}`);
+        if (configEntry.keyName.startsWith(`realm_N.`)) {
+          outContents.push(`Default value: ${configEntry.keyName.replace(/^realm_N\./, '<global_realm.')}>`);
+        } else {
+          outContents.push(`Default value: ${getDefaultValue(configEntry.restArgs, configEntry.keyName)}`);
+        }
       }
       outContents.push(`Error handling: ${failIfError ? 'Abort operation' : 'Use default value'}`);
     }
