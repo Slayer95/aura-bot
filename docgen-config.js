@@ -25,6 +25,7 @@ function getKeyType(keyName) {
 }
 
 function getDefaultValue(rest, keyName) {
+  if (keyName === `net.host_port.min`) return `<net.host_port.only>`;
   if (keyName === `net.host_port.max`) return `<net.host_port.min>`;
   if (rest.endsWith('}') && rest.includes('{')) {
     rest = rest.slice(rest.indexOf('{') + 1, -1);
