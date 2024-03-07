@@ -35,7 +35,7 @@ or ``cd "C:\Users\Jon\Downloads\aura-bot\")``.
 This will set your command line's location to Aura's folder. You'll have to do this each time you open 
 a command line to run Aura.
 
-Copy ``aura-example.cfg`` into ``config.ini``, and edit as you please. Aura is capable of autoconfiguration to some
+Copy ``config-example.ini`` into ``config.ini``, and edit as you please. Aura is capable of autoconfiguration to some
 extent, but you will need to provide it with ``bot.maps_path`` to let it find your maps folder. This should 
 be in the same format as ``LOCATION`` above. See [CONFIG.md][5] for documentation regarding config options.
 
