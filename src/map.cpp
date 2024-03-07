@@ -245,7 +245,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   bool IsPartial = CFG->GetBool("cfg_partial", false);
   int RawMapSize = 0;
-  if (IsPartial || m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+  if (IsPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapLocalPath.empty()) {
       return;
     }
@@ -705,7 +705,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_size")) {
     string CFGValue = CFG->GetString("map_size", emptyString);
-    if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+    if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), false));
       MapContentMismatch[0] = CFGValue != MapValue;
     }
@@ -719,7 +719,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_info")) {
     string CFGValue = CFG->GetString("map_info", emptyString);
-    if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+    if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(MapInfo);
       MapContentMismatch[1] = CFGValue != MapValue;
     }
@@ -732,7 +732,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_crc")) {
     string CFGValue = CFG->GetString("map_crc", emptyString);
-    if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+    if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(MapCRC);
       MapContentMismatch[2] = CFGValue != MapValue;
     }
@@ -745,7 +745,7 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   if (CFG->Exists("map_sha1")) {
     string CFGValue = CFG->GetString("map_sha1", emptyString);
-    if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+    if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
       string MapValue = ByteArrayToDecString(MapSHA1);
       MapContentMismatch[3] = CFGValue != MapValue;
     }

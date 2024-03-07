@@ -23,9 +23,6 @@
 
  */
 
-#ifndef AURA_CONFIG_BOT_H_
-#define AURA_CONFIG_BOT_
-
 #include "config_bot.h"
 #include "util.h"
 #include "net.h"
@@ -42,130 +39,26 @@ using namespace std;
 
 CBotConfig::CBotConfig(CConfig* CFG)
 {
-  const static string emptyString;
-
-  m_Enabled                 = CFG->GetBool("hosting.enabled", true);
-  m_ProxyReconnectEnabled   = CFG->GetBool("net.tcp_extensions.gproxy.enabled", true);
-  m_War3Version             = CFG->GetMaybeInt("game.version");
+  m_Enabled                      = CFG->GetBool("hosting.enabled", true);
+  m_War3Version                  = CFG->GetMaybeInt("game.version");
   CFG->FailIfErrorLast();
-  m_Warcraft3Path           = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
-  m_MapCFGPath              = CFG->GetPath("bot.map_configs_path", filesystem::path());
-  m_MapPath                 = CFG->GetPath("bot.maps_path", filesystem::path());
+  m_Warcraft3Path                = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
+  m_MapCFGPath                   = CFG->GetPath("bot.map_configs_path", filesystem::path());
+  m_MapPath                      = CFG->GetPath("bot.maps_path", filesystem::path());
 
-  m_BindAddress4            = CFG->GetAddressIPv4("net.bind_address", "0.0.0.0");
-  CFG->FailIfErrorLast();
-  m_BindAddress6            = CFG->GetAddressIPv6("net.bind_address6", "::");
-  CFG->FailIfErrorLast();
-  m_MinHostPort             = CFG->GetUint16("net.host_port.min", CFG->GetUint16("net.host_port.only", 6112));
-  m_MaxHostPort             = CFG->GetUint16("net.host_port.max", m_MinHostPort);
-  m_UDPEnableCustomPortTCP4 = CFG->GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
-  m_UDPCustomPortTCP4       = CFG->GetUint16("net.game_discovery.udp.tcp4_custom_port.value", 6112);
-  m_UDPEnableCustomPortTCP6 = CFG->GetBool("net.game_discovery.udp.tcp6_custom_port.enabled", false);
-  m_UDPCustomPortTCP6       = CFG->GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678);
-
-  m_UDPCustomPortTCP6       = CFG->GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678);
-
-  m_EnableTCPWrapUDP        = CFG->GetBool("net.tcp_extensions.udp_tunnel.enabled", true);
-  m_EnableTCPScanUDP        = CFG->GetBool("net.tcp_extensions.udp_scan.enabled", true);
-
-  /* Make absolute, lexically normal */
-  m_GreetingPath           = CFG->GetPath("bot.greeting_path", filesystem::path());
-  if (!m_GreetingPath.empty()) {
-    ifstream in;
-    in.open(m_GreetingPath.string(), ios::in);
-    if (!in.fail()) {
-      while (!in.eof()) {
-        string Line;
-        getline(in, Line);
-        if (Line.empty()) {
-          if (!in.eof())
-            m_Greeting.push_back(" ");
-        } else {
-          m_Greeting.push_back(Line);
-        }
-      }
-      in.close( );
-    }
-  }
-
-  m_UDPBroadcastStrictMode       = CFG->GetBool("net.game_discovery.udp.broadcast.strict", true);
-  m_UDPForwardTraffic            = CFG->GetBool("net.udp_redirect.enabled", false);
-  m_UDPForwardAddress            = CFG->GetString("net.udp_redirect.ip_address", emptyString);
-  m_UDPForwardPort               = CFG->GetUint16("net.udp_redirect.port", 6110);
-  m_UDPForwardGameLists          = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
-  m_UDPBroadcastEnabled          = CFG->GetBool("net.game_discovery.udp.broadcast.enabled", true);
-  m_UDPBroadcastTarget           = CFG->GetAddressIPv4("net.game_discovery.udp.broadcast.address", "255.255.255.255");
-  m_UDPBlockedIPs                = CFG->GetIPStringSet("net.udp_server.block_list", ',', {});
-
-  m_UDP6TargetPort               = CFG->GetUint16("net.game_discovery.udp.ipv6.target_port", 5678);
-
-  m_AllowDownloads               = CFG->GetBool("hosting.map_downloads.enabled", false);
-  m_AllowTransfers               = CFG->GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
-  m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);
-  m_MaxUploadSize                = CFG->GetInt("hosting.map_transfers.max_size", 8192);
-  m_MaxUploadSpeed               = CFG->GetInt("hosting.map_transfers.max_speed", 1024);
-  m_MaxParallelMapPackets        = CFG->GetInt("hosting.map_transfers.max_parallel_packets", 1000);
   m_RTTPings                     = CFG->GetBool("metrics.rtt_pings", false);
-  m_HasBufferBloat               = CFG->GetBool("net.has_buffer_bloat", false);
-
-  m_ReconnectWaitTime            = CFG->GetUint8("net.tcp_extensions.gproxy.reconnect_wait", 5);
-  m_ReconnectWaitTimeLegacy      = CFG->GetUint8("net.tcp_extensions.gproxy_legacy.reconnect_wait", 3);
-
-  m_AnnounceGProxy               = CFG->GetBool("net.tcp_extensions.gproxy.announce_chat", true);
-  m_AnnounceGProxySite           = CFG->GetString("net.tcp_extensions.gproxy.site", "https://www.mymgn.com/gproxy/");
-  m_AnnounceIPv6                 = CFG->GetBool("net.ipv6.tcp.announce_chat", true);
 
   m_MinHostCounter               = CFG->GetInt("hosting.namepace.first_game_id", 100);
   m_MaxGames                     = CFG->GetInt("hosting.max_games", 20);
   m_MaxSavedMapSize              = CFG->GetInt("bot.max_persistent_size", 0xFFFFFFFF);
 
+  optional<filesystem::path> maybeGreeting = CFG->GetMaybePath("bot.greeting_path");
+  if (maybeGreeting.has_value() && !maybeGreeting.value().empty()) {
+    m_Greeting = ReadChatTemplate(maybeGreeting.value());
+  }
+
   m_StrictPaths                  = CFG->GetBool("bot.load_maps.strict_paths", false);
   m_EnableCFGCache               = CFG->GetBool("bot.load_maps.cache.enabled", true);
-  m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
-
-  string ipv4Algorithm             = CFG->GetString("net.ipv4.public_address.algorithm", "api");
-  if (ipv4Algorithm == "manual") {
-    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-    if (!CFG->Exists("net.ipv4.public_address.value")) {
-      Print("[CONFIG] <net.ipv4.public_address.value> is missing. Set <net.ipv4.public_address.algorithm = none> if this is intended.");
-      CFG->SetFailed();
-    } else {
-      sockaddr_storage inputIPv4 = CFG->GetAddressIPv4("net.ipv4.public_address.value", "0.0.0.0");
-      CFG->FailIfErrorLast();
-      m_PublicIPv4Value = AddressToString(inputIPv4);
-    }
-  } else if (ipv4Algorithm == "api") {
-    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
-    m_PublicIPv4Value = CFG->GetString("net.ipv4.public_address.value", "https://api.ipify.org");
-  } else if (ipv4Algorithm == "none") {
-    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv4.public_address.value");
-  } else {
-    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv4.public_address.value");
-  }
-
-  string ipv6Algorithm             = CFG->GetString("net.ipv6.public_address.algorithm", "api");
-  if (ipv6Algorithm == "manual") {
-    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-    if (!CFG->Exists("net.ipv6.public_address.value")) {
-      Print("[CONFIG] <net.ipv6.public_address.value> is missing. Set <net.ipv6.public_address.algorithm = none> if this is intended.");
-      CFG->SetFailed();
-    } else {
-      sockaddr_storage inputIPv6 = CFG->GetAddressIPv6("net.ipv6.public_address.value", "::");
-      CFG->FailIfErrorLast();
-      m_PublicIPv6Value = AddressToString(inputIPv6);
-    }
-  } else if (ipv6Algorithm == "api") {
-    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
-    m_PublicIPv6Value = CFG->GetString("net.ipv6.public_address.value", "https://api6.ipify.org");
-  } else if (ipv6Algorithm == "none") {
-    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv6.public_address.value");
-  } else {
-    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv6.public_address.value");
-  }
 
   m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);
 
@@ -174,4 +67,3 @@ CBotConfig::CBotConfig(CConfig* CFG)
 }
 
 CBotConfig::~CBotConfig() = default;
-#endif

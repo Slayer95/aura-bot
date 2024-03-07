@@ -150,6 +150,7 @@ bool CTestConnection::Update(void* fd, void* send_fd)
 
 CNet::CNet(CAura* nAura)
   : m_Aura(nAura),
+    m_Config(nullptr),
     m_SupportUDPOverIPv6(false),
     m_UDPMainServerEnabled(false),
     m_UDPMainServer(nullptr),
@@ -164,29 +165,34 @@ CNet::CNet(CAura* nAura)
 {
 }
 
-bool CNet::Init(CConfig* CFG)
+void CNet::InitPersistentConfig()
 {
-  // m_UDPMainServerEnabled may be overriden by the cli.
-  bool useDoNotRoute = CFG->GetBool("net.game_discovery.udp.do_not_route", false);
+  // Implements non-reloadable config entries.
+  m_UDPMainServerEnabled = m_Config->m_UDPMainServerEnabled;
+  m_SupportTCPOverIPv6 = m_Config->m_SupportTCPOverIPv6;
+  m_SupportUDPOverIPv6 = m_Config->m_SupportUDPOverIPv6;
+  m_UDPFallbackPort = m_Config->m_UDPFallbackPort;
+  m_UDPIPv6Port = m_Config->m_UDPIPv6Port;
+}
+
+bool CNet::Init()
+{
+  InitPersistentConfig();
 
   // Main server is the only one that can send W3GS_REFRESHGAME packets. 
   // If disabled, UDP communication is one-way, and can only be through W3GS_GAMEINFO.
-  m_UDPMainServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
-  m_SupportTCPOverIPv6 = CFG->GetBool("net.ipv6.tcp.enabled", true);
-  m_SupportUDPOverIPv6 = CFG->GetBool("net.udp_ipv6.enabled", true);
 
   if (m_UDPMainServerEnabled) {
     m_UDPMainServer = new CUDPServer(AF_INET);
-    m_UDPMainServer->SetDontRoute(useDoNotRoute);
-    if (!m_UDPMainServer->Listen(m_Aura->m_Config->m_BindAddress4, 6112, false)) {
+    if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, false)) {
       Print("====================================================================");
       Print("[DISCOVERY] <net.udp_server.enabled = yes> requires active instances of Warcraft to be closed...");
       Print("[DISCOVERY] Please release port 6112, or set <net.udp_server.enabled = no>");
       Print("====================================================================");
       Print("[DISCOVERY] Waiting...");
       this_thread::sleep_for(chrono::milliseconds(5000));
-      if (!m_UDPMainServer->Listen(m_Aura->m_Config->m_BindAddress4, 6112, true)) {
-        if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
+      if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, true)) {
+        if (m_Config->m_UDPBroadcastEnabled) {
           Print("[DISCOVERY] Failed to start UDP/IPv4 service on port 6112. Cannot start broadcast service.");
         } else {
           Print("[DISCOVERY] Failed to start UDP/IPv4 service on port 6112");
@@ -197,15 +203,13 @@ bool CNet::Init(CConfig* CFG)
     }
   }
 
-  uint16_t fallbackPort = CFG->GetUint16("net.udp_fallback.outbound_port", 6113);
   if (!m_UDPMainServerEnabled) {
     m_UDPDeafSocket = new CUDPServer(AF_INET);
-    m_UDPDeafSocket->SetDontRoute(useDoNotRoute);
-    if (!m_UDPDeafSocket->Listen(m_Aura->m_Config->m_BindAddress4, fallbackPort, true)) {
+    if (!m_UDPDeafSocket->Listen(m_Config->m_BindAddress4, m_UDPFallbackPort, true)) {
       Print("====================================================================");
-      Print("[DISCOVERY] Failed to bind to fallback port " + to_string(fallbackPort) + ".");
+      Print("[DISCOVERY] Failed to bind to fallback port " + to_string(m_UDPFallbackPort) + ".");
       Print("[DISCOVERY] For a random available port, set <net.udp_fallback.outbound_port = 0>");
-      if (m_Aura->m_Config->m_UDPBroadcastEnabled) {
+      if (m_Config->m_UDPBroadcastEnabled) {
         Print("[DISCOVERY] Failed to start UDP/IPv4 service. Cannot start broadcast service.");
       } else {
         Print("[DISCOVERY] Failed to start UDP/IPv4 service");
@@ -215,23 +219,30 @@ bool CNet::Init(CConfig* CFG)
     }
   }
 
-  uint16_t ipv6Port = CFG->GetUint16("net.udp_ipv6.port", 6110);
   if (m_SupportUDPOverIPv6) {
     m_UDPIPv6Server = new CUDPServer(AF_INET6);
-    m_UDPIPv6Server->SetDontRoute(useDoNotRoute);
-    if (!m_UDPIPv6Server->Listen(m_Aura->m_Config->m_BindAddress6, ipv6Port, true)) {
+    if (!m_UDPIPv6Server->Listen(m_Config->m_BindAddress6, m_UDPIPv6Port, true)) {
       Print("====================================================================");
-      Print("[DISCOVERY] Failed to bind to port " + to_string(ipv6Port) + ".");
+      Print("[DISCOVERY] Failed to bind to port " + to_string(m_UDPIPv6Port) + ".");
       Print("[DISCOVERY] For a random available port, set <net.udp_ipv6.port = 0>");
       Print("[DISCOVERY] Failed to start UDP/IPv6 service");
       Print("====================================================================");
       return false;
     }
+  } else {
+    for (const auto& clientIp : m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses) {
+      optional<sockaddr_storage> maybeAddress = ParseAddress(clientIp, ACCEPT_IPV6);
+      if (maybeAddress.has_value()) {
+        Print("[CONFIG] Address " + clientIp + " at <net.game_discovery.udp.extra_clients.ip_addresses> cannot receive game discovery messages, because IPv6 support hasn't been enabled");
+        Print("[CONFIG] Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
+      }
+    }
   }
 
-  m_UDP6TargetPort = m_Aura->m_Config->m_UDP6TargetPort;
-  if (m_Aura->m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
-  SetBroadcastTarget(m_Aura->m_Config->m_UDPBroadcastTarget);
+  m_UDP6TargetPort = m_Config->m_UDP6TargetPort;
+  if (m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
+  if (m_Config->m_UDPDoNotRouteEnabled) PropagateDoNotRouteEnabled(true);
+  SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
   return true;
 }
 
@@ -299,7 +310,7 @@ void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
 
 bool CNet::SendBroadcast(const vector<uint8_t>& packet)
 {
-  if (!m_Aura->m_Config->m_UDPBroadcastEnabled)
+  if (!m_Config->m_UDPBroadcastEnabled)
     return false;
 
   if (m_UDPMainServerEnabled) {
@@ -322,10 +333,14 @@ void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet)
     return;
   }
 
-  if (m_UDPMainServerEnabled) {
-    m_UDPMainServer->SendTo(address, packet);
+  if (address->ss_family == AF_INET6) {
+    m_UDPIPv6Server->SendTo(address, packet);
   } else {
-    m_UDPDeafSocket->SendTo(address, packet);
+    if (m_UDPMainServerEnabled) {
+      m_UDPMainServer->SendTo(address, packet);
+    } else {
+      m_UDPDeafSocket->SendTo(address, packet);
+    }
   }
 }
 
@@ -360,12 +375,12 @@ void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t por
   sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, port);
 
-  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+  if (m_Config->m_UDPBroadcastEnabled)
     PropagateBroadcastEnabled(false);
 
   Send(address, packet);
 
-  if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+  if (m_Config->m_UDPBroadcastEnabled)
     PropagateBroadcastEnabled(true);
 }
 
@@ -375,17 +390,17 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
     return;
 
   if (!clientIps.empty()) {
-    if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+    if (m_Config->m_UDPBroadcastEnabled)
       PropagateBroadcastEnabled(false);
 
     for (auto& clientIp : clientIps)
       Send(clientIp, packet);
 
-    if (m_Aura->m_Config->m_UDPBroadcastEnabled)
+    if (m_Config->m_UDPBroadcastEnabled)
       PropagateBroadcastEnabled(true);
   }
 
-  if (m_Aura->m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_IncomingConnections) {
+  if (m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_IncomingConnections) {
     for (auto& connection : pair.second) {
       if (connection->GetDeleteMe()) continue;
       if (connection->m_IsUDPTunnel) {
@@ -398,22 +413,35 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
 sockaddr_storage* CNet::GetPublicIPv4()
 {
   static pair<string, sockaddr_storage*> memoized = make_pair(string(), nullptr);
+  static uint8_t memoizedAlgorithm = 3;
 
-  switch (m_Aura->m_Config->m_PublicIPv4Algorithm) {
+  switch (m_Config->m_PublicIPv4Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Aura->m_Config->m_PublicIPv4Value, ACCEPT_IPV4);
-      if (!maybeAddress.has_value()) return nullptr; // should never happen
-      return &(maybeAddress.value());
-    }
-    case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (memoized.first == m_Aura->m_Config->m_PublicIPv4Value) {
+      if (memoized.first == m_Config->m_PublicIPv4Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
         return memoized.second;
       }
       if (memoized.second != nullptr) {
         delete memoized.second;
         memoized = make_pair(string(), nullptr);
       }
-      auto response = cpr::Get(cpr::Url{m_Aura->m_Config->m_PublicIPv4Value});
+
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv4Value, ACCEPT_IPV4);
+      if (!maybeAddress.has_value()) return nullptr; // should never happen
+      sockaddr_storage* cachedAddress = new sockaddr_storage();
+      memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
+      memoized = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+      return memoized.second;
+    }
+    case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
+      if (memoized.first == m_Config->m_PublicIPv4Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+        return memoized.second;
+      }
+      if (memoized.second != nullptr) {
+        delete memoized.second;
+        memoized = make_pair(string(), nullptr);
+      }
+      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv4Value});
       if (response.status_code != 200) {
         return nullptr;
       }
@@ -422,7 +450,8 @@ sockaddr_storage* CNet::GetPublicIPv4()
       if (!maybeAddress.has_value()) return nullptr;
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      memoized = make_pair(m_Aura->m_Config->m_PublicIPv4Value, cachedAddress);
+      memoized = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
       return memoized.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
@@ -434,33 +463,45 @@ sockaddr_storage* CNet::GetPublicIPv4()
 sockaddr_storage* CNet::GetPublicIPv6()
 {
   static pair<string, sockaddr_storage*> memoized = make_pair(string(), nullptr);
+  static uint8_t memoizedAlgorithm = 3;
 
-  switch (m_Aura->m_Config->m_PublicIPv6Algorithm) {
+  switch (m_Config->m_PublicIPv6Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Aura->m_Config->m_PublicIPv6Value, ACCEPT_IPV6);
-      if (!maybeAddress.has_value()) return nullptr; // should never happen
-      return &(maybeAddress.value());
-    }
-    case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (memoized.first == m_Aura->m_Config->m_PublicIPv6Value) {
+      if (memoized.first == m_Config->m_PublicIPv6Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
         return memoized.second;
       }
       if (memoized.second != nullptr) {
         delete memoized.second;
         memoized = make_pair(string(), nullptr);
       }
-      auto response = cpr::Get(cpr::Url{m_Aura->m_Config->m_PublicIPv6Value});
+
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv6Value, ACCEPT_IPV6);
+      if (!maybeAddress.has_value()) return nullptr; // should never happen
+      sockaddr_storage* cachedAddress = new sockaddr_storage();
+      memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
+      memoized = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+      return memoized.second;
+    }
+    case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
+      if (memoized.first == m_Config->m_PublicIPv6Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+        return memoized.second;
+      }
+      if (memoized.second != nullptr) {
+        delete memoized.second;
+        memoized = make_pair(string(), nullptr);
+      }
+      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv6Value});
       if (response.status_code != 200) {
         return nullptr;
       }
 
       optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(response.text, ACCEPT_IPV6);
-      if (!maybeAddress.has_value()) {
-        return nullptr;
-      }
+      if (!maybeAddress.has_value()) return nullptr;
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      memoized = make_pair(m_Aura->m_Config->m_PublicIPv6Value, cachedAddress);
+      memoized = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
       return memoized.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
@@ -556,16 +597,16 @@ vector<uint16_t> CNet::GetPotentialGamePorts() const
 {
   vector<uint16_t> result;
 
-  uint16_t port = m_Aura->m_Config->m_MinHostPort;
-  if (m_Aura->m_Config->m_UDPEnableCustomPortTCP4 && m_Aura->m_Config->m_UDPCustomPortTCP4 < port) {
-    result.push_back(m_Aura->m_Config->m_UDPCustomPortTCP4);
+  uint16_t port = m_Config->m_MinHostPort;
+  if (m_Config->m_UDPEnableCustomPortTCP4 && m_Config->m_UDPCustomPortTCP4 < port) {
+    result.push_back(m_Config->m_UDPCustomPortTCP4);
   }
-  while (port <= m_Aura->m_Config->m_MaxHostPort) {
+  while (port <= m_Config->m_MaxHostPort) {
     result.push_back(port);
     ++port;
   }
-  if (m_Aura->m_Config->m_UDPEnableCustomPortTCP4 && m_Aura->m_Config->m_UDPCustomPortTCP4 > port) {
-    result.push_back(m_Aura->m_Config->m_UDPCustomPortTCP4);
+  if (m_Config->m_UDPEnableCustomPortTCP4 && m_Config->m_UDPCustomPortTCP4 > port) {
+    result.push_back(m_Config->m_UDPCustomPortTCP4);
   }
   
   return result;
@@ -651,11 +692,25 @@ void CNet::PropagateBroadcastEnabled(const bool nEnable)
   }
 }
 
+void CNet::PropagateDoNotRouteEnabled(const bool nEnable)
+{
+  if (m_UDPMainServerEnabled) {
+    m_UDPMainServer->SetDontRoute(nEnable);
+  } else {
+    m_UDPDeafSocket->SetDontRoute(nEnable);
+  }
+
+  if (m_SupportUDPOverIPv6) {
+    m_UDPIPv6Server->SetDontRoute(nEnable);
+  }
+}
+
 void CNet::OnConfigReload()
 {
-  m_UDP6TargetPort = m_Aura->m_Config->m_UDP6TargetPort;
-  PropagateBroadcastEnabled(m_Aura->m_Config->m_UDPBroadcastEnabled);
-  SetBroadcastTarget(m_Aura->m_Config->m_UDPBroadcastTarget);
+  m_UDP6TargetPort = m_Config->m_UDP6TargetPort;
+  PropagateBroadcastEnabled(m_Config->m_UDPBroadcastEnabled);
+  PropagateDoNotRouteEnabled(m_Config->m_UDPDoNotRouteEnabled);
+  SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
 }
 
 CNet::~CNet()

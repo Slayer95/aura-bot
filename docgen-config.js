@@ -6,9 +6,11 @@ const util = require('util');
 const path = require('path');
 
 const OUTPUT_PATH = `CONFIG.md`;
-const COMMAND_FILES = ['src/net.cpp', 'src/config_bot.cpp', 'src/config_game.cpp', 'src/config_irc.cpp', 'src/config_realm.cpp'];
+const COMMAND_FILES = ['src/net.cpp', 'src/config_bot.cpp', 'src/config_game.cpp', 'src/config_irc.cpp', 'src/config_net.cpp', 'src/config_realm.cpp'];
 const configMaybeKeyRegexp = /CFG\-\>(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
 const configKeyRegexp = /CFG\-\>(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
+
+const ReloadModes = {NONE: 0, INSTANT: 1, NEXT: 2};
 
 function getKeyType(keyName) {
   let subName = '';
@@ -53,7 +55,9 @@ function getValueConstraints(fnName, keyName, rest) {
 async function main() {
   const optionsMeta = new Map();
   const configOptions = [];
+  let isCannotBeReloadedOn = false;
   for (const fileName of COMMAND_FILES) {
+    isCannotBeReloadedOn = false;
     const filePath = path.resolve(__dirname, fileName);
     const fileContent = await fs.readFile(filePath, 'utf8');
     let lastConfigName = '';
@@ -71,6 +75,12 @@ async function main() {
         const [, fnName, keyName, restArgs] = keyMatch;
         lastConfigName = keyName;
         configOptions.push({keyName, fnName, restArgs});
+        if (!optionsMeta.has(lastConfigName)) optionsMeta.set(lastConfigName, {});
+        if (isCannotBeReloadedOn) {
+          optionsMeta.get(lastConfigName).reload = ReloadModes.NONE;
+        } else if (fileName == 'src/config_game.cpp') {
+          optionsMeta.get(lastConfigName).reload = ReloadModes.NEXT;
+        }
         continue;
       }
       if (trimmed === 'CFG->FailIfErrorLast();') {
@@ -78,6 +88,12 @@ async function main() {
           optionsMeta.set(lastConfigName, {});
           optionsMeta.get(lastConfigName).failIfError = true;
         }
+      }
+      if (trimmed === `// == SECTION START: Cannot be reloaded ==`) {
+        isCannotBeReloadedOn = true;
+      }
+      if (trimmed === `// == SECTION END ==`) {
+        isCannotBeReloadedOn = false;
       }
     }
   }
@@ -107,6 +123,14 @@ async function main() {
         outContents.push(`Default value: ${getDefaultValue(configEntry.restArgs)}`);
       }
       outContents.push(`Error handling: ${failIfError ? 'Abort operation' : 'Use default value'}`);
+    }
+    const reloadMode = optionsMeta.get(configEntry.keyName)?.reloadMode;
+    if (reloadMode === ReloadModes.NEXT) {
+      outContents.push(`Reloadable: Yes, but it doesn't affect currently hosted games.`);
+    } else if (reloadMode === ReloadModes.INSTANT) {
+      outContents.push(`Reloadable: Yes.`);
+    } else if (reloadMode === ReloadModes.NONE) {
+      outContents.push(`Reloadable: Cannot be reloaded.`);
     }
     outContents.push(``);
   }

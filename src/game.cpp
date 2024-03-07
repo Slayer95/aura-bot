@@ -520,7 +520,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
     if (!m_CountDownStarted && m_UDPEnabled)
     {
-      if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Config->m_UDPBroadcastStrictMode) {
+      if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Net->m_Config->m_UDPBroadcastStrictMode) {
         SendGameDiscoveryRefresh();
       } else {
         SendGameDiscoveryInfo();
@@ -824,7 +824,7 @@ bool CGame::Update(void* fd, void* send_fd)
       {
         ++Downloaders;
 
-        if (m_Aura->m_Config->m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Config->m_MaxDownloaders)
+        if (m_Aura->m_Net->m_Config->m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net->m_Config->m_MaxDownloaders)
           break;
 
         // send up to 100 pieces of the map at once so that the download goes faster
@@ -843,7 +843,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
         const uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
-        while (player->GetLastMapPartSent() < player->GetLastMapPartAcked() + 1442 * m_Aura->m_Config->m_MaxParallelMapPackets && player->GetLastMapPartSent() < MapSize)
+        while (player->GetLastMapPartSent() < player->GetLastMapPartAcked() + 1442 * m_Aura->m_Net->m_Config->m_MaxParallelMapPackets && player->GetLastMapPartSent() < MapSize)
         {
           if (player->GetLastMapPartSent() == 0)
           {
@@ -856,7 +856,7 @@ bool CGame::Update(void* fd, void* send_fd)
           // limit the download speed if we're sending too much data
           // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
 
-          if (m_Aura->m_Config->m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Config->m_MaxUploadSpeed * 1024)
+          if (m_Aura->m_Net->m_Config->m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net->m_Config->m_MaxUploadSpeed * 1024)
             break;
 
           Send(player, GetProtocol()->SEND_W3GS_MAPPART(GetHostPID(), player->GetPID(), player->GetLastMapPartSent(), m_Map->GetMapData()));
@@ -1406,10 +1406,10 @@ void CGame::SendAllActions()
 uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
 {
   if (protocol == AF_INET)
-    return m_Aura->m_Config->m_UDPEnableCustomPortTCP4 ? m_Aura->m_Config->m_UDPCustomPortTCP4 : m_HostPort;
+    return m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4 ? m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 : m_HostPort;
 
   if (protocol == AF_INET6)
-    return m_Aura->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
+    return m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
 
   return m_HostPort;
 }
@@ -1437,8 +1437,8 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
     m_Aura->m_GameVersion,
     CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
     m_Map->GetMapGameFlags(),
-    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
-    m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
+    m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
+    m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
     m_GameName,
     m_IndexVirtualHostName,
     0,
@@ -1506,9 +1506,9 @@ void CGame::SendGameDiscoveryRefresh() const
 void CGame::SendGameDiscoveryInfo() const
 {
   // See CNet::SendGameDiscovery()
-  bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Config->m_UDPEnableCustomPortTCP4;
-  bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Config->m_UDPEnableCustomPortTCP6;
-  bool thereCouldBeUDPTunnelsOverTCP = m_Aura->m_Config->m_EnableTCPWrapUDP && !m_Aura->m_Net->m_IncomingConnections.empty();
+  bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4;
+  bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6;
+  bool thereCouldBeUDPTunnelsOverTCP = m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP && !m_Aura->m_Net->m_IncomingConnections.empty();
   if (loopbackIsIPv4Port && (loopbackIsIPv6Port || m_ExtraDiscoveryAddresses.empty() && !thereCouldBeUDPTunnelsOverTCP)) {
     vector<uint8_t> packet = GetGameDiscoveryInfo(m_HostPort);
     m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
@@ -1539,9 +1539,6 @@ void CGame::SendGameDiscoveryInfo() const
     if (isLoopbackAddress(address)) continue; // We already secure sending loopback packets above.
     bool isIPv6 = GetInnerIPVersion(address) == AF_INET6;
     if (isIPv6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) {
-      // TODO(IceSandslash): Validate in config-net.cpp
-      Print("[CONFIG] Game discovery message to " + clientIp + " at <net.game_discovery.udp.extra_clients.ip_addresses> cannot be sent, because IPv6 support hasn't been enabled");
-      Print("[CONFIG] Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
       continue;
     }
     m_Aura->m_Net->Send(address, isIPv6 ? ipv6Packet : ipv4Packet);
@@ -1861,19 +1858,19 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   }
 
   string GProxyFragment;
-  if (m_Aura->m_Config->m_AnnounceGProxy) {
+  if (m_Aura->m_Net->m_Config->m_AnnounceGProxy) {
     if (player->GetGProxyExtended()) {
-      GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">";
+      GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
     } else if (player->GetGProxyAny()) {
-      GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">";
+      GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
     } else if (m_Aura->m_GameVersion < 26 || 29 < m_Aura->m_GameVersion) {
-      GProxyFragment = " is not using disconnection protection. You may download it at: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">";
+      GProxyFragment = " is not using disconnection protection. You may download it at: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
     }
   }
   
   player->SetStatusMessageSent(true);
   if (OwnerFragment.empty() && GProxyFragment.empty()) {
-    if (m_Aura->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
+    if (m_Aura->m_Net->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
       Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPStringStrict() + ").");
       SendAllChat(player->GetName() + " joined the game over IPv6.");
     }
@@ -2540,7 +2537,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
   uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
   CRealm* JoinedRealm = player->GetRealm(false);
-  uint32_t MaxUploadSize = m_Aura->m_Config->m_MaxUploadSize;
+  uint32_t MaxUploadSize = m_Aura->m_Net->m_Config->m_MaxUploadSize;
   if (JoinedRealm)
     MaxUploadSize = JoinedRealm->GetMaxUploadSize();
 
@@ -2550,7 +2547,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     string* MapData = m_Map->GetMapData();
     bool IsMapAvailable = !MapData->empty() && m_Map->GetValidLinkedMap();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
-    if (IsMapAvailable && m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER && (player->GetDownloadAllowed() || m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) {
+    if (IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER && (player->GetDownloadAllowed() || m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) {
       if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
         // inform the client that we are willing to send the map
 
@@ -2563,7 +2560,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
       }
     } else if (!player->GetKickQueued()) {
         player->SetKickByTime(Time + m_LacksMapKickDelay);
-        if (m_Aura->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
+        if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
           player->SetLeftReason("doesn't have the map and uploads are disabled");
         } else if (IsMapTooLarge) {

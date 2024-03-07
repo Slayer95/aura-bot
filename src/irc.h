@@ -70,7 +70,7 @@ public:
   bool                     m_Exiting;
   bool                     m_WaitingToConnect;
 
-  CIRC(CAura* nAura, CIRCConfig* nConfig);
+  CIRC(CAura* nAura);
   ~CIRC();
   CIRC(CIRC&) = delete;
 

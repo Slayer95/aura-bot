@@ -50,6 +50,7 @@
 #include <cstdint>
 #include <vector>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <regex>
 #include <filesystem>
@@ -643,7 +644,7 @@ inline std::string IPv4ToString(const std::vector<uint8_t> ip) {
   return std::to_string(static_cast<int>(ip[0])) + "." + std::to_string(static_cast<int>(ip[1])) + "." + std::to_string(static_cast<int>(ip[2])) + "." + std::to_string(static_cast<int>(ip[3]));
 }
 
-inline std::string EncodeURIComponent(const std::string & s) {
+inline std::string EncodeURIComponent(const std::string& s) {
   std::ostringstream escaped;
   escaped.fill('0');
   escaped << std::hex;
@@ -661,7 +662,7 @@ inline std::string EncodeURIComponent(const std::string & s) {
   return escaped.str();
 }
 
-inline std::string DecodeURIComponent(const std::string & encoded) {
+inline std::string DecodeURIComponent(const std::string& encoded) {
   std::ostringstream decoded;
 
   for (std::size_t i = 0; i < encoded.size(); ++i) {
@@ -682,18 +683,38 @@ inline std::string DecodeURIComponent(const std::string & encoded) {
   return decoded.str();
 }
 
-inline std::string GetFileName(const std::string & inputPath) {
+inline std::string GetFileName(const std::string& inputPath) {
   std::filesystem::path filePath = inputPath;
   return filePath.filename().string();
 }
 
-inline bool PathHasNullBytes(const std::filesystem::path & filePath) {
+inline bool PathHasNullBytes(const std::filesystem::path& filePath) {
   for (const auto& c : filePath.native()) {
     if (c == '\0') {
-      return true; // Found a null byte
+      return true;
     }
   }
-  return false; // No null bytes found
+  return false;
+}
+
+inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& filePath) {
+  std::ifstream in;
+  in.open(filePath.string(), std::ios::in);
+  std::vector<std::string> fileContents;
+  if (!in.fail()) {
+    while (!in.eof()) {
+      std::string line;
+      std::getline(in, line);
+      if (line.empty()) {
+        if (!in.eof())
+          fileContents.push_back(" ");
+      } else {
+        fileContents.push_back(line);
+      }
+    }
+    in.close();
+  }
+  return fileContents;
 }
 
 #endif // AURA_UTIL_H_

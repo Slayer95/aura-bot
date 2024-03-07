@@ -236,6 +236,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
 
   m_GameProtocol = new CGameProtocol(this);
   m_Net = new CNet(this);
+  m_IRC = new CIRC(this);
 
   m_CRC->Initialize();
 
@@ -255,14 +256,14 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   }
   Print("[AURA] Running game version 1." + to_string(m_GameVersion));
 
-  if (!m_Net->Init(CFG)) {
+  if (!m_Net->Init()) {
     Print("[AURA] error - close active instances of Warcraft, and/or pause LANViewer to initialize Aura.");
     m_Ready = false;
     return;
   }
 
-  if (m_Config->m_UDPEnableCustomPortTCP4) {
-    Print("[AURA] Broadcasting games port " + to_string(m_Config->m_UDPCustomPortTCP4) + " over LAN");
+  if (m_Net->m_Config->m_UDPEnableCustomPortTCP4) {
+    Print("[AURA] Broadcasting games port " + to_string(m_Net->m_Config->m_UDPCustomPortTCP4) + " over LAN");
   }
 
   if (m_Config->m_EnableBNET.has_value()) {
@@ -274,9 +275,6 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   }
   if (m_Config->m_EnableBNET.value_or(true)) {
     LoadBNETs(CFG);
-  }
-  if (!LoadIRC(CFG)) {
-    Print("[CONFIG] warning - irc server misconfigured");
   }
   vector<string> invalidKeys = CFG->GetInvalidKeys(m_Config->m_EnableBNET.value_or(true));
   if (!invalidKeys.empty()) {
@@ -371,18 +369,6 @@ bool CAura::LoadBNETs(CConfig* CFG)
   return true;
 }
 
-bool CAura::LoadIRC(CConfig* CFG)
-{
-  CIRCConfig* IRCConfig = new CIRCConfig(CFG);
-  if (!CFG->GetSuccess()) {
-    delete IRCConfig;
-    return false;
-  }
-
-  delete m_IRC;
-  m_IRC = new CIRC(this, IRCConfig);
-  return true;
-}
 bool CAura::CopyScripts()
 {
   // Try to use manually extracted files already available in bot.map_configs_path
@@ -481,7 +467,7 @@ CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
     return it->second;
   }
   CTCPServer* gameServer = new CTCPServer(m_Net->m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
-  if (!gameServer->Listen(m_Net->m_SupportTCPOverIPv6 ? m_Config->m_BindAddress6 : m_Config->m_BindAddress4, inputPort, false)) {
+  if (!gameServer->Listen(m_Net->m_SupportTCPOverIPv6 ? m_Net->m_Config->m_BindAddress6 : m_Net->m_Config->m_BindAddress4, inputPort, false)) {
     Print("[GAME] " + name + " Error listening on port " + to_string(inputPort));
     return nullptr;
   }
@@ -567,10 +553,10 @@ pair<uint8_t, string> CAura::LoadMap(const string& user, const string& mapInput,
   if (NamespacedMap.first != "local" && !ResolvedCFGExists) {
     // Map config not locally available. Download the map so we can calculate it.
     // But only if we are allowed to.
-    if (!this->m_Config->m_AllowDownloads) {
+    if (!this->m_Net->m_Config->m_AllowDownloads) {
       return make_pair(0x21, string("Map downloads are not allowed."));
     }
-    if (!this->m_Games.empty() && this->m_Config->m_HasBufferBloat) {
+    if (!this->m_Games.empty() && this->m_Net->m_Config->m_HasBufferBloat) {
       return make_pair(0x40, string("Currently hosting ") + to_string(this->m_Games.size()) + " game(s). Downloads are disabled to prevent high latency.");
     }
 
@@ -939,7 +925,7 @@ void CAura::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  if (m_Config->m_UDPForwardTraffic) {
+  if (m_Net->m_Config->m_UDPForwardTraffic) {
     vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
     AppendByteArray(relayPacket, ipAddress, true);
     size_t portOffset = relayPacket.size();
@@ -949,7 +935,7 @@ void CAura::HandleUDP(UDPPkt* pkt)
     memset(relayPacket.data() + portOffset + 2, 0, 4); // Game version unknown at this layer.
     memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
     AssignLength(relayPacket);
-    m_Net->Send(m_Config->m_UDPForwardAddress, m_Config->m_UDPForwardPort, relayPacket);
+    m_Net->Send(&(m_Net->m_Config->m_UDPForwardAddress), relayPacket);
   }
 
   if (static_cast<unsigned char>(pkt->buf[0]) != W3GS_HEADER_CONSTANT) {
@@ -966,6 +952,8 @@ void CAura::HandleUDP(UDPPkt* pkt)
     if (m_CurrentLobby && m_CurrentLobby->GetUDPEnabled() && !m_CurrentLobby->GetCountDownStarted()) {
       //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
       m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
+
+      // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.
       if (remotePort != m_Net->m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
         m_CurrentLobby->AnnounceToAddress(ipAddress);
       }
@@ -1085,7 +1073,7 @@ bool CAura::Update()
     uint16_t localPort = pair.first;
     CStreamIOSocket* socket = pair.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
-      if (m_Config->m_ProxyReconnectEnabled) {
+      if (m_Net->m_Config->m_ProxyReconnectEnabled) {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
         //Print("Incoming connection from " + incomingConnection->GetIPString());
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
@@ -1238,10 +1226,6 @@ bool CAura::ReloadConfigs()
     Print("[CONFIG] error - realms misconfigured: not reloaded");
     success = false;
   }
-  if (!LoadIRC(CFG)) {
-    Print("[CONFIG] error - irc server misconfigured: not reloaded");
-    success = false;
-  }
   vector<string> invalidKeys = CFG->GetInvalidKeys(true);
   if (!invalidKeys.empty()) {
     Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinVector(invalidKeys, false));
@@ -1265,25 +1249,30 @@ bool CAura::ReloadConfigs()
 
 bool CAura::LoadConfigs(CConfig* CFG)
 {
-  // this doesn't set EVERY config value since that would potentially require reconfiguring the battle.net connections
-  // it just set the easily reloadable values
-
   CBotConfig* BotConfig = new CBotConfig(CFG);
-  CRealmConfig* RealmDefaultConfig = new CRealmConfig(CFG, BotConfig);
+  CNetConfig* NetConfig = new CNetConfig(CFG);
+  CIRCConfig* IRCConfig = new CIRCConfig(CFG);
+  CRealmConfig* RealmDefaultConfig = new CRealmConfig(CFG, NetConfig);
   CGameConfig* GameDefaultConfig = new CGameConfig(CFG);
 
   if (!CFG->GetSuccess()) {
     delete BotConfig;
+    delete NetConfig;
+    delete IRCConfig;
     delete RealmDefaultConfig;
     delete GameDefaultConfig;
     return false;
   }
   
   delete m_Config;
+  delete m_Net->m_Config;
+  delete m_IRC->m_Config;
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
 
   m_Config = BotConfig;
+  m_Net->m_Config = NetConfig;
+  m_IRC->m_Config = IRCConfig;
   m_RealmDefaultConfig = RealmDefaultConfig;
   m_GameDefaultConfig = GameDefaultConfig;
 
@@ -1898,8 +1887,8 @@ vector<string> CAura::ConfigFilesMatch(string pattern)
 uint16_t CAura::NextHostPort()
 {
   ++m_LastHostPort;
-  if (m_LastHostPort > m_Config->m_MaxHostPort || m_LastHostPort < m_Config->m_MinHostPort) {
-    m_LastHostPort = m_Config->m_MinHostPort;
+  if (m_LastHostPort > m_Net->m_Config->m_MaxHostPort || m_LastHostPort < m_Net->m_Config->m_MinHostPort) {
+    m_LastHostPort = m_Net->m_Config->m_MinHostPort;
   }
   return m_LastHostPort;
 }
@@ -1921,5 +1910,5 @@ bool CAura::IsIgnoredNotifyPlayer(string playerName)
 bool CAura::IsIgnoredDatagramSource(string sourceIp)
 {
   string element(sourceIp);
-  return m_Config->m_UDPBlockedIPs.find(element) != m_Config->m_UDPBlockedIPs.end();
+  return m_Net->m_Config->m_UDPBlockedIPs.find(element) != m_Net->m_Config->m_UDPBlockedIPs.end();
 }

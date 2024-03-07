@@ -36,7 +36,7 @@ using namespace std;
 // CRealmConfig
 //
 
-CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
+CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
   : m_CountryShort("PE"),
     m_Country("Peru"),
     m_Locale("system"),
@@ -64,7 +64,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CBotConfig* AuraCFG)
     m_FirstChannel("The Void"),
     m_RootAdmins({}),
     m_GamePrefix(string()),
-    m_MaxUploadSize(AuraCFG->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
+    m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
     m_FloodImmune(false),
 
     m_Enabled(true),

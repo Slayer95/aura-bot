@@ -1161,7 +1161,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       bool isOwner = (0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE)));
       SendReply(
-        "Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Config->m_AnnounceGProxySite + ">",
+        "Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">",
         isOwner ? CHAT_SEND_TARGET_ALL : 0
       );
       break;
@@ -1832,7 +1832,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool IsMapAvailable = !m_TargetGame->m_Map->GetMapData()->empty() && m_TargetGame->m_Map->GetValidLinkedMap();
-      if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable) {
+      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable) {
         if (m_TargetGame->m_Map->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
@@ -3728,9 +3728,9 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("setdownloads"):
     case HashCode("maptransfers"): {
           if (Payload.empty()) {
-        if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
+        if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
           SendReply("Map transfers are disabled");
-        } else if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
+        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
           SendReply("Map transfers are enabled");
         } else {
           SendReply("Map transfers are set to manual");
@@ -3759,10 +3759,10 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_Aura->m_Config->m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
-      if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
+      m_Aura->m_Net->m_Config->m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
+      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
         SendAll("Map transfers disabled.");
-      } else if (m_Aura->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
+      } else if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
         SendAll("Map transfers enabled.");
       } else {
         SendAll("Map transfers set to manual.");

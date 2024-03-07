@@ -57,6 +57,7 @@ OBJS = src/fileutil.o \
 			 src/config_realm.o \
 			 src/config_game.o 
 			 src/config_irc.o \
+			 src/config_net.o \
 			 src/crc32.o \
 			 src/sha1.o \
 			 src/realm.o \

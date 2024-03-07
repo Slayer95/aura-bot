@@ -159,7 +159,6 @@ public:
   bool LoadConfigs(CConfig* CFG);
   bool LoadCLI(const int argc, const char* argv[]);
   bool LoadBNETs(CConfig* CFG);
-  bool LoadIRC(CConfig* CFG);
 
   uint8_t ExtractScripts();
   bool CopyScripts();

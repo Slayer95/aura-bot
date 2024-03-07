@@ -27,7 +27,7 @@
 #define AURA_CONFIG_REALM_H_
 
 #include "config.h"
-#include "config_bot.h"
+#include "config_net.h"
 #include "socket.h"
 
 #include <vector>
@@ -94,7 +94,7 @@ public:
   std::string m_CFGKeyPrefix;                    // 
 
 
-  CRealmConfig(CConfig* CFG, CBotConfig* nBotConfig);
+  CRealmConfig(CConfig* CFG, CNetConfig* nNetConfig);
   CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);
   ~CRealmConfig();
 };

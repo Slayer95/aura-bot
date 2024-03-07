@@ -63,11 +63,11 @@ using namespace std;
 //// CIRC ////
 //////////////
 
-CIRC::CIRC(CAura* nAura, CIRCConfig* nConfig)
+CIRC::CIRC(CAura* nAura)
   : m_Aura(nAura),
     m_Socket(new CTCPClient(AF_INET, "IRC")),
-    m_Config(nConfig),
-    m_NickName(nConfig->m_NickName),
+    m_Config(nullptr),
+    m_NickName(string()),
     m_LastConnectionAttemptTime(0),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),

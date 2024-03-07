@@ -181,7 +181,7 @@ bool CRealm::Update(void* fd, void* send_fd)
             break;
 
           case CBNETProtocol::SID_GETADVLISTEX:
-            if (m_Aura->m_Config->m_UDPForwardGameLists) {
+            if (m_Aura->m_Net->m_Config->m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
               std::vector<uint8_t> War3Version = {m_Aura->m_GameVersion, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
@@ -190,8 +190,8 @@ bool CRealm::Update(void* fd, void* send_fd)
               AppendByteArray(relayPacket, War3Version);
               AppendByteArrayFast(relayPacket, Data);
               AssignLength(relayPacket);
-              //Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + m_Aura->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
-              m_Aura->m_Net->Send(m_Aura->m_Config->m_UDPForwardAddress, m_Aura->m_Config->m_UDPForwardPort, relayPacket);
+              //Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + m_Aura->m_Net->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Net->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
+              m_Aura->m_Net->Send(&(m_Aura->m_Net->m_Config->m_UDPForwardAddress), relayPacket);
             }
 
             break;
@@ -947,8 +947,8 @@ void CRealm::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, 
     QueuePacket(m_Protocol->SEND_SID_STARTADVEX3(
       state, CreateByteArray(MapGameType, false), map->GetMapGameFlags(),
       // use an invalid map width/height to indicate reconnectable games
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapWidth(),
-      m_Aura->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),
+      m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapWidth(),
+      m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),
       GetPrefixedGameName(gameName), m_Config->m_UserName,
       0, map->GetMapPath(), map->GetMapCRC(), map->GetMapSHA1(),
       hostCounter | (useServerNamespace ? (m_ServerID << 24) : 0),

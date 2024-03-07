@@ -28,7 +28,7 @@
 
 #include "socket.h"
 #include "gameplayer.h"
-#include "config.h"
+#include "config_net.h"
 #include "aura.h"
 
 #include <map>
@@ -68,7 +68,7 @@ class CUDPServer;
 class CUDPSocket;
 class CStreamIOSocket;
 class CGameConnection;
-class CConfig;
+class CNetConfig;
 
 struct sockaddr_storage;
 struct UDPPkt;
@@ -103,10 +103,17 @@ public:
   ~CNet();
 
   CAura*                                                      m_Aura;
+  CNetConfig*                                                 m_Config;
 
+  // == SECTION START ==
+  // Implements non-reloadable config entries.
   bool                                                        m_SupportUDPOverIPv6;
   bool                                                        m_SupportTCPOverIPv6;
   bool                                                        m_UDPMainServerEnabled;      // (IPv4) whether the bot should listen to UDP traffic in port 6112)
+  uint16_t                                                    m_UDPFallbackPort;
+  uint16_t                                                    m_UDPIPv6Port;
+  // == SECTION END ==
+
   CUDPServer*                                                 m_UDPMainServer;             // (IPv4) UDP I/O at port 6112. Supports broadcasts. May also act as reverse-proxy for UDP traffic.
   CUDPServer*                                                 m_UDPDeafSocket;             // (IPv4) UDP outbound traffic. Uses <net.udp_fallback.outbound_port> (should NOT be 6112). Supports broadcasts.
   CUDPServer*                                                 m_UDPIPv6Server;
@@ -117,13 +124,14 @@ public:
   sockaddr_storage*                                           m_UDP6BroadcastTarget;
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
-  std::map<uint16_t, std::vector<CGameConnection*>>          m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
+  std::map<uint16_t, std::vector<CGameConnection*>>           m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
   std::map<std::string, sockaddr_storage>                     m_DNSCache;
 
   std::vector<CTestConnection*>                               m_HealthCheckClients;
   bool                                                        m_HealthCheckInProgress;
-  
-  bool Init(CConfig* CFG);
+
+  void InitPersistentConfig();
+  bool Init();
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool Update(void* fd, void* send_fd);
   bool SendBroadcast(const std::vector<uint8_t>& packet);
@@ -149,6 +157,7 @@ public:
   static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
   void                                   SetBroadcastTarget(sockaddr_storage& subnet);
   void                                   PropagateBroadcastEnabled(const bool nEnable);
+  void                                   PropagateDoNotRouteEnabled(const bool nEnable);
   void                                   OnConfigReload();
 };
 
