@@ -46,7 +46,7 @@ will be available to players on the same network, as well as players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
-This option is equivalent to ``<net.game_discovery.udp.enabled = yes>`` in \`aura.cfg\`
+This option is equivalent to ``<net.game_discovery.udp.enabled = yes>`` in \`config.ini\`
 
 This flag is enabled by default.
 
@@ -58,24 +58,24 @@ will NOT be available to players on the same network, nor to players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
-This option is equivalent to ``<net.game_discovery.udp.enabled = no>`` in \`aura.cfg\`
+This option is equivalent to ``<net.game_discovery.udp.enabled = no>`` in \`config.ini\`
 
 ## \`--bnet\`
 
-Sets all Battle.net/PvPGN realms registered in \`aura.cfg\` to enabled. This flag overrides 
+Sets all Battle.net/PvPGN realms registered in \`config.ini\` to enabled. This flag overrides 
 any ``realm_N.enabled = no`` entries in the configuration file. This forces hosted games 
 to be playable over the internet through Blizzard's Battle.net platform, as well as 
 through alternative PvPGN servers.
 
-This option is equivalent to ``<bot.toggle_every_realm = yes>`` in \`aura.cfg\`
+This option is equivalent to ``<bot.toggle_every_realm = yes>`` in \`config.ini\`
 
 ## \`--no-bnet\`
 
-Sets all Battle.net/PvPGN realms registered in \`aura.cfg\` to disabled. This prevents Aura from 
+Sets all Battle.net/PvPGN realms registered in \`config.ini\` to disabled. This prevents Aura from 
 connecting to them. If this flag is enabled, games cannot be played over the internet through 
 Blizzard's Battle.net platform, nor through alternative PvPGN servers.
 
-This option is equivalent to ``<bot.toggle_every_realm = no>`` in \`aura.cfg\`
+This option is equivalent to ``<bot.toggle_every_realm = no>`` in \`config.ini\`
 
 ## \`--exit\`
 
@@ -109,21 +109,21 @@ when hosting games from the CLI.
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
 compatibility. This parameter allows the host bot to switch versions on the spot.
 
-This option is equivalent to ``<game.version>`` in \`aura.cfg\`
+This option is equivalent to ``<game.version>`` in \`config.ini\`
 
 ## \`--w3path <DIRECTORY>\` 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows the host bot 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
 
-This option is equivalent to ``<game.install_path>`` in \`aura.cfg\`
+This option is equivalent to ``<game.install_path>`` in \`config.ini\`
 
 ## \`--mapdir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 maps are stored. This parameter allows the host bot to locate  
 and load maps for hosting games.
 
-This option is equivalent to ``<bot.maps_path>`` in \`aura.cfg\`
+This option is equivalent to ``<bot.maps_path>`` in \`config.ini\`
 
 ## \`--cfgdir <DIRECTORY>\`
 
@@ -131,7 +131,7 @@ Specifies the directory where the metadata of Warcraft 3 maps is stored. Aura on
 in order to host games, even after the actual map files are gone. This parameter allows the host bot 
 to locate the metadata files, also referred to as "map config" files, or \`mapcfg\` for short.
 
-This option is equivalent to ``<bot.map_configs_path>`` in \`aura.cfg\`
+This option is equivalent to ``<bot.map_configs_path>`` in \`config.ini\`
 
 ## \`--lan-mode <MODE>\`
 
@@ -143,20 +143,20 @@ Specifies how hosted games available for "Local Area Network" should be made kno
 tiny periodic messages over the network that prompts open Warcraft III clients to request further 
 information. Once Aura provides them with that information, game clients may join your hosted game.
 
-This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = yes>`` in \`aura.cfg\`
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = yes>`` in \`config.ini\`
 
 - lax: Aura periodically sends the full information needed to join a hosted game to all machines in the 
 same network. Additionally, it will reply to the information request that happens when a game client first 
 opens the "Local Area Network" menu.
 
-This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = no>`` in \`aura.cfg\`
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = no>`` in \`config.ini\`
 
 - free: Aura periodically sends the full information needed to join a hosted game to all machines in the 
 same network. It will not reply to any information requests, nor process any UDP traffic. Port 6112 is not 
 used by Aura's UDP server. This is the only UDP mode that allows a Warcraft III game client in the host 
 machine to connect to the Local Area Network.
 
-This option is equivalent to ``<net.udp_server.enabled = no>`` in \`aura.cfg\`
+This option is equivalent to ``<net.udp_server.enabled = no>`` in \`config.ini\`
 
 # Flags for CLI games
 
@@ -199,7 +199,7 @@ the specified files, whether they are maps or configuration files.
 ## \`--exclude <SERVER>\`
 
 This makes hosted games invisible in the specified server. The server is to be specified through their 
-unique `Input ID`, which corresponds to ``realm_N.input_id`` in \`aura.cfg\`. Note that this value may be 
+unique `Input ID`, which corresponds to ``realm_N.input_id`` in \`config.ini\`. Note that this value may be 
 missing, and thus defaults to ``realm_N.unique_name`` (which defaults to \`realm_N.host_name\`).
 
 ## \`--mirror <IP:PORT#ID>\`

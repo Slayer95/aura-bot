@@ -114,15 +114,15 @@ int main(const int argc, const char* argv[])
 
   CConfig CFG;
   filesystem::path ExeDirectory = GetExeDirectory();
-  filesystem::path ConfigPath = ExeDirectory / filesystem::path("aura.cfg");
+  filesystem::path ConfigPath = ExeDirectory / filesystem::path("config.ini");
   if (!CFG.Read(ConfigPath)) {
     int FileSize = 0;
-    string CFGExample = FileRead(ExeDirectory / filesystem::path("aura-example.cfg"), &FileSize);
+    string CFGExample = FileRead(ExeDirectory / filesystem::path("config-example.ini"), &FileSize);
     vector<uint8_t> CFGCopy(CFGExample.begin(), CFGExample.end());
-    Print("[AURA] copying aura-example.cfg to aura.cfg...");
+    Print("[AURA] copying config-example.cfg to config.ini...");
     FileWrite(ConfigPath, CFGCopy.data(), CFGCopy.size());
     if (!CFG.Read(ConfigPath)) {
-      Print("[AURA] error initializing aura.cfg");
+      Print("[AURA] error initializing config.ini");
       return 1;
     }
   }
@@ -241,7 +241,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   m_CRC->Initialize();
 
   if (!LoadConfigs(CFG)) {
-    Print("[CONFIG] Error: Critical errors found in aura.cfg");
+    Print("[CONFIG] Error: Critical errors found in config.ini");
     m_Ready = false;
     return;
   }
@@ -1217,7 +1217,7 @@ bool CAura::ReloadConfigs()
   uint8_t WasVersion = m_GameVersion;
   filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
   CConfig* CFG = new CConfig();
-  CFG->Read("aura.cfg");
+  CFG->Read("config.ini");
   if (!LoadConfigs(CFG)) {
     Print("[CONFIG] error - bot configuration invalid: not reloaded");
     success = false;

@@ -81,7 +81,7 @@ pktriot tunnel tcp allocate
 pktriot info
 ```
 
-Edit your ``aura.cfg`` accordingly to the displayed IPv4 address and port:
+Edit your ``config.ini`` accordingly to the displayed IPv4 address and port:
 
 ```
 global_realm.custom_ip_address.enabled = yes
@@ -94,7 +94,7 @@ global_realm.custom_port.value = <PORT>
 Type the following command, replacing two values:
 
 - ``<PORT>``: The same as displayed above.
-- ``<net.host_port.only>``: It must match the value for ``net.host_port.only`` in your ``aura.cfg``. By default, 6113.
+- ``<net.host_port.only>``: It must match the value for ``net.host_port.only`` in your ``config.ini``. By default, 6113.
 
 ```
 pktriot tunnel tcp forward --port <PORT> --destination 127.0.0.1 --dstport <net.host_port.only>
@@ -158,7 +158,7 @@ Install the VPN software you are interested in, both in your machine, and in the
 connect from.
 
 Make sure that you are broadcasting games to the relevant VPN network interface. Configure the broadcast 
-address in your ``aura.cfg``, as the value for ``net.game_discovery.udp.broadcast.address``.
+address in your ``config.ini``, as the value for ``net.game_discovery.udp.broadcast.address``.
 
 Broadcast addresses for some VPN providers include:
 * Hamachi: 5.255.255.255

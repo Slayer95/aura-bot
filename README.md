@@ -35,7 +35,7 @@ or ``cd "C:\Users\Jon\Downloads\aura-bot\")``.
 This will set your command line's location to Aura's folder. You'll have to do this each time you open 
 a command line to run Aura.
 
-Copy ``aura-example.cfg`` into ``aura.cfg``, and edit as you please. Aura is capable of autoconfiguration to some
+Copy ``aura-example.cfg`` into ``config.ini``, and edit as you please. Aura is capable of autoconfiguration to some
 extent, but you will need to provide it with ``bot.maps_path`` to let it find your maps folder. This should 
 be in the same format as ``LOCATION`` above. See [CONFIG.md][5] for documentation regarding config options.
 
@@ -74,7 +74,7 @@ b. Host a known game from a map file at ``<bot.maps_path>``.
 There are more CLI features available at [CLI.md][8].
 
 However, you likely want to start Aura and let authorized people host any number of games. 
-For that, setup your ``aura.cfg`` to connect to one or more realms, or to an IRC network. Then, 
+For that, setup your ``config.ini`` to connect to one or more realms, or to an IRC network. Then, 
 just run the command:
 
 ```

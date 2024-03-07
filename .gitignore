@@ -41,9 +41,9 @@ Thumbs.db
 *.db-wal
 *.db-shm
 
-aura*.cfg
+config*.ini
 *.pdb
-!aura-example.cfg
+!config-example.ini
 mapcfgs/
 Debug/
 Share/
