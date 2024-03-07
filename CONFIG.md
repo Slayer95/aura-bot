@@ -69,12 +69,12 @@ Error handling: Use default value
 
 ## \`global_realm.auth_exe_version\`
 Type: uint8vector
-Default value: 1}
+Default value: 173 1 27 1
 Error handling: Use default value
 
 ## \`global_realm.auth_exe_version_hash\`
 Type: uint8vector
-Default value: 170}
+Default value: 72 160 171 170
 Error handling: Use default value
 
 ## \`global_realm.auth_game_version\`
@@ -261,7 +261,7 @@ Error handling: Use default value
 
 ## \`hosting.map_transfers.mode\`
 Type: stringindex
-Default value: MAP_TRANSFERS_AUTOMATIC
+Default value: auto
 Error handling: Use default value
 
 ## \`hosting.max_games\`
@@ -377,7 +377,7 @@ Error handling: Use default value
 
 ## \`net.game_discovery.udp.extra_clients.ip_addresses\`
 Type: ipstringset
-Default value: {}
+Default value: 
 Error handling: Use default value
 
 ## \`net.game_discovery.udp.extra_clients.strict\`
@@ -557,7 +557,7 @@ Error handling: Use default value
 
 ## \`net.udp_server.block_list\`
 Type: ipstringset
-Default value: {}
+Default value: 
 Error handling: Use default value
 
 ## \`net.udp_server.enabled\`
@@ -736,5 +736,5 @@ Error handling: Use default value
 
 ## \`ui.notify_joins.exceptions\`
 Type: set
-Default value: {}
+Default value: 
 Error handling: Use default value

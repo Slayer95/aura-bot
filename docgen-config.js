@@ -26,8 +26,13 @@ function getKeyType(keyName) {
 
 function getDefaultValue(rest, keyName) {
   if (keyName === `net.host_port.max`) return `<net.host_port.min>`;
-  let parts = rest.split(',');
-  rest = parts[parts.length - 1].trim();
+  if (rest.endsWith('}') && rest.includes('{')) {
+    rest = rest.slice(rest.indexOf('{') + 1, -1);
+    return rest.split(`,`).map(x => x.trim()).join(` `);
+  } else {
+    let parts = rest.split(',');
+    rest = parts[parts.length - 1].trim();
+  }
   if (rest == "emptyString") {
     return "Empty";
   }
@@ -40,6 +45,7 @@ function getDefaultValue(rest, keyName) {
   if (rest.startsWith(`0x`)) {
     return parseInt(rest, 16);
   }
+  if (rest === `MAP_TRANSFERS_AUTOMATIC`) return `auto`;
   return rest.replace(/^"/, '').replace(/"$/, '');
 }
 
