@@ -295,7 +295,7 @@ public:
   void EventPlayerKickHandleQueued(CGamePlayer* player);
   void EventPlayerCheckStatus(CGamePlayer* player);
   bool EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest);
-  void EventPlayerLeft(CGamePlayer* player, uint32_t reason);
+  void EventPlayerLeft(CGamePlayer* player);
   void EventPlayerLoaded(CGamePlayer* player);
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);

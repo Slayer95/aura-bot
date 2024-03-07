@@ -48,7 +48,7 @@ CTestConnection::CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, con
     m_Timeout(0),
     m_LastConnectionFailure(0),
     m_SentJoinRequest(false),
-    m_Socket(new CTCPClient(nTargetHost.ss_family, nName))
+    m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName))
 {
 }
 

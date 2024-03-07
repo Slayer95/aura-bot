@@ -206,7 +206,7 @@ uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromLis
     SUCCESS(x)
   }
 
-  uint8_t maxIndex = fromList.size();
+  uint8_t maxIndex = static_cast<uint8_t>(fromList.size());
   for (uint8_t i = 0; i < maxIndex; ++i) {
     if (it->second == fromList[i]) {
       SUCCESS(i)

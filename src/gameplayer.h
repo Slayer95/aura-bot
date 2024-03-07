@@ -165,7 +165,7 @@ private:
   bool                             m_Muted;                        // if the player is muted or not
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
   bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
-  uint64_t                         m_CheckStatusByTime;
+  int64_t                          m_CheckStatusByTime;
 
   bool                             m_GProxy;                       // if the player is using GProxy++
   uint16_t                         m_GProxyPort;                   // port where GProxy will try to reconnect

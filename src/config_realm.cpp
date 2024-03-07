@@ -37,31 +37,11 @@ using namespace std;
 //
 
 CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
-  : m_CountryShort("PE"),
-    m_Country("Peru"),
-    m_Locale("system"),
-    m_LocaleID(10250),
-
-    m_CommandTrigger('!'),
-    m_EnablePublicCreate(true),
-    m_AnnounceHostToChat(true),
-    m_IsMirror(false),
-    m_IsVPN(false),
-
-    m_EnableCustomAddress(false),
-
-    m_EnableCustomPort(false),
-    m_PublicHostPort(6112),
+  : m_CommandTrigger('!'),
 
     m_UserName(string()),
     m_PassWord(string()),
 
-    m_AuthWar3Version(27),
-    m_AuthExeVersion({173, 1, 27, 1}),
-    m_AuthExeVersionHash({72, 160, 171, 170}),
-    m_AuthPasswordHashType("pvpgn"),
-
-    m_FirstChannel("The Void"),
     m_RootAdmins({}),
     m_GamePrefix(string()),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
@@ -72,10 +52,9 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
     m_ServerIndex(0), // m_ServerIndex is one-based
     m_CFGKeyPrefix("global_realm.")
 {
-  const static string emptyString;
-  m_CountryShort           = CFG->GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
-  m_Country                = CFG->GetString(m_CFGKeyPrefix + "country", m_Country);
-  m_Locale                 = CFG->GetString(m_CFGKeyPrefix + "locale", m_Locale);
+  m_CountryShort           = CFG->GetString(m_CFGKeyPrefix + "country_short", "PE");
+  m_Country                = CFG->GetString(m_CFGKeyPrefix + "country", "Peru");
+  m_Locale                 = CFG->GetString(m_CFGKeyPrefix + "locale", "system");
 
   if (m_Locale == "system") {
     m_LocaleID = 10250;
@@ -84,37 +63,38 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
       m_LocaleID  = stoul(m_Locale);
     } catch (...) {
       m_Locale = "system";
+      m_LocaleID = 10250;
     }
   }
 
-  string CommandTrigger = CFG->GetString(m_CFGKeyPrefix + "command_trigger", "");
-  if (CommandTrigger.length() == 1) {
-    m_CommandTrigger       = CommandTrigger[0];
-  }
-  m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);
-  m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
-  m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
-  m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
+  string commandTrigger    = CFG->GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, "!");
+  CFG->FailIfErrorLast();
+  m_CommandTrigger         = commandTrigger[0];
 
-  m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
+  m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", true);
+  m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", true);
+  m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", false);
+  m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", false);
+
+  m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", false);
   m_PublicHostAddress      = CFG->GetAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value", "0.0.0.0");
   if (m_EnableCustomAddress)
     CFG->FailIfErrorLast();
 
-  m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
-  m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
+  m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", false);
+  m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", 6112);
   if (m_EnableCustomPort)
     CFG->FailIfErrorLast();
 
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = CFG->GetUint8(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
-  m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
-  m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
-  m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);
+  m_AuthWar3Version        = CFG->GetUint8(m_CFGKeyPrefix + "auth_game_version", 27);
+  m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, {173, 1, 27, 1});
+  m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, {72, 160, 171, 170});
+  m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", "pvpgn");
 
-  m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
+  m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
   m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
   m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
@@ -196,10 +176,9 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     }
   }
 
-  string CommandTrigger    = CFG->GetString(m_CFGKeyPrefix + "command_trigger", "");
-  if (CommandTrigger.length() == 1) {
-    m_CommandTrigger       = CommandTrigger[0];
-  }
+  string commandTrigger    = CFG->GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, "!");
+  CFG->FailIfErrorLast();
+  m_CommandTrigger         = commandTrigger[0];
   m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);
   m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);

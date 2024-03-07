@@ -2168,7 +2168,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   return true;
 }
 
-void CGame::EventPlayerLeft(CGamePlayer* player, uint32_t reason)
+void CGame::EventPlayerLeft(CGamePlayer* player)
 {
   // this function is only called when a player leave packet is received, not when there's a socket error, kick, etc...
 

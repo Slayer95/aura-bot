@@ -52,7 +52,8 @@ CGameConfig::CGameConfig(CConfig* CFG)
   m_ExtraDiscoveryAddresses   = CFG->GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
   m_ExtraDiscoveryStrict      = CFG->GetBool("net.game_discovery.udp.extra_clients.strict", false);
 
-  string BotCommandTrigger    = CFG->GetString("hosting.command_trigger", "!");
+  string BotCommandTrigger    = CFG->GetString("hosting.command_trigger", 1, 1, "!");
+  CFG->FailIfErrorLast();
   m_CommandTrigger            = BotCommandTrigger[0];
   m_IndexVirtualHostName      = CFG->GetString("hosting.index.creator_name", 1, 15, "Aura Bot");
   m_LobbyVirtualHostName      = CFG->GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");

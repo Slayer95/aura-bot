@@ -205,12 +205,12 @@ inline bool isIPv4MappedAddress(const sockaddr_storage* address) {
 inline bool isLoopbackAddress(const sockaddr_storage* address) {
   if (address->ss_family == AF_INET) {
     const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(address);
-    return ((addr4->sin_addr.s_addr & htonl(0xFF0000000)) == htonl(INADDR_LOOPBACK));
+    return ((addr4->sin_addr.s_addr & htonl(0xFF000000)) == htonl(INADDR_LOOPBACK));
   } else if (address->ss_family == AF_INET6) {
     const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(address);
     if (isIPv4MappedAddress(addr6)) {
       const in_addr* addr4 = reinterpret_cast<const in_addr*>(addr6->sin6_addr.s6_addr + 12);
-      return ((addr4->s_addr & htonl(0xFF0000000)) == htonl(INADDR_LOOPBACK));
+      return ((addr4->s_addr & htonl(0xFF000000)) == htonl(INADDR_LOOPBACK));
     } else {
       return (memcmp(&(addr6->sin6_addr), &in6addr_loopback, sizeof(in6_addr)) == 0);
     }
@@ -227,7 +227,7 @@ inline bool isSpecialIPv6Address(const sockaddr_in6* address) {
 
 inline bool isSpecialIPv4Address(const sockaddr_in* address) {
   uint32_t addr = address->sin_addr.s_addr;
-  if ((addr & htonl(0xFF0000000)) == htonl(INADDR_LOOPBACK)) return true;
+  if ((addr & htonl(0xFF000000)) == htonl(INADDR_LOOPBACK)) return true;
   if (addr == htonl(INADDR_BROADCAST)) return true;
   if (htonl(INADDR_MULTICAST_START) <= addr && addr <= htonl(INADDR_MULTICAST_END)) return true;
   return false;
@@ -256,7 +256,7 @@ inline uint8_t GetInnerIPVersion(const sockaddr_storage* inputAddress) {
     if (isIPv4MappedAddress(addr6)) return AF_INET;
     return AF_INET6;
   }
-  return inputAddress->ss_family;
+  return static_cast<uint8_t>(inputAddress->ss_family);
 }
 
 inline std::string AddressToString(const sockaddr_storage& address)

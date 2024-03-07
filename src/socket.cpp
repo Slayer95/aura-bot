@@ -227,6 +227,8 @@ void CSocket::Reset()
 
 void CSocket::SendReply(const sockaddr_storage* address, const vector<uint8_t>& message)
 {
+  UNREFERENCED_PARAMETER(address);
+  UNREFERENCED_PARAMETER(message);
 }
 
 //
@@ -259,7 +261,7 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
 }
 
 CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTCPServer* nServer, const uint16_t nCounter)
-  : CSocket(nAddress.ss_family, nSocket),
+  : CSocket(static_cast<uint8_t>(nAddress.ss_family), nSocket),
     m_LastRecv(GetTime()),
     m_Connected(true),
     m_RemoteHost(move(nAddress)),
@@ -376,12 +378,11 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
       return;
     }
   }
-
-
 }
 
 void CStreamIOSocket::SendReply(const sockaddr_storage* address, const vector<uint8_t>& message)
 {
+  UNREFERENCED_PARAMETER(address);
   PutBytes(message);
 }
 
