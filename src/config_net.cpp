@@ -67,7 +67,9 @@ CNetConfig::CNetConfig(CConfig* CFG)
   CFG->FailIfErrorLast();
   m_BindAddress6                 = CFG->GetAddressIPv6("net.bind_address6", "::");
   CFG->FailIfErrorLast();
-  m_MinHostPort                  = CFG->GetUint16("net.host_port.min", CFG->GetUint16("net.host_port.only", 6112));
+
+  uint16_t onlyHostPort          = CFG->GetUint16("net.host_port.only", 6112);
+  m_MinHostPort                  = CFG->GetUint16("net.host_port.min", onlyHostPort);
   m_MaxHostPort                  = CFG->GetUint16("net.host_port.max", m_MinHostPort);
 
   m_UDPBlockedIPs                = CFG->GetIPStringSet("net.udp_server.block_list", ',', {});

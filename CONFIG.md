@@ -425,6 +425,11 @@ Type: uint16
 Default value: <net.host_port.only>
 Error handling: Use default value
 
+## \`net.host_port.only\`
+Type: uint16
+Default value: 6112
+Error handling: Use default value
+
 ## \`net.ipv4.public_address.algorithm\`
 Type: string
 Default value: api
