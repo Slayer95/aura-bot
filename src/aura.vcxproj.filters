@@ -42,6 +42,9 @@
     <ClCompile Include="config_net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cli.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="crc32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -126,6 +129,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config_net.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cli.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="crc32.h">

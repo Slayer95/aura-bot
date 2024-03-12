@@ -61,10 +61,10 @@
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
 #include "game.h"
+#include "cli.h"
 #include "irc.h"
 #include "util.h"
 #include "fileutil.h"
-#include "argh.h"
 
 #include <csignal>
 #include <cstdlib>
@@ -207,6 +207,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
+    m_CLI(nullptr),
     m_IRC(nullptr),
     m_Net(nullptr),
     m_CurrentLobby(nullptr),
@@ -231,6 +232,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   Print("[AURA] Aura version " + m_Version);
 
   m_GameProtocol = new CGameProtocol(this);
+  m_CLI = new CCLI(this);
   m_Net = new CNet(this);
   m_IRC = new CIRC(this);
 
@@ -241,7 +243,7 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     m_Ready = false;
     return;
   }
-  if (LoadCLI(argc, argv)) {
+  if (!LoadCLI(argc, argv)) {
     m_Ready = false;
     return;
   }
@@ -847,156 +849,7 @@ bool CAura::LoadConfigs(CConfig* CFG)
 bool CAura::LoadCLI(const int argc, const char* argv[])
 {
   // CLI overrides Config overrides Registry
-  argh::parser cmdl({
-    // TODO(IceSandslash): Switch to another CLI parser library that properly supports flags
-    // Flags
-    //"--version", "--help", "--stdpaths",
-    //"--lan", "--bnet", "--exit", "--cache",
-    //"--no-lan", "--no-bnet", "--no-exit", "--no-cache",
-
-    // Parameters
-    "--w3version", "--w3path", "--mapdir", "--cfgdir", "--filetype",
-    "--lan-mode",
-    "--exclude", "--mirror",
-    "--observers", "--visibility", "--random-races", "--random-heroes", "--owner",
-    "--exec-as", "--exec-auth", "exec-scope", "--exec"
-  });
-
-  cmdl.parse(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-
-  if (cmdl("--version")) {
-    Print("--version");
-    return true;
-  }
-  if (cmdl("help")) {
-    Print("Usage:");
-    Print("aura DotA.w3x \"come and play\"");
-    return true;
-  }
-
-  optional<bool> bnet = m_Config->m_EnableBNET;
-  bool noexit = !m_Config->m_ExitOnStandby;
-  bool nolan = !m_GameDefaultConfig->m_UDPEnabled;
-  bool nocache = !m_Config->m_EnableCFGCache;
-  bool stdpaths = false;
-  
-  uint32_t War3Version = m_Config->m_War3Version.has_value() ? m_Config->m_War3Version.value() : 0;
-  string War3Path = m_Config->m_Warcraft3Path.has_value() ? m_Config->m_Warcraft3Path.value().string() : string();
-  string MapPath = m_Config->m_MapPath.string();
-  string MapCFGPath = m_Config->m_MapCFGPath.string();
-  string MapFileType = "map";
-  string LANMode = m_Net->m_UDPMainServerEnabled ? "strict": "free";
-
-  cmdl("w3version", War3Version) >> War3Version;
-  cmdl("w3path", War3Path) >> War3Path;
-  cmdl("mapdir", MapPath) >> MapPath;
-  cmdl("cfgdir", MapCFGPath) >> MapCFGPath;
-  cmdl("filetype", MapFileType) >> MapFileType;
-  cmdl("lan-mode", LANMode) >> LANMode;
-
-  cmdl("no-exit", noexit) >> noexit;
-  //cmdl("no-bnet", nobnet) >> nobnet;
-  cmdl("no-lan", nolan) >> nolan;
-  cmdl("no-cache", nocache) >> nocache;
-  cmdl("stdpaths") >> stdpaths;
-
-  string rawFirstArgument = cmdl[1];
-  if (!rawFirstArgument.empty()) {
-    string gameName = cmdl[2].empty() ? "Join and play" : cmdl[2];
-    string mirrorTarget, excludedRealm;
-    string observerMode, visionMode, randomRaces, randomHeroes, owner;
-    cmdl("mirror") >> mirrorTarget;
-    cmdl("exclude") >> excludedRealm;      
-    cmdl("observers") >> observerMode;
-    cmdl("visibility") >> visionMode;
-    cmdl("random-races") >> randomRaces;
-    cmdl("random-heroes") >> randomHeroes;
-    cmdl("owner") >> owner;
-
-    string targetMapPath = rawFirstArgument;
-    if (stdpaths) {
-      filesystem::path mapPath = targetMapPath;
-      targetMapPath = filesystem::absolute(mapPath).lexically_normal().string();
-    }
-
-    CGameExtraOptions options;
-    options.ParseMapObservers(observerMode);
-    options.ParseMapVisibility(visionMode);
-    options.ParseMapRandomRaces(randomRaces);
-    options.ParseMapRandomHeroes(randomHeroes);
-
-    uint8_t searchType = SEARCH_TYPE_ANY;
-    if (MapFileType == "map") {
-      searchType = SEARCH_TYPE_ONLY_MAP;
-    } else if (MapFileType == "config") {
-      searchType = SEARCH_TYPE_ONLY_CONFIG;
-    } else if (MapFileType == "local") {
-      searchType = SEARCH_TYPE_ONLY_FILE;
-    }
-    CCommandContext* ctx = new CCommandContext(this, &cout, '!');
-    CGameSetup* gameSetup = new CGameSetup(this, ctx, targetMapPath, searchType, stdpaths ? SETUP_USE_STANDARD_PATHS : SETUP_PROTECT_ARBITRARY_TRAVERSAL, true);
-    if (gameSetup && gameSetup->LoadMap()) {
-      if (gameSetup->ApplyMapModifiers(&options)) {
-        // CRealm instances do not exist yet. Just use the user input verbatim.
-        if (!excludedRealm.empty()) m_GameSetup->AddIgnoredRealm(excludedRealm);
-        
-        vector<string> Action;
-        if (!mirrorTarget.empty()) {
-          gameSetup->SetMirrorSource(mirrorTarget);
-        }
-        gameSetup->SetName(gameName);
-        gameSetup->SetActive();
-        vector<string> hostAction = {"host"};
-        m_PendingActions.push_back(hostAction);
-      } else {
-        ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
-        delete gameSetup;
-        delete ctx;
-      }
-    } else {
-      ctx->ErrorReply("Invalid game hosting parameters. Please ensure the provided file is valid. See also: CLI.md");
-      delete gameSetup;
-      delete ctx;
-    }
-    noexit = false;
-    //nocache = cmdl("stdpaths");
-  }
-
-  m_Config->m_War3Version = War3Version;
-  m_Config->m_Warcraft3Path = War3Path;
-  m_Config->m_MapPath = MapPath;
-  m_Config->m_MapCFGPath = MapCFGPath;
-
-  m_Config->m_ExitOnStandby = !noexit;
-  //m_Config->m_EnableBNET = !nobnet;
-  m_GameDefaultConfig->m_UDPEnabled = !nolan;
-  m_Config->m_EnableCFGCache = !nocache;
-
-  if (LANMode == "strict" || LANMode == "lax") {
-    m_Net->m_UDPMainServerEnabled = true;
-  } else if (LANMode == "free") {
-    m_Net->m_UDPMainServerEnabled = false;
-  } else {
-    Print("Bad UDPMode: " + LANMode);
-  }
-
-  string execCommand, execAs, execScope, execAuth;
-  cmdl("exec", execCommand) >> execCommand;
-  cmdl("exec-as", execAs) >> execAs;
-  cmdl("exec-scope", execScope) >> execScope;
-  cmdl("exec-auth", execAuth) >> execAuth;
-
-  if (!execCommand.empty() && !execAs.empty() && !execAuth.empty()) {
-    vector<string> Action;
-    Action.push_back("exec");
-    Action.push_back(execCommand);
-    Action.push_back(execAs);
-    Action.push_back(execScope);
-    Action.push_back(execAuth);
-    m_PendingActions.push_back(Action);
-  }
-
-  return false;
+  return m_CLI->Parse(argc, argv);
 }
 
 uint8_t CAura::ExtractScripts()

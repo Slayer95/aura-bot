@@ -267,6 +267,7 @@
     <ClCompile Include="config_game.cpp" />
     <ClCompile Include="config_irc.cpp" />
     <ClCompile Include="config_net.cpp" />
+    <ClCompile Include="cli.cpp" />
     <ClCompile Include="bnetprotocol.cpp" />
     <ClCompile Include="gameprotocol.cpp" />
     <ClCompile Include="gpsprotocol.cpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="config_game.h" />
     <ClInclude Include="config_irc.h" />
     <ClInclude Include="config_net.h" />
+    <ClInclude Include="cli.h" />
     <ClInclude Include="bnetprotocol.h" />
     <ClInclude Include="gameprotocol.h" />
     <ClInclude Include="gpsprotocol.h" />

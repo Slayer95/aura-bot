@@ -50,6 +50,7 @@
 #include "config_bot.h"
 #include "config_realm.h"
 #include "config_game.h"
+#include "cli.h"
 #include "command.h"
 #include "net.h"
 #include "gamesetup.h"
@@ -79,6 +80,7 @@ class CGameProtocol;
 class CGPSProtocol;
 class CCRC32;
 class CSHA1;
+class CCLI;
 class CRealm;
 class CGame;
 class CCommandContext;
@@ -95,6 +97,7 @@ public:
   CCRC32*                                            m_CRC;                        // for calculating CRC's
   CSHA1*                                             m_SHA;                        // for calculating SHA1's
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
+  CCLI*                                              m_CLI;                        // CLI parser
   CIRC*                                              m_IRC;                        // IRC client
   CNet*                                              m_Net;                        // network manager
   CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any

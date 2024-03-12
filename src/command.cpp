@@ -4191,7 +4191,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (Args.size() >= 4 + isHostCommand) options.ParseMapRandomRaces(Args[3]);
       if (Args.size() >= 5 + isHostCommand) options.ParseMapRandomHeroes(Args[4]);
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, targetMap, SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
       if (!gameSetup) {
         ErrorReply("Unable to host game");
         break;
