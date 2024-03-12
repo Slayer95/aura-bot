@@ -685,8 +685,35 @@ bool CGameSetup::RunDownload()
 
 bool CGameSetup::LoadMap()
 {
-  if (m_Map) return false;
-  return false;
+  if (m_Map) return true;
+
+  ParseInput();
+  pair<uint8_t, std::filesystem::path> searchResult = SearchInput();
+  if (searchResult.first == MATCH_TYPE_FORBIDDEN) {
+    return false;
+  }
+  if (searchResult.first == MATCH_TYPE_INVALID) {
+    // Exclusive to standard paths mode.
+    m_Ctx->ErrorReply("Invalid file extension for [" + searchResult.second.filename().string() + "]. Please use --filetype");
+    return false;
+  }
+  if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
+    if (!m_IsDownloadable || ResolveRemoteMap() != RESOLUTION_OK) {
+      return false;
+    }
+    if (RunDownload()) {
+      searchResult = SearchInput();
+      if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
+        return false;
+      }
+    }
+  }
+  if (searchResult.first == MATCH_TYPE_CONFIG) {
+    m_Map = GetBaseMapFromConfigFile(searchResult.second, false);
+  } else {
+    m_Map = GetBaseMapFromMapFileOrCache(searchResult.second, false);
+  }
+  return true;
 }
 
 bool CGameSetup::SetActive()
