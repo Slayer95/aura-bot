@@ -44,11 +44,15 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 */
 
 #include "fileutil.h"
+#include "util.h"
 
 #include <fstream>
 #include <algorithm>
 #include <iostream>
 #include <bitset>
+#include <set>
+#include <unordered_set>
+#include <optional>
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -61,6 +65,9 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <limits.h>
 #endif
 
+#define __STORMLIB_SELF__
+#include <StormLib.h>
+
 // unistd.h and limits.h
 
 using namespace std;
@@ -70,8 +77,9 @@ bool FileExists(const filesystem::path& file)
   return filesystem::exists(file);
 }
 
-vector<string> FilesMatch(const filesystem::path& path, const string& pattern)
+vector<string> FilesMatch(const filesystem::path& path, const vector<string>& extensionList)
 {
+  set<string> extensions(extensionList.begin(), extensionList.end());
   vector<string> Files;
 
 #ifdef WIN32
@@ -79,20 +87,14 @@ vector<string> FilesMatch(const filesystem::path& path, const string& pattern)
   HANDLE           handle = FindFirstFileA((path.string() + "\\*").c_str(), &data);
   memset(&data, 0, sizeof(WIN32_FIND_DATAA));
 
-  while (handle != INVALID_HANDLE_VALUE)
-  {
+  while (handle != INVALID_HANDLE_VALUE) {
     string Name = string(data.cFileName);
     transform(begin(Name), end(Name), begin(Name), ::tolower);
-
-    if (Name == pattern)
-    {
-      Files.push_back(string(data.cFileName));
-      break;
+    if (Name != "..") {
+      if (extensions.empty() || extensions.find(GetFileExtension(Name)) != extensions.end()) {
+        Files.push_back(string(data.cFileName));
+      }
     }
-
-    if (Name.find(pattern) != string::npos && Name != "..")
-      Files.push_back(string(data.cFileName));
-
     if (FindNextFileA(handle, &data) == FALSE)
       break;
   }
@@ -106,19 +108,14 @@ vector<string> FilesMatch(const filesystem::path& path, const string& pattern)
 
   struct dirent* dp = nullptr;
 
-  while ((dp = readdir(dir)) != nullptr)
-  {
+  while ((dp = readdir(dir)) != nullptr) {
     string Name = string(dp->d_name);
     transform(begin(Name), end(Name), begin(Name), ::tolower);
-
-    if (Name == pattern)
-    {
-      Files.emplace_back(dp->d_name);
-      break;
+    if (Name != "." && Name != "..") {
+      if (extensions.empty() || extensions.find(GetFileExtension(Name)) != extensions.end()) {
+        Files.emplace_back(dp->d_name);
+      }
     }
-
-    if (Name.find(pattern) != string::npos && Name != "." && Name != "..")
-      Files.emplace_back(dp->d_name);
   }
 
   closedir(dir);
@@ -288,3 +285,143 @@ filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const s
 
   return "";
 }
+
+vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, const vector<string>& baseExtensions, const string& rawPattern)
+{
+  // If the pattern has a valid extension, restrict the results to files with that extension.
+  string rawExtension = GetFileExtension(rawPattern);
+  vector<string> extensions;
+  if (!rawExtension.empty() && find(baseExtensions.begin(), baseExtensions.end(), rawExtension) != baseExtensions.end()) {
+    extensions = vector<string>(1, rawExtension);
+  } else {
+    extensions = baseExtensions;
+  }
+  string fuzzyPattern = PreparePatternForFuzzySearch(rawPattern);
+  vector<string> folderContents = FilesMatch(directory, extensions);
+  unordered_set<string> filesSet(folderContents.begin(), folderContents.end());
+
+  // 1. Try inclusions first.
+  vector<pair<string, int>> inclusionMatches;
+  for (const auto& mapName : filesSet) {
+    string cmpName = PreparePatternForFuzzySearch(mapName);
+    size_t fuzzyPatternIndex = cmpName.find(fuzzyPattern);
+    if (fuzzyPatternIndex == string::npos) {
+      continue;
+    }
+    bool startsWithPattern = true;
+    for (uint8_t i = 0; i < fuzzyPatternIndex; ++i) {
+      if (!isdigit(mapName[i])) {
+        startsWithPattern = false;
+        break;
+      }
+    }
+    if (startsWithPattern) {
+      inclusionMatches.push_back(make_pair(mapName, mapName.length() - fuzzyPattern.length()));
+      if (inclusionMatches.size() >= FUZZY_SEARCH_MAX_RESULTS) {
+        break;
+      }
+    }
+  }
+  if (inclusionMatches.size() > 0) {
+    sort(inclusionMatches.begin(), inclusionMatches.end());
+    return inclusionMatches;
+  }
+
+  // 2. Try fuzzy searching
+  string::size_type maxDistance = FUZZY_SEARCH_MAX_DISTANCE;
+  if (fuzzyPattern.size() < maxDistance) {
+    maxDistance = fuzzyPattern.size() / 2;
+  }
+
+  vector<pair<string, int>> distances;
+  for (auto& mapName : filesSet) {
+    string cmpName = RemoveNonAlphanumeric(mapName);
+    transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
+    if ((fuzzyPattern.size() <= cmpName.size() + maxDistance) && (cmpName.size() <= maxDistance + fuzzyPattern.size())) {
+      string::size_type distance = GetLevenshteinDistance(fuzzyPattern, cmpName); // source to target
+      if (distance <= maxDistance) {
+        distances.emplace_back(mapName, distance * 3);
+      }
+    }
+  }
+
+  size_t resultCount = min(FUZZY_SEARCH_MAX_RESULTS, static_cast<int>(distances.size()));
+  partial_sort(
+    distances.begin(),
+    distances.begin() + resultCount,
+    distances.end(),
+    [](const pair<string, int>& a, const pair<string, int>& b) {
+        return a.second < b.second;
+    }
+  );
+
+  vector<pair<string, int>> fuzzyMatches(distances.begin(), distances.begin() + resultCount);
+  return fuzzyMatches;
+}
+
+bool OpenMPQFile(void* MPQ, const filesystem::path& filePath)
+{
+  return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ);
+}
+
+void CloseMPQFile(void* MPQ)
+{
+  SFileCloseArchive(MPQ);
+}
+
+bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& outPath)
+{
+  void* SubFile;
+  if (!SFileOpenFileEx(MPQ, R"(Scripts\common.j)", 0, &SubFile)) {
+    Print("[AURA] couldn't find " + string(archiveFile) + " in MPQ file");
+    return false;
+  }
+  const uint32_t FileLength = SFileGetFileSize(&SubFile, nullptr);
+  bool success = false;
+
+  if (FileLength > 0 && FileLength != 0xFFFFFFFF) {
+    auto  SubFileData = new int8_t[FileLength];
+    DWORD BytesRead   = 0;
+
+    if (SFileReadFile(&SubFile, SubFileData, FileLength, &BytesRead, nullptr)) {
+      if (FileWrite(outPath, reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
+        Print("[AURA] extracted " + string(archiveFile) + " to [" + outPath.string() + "]");
+        success = true;
+      } else {
+        Print("[AURA] warning - unable to save extracted " + string(archiveFile) + " to [" + outPath.string() + "]");
+      }
+    } else {
+      Print("[AURA] warning - unable to extract " + string(archiveFile) + " from MPQ file");
+    }
+
+    delete[] SubFileData;
+  }
+
+  SFileCloseFile(static_cast<void*>(&SubFile));
+  return success;
+}
+
+#ifdef WIN32
+optional<string> MaybeReadRegistryKey(const char* keyName)
+{
+  optional<string> result;
+  HKEY hKey;
+  DWORD dwType, dwSize;
+  char szValue[1024];
+
+  // Open the desired key
+  if (RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Blizzard Entertainment\\Warcraft III", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+    // Query the value of the desired registry entry
+    dwSize = sizeof(szValue);
+    if (RegQueryValueExA(hKey, keyName, nullptr, &dwType, (LPBYTE)szValue, &dwSize) == ERROR_SUCCESS) {
+      if (dwType == REG_SZ && 0 < dwSize && dwSize < 1024) {
+        string installPath(szValue, dwSize - 1);
+        result = installPath;
+      }
+    }
+    // Close the key
+    RegCloseKey(hKey);
+  }
+  return result;
+}
+#endif

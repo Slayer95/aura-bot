@@ -68,25 +68,27 @@
 using namespace std;
 
 //
-// CGame mirror constructor
+// CGame
 //
 
-CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, vector<uint8_t> nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, string nExcludedServer)
+CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   : m_Aura(nAura),
     m_Socket(nullptr),
     m_DBBanLast(nullptr),
     m_Stats(nullptr),
-    m_Slots(nMap->GetSlots()),
-    m_Map(nMap),
-    m_GameName(nGameName),
-    m_LastGameName(nGameName),
-    m_OwnerName(string()),
-    m_OwnerRealm(string()),
-    m_CreatorName(string()),
-    m_CreatorServer(nullptr),
-    m_ExcludedServer(nExcludedServer),
-    m_HCLCommandString(nMap->GetMapDefaultHCL()),
-    m_MapPath(nMap->GetMapPath()),
+    m_Slots(nGameSetup->m_Map->GetSlots()),
+    m_Map(nGameSetup->m_Map),
+    m_GameName(nGameSetup->m_GameName),
+    m_LastGameName(nGameSetup->m_GameName),
+    m_OwnerName(nGameSetup->m_GameOwner.first),
+    m_OwnerRealm(nGameSetup->m_GameOwner.second),
+    m_CreatorText(nGameSetup->m_Attribution),
+    m_CreatorName(nGameSetup->m_CreatorName),
+    m_CreatorRealm(nGameSetup->m_CreatorRealm),
+    m_ExcludedServer(string()),
+    m_HCLCommandString(nGameSetup->m_Map->GetMapDefaultHCL()),
+    m_MapPath(nGameSetup->m_Map->GetMapPath()),
+    m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_GameTicks(0),
     m_CreationTime(GetTime()),
     m_LastPingTime(GetTime()),
@@ -105,8 +107,8 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
     m_LastPlayerLeaveTicks(0),
     m_LastLagScreenResetTime(0),
     m_RandomSeed(0),
-    m_HostCounter(nHostCounter),
-    m_EntryKey(nEntryKey),
+    m_HostCounter(nGameSetup->m_GameIdentifier.has_value() ? nGameSetup->m_GameIdentifier.value() : nAura->NextHostCounter()),
+    m_EntryKey(0),
     m_SyncCounter(0),
     m_DownloadCounter(0),
     m_CountDownCounter(0),
@@ -117,10 +119,8 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
     m_PlayersWithMap(0),
     m_HostPort(0),
     m_UDPEnabled(false),
-    m_PublicHostOverride(true),
-    m_PublicHostAddress(nPublicHostAddress),
-    m_PublicHostPort(nPublicHostPort),
-    m_GameDisplay(nGameDisplay),
+    m_PublicHostOverride(nGameSetup->GetIsMirror()),
+    m_GameDisplay(nGameSetup->m_RealmsDisplayMode),
     m_VirtualHostPID(255),
     m_Exiting(false),
     m_Saving(false),
@@ -130,95 +130,7 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, string& nGameName, 
     m_RefreshError(false),
     m_MuteAll(false),
     m_MuteLobby(false),
-    m_IsMirror(true),
-    m_CountDownStarted(false),
-    m_GameLoading(false),
-    m_GameLoaded(false),
-    m_Lagging(false),
-    m_Desynced(false),
-    m_HasMapLock(false),
-    m_HadLeaver(false)
-{
-  m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
-  m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
-  m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
-  m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
-  m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
-  m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
-  m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
-
-  m_VoteKickPercentage = m_Aura->m_GameDefaultConfig->m_VoteKickPercentage;
-  m_CommandTrigger = m_Aura->m_GameDefaultConfig->m_CommandTrigger;
-  m_LacksMapKickDelay = m_Aura->m_GameDefaultConfig->m_LacksMapKickDelay;
-  m_NotifyJoins = m_Aura->m_GameDefaultConfig->m_NotifyJoins;
-  m_PerfThreshold = m_Aura->m_GameDefaultConfig->m_PerfThreshold;
-  m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
-  m_LobbyTimeLimit = m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
-  m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
-}
-
-//
-// CGame lobby constructor
-//
-
-CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameDisplay, string& nGameName, string& nOwnerName, string& nOwnerRealm, string& nCreatorName, CRealm* nCreatorServer)
-  : m_Aura(nAura),
-    m_Socket(nullptr),
-    m_DBBanLast(nullptr),
-    m_Stats(nullptr),
-    m_Slots(nMap->GetSlots()),
-    m_Map(nMap),
-    m_GameName(nGameName),
-    m_LastGameName(nGameName),
-    m_OwnerName(nOwnerName),
-    m_OwnerRealm(nOwnerRealm),
-    m_CreatorName(nCreatorName),
-    m_CreatorServer(nCreatorServer),
-    m_ExcludedServer(string()),
-    m_HCLCommandString(nMap->GetMapDefaultHCL()),
-    m_MapPath(nMap->GetMapPath()),
-    m_GameTicks(0),
-    m_CreationTime(GetTime()),
-    m_LastPingTime(GetTime()),
-    m_LastRefreshTime(GetTime()),
-    m_LastDownloadTicks(GetTime()),
-    m_LastDownloadCounterResetTicks(GetTicks()),
-    m_LastCountDownTicks(0),
-    m_StartedLoadingTicks(0),
-    m_LastActionSentTicks(0),
-    m_LastActionLateBy(0),
-    m_StartedLaggingTime(0),
-    m_LastLagScreenTime(0),
-    m_LastOwnerSeen(GetTime()),
-    m_StartedKickVoteTime(0),
-    m_GameOverTime(0),
-    m_LastPlayerLeaveTicks(0),
-    m_LastLagScreenResetTime(0),
-    m_RandomSeed(static_cast<uint32_t>(GetTicks())),
-    m_HostCounter(nAura->NextHostCounter()),
-    m_EntryKey(rand()),
-    m_SyncCounter(0),
-    m_DownloadCounter(0),
-    m_CountDownCounter(0),
-    m_StartPlayers(0),
-    m_AutoStartMinTime(0),
-    m_AutoStartMaxTime(0),
-    m_AutoStartPlayers(0),
-    m_PlayersWithMap(0),
-    m_HostPort(nHostPort),
-    m_UDPEnabled(false),
-    m_PublicHostOverride(false),
-    m_GameDisplay(nGameDisplay),
-    m_VirtualHostPID(255),
-    m_Exiting(false),
-    m_Saving(false),
-    m_SlotInfoChanged(0),
-    m_PublicStart(false),
-    m_Locked(false),
-    m_RefreshError(false),
-    m_MuteAll(false),
-    m_MuteLobby(false),
-    m_IsMirror(false),
+    m_IsMirror(nGameSetup->GetIsMirror()),
     m_CountDownStarted(false),
     m_GameLoading(false),
     m_GameLoaded(false),
@@ -246,29 +158,43 @@ CGame::CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameDisplay,
   m_ExtraDiscoveryAddresses = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses;
   m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;
 
-  m_UDPEnabled = nAura->m_GameDefaultConfig->m_UDPEnabled;
+  m_IgnoredNotifyJoinPlayers = m_Aura->m_GameDefaultConfig->m_IgnoredNotifyJoinPlayers;
 
-  // wait time of 1 minute  = 0 empty actions required
-  // wait time of 2 minutes = 1 empty action required...
+  if (!nGameSetup->GetIsMirror()) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<uint32_t> dis;
+    m_RandomSeed = dis(gen);
+    m_EntryKey = dis(gen);
 
-  if (m_GProxyEmptyActions > 0) {
-    m_GProxyEmptyActions = m_GProxyEmptyActions - 1;
-    if (m_GProxyEmptyActions > 9)
-      m_GProxyEmptyActions = 9;
-  }
+    // wait time of 1 minute  = 0 empty actions required
+    // wait time of 2 minutes = 1 empty action required...
 
-  // start listening for connections
+    if (m_GProxyEmptyActions > 0) {
+      m_GProxyEmptyActions = m_GProxyEmptyActions - 1;
+      if (m_GProxyEmptyActions > 9)
+        m_GProxyEmptyActions = 9;
+    }
 
-  m_Socket = m_Aura->GetGameServer(m_HostPort, m_GameName);
-  m_HostPort = m_Socket->GetPort();
+    // start listening for connections
 
-  if (!m_Socket) {
-    m_Exiting = true;
-  }
+    uint16_t hostPort = nAura->m_Net->NextHostPort();
+    m_Socket = m_Aura->GetGameServer(hostPort, m_GameName);
+    m_HostPort = m_Socket->GetPort();
 
-  if (!m_Map->GetMapData()->empty()) {
-    m_Aura->m_BusyMaps.insert(m_Map->GetMapLocalPath());
-    m_HasMapLock = true;
+    if (!m_Socket) {
+      m_Exiting = true;
+    }
+
+    if (!m_Map->GetMapData()->empty()) {
+      m_Aura->m_BusyMaps.insert(m_Map->GetMapLocalPath());
+      m_HasMapLock = true;
+    }
+
+    m_UDPEnabled = nAura->m_GameDefaultConfig->m_UDPEnabled;
+  } else {
+    m_PublicHostAddress = AddressToIPv4Vector(&(nGameSetup->m_RealmsAddress));
+    m_PublicHostPort = GetAddressPort(&(nGameSetup->m_RealmsAddress));
   }
 }
 
@@ -278,7 +204,7 @@ CGame::~CGame()
     m_Aura->m_BusyMaps.erase(m_Map->GetMapLocalPath());
     bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
     if (IsTooLarge && m_Aura->m_BusyMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_BusyMaps.end()) {
-      m_Map->DeleteFile();
+      m_Map->UnlinkFile();
     }
     m_HasMapLock = false;
   }
@@ -1210,13 +1136,13 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line = Line.substr(12);
     }
     if (Line.substr(0, 6) == "{URL?}") {
-      if (m_Map->GetMapSiteURL().empty()) {
+      if (GetMapSiteURL().empty()) {
         continue;
       }
       Line = Line.substr(6);
     }
     if (Line.substr(0, 6) == "{URL!}") {
-      if (!m_Map->GetMapSiteURL().empty()) {
+      if (!GetMapSiteURL().empty()) {
         continue;
       }
       Line = Line.substr(6);
@@ -1242,13 +1168,13 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line = Line.substr(11);
     }
     if (Line.substr(0, 10) == "{CREATOR?}") {
-      if (m_CreatorName.empty()) {
+      if (m_CreatorText.empty()) {
         continue;
       }
       Line = Line.substr(10);
     }
     if (Line.substr(0, 10) == "{CREATOR!}") {
-      if (!m_CreatorName.empty()) {
+      if (!m_CreatorText.empty()) {
         continue;
       }
       Line = Line.substr(10);
@@ -1265,20 +1191,8 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       }
       Line = Line.substr(8);
     }
-    if (Line.substr(0, 16) == "{CREATOR==OWNER}" || Line.substr(0, 16) == "{OWNER==CREATOR}") {
-      if (m_OwnerName != m_CreatorName) {
-        continue;
-      }
-      Line = Line.substr(16);
-    }
-    if (Line.substr(0, 16) == "{CREATOR!=OWNER}" || Line.substr(0, 16) == "{OWNER!=CREATOR}") {
-      if (m_OwnerName == m_CreatorName) {
-        continue;
-      }
-      Line = Line.substr(16);
-    }
     while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
-      Line.replace(matchIndex, 9, m_CreatorName);
+      Line.replace(matchIndex, 9, m_CreatorText);
     }
     while ((matchIndex = Line.find("{OWNER}")) != string::npos) {
       Line.replace(matchIndex, 7, m_OwnerName);
@@ -1286,17 +1200,14 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
     while ((matchIndex = Line.find("{OWNERREALM}")) != string::npos) {
       Line.replace(matchIndex, 12, m_OwnerRealm.empty() ? "@@@LAN/VPN" : ("@" + m_OwnerRealm));
     }
-    while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      Line.replace(matchIndex, 11, !m_CreatorServer ? "@@@LAN/VPN" : ("@" + m_CreatorServer->GetCanonicalDisplayName()));
-    }
     while ((matchIndex = Line.find("{TRIGGER}")) != string::npos) {
       Line.replace(matchIndex, 9, string(1, m_CommandTrigger));
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
-      Line.replace(matchIndex, 5, m_Map->GetMapSiteURL());
+      Line.replace(matchIndex, 5, GetMapSiteURL());
     }
     while ((matchIndex = Line.find("{FILENAME}")) != string::npos) {
-      Line.replace(matchIndex, 10, m_Map->GetMapFileName());
+      Line.replace(matchIndex, 10, GetMapFileName());
     }
     while ((matchIndex = Line.find("{SHORTDESC}")) != string::npos) {
       Line.replace(matchIndex, 11, m_Map->GetMapShortDesc());
@@ -1988,7 +1899,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   }
 
   string notifyString = "";
-  if (m_NotifyJoins && !m_Aura->IsIgnoredNotifyPlayer(joinRequest->GetName())) {
+  if (m_NotifyJoins && m_IgnoredNotifyJoinPlayers.find(joinRequest->GetName()) == m_IgnoredNotifyJoinPlayers.end()) {
     notifyString = "\x07";
   }
   Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] joined - [" + Player->GetSocket()->GetName() + "] (" + Player->GetIPString() + ")" + notifyString);
@@ -2571,10 +2482,10 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
           player->SetLeftReason("doesn't have the map and the local copy of the map is invalid");
         }
         player->SetLeftCode(PLAYERLEAVE_LOBBY);
-        if (m_Map->GetMapSiteURL().empty()) {
+        if (GetMapSiteURL().empty()) {
           SendChat(player, "" + player->GetName() + ", please download the map before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
         } else {
-          SendChat(player, "" + player->GetName() + ", please download the map from <" + m_Map->GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
+          SendChat(player, "" + player->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
         }
     }
   } else if (player->GetDownloadStarted()) {
@@ -2803,7 +2714,7 @@ void CGame::EventGameStarted()
     m_Aura->m_BusyMaps.erase(m_Map->GetMapLocalPath());
     bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
     if (IsTooLarge && m_Aura->m_BusyMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_BusyMaps.end()) {
-      m_Map->DeleteFile();
+      m_Map->UnlinkFile();
     }
     m_HasMapLock = false;
   }

@@ -42,7 +42,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_Enabled                      = CFG->GetBool("hosting.enabled", true);
   m_War3Version                  = CFG->GetMaybeInt("game.version");
   CFG->FailIfErrorLast();
-  m_Warcraft3Path                = CFG->GetMaybePath("game.install_path"/*, filesystem::path(R"(C:\Program Files\Warcraft III\)")*/);
+  m_Warcraft3Path                = CFG->GetMaybePath("game.install_path");
   m_MapCFGPath                   = CFG->GetPath("bot.map_configs_path", filesystem::path());
   m_MapPath                      = CFG->GetPath("bot.maps_path", filesystem::path());
 
@@ -57,7 +57,8 @@ CBotConfig::CBotConfig(CConfig* CFG)
     m_Greeting = ReadChatTemplate(maybeGreeting.value());
   }
 
-  m_StrictPaths                  = CFG->GetBool("bot.load_maps.strict_paths", false);
+  m_StrictSearch                  = CFG->GetBool("bot.load_maps.strict_search", false);
+  m_MapSearchShowSuggestions     = CFG->GetBool("bot.load_maps.show_suggestions", true);
   m_EnableCFGCache               = CFG->GetBool("bot.load_maps.cache.enabled", true);
 
   m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);

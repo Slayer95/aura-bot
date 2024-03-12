@@ -60,6 +60,9 @@
     <ClCompile Include="gpsprotocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="gamesetup.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="gameslot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -141,6 +144,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gpsprotocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gamesetup.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gameslot.h">

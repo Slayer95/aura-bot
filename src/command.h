@@ -76,8 +76,8 @@ protected:
   CGamePlayer*                  m_Player;
 
   std::string                   m_HostName;
-  CRealm*                        m_SourceRealm;
-  CRealm*                        m_TargetRealm;
+  CRealm*                       m_SourceRealm;
+  CRealm*                       m_TargetRealm;
 
   CIRC*                         m_IRC;
   std::string                   m_ChannelName;
@@ -101,6 +101,7 @@ public:
   }
 
   std::string GetUserAttribution();
+  std::string GetUserAttributionPreffix();
 
   bool SetIdentity(const std::string& userName, const std::string& realmId);
   void SetAuthenticated(const bool& nAuthenticated);

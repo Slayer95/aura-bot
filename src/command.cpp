@@ -26,6 +26,7 @@
 #include "command.h"
 #include "bnetprotocol.h"
 #include "gameprotocol.h"
+#include "gamesetup.h"
 #include "hash.h"
 
 #include <random>
@@ -223,6 +224,21 @@ bool CCommandContext::SetIdentity(const string& userName, const string& realmId)
 }
 
 string CCommandContext::GetUserAttribution()
+{
+  if (m_Player) {
+    return m_FromName + "@" + (m_HostName.empty() ? "@@LAN/VPN" : m_HostName);
+  } else if (m_SourceRealm) {
+    return m_FromName + "@" + m_SourceRealm->GetServer();
+  } else if (m_IRC) {
+    return m_FromName + "@" + (m_IRC->m_Config->m_HostName);
+  } else if (!m_FromName.empty()) {
+    return m_FromName;
+  } else {
+    return "[Anonymous]";
+  }
+}
+
+string CCommandContext::GetUserAttributionPreffix()
 {
   if (m_Player) {
     return m_TargetGame->GetLogPrefix() + "Player [" + m_FromName + "@" + (m_HostName.empty() ? "@@LAN/VPN" : m_HostName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
@@ -528,6 +544,11 @@ void CCommandContext::Run(const string& command, const string& payload)
   string Command = command;
   string Payload = payload;
 
+  if (HasNullOrBreak(command) || HasNullOrBreak(payload)) {
+    ErrorReply("Invalid input");
+    return;
+  }
+
   uint64_t CommandHash = HashCode(Command);
 
   if (CommandHash == HashCode("su")) {
@@ -573,9 +594,9 @@ void CCommandContext::Run(const string& command, const string& payload)
   }
 
   if (Payload.empty()) {
-    (*m_Output) << GetUserAttribution() + "sent command [" + GetToken() + Command + "]" << std::endl;
+    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + GetToken() + Command + "]" << std::endl;
   } else {
-    (*m_Output) << GetUserAttribution() + "sent command [" + GetToken() + Command + "] with payload [" + Payload + "]" << std::endl;
+    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + GetToken() + Command + "] with payload [" + Payload + "]" << std::endl;
   }
 
   /*********************
@@ -1108,9 +1129,6 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      // TODO? Allow root admins to end the game if the game owner isn't in the game
-      // Add concept of game bound to a realm.
-
       (*m_Output) << m_TargetGame->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]" << std::endl;
       m_TargetGame->StopPlayers("was disconnected (admin ended game)");
       break;
@@ -1128,11 +1146,10 @@ void CCommandContext::Run(const string& command, const string& payload)
       const string TargetUrl = TrimString(Payload);
 
       if (TargetUrl.empty()) {
-        // TODO(IceSandslash): Make this available after game has loaded.
-        if (!m_TargetGame->m_Map || m_TargetGame->m_Map->GetMapSiteURL().empty()) {
+        if (m_TargetGame->GetMapSiteURL().empty()) {
           SendAll("Download URL unknown");
         } else {
-          SendAll("Download [" + m_TargetGame->m_Map->GetMapFileName() + "] from <" + m_TargetGame->m_Map->GetMapSiteURL() + ">");
+          SendAll("Download [" + m_TargetGame->GetMapFileName() + "] from <" + m_TargetGame->GetMapSiteURL() + ">");
         }
         break;
       }
@@ -1145,7 +1162,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      m_TargetGame->m_Map->SetMapSiteURL(TargetUrl);
+      m_TargetGame->SetMapSiteURL(TargetUrl);
       SendAll("Download URL set to [" + TargetUrl + "]");
       break;
     }
@@ -1418,7 +1435,7 @@ void CCommandContext::Run(const string& command, const string& payload)
             break;
           }
         }
-        if (!m_Aura->m_Map) {
+        if (!m_Aura->m_GameSetup) {
           ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
           break;
         }
@@ -1465,8 +1482,22 @@ void CCommandContext::Run(const string& command, const string& payload)
 
         m_TargetGame->m_CreationTime = m_TargetGame->m_LastRefreshTime = GetTime();
       } else {
-        m_Aura->CreateGame(m_Aura->m_Map, IsPrivate ? GAME_PRIVATE : GAME_PUBLIC, Payload, m_FromName, m_HostName, m_FromName, m_SourceRealm, this);
-        m_Aura->m_Map = nullptr;
+        if (!m_Aura->m_GameSetup) {
+          ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
+          break;
+        }
+        if (m_Aura->m_CurrentLobby) {
+          ErrorReply("Already hosting a game.");
+          break;
+        }
+        m_Aura->m_GameSetup->SetContext(this);
+        m_Aura->m_GameSetup->SetName(Payload);
+        m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
+        m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
+        m_Aura->m_GameSetup->SetOwner(m_FromName, CommandHash == HashCode("hostlan") ? nullptr : m_SourceRealm);
+        m_Aura->m_GameSetup->RunHost();
+        delete m_Aura->m_GameSetup;
+        m_Aura->m_GameSetup = nullptr;
       }
       break;
     }
@@ -1484,27 +1515,39 @@ void CCommandContext::Run(const string& command, const string& payload)
           break;
         }
       }
-      if (!m_Aura->m_Map) {
-        ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
-        break;
-      }
-      if (Payload.empty()) {
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      string gameName;
+      if (Args.empty() || (gameName = TrimString(Args[1])).empty()) {
         ErrorReply("Usage: " + GetToken() + "pubby [OWNER], [GAMENAME]");
         ErrorReply("Usage: " + GetToken() + "privby [OWNER], [GAMENAME]");
         break;
       }
 
-      string            Owner, GameName;
-      string::size_type GameNameStart = Payload.find(',');
+      if (!m_Aura->m_GameSetup) {
+        ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
+        break;
+      }
+      if (m_Aura->m_CurrentLobby) {
+        ErrorReply("Already hosting a game.");
+        break;
+      }
 
       bool IsPrivate = CommandHash == HashCode("privby");
-      if (GameNameStart != string::npos) {
-        Owner    = Payload.substr(0, GameNameStart);
-        GameName = Payload.substr(GameNameStart + 1);
-        
-        m_Aura->CreateGame(m_Aura->m_Map, IsPrivate ? GAME_PRIVATE : GAME_PUBLIC, GameName, Owner, m_HostName, m_FromName, m_SourceRealm, this);
-        m_Aura->m_Map = nullptr;
+      string ownerRealmName;
+      string ownerName = Args[0];
+      string::size_type realmStart = ownerName.find('@');
+      if (realmStart != string::npos) {
+        ownerRealmName = TrimString(ownerName.substr(realmStart + 1));
+        ownerName = TrimString(ownerName.substr(0, realmStart));
       }
+      m_Aura->m_GameSetup->SetContext(this);
+      m_Aura->m_GameSetup->SetName(gameName);
+      m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
+      m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
+      m_Aura->m_GameSetup->SetOwner(ownerName, ownerRealmName.empty() ? m_SourceRealm : m_Aura->GetRealmByInputId(ownerRealmName));
+      m_Aura->m_GameSetup->RunHost();
+      delete m_Aura->m_GameSetup;
+      m_Aura->m_GameSetup = nullptr;
       break;
     }
 
@@ -1833,10 +1876,10 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       bool IsMapAvailable = !m_TargetGame->m_Map->GetMapData()->empty() && m_TargetGame->m_Map->GetValidLinkedMap();
       if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable) {
-        if (m_TargetGame->m_Map->GetMapSiteURL().empty()) {
+        if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
-          ErrorAll("Cannot transfer the map. Please download it from <" + m_TargetGame->m_Map->GetMapSiteURL() + ">");
+          ErrorAll("Cannot transfer the map. Please download it from <" + m_TargetGame->GetMapSiteURL() + ">");
         }
         break;
       }
@@ -2006,7 +2049,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("checknetwork"): {
       UseImplicitHostedGame();
 
-      uint16_t gamePort = m_TargetGame ? m_TargetGame->GetHostPort() : m_Aura->NextHostPort();
+      uint16_t gamePort = m_TargetGame ? m_TargetGame->GetHostPort() : m_Aura->m_Net->NextHostPort();
 
       if (0 == (m_Permissions & ((m_TargetGame && m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to check network status.");
@@ -3475,9 +3518,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      vector<string> AllMaps = FilesMatch(m_Aura->m_Config->m_MapPath, ".w3x");
-      vector<string> ROCMaps = FilesMatch(m_Aura->m_Config->m_MapPath, ".w3m");
-      AllMaps.insert(AllMaps.end(), ROCMaps.begin(), ROCMaps.end());
+      vector<string> AllMaps = FilesMatch(m_Aura->m_Config->m_MapPath, {".w3x", ".w3m"});
       int counter = 0;
       
       for (const auto& FileName : AllMaps) {
@@ -3511,7 +3552,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (FileName.find("DotA") != string::npos)
           MapCFG.Set("map_type", "dota");
 
-        CMap* ParsedMap = new CMap(m_Aura, &MapCFG, FileName);
+        CMap* ParsedMap = new CMap(m_Aura, &MapCFG);
         delete ParsedMap;
 
         string CFGName = "local-" + FileName + ".cfg";
@@ -3538,13 +3579,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-#ifdef WIN32
-      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, ".").size();
-      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, ".cfg").size();
-#else
-      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, "").size();
-      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, ".cfg").size();
-#endif
+      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, {".w3m", ".w3x"}).size();
+      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, {".cfg"}).size();
 
       SendReply(to_string(MapCount) + " maps on disk, " + to_string(CFGCount) + " presets on disk, " + to_string(m_Aura->m_CachedMaps.size()) + " preloaded.");
       return;
@@ -3962,11 +3998,11 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("load"): {
       if (Payload.empty()) {
-        if (!m_Aura->m_Map) {
+        if (!m_Aura->m_GameSetup) {
           SendReply("There is no map/config file loaded.");
           break;
         }
-        SendReply("The currently loaded map/config file is: [" + m_Aura->m_Map->GetCFGFile() + "]");
+        SendReply("The currently loaded map/config file is: [" + m_Aura->m_GameSetup->GetInspectName() + "]");
         break;
       }
 
@@ -3974,25 +4010,18 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Map config path doesn't exist", CHAT_LOG_CONSOLE);
         break;
       }
-      const vector<string> Matches = m_Aura->ConfigFilesMatch(Payload);
 
-      if (Matches.empty()) {
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, false);
+      if (!gameSetup) {
+        ErrorReply("Unable to host game");
+        break;
+      }
+      if (!gameSetup->ReadyData()) {
+        delete gameSetup;
         ErrorReply("No map configs found with that name.");
         break;
       }
-      if (Matches.size() > 1) {
-        string FoundMapConfigs = JoinVector(Matches, false);
-        SendReply("Map configs: " + FoundMapConfigs);
-        break;
-      }
-      const string File = Matches.at(0);
-      filesystem::path ConfigPath = m_Aura->m_Config->m_MapCFGPath / File;
-      SendReply("Loading config file [" + ConfigPath.string() + "]");
-      CConfig MapCFG;
-      MapCFG.Read(ConfigPath);
-      if (m_Aura->m_Map)
-        delete m_Aura->m_Map;
-      m_Aura->m_Map = new CMap(m_Aura, &MapCFG, ConfigPath.string());
+      gameSetup->SetActive();
       break;
     }
 
@@ -4005,7 +4034,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      m_Aura->m_Net->FlushDNS();
+      m_Aura->m_Net->FlushDNSCache();
       SendReply("Cleared DNS entries");
       break;
     }
@@ -4134,56 +4163,58 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
       }
 
-      bool IsHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
+      bool isHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
       vector<string> Args = SplitArgs(Payload, 1, 5);
 
       if (Args.empty() || Args[0].empty()) {
-        if (IsHostCommand) {
+        if (isHostCommand) {
           ErrorReply("Please enter the map in the host command.");
           break;
         }
-        if (!m_Aura->m_Map) {
+        if (!m_Aura->m_GameSetup) {
           SendReply("There is no map/config file loaded.", CHAT_SEND_SOURCE_ALL);
           break;
         }
-        SendReply("The currently loaded map/config file is: [" + m_Aura->m_Map->GetCFGFile() + "]", CHAT_SEND_SOURCE_ALL);
+        SendReply("The currently loaded map/config file is: [" + m_Aura->m_GameSetup->GetInspectName() + "]", CHAT_SEND_SOURCE_ALL);
         break;
       }
 
-      pair<uint8_t, string> LoadResult = m_Aura->LoadMap(
-        m_FromName,
-        Args[0],
-        Args.size() >= 2 ? Args[1] : emptyString,
-        Args.size() >= 3 ? Args[2] : emptyString,
-        "default",
-        Args.size() >= 4 ? Args[3] : emptyString,
-        IsHostCommand, // I'm gonna be lucky
-        false // Directory traversal protection
-      );
+      CGameExtraOptions options;
+      if (Args.size() >= 2) options.ParseMapObservers(Args[1]);
+      if (Args.size() >= 3) options.ParseMapVisibility(Args[2]);
+      if (Args.size() >= 4) options.ParseMapRandomHeroes(Args[3]);
 
-      if (!LoadResult.second.empty()) {
-        if (LoadResult.first == 0) {
-          SendReply(LoadResult.second, CHAT_SEND_SOURCE_ALL);
-        } else {
-          ErrorReply(LoadResult.second, CHAT_SEND_SOURCE_ALL);
-        }
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
+      if (!gameSetup) {
+        ErrorReply("Unable to host game");
+        break;
       }
-
-      if (LoadResult.first == 0 && IsHostCommand) {
+      if (!gameSetup->ReadyData()) {
+        delete gameSetup;
+        break;
+      }
+      if (!gameSetup->ApplyMapModifiers(&options)) {
+        ErrorReply("Invalid map options. Map has fixed player settings.");
+        delete gameSetup;
+        break;
+      }
+      gameSetup->SetActive();
+      if (isHostCommand) {
         string gameName = "gogogo";
         if (Args.size() >= 5 && !Args[4].empty()) {
           gameName = Args[4];
         }
         if (m_Aura->m_CurrentLobby)  {
           ErrorReply("Already hosting a game.");
+          delete gameSetup;
           break;
         }
-        m_Aura->CreateGame(
-          m_Aura->m_Map, GAME_PUBLIC, gameName,
-          m_FromName, CommandHash == HashCode("hostlan") ? "" : m_HostName,
-          m_FromName, m_SourceRealm, this
-        );
-        m_Aura->m_Map = nullptr;
+        m_Aura->m_GameSetup->SetName(gameName);
+        m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
+        m_Aura->m_GameSetup->SetOwner(m_FromName, CommandHash == HashCode("hostlan") ? nullptr : m_SourceRealm);
+        m_Aura->m_GameSetup->RunHost();
+        delete m_Aura->m_GameSetup;
+        m_Aura->m_GameSetup = nullptr;
       }
       break;
     }
@@ -4198,7 +4229,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (!m_Aura->m_Map) {
+      if (!m_Aura->m_GameSetup) {
         ErrorReply("A map must first be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map.");
         break;
       }
@@ -4208,23 +4239,27 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
+      if (m_Aura->m_CurrentLobby) {
+        ErrorReply("Already hosting a game.");
+        break;
+      }
+
       vector<string> Args = SplitArgs(Payload, 6);
 
       uint16_t gamePort = 6112;
       uint32_t gameHostCounter = 1;
       uint32_t gameEntryKey = 0;
 
-      string excludedServer = Args[0];
-      transform(begin(excludedServer), end(excludedServer), begin(excludedServer), ::tolower);
+      CRealm* excludedServer = m_Aura->GetRealmByInputId(Args[0]);
 
-      vector<uint8_t> gameAddress = ExtractIPv4(Args[1]);
-      if (gameAddress.empty()) {
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(Args[1], ACCEPT_IPV4);
+      if (!maybeAddress.has_value()) {
         ErrorReply("Not a IPv4 address.");
         break;
       }
 
       try {
-        gamePort = static_cast<uint16_t>(stoi(Args[2]));
+        gamePort = static_cast<uint16_t>(stoul(Args[2]));
         size_t posId, posKey;
         gameHostCounter = stoul(Args[3], &posId, 16);
         if (posId != Args[3].length()) {
@@ -4241,16 +4276,21 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-     string gameName = Args[5];
-
-      m_Aura->CreateMirror(m_Aura->m_Map, GAME_PUBLIC, gameName, gameAddress, gamePort, gameHostCounter, gameEntryKey, excludedServer, m_FromName, m_SourceRealm, this);
-      m_Aura->m_Map = nullptr;
+      string gameName = Args[5];
+      SetAddressPort(&(maybeAddress.value()), gamePort);
+      m_Aura->m_GameSetup->SetContext(this);
+      m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter, gameEntryKey);
+      m_Aura->m_GameSetup->SetName(gameName);
+      if (excludedServer) m_Aura->m_GameSetup->AddIgnoredRealm(excludedServer);
+      m_Aura->m_GameSetup->RunHost();
       for (auto& bnet : m_Aura->m_Realms) {
-        if (bnet->GetInputID() != excludedServer && !bnet->GetIsMirror()) {
+        if (bnet != excludedServer && !bnet->GetIsMirror()) {
           bnet->ResetConnection(false);
           bnet->SetReconnectNextTick(true);
         }
       }
+      delete m_Aura->m_GameSetup;
+      m_Aura->m_GameSetup = nullptr;
       break;
     }
 

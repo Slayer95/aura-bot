@@ -303,12 +303,12 @@ inline void SetAddressPort(sockaddr_storage* address, const uint16_t port)
   }
 }
 
-inline uint16_t GetAddressPort(const sockaddr_storage& address)
+inline uint16_t GetAddressPort(const sockaddr_storage* address)
 {
-  if (address.ss_family == AF_INET6) {
-    return ntohs(reinterpret_cast<const struct sockaddr_in6*>(&address)->sin6_port);
+  if (address->ss_family == AF_INET6) {
+    return ntohs(reinterpret_cast<const struct sockaddr_in6*>(address)->sin6_port);
   } else {
-    return ntohs(reinterpret_cast<const struct sockaddr_in*>(&address)->sin_port);
+    return ntohs(reinterpret_cast<const struct sockaddr_in*>(address)->sin_port);
   }
 }
 

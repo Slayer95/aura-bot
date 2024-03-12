@@ -109,7 +109,6 @@ bool CTestConnection::Update(void* fd, void* send_fd)
   }
 
   const int64_t Ticks = GetTicks();
-  // TODO(IceSandslash): Add minimum delay between connection attempts
   if (m_Socket->HasError()) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
     m_Passed = false;
@@ -161,7 +160,13 @@ CNet::CNet(CAura* nAura)
     m_UDP4BroadcastTarget(new sockaddr_storage()),
     m_UDP6BroadcastTarget(new sockaddr_storage()),
 
-    m_HealthCheckInProgress(false)
+    m_HealthCheckInProgress(false),
+    m_IPv4CacheV(make_pair(string(), nullptr)),
+    m_IPv4CacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
+    m_IPv6CacheV(make_pair(string(), nullptr)),
+    m_IPv6CacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
+
+    m_LastHostPort(0)
 {
 }
 
@@ -274,14 +279,14 @@ bool CNet::Update(void* fd, void* send_fd)
       }
     }
     if (!anyPending) {
-      m_Aura->HandleHealthCheck();
+      ReportHealthCheck();
     }
   }
 
   if (m_UDPMainServerEnabled) {
     UDPPkt* pkt = m_UDPMainServer->Accept(static_cast<fd_set*>(fd));
     if (pkt != nullptr) {
-      m_Aura->HandleUDP(pkt);
+      HandleUDP(pkt);
       delete pkt->sender;
       delete pkt;
     }
@@ -410,38 +415,91 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
   }
 }
 
+bool CNet::IsIgnoredDatagramSource(string sourceIp)
+{
+  string element(sourceIp);
+  return m_Config->m_UDPBlockedIPs.find(element) != m_Config->m_UDPBlockedIPs.end();
+}
+
+void CNet::HandleUDP(UDPPkt* pkt)
+{
+  std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)pkt->buf, pkt->length);
+  // pkt->buf->length at least MIN_UDP_PACKET_SIZE
+
+  if (pkt->sender->ss_family != AF_INET && pkt->sender->ss_family != AF_INET6) {
+    return;
+  }
+
+  uint16_t remotePort = GetAddressPort(pkt->sender);
+  string ipAddress = AddressToString(*(pkt->sender));
+
+  if (IsIgnoredDatagramSource(ipAddress)) {
+    return;
+  }
+
+  if (m_Config->m_UDPForwardTraffic) {
+    vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
+    AppendByteArray(relayPacket, ipAddress, true);
+    size_t portOffset = relayPacket.size();
+    relayPacket.resize(portOffset + 6 + pkt->length);
+    relayPacket[portOffset] = static_cast<uint8_t>(remotePort >> 8); // Network-byte-order (Big-endian)
+    relayPacket[portOffset + 1] = static_cast<uint8_t>(remotePort);
+    memset(relayPacket.data() + portOffset + 2, 0, 4); // Game version unknown at this layer.
+    memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
+    AssignLength(relayPacket);
+    Send(&(m_Config->m_UDPForwardAddress), relayPacket);
+  }
+
+  if (static_cast<unsigned char>(pkt->buf[0]) != W3GS_HEADER_CONSTANT) {
+    return;
+  }
+
+  if (!(pkt->length >= 16 && static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME)) {
+    return;
+  }
+
+  if (pkt->buf[8] == m_Aura->m_GameVersion || pkt->buf[8] == 0) {
+    if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetUDPEnabled() && !m_Aura->m_CurrentLobby->GetCountDownStarted()) {
+      //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+      m_Aura->m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
+
+      // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.
+      if (remotePort != m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
+        m_Aura->m_CurrentLobby->AnnounceToAddress(ipAddress);
+      }
+    }
+  }
+}
+
 sockaddr_storage* CNet::GetPublicIPv4()
 {
-  static pair<string, sockaddr_storage*> memoized = make_pair(string(), nullptr);
-  static uint8_t memoizedAlgorithm = 3;
-
   switch (m_Config->m_PublicIPv4Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      if (memoized.first == m_Config->m_PublicIPv4Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
-        return memoized.second;
+      if (m_IPv4CacheV.first == m_Config->m_PublicIPv4Value && m_IPv4CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
+        return m_IPv4CacheV.second;
       }
-      if (memoized.second != nullptr) {
-        delete memoized.second;
-        memoized = make_pair(string(), nullptr);
+      if (m_IPv4CacheV.second != nullptr) {
+        delete m_IPv4CacheV.second;
+        m_IPv4CacheV = make_pair(string(), nullptr);
       }
 
       optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv4Value, ACCEPT_IPV4);
       if (!maybeAddress.has_value()) return nullptr; // should never happen
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      memoized = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
-      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-      return memoized.second;
+      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+      return m_IPv4CacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (memoized.first == m_Config->m_PublicIPv4Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-        return memoized.second;
+      if (m_IPv4CacheV.first == m_Config->m_PublicIPv4Value && m_IPv4CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+        return m_IPv4CacheV.second;
       }
-      if (memoized.second != nullptr) {
-        delete memoized.second;
-        memoized = make_pair(string(), nullptr);
+      if (m_IPv4CacheV.second != nullptr) {
+        delete m_IPv4CacheV.second;
+        m_IPv4CacheV = make_pair(string(), nullptr);
       }
-      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv4Value});
+      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv4Value}, cpr::Timeout{3000});
       if (response.status_code != 200) {
         return nullptr;
       }
@@ -450,9 +508,9 @@ sockaddr_storage* CNet::GetPublicIPv4()
       if (!maybeAddress.has_value()) return nullptr;
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      memoized = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
-      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
-      return memoized.second;
+      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+      return m_IPv4CacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
     default:
@@ -462,36 +520,33 @@ sockaddr_storage* CNet::GetPublicIPv4()
 
 sockaddr_storage* CNet::GetPublicIPv6()
 {
-  static pair<string, sockaddr_storage*> memoized = make_pair(string(), nullptr);
-  static uint8_t memoizedAlgorithm = 3;
-
   switch (m_Config->m_PublicIPv6Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      if (memoized.first == m_Config->m_PublicIPv6Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
-        return memoized.second;
+      if (m_IPv6CacheV.first == m_Config->m_PublicIPv6Value && m_IPv6CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
+        return m_IPv6CacheV.second;
       }
-      if (memoized.second != nullptr) {
-        delete memoized.second;
-        memoized = make_pair(string(), nullptr);
+      if (m_IPv6CacheV.second != nullptr) {
+        delete m_IPv6CacheV.second;
+        m_IPv6CacheV = make_pair(string(), nullptr);
       }
 
       optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv6Value, ACCEPT_IPV6);
       if (!maybeAddress.has_value()) return nullptr; // should never happen
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      memoized = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
-      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-      return memoized.second;
+      m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+      return m_IPv6CacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (memoized.first == m_Config->m_PublicIPv6Value && memoizedAlgorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-        return memoized.second;
+      if (m_IPv6CacheV.first == m_Config->m_PublicIPv6Value && m_IPv6CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+        return m_IPv6CacheV.second;
       }
-      if (memoized.second != nullptr) {
-        delete memoized.second;
-        memoized = make_pair(string(), nullptr);
+      if (m_IPv6CacheV.second != nullptr) {
+        delete m_IPv6CacheV.second;
+        m_IPv6CacheV = make_pair(string(), nullptr);
       }
-      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv6Value});
+      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv6Value}, cpr::Timeout{3000});
       if (response.status_code != 200) {
         return nullptr;
       }
@@ -500,9 +555,9 @@ sockaddr_storage* CNet::GetPublicIPv6()
       if (!maybeAddress.has_value()) return nullptr;
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      memoized = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
-      memoizedAlgorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
-      return memoized.second;
+      m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+      return m_IPv6CacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
     default:
@@ -581,6 +636,95 @@ void CNet::ResetHealthCheck()
   m_HealthCheckInProgress = false;
 }
 
+void CNet::ReportHealthCheck()
+{
+  bool hasDirectAttempts = false;
+  bool anyDirectSuccess = false;
+  vector<string> ChatReport;
+  vector<uint16_t> FailPorts;
+  bool isIPv6Reachable = false;
+  for (auto& testConnection : m_HealthCheckClients) {
+    bool success = false;
+    string ResultText;
+    if (testConnection->m_Passed.value_or(false)) {
+      success = true;
+      ResultText = "OK";
+    } else if (testConnection->m_CanConnect.value_or(false)) {
+      ResultText = "Cannot join";
+    } else {
+      ResultText = "Cannot connect";
+    }
+    ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
+    Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
+    if (0 == (testConnection->m_Type & ~(CONNECTION_TYPE_CUSTOM_PORT))) {
+      hasDirectAttempts = true;
+      if (success) anyDirectSuccess = true;
+    }
+    if (0 != (testConnection->m_Type & (CONNECTION_TYPE_IPV6))) {
+      if (success) isIPv6Reachable = true;
+    }
+    if (!success) {
+      uint16_t port = testConnection->GetPort();
+      if (std::find(FailPorts.begin(), FailPorts.end(), port) == FailPorts.end())
+        FailPorts.push_back(port);
+    }
+  }
+  sockaddr_storage* publicIPv4 = GetPublicIPv4();
+  if (publicIPv4 != nullptr && hasDirectAttempts) {
+    string portForwardInstructions;
+    if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
+      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(GetPotentialGamePorts(), false) + "}";
+    }
+    if (anyDirectSuccess) {
+      Print("[Network] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4) + ".");
+      m_Aura->m_CurrentLobby->SendAllChat("This bot CAN be reached through the IPv4 Internet.");
+    } else {
+      Print("[Network] This bot is disconnected from the IPv4 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv4) + ".");
+      Print("[Network] Please setup port-forwarding to allow connections.");
+      if (!portForwardInstructions.empty())
+        Print("[Network] " + portForwardInstructions);
+      Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+      Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
+      Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
+      if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
+        m_Aura->m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
+        m_Aura->m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
+        m_Aura->m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
+        m_Aura->m_CurrentLobby->SendAllChat(portForwardInstructions);
+        m_Aura->m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+        m_Aura->m_CurrentLobby->SendAllChat("Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
+        m_Aura->m_CurrentLobby->SendAllChat("But make sure your firewall allows Aura inbound TCP connections.");
+        m_Aura->m_CurrentLobby->SendAllChat("=================================================================================");
+      }
+    }
+  }
+  sockaddr_storage* publicIPv6 = GetPublicIPv6();
+  if (publicIPv6 != nullptr) {
+    if (isIPv6Reachable) {
+      Print("[Network] This bot CAN be reached through the IPv6 Internet. Address: " + AddressToString(*publicIPv6) + ".");
+      Print("[Network] See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
+      m_Aura->m_CurrentLobby->SendAllChat("This bot CAN be reached through the IPv6 Internet.");
+      m_Aura->m_CurrentLobby->SendAllChat("See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
+      m_Aura->m_CurrentLobby->SendAllChat("=================================================================================");
+    } else {
+      Print("[Network] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
+      m_Aura->m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv6 Internet, because its public address is unreachable.");
+      m_Aura->m_CurrentLobby->SendAllChat("=================================================================================");
+    }
+  }
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
+    string LeftMessage = JoinVector(ChatReport, " | ", false);
+    while (LeftMessage.length() > 254) {
+      m_Aura->m_CurrentLobby->SendAllChat(LeftMessage.substr(0, 254));
+      LeftMessage = LeftMessage.substr(254);
+    }
+    if (LeftMessage.length()) {
+      m_Aura->m_CurrentLobby->SendAllChat(LeftMessage);
+    }
+  }
+  ResetHealthCheck();
+}
+
 uint16_t CNet::GetUDPPort(const uint8_t protocol) const
 {
   if (protocol == AF_INET) {
@@ -591,6 +735,15 @@ uint16_t CNet::GetUDPPort(const uint8_t protocol) const
     }
   }
   return 0;
+}
+
+uint16_t CNet::NextHostPort()
+{
+  ++m_LastHostPort;
+  if (m_LastHostPort > m_Config->m_MaxHostPort || m_LastHostPort < m_Config->m_MinHostPort) {
+    m_LastHostPort = m_Config->m_MinHostPort;
+  }
+  return m_LastHostPort;
 }
 
 vector<uint16_t> CNet::GetPotentialGamePorts() const
@@ -678,9 +831,21 @@ optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName)
   return result;
 }
 
-void CNet::FlushDNS()
+void CNet::FlushDNSCache()
 {
   m_DNSCache.clear();
+}
+
+void CNet::FlushSelfIPCache()
+{
+  if (m_IPv4CacheV.second != nullptr)
+    delete m_IPv4CacheV.second;
+  if (m_IPv6CacheV.second != nullptr)
+    delete m_IPv6CacheV.second;
+  m_IPv4CacheV = make_pair(string(), nullptr);
+  m_IPv4CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
+  m_IPv6CacheV = make_pair(string(), nullptr);
+  m_IPv6CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
 }
 
 void CNet::PropagateBroadcastEnabled(const bool nEnable)

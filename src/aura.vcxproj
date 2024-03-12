@@ -277,6 +277,7 @@
     <ClCompile Include="irc.cpp" />
     <ClCompile Include="map.cpp" />
     <ClCompile Include="gameplayer.cpp" />
+    <ClCompile Include="gamesetup.cpp" />
     <ClCompile Include="gameslot.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="command.cpp" />
@@ -308,6 +309,7 @@
     <ClInclude Include="irc.h" />
     <ClInclude Include="map.h" />
     <ClInclude Include="gameplayer.h" />
+    <ClInclude Include="gamesetup.h" />
     <ClInclude Include="gameslot.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="command.h" />

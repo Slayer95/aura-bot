@@ -65,10 +65,10 @@ using namespace std;
 // CMap
 //
 
-CMap::CMap(CAura* nAura, CConfig* CFG, const string& nCFGFile)
+CMap::CMap(CAura* nAura, CConfig* CFG)
   : m_Aura(nAura)
 {
-  Load(CFG, nCFGFile);
+  Load(CFG);
 }
 
 CMap::~CMap() = default;
@@ -232,10 +232,101 @@ string CMap::GetMapFileName() const
   return m_MapPath.substr(LastSlash + 1);
 }
 
-void CMap::Load(CConfig* CFG, const string& nCFGFile)
+void CMap::OpenObserverSlots()
+{
+  Print("[MAP] adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
+  while (m_Slots.size() < m_Aura->m_MaxSlots)
+    m_Slots.emplace_back(0, 255, SLOTSTATUS_OPEN, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+}
+
+void CMap::CloseObserverSlots()
+{
+  uint8_t count = 0;
+  for (uint8_t i = m_Slots.size() - 1; i >= 0; --i) {
+    if (m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
+      m_Slots.erase(m_Slots.begin() + i);
+      ++count;
+    }
+  }
+  if (count > 0) {
+    Print("[MAP] deleted " + to_string(count) + " observer slots");
+  }
+}
+
+bool CMap::SetForcedRandomRaceSlots()
+{
+  if (GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+    return false;
+  }
+  for (uint8_t i = m_Slots.size() - 1; i >= 0; --i) {
+    m_Slots[i].SetRace(SLOTRACE_RANDOM);
+  }
+  Print("[MAP] forcing random races");
+  return true;
+}
+
+bool CMap::SetSelectableSlots()
+{
+  if (GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+    return false;
+  }
+  for (uint8_t i = m_Slots.size() - 1; i >= 0; --i) {
+    m_Slots[i].SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
+  }
+  Print("[MAP] setting selectable races");
+  return true;
+}
+
+bool CMap::SetMapObservers(const uint8_t nMapObservers)
+{
+  bool hadObserverSlots = m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES;
+  bool willHaveObserverSlots = nMapObservers == MAPOBS_ALLOWED || nMapObservers == MAPOBS_REFEREES;
+  if (hadObserverSlots == willHaveObserverSlots) {
+    return true;
+  }
+  if (willHaveObserverSlots) {
+    CloseObserverSlots();
+  } else {
+    OpenObserverSlots();
+  }
+  return true;
+}
+
+bool CMap::SetMapVisibility(const uint8_t nMapVisibility)
+{
+  m_MapVisibility = nMapVisibility;
+  return true;
+}
+
+bool CMap::SetRandomHeroes(const bool nEnable)
+{
+  if (nEnable) {
+    m_MapFlags |= MAPFLAG_RANDOMHERO;
+  } else {
+    m_MapFlags &= ~MAPFLAG_RANDOMHERO;
+  }
+  return true;
+}
+
+bool CMap::SetRandomRaces(const bool nEnable)
+{
+  if (nEnable) {
+    m_MapFlags |= MAPFLAG_RANDOMRACES;
+  } else {
+    m_MapFlags &= ~MAPFLAG_RANDOMRACES;
+  }
+
+  if (nEnable) {
+    return SetForcedRandomRaceSlots();
+  } else {
+    return SetSelectableSlots();
+  }
+}
+
+void CMap::Load(CConfig* CFG)
 {
   m_Valid   = true;
-  m_CFGFile = nCFGFile;
+  m_CFGName = CFG->GetFile().filename().string();
   const static string emptyString;
 
   // load the map data
@@ -256,35 +347,30 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
     }
   }
 
-  // load the map MPQ
-
-  filesystem::path MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
-  HANDLE MapMPQ;
   bool   MapMPQReady = false;
-
+  HANDLE MapMPQ;
+  if (!m_MapLocalPath.empty()) {
+    // load the map MPQ
+    filesystem::path MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
+    if (!SFileOpenArchive(MapMPQFilePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ)) {
+      Print("[MAP] loading MPQ file [" + MapMPQFilePath.string() + "]");
+      MapMPQReady = true;
+    } else {
 #ifdef WIN32
-  if (SFileOpenArchive(MapMPQFilePath.wstring().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
+      uint32_t ErrorCode = (uint32_t)GetLastError();
+      string ErrorCodeString = (
+        ErrorCode == 2 ? "Map not found" : (
+        (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot.maps_path is not a valid directory" : (
+        (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
+        "Error code " + to_string(ErrorCode)
+        )))
+      );
 #else
-  if (SFileOpenArchive(MapMPQFilePath.c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ))
+      int32_t ErrorCode = static_cast<int32_t>(GetLastError());
+      string ErrorCodeString = "Error code " + to_string(ErrorCode);
 #endif
-  {
-    Print("[MAP] loading MPQ file [" + MapMPQFilePath.string() + "]");
-    MapMPQReady = true;
-  } else {
-#ifdef WIN32
-    uint32_t ErrorCode = (uint32_t)GetLastError();
-    string ErrorCodeString = (
-      ErrorCode == 2 ? "Map not found" : (
-      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot.maps_path is not a valid directory" : (
-      (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
-      "Error code " + to_string(ErrorCode)
-      )))
-    );
-#else
-    int32_t ErrorCode = static_cast<int32_t>(GetLastError());
-    string ErrorCodeString = "Error code " + to_string(ErrorCode);
-#endif
-    Print("[MAP] warning - unable to load MPQ file [" + MapMPQFilePath.string() + "] - " + ErrorCodeString);
+      Print("[MAP] warning - unable to load MPQ file [" + MapMPQFilePath.string() + "] - " + ErrorCodeString);
+    }
   }
 
   // try to calculate map_size, map_info, map_crc, map_sha1
@@ -865,11 +951,8 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
 
   // add observer slots
   // (per-game setting, don't save it)
-  if (m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES) {
-    Print("[MAP] adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
-
-    while (m_Slots.size() < m_Aura->m_MaxSlots)
-      m_Slots.emplace_back(0, 255, SLOTSTATUS_OPEN, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+  if ((m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES) && m_Slots.size() < m_Aura->m_MaxSlots) {
+    OpenObserverSlots();
   }
 
   const char* ErrorMessage = CheckValid();
@@ -877,11 +960,11 @@ void CMap::Load(CConfig* CFG, const string& nCFGFile)
   if (ErrorMessage) {
     Print(std::string("[MAP] ") + ErrorMessage);
   } else if (IsPartial) {
-    CFG->SetBool("cfg_partial", false);
+    CFG->Delete("cfg_partial");
   }
 }
 
-bool CMap::DeleteFile()
+bool CMap::UnlinkFile()
 {
   Print("Deleting " + m_MapLocalPath + "...");
   filesystem::path mapLocalPath = m_MapLocalPath;

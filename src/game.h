@@ -47,6 +47,7 @@
 #define AURA_GAME_H_
 
 #include "gameslot.h"
+#include "gamesetup.h"
 #include "socket.h"
 
 #include <set>
@@ -70,6 +71,7 @@ class CCommandContext;
 class CGameProtocol;
 class CGameConnection;
 class CGamePlayer;
+class CGameSetup;
 class CMap;
 class CIncomingJoinRequest;
 class CIncomingAction;
@@ -108,12 +110,14 @@ protected:
   std::string                    m_LobbyVirtualHostName;          // host's name
   std::string                    m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                    m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
-  std::string                    m_CreatorName;                   // name of the player who created this game
-  CRealm*                         m_CreatorServer;                 // battle.net server the player who created this game was on
+  std::string                    m_CreatorText;                   // who created this game
+  std::string                    m_CreatorName;                   // name of the battle.net user who created this game
+  CRealm*                        m_CreatorRealm;                 // battle.net server the player who created this game was on
   std::string                    m_ExcludedServer;                // battle.net server where the mirrored game is not to be broadcasted
   std::string                    m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
   std::string                    m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
   std::string                    m_MapPath;                       // store the map path to save in the database on game end
+  std::string                    m_MapSiteURL;
   int64_t                        m_GameTicks;                     // ingame ticks
   int64_t                        m_CreationTime;                  // GetTime when the game was created
   int64_t                        m_LastPingTime;                  // GetTime when the last ping was sent
@@ -184,11 +188,11 @@ protected:
   bool                           m_HadLeaver;                     // if the game has desynced or not
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
+  std::set<std::string>          m_IgnoredNotifyJoinPlayers;
   
 
 public:
-  CGame(CAura* nAura, CMap* nMap, uint8_t nGameDisplay, std::string& nGameName, std::vector<uint8_t> nPublicHostAddress, uint16_t nPublicHostPort, uint32_t nHostCounter, uint32_t nEntryKey, std::string nExcludedServer);
-  CGame(CAura* nAura, CMap* nMap, uint16_t nHostPort, uint8_t nGameState, std::string& nGameName, std::string& nOwnerName, std::string& nOwnerRealm, std::string& nCreatorName, CRealm* nCreatorServer);
+  CGame(CAura* nAura, CGameSetup* nGameSetup);
   ~CGame();
   CGame(CGame&) = delete;
 
@@ -209,7 +213,7 @@ public:
   inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
   inline std::string    GetOwnerName() const { return m_OwnerName; }
   inline std::string    GetCreatorName() const { return m_CreatorName; }
-  inline CRealm*        GetCreatorServer() const { return m_CreatorServer; }
+  inline CRealm*        GetCreatorRealm() const { return m_CreatorRealm; }
   inline uint32_t       GetHostCounter() const { return m_HostCounter; }
   inline int64_t        GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool           GetLocked() const { return m_Locked; }
@@ -227,6 +231,7 @@ public:
   uint32_t       GetNumConnectionsOrFake() const;
   uint32_t       GetNumHumanPlayers() const;
   std::string    GetMapFileName() const;
+  std::string    GetMapSiteURL() const { return m_MapSiteURL; }
   std::string    GetDescription() const;
   std::string    GetCategory() const;
   std::string    GetLogPrefix() const;
@@ -239,6 +244,7 @@ public:
 
   inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void SetRefreshError(bool nRefreshError) { m_RefreshError = nRefreshError; }
+  inline void SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
 
   // processing functions
 

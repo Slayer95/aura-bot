@@ -144,7 +144,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             pkt.sender = &(m_Socket->m_RemoteHost);
             memcpy(pkt.buf, Bytes.data(), Length);
             pkt.length = Length;
-            m_Aura->HandleUDP(&pkt);
+            m_Aura->m_Net->HandleUDP(&pkt);
           } 
         } else if (Length == 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT) {
           const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);

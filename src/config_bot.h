@@ -57,7 +57,8 @@ public:
   uint32_t                                m_MaxGames;                   // maximum number of games in progress
   uint32_t                                m_MaxSavedMapSize;            // maximum byte size of maps kept persistently in the m_MapPath folder
 
-  bool                                    m_StrictPaths;                // accept only exact paths (no fuzzy searches) for maps, etc.
+  bool                                    m_StrictSearch;                // accept only exact paths (no fuzzy searches) for maps, etc.
+  bool                                    m_MapSearchShowSuggestions;
   bool                                    m_EnableCFGCache;             // save read map CFGs to disk
 
   bool                                    m_ExitOnStandby;

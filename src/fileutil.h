@@ -46,19 +46,31 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #ifndef AURA_FILEUTIL_H_
 #define AURA_FILEUTIL_H_
 
+#define FUZZY_SEARCH_MAX_RESULTS 5
+#define FUZZY_SEARCH_MAX_DISTANCE 10
+
 #include "includes.h"
 #include <vector>
+#include <set>
 #include <filesystem>
 #include <system_error>
 #include <cstdio>
+#include <optional>
 
 bool FileExists(const std::filesystem::path& file);
-std::vector<std::string> FilesMatch(const std::filesystem::path& path, const std::string& pattern);
+std::vector<std::string> FilesMatch(const std::filesystem::path& path, const std::vector<std::string>& extensionList);
 std::string FileRead(const std::filesystem::path& file, uint32_t start, uint32_t length, int* byteSize);
 std::string FileRead(const std::filesystem::path& file, int* byteSize);
 bool FileWrite(const std::filesystem::path& file, uint8_t* data, uint32_t length);
 bool FileDelete(const std::filesystem::path& File);
 std::filesystem::path GetExeDirectory();
 std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
+std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<std::string>& baseExtensions, const std::string& rawPattern);
+bool OpenMPQFile(void* MPQ, const std::filesystem::path& filePath);
+void CloseMPQFile(void* MPQ);
+bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
+#ifdef WIN32
+std::optional<std::string> MaybeReadRegistryKey(const char* keyName);
+#endif
 
 #endif // AURA_FILEUTIL_H_

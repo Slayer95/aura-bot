@@ -688,6 +688,26 @@ inline std::string GetFileName(const std::string& inputPath) {
   return filePath.filename().string();
 }
 
+inline std::string GetFileExtension(const std::string& inputPath) {
+  std::string fileName = GetFileName(inputPath);
+  size_t extIndex = fileName.find_last_of(".");
+  if (extIndex == std::string::npos) return std::string();
+  std::string extension = fileName.substr(extIndex);
+  std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  return extension;
+}
+
+inline bool HasNullOrBreak(const std::string& unsafeInput) {
+  for (const auto& c : unsafeInput) {
+    if (c == '\0' || c == '\n' || c == '\r' || c == '\f') {
+      return true;
+    }
+  }
+  return false;
+}
+
 inline bool PathHasNullBytes(const std::filesystem::path& filePath) {
   for (const auto& c : filePath.native()) {
     if (c == '\0') {
@@ -695,6 +715,19 @@ inline bool PathHasNullBytes(const std::filesystem::path& filePath) {
     }
   }
   return false;
+}
+
+inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
+{
+  std::string pattern = rawPattern;
+  std::transform(std::begin(pattern), std::end(pattern), std::begin(pattern), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  std::string extension = GetFileExtension(pattern);
+  if (extension == ".w3x" || extension == ".w3m" || extension == ".cfg") {
+    pattern = pattern.substr(0, pattern.length() - extension.length());
+  }
+  return RemoveNonAlphanumeric(pattern);
 }
 
 inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& filePath) {

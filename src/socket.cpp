@@ -601,7 +601,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
       Print("[TCPSERVER] error (getsockname) - " + GetErrorString());
       return false;
     }
-    m_Port = GetAddressPort(address);
+    m_Port = GetAddressPort(&address);
   } else {
     m_Port = port;
   }
@@ -817,7 +817,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
       Print("[DISCOVERY] error (getsockname) - " + GetErrorString());
       return false;
     }
-    m_Port = GetAddressPort(address);
+    m_Port = GetAddressPort(&address);
   } else {
     m_Port = port;
   }

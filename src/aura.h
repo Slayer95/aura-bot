@@ -52,6 +52,7 @@
 #include "config_game.h"
 #include "command.h"
 #include "net.h"
+#include "gamesetup.h"
 
 #include <cstdint>
 #include <vector>
@@ -83,10 +84,8 @@ class CGame;
 class CCommandContext;
 class CAuraDB;
 class CNet;
-class CMap;
+class CGameSetup;
 class CIRC;
-
-struct UDPPkt;
 
 class CAura
 {
@@ -101,13 +100,12 @@ public:
   CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any
   std::vector<CGame*>                                m_Games;                      // these games are in progress
   CAuraDB*                                           m_DB;                         // database
-  CMap*                                              m_Map;                        // the currently loaded map
+  CGameSetup*                                        m_GameSetup;                  // the currently loaded map
   std::string                                        m_Version;                    // Aura version string
   std::string                                        m_RepositoryURL;              // Aura repository URL
 
   uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
-  uint16_t                                           m_LastHostPort;               // the port of the last hosted game
   size_t                                             m_MaxGameNameSize;
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
@@ -137,9 +135,7 @@ public:
 
   // processing functions
 
-  void HandleHealthCheck();
   bool HandleAction(std::vector<std::string>& action);
-  void HandleUDP(UDPPkt* pkt);
   bool Update();
   inline bool GetReady() const { return m_Ready; }
 
@@ -147,6 +143,8 @@ public:
   CRealm* GetRealmByHostName(const std::string& hostName);
   CRealm* GetRealmByHostCounter(const uint8_t hostCounter);
   CTCPServer* GetGameServer(uint16_t, std::string& name);
+
+  bool CreateGame(CGameSetup* gameSetup);
 
   // events
 
@@ -166,18 +164,8 @@ public:
   void LoadIPToCountryData();
 
   void CacheMapPresets();
-  bool CreateGame(CMap* map, uint8_t gameState, std::string gameName, std::string ownerName, std::string ownerServer, std::string creatorName, CRealm* nCreatorServer, CCommandContext* ctx);
-  bool CreateMirror(CMap* map, uint8_t gameDisplay, std::string gameName, std::vector<uint8_t> gameAddress, uint16_t gamePort, uint32_t gameHostCounter, uint32_t gameEntryKey, std::string excludedServer, std::string creatorName, CRealm* creatorServer, CCommandContext* ctx);
-  std::pair<uint8_t, std::string> LoadMap(const std::string& user, const std::string& mapInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomRaceInput, const std::string& randomHeroInput, const bool& gonnaBeLucky, const bool& allowArbitraryMapPath);
-  std::pair<uint8_t, std::string> LoadMapConfig(const std::string& user, const std::string& cfgInput, const std::string& observersInput, const std::string& visibilityInput, const std::string& randomRaceInput, const std::string& randomHeroInput, const bool& allowArbitraryMapPath);
-  std::vector<std::string> MapFilesMatch(std::string pattern);
-  std::vector<std::string> ConfigFilesMatch(std::string pattern);
 
-  uint16_t NextHostPort();
   uint32_t NextHostCounter();
-
-  bool IsIgnoredNotifyPlayer(std::string playerName);
-  bool IsIgnoredDatagramSource(std::string sourceIp);
 
   inline std::string GetSudoAuthPayload(const std::string& Payload) {
     std::random_device rd;

@@ -37,9 +37,7 @@ using namespace std;
 //
 
 CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
-  : m_CommandTrigger('!'),
-
-    m_UserName(string()),
+  : m_UserName(string()),
     m_PassWord(string()),
 
     m_RootAdmins({}),
@@ -176,7 +174,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     }
   }
 
-  string commandTrigger    = CFG->GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, "!");
+  string commandTrigger    = CFG->GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, string(1, m_CommandTrigger));
   CFG->FailIfErrorLast();
   m_CommandTrigger         = commandTrigger[0];
   m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);

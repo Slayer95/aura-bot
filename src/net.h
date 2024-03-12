@@ -54,6 +54,7 @@
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE 0
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL 1
 #define NET_PUBLIC_IP_ADDRESS_ALGORITHM_API 2
+#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID 3
 
 #define ACCEPT_IPV4 1 << 0
 #define ACCEPT_IPV6 1 << 1
@@ -126,9 +127,14 @@ public:
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CGameConnection*>>           m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
   std::map<std::string, sockaddr_storage>                     m_DNSCache;
+  std::pair<std::string, sockaddr_storage*>                   m_IPv4CacheV;
+  uint8_t                                                     m_IPv4CacheT;
+  std::pair<std::string, sockaddr_storage*>                   m_IPv6CacheV;
+  uint8_t                                                     m_IPv6CacheT;
 
   std::vector<CTestConnection*>                               m_HealthCheckClients;
   bool                                                        m_HealthCheckInProgress;
+  uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
 
   void InitPersistentConfig();
   bool Init();
@@ -140,6 +146,7 @@ public:
   void Send(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendArbitraryUnicast(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
+  void HandleUDP(UDPPkt* pkt);
 
   sockaddr_storage*               GetPublicIPv4();
   sockaddr_storage*               GetPublicIPv6();
@@ -148,17 +155,23 @@ public:
   uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
   std::optional<sockaddr_storage> ResolveHostName(const std::string& hostName);
-  void             FlushDNS();
+  void             FlushDNSCache();
+  void             FlushSelfIPCache();
 
   uint8_t EnableUPnP(const uint16_t externalPort, const uint16_t internalPort);
   void StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers);
   void ResetHealthCheck();
+  void ReportHealthCheck();
+
+  uint16_t NextHostPort();
 
   static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
   void                                   SetBroadcastTarget(sockaddr_storage& subnet);
   void                                   PropagateBroadcastEnabled(const bool nEnable);
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);
   void                                   OnConfigReload();
+
+  bool                                   IsIgnoredDatagramSource(std::string sourceIp);
 };
 
 #endif // AURA_NET_H_

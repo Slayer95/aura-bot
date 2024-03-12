@@ -95,6 +95,8 @@ CConfig::~CConfig() = default;
 
 bool CConfig::Read(const filesystem::path& file)
 {
+  m_File = file;
+
   ifstream in;
   in.open(file.c_str(), ios::in);
 
@@ -152,6 +154,12 @@ bool CConfig::Exists(const string& key)
 void CConfig::Accept(const string& key)
 {
   m_ValidKeys.insert(key);
+}
+
+void CConfig::Delete(const string& key)
+{
+  m_ValidKeys.insert(key);
+  m_CFG.erase(key);
 }
 
 vector<string> CConfig::GetInvalidKeys(const bool checkRealmKeys) const
@@ -262,7 +270,7 @@ uint32_t CConfig::GetUint32(const string& key, uint32_t x)
 
   uint32_t Value = x;
   try {
-    Value = stoi(it->second);
+    Value = stoul(it->second);
     if (Value < 0) {
       CONFIG_ERROR(key, x)
     }
@@ -283,7 +291,7 @@ uint16_t CConfig::GetUint16(const string& key, uint16_t x)
 
   int32_t Value = x;
   try {
-    Value = stoi(it->second);
+    Value = stoul(it->second);
     if (Value < 0 || 0xFFFF < Value) {
       CONFIG_ERROR(key, x)
     }
@@ -304,7 +312,7 @@ uint8_t CConfig::GetUint8(const string& key, uint8_t x)
 
   int32_t Value = x;
   try {
-    Value = stoi(it->second);
+    Value = stoul(it->second);
     if (Value < 0 || 0xFF < Value) {
       CONFIG_ERROR(key, x)
     }
