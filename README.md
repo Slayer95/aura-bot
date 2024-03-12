@@ -81,7 +81,15 @@ just run the command:
 aura
 ```
 
-Now, you may join the same server as your bot, and send commands to it through public chat or whispers.
+Now, you may join the same server as your bot, and send commands to it through public chat or whispers. 
+
+To send commands to it through whispers, right click its name on the user list, then click on ``Whisper``. 
+Afterwards, you will see ``/w BOTNAME`` show up in your chatbox. You may add any desired bot command afterwards. 
+Note that, in contrast to previous CLI examples, bot commands only use commas to separate parameters.
+
+```
+/w aurabot !host lost temple, 2v2 fight
+```
 
 Features
 ---------

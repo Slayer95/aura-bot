@@ -47,9 +47,6 @@ Syntax: checknetwork [REALM]
 
 ## \`closeall\`
 
-## \`coinflip\`
-Aliases: coin
-
 ## \`comp\`
 Syntax: comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2
 
@@ -106,6 +103,10 @@ Syntax: fill [SKILL] - Skill is any of: 0, 1, 2
 
 ## \`fillfake\`
 
+## \`flip\`
+Aliases: coin, coinflip
+Syntax: flip [CHANCE%]
+
 ## \`flushdns\`
 
 ## \`forceautostart\`
@@ -124,8 +125,6 @@ Aliases: resume
 
 ## \`game\`
 Syntax: game [GAMEID], [COMMAND] - See game ids with !listgames
-
-## \`gameranger\`
 
 ## \`getclan\`
 
@@ -147,6 +146,14 @@ Aliases: reconnect
 
 ## \`hold\`
 Syntax: hold [PLAYER1], [PLAYER2], ...
+
+## \`host\`
+Aliases: map, hostlan
+Syntax: host [MAP NAME], [GAME NAME]
+Syntax: host [MAP NAME], [OBSERVERS], [GAME NAME]
+Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]
+Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]
+Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]
 
 ## \`initcfg\`
 Aliases: synccfg
@@ -172,9 +179,6 @@ Syntax: listbans [REALM]
 ## \`load\`
 
 ## \`lock\`
-
-## \`map\`
-Aliases: hostlan, host
 
 ## \`maptransfers\`
 Aliases: setdownloads
@@ -206,6 +210,7 @@ Syntax: owner [PLAYERNAME]
 Aliases: ping
 
 ## \`pick\`
+Syntax: pick [OPTION], [OPTION], [OPTION], ...
 
 ## \`printgames\`
 Syntax: printgames [REALM]
@@ -233,6 +238,7 @@ Aliases: exit
 ## \`restart\`
 
 ## \`roll\`
+Syntax: roll [FACES]
 
 ## \`say\`
 Syntax: say [REALM], [MESSAGE]
@@ -241,11 +247,14 @@ Syntax: say [REALM], [MESSAGE]
 Aliases: saygameraw
 Syntax: saygame [GAMEID], [MESSAGE]
 
-## \`sendudp\`
-Aliases: sendlan
+## \`sendlan\`
+Aliases: sendudp
+Syntax: sendlan ON/OFF
+Syntax: sendlan [IP]
 
-## \`sendudpinfo\`
-Aliases: sendlaninfo
+## \`sendlaninfo\`
+Aliases: sendudpinfo
+Syntax: sendlaninfo
 
 ## \`sl\`
 Aliases: synclimit

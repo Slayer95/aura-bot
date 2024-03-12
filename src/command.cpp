@@ -910,22 +910,23 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
-    // !COINFLIP
+    // !FLIP
     //
 
     case HashCode("coin"):
-    case HashCode("coinflip"): {
+    case HashCode("coinflip"):
+    case HashCode("flip"): {
       double chance = 0.5;
       if (!Payload.empty()) {
         double chancePercent;
         try {
           chancePercent = stod(Payload);
         } catch (...) {
-          ErrorReply("Usage: !coin [CHANCE%]");
+          ErrorReply("Usage: " + GetToken() + "flip [CHANCE%]");
           break;
         }
         if (chancePercent < 0. || chancePercent > 100.) {
-          ErrorReply("Usage: !coin [CHANCE%]");
+          ErrorReply("Usage: " + GetToken() + "flip [CHANCE%]");
           break;
         }
         chance = chancePercent / 100.;
@@ -958,7 +959,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         rollCount = static_cast<uint8_t>(stoi(rawRollCount));
         rollFaces = static_cast<uint16_t>(stoi(rawRollFaces));
       } catch (...) {
-        ErrorReply("Usage: !roll [FACES]");
+        ErrorReply("Usage: " + GetToken() + "roll [FACES]");
         break;
       }
 
@@ -990,7 +991,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("pick"): {
       if (Payload.empty()) {
-        ErrorReply("Usage: !pick [OPTION], [OPTION], [OPTION], ...");
+        ErrorReply("Usage: " + GetToken() + "pick [OPTION], [OPTION], [OPTION], ...");
         break;
       }
 
@@ -2436,8 +2437,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !SENDLAN
     //
 
-    case HashCode("sendlan"):
-    case HashCode("sendudp"): {
+    case HashCode("sendudp"):
+    case HashCode("sendlan"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
@@ -2465,8 +2466,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!TargetValue.has_value()) {
         optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(Payload);
         if (!maybeAddress.has_value()) {
-          ErrorReply("Usage: !sendlan ON/OFF");
-          ErrorReply("Usage: !sendlan [IP]");
+          ErrorReply("Usage: " + GetToken() + "sendlan ON/OFF");
+          ErrorReply("Usage: " + GetToken() + "sendlan [IP]");
           break;
         }
         sockaddr_storage* address = &(maybeAddress.value());
@@ -2510,8 +2511,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !SENDLANINFO
     //
 
-    case HashCode("sendlaninfo"):
-    case HashCode("sendudpinfo"): {
+    case HashCode("sendudpinfo"):
+    case HashCode("sendlaninfo"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
@@ -2524,7 +2525,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (!Payload.empty()) {
-        ErrorReply("Usage: !sendlaninfo");
+        ErrorReply("Usage: " + GetToken() + "sendlaninfo");
         ErrorReply("You may want !sendlan [IP] or !sendlan on/off instead");
         break;
       }
@@ -4016,7 +4017,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Unable to host game");
         break;
       }
-      if (!gameSetup->ReadyData()) {
+      if (!gameSetup->LoadMap()) {
         delete gameSetup;
         ErrorReply("No map configs found with that name.");
         break;
@@ -4151,11 +4152,12 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     //
     // !MAP (load map file)
+    // !HOST (create game)
     //
 
+    case HashCode("map"):
     case HashCode("hostlan"):
-    case HashCode("host"):
-    case HashCode("map"): {
+    case HashCode("host"): {
       if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
         if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
           ErrorReply("Not allowed to host games.");
@@ -4164,11 +4166,15 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool isHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
-      vector<string> Args = SplitArgs(Payload, 1, 5);
+      vector<string> Args = SplitArgs(Payload, 1 + isHostCommand, 5 + isHostCommand);
 
-      if (Args.empty() || Args[0].empty()) {
+      if (Args.empty() || Args[0].empty() || isHostCommand && Args[Args.size() - 1].empty()) {
         if (isHostCommand) {
-          ErrorReply("Please enter the map in the host command.");
+          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [GAME NAME]");
+          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [GAME NAME]");
+          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]");
+          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]");
+          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]");
           break;
         }
         if (!m_Aura->m_GameSetup) {
@@ -4180,16 +4186,17 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       CGameExtraOptions options;
-      if (Args.size() >= 2) options.ParseMapObservers(Args[1]);
-      if (Args.size() >= 3) options.ParseMapVisibility(Args[2]);
-      if (Args.size() >= 4) options.ParseMapRandomHeroes(Args[3]);
+      if (Args.size() >= 2 + isHostCommand) options.ParseMapObservers(Args[1]);
+      if (Args.size() >= 3 + isHostCommand) options.ParseMapVisibility(Args[2]);
+      if (Args.size() >= 4 + isHostCommand) options.ParseMapRandomRaces(Args[3]);
+      if (Args.size() >= 5 + isHostCommand) options.ParseMapRandomHeroes(Args[4]);
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, targetMap, SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
       if (!gameSetup) {
         ErrorReply("Unable to host game");
         break;
       }
-      if (!gameSetup->ReadyData()) {
+      if (!gameSetup->LoadMap()) {
         delete gameSetup;
         break;
       }
@@ -4200,16 +4207,12 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
       gameSetup->SetActive();
       if (isHostCommand) {
-        string gameName = "gogogo";
-        if (Args.size() >= 5 && !Args[4].empty()) {
-          gameName = Args[4];
-        }
         if (m_Aura->m_CurrentLobby)  {
           ErrorReply("Already hosting a game.");
           delete gameSetup;
           break;
         }
-        m_Aura->m_GameSetup->SetName(gameName);
+        m_Aura->m_GameSetup->SetName(Args[Args.size() - 1]);
         m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
         m_Aura->m_GameSetup->SetOwner(m_FromName, CommandHash == HashCode("hostlan") ? nullptr : m_SourceRealm);
         m_Aura->m_GameSetup->RunHost();

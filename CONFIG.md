@@ -20,7 +20,12 @@ Type: bool
 Default value: true
 Error handling: Use default value
 
-## \`bot.load_maps.strict_paths\`
+## \`bot.load_maps.show_suggestions\`
+Type: bool
+Default value: true
+Error handling: Use default value
+
+## \`bot.load_maps.strict_search\`
 Type: bool
 Default value: false
 Error handling: Use default value
@@ -232,6 +237,11 @@ Error handling: Use default value
 ## \`hosting.map_downloads.enabled\`
 Type: bool
 Default value: false
+Error handling: Use default value
+
+## \`hosting.map_downloads.timeout\`
+Type: uint16
+Default value: 1000
 Error handling: Use default value
 
 ## \`hosting.map_missing.kick_delay\`

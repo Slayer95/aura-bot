@@ -683,8 +683,9 @@ bool CGameSetup::RunDownload()
   return true;
 }
 
-bool CGameSetup::ReadyData()
+bool CGameSetup::LoadMap()
 {
+  if (m_Map) return false;
   return false;
 }
 

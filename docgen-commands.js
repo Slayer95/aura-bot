@@ -69,7 +69,6 @@ async function main() {
     }
     outContents.push(``);
   }
-  console.log(aliases.size, commandUsages.size, seenCommands.size);
 
   await fs.writeFile(
     path.resolve(__dirname, OUTPUT_PATH),

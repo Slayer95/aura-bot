@@ -935,7 +935,7 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
     }
     CCommandContext* ctx = new CCommandContext(this, &cout, '!');
     CGameSetup* gameSetup = new CGameSetup(this, ctx, targetMapPath, searchType, stdpaths ? SETUP_USE_STANDARD_PATHS : SETUP_PROTECT_ARBITRARY_TRAVERSAL, true);
-    if (gameSetup && gameSetup->ReadyData()) {
+    if (gameSetup && gameSetup->LoadMap()) {
       if (gameSetup->ApplyMapModifiers(&options)) {
         // CRealm instances do not exist yet. Just use the user input verbatim.
         if (!excludedRealm.empty()) m_GameSetup->AddIgnoredRealm(excludedRealm);
@@ -954,7 +954,7 @@ bool CAura::LoadCLI(const int argc, const char* argv[])
         delete ctx;
       }
     } else {
-      ctx->ErrorReply("Invalid game hosting parameters. Please see CLI.md");
+      ctx->ErrorReply("Invalid game hosting parameters. Please ensure the provided file is valid. See also: CLI.md");
       delete gameSetup;
       delete ctx;
     }

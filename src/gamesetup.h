@@ -177,7 +177,7 @@ public:
   uint8_t ResolveRemoteMap();
   void SetDownloadFilePath(std::filesystem::path&& filePath);
   bool RunDownload();
-  bool ReadyData();
+  bool LoadMap();
   bool SetActive();
   bool RunHost();
 
