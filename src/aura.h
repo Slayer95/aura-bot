@@ -71,6 +71,10 @@
 #include <windows.h>
 #endif
 
+#define AURA_VERSION "2.0.0.dev"
+#define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
+#define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
+
 //
 // CAura
 //
@@ -80,7 +84,6 @@ class CGameProtocol;
 class CGPSProtocol;
 class CCRC32;
 class CSHA1;
-class CCLI;
 class CRealm;
 class CGame;
 class CCommandContext;
@@ -88,6 +91,7 @@ class CAuraDB;
 class CNet;
 class CGameSetup;
 class CIRC;
+class CCLI;
 
 class CAura
 {
@@ -97,7 +101,6 @@ public:
   CCRC32*                                            m_CRC;                        // for calculating CRC's
   CSHA1*                                             m_SHA;                        // for calculating SHA1's
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
-  CCLI*                                              m_CLI;                        // CLI parser
   CIRC*                                              m_IRC;                        // IRC client
   CNet*                                              m_Net;                        // network manager
   CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any
@@ -106,6 +109,8 @@ public:
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map
   std::string                                        m_Version;                    // Aura version string
   std::string                                        m_RepositoryURL;              // Aura repository URL
+  std::string                                        m_IssuesURL;                  // Aura issues URL
+  std::filesystem::path                              m_ConfigPath;
 
   uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
@@ -132,7 +137,7 @@ public:
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
 
-  explicit CAura(CConfig* CFG, const int argc, const char* argv[]);
+  explicit CAura(CConfig* CFG, CCLI* nCLI);
   ~CAura();
   CAura(CAura&) = delete;
 
@@ -158,7 +163,7 @@ public:
 
   bool ReloadConfigs();
   bool LoadConfigs(CConfig* CFG);
-  bool LoadCLI(const int argc, const char* argv[]);
+  bool LoadCLI(const int argc, char** argv);
   bool LoadBNETs(CConfig* CFG);
 
   uint8_t ExtractScripts();

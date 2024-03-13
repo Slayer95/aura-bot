@@ -26,13 +26,21 @@
 #ifndef AURA_CLI_H_
 #define AURA_CLI_H_
 
-#include "argh.h"
-
 #include <map>
 #include <string>
 #include <vector>
 #include <set>
 #include <optional>
+#include <filesystem>
+
+#include "aura.h"
+
+#define CLI_OK 0
+#define CLI_ERROR 1
+#define CLI_EARLY_RETURN 2
+
+#define CLI_ACTION_ABOUT 1
+#define CLI_ACTION_EXAMPLES 2
 
 //
 // CCLI
@@ -42,14 +50,50 @@ class CAura;
 
 class CCLI
 {
+public:
+  std::optional<std::filesystem::path>  m_CFGPath;
+
 private:
-  CAura*                             m_Aura;
+  uint8_t                               m_EarlyAction;
+  bool                                  m_UseStandardPaths;
+  std::optional<bool>                   m_LAN;
+  std::optional<bool>                   m_BNET;
+  std::optional<bool>                   m_ExitOnStandby;
+  std::optional<bool>                   m_UseMapCFGCache;
+  std::optional<std::string>            m_LANMode; // Validation?
+
+  std::optional<uint8_t>                m_War3Version;
+  std::optional<std::filesystem::path>  m_War3Path;
+  std::optional<std::filesystem::path>  m_MapPath;
+  std::optional<std::filesystem::path>  m_MapCFGPath;
+
+  // Host flags
+  std::optional<std::string>            m_SearchTarget;
+  std::optional<std::string>            m_GameName;
+  std::optional<bool>                   m_RandomRaces;
+  std::optional<bool>                   m_RandomHeroes;
+  std::string                           m_SearchType; // Validation?
+  std::optional<std::string>            m_Observers; // Validation?
+  std::optional<std::string>            m_Visibility; // Validation?
+  std::optional<std::string>            m_Owner;
+  std::vector<std::string>              m_ExcludedRealms;
+  std::optional<std::string>            m_MirrorSource;
+
+  // Command queue
+  std::optional<std::string>            m_ExecAs;
+  std::string                           m_ExecAuth;
+  std::string                           m_ExecScope;
+  std::vector<std::string>              m_ExecCommands;
+  bool                                  m_ExecBroadcast;
 
 public:
-  CCLI(CAura* nAura);
+  CCLI();
   ~CCLI();
 
-  bool Parse(const int argc, const char* argv[]);
+  uint8_t Parse(const int argc, char** argv);
+  void RunEarlyOptions();
+  void OverrideConfig(CAura* nAura);
+  void QueueActions(CAura* nAura);
 };
 
 #endif // AURA_CLI_H_

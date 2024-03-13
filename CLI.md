@@ -1,12 +1,6 @@
 ﻿Command Line Interface
 ======================
 
-DISCLAIMER: A significant part of this document conveys project intent, and not
-necessarily the current status of the code base. I am just writing this up now,
-so I don't get lazy later. Proceed with caution.
-
-TODO(IceSandslash)
-
 # Overview
 
 [Aura][1]'s CLI provides a set of flags and parameters to configure and control the bot's behavior
@@ -170,6 +164,8 @@ directory, instead of the root path of the bot.
 However, it's important to note that this flag removes protection against [arbitrary directory traversal][3]. 
 Therefore, it should only be used for paths that have been thoroughly validated.
 
+This option is commutative.
+
 ## \`--random-races\`
 
 This flag enables randomization of player races in the hosted game. When this flag is used, each player's 
@@ -185,16 +181,17 @@ assigned hero.
 
 # Parameters for CLI games
 
-## \`--filetype <TYPE>\`
+## \`-s <TYPE>, --search-type <TYPE>\`
 
-Specifies the type of file being referenced. This parameter helps the host bot determine how to handle 
-the specified files, whether they are maps or configuration files.
+Specifies the type of hostable being referenced. This parameter helps the host bot determine how to resolve 
+the input when hosting maps from the CLI, whether they are maps, configuration files, or remote resources.
 
 **Options:**
 
 - map: Indicates that the specified file is a Warcraft 3 map.
 - config: Indicates that the specified file is a map config/metadata file.
-- any: Indicates that the specified file may be either a Warcraft 3 map or config file. This is the default.
+- local: Indicates that both maps and config files are allowed, but only in the local machine.
+- any: Indicates that the specified file may be found in the cloud.
 
 ## \`--exclude <SERVER>\`
 
@@ -246,9 +243,9 @@ administrative control over the game session. Here's the format for specifying t
 
 ## \`--exec-broadcast\`
 
-This flag enables broadcasting the command execution to all users or players involved in the game 
-session. When activated, the command specified by --exec will be broadcasted to all participants, 
-ensuring transparency and visibility of the executed action.
+This flag enables broadcasting the command execution to all users or players in the channel. 
+When activated, the command specified by --exec will be broadcasted to all users in the same 
+realm or game, ensuring transparency and visibility of the executed action.
 
 By using this flag, users or players will be informed about the command being executed, fostering 
 a collaborative and informed environment during the game session.

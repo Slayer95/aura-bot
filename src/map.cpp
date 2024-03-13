@@ -242,7 +242,8 @@ void CMap::OpenObserverSlots()
 void CMap::CloseObserverSlots()
 {
   uint8_t count = 0;
-  for (uint8_t i = m_Slots.size() - 1; i >= 0; --i) {
+  uint8_t i = static_cast<uint8_t>(m_Slots.size());
+  while (i--) {
     if (m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
       m_Slots.erase(m_Slots.begin() + i);
       ++count;
@@ -258,7 +259,8 @@ bool CMap::SetForcedRandomRaceSlots()
   if (GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
     return false;
   }
-  for (uint8_t i = m_Slots.size() - 1; i >= 0; --i) {
+  uint8_t i = static_cast<uint8_t>(m_Slots.size());
+  while (i--) {
     m_Slots[i].SetRace(SLOTRACE_RANDOM);
   }
   Print("[MAP] forcing random races");
@@ -270,7 +272,8 @@ bool CMap::SetSelectableSlots()
   if (GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
     return false;
   }
-  for (uint8_t i = m_Slots.size() - 1; i >= 0; --i) {
+  uint8_t i = static_cast<uint8_t>(m_Slots.size());
+  while (i--) {
     m_Slots[i].SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
   }
   Print("[MAP] setting selectable races");
@@ -358,7 +361,7 @@ void CMap::Load(CConfig* CFG)
       uint32_t ErrorCode = (uint32_t)GetLastError();
       string ErrorCodeString = (
         ErrorCode == 2 ? "Map not found" : (
-        (ErrorCode == 3 || ErrorCode == 15) ? "Config error: bot.maps_path is not a valid directory" : (
+        (ErrorCode == 3 || ErrorCode == 15) ? "Config error: <bot.maps_path> is not a valid directory" : (
         (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
         "Error code " + to_string(ErrorCode)
         )))

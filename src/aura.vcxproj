@@ -289,7 +289,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util.h" />
-    <ClInclude Include="argh.h" />
+    <ClInclude Include="CLI11.hpp" />
     <ClInclude Include="csvparser.h" />
     <ClInclude Include="fileutil.h" />
     <ClInclude Include="socket.h" />

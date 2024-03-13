@@ -82,9 +82,6 @@
 #include <process.h>
 #endif
 
-#define VERSION "2.0.0.dev"
-#define REPOSITORY "https://gitlab.com/ivojulca/aura-bot"
-
 using namespace std;
 
 #undef FD_SETSIZE
@@ -97,7 +94,7 @@ bool          gRestart = false;
 // main
 //
 
-int main(const int argc, const char* argv[])
+int main(const int argc, char** argv)
 {
   // seed the PRNG
 
@@ -107,20 +104,39 @@ int main(const int argc, const char* argv[])
 
   ios_base::sync_with_stdio(false);
 
-  // read config file
+  CCLI* cliApp = new CCLI();
+  uint8_t cliResult = cliApp->Parse(argc, argv);
+  if (cliResult == CLI_EARLY_RETURN) {
+    cliApp->RunEarlyOptions();
+    return 0;
+  }
+  if (cliResult != CLI_OK) {
+    Print("[AURA] invalid CLI usage");
+    return 1;
+  }
 
   CConfig CFG;
-  filesystem::path ExeDirectory = GetExeDirectory();
-  filesystem::path ConfigPath = ExeDirectory / filesystem::path("config.ini");
-  if (!CFG.Read(ConfigPath)) {
-    int FileSize = 0;
-    string CFGExample = FileRead(ExeDirectory / filesystem::path("config-example.ini"), &FileSize);
-    vector<uint8_t> CFGCopy(CFGExample.begin(), CFGExample.end());
-    Print("[AURA] copying config-example.cfg to config.ini...");
-    FileWrite(ConfigPath, CFGCopy.data(), CFGCopy.size());
-    if (!CFG.Read(ConfigPath)) {
-      Print("[AURA] error initializing config.ini");
-      return 1;
+  if (cliApp->m_CFGPath.has_value()) {
+    filesystem::path configPath = cliApp->m_CFGPath.value();
+    if (!CFG.Read(configPath)) return 1;
+  } else {
+    filesystem::path ExeDirectory = GetExeDirectory();
+    filesystem::path configPath = ExeDirectory / filesystem::path("config.ini");
+    if (!CFG.Read(configPath)) {
+      int FileSize = 0;
+      string CFGExample = FileRead(ExeDirectory / filesystem::path("config-example.ini"), &FileSize);
+      if (CFGExample.empty()) {
+        Print("[AURA] config.ini not found");
+        // But Aura can actually work without a config file ;)
+      } else {
+        vector<uint8_t> CFGCopy(CFGExample.begin(), CFGExample.end());
+        Print("[AURA] copying config-example.cfg to config.ini...");
+        FileWrite(configPath, CFGCopy.data(), CFGCopy.size());
+        if (!CFG.Read(configPath)) {
+          Print("[AURA] error initializing config.ini");
+          return 1;
+        }
+      }
     }
   }
 
@@ -161,7 +177,7 @@ int main(const int argc, const char* argv[])
 
   // initialize aura
 
-  gAura = new CAura(&CFG, argc, argv);
+  gAura = new CAura(&CFG, cliApp);
 
   // check if it's properly configured
 
@@ -202,22 +218,23 @@ int main(const int argc, const char* argv[])
 // CAura
 //
 
-CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
+CAura::CAura(CConfig* CFG, CCLI* nCLI)
   : m_GameProtocol(nullptr),
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
-    m_CLI(nullptr),
     m_IRC(nullptr),
     m_Net(nullptr),
     m_CurrentLobby(nullptr),
+    m_ConfigPath(CFG->GetFile()),
     m_DB(new CAuraDB(CFG)),
     m_GameSetup(nullptr),
     m_Config(nullptr),
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
-    m_Version(VERSION),
-    m_RepositoryURL(REPOSITORY),
+    m_Version(AURA_VERSION),
+    m_RepositoryURL(AURA_REPOSITORY_URL),
+    m_IssuesURL(AURA_ISSUES_URL),
     m_MaxSlots(MAX_SLOTS_LEGACY),
     m_HostCounter(0),
     m_MaxGameNameSize(31),
@@ -232,21 +249,17 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
   Print("[AURA] Aura version " + m_Version);
 
   m_GameProtocol = new CGameProtocol(this);
-  m_CLI = new CCLI(this);
   m_Net = new CNet(this);
   m_IRC = new CIRC(this);
 
   m_CRC->Initialize();
 
   if (!LoadConfigs(CFG)) {
-    Print("[CONFIG] Error: Critical errors found in config.ini");
+    Print("[CONFIG] Error: Critical errors found in " + m_ConfigPath.filename().string());
     m_Ready = false;
     return;
   }
-  if (!LoadCLI(argc, argv)) {
-    m_Ready = false;
-    return;
-  }
+  nCLI->OverrideConfig(this);
   if (m_GameVersion == 0) {
     Print("[CONFIG] Game version and path are missing.");
     m_Ready = false;
@@ -283,6 +296,8 @@ CAura::CAura(CConfig* CFG, const int argc, const char* argv[])
     Print("[AURA] warning - no enabled battle.net connections configured");
   if (!m_IRC)
     Print("[AURA] warning - no irc connection configured");
+
+  nCLI->QueueActions(this);
 
   if (m_Realms.empty() && !m_IRC && m_PendingActions.empty()) {
     Print("[AURA] Input disconnected.");
@@ -495,8 +510,8 @@ bool CAura::HandleAction(vector<string>& action)
     if (!success) {
       return true; // Exit
     }
-  } else {
-    Print("[AURA] Action type unsupported");
+  } else if (!action.empty()) {
+    Print("[AURA] Action type " + action[0] + " unsupported");
     return true;
   }
   return false;
@@ -758,7 +773,7 @@ bool CAura::ReloadConfigs()
   uint8_t WasVersion = m_GameVersion;
   filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
   CConfig* CFG = new CConfig();
-  CFG->Read("config.ini");
+  CFG->Read(m_ConfigPath);
   if (!LoadConfigs(CFG)) {
     Print("[CONFIG] error - bot configuration invalid: not reloaded");
     success = false;
@@ -846,11 +861,11 @@ bool CAura::LoadConfigs(CConfig* CFG)
   return true;
 }
 
-bool CAura::LoadCLI(const int argc, const char* argv[])
+/*bool CAura::LoadCLI(const int argc, char** argv)
 {
   // CLI overrides Config overrides Registry
   return m_CLI->Parse(argc, argv);
-}
+}*/
 
 uint8_t CAura::ExtractScripts()
 {

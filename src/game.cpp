@@ -201,10 +201,15 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 CGame::~CGame()
 {
   if (m_HasMapLock) {
-    m_Aura->m_BusyMaps.erase(m_Map->GetMapLocalPath());
-    bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
-    if (IsTooLarge && m_Aura->m_BusyMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_BusyMaps.end()) {
-      m_Map->UnlinkFile();
+    string localPathString = m_Map->GetMapLocalPath();
+    m_Aura->m_BusyMaps.erase(localPathString);
+    filesystem::path localPath = localPathString;
+    bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
+    if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
+      bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
+      if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
+        m_Map->UnlinkFile();
+      }
     }
     m_HasMapLock = false;
   }
@@ -2638,10 +2643,14 @@ void CGame::EventGameStarted()
   if (GetNumConnectionsOrFake() >= 2) {
     // Remove the virtual host player to ensure consistent game state and networking.
     DeleteVirtualHost();
+    /*
+    // This is an attempt to "rename" a fake player into our virtual host.
+    // Unfortunately, it makes game clients quit after the game loads.
     if (m_FakePlayers.size()) {
-      DeleteFakePlayer(m_FakePlayers[m_FakePlayers.size() - 1]);
+      DeleteFakePlayer(GetSIDFromPID(m_FakePlayers[m_FakePlayers.size() - 1]));
       CreateFakePlayer(true);
     }
+    */
   } else if (GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake player.
@@ -2714,10 +2723,21 @@ void CGame::EventGameStarted()
   // delete the map data
 
   if (m_HasMapLock) {
-    m_Aura->m_BusyMaps.erase(m_Map->GetMapLocalPath());
-    bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
-    if (IsTooLarge && m_Aura->m_BusyMaps.find(m_Map->GetMapLocalPath()) == m_Aura->m_BusyMaps.end()) {
-      m_Map->UnlinkFile();
+    string localPathString = m_Map->GetMapLocalPath();
+    m_Aura->m_BusyMaps.erase(localPathString);
+    filesystem::path localPath = localPathString;
+    bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
+    if (isFileName) Print("Map " + localPathString + " is a filename");
+    else Print("Map " + localPathString + " is not a filename");
+    if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
+      bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
+      if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
+        m_Map->UnlinkFile();
+      } else {
+        Print("Map small or busy");
+      }
+    } else {
+      Print("Map not cached");
     }
     m_HasMapLock = false;
   }
@@ -3700,8 +3720,9 @@ bool CGame::CreateVirtualHost()
 
 bool CGame::DeleteVirtualHost()
 {
-  if (m_VirtualHostPID == 255)
+  if (m_VirtualHostPID == 255) {
     return false;
+  }
 
   SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(m_VirtualHostPID, PLAYERLEAVE_LOBBY));
   m_VirtualHostPID = 255;

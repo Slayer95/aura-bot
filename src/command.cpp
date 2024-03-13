@@ -611,7 +611,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("version"):
     case HashCode("about"): {
-      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project. See " + m_Aura->m_RepositoryURL);
+      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project. Say hi at <" + m_Aura->m_IssuesURL + ">");
       break;
     }
 

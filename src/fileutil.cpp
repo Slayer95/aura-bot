@@ -415,10 +415,9 @@ optional<string> MaybeReadRegistryKey(const char* keyName)
   DWORD dwType, dwSize;
   char szValue[1024];
 
-  // Open the desired key
   if (RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Blizzard Entertainment\\Warcraft III", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-    // Query the value of the desired registry entry
     dwSize = sizeof(szValue);
+    // Query the value of the desired registry entry
     if (RegQueryValueExA(hKey, keyName, nullptr, &dwType, (LPBYTE)szValue, &dwSize) == ERROR_SUCCESS) {
       if (dwType == REG_SZ && 0 < dwSize && dwSize < 1024) {
         string installPath(szValue, dwSize - 1);

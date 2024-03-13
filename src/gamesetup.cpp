@@ -244,7 +244,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputStandard()
     return make_pair(MATCH_TYPE_INVALID, targetPath);
   }
 
-  string targetExt = targetPath.filename().string().substr(m_SearchTarget.second.length() - 4, 4);
+  string targetExt = GetFileExtension(targetPath.filename().string());
   if (targetExt == ".w3m" || targetExt == ".w3x") {
     return make_pair(MATCH_TYPE_MAP, targetPath);
   }
@@ -471,6 +471,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   MapCFG.SetBool("cfg_partial", true);
   MapCFG.Set("map_path", R"(Maps\Download\)" + baseFileName);
   MapCFG.Set("map_localpath", isInMapsFolder ? fileName : filePath.string());
+  Print("<map_localpath = " + MapCFG.GetString("map_localpath", "") + ">");
 
   if (m_IsDownloaded) {
     MapCFG.Set("map_site", m_MapSiteUri);
@@ -782,11 +783,6 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   }
   SetAddressPort(&(maybeAddress.value()), gamePort);
   return SetMirrorSource(maybeAddress.value(), gameId, gameKey);
-}
-
-void CGameSetup::AddIgnoredRealm(const string& nRealm)
-{
-  m_RealmsExcluded.insert(nRealm);
 }
 
 void CGameSetup::AddIgnoredRealm(const CRealm* nRealm)

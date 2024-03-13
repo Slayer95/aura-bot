@@ -1,8 +1,6 @@
-﻿Aura
-====
+﻿# Aura
 
-Overview
---------
+## Overview
 
 [Aura][1] is a modern cross-platform hosting bot for Warcraft III The Frozen Throne Ⓡ.
 It's based on [GHost++][2] by Trevor Hogan. After several overhauls across 
@@ -13,8 +11,7 @@ but also bot owners, even behind the most strict [NATs][3].
 Aura runs on little-endian Linux (32-bit and 64-bit), Windows (32-bit and 64-bit), 
 and OS X (64-bit Intel CPU) machines.
 
-Getting started
----------------
+## Getting started
 
 First, get the Aura executable file. They are already provided for Windows 32-bit and 64-bit. 
 For Linux, or OS X, you will need to build it yourself. See [BUILDING.md][4] for instructions.
@@ -42,7 +39,7 @@ be in the same format as ``LOCATION`` above. See [CONFIG.md][5] for documentatio
 Now, to test your setup, run the command:
 
 ```
-aura wormwar.cfg "my first hosted game" --filetype config 
+aura wormwar.cfg "my first hosted game" -s config
 ```
 
 Open your game client, and go to **Local Area Network**. You should see your Worm War game hosted there. 
@@ -91,23 +88,13 @@ Note that, in contrast to previous CLI examples, bot commands only use commas to
 /w aurabot !host lost temple, 2v2 fight
 ```
 
-Features
----------
+## Features
 
 Find a non-extensive list of Aura features at [FEATURES.md][9].
 
-Credits
--------
+## Contributing
 
-* Leonardo Julca -- [Aura v2.0][1] author
-* Josko Nikolic -- [Aura v1.32][9] author
-* Trevor "Varlock" Hogan -- GHost++ author
-* MrJag -- [Ghost][10] author
-
-Contributing
-------------
-
-This project is open-source, and hosted at [Gitlab][1]. You will need [Git][11] in 
+This project is open-source, and hosted at [Gitlab][1]. You will need [Git][9] in 
 order to contribute to this and other open-source projects. Then proceed with the 
 following:
 
@@ -115,7 +102,148 @@ following:
 2. Create a branch (`git checkout -b my_aura`)
 3. Commit your changes (`git commit -am "Fixed a crash when using GProxy++"`)
 4. Push to the branch (`git push origin my_aura`)
-5. Create an [Issue][12] with a link to your branch or make a [Pull Request][13]
+5. Create an [Issue][10] with a link to your branch or make a [Pull Request][11]
+
+## License
+
+### Aura
+This work is licensed under the MIT license, reproduced below.
+
+Copyright [2024] [Leonardo Julca]
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+### Other authors
+
+This work contains files originally developed by:
+* Josko Nikolic -- [Aura v1.32][12] author (Apache License, Version 2.0)
+* Trevor "Varlock" Hogan -- GHost++ author (Apache License, Version 2.0)
+
+### Prior art
+
+This work is inspired by prior work by MrJag, author of [Ghost][13].
+
+### Libraries
+
+Included libraries are licensed as follows.
+
+#### StormLib
+
+The MIT License (MIT)
+
+Copyright (c) 1999-2013 Ladislav Zezula
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+#### BNCSutil
+
+Battle.Net Utility Library
+
+Copyright (C) 2004-2006 Eric Naeseth
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+A copy of the GNU Lesser General Public License is included in the BNCSutil
+distribution in the file COPYING.  If you did not receive this copy,
+write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+Boston, MA  02111-1307  USA
+
+#### MiniUPnP Project
+
+Copyright (c) 2005-2017, Thomas BERNARD
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+    * The name of the author may not be used to endorse or promote products
+	  derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+#### CLI11
+
+CLI11 2.2 Copyright (c) 2017-2024 University of Cincinnati, developed by Henry
+Schreiner under NSF AWARD 1414736. All rights reserved.
+
+Redistribution and use in source and binary forms of CLI11, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+3. Neither the name of the copyright holder nor the names of its contributors
+   may be used to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/uakfdotb/ghostpp
@@ -125,8 +253,8 @@ following:
 [6]: https://gitlab.com/ivojulca/aura-bot/NETWORKING.md
 [7]: https://gitlab.com/ivojulca/aura-bot/COMMANDS.md
 [8]: https://gitlab.com/ivojulca/aura-bot/CLI.md
-[9]: https://github.com/Josko/aura-bot
-[10]: https://github.com/MrJag/ghost
-[11]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
-[12]: https://gitlab.com/ivojulca/aura-bot/-/issues
-[13]: https://gitlab.com/ivojulca/aura-bot/-/pulls
+[9]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+[10]: https://gitlab.com/ivojulca/aura-bot/-/issues
+[11]: https://gitlab.com/ivojulca/aura-bot/-/pulls
+[12]: https://github.com/Josko/aura-bot
+[13]: https://github.com/MrJag/ghost

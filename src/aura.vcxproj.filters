@@ -200,7 +200,7 @@
     <ClInclude Include="fileutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="argh.h">
+    <ClInclude Include="CLI11.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="command.h">
