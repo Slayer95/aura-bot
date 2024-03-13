@@ -793,10 +793,6 @@ void CGameSetup::RemoveIgnoredRealm(const CRealm* nRealm)
 {
   m_RealmsExcluded.erase(nRealm->GetServer());
 }
-void CGameSetup::RemoveIgnoredRealm(const string& nRealm)
-{
-  m_RealmsExcluded.erase(nRealm);
-}
 
 void CGameSetup::SetDisplayMode(const uint8_t nDisplayMode)
 {

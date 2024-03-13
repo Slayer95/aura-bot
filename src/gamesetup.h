@@ -187,7 +187,6 @@ public:
   bool SetMirrorSource(const std::string& nInput);
   void AddIgnoredRealm(const CRealm* nRealm);
   void RemoveIgnoredRealm(const CRealm* nRealm);
-  void RemoveIgnoredRealm(const std::string& nRealm);
   void SetDisplayMode(const uint8_t nDisplayMode);
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
