@@ -3620,8 +3620,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      filesystem::path TargetPath = Folder / FileFragment;
-      if (TargetPath.parent_path() != Folder || PathHasNullBytes(TargetPath)) {
+      filesystem::path TargetPath = (Folder / FileFragment).lexically_normal();
+      if (TargetPath.parent_path() != Folder.parent_path() || PathHasNullBytes(TargetPath) || TargetPath.filename().empty()) {
         ErrorReply("Removal failed");
         break;
       }

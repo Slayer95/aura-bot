@@ -473,15 +473,20 @@ filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
-    SUCCESS(x.empty() ? GetExeDirectory() : x)
+    filesystem::path defaultDirectory = x;
+    defaultDirectory += defaultDirectory.preferred_separator;
+    SUCCESS(defaultDirectory.lexically_normal())
   }
 
   filesystem::path value = it->second;
   if (value.is_absolute()) {
-    SUCCESS(value)
+    value += value.preferred_separator;
+    SUCCESS(value.lexically_normal())
   }
 
-  SUCCESS(filesystem::path(GetExeDirectory() / value).lexically_normal())
+  value = GetExeDirectory() / value;
+  value += value.preferred_separator;
+  SUCCESS(value.lexically_normal())
 }
 
 sockaddr_storage CConfig::GetAddressOfType(const string& key, const uint8_t acceptMode, const string& x)
@@ -593,11 +598,32 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
     SUCCESS(result)
   }
 
-  result = it->second;
+  result = filesystem::path(it->second);
   if (result.value().is_absolute()) {
     SUCCESS(result)
   }
-  result = filesystem::path(GetExeDirectory() / result.value()).lexically_normal();
+  result = (GetExeDirectory() / result.value()).lexically_normal();
+  SUCCESS(result)
+}
+
+optional<filesystem::path> CConfig::GetMaybeDirectory(const string &key)
+{
+  m_ValidKeys.insert(key);
+  optional<filesystem::path> result;
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
+
+  result = filesystem::path(it->second);
+  if (result.value().is_absolute()) {
+    result.value() += result.value().preferred_separator;
+    SUCCESS(result)
+  }
+  result = GetExeDirectory() / result.value();
+  result.value() += result.value().preferred_separator;
+  result.value() = result.value().lexically_normal();
   SUCCESS(result)
 }
 

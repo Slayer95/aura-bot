@@ -26,6 +26,7 @@
 #include "config_bot.h"
 #include "util.h"
 #include "net.h"
+#include "fileutil.h"
 
 #include <utility>
 #include <algorithm>
@@ -42,9 +43,9 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_Enabled                      = CFG->GetBool("hosting.enabled", true);
   m_War3Version                  = CFG->GetMaybeInt("game.version");
   CFG->FailIfErrorLast();
-  m_Warcraft3Path                = CFG->GetMaybePath("game.install_path");
-  m_MapCFGPath                   = CFG->GetPath("bot.map_configs_path", filesystem::path());
-  m_MapPath                      = CFG->GetPath("bot.maps_path", filesystem::path());
+  m_Warcraft3Path                = CFG->GetMaybeDirectory("game.install_path");
+  m_MapCFGPath                   = CFG->GetDirectory("bot.map_configs_path", GetExeDirectory());
+  m_MapPath                      = CFG->GetDirectory("bot.maps_path", GetExeDirectory());
 
   m_RTTPings                     = CFG->GetBool("metrics.rtt_pings", false);
 

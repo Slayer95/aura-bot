@@ -121,6 +121,7 @@ public:
   std::optional<sockaddr_storage> GetMaybeAddress(const std::string& key);
   std::optional<std::vector<uint8_t>> GetMaybeIPv4(const std::string& key);
   std::optional<std::filesystem::path> GetMaybePath(const std::string &key);
+  std::optional<std::filesystem::path> GetMaybeDirectory(const std::string &key);
 
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);

@@ -255,12 +255,15 @@ filesystem::path GetExeDirectory()
   } while (length >= buffer.size() - 1);
 
   if (length == 0) {
-    throw std::runtime_error("Failed to retrieve the module file name.");
+    Print("Failed to retrieve Aura's directory.");
+    return Memoized;
   }
   buffer.resize(length);
 
   filesystem::path executablePath(buffer.data());
-  Memoized = executablePath.parent_path().lexically_normal();
+  Memoized = executablePath.parent_path();
+  Memoized += Memoized.preferred_separator;
+  Memoized = Memoized.lexically_normal();
   return Memoized;
 }
 

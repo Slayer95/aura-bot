@@ -259,7 +259,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
   string fileExtension = GetFileExtension(m_SearchTarget.second);
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapPath) {
+    if (testPath.parent_path() != m_Aura->m_Config->m_MapPath.parent_path()) {
       return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if ((fileExtension == ".w3m" || fileExtension == ".w3x") && FileExists(testPath)) {
@@ -268,7 +268,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath) {
+    if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
       return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if ((fileExtension == ".cfg") && FileExists(testPath)) {
@@ -287,7 +287,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second + ".w3x")).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapPath) {
+    if (testPath.parent_path() != m_Aura->m_Config->m_MapPath.parent_path()) {
       return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if (FileExists(testPath)) {
@@ -300,7 +300,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second + ".cfg")).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath) {
+    if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
       return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if (FileExists(testPath)) {
@@ -421,7 +421,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
   // Gotta find a matching config file.
   string resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg";
   filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(resolvedCFGName)).lexically_normal();
-  if (PathHasNullBytes(resolvedCFGPath) || resolvedCFGPath.parent_path() != m_Aura->m_Config->m_MapCFGPath) {
+  if (PathHasNullBytes(resolvedCFGPath) || resolvedCFGPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
     return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
   }
   if (FileExists(resolvedCFGPath)) {
@@ -458,7 +458,7 @@ CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, con
 
 CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const bool silent)
 {
-  bool isInMapsFolder = filePath.parent_path() == m_Aura->m_Config->m_MapPath;
+  bool isInMapsFolder = filePath.parent_path() == m_Aura->m_Config->m_MapPath.parent_path();
   string fileName = filePath.filename().string();
   string baseFileName;
   if (fileName.length() > 6 && fileName[fileName.length() - 6] == '~' && isdigit(fileName[fileName.length() - 5])) {
@@ -471,7 +471,6 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   MapCFG.SetBool("cfg_partial", true);
   MapCFG.Set("map_path", R"(Maps\Download\)" + baseFileName);
   MapCFG.Set("map_localpath", isInMapsFolder ? fileName : filePath.string());
-  Print("<map_localpath = " + MapCFG.GetString("map_localpath", "") + ">");
 
   if (m_IsDownloaded) {
     MapCFG.Set("map_site", m_MapSiteUri);

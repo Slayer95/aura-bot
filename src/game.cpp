@@ -2727,17 +2727,11 @@ void CGame::EventGameStarted()
     m_Aura->m_BusyMaps.erase(localPathString);
     filesystem::path localPath = localPathString;
     bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
-    if (isFileName) Print("Map " + localPathString + " is a filename");
-    else Print("Map " + localPathString + " is not a filename");
     if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
       bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
       if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
         m_Map->UnlinkFile();
-      } else {
-        Print("Map small or busy");
       }
-    } else {
-      Print("Map not cached");
     }
     m_HasMapLock = false;
   }

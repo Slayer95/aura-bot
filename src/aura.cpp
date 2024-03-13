@@ -841,6 +841,8 @@ bool CAura::LoadConfigs(CConfig* CFG)
       if (maybeInstallPath.has_value()) {
         Print("[AURA] Using <game.install_path = " + maybeInstallPath.value() + ">");
         m_GameInstallPath = maybeInstallPath.value();
+        m_GameInstallPath += m_GameInstallPath.preferred_separator;
+        m_GameInstallPath = m_GameInstallPath.lexically_normal();
       } else {
         // Make sure this error message can be looked up.
         Print("[AURA] Registry error loading key 'Warcraft III\\InstallPath'");
@@ -960,7 +962,7 @@ void CAura::CacheMapPresets()
   for (const auto& cfgName : configFiles) {
     string localPathString = CConfig::ReadString(m_Config->m_MapCFGPath / filesystem::path(cfgName), "map_localpath");
     filesystem::path localPath = localPathString;
-    if (!localPath.is_absolute() || localPath.parent_path() == m_Config->m_MapCFGPath) {
+    if (!localPath.is_absolute() || localPath.parent_path() == m_Config->m_MapCFGPath.parent_path()) {
       m_CachedMaps[localPath.filename().string()] = cfgName;
     }
   }
