@@ -1195,7 +1195,7 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line.replace(matchIndex, 9, m_CreatorText);
     }
     while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      Line.replace(matchIndex, 11, m_CreatorRealm ? "@@@LAN/VPN" : ("@" + m_CreatorRealm->GetCanonicalDisplayName()));
+      Line.replace(matchIndex, 11, !m_CreatorRealm ? "@@@LAN/VPN" : ("@" + m_CreatorRealm->GetCanonicalDisplayName()));
     }
     while ((matchIndex = Line.find("{OWNER}")) != string::npos) {
       Line.replace(matchIndex, 7, m_OwnerName);
