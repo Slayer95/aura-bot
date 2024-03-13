@@ -348,7 +348,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   bool   MapMPQReady = false;
-  HANDLE MapMPQ;
+  void* MapMPQ;
   if (!m_MapLocalPath.empty()) {
     // load the map MPQ
     filesystem::path MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
@@ -412,7 +412,7 @@ void CMap::Load(CConfig* CFG)
 
         if (MapMPQReady)
         {
-          HANDLE SubFile;
+          void* SubFile;
 
           // override common.j
 
@@ -423,7 +423,11 @@ void CMap::Load(CConfig* CFG)
             if (FileLength > 0 && FileLength != 0xFFFFFFFF)
             {
               auto  SubFileData = new char[FileLength];
-              DWORD BytesRead   = 0;
+#ifdef WIN32
+              unsigned long BytesRead = 0;
+#else
+              uint32_t BytesRead = 0;
+#endif
 
               if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
               {
@@ -448,7 +452,7 @@ void CMap::Load(CConfig* CFG)
 
         if (MapMPQReady)
         {
-          HANDLE SubFile;
+          void* SubFile;
 
           // override blizzard.j
 
@@ -459,7 +463,11 @@ void CMap::Load(CConfig* CFG)
             if (FileLength > 0 && FileLength != 0xFFFFFFFF)
             {
               auto  SubFileData = new char[FileLength];
-              DWORD BytesRead   = 0;
+#ifdef WIN32
+              unsigned long BytesRead = 0;
+#else
+              uint32_t BytesRead = 0;
+#endif
 
               if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
               {
@@ -508,7 +516,7 @@ void CMap::Load(CConfig* CFG)
             if (FoundScript && fileName == R"(scripts\war3map.j)")
               continue;
 
-            HANDLE SubFile;
+            void* SubFile;
 
             if (SFileOpenFileEx(MapMPQ, fileName.c_str(), 0, &SubFile))
             {
@@ -517,7 +525,11 @@ void CMap::Load(CConfig* CFG)
               if (FileLength > 0 && FileLength != 0xFFFFFFFF)
               {
                 auto  SubFileData = new char[FileLength];
-                DWORD BytesRead   = 0;
+#ifdef WIN32
+                unsigned long BytesRead = 0;
+#else
+                uint32_t BytesRead = 0;
+#endif
 
                 if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
                 {
@@ -569,7 +581,7 @@ void CMap::Load(CConfig* CFG)
   if (IsPartial) {
     if (MapMPQReady)
     {
-      HANDLE SubFile;
+      void* SubFile;
 
       if (SFileOpenFileEx(MapMPQ, "war3map.w3i", 0, &SubFile))
       {
@@ -578,7 +590,11 @@ void CMap::Load(CConfig* CFG)
         if (FileLength > 0 && FileLength != 0xFFFFFFFF)
         {
           auto  SubFileData = new char[FileLength];
-          DWORD BytesRead   = 0;
+#ifdef WIN32
+          unsigned long BytesRead = 0;
+#else
+          uint32_t BytesRead = 0;
+#endif
 
           if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
           {

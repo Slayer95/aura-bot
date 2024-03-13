@@ -380,7 +380,12 @@ bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& 
 
   if (FileLength > 0 && FileLength != 0xFFFFFFFF) {
     auto  SubFileData = new int8_t[FileLength];
-    DWORD BytesRead   = 0;
+
+#ifdef WIN32
+    unsigned long BytesRead = 0;
+#else
+    uint32_t BytesRead = 0;
+#endif
 
     if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr)) {
       if (FileWrite(outPath, reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
@@ -396,7 +401,7 @@ bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& 
     delete[] SubFileData;
   }
 
-  SFileCloseFile(static_cast<void*>(&SubFile));
+  SFileCloseFile(SubFile);
   return success;
 }
 
