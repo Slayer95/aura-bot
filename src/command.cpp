@@ -1415,8 +1415,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
-    // !PUB (host or rehost as public game)
-    // !PRIV (host or rehost as private game)
+    // !PUB (create or recreate as public game)
+    // !PRIV (create or recreate as private game)
     //
 
     case HashCode("pub"):
@@ -1504,8 +1504,8 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     //
-    // !PUBBY (host public game by other player)
-    // !PRIVBY (host private game by other player)
+    // !PUBBY (create public game by other player)
+    // !PRIVBY (create private game by other player)
     //
 
     case HashCode("pubby"):

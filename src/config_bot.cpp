@@ -65,6 +65,8 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
   m_EnableBNET                   = CFG->GetMaybeBool("bot.toggle_every_realm");
+
+  CFG->Accept("db.storage_file");
 }
 
 CBotConfig::~CBotConfig() = default;

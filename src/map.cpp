@@ -347,15 +347,13 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  bool   MapMPQReady = false;
+  bool  MapMPQReady = false;
   void* MapMPQ;
   if (!m_MapLocalPath.empty()) {
     // load the map MPQ
     filesystem::path MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
-    if (!SFileOpenArchive(MapMPQFilePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MapMPQ)) {
-      Print("[MAP] loading MPQ file [" + MapMPQFilePath.string() + "]");
-      MapMPQReady = true;
-    } else {
+    MapMPQReady = OpenMPQArchive(&MapMPQ, MapMPQFilePath);
+    if (!MapMPQReady) {
 #ifdef _WIN32
       uint32_t ErrorCode = (uint32_t)GetLastError();
       string ErrorCodeString = (
@@ -951,7 +949,6 @@ void CMap::Load(CConfig* CFG)
   m_Slots = Slots;
 
   // if random races is set force every slot's race to random
-  // (per-game setting, don't save it)
 
   if (m_MapFlags & MAPFLAG_RANDOMRACES) {
     Print("[MAP] forcing races to random");

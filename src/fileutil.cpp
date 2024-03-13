@@ -300,7 +300,8 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   vector<string> folderContents = FilesMatch(directory, extensions);
   unordered_set<string> filesSet(folderContents.begin(), folderContents.end());
 
-  // 1. Try inclusions first.
+  // 1. Try files that start with the given pattern (up to digits).
+  //    These have triple weight.
   vector<pair<string, int>> inclusionMatches;
   for (const auto& mapName : filesSet) {
     string cmpName = PreparePatternForFuzzySearch(mapName);
@@ -361,6 +362,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
 
 bool OpenMPQArchive(void** MPQ, const filesystem::path& filePath)
 {
+  Print("[AURA] loading MPQ file [" + filePath.string() + "]");
   return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, MPQ);
 }
 

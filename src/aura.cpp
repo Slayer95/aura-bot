@@ -864,7 +864,6 @@ uint8_t CAura::ExtractScripts()
 
   void* MPQ;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
-    Print("[AURA] loading MPQ file [" + MPQFilePath.string() + "]");
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
     CloseMPQArchive(MPQ);
@@ -942,11 +941,12 @@ void CAura::CacheMapPresets()
 {
   // Preload map configs
   m_CachedMaps.clear();
-  const vector<string> MapConfigFiles = FilesMatch(m_Config->m_MapCFGPath, {".cfg"});
-  for (const auto& MapConfigFile : MapConfigFiles) {
-    string MapLocalPath = CConfig::ReadString(m_Config->m_MapCFGPath / filesystem::path(MapConfigFile), "map_localpath");
-    if (!MapLocalPath.empty()) {
-      m_CachedMaps[MapLocalPath] = MapConfigFile;
+  const vector<string> configFiles = FilesMatch(m_Config->m_MapCFGPath, {".cfg"});
+  for (const auto& cfgName : configFiles) {
+    string localPathString = CConfig::ReadString(m_Config->m_MapCFGPath / filesystem::path(cfgName), "map_localpath");
+    filesystem::path localPath = localPathString;
+    if (!localPath.is_absolute() || localPath.parent_path() == m_Config->m_MapCFGPath) {
+      m_CachedMaps[localPath.filename().string()] = cfgName;
     }
   }
 }
@@ -963,7 +963,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     return false;
   }
 
-  if (!gameSetup->m_Map->GetValid()) {
+  if (!gameSetup->m_Map || !gameSetup->m_Map->GetValid()) {
     gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }

@@ -205,12 +205,12 @@ inline bool isIPv4MappedAddress(const sockaddr_storage* address) {
 inline bool isLoopbackAddress(const sockaddr_storage* address) {
   if (address->ss_family == AF_INET) {
     const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(address);
-    return ((addr4->sin_addr.s_addr & htonl(0xFF000000)) == htonl(INADDR_LOOPBACK));
+    return (addr4->sin_addr.s_addr & htonl(0xFF000000)) == (htonl(INADDR_LOOPBACK) & htonl(0xFF000000));
   } else if (address->ss_family == AF_INET6) {
     const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(address);
     if (isIPv4MappedAddress(addr6)) {
       const in_addr* addr4 = reinterpret_cast<const in_addr*>(addr6->sin6_addr.s6_addr + 12);
-      return ((addr4->s_addr & htonl(0xFF000000)) == htonl(INADDR_LOOPBACK));
+      return (addr4->s_addr & htonl(0xFF000000)) == (htonl(INADDR_LOOPBACK) & htonl(0xFF000000));
     } else {
       return (memcmp(&(addr6->sin6_addr), &in6addr_loopback, sizeof(in6_addr)) == 0);
     }

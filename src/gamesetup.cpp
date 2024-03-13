@@ -313,7 +313,6 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>& fuzzyMatches)
 {
   size_t leastDistance = 255;
-  string closestMatch;
 
   vector<pair<string, int>> allResults;
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
@@ -342,9 +341,9 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
 
   if (m_LuckyMode || allResults.size() == 1) {
     if ((allResults[0].second & 0x80) == 0) {
-      return make_pair(MATCH_TYPE_CONFIG, m_Aura->m_Config->m_MapCFGPath / filesystem::path(closestMatch));
+      return make_pair(MATCH_TYPE_CONFIG, m_Aura->m_Config->m_MapCFGPath / filesystem::path(allResults[0].first));
     } else {
-      return make_pair(MATCH_TYPE_MAP, m_Aura->m_Config->m_MapPath / filesystem::path(closestMatch));
+      return make_pair(MATCH_TYPE_MAP, m_Aura->m_Config->m_MapPath / filesystem::path(allResults[0].first));
     }
   }
 
