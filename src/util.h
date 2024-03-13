@@ -750,4 +750,9 @@ inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& fi
   return fileContents;
 }
 
+inline void NormalizeDirectory(std::filesystem::path& filePath) {
+  filePath += filePath.preferred_separator;
+  filePath = filePath.lexically_normal();
+}
+
 #endif // AURA_UTIL_H_

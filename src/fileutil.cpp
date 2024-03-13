@@ -262,8 +262,7 @@ filesystem::path GetExeDirectory()
 
   filesystem::path executablePath(buffer.data());
   Memoized = executablePath.parent_path();
-  Memoized += Memoized.preferred_separator;
-  Memoized = Memoized.lexically_normal();
+  NormalizeDirectory(Memoized);
   return Memoized;
 }
 

@@ -127,8 +127,6 @@ uint8_t CCLI::Parse(const int argc, char** argv)
     }
   }
 
-  Print("m_ExecScope: " + m_ExecScope);
-
   if (about || examples) {
     if (about) {
       m_EarlyAction = CLI_ACTION_ABOUT;
@@ -138,14 +136,22 @@ uint8_t CCLI::Parse(const int argc, char** argv)
     return CLI_EARLY_RETURN;
   }
 
-  if (!m_UseStandardPaths) {
+  if (m_UseStandardPaths) {
+    if (m_SearchTarget.has_value()) m_SearchTarget = filesystem::absolute(m_SearchTarget.value()).lexically_normal().string();
+    if (m_CFGPath.has_value()) m_CFGPath = filesystem::absolute(m_CFGPath.value());
+    if (m_War3Path.has_value()) m_War3Path = filesystem::absolute(m_War3Path.value());
+    if (m_MapPath.has_value()) m_MapPath = filesystem::absolute(m_MapPath.value());
+    if (m_MapCFGPath.has_value()) m_MapCFGPath = filesystem::absolute(m_MapCFGPath.value());
+  } else {
     if (m_CFGPath.has_value() && !m_CFGPath.value().is_absolute()) m_CFGPath = GetExeDirectory() / m_CFGPath.value();
     if (m_War3Path.has_value() && !m_War3Path.value().is_absolute()) m_War3Path = GetExeDirectory() / m_War3Path.value();
     if (m_MapPath.has_value() && !m_MapPath.value().is_absolute()) m_MapPath = GetExeDirectory() / m_MapPath.value();
     if (m_MapCFGPath.has_value() && !m_MapCFGPath.value().is_absolute()) m_MapCFGPath = GetExeDirectory() / m_MapCFGPath.value();
-  } else {
-    if (m_SearchTarget.has_value()) m_SearchTarget = filesystem::absolute(m_SearchTarget.value()).lexically_normal().string();
   }
+  if (m_CFGPath.has_value()) NormalizeDirectory(m_CFGPath.value());
+  if (m_War3Path.has_value()) NormalizeDirectory(m_War3Path.value());
+  if (m_MapPath.has_value()) NormalizeDirectory(m_MapPath.value());
+  if (m_MapCFGPath.has_value()) NormalizeDirectory(m_MapCFGPath.value());
 
   if (m_SearchTarget.has_value()) {
     if (!m_ExitOnStandby.has_value()) m_ExitOnStandby = true;

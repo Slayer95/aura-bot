@@ -839,10 +839,9 @@ bool CAura::LoadConfigs(CConfig* CFG)
     if (m_GameInstallPath.empty()) {
       optional<string> maybeInstallPath = MaybeReadRegistryKey("InstallPath");
       if (maybeInstallPath.has_value()) {
-        Print("[AURA] Using <game.install_path = " + maybeInstallPath.value() + ">");
         m_GameInstallPath = maybeInstallPath.value();
-        m_GameInstallPath += m_GameInstallPath.preferred_separator;
-        m_GameInstallPath = m_GameInstallPath.lexically_normal();
+        NormalizeDirectory(m_GameInstallPath);
+        Print("[AURA] Using <game.install_path = " + m_GameInstallPath.string() + ">");
       } else {
         // Make sure this error message can be looked up.
         Print("[AURA] Registry error loading key 'Warcraft III\\InstallPath'");
