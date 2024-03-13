@@ -54,7 +54,7 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <unordered_set>
 #include <optional>
 
-#ifdef WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #pragma once
 #include <windows.h>
@@ -82,7 +82,7 @@ vector<string> FilesMatch(const filesystem::path& path, const vector<string>& ex
   set<string> extensions(extensionList.begin(), extensionList.end());
   vector<string> Files;
 
-#ifdef WIN32
+#ifdef _WIN32
   WIN32_FIND_DATAA data;
   HANDLE           handle = FindFirstFileA((path.string() + "\\*").c_str(), &data);
   memset(&data, 0, sizeof(WIN32_FIND_DATAA));
@@ -239,7 +239,7 @@ filesystem::path GetExeDirectory()
     return Memoized;
 
   vector<char> buffer(2048);
-#ifdef WIN32
+#ifdef _WIN32
   DWORD length = 0;
 #else
   ssize_t length = 0;
@@ -247,7 +247,7 @@ filesystem::path GetExeDirectory()
 
   do {
     buffer.resize(buffer.size() * 2);
-#ifdef WIN32
+#ifdef _WIN32
     length = GetModuleFileNameA(nullptr, buffer.data(), buffer.size());
 #else
     length = readlink("/proc/self/exe", buffer.data(), buffer.size());
@@ -381,7 +381,7 @@ bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& 
   if (FileLength > 0 && FileLength != 0xFFFFFFFF) {
     auto  SubFileData = new int8_t[FileLength];
 
-#ifdef WIN32
+#ifdef _WIN32
     unsigned long BytesRead = 0;
 #else
     uint32_t BytesRead = 0;
@@ -405,7 +405,7 @@ bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& 
   return success;
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 optional<string> MaybeReadRegistryKey(const char* keyName)
 {
   optional<string> result;

@@ -247,7 +247,7 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
   Allocate(nFamily, SOCK_STREAM);
 
   // make socket non blocking
-#ifdef WIN32
+#ifdef _WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
 #else
@@ -269,7 +269,7 @@ CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTC
     m_Counter(nCounter)
 {
   // make socket non blocking
-#ifdef WIN32
+#ifdef _WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
 #else
@@ -309,7 +309,7 @@ void CStreamIOSocket::Reset()
 
 // make socket non blocking
 
-#ifdef WIN32
+#ifdef _WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
 #else
@@ -487,7 +487,7 @@ bool CTCPClient::CheckConnect()
 
 // check if the socket is connected
 
-#ifdef WIN32
+#ifdef _WIN32
   if (select(1, nullptr, &fd, nullptr, &tv) == SOCKET_ERROR)
 #else
   if (select(m_Socket + 1, nullptr, &fd, nullptr, &tv) == SOCKET_ERROR)
@@ -519,7 +519,7 @@ CTCPServer::CTCPServer(uint8_t nFamily)
   Allocate(m_Family, SOCK_STREAM);
 
   // make socket non blocking
-#ifdef WIN32
+#ifdef _WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
 #else
@@ -528,7 +528,7 @@ CTCPServer::CTCPServer(uint8_t nFamily)
 
   // set the socket to reuse the address in case it hasn't been released yet
   int32_t optval = 1;
-#ifdef WIN32
+#ifdef _WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(int32_t));
 #else
   setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int32_t));
@@ -732,7 +732,7 @@ void CUDPSocket::SetBroadcastEnabled(const bool nEnable)
   // Broadcast is only defined over IPv4, but a subset of IPv6 maps to IPv6.
 
   int32_t OptVal = nEnable;
-#ifdef WIN32
+#ifdef _WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
 #else
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&OptVal, sizeof(int32_t));
@@ -762,7 +762,7 @@ CUDPServer::CUDPServer(uint8_t nFamily)
   : CUDPSocket(nFamily)
 {
   // make socket non blocking
-#ifdef WIN32
+#ifdef _WIN32
   int32_t iMode = 1;
   ioctlsocket(m_Socket, FIONBIO, (u_long FAR*)&iMode);
 #else
@@ -845,7 +845,7 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
   ADDRESS_LENGTH_TYPE addressLength = sizeof(sockaddr_storage);
 
   int bytesRead = recvfrom(m_Socket, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr*>(address), &addressLength);
-#ifdef WIN32
+#ifdef _WIN32
   if (bytesRead == SOCKET_ERROR) {
     //int error = WSAGetLastError();
 #else

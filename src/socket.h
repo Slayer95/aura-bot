@@ -50,7 +50,7 @@
 
 #include "util.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #include <errno.h>
@@ -157,11 +157,11 @@ typedef int32_t SOCKET;
 #define MSG_NOSIGNAL 0
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #define SHUT_RDWR 2
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #define ADDRESS_LENGTH_TYPE int
 #else
 #define ADDRESS_LENGTH_TYPE socklen_t

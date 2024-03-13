@@ -69,7 +69,7 @@ std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem:
 bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
-#ifdef WIN32
+#ifdef _WIN32
 std::optional<std::string> MaybeReadRegistryKey(const char* keyName);
 #endif
 

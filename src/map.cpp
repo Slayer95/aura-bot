@@ -356,7 +356,7 @@ void CMap::Load(CConfig* CFG)
       Print("[MAP] loading MPQ file [" + MapMPQFilePath.string() + "]");
       MapMPQReady = true;
     } else {
-#ifdef WIN32
+#ifdef _WIN32
       uint32_t ErrorCode = (uint32_t)GetLastError();
       string ErrorCodeString = (
         ErrorCode == 2 ? "Map not found" : (
@@ -423,7 +423,7 @@ void CMap::Load(CConfig* CFG)
             if (FileLength > 0 && FileLength != 0xFFFFFFFF)
             {
               auto  SubFileData = new char[FileLength];
-#ifdef WIN32
+#ifdef _WIN32
               unsigned long BytesRead = 0;
 #else
               uint32_t BytesRead = 0;
@@ -463,7 +463,7 @@ void CMap::Load(CConfig* CFG)
             if (FileLength > 0 && FileLength != 0xFFFFFFFF)
             {
               auto  SubFileData = new char[FileLength];
-#ifdef WIN32
+#ifdef _WIN32
               unsigned long BytesRead = 0;
 #else
               uint32_t BytesRead = 0;
@@ -525,7 +525,7 @@ void CMap::Load(CConfig* CFG)
               if (FileLength > 0 && FileLength != 0xFFFFFFFF)
               {
                 auto  SubFileData = new char[FileLength];
-#ifdef WIN32
+#ifdef _WIN32
                 unsigned long BytesRead = 0;
 #else
                 uint32_t BytesRead = 0;
@@ -590,7 +590,7 @@ void CMap::Load(CConfig* CFG)
         if (FileLength > 0 && FileLength != 0xFFFFFFFF)
         {
           auto  SubFileData = new char[FileLength];
-#ifdef WIN32
+#ifdef _WIN32
           unsigned long BytesRead = 0;
 #else
           uint32_t BytesRead = 0;

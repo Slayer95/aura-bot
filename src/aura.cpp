@@ -75,7 +75,7 @@
 #include <iterator>
 #include <exception>
 
-#ifdef WIN32
+#ifdef _WIN32
 #define NOMINMAX
 #include <ws2tcpip.h>
 #include <winsock.h>
@@ -144,7 +144,7 @@ int main(const int argc, const char* argv[])
   signal(SIGPIPE, SIG_IGN);
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
   // initialize winsock
 
   WSADATA wsadata;
@@ -178,7 +178,7 @@ int main(const int argc, const char* argv[])
   Print("[AURA] shutting down");
   delete gAura;
 
-#ifdef WIN32
+#ifdef _WIN32
   // shutdown winsock
 
   WSACleanup();
@@ -188,7 +188,7 @@ int main(const int argc, const char* argv[])
 
   if (gRestart)
   {
-#ifdef WIN32
+#ifdef _WIN32
     _spawnl(_P_OVERLAY, argv[0], argv[0], nullptr);
 #else
     execl(argv[0], argv[0], nullptr);
@@ -590,7 +590,7 @@ bool CAura::Update()
   send_tv.tv_sec  = 0;
   send_tv.tv_usec = 0;
 
-#ifdef WIN32
+#ifdef _WIN32
   select(1, &fd, nullptr, nullptr, &tv);
   select(1, nullptr, &send_fd, nullptr, &send_tv);
 #else
@@ -820,7 +820,7 @@ bool CAura::LoadConfigs(CConfig* CFG)
   if (m_Config->m_Warcraft3Path.has_value()) {
     m_GameInstallPath = m_Config->m_Warcraft3Path.value();
   } else {
-#ifdef WIN32
+#ifdef _WIN32
     if (m_GameInstallPath.empty()) {
       optional<string> maybeInstallPath = MaybeReadRegistryKey("InstallPath");
       if (maybeInstallPath.has_value()) {
@@ -869,7 +869,7 @@ uint8_t CAura::ExtractScripts()
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
     CloseMPQArchive(MPQ);
   } else {
-#ifdef WIN32
+#ifdef _WIN32
     uint32_t ErrorCode = (uint32_t)GetLastError();
     string ErrorCodeString = (
       ErrorCode == 2 ? "Config error: <game.install_path> is not the WC3 directory" : (
