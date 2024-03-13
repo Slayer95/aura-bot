@@ -863,11 +863,11 @@ uint8_t CAura::ExtractScripts()
   }();
 
   void* MPQ;
-  if (OpenMPQFile(&MPQ, MPQFilePath)) {
+  if (OpenMPQArchive(&MPQ, MPQFilePath)) {
     Print("[AURA] loading MPQ file [" + MPQFilePath.string() + "]");
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
-    CloseMPQFile(MPQ);
+    CloseMPQArchive(MPQ);
   } else {
 #ifdef WIN32
     uint32_t ErrorCode = (uint32_t)GetLastError();

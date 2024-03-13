@@ -359,12 +359,12 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   return fuzzyMatches;
 }
 
-bool OpenMPQFile(void* MPQ, const filesystem::path& filePath)
+bool OpenMPQArchive(void** MPQ, const filesystem::path& filePath)
 {
-  return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, &MPQ);
+  return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, MPQ);
 }
 
-void CloseMPQFile(void* MPQ)
+void CloseMPQArchive(void* MPQ)
 {
   SFileCloseArchive(MPQ);
 }
@@ -372,18 +372,17 @@ void CloseMPQFile(void* MPQ)
 bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& outPath)
 {
   void* SubFile;
-  if (!SFileOpenFileEx(MPQ, R"(Scripts\common.j)", 0, &SubFile)) {
-    Print("[AURA] couldn't find " + string(archiveFile) + " in MPQ file");
+  if (!SFileOpenFileEx(MPQ, archiveFile, 0, &SubFile)) {
     return false;
   }
-  const uint32_t FileLength = SFileGetFileSize(&SubFile, nullptr);
+  const uint32_t FileLength = SFileGetFileSize(SubFile, nullptr);
   bool success = false;
 
   if (FileLength > 0 && FileLength != 0xFFFFFFFF) {
     auto  SubFileData = new int8_t[FileLength];
     DWORD BytesRead   = 0;
 
-    if (SFileReadFile(&SubFile, SubFileData, FileLength, &BytesRead, nullptr)) {
+    if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr)) {
       if (FileWrite(outPath, reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
         Print("[AURA] extracted " + string(archiveFile) + " to [" + outPath.string() + "]");
         success = true;

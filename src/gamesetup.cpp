@@ -698,7 +698,7 @@ bool CGameSetup::LoadMap()
     return false;
   }
   if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
-    if (!m_IsDownloadable || ResolveRemoteMap() != RESOLUTION_OK) {
+    if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable || ResolveRemoteMap() != RESOLUTION_OK) {
       return false;
     }
     if (RunDownload()) {

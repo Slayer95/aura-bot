@@ -66,8 +66,8 @@ bool FileDelete(const std::filesystem::path& File);
 std::filesystem::path GetExeDirectory();
 std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
 std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<std::string>& baseExtensions, const std::string& rawPattern);
-bool OpenMPQFile(void* MPQ, const std::filesystem::path& filePath);
-void CloseMPQFile(void* MPQ);
+bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
+void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
 #ifdef WIN32
 std::optional<std::string> MaybeReadRegistryKey(const char* keyName);
