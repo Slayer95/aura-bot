@@ -52,7 +52,7 @@ CCLI::~CCLI() = default;
 
 uint8_t CCLI::Parse(const int argc, char** argv)
 {
-  CLI::App app{"Warcraft III host bot"};
+  CLI::App app{AURA_APP_NAME};
   argv = app.ensure_utf8(argv);
 
   bool examples = false;
@@ -60,8 +60,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 
   app.option_defaults()->ignore_case();
 
-  app.add_option("target", m_SearchTarget, "Map, config or URI from which to host a game from the CLI.");
-  app.add_option("name", m_GameName, "Name assigned to a game hosted from the CLI.");
+  app.add_option("MAPFILE", m_SearchTarget, "Map, config or URI from which to host a game from the CLI.");
+  app.add_option("GAMENAME", m_GameName, "Name assigned to a game hosted from the CLI.");
 
   app.add_flag("--stdpaths", m_UseStandardPaths, "Makes relative paths resolve from CWD when input through the CLI. Commutative.");
   app.add_flag("--lan,--no-lan{false}", m_LAN, "Show hosted games on Local Area Network.");
@@ -69,8 +69,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag("--exit,--no-exit{false}", m_ExitOnStandby, "Terminates the process when idle.");
   app.add_flag("--cache,--no-cache{false}", m_UseMapCFGCache, "Caches loaded map files into the map configs folder.");
   app.add_flag("--about,--version", about, "Display software information.");
-  app.add_flag("--example,--examples", examples, "Display examples.");
-  // TODO: --help ??
+  app.add_flag("--example,--examples", examples, "Display CLI hosting examples.");
 
   app.add_option("--config", m_CFGPath, "Customizes the main aura config file. Affected by --stdpaths");
   app.add_option("--w3version", m_War3Version, "Customizes the game version.");
@@ -97,7 +96,9 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
-    Print("[AURA] invalid CLI usage: " + string(e.what()));
+    if (0 == app.exit(e)) {
+      return CLI_EARLY_RETURN;
+    }
     return CLI_ERROR;
   } catch (...) {
     Print("[AURA] CLI unhandled exception");
