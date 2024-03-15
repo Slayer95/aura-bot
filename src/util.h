@@ -683,13 +683,13 @@ inline std::string DecodeURIComponent(const std::string& encoded) {
   return decoded.str();
 }
 
-inline std::string GetFileName(const std::string& inputPath) {
+inline std::string ParseFileName(const std::string& inputPath) {
   std::filesystem::path filePath = inputPath;
   return filePath.filename().string();
 }
 
-inline std::string GetFileExtension(const std::string& inputPath) {
-  std::string fileName = GetFileName(inputPath);
+inline std::string ParseFileExtension(const std::string& inputPath) {
+  std::string fileName = ParseFileName(inputPath);
   size_t extIndex = fileName.find_last_of(".");
   if (extIndex == std::string::npos) return std::string();
   std::string extension = fileName.substr(extIndex);
@@ -723,7 +723,7 @@ inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
   std::transform(std::begin(pattern), std::end(pattern), std::begin(pattern), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
-  std::string extension = GetFileExtension(pattern);
+  std::string extension = ParseFileExtension(pattern);
   if (extension == ".w3x" || extension == ".w3m" || extension == ".cfg") {
     pattern = pattern.substr(0, pattern.length() - extension.length());
   }
@@ -732,7 +732,7 @@ inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
 
 inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& filePath) {
   std::ifstream in;
-  in.open(filePath.string(), std::ios::in);
+  in.open(filePath.native().c_str(), std::ios::in);
   std::vector<std::string> fileContents;
   if (!in.fail()) {
     while (!in.eof()) {

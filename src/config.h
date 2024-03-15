@@ -54,6 +54,7 @@
 #include <vector>
 #include <set>
 #include <optional>
+#include <bitset>
 
 //
 // CConfig
@@ -76,7 +77,8 @@ public:
   bool Exists(const std::string& key);
   void Accept(const std::string& key);
   void Delete(const std::string& key);
-  std::vector<std::string> GetInvalidKeys(const bool checkRealmKeys) const;
+  uint8_t CheckRealmKey(const std::string& key) const;
+  std::vector<std::string> GetInvalidKeys(const std::bitset<240> definedRealms) const;
   inline std::filesystem::path GetFile() const { return m_File; };
   inline bool GetErrorLast() const { return m_ErrorLast; };
   inline bool GetSuccess() const { return !m_CriticalError; };
@@ -91,6 +93,7 @@ public:
 
   int32_t GetInt(const std::string& key, int32_t x);
   int32_t GetInt32(const std::string& key, int32_t x);
+  int64_t GetInt64(const std::string& key, int64_t x);
   uint32_t GetUint32(const std::string& key, uint32_t x);
   uint16_t GetUint16(const std::string& key, uint16_t x);
   uint8_t GetUint8(const std::string& key, uint8_t x);
@@ -114,7 +117,8 @@ public:
   std::vector<sockaddr_storage> GetAddressList(const std::string& key, char separator, const std::vector<std::string> x);
 
   std::optional<bool> GetMaybeBool(const std::string& key);
-  std::optional<uint32_t> GetMaybeInt(const std::string& key);
+  std::optional<uint8_t> GetMaybeUint8(const std::string& key);
+  std::optional<int64_t> GetMaybeInt64(const std::string& key);
   std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);
   std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
   std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);
@@ -127,6 +131,7 @@ public:
   void SetString(const std::string& key, const std::string& x);
   void SetBool(const std::string& key, const bool& x);
   void SetInt32(const std::string& key, const int32_t& x);
+  void SetInt64(const std::string& key, const int64_t& x);
   void SetUint32(const std::string& key, const uint32_t& x);
   void SetUint16(const std::string& key, const uint16_t& x);
   void SetUint8(const std::string& key, const uint8_t& x);

@@ -72,6 +72,7 @@ inline int64_t GetTicks()
 inline void Print(const std::string& message) // outputs to console
 {
   std::cout << message << std::endl;
+  std::cout << std::flush;
 }
 
 inline void Print(const char* message)

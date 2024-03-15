@@ -56,6 +56,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <utf8.h>
+
 using namespace std;
 
 #define SUCCESS(T) \
@@ -101,28 +103,33 @@ bool CConfig::Read(const filesystem::path& file)
   in.open(file.c_str(), ios::in);
 
   if (in.fail()) {
-    Print("[CONFIG] warning - unable to read file [" + file.string() + "]");
+    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "]");
     return false;
   }
 
-  Print("[CONFIG] loading file [" + file.string() + "]");
+  Print("[CONFIG] loading file [" + PathToString(file) + "]");
 
-  string Line;
+  string RawLine;
+  int lineCount = 0;
 
   while (!in.eof()) {
-    getline(in, Line);
+    lineCount++;
+    getline(in, RawLine);
+
+    // Strip UTF-8 BOM
+    if (lineCount == 1 && RawLine.length() >= 3 && RawLine[0] == '\xEF' && RawLine[1] == '\xBB' && RawLine[2] == '\xBF') {
+      RawLine = RawLine.substr(3);
+    }
 
     // ignore blank lines and comments
-
-    if (Line.empty() || Line[0] == '#' || Line == "\n") {
+    if (RawLine.empty() || RawLine[0] == '#' || RawLine == "\n") {
       continue;
     }
 
-    // remove newlines and partial newlines to help fix issues with Windows formatted config files on Linux systems
+    // remove CR
+    RawLine.erase(remove(begin(RawLine), end(RawLine), '\r'), end(RawLine));
 
-    Line.erase(remove(begin(Line), end(Line), '\r'), end(Line));
-    Line.erase(remove(begin(Line), end(Line), '\n'), end(Line));
-
+    string Line = RawLine;
     string::size_type Split = Line.find('=');
 
     if (Split == string::npos || Split == 0) {
@@ -162,15 +169,39 @@ void CConfig::Delete(const string& key)
   m_CFG.erase(key);
 }
 
-vector<string> CConfig::GetInvalidKeys(const bool checkRealmKeys) const
+uint8_t CConfig::CheckRealmKey(const string& key) const
+{
+  if (key.length() < 9 || key.substr(0, 6) != "realm_") {
+    return 0xFF;
+  }
+  size_t dotIndex = key.find('.');
+  if (dotIndex == string::npos) {
+    return 0xFF;
+  }
+  string realmNum = key.substr(6, dotIndex - 6);
+  if (realmNum.empty() || realmNum.length() > 3) {
+    return 0xFF;
+  }
+  int32_t value = 0;
+  try {
+    value = stoi(realmNum);
+  } catch (...) {
+  }
+  if (1 <= value && value <= 240)
+    return value - 1;
+
+  return 0xFF;
+}
+
+vector<string> CConfig::GetInvalidKeys(const bitset<240> definedRealms) const
 {
   vector<string> invalidKeys;
   for (const auto& entry : m_CFG) {
-    if (!checkRealmKeys && entry.first.length() >= 9 && entry.first.substr(0, 6) == "realm_") {
-      continue;
-    }
     if (m_ValidKeys.find(entry.first) == m_ValidKeys.end()) {
-      invalidKeys.push_back("<" + entry.first + ">");
+      uint8_t realmKey = CheckRealmKey(entry.first);
+      if (realmKey == 0xFF || definedRealms.test(realmKey)) {
+        invalidKeys.push_back("<" + entry.first + ">");
+      }
     }
   }
   return invalidKeys;
@@ -252,7 +283,25 @@ int32_t CConfig::GetInt32(const string& key, int32_t x)
 
   int32_t Value = x;
   try {
-    Value = atoi(it->second.c_str());
+    Value = stoul(it->second);
+  } catch (...) {
+    CONFIG_ERROR(key, x)
+  }
+
+  SUCCESS(Value)
+}
+
+int64_t CConfig::GetInt64(const string& key, int64_t x)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  int64_t Value = x;
+  try {
+    Value = stoul(it->second);
   } catch (...) {
     CONFIG_ERROR(key, x)
   }
@@ -460,7 +509,14 @@ filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
     SUCCESS(x)
   }
 
-  filesystem::path value = it->second;
+  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
+    CONFIG_ERROR(key, x)
+  }
+
+  wstring widePath;
+  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+
+  filesystem::path value = widePath;
   if (value.is_absolute()) {
     SUCCESS(value)
   }
@@ -478,7 +534,14 @@ filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path
     SUCCESS(defaultDirectory)
   }
 
-  filesystem::path value = it->second;
+  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
+    CONFIG_ERROR(key, x)
+  }
+
+  wstring widePath;
+  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+
+  filesystem::path value = widePath;
   if (value.is_absolute()) {
     NormalizeDirectory(value);
     SUCCESS(value)
@@ -550,10 +613,10 @@ optional<bool> CConfig::GetMaybeBool(const string& key)
   CONFIG_ERROR(key, result)
 }
 
-optional<uint32_t> CConfig::GetMaybeInt(const string& key)
+optional<uint8_t> CConfig::GetMaybeUint8(const string& key)
 {
   m_ValidKeys.insert(key);
-  optional<uint32_t> result;
+  optional<uint8_t> result;
 
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
@@ -561,7 +624,30 @@ optional<uint32_t> CConfig::GetMaybeInt(const string& key)
   }
 
   try {
-    result = atoi(it->second.c_str());
+    int64_t Value = stoul(it->second);
+    if (Value < 0 || 0xFF < Value) {
+      CONFIG_ERROR(key, result)
+    }
+    result = static_cast<uint8_t>(Value);
+  } catch (...) {
+    CONFIG_ERROR(key, result)
+  }
+
+  SUCCESS(result)
+}
+
+optional<int64_t> CConfig::GetMaybeInt64(const string& key)
+{
+  m_ValidKeys.insert(key);
+  optional<int64_t> result;
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
+
+  try {
+    result = stoul(it->second);
   } catch (...) {
     CONFIG_ERROR(key, result)
   }
@@ -598,7 +684,14 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
     SUCCESS(result)
   }
 
-  result = filesystem::path(it->second);
+  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
+    CONFIG_ERROR(key, result)
+  }
+
+  wstring widePath;
+  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+
+  result = filesystem::path(widePath);
   if (result.value().is_absolute()) {
     SUCCESS(result)
   }
@@ -616,7 +709,15 @@ optional<filesystem::path> CConfig::GetMaybeDirectory(const string &key)
     SUCCESS(result)
   }
 
-  result = filesystem::path(it->second);
+  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
+    CONFIG_ERROR(key, result)
+  }
+
+  wstring widePath;
+  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+
+  result = filesystem::path(widePath);
+
   if (result.value().is_absolute()) {
     NormalizeDirectory(result.value());
     SUCCESS(result)
@@ -678,6 +779,11 @@ void CConfig::SetInt32(const string& key, const int32_t& x)
   m_CFG[key] = to_string(x);
 }
 
+void CConfig::SetInt64(const string& key, const int64_t& x)
+{
+  m_CFG[key] = to_string(x);
+}
+
 void CConfig::SetUint32(const string& key, const uint32_t& x)
 {
   m_CFG[key] = to_string(x);
@@ -723,21 +829,26 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
   if (in.fail())
     return Output;
 
-  string Line;
+  string RawLine;
 
+  bool isFirstLine = true;
   while (!in.eof()) {
-    getline(in, Line);
+    getline(in, RawLine);
+
+    if (isFirstLine) {
+      if (RawLine.length() >= 3 && RawLine[0] == '\xEF' && RawLine[1] == '\xBB' && RawLine[2] == '\xBF')
+        RawLine = RawLine.substr(3);
+      isFirstLine = false;
+    }
 
     // ignore blank lines and comments
-
-    if (Line.empty() || Line[0] == '#' || Line == "\n")
+    if (RawLine.empty() || RawLine[0] == '#' || RawLine == "\n")
       continue;
 
-    // remove newlines and partial newlines to help fix issues with Windows formatted config files on Linux systems
+    // remove CR
+    RawLine.erase(remove(begin(RawLine), end(RawLine), '\r'), end(RawLine));
 
-    Line.erase(remove(begin(Line), end(Line), '\r'), end(Line));
-    Line.erase(remove(begin(Line), end(Line), '\n'), end(Line));
-
+    string Line = RawLine;
     string::size_type Split = Line.find('=');
 
     if (Split == string::npos || Split == 0)

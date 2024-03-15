@@ -27,6 +27,7 @@
 #include "util.h"
 #include "net.h"
 #include "fileutil.h"
+#include "map.h"
 
 #include <utility>
 #include <algorithm>
@@ -41,7 +42,7 @@ using namespace std;
 CBotConfig::CBotConfig(CConfig* CFG)
 {
   m_Enabled                      = CFG->GetBool("hosting.enabled", true);
-  m_War3Version                  = CFG->GetMaybeInt("game.version");
+  m_War3Version                  = CFG->GetMaybeUint8("game.version");
   CFG->FailIfErrorLast();
   m_Warcraft3Path                = CFG->GetMaybeDirectory("game.install_path");
   m_MapCFGPath                   = CFG->GetDirectory("bot.map_configs_path", GetExeDirectory());
@@ -51,16 +52,18 @@ CBotConfig::CBotConfig(CConfig* CFG)
 
   m_MinHostCounter               = CFG->GetInt("hosting.namepace.first_game_id", 100);
   m_MaxGames                     = CFG->GetInt("hosting.max_games", 20);
-  m_MaxSavedMapSize              = CFG->GetInt("bot.max_persistent_size", 0xFFFFFFFF);
+  m_EnableDeleteOversizedMaps    = CFG->GetBool("bot.persistence.delete_huge_maps.enabled", false);
+  m_MaxSavedMapSize              = CFG->GetInt("bot.persistence.delete_huge_maps.size", 0x6400); // 25 MiB
 
   optional<filesystem::path> maybeGreeting = CFG->GetMaybePath("bot.greeting_path");
   if (maybeGreeting.has_value() && !maybeGreeting.value().empty()) {
     m_Greeting = ReadChatTemplate(maybeGreeting.value());
   }
 
-  m_StrictSearch                  = CFG->GetBool("bot.load_maps.strict_search", false);
+  m_StrictSearch                 = CFG->GetBool("bot.load_maps.strict_search", false);
   m_MapSearchShowSuggestions     = CFG->GetBool("bot.load_maps.show_suggestions", true);
   m_EnableCFGCache               = CFG->GetBool("bot.load_maps.cache.enabled", true);
+  m_CFGCacheRevalidateAlgorithm  = CFG->GetStringIndex("bot.load_maps.cache.revalidation.algorithm", {"never", "always", "modified"}, CACHE_REVALIDATION_MODIFIED);
 
   m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);
 

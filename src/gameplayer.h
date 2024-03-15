@@ -122,13 +122,14 @@ protected:
   CStreamIOSocket* m_Socket; // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
 
 private:
+  uint16_t                         m_BroadcastPort;                // the port to which the client directly connects (proxy port if it uses a proxy; the hosted game port otherwise)
   std::vector<uint8_t>             m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
   std::vector<uint32_t>            m_Pings;                        // store the last few (10) pings received so we can take an average
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
   std::queue<std::vector<uint8_t>> m_GProxyBuffer;                 // buffer with data used with GProxy++
   std::string                      m_LeftReason;                   // the reason the player left the game
-  uint8_t                          m_JoinedRealmID;
-  std::string                      m_JoinedRealm;                  // the realm the player joined on (probable, can be spoofed)
+  uint8_t                          m_RealmHostCounter;
+  std::string                      m_RealmHostName;                  // the realm the player joined on (probable, can be spoofed)
   std::string                      m_Name;                         // the player's name
   uint32_t                         m_TotalPacketsSent;             // the total number of packets sent to the player
   uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
@@ -202,8 +203,8 @@ public:
   inline bool                  GetQuitGame() const { return m_QuitGame; }
   CRealm*                      GetRealm(bool mustVerify);
   std::string                  GetRealmDataBaseID(bool mustVerify);
-  inline uint8_t               GetRealmID() const { return m_JoinedRealmID; }
-  inline std::string           GetRealmHostName() const { return m_JoinedRealm; }
+  inline uint8_t               GetRealmHostCounter() const { return m_RealmHostCounter; }
+  inline std::string           GetRealmHostName() const { return m_RealmHostName; }
   inline bool                  IsRealmVerified() const { return m_Verified; }
   inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
   inline int64_t               GetJoinTime() const { return m_JoinTime; }

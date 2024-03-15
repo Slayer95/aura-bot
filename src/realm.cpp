@@ -636,7 +636,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
         UserName = Message;
 
       CGamePlayer* AboutPlayer = m_Aura->m_CurrentLobby->GetPlayerFromName(UserName, true);
-      if (AboutPlayer && AboutPlayer->GetRealmID() == m_ServerID) {
+      if (AboutPlayer && AboutPlayer->GetRealmHostCounter() == m_ServerID) {
         // handle spoof checking for current game
         // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
         // at all times you can still /w the bot with "spoofcheck" to manually spoof check

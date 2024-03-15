@@ -329,7 +329,7 @@ bool CMap::SetRandomRaces(const bool nEnable)
 void CMap::Load(CConfig* CFG)
 {
   m_Valid   = true;
-  m_CFGName = CFG->GetFile().filename().string();
+  m_CFGName = PathToString(CFG->GetFile().filename());
   const static string emptyString;
 
   // load the map data
@@ -350,11 +350,27 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
+  optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map_localmtime");
+  optional<int64_t> FileModifiedTime;
+  filesystem::path MapMPQFilePath;
+
+  bool ignoreMPQ = m_MapLocalPath.empty() || !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER;
+  if (!ignoreMPQ) {
+    MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
+    FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
+    ignoreMPQ = (
+      !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED &&
+      CachedModifiedTime.has_value() && FileModifiedTime.has_value() &&
+      FileModifiedTime.value() <= CachedModifiedTime.value()
+    );
+  }
+  if (FileModifiedTime.has_value()) {
+    CFG->SetInt64("map_localmtime", FileModifiedTime.value());
+  }
   bool  MapMPQReady = false;
   void* MapMPQ;
-  if (!m_MapLocalPath.empty()) {
-    // load the map MPQ
-    filesystem::path MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
+  if (!ignoreMPQ) {
+    // load the map MPQ file
     MapMPQReady = OpenMPQArchive(&MapMPQ, MapMPQFilePath);
     if (!MapMPQReady) {
 #ifdef _WIN32
@@ -370,7 +386,7 @@ void CMap::Load(CConfig* CFG)
       int32_t ErrorCode = static_cast<int32_t>(GetLastError());
       string ErrorCodeString = "Error code " + to_string(ErrorCode);
 #endif
-      Print("[MAP] warning - unable to load MPQ file [" + MapMPQFilePath.string() + "] - " + ErrorCodeString);
+      Print("[MAP] warning - unable to load MPQ file [" + PathToString(MapMPQFilePath) + "] - " + ErrorCodeString);
     }
   }
 
@@ -393,14 +409,14 @@ void CMap::Load(CConfig* CFG)
     string CommonJ = FileRead(commonPath, nullptr);
 
     if (CommonJ.empty())
-      Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + commonPath.string() + "]");
+      Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + PathToString(commonPath) + "]");
     else
     {
       filesystem::path blizzardPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
       string BlizzardJ = FileRead(blizzardPath, nullptr);
 
       if (BlizzardJ.empty())
-        Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + blizzardPath.string() + "]");
+        Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + PathToString(blizzardPath) + "]");
       else
       {
         uint32_t Val = 0;
@@ -579,223 +595,222 @@ void CMap::Load(CConfig* CFG)
   uint8_t              MapNumTeams   = 0;
   vector<CGameSlot>    Slots;
 
-  if (IsPartial) {
-    if (MapMPQReady)
+  if (IsPartial && MapMPQReady) {
+    void* SubFile;
+
+    if (SFileOpenFileEx(MapMPQ, "war3map.w3i", 0, &SubFile))
     {
-      void* SubFile;
+      uint32_t FileLength = SFileGetFileSize(SubFile, nullptr);
 
-      if (SFileOpenFileEx(MapMPQ, "war3map.w3i", 0, &SubFile))
+      if (FileLength > 0 && FileLength != 0xFFFFFFFF)
       {
-        uint32_t FileLength = SFileGetFileSize(SubFile, nullptr);
-
-        if (FileLength > 0 && FileLength != 0xFFFFFFFF)
-        {
-          auto  SubFileData = new char[FileLength];
+        auto  SubFileData = new char[FileLength];
 #ifdef _WIN32
-          unsigned long BytesRead = 0;
+        unsigned long BytesRead = 0;
 #else
-          uint32_t BytesRead = 0;
+        uint32_t BytesRead = 0;
 #endif
 
-          if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
+        if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
+        {
+          istringstream ISS(string(SubFileData, BytesRead));
+
+          // war3map.w3i format found at http://www.wc3campaigns.net/tools/specs/index.html by Zepir/PitzerMike
+
+          string   GarbageString;
+          uint32_t FileFormat;
+          uint32_t RawMapFlags;
+          uint32_t RawMapWidth, RawMapHeight;
+          uint32_t RawMapNumPlayers, RawMapNumTeams;
+
+          ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT)
+
+          if (FileFormat == 18 || FileFormat == 25)
           {
-            istringstream ISS(string(SubFileData, BytesRead));
+            ISS.seekg(4, ios::cur);            // number of saves
+            ISS.seekg(4, ios::cur);            // editor version
+            getline(ISS, GarbageString, '\0'); // map name
+            getline(ISS, GarbageString, '\0'); // map author
+            getline(ISS, GarbageString, '\0'); // map description
+            getline(ISS, GarbageString, '\0'); // players recommended
+            ISS.seekg(32, ios::cur);           // camera bounds
+            ISS.seekg(16, ios::cur);           // camera bounds complements
+            ISS.read(reinterpret_cast<char*>(&RawMapWidth), 4);  // map width
+            ISS.read(reinterpret_cast<char*>(&RawMapHeight), 4); // map height
+            ISS.read(reinterpret_cast<char*>(&RawMapFlags), 4);  // flags
+            ISS.seekg(1, ios::cur);            // map main ground type
 
-            // war3map.w3i format found at http://www.wc3campaigns.net/tools/specs/index.html by Zepir/PitzerMike
-
-            string   GarbageString;
-            uint32_t FileFormat;
-            uint32_t RawMapFlags;
-            uint32_t RawMapWidth, RawMapHeight;
-            uint32_t RawMapNumPlayers, RawMapNumTeams;
-
-            ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT)
-
-            if (FileFormat == 18 || FileFormat == 25)
+            if (FileFormat == 18)
+              ISS.seekg(4, ios::cur); // campaign background number
+            else if (FileFormat == 25)
             {
-              ISS.seekg(4, ios::cur);            // number of saves
-              ISS.seekg(4, ios::cur);            // editor version
-              getline(ISS, GarbageString, '\0'); // map name
-              getline(ISS, GarbageString, '\0'); // map author
-              getline(ISS, GarbageString, '\0'); // map description
-              getline(ISS, GarbageString, '\0'); // players recommended
-              ISS.seekg(32, ios::cur);           // camera bounds
-              ISS.seekg(16, ios::cur);           // camera bounds complements
-              ISS.read(reinterpret_cast<char*>(&RawMapWidth), 4);  // map width
-              ISS.read(reinterpret_cast<char*>(&RawMapHeight), 4); // map height
-              ISS.read(reinterpret_cast<char*>(&RawMapFlags), 4);  // flags
-              ISS.seekg(1, ios::cur);            // map main ground type
+              ISS.seekg(4, ios::cur);            // loading screen background number
+              getline(ISS, GarbageString, '\0'); // path of custom loading screen model
+            }
 
-              if (FileFormat == 18)
-                ISS.seekg(4, ios::cur); // campaign background number
-              else if (FileFormat == 25)
+            getline(ISS, GarbageString, '\0'); // map loading screen text
+            getline(ISS, GarbageString, '\0'); // map loading screen title
+            getline(ISS, GarbageString, '\0'); // map loading screen subtitle
+
+            if (FileFormat == 18)
+              ISS.seekg(4, ios::cur); // map loading screen number
+            else if (FileFormat == 25)
+            {
+              ISS.seekg(4, ios::cur);            // used game data set
+              getline(ISS, GarbageString, '\0'); // prologue screen path
+            }
+
+            getline(ISS, GarbageString, '\0'); // prologue screen text
+            getline(ISS, GarbageString, '\0'); // prologue screen title
+            getline(ISS, GarbageString, '\0'); // prologue screen subtitle
+
+            if (FileFormat == 25)
+            {
+              ISS.seekg(4, ios::cur);            // uses terrain fog
+              ISS.seekg(4, ios::cur);            // fog start z height
+              ISS.seekg(4, ios::cur);            // fog end z height
+              ISS.seekg(4, ios::cur);            // fog density
+              ISS.seekg(1, ios::cur);            // fog red value
+              ISS.seekg(1, ios::cur);            // fog green value
+              ISS.seekg(1, ios::cur);            // fog blue value
+              ISS.seekg(1, ios::cur);            // fog alpha value
+              ISS.seekg(4, ios::cur);            // global weather id
+              getline(ISS, GarbageString, '\0'); // custom sound environment
+              ISS.seekg(1, ios::cur);            // tileset id of the used custom light environment
+              ISS.seekg(1, ios::cur);            // custom water tinting red value
+              ISS.seekg(1, ios::cur);            // custom water tinting green value
+              ISS.seekg(1, ios::cur);            // custom water tinting blue value
+              ISS.seekg(1, ios::cur);            // custom water tinting alpha value
+            }
+
+            ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
+            uint8_t ClosedSlots = 0;
+
+            for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
+            {
+              CGameSlot Slot(0, 255, SLOTSTATUS_OPEN, 0, 0, 1, SLOTRACE_RANDOM);
+              uint32_t  Colour, Status, Race;
+              ISS.read(reinterpret_cast<char*>(&Colour), 4); // colour
+              Slot.SetColour(static_cast<uint8_t>(Colour));
+              ISS.read(reinterpret_cast<char*>(&Status), 4); // status
+
+              if (Status == 1)
+                Slot.SetSlotStatus(SLOTSTATUS_OPEN);
+              else if (Status == 2)
               {
-                ISS.seekg(4, ios::cur);            // loading screen background number
-                getline(ISS, GarbageString, '\0'); // path of custom loading screen model
+                Slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
+                Slot.SetComputer(1);
+                Slot.SetComputerType(SLOTCOMP_NORMAL);
+              }
+              else
+              {
+                Slot.SetSlotStatus(SLOTSTATUS_CLOSED);
+                ++ClosedSlots;
               }
 
-              getline(ISS, GarbageString, '\0'); // map loading screen text
-              getline(ISS, GarbageString, '\0'); // map loading screen title
-              getline(ISS, GarbageString, '\0'); // map loading screen subtitle
+              ISS.read(reinterpret_cast<char*>(&Race), 4); // race
 
-              if (FileFormat == 18)
-                ISS.seekg(4, ios::cur); // map loading screen number
-              else if (FileFormat == 25)
-              {
-                ISS.seekg(4, ios::cur);            // used game data set
-                getline(ISS, GarbageString, '\0'); // prologue screen path
+              if (Race == 1)
+                Slot.SetRace(SLOTRACE_HUMAN);
+              else if (Race == 2)
+                Slot.SetRace(SLOTRACE_ORC);
+              else if (Race == 3)
+                Slot.SetRace(SLOTRACE_UNDEAD);
+              else if (Race == 4)
+                Slot.SetRace(SLOTRACE_NIGHTELF);
+              else
+                Slot.SetRace(SLOTRACE_RANDOM);
+
+              ISS.seekg(4, ios::cur);            // fixed start position
+              getline(ISS, GarbageString, '\0'); // player name
+              ISS.seekg(4, ios::cur);            // start position x
+              ISS.seekg(4, ios::cur);            // start position y
+              ISS.seekg(4, ios::cur);            // ally low priorities
+              ISS.seekg(4, ios::cur);            // ally high priorities
+
+              if (Slot.GetSlotStatus() != SLOTSTATUS_CLOSED)
+                Slots.push_back(Slot);
+            }
+
+            ISS.read(reinterpret_cast<char*>(&RawMapNumTeams), 4); // number of teams
+
+            // the bot only cares about the following options: melee, fixed player settings, custom forces
+            // let's not confuse the user by displaying erroneous map options so zero them out now
+            MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
+            Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
+
+            if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
+              MapNumTeams = static_cast<uint8_t>(RawMapNumPlayers);
+            } else {
+              MapNumTeams = static_cast<uint8_t>(RawMapNumTeams);
+            }
+
+            for (uint32_t i = 0; i < MapNumTeams; ++i) {
+              uint32_t Flags;
+              uint32_t PlayerMask = 0;
+
+              if (i < RawMapNumTeams) {
+                ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
+                ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
               }
-
-              getline(ISS, GarbageString, '\0'); // prologue screen text
-              getline(ISS, GarbageString, '\0'); // prologue screen title
-              getline(ISS, GarbageString, '\0'); // prologue screen subtitle
-
-              if (FileFormat == 25)
-              {
-                ISS.seekg(4, ios::cur);            // uses terrain fog
-                ISS.seekg(4, ios::cur);            // fog start z height
-                ISS.seekg(4, ios::cur);            // fog end z height
-                ISS.seekg(4, ios::cur);            // fog density
-                ISS.seekg(1, ios::cur);            // fog red value
-                ISS.seekg(1, ios::cur);            // fog green value
-                ISS.seekg(1, ios::cur);            // fog blue value
-                ISS.seekg(1, ios::cur);            // fog alpha value
-                ISS.seekg(4, ios::cur);            // global weather id
-                getline(ISS, GarbageString, '\0'); // custom sound environment
-                ISS.seekg(1, ios::cur);            // tileset id of the used custom light environment
-                ISS.seekg(1, ios::cur);            // custom water tinting red value
-                ISS.seekg(1, ios::cur);            // custom water tinting green value
-                ISS.seekg(1, ios::cur);            // custom water tinting blue value
-                ISS.seekg(1, ios::cur);            // custom water tinting alpha value
-              }
-
-              ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
-              uint8_t ClosedSlots = 0;
-
-              for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
-              {
-                CGameSlot Slot(0, 255, SLOTSTATUS_OPEN, 0, 0, 1, SLOTRACE_RANDOM);
-                uint32_t  Colour, Status, Race;
-                ISS.read(reinterpret_cast<char*>(&Colour), 4); // colour
-                Slot.SetColour(static_cast<uint8_t>(Colour));
-                ISS.read(reinterpret_cast<char*>(&Status), 4); // status
-
-                if (Status == 1)
-                  Slot.SetSlotStatus(SLOTSTATUS_OPEN);
-                else if (Status == 2)
-                {
-                  Slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
-                  Slot.SetComputer(1);
-                  Slot.SetComputerType(SLOTCOMP_NORMAL);
-                }
-                else
-                {
-                  Slot.SetSlotStatus(SLOTSTATUS_CLOSED);
-                  ++ClosedSlots;
-                }
-
-                ISS.read(reinterpret_cast<char*>(&Race), 4); // race
-
-                if (Race == 1)
-                  Slot.SetRace(SLOTRACE_HUMAN);
-                else if (Race == 2)
-                  Slot.SetRace(SLOTRACE_ORC);
-                else if (Race == 3)
-                  Slot.SetRace(SLOTRACE_UNDEAD);
-                else if (Race == 4)
-                  Slot.SetRace(SLOTRACE_NIGHTELF);
-                else
-                  Slot.SetRace(SLOTRACE_RANDOM);
-
-                ISS.seekg(4, ios::cur);            // fixed start position
-                getline(ISS, GarbageString, '\0'); // player name
-                ISS.seekg(4, ios::cur);            // start position x
-                ISS.seekg(4, ios::cur);            // start position y
-                ISS.seekg(4, ios::cur);            // ally low priorities
-                ISS.seekg(4, ios::cur);            // ally high priorities
-
-                if (Slot.GetSlotStatus() != SLOTSTATUS_CLOSED)
-                  Slots.push_back(Slot);
-              }
-
-              ISS.read(reinterpret_cast<char*>(&RawMapNumTeams), 4); // number of teams
-
-              // the bot only cares about the following options: melee, fixed player settings, custom forces
-              // let's not confuse the user by displaying erroneous map options so zero them out now
-              MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
-              Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
-
               if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
-                MapNumTeams = static_cast<uint8_t>(RawMapNumPlayers);
-              } else {
-                MapNumTeams = static_cast<uint8_t>(RawMapNumTeams);
+                Flags = 0;
+                PlayerMask = 1 << i;
               }
-
-              for (uint32_t i = 0; i < MapNumTeams; ++i) {
-                uint32_t Flags;
-                uint32_t PlayerMask = 0;
-
-                if (i < RawMapNumTeams) {
-                  ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
-                  ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
-                }
-                if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
-                  Flags = 0;
-                  PlayerMask = 1 << i;
-                }
-
-                for (auto& Slot : Slots) {
-                  if ((1 << (Slot).GetColour()) & PlayerMask)
-                    (Slot).SetTeam(static_cast<uint8_t>(i));
-                }
-
-                getline(ISS, GarbageString, '\0'); // team name
-              }
-
-              MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
-              MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
-              MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - ClosedSlots;
-
-              if (MapOptions & MAPOPT_MELEE) {
-                Print("[MAP] found melee map");
-                MapFilterType = MAPFILTER_TYPE_MELEE;
-              }
-
-              if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
-                // make races selectable
-
-                for (auto& Slot : Slots)
-                  (Slot).SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
-              }
-
-              uint32_t SlotNum = 1;
-
-              Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
-              Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
-              Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
-              Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
 
               for (auto& Slot : Slots) {
-                Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
-                ++SlotNum;
+                if ((1 << (Slot).GetColour()) & PlayerMask)
+                  (Slot).SetTeam(static_cast<uint8_t>(i));
               }
+
+              getline(ISS, GarbageString, '\0'); // team name
+            }
+
+            MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
+            MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
+            MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - ClosedSlots;
+
+            if (MapOptions & MAPOPT_MELEE) {
+              Print("[MAP] found melee map");
+              MapFilterType = MAPFILTER_TYPE_MELEE;
+            }
+
+            if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
+              // make races selectable
+
+              for (auto& Slot : Slots)
+                (Slot).SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
+            }
+
+            uint32_t SlotNum = 1;
+
+            Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
+            Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
+            Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
+            Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
+
+            for (auto& Slot : Slots) {
+              Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
+              ++SlotNum;
             }
           }
-          else
-            Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from MPQ file");
-
-          delete[] SubFileData;
         }
+        else
+          Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from MPQ file");
 
-        SFileCloseFile(SubFile);
+        delete[] SubFileData;
       }
-      else
-        Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - couldn't find war3map.w3i in MPQ file");
+
+      SFileCloseFile(SubFile);
+    } else {
+      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - couldn't find war3map.w3i in MPQ file");
     }
-    else
-      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map MPQ file not loaded");
   } else {
-    Print("[MAP] Using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
+    if (!IsPartial) {
+      Print("[MAP] Using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
+    } else if (!MapMPQReady) {
+      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map MPQ file not loaded");
+    }
   }
 
   // close the map MPQ
@@ -861,7 +876,7 @@ void CMap::Load(CConfig* CFG)
 
   m_MapContentMismatch = MapContentMismatch;
   if (!GetValidLinkedMap()) {
-    Print("[MAP] Content mismatch: " + ByteArrayToDecString(MapContentMismatch));
+    Print("[CACHE] Map content mismatch: " + ByteArrayToDecString(MapContentMismatch));
   }
 
   m_MapSiteURL   = CFG->GetString("map_site", emptyString);

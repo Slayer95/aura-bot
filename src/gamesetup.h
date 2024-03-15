@@ -55,6 +55,14 @@
 #define SETUP_USE_STANDARD_PATHS true
 #define SETUP_PROTECT_ARBITRARY_TRAVERSAL false
 
+#ifdef _WIN32
+#define FILE_EXTENSIONS_MAP {L".w3x", L".w3m"}
+#define FILE_EXTENSIONS_CONFIG {L".cfg"}
+#else
+#define FILE_EXTENSIONS_MAP {".w3x", ".w3m"}
+#define FILE_EXTENSIONS_CONFIG {".cfg"}
+#endif
+
 class CAura;
 class CCommandContext;
 class CMap;
@@ -81,7 +89,8 @@ inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::st
 inline std::vector<std::string> GetEpicWarSuggestions(std::string & pattern, uint8_t maxCount)
 {
   std::string searchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
-  Print("[AURA] Downloading <" + searchUri + ">...");
+  Print("[AURA] Looking up suggestions...");
+  Print("[AURA] GET <" + searchUri + ">");
   std::vector<std::string> suggestions;
   auto response = cpr::Get(cpr::Url{searchUri});
   if (response.status_code != 200) {
@@ -91,7 +100,7 @@ inline std::vector<std::string> GetEpicWarSuggestions(std::string & pattern, uin
   std::vector<std::pair<std::string, int>> matchingMaps = ExtractEpicWarMaps(response.text, maxCount);
 
   for (const auto& element : matchingMaps) {
-    suggestions.push_back(element.first + " (epicwar-" + std::to_string(element.second) + "), ");
+    suggestions.push_back(element.first + " (epicwar-" + std::to_string(element.second) + ")");
   }
   return suggestions;
 }
@@ -176,7 +185,7 @@ public:
   bool ApplyMapModifiers(CGameExtraOptions* extraOptions);
   uint8_t ResolveRemoteMap();
   void SetDownloadFilePath(std::filesystem::path&& filePath);
-  bool RunDownload();
+  uint32_t RunDownload();
   bool LoadMap();
   bool SetActive();
   bool RunHost();

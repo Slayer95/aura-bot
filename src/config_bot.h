@@ -32,7 +32,6 @@
 #include <set>
 #include <string>
 #include <map>
-#include <unordered_set>
 
 //
 // CBotConfig
@@ -42,27 +41,29 @@ class CBotConfig
 {
 public:
 
-  bool                                    m_Enabled;                    // set to false to prevent new games from being created
-  std::optional<uint8_t>                  m_War3Version;                // warcraft 3 version
-  std::optional<std::filesystem::path>    m_Warcraft3Path;              // Warcraft 3 path
-  std::filesystem::path                   m_MapCFGPath;                 // map cfg path
-  std::filesystem::path                   m_MapPath;                    // map path
+  bool                                    m_Enabled;                     // set to false to prevent new games from being created
+  std::optional<uint8_t>                  m_War3Version;                 // warcraft 3 version
+  std::optional<std::filesystem::path>    m_Warcraft3Path;               // Warcraft 3 path
+  std::filesystem::path                   m_MapCFGPath;                  // map cfg path
+  std::filesystem::path                   m_MapPath;                     // map path
 
-  std::filesystem::path                   m_GreetingPath;               // the path of the greeting the bot sends to all players joining a game
-  std::vector<std::string>                m_Greeting;                   // read from m_GreetingPath
+  std::filesystem::path                   m_GreetingPath;                // the path of the greeting the bot sends to all players joining a game
+  std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
-  bool                                    m_RTTPings;                   // use LC style pings (divide actual pings by two
+  bool                                    m_RTTPings;                    // use LC style pings (divide actual pings by two
 
-  uint32_t                                m_MinHostCounter;             // defines a subspace for game identifiers
-  uint32_t                                m_MaxGames;                   // maximum number of games in progress
-  uint32_t                                m_MaxSavedMapSize;            // maximum byte size of maps kept persistently in the m_MapPath folder
+  uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
+  uint32_t                                m_MaxGames;                    // maximum number of games in progress
+  bool                                    m_EnableDeleteOversizedMaps;   // may delete maps in m_MapPath exceeding m_MaxSavedMapSize
+  uint32_t                                m_MaxSavedMapSize;             // maximum byte size of maps kept persistently in the m_MapPath folder
 
   bool                                    m_StrictSearch;                // accept only exact paths (no fuzzy searches) for maps, etc.
   bool                                    m_MapSearchShowSuggestions;
-  bool                                    m_EnableCFGCache;             // save read map CFGs to disk
+  bool                                    m_EnableCFGCache;              // save read map CFGs to disk
+  uint8_t                                 m_CFGCacheRevalidateAlgorithm; // always, never, modified
 
   bool                                    m_ExitOnStandby;
-  std::optional<bool>                     m_EnableBNET;                 // master switch to enable/disable ALL bnet configs on startup
+  std::optional<bool>                     m_EnableBNET;                  // master switch to enable/disable ALL bnet configs on startup
   
   explicit CBotConfig(CConfig* CFG);
   ~CBotConfig();

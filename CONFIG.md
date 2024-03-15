@@ -40,7 +40,7 @@ Type: path
 Default value: Empty
 Error handling: Use default value
 
-## \`bot.max_persistent_size\`
+## \`bot.persistence.delete_huge_maps.size\`
 Type: int
 Default value: 4294967295
 Error handling: Use default value

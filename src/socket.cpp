@@ -51,7 +51,7 @@
 
 using namespace std;
 
-#ifndef WIN32
+#ifndef _WIN32
 int32_t GetLastError()
 {
   return errno;
@@ -196,7 +196,7 @@ void CSocket::SetFD(fd_set* fd, fd_set* send_fd, int* nfds)
   FD_SET(m_Socket, fd);
   FD_SET(m_Socket, send_fd);
 
-#ifndef WIN32
+#ifndef _WIN32
   if (m_Socket > *nfds)
     *nfds = m_Socket;
 #endif

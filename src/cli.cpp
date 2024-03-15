@@ -138,7 +138,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   }
 
   if (m_UseStandardPaths) {
-    if (m_SearchTarget.has_value()) m_SearchTarget = filesystem::absolute(m_SearchTarget.value()).lexically_normal().string();
+    if (m_SearchTarget.has_value()) m_SearchTarget = PathToString(filesystem::absolute(m_SearchTarget.value()).lexically_normal());
     if (m_CFGPath.has_value()) m_CFGPath = filesystem::absolute(m_CFGPath.value());
     if (m_War3Path.has_value()) m_War3Path = filesystem::absolute(m_War3Path.value());
     if (m_MapPath.has_value()) m_MapPath = filesystem::absolute(m_MapPath.value());

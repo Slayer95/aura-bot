@@ -51,14 +51,17 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <iostream>
 #include <bitset>
 #include <set>
-#include <unordered_set>
 #include <optional>
+#include <codecvt>
+#include <locale>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #pragma once
 #include <windows.h>
+#define stat _stat
 #else
+#include <sys/stat.h>
 #include <dirent.h>
 #include <cstring>
 #include <unistd.h>
@@ -77,25 +80,73 @@ bool FileExists(const filesystem::path& file)
   return filesystem::exists(file);
 }
 
-vector<string> FilesMatch(const filesystem::path& path, const vector<string>& extensionList)
+#ifdef _WIN32
+wstring GetFileName(const wstring& inputPath) {
+  filesystem::path filePath = inputPath;
+  return filePath.filename().wstring();
+}
+
+wstring GetFileExtension(const wstring& inputPath) {
+  wstring fileName = GetFileName(inputPath);
+  size_t extIndex = fileName.find_last_of(L".");
+  if (extIndex == wstring::npos) return wstring();
+  wstring extension = fileName.substr(extIndex);
+  std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](wchar_t c) {
+    return std::tolower(c);
+  });
+  return extension;
+}
+#else
+string GetFileName(const string& inputPath) {
+  filesystem::path filePath = inputPath;
+  return filePath.filename().string();
+}
+
+string GetFileExtension(const string& inputPath) {
+  string fileName = GetFileName(inputPath);
+  size_t extIndex = fileName.find_last_of(".");
+  if (extIndex == string::npos) return string();
+  string extension = fileName.substr(extIndex);
+  std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  return extension;
+}
+#endif
+
+string PathToString(const filesystem::path& inputPath) {
+#ifdef _WIN32
+  std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+  try {
+    return converter.to_bytes(inputPath.wstring());
+  } catch (...) {
+    return string();
+  }
+#else
+  return inputPath.string();
+#endif
+}
+
+vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<PLATFORM_STRING_TYPE>& extensionList)
 {
-  set<string> extensions(extensionList.begin(), extensionList.end());
-  vector<string> Files;
+  set<PLATFORM_STRING_TYPE> extensions(extensionList.begin(), extensionList.end());
+  vector<filesystem::path> Files;
 
 #ifdef _WIN32
-  WIN32_FIND_DATAA data;
-  HANDLE           handle = FindFirstFileA((path.string() + "\\*").c_str(), &data);
-  memset(&data, 0, sizeof(WIN32_FIND_DATAA));
+  WIN32_FIND_DATAW data;
+  filesystem::path pattern = path / filesystem::path("*");
+  HANDLE           handle = FindFirstFileW(pattern.wstring().c_str(), &data);
+  memset(&data, 0, sizeof(WIN32_FIND_DATAW));
 
   while (handle != INVALID_HANDLE_VALUE) {
-    string Name = string(data.cFileName);
-    transform(begin(Name), end(Name), begin(Name), ::tolower);
-    if (Name != "..") {
-      if (extensions.empty() || extensions.find(GetFileExtension(Name)) != extensions.end()) {
-        Files.push_back(string(data.cFileName));
+    wstring fileName(data.cFileName);
+    transform(begin(fileName), end(fileName), begin(fileName), ::tolower);
+    if (fileName != L"..") {
+      if (extensions.empty() || extensions.find(GetFileExtension(fileName)) != extensions.end()) {
+        Files.emplace_back(fileName);
       }
     }
-    if (FindNextFileA(handle, &data) == FALSE)
+    if (FindNextFileW(handle, &data) == FALSE)
       break;
   }
 
@@ -109,10 +160,10 @@ vector<string> FilesMatch(const filesystem::path& path, const vector<string>& ex
   struct dirent* dp = nullptr;
 
   while ((dp = readdir(dir)) != nullptr) {
-    string Name = string(dp->d_name);
-    transform(begin(Name), end(Name), begin(Name), ::tolower);
-    if (Name != "." && Name != "..") {
-      if (extensions.empty() || extensions.find(GetFileExtension(Name)) != extensions.end()) {
+    string fileName = string(dp->d_name);
+    transform(begin(fileName), end(fileName), begin(fileName), ::tolower);
+    if (fileName != "." && fileName != "..") {
+      if (extensions.empty() || extensions.find(GetFileExtension(fileName)) != extensions.end()) {
         Files.emplace_back(dp->d_name);
       }
     }
@@ -127,11 +178,11 @@ vector<string> FilesMatch(const filesystem::path& path, const vector<string>& ex
 string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, int *byteSize)
 {
   ifstream IS;
-  IS.open(file.c_str(), ios::binary | ios::in);
+  IS.open(file.native().c_str(), ios::binary | ios::in);
 
   if (IS.fail())
   {
-    Print("[UTIL] warning - unable to read file part [" + file.string() + "]");
+    Print("[UTIL] warning - unable to read file part [" + PathToString(file) + "]");
     return string();
   }
 
@@ -168,11 +219,11 @@ string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, i
 string FileRead(const filesystem::path& file, int *byteSize)
 {
   ifstream IS;
-  IS.open(file.c_str(), ios::binary | ios::in);
+  IS.open(file.native().c_str(), ios::binary | ios::in);
 
   if (IS.fail())
   {
-    Print("[UTIL] warning - unable to read file [" + file.string() + "]");
+    Print("[UTIL] warning - unable to read file [" + PathToString(file) + "]");
     return string();
   }
 
@@ -205,11 +256,11 @@ string FileRead(const filesystem::path& file, int *byteSize)
 bool FileWrite(const filesystem::path& file, uint8_t* data, uint32_t length)
 {
   ofstream OS;
-  OS.open(file.c_str(), ios::binary);
+  OS.open(file.native().c_str(), ios::binary);
 
   if (OS.fail())
   {
-    Print("[UTIL] warning - unable to write file [" + file.string() + "]");
+    Print("[UTIL] warning - unable to write file [" + PathToString(file) + "]");
     return false;
   }
 
@@ -222,13 +273,24 @@ bool FileWrite(const filesystem::path& file, uint8_t* data, uint32_t length)
 
 bool FileDelete(const filesystem::path& file)
 {
-  std::error_code e;
-  bool result = std::filesystem::remove(file, e);
+  error_code e;
+  bool result = filesystem::remove(file, e);
   
   if (e) {
-    Print("[AURA] Cannot delete " + file.string() + ". " + e.message());
+    Print("[AURA] Cannot delete " + PathToString(file) + ". " + e.message());
   }
 
+  return result;
+}
+
+optional<int64_t> GetMaybeModifiedTime(const filesystem::path& file)
+{
+  optional<int64_t> result;
+  try {
+    filesystem::file_time_type lastModifiedTime = filesystem::last_write_time(file);
+    result = chrono::duration_cast<chrono::seconds>(lastModifiedTime.time_since_epoch()).count();
+  } catch (...) {
+  }
   return result;
 }
 
@@ -288,38 +350,44 @@ filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const s
   return "";
 }
 
-vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, const vector<string>& baseExtensions, const string& rawPattern)
+vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, const vector<PLATFORM_STRING_TYPE>& baseExtensions, const string& rawPattern)
 {
   // If the pattern has a valid extension, restrict the results to files with that extension.
-  string rawExtension = GetFileExtension(rawPattern);
-  vector<string> extensions;
+#ifdef _WIN32
+  wstring rawExtension = filesystem::path(rawPattern).wstring();
+#else
+  string rawExtension = filesystem::path(rawPattern).string();
+#endif
+  vector<PLATFORM_STRING_TYPE> extensions;
   if (!rawExtension.empty() && find(baseExtensions.begin(), baseExtensions.end(), rawExtension) != baseExtensions.end()) {
-    extensions = vector<string>(1, rawExtension);
+    extensions = vector<PLATFORM_STRING_TYPE>(1, rawExtension);
   } else {
     extensions = baseExtensions;
   }
   string fuzzyPattern = PreparePatternForFuzzySearch(rawPattern);
-  vector<string> folderContents = FilesMatch(directory, extensions);
-  unordered_set<string> filesSet(folderContents.begin(), folderContents.end());
+  vector<filesystem::path> folderContents = FilesMatch(directory, extensions);
+  set<filesystem::path> filesSet(folderContents.begin(), folderContents.end());
 
   // 1. Try files that start with the given pattern (up to digits).
   //    These have triple weight.
   vector<pair<string, int>> inclusionMatches;
   for (const auto& mapName : filesSet) {
-    string cmpName = PreparePatternForFuzzySearch(mapName);
+    string mapString = PathToString(mapName);
+    if (mapName.empty()) continue;
+    string cmpName = PreparePatternForFuzzySearch(mapString);
     size_t fuzzyPatternIndex = cmpName.find(fuzzyPattern);
     if (fuzzyPatternIndex == string::npos) {
       continue;
     }
     bool startsWithPattern = true;
     for (uint8_t i = 0; i < fuzzyPatternIndex; ++i) {
-      if (!isdigit(mapName[i])) {
+      if (!isdigit(mapString[i])) {
         startsWithPattern = false;
         break;
       }
     }
     if (startsWithPattern) {
-      inclusionMatches.push_back(make_pair(mapName, mapName.length() - fuzzyPattern.length()));
+      inclusionMatches.push_back(make_pair(mapString, mapString.length() - fuzzyPattern.length()));
       if (inclusionMatches.size() >= FUZZY_SEARCH_MAX_RESULTS) {
         break;
       }
@@ -337,13 +405,15 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   }
 
   vector<pair<string, int>> distances;
-  for (auto& mapName : filesSet) {
-    string cmpName = RemoveNonAlphanumeric(mapName);
+  for (const auto& mapName : filesSet) {
+    string mapString = PathToString(mapName);
+    if (mapString.empty()) continue;
+    string cmpName = RemoveNonAlphanumeric(mapString);
     transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
     if ((fuzzyPattern.size() <= cmpName.size() + maxDistance) && (cmpName.size() <= maxDistance + fuzzyPattern.size())) {
       string::size_type distance = GetLevenshteinDistance(fuzzyPattern, cmpName); // source to target
       if (distance <= maxDistance) {
-        distances.emplace_back(mapName, distance * 3);
+        distances.emplace_back(mapString, distance * 3);
       }
     }
   }
@@ -364,7 +434,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
 
 bool OpenMPQArchive(void** MPQ, const filesystem::path& filePath)
 {
-  Print("[AURA] loading MPQ file [" + filePath.string() + "]");
+  Print("[AURA] loading MPQ file [" + PathToString(filePath) + "]");
   return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, MPQ);
 }
 
@@ -393,10 +463,10 @@ bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& 
 
     if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr)) {
       if (FileWrite(outPath, reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
-        Print("[AURA] extracted " + string(archiveFile) + " to [" + outPath.string() + "]");
+        Print("[AURA] extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
         success = true;
       } else {
-        Print("[AURA] warning - unable to save extracted " + string(archiveFile) + " to [" + outPath.string() + "]");
+        Print("[AURA] warning - unable to save extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
       }
     } else {
       Print("[AURA] warning - unable to extract " + string(archiveFile) + " from MPQ file");

@@ -49,6 +49,12 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #define FUZZY_SEARCH_MAX_RESULTS 5
 #define FUZZY_SEARCH_MAX_DISTANCE 10
 
+#ifdef _WIN32
+#define PLATFORM_STRING_TYPE std::wstring
+#else
+#define PLATFORM_STRING_TYPE std::string
+#endif
+
 #include "includes.h"
 #include <vector>
 #include <set>
@@ -56,16 +62,21 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <system_error>
 #include <cstdio>
 #include <optional>
+#include <ctime>
 
 bool FileExists(const std::filesystem::path& file);
-std::vector<std::string> FilesMatch(const std::filesystem::path& path, const std::vector<std::string>& extensionList);
+PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
+PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
+std::string PathToString(const std::filesystem::path& file);
+std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
 std::string FileRead(const std::filesystem::path& file, uint32_t start, uint32_t length, int* byteSize);
 std::string FileRead(const std::filesystem::path& file, int* byteSize);
 bool FileWrite(const std::filesystem::path& file, uint8_t* data, uint32_t length);
 bool FileDelete(const std::filesystem::path& File);
+std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
 std::filesystem::path GetExeDirectory();
 std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
-std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<std::string>& baseExtensions, const std::string& rawPattern);
+std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
 bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);

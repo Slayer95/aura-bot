@@ -32,7 +32,6 @@
 #include <set>
 #include <string>
 #include <map>
-#include <unordered_set>
 
 #define MAP_TRANSFERS_NEVER 0
 #define MAP_TRANSFERS_AUTOMATIC 1

@@ -1910,7 +1910,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   if (m_NotifyJoins && m_IgnoredNotifyJoinPlayers.find(joinRequest->GetName()) == m_IgnoredNotifyJoinPlayers.end()) {
     notifyString = "\x07";
   }
-  Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] joined - [" + Player->GetSocket()->GetName() + "] (" + Player->GetIPString() + ")" + notifyString);
+  Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "] joined - [" + Player->GetSocket()->GetName() + "] (" + Player->GetIPString() + ")" + notifyString);
 
   return Player;
 }

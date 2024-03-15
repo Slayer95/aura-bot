@@ -128,7 +128,7 @@ private:
   bool  m_Ready;
 
 public:
-  explicit CSQLITE3(const std::string& filename);
+  explicit CSQLITE3(const std::filesystem::path& filename);
   ~CSQLITE3();
   CSQLITE3(CSQLITE3&) = delete;
 

@@ -60,7 +60,6 @@
 #include <set>
 #include <string>
 #include <map>
-#include <unordered_set>
 #include <algorithm>
 #include <random>
 
@@ -138,6 +137,9 @@ public:
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
 
+  std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;
+  std::map<std::string, CRealm*>                     m_RealmsByUniqueIdentifier;
+
   explicit CAura(CConfig* CFG, CCLI* nCLI);
   ~CAura();
   CAura(CAura&) = delete;
@@ -164,8 +166,7 @@ public:
 
   bool ReloadConfigs();
   bool LoadConfigs(CConfig* CFG);
-  bool LoadCLI(const int argc, char** argv);
-  bool LoadBNETs(CConfig* CFG);
+  bool LoadBNETs(CConfig* CFG, std::bitset<240>& definedConfigs);
 
   uint8_t ExtractScripts();
   bool CopyScripts();

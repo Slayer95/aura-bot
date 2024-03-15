@@ -242,9 +242,10 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
   : m_Protocol(connection->m_Protocol),
     m_Game(nGame),
     m_Socket(connection->GetSocket()),
+    m_BroadcastPort(6112),
     m_IPv4Internal(std::move(nInternalIP)),
-    m_JoinedRealmID(nJoinedRealmID),
-    m_JoinedRealm(std::move(nJoinedRealm)),
+    m_RealmHostCounter(nJoinedRealmID),
+    m_RealmHostName(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
     m_TotalPacketsSent(0),
     m_TotalPacketsReceived(1),
@@ -320,14 +321,14 @@ uint32_t CGamePlayer::GetPing() const
 
 CRealm* CGamePlayer::GetRealm(bool mustVerify)
 {
-  if (m_JoinedRealmID < 0x10)
+  if (m_RealmHostCounter < 0x10)
     return nullptr;
 
   if (mustVerify && !m_Verified) {
     return nullptr;
   }
 
-  return m_Game->m_Aura->GetRealmByHostCounter(m_JoinedRealmID);
+  return m_Game->m_Aura->GetRealmByHostCounter(m_RealmHostCounter);
 }
 
 string CGamePlayer::GetRealmDataBaseID(bool mustVerify)
@@ -353,7 +354,7 @@ bool CGamePlayer::Update(void* fd)
   // wait 4 seconds after joining before sending the /whois or /w
   // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
 
-  if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_JoinedRealm.empty() && Time - m_JoinTime >= 4) {
+  if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Time - m_JoinTime >= 4) {
     CRealm* Realm = GetRealm(false);
     if (Realm) {
       if (m_Game->GetGameState() == GAME_PUBLIC || Realm->GetPvPGN())
@@ -527,7 +528,7 @@ bool CGamePlayer::Update(void* fd)
           CRealm* MyRealm = GetRealm(false);
           if (MyRealm) {
             m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
-          } else if (m_JoinedRealmID == 0) {
+          } else if (m_RealmHostCounter == 0) {
             m_GProxyPort = m_Game->m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 : m_Game->GetHostPort();
           } else {
             m_GProxyPort = 6112;

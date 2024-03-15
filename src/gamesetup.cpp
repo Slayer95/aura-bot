@@ -244,7 +244,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputStandard()
     return make_pair(MATCH_TYPE_INVALID, targetPath);
   }
 
-  string targetExt = GetFileExtension(targetPath.filename().string());
+  string targetExt = ParseFileExtension(PathToString(targetPath.filename()));
   if (targetExt == ".w3m" || targetExt == ".w3x") {
     return make_pair(MATCH_TYPE_MAP, targetPath);
   }
@@ -256,7 +256,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputStandard()
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
 {
-  string fileExtension = GetFileExtension(m_SearchTarget.second);
+  string fileExtension = ParseFileExtension(m_SearchTarget.second);
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
     if (testPath.parent_path() != m_Aura->m_Config->m_MapPath.parent_path()) {
@@ -280,7 +280,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
 {
-  string fileExtension = GetFileExtension(m_SearchTarget.second);
+  string fileExtension = ParseFileExtension(m_SearchTarget.second);
   bool hasExtension = fileExtension == ".w3x" || fileExtension == ".w3m" || fileExtension == ".cfg";
   if (hasExtension) {
     return make_pair(MATCH_TYPE_NONE, filesystem::path());
@@ -316,13 +316,13 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
 
   vector<pair<string, int>> allResults;
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    vector<pair<string, int>> mapResults = FuzzySearchFiles(m_Aura->m_Config->m_MapPath, {".w3x", ".w3m"}, m_SearchTarget.second);
+    vector<pair<string, int>> mapResults = FuzzySearchFiles(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP, m_SearchTarget.second);
     for (const auto& result : mapResults) {
       allResults.push_back(make_pair(result.first, result.second | 0x80));
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    vector<pair<string, int>> cfgResults = FuzzySearchFiles(m_Aura->m_Config->m_MapCFGPath, {".cfg"}, m_SearchTarget.second);
+    vector<pair<string, int>> cfgResults = FuzzySearchFiles(m_Aura->m_Config->m_MapCFGPath, FILE_EXTENSIONS_CONFIG, m_SearchTarget.second);
     allResults.insert(allResults.end(), cfgResults.begin(), cfgResults.end());
   }
   if (allResults.empty()) {
@@ -450,7 +450,7 @@ CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, con
 {
   CConfig MapCFG;
   if (!MapCFG.Read(filePath)) {
-    if (!silent) m_Ctx->ErrorReply("Map config file [" + filePath.filename().string() + "] not found.", CHAT_SEND_SOURCE_ALL);
+    if (!silent) m_Ctx->ErrorReply("Map config file [" + PathToString(filePath.filename()) + "] not found.", CHAT_SEND_SOURCE_ALL);
     return nullptr;
   }
   return GetBaseMapFromConfig(&MapCFG, silent);
@@ -459,7 +459,8 @@ CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, con
 CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const bool silent)
 {
   bool isInMapsFolder = filePath.parent_path() == m_Aura->m_Config->m_MapPath.parent_path();
-  string fileName = filePath.filename().string();
+  string fileName = PathToString(filePath.filename());
+  if (fileName.empty()) return nullptr;
   string baseFileName;
   if (fileName.length() > 6 && fileName[fileName.length() - 6] == '~' && isdigit(fileName[fileName.length() - 5])) {
     baseFileName = fileName.substr(0, fileName.length() - 6) + fileName.substr(fileName.length() - 4);
@@ -470,7 +471,8 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   CConfig MapCFG;
   MapCFG.SetBool("cfg_partial", true);
   MapCFG.Set("map_path", R"(Maps\Download\)" + baseFileName);
-  MapCFG.Set("map_localpath", isInMapsFolder ? fileName : filePath.string());
+  string localPath = isInMapsFolder ? fileName : PathToString(filePath);
+  MapCFG.Set("map_localpath", localPath);
 
   if (m_IsDownloaded) {
     MapCFG.Set("map_site", m_MapSiteUri);
@@ -506,7 +508,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     vector<uint8_t> bytes = MapCFG.Export();
     FileWrite(resolvedCFGPath, bytes.data(), bytes.size());
     m_Aura->m_CachedMaps[fileName] = resolvedCFGName;
-    Print("[AURA] Cached map config for [" + fileName + "] as [" + resolvedCFGPath.string() + "]");
+    Print("[AURA] Cached map config for [" + fileName + "] as [" + PathToString(resolvedCFGPath) + "]");
   }
 
   if (!silent) m_Ctx->SendReply("Map file loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
@@ -515,16 +517,22 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
 
 CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, const bool silent)
 {
-  string fileName = mapPath.filename().string();
+  string fileName = PathToString(mapPath.filename());
+  if (fileName.empty()) return nullptr;
   if (m_Aura->m_Config->m_EnableCFGCache && m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
     string cfgName = m_Aura->m_CachedMaps[fileName];
-    CMap* cachedResult = GetBaseMapFromConfigFile(cfgName, true);
-    if (cachedResult == nullptr || cachedResult->GetMapLocalPath() != fileName) {
-      // Oops! CFG file is gone!
-      m_Aura->m_CachedMaps.erase(fileName);
-    } else {
+    filesystem::path cfgPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path(cfgName);
+    CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true);
+    bool cacheSuccess = false;
+    if (cachedResult && cachedResult->GetMapLocalPath() == fileName && cachedResult->GetValidLinkedMap()) {
+      cacheSuccess = true;
+    }
+    if (cacheSuccess) {
       Print("[DEBUG] Retrieving cached config " + cfgName + " -> " + fileName);
       return cachedResult;
+    } else {
+      delete cachedResult;
+      m_Aura->m_CachedMaps.erase(fileName);
     }
   }
   return GetBaseMapFromMapFile(mapPath, silent);
@@ -560,7 +568,7 @@ uint8_t CGameSetup::ResolveRemoteMap()
   switch (SearchTargetType) {
     case HashCode("epicwar"): {
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;
-      Print("Downloading <" + m_MapSiteUri + ">");
+      Print("GET <" + m_MapSiteUri + ">");
       auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout});
       if (response.status_code != 200) return RESOLUTION_ERR;
       
@@ -591,7 +599,7 @@ uint8_t CGameSetup::ResolveRemoteMap()
     return RESOLUTION_BAD_NAME;
   }
 
-  string fileExtension = GetFileExtension(downloadFileName);
+  string fileExtension = ParseFileExtension(downloadFileName);
   if (fileExtension != ".w3m" && fileExtension != ".w3x") {
     return RESOLUTION_BAD_NAME;
   }
@@ -621,23 +629,23 @@ void CGameSetup::SetDownloadFilePath(filesystem::path&& filePath)
   m_DownloadFilePath = move(filePath);
 }
 
-bool CGameSetup::RunDownload()
+uint32_t CGameSetup::RunDownload()
 {
   if (m_SearchTarget.first != "epicwar") {
     Print("Error!! trying to download from " + m_SearchTarget.first + "!!");
-    return false;
+    return 0;
   }
   if (!m_Aura->m_Net->m_Config->m_AllowDownloads) {
     m_Ctx->ErrorReply("Map downloads are not allowed.", CHAT_SEND_SOURCE_ALL);
-    return false;
+    return 0;
   }
   if (!m_Aura->m_Games.empty()/* && m_Aura->m_Net->m_Config->m_HasBufferBloat*/) {
     // Since the download is synchronous, it will lag active games even without bufferbloat.
     m_Ctx->ErrorReply(string("Currently hosting ") + to_string(m_Aura->m_Games.size()) + " game(s). Downloads are disabled to prevent high latency.", CHAT_SEND_SOURCE_ALL);
-    return false;
+    return 0;
   }
 
-  string fileNameFragmentPost = GetFileExtension(m_BaseDownloadFileName);
+  string fileNameFragmentPost = ParseFileExtension(m_BaseDownloadFileName);
   string fileNameFragmentPre = m_BaseDownloadFileName.substr(0, m_BaseDownloadFileName.length() - fileNameFragmentPost.length());
   bool nameSuccess = false;
   string mapSuffix;
@@ -658,28 +666,29 @@ bool CGameSetup::RunDownload()
       continue;
     }
     SetDownloadFilePath(move(testFilePath));
+    nameSuccess = true;
     break;
   }
   if (!nameSuccess) {
-    m_Ctx->ErrorReply("Download failed - duplicate map name.", CHAT_SEND_SOURCE_ALL);
-    return false;
+    m_Ctx->ErrorReply("Download failed - duplicate map name [" + m_BaseDownloadFileName + "].", CHAT_SEND_SOURCE_ALL);
+    return 0;
   }
-  Print("[AURA] Downloading <" + m_MapDownloadUri + "> as [" + m_DownloadFilePath.filename().string() + "]...");
-  std::ofstream mapFile(m_DownloadFilePath.string(), std::ios_base::out | std::ios_base::binary);
+  Print("[AURA] GET <" + m_MapDownloadUri + "> as [" + PathToString(m_DownloadFilePath.filename()) + "]...");
+  std::ofstream mapFile(m_DownloadFilePath.native().c_str(), std::ios_base::out | std::ios_base::binary);
   if (!mapFile.is_open()) {
     mapFile.close();
     m_Ctx->ErrorReply("Download failed - unable to write to disk.", CHAT_SEND_SOURCE_ALL);
-    return false;
+    return 0;
   }
-  cpr::Response MapResponse = cpr::Download(mapFile, cpr::Url{m_MapDownloadUri}, cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}});
+  cpr::Response response = cpr::Download(mapFile, cpr::Url{m_MapDownloadUri}, cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}});
   mapFile.close();
-  if (MapResponse.status_code != 200) {
+  if (response.status_code != 200) {
     m_Ctx->ErrorReply("Map not found in EpicWar.", CHAT_SEND_SOURCE_ALL);
-    return false;
+    return 0;
   }
 
   m_IsDownloaded = true;
-  return true;
+  return response.downloaded_bytes;
 }
 
 bool CGameSetup::LoadMap()
@@ -693,19 +702,17 @@ bool CGameSetup::LoadMap()
   }
   if (searchResult.first == MATCH_TYPE_INVALID) {
     // Exclusive to standard paths mode.
-    m_Ctx->ErrorReply("Invalid file extension for [" + searchResult.second.filename().string() + "]. Please use --filetype");
+    m_Ctx->ErrorReply("Invalid file extension for [" + PathToString(searchResult.second.filename()) + "]. Please use --filetype");
     return false;
   }
   if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
     if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable || ResolveRemoteMap() != RESOLUTION_OK) {
       return false;
     }
-    if (RunDownload()) {
-      searchResult = SearchInput();
-      if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
-        return false;
-      }
-    }
+    uint32_t downloadSize = RunDownload();
+    if (downloadSize == 0) return false;
+    m_Map = GetBaseMapFromMapFileOrCache(m_DownloadFilePath, false);
+    return true;
   }
   if (searchResult.first == MATCH_TYPE_CONFIG) {
     m_Map = GetBaseMapFromConfigFile(searchResult.second, false);

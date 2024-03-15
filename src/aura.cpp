@@ -72,8 +72,10 @@
 #include <fstream>
 #include <algorithm>
 #include <string>
+#include <bitset>
 #include <iterator>
 #include <exception>
+#include <locale>
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -97,12 +99,15 @@ bool          gRestart = false;
 int main(const int argc, char** argv)
 {
   // seed the PRNG
-
   srand(static_cast<uint32_t>(time(nullptr)));
 
   // disable sync since we don't use cstdio anyway
-
   ios_base::sync_with_stdio(false);
+
+#ifdef _WIN32
+  // print UTF-8 to the console
+  SetConsoleOutputCP(CP_UTF8);
+#endif
 
   CCLI* cliApp = new CCLI();
   uint8_t cliResult = cliApp->Parse(argc, argv);
@@ -154,7 +159,7 @@ int main(const int argc, char** argv)
       exit(1);
   });
 
-#ifndef WIN32
+#ifndef _WIN32
   // disable SIGPIPE since some systems like OS X don't define MSG_NOSIGNAL
 
   signal(SIGPIPE, SIG_IGN);
@@ -255,7 +260,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
   m_CRC->Initialize();
 
   if (!LoadConfigs(CFG)) {
-    Print("[CONFIG] Error: Critical errors found in " + m_ConfigPath.filename().string());
+    Print("[CONFIG] Error: Critical errors found in " + PathToString(m_ConfigPath.filename()));
     m_Ready = false;
     return;
   }
@@ -284,10 +289,11 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
       Print("[AURA] All realms forcibly set to DISABLED <bot.toggle_every_realm = off>");
     }
   }
+  bitset<240> definedRealms;
   if (m_Config->m_EnableBNET.value_or(true)) {
-    LoadBNETs(CFG);
+    LoadBNETs(CFG, definedRealms);
   }
-  vector<string> invalidKeys = CFG->GetInvalidKeys(m_Config->m_EnableBNET.value_or(true));
+  vector<string> invalidKeys = CFG->GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
     Print("[CONFIG] warning - some keys are misnamed: " + JoinVector(invalidKeys, false));
   }
@@ -323,62 +329,94 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
   CacheMapPresets();
 }
 
-bool CAura::LoadBNETs(CConfig* CFG)
+bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
 {
   // load the battle.net connections
   // we're just loading the config data and creating the CRealm classes here, the connections are established later (in the Update function)
 
-  size_t LongestGamePrefixSize = 0;
-  bool IsReload = !m_Realms.empty();
-  for (uint8_t i = 1; i <= 240; ++i) { // uint8_t wraps around and loops forever
-    bool DoResetConnection = false;
+  bool isInvalidConfig = false;
+  map<string, uint8_t> uniqueInputIds;
+  map<string, uint8_t> uniqueNames;
+  vector<CRealmConfig*> realmConfigs(240, nullptr);
+  const bool hasGlobalHostName = CFG->Exists("realm_global.host_name");
+  for (uint8_t i = 1; i <= 240; ++i) {
+    if (!hasGlobalHostName && !CFG->Exists("realm_" + to_string(i) + ".host_name")) {
+      continue;
+    }
     CRealmConfig* ThisConfig = new CRealmConfig(CFG, m_RealmDefaultConfig, i);
     if (m_Config->m_EnableBNET.has_value()) {
       ThisConfig->m_Enabled = m_Config->m_EnableBNET.value();
     }
-    if (ThisConfig->m_HostName.empty()) {
-      delete ThisConfig;
-      continue;
-    }
     if (ThisConfig->m_UserName.empty() || ThisConfig->m_PassWord.empty()) {
-      if (!IsReload && ThisConfig->m_Enabled) {
-        Print("[AURA] server #" + to_string(i) + " ignored [" + ThisConfig->m_UniqueName + "] - username and/or password missing");
-      }
+      ThisConfig->m_Enabled = false;
+    }
+    if (!ThisConfig->m_Enabled) {
       delete ThisConfig;
-      continue;
-    }
-    if (IsReload && i < m_Realms.size()) {
-      if (ThisConfig->m_HostName != m_Realms[i - 1]->GetServer()) {
-        Print("[AURA] ignoring update for battle.net config #" + to_string(i) + "; host_name mismatch - expected [" + m_Realms[i - 1]->GetServer() + "], but got " + ThisConfig->m_HostName);
-        delete ThisConfig;
-        continue;
-      }
-      DoResetConnection = m_Realms[i]->GetLoginName() != ThisConfig->m_UserName || m_Realms[i]->GetEnabled() && !ThisConfig->m_Enabled;
-      m_Realms[i]->SetConfig(ThisConfig);
-    }
-
-    if (ThisConfig->m_CDKeyROC.length() != 26 || ThisConfig->m_CDKeyTFT.length() != 26)
-      Print("[BNET: " + ThisConfig->m_UniqueName + "] warning - your CD keys are not 26 characters long - probably invalid");
-
-    if (ThisConfig->m_GamePrefix.length() > LongestGamePrefixSize)
-      LongestGamePrefixSize = ThisConfig->m_GamePrefix.length();
-
-    for (auto& RootAdmin : ThisConfig->m_RootAdmins) {
-      m_DB->RootAdminAdd(ThisConfig->m_DataBaseID, RootAdmin);
-    }
-
-    if (IsReload && i < m_Realms.size()) {
-      Print("[AURA] server #" + to_string(i) + " reloaded [" + ThisConfig->m_UniqueName + "]");
-      if (DoResetConnection) {
-        m_Realms[i]->ResetConnection(false);
-      }
+    } else if (uniqueNames.find(ThisConfig->m_UniqueName) != uniqueNames.end()) {
+      Print("[CONFIG] <realm_" + to_string(uniqueNames.at(ThisConfig->m_UniqueName) + 1) + ".unique_name> must be different from <realm_" + to_string(i) + ".unique_name>");
+      isInvalidConfig = true;
+      delete ThisConfig;
+    } else if (uniqueInputIds.find(ThisConfig->m_InputID) != uniqueInputIds.end()) {
+      Print("[CONFIG] <realm_" + to_string(uniqueNames.at(ThisConfig->m_UniqueName) + 1) + ".input_id> must be different from <realm_" + to_string(i) + ".input_id>");
+      isInvalidConfig = true;
+      delete ThisConfig;
     } else {
-      Print("[AURA] server #" + to_string(i) + " found [" + ThisConfig->m_UniqueName + "]");
-      m_Realms.push_back(new CRealm(this, ThisConfig));
+      uniqueNames[ThisConfig->m_UniqueName] = i - 1;
+      uniqueInputIds[ThisConfig->m_InputID] = i - 1;
+      realmConfigs[i - 1] = ThisConfig;
+      definedRealms.set(i - 1);
     }
   }
 
-  m_MaxGameNameSize = 31 - LongestGamePrefixSize;
+  if (isInvalidConfig) {
+    for (auto& realmConfig : realmConfigs) {
+      delete realmConfig;
+    }
+    return false;
+  }
+
+  m_RealmsByHostCounter.clear();
+  uint8_t i = m_Realms.size();
+  while (i--) {
+    string inputID = m_Realms[i]->GetInputID();
+    if (uniqueInputIds.find(inputID) == uniqueInputIds.end()) {
+      delete m_Realms[i];
+      m_RealmsByUniqueIdentifier.erase(inputID);
+      m_Realms.erase(m_Realms.begin() + i);
+    }
+  }
+
+  size_t longestGamePrefixSize = 0;
+  for (const auto& entry : uniqueInputIds) {
+    CRealm* matchingRealm = GetRealmByInputId(entry.first);
+    CRealmConfig* realmConfig = realmConfigs[entry.second];
+    if (matchingRealm == nullptr) {
+      matchingRealm = new CRealm(this, realmConfig);
+      m_Realms.push_back(matchingRealm);
+      m_RealmsByUniqueIdentifier[entry.first] = matchingRealm;
+      Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
+    } else {
+      bool DoResetConnection = (
+        matchingRealm->GetServer() != realmConfig->m_HostName ||
+        matchingRealm->GetLoginName() != realmConfig->m_UserName ||
+        matchingRealm->GetEnabled() && !realmConfig->m_Enabled
+      );
+      matchingRealm->SetConfig(realmConfig);
+      if (DoResetConnection) matchingRealm->ResetConnection(false);
+      Print("[AURA] server reloaded: " + matchingRealm->GetUniqueDisplayName());
+    }
+
+    if (realmConfig->m_GamePrefix.length() > longestGamePrefixSize)
+      longestGamePrefixSize = realmConfig->m_GamePrefix.length();
+
+    for (auto& rootAdmin : realmConfig->m_RootAdmins) {
+      m_DB->RootAdminAdd(realmConfig->m_DataBaseID, rootAdmin);
+    }
+
+    m_RealmsByHostCounter[matchingRealm->GetHostCounterID()] = matchingRealm;
+  }
+
+  m_MaxGameNameSize = 31 - longestGamePrefixSize;
   return true;
 }
 
@@ -398,7 +436,7 @@ bool CAura::CopyScripts()
     try {
       filesystem::copy_file(manuallyExtractedCommonPath, autoExtractedCommonPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
-      Print("[AURA] File system error at " + manuallyExtractedCommonPath.string() + ": " + string(e.what()));
+      Print("[AURA] File system error at " + PathToString(manuallyExtractedCommonPath) + ": " + string(e.what()));
       return false;
     }
   }
@@ -407,7 +445,7 @@ bool CAura::CopyScripts()
     try {
       filesystem::copy_file(manuallyExtractedBlizzardPath, autoExtractedBlizzardPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
-      Print("[AURA] File system error at " + manuallyExtractedBlizzardPath.string() + ": " + string(e.what()));
+      Print("[AURA] File system error at " + PathToString(manuallyExtractedBlizzardPath) + ": " + string(e.what()));
       return false;
     }
   }
@@ -778,11 +816,12 @@ bool CAura::ReloadConfigs()
     Print("[CONFIG] error - bot configuration invalid: not reloaded");
     success = false;
   }
-  if (!LoadBNETs(CFG)) {
+  bitset<240> definedRealms;
+  if (!LoadBNETs(CFG, definedRealms)) {
     Print("[CONFIG] error - realms misconfigured: not reloaded");
     success = false;
   }
-  vector<string> invalidKeys = CFG->GetInvalidKeys(true);
+  vector<string> invalidKeys = CFG->GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
     Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinVector(invalidKeys, false));
   }
@@ -841,7 +880,7 @@ bool CAura::LoadConfigs(CConfig* CFG)
       if (maybeInstallPath.has_value()) {
         m_GameInstallPath = maybeInstallPath.value();
         NormalizeDirectory(m_GameInstallPath);
-        Print("[AURA] Using <game.install_path = " + m_GameInstallPath.string() + ">");
+        Print("[AURA] Using <game.install_path = " + PathToString(m_GameInstallPath) + ">");
       } else {
         // Make sure this error message can be looked up.
         Print("[AURA] Registry error loading key 'Warcraft III\\InstallPath'");
@@ -861,12 +900,6 @@ bool CAura::LoadConfigs(CConfig* CFG)
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
   return true;
 }
-
-/*bool CAura::LoadCLI(const int argc, char** argv)
-{
-  // CLI overrides Config overrides Registry
-  return m_CLI->Parse(argc, argv);
-}*/
 
 uint8_t CAura::ExtractScripts()
 {
@@ -897,7 +930,7 @@ uint8_t CAura::ExtractScripts()
     int32_t ErrorCode = static_cast<int32_t>(GetLastError());
     string ErrorCodeString = "Error code " + to_string(ErrorCode);
 #endif
-    Print("[AURA] warning - unable to load MPQ file [" + MPQFilePath.string() + "] - " + ErrorCodeString);
+    Print("[AURA] warning - unable to load MPQ file [" + PathToString(MPQFilePath) + "] - " + ErrorCodeString);
   }
 
   return FilesExtracted;
@@ -907,7 +940,7 @@ void CAura::LoadIPToCountryData()
 {
   ifstream in;
   filesystem::path GeoFilePath = GetExeDirectory() / filesystem::path("ip-to-country.csv");
-  in.open(GeoFilePath.string(), ios::in);
+  in.open(GeoFilePath.native().c_str(), ios::in);
 
   if (in.fail()) {
     Print("[AURA] warning - unable to read file [ip-to-country.csv], geolocalization data not loaded");
@@ -957,12 +990,16 @@ void CAura::CacheMapPresets()
 {
   // Preload map configs
   m_CachedMaps.clear();
-  const vector<string> configFiles = FilesMatch(m_Config->m_MapCFGPath, {".cfg"});
+  const vector<filesystem::path> configFiles = FilesMatch(m_Config->m_MapCFGPath, FILE_EXTENSIONS_CONFIG);
   for (const auto& cfgName : configFiles) {
-    string localPathString = CConfig::ReadString(m_Config->m_MapCFGPath / filesystem::path(cfgName), "map_localpath");
+    string localPathString = CConfig::ReadString(m_Config->m_MapCFGPath / cfgName, "map_localpath");
     filesystem::path localPath = localPathString;
-    if (!localPath.is_absolute() || localPath.parent_path() == m_Config->m_MapCFGPath.parent_path()) {
-      m_CachedMaps[localPath.filename().string()] = cfgName;
+    localPath = localPath.lexically_normal();
+    if (!localPath.is_absolute() || localPath.parent_path() == m_Config->m_MapPath.parent_path()) {
+      string mapString = PathToString(localPath.filename());
+      string cfgString = PathToString(cfgName);
+      if (mapString.empty() || cfgString.empty()) continue;
+      m_CachedMaps[mapString] = cfgString;
     }
   }
 }
@@ -1022,12 +1059,12 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     string AnnounceText;
     if (gameSetup->GetIsMirror()) {
       AnnounceText = (
-        string("[1.") + to_string(m_GameVersion) + ".x] Mirroring " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + GetFileName(gameSetup->m_Map->GetMapLocalPath()) +
+        string("[1.") + to_string(m_GameVersion) + ".x] Mirroring " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
         ": \"" + bnet->GetPrefixedGameName(gameSetup->m_GameName) + "\")"
       );
     } else {
       AnnounceText = (
-        string("[1.") + to_string(m_GameVersion) + ".x] Hosting " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + GetFileName(gameSetup->m_Map->GetMapLocalPath()) +
+        string("[1.") + to_string(m_GameVersion) + ".x] Hosting " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
         ". (Started by " + gameSetup->m_GameOwner.first + ": \"" + bnet->GetPrefixedGameName(gameSetup->m_GameName) + "\")"
       );
     }

@@ -32,7 +32,6 @@
 #include <set>
 #include <string>
 #include <map>
-#include <unordered_set>
 
 //
 // CGameConfig

@@ -34,7 +34,6 @@
 #include <string>
 #include <optional>
 #include <map>
-#include <unordered_set>
 
 struct sockaddr_storage;
 

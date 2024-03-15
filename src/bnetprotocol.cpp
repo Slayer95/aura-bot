@@ -549,9 +549,9 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const st
     AppendByteArrayFast(packet, StatString);               // Stat String
     packet.push_back(0);                                   // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
     AssignLength(packet);
-  }
-  else
+  } else {
     Print("[BNETPROTO] invalid parameters passed to SEND_SID_STARTADVEX3");
+  }
 
   return packet;
 }

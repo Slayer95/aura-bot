@@ -3519,49 +3519,51 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      vector<string> AllMaps = FilesMatch(m_Aura->m_Config->m_MapPath, {".w3x", ".w3m"});
+      vector<filesystem::path> AllMaps = FilesMatch(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP);
       int counter = 0;
       
-      for (const auto& FileName : AllMaps) {
-        if (CommandHash != HashCode("synccfg") && m_Aura->m_CachedMaps.find(FileName) != m_Aura->m_CachedMaps.end()) {
+      for (const auto& fileName : AllMaps) {
+        string nameString = PathToString(fileName);
+        if (nameString.empty()) continue;
+        if (CommandHash != HashCode("synccfg") && m_Aura->m_CachedMaps.find(nameString) != m_Aura->m_CachedMaps.end()) {
           continue;
         }
-        if (FileName.find(Payload) == string::npos) {
+        if (nameString.find(Payload) == string::npos) {
           continue;
         }
-        if (!FileExists(m_Aura->m_Config->m_MapPath / filesystem::path(FileName))) {
+        if (!FileExists(m_Aura->m_Config->m_MapPath / fileName)) {
           continue;
         }
 
         CConfig MapCFG;
         MapCFG.Set("cfg_partial", "1");
-        MapCFG.Set("map_path", R"(Maps\Download\)" + FileName);
-        MapCFG.Set("map_localpath", FileName);
-        if (FileName.find("_evrgrn32") != string::npos) {
+        MapCFG.Set("map_path", R"(Maps\Download\)" + nameString);
+        MapCFG.Set("map_localpath", nameString);
+        if (nameString.find("_evrgrn32") != string::npos) {
           MapCFG.Set("map_site", "https://www.hiveworkshop.com/threads/351924/");
         } else {
           MapCFG.Set("map_site", "");
         }
         MapCFG.Set("map_url", "");
-        if (FileName.find("_evrgrn32") != string::npos) {
+        if (nameString.find("_evrgrn32") != string::npos) {
           MapCFG.Set("map_shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
         } else {
           MapCFG.Set("map_shortdesc", "");
         }
         MapCFG.Set("downloaded_by", m_FromName);
 
-        if (FileName.find("DotA") != string::npos)
+        if (nameString.find("DotA") != string::npos)
           MapCFG.Set("map_type", "dota");
 
         CMap* ParsedMap = new CMap(m_Aura, &MapCFG);
         delete ParsedMap;
 
-        string CFGName = "local-" + FileName + ".cfg";
+        string CFGName = "local-" + nameString + ".cfg";
         filesystem::path CFGPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path(CFGName);
 
         vector<uint8_t> OutputBytes = MapCFG.Export();
         FileWrite(CFGPath, OutputBytes.data(), OutputBytes.size());
-        m_Aura->m_CachedMaps[FileName] = CFGName;
+        m_Aura->m_CachedMaps[nameString] = CFGName;
         counter++;
       }
       SendReply("Initialized " + to_string(counter) + " map config files.");
@@ -3580,8 +3582,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, {".w3m", ".w3x"}).size();
-      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, {".cfg"}).size();
+      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP).size();
+      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, FILE_EXTENSIONS_CONFIG).size();
 
       SendReply(to_string(MapCount) + " maps on disk, " + to_string(CFGCount) + " presets on disk, " + to_string(m_Aura->m_CachedMaps.size()) + " preloaded.");
       return;

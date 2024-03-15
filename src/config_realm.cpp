@@ -149,8 +149,8 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_InputID                = CFG->GetString(m_CFGKeyPrefix + "input_id", m_UniqueName); // expected unique
   transform(begin(m_InputID), end(m_InputID), begin(m_InputID), ::tolower);
   m_DataBaseID             = CFG->GetString(m_CFGKeyPrefix + "db_id", m_HostName); // may be shared by several servers
-  m_CDKeyROC               = CFG->GetString(m_CFGKeyPrefix + "cd_key.roc", "FFFFFFFFFFFFFFFFFFFFFFFFFF");
-  m_CDKeyTFT               = CFG->GetString(m_CFGKeyPrefix + "cd_key.tft", "FFFFFFFFFFFFFFFFFFFFFFFFFF");
+  m_CDKeyROC               = CFG->GetString(m_CFGKeyPrefix + "cd_key.roc", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
+  m_CDKeyTFT               = CFG->GetString(m_CFGKeyPrefix + "cd_key.tft", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
 
   // remove dashes and spaces from CD keys and convert to uppercase
   m_CDKeyROC.erase(remove(begin(m_CDKeyROC), end(m_CDKeyROC), '-'), end(m_CDKeyROC));
@@ -206,7 +206,7 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
   m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
-  m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
+  m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
   m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
