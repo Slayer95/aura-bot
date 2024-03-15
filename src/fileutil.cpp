@@ -300,17 +300,18 @@ filesystem::path GetExeDirectory()
   if (!Memoized.empty())
     return Memoized;
 
-  vector<char> buffer(2048);
 #ifdef _WIN32
+  vector<wchar_t> buffer(2048);
   DWORD length = 0;
 #else
+  vector<char> buffer(2048);
   ssize_t length = 0;
 #endif
 
   do {
     buffer.resize(buffer.size() * 2);
 #ifdef _WIN32
-    length = GetModuleFileNameA(nullptr, buffer.data(), buffer.size());
+    length = GetModuleFileNameW(nullptr, buffer.data(), buffer.size());
 #else
     length = readlink("/proc/self/exe", buffer.data(), buffer.size());
 #endif

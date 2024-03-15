@@ -154,6 +154,8 @@ private:
   std::string            m_MapShortDesc;
   std::string            m_MapData;       // the map data itself, for sending the map to players
   uint32_t               m_MapOptions;
+  uint32_t               m_MapEditorVersion;
+  uint8_t                m_MapMinGameVersion;
   uint8_t                m_MapNumPlayers; // config value: max map number of players
   uint8_t                m_MapNumTeams;   // config value: max map number of teams
   uint8_t                m_MapSpeed;
@@ -206,15 +208,12 @@ public:
   bool                          SetRandomHeroes(const bool nEnable);
   bool                          SetMapVisibility(const uint8_t nMapVisibility);
   bool                          SetMapObservers(const uint8_t nMapObservers);
-
-  void                          OpenObserverSlots();
-  void                          CloseObserverSlots();
   bool                          SetForcedRandomRaceSlots();
   bool                          SetSelectableSlots();
 
   void Load(CConfig* CFG);
   bool UnlinkFile();
-  const char* CheckValid();
+  std::string CheckProblems();
   uint32_t XORRotateLeft(uint8_t* data, uint32_t length);
 };
 

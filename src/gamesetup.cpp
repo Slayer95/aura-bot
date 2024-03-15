@@ -136,6 +136,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
 
     m_IsDownloadable(false),
     m_IsDownloaded(false),
+    m_MapDownloadSize(0),
 
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
@@ -437,9 +438,9 @@ CMap* CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
     if (!silent) m_Ctx->ErrorReply("Failed to load map config", CHAT_SEND_SOURCE_ALL);
     return nullptr;
   }
-  const char* errorMessage = map->CheckValid();
-  if (errorMessage) {
-    if (!silent) m_Ctx->ErrorReply("Failed to load map config: " + string(errorMessage), CHAT_SEND_SOURCE_ALL);
+  string errorMessage = map->CheckProblems();
+  if (!errorMessage.empty()) {
+    if (!silent) m_Ctx->ErrorReply("Failed to load map config: " + errorMessage, CHAT_SEND_SOURCE_ALL);
     delete map;
     return nullptr;
   }
@@ -489,9 +490,9 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     if (!silent) m_Ctx->ErrorReply("Failed to load map.", CHAT_SEND_SOURCE_ALL);
     return nullptr;
   }
-  const char* errorMessage = baseMap->CheckValid();
-  if (errorMessage) {
-    if (!silent) m_Ctx->ErrorReply("Failed to load map: " + string(errorMessage), CHAT_SEND_SOURCE_ALL);
+  string errorMessage = baseMap->CheckProblems();
+  if (!errorMessage.empty()) {
+    if (!silent) m_Ctx->ErrorReply("Failed to load map: " + errorMessage, CHAT_SEND_SOURCE_ALL);
     delete baseMap;
     return nullptr;
   }

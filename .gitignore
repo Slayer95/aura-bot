@@ -45,8 +45,10 @@ config*.ini
 *.pdb
 !config-example.ini
 mapcfgs/
+mapcfgs_old/
 Debug/
 Share/
+Share*
 src/Debug
 src/Release
 bncsutil/vc8_build/Release

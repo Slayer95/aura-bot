@@ -149,6 +149,7 @@ public:
   bool                                            m_IsDownloaded;
   std::string                                     m_BaseDownloadFileName;
   std::string                                     m_MapDownloadUri;
+  uint32_t                                        m_MapDownloadSize;
   std::string                                     m_MapSiteUri;
   std::filesystem::path                           m_DownloadFilePath;
 

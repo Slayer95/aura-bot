@@ -196,6 +196,12 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_PublicHostAddress = AddressToIPv4Vector(&(nGameSetup->m_RealmsAddress));
     m_PublicHostPort = GetAddressPort(&(nGameSetup->m_RealmsAddress));
   }
+
+  if (m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES) {
+    OpenObserverSlots();
+  } else {
+    CloseObserverSlots();
+  }
 }
 
 CGame::~CGame()
@@ -3706,6 +3712,29 @@ void CGame::StopLaggers(const string& reason)
       player->SetLeftReason(reason);
       player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
+  }
+}
+
+void CGame::OpenObserverSlots()
+{
+  if (m_Slots.size() >= m_Aura->m_MaxSlots) return;
+  Print(GetLogPrefix() + "adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
+  while (m_Slots.size() < m_Aura->m_MaxSlots)
+    m_Slots.emplace_back(0, 255, SLOTSTATUS_OPEN, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+}
+
+void CGame::CloseObserverSlots()
+{
+  uint8_t count = 0;
+  uint8_t i = static_cast<uint8_t>(m_Slots.size());
+  while (i--) {
+    if (m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
+      m_Slots.erase(m_Slots.begin() + i);
+      ++count;
+    }
+  }
+  if (count > 0) {
+    Print(GetLogPrefix() + "deleted " + to_string(count) + " observer slots");
   }
 }
 

@@ -266,6 +266,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     return;
   }
   nCLI->OverrideConfig(this);
+  OnLoadConfigs();
   if (m_GameVersion == 0) {
     Print("[CONFIG] Game version and path are missing.");
     m_Ready = false;
@@ -295,23 +296,6 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
   if (m_Config->m_EnableBNET.value_or(true)) {
     LoadBNETs(CFG, definedRealms);
   }
-  vector<string> invalidKeys = CFG->GetInvalidKeys(definedRealms);
-  if (!invalidKeys.empty()) {
-    Print("[CONFIG] warning - some keys are misnamed: " + JoinVector(invalidKeys, false));
-  }
-
-  if (m_Realms.empty() && !m_Config->m_EnableBNET.value_or(true))
-    Print("[AURA] warning - no enabled battle.net connections configured");
-  if (!m_IRC)
-    Print("[AURA] warning - no irc connection configured");
-
-  nCLI->QueueActions(this);
-
-  if (m_Realms.empty() && !m_IRC && m_PendingActions.empty()) {
-    Print("[AURA] Input disconnected.");
-    m_Ready = false;
-    return;
-  }
 
   // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
   // these two files are necessary for calculating "map_crc" when loading maps so we make sure they are available
@@ -322,6 +306,24 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
       m_Ready = false;
       return;
     }
+  }
+
+  nCLI->QueueActions(this);
+
+  vector<string> invalidKeys = CFG->GetInvalidKeys(definedRealms);
+  if (!invalidKeys.empty()) {
+    Print("[CONFIG] warning - some keys are misnamed: " + JoinVector(invalidKeys, false));
+  }
+
+  if (m_Realms.empty() && m_Config->m_EnableBNET.value_or(true))
+    Print("[AURA] warning - no enabled battle.net connections configured");
+  if (!m_IRC->m_Config->m_Enabled)
+    Print("[AURA] warning - no irc connection configured");
+
+  if (m_Realms.empty() && !m_IRC->m_Config->m_Enabled && m_PendingActions.empty()) {
+    Print("[AURA] error - no inputs connected");
+    m_Ready = false;
+    return;
   }
 
   // load the iptocountry data
@@ -805,6 +807,7 @@ bool CAura::ReloadConfigs()
     Print("[CONFIG] error - bot configuration invalid: not reloaded");
     success = false;
   }
+  OnLoadConfigs();
   bitset<240> definedRealms;
   if (!LoadBNETs(CFG, definedRealms)) {
     Print("[CONFIG] error - realms misconfigured: not reloaded");
@@ -877,7 +880,11 @@ bool CAura::LoadConfigs(CConfig* CFG)
     }
 #endif
   }
+  return true;
+}
 
+void CAura::OnLoadConfigs()
+{
   if (m_Config->m_War3Version.has_value()) {
     m_GameVersion = m_Config->m_War3Version.value();
   } else if (m_GameVersion == 0) {
@@ -887,7 +894,6 @@ bool CAura::LoadConfigs(CConfig* CFG)
     }
   }
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
-  return true;
 }
 
 uint8_t CAura::ExtractScripts()
@@ -899,6 +905,13 @@ uint8_t CAura::ExtractScripts()
     else
       return m_GameInstallPath / filesystem::path("War3Patch.mpq");
   }();
+
+  try {
+    filesystem::create_directory(m_Config->m_MapCFGPath);
+  } catch (...) {
+    Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
+    return 0;
+  }
 
   void* MPQ;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
@@ -931,10 +944,10 @@ void CAura::LoadIPToCountryData()
   filesystem::path GeoFilePath = GetExeDirectory() / filesystem::path("ip-to-country.csv");
   in.open(GeoFilePath.native().c_str(), ios::in);
 
+  uint32_t lineCount = 0;
   if (in.fail()) {
     Print("[AURA] warning - unable to read file [ip-to-country.csv], geolocalization data not loaded");
   } else {
-
     // the begin and commit statements are optimizations
     // we're about to insert ~4 MB of data into the database so if we allow the database to treat each insert as a transaction it will take a LONG time
 
@@ -977,6 +990,13 @@ void CAura::LoadIPToCountryData()
 
 void CAura::CacheMapPresets()
 {
+  try {
+    filesystem::create_directory(m_Config->m_MapPath);
+  } catch (...) {
+    Print("[AURA] warning - <bot.maps_path> is not a valid directory");
+    return;
+  }
+
   // Preload map configs
   m_CachedMaps.clear();
   const vector<filesystem::path> configFiles = FilesMatch(m_Config->m_MapCFGPath, FILE_EXTENSIONS_CONFIG);
@@ -1038,6 +1058,15 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     m_CurrentLobby->SendGameDiscoveryCreate();
   }
 
+  uint32_t mapSize = ByteArrayToUInt32(gameSetup->m_Map->GetMapSize(), false);
+  string versionPrefix;
+  if (m_GameVersion <= 26 && mapSize > 0x800000) {
+    Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + gameSetup->m_Map->GetMapFileName() + "]");
+    versionPrefix = "[1." + to_string(m_GameVersion) + ".UnlockMapSize] ";
+  } else {
+    versionPrefix = "[1." + to_string(m_GameVersion) + "] ";
+  }
+
   for (auto& bnet : m_Realms) {
     if (gameSetup->m_RealmsExcluded.find(bnet->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
       continue;
@@ -1048,12 +1077,12 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     string AnnounceText;
     if (gameSetup->GetIsMirror()) {
       AnnounceText = (
-        string("[1.") + to_string(m_GameVersion) + ".x] Mirroring " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
+        versionPrefix + "Mirroring " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
         ": \"" + bnet->GetPrefixedGameName(gameSetup->m_GameName) + "\")"
       );
     } else {
       AnnounceText = (
-        string("[1.") + to_string(m_GameVersion) + ".x] Hosting " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
+        versionPrefix + "Hosting " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
         ". (Started by " + gameSetup->m_GameOwner.first + ": \"" + bnet->GetPrefixedGameName(gameSetup->m_GameName) + "\")"
       );
     }

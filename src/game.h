@@ -363,6 +363,8 @@ public:
   void StartCountDown(bool force);
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
+  void OpenObserverSlots();
+  void CloseObserverSlots();
   bool CreateVirtualHost();
   bool DeleteVirtualHost();
   bool CreateFakePlayer(const bool useVirtualHostName);

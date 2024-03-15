@@ -190,6 +190,7 @@ public:
 
   bool ReloadConfigs();
   bool LoadConfigs(CConfig* CFG);
+  void OnLoadConfigs();
   bool LoadBNETs(CConfig* CFG, std::bitset<240>& definedConfigs);
 
   uint8_t ExtractScripts();

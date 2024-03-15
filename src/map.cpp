@@ -232,28 +232,6 @@ string CMap::GetMapFileName() const
   return m_MapPath.substr(LastSlash + 1);
 }
 
-void CMap::OpenObserverSlots()
-{
-  Print("[MAP] adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
-  while (m_Slots.size() < m_Aura->m_MaxSlots)
-    m_Slots.emplace_back(0, 255, SLOTSTATUS_OPEN, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
-}
-
-void CMap::CloseObserverSlots()
-{
-  uint8_t count = 0;
-  uint8_t i = static_cast<uint8_t>(m_Slots.size());
-  while (i--) {
-    if (m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
-      m_Slots.erase(m_Slots.begin() + i);
-      ++count;
-    }
-  }
-  if (count > 0) {
-    Print("[MAP] deleted " + to_string(count) + " observer slots");
-  }
-}
-
 bool CMap::SetForcedRandomRaceSlots()
 {
   if (GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
@@ -282,16 +260,7 @@ bool CMap::SetSelectableSlots()
 
 bool CMap::SetMapObservers(const uint8_t nMapObservers)
 {
-  bool hadObserverSlots = m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES;
-  bool willHaveObserverSlots = nMapObservers == MAPOBS_ALLOWED || nMapObservers == MAPOBS_REFEREES;
-  if (hadObserverSlots == willHaveObserverSlots) {
-    return true;
-  }
-  if (willHaveObserverSlots) {
-    CloseObserverSlots();
-  } else {
-    OpenObserverSlots();
-  }
+  m_MapObservers = nMapObservers;
   return true;
 }
 
@@ -346,6 +315,11 @@ void CMap::Load(CConfig* CFG)
     m_MapData = FileRead(m_Aura->m_Config->m_MapPath / m_MapLocalPath, &RawMapSize);
     if (IsPartial && m_MapData.empty()) {
       Print("[AURA] Local map not found for partial config file");
+      return;
+    }
+    if (RawMapSize > 0x18000000) {
+      Print("[AURA] warning - map exceeds maximum file size");
+      m_MapData.clear();
       return;
     }
   }
@@ -583,16 +557,18 @@ void CMap::Load(CConfig* CFG)
     }
   }
   else
-    Print("[MAP] no map data available, using config file for map_size, map_info, map_crc, map_sha1");
+    Print("[MAP] no map data available, using config file for <map_size>, <map_info>, <map_crc>, <map_sha1>");
 
   // try to calculate map_width, map_height, map_slot<x>, map_numplayers, map_numteams, map_filtertype
 
   std::vector<uint8_t> MapWidth;
   std::vector<uint8_t> MapHeight;
+  uint32_t             MapEditorVersion = 0;
   uint32_t             MapOptions    = 0;
   uint8_t              MapNumPlayers = 0;
   uint8_t              MapFilterType = MAPFILTER_TYPE_SCENARIO;
   uint8_t              MapNumTeams   = 0;
+  uint8_t              MapMinGameVersion = 0;
   vector<CGameSlot>    Slots;
 
   if (IsPartial && MapMPQReady) {
@@ -619,6 +595,7 @@ void CMap::Load(CConfig* CFG)
 
           string   GarbageString;
           uint32_t FileFormat;
+          uint32_t RawEditorVersion;
           uint32_t RawMapFlags;
           uint32_t RawMapWidth, RawMapHeight;
           uint32_t RawMapNumPlayers, RawMapNumTeams;
@@ -628,7 +605,7 @@ void CMap::Load(CConfig* CFG)
           if (FileFormat == 18 || FileFormat == 25)
           {
             ISS.seekg(4, ios::cur);            // number of saves
-            ISS.seekg(4, ios::cur);            // editor version
+            ISS.read(reinterpret_cast<char*>(&RawEditorVersion), 4); // editor version
             getline(ISS, GarbageString, '\0'); // map name
             getline(ISS, GarbageString, '\0'); // map author
             getline(ISS, GarbageString, '\0'); // map description
@@ -682,6 +659,8 @@ void CMap::Load(CConfig* CFG)
               ISS.seekg(1, ios::cur);            // custom water tinting blue value
               ISS.seekg(1, ios::cur);            // custom water tinting alpha value
             }
+
+            MapEditorVersion = RawEditorVersion;
 
             ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
             uint8_t ClosedSlots = 0;
@@ -927,7 +906,13 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map_height", MapHeight);
   }
 
-  m_MapHeight     = MapHeight;
+  if (CFG->Exists("map_editorversion")) {
+    MapEditorVersion = CFG->GetUint32("map_editorversion", 0);
+  } else {
+    CFG->SetUint32("map_editorversion", MapEditorVersion);
+  }
+  m_MapHeight        = MapHeight;
+  m_MapEditorVersion = MapEditorVersion;
   m_MapType       = CFG->GetString("map_type", emptyString);
   m_MapDefaultHCL = CFG->GetString("map_defaulthcl", emptyString);
 
@@ -968,6 +953,35 @@ void CMap::Load(CConfig* CFG)
 
   m_Slots = Slots;
 
+  if (CFG->Exists("map_gameversion_min")) {
+    MapMinGameVersion = CFG->GetUint8("map_gameversion_min", 0);
+  } else {
+    uint8_t MapMinGameVersion = 0;
+    if (6060 <= MapEditorVersion  || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
+      MapMinGameVersion = 29;
+    } else if (6059 <= MapEditorVersion) {
+      MapMinGameVersion = 24;
+    } else if (6058 <= MapEditorVersion) {
+      MapMinGameVersion = 23;
+    } else if (6057 <= MapEditorVersion) {
+      MapMinGameVersion = 22;
+    } else if (6050 <= MapEditorVersion && MapEditorVersion <= 6052) {
+      MapMinGameVersion = 17 + (MapEditorVersion - 6050);
+    } else if (6046 <= MapEditorVersion) {
+      MapMinGameVersion = 16;
+    } else if (6043 <= MapEditorVersion) {
+      MapMinGameVersion = 15;
+    } else if (6039 <= MapEditorVersion) {
+      MapMinGameVersion = 14;
+    } else if (6034 <= MapEditorVersion && MapEditorVersion <= 6037) {
+      MapMinGameVersion = 10 + (MapEditorVersion - 6034);
+    } else if (6031 <= MapEditorVersion) {
+      MapMinGameVersion = 7;
+    }
+    CFG->SetUint32("map_gameversion_min", MapMinGameVersion);
+  }
+  m_MapMinGameVersion = MapMinGameVersion;
+
   // if random races is set force every slot's race to random
 
   if (m_MapFlags & MAPFLAG_RANDOMRACES) {
@@ -982,16 +996,10 @@ void CMap::Load(CConfig* CFG)
   if (m_MapFilterType & MAPFILTER_TYPE_MELEE && m_MapObservers == MAPOBS_NONE)
     m_MapObservers = MAPOBS_ALLOWED;
 
-  // add observer slots
-  // (per-game setting, don't save it)
-  if ((m_MapObservers == MAPOBS_ALLOWED || m_MapObservers == MAPOBS_REFEREES) && m_Slots.size() < m_Aura->m_MaxSlots) {
-    OpenObserverSlots();
-  }
+  string ErrorMessage = CheckProblems();
 
-  const char* ErrorMessage = CheckValid();
-
-  if (ErrorMessage) {
-    Print(std::string("[MAP] ") + ErrorMessage);
+  if (!ErrorMessage.empty()) {
+    Print("[MAP] " + ErrorMessage);
   } else if (IsPartial) {
     CFG->Delete("cfg_partial");
   }
@@ -1008,7 +1016,7 @@ bool CMap::UnlinkFile()
   return FileDelete(resolvedPath.lexically_normal());
 }
 
-const char* CMap::CheckValid()
+string CMap::CheckProblems()
 {
   if (m_MapPath.empty())
   {
@@ -1063,14 +1071,12 @@ const char* CMap::CheckValid()
   if (m_MapVisibility != MAPVIS_HIDETERRAIN && m_MapVisibility != MAPVIS_EXPLORED && m_MapVisibility != MAPVIS_ALWAYSVISIBLE && m_MapVisibility != MAPVIS_DEFAULT)
   {
     m_Valid = false;
-    Print("m_MapVisibility = " + to_string(m_MapVisibility));
     return "invalid map_visibility detected";
   }
 
   if (m_MapObservers != MAPOBS_NONE && m_MapObservers != MAPOBS_ONDEFEAT && m_MapObservers != MAPOBS_ALLOWED && m_MapObservers != MAPOBS_REFEREES)
   {
     m_Valid = false;
-    Print("m_MapObservers = " + to_string(m_MapObservers));
     return "invalid map_observers detected";
   }
 
@@ -1086,25 +1092,42 @@ const char* CMap::CheckValid()
     return "invalid map_height detected";
   }
 
-  if (m_MapNumPlayers == 0 || m_MapNumPlayers > m_Aura->m_MaxSlots)
+  if (m_MapNumPlayers == 0 || m_MapNumPlayers > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
     return "invalid map_numplayers detected";
   }
 
-  if (m_MapNumTeams == 0 || m_MapNumTeams > m_Aura->m_MaxSlots)
+  if (m_MapNumTeams == 0 || m_MapNumTeams > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
     return "invalid map_numteams detected";
   }
 
-  if (m_Slots.empty() || m_Slots.size() > m_Aura->m_MaxSlots)
+  if (m_Slots.empty() || m_Slots.size() > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
     return "invalid map_slot<x> detected";
   }
 
-  return nullptr;
+  if (m_MapNumPlayers > m_Aura->m_MaxSlots || m_MapNumTeams > m_Aura->m_MaxSlots || m_Slots.size() > m_Aura->m_MaxSlots) {
+    m_Valid = false;
+    return "map uses more than " + to_string(m_Aura->m_MaxSlots) + " players - v1.29+ required";
+  }
+
+  for (const auto& slot : m_Slots) {
+    if (slot.GetTeam() > m_Aura->m_MaxSlots || slot.GetColour() > m_Aura->m_MaxSlots) {
+      m_Valid = false;
+      return "map uses more than " + to_string(m_Aura->m_MaxSlots) + " players - v1.29+ required";
+    }
+  }
+
+  if (m_MapMinGameVersion >= m_Aura->m_GameVersion) {
+    m_Valid = false;
+    return "map requires v1." + to_string(m_MapMinGameVersion) + " (using v1." + to_string(m_Aura->m_GameVersion) + ")";
+  }
+
+  return string();
 }
 
 uint32_t CMap::XORRotateLeft(uint8_t* data, uint32_t length)
