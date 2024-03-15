@@ -258,6 +258,25 @@ bool CMap::SetSelectableSlots()
   return true;
 }
 
+bool CMap::NormalizeSlots()
+{
+  uint8_t i = static_cast<uint8_t>(m_Slots.size());
+  bool updated = false;
+  while (i--) {
+    CGameSlot slot = m_Slots[i];
+    if (slot.GetTeam() > m_MapNumPlayers) {
+      m_Slots.erase(m_Slots.begin() + i);
+      continue;
+    }
+    uint8_t race = GetLobbyRace(slot);
+    if (race != slot.GetRace()) {
+      slot.SetRace(race);
+      updated = true;
+    }
+  }
+  return updated;
+}
+
 bool CMap::SetMapObservers(const uint8_t nMapObservers)
 {
   m_MapObservers = nMapObservers;
@@ -663,6 +682,7 @@ void CMap::Load(CConfig* CFG)
             MapEditorVersion = RawEditorVersion;
 
             ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
+            if (RawMapNumPlayers > MAX_SLOTS_MODERN) RawMapNumPlayers = 0;
             uint8_t ClosedSlots = 0;
 
             for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
@@ -712,65 +732,72 @@ void CMap::Load(CConfig* CFG)
             }
 
             ISS.read(reinterpret_cast<char*>(&RawMapNumTeams), 4); // number of teams
+            if (RawMapNumTeams > MAX_SLOTS_MODERN) RawMapNumTeams = 0;
 
-            // the bot only cares about the following options: melee, fixed player settings, custom forces
-            // let's not confuse the user by displaying erroneous map options so zero them out now
-            MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
-            Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
+            if (RawMapNumPlayers > 0 && RawMapNumTeams > 0) {
+              // the bot only cares about the following options: melee, fixed player settings, custom forces
+              // let's not confuse the user by displaying erroneous map options so zero them out now
+              MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
+              Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
 
-            if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
-              MapNumTeams = static_cast<uint8_t>(RawMapNumPlayers);
-            } else {
-              MapNumTeams = static_cast<uint8_t>(RawMapNumTeams);
-            }
-
-            for (uint32_t i = 0; i < MapNumTeams; ++i) {
-              uint32_t Flags;
-              uint32_t PlayerMask = 0;
-
-              if (i < RawMapNumTeams) {
-                ISS.read(reinterpret_cast<char*>(&Flags), 4);      // flags
-                ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
-              }
               if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
-                Flags = 0;
-                PlayerMask = 1 << i;
+                MapNumTeams = static_cast<uint8_t>(RawMapNumPlayers);
+              } else {
+                MapNumTeams = static_cast<uint8_t>(RawMapNumTeams);
               }
+
+              for (uint32_t i = 0; i < MapNumTeams; ++i) {
+                uint32_t PlayerMask = 0;
+                if (i < RawMapNumTeams) {
+                  ISS.seekg(4, ios::cur);                            // flags
+                  ISS.read(reinterpret_cast<char*>(&PlayerMask), 4); // player mask
+                }
+                if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
+                  PlayerMask = 1 << i;
+                }
+
+                for (auto& Slot : Slots) {
+                  if (0 != (PlayerMask & (1 << static_cast<uint32_t>((Slot).GetColour())))) {
+                    (Slot).SetTeam(static_cast<uint8_t>(i));
+                  }
+                }
+
+                if (i < RawMapNumTeams) {
+                  getline(ISS, GarbageString, '\0'); // team name
+                }
+              }
+
+              MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
+              MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
+              MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - ClosedSlots;
+
+              if (MapOptions & MAPOPT_MELEE) {
+                Print("[MAP] found melee map");
+                MapFilterType = MAPFILTER_TYPE_MELEE;
+              }
+
+              if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
+                // make races selectable
+
+                for (auto& Slot : Slots)
+                  (Slot).SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
+              }
+
+              uint32_t SlotNum = 1;
+
+              Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
+              Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
+              Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
+              Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
 
               for (auto& Slot : Slots) {
-                if ((1 << (Slot).GetColour()) & PlayerMask)
-                  (Slot).SetTeam(static_cast<uint8_t>(i));
+                Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
+                ++SlotNum;
               }
-
-              getline(ISS, GarbageString, '\0'); // team name
-            }
-
-            MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
-            MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
-            MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - ClosedSlots;
-
-            if (MapOptions & MAPOPT_MELEE) {
-              Print("[MAP] found melee map");
-              MapFilterType = MAPFILTER_TYPE_MELEE;
-            }
-
-            if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
-              // make races selectable
-
-              for (auto& Slot : Slots)
-                (Slot).SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
-            }
-
-            uint32_t SlotNum = 1;
-
-            Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
-            Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
-            Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
-            Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
-
-            for (auto& Slot : Slots) {
-              Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
-              ++SlotNum;
+            } else {
+              Print("[MAP] unable to calculate <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from MPQ file");
+              MapNumPlayers = 0;
+              MapNumTeams = 0;
             }
           }
         }

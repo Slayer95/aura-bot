@@ -210,6 +210,7 @@ public:
   bool                          SetMapObservers(const uint8_t nMapObservers);
   bool                          SetForcedRandomRaceSlots();
   bool                          SetSelectableSlots();
+  bool                          NormalizeSlots();
 
   void Load(CConfig* CFG);
   bool UnlinkFile();
