@@ -865,7 +865,7 @@ bool CAura::LoadConfigs(CConfig* CFG)
   } else {
 #ifdef _WIN32
     if (m_GameInstallPath.empty()) {
-      optional<string> maybeInstallPath = MaybeReadRegistryKey("InstallPath");
+      optional<filesystem::path> maybeInstallPath = MaybeReadPathFromRegistry(L"InstallPath");
       if (maybeInstallPath.has_value()) {
         m_GameInstallPath = maybeInstallPath.value();
         NormalizeDirectory(m_GameInstallPath);

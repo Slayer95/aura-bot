@@ -480,19 +480,22 @@ bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& 
 }
 
 #ifdef _WIN32
-optional<string> MaybeReadRegistryKey(const char* keyName)
+optional<filesystem::path> MaybeReadPathFromRegistry(const wchar_t* name)
 {
-  optional<string> result;
+  optional<filesystem::path> result;
   HKEY hKey;
-  DWORD dwType, dwSize;
-  char szValue[1024];
+  LPCWSTR registryPath = L"SOFTWARE\\Blizzard Entertainment\\Warcraft III";
+  LPCWSTR keyName = name;
+  WCHAR buffer[1024];
 
-  if (RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Blizzard Entertainment\\Warcraft III", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-    dwSize = sizeof(szValue);
+  if (RegOpenKeyExW(HKEY_CURRENT_USER, registryPath, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+    DWORD bufferSize = sizeof(buffer);
+    DWORD valueType;
     // Query the value of the desired registry entry
-    if (RegQueryValueExA(hKey, keyName, nullptr, &dwType, (LPBYTE)szValue, &dwSize) == ERROR_SUCCESS) {
-      if (dwType == REG_SZ && 0 < dwSize && dwSize < 1024) {
-        string installPath(szValue, dwSize - 1);
+    if (RegQueryValueExW(hKey, keyName, nullptr, &valueType, reinterpret_cast<BYTE*>(buffer), &bufferSize) == ERROR_SUCCESS) {
+      if (valueType == REG_SZ && 0 < bufferSize && bufferSize < 1024) {
+        buffer[bufferSize / sizeof(WCHAR)] = L'\0';
+        filesystem::path installPath = wstring(buffer);
         result = installPath;
       }
     }

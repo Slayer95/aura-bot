@@ -81,7 +81,7 @@ bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
 #ifdef _WIN32
-std::optional<std::string> MaybeReadRegistryKey(const char* keyName);
+std::optional<std::filesystem::path> MaybeReadPathFromRegistry(const wchar_t* keyName);
 #endif
 
 #endif // AURA_FILEUTIL_H_
