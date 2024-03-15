@@ -944,7 +944,6 @@ void CAura::LoadIPToCountryData()
   filesystem::path GeoFilePath = GetExeDirectory() / filesystem::path("ip-to-country.csv");
   in.open(GeoFilePath.native().c_str(), ios::in);
 
-  uint32_t lineCount = 0;
   if (in.fail()) {
     Print("[AURA] warning - unable to read file [ip-to-country.csv], geolocalization data not loaded");
   } else {

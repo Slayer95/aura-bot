@@ -965,6 +965,8 @@ void CMap::Load(CConfig* CFG)
       MapMinGameVersion = 23;
     } else if (6057 <= MapEditorVersion) {
       MapMinGameVersion = 22;
+    } else if (6053 <= MapEditorVersion && MapEditorVersion <= 6056) {
+      MapMinGameVersion = 22; // Not released
     } else if (6050 <= MapEditorVersion && MapEditorVersion <= 6052) {
       MapMinGameVersion = 17 + (MapEditorVersion - 6050);
     } else if (6046 <= MapEditorVersion) {
@@ -973,6 +975,8 @@ void CMap::Load(CConfig* CFG)
       MapMinGameVersion = 15;
     } else if (6039 <= MapEditorVersion) {
       MapMinGameVersion = 14;
+    } else if (6038 <= MapEditorVersion) {
+      MapMinGameVersion = 14; // Not released
     } else if (6034 <= MapEditorVersion && MapEditorVersion <= 6037) {
       MapMinGameVersion = 10 + (MapEditorVersion - 6034);
     } else if (6031 <= MapEditorVersion) {
