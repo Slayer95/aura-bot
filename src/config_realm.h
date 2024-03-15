@@ -35,6 +35,9 @@
 #include <optional>
 #include <map>
 
+#define REALM_AUTH_PVPGN 0
+#define REALM_AUTH_BATTLENET 1
+
 struct sockaddr_storage;
 
 //
@@ -76,10 +79,13 @@ public:
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
 
-  uint8_t m_AuthWar3Version;                     // WC3 minor version
-  std::vector<uint8_t> m_AuthExeVersion;         // 4 bytes: WC3 version as {patch, minor, major, 1}
-  std::vector<uint8_t> m_AuthExeVersionHash;     // 4 bytes
-  std::string m_AuthPasswordHashType;            // pvpgn or battle.net
+  bool m_AuthSkipVersionCheck;
+  uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net
+
+  std::optional<uint8_t> m_AuthWar3Version;                  // WC3 minor version
+  std::optional<std::vector<uint8_t>> m_AuthExeVersion;       // 4 bytes: WC3 version as {patch, minor, major, build}
+  std::optional<std::vector<uint8_t>> m_AuthExeVersionHash;   // 4 bytes
+  std::string m_AuthExeInfo;                                  // filename.exe dd/MM/yy hh::mm:ss size
 
   std::string m_FirstChannel;                    //
   std::set<std::string> m_SudoUsers;             //

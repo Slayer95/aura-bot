@@ -203,12 +203,14 @@ CGame::~CGame()
   if (m_HasMapLock) {
     string localPathString = m_Map->GetMapLocalPath();
     m_Aura->m_BusyMaps.erase(localPathString);
-    filesystem::path localPath = localPathString;
-    bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
-    if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
-      bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
-      if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
-        m_Map->UnlinkFile();
+    if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
+      filesystem::path localPath = localPathString;
+      bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
+      if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
+        bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
+        if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
+          m_Map->UnlinkFile();
+        }
       }
     }
     m_HasMapLock = false;
@@ -2733,12 +2735,14 @@ void CGame::EventGameStarted()
   if (m_HasMapLock) {
     string localPathString = m_Map->GetMapLocalPath();
     m_Aura->m_BusyMaps.erase(localPathString);
-    filesystem::path localPath = localPathString;
-    bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
-    if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
-      bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
-      if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
-        m_Map->UnlinkFile();
+    if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
+      filesystem::path localPath = localPathString;
+      bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
+      if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
+        bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
+        if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
+          m_Map->UnlinkFile();
+        }
       }
     }
     m_HasMapLock = false;

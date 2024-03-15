@@ -86,6 +86,7 @@ public:
 
   inline void SetEXEVersion(const std::vector<uint8_t>& nEXEVersion) { m_EXEVersion = nEXEVersion; }
   inline void SetEXEVersionHash(const std::vector<uint8_t>& nEXEVersionHash) { m_EXEVersionHash = nEXEVersionHash; }
+  inline void SetEXEInfo(const std::string& nEXEInfo) { m_EXEInfo = nEXEInfo; }
 
   void Reset(const std::string& userName, const std::string& userPassword);
 

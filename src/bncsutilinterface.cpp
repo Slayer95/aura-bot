@@ -77,31 +77,35 @@ void CBNCSUtilInterface::Reset(const string& userName, const string& userPasswor
 optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war3Path)
 {
   optional<uint8_t> version;
-  const string FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll").string();
-  const string FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll").string();
-  const string WarcraftIIIExe = CaseInsensitiveFileExists(war3Path, "Warcraft III.exe").string();
-  const string War3Exe = CaseInsensitiveFileExists(war3Path, "war3.exe").string();
+  const filesystem::path FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll");
+  const filesystem::path FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll");
+  const filesystem::path WarcraftIIIExe = CaseInsensitiveFileExists(war3Path, "Warcraft III.exe");
+  const filesystem::path War3Exe = CaseInsensitiveFileExists(war3Path, "war3.exe");
   if (WarcraftIIIExe.empty() && War3Exe.empty()) {
-    Print("[CONFIG] war3.exe, Warcraft III.exe missing at " + war3Path.string() + ". Config required: game.version, realm_X_auth_*.");
+    Print("[CONFIG] Game path corrupted or invalid (" + PathToString(war3Path) + "). Executable file not found.");
+    Print("[CONFIG] Config required: <game.version>, realm_X_auth_*");
     return version;
   }
   if (FileStormDLL.empty() != FileGameDLL.empty()) {
     if (FileStormDLL.empty()) {
-      Print("[CONFIG] Game.dll found, but Storm.dll missing at " + war3Path.string() + ". Config required: game.version, realm_X_auth_*.");
+      Print("[CONFIG] Game.dll found, but Storm.dll missing at " + PathToString(war3Path) + ".");
     } else {
-      Print("[CONFIG] Storm.dll found, but Game.dll missing at " + war3Path.string() + ". Config required: game.version, realm_X_auth_*.");
+      Print("[CONFIG] Storm.dll found, but Game.dll missing at " + PathToString(war3Path) + ".");
     }
+    Print("[CONFIG] Config required: <game.version>, realm_X_auth_*");
     return version;
   }
   if (FileStormDLL.empty()) {
     if (WarcraftIIIExe.empty()) {
-      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: game.version, realm_X_auth_*.");
+      Print("[CONFIG] Game path corrupted or invalid (" + PathToString(war3Path) + "). No game files found.");
+      Print("[CONFIG] Config required: <game.version>, realm_X_auth_*");
       return version;
     }
   }
   if (!War3Exe.empty()) {
     if (FileStormDLL.empty()) {
-      Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: game.version, realm_X_auth_*.");
+      Print("[CONFIG] Game path corrupted or invalid (" + PathToString(war3Path)  + "). Storm.dll is missing.");
+      Print("[CONFIG] Config required: <game.version>, realm_X_auth_*");
       return version;
     }
   }
@@ -115,17 +119,24 @@ optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
     versionMode = 29;
   }
 
+  const filesystem::path CheckExe = versionMode >= 28 ? WarcraftIIIExe : War3Exe;
   char     buf[1024];
-  uint32_t EXEVersion;
-  if (versionMode >= 28) {
-    getExeInfo(WarcraftIIIExe.c_str(), buf, 1024, &EXEVersion, BNCSUTIL_PLATFORM_X86);
-  } else {
-    getExeInfo(War3Exe.c_str(), buf, 1024, &EXEVersion, BNCSUTIL_PLATFORM_X86);
-  }
+  uint32_t EXEVersion = 0;
+  getExeInfo(PathToString(CheckExe).c_str(), buf, 1024, &EXEVersion, BNCSUTIL_PLATFORM_X86);
   uint8_t readVersion = static_cast<uint8_t>(EXEVersion >> 16);
 
+  if (readVersion == 0) {
+    Print("[CONFIG] Game path corrupted or invalid (" + PathToString(war3Path)  + ").");
+    Print("[CONFIG] Game path has files from v1." + to_string(versionMode));
+    Print("[CONFIG] " + PathToString(CheckExe) + " cannot read version");
+    Print("[CONFIG] Config required: <game.version>, realm_X_auth_*");
+    return version;
+  }
   if ((versionMode == 28) != (readVersion == 28) || versionMode < 28 && readVersion > 28 || versionMode > 28 && readVersion < 28) {
-    Print("[CONFIG] Game path corrupted or invalid (" + war3Path.string()  + "). Config required: game.version, realm_X_auth_*.");
+    Print("[CONFIG] Game path corrupted or invalid (" + PathToString(war3Path)  + ").");
+    Print("[CONFIG] Game path has files from v1." + to_string(versionMode));
+    Print("[CONFIG] " + PathToString(CheckExe) + " is v1." + to_string(readVersion));
+    Print("[CONFIG] Config required: <game.version>, realm_X_auth_*");
     return version;
   }
 
@@ -135,14 +146,23 @@ optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
 
 bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const string& keyROC, const string& keyTFT, const string& valueStringFormula, const string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version)
 {
-  const string FileWar3EXE = [&]() {
+  const filesystem::path FileWar3EXE = [&]() {
     if (war3Version >= 28)
-      return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe").string();
+      return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe");
     else
-      return CaseInsensitiveFileExists(war3Path, "war3.exe").string();
+      return CaseInsensitiveFileExists(war3Path, "war3.exe");
   }();
-  const string FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll").string();
-  const string FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll").string();
+  const filesystem::path FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll");
+  const filesystem::path FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll");
+
+  m_KeyInfoROC     = CreateKeyInfo(keyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
+  m_KeyInfoTFT     = CreateKeyInfo(keyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
+
+  if (m_KeyInfoROC.size() != 36)
+    Print("[BNCSUI] unable to create ROC key info - invalid ROC key");
+
+  if (m_KeyInfoTFT.size() != 36)
+    Print("[BNCSUI] unable to create TFT key info - invalid TFT key");
 
   if (!FileWar3EXE.empty() && (war3Version >= 29 || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {
@@ -150,53 +170,44 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
     int requiredSize = 0;
     vector<char> buffer(bufferSize);
 
-    uint32_t EXEVersion;
-    unsigned long EXEVersionHash;
+    uint32_t EXEVersion = 0;
+    unsigned long EXEVersionHash = 0;
 
     do {
       bufferSize *= 2;
       buffer.resize(bufferSize);
-      requiredSize = getExeInfo(FileWar3EXE.c_str(), buffer.data(), bufferSize, &EXEVersion, BNCSUTIL_PLATFORM_X86);
+      requiredSize = getExeInfo(PathToString(FileWar3EXE).c_str(), buffer.data(), bufferSize, &EXEVersion, BNCSUTIL_PLATFORM_X86);
     } while (0 < requiredSize && bufferSize < requiredSize);
 
     if (requiredSize == 0) {
+      Print("getExeInfo(" + PathToString(FileWar3EXE) + ") returned 0 bytes");
       return false;
     }
 
     if (war3Version >= 29)
     {
-      const char* filesArray[] = {FileWar3EXE.c_str()};
+      const char* filesArray[] = {PathToString(FileWar3EXE).c_str()};
       checkRevision(valueStringFormula.c_str(), filesArray, 1, extractMPQNumber(mpqFileName.c_str()), &EXEVersionHash);
     }
     else 
-      checkRevisionFlat(valueStringFormula.c_str(), FileWar3EXE.c_str(), FileStormDLL.c_str(), FileGameDLL.c_str(), extractMPQNumber(mpqFileName.c_str()), &EXEVersionHash);
+      checkRevisionFlat(valueStringFormula.c_str(), PathToString(FileWar3EXE).c_str(), PathToString(FileStormDLL).c_str(), PathToString(FileGameDLL).c_str(), extractMPQNumber(mpqFileName.c_str()), &EXEVersionHash);
 
+    buffer.resize(requiredSize);
     m_EXEInfo        = buffer.data();
     m_EXEVersion     = CreateByteArray(EXEVersion, false);
     m_EXEVersionHash = CreateByteArray(int64_t(EXEVersionHash), false);
-    m_KeyInfoROC     = CreateKeyInfo(keyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
-    m_KeyInfoTFT     = CreateKeyInfo(keyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
 
-    if (m_KeyInfoROC.size() == 36 && m_KeyInfoTFT.size() == 36)
-      return true;
-    else
-    {
-      if (m_KeyInfoROC.size() != 36)
-        Print("[BNCSUI] unable to create ROC key info - invalid ROC key");
-
-      if (m_KeyInfoTFT.size() != 36)
-        Print("[BNCSUI] unable to create TFT key info - invalid TFT key");
-    }
+    return true;
   }
   else
   {
     if (FileWar3EXE.empty())
-      Print("[BNCSUI] unable to open War3EXE [" + FileWar3EXE + "]");
+      Print("[BNCSUI] unable to open War3EXE [" + PathToString(FileWar3EXE) + "]");
 
     if (FileStormDLL.empty() && war3Version < 29)
-      Print("[BNCSUI] unable to open StormDLL [" + FileStormDLL + "]");
+      Print("[BNCSUI] unable to open StormDLL [" + PathToString(FileStormDLL) + "]");
     if (FileGameDLL.empty() && war3Version < 29)
-      Print("[BNCSUI] unable to open GameDLL [" + FileGameDLL + "]");
+      Print("[BNCSUI] unable to open GameDLL [" + PathToString(FileGameDLL) + "]");
   }
 
   return false;

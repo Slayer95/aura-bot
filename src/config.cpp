@@ -665,6 +665,25 @@ optional<int64_t> CConfig::GetMaybeInt64(const string& key)
   SUCCESS(result)
 }
 
+optional<vector<uint8_t>> CConfig::GetMaybeUint8Vector(const string &key, const uint32_t count)
+{
+  m_ValidKeys.insert(key);
+  optional<vector<uint8_t>> result;
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
+
+  vector<uint8_t> Output = ExtractNumbers(it->second, count);
+  if (Output.size() != count) {
+    CONFIG_ERROR(key, result)
+  }
+
+  result = Output;
+  SUCCESS(result)
+}
+
 optional<vector<uint8_t>> CConfig::GetMaybeIPv4(const string &key)
 {
   m_ValidKeys.insert(key);

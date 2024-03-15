@@ -874,9 +874,11 @@ void CMap::Load(CConfig* CFG)
 
   m_MapSHA1 = MapSHA1;
 
-  m_MapContentMismatch = MapContentMismatch;
-  if (!GetValidLinkedMap()) {
-    Print("[CACHE] Map content mismatch: " + ByteArrayToDecString(MapContentMismatch));
+  if (!m_MapData.empty()) {
+    m_MapContentMismatch = MapContentMismatch;
+    if (!GetValidLinkedMap()) {
+      Print("[CACHE] Map content mismatch: " + ByteArrayToDecString(MapContentMismatch));
+    }
   }
 
   m_MapSiteURL   = CFG->GetString("map_site", emptyString);

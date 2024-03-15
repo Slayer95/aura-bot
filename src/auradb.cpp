@@ -61,7 +61,7 @@ using namespace std;
 CSQLITE3::CSQLITE3(const filesystem::path& filename)
   : m_Ready(true)
 {
-  if (sqlite3_open_v2(filename.string().c_str(), reinterpret_cast<sqlite3**>(&m_DB), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK)
+  if (sqlite3_open_v2(PathToString(filename).c_str(), reinterpret_cast<sqlite3**>(&m_DB), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK)
     m_Ready = false;
 }
 

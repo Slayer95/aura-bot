@@ -87,10 +87,12 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = CFG->GetUint8(m_CFGKeyPrefix + "auth_game_version", 27);
-  m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, {173, 1, 27, 1});
-  m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, {72, 160, 171, 170});
-  m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", "pvpgn");
+  m_AuthSkipVersionCheck   = CFG->GetBool(m_CFGKeyPrefix + "auth_skip_version_check", true);
+  m_AuthWar3Version        = CFG->GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
+  m_AuthExeVersion         = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
+  m_AuthExeVersionHash     = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
+  m_AuthExeInfo            = CFG->GetString(m_CFGKeyPrefix + "auth_exe_info", string());
+  m_AuthPasswordHashType   = CFG->GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
   m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
@@ -124,9 +126,11 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_UserName(nRootConfig->m_UserName),
     m_PassWord(nRootConfig->m_PassWord),    
 
+    m_AuthSkipVersionCheck(nRootConfig->m_AuthSkipVersionCheck),
     m_AuthWar3Version(nRootConfig->m_AuthWar3Version),
     m_AuthExeVersion(nRootConfig->m_AuthExeVersion),
     m_AuthExeVersionHash(nRootConfig->m_AuthExeVersionHash),
+    m_AuthExeInfo(nRootConfig->m_AuthExeInfo),
     m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
 
     m_FirstChannel(nRootConfig->m_FirstChannel),
@@ -198,10 +202,19 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthWar3Version        = CFG->GetUint8(m_CFGKeyPrefix + "auth_game_version", m_AuthWar3Version);
-  m_AuthExeVersion         = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4, m_AuthExeVersion);
-  m_AuthExeVersionHash     = CFG->GetUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4, m_AuthExeVersionHash);
-  m_AuthPasswordHashType   = CFG->GetString(m_CFGKeyPrefix + "auth_password_hash_type", m_AuthPasswordHashType);
+  m_AuthSkipVersionCheck   = CFG->GetBool(m_CFGKeyPrefix + "auth_skip_version_check", m_AuthSkipVersionCheck);
+  m_AuthPasswordHashType   = CFG->GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
+
+  // These are optional, since they can be figured out with bncsutil.
+  optional<uint8_t> authWar3Version            = CFG->GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
+  optional<vector<uint8_t>> authExeVersion     = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
+  optional<vector<uint8_t>> authExeVersionHash = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
+  string authExeInfo = CFG->GetString(m_CFGKeyPrefix + "auth_exe_info", string());
+
+  if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
+  if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();
+  if (authExeVersionHash.has_value()) m_AuthExeVersionHash = authExeVersionHash.value();
+  if (!authExeInfo.empty()) m_AuthExeInfo = authExeInfo;
 
   m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);

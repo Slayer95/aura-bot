@@ -123,6 +123,7 @@ public:
   std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
   std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);
   std::optional<sockaddr_storage> GetMaybeAddress(const std::string& key);
+  std::optional<std::vector<uint8_t>> GetMaybeUint8Vector(const std::string& key, const uint32_t count);
   std::optional<std::vector<uint8_t>> GetMaybeIPv4(const std::string& key);
   std::optional<std::filesystem::path> GetMaybePath(const std::string &key);
   std::optional<std::filesystem::path> GetMaybeDirectory(const std::string &key);
