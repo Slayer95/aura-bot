@@ -193,7 +193,7 @@ public:
 
   inline bool GetIsMirror() const { return m_GameIsMirror; }
 
-  bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier, const uint32_t nGameChannelKey);
+  bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
   bool SetMirrorSource(const std::string& nInput);
   void AddIgnoredRealm(const CRealm* nRealm);
   void RemoveIgnoredRealm(const CRealm* nRealm);

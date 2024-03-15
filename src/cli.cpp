@@ -84,7 +84,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--visibility", m_Visibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
   app.add_option("--random-races", m_RandomRaces, "Toggles random races when hosting from the CLI.");
   app.add_option("--random-heroes", m_RandomHeroes, "Toggles random heroes when hosting from the CLI.");
-  app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID:KEY.");
+  app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
 
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
@@ -250,7 +250,7 @@ void CCLI::QueueActions(CAura* nAura)
         }
         if (m_MirrorSource.has_value()) {
           if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
-            Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID:KEY");
+            Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
             delete gameSetup;
             delete ctx;
             return;

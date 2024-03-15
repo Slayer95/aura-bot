@@ -917,7 +917,7 @@ void CRealm::TrySendChat(const string& message, const string& user, bool isPriva
   }
 }
 
-void CRealm::QueueGameCreate(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
+void CRealm::QueueGameCreate(uint8_t displayMode, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
 {
   if (!m_LoggedIn || !map)
     return;
@@ -930,10 +930,10 @@ void CRealm::QueueGameCreate(uint8_t state, const string& gameName, CMap* map, u
   } else {
     QueuePacket(m_Protocol->SEND_SID_NETGAMEPORT(hostPort));
   }
-  QueueGameRefresh(state, gameName, map, hostCounter, true);
+  QueueGameRefresh(displayMode, gameName, map, hostCounter, true);
 }
 
-void CRealm::QueueGameMirror(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
+void CRealm::QueueGameMirror(uint8_t displayMode, const string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort)
 {
   if (!m_LoggedIn || !map)
     return;
@@ -942,10 +942,10 @@ void CRealm::QueueGameMirror(uint8_t state, const string& gameName, CMap* map, u
     m_FirstChannel = m_CurrentChannel;
 
   QueuePacket(m_Protocol->SEND_SID_NETGAMEPORT(hostPort));
-  QueueGameRefresh(state, gameName, map, hostCounter, false);
+  QueueGameRefresh(displayMode, gameName, map, hostCounter, false);
 }
 
-void CRealm::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace)
+void CRealm::QueueGameRefresh(uint8_t displayMode, const string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace)
 {
   if (m_LoggedIn && map)
   {
@@ -959,11 +959,11 @@ void CRealm::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, 
     uint32_t MapGameType = map->GetMapGameType();
     MapGameType |= MAPGAMETYPE_UNKNOWN0;
 
-    if (state == GAME_PRIVATE)
+    if (displayMode == GAME_PRIVATE)
       MapGameType |= MAPGAMETYPE_PRIVATEGAME;
 
     QueuePacket(m_Protocol->SEND_SID_STARTADVEX3(
-      state, CreateByteArray(MapGameType, false), map->GetMapGameFlags(),
+      displayMode, CreateByteArray(MapGameType, false), map->GetMapGameFlags(),
       // use an invalid map width/height to indicate reconnectable games
       m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapWidth(),
       m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),

@@ -172,9 +172,9 @@ public:
   void SendWhisper(const std::string& message, const std::string& user);
   void SendChatOrWhisper(const std::string& chatCommand, const std::string& user, bool whisper);
   void TrySendChat(const std::string& chatCommand, const std::string& user, bool isPrivate, std::ostream* errorLog);
-  void QueueGameCreate(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
-  void QueueGameMirror(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
-  void QueueGameRefresh(uint8_t state, const std::string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace);
+  void QueueGameCreate(uint8_t displayMode, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
+  void QueueGameMirror(uint8_t displayMode, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);
+  void QueueGameRefresh(uint8_t displayMode, const std::string& gameName, CMap* map, uint32_t hostCounter, bool useServerNamespace);
   void QueueGameUncreate();
 
   void ResetConnection(bool hadError);

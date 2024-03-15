@@ -737,11 +737,10 @@ bool CGameSetup::RunHost()
   return m_Aura->CreateGame(this);
 }
 
-bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier, const uint32_t nGameChannelKey)
+bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier)
 {
   m_GameIsMirror = true;
   m_GameIdentifier = nGameIdentifier;
-  m_GameChannelKey = nGameChannelKey;
   memcpy(&m_RealmsAddress, &nSourceAddress, sizeof(sockaddr_storage));
   return true;
 }
@@ -760,13 +759,10 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   if (rawPort.empty()) return false;
   string rawId = nInput.substr(idStart + 1, keyStart - (idStart + 1));
   if (rawId.empty()) return false;
-  string rawKey = nInput.substr(keyStart + 1);
-  if (rawKey.empty()) return false;
   optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(rawAddress, ACCEPT_IPV4);
   if (!maybeAddress.has_value()) return false;
   uint16_t gamePort = 0;
   uint32_t gameId = 0;
-  uint32_t gameKey = 0;
   try {
     uint32_t value = stoul(rawPort);
     if (value <= 0 || value > 0xFF) return false;
@@ -781,15 +777,8 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   } catch (...) {
     return false;
   }
-  try {
-    uint64_t value = stoul(rawKey);
-    if (value < 0 || value > 0xFFFFFFFF) return false;
-    gameKey = static_cast<uint32_t>(value);
-  } catch (...) {
-    return false;
-  }
   SetAddressPort(&(maybeAddress.value()), gamePort);
-  return SetMirrorSource(maybeAddress.value(), gameId, gameKey);
+  return SetMirrorSource(maybeAddress.value(), gameId);
 }
 
 void CGameSetup::AddIgnoredRealm(const CRealm* nRealm)
