@@ -180,7 +180,6 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
     } while (0 < requiredSize && bufferSize < requiredSize);
 
     if (requiredSize == 0) {
-      Print("getExeInfo(" + PathToString(FileWar3EXE) + ") returned 0 bytes");
       return false;
     }
 
