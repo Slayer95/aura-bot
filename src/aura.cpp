@@ -1124,6 +1124,9 @@ void CAura::HoldContext(CCommandContext* nCtx)
 
 void CAura::UnholdContext(CCommandContext* nCtx)
 {
+  if (nCtx == nullptr)
+    return;
+
   if (nCtx->Unref()) {
     m_ActiveContexts.erase(nCtx);
     delete nCtx;
