@@ -251,7 +251,7 @@ void CCLI::QueueActions(CAura* nAura)
         if (m_MirrorSource.has_value()) {
           if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
             Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-            UnholdContext(ctx);
+            nAura->UnholdContext(ctx);
             delete gameSetup;
             return;
           }
@@ -263,12 +263,12 @@ void CCLI::QueueActions(CAura* nAura)
       } else {
         ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
         delete gameSetup;
-        UnholdContext(ctx);
+        nAura->UnholdContext(ctx);
       }
     } else {
       ctx->ErrorReply("Invalid game hosting parameters. Please ensure the provided file is valid. See also: CLI.md");
       delete gameSetup;
-      UnholdContext(ctx);
+      nAura->UnholdContext(ctx);
     }
   }
 

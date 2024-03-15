@@ -256,8 +256,15 @@ CGame::~CGame()
 
   delete m_Stats;
 
-  if (m_Aura->m_SudoGame == this) {
-    m_Aura->m_SudoGame = nullptr;
+  for (auto& ctx : m_Aura->m_ActiveContexts) {
+    if (ctx->m_SourceGame == this) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_SourceGame = nullptr;
+    }
+    if (ctx->m_TargetGame == this) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_TargetGame = nullptr;
+    }
   }
 }
 
@@ -954,20 +961,37 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message) const
   if (message.empty())
     return;
 
+  if (GetNumHumanPlayers() <= 0) {
+    return;
+  }
+
   // send a public message to all players - it'll be marked [All] in Warcraft 3
 
-  if (GetNumHumanPlayers() > 0) {
-    if (!m_GameLoading && !m_GameLoaded)
-    {
-      if (message.size() > 254)
-        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), message.substr(0, 254)));
-      else
+  uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
+  if (message.size() < maxSize) {
+    if (!m_GameLoading && !m_GameLoaded) {
         SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), message));
     } else {
-      if (message.size() > 127)
-        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), message.substr(0, 127)));
-      else
         SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
+    }
+    return;
+  }
+
+  string leftMessage = message;
+  while (leftMessage.size() > maxSize) {
+    if (!m_GameLoading && !m_GameLoaded) {
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
+    } else {
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
+    }
+    leftMessage = leftMessage.substr(0, maxSize);
+  }
+
+  if (!leftMessage.empty()) {
+    if (!m_GameLoading && !m_GameLoaded) {
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), leftMessage));
+    } else {
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
     }
   }
 }
@@ -2311,7 +2335,7 @@ void CGame::EventPlayerBotCommand(CGamePlayer* player, char token, std::string& 
 {
   CCommandContext* ctx = new CCommandContext(m_Aura, this, player, &std::cout, token);
   ctx->Run(command, payload);
-  UnholdContext(ctx);
+  m_Aura->UnholdContext(ctx);
 }
 
 void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)

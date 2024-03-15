@@ -124,10 +124,7 @@ public:
   std::unordered_multiset<std::string>               m_BusyMaps;
   std::set<CCommandContext*>                         m_ActiveContexts;
 
-  std::string                                        m_SudoUser;
-  CGame*                                             m_SudoGame;
-  CIRC*                                              m_SudoIRC;
-  CRealm*                                            m_SudoRealm;
+  CCommandContext*                                   m_SudoContext;
   std::string                                        m_SudoAuthPayload;
   std::string                                        m_SudoExecCommand;
   std::vector<std::vector<std::string>>              m_PendingActions;

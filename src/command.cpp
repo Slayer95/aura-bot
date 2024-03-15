@@ -60,7 +60,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player,
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1)
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
 {
 }
 
@@ -86,7 +87,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRe
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1)
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
 {
 }
 
@@ -112,7 +114,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwo
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
-    m_RefCount(1)
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
 {
 }
 
@@ -138,7 +141,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutp
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1)
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
 {
 }
 
@@ -164,7 +168,8 @@ CCommandContext::CCommandContext(CAura* nAura, CRealm* fromRealm, string& fromNa
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1)
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
 {
 }
 
@@ -190,7 +195,8 @@ CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channel
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
-    m_RefCount(1)
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
 {
 }
 
@@ -216,7 +222,8 @@ CCommandContext::CCommandContext(CAura* nAura, ostream* nOutputStream, char nTok
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1)
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
 {
 }
 
@@ -324,16 +331,25 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
   if (!m_HostName.empty() && !(m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
     return Result;
   }
-  bool isValidCaller = false;
-  if (m_FromName == m_Aura->m_SudoUser) {
-    if (m_Aura->m_SudoGame) {
-      isValidCaller = m_Player && m_TargetGame == m_Aura->m_SudoGame;
-    } else if (m_Aura->m_SudoRealm) {
-      isValidCaller = m_SourceRealm == m_Aura->m_SudoRealm;
-    } else if (m_Aura->m_SudoIRC) {
-      isValidCaller = m_IRC = m_Aura->m_SudoIRC;
-    }
+  if (!m_Aura->m_SudoContext) {
+    return Result;
   }
+  if (m_Aura->m_SudoContext->GetPartiallyDestroyed()) {
+    m_Aura->UnholdContext(m_Aura->m_SudoContext);
+    m_Aura->m_SudoContext = nullptr;
+    m_Aura->m_SudoAuthPayload.clear();
+    m_Aura->m_SudoExecCommand.clear();
+    return Result;
+  }
+  bool isValidCaller = (
+    m_FromName == m_Aura->m_SudoContext->m_FromName &&
+    m_SourceRealm == m_Aura->m_SudoContext->m_SourceRealm &&
+    m_TargetRealm == m_Aura->m_SudoContext->m_TargetRealm &&
+    m_SourceGame == m_Aura->m_SudoContext->m_SourceGame &&
+    m_TargetGame == m_Aura->m_SudoContext->m_TargetGame &&
+    m_Player == m_Aura->m_SudoContext->m_Player &&
+    m_IRC == m_Aura->m_SudoContext->m_IRC
+  );
   if (isValidCaller && message == m_Aura->m_SudoAuthPayload) {
     (*m_Output) << "[AURA] Confirmed " + m_FromName + " command \"" + m_Aura->m_SudoExecCommand + "\"" << std::endl;
     size_t PayloadStart = m_Aura->m_SudoExecCommand.find(' ');
@@ -349,12 +365,10 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     //m_Permissions |= PERM_BOT_SUDO_OK;
     m_Permissions = 0xFFFF;
   }
-  m_Aura->m_SudoUser.clear();
+  m_Aura->UnholdContext(m_Aura->m_SudoContext);
+  m_Aura->m_SudoContext = nullptr;
   m_Aura->m_SudoAuthPayload.clear();
   m_Aura->m_SudoExecCommand.clear();
-  m_Aura->m_SudoGame = nullptr;
-  m_Aura->m_SudoRealm = nullptr;
-  m_Aura->m_SudoIRC = nullptr;
   return Result;
 }
 
@@ -365,6 +379,7 @@ void CCommandContext::SendReply(const string& message)
 
   switch (m_FromType) {
     case FROM_GAME: {
+      if (!m_TargetGame) break;
       if (message.length() <= 100) {
         m_TargetGame->SendChat(m_Player, message);
       } else {
@@ -381,11 +396,13 @@ void CCommandContext::SendReply(const string& message)
     }
 
     case FROM_BNET: {
+      if (!m_SourceRealm) break;
       m_SourceRealm->TrySendChat(message, m_FromName, true, m_Output);
       break;
     }
 
     case FROM_IRC: {
+      if (!m_IRC) break;
       if (m_FromWhisper) {
         m_IRC->SendUser(message, m_FromName);
       } else {
@@ -563,10 +580,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       ErrorReply("Forbidden");
       return;
     }
-    m_Aura->m_SudoUser = m_FromName;
-    m_Aura->m_SudoGame = m_TargetGame;
-    m_Aura->m_SudoRealm = m_SourceRealm;
-    m_Aura->m_SudoIRC = m_IRC;
+    m_Aura->HoldContext(this);
+    m_Aura->m_SudoContext = this;
     // TODO(IceSandslash): GetSudoAuthPayload should only be executed after some local input.
     m_Aura->m_SudoAuthPayload = m_Aura->GetSudoAuthPayload(Payload);
     m_Aura->m_SudoExecCommand = Payload;
@@ -2148,7 +2163,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame) {
         SendReply("Network check started... Check output in the console.");
       }
-      m_Aura->m_Net->StartHealthCheck(testServers);
+      m_Aura->m_Net->StartHealthCheck(testServers, this);
       break;
     }
 
@@ -3514,7 +3529,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ctx = new CCommandContext(m_Aura, targetGame, &std::cout, m_Token);
       }
       ctx->Run(SubCmd, SubPayload);
-      UnholdContext(ctx);
+      m_Aura->UnholdContext(ctx);
       break;
     }
 
@@ -4289,7 +4304,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       string gameName = Args[5];
       SetAddressPort(&(maybeAddress.value()), gamePort);
       m_Aura->m_GameSetup->SetContext(this);
-      m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter, gameEntryKey);
+      m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter);
       m_Aura->m_GameSetup->SetName(gameName);
       if (excludedServer) m_Aura->m_GameSetup->AddIgnoredRealm(excludedServer);
       m_Aura->m_GameSetup->RunHost();

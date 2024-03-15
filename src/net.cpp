@@ -161,6 +161,7 @@ CNet::CNet(CAura* nAura)
     m_UDP6BroadcastTarget(new sockaddr_storage()),
 
     m_HealthCheckInProgress(false),
+    m_HealthCheckContext(nullptr),
     m_IPv4CacheV(make_pair(string(), nullptr)),
     m_IPv4CacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
     m_IPv6CacheV(make_pair(string(), nullptr)),
@@ -619,21 +620,32 @@ uint8_t CNet::EnableUPnP(const uint16_t externalPort, const uint16_t internalPor
   return success;
 }
 
-void CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage>> testServers)
+bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx)
 {
+  if (m_HealthCheckInProgress) {
+    return false;
+  }
   for (auto& testServer: testServers) {
     m_HealthCheckClients.push_back(new CTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer)));
   }
+  m_Aura->HoldContext(nCtx);
+  m_HealthCheckContext = nCtx;
   m_HealthCheckInProgress = true;
+  return true;
 }
 
 void CNet::ResetHealthCheck()
 {
+  if (!m_HealthCheckInProgress)
+    return;
+
   for (auto& testConnection : m_HealthCheckClients) {
     delete testConnection;
   }
   m_HealthCheckClients.clear();
   m_HealthCheckInProgress = false;
+  m_Aura->UnholdContext(m_HealthCheckContext);
+  m_HealthCheckContext = nullptr;
 }
 
 void CNet::ReportHealthCheck()
@@ -677,7 +689,7 @@ void CNet::ReportHealthCheck()
     }
     if (anyDirectSuccess) {
       Print("[Network] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4) + ".");
-      m_Aura->m_CurrentLobby->SendAllChat("This bot CAN be reached through the IPv4 Internet.");
+      m_HealthCheckContext->SendAll("This bot CAN be reached through the IPv4 Internet.");
     } else {
       Print("[Network] This bot is disconnected from the IPv4 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv4) + ".");
       Print("[Network] Please setup port-forwarding to allow connections.");
@@ -686,16 +698,15 @@ void CNet::ReportHealthCheck()
       Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
       Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
       Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
-      if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
-        m_Aura->m_CurrentLobby->SendAllChat("============= READ IF YOU ARE RUNNING AURA =====================================");
-        m_Aura->m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
-        m_Aura->m_CurrentLobby->SendAllChat("Please setup port-forwarding to allow connections.");
-        m_Aura->m_CurrentLobby->SendAllChat(portForwardInstructions);
-        m_Aura->m_CurrentLobby->SendAllChat("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
-        m_Aura->m_CurrentLobby->SendAllChat("Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
-        m_Aura->m_CurrentLobby->SendAllChat("But make sure your firewall allows Aura inbound TCP connections.");
-        m_Aura->m_CurrentLobby->SendAllChat("=================================================================================");
-      }
+
+      m_HealthCheckContext->SendAll("============= READ IF YOU ARE RUNNING AURA =====================================");
+      m_HealthCheckContext->SendAll("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
+      m_HealthCheckContext->SendAll("Please setup port-forwarding to allow connections.");
+      m_HealthCheckContext->SendAll(portForwardInstructions);
+      m_HealthCheckContext->SendAll("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+      m_HealthCheckContext->SendAll("Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
+      m_HealthCheckContext->SendAll("But make sure your firewall allows Aura inbound TCP connections.");
+      m_HealthCheckContext->SendAll("=================================================================================");
     }
   }
   sockaddr_storage* publicIPv6 = GetPublicIPv6();
@@ -703,25 +714,16 @@ void CNet::ReportHealthCheck()
     if (isIPv6Reachable) {
       Print("[Network] This bot CAN be reached through the IPv6 Internet. Address: " + AddressToString(*publicIPv6) + ".");
       Print("[Network] See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
-      m_Aura->m_CurrentLobby->SendAllChat("This bot CAN be reached through the IPv6 Internet.");
-      m_Aura->m_CurrentLobby->SendAllChat("See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
-      m_Aura->m_CurrentLobby->SendAllChat("=================================================================================");
+      m_HealthCheckContext->SendAll("This bot CAN be reached through the IPv6 Internet.");
+      m_HealthCheckContext->SendAll("See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
+      m_HealthCheckContext->SendAll("=================================================================================");
     } else {
       Print("[Network] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
-      m_Aura->m_CurrentLobby->SendAllChat("This bot is disconnected from the IPv6 Internet, because its public address is unreachable.");
-      m_Aura->m_CurrentLobby->SendAllChat("=================================================================================");
+      m_HealthCheckContext->SendAll("This bot is disconnected from the IPv6 Internet, because its public address is unreachable.");
+      m_HealthCheckContext->SendAll("=================================================================================");
     }
   }
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
-    string LeftMessage = JoinVector(ChatReport, " | ", false);
-    while (LeftMessage.length() > 254) {
-      m_Aura->m_CurrentLobby->SendAllChat(LeftMessage.substr(0, 254));
-      LeftMessage = LeftMessage.substr(254);
-    }
-    if (LeftMessage.length()) {
-      m_Aura->m_CurrentLobby->SendAllChat(LeftMessage);
-    }
-  }
+  m_HealthCheckContext->SendAll(JoinVector(ChatReport, " | ", false));
   ResetHealthCheck();
 }
 
@@ -880,8 +882,13 @@ void CNet::OnConfigReload()
 
 CNet::~CNet()
 {
+  delete m_Config;
   delete m_UDPMainServer;
   delete m_UDPDeafSocket;
+  delete m_UDPIPv6Server;
   delete m_UDP4BroadcastTarget;
   delete m_UDP6BroadcastTarget;
+  FlushSelfIPCache();
+  m_Aura->UnholdContext(m_HealthCheckContext);
+  m_HealthCheckContext = nullptr;
 }

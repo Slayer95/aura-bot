@@ -30,6 +30,7 @@
 #include "gameplayer.h"
 #include "config_net.h"
 #include "aura.h"
+#include "command.h"
 
 #include <map>
 #include <set>
@@ -65,6 +66,7 @@
 //
 
 class CAura;
+class CCommandContext;
 class CUDPServer;
 class CUDPSocket;
 class CStreamIOSocket;
@@ -134,6 +136,7 @@ public:
 
   std::vector<CTestConnection*>                               m_HealthCheckClients;
   bool                                                        m_HealthCheckInProgress;
+  CCommandContext*                                            m_HealthCheckContext;
   uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
 
   void InitPersistentConfig();
@@ -159,7 +162,7 @@ public:
   void             FlushSelfIPCache();
 
   uint8_t EnableUPnP(const uint16_t externalPort, const uint16_t internalPort);
-  void StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers);
+  bool StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx);
   void ResetHealthCheck();
   void ReportHealthCheck();
 

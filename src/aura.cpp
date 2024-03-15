@@ -244,9 +244,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     m_HostCounter(0),
     m_LastServerID(0xF),
     m_MaxGameNameSize(31),
-    m_SudoRealm(nullptr),
-    m_SudoGame(nullptr),
-    m_SudoIRC(nullptr),
+    m_SudoContext(nullptr),
     m_GameVersion(0),
     m_Exiting(false),
     m_Ready(true),
@@ -461,9 +459,8 @@ bool CAura::CopyScripts()
 
 CAura::~CAura()
 {
-  m_SudoGame = nullptr;
-  m_SudoIRC = nullptr;
-  m_SudoRealm = nullptr;  
+  UnholdContext(m_SudoContext);
+  m_SudoContext = nullptr;
 
   delete m_Config;
   delete m_RealmDefaultConfig;
@@ -1119,17 +1116,17 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   return true;
 }
 
-void HoldContext(CCommandContext* nCtx)
+void CAura::HoldContext(CCommandContext* nCtx)
 {
-  ctx->Ref();
+  nCtx->Ref();
   m_ActiveContexts.insert(nCtx);
 }
 
-void UnholdContext(CCommandContext* nCtx)
+void CAura::UnholdContext(CCommandContext* nCtx)
 {
-  if (ctx->Unref()) {
-    m_ActiveContexts.erase(ctx);
-    delete ctx;
+  if (nCtx->Unref()) {
+    m_ActiveContexts.erase(nCtx);
+    delete nCtx;
   }
 }
 

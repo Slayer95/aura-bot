@@ -109,8 +109,15 @@ CRealm::~CRealm()
   delete m_Protocol;
   delete m_BNCSUtil;
 
-  if (m_Aura->m_SudoRealm == this) {
-    m_Aura->m_SudoRealm = nullptr;
+  for (auto& ctx : m_Aura->m_ActiveContexts) {
+    if (ctx->m_SourceRealm == this) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_SourceRealm = nullptr;
+    }
+    if (ctx->m_TargetRealm == this) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_TargetRealm = nullptr;
+    }
   }
 }
 

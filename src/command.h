@@ -62,24 +62,23 @@
 
 class CCommandContext
 {
+public:
+  CRealm*                       m_SourceRealm;
+  CRealm*                       m_TargetRealm;
+  CGame*                        m_SourceGame;
+  CGame*                        m_TargetGame;
+  CGamePlayer*                  m_Player;
+  CIRC*                         m_IRC;
+
 protected:
   CAura*                        m_Aura;
   std::string                   m_FromName;
   bool                          m_FromWhisper;
   uint8_t                       m_FromType;
   char                          m_Token;
-
-  CGame*                        m_SourceGame;
-  CGame*                        m_TargetGame;
   uint16_t                      m_Permissions;
 
-  CGamePlayer*                  m_Player;
-
   std::string                   m_HostName;
-  CRealm*                       m_SourceRealm;
-  CRealm*                       m_TargetRealm;
-
-  CIRC*                         m_IRC;
   std::string                   m_ChannelName;
 
   std::ostream*                 m_Output;
@@ -88,6 +87,7 @@ protected:
   std::optional<uint8_t>        m_OverridePermissions;
 
   uint16_t                      m_RefCount; // How many pointers exist to this CCommandContext? The one in CAura::m_ActiveContexts is not counted.
+  bool                          m_PartiallyDestroyed;
 
 public:
   CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, std::ostream* outputStream, char nToken);
@@ -126,6 +126,8 @@ public:
   void Run(const std::string& command, const std::string& payload);
   void Ref() { ++m_RefCount; }
   bool Unref() { return --m_RefCount == 0; }
+  void SetPartiallyDestroyed() { m_PartiallyDestroyed = true; }
+  bool GetPartiallyDestroyed() const { return m_PartiallyDestroyed; }
 
   ~CCommandContext();
 };

@@ -300,6 +300,13 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
 CGamePlayer::~CGamePlayer()
 {
   delete m_Socket;
+
+  for (auto& ctx : m_Game->m_Aura->m_ActiveContexts) {
+    if (ctx->m_Player == this) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_Player = nullptr;
+    }
+  }
 }
 
 uint32_t CGamePlayer::GetPing() const

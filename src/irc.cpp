@@ -81,8 +81,11 @@ CIRC::~CIRC()
   delete m_Config;
   delete m_Socket;
 
-  if (m_Aura->m_SudoIRC == this) {
-    m_Aura->m_SudoIRC = nullptr;
+  for (auto& ctx : m_Aura->m_ActiveContexts) {
+    if (ctx->m_IRC == this) {
+      ctx->m_IRC = nullptr;
+      ctx->SetPartiallyDestroyed();
+    }
   }
 }
 
