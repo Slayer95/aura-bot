@@ -187,7 +187,7 @@ public:
   inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
   inline uint8_t                GetMapObservers() const { return m_MapObservers; }
-  inline uint8_t                GetMapFlags() { return m_MapFlags; }
+  inline uint8_t                GetMapFlags() const { return m_MapFlags; }
   std::vector<uint8_t>          GetMapGameFlags() const;
   uint32_t                      GetMapGameType() const;
   inline uint32_t               GetMapOptions() const { return m_MapOptions; }
@@ -202,7 +202,7 @@ public:
   inline uint8_t                GetMapNumPlayers() const { return m_MapNumPlayers; }
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
-  uint8_t GetLobbyRace(const CGameSlot* slot);
+  uint8_t                       GetLobbyRace(const CGameSlot* slot) const;
   void                          ClearMapData() { m_MapData.clear(); }
   bool                          SetRandomRaces(const bool nEnable);
   bool                          SetRandomHeroes(const bool nEnable);
@@ -210,6 +210,7 @@ public:
   bool                          SetMapObservers(const uint8_t nMapObservers);
   bool                          SetForcedRandomRaceSlots();
   bool                          SetSelectableSlots();
+  bool                          IsObserverSlot(const CGameSlot* slot) const;
   bool                          NormalizeSlots();
 
   void Load(CConfig* CFG);

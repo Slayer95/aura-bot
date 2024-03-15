@@ -258,22 +258,46 @@ bool CMap::SetSelectableSlots()
   return true;
 }
 
+bool CMap::IsObserverSlot(const CGameSlot* slot) const
+{
+  if (slot->GetPID() != 0 || slot->GetDownloadStatus() != 255) {
+    return false;
+  }
+  if (slot->GetSlotStatus() != SLOTSTATUS_OPEN || slot->GetComputer() != 0 || slot->GetRace() != SLOTRACE_RANDOM) {
+    return false;
+  }
+  return slot->GetTeam() >= m_MapNumPlayers && slot->GetColour() >= m_MapNumPlayers;
+}
+
 bool CMap::NormalizeSlots()
 {
   uint8_t i = static_cast<uint8_t>(m_Slots.size());
+
   bool updated = false;
+  bool anyNonObserver = false;
   while (i--) {
     CGameSlot slot = m_Slots[i];
-    if (slot.GetTeam() > m_MapNumPlayers) {
+    if (!IsObserverSlot(&slot)) {
+      anyNonObserver = true;
+      break;
+    }
+  }
+
+  i = static_cast<uint8_t>(m_Slots.size());
+  while (i--) {
+    CGameSlot slot = m_Slots[i];
+    if (anyNonObserver && IsObserverSlot(&slot)) {
       m_Slots.erase(m_Slots.begin() + i);
+      updated = true;
       continue;
     }
-    uint8_t race = GetLobbyRace(slot);
+    uint8_t race = GetLobbyRace(&slot);
     if (race != slot.GetRace()) {
       slot.SetRace(race);
       updated = true;
     }
   }
+
   return updated;
 }
 
@@ -1186,7 +1210,7 @@ uint32_t CMap::XORRotateLeft(uint8_t* data, uint32_t length)
   return Val;
 }
 
-uint8_t CMap::GetLobbyRace(const CGameSlot* slot)
+uint8_t CMap::GetLobbyRace(const CGameSlot* slot) const
 {
   bool isFixedRace = GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS;
   bool isRandomRace = GetMapFlags() & MAPFLAG_RANDOMRACES;
