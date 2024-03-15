@@ -509,6 +509,7 @@ filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
     SUCCESS(x)
   }
 
+#ifdef _WIN32
   if (!utf8::is_valid(it->second.begin(), it->second.end())) {
     CONFIG_ERROR(key, x)
   }
@@ -517,6 +518,9 @@ filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
   utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
 
   filesystem::path value = widePath;
+#else
+  filesystem::path value = it->second;
+#endif
   if (value.is_absolute()) {
     SUCCESS(value)
   }
@@ -534,14 +538,20 @@ filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path
     SUCCESS(defaultDirectory)
   }
 
+#ifdef _WIN32
   if (!utf8::is_valid(it->second.begin(), it->second.end())) {
-    CONFIG_ERROR(key, x)
+    filesystem::path defaultDirectory = x;
+    NormalizeDirectory(defaultDirectory);
+    CONFIG_ERROR(key, defaultDirectory)
   }
 
   wstring widePath;
   utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
 
   filesystem::path value = widePath;
+#else
+  filesystem::path value = it->second;
+#endif
   if (value.is_absolute()) {
     NormalizeDirectory(value);
     SUCCESS(value)
@@ -684,6 +694,7 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
     SUCCESS(result)
   }
 
+#ifdef _WIN32
   if (!utf8::is_valid(it->second.begin(), it->second.end())) {
     CONFIG_ERROR(key, result)
   }
@@ -692,6 +703,9 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
   utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
 
   result = filesystem::path(widePath);
+#else
+  result = filesystem::path(it->second);
+#endif
   if (result.value().is_absolute()) {
     SUCCESS(result)
   }
@@ -709,6 +723,7 @@ optional<filesystem::path> CConfig::GetMaybeDirectory(const string &key)
     SUCCESS(result)
   }
 
+#ifdef _WIN32
   if (!utf8::is_valid(it->second.begin(), it->second.end())) {
     CONFIG_ERROR(key, result)
   }
@@ -717,6 +732,9 @@ optional<filesystem::path> CConfig::GetMaybeDirectory(const string &key)
   utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
 
   result = filesystem::path(widePath);
+#else
+  result = filesystem::path(it->second);
+#endif
 
   if (result.value().is_absolute()) {
     NormalizeDirectory(result.value());
