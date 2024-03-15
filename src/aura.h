@@ -114,6 +114,7 @@ public:
 
   uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
+  uint32_t                                           m_LastServerID;
   size_t                                             m_MaxGameNameSize;
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
@@ -137,45 +138,22 @@ public:
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
 
+  std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;
-  std::map<std::string, CRealm*>                     m_RealmsByUniqueIdentifier;
+  std::map<std::string, CRealm*>                     m_RealmsByInputID;
 
   explicit CAura(CConfig* CFG, CCLI* nCLI);
   ~CAura();
   CAura(CAura&) = delete;
 
-  // processing functions
-
-  bool HandleAction(std::vector<std::string>& action);
-  bool Update();
-  inline bool GetReady() const { return m_Ready; }
-
-  CRealm* GetRealmByInputId(const std::string& inputId);
-  CRealm* GetRealmByHostName(const std::string& hostName);
-  CRealm* GetRealmByHostCounter(const uint8_t hostCounter);
+  CRealm* GetRealmByInputId(const std::string& inputId) const;
+  CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   CTCPServer* GetGameServer(uint16_t, std::string& name);
 
-  bool CreateGame(CGameSetup* gameSetup);
-
-  // events
-
-  void EventBNETGameRefreshFailed(CRealm* bnet);
-  void EventGameDeleted(CGame* game);
-
-  // other functions
-
-  bool ReloadConfigs();
-  bool LoadConfigs(CConfig* CFG);
-  bool LoadBNETs(CConfig* CFG, std::bitset<240>& definedConfigs);
-
-  uint8_t ExtractScripts();
-  bool CopyScripts();
-
-  void LoadIPToCountryData();
-
-  void CacheMapPresets();
+  // identifier generators
 
   uint32_t NextHostCounter();
+  uint32_t NextServerID();
 
   inline std::string GetSudoAuthPayload(const std::string& Payload) {
     std::random_device rd;
@@ -195,6 +173,31 @@ public:
     m_SudoAuthPayload = result;
     return result;
   }
+
+  // processing functions
+
+  bool HandleAction(std::vector<std::string>& action);
+  bool Update();
+  inline bool GetReady() const { return m_Ready; }
+  bool CreateGame(CGameSetup* gameSetup);
+
+  // events
+
+  void EventBNETGameRefreshFailed(CRealm* bnet);
+  void EventGameDeleted(CGame* game);
+
+  // other functions
+
+  bool ReloadConfigs();
+  bool LoadConfigs(CConfig* CFG);
+  bool LoadBNETs(CConfig* CFG, std::bitset<240>& definedConfigs);
+
+  uint8_t ExtractScripts();
+  bool CopyScripts();
+
+  void LoadIPToCountryData();
+
+  void CacheMapPresets();
 };
 
 #endif // AURA_AURA_H_

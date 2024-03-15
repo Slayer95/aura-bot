@@ -238,13 +238,13 @@ void CGameConnection::Send(const std::vector<uint8_t>& data) const
 // CGamePlayer
 //
 
-CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID, uint8_t nJoinedRealmID, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
+CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
   : m_Protocol(connection->m_Protocol),
     m_Game(nGame),
     m_Socket(connection->GetSocket()),
     m_BroadcastPort(6112),
     m_IPv4Internal(std::move(nInternalIP)),
-    m_RealmHostCounter(nJoinedRealmID),
+    m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
     m_TotalPacketsSent(0),
@@ -321,14 +321,14 @@ uint32_t CGamePlayer::GetPing() const
 
 CRealm* CGamePlayer::GetRealm(bool mustVerify)
 {
-  if (m_RealmHostCounter < 0x10)
+  if (m_RealmInternalId < 0x10)
     return nullptr;
 
   if (mustVerify && !m_Verified) {
     return nullptr;
   }
 
-  return m_Game->m_Aura->GetRealmByHostCounter(m_RealmHostCounter);
+  return m_Game->m_Aura->GetRealmByInputId(m_Game->m_Aura->m_RealmsIdentifiers[m_RealmInternalId]);
 }
 
 string CGamePlayer::GetRealmDataBaseID(bool mustVerify)
@@ -528,7 +528,7 @@ bool CGamePlayer::Update(void* fd)
           CRealm* MyRealm = GetRealm(false);
           if (MyRealm) {
             m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
-          } else if (m_RealmHostCounter == 0) {
+          } else if (m_RealmInternalId == 0) {
             m_GProxyPort = m_Game->m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 : m_Game->GetHostPort();
           } else {
             m_GProxyPort = 6112;

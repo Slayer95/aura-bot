@@ -97,7 +97,8 @@ private:
   std::string                      m_CurrentChannel;            // the current chat channel
   std::string                      m_HostName;                  // 
   uint8_t                          m_ServerIndex;               // 
-  uint8_t                          m_ServerID;                  // 
+  uint32_t                         m_InternalServerID;                  // internal server ID, maps 1:1 to CRealmConfig::m_InputID
+  uint8_t                          m_PublicServerID;            // for building host counters, which allows matching game join requests to a realm (or none)
   std::string                      m_IRC;                       // IRC channel we're sending the message to
   int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
   int64_t                          m_LastConnectionAttemptTime; // GetTime when we last attempted to connect to battle.net
@@ -136,7 +137,8 @@ public:
   std::string          GetCanonicalDisplayName() const;
   std::string          GetDataBaseID() const;
   std::string          GetLogPrefix() const;
-  uint8_t              GetHostCounterID() const;
+  inline uint8_t       GetHostCounterID() const { return m_PublicServerID; }
+  inline uint8_t       GetInternalID() const { return m_InternalServerID; }
   std::string          GetLoginName() const;
   bool                 GetIsMirror() const;
   bool                 GetIsVPN() const;
@@ -180,17 +182,19 @@ public:
 
   // other functions
 
-  bool GetIsAdmin(std::string name);
-  bool GetIsRootAdmin(std::string name);
-  bool GetIsSudoer(std::string name);
-  CDBBan* IsBannedName(std::string name);
+  bool GetIsAdmin(std::string name) const;
+  bool GetIsRootAdmin(std::string name) const;
+  bool GetIsSudoer(std::string name) const;
+  bool IsBannedName(std::string name) const;
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
 
-  void SetConfig(CRealmConfig* CFG) {
+  inline void SetConfig(CRealmConfig* CFG) {
     delete m_Config;
     m_Config = CFG;
-  };
+  }
+
+  inline void SetHostCounter(const uint8_t nHostCounter) { m_PublicServerID = nHostCounter; }
 
   private:
 };

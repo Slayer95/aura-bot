@@ -81,7 +81,8 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_FirstChannel(nRealmConfig->m_FirstChannel),
     m_HostName(nRealmConfig->m_HostName),
     m_ServerIndex(nRealmConfig->m_ServerIndex),
-    m_ServerID(nRealmConfig->m_ServerIndex + 15),
+    m_InternalServerID(nAura->NextServerID()),
+    m_PublicServerID(nRealmConfig->m_ServerIndex + 15),
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
     m_LastGameListTime(0),
@@ -636,7 +637,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
         UserName = Message;
 
       CGamePlayer* AboutPlayer = m_Aura->m_CurrentLobby->GetPlayerFromName(UserName, true);
-      if (AboutPlayer && AboutPlayer->GetRealmHostCounter() == m_ServerID) {
+      if (AboutPlayer && AboutPlayer->GetRealmInternalID() == m_InternalServerID) {
         // handle spoof checking for current game
         // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
         // at all times you can still /w the bot with "spoofcheck" to manually spoof check
@@ -703,11 +704,6 @@ string CRealm::GetDataBaseID() const
 string CRealm::GetLogPrefix() const
 {
   return "[BNET: " + m_Config->m_UniqueName + "] ";
-}
-
-uint8_t CRealm::GetHostCounterID() const
-{
-  return m_ServerID;
 }
 
 string CRealm::GetLoginName() const
@@ -951,7 +947,7 @@ void CRealm::QueueGameRefresh(uint8_t state, const string& gameName, CMap* map, 
       m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),
       GetPrefixedGameName(gameName), m_Config->m_UserName,
       0, map->GetMapPath(), map->GetMapCRC(), map->GetMapSHA1(),
-      hostCounter | (useServerNamespace ? (m_ServerID << 24) : 0),
+      hostCounter | (useServerNamespace ? (m_PublicServerID << 24) : 0),
       m_Aura->m_MaxSlots
     ), PACKET_TYPE_GAME_REFRESH);
   }
@@ -977,7 +973,7 @@ void CRealm::ResetConnection(bool Errored)
   m_WaitingToConnect = true;
 }
 
-bool CRealm::GetIsAdmin(string name)
+bool CRealm::GetIsAdmin(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
@@ -987,7 +983,7 @@ bool CRealm::GetIsAdmin(string name)
   return false;
 }
 
-bool CRealm::GetIsRootAdmin(string name)
+bool CRealm::GetIsRootAdmin(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
@@ -997,20 +993,19 @@ bool CRealm::GetIsRootAdmin(string name)
   return false;
 }
 
-bool CRealm::GetIsSudoer(string name)
+bool CRealm::GetIsSudoer(string name) const
 {
   // Case-sensitive
   return m_Config->m_SudoUsers.find(name) != m_Config->m_SudoUsers.end();
 }
 
-CDBBan* CRealm::IsBannedName(string name)
+bool CRealm::IsBannedName(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
-
-  if (CDBBan* Ban = m_Aura->m_DB->BanCheck(m_Config->m_DataBaseID, name))
-    return Ban;
-
-  return nullptr;
+  CDBBan* Ban = m_Aura->m_DB->BanCheck(m_Config->m_DataBaseID, name);
+  if (!Ban) return false;
+  delete Ban;
+  return true;
 }
 
 void CRealm::HoldFriends(CGame* game)

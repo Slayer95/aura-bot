@@ -242,6 +242,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     m_IssuesURL(AURA_ISSUES_URL),
     m_MaxSlots(MAX_SLOTS_LEGACY),
     m_HostCounter(0),
+    m_LastServerID(0xF),
     m_MaxGameNameSize(31),
     m_SudoRealm(nullptr),
     m_SudoGame(nullptr),
@@ -282,6 +283,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     Print("[AURA] Broadcasting games port " + to_string(m_Net->m_Config->m_UDPCustomPortTCP4) + " over LAN");
   }
 
+  m_RealmsIdentifiers.resize(16);
   if (m_Config->m_EnableBNET.has_value()) {
     if (m_Config->m_EnableBNET.value()) {
       Print("[AURA] All realms forcibly set to ENABLED <bot.toggle_every_realm = on>");
@@ -381,7 +383,7 @@ bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
     string inputID = m_Realms[i]->GetInputID();
     if (uniqueInputIds.find(inputID) == uniqueInputIds.end()) {
       delete m_Realms[i];
-      m_RealmsByUniqueIdentifier.erase(inputID);
+      m_RealmsByInputID.erase(inputID);
       m_Realms.erase(m_Realms.begin() + i);
     }
   }
@@ -393,7 +395,9 @@ bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
     if (matchingRealm == nullptr) {
       matchingRealm = new CRealm(this, realmConfig);
       m_Realms.push_back(matchingRealm);
-      m_RealmsByUniqueIdentifier[entry.first] = matchingRealm;
+      m_RealmsByInputID[entry.first] = matchingRealm;
+      m_RealmsIdentifiers.push_back(entry.first);
+      // m_RealmsIdentifiers[matchingRealm->GetInternalID()] == matchingRealm->GetInputID();
       Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
     } else {
       bool DoResetConnection = (
@@ -402,6 +406,7 @@ bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
         matchingRealm->GetEnabled() && !realmConfig->m_Enabled
       );
       matchingRealm->SetConfig(realmConfig);
+      matchingRealm->SetHostCounter(realmConfig->m_ServerIndex + 15);
       if (DoResetConnection) matchingRealm->ResetConnection(false);
       Print("[AURA] server reloaded: " + matchingRealm->GetUniqueDisplayName());
     }
@@ -480,34 +485,18 @@ CAura::~CAura()
   delete m_IRC;
 }
 
-CRealm* CAura::GetRealmByInputId(const string& inputId)
+CRealm* CAura::GetRealmByInputId(const string& inputId) const
 {
-  for (auto& bnet : m_Realms) {
-    if (bnet->GetInputID() == inputId) {
-      return bnet;
-    }
-  }
-  return nullptr;
+  auto it = m_RealmsByInputID.find(inputId);
+  if (it == m_RealmsByInputID.end()) return nullptr;
+  return it->second;
 }
 
-CRealm* CAura::GetRealmByHostName(const string& hostName)
+CRealm* CAura::GetRealmByHostCounter(const uint8_t hostCounter) const
 {
-  for (auto& bnet : m_Realms) {
-    if (bnet->GetServer() == hostName) {
-      return bnet;
-    }
-  }
-  return nullptr;
-}
-
-CRealm* CAura::GetRealmByHostCounter(const uint8_t hostCounter)
-{
-  for (auto& bnet : m_Realms) {
-    if (bnet->GetHostCounterID() == hostCounter) {
-      return bnet;
-    }
-  }
-  return nullptr;
+  auto it = m_RealmsByHostCounter.find(hostCounter);
+  if (it == m_RealmsByHostCounter.end()) return nullptr;
+  return it->second;
 }
 
 CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
@@ -1109,4 +1098,14 @@ uint32_t CAura::NextHostCounter()
     m_HostCounter = m_Config->m_MinHostCounter;
   }
   return m_HostCounter;
+}
+
+uint32_t CAura::NextServerID()
+{
+  ++m_LastServerID;
+  if (m_LastServerID < 0x10) {
+    // Ran out of server IDs.
+    m_LastServerID = 0;
+  }
+  return m_LastServerID;
 }

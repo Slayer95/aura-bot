@@ -1817,8 +1817,19 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
 
 CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
 {
-  // Transfer socket from CGameConnection to CGamePlayer
-  CGamePlayer* Player = new CGamePlayer(this, connection, GetNewPID(), HostCounterID, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
+  // If realms are reloaded, HostCounter may change.
+  // However, internal realm IDs maps to constant realm input IDs.
+  // Hence, CGamePlayers are created with references to internal realm IDs.
+  uint32_t internalRealmId = HostCounterID;
+  CRealm* matchingRealm = nullptr;
+  if (HostCounterID >= 0x10) {
+    matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
+    if (matchingRealm) internalRealmId = matchingRealm->GetInternalID();
+  }
+
+  CGamePlayer* Player = new CGamePlayer(this, connection, GetNewPID(), internalRealmId, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
+  // Now, socket belongs to CGamePlayer. Don't look for it in CGameConnection.
+
   m_Players.push_back(Player);
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
@@ -1932,8 +1943,9 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   uint8_t HostCounterID = joinRequest->GetHostCounter() >> 24;
   bool IsUnverifiedAdmin = false;
 
+  CRealm* matchingRealm = nullptr;
   if (HostCounterID >= 0x10) {
-    CRealm* matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
+    matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
     if (matchingRealm) {
       JoinedRealm = matchingRealm->GetServer();
       IsUnverifiedAdmin = matchingRealm->GetIsAdmin(joinRequest->GetName()) || matchingRealm->GetIsRootAdmin(joinRequest->GetName());
@@ -1941,7 +1953,6 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
       // Trying to join from an unknown realm.
       HostCounterID = 0xF;
     }
-    matchingRealm = nullptr;
   }
 
   if (HostCounterID < 0x10 && joinRequest->GetEntryKey() != m_EntryKey) {
@@ -1987,10 +1998,8 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   // check if the new player's name is banned
   // don't allow the player to spam the chat by attempting to join the game multiple times in a row
 
-  CRealm* SourceRealm = m_Aura->GetRealmByHostName(JoinedRealm);
-  if (SourceRealm) {
-    CDBBan* Ban = SourceRealm->IsBannedName(joinRequest->GetName());
-    if (Ban){
+  if (matchingRealm) {
+    if (matchingRealm->IsBannedName(joinRequest->GetName())){
       Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "|" + connection->GetIPString() + "] is banned");
 
       if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
@@ -2003,10 +2012,9 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
       vector<CGameSlot> Slots = m_Map->GetSlots();
       connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
-      delete Ban;
       return false;
     }
-    SourceRealm = nullptr;
+    matchingRealm = nullptr;
   }
 
   // Check if the player is an admin or root admin on any connected realm for determining reserved status
