@@ -87,6 +87,8 @@ protected:
   std::optional<uint8_t>        m_OverrideVerified;
   std::optional<uint8_t>        m_OverridePermissions;
 
+  uint16_t                      m_RefCount; // How many pointers exist to this CCommandContext? The one in CAura::m_ActiveContexts is not counted.
+
 public:
   CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, std::ostream* outputStream, char nToken);
   CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
@@ -122,6 +124,8 @@ public:
   CGame* GetTargetGame(const std::string& target);
   void UseImplicitHostedGame();
   void Run(const std::string& command, const std::string& payload);
+  void Ref() { ++m_RefCount; }
+  bool Unref() { return --m_RefCount == 0; }
 
   ~CCommandContext();
 };

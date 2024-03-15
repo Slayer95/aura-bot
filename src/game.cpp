@@ -2311,7 +2311,7 @@ void CGame::EventPlayerBotCommand(CGamePlayer* player, char token, std::string& 
 {
   CCommandContext* ctx = new CCommandContext(m_Aura, this, player, &std::cout, token);
   ctx->Run(command, payload);
-  delete ctx;
+  UnholdContext(ctx);
 }
 
 void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)

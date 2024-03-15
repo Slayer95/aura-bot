@@ -593,29 +593,29 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       if (Whisper) {
         string tokenName;
         if (m_Config->m_CommandTrigger == '!') {
-          tokenName = " (exclamation mark)";
+          tokenName = " (exclamation mark.)";
         } else if (m_Config->m_CommandTrigger == '?') {
-          tokenName = " (question mark)";
+          tokenName = " (question mark.)";
         } else if (m_Config->m_CommandTrigger == '.') {
-          tokenName = " (period)";
+          tokenName = " (period.)";
         } else if (m_Config->m_CommandTrigger == ',') {
-          tokenName = " (comma)";
+          tokenName = " (comma.)";
         } else if (m_Config->m_CommandTrigger == '~') {
-          tokenName = " (tilde)";
+          tokenName = " (tilde.)";
         } else if (m_Config->m_CommandTrigger == '-') {
-          tokenName = " (hyphen)";
+          tokenName = " (hyphen.)";
         } else if (m_Config->m_CommandTrigger == '#') {
-          tokenName = " (hashtag)";
+          tokenName = " (hashtag.)";
         } else if (m_Config->m_CommandTrigger == '@') {
-          tokenName = " (at)";
+          tokenName = " (at.)";
         } else if (m_Config->m_CommandTrigger == '&') {
-          tokenName = " (ampersand)";
+          tokenName = " (ampersand.)";
         } else if (m_Config->m_CommandTrigger == '$') {
-          tokenName = " (dollar)";
+          tokenName = " (dollar.)";
         } else if (m_Config->m_CommandTrigger == '%') {
-          tokenName = " (percent)";
+          tokenName = " (percent.)";
         }
-        SendChatOrWhisper("Hello, " + User + ". My commands start with [" + string(1, m_Config->m_CommandTrigger) + "]. Example: ,host siege", User, Whisper);
+        SendWhisper("Hello, " + User + ". My commands start with " + string(1, m_Config->m_CommandTrigger) + tokenName + " Example: " + string(1, m_Config->m_CommandTrigger) + "host siege", User);
       }
       return;
     }
@@ -633,7 +633,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
     CCommandContext* ctx = new CCommandContext(m_Aura, this, User, Whisper, &std::cout, CommandToken);
     ctx->Run(Command, Payload);
-    delete ctx;
+    m_Aura->UnholdContext(ctx);
   }
   else if (Event == CBNETProtocol::EID_CHANNEL)
   {

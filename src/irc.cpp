@@ -345,7 +345,7 @@ void CIRC::ExtractPackets()
         ctx->UpdatePermissions();
         ctx->SetIRCAdmin(IsRootAdmin);
         ctx->Run(Command, Payload);
-        delete ctx;
+        m_Aura->UnholdContext(ctx);
       }
 
       continue;

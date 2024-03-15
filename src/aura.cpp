@@ -1119,6 +1119,20 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   return true;
 }
 
+void HoldContext(CCommandContext* nCtx)
+{
+  ctx->Ref();
+  m_ActiveContexts.insert(nCtx);
+}
+
+void UnholdContext(CCommandContext* nCtx)
+{
+  if (ctx->Unref()) {
+    m_ActiveContexts.erase(ctx);
+    delete ctx;
+  }
+}
+
 uint32_t CAura::NextHostCounter()
 {
   m_HostCounter = (m_HostCounter + 1) & 0x00FFFFFF;

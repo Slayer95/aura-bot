@@ -59,7 +59,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player,
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(nOutputStream)
+    m_Output(nOutputStream),
+    m_RefCount(1)
 {
 }
 
@@ -84,7 +85,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRe
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(nOutputStream)
+    m_Output(nOutputStream),
+    m_RefCount(1)
 {
 }
 
@@ -109,7 +111,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwo
     m_IRC(ircNetwork),
     m_ChannelName(channelName),
 
-    m_Output(nOutputStream)
+    m_Output(nOutputStream),
+    m_RefCount(1)
 {
 }
 
@@ -134,7 +137,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutp
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(nOutputStream)
+    m_Output(nOutputStream),
+    m_RefCount(1)
 {
 }
 
@@ -159,7 +163,8 @@ CCommandContext::CCommandContext(CAura* nAura, CRealm* fromRealm, string& fromNa
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(nOutputStream)
+    m_Output(nOutputStream),
+    m_RefCount(1)
 {
 }
 
@@ -184,7 +189,8 @@ CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channel
     m_IRC(ircNetwork),
     m_ChannelName(channelName),
 
-    m_Output(nOutputStream)
+    m_Output(nOutputStream),
+    m_RefCount(1)
 {
 }
 
@@ -209,7 +215,8 @@ CCommandContext::CCommandContext(CAura* nAura, ostream* nOutputStream, char nTok
     m_IRC(nullptr),
     m_ChannelName(string()),
 
-    m_Output(nOutputStream)
+    m_Output(nOutputStream),
+    m_RefCount(1)
 {
 }
 
@@ -3507,7 +3514,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ctx = new CCommandContext(m_Aura, targetGame, &std::cout, m_Token);
       }
       ctx->Run(SubCmd, SubPayload);
-      delete ctx;
+      UnholdContext(ctx);
       break;
     }
 

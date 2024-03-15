@@ -122,6 +122,7 @@ public:
 
   std::map<std::string, std::string>                 m_CachedMaps;
   std::unordered_multiset<std::string>               m_BusyMaps;
+  std::set<CCommandContext*>                         m_ActiveContexts;
 
   std::string                                        m_SudoUser;
   CGame*                                             m_SudoGame;
@@ -149,6 +150,9 @@ public:
   CRealm* GetRealmByInputId(const std::string& inputId) const;
   CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   CTCPServer* GetGameServer(uint16_t, std::string& name);
+
+  void HoldContext(CCommandContext* nCtx);
+  void UnholdContext(CCommandContext* nCtx);
 
   // identifier generators
 
