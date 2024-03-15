@@ -165,7 +165,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     mt19937 gen(rd());
     uniform_int_distribution<uint32_t> dis;
     m_RandomSeed = dis(gen);
-    m_EntryKey = dis(gen);
+    m_EntryKey = nGameSetup->m_GameChannelKey.has_value() ? nGameSetup->m_GameChannelKey.value() : dis(gen);
 
     // wait time of 1 minute  = 0 empty actions required
     // wait time of 2 minutes = 1 empty action required...
