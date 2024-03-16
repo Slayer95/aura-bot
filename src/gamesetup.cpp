@@ -317,8 +317,6 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>& fuzzyMatches)
 {
-  size_t leastDistance = 255;
-
   vector<pair<string, int>> allResults;
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     vector<pair<string, int>> mapResults = FuzzySearchFiles(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP, m_SearchTarget.second);

@@ -675,7 +675,7 @@ bool CGame::Update(void* fd, void* send_fd)
     bool IsTriggerPlayers = 0 < m_AutoStartPlayers && m_AutoStartPlayers <= m_PlayersWithMap;
     bool ShouldStart = false;
     if (IsTriggerTime || IsTriggerPlayers) {
-      ShouldStart = IsTriggerTime && IsTriggerPlayers || 0 < m_AutoStartMaxTime && m_AutoStartMaxTime <= Time;
+      ShouldStart = (IsTriggerTime && IsTriggerPlayers) || 0 < m_AutoStartMaxTime && m_AutoStartMaxTime <= Time;
       if (!ShouldStart) {
         ShouldStart = 0 == (IsTriggerTime ? m_AutoStartPlayers : m_AutoStartMinTime);
       }
@@ -1430,7 +1430,7 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket) const
       server->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
     }
   } else if (socket->m_Type == SOCK_STREAM) {
-    CStreamIOSocket* tcpSocket = dynamic_cast<CStreamIOSocket*>(socket);
+    CStreamIOSocket* tcpSocket = reinterpret_cast<CStreamIOSocket*>(socket);
     tcpSocket->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
