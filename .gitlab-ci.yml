@@ -26,6 +26,7 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Shared library
+  - cp /usr/lib/libbncsutil.so /usr/local/lib
   - cp /usr/lib/libbncsutil.so dist/bin-shared
   ## Header files
   ### - cp -R /usr/include/bncsutil dist/include
@@ -53,7 +54,8 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Shared library
-  - cp /usr/local/lib/libstorm.a dist/bin-shared
+  - cp /usr/local/lib/libstorm.so /usr/local/lib
+  - cp /usr/local/lib/libstorm.so dist/bin-shared
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
@@ -73,8 +75,9 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Shared library
+  - cp /usr/lib/libminiupnpc.so /usr/local/lib
   - cp /usr/lib/libminiupnpc.so dist/bin-shared
-  # Aura
+  # Aura (all shared libraries)
   - cd $CI_PROJECT_DIR
   #- export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
