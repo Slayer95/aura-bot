@@ -384,6 +384,10 @@ void CMap::Load(CConfig* CFG)
   if (FileModifiedTime.has_value()) {
     CFG->SetInt64("map_localmtime", FileModifiedTime.value());
   }
+
+  uint32_t mapLocale = CFG->GetUint32("map_locale", 0);
+  SFileSetLocale(mapLocale);
+
   bool  MapMPQReady = false;
   void* MapMPQ;
   if (!ignoreMPQ) {

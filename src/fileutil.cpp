@@ -446,6 +446,7 @@ void CloseMPQArchive(void* MPQ)
 
 bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& outPath)
 {
+  SFileSetLocale(0);
   void* SubFile;
   if (!SFileOpenFileEx(MPQ, archiveFile, 0, &SubFile)) {
     return false;
