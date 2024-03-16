@@ -198,7 +198,52 @@ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
-#### [StormLib][16]
+#### [CRC32][16]
+
+zlib License
+
+Copyright (c) 2011-2016 Stephan Brumme
+
+This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose, including commercial applications, and to alter it and redistribute it freely, subject to the following restrictions:
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software.
+   If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+
+#### [CSVParser][17]
+
+Copyright (c) 2001, Mayukh Bose
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+ * Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.  
+
+ * Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+ * Neither the name of Mayukh Bose nor the names of other
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#### [StormLib][18]
 
 The MIT License (MIT)
 
@@ -222,7 +267,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-#### [BNCSutil][17]
+#### [BNCSutil][19]
 
 Battle.Net Utility Library
 
@@ -243,7 +288,7 @@ distribution in the file COPYING.  If you did not receive this copy,
 write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 Boston, MA  02111-1307  USA
 
-#### [MiniUPnP Project][18]
+#### [MiniUPnP Project][20]
 
 Copyright (c) 2005-2017, Thomas BERNARD
 All rights reserved.
@@ -271,7 +316,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-#### [C++ Requests][19]
+#### [C++ Requests][21]
 
 This license applies to everything except the contents of the "test"
 directory and its subdirectories.
@@ -299,7 +344,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-#### [cURL][20]
+#### [cURL][22]
 
 Copyright (C) Daniel Stenberg, <daniel@haxx.se>, and many
 contributors, see the THANKS file.
@@ -337,8 +382,10 @@ in this Software without prior written authorization of the copyright holder.
 [13]: https://github.com/MrJag/ghost
 [14]: https://github.com/CLIUtils/CLI11
 [15]: https://github.com/nemtrif/utfcpp
-[16]: https://github.com/ladislav-zezula/StormLib
-[17]: https://github.com/BNETDocs/bncsutil
-[18]: https://github.com/miniupnp/miniupnp
-[19]: https://github.com/libcpr/cpr
-[20]: https://github.com/curl/curl
+[16]:
+[17]:
+[18]: https://github.com/ladislav-zezula/StormLib
+[19]: https://github.com/BNETDocs/bncsutil
+[20]: https://github.com/miniupnp/miniupnp
+[21]: https://github.com/libcpr/cpr
+[22]: https://github.com/curl/curl
