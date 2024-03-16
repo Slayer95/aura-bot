@@ -382,8 +382,8 @@ in this Software without prior written authorization of the copyright holder.
 [13]: https://github.com/MrJag/ghost
 [14]: https://github.com/CLIUtils/CLI11
 [15]: https://github.com/nemtrif/utfcpp
-[16]:
-[17]:
+[16]: https://github.com/stbrumme/crc32
+[17]: https://gitlab.com/ivojulca/aura-bot/-/blob/master/src/csvparser.cpp
 [18]: https://github.com/ladislav-zezula/StormLib
 [19]: https://github.com/BNETDocs/bncsutil
 [20]: https://github.com/miniupnp/miniupnp
