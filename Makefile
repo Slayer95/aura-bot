@@ -15,18 +15,32 @@ CCFLAGS = -fno-builtin
 CXXFLAGS = -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti
 DFLAGS =
 OFLAGS = -O3 -flto
-LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lstorm -lbncsutil -lgmp -lbz2 -lz
+LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lgmp -lbz2 -lz
+
+ifeq($(AURASTATIC), 1)
+  LFLAGS += libstorm.a bncsutil.a
+else
+  LFLAGS += -llibstorm -lbncsutil
+endif
 
 ifeq ($(AURADISABLEMINIUPNP), 1)
   CXXFLAGS += -DDISABLE_MINIUPNP
 else
-  LFLAGS += -lminiupnpc
+  ifeq($(AURASTATIC), 1)
+    LFLAGS += miniupnpc.a
+  else
+    LFLAGS += -lminiupnpc
+  endif
 endif
 
 ifeq ($(AURADISABLECPR), 1)
   CXXFLAGS += -DDISABLE_CPR
 else
-  LFLAGS += -lcpr
+  ifeq($(AURASTATIC), 1)
+    LFLAGS += cpr.a
+  else
+    LFLAGS += -lcpr
+  endif
 endif
 
 ifeq ($(ARCH),x86_64)

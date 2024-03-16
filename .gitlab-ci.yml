@@ -19,7 +19,7 @@ Assemble:
   script:
   # Packages
   - apt-get update && apt-get install -y build-essential git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev
-  - mkdir -p dist/lib dist/bin-static dist/bin-shared
+  - mkdir -p dist/bin-static dist/bin-shared
   # BNCSUtil (dynamic, .so)
   - apt-get install -y build-essential cmake
   - cd bncsutil/src/bncsutil
@@ -40,7 +40,7 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Static library
-  ###- cp /usr/local/lib/libstorm.a dist/lib
+  - cp /usr/local/lib/libstorm.a /usr/local/lib
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
@@ -79,9 +79,16 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so dist/bin-shared
   # Aura (all shared libraries)
   - cd $CI_PROJECT_DIR
-  #- export AURADISABLEMINIUPNP="1"
+  - export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
   - make && make install
   - cp /usr/bin/aura dist/bin-shared
   - chmod +x dist/bin-shared/aura
-
+  # Aura (all static libraries)
+  - cd $CI_PROJECT_DIR
+  #- export AURADISABLEMINIUPNP="1"
+  - export AURADISABLECPR="1"
+  - export AURASTATIC="1"
+  - make && make install
+  - cp /usr/bin/aura dist/bin-static
+  - chmod +x dist/bin-static/aura
