@@ -47,10 +47,6 @@ struct sockaddr_storage;
 class CRealmConfig
 {
 public:
-  std::string m_HostName;                        // server address to connect to
-  uint16_t    m_ServerPort;
-  std::optional<sockaddr_storage> m_BindAddress; // the local address from which we connect
-  bool        m_Enabled;
   std::string m_InputID;                         // for IRC commands
   std::string m_UniqueName;                      // displayed on the console
   std::string m_CanonicalName;                   // displayed on game rooms
@@ -77,6 +73,8 @@ public:
   bool m_EnableCustomPort;                       // enable to make peers from pvpgn servers connect to m_PublicHostPort
   uint16_t m_PublicHostPort;                     // the port to broadcast in pvpgn servers
 
+  std::string m_HostName;                        // server address to connect to
+  uint16_t    m_ServerPort;
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
 
@@ -96,9 +94,10 @@ public:
   bool m_FloodImmune;                            // whether we are allowed to send unlimited commands to the server
 
   // Automatically-assigned values
+  bool        m_Enabled;
+  std::optional<sockaddr_storage> m_BindAddress; // the local address from which we connect
   uint8_t m_ServerIndex;                         // unique server ID to identify players' realms through host counters
   std::string m_CFGKeyPrefix;                    // 
-
 
   CRealmConfig(CConfig* CFG, CNetConfig* nNetConfig);
   CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);

@@ -136,8 +136,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameLoaded(false),
     m_Lagging(false),
     m_Desynced(false),
-    m_HasMapLock(false),
-    m_HadLeaver(false)
+    m_HadLeaver(false),
+    m_HasMapLock(false)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
   m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
@@ -664,9 +664,9 @@ bool CGame::Update(void* fd, void* send_fd)
     }
   }
 
-  if ((!m_GameLoading && !m_GameLoaded) && (m_SlotInfoChanged & SLOTS_ALIGNMENT_CHANGED)) {
+  if ((!m_GameLoading && !m_GameLoaded) && (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED))) {
     SendAllSlotInfo(); // Updates m_PlayersWithMap
-    m_SlotInfoChanged &= ~SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
   }
 
   // start countdown timer if autostart is due
@@ -753,7 +753,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
     if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
       SendAllSlotInfo();
-      m_SlotInfoChanged &= ~SLOTS_DOWNLOAD_PROGRESS_CHANGED;
+      m_SlotInfoChanged &= ~(SLOTS_DOWNLOAD_PROGRESS_CHANGED);
     }
 
     m_DownloadCounter               = 0;
@@ -1012,8 +1012,9 @@ void CGame::SendAllSlotInfo()
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
       CGamePlayer* Player = GetPlayerFromSID(i);
-      if (!Player || Player->GetHasMap() && !Player->GetObserver())
+      if (!Player || (Player->GetHasMap() && !Player->GetObserver())) {
         ++m_PlayersWithMap;
+      }
     }
     m_SlotInfoChanged = 0;
   }
@@ -1158,7 +1159,7 @@ void CGame::SendIncomingPlayerInfo(CGamePlayer* player) const
 void CGame::SendWelcomeMessage(CGamePlayer *player) const
 {
   for (size_t i = 0; i < m_Aura->m_Config->m_Greeting.size(); i++) {
-    int matchIndex;
+    string::size_type matchIndex;
     string Line = m_Aura->m_Config->m_Greeting[i];
     if (Line.substr(0, 12) == "{SHORTDESC?}") {
       if (m_Map->GetMapShortDesc().empty()) {
@@ -1421,13 +1422,15 @@ void CGame::AnnounceToAddress(string& addressLiteral) const
 
 void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket) const
 {
-  if (CUDPServer* server = dynamic_cast<CUDPServer*>(socket)) {
+  if (socket->m_Type == SOCK_DGRAM) {
+    CUDPServer* server = reinterpret_cast<CUDPServer*>(socket);
     if (isLoopbackAddress(address)) {
       server->SendReply(address, GetGameDiscoveryInfo(m_HostPort));
     } else {
       server->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
     }
-  } else if (CStreamIOSocket* tcpSocket = dynamic_cast<CStreamIOSocket*>(socket)) {
+  } else if (socket->m_Type == SOCK_STREAM) {
+    CStreamIOSocket* tcpSocket = dynamic_cast<CStreamIOSocket*>(socket);
     tcpSocket->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
@@ -1460,7 +1463,7 @@ void CGame::SendGameDiscoveryInfo() const
   bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4;
   bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6;
   bool thereCouldBeUDPTunnelsOverTCP = m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP && !m_Aura->m_Net->m_IncomingConnections.empty();
-  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || m_ExtraDiscoveryAddresses.empty() && !thereCouldBeUDPTunnelsOverTCP)) {
+  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || (m_ExtraDiscoveryAddresses.empty() && !thereCouldBeUDPTunnelsOverTCP))) {
     vector<uint8_t> packet = GetGameDiscoveryInfo(m_HostPort);
     m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
     return;
@@ -2015,7 +2018,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
-  } else if (joinRequest->GetName() == m_LobbyVirtualHostName || joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[") {
+  } else if (joinRequest->GetName() == m_LobbyVirtualHostName || (joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[")) {
     Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
@@ -2051,7 +2054,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
   // Check if the player is an admin or root admin on any connected realm for determining reserved status
   // Note: vulnerable to spoofing
-  const bool IsReserved = GetIsReserved(joinRequest->GetName()) || MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm;
+  const bool IsReserved = GetIsReserved(joinRequest->GetName()) || (MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm);
 
   // try to find an empty slot
 
@@ -2395,7 +2398,7 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
         m_Slots[SID].SetColour(GetNewColour());
       }
 
-      m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
     }
   }
 }
@@ -2441,7 +2444,7 @@ void CGame::EventPlayerChangeRace(CGamePlayer* player, uint8_t race)
   if (SID < m_Slots.size())
   {
     m_Slots[SID].SetRace(race | SLOTRACE_SELECTABLE);
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 }
 
@@ -2460,7 +2463,7 @@ void CGame::EventPlayerChangeHandicap(CGamePlayer* player, uint8_t handicap)
   if (SID < m_Slots.size())
   {
     m_Slots[SID].SetHandicap(handicap);
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 }
 
@@ -2506,7 +2509,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     string* MapData = m_Map->GetMapData();
     bool IsMapAvailable = !MapData->empty() && m_Map->GetValidLinkedMap();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
-    if (IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER && (player->GetDownloadAllowed() || m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) {
+    if (IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER && (player->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge))) {
       if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
         // inform the client that we are willing to send the map
 
@@ -2574,7 +2577,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
       // if we send a new slot update for every percentage change in their download status it adds up to a lot of data
       // instead, we mark the slot info as "out of date" and update it only once in awhile (once per second when this comment was made)
 
-      m_SlotInfoChanged |= SLOTS_DOWNLOAD_PROGRESS_CHANGED;
+      m_SlotInfoChanged |= (SLOTS_DOWNLOAD_PROGRESS_CHANGED);
     }
   }
 }
@@ -3242,7 +3245,7 @@ void CGame::SwapSlots(uint8_t SID1, uint8_t SID2)
       }
     }
 
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 }
 
@@ -3260,7 +3263,7 @@ bool CGame::OpenSlot(uint8_t SID, bool kick)
 
     CGameSlot Slot = m_Slots[SID];
     m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 
   return true;
@@ -3281,7 +3284,7 @@ bool CGame::CloseSlot(uint8_t SID, bool kick)
     if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
     m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_CLOSED, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
   return true;
 }
@@ -3301,7 +3304,7 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
     if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
     m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
   return true;
 }
@@ -3323,7 +3326,7 @@ void CGame::ColorSlot(uint8_t SID, uint8_t colour)
       m_Slots[TakenSID.value()].SetColour(m_Slots[SID].GetColour());
     }
     m_Slots[SID].SetColour(colour);
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 }
 
@@ -3342,7 +3345,7 @@ void CGame::OpenAllSlots()
 
   if (Changed) {
     CreateVirtualHost();
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 }
 
@@ -3362,7 +3365,7 @@ void CGame::CloseAllSlots()
   if (Changed) {
     if (GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 }
 
@@ -3384,7 +3387,7 @@ void CGame::ComputerAllSlots(uint8_t skill)
   if (Changed) {
     if (GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 }
 
@@ -3458,7 +3461,7 @@ void CGame::ShuffleSlots()
   }
 
   m_Slots = Slots;
-  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
 }
 
 void CGame::ReportSpoofed(const string& server, CGamePlayer* Player)
@@ -3805,7 +3808,7 @@ bool CGame::CreateFakePlayer(const bool useVirtualHostName)
     SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]", IP, IP));
     m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
     m_FakePlayers.push_back(FakePlayerPID);
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
     return true;
   }
 
@@ -3829,7 +3832,7 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
     SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]", IP, IP));
     m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
     m_FakePlayers.push_back(FakePlayerPID);
-    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
     return true;
   }
 
@@ -3845,7 +3848,7 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
         SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(*i, PLAYERLEAVE_LOBBY));
         m_FakePlayers.erase(i);
         CreateVirtualHost();
-        m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+        m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
         return true;
       }
     }
@@ -3870,5 +3873,5 @@ void CGame::DeleteFakePlayers()
 
   m_FakePlayers.clear();
   CreateVirtualHost();
-  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
 }

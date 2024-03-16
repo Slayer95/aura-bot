@@ -105,8 +105,8 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
   m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
-  m_BindAddress            = CFG->GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
   m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", true);
+  m_BindAddress            = CFG->GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
 }
 
 CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)
@@ -146,8 +146,8 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
     m_FloodImmune(nRootConfig->m_FloodImmune),
 
-    m_BindAddress(nRootConfig->m_BindAddress),
     m_Enabled(nRootConfig->m_Enabled),
+    m_BindAddress(nRootConfig->m_BindAddress),
 
     m_ServerIndex(nServerIndex),
     m_CFGKeyPrefix("realm_" + to_string(nServerIndex) + ".")
@@ -229,11 +229,11 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
+  m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
+
   optional<sockaddr_storage> customBindAddress = CFG->GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
   if (customBindAddress.has_value())
     m_BindAddress            = customBindAddress.value();
-
-  m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
 }
 
 CRealmConfig::~CRealmConfig() = default;

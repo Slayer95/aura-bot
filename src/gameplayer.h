@@ -70,8 +70,8 @@ class CAura;
 class CGameConnection
 {
 public:
-  CGameProtocol* m_Protocol;
   CAura*         m_Aura;
+  CGameProtocol* m_Protocol;
   uint16_t       m_Port;
   bool           m_IsUDPTunnel;
 
@@ -122,7 +122,6 @@ protected:
   CStreamIOSocket* m_Socket; // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
 
 private:
-  uint16_t                         m_BroadcastPort;                // the port to which the client directly connects (proxy port if it uses a proxy; the hosted game port otherwise)
   std::vector<uint8_t>             m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
   std::vector<uint32_t>            m_Pings;                        // store the last few (10) pings received so we can take an average
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)

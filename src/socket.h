@@ -339,6 +339,7 @@ class CSocket
 public:
   SOCKET             m_Socket;
   uint8_t            m_Family;
+  int                m_Type;
   uint16_t           m_Port;
   bool               m_HasError;
   bool               m_HasFin;
@@ -390,7 +391,7 @@ public:
 
   CStreamIOSocket(uint8_t nFamily, std::string nName);
   CStreamIOSocket(SOCKET nSocket, sockaddr_storage& remoteAddress, CTCPServer* nServer, const uint16_t nCounter);
-  ~CStreamIOSocket();
+  virtual ~CStreamIOSocket();
 
   inline int64_t                    GetLastRecv() const { return m_LastRecv; }
   std::string                       GetName() const;

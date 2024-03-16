@@ -63,12 +63,12 @@ using namespace std;
 
 CGameConnection::CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
   : m_Aura(nAura),
-    m_Port(nPort),
     m_Protocol(nProtocol),
+    m_Port(nPort),
+    m_IsUDPTunnel(false),
     m_Socket(nSocket),
     m_IncomingJoinPlayer(nullptr),
     m_DeleteMe(false),
-    m_IsUDPTunnel(false)
 {
 }
 
@@ -242,7 +242,6 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
   : m_Protocol(connection->m_Protocol),
     m_Game(nGame),
     m_Socket(connection->GetSocket()),
-    m_BroadcastPort(6112),
     m_IPv4Internal(std::move(nInternalIP)),
     m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
@@ -266,6 +265,8 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_PID(nPID),
     m_Verified(false),
     m_Reserved(nReserved),
+    m_Observer(false),
+    m_PowerObserver(false),
     m_WhoisShouldBeSent(false),
     m_WhoisSent(false),
     m_HasMap(false),
@@ -278,12 +279,9 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_DropVote(false),
     m_KickVote(false),
     m_Muted(false),
-    m_Observer(false),
-    m_PowerObserver(false),
     m_LeftMessageSent(false),
     m_StatusMessageSent(false),
     m_CheckStatusByTime(GetTime() + 5),
-    m_DeleteMe(false),
 
     m_GProxy(false),
     m_GProxyPort(0),
@@ -291,9 +289,11 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
 
     m_GProxyExtended(false),
     m_GProxyVersion(0),
+    m_Disconnected(false),
     m_TotalDisconnectTime(0),
     m_LastDisconnectTime(0),
-    m_Disconnected(false)
+
+    m_DeleteMe(false)
 {
 }
 
@@ -548,6 +548,8 @@ bool CGamePlayer::Update(void* fd)
           if (m_GProxyVersion >= 2) {
             m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60));
           }
+          // the port to which the client directly connects
+          // (proxy port if it uses a proxy; the hosted game port otherwise)
           Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
         } else if (Bytes[1] == CGPSProtocol::GPS_SUPPORT_EXTENDED && Length >= 8) {
           //uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);

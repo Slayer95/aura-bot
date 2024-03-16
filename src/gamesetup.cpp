@@ -86,7 +86,6 @@ bool CGameExtraOptions::ParseMapVisibility(const string& s) {
 }
 
 bool CGameExtraOptions::ParseMapRandomRaces(const string& s) {
-  int result = 0;
   std::string lower = s;
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
@@ -102,7 +101,6 @@ bool CGameExtraOptions::ParseMapRandomRaces(const string& s) {
 }
 
 bool CGameExtraOptions::ParseMapRandomHeroes(const string& s) {
-  int result = 0;
   std::string lower = s;
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
@@ -418,7 +416,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
         // Synchronous download, only if there are no ongoing games.
 #ifndef DISABLE_CPR
         SearchInputRemoteFuzzy(fuzzyMatches);
-#endif DISABLE_CPR
+#endif
       }
       if (!fuzzyMatches.empty()) {
         m_Ctx->ErrorReply("Suggestions: " + JoinVector(fuzzyMatches, false), CHAT_SEND_SOURCE_ALL);
@@ -781,14 +779,14 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   uint16_t gamePort = 0;
   uint32_t gameId = 0;
   try {
-    uint32_t value = stoul(rawPort);
+    int64_t value = stoul(rawPort);
     if (value <= 0 || value > 0xFF) return false;
     gamePort = static_cast<uint16_t>(value);
   } catch (...) {
     return false;
   }
   try {
-    uint64_t value = stoul(rawId);
+    int64_t value = stoul(rawId);
     if (value < 0 || value > 0xFFFFFFFF) return false;
     gameId = static_cast<uint32_t>(value);
   } catch (...) {

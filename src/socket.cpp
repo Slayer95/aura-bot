@@ -68,6 +68,7 @@ int32_t GetLastError()
 CSocket::CSocket(const uint8_t nFamily)
   : m_Socket(INVALID_SOCKET),
     m_Family(nFamily),
+    n_Type(0),
     m_Port(0),
     m_HasError(false),
     m_HasFin(false),
@@ -78,6 +79,7 @@ CSocket::CSocket(const uint8_t nFamily)
 CSocket::CSocket(const uint8_t nFamily, SOCKET nSocket)
   : m_Socket(nSocket),
     m_Family(nFamily),
+    m_Type(0),
     m_Port(0),
     m_HasError(false),
     m_HasFin(false),
@@ -88,6 +90,7 @@ CSocket::CSocket(const uint8_t nFamily, SOCKET nSocket)
 CSocket::CSocket(const uint8_t nFamily, string nName)
   : m_Socket(INVALID_SOCKET),
     m_Family(nFamily),
+    m_Type(0),
     m_Port(0),
     m_HasError(false),
     m_HasFin(false),
@@ -208,6 +211,7 @@ void CSocket::SetFD(fd_set* fd, fd_set* send_fd, int* nfds)
 void CSocket::Allocate(const uint8_t family, int type)
 {
   m_Socket = socket(family, type, 0);
+  m_Type = type;
 
   if (m_Socket == INVALID_SOCKET)
   {

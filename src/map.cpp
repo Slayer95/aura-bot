@@ -371,7 +371,7 @@ void CMap::Load(CConfig* CFG)
   optional<int64_t> FileModifiedTime;
   filesystem::path MapMPQFilePath;
 
-  bool ignoreMPQ = m_MapLocalPath.empty() || !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER;
+  bool ignoreMPQ = m_MapLocalPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
   if (!ignoreMPQ) {
     MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
     FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);

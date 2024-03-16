@@ -317,10 +317,10 @@ uint32_t CConfig::GetUint32(const string& key, uint32_t x)
     SUCCESS(x)
   }
 
-  uint32_t Value = x;
+  int64_t Value = x;
   try {
     Value = stoul(it->second);
-    if (Value < 0) {
+    if (Value < 0 || 0xFFFFFFFF < Value) {
       CONFIG_ERROR(key, x)
     }
   } catch (...) {

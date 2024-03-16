@@ -918,7 +918,10 @@ void CRealm::TrySendChat(const string& message, const string& user, bool isPriva
   // in some cases the queue may be full of legitimate messages but we don't really care if the bot ignores one of these commands once in awhile
   // e.g. when several users join a game at the same time and cause multiple /whois messages to be queued at once
 
-  bool IsQuotaOkay = GetIsFloodImmune() || message.length() <= 200 && (m_OutPackets.size() <= 3 || (GetIsAdmin(user) || GetIsRootAdmin(user) || GetIsSudoer(user)));
+  bool IsQuotaOkay = (
+    GetIsFloodImmune() ||
+    (message.length() <= 200 && (m_OutPackets.size() <= 3 || (GetIsAdmin(user) || GetIsRootAdmin(user) || GetIsSudoer(user))))
+  );
   if (IsQuotaOkay) {
     SendChatOrWhisper(message, user, isPrivate);
     return;
