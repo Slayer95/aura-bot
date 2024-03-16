@@ -62,16 +62,15 @@ Assemble:
   - make && make install
   - unset AURADISABLEMINIUPNP
   - unset AURADISABLECPR
-  - touch /usr/bin/aura
   - mv /usr/bin/aura dist/bin-shared
   - chmod +x dist/bin-shared/aura
   ######################
   ### Static build     #
   ######################
   # BNCSUtil (static, .a)
+  ## FIXME
   - cd bncsutil/src/bncsutil
   - export BNCSUTIL_STATIC_LIB=1
-  - export CXXFLAGS="-static"
   - make && make install
   - unset BNCSUTIL_STATIC_LIB
   - cd $CI_PROJECT_DIR
@@ -114,6 +113,8 @@ Assemble:
   - make clean && make && make install
   - unset AURADISABLECPR
   - unset AURASTATIC
+  ## on build failures, the error is reported iff mv below fails
+  ## touch causes mv to succeed: static build is unsupported yet
   - touch /usr/bin/aura
   - mv /usr/bin/aura dist/bin-static
   - chmod +x dist/bin-static/aura

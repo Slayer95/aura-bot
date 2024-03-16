@@ -2,10 +2,10 @@ SHELL = /bin/sh
 SYSTEM = $(shell uname)
 INSTALL_DIR = /usr
 CXX = g++
-CXXFLAGS += -std=c++11 -O3 -I ../ -Wno-multichar -fPIC -flto
+CXXFLAGS = -std=c++11 -O3 -I ../ -Wno-multichar -fPIC -flto
 CXXOBJ = bsha1.o cdkeydecoder.o checkrevision.o decodekey.o file.o libinfo.o oldauth.o
 CC = gcc
-CCFLAGS += -std=c99 -O3 -I ../ -Wno-multichar -fPIC
+CCFLAGS = -std=c99 -O3 -I ../ -Wno-multichar -fPIC
 CCOBJ = nls.o pe.o sha1.o stack.o
 
 ifeq ($(SYSTEM),Darwin)
@@ -19,14 +19,6 @@ ifeq ($(SYSTEM),Darwin)
 else
 	LDFLAGS = -shared -lgmp
 	TARGET = libbncsutil.so
-endif
-
-ifeq ($(BNCSUTIL_STATIC_LIB), 1)
-  TARGET = libbncsutil.a
-else
-  ifeq ($(BNCSUTIL_SHARED_LIB), 1)
-    TARGET = libbncsutil.so
-  endif
 endif
 
 $(TARGET): $(CXXOBJ) $(CCOBJ)
