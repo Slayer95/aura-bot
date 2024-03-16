@@ -314,7 +314,7 @@ inline std::vector<uint8_t> ExtractIPv4(const std::string& s)
     if (element.empty())
       break;
 
-    uint32_t parsedElement = 0;
+    int32_t parsedElement = 0;
     try {
       parsedElement = std::stoi(element);
     } catch (...) {

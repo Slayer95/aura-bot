@@ -305,7 +305,7 @@ filesystem::path GetExeDirectory()
   DWORD length = 0;
 #else
   vector<char> buffer(2048);
-  ssize_t length = 0;
+  vector<char>::size_type length = 0;
 #endif
 
   do {
@@ -332,7 +332,7 @@ filesystem::path GetExeDirectory()
 filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const string& file)
 {
   std::string mutated_file = file;
-  const size_t NumberOfCombinations = static_cast<size_t>(std::pow(2, mutated_file.size()));
+  const size_t NumberOfCombinations = static_cast<size_t>(1) << mutated_file.size();
 
   for (size_t perm = 0; perm < NumberOfCombinations; ++perm) {
     std::bitset<64> bs(perm);
