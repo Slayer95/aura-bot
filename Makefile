@@ -11,11 +11,11 @@ ifndef CXX
   CXX = g++
 endif
 
-CCFLAGS = -fno-builtin
-CXXFLAGS = -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti
+CCFLAGS += -fno-builtin
+CXXFLAGS += -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti
 DFLAGS =
 OFLAGS = -O3 -flto
-LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lgmp -lbz2 -lz
+LFLAGS += -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lgmp -lbz2 -lz
 
 ifeq ($(AURASTATIC), 1)
   LFLAGS += libstorm.a bncsutil.a

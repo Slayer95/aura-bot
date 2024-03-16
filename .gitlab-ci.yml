@@ -62,7 +62,7 @@ Assemble:
   - make && make install
   - unset AURADISABLEMINIUPNP
   - unset AURADISABLECPR
-  - cp /usr/bin/aura dist/bin-shared
+  - mv /usr/bin/aura dist/bin-shared
   - chmod +x dist/bin-shared/aura
   ######################
   ### Static build     #
@@ -71,7 +71,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   - cd StormLib
   - sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/g' CMakeLists.txt
-  - mkdir -p build
+  - rm -rf build && mkdir -p build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Release ..
   - make clean && make && make install
@@ -79,6 +79,7 @@ Assemble:
   ## Static library
   ### Already at /usr/local/lib
   ### - cp /usr/local/lib/libstorm.a /usr/local/lib
+  - cp /usr/lib/libstorm.a dist/bin-static
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
@@ -91,6 +92,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   ## Static library
   - cp /usr/lib/libminiupnpc.a /usr/local/lib
+  - cp /usr/lib/libminiupnpc.a dist/bin-static
   ### - cp /usr/lib/libminiupnpc.a dist/lib
   # Aura (all static libraries)
   - cd $CI_PROJECT_DIR
@@ -100,5 +102,5 @@ Assemble:
   - make clean && make && make install
   - unset AURADISABLECPR
   - unset AURASTATIC
-  - cp /usr/bin/aura dist/bin-static
+  - mv /usr/bin/aura dist/bin-static
   - chmod +x dist/bin-static/aura
