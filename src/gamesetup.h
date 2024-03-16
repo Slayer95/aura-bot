@@ -190,7 +190,9 @@ public:
   bool ApplyMapModifiers(CGameExtraOptions* extraOptions);
   uint8_t ResolveRemoteMap();
   void SetDownloadFilePath(std::filesystem::path&& filePath);
+#ifndef DISABLE_CPR
   uint32_t RunDownload();
+#endif
   bool LoadMap();
   bool SetActive();
   bool RunHost();

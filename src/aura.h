@@ -62,6 +62,7 @@
 #include <map>
 #include <algorithm>
 #include <random>
+#include <unordered_set>
 
 #define NOMINMAX
 #ifdef _WIN32
