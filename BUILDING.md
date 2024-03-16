@@ -44,20 +44,20 @@ Continue building miniupnpc
 	make
 	sudo make install
 
-  (Or disable it by appending to ``CXXFLAGS`` in the `MakeFile`: ``-DDISABLE_MINIUPNP``)
+  (Or disable it by setting an environment variable: ``export AURADISABLEMINIUPNP=1``)
 
 Afterwards, C++ Requests
 
   See the [CPR repository][2] for instructions.
 
-  (Or disable it by appending to ``CXXFLAGS`` in the `MakeFile`: ``-DDISABLE_CPR``)
+  (Or disable it by setting an environment variable: ``export AURADISABLECPR=1``)
 
 Then, proceed to build Aura:
 
 	cd ../../..
 	make
 
-Now you can run Aura by executing `./aura` or install it to your path using `sudo make install`.
+Now you can run Aura by executing `./aura` or install it to your PATH using `sudo make install`.
 
 **Note**: gcc version needs to be 8 or higher along with a compatible libc.
 

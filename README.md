@@ -1,5 +1,7 @@
 ﻿# Aura
 
+![Build Status](https://gitlab.com/ivojulca/aura-bot/badges/master/pipeline.svg?ignore_skipped=true)
+
 ## Overview
 
 [Aura][1] is a modern cross-platform hosting bot for Warcraft III The Frozen Throne Ⓡ.
