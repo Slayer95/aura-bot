@@ -76,7 +76,6 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so dist/bin-shared
   # Aura
   - cd $CI_PROJECT_DIR
-  - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
   #- export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
   - make && make install
