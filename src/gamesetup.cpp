@@ -189,7 +189,9 @@ void CGameSetup::ParseInput()
   // Custom namespace/protocol
   if (lower.substr(0, 8) == "epicwar-" || lower.substr(0, 8) == "epicwar:") {
     m_SearchTarget = make_pair("epicwar", MaybeBase10(lower.substr(8)));
+#ifndef DISABLE_CPR
     m_IsDownloadable = true;
+#endif
     return;
   }
   if (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:") {
@@ -210,13 +212,17 @@ void CGameSetup::ParseInput()
   if (lower.substr(0, 12) == "epicwar.com/") {
     std::string mapCode = lower.substr(17);
     m_SearchTarget = make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
+#ifndef DISABLE_CPR
     m_IsDownloadable = true;
+#endif
     return;
   }
   if (lower.substr(0, 16) == "www.epicwar.com/") {
     std::string mapCode = lower.substr(21);
     m_SearchTarget = make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
+#ifndef DISABLE_CPR
     m_IsDownloadable = true;
+#endif
     return;
   }
   if (isUri) {
@@ -567,6 +573,7 @@ uint8_t CGameSetup::ResolveRemoteMap()
   uint64_t SearchTargetType = HashCode(m_SearchTarget.first);
 
   switch (SearchTargetType) {
+#ifndef DISABLE_CPR
     case HashCode("epicwar"): {
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;
       Print("GET <" + m_MapSiteUri + ">");
@@ -584,7 +591,7 @@ uint8_t CGameSetup::ResolveRemoteMap()
       downloadFileName = DecodeURIComponent(encodedName);
       break;
     }
-
+#endif
     default: {
       Print("Unsupported remote domain: " + m_SearchTarget.first);
       return RESOLUTION_ERR;
@@ -630,6 +637,7 @@ void CGameSetup::SetDownloadFilePath(filesystem::path&& filePath)
   m_DownloadFilePath = move(filePath);
 }
 
+#ifndef DISABLE_CPR
 uint32_t CGameSetup::RunDownload()
 {
   if (m_SearchTarget.first != "epicwar") {
@@ -691,6 +699,7 @@ uint32_t CGameSetup::RunDownload()
   m_IsDownloaded = true;
   return response.downloaded_bytes;
 }
+#endif
 
 bool CGameSetup::LoadMap()
 {
@@ -707,6 +716,7 @@ bool CGameSetup::LoadMap()
     return false;
   }
   if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
+#ifndef DISABLE_CPR
     if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable || ResolveRemoteMap() != RESOLUTION_OK) {
       return false;
     }
@@ -714,6 +724,9 @@ bool CGameSetup::LoadMap()
     if (downloadSize == 0) return false;
     m_Map = GetBaseMapFromMapFileOrCache(m_DownloadFilePath, false);
     return true;
+#else
+    return false;
+#endif
   }
   if (searchResult.first == MATCH_TYPE_CONFIG) {
     m_Map = GetBaseMapFromConfigFile(searchResult.second, false);

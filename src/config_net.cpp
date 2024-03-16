@@ -108,6 +108,7 @@ CNetConfig::CNetConfig(CConfig* CFG)
   if (m_EnableUPnP) {
     Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> unsupported in this Aura distribution");
     Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> requires compilation without #define DISABLE_MINIUPNP");
+    m_EnableUPnP = false;
   }
 #else
   m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
@@ -131,8 +132,14 @@ CNetConfig::CNetConfig(CConfig* CFG)
       m_PublicIPv4Value = AddressToString(inputIPv4);
     }
   } else if (ipv4Algorithm == "api") {
+#ifndef DISABLE_CPR
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
     m_PublicIPv4Value = CFG->GetString("net.ipv4.public_address.value", "https://api.ipify.org");
+#else
+    Print("[CONFIG] warning - <net.ipv4.public_address.algorithm = api> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <net.ipv4.public_address.algorithm = api> requires compilation without #define DISABLE_CPR");
+    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+#endif
   } else if (ipv4Algorithm == "none") {
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
     CFG->Accept("net.ipv4.public_address.value");
@@ -153,8 +160,14 @@ CNetConfig::CNetConfig(CConfig* CFG)
       m_PublicIPv6Value = AddressToString(inputIPv6);
     }
   } else if (ipv6Algorithm == "api") {
+#ifndef DISABLE_CPR
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
     m_PublicIPv6Value = CFG->GetString("net.ipv6.public_address.value", "https://api6.ipify.org");
+#else
+    Print("[CONFIG] warning - <net.ipv6.public_address.algorithm = api> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <net.ipv6.public_address.algorithm = api> requires compilation without #define DISABLE_CPR");
+    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+#endif
   } else if (ipv6Algorithm == "none") {
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
     CFG->Accept("net.ipv6.public_address.value");
@@ -164,6 +177,13 @@ CNetConfig::CNetConfig(CConfig* CFG)
   }
 
   m_AllowDownloads               = CFG->GetBool("hosting.map_downloads.enabled", false);
+#ifdef DISABLE_CPR
+  if (m_AllowDownloads) {
+    Print("[CONFIG] warning - <hosting.map_downloads.enabled = yes> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <hosting.map_downloads.enabled = yes> requires compilation without #define DISABLE_CPR");
+    m_AllowDownloads = false;
+  }
+#endif
   m_DownloadTimeout              = CFG->GetUint16("hosting.map_downloads.timeout", 1000);
   m_AllowTransfers               = CFG->GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);

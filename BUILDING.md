@@ -30,25 +30,29 @@ For building StormLib execute the following commands (line by line):
 	make
 	sudo make install
 
-Continue building bncsutil:
+Next, build bncsutil:
 
 	cd ../..
 	cd bncsutil/src/bncsutil
 	make
 	sudo make install
 
-Build miniupnpc
+Continue building miniupnpc
 
 	cd ../..
 	cd miniupnpc
 	make
 	sudo make install
 
-Build cpr
+  (Or disable it by appending to ``CXXFLAGS`` in the `MakeFile`: ``-DDISABLE_MINIUPNP``)
 
-  TODO: Fill me in
+Afterwards, C++ Requests
 
-Then proceed to build Aura:
+  See the [CPR repository][2] for instructions.
+
+  (Or disable it by appending to ``CXXFLAGS`` in the `MakeFile`: ``-DDISABLE_CPR``)
+
+Then, proceed to build Aura:
 
 	cd ../../..
 	make
@@ -80,3 +84,4 @@ You can use [Homebrew](http://brew.sh/) to get `libgmp`. When you are at it, you
 Now proceed by following the [steps for Linux users](#steps) and omit StormLib in case you installed it using `brew`.
 
 [1]: https://gitlab.com/ivojulca/aura-bot
+[2]: https://github.com/libcpr/cpr

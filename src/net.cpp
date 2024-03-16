@@ -26,7 +26,9 @@
 #include <thread>
 #include <string>
 #include <utility>
+#ifndef DISABLE_CPR
 #include <cpr/cpr.h>
+#endif
 #ifndef DISABLE_MINIUPNP
 #include <miniupnpc.h>
 #include <upnpcommands.h>
@@ -502,6 +504,7 @@ sockaddr_storage* CNet::GetPublicIPv4()
         delete m_IPv4CacheV.second;
         m_IPv4CacheV = make_pair(string(), nullptr);
       }
+#ifndef DISABLE_CPR
       auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv4Value}, cpr::Timeout{3000});
       if (response.status_code != 200) {
         return nullptr;
@@ -513,6 +516,7 @@ sockaddr_storage* CNet::GetPublicIPv4()
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
       m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
       m_IPv4CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+#endif
       return m_IPv4CacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
@@ -549,6 +553,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
         delete m_IPv6CacheV.second;
         m_IPv6CacheV = make_pair(string(), nullptr);
       }
+#ifndef DISABLE_CPR
       auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv6Value}, cpr::Timeout{3000});
       if (response.status_code != 200) {
         return nullptr;
@@ -560,6 +565,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
       m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
       m_IPv6CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+#endif
       return m_IPv6CacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:

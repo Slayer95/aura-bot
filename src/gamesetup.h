@@ -30,7 +30,9 @@
 #include <cstdint>
 #include <vector>
 #include <optional>
+#ifndef DISABLE_CPR
 #include <cpr/cpr.h>
+#endif
 
 #include "aura.h"
 #include "command.h"
@@ -88,10 +90,11 @@ inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::st
 
 inline std::vector<std::string> GetEpicWarSuggestions(std::string & pattern, uint8_t maxCount)
 {
+  std::vector<std::string> suggestions;
+#ifndef DISABLE_CPR
   std::string searchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
   Print("[AURA] Looking up suggestions...");
   Print("[AURA] GET <" + searchUri + ">");
-  std::vector<std::string> suggestions;
   auto response = cpr::Get(cpr::Url{searchUri});
   if (response.status_code != 200) {
     return suggestions;
@@ -102,6 +105,7 @@ inline std::vector<std::string> GetEpicWarSuggestions(std::string & pattern, uin
   for (const auto& element : matchingMaps) {
     suggestions.push_back(element.first + " (epicwar-" + std::to_string(element.second) + ")");
   }
+#endif
   return suggestions;
 }
 

@@ -4221,6 +4221,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       if (!gameSetup->LoadMap()) {
+        ErrorReply("Map not found");
         delete gameSetup;
         break;
       }
