@@ -35,7 +35,7 @@ Assemble:
   - cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_DYNAMIC_MODULE=1 ..
   - make && make install
   - cd $CI_PROJECT_DIR
-  - cp /usr/lib/libstorm.so dist/lib
+  - cp /usr/local/lib/libstorm.a dist/lib
   - cp /usr/include/StormLib.h dist/include/stormlib
   - cp /usr/include/StormPort.h dist/include/stormlib
   # Aura
