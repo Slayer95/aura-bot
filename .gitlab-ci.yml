@@ -18,8 +18,9 @@ Assemble:
       - dist/
   script:
   # Packages
-  - apt-get update && apt-get install -y build-essential git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev
+  - apt-get update && apt-get install -y build-essential git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev cmake libbz2-dev
   - mkdir -p dist/bin-static dist/bin-shared
+  - cd $CI_PROJECT_DIR
   # BNCSUtil (dynamic, .so)
   - apt-get install -y build-essential cmake
   - cd bncsutil/src/bncsutil
@@ -68,7 +69,6 @@ Assemble:
   ######################
   # StormLib (static, .a)
   - cd $CI_PROJECT_DIR
-  - apt-get install -y build-essential cmake zlib1g-dev libbz2-dev
   - cd StormLib
   - sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/g' CMakeLists.txt
   - mkdir -p build
