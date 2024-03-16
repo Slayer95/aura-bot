@@ -15,7 +15,7 @@ CCFLAGS = -fno-builtin
 CXXFLAGS = -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti -DDISABLE_CPR
 DFLAGS =
 OFLAGS = -O3 -flto
-LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lstorm -lbncsutil -lgmp -lbz2 -lz
+LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lstorm -lbncsutil -lgmp -lbz2 -lz -lminiupnpc
 
 ifeq ($(ARCH),x86_64)
 	CCFLAGS += -m64
