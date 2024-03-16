@@ -42,8 +42,6 @@
    CODE PORTED FROM THE ORIGINAL GHOST PROJECT
  */
 
-#include <cstring>
-
 #include "aura.h"
 #include "util.h"
 #include "socket.h"

@@ -26,6 +26,7 @@
 #ifndef AURA_NET_H_
 #define AURA_NET_H_
 
+#include "includes.h"
 #include "socket.h"
 #include "gameplayer.h"
 #include "config_net.h"

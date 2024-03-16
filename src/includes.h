@@ -50,6 +50,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <cstdint>
 #include <chrono>
 
