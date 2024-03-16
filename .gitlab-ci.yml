@@ -79,7 +79,7 @@ Assemble:
   ## Static library
   ### Already at /usr/local/lib
   ### - cp /usr/local/lib/libstorm.a /usr/local/lib
-  - cp /usr/lib/libstorm.a dist/bin-static
+  - cp /usr/local/lib/libstorm.a dist/bin-static
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
