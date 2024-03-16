@@ -20,7 +20,7 @@ LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lgmp -lbz2 -lz
 ifeq ($(AURASTATIC), 1)
   LFLAGS += libstorm.a bncsutil.a
 else
-  LFLAGS += -llibstorm -lbncsutil
+  LFLAGS += -lstorm -lbncsutil
 endif
 
 ifeq ($(AURADISABLEMINIUPNP), 1)
