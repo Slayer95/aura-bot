@@ -61,6 +61,7 @@ Assemble:
   - make && make install
   - unset AURADISABLEMINIUPNP
   - unset AURADISABLECPR
+  - touch /usr/bin/aura
   - mv /usr/bin/aura dist/bin-shared
   - chmod +x dist/bin-shared/aura
   ######################
@@ -100,5 +101,6 @@ Assemble:
   - make clean && make && make install
   - unset AURADISABLECPR
   - unset AURASTATIC
+  - touch /usr/bin/aura
   - mv /usr/bin/aura dist/bin-static
   - chmod +x dist/bin-static/aura
