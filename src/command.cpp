@@ -2171,6 +2171,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     // !UPNP
     //
 
+#ifndef DISABLE_MINIUPNP
     case HashCode("upnp"): {
       UseImplicitHostedGame();
 
@@ -2214,6 +2215,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
       break;
     }
+#endif
 
     //
     // !CHECKBAN

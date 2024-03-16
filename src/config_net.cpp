@@ -103,7 +103,16 @@ CNetConfig::CNetConfig(CConfig* CFG)
   if (m_UDPBroadcastEnabled) CFG->FailIfErrorLast();
   m_UDPBroadcastStrictMode       = CFG->GetBool("net.game_discovery.udp.broadcast.strict", true);
 
+#ifdef DISABLE_MINIUPNP
+  m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", false);
+  if (m_EnableUPnP) {
+    Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> requires compilation without #define DISABLE_MINIUPNP");
+  }
+#else
   m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
+#endif
+
   m_EnableTCPWrapUDP             = CFG->GetBool("net.tcp_extensions.udp_tunnel.enabled", true);
   m_EnableTCPScanUDP             = CFG->GetBool("net.tcp_extensions.udp_scan.enabled", true);
 

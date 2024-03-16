@@ -161,7 +161,9 @@ public:
   void             FlushDNSCache();
   void             FlushSelfIPCache();
 
+#ifndef DISABLE_MINIUPNP
   uint8_t EnableUPnP(const uint16_t externalPort, const uint16_t internalPort);
+#endif
   bool StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx);
   void ResetHealthCheck();
   void ReportHealthCheck();

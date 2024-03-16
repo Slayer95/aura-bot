@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BNCSutil", "bncsutil\vc8_bu
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StormLib", "StormLib\StormLib_vs17.vcxproj", "{78424708-1F6E-4D4B-920C-FB6D26847055}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "miniupnpc", "miniupnpc\msvc\miniupnpc.vcxproj", "{D28CE435-CB33-4BAE-8A52-C6EF915956F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -44,6 +46,12 @@ Global
 		{78424708-1F6E-4D4B-920C-FB6D26847055}.Release|Win32.Build.0 = ReleaseUS|Win32
 		{78424708-1F6E-4D4B-920C-FB6D26847055}.Release|x64.ActiveCfg = ReleaseUS|x64
 		{78424708-1F6E-4D4B-920C-FB6D26847055}.Release|x64.Build.0 = ReleaseUS|x64
+		{D28CE435-CB33-4BAE-8A52-C6EF915956F5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D28CE435-CB33-4BAE-8A52-C6EF915956F5}.Debug|Win32.Build.0 = Debug|Win32
+		{D28CE435-CB33-4BAE-8A52-C6EF915956F5}.Debug|x64.ActiveCfg = Debug|Win32
+		{D28CE435-CB33-4BAE-8A52-C6EF915956F5}.Release|Win32.ActiveCfg = Release|Win32
+		{D28CE435-CB33-4BAE-8A52-C6EF915956F5}.Release|Win32.Build.0 = Release|Win32
+		{D28CE435-CB33-4BAE-8A52-C6EF915956F5}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

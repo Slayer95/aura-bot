@@ -97,7 +97,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\bncsutil\src;..\StormLib\src;D:\Dev\vcpkg\installed\x86-windows-static\include;D:\Games-Addons\Warcraft\aura\miniupnpc-2.2.6;D:\Games-Addons\Warcraft\aura\miniupnpc-2.2.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\bncsutil\src;..\StormLib\src;..\miniupnpc\include;..\utf8;D:\Dev\vcpkg\installed\x86-windows-static\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -120,7 +120,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;cpr.lib;libcurl.lib;iphlpapi.lib;msvcrt.lib;miniupnpc.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\bncsutil\vc8_build\Release;..\StormLib\bin\StormLib\Win32\ReleaseUS;D:\Dev\vcpkg\installed\x86-windows-static\lib;D:\Games-Addons\Warcraft\aura\miniupnpc-2.2.6\msvc\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\bncsutil\vc8_build\Release;..\StormLib\bin\StormLib\Win32\ReleaseUS;..\miniupnpc\msvc\Release;D:\Dev\vcpkg\installed\x86-windows-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -134,7 +134,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\bncsutil\src;..\StormLib\src;..\utf8;D:\Dev\vcpkg\installed\x86-windows-static\include;D:\Games-Addons\Warcraft\aura\miniupnpc-2.2.6;D:\Games-Addons\Warcraft\aura\miniupnpc-2.2.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\bncsutil\src;..\StormLib\src;..\miniupnpc\include;..\utf8;D:\Dev\vcpkg\installed\x86-windows-static\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -159,7 +159,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;cpr.lib;libcurl.lib;iphlpapi.lib;msvcrtd.lib;miniupnpc.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\bncsutil\vc8_build\Release;..\StormLib\bin\StormLib\Win32\ReleaseUS;D:\Dev\vcpkg\installed\x86-windows-static\lib;D:\Games-Addons\Warcraft\aura\miniupnpc-2.2.6\msvc\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\bncsutil\vc8_build\Release;..\StormLib\bin\StormLib\Win32\ReleaseUS;..\miniupnpc\msvc\Debug;D:\Dev\vcpkg\installed\x86-windows-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>

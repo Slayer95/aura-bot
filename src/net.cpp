@@ -27,8 +27,10 @@
 #include <string>
 #include <utility>
 #include <cpr/cpr.h>
+#ifndef DISABLE_MINIUPNP
 #include <miniupnpc.h>
 #include <upnpcommands.h>
+#endif
 
 #include "aura.h"
 #include "net.h"
@@ -566,6 +568,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
   }
 }
 
+#ifndef DISABLE_MINIUPNP
 uint8_t CNet::EnableUPnP(const uint16_t externalPort, const uint16_t internalPort)
 {
   struct UPNPDev* devlist = NULL;
@@ -619,6 +622,7 @@ uint8_t CNet::EnableUPnP(const uint16_t externalPort, const uint16_t internalPor
   freeUPNPDevlist(devlist);
   return success;
 }
+#endif
 
 bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx)
 {
@@ -695,7 +699,9 @@ void CNet::ReportHealthCheck()
       Print("[Network] Please setup port-forwarding to allow connections.");
       if (!portForwardInstructions.empty())
         Print("[Network] " + portForwardInstructions);
+#ifndef DISABLE_MINIUPNP
       Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+#endif
       Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
       Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
 
@@ -703,7 +709,9 @@ void CNet::ReportHealthCheck()
       m_HealthCheckContext->SendAll("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
       m_HealthCheckContext->SendAll("Please setup port-forwarding to allow connections.");
       m_HealthCheckContext->SendAll(portForwardInstructions);
+#ifndef DISABLE_MINIUPNP
       m_HealthCheckContext->SendAll("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+#endif
       m_HealthCheckContext->SendAll("Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
       m_HealthCheckContext->SendAll("But make sure your firewall allows Aura inbound TCP connections.");
       m_HealthCheckContext->SendAll("=================================================================================");
