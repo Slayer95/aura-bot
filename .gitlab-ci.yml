@@ -40,4 +40,6 @@ Assemble:
   - cp /usr/local/include/StormPort.h dist/include/stormlib
   # Aura
   - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
-  - make
+  - make && make install
+  - cp /usr/local/bin/aura* dist/bin/
+
