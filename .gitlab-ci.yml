@@ -40,7 +40,8 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Static library
-  - cp /usr/local/lib/libstorm.a /usr/local/lib
+  ### Already at /usr/local/lib
+  ### - cp /usr/local/lib/libstorm.a /usr/local/lib
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
@@ -54,7 +55,8 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Shared library
-  - cp /usr/local/lib/libstorm.so /usr/local/lib
+  ### Already at /usr/local/lib
+  ### - cp /usr/local/lib/libstorm.so /usr/local/lib
   - cp /usr/local/lib/libstorm.so dist/bin-shared
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
