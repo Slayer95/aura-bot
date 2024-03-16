@@ -17,7 +17,7 @@ DFLAGS =
 OFLAGS = -O3 -flto
 LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lstorm -lbncsutil -lgmp -lbz2 -lz
 
-ifeq ($(AURADISABLEUPNP), 1)
+ifeq ($(AURADISABLEMINIUPNP), 1)
   CXXFLAGS += -DDISABLE_MINIUPNP
 else
   LFLAGS += -lminiupnpc
@@ -87,13 +87,13 @@ OBJS = src/fileutil.o \
 
 COBJS = src/sqlite3.o
 
-PROG = aura++
+PROG = aura
 
 all: $(OBJS) $(COBJS) $(PROG)
 	@echo "Used CFLAGS: $(CXXFLAGS)"
 
 $(PROG): $(OBJS) $(COBJS)
-	@$(CXX) -o aura++ $(OBJS) $(COBJS) $(CXXFLAGS) $(LFLAGS)
+	@$(CXX) -o aura $(OBJS) $(COBJS) $(CXXFLAGS) $(LFLAGS)
 	@echo "[BIN] $@ created."
 	@strip "$(PROG)"
 	@echo "[BIN] Stripping the binary."
