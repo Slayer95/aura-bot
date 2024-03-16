@@ -71,6 +71,7 @@ Assemble:
   # BNCSUtil (static, .a)
   - cd bncsutil/src/bncsutil
   - export BNCSUTIL_STATIC_LIB=1
+  - export CXXFLAGS="-static"
   - make && make install
   - unset BNCSUTIL_STATIC_LIB
   - cd $CI_PROJECT_DIR
