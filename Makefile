@@ -12,10 +12,22 @@ ifndef CXX
 endif
 
 CCFLAGS = -fno-builtin
-CXXFLAGS = -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti -DDISABLE_CPR
+CXXFLAGS = -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti
 DFLAGS =
 OFLAGS = -O3 -flto
-LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lstorm -lbncsutil -lgmp -lbz2 -lz -lminiupnpc
+LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lstorm -lbncsutil -lgmp -lbz2 -lz
+
+ifeq ($(AURADISABLEUPNP), 1)
+  CXXFLAGS += -DDISABLE_MINIUPNP
+else
+  LFLAGS += -lminiupnpc
+endif
+
+ifeq ($(AURADISABLECPR), 1)
+  CXXFLAGS += -DDISABLE_CPR
+else
+  LFLAGS += -lcpr
+endif
 
 ifeq ($(ARCH),x86_64)
 	CCFLAGS += -m64

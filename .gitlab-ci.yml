@@ -50,6 +50,7 @@ Assemble:
   # Aura
   - cd $CI_PROJECT_DIR  
   - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
+  - export AURADISABLECPR="1"
   - make && make install
-  - cp /usr/bin/aura.bin dist/bin/aura.bin
+  - cp /usr/bin/aura dist/bin/aura
 
