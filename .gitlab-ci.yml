@@ -28,6 +28,7 @@ Assemble:
   - cp /usr/lib/libbncsutil.so dist/lib
   - cp -R /usr/include/bncsutil dist/include
   # StormLib
+  - cd $CI_PROJECT_DIR
   - apt-get install -y build-essential cmake zlib1g-dev libbz2-dev
   - cd StormLib
   - mkdir build
@@ -38,6 +39,11 @@ Assemble:
   - cp /usr/local/lib/libstorm.a dist/lib
   - cp /usr/local/include/StormLib.h dist/include/stormlib
   - cp /usr/local/include/StormPort.h dist/include/stormlib
+  # MiniUPNP
+  - cd $CI_PROJECT_DIR
+  - make && make install
+  - cd $CI_PROJECT_DIR
+  - cp /usr/local/miniupnpc.a dist/lib
   # Aura
   - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
   - make && make install
