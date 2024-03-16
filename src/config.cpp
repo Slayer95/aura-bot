@@ -56,7 +56,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <utf8.h>
+#include "../utf8/utf8.h"
 
 using namespace std;
 
