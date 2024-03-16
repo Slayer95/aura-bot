@@ -245,12 +245,12 @@ public:
 
 private:
   std::string          m_Message;
-  std::vector<uint8_t> m_ToPIDs;
-  std::vector<uint8_t> m_ExtraFlags;
   ChatToHostType       m_Type;
+  uint8_t              m_Byte;
   uint8_t              m_FromPID;
   uint8_t              m_Flag;
-  uint8_t              m_Byte;
+  std::vector<uint8_t> m_ToPIDs;
+  std::vector<uint8_t> m_ExtraFlags;
 
 public:
   CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, std::string nMessage);

@@ -785,31 +785,31 @@ CIncomingAction::~CIncomingAction() = default;
 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, string nMessage)
   : m_Message(std::move(nMessage)),
-    m_ToPIDs(std::move(nToPIDs)),
     m_Type(CTH_MESSAGE),
+    m_Byte(255),
     m_FromPID(nFromPID),
     m_Flag(nFlag),
-    m_Byte(255)
+    m_ToPIDs(std::move(nToPIDs))
 {
 }
 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, string nMessage, std::vector<uint8_t> nExtraFlags)
   : m_Message(std::move(nMessage)),
-    m_ToPIDs(std::move(nToPIDs)),
     m_Type(CTH_MESSAGE),
+    m_Byte(255),
     m_FromPID(nFromPID),
     m_Flag(nFlag),
-    m_Byte(255),
+    m_ToPIDs(std::move(nToPIDs)),
     m_ExtraFlags(std::move(nExtraFlags))
 {
 }
 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, uint8_t nByte)
-  : m_ToPIDs(std::move(nToPIDs)),
-    m_Type(CTH_TEAMCHANGE),
+  : m_Type(CTH_TEAMCHANGE),
+    m_Byte(nByte),
     m_FromPID(nFromPID),
     m_Flag(nFlag),
-    m_Byte(nByte)
+    m_ToPIDs(std::move(nToPIDs))
 {
   if (nFlag == 17)
     m_Type = CTH_TEAMCHANGE;

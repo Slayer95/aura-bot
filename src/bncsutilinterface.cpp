@@ -132,7 +132,7 @@ optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
     Print("[CONFIG] Config required: <game.version>, <realm_N.auth_*>");
     return version;
   }
-  if ((versionMode == 28) != (readVersion == 28) || versionMode < 28 && readVersion > 28 || versionMode > 28 && readVersion < 28) {
+  if ((versionMode == 28) != (readVersion == 28) || (versionMode < 28 && readVersion > 28) || (versionMode > 28 && readVersion < 28)) {
     Print("[CONFIG] Game path corrupted or invalid (" + PathToString(war3Path)  + ").");
     Print("[CONFIG] Game path has files from v1." + to_string(versionMode));
     Print("[CONFIG] " + PathToString(CheckExe) + " is v1." + to_string(readVersion));

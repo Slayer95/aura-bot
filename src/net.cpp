@@ -87,11 +87,13 @@ uint16_t CTestConnection::GetPort()
 
 bool CTestConnection::QueryGameInfo()
 {
-  if (m_Socket->HasError() || !m_Socket->GetConnected())
+  if (m_Socket->HasError() || !m_Socket->GetConnected()) {
     return false;
+  }
 
-  if (!m_Aura->m_CurrentLobby || !m_Aura->m_CurrentLobby->GetIsLobby() && !m_Aura->m_CurrentLobby->GetIsMirror())
+  if (!m_Aura->m_CurrentLobby || (!m_Aura->m_CurrentLobby->GetIsLobby() && !m_Aura->m_CurrentLobby->GetIsMirror())) {
     return false;
+  }
 
   const static string Name = "AuraBot";
   const vector<uint8_t> joinRequest = m_Aura->m_GameProtocol->SEND_W3GS_REQJOIN(
@@ -164,12 +166,13 @@ CNet::CNet(CAura* nAura)
     m_UDP4BroadcastTarget(new sockaddr_storage()),
     m_UDP6BroadcastTarget(new sockaddr_storage()),
 
-    m_HealthCheckInProgress(false),
-    m_HealthCheckContext(nullptr),
     m_IPv4CacheV(make_pair(string(), nullptr)),
     m_IPv4CacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
     m_IPv6CacheV(make_pair(string(), nullptr)),
     m_IPv6CacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
+
+    m_HealthCheckInProgress(false),
+    m_HealthCheckContext(nullptr),
 
     m_LastHostPort(0)
 {
