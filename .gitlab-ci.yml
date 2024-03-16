@@ -30,21 +30,6 @@ Assemble:
   - cp /usr/lib/libbncsutil.so dist/bin-shared
   ## Header files
   ### - cp -R /usr/include/bncsutil dist/include
-  # StormLib (static, .a)
-  - cd $CI_PROJECT_DIR
-  - apt-get install -y build-essential cmake zlib1g-dev libbz2-dev
-  - cd StormLib
-  - mkdir -p build
-  - cd build
-  - cmake -DCMAKE_BUILD_TYPE=Release ..
-  - make && make install && make clean
-  - cd $CI_PROJECT_DIR
-  ## Static library
-  ### Already at /usr/local/lib
-  ### - cp /usr/local/lib/libstorm.a /usr/local/lib
-  ## Header files
-  ### - cp /usr/local/include/StormLib.h dist/include/stormlib
-  ### - cp /usr/local/include/StormPort.h dist/include/stormlib
   # StormLib (shared, .so)
   - cd $CI_PROJECT_DIR
   - cd StormLib
@@ -61,16 +46,6 @@ Assemble:
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
-  # MiniUPNP (static, .a)
-  - cd $CI_PROJECT_DIR
-  - cd miniupnpc
-  - export CPPFLAGS="-DMINIUPNP_STATICLIB"
-  - make && make install && make clean
-  - unset CPPFLAGS
-  - cd $CI_PROJECT_DIR
-  ## Static library
-  - cp /usr/lib/libminiupnpc.a /usr/local/lib
-  ### - cp /usr/lib/libminiupnpc.a dist/lib
   # MiniUPNP (shared, .so)
   - cd $CI_PROJECT_DIR
   - cd miniupnpc
@@ -84,13 +59,46 @@ Assemble:
   - export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
   - make && make install
+  - unset AURADISABLEMINIUPNP
+  - unset AURADISABLECPR
   - cp /usr/bin/aura dist/bin-shared
   - chmod +x dist/bin-shared/aura
+  ######################
+  ### Static build     #
+  ######################
+  # StormLib (static, .a)
+  - cd $CI_PROJECT_DIR
+  - apt-get install -y build-essential cmake zlib1g-dev libbz2-dev
+  - cd StormLib
+  - sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/g' CMakeLists.txt
+  - mkdir -p build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - make clean && make && make install
+  - cd $CI_PROJECT_DIR
+  ## Static library
+  ### Already at /usr/local/lib
+  ### - cp /usr/local/lib/libstorm.a /usr/local/lib
+  ## Header files
+  ### - cp /usr/local/include/StormLib.h dist/include/stormlib
+  ### - cp /usr/local/include/StormPort.h dist/include/stormlib
+  # MiniUPNP (static, .a)
+  - cd $CI_PROJECT_DIR
+  - cd miniupnpc
+  - export CPPFLAGS="-DMINIUPNP_STATICLIB"
+  - make clean && make && make install
+  - unset CPPFLAGS
+  - cd $CI_PROJECT_DIR
+  ## Static library
+  - cp /usr/lib/libminiupnpc.a /usr/local/lib
+  ### - cp /usr/lib/libminiupnpc.a dist/lib
   # Aura (all static libraries)
   - cd $CI_PROJECT_DIR
   #- export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
   - export AURASTATIC="1"
   - make && make install
+  - unset AURADISABLECPR
+  - unset AURASTATIC
   - cp /usr/bin/aura dist/bin-static
   - chmod +x dist/bin-static/aura
