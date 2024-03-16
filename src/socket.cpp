@@ -705,10 +705,6 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const sockaddr_storage
     Print("[DEBUG] Broadcast is only allowed to IPv4 addresses");
     return false;
   }
-  const in6_addr* _addr6 = &(reinterpret_cast<const sockaddr_in6*>(addr6)->sin6_addr);
-  if (!IN6_IS_ADDR_V4MAPPED(_addr6)) {
-    Print("[DEBUG] Wrong IN6_IS_ADDR_V4MAPPED macro usage.");
-  }
 
   const string MessageString = string(begin(message), end(message));
   int result;
@@ -719,8 +715,6 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const sockaddr_storage
     result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
   }
   if (result == -1) {
-    int error = WSAGetLastError();
-    Print("[DISCOVERY] failed to broadcast packet to " + AddressToString(*addr4) + ", size " + to_string(MessageString.size()) + " bytes) with error: " + to_string(error));
     return false;
   }
 
