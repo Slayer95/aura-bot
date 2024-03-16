@@ -36,8 +36,8 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   - cp /usr/local/lib/libstorm.a dist/lib
-  - cp /usr/include/StormLib.h dist/include/stormlib
-  - cp /usr/include/StormPort.h dist/include/stormlib
+  - cp /usr/local/include/StormLib.h dist/include/stormlib
+  - cp /usr/local/include/StormPort.h dist/include/stormlib
   # Aura
   - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
   - make
