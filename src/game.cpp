@@ -675,7 +675,7 @@ bool CGame::Update(void* fd, void* send_fd)
     bool IsTriggerPlayers = 0 < m_AutoStartPlayers && m_AutoStartPlayers <= m_PlayersWithMap;
     bool ShouldStart = false;
     if (IsTriggerTime || IsTriggerPlayers) {
-      ShouldStart = (IsTriggerTime && IsTriggerPlayers) || 0 < m_AutoStartMaxTime && m_AutoStartMaxTime <= Time;
+      ShouldStart = (IsTriggerTime && IsTriggerPlayers) || (0 < m_AutoStartMaxTime && m_AutoStartMaxTime <= Time);
       if (!ShouldStart) {
         ShouldStart = 0 == (IsTriggerTime ? m_AutoStartPlayers : m_AutoStartMinTime);
       }

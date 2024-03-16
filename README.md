@@ -200,6 +200,8 @@ DEALINGS IN THE SOFTWARE.
 
 #### [CRC32][16]
 
+This library has been modified for inclusion in Aura.
+
 zlib License
 
 Copyright (c) 2011-2016 Stephan Brumme

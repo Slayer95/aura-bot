@@ -56,9 +56,9 @@
 #include <random>
 #include <map>
 
-#define SLOTS_ALIGNMENT_CHANGED 1 << 0
-#define SLOTS_DOWNLOAD_PROGRESS_CHANGED 1 << 1
-#define SLOTS_HCL_INJECTED 1 << 2
+#define SLOTS_ALIGNMENT_CHANGED (1 << 0)
+#define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)
+#define SLOTS_HCL_INJECTED (1 << 2)
 
 //
 // CGame

@@ -41,22 +41,24 @@ using namespace std;
 /* In-game command */
 CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+
+    m_SourceRealm(player->GetRealm(false)),
+    m_TargetRealm(nullptr),
+    m_SourceGame(game),
+    m_TargetGame(game),
+    m_Player(player),
+    m_IRC(nullptr),
+
     m_FromName(player->GetName()),
     m_FromWhisper(false),
     m_FromType(FROM_GAME),
     m_Token(nToken),
 
-    m_SourceGame(game),
-    m_TargetGame(game),
     m_Permissions(0),
 
-    m_Player(player),
 
     m_HostName(player->GetRealmHostName()),
-    m_SourceRealm(player->GetRealm(false)),
-    m_TargetRealm(nullptr),
 
-    m_IRC(nullptr),
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
@@ -68,22 +70,22 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player,
 /* Command received from BNET but targetting a game */
 CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_SourceRealm(fromRealm),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(targetGame),
+    m_Player(nullptr),
+    m_IRC(nullptr),
+
     m_FromName(fromName),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_BNET),
     m_Token(nToken),
 
-    m_SourceGame(nullptr),
-    m_TargetGame(targetGame),
     m_Permissions(0),
 
-    m_Player(nullptr),
-
     m_HostName(fromRealm->GetServer()),
-    m_SourceRealm(fromRealm),
-    m_TargetRealm(nullptr),
 
-    m_IRC(nullptr),
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
@@ -95,22 +97,21 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRe
 /* Command received from IRC but targetting a game */
 CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(targetGame),
+    m_Player(nullptr),
+    m_IRC(ircNetwork),
+
     m_FromName(userName),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_IRC),
     m_Token(nToken),
 
-    m_SourceGame(nullptr),
-    m_TargetGame(targetGame),
-    m_Permissions(0),    
-
-    m_Player(nullptr),
+    m_Permissions(0),
 
     m_HostName(string()),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
-
-    m_IRC(ircNetwork),
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
@@ -122,22 +123,21 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwo
 /* Command received from elsewhere but targetting a game */
 CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(targetGame),
+    m_Player(nullptr),
+    m_IRC(nullptr),
+
     m_FromName(string()),
     m_FromWhisper(false),
     m_FromType(FROM_OTHER),
     m_Token(nToken),
 
-    m_SourceGame(nullptr),
-    m_TargetGame(targetGame),
     m_Permissions(0),
 
-    m_Player(nullptr),
-
     m_HostName(string()),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
-
-    m_IRC(nullptr),
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
@@ -149,22 +149,22 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutp
 /* BNET command */
 CCommandContext::CCommandContext(CAura* nAura, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_SourceRealm(fromRealm),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(nullptr),
+    m_Player(nullptr),
+    m_IRC(nullptr),
+
     m_FromName(fromName),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_BNET),
     m_Token(nToken),
-
-    m_SourceGame(nullptr),
-    m_TargetGame(nullptr),
     m_Permissions(0),
 
-    m_Player(nullptr),
 
     m_HostName(fromRealm->GetServer()),
-    m_SourceRealm(fromRealm),
-    m_TargetRealm(nullptr),
 
-    m_IRC(nullptr),
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
@@ -176,22 +176,20 @@ CCommandContext::CCommandContext(CAura* nAura, CRealm* fromRealm, string& fromNa
 /* IRC command */
 CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(nullptr),
+    m_Player(nullptr),
+    m_IRC(ircNetwork),
+
     m_FromName(userName),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_IRC),
     m_Token(nToken),
-
-    m_SourceGame(nullptr),
-    m_TargetGame(nullptr),
     m_Permissions(0),
 
-    m_Player(nullptr),
-
     m_HostName(string()),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
-
-    m_IRC(ircNetwork),
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
@@ -203,22 +201,21 @@ CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channel
 /* Generic command */
 CCommandContext::CCommandContext(CAura* nAura, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(nullptr),
+    m_Player(nullptr),
+    m_IRC(nullptr),
+
     m_FromName(string()),
     m_FromWhisper(false),
     m_FromType(FROM_OTHER),
     m_Token(nToken),
-
-    m_SourceGame(nullptr),
-    m_TargetGame(nullptr),
     m_Permissions(0),
 
-    m_Player(nullptr),
-
     m_HostName(string()),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
 
-    m_IRC(nullptr),
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
@@ -296,18 +293,22 @@ void CCommandContext::UpdatePermissions()
   // However, do NOT trust them regarding sudo access, since those commands may cause data deletion or worse.
   // Note also that sudo permissions must be ephemeral, since neither WC3 nor PvPGN TCP connections are secure.
   bool IsOwner = m_TargetGame && m_TargetGame->MatchOwnerName(m_FromName) && m_HostName == m_TargetGame->m_OwnerRealm && (
-    IsRealmVerified || m_Player && m_HostName.empty()
+    IsRealmVerified || (m_Player && m_HostName.empty())
   );
   bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsRootAdmin(m_FromName);
-  bool IsAdmin = IsRootAdmin || IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsAdmin(m_FromName);
+  bool IsAdmin = IsRootAdmin || (IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsAdmin(m_FromName));
   bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
   // bool IsIRCAdmin = m_IRC != nullptr && m_IRC->GetIsRootAdmin(m_FromName);
 
   // Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
-  if (m_Player || IsOwner && m_TargetGame && m_TargetGame->GetIsLobby()) m_Permissions |= PERM_GAME_PLAYER;
+  if (m_Player || (IsOwner && m_TargetGame && m_TargetGame->GetIsLobby())) {
+    m_Permissions |= PERM_GAME_PLAYER;
+  }
 
   // Leaver or absent owners are automatically demoted.
-  if (IsOwner && (m_Player || m_TargetGame && m_TargetGame->GetIsLobby())) m_Permissions |= PERM_GAME_OWNER;
+  if (IsOwner && (m_Player || (m_TargetGame && m_TargetGame->GetIsLobby()))) {
+    m_Permissions |= PERM_GAME_OWNER;
+  }
   if (IsAdmin) m_Permissions |= PERM_BNET_ADMIN;
   if (IsRootAdmin) m_Permissions |= PERM_BNET_ROOTADMIN;
   // if (IsIRCAdmin) m_Permissions |= PERM_IRC_ADMIN;
@@ -319,9 +320,9 @@ void CCommandContext::UpdatePermissions()
 void CCommandContext::SetIRCAdmin(const bool& isAdmin)
 {
   if (isAdmin) {
-    m_Permissions |= PERM_IRC_ADMIN;
+    m_Permissions |= (PERM_IRC_ADMIN);
   } else {
-    m_Permissions &= ~PERM_IRC_ADMIN;
+    m_Permissions &= ~(PERM_IRC_ADMIN);
   }
 }
 
@@ -2078,7 +2079,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Not allowed to check network status.");
         break;
       }
-      const bool TargetAllRealms = Payload == "*" || Payload.empty() && !m_SourceRealm;
+      const bool TargetAllRealms = Payload == "*" || (Payload.empty() && !m_SourceRealm);
       CRealm* targetRealm = nullptr;
       if (!TargetAllRealms) {
         targetRealm = GetTargetRealmOrCurrent(Payload);
@@ -2360,7 +2361,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         SendAll("Player [" + targetPlayer->GetName() + "] was banned by player [" + m_FromName + "] on server [" + targetPlayer->GetRealmHostName() + "]");
         break;
       } else if (m_SourceRealm) {
-        if (m_SourceRealm->GetIsRootAdmin(Victim) || m_SourceRealm->GetIsAdmin(Victim) && (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE)))) {
+        if (m_SourceRealm->GetIsRootAdmin(Victim) || (m_SourceRealm->GetIsAdmin(Victim) && (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))))) {
           ErrorReply("User [" + Victim + "] is an admin on server [" + m_HostName + "]");
           break;
         }
@@ -2497,8 +2498,8 @@ void CCommandContext::Run(const string& command, const string& payload)
           ErrorReply("IPv6 support hasn't been enabled. Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
           break;
         }
-        if (address->ss_family == AF_INET6 && isSpecialIPv6Address(reinterpret_cast<struct sockaddr_in6*>(address)) ||
-          address->ss_family == AF_INET && isSpecialIPv4Address(reinterpret_cast<struct sockaddr_in*>(address))) {
+        if ((address->ss_family == AF_INET6 && isSpecialIPv6Address(reinterpret_cast<struct sockaddr_in6*>(address))) ||
+          (address->ss_family == AF_INET && isSpecialIPv4Address(reinterpret_cast<struct sockaddr_in*>(address)))) {
           ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> if you are sure about this.");
           break;
         }
@@ -3375,7 +3376,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      bool ToAllRealms = TargetRealm.empty() || TargetRealm.length() == 1 && TargetRealm[0] == '*';
+      bool ToAllRealms = TargetRealm.empty() || (TargetRealm.length() == 1 && TargetRealm[0] == '*');
 
       string Message = m_FromName + " at " + (m_HostName.empty() ? "LAN/VPN" : m_HostName) + " says to you: \"" + SubMessage + "\"";
       for (auto& bnet : m_Aura->m_Realms) {
@@ -3422,7 +3423,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      bool ToAllRealms = TargetRealm.empty() || TargetRealm.length() == 1 && TargetRealm[0] == '*';
+      bool ToAllRealms = TargetRealm.empty() || (TargetRealm.length() == 1 && TargetRealm[0] == '*');
       const string Message = "/whois " + Name;
 
       for (auto& bnet : m_Aura->m_Realms) {
@@ -3628,7 +3629,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       string DeletionType = CommandHash == HashCode("deletecfg") ? "cfg" : "map";
       filesystem::path Folder = DeletionType == "cfg" ? m_Aura->m_Config->m_MapCFGPath : m_Aura->m_Config->m_MapPath;
 
-      if (DeletionType == "cfg" && !IsValidCFGName(Payload) || DeletionType == "map" &&!IsValidMapName(Payload)) {
+      if ((DeletionType == "cfg" && !IsValidCFGName(Payload)) || (DeletionType == "map" &&!IsValidMapName(Payload))) {
         ErrorReply("Removal failed");
         break;
       }
@@ -4189,10 +4190,10 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
       }
 
-      bool isHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
+      uint8_t isHostCommand = static_cast<uint8_t>(static_cast<int>(CommandHash == HashCode("host") || CommandHash == HashCode("hostlan")));
       vector<string> Args = SplitArgs(Payload, 1 + isHostCommand, 5 + isHostCommand);
 
-      if (Args.empty() || Args[0].empty() || isHostCommand && Args[Args.size() - 1].empty()) {
+      if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
         if (isHostCommand) {
           ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [GAME NAME]");
           ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [GAME NAME]");
@@ -4276,7 +4277,6 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       uint16_t gamePort = 6112;
       uint32_t gameHostCounter = 1;
-      uint32_t gameEntryKey = 0;
 
       CRealm* excludedServer = m_Aura->GetRealmByInputId(Args[0]);
 
@@ -4291,16 +4291,11 @@ void CCommandContext::Run(const string& command, const string& payload)
         size_t posId, posKey;
         gameHostCounter = stoul(Args[3], &posId, 16);
         if (posId != Args[3].length()) {
-          ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
-          break;
-        }
-        gameEntryKey = stoul(Args[4], &posKey, 16);
-        if (posKey != Args[4].length()) {
-          ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
+          ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.");
           break;
         }
       } catch (...) {
-        ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
+        ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.");
         break;
       }
 

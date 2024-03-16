@@ -244,11 +244,13 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     m_HostCounter(0),
     m_LastServerID(0xF),
     m_MaxGameNameSize(31),
-    m_SudoContext(nullptr),
+
+    m_ScriptsExtracted(false),
     m_GameVersion(0),
     m_Exiting(false),
     m_Ready(true),
-    m_ScriptsExtracted(false)
+
+    m_SudoContext(nullptr)
 {
   Print("[AURA] Aura version " + m_Version);
 
@@ -400,11 +402,11 @@ bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
       // m_RealmsIdentifiers[matchingRealm->GetInternalID()] == matchingRealm->GetInputID();
       Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
     } else {
-      bool DoResetConnection = (
+      const bool DoResetConnection = (
         matchingRealm->GetServer() != realmConfig->m_HostName ||
         matchingRealm->GetServerPort() != realmConfig->m_ServerPort ||
         matchingRealm->GetLoginName() != realmConfig->m_UserName ||
-        matchingRealm->GetEnabled() && !realmConfig->m_Enabled
+        (matchingRealm->GetEnabled() && !realmConfig->m_Enabled)
       );
       matchingRealm->SetConfig(realmConfig);
       matchingRealm->SetHostCounter(realmConfig->m_ServerIndex + 15);
@@ -927,8 +929,7 @@ uint8_t CAura::ExtractScripts()
       )))
     );
 #else
-    int32_t ErrorCode = static_cast<int32_t>(GetLastError());
-    string ErrorCodeString = "Error code " + to_string(ErrorCode);
+    string ErrorCodeString = "Error code " + to_string(errno);
 #endif
     Print("[AURA] warning - unable to load MPQ file [" + PathToString(MPQFilePath) + "] - " + ErrorCodeString);
   }
@@ -955,10 +956,7 @@ void CAura::LoadIPToCountryData()
       string    Line, Skip, IP1, IP2, Country;
       CSVParser parser;
 
-      // get length of file for the progress meter
-
       in.seekg(0, ios::end);
-      const uint32_t FileLength = static_cast<uint32_t>(in.tellg());
       in.seekg(0, ios::beg);
 
       while (!in.eof())

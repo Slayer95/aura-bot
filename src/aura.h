@@ -106,20 +106,22 @@ public:
   CNet*                                              m_Net;                        // network manager
   CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any
   std::vector<CGame*>                                m_Games;                      // these games are in progress
+  std::filesystem::path                              m_ConfigPath;
   CAuraDB*                                           m_DB;                         // database
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map
   std::string                                        m_Version;                    // Aura version string
   std::string                                        m_RepositoryURL;              // Aura repository URL
   std::string                                        m_IssuesURL;                  // Aura issues URL
-  std::filesystem::path                              m_ConfigPath;
 
   uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
   uint32_t                                           m_LastServerID;
   size_t                                             m_MaxGameNameSize;
+
+  bool                                               m_ScriptsExtracted;           // indicates if there's lacking configuration info so we can quit
+  uint8_t                                            m_GameVersion;
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
-  bool                                               m_ScriptsExtracted;           // indicates if there's lacking configuration info so we can quit
 
   std::map<std::string, std::string>                 m_CachedMaps;
   std::unordered_multiset<std::string>               m_BusyMaps;
@@ -130,7 +132,6 @@ public:
   std::string                                        m_SudoExecCommand;
   std::vector<std::vector<std::string>>              m_PendingActions;
 
-  uint8_t                                            m_GameVersion;
   std::filesystem::path                              m_GameInstallPath;
 
   CBotConfig*                                        m_Config;

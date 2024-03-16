@@ -92,11 +92,12 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
   m_AuthSkipVersionCheck   = CFG->GetBool(m_CFGKeyPrefix + "auth_skip_version_check", true);
+  m_AuthPasswordHashType   = CFG->GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
+
   m_AuthWar3Version        = CFG->GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
   m_AuthExeVersion         = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   m_AuthExeVersionHash     = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
   m_AuthExeInfo            = CFG->GetString(m_CFGKeyPrefix + "auth_exe_info", string());
-  m_AuthPasswordHashType   = CFG->GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
   m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
