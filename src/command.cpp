@@ -4211,10 +4211,10 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       CGameExtraOptions options;
-      if (Args.size() >= 2 + isHostCommand) options.ParseMapObservers(Args[1]);
-      if (Args.size() >= 3 + isHostCommand) options.ParseMapVisibility(Args[2]);
-      if (Args.size() >= 4 + isHostCommand) options.ParseMapRandomRaces(Args[3]);
-      if (Args.size() >= 5 + isHostCommand) options.ParseMapRandomHeroes(Args[4]);
+      if (isHostCommand + 2 <= Args.size()) options.ParseMapObservers(Args[1]);
+      if (isHostCommand + 3 <= Args.size()) options.ParseMapVisibility(Args[2]);
+      if (isHostCommand + 4 <= Args.size()) options.ParseMapRandomRaces(Args[3]);
+      if (isHostCommand + 5 <= Args.size()) options.ParseMapRandomHeroes(Args[4]);
 
       CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
       if (!gameSetup) {
