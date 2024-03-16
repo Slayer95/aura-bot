@@ -41,11 +41,13 @@ Assemble:
   - cp /usr/local/include/StormPort.h dist/include/stormlib
   # MiniUPNP
   - cd $CI_PROJECT_DIR
+  - cd miniupnpc
   - make && make install
   - cd $CI_PROJECT_DIR
   - cp /usr/local/miniupnpc.a dist/lib
   # Aura
+  - cd $CI_PROJECT_DIR
   - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
   - make && make install
-  - cp /usr/local/bin/aura* dist/bin/
+  - cp /usr/bin/aura.bin dist/bin/aura.bin
 
