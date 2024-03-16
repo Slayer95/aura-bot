@@ -46,6 +46,7 @@ Assemble:
   - make && make install
   - cd $CI_PROJECT_DIR
   - cp /usr/lib/libminiupnpc.a dist/lib
+  - cp /usr/lib/libminiupnpc.a /usr/local/lib
   # Aura
   - cd $CI_PROJECT_DIR  
   - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
