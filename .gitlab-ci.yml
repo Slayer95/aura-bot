@@ -22,22 +22,22 @@ Assemble:
   - mkdir -p dist/lib dist/include dist/include/stormlib dist/config
   # BNCSUtil (from Source)
   - apt-get install -y build-essential cmake
-  - cd bncsutil
-  - cmake -G "Unix Makefiles" -B./build -H./
-  - cd build && make && make install
+  - cd bncsutil/src/bncsutil
+  - make && make install
   - cd $CI_PROJECT_DIR
   - cp /usr/local/lib/libbncsutil.so dist/lib
   - cp -R /usr/local/include/bncsutil dist/include
   # StormLib
   - apt-get install -y build-essential cmake zlib1g-dev libbz2-dev
   - cd StormLib
-  - sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/g' CMakeLists.txt # build library as shared library (.so)
-  - cmake -G "Unix Makefiles" -B./build -H./
-  - cd build && make && make install
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_DYNAMIC_MODULE=1 ..
+  - make && make install
   - cd $CI_PROJECT_DIR
   - cp /usr/local/lib/libstorm.so dist/lib
   - cp /usr/local/include/StormLib.h dist/include/stormlib
   - cp /usr/local/include/StormPort.h dist/include/stormlib
   # Aura
-  - cp -R dist/include/* /usr/local/include # make dist/includes available for the ghost build
+  - cp -R dist/include/* /usr/local/include # make dist/includes available for Aura build
   - make
