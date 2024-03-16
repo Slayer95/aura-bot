@@ -50,6 +50,8 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
     m_ServerIndex(0), // m_ServerIndex is one-based
     m_CFGKeyPrefix("global_realm.")
 {
+  const static string emptyString;
+
   m_CountryShort           = CFG->GetString(m_CFGKeyPrefix + "country_short", "PE");
   m_Country                = CFG->GetString(m_CFGKeyPrefix + "country", "Peru");
   m_Locale                 = CFG->GetString(m_CFGKeyPrefix + "locale", "system");
@@ -84,6 +86,8 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
   if (m_EnableCustomPort)
     CFG->FailIfErrorLast();
 
+  m_HostName               = CFG->GetString(m_CFGKeyPrefix + "host_name", emptyString);
+  m_ServerPort               = CFG->GetUint16(m_CFGKeyPrefix + "server_port", 6112);
   m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
@@ -123,6 +127,8 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_EnableCustomPort(nRootConfig->m_EnableCustomPort),
     m_PublicHostPort(nRootConfig->m_PublicHostPort),
 
+    m_HostName(nRootConfig->m_HostName),
+    m_ServerPort(nRootConfig->m_ServerPort),
     m_UserName(nRootConfig->m_UserName),
     m_PassWord(nRootConfig->m_PassWord),    
 
@@ -146,8 +152,8 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_ServerIndex(nServerIndex),
     m_CFGKeyPrefix("realm_" + to_string(nServerIndex) + ".")
 {
-  const static string emptyString;
-  m_HostName               = CFG->GetString(m_CFGKeyPrefix + "host_name", emptyString);
+  m_HostName               = CFG->GetString(m_CFGKeyPrefix + "host_name", m_HostName);
+  m_ServerPort               = CFG->GetUint16(m_CFGKeyPrefix + "server_port", m_ServerPort);
   m_UniqueName             = CFG->GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
   m_CanonicalName          = CFG->GetString(m_CFGKeyPrefix + "canonical_name", m_UniqueName); // may be shared by several servers
   m_InputID                = CFG->GetString(m_CFGKeyPrefix + "input_id", m_UniqueName); // expected unique

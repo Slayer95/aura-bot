@@ -201,7 +201,10 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     Print("[IRC: " + m_Config->m_HostName + "] connecting to server [" + m_Config->m_HostName + "] on port " + to_string(m_Config->m_Port));
     optional<sockaddr_storage> emptyBindAddress;
-    optional<sockaddr_storage> resolvedAddress = m_Aura->m_Net->ResolveHostName(m_Config->m_HostName);
+    optional<sockaddr_storage> resolvedAddress = (
+      m_Config->m_Port == 6667 ? m_Aura->m_Net->ResolveHostName(m_Config->m_HostName) :
+      m_Aura->m_Net->ResolveHostName(m_Config->m_HostName, m_Config->m_Port)
+    );
     if (resolvedAddress.has_value()) {
       m_Socket->Connect(emptyBindAddress, resolvedAddress.value(), m_Config->m_Port);
     } else {

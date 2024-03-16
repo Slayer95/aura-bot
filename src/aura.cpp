@@ -402,6 +402,7 @@ bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
     } else {
       bool DoResetConnection = (
         matchingRealm->GetServer() != realmConfig->m_HostName ||
+        matchingRealm->GetServerPort() != realmConfig->m_ServerPort ||
         matchingRealm->GetLoginName() != realmConfig->m_UserName ||
         matchingRealm->GetEnabled() && !realmConfig->m_Enabled
       );

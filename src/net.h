@@ -158,6 +158,7 @@ public:
   uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
   std::optional<sockaddr_storage> ResolveHostName(const std::string& hostName);
+  std::optional<sockaddr_storage> ResolveHostName(const std::string& hostName, const uint16_t hostPort);
   void             FlushDNSCache();
   void             FlushSelfIPCache();
 

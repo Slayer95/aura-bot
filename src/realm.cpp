@@ -491,7 +491,7 @@ bool CRealm::Update(void* fd, void* send_fd)
     // attempt to connect to battle.net
 
     if (!m_FirstConnect) {
-      Print("[BNET: " + m_Config->m_UniqueName + "] reconnecting to [" + m_HostName + ":6112]...");
+      Print("[BNET: " + m_Config->m_UniqueName + "] reconnecting to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]...");
     } else {
       if (m_Config->m_BindAddress.has_value()) {
         Print("[BNET: " + m_Config->m_UniqueName + "] connecting with local address [" + AddressToString(m_Config->m_BindAddress.value()) + "]...");
@@ -500,14 +500,17 @@ bool CRealm::Update(void* fd, void* send_fd)
     m_FirstConnect = false;
     m_ReconnectNextTick = false;
 
-    optional<sockaddr_storage> resolvedAddress = m_Aura->m_Net->ResolveHostName(m_Config->m_HostName);
+    optional<sockaddr_storage> resolvedAddress = (
+      m_Config->m_ServerPort == 6112 ? m_Aura->m_Net->ResolveHostName(m_Config->m_HostName) :
+      m_Aura->m_Net->ResolveHostName(m_Config->m_HostName, m_Config->m_ServerPort)
+    );
     if (!resolvedAddress.has_value()) {
       m_Socket->m_HasError = true;
     } else if (resolvedAddress.value().ss_family == AF_INET6) {
       Print(GetLogPrefix() + "Provide IPv4 addresses for realms.");
       m_Socket->m_HasError = true;
     } else {
-      m_Socket->Connect(m_Config->m_BindAddress, resolvedAddress.value(), 6112);
+      m_Socket->Connect(m_Config->m_BindAddress, resolvedAddress.value(), m_Config->m_ServerPort);
     }
 
     m_WaitingToConnect          = false;
@@ -537,7 +540,7 @@ bool CRealm::Update(void* fd, void* send_fd)
     {
       // the connection attempt timed out (10 seconds)
 
-      Print("[BNET: " + m_Config->m_UniqueName + "] failed to connect to [" + m_HostName + ":6112]");
+      Print("[BNET: " + m_Config->m_UniqueName + "] failed to connect to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]");
       Print("[BNET: " + m_Config->m_UniqueName + "] waiting 90 seconds to retry...");
       m_Socket->Reset();
       m_LastDisconnectedTime = Time;
@@ -708,6 +711,11 @@ bool CRealm::GetPvPGN() const
 string CRealm::GetServer() const
 {
   return m_Config->m_HostName;
+}
+
+uint16_t CRealm::GetServerPort() const
+{
+  return m_Config->m_ServerPort;
 }
 
 string CRealm::GetInputID() const

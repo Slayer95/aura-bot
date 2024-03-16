@@ -816,7 +816,8 @@ optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName)
     return result;
   }
 
-  auto it = m_DNSCache.find(hostName);
+  string cacheKey = hostName + ":";
+  auto it = m_DNSCache.find(cacheKey);
   if (it != end(m_DNSCache)) {
     result = it->second;
     return result;
@@ -836,7 +837,49 @@ optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName)
   addr4->sin_port = 0;
   memcpy(&(addr4->sin_addr.s_addr), HostInfo->h_addr, HostInfo->h_length);
 
-  m_DNSCache[hostName] = address;
+  m_DNSCache[cacheKey] = address;
+  result = address;
+  return result;
+}
+
+optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName, const uint16_t hostPort)
+{
+  optional<sockaddr_storage> result = ParseAddress(hostName);
+  if (result.has_value()) {
+    return result;
+  }
+
+  string cacheKey = hostName + ":" + to_string(hostPort);
+  auto it = m_DNSCache.find(cacheKey);
+  if (it != end(m_DNSCache)) {
+    result = it->second;
+    return result;
+  }
+
+  auto baseMatch = m_DNSCache.find(hostName + ":");
+  if (baseMatch != end(m_DNSCache)) {
+    struct sockaddr_storage addressCopy;
+    memcpy(&addressCopy, &(baseMatch->second), sizeof(sockaddr_storage));
+    m_DNSCache[cacheKey] = addressCopy;
+    result = addressCopy;
+    return result;
+  }
+
+  struct hostent* HostInfo;
+  HostInfo = gethostbyname(hostName.c_str());
+
+  if (!HostInfo) {
+    Print("DNS resolution failed for " + hostName);
+    return result;
+  }
+
+  struct sockaddr_storage address;
+  struct sockaddr_in *addr4 = (struct sockaddr_in *)&address;
+  addr4->sin_family = AF_INET;
+  addr4->sin_port = 0;
+  memcpy(&(addr4->sin_addr.s_addr), HostInfo->h_addr, HostInfo->h_length);
+
+  m_DNSCache[cacheKey] = address;
   result = address;
   return result;
 }

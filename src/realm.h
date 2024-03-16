@@ -132,6 +132,7 @@ public:
   bool                 GetEnabled() const;
   bool                 GetPvPGN() const;
   std::string          GetServer() const;
+  uint16_t             GetServerPort() const;
   std::string          GetInputID() const;
   std::string          GetUniqueDisplayName() const;
   std::string          GetCanonicalDisplayName() const;

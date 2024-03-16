@@ -48,6 +48,7 @@ class CRealmConfig
 {
 public:
   std::string m_HostName;                        // server address to connect to
+  uint16_t    m_ServerPort;
   std::optional<sockaddr_storage> m_BindAddress; // the local address from which we connect
   bool        m_Enabled;
   std::string m_InputID;                         // for IRC commands
