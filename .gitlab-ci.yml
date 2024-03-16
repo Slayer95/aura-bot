@@ -97,7 +97,7 @@ Assemble:
   #- export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
   - export AURASTATIC="1"
-  - make && make install
+  - make clean && make && make install
   - unset AURADISABLECPR
   - unset AURASTATIC
   - cp /usr/bin/aura dist/bin-static

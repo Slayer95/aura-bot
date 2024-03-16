@@ -17,7 +17,7 @@ DFLAGS =
 OFLAGS = -O3 -flto
 LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lgmp -lbz2 -lz
 
-ifeq($(AURASTATIC), 1)
+ifeq ($(AURASTATIC), 1)
   LFLAGS += libstorm.a bncsutil.a
 else
   LFLAGS += -llibstorm -lbncsutil
@@ -26,7 +26,7 @@ endif
 ifeq ($(AURADISABLEMINIUPNP), 1)
   CXXFLAGS += -DDISABLE_MINIUPNP
 else
-  ifeq($(AURASTATIC), 1)
+  ifeq ($(AURASTATIC), 1)
     LFLAGS += miniupnpc.a
   else
     LFLAGS += -lminiupnpc
@@ -36,7 +36,7 @@ endif
 ifeq ($(AURADISABLECPR), 1)
   CXXFLAGS += -DDISABLE_CPR
 else
-  ifeq($(AURASTATIC), 1)
+  ifeq ($(AURASTATIC), 1)
     LFLAGS += cpr.a
   else
     LFLAGS += -lcpr
