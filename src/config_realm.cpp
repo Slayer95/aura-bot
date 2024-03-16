@@ -134,11 +134,12 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_PassWord(nRootConfig->m_PassWord),    
 
     m_AuthSkipVersionCheck(nRootConfig->m_AuthSkipVersionCheck),
+    m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
+
     m_AuthWar3Version(nRootConfig->m_AuthWar3Version),
     m_AuthExeVersion(nRootConfig->m_AuthExeVersion),
     m_AuthExeVersionHash(nRootConfig->m_AuthExeVersionHash),
     m_AuthExeInfo(nRootConfig->m_AuthExeInfo),
-    m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
 
     m_FirstChannel(nRootConfig->m_FirstChannel),
     m_SudoUsers(nRootConfig->m_SudoUsers),
