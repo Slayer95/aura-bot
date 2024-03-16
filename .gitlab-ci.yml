@@ -22,9 +22,10 @@ Assemble:
   - mkdir -p dist/bin-static dist/bin-shared
   - cd $CI_PROJECT_DIR
   # BNCSUtil (dynamic, .so)
-  - apt-get install -y build-essential cmake
   - cd bncsutil/src/bncsutil
+  - export BNCSUTIL_SHARED_LIB=1
   - make && make install
+  - unset BNCSUTIL_SHARED_LIB
   - cd $CI_PROJECT_DIR
   ## Shared library
   - cp /usr/lib/libbncsutil.so /usr/local/lib
@@ -67,6 +68,17 @@ Assemble:
   ######################
   ### Static build     #
   ######################
+  # BNCSUtil (static, .a)
+  - cd bncsutil/src/bncsutil
+  - export BNCSUTIL_STATIC_LIB=1
+  - make && make install
+  - unset BNCSUTIL_STATIC_LIB
+  - cd $CI_PROJECT_DIR
+  ## Shared library
+  - cp /usr/lib/libbncsutil.so /usr/local/lib
+  - cp /usr/lib/libbncsutil.so dist/bin-shared
+  ## Header files
+  ### - cp -R /usr/include/bncsutil dist/include
   # StormLib (static, .a)
   - cd $CI_PROJECT_DIR
   - cd StormLib

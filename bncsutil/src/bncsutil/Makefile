@@ -21,6 +21,14 @@ else
 	TARGET = libbncsutil.so
 endif
 
+ifeq ($(BNCSUTIL_STATIC_LIB), 1)
+  TARGET = libbncsutil.a
+else
+  ifeq ($(BNCSUTIL_SHARED_LIB), 1)
+    TARGET = libbncsutil.so
+  endif
+endif
+
 $(TARGET): $(CXXOBJ) $(CCOBJ)
 	$(CXX)  $(CXXFLAGS) $(LDFLAGS) $(CXXOBJ) $(CCOBJ) -flto -o $(TARGET)
 ifeq ($(SYSTEM),Darwin)
