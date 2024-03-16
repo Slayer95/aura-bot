@@ -33,7 +33,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   - apt-get install -y build-essential cmake zlib1g-dev libbz2-dev
   - cd StormLib
-  - mkdir build
+  - mkdir -p build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Release ..
   - make && make install
@@ -47,7 +47,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   - cd StormLib
   - sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/g' CMakeLists.txt
-  - mkdir build
+  - mkdir -p build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Release ..
   - make && make install
@@ -80,6 +80,6 @@ Assemble:
   #- export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
   - make && make install
-  - cp /usr/bin/aura dist/bin-shared/aura
+  - cp /usr/bin/aura dist/bin-shared
   - chmod +x dist/bin-shared/aura
 
