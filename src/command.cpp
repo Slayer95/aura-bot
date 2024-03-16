@@ -657,7 +657,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       bool IsRealmVerified = targetPlayerRealm != nullptr;
       bool IsOwner = m_TargetGame->MatchOwnerName(targetPlayer->GetName()) && m_TargetGame->HasOwnerInGame();
       bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsRootAdmin(m_FromName);
-      bool IsAdmin = IsRootAdmin || IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName);
+      bool IsAdmin = IsRootAdmin || (IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName));
       string SyncStatus;
       if (m_TargetGame->GetGameLoaded()) {
         if (m_TargetGame->m_SyncPlayers[targetPlayer].size() + 1 == m_TargetGame->m_Players.size()) {
@@ -1314,7 +1314,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("kick"):
     case HashCode("k"): {
       UseImplicitHostedGame();
-      if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || (m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded()))
         break;
 
       if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -1959,7 +1959,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("referee"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded())
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || (m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded()))
         break;
 
       CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
@@ -4190,7 +4190,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
       }
 
-      uint8_t isHostCommand = static_cast<uint8_t>(static_cast<int>(CommandHash == HashCode("host") || CommandHash == HashCode("hostlan")));
+      uint8_t isHostCommand = static_cast<uint8_t>(CommandHash == HashCode("host") || CommandHash == HashCode("hostlan"));
       vector<string> Args = SplitArgs(Payload, 1 + isHostCommand, 5 + isHostCommand);
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
@@ -4288,7 +4288,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       try {
         gamePort = static_cast<uint16_t>(stoul(Args[2]));
-        size_t posId, posKey;
+        size_t posId;
         gameHostCounter = stoul(Args[3], &posId, 16);
         if (posId != Args[3].length()) {
           ErrorReply("Usage: " + GetToken() + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.");

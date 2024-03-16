@@ -105,8 +105,12 @@ public:
   CIRC*                                              m_IRC;                        // IRC client
   CNet*                                              m_Net;                        // network manager
   CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any
-  std::vector<CGame*>                                m_Games;                      // these games are in progress
+
   std::filesystem::path                              m_ConfigPath;
+  CBotConfig*                                        m_Config;
+  CRealmConfig*                                      m_RealmDefaultConfig;
+  CGameConfig*                                       m_GameDefaultConfig;
+
   CAuraDB*                                           m_DB;                         // database
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map
   std::string                                        m_Version;                    // Aura version string
@@ -123,20 +127,17 @@ public:
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
 
-  std::map<std::string, std::string>                 m_CachedMaps;
-  std::unordered_multiset<std::string>               m_BusyMaps;
-  std::set<CCommandContext*>                         m_ActiveContexts;
-
   CCommandContext*                                   m_SudoContext;
   std::string                                        m_SudoAuthPayload;
   std::string                                        m_SudoExecCommand;
   std::vector<std::vector<std::string>>              m_PendingActions;
 
-  std::filesystem::path                              m_GameInstallPath;
+  std::vector<CGame*>                                m_Games;                      // these games are in progress
+  std::map<std::string, std::string>                 m_CachedMaps;
+  std::unordered_multiset<std::string>               m_BusyMaps;
+  std::set<CCommandContext*>                         m_ActiveContexts;
 
-  CBotConfig*                                        m_Config;
-  CRealmConfig*                                      m_RealmDefaultConfig;
-  CGameConfig*                                       m_GameDefaultConfig;
+  std::filesystem::path                              m_GameInstallPath;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;

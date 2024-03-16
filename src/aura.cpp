@@ -231,12 +231,14 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     m_IRC(nullptr),
     m_Net(nullptr),
     m_CurrentLobby(nullptr),
+
     m_ConfigPath(CFG->GetFile()),
-    m_DB(new CAuraDB(CFG)),
-    m_GameSetup(nullptr),
     m_Config(nullptr),
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
+
+    m_DB(new CAuraDB(CFG)),
+    m_GameSetup(nullptr),
     m_Version(AURA_VERSION),
     m_RepositoryURL(AURA_REPOSITORY_URL),
     m_IssuesURL(AURA_ISSUES_URL),
