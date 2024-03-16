@@ -45,14 +45,14 @@ using namespace std;
 //
 
 CTestConnection::CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const string nName)
-  : m_Aura(nAura),
-    m_TargetHost(nTargetHost),
+  : m_TargetHost(nTargetHost),
+    m_Aura(nAura),
+    m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName)),
     m_Type(nType),
     m_Name(nName),
     m_Timeout(0),
     m_LastConnectionFailure(0),
-    m_SentJoinRequest(false),
-    m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName))
+    m_SentJoinRequest(false)
 {
 }
 

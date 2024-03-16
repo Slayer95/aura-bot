@@ -362,12 +362,14 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
   return make_pair(MATCH_TYPE_NONE, filesystem::path());
 }
 
+#ifndef DISABLE_CPR
 void CGameSetup::SearchInputRemoteFuzzy(vector<string>& fuzzyMatches) {
   if (fuzzyMatches.size() >= 5) return;
   vector<string> remoteSuggestions = GetEpicWarSuggestions(m_SearchTarget.second, 5 - static_cast<uint8_t>(fuzzyMatches.size()));
   // Return suggestions through passed argument.
   fuzzyMatches.insert(end(fuzzyMatches), begin(remoteSuggestions), end(remoteSuggestions));
 }
+#endif
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocal(vector<string>& fuzzyMatches)
 {
@@ -414,7 +416,9 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
     if (m_Aura->m_Config->m_MapSearchShowSuggestions) {
       if (m_Aura->m_Games.empty()) {
         // Synchronous download, only if there are no ongoing games.
+#ifndef DISABLE_CPR
         SearchInputRemoteFuzzy(fuzzyMatches);
+#endif DISABLE_CPR
       }
       if (!fuzzyMatches.empty()) {
         m_Ctx->ErrorReply("Suggestions: " + JoinVector(fuzzyMatches, false), CHAT_SEND_SOURCE_ALL);

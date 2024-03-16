@@ -91,8 +91,8 @@ CSocket::CSocket(const uint8_t nFamily, string nName)
     m_Port(0),
     m_HasError(false),
     m_HasFin(false),
-    m_Name(nName),
-    m_Error(0)
+    m_Error(0),
+    m_Name(nName)
 {
 }
 

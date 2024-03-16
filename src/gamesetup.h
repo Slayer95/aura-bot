@@ -88,10 +88,10 @@ inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::st
   return output;
 }
 
+#ifndef DISABLE_CPR
 inline std::vector<std::string> GetEpicWarSuggestions(std::string & pattern, uint8_t maxCount)
 {
   std::vector<std::string> suggestions;
-#ifndef DISABLE_CPR
   std::string searchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
   Print("[AURA] Looking up suggestions...");
   Print("[AURA] GET <" + searchUri + ">");
@@ -105,9 +105,9 @@ inline std::vector<std::string> GetEpicWarSuggestions(std::string & pattern, uin
   for (const auto& element : matchingMaps) {
     suggestions.push_back(element.first + " (epicwar-" + std::to_string(element.second) + ")");
   }
-#endif
   return suggestions;
 }
+#endif
 
 //
 // CGameExtraOptions
@@ -180,7 +180,9 @@ public:
   std::pair<uint8_t, std::filesystem::path> SearchInputLocalExact();
   std::pair<uint8_t, std::filesystem::path> SearchInputLocalTryExtensions();
   std::pair<uint8_t, std::filesystem::path> SearchInputLocalFuzzy(std::vector<std::string>& fuzzyMatches);
+#ifndef DISABLE_CPR
   void SearchInputRemoteFuzzy(std::vector<std::string>& fuzzyMatches);
+#endif
   std::pair<uint8_t, std::filesystem::path> SearchInputLocal(std::vector<std::string>& fuzzyMatches);
   std::pair<uint8_t, std::filesystem::path> SearchInput();
   CMap* GetBaseMapFromConfig(CConfig* mapCFG, const bool silent);

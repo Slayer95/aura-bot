@@ -88,11 +88,11 @@ public:
   bool      QueryGameInfo();
   uint16_t  GetPort();
 
-  CAura*                      m_Aura;
   sockaddr_storage            m_TargetHost;
+  CAura*                      m_Aura;
+  CTCPClient*                 m_Socket;
   uint8_t                     m_Type;
   std::string                 m_Name;
-  CTCPClient*                 m_Socket;
   std::optional<bool>         m_Passed;
   std::optional<bool>         m_CanConnect;
   int64_t                     m_Timeout;
