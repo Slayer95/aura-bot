@@ -35,9 +35,8 @@ Assemble:
   - cd $CI_PROJECT_DIR
   - cd StormLib
   #- sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/g' CMakeLists.txt
-  - mkdir -p build
-  - cd build
-  - cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS ..
+  - rm -rf build && mkdir -p build
+  - cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS ..
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Shared library
@@ -72,8 +71,7 @@ Assemble:
   - cd StormLib
   #- sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/g' CMakeLists.txt
   - rm -rf build && mkdir -p build
-  - cd build
-  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - cd build && cmake -DCMAKE_BUILD_TYPE=Release ..
   - make clean && make && make install
   - cd $CI_PROJECT_DIR
   ## Static library
