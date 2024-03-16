@@ -68,7 +68,7 @@ int32_t GetLastError()
 CSocket::CSocket(const uint8_t nFamily)
   : m_Socket(INVALID_SOCKET),
     m_Family(nFamily),
-    n_Type(0),
+    m_Type(0),
     m_Port(0),
     m_HasError(false),
     m_HasFin(false),
