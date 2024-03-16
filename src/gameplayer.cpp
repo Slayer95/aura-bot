@@ -68,7 +68,7 @@ CGameConnection::CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_
     m_IsUDPTunnel(false),
     m_Socket(nSocket),
     m_IncomingJoinPlayer(nullptr),
-    m_DeleteMe(false),
+    m_DeleteMe(false)
 {
 }
 
@@ -114,7 +114,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
       if (Bytes.size() < Length) break;
       const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-      if (Bytes[0] == W3GS_HEADER_CONSTANT || Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
+      if (Bytes[0] == W3GS_HEADER_CONSTANT || (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled)) {
         if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
           if (m_IsUDPTunnel) {
             m_IsUDPTunnel = false;
