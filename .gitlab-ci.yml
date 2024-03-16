@@ -42,7 +42,8 @@ Assemble:
   # MiniUPNP
   - cd $CI_PROJECT_DIR
   - cd miniupnpc
-  - make CPPFLAGS+="-DMINIUPNP_STATICLIB" && make install
+  - export CPPFLAGS="-DMINIUPNP_STATICLIB"
+  - make && make install
   - cd $CI_PROJECT_DIR
   - cp /usr/local/lib/libminiupnpc.a dist/lib
   # Aura
