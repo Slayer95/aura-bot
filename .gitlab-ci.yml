@@ -3,7 +3,7 @@
 ####
 
 # Image
-image: ubuntu:18.10
+image: ubuntu:24.04
 
 # Stages
 stages:
