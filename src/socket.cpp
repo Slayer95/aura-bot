@@ -58,6 +58,11 @@ int32_t GetLastError()
 }
 #endif
 
+#ifndef UNREFERENCED_PARAMETER
+#define UNREFERENCED_PARAMETER(x) (void)(x)
+#endif
+
+
 //
 // CSocket
 //
