@@ -19,17 +19,17 @@ Assemble:
   script:
   # Packages
   - apt-get update && apt-get install -y build-essential git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev
-  - mkdir -p dist/lib dist/include dist/include/stormlib dist/config
-  # BNCSUtil (from Source)
+  - mkdir -p dist/lib dist/bin-static dist/bin-shared
+  # BNCSUtil (dynamic, .so)
   - apt-get install -y build-essential cmake
   - cd bncsutil/src/bncsutil
   - make && make install
   - cd $CI_PROJECT_DIR
-  #Static libraries
-  #- cp /usr/lib/libbncsutil.so dist/lib
-  #Header files
-  #- cp -R /usr/include/bncsutil dist/include
-  # StormLib
+  ## Shared library
+  - cp /usr/lib/libbncsutil.so dist/bin-shared
+  ## Header files
+  ### - cp -R /usr/include/bncsutil dist/include
+  # StormLib (static, .a)
   - cd $CI_PROJECT_DIR
   - apt-get install -y build-essential cmake zlib1g-dev libbz2-dev
   - cd StormLib
@@ -38,25 +38,48 @@ Assemble:
   - cmake -DCMAKE_BUILD_TYPE=Release ..
   - make && make install
   - cd $CI_PROJECT_DIR
-  #Static libraries
-  #- cp /usr/local/lib/libstorm.a dist/lib
-  #Header files
-  #- cp /usr/local/include/StormLib.h dist/include/stormlib
-  #- cp /usr/local/include/StormPort.h dist/include/stormlib
-  # MiniUPNP
+  ## Static library
+  ###- cp /usr/local/lib/libstorm.a dist/lib
+  ## Header files
+  ### - cp /usr/local/include/StormLib.h dist/include/stormlib
+  ### - cp /usr/local/include/StormPort.h dist/include/stormlib
+  # StormLib (shared, .so)
+  - cd $CI_PROJECT_DIR
+  - cd StormLib
+  - sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/g' CMakeLists.txt
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - make && make install
+  - cd $CI_PROJECT_DIR
+  ## Shared library
+  - cp /usr/local/lib/libstorm.a dist/bin-shared
+  ## Header files
+  ### - cp /usr/local/include/StormLib.h dist/include/stormlib
+  ### - cp /usr/local/include/StormPort.h dist/include/stormlib
+  # MiniUPNP (static, .a)
   - cd $CI_PROJECT_DIR
   - cd miniupnpc
   - export CPPFLAGS="-DMINIUPNP_STATICLIB"
   - make && make install
+  - unset CPPFLAGS
   - cd $CI_PROJECT_DIR
-  #Static libraries
-  #- cp /usr/lib/libminiupnpc.a /usr/local/lib
-  #- cp /usr/lib/libminiupnpc.a dist/lib
+  ## Static library
+  - cp /usr/lib/libminiupnpc.a /usr/local/lib
+  ### - cp /usr/lib/libminiupnpc.a dist/lib
+  # MiniUPNP (shared, .so)
+  - cd $CI_PROJECT_DIR
+  - cd miniupnpc
+  - make && make install
+  - cd $CI_PROJECT_DIR
+  ## Shared library
+  - cp /usr/lib/libminiupnpc.so dist/bin-shared
   # Aura
   - cd $CI_PROJECT_DIR
   - cp -R dist/include/* /usr/include # make dist/includes available for Aura build
-  - export AURADISABLEMINIUPNP="1"
+  #- export AURADISABLEMINIUPNP="1"
   - export AURADISABLECPR="1"
   - make && make install
-  - cp /usr/bin/aura dist/bin/aura
+  - cp /usr/bin/aura dist/bin-shared/aura
+  - chmod +x dist/bin-shared/aura
 
