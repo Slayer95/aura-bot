@@ -109,7 +109,7 @@ bool CConfig::Read(const filesystem::path& file)
     Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + to_string(strerror(errno)));
 #endif
     if (file.is_absolute()) {
-      return Read(filesystem::relative(file, filesystem::current_path());
+      return Read(filesystem::relative(file, filesystem::current_path()));
     }
     return false;
   }
