@@ -46,8 +46,10 @@ Thumbs.db
 ####################
 
 **/.msvc/
-**/Debug
-**/Release
+**/Debug/
+**/Debug-x64/
+**/Release/
+**/Release-x64/
 miniupnpc/msvc/build
 
 # Other #
