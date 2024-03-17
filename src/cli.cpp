@@ -86,6 +86,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--random-heroes", m_RandomHeroes, "Toggles random heroes when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
+  app.add_option("--timeout", m_GameTimeout, "Sets the time limit for the game lobby.");
 
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
   app.add_option("--exec-as", m_ExecAs, "Customizes the user identity when running commands from the CLI.");
@@ -218,8 +219,6 @@ void CCLI::OverrideConfig(CAura* nAura)
 void CCLI::QueueActions(CAura* nAura)
 {
   if (m_SearchTarget.has_value()) {
-    string gameName = m_GameName.value_or("Join and play");
-
     CGameExtraOptions options;
     if (m_Observers.has_value()) options.ParseMapObservers(m_Observers.value());
     if (m_Visibility.has_value()) options.ParseMapVisibility(m_Visibility.value());
@@ -256,7 +255,8 @@ void CCLI::QueueActions(CAura* nAura)
             return;
           }
         }
-        gameSetup->SetName(gameName);
+        gameSetup->SetName(m_GameName.value_or("Join and play"));
+        if (m_GameTimeout.has_value()) gameSetup->SetTimeout(m_GameTimeout.value());
         gameSetup->SetActive();
         vector<string> hostAction = {"host"};
         nAura->m_PendingActions.push_back(hostAction);

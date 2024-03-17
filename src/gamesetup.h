@@ -165,6 +165,7 @@ public:
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
+  std::optional<uint32_t>                         m_GameTimeout;
 
   std::string                                     m_CreatorName;
   CRealm*                                         m_CreatorRealm;
@@ -209,6 +210,7 @@ public:
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
   void SetName(const std::string& nName);
+  void SetTimeout(const uint32_t nTimeout);
   void SetContext(CCommandContext* nCtx);
 };
 

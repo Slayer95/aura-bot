@@ -78,6 +78,7 @@ private:
   std::optional<std::string>            m_Owner;
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
+  std::optional<uint32_t>               m_GameTimeout;
 
   // Command queue
   std::optional<std::string>            m_ExecAs;

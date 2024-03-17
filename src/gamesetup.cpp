@@ -829,6 +829,11 @@ void CGameSetup::SetName(const string& nName)
   m_GameName = nName;
 }
 
+void CGameSetup::SetTimeout(const uint32_t nTimeout)
+{
+  m_GameTimeout = nTimeout;
+}
+
 void CGameSetup::SetContext(CCommandContext* nCtx)
 {
   m_Ctx = nCtx;

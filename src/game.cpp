@@ -153,7 +153,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_NotifyJoins = m_Aura->m_GameDefaultConfig->m_NotifyJoins;
   m_PerfThreshold = m_Aura->m_GameDefaultConfig->m_PerfThreshold;
   m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
-  m_LobbyTimeLimit = m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
+  m_LobbyTimeLimit = nGameSetup->m_GameTimeout.has_value() ? nGameSetup->m_GameTimeout.value() : m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
   m_ExtraDiscoveryAddresses = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses;
   m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;
