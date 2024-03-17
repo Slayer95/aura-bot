@@ -239,6 +239,13 @@ administrative control over the game session. Here's the format for specifying t
 - <USER>: The username of the owner.
 - <SERVER>: The server the user is registered in.
 
+## \`--timeout <TIME>\`
+
+This parameter specifies the maximum time a game lobby is allowed to be unattended, that is,
+without a game owner. After this time passes, the lobby is unhosted.
+
+- <TIME>: Provided in minutes.
+
 # Flags for CLI commands
 
 ## \`--exec-broadcast\`
