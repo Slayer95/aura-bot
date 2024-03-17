@@ -68,7 +68,7 @@ Assemble:
   - chmod +x aura
   - chmod +x *.so
   - chmod +x *.so.*
-  - ./aura
+  #- ./aura
   ######################
   ### Static build     #
   ######################
