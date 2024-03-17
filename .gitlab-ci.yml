@@ -69,6 +69,7 @@ Assemble:
   - chmod +x aura
   - chmod +x *.so
   - chmod +x *.so.*
+  - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/dist/bin-shared
   - ./aura
   ######################
   ### Static build     #
