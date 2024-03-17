@@ -29,7 +29,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   ## Shared library
   - cp /usr/lib/libbncsutil.so /usr/local/lib
-  - cp /usr/lib/libbncsutil.so dist/bin-shared
+  - cp /usr/lib/libbncsutil.so* dist/bin-shared
   ## Header files
   ### - cp -R /usr/include/bncsutil dist/include
   # StormLib (shared, .so)
@@ -54,7 +54,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   ## Shared library
   - cp /usr/lib/libminiupnpc.so /usr/local/lib
-  - cp /usr/lib/libminiupnpc.so dist/bin-shared
+  - cp /usr/lib/libminiupnpc.so* dist/bin-shared
   # Aura (all shared libraries)
   - cd $CI_PROJECT_DIR
   - export AURALINKMINIUPNP=0
@@ -66,6 +66,7 @@ Assemble:
   - mv /usr/bin/aura dist/bin-shared
   - cd dist/bin-shared
   - chmod +x aura
+  - chmod +x *.so
   - ./aura
   ######################
   ### Static build     #
@@ -79,7 +80,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   ## Shared library
   - cp /usr/lib/libbncsutil.so /usr/local/lib
-  - cp /usr/lib/libbncsutil.so dist/bin-shared
+  - cp /usr/lib/libbncsutil.so* dist/bin-shared
   ## Header files
   ### - cp -R /usr/include/bncsutil dist/include
   # StormLib (static, .a)
