@@ -19,7 +19,7 @@ Assemble:
   script:
   # Packages
   - cd $CI_PROJECT_DIR
-  - apt-get update && apt-get install -y build-essential git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev cmake libbz2-dev
+  - apt-get update && apt-get install -y build-essential curl git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev cmake libbz2-dev
   - mkdir -p dist/bin-static dist/bin-shared
   # BNCSUtil (dynamic, .so)
   - cd $CI_PROJECT_DIR
