@@ -1,0 +1,1 @@
+aura v2.0.0-dev win32-full msvc:Release-x86

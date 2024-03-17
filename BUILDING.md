@@ -6,11 +6,19 @@ Get the source code from the project [repository][1] at Gitlab.
 ### Windows
 
 Windows users must use VS2019 or later. Visual Studio 2019 Community edition works.
-Neccessary .sln and .vcxproj files are provided. Before building, choose the Release configuration and Win32 or x64 as the platform.
-The binary shall be generated in the `..\aura-bot\aura\Release` folder.
 
-Note: When installing Visual Studio select in the `Desktop development with C++` category the `Windows 8.1 SDK` or `Windows 10 SDK` 
+#### Steps
+
+- Open `aura.sln` with VS2019.
+- Choose the ``Release`` configuration and Win32 or x64 as the platform.
+- Compile the solution.
+- Find the generated binary in the `Release` folder.
+
+**Note**: When installing Visual Studio select in the `Desktop development with C++` category the `Windows 8.1 SDK` or `Windows 10 SDK` 
 (depending on your OS version), and, if running with VS2019 or newer, also the `MSVC v142 - VS 2019 C++ x64/x86 build tools (v14.29)`.
+
+**Note**: If you have trouble getting some components to build, you may use the ``ReleaseLite`` configuration instead. Alternatively, 
+you may manually disable troublesome components in the project ``"Configuration Properties"``. Find instructions below. [3] 
 
 ### Linux
 
@@ -44,13 +52,13 @@ Continue building miniupnpc
 	make
 	sudo make install
 
-  (Or disable it by setting an environment variable: ``export AURADISABLEMINIUPNP=1``)
+  (Or disable it by setting an environment variable: ``export AURALINKMINIUPNP=0``)
 
 Afterwards, C++ Requests
 
   See the [CPR repository][2] for instructions.
 
-  (Or disable it by setting an environment variable: ``export AURADISABLECPR=1``)
+  (Or disable it by setting an environment variable: ``export AURALINKCPR=0``)
 
 Then, proceed to build Aura:
 
@@ -83,5 +91,18 @@ You can use [Homebrew](http://brew.sh/) to get `libgmp`. When you are at it, you
 
 Now proceed by following the [steps for Linux users](#steps) and omit StormLib in case you installed it using `brew`.
 
+### Optional components
+
+- **C++ Requests** (CPR) is disabled with the preprocessor directive ``DISABLE_CPR``. The following linked libraries must be removed:
+
+  Windows: cpr.lib;libcurl.lib;Crypt32.lib;Wldap32.lib
+  Linux: -lcpr -lcurl
+
+- **MiniUPnP** is disabled with the preprocessor directive ``DISABLE_MINIUPNP``. The following linked libraries must be removed:
+
+  Windows: miniupnpc.lib
+  Linux: -lminiupnpc
+
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/libcpr/cpr
+[3]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components

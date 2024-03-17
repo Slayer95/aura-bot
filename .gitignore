@@ -47,10 +47,13 @@ config*.ini
 mapcfgs/
 mapcfgs_old/
 Debug/
-Share/
-Share*
+Release/
+ReleaseLite/
 src/Debug
 src/Release
+src/ReleaseLite
+Share/
+Share*
 bncsutil/vc8_build/Release
 log.txt
 patch.diff

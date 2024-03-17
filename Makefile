@@ -21,7 +21,7 @@ ifeq ($(AURASTATIC), 1)
   LFLAGS += -static
 endif
 
-ifeq ($(AURADISABLEMINIUPNP), 1)
+ifeq ($(AURALINKMINIUPNP), 0)
   CXXFLAGS += -DDISABLE_MINIUPNP
 else
   ifeq ($(AURASTATIC), 1)
@@ -31,7 +31,7 @@ else
   endif
 endif
 
-ifeq ($(AURADISABLECPR), 1)
+ifeq ($(AURALINKCPR), 0)
   CXXFLAGS += -DDISABLE_CPR
 else
   ifeq ($(AURASTATIC), 1)
