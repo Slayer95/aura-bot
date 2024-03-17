@@ -60,7 +60,7 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so* dist/bin-shared
   # Aura (all shared libraries)
   - cd $CI_PROJECT_DIR
-  - export AURALINKMINIUPNP=0
+  - export AURALINKMINIUPNP=1
   - export AURALINKCPR=0
   - make && make install
   - unset AURALINKMINIUPNP
@@ -72,7 +72,7 @@ Assemble:
   - chmod +x *.so
   - chmod +x *.so.*
   - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/dist/bin-shared
-  - ./aura --stdpaths --config="../../config-example.ini" --no-bnet --w3version=27 --cfgdir="../../mapcfgs" --timeout=1 "../../mapcfgs/wormwar.cfg"
+  - ./aura --stdpaths --config="../../config-example.ini" --no-bnet --w3version=27 --cfgdir="../../mapcfgs" --timeout=1 --port-forward=6113 "../../mapcfgs/wormwar.cfg"
   - unset LD_LIBRARY_PATH
   ######################
   ### Static build     #
