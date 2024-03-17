@@ -46,10 +46,9 @@ Thumbs.db
 ####################
 
 **/.msvc/
-bncsutil/vc8_build/Release
+**/Debug
+**/Release
 miniupnpc/msvc/build
-miniupnpc/msvc/Debug
-miniupnpc/msvc/Release
 
 # Other #
 #########
