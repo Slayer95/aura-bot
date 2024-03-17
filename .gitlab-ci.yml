@@ -43,7 +43,7 @@ Assemble:
   ## Shared library
   ### Already at /usr/local/lib
   ### - cp /usr/local/lib/libstorm.so /usr/local/lib
-  - cp /usr/local/lib/libstorm.so dist/bin-shared
+  - cp /usr/local/lib/libstorm.so* dist/bin-shared
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
@@ -67,6 +67,7 @@ Assemble:
   - cd dist/bin-shared
   - chmod +x aura
   - chmod +x *.so
+  - chmod +x *.so.*
   - ./aura
   ######################
   ### Static build     #

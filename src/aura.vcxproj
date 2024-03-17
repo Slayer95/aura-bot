@@ -326,7 +326,7 @@
       <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ws2_32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;iphlpapi.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;iphlpapi.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\bncsutil\vc8_build\Release;..\StormLib\bin\StormLib\x64\ReleaseUS;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>false</GenerateDebugInformation>
