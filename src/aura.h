@@ -57,6 +57,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <queue>
 #include <set>
 #include <string>
 #include <map>
@@ -130,7 +131,7 @@ public:
   CCommandContext*                                   m_SudoContext;
   std::string                                        m_SudoAuthPayload;
   std::string                                        m_SudoExecCommand;
-  std::vector<std::vector<std::string>>              m_PendingActions;
+  std::queue<std::vector<std::string>>               m_PendingActions;
 
   std::vector<CGame*>                                m_Games;                      // these games are in progress
   std::map<std::string, std::string>                 m_CachedMaps;
@@ -180,7 +181,7 @@ public:
 
   // processing functions
 
-  bool HandleAction(std::vector<std::string>& action);
+  bool HandleAction(std::vector<std::string> action);
   bool Update();
   inline bool GetReady() const { return m_Ready; }
   bool CreateGame(CGameSetup* gameSetup);

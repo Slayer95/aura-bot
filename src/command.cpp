@@ -2209,7 +2209,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       uint8_t result = m_Aura->m_Net->EnableUPnP(extPort, intPort);
       if (result == 0) {
         ErrorReply("Universal Plug and Play is not supported by the host router.");
-      } else if (result == 1) {
+      } else if (0 != (result & 1)) {
         SendReply("Opened port " + to_string(extPort) + " with Universal Plug and Play");
       } else {
         SendReply("Unknown results. Try " + GetToken() + "checknetwork *");

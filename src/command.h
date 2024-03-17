@@ -98,6 +98,8 @@ public:
   CCommandContext(CAura* nAura, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::ostream* outputStream, char nToken);
   CCommandContext(CAura* nAura, std::ostream* outputStream, char nToken);
 
+  inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; };
+
   inline std::string GetToken() {
     return std::string(1, m_Token);
   }

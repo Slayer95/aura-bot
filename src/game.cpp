@@ -180,9 +180,10 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
     uint16_t hostPort = nAura->m_Net->NextHostPort();
     m_Socket = m_Aura->GetGameServer(hostPort, m_GameName);
-    m_HostPort = m_Socket->GetPort();
 
-    if (!m_Socket) {
+    if (m_Socket) {
+      m_HostPort = m_Socket->GetPort();
+    } else {
       m_Exiting = true;
     }
 

@@ -118,7 +118,8 @@ bool CIRC::Update(void* fd, void* send_fd)
   {
     // the socket has an error
 
-    Print("[IRC: " + m_Config->m_HostName + "] disconnected due to socket error,  waiting 60 seconds to reconnect");
+    Print("[IRC: " + m_Config->m_HostName + "] disconnected due to socket error");
+    Print("[IRC: " + m_Config->m_HostName + "] waiting 60 seconds to reconnect");
     m_Socket->Reset();
     m_WaitingToConnect          = true;
     m_LastConnectionAttemptTime = Time;

@@ -94,6 +94,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--exec-scope", m_ExecScope, "Customizes the channel when running commands from the CLI. Values: none, lobby, server, game#IDX")->default_val("none");
   app.add_option("--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
 
+  app.add_option("--port-forward", m_PortForward, "Runs Universal Plug-and-Play to enable port-forwarding on the given port.");
+
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
@@ -261,8 +263,8 @@ void CCLI::QueueActions(CAura* nAura)
         gameSetup->SetName(m_GameName.value_or("Join and play"));
         if (m_GameTimeout.has_value()) gameSetup->SetTimeout(m_GameTimeout.value());
         gameSetup->SetActive();
-        vector<string> hostAction = {"host"};
-        nAura->m_PendingActions.push_back(hostAction);
+        vector<string> hostAction{"host"};
+        nAura->m_PendingActions.push(hostAction);
       } else {
         ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
         delete gameSetup;
@@ -275,16 +277,19 @@ void CCLI::QueueActions(CAura* nAura)
     }
   }
 
+  if (m_PortForward.has_value()) {
+    vector<string> action{
+      "port-forward", to_string(m_PortForward.value()), to_string(m_PortForward.value())
+    };
+    nAura->m_PendingActions.push(action);
+  }
+
   while (!m_ExecCommands.empty()) {
     string execCommand, execAs, execScope, execAuth;
-    vector<string> action;
-    action.push_back("exec");
-    action.push_back(m_ExecCommands[0]);
-    action.push_back(m_ExecAs.value());
-    action.push_back(m_ExecScope);
-    action.push_back(m_ExecAuth);
-    action.push_back(m_ExecBroadcast ? "1" : "0");
-    nAura->m_PendingActions.push_back(action);
+    vector<string> action{
+        "exec", m_ExecCommands[0], m_ExecAs.value(), m_ExecScope, m_ExecAuth, m_ExecBroadcast ? "1" : "0"
+    };
+    nAura->m_PendingActions.push(action);
     m_ExecCommands.erase(m_ExecCommands.begin());
   }
 }

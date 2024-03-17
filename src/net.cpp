@@ -598,27 +598,26 @@ uint8_t CNet::EnableUPnP(const uint16_t externalPort, const uint16_t internalPor
     int checkIGD = UPNP_GetValidIGD(device, &urls, &data, lanaddr, sizeof(lanaddr));
     if (checkIGD != 1 && checkIGD != 2) {
       if (checkIGD == 0) {
-        printf("Found UPnP Device: %s - but no IGD found\n", device->descURL);
+        Print("[UPNP] device found: <" + string(device->descURL) + "> - but no IGD found");
       } else if (checkIGD == 3) {
-        printf("Found UPnP Device: %s - but not recognized as an IGD\n", device->descURL);
+        Print("[UPNP] device found: <" + string(device->descURL) + "> - but not recognized as an IGD");
       } else {
-        printf("Found UPnP Device: %s - but got an internal error checking its data\n", device->descURL);
+        Print("[UPNP] device found: <" + string(device->descURL) + "> - but got an internal error checking its data");
       }
       continue;
     }
     if (checkIGD == 2) {
-      printf("Found unconnected Internet Gateway Device at %s\n", urls.controlURL);
+      Print("[UPNP] unconnected gateway found: <" + string(urls.controlURL) + ">");
     } else {
-      printf("Found connected Internet Gateway Device at %s\n", urls.controlURL);
+      Print("[UPNP] connected gateway found: <" + string(urls.controlURL) + ">");
     }
-    printf("LAN address: %s\n", lanaddr);
+    Print("[UPNP] trying to forward traffic to LAN address " + string(lanaddr) + "...");
 
     int r = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", "TCP", NULL, "86400");
 
     if (r != UPNPCOMMAND_SUCCESS) {
-      printf("Failed to add port mapping: %d\n", r);
+      Print("[UPNP] failed to add port mapping - error " + to_string(r));
     } else {
-      printf("Port mapping added successfully!\n");
       success = success | (1 << (checkIGD - 1));
     }
 
@@ -702,7 +701,9 @@ void CNet::ReportHealthCheck()
     }
     if (anyDirectSuccess) {
       Print("[Network] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4) + ".");
-      m_HealthCheckContext->SendAll("This bot CAN be reached through the IPv4 Internet.");
+      if (!m_HealthCheckContext->GetWritesToStdout()) {
+        m_HealthCheckContext->SendAll("This bot CAN be reached through the IPv4 Internet.");
+      }
     } else {
       Print("[Network] This bot is disconnected from the IPv4 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv4) + ".");
       Print("[Network] Please setup port-forwarding to allow connections.");
@@ -713,17 +714,18 @@ void CNet::ReportHealthCheck()
 #endif
       Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
       Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
-
-      m_HealthCheckContext->SendAll("============= READ IF YOU ARE RUNNING AURA =====================================");
-      m_HealthCheckContext->SendAll("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
-      m_HealthCheckContext->SendAll("Please setup port-forwarding to allow connections.");
-      m_HealthCheckContext->SendAll(portForwardInstructions);
+      if (!m_HealthCheckContext->GetWritesToStdout()) {
+        m_HealthCheckContext->SendAll("============= READ IF YOU ARE RUNNING AURA =====================================");
+        m_HealthCheckContext->SendAll("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
+        m_HealthCheckContext->SendAll("Please setup port-forwarding to allow connections.");
+        m_HealthCheckContext->SendAll(portForwardInstructions);
 #ifndef DISABLE_MINIUPNP
-      m_HealthCheckContext->SendAll("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+        m_HealthCheckContext->SendAll("If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
 #endif
-      m_HealthCheckContext->SendAll("Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
-      m_HealthCheckContext->SendAll("But make sure your firewall allows Aura inbound TCP connections.");
-      m_HealthCheckContext->SendAll("=================================================================================");
+        m_HealthCheckContext->SendAll("Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
+        m_HealthCheckContext->SendAll("But make sure your firewall allows Aura inbound TCP connections.");
+        m_HealthCheckContext->SendAll("=================================================================================");
+      }
     }
   }
   sockaddr_storage* publicIPv6 = GetPublicIPv6();
@@ -731,13 +733,19 @@ void CNet::ReportHealthCheck()
     if (isIPv6Reachable) {
       Print("[Network] This bot CAN be reached through the IPv6 Internet. Address: " + AddressToString(*publicIPv6) + ".");
       Print("[Network] See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
-      m_HealthCheckContext->SendAll("This bot CAN be reached through the IPv6 Internet.");
-      m_HealthCheckContext->SendAll("See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
-      m_HealthCheckContext->SendAll("=================================================================================");
     } else {
       Print("[Network] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
-      m_HealthCheckContext->SendAll("This bot is disconnected from the IPv6 Internet, because its public address is unreachable.");
-      m_HealthCheckContext->SendAll("=================================================================================");
+    }
+    if (!m_HealthCheckContext->GetWritesToStdout()) {
+      if (isIPv6Reachable) {
+        m_HealthCheckContext->SendAll("This bot CAN be reached through the IPv6 Internet.");
+        m_HealthCheckContext->SendAll("See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
+        m_HealthCheckContext->SendAll("=================================================================================");
+      } else {
+        Print("[Network] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
+        m_HealthCheckContext->SendAll("This bot is disconnected from the IPv6 Internet, because its public address is unreachable.");
+        m_HealthCheckContext->SendAll("=================================================================================");
+      }
     }
   }
   m_HealthCheckContext->SendAll(JoinVector(ChatReport, " | ", false));
@@ -836,7 +844,7 @@ optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName)
   HostInfo = gethostbyname(hostName.c_str());
 
   if (!HostInfo) {
-    Print("DNS resolution failed for " + hostName);
+    Print("[DNS] cannot resolve " + hostName + " - check your Internet connection");
     return result;
   }
 
@@ -878,7 +886,7 @@ optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName, const u
   HostInfo = gethostbyname(hostName.c_str());
 
   if (!HostInfo) {
-    Print("DNS resolution failed for " + hostName);
+    Print("[DNS] cannot resolve " + hostName + " - check your Internet connection");
     return result;
   }
 

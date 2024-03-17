@@ -524,11 +524,11 @@ CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
   return gameServer;
 }
 
-bool CAura::HandleAction(vector<string>& action)
+bool CAura::HandleAction(vector<string> action)
 {
   if (action[0] == "exec") {
     Print("[AURA] Exec cli unsupported yet");
-    return true;
+    return false;
   } else if (action[0] == "host") {
     bool success = false;
     if (m_GameSetup) {
@@ -539,25 +539,57 @@ bool CAura::HandleAction(vector<string>& action)
     }
 
     if (!success) {
-      return true; // Exit
+      return false;
     }
+  } else if (action[0] == "network-check") {
+    sockaddr_storage* publicIPv4 = m_Net->GetPublicIPv4();
+    if (publicIPv4 == nullptr) {
+      Print("[Network] Public IPv4 address unknown - check <net.ipv4.public_address.algorithm>, <net.ipv4.public_address.value>");
+    } else {
+      string gameName = "[NetworkCheck]";
+      CTCPServer* testIncomingServer = GetGameServer(stoi(action[1]), gameName);
+      if (testIncomingServer) {
+        sockaddr_storage targetHost;
+        memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
+        SetAddressPort(&targetHost, testIncomingServer->GetPort());
+        tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv4]", 0, targetHost);
+        vector<tuple<string, uint8_t, sockaddr_storage>> upnpTest(1, testHost);
+        m_Net->StartHealthCheck(upnpTest, new CCommandContext(this, &cout, '!'));
+      }
+    }
+#ifndef DISABLE_MINIUPNP
+  } else if (action[0] == "port-forward") {
+    uint16_t externalPort = stoi(action[1]);
+    uint16_t internalPort = stoi(action[2]);
+    uint8_t result = m_Net->EnableUPnP(externalPort, internalPort);
+    if (result == 0) {
+      Print("[UPnP] Universal Plug and Play is not supported by the host router.");
+    } else if (0 != (result & 1)) {
+      Print("[UPnP] forwarding external port " + action[1] + " to internal port " + action[2] + " OK.");
+    } else {
+      Print("[UPnP] warning - multi-layer NAT detected.");
+      vector<string> networkCheck{"network-check", to_string(externalPort)};
+      m_PendingActions.push(networkCheck);
+    }
+#endif
   } else if (!action.empty()) {
     Print("[AURA] Action type " + action[0] + " unsupported");
-    return true;
+    return false;
   }
-  return false;
+  return true;
 }
 
 bool CAura::Update()
 {
   // 1. pending actions
-
-  for (auto& action : m_PendingActions) {
-    if (HandleAction(action)) {
-      return true;
+  bool skipActions = false;
+  while (!m_PendingActions.empty()) {
+    if (skipActions || HandleAction(m_PendingActions.front())) {
+      m_PendingActions.pop();
+    } else {
+      skipActions = true;
     }
   }
-  m_PendingActions.clear();
 
   if (m_Config->m_ExitOnStandby && !m_CurrentLobby && m_Games.empty() && !m_Net->m_HealthCheckInProgress) {
     return true;
