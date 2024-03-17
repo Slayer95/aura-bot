@@ -21,6 +21,8 @@ Assemble:
   - cd $CI_PROJECT_DIR
   - apt-get update && apt-get install -y build-essential curl git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev cmake libbz2-dev
   - mkdir -p dist/bin-static dist/bin-shared
+  - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "mapcfgs/blizzard.j"
+  - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "mapcfgs/common.j"
   # BNCSUtil (dynamic, .so)
   - cd $CI_PROJECT_DIR
   - cd bncsutil/src/bncsutil
@@ -70,9 +72,7 @@ Assemble:
   - chmod +x *.so
   - chmod +x *.so.*
   - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/dist/bin-shared
-  - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "../../mapcfgs/blizzard.j"
-  - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "../../mapcfgs/common.j"
-  - ./aura --stdpaths --config="../../config-example.ini" --no-bnet --w3version=27 --timeout=1 "../../mapcfgs/wormwar.cfg"
+  - ./aura --stdpaths --config="../../config-example.ini" --no-bnet --w3version=27 --cfgdir="../../mapcfgs" --timeout=1 "../../mapcfgs/wormwar.cfg"
   - unset LD_LIBRARY_PATH
   ######################
   ### Static build     #
