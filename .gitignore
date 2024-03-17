@@ -57,9 +57,12 @@ miniupnpc/msvc/Release
 config*.ini
 !config-example.ini
 mapcfgs/
-!mapcfgs/wormwar.cfg
 mapcfgs_old/
+!mapcfgs/wormwar.cfg
+dist/bin-shared/
+dist/bin-static/
 Share/
 Share*
 log.txt
 patch.diff
+
