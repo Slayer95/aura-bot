@@ -104,9 +104,9 @@ bool CConfig::Read(const filesystem::path& file)
 
   if (in.fail()) {
 #ifdef _WIN32
-    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - error " + GetLastError());
+    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - error " + to_string(GetLastError()));
 #else
-    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - error " + to_string(errno));
+    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + strerror(errno));
 #endif
     return false;
   }
