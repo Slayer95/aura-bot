@@ -1011,7 +1011,7 @@ void CMap::Load(CConfig* CFG)
   if (CFG->Exists("map_gameversion_min")) {
     MapMinGameVersion = CFG->GetUint8("map_gameversion_min", 0);
   } else {
-    uint8_t MapMinGameVersion = 0;
+    MapMinGameVersion = 0;
     if (6060 <= MapEditorVersion  || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
       MapMinGameVersion = 29;
     } else if (6059 <= MapEditorVersion) {
