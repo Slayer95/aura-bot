@@ -150,6 +150,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
     if (m_MapPath.has_value() && !m_MapPath.value().is_absolute()) m_MapPath = GetExeDirectory() / m_MapPath.value();
     if (m_MapCFGPath.has_value() && !m_MapCFGPath.value().is_absolute()) m_MapCFGPath = GetExeDirectory() / m_MapCFGPath.value();
   }
+  // Make sure directories have a trailing slash.
+  // But m_CFGPath is just a file.
   if (m_War3Path.has_value()) NormalizeDirectory(m_War3Path.value());
   if (m_MapPath.has_value()) NormalizeDirectory(m_MapPath.value());
   if (m_MapCFGPath.has_value()) NormalizeDirectory(m_MapCFGPath.value());

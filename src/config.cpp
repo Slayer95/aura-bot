@@ -106,7 +106,7 @@ bool CConfig::Read(const filesystem::path& file)
 #ifdef _WIN32
     Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - error " + to_string(GetLastError()));
 #else
-    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + to_string(strerror(errno)));
+    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + string(strerror(errno)));
 #endif
     if (file.is_absolute()) {
       return Read(filesystem::relative(file, filesystem::current_path()));
