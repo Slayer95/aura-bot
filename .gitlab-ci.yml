@@ -70,7 +70,7 @@ Assemble:
   - chmod +x *.so
   - chmod +x *.so.*
   - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/dist/bin-shared
-  - ./aura
+  - ./aura --stdpaths --config="../../config-example.ini" --no-bnet --w3version=27 --timeout=1 "../../mapcfgs/wormwar.cfg"
   ######################
   ### Static build     #
   ######################
