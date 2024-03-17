@@ -2,6 +2,7 @@
 ###################
 *.dll
 *.exe
+*.pdb
 *.o
 *.so
 *.a
@@ -41,22 +42,24 @@ Thumbs.db
 *.db-wal
 *.db-shm
 
-config*.ini
-*.pdb
-!config-example.ini
-mapcfgs/
-mapcfgs_old/
-Debug/
-Release/
-ReleaseLite/
-src/Debug
-src/Release
-src/ReleaseLite
-Share/
-Share*
+# MSVC directories #
+####################
+
+**/.msvc/
 bncsutil/vc8_build/Release
-log.txt
-patch.diff
 miniupnpc/msvc/build
 miniupnpc/msvc/Debug
 miniupnpc/msvc/Release
+
+# Other #
+#########
+
+config*.ini
+!config-example.ini
+mapcfgs/
+!mapcfgs/wormwar.cfg
+mapcfgs_old/
+Share/
+Share*
+log.txt
+patch.diff

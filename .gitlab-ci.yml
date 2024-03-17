@@ -18,10 +18,11 @@ Assemble:
       - dist/
   script:
   # Packages
+  - cd $CI_PROJECT_DIR
   - apt-get update && apt-get install -y build-essential git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev cmake libbz2-dev
   - mkdir -p dist/bin-static dist/bin-shared
-  - cd $CI_PROJECT_DIR
   # BNCSUtil (dynamic, .so)
+  - cd $CI_PROJECT_DIR
   - cd bncsutil/src/bncsutil
   - export BNCSUTIL_SHARED_LIB=1
   - make && make install
@@ -74,6 +75,7 @@ Assemble:
   ######################
   # BNCSUtil (static, .a)
   ## FIXME
+  - cd $CI_PROJECT_DIR
   - cd bncsutil/src/bncsutil
   - export BNCSUTIL_STATIC_LIB=1
   - make && make install
