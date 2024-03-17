@@ -45,6 +45,7 @@ CBotConfig::CBotConfig(CConfig* CFG)
   m_War3Version                  = CFG->GetMaybeUint8("game.version");
   CFG->FailIfErrorLast();
   m_Warcraft3Path                = CFG->GetMaybeDirectory("game.install_path");
+  // TODO: Default to CFGDirectory instead
   m_MapCFGPath                   = CFG->GetDirectory("bot.map_configs_path", GetExeDirectory());
   m_MapPath                      = CFG->GetDirectory("bot.maps_path", GetExeDirectory());
 

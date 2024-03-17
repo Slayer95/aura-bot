@@ -109,6 +109,10 @@ bool CConfig::Read(const filesystem::path& file)
     Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + string(strerror(errno)));
 #endif
     if (file.is_absolute()) {
+      // Aura stores all file paths as absolute.
+      // However, it's possible a user has permissions to open() a file at a given relative path,
+      // yet they lack permissions for its equivalent absolute path.
+      // While I figure out a satisfying solution, retry using the relative path.
       return Read(filesystem::relative(file, filesystem::current_path()));
     }
     return false;

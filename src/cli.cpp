@@ -139,7 +139,9 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   }
 
   if (m_UseStandardPaths) {
+    // TODO: It should be possible to let m_SearchTarget be a relative path
     if (m_SearchTarget.has_value()) m_SearchTarget = PathToString(filesystem::absolute(m_SearchTarget.value()).lexically_normal());
+    // TODO: Investigate no longer making these absolute. 
     if (m_CFGPath.has_value()) m_CFGPath = filesystem::absolute(m_CFGPath.value());
     if (m_War3Path.has_value()) m_War3Path = filesystem::absolute(m_War3Path.value());
     if (m_MapPath.has_value()) m_MapPath = filesystem::absolute(m_MapPath.value());
