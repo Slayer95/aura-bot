@@ -73,7 +73,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 
   app.add_option("--config", m_CFGPath, "Customizes the main aura config file. Affected by --stdpaths");
   app.add_option("--w3version", m_War3Version, "Customizes the game version.");
-  app.add_option("--w3path", m_War3Path, "Customizes the game path.");
+  app.add_option("--w3dir", m_War3Path, "Customizes the game path.");
   app.add_option("--mapdir", m_MapPath, "Customizes the maps path.");
   app.add_option("--cfgdir", m_MapCFGPath, "Customizes the map configs path.");
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");

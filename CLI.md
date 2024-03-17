@@ -105,7 +105,7 @@ compatibility. This parameter allows the host bot to switch versions on the spot
 
 This option is equivalent to ``<game.version>`` in \`config.ini\`
 
-## \`--w3path <DIRECTORY>\` 
+## \`--w3dir <DIRECTORY>\` 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows the host bot 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
