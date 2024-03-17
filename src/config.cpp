@@ -100,10 +100,14 @@ bool CConfig::Read(const filesystem::path& file)
   m_File = file;
 
   ifstream in;
-  in.open(file.c_str(), ios::in);
+  in.open(file.native().c_str(), ios::in);
 
   if (in.fail()) {
-    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "]");
+#ifdef _WIN32
+    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - error " + GetLastError());
+#else
+    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - error " + to_string(errno));
+#endif
     return false;
   }
 
@@ -861,7 +865,7 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
 {
   std::string Output;
   ifstream in;
-  in.open(file.c_str(), ios::in);
+  in.open(file.native().c_str(), ios::in);
 
   if (in.fail())
     return Output;
