@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstdint>
 
+// Slice-by-16 algorithm.
 constexpr std::size_t MaxSlices = 16;
 
 class CCRC32
