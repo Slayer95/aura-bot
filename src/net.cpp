@@ -58,13 +58,11 @@ CTestConnection::CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, con
 
 CTestConnection::~CTestConnection()
 {
-  Print("~CTestConnection()");
   delete m_Socket;
 }
 
 uint32_t CTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
-  Print("SetFD()");
   if (!m_Socket->HasError() && m_Socket->GetConnected())
   {
     m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
@@ -76,7 +74,6 @@ uint32_t CTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
 
 uint16_t CTestConnection::GetPort()
 {
-  Print("GetPort()");
   if (m_TargetHost.ss_family == AF_INET6) {
     sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&m_TargetHost);
     return ntohs(addr6->sin6_port);
@@ -90,7 +87,6 @@ uint16_t CTestConnection::GetPort()
 
 bool CTestConnection::QueryGameInfo()
 {
-  Print("QueryGameInfo()");
   if (m_Socket->HasError() || !m_Socket->GetConnected()) {
     return false;
   }
@@ -112,7 +108,6 @@ bool CTestConnection::QueryGameInfo()
 
 bool CTestConnection::Update(void* fd, void* send_fd)
 {
-  Print("Update()");
   static optional<sockaddr_storage> emptyBindAddress;
 
   if (m_Passed.has_value()) {
@@ -124,30 +119,20 @@ bool CTestConnection::Update(void* fd, void* send_fd)
     if (!m_CanConnect.has_value()) m_CanConnect = false;
     m_Passed = false;
     m_LastConnectionFailure = Ticks;
-    Print("-> Reset()");
     m_Socket->Reset();
-    Print("Reset() ->");
   } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
-    Print("-> DoRecv()");
     m_Socket->DoRecv(static_cast<fd_set*>(fd));
-    Print("DoRecv() ->");
-    Print("-> GetBytes()");
     string* RecvBuffer = m_Socket->GetBytes();
-    Print("GetBytes() ->");
     std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
     const bool IsJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_SLOTINFOJOIN;
     RecvBuffer->clear();
     if (!m_SentJoinRequest) {
       if (QueryGameInfo()) {
-        Print("-> DoSend()");
         m_Socket->DoSend(static_cast<fd_set*>(send_fd));
-        Print("DoSend() ->");
       }
     } else if (IsJoinedMessage) {
       m_Passed = true;
-      Print("-> Disconnect()");
       m_Socket->Disconnect();
-      Print("Disconnect() ->");
     }
   } else if (m_Socket->GetConnecting() && m_Socket->CheckConnect()) {
     m_CanConnect = true;
@@ -155,13 +140,9 @@ bool CTestConnection::Update(void* fd, void* send_fd)
     if (!m_CanConnect.has_value()) m_CanConnect = false;
     m_Passed = false;
     m_LastConnectionFailure = Ticks;
-    Print("-> Reset [TIMEOUT]");
     m_Socket->Reset();
-    Print("Reset [TIMEOUT] ->");
   } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && (Ticks - m_LastConnectionFailure > 900)) {
-    Print("-> Connect()");
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
-    Print("Connect() ->");
     m_Timeout = Ticks + 3000;
   }
 
@@ -752,13 +733,10 @@ bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage
   if (m_HealthCheckInProgress || testServers.empty()) {
     return false;
   }
-  Print("StartHealthCheck() go");
   for (auto& testServer: testServers) {
     m_HealthCheckClients.push_back(new CTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer)));
   }
-  Print("StartHealthCheck() before hold");
   m_Aura->HoldContext(nCtx);
-  Print("StartHealthCheck() after hold");
   m_HealthCheckVerbose = isVerbose;
   m_HealthCheckContext = nCtx;
   m_HealthCheckInProgress = true;
