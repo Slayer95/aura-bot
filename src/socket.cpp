@@ -393,7 +393,6 @@ void CStreamIOSocket::SendReply(const sockaddr_storage* address, const vector<ui
   PutBytes(message);
 }
 
-
 void CStreamIOSocket::Disconnect()
 {
   if (m_Socket != INVALID_SOCKET)
