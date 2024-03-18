@@ -2077,6 +2077,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       uint8_t checkMode = HEALTH_CHECK_ALL | HEALTH_CHECK_VERBOSE;
       if (!m_Aura->m_Net->m_SupportTCPOverIPv6) {
         checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
+        checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
       }
 
       if (0 == (m_Permissions & ((m_TargetGame && m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -4126,8 +4127,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
       }
 
-      uint8_t isHostCommand = static_cast<uint8_t>(CommandHash == HashCode("host") || CommandHash == HashCode("hostlan"));
-      vector<string> Args = SplitArgs(Payload, 1 + isHostCommand, 5 + isHostCommand);
+      bool isHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
+      vector<string> Args = isHostCommand ? SplitArgs(Payload, 2, 6) : SplitArgs(Payload, 1, 5);
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
         if (isHostCommand) {
@@ -4146,11 +4147,16 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
+      string gameName;
+      if (isHostCommand) {
+        gameName = Args[Args.size() - 1];
+        Args.pop_back();
+      }
       CGameExtraOptions options;
-      if (isHostCommand + 2 <= Args.size()) options.ParseMapObservers(Args[1]);
-      if (isHostCommand + 3 <= Args.size()) options.ParseMapVisibility(Args[2]);
-      if (isHostCommand + 4 <= Args.size()) options.ParseMapRandomRaces(Args[3]);
-      if (isHostCommand + 5 <= Args.size()) options.ParseMapRandomHeroes(Args[4]);
+      if (2 <= Args.size()) options.ParseMapObservers(Args[1]);
+      if (3 <= Args.size()) options.ParseMapVisibility(Args[2]);
+      if (4 <= Args.size()) options.ParseMapRandomRaces(Args[3]);
+      if (5 <= Args.size()) options.ParseMapRandomHeroes(Args[4]);
 
       CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
       if (!gameSetup) {
@@ -4174,7 +4180,7 @@ void CCommandContext::Run(const string& command, const string& payload)
           delete gameSetup;
           break;
         }
-        m_Aura->m_GameSetup->SetName(Args[Args.size() - 1]);
+        m_Aura->m_GameSetup->SetName(gameName);
         m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
         m_Aura->m_GameSetup->SetOwner(m_FromName, CommandHash == HashCode("hostlan") ? nullptr : m_SourceRealm);
         m_Aura->m_GameSetup->RunHost();
