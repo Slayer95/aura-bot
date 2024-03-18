@@ -535,7 +535,7 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
       cacheSuccess = true;
     }
     if (cacheSuccess) {
-      Print("[DEBUG] Retrieving cached config " + cfgName + " -> " + fileName);
+      Print("[DEBUG] Fetching cached config " + cfgName + " -> " + fileName);
       return cachedResult;
     } else {
       delete cachedResult;
@@ -824,4 +824,10 @@ void CGameSetup::SetCreator(const string& nCreator, CRealm* nRealm)
   m_CreatorRealm = nRealm;
 }
 
-CGameSetup::~CGameSetup() = default;
+CGameSetup::~CGameSetup()
+{
+  m_Aura = nullptr;
+  m_Map = nullptr;
+  m_Ctx = nullptr;
+  m_CreatorRealm = nullptr;
+}

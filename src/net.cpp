@@ -564,7 +564,9 @@ sockaddr_storage* CNet::GetPublicIPv6()
       }
 
       optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(response.text, ACCEPT_IPV6);
-      if (!maybeAddress.has_value()) return nullptr;
+      if (!maybeAddress.has_value()) {
+        return nullptr;
+      }
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
       m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);

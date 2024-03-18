@@ -90,7 +90,6 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
   const int64_t Time = GetTime();
   if (Time - m_Socket->GetLastRecv() >= 5) {
-    Print("Delete CGameConnection after 5 secs inactivity");
     return PREPLAYER_CONNECTION_DESTROY;
   }
 

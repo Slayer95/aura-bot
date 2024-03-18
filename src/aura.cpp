@@ -533,7 +533,7 @@ bool CAura::HandleAction(vector<string> action)
     bool success = false;
     if (m_GameSetup) {
       success = m_GameSetup->RunHost();
-      delete m_GameSetup->m_Ctx;
+      UnholdContext(m_GameSetup->m_Ctx);
       delete m_GameSetup;
       m_GameSetup = nullptr;
     }
