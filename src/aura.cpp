@@ -1065,6 +1065,9 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     if (!m_Net->m_SupportTCPOverIPv6) {
       checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
     }
+    if (m_CurrentLobby->GetIsVerbose()) {
+      checkMode |= HEALTH_CHECK_VERBOSE;
+    }
     m_Net->QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
   }
 

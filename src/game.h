@@ -367,6 +367,7 @@ public:
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
   inline bool GetCheckIsJoinable() { return m_CheckJoinable; }
+  inline bool GetIsVerbose() { return m_Verbose; }
 
   void OpenObserverSlots();
   void CloseObserverSlots();
