@@ -86,6 +86,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
   app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
 
+  // Game hosting
   app.add_option("--owner", m_Owner, "Customizes the game owner when hosting from the CLI.");
   app.add_option("--observers", m_Observers, "Customizes observers when hosting from the CLI. Values: no, referees, defeat, full")->check(CLI::IsMember({"no", "referees", "defeat", "full"}));
   app.add_option("--visibility", m_Visibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
@@ -94,14 +95,16 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--timeout", m_GameTimeout, "Sets the time limit for the game lobby.");
-  app.add_option("--check-joinable", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
+  app.add_flag(  "--check-joinable", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
 
+  // Command execution
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
   app.add_option("--exec-as", m_ExecAs, "Customizes the user identity when running commands from the CLI.");
   app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember({"spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("verified");
   app.add_option("--exec-scope", m_ExecScope, "Customizes the channel when running commands from the CLI. Values: none, lobby, server, game#IDX")->default_val("none");
-  app.add_option("--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
+  app.add_flag(  "--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
 
+  // Port-forwarding
 #ifndef DISABLE_MINIUPNP
   app.add_option("--port-forward-tcp", m_PortForwardTCP, "Enable port-forwarding on the given TCP ports. Repeatable.");
   app.add_option("--port-forward-udp", m_PortForwardUDP, "Enable port-forwarding on the given UDP ports. Repeatable.");
