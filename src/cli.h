@@ -57,6 +57,7 @@ private:
   uint8_t                               m_EarlyAction;
 
   bool                                  m_UseStandardPaths;
+  bool                                  m_Verbose;
   std::optional<bool>                   m_LAN;
   std::optional<bool>                   m_BNET;
   std::optional<bool>                   m_ExitOnStandby;
@@ -80,10 +81,12 @@ private:
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameTimeout;
+  std::optional<bool>                   m_GameCheckJoinable;
 
   // UPnP
-  std::optional<uint16_t>               m_PortForward;
-
+  std::optional<bool>                   m_EnableUPnP;
+  std::vector<uint16_t>                 m_PortForwardTCP;
+  std::vector<uint16_t>                 m_PortForwardUDP;
 
   // Command queue
   std::optional<std::string>            m_ExecAs;

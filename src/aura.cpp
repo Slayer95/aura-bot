@@ -541,36 +541,14 @@ bool CAura::HandleAction(vector<string> action)
     if (!success) {
       return false;
     }
-  } else if (action[0] == "network-check") {
-    sockaddr_storage* publicIPv4 = m_Net->GetPublicIPv4();
-    if (publicIPv4 == nullptr) {
-      Print("[Network] Public IPv4 address unknown - check <net.ipv4.public_address.algorithm>, <net.ipv4.public_address.value>");
-    } else {
-      string gameName = "[NetworkCheck]";
-      CTCPServer* testIncomingServer = GetGameServer(stoi(action[1]), gameName);
-      if (testIncomingServer) {
-        sockaddr_storage targetHost;
-        memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
-        SetAddressPort(&targetHost, testIncomingServer->GetPort());
-        tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv4]", 0, targetHost);
-        vector<tuple<string, uint8_t, sockaddr_storage>> upnpTest(1, testHost);
-        m_Net->StartHealthCheck(upnpTest, new CCommandContext(this, &cout, '!'));
-      }
-    }
+  } else if (action[0] == "lazy") {
+    vector<string> lazyAction(action.begin() + 1, action.end());
+    m_PendingActions.push(lazyAction);
 #ifndef DISABLE_MINIUPNP
   } else if (action[0] == "port-forward") {
-    uint16_t externalPort = stoi(action[1]);
-    uint16_t internalPort = stoi(action[2]);
-    uint8_t result = m_Net->EnableUPnP(externalPort, internalPort);
-    if (result == 0) {
-      Print("[UPnP] Universal Plug and Play is not supported by the host router.");
-    } else if (0 != (result & 1)) {
-      Print("[UPnP] forwarding external port " + action[1] + " to internal port " + action[2] + " OK.");
-    } else {
-      Print("[UPnP] warning - multi-layer NAT detected.");
-      vector<string> networkCheck{"network-check", to_string(externalPort)};
-      m_PendingActions.push(networkCheck);
-    }
+    uint16_t externalPort = stoi(action[2]);
+    uint16_t internalPort = stoi(action[3]);
+    m_Net->RequestUPnP(action[1], externalPort, internalPort);
 #endif
   } else if (!action.empty()) {
     Print("[AURA] Action type " + action[0] + " unsupported");
@@ -1081,6 +1059,13 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     delete m_CurrentLobby;
     m_CurrentLobby = nullptr;
     return false;
+  }
+  if (m_CurrentLobby->GetCheckIsJoinable()) {
+    uint8_t checkMode = HEALTH_CHECK_ALL;
+    if (!m_Net->m_SupportTCPOverIPv6) {
+      checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
+    }
+    m_Net->QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
   }
 
   if (m_CurrentLobby->GetUDPEnabled()) {

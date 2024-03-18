@@ -10,9 +10,9 @@ Windows users must use VS2019 or later. Visual Studio 2019 Community edition wor
 #### Steps
 
 - Open `aura.sln` with VS2019.
-- Choose the ``Release`` configuration and Win32 or x64 as the platform.
+- Choose the ``Release`` configuration, and Win32 or x64 as the platform.
 - Compile the solution.
-- Find the generated binary in the `Release` folder.
+- Find the generated binary in the `.msvc\Release` folder.
 
 **Note**: When installing Visual Studio select in the `Desktop development with C++` category the `Windows 8.1 SDK` or `Windows 10 SDK` 
 (depending on your OS version), and, if running with VS2019 or newer, also the `MSVC v142 - VS 2019 C++ x64/x86 build tools (v14.29)`.

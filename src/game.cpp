@@ -72,7 +72,8 @@ using namespace std;
 //
 
 CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
-  : m_Aura(nAura),
+  : m_Verbose(nGameSetup->m_Verbose),
+    m_Aura(nAura),
     m_Socket(nullptr),
     m_DBBanLast(nullptr),
     m_Stats(nullptr),
@@ -153,8 +154,10 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_NotifyJoins = m_Aura->m_GameDefaultConfig->m_NotifyJoins;
   m_PerfThreshold = m_Aura->m_GameDefaultConfig->m_PerfThreshold;
   m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
-  m_LobbyTimeLimit = nGameSetup->m_GameTimeout.has_value() ? nGameSetup->m_GameTimeout.value() : m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
+  m_LobbyTimeLimit = nGameSetup->m_LobbyTimeout.has_value() ? nGameSetup->m_LobbyTimeout.value() : m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
+
+  m_CheckJoinable = nGameSetup->m_CheckJoinable.has_value() ? nGameSetup->m_CheckJoinable.value() : m_Aura->m_GameDefaultConfig->m_CheckJoinable;
   m_ExtraDiscoveryAddresses = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses;
   m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;
 

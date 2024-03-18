@@ -60,7 +60,13 @@
 
 #define ACCEPT_IPV4 (1 << 0)
 #define ACCEPT_IPV6 (1 << 1)
-#define ACCEPT_ANY 3
+#define ACCEPT_ANY (ACCEPT_IPV4 | ACCEPT_IPV6)
+
+#define HEALTH_CHECK_PUBLIC_IPV4 (1 << 0)
+#define HEALTH_CHECK_PUBLIC_IPV6 (1 << 1)
+#define HEALTH_CHECK_REALM (1 << 2)
+#define HEALTH_CHECK_ALL (HEALTH_CHECK_PUBLIC_IPV4 | HEALTH_CHECK_PUBLIC_IPV6 | HEALTH_CHECK_REALM)
+#define HEALTH_CHECK_VERBOSE (1 << 4)
 
 //
 // CNet
@@ -136,6 +142,7 @@ public:
   uint8_t                                                     m_IPv6CacheT;
 
   std::vector<CTestConnection*>                               m_HealthCheckClients;
+  bool                                                        m_HealthCheckVerbose;
   bool                                                        m_HealthCheckInProgress;
   CCommandContext*                                            m_HealthCheckContext;
   uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
@@ -164,9 +171,10 @@ public:
   void             FlushSelfIPCache();
 
 #ifndef DISABLE_MINIUPNP
-  uint8_t EnableUPnP(const uint16_t externalPort, const uint16_t internalPort);
+  uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort);
 #endif
-  bool StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx);
+  bool QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* realm, const uint16_t gamePort);
+  bool StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx, const bool isVerbose);
   void ResetHealthCheck();
   void ReportHealthCheck();
 

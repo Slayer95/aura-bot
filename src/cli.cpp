@@ -42,6 +42,7 @@ using namespace std;
 CCLI::CCLI()
  : m_EarlyAction(0),
    m_UseStandardPaths(false),
+   m_Verbose(false),
    m_SearchType("any"),
    m_ExecAuth("verified"),
    m_ExecScope("none")
@@ -64,12 +65,18 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("GAMENAME", m_GameName, "Name assigned to a game hosted from the CLI.");
 
   app.add_flag("--stdpaths", m_UseStandardPaths, "Makes relative paths resolve from CWD when input through the CLI. Commutative.");
+#ifndef DISABLE_MINIUPNP
+  app.add_flag("--auto-port-forward,--no-auto-port-forward{false}", m_EnableUPnP, "Enable automatic port-forwarding, using Universal Plug-and-Play.");
+#else
+  app.add_flag("--auto-port-forward,--no-auto-port-forward{false}", m_EnableUPnP, "Enable automatic port-forwarding, using Universal Plug-and-Play. (This distribution of Aura does not support this feature.)");
+#endif
   app.add_flag("--lan,--no-lan{false}", m_LAN, "Show hosted games on Local Area Network.");
   app.add_flag("--bnet,--no-bnet{false}", m_BNET, "Switch to enable or disable every defined realm.");
   app.add_flag("--exit,--no-exit{false}", m_ExitOnStandby, "Terminates the process when idle.");
   app.add_flag("--cache,--no-cache{false}", m_UseMapCFGCache, "Caches loaded map files into the map configs folder.");
   app.add_flag("--about,--version", about, "Display software information.");
   app.add_flag("--example,--examples", examples, "Display CLI hosting examples.");
+  app.add_flag("--verbose", m_Verbose, "Outputs detailed information when running CLI actions.");
 
   app.add_option("--config", m_CFGPath, "Customizes the main aura config file. Affected by --stdpaths");
   app.add_option("--w3version", m_War3Version, "Customizes the game version.");
@@ -87,6 +94,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--timeout", m_GameTimeout, "Sets the time limit for the game lobby.");
+  app.add_option("--check-joinable", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
 
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
   app.add_option("--exec-as", m_ExecAs, "Customizes the user identity when running commands from the CLI.");
@@ -94,7 +102,13 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--exec-scope", m_ExecScope, "Customizes the channel when running commands from the CLI. Values: none, lobby, server, game#IDX")->default_val("none");
   app.add_option("--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
 
-  app.add_option("--port-forward", m_PortForward, "Runs Universal Plug-and-Play to enable port-forwarding on the given port.");
+#ifndef DISABLE_MINIUPNP
+  app.add_option("--port-forward-tcp", m_PortForwardTCP, "Enable port-forwarding on the given TCP ports. Repeatable.");
+  app.add_option("--port-forward-udp", m_PortForwardUDP, "Enable port-forwarding on the given UDP ports. Repeatable.");
+#else
+  app.add_option("--port-forward-tcp", m_PortForwardTCP, "Enable port-forwarding on the given TCP ports. Repeatable. (This distribution of Aura does not support this feature.)");
+  app.add_option("--port-forward-udp", m_PortForwardUDP, "Enable port-forwarding on the given UDP ports. Repeatable. (This distribution of Aura does not support this feature.)");
+#endif
 
   try {
     app.parse(argc, argv);
@@ -219,10 +233,27 @@ void CCLI::OverrideConfig(CAura* nAura)
       nAura->m_Net->m_Config->m_UDPBroadcastStrictMode = m_LANMode.value() == "strict";
     }
   }
+  if (m_EnableUPnP.has_value()) {
+    nAura->m_Net->m_Config->m_EnableUPnP = m_EnableUPnP.value();
+  }
 }
 
 void CCLI::QueueActions(CAura* nAura)
 {
+  for (const auto& port : m_PortForwardTCP) {
+    vector<string> action{
+      "port-forward", "TCP", to_string(port), to_string(port)
+    };
+    nAura->m_PendingActions.push(action);
+  }
+
+  for (const auto& port : m_PortForwardUDP) {
+    vector<string> action{
+      "port-forward", "UDP", to_string(port), to_string(port)
+    };
+    nAura->m_PendingActions.push(action);
+  }
+
   if (m_SearchTarget.has_value()) {
     CGameExtraOptions options;
     if (m_Observers.has_value()) options.ParseMapObservers(m_Observers.value());
@@ -261,7 +292,9 @@ void CCLI::QueueActions(CAura* nAura)
           }
         }
         gameSetup->SetName(m_GameName.value_or("Join and play"));
-        if (m_GameTimeout.has_value()) gameSetup->SetTimeout(m_GameTimeout.value());
+        if (m_GameTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameTimeout.value());
+        if (m_GameCheckJoinable.has_value()) gameSetup->SetCheckJoinable(m_GameCheckJoinable.value());
+        gameSetup->SetVerbose(m_Verbose);
         gameSetup->SetActive();
         vector<string> hostAction{"host"};
         nAura->m_PendingActions.push(hostAction);
@@ -275,13 +308,6 @@ void CCLI::QueueActions(CAura* nAura)
       delete gameSetup;
       nAura->UnholdContext(ctx);
     }
-  }
-
-  if (m_PortForward.has_value()) {
-    vector<string> action{
-      "port-forward", to_string(m_PortForward.value()), to_string(m_PortForward.value())
-    };
-    nAura->m_PendingActions.push(action);
   }
 
   while (!m_ExecCommands.empty()) {

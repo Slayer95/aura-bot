@@ -2073,7 +2073,11 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("checknetwork"): {
       UseImplicitHostedGame();
 
-      uint16_t gamePort = m_TargetGame ? m_TargetGame->GetHostPort() : m_Aura->m_Net->NextHostPort();
+      uint16_t gamePort = m_TargetGame ? m_TargetGame->GetHostPortForDiscoveryInfo(AF_INET) : m_Aura->m_Net->NextHostPort();
+      uint8_t checkMode = HEALTH_CHECK_ALL | HEALTH_CHECK_VERBOSE;
+      if (!m_Aura->m_Net->m_SupportTCPOverIPv6) {
+        checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
+      }
 
       if (0 == (m_Permissions & ((m_TargetGame && m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to check network status.");
@@ -2089,115 +2093,47 @@ void CCommandContext::Run(const string& command, const string& payload)
           break;
         }
       }
-      if (m_Aura->m_Net->m_HealthCheckInProgress) {
-        ErrorReply("Already testing the network configuration.");
+
+      if (!m_Aura->m_Net->QueryHealthCheck(this, checkMode, targetRealm, gamePort)) {
+        ErrorReply("Already testing the network.");
         break;
       }
 
-      vector<tuple<string, uint8_t, sockaddr_storage>> testServers;
-      if (TargetAllRealms) {
-        sockaddr_storage loopBackAddress;
-        memset(&loopBackAddress, 0, sizeof(sockaddr_storage));
-        loopBackAddress.ss_family = AF_INET;
-        sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&loopBackAddress);
-        addr4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        addr4->sin_port = htons(gamePort);
-        tuple<string, uint8_t, sockaddr_storage> testHost("[Loopback]", CONNECTION_TYPE_LOOPBACK, loopBackAddress);
-        testServers.push_back(testHost);
-      }
-      sockaddr_storage* publicIPv4 = m_Aura->m_Net->GetPublicIPv4();
-      sockaddr_storage* publicIPv6 = m_Aura->m_Net->GetPublicIPv6();
-
-      bool anySendsPublicIp = false;
-      for (auto& realm : m_Aura->m_Realms) {
-        if (!TargetAllRealms && realm != targetRealm) {
-          continue;
-        }
-        if (!realm->GetLoggedIn()) {
-          SendReply("[Network] Not connected to " + realm->GetUniqueDisplayName(), CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
-          continue;
-        }
-        sockaddr_storage* selfIPInThisRealm = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIPv4;
-        if (publicIPv4 == nullptr) {
-          continue;
-        }
-        uint8_t connectionType = CONNECTION_TYPE_DEFAULT;
-        uint16_t port = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : gamePort;
-        string NameSuffix;
-        if (realm->GetIsVPN()) {
-          NameSuffix = " [VPN]";
-          connectionType = connectionType | CONNECTION_TYPE_VPN;
-        }
-        if (realm->GetUsesCustomIPAddress()) {
-          if (NameSuffix.empty()) NameSuffix = " [Tunnel]";
-          connectionType = connectionType | CONNECTION_TYPE_CUSTOM_IP_ADDRESS;
-        }
-        if (realm->GetUsesCustomPort()) {
-          if (NameSuffix.empty()) NameSuffix = " [Tunnel]";
-          connectionType = connectionType | CONNECTION_TYPE_CUSTOM_PORT;
-        }
-
-        sockaddr_storage targetHost;
-        memcpy(&targetHost, selfIPInThisRealm, sizeof(sockaddr_storage));
-        SetAddressPort(&targetHost, port);
-        tuple<string, uint8_t, sockaddr_storage> testHost(realm->GetUniqueDisplayName() + NameSuffix, connectionType, targetHost);
-        testServers.push_back(testHost);
-
-        if (reinterpret_cast<sockaddr_in*>(selfIPInThisRealm)->sin_addr.s_addr == reinterpret_cast<sockaddr_in*>(publicIPv4)->sin_addr.s_addr) {
-          anySendsPublicIp = true;
-        }
-      }
-      if (!anySendsPublicIp && publicIPv4 != nullptr) {
-        sockaddr_storage targetHost;
-        memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
-        SetAddressPort(&targetHost, gamePort);
-        tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv4]", 0, targetHost);
-        testServers.push_back(testHost);
-      }
-      if (publicIPv6 != nullptr && !IN6_IS_ADDR_UNSPECIFIED(&(reinterpret_cast<sockaddr_in6*>(publicIPv6)->sin6_addr))) {
-        sockaddr_storage targetHost;
-        memcpy(&targetHost, publicIPv6, sizeof(sockaddr_storage));
-        SetAddressPort(&targetHost, gamePort);
-        tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv6]", CONNECTION_TYPE_IPV6, targetHost);
-        testServers.push_back(testHost);
-      }
-      if (!m_TargetGame) {
-        SendReply("Network check started... Check output in the console.");
-      }
-      m_Aura->m_Net->StartHealthCheck(testServers, this);
+      SendReply("Testing network connectivity...");
       break;
     }
 
     //
-    // !UPNP
+    // !PORTFORWARD
     //
 
 #ifndef DISABLE_MINIUPNP
-    case HashCode("upnp"): {
+    case HashCode("portforward"): {
       UseImplicitHostedGame();
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("Not allowed to trigger UPnP.");
+      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+        ErrorReply("Requires sudo permissions.");
         break;
       }
 
+      string protocol = "TCP";
       vector<uint32_t> Args = SplitNumericArgs(Payload, 1, 2);
       if (Args.size() == 1) {
         if (Args[0] == 0 || Args[0] > 0xFFFF) {
-          ErrorReply("Usage: " + GetToken() + "upnp [EXTPORT] [INTPORT]");
+          ErrorReply("Usage: " + GetToken() + "portforward [EXTPORT], [INTPORT]");
           break;
         }
         Args.push_back(Args[0]);
       } else if (Args.empty()) {
         if (!Payload.empty() || !m_TargetGame) {
-          ErrorReply("Usage: " + GetToken() + "upnp [EXTPORT] [INTPORT]");
+          ErrorReply("Usage: " + GetToken() + "portforward [EXTPORT], [INTPORT]");
           break;
         }
         Args.push_back(m_TargetGame->GetHostPort());
         Args.push_back(m_TargetGame->GetHostPort());
       } else {
         if (Args[0] == 0 || Args[0] > 0xFFFF || Args[1] == 0 || Args[1] > 0xFFFF) {
-          ErrorReply("Usage: " + GetToken() + "upnp [EXTPORT] [INTPORT]");
+          ErrorReply("Usage: " + GetToken() + "portforward [EXTPORT], [INTPORT]");
           break;
         }
       }
@@ -2206,7 +2142,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       uint16_t intPort = static_cast<uint16_t>(Args[1]);
 
       SendReply("Trying to forward external port " + to_string(extPort) + " to internal port " + to_string(intPort) + "...");
-      uint8_t result = m_Aura->m_Net->EnableUPnP(extPort, intPort);
+      uint8_t result = m_Aura->m_Net->RequestUPnP(protocol, extPort, intPort);
       if (result == 0) {
         ErrorReply("Universal Plug and Play is not supported by the host router.");
       } else if (0 != (result & 1)) {

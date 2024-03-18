@@ -92,6 +92,7 @@ private:
   friend class CCommandContext;
 
 protected:
+  bool                           m_Verbose;
   CTCPServer*                    m_Socket;                        // listening socket
   CDBBan*                        m_DBBanLast;                     // last ban for the !banlast command - this is a pointer to one of the items in m_DBBans
   std::vector<CDBBan*>           m_DBBans;                        // std::vector of potential ban data for the database
@@ -153,6 +154,8 @@ protected:
   uint32_t                       m_LobbyNoOwnerTime;              // relinquish game ownership after this many minutes
   uint32_t                       m_LobbyTimeLimit;                // auto close the game lobby after this many minutes without any owner
   uint32_t                       m_NumPlayersToStartGameOver;     // when this player count is reached, the game over timer will start
+
+  bool                           m_CheckJoinable;
   std::set<std::string>          m_ExtraDiscoveryAddresses;
   bool                           m_ExtraDiscoveryStrict;
 
@@ -363,6 +366,8 @@ public:
   void StartCountDown(bool force);
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
+  inline bool GetCheckIsJoinable() { return m_CheckJoinable; }
+
   void OpenObserverSlots();
   void CloseObserverSlots();
   bool CreateVirtualHost();

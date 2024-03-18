@@ -147,6 +147,7 @@ public:
   uint8_t                                         m_SearchType;
   bool                                            m_StandardPaths;
   bool                                            m_LuckyMode;
+  bool                                            m_Verbose;
   std::pair<std::string, std::string>             m_SearchTarget;
 
   bool                                            m_IsDownloadable;
@@ -165,7 +166,9 @@ public:
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
-  std::optional<uint32_t>                         m_GameTimeout;
+
+  std::optional<uint32_t>                         m_LobbyTimeout;
+  std::optional<bool>                             m_CheckJoinable;
 
   std::string                                     m_CreatorName;
   CRealm*                                         m_CreatorRealm;
@@ -209,9 +212,11 @@ public:
   void SetDisplayMode(const uint8_t nDisplayMode);
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
-  void SetName(const std::string& nName);
-  void SetTimeout(const uint32_t nTimeout);
-  void SetContext(CCommandContext* nCtx);
+  void SetName(const std::string& nName) { m_GameName = nName; }
+  void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
+  void SetCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
+  void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
+  void SetContext(CCommandContext* nCtx) { m_Ctx = nCtx; }
 };
 
 #endif // AURA_GAMESETUP_H_

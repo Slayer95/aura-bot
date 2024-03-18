@@ -32,6 +32,45 @@ Displays the information of the host bot, including its version.
 
 Displays usage information and a list of available flags and parameters.
 
+## \`--verbose\`
+
+Displays more detailed information when running CLI actions.
+
+## \`--auto-port-forward\`
+
+This flag enables Universal Plug and Play (UPnP) functionality within the game 
+server. UPnP allows devices to discover and communicate with each other, 
+facilitating automatic port forwarding on routers that support this protocol.
+
+When the --auto-port-forward flag is enabled, the game server will attempt to 
+automatically configure port forwarding on compatible routers using UPnP. This 
+feature is particularly useful for hosting multiplayer game sessions, as it 
+ensures that incoming connections from players outside the local network can 
+reach the server without manual intervention to configure port forwarding on 
+the router.
+
+Note:
+- UPnP support must be enabled on the router for this feature to work.
+- Some routers may require user authentication for UPnP requests.
+
+This flag is enabled by default.
+
+## \`--no-auto-port-forward\`
+
+Conversely, this flag flag is used to explicitly disable Universal Plug and Play 
+(UPnP) functionality within the game server. When this flag is set, the game server 
+will not attempt to automatically configure port forwarding using UPnP, even if 
+UPnP is supported by the router.
+
+This may be desirable in situations where manual port forwarding configurations are 
+preferred, or if there are concerns about security risks associated with UPnP.
+
+Disabling UPnP may require manual configuration of port forwarding rules on the router, 
+which could be inconvenient for game hosts. Ensure that you can properly handle the 
+implications of using this flag.
+
+This option is equivalent to ``<net.port_forwarding.upnp.enabled = no>`` in \`config.ini\`
+
 ## \`--lan\`
 
 This flag indicates that any hosted games should be available in the 
@@ -152,6 +191,28 @@ machine to connect to the Local Area Network.
 
 This option is equivalent to ``<net.udp_server.enabled = no>`` in \`config.ini\`
 
+## \`--port-forward-tcp <PORT>\`, \`--port-forward-udp <PORT>\`
+
+The --port-forward-tcp <PORT> and --port-forward-udp <PORT> flags are used to trigger 
+Universal Plug and Play (UPnP) requests from the command line interface (CLI) for TCP and UDP 
+port forwarding, respectively. These flags facilitate the hosting and discovery of multiplayer games 
+by allowing incoming connections on specific ports.
+
+  TCP (Transmission Control Protocol):
+      The --port-forward-tcp <PORT> flag initiates UPnP requests to forward TCP traffic on the specified port.
+      TCP is used for establishing connections between the game server and multiple clients for multiplayer gameplay.
+      Enabling TCP port forwarding ensures that incoming TCP connections can reach the game server, allowing players to join multiplayer games seamlessly.
+
+  UDP (User Datagram Protocol):
+      The --port-forward-udp <PORT> flag initiates UPnP requests to forward UDP traffic on the specified port.
+      UDP is utilized for server and client communication to discover hosted games and exchange game data efficiently.
+      Enabling UDP port forwarding ensures that UDP packets related to game discovery and communication can reach the game server and clients.
+
+**Note:**
+- Ensure that the specified ports are not blocked by firewalls and are available for use.
+- UPnP support must be enabled on the router for these requests to be successful.
+- Some routers may require user authentication for UPnP requests.
+
 # Flags for CLI games
 
 ## \`--stdpaths\`
@@ -165,6 +226,10 @@ However, it's important to note that this flag removes protection against [arbit
 Therefore, it should only be used for paths that have been thoroughly validated.
 
 This option is commutative.
+
+## \`--check-joinable\`
+
+This flag enables automatic connectivity checks to ensure hosted games are joinable from the Internet.
 
 ## \`--random-races\`
 
@@ -197,7 +262,7 @@ the input when hosting maps from the CLI, whether they are maps, configuration f
 
 This makes hosted games invisible in the specified server. The server is to be specified through their 
 unique `Input ID`, which corresponds to ``realm_N.input_id`` in \`config.ini\`. Note that this value may be 
-missing, and thus defaults to ``realm_N.unique_name`` (which defaults to \`realm_N.host_name\`).
+missing, and thus defaults to ``realm_N.unique_name`` (which itself defaults to \`realm_N.host_name\`).
 
 ## \`--mirror <IP:PORT#ID>\`
 
