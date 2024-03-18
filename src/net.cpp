@@ -647,15 +647,27 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
   vector<tuple<string, uint8_t, sockaddr_storage>> testServers;
   bool isVerbose = 0 != (checkMode & HEALTH_CHECK_VERBOSE);
 
-  // Loopback (sanity check)
-  sockaddr_storage loopBackAddress;
-  memset(&loopBackAddress, 0, sizeof(sockaddr_storage));
-  loopBackAddress.ss_family = AF_INET;
-  sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&loopBackAddress);
-  addr4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  addr4->sin_port = htons(gamePort);
-  tuple<string, uint8_t, sockaddr_storage> testHost("[Loopback]", CONNECTION_TYPE_LOOPBACK, loopBackAddress);
-  testServers.push_back(testHost);
+  if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV4)) {
+    sockaddr_storage loopBackAddress;
+    memset(&loopBackAddress, 0, sizeof(sockaddr_storage));
+    loopBackAddress.ss_family = AF_INET;
+    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&loopBackAddress);
+    addr4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr4->sin_port = htons(gamePort);
+    tuple<string, uint8_t, sockaddr_storage> testHost("[Loopback]", CONNECTION_TYPE_LOOPBACK, loopBackAddress);
+    testServers.push_back(testHost);
+  }
+
+  if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV6)) {
+    sockaddr_storage loopBackAddress;
+    memset(&loopBackAddress, 0, sizeof(sockaddr_storage));
+    loopBackAddress.ss_family = AF_INET6;
+    sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&loopBackAddress);
+    memcpy(&(addr6->sin6_addr), &in6addr_loopback, sizeof(in6_addr));
+    addr6->sin6_port = htons(gamePort);
+    tuple<string, uint8_t, sockaddr_storage> testHost("[Loopback IPv6]", CONNECTION_TYPE_LOOPBACK, loopBackAddress);
+    testServers.push_back(testHost);
+  }
 
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
   sockaddr_storage* publicIPv6 = GetPublicIPv6();
@@ -776,7 +788,9 @@ void CNet::ReportHealthCheck()
       ResultText = "Cannot connect";
     }
     ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
-    Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
+    if (!m_HealthCheckContext->GetWritesToStdout()) {
+      Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
+    }
     if (0 == (testConnection->m_Type & ~(CONNECTION_TYPE_CUSTOM_PORT))) {
       hasDirectAttempts = true;
       if (success) anyDirectSuccess = true;

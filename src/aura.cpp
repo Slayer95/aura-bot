@@ -1064,6 +1064,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     uint8_t checkMode = HEALTH_CHECK_ALL;
     if (!m_Net->m_SupportTCPOverIPv6) {
       checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
+      checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
     }
     if (m_CurrentLobby->GetIsVerbose()) {
       checkMode |= HEALTH_CHECK_VERBOSE;
