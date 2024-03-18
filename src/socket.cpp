@@ -410,6 +410,7 @@ CTCPClient::CTCPClient(uint8_t nFamily, string nName)
   : CStreamIOSocket(nFamily, nName),
     m_Connecting(false)
 {
+  Print("[CTCPClient] " + nName + " created");
 }
 
 CTCPClient::~CTCPClient()

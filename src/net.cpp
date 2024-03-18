@@ -667,7 +667,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
   }
 
   bool anySendsPublicIp = false;
-  for (auto& realm : m_Aura->m_Realms) {
+  for (const auto& realm : m_Aura->m_Realms) {
     if ((0 == (checkMode & HEALTH_CHECK_REALM)) && realm != targetRealm) {
       continue;
     }
@@ -729,13 +729,16 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
 
 bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx, const bool isVerbose)
 {
-  if (m_HealthCheckInProgress) {
+  if (m_HealthCheckInProgress || testServers.empty()) {
     return false;
   }
+  Print("StartHealthCheck() go");
   for (auto& testServer: testServers) {
     m_HealthCheckClients.push_back(new CTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer)));
   }
+  Print("StartHealthCheck() before hold");
   m_Aura->HoldContext(nCtx);
+  Print("StartHealthCheck() after hold");
   m_HealthCheckVerbose = isVerbose;
   m_HealthCheckContext = nCtx;
   m_HealthCheckInProgress = true;
