@@ -60,8 +60,7 @@ config*.ini
 mapcfgs/
 mapcfgs_old/
 !mapcfgs/wormwar.cfg
-dist/bin-shared/
-dist/bin-static/
+dist/**/*
 Share/
 Share*
 log.txt
