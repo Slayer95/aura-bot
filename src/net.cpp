@@ -744,6 +744,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
   }
 
   StartHealthCheck(testServers, ctx, isVerbose);
+  return true;
 }
 
 bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx, const bool isVerbose)

@@ -72,8 +72,8 @@ using namespace std;
 //
 
 CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
-  : m_Verbose(nGameSetup->m_Verbose),
-    m_Aura(nAura),
+  : m_Aura(nAura),
+    m_Verbose(nGameSetup->m_Verbose),
     m_Socket(nullptr),
     m_DBBanLast(nullptr),
     m_Stats(nullptr),
@@ -2188,7 +2188,6 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
   std::vector<CGamePlayer*>& OtherPlayers = m_SyncPlayers[player];
   for (auto& otherPlayer: OtherPlayers) {
     if (otherPlayer == player) {
-      Print("Same player found in other players vector");
       CanConsumeFrame = false;;
       break;
     }
