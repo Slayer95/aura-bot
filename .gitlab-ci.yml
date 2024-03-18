@@ -72,7 +72,7 @@ Assemble:
   - chmod +x *.so
   - chmod +x *.so.*
   - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/dist/bin-shared
-  - ./aura --stdpaths --config="../../config-example.ini" --no-bnet --w3version=27 --cfgdir="../../mapcfgs" --timeout=1 --port-forward --check-joinable "../../mapcfgs/wormwar.cfg"
+  - ./aura --stdpaths --config="../../config-example.ini" --no-bnet --w3version=27 --cfgdir="../../mapcfgs" --timeout=1 --port-forward --check-joinable --verbose "../../mapcfgs/wormwar.cfg"
   - unset LD_LIBRARY_PATH
   ######################
   ### Static build     #
