@@ -35,33 +35,33 @@ using namespace std;
 // CGameConfig
 //
 
-CGameConfig::CGameConfig(CConfig* CFG)
+CGameConfig::CGameConfig(CConfig& CFG)
 {
-  m_VoteKickPercentage        = CFG->GetInt("hosting.vote_kick.min_percent", 70);
-  m_NumPlayersToStartGameOver = CFG->GetInt("hosting.game_over.player_count", 1);
-  m_SyncLimit                 = CFG->GetInt("net.start_lag.sync_limit", 10);
-  m_SyncLimitSafe             = CFG->GetInt("net.stop_lag.sync_limit", 3);
-  m_AutoKickPing              = CFG->GetInt("hosting.high_ping.kick_ms", 300);
-  m_WarnHighPing              = CFG->GetInt("hosting.high_ping.warn_ms", 200);
-  m_LobbyTimeLimit            = CFG->GetInt("hosting.abandoned_lobby.game_expiry_time", 10);
-  m_LobbyNoOwnerTime          = CFG->GetInt("hosting.abandoned_lobby.owner_expiry_time", 2);
-  m_Latency                   = CFG->GetUint16("bot.latency", 100);
-  m_PerfThreshold             = CFG->GetInt("bot.perf_limit", 150);
-  m_LacksMapKickDelay         = CFG->GetInt("hosting.map_missing.kick_delay", 60); // default: 1 minute
+  m_VoteKickPercentage        = CFG.GetInt("hosting.vote_kick.min_percent", 70);
+  m_NumPlayersToStartGameOver = CFG.GetInt("hosting.game_over.player_count", 1);
+  m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 10);
+  m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 3);
+  m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 300);
+  m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 200);
+  m_LobbyTimeLimit            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 10);
+  m_LobbyNoOwnerTime          = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 2);
+  m_Latency                   = CFG.GetUint16("bot.latency", 100);
+  m_PerfThreshold             = CFG.GetInt("bot.perf_limit", 150);
+  m_LacksMapKickDelay         = CFG.GetInt("hosting.map_missing.kick_delay", 60); // default: 1 minute
 
-  m_CheckJoinable             = CFG->GetBool("monitor.hosting.on_start.check_connectivity", false);
-  m_ExtraDiscoveryAddresses   = CFG->GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
-  m_ExtraDiscoveryStrict      = CFG->GetBool("net.game_discovery.udp.extra_clients.strict", false);
+  m_CheckJoinable             = CFG.GetBool("monitor.hosting.on_start.check_connectivity", false);
+  m_ExtraDiscoveryAddresses   = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
+  m_ExtraDiscoveryStrict      = CFG.GetBool("net.game_discovery.udp.extra_clients.strict", false);
 
-  string BotCommandTrigger    = CFG->GetString("hosting.command_trigger", 1, 1, "!");
-  CFG->FailIfErrorLast();
+  string BotCommandTrigger    = CFG.GetString("hosting.command_trigger", 1, 1, "!");
+  CFG.FailIfErrorLast();
   m_CommandTrigger            = BotCommandTrigger[0];
-  m_IndexVirtualHostName      = CFG->GetString("hosting.index.creator_name", 1, 15, "Aura Bot");
-  m_LobbyVirtualHostName      = CFG->GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
+  m_IndexVirtualHostName      = CFG.GetString("hosting.index.creator_name", 1, 15, "Aura Bot");
+  m_LobbyVirtualHostName      = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
-  m_NotifyJoins               = CFG->GetBool("ui.notify_joins.enabled", false);
-  m_IgnoredNotifyJoinPlayers  = CFG->GetSet("ui.notify_joins.exceptions", ',', {});
-  m_UDPEnabled                = CFG->GetBool("net.game_discovery.udp.enabled", true);
+  m_NotifyJoins               = CFG.GetBool("ui.notify_joins.enabled", false);
+  m_IgnoredNotifyJoinPlayers  = CFG.GetSet("ui.notify_joins.exceptions", ',', {});
+  m_UDPEnabled                = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;

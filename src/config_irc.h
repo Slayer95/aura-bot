@@ -50,7 +50,7 @@ public:
   uint16_t                            m_Port;
   char                                m_CommandTrigger;
 
-  explicit CIRCConfig(CConfig* CFG);
+  explicit CIRCConfig(CConfig& CFG);
   ~CIRCConfig();
 };
 

@@ -71,7 +71,7 @@ std::string PathToString(const std::filesystem::path& file);
 std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
 std::string FileRead(const std::filesystem::path& file, uint32_t start, uint32_t length, int* byteSize);
 std::string FileRead(const std::filesystem::path& file, int* byteSize);
-bool FileWrite(const std::filesystem::path& file, uint8_t* data, uint32_t length);
+bool FileWrite(const std::filesystem::path& file, const uint8_t* data, uint32_t length);
 bool FileDelete(const std::filesystem::path& File);
 std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
 std::filesystem::path GetExeDirectory();

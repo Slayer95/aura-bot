@@ -36,7 +36,7 @@ using namespace std;
 // CRealmConfig
 //
 
-CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
+CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   : m_UserName(string()),
     m_PassWord(string()),
 
@@ -52,9 +52,9 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
 {
   const static string emptyString;
 
-  m_CountryShort           = CFG->GetString(m_CFGKeyPrefix + "country_short", "PE");
-  m_Country                = CFG->GetString(m_CFGKeyPrefix + "country", "Peru");
-  m_Locale                 = CFG->GetString(m_CFGKeyPrefix + "locale", "system");
+  m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", "PE");
+  m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", "Peru");
+  m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", "system");
 
   if (m_Locale == "system") {
     m_LocaleID = 10250;
@@ -67,50 +67,50 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CNetConfig* NetConfig)
     }
   }
 
-  string commandTrigger    = CFG->GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, "!");
-  CFG->FailIfErrorLast();
+  string commandTrigger    = CFG.GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, "!");
+  CFG.FailIfErrorLast();
   m_CommandTrigger         = commandTrigger[0];
 
-  m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", true);
-  m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", true);
-  m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", false);
-  m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", false);
+  m_EnablePublicCreate     = CFG.GetBool(m_CFGKeyPrefix + "allow_host_non_admins", true);
+  m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", true);
+  m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", false);
+  m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", false);
 
-  m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", false);
-  m_PublicHostAddress      = CFG->GetAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value", "0.0.0.0");
+  m_EnableCustomAddress    = CFG.GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", false);
+  m_PublicHostAddress      = CFG.GetAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value", "0.0.0.0");
   if (m_EnableCustomAddress)
-    CFG->FailIfErrorLast();
+    CFG.FailIfErrorLast();
 
-  m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", false);
-  m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", 6112);
+  m_EnableCustomPort       = CFG.GetBool(m_CFGKeyPrefix + "custom_port.enabled", false);
+  m_PublicHostPort         = CFG.GetUint16(m_CFGKeyPrefix + "custom_port.value", 6112);
   if (m_EnableCustomPort)
-    CFG->FailIfErrorLast();
+    CFG.FailIfErrorLast();
 
-  m_HostName               = CFG->GetString(m_CFGKeyPrefix + "host_name", emptyString);
-  m_ServerPort               = CFG->GetUint16(m_CFGKeyPrefix + "server_port", 6112);
-  m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
-  m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
+  m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name", emptyString);
+  m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", 6112);
+  m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
+  m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthSkipVersionCheck   = CFG->GetBool(m_CFGKeyPrefix + "auth_skip_version_check", true);
-  m_AuthPasswordHashType   = CFG->GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
+  m_AuthSkipVersionCheck   = CFG.GetBool(m_CFGKeyPrefix + "auth_skip_version_check", true);
+  m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
-  m_AuthWar3Version        = CFG->GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
-  m_AuthExeVersion         = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
-  m_AuthExeVersionHash     = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
-  m_AuthExeInfo            = CFG->GetString(m_CFGKeyPrefix + "auth_exe_info", string());
+  m_AuthWar3Version        = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
+  m_AuthExeVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
+  m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
+  m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", string());
 
-  m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", "The Void");
-  m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
-  m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
-  m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
-  m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
+  m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
+  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
+  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
+  m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
+  m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
+  m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
-  m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", true);
-  m_BindAddress            = CFG->GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
+  m_Enabled                = CFG.GetBool(m_CFGKeyPrefix + "enabled", true);
+  m_BindAddress            = CFG.GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
 }
 
-CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)
+CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)
   : m_CountryShort(nRootConfig->m_CountryShort),
     m_Country(nRootConfig->m_Country),
     m_Locale(nRootConfig->m_Locale),
@@ -154,15 +154,15 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_ServerIndex(nServerIndex),
     m_CFGKeyPrefix("realm_" + to_string(nServerIndex) + ".")
 {
-  m_HostName               = CFG->GetString(m_CFGKeyPrefix + "host_name", m_HostName);
-  m_ServerPort               = CFG->GetUint16(m_CFGKeyPrefix + "server_port", m_ServerPort);
-  m_UniqueName             = CFG->GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
-  m_CanonicalName          = CFG->GetString(m_CFGKeyPrefix + "canonical_name", m_UniqueName); // may be shared by several servers
-  m_InputID                = CFG->GetString(m_CFGKeyPrefix + "input_id", m_UniqueName); // expected unique
+  m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name", m_HostName);
+  m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", m_ServerPort);
+  m_UniqueName             = CFG.GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
+  m_CanonicalName          = CFG.GetString(m_CFGKeyPrefix + "canonical_name", m_UniqueName); // may be shared by several servers
+  m_InputID                = CFG.GetString(m_CFGKeyPrefix + "input_id", m_UniqueName); // expected unique
   transform(begin(m_InputID), end(m_InputID), begin(m_InputID), ::tolower);
-  m_DataBaseID             = CFG->GetString(m_CFGKeyPrefix + "db_id", m_HostName); // may be shared by several servers
-  m_CDKeyROC               = CFG->GetString(m_CFGKeyPrefix + "cd_key.roc", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
-  m_CDKeyTFT               = CFG->GetString(m_CFGKeyPrefix + "cd_key.tft", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
+  m_DataBaseID             = CFG.GetString(m_CFGKeyPrefix + "db_id", m_HostName); // may be shared by several servers
+  m_CDKeyROC               = CFG.GetString(m_CFGKeyPrefix + "cd_key.roc", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
+  m_CDKeyTFT               = CFG.GetString(m_CFGKeyPrefix + "cd_key.tft", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
 
   // remove dashes and spaces from CD keys and convert to uppercase
   m_CDKeyROC.erase(remove(begin(m_CDKeyROC), end(m_CDKeyROC), '-'), end(m_CDKeyROC));
@@ -172,9 +172,9 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
   transform(begin(m_CDKeyROC), end(m_CDKeyROC), begin(m_CDKeyROC), ::toupper);
   transform(begin(m_CDKeyTFT), end(m_CDKeyTFT), begin(m_CDKeyTFT), ::toupper);
 
-  m_CountryShort           = CFG->GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
-  m_Country                = CFG->GetString(m_CFGKeyPrefix + "country", m_Country);
-  m_Locale                 = CFG->GetString(m_CFGKeyPrefix + "locale", m_Locale);
+  m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
+  m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", m_Country);
+  m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", m_Locale);
 
   if (m_Locale == "system") {
     m_LocaleID = 10250;
@@ -186,54 +186,54 @@ CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nSer
     }
   }
 
-  string commandTrigger    = CFG->GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, string(1, m_CommandTrigger));
-  CFG->FailIfErrorLast();
+  string commandTrigger    = CFG.GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, string(1, m_CommandTrigger));
+  CFG.FailIfErrorLast();
   m_CommandTrigger         = commandTrigger[0];
-  m_EnablePublicCreate     = CFG->GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);
-  m_AnnounceHostToChat     = CFG->GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
-  m_IsMirror               = CFG->GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
-  m_IsVPN                  = CFG->GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
+  m_EnablePublicCreate     = CFG.GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);
+  m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
+  m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
+  m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
 
-  m_EnableCustomAddress    = CFG->GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
-  optional<sockaddr_storage> maybeAddress = CFG->GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
+  m_EnableCustomAddress    = CFG.GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
+  optional<sockaddr_storage> maybeAddress = CFG.GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
   if (m_EnableCustomAddress)
-    CFG->FailIfErrorLast();
+    CFG.FailIfErrorLast();
   if (maybeAddress.has_value()) {
     m_PublicHostAddress    = maybeAddress.value();
   }
 
-  m_EnableCustomPort       = CFG->GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
-  m_PublicHostPort         = CFG->GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
+  m_EnableCustomPort       = CFG.GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
+  m_PublicHostPort         = CFG.GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
   if (m_EnableCustomPort)
-    CFG->FailIfErrorLast();
+    CFG.FailIfErrorLast();
 
-  m_UserName               = CFG->GetString(m_CFGKeyPrefix + "username", m_UserName);
-  m_PassWord               = CFG->GetString(m_CFGKeyPrefix + "password", m_PassWord);
+  m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
+  m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthSkipVersionCheck   = CFG->GetBool(m_CFGKeyPrefix + "auth_skip_version_check", m_AuthSkipVersionCheck);
-  m_AuthPasswordHashType   = CFG->GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
+  m_AuthSkipVersionCheck   = CFG.GetBool(m_CFGKeyPrefix + "auth_skip_version_check", m_AuthSkipVersionCheck);
+  m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
 
   // These are optional, since they can be figured out with bncsutil.
-  optional<uint8_t> authWar3Version            = CFG->GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
-  optional<vector<uint8_t>> authExeVersion     = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
-  optional<vector<uint8_t>> authExeVersionHash = CFG->GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
-  string authExeInfo = CFG->GetString(m_CFGKeyPrefix + "auth_exe_info", string());
+  optional<uint8_t> authWar3Version            = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
+  optional<vector<uint8_t>> authExeVersion     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
+  optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
+  string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", string());
 
   if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
   if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();
   if (authExeVersionHash.has_value()) m_AuthExeVersionHash = authExeVersionHash.value();
   if (!authExeInfo.empty()) m_AuthExeInfo = authExeInfo;
 
-  m_FirstChannel           = CFG->GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
-  m_SudoUsers              = CFG->GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_RootAdmins             = CFG->GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
-  m_GamePrefix             = CFG->GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
-  m_MaxUploadSize          = CFG->GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
-  m_FloodImmune            = CFG->GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
+  m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
+  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
+  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
+  m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
+  m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
+  m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
-  m_Enabled                = CFG->GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
+  m_Enabled                = CFG.GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
 
-  optional<sockaddr_storage> customBindAddress = CFG->GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
+  optional<sockaddr_storage> customBindAddress = CFG.GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
   if (customBindAddress.has_value())
     m_BindAddress            = customBindAddress.value();
 }

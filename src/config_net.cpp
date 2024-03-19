@@ -37,104 +37,104 @@ using namespace std;
 // CNetConfig
 //
 
-CNetConfig::CNetConfig(CConfig* CFG)
+CNetConfig::CNetConfig(CConfig& CFG)
 {
   // == SECTION START: Cannot be reloaded ==
-  m_UDPMainServerEnabled = CFG->GetBool("net.udp_server.enabled", false);
-  m_SupportTCPOverIPv6 = CFG->GetBool("net.ipv6.tcp.enabled", true);
-  m_SupportUDPOverIPv6 = CFG->GetBool("net.udp_ipv6.enabled", true);
-  m_UDPFallbackPort = CFG->GetUint16("net.udp_fallback.outbound_port", 6113);
-  m_UDPIPv6Port = CFG->GetUint16("net.udp_ipv6.port", 6110);
+  m_UDPMainServerEnabled = CFG.GetBool("net.udp_server.enabled", false);
+  m_SupportTCPOverIPv6 = CFG.GetBool("net.ipv6.tcp.enabled", true);
+  m_SupportUDPOverIPv6 = CFG.GetBool("net.udp_ipv6.enabled", true);
+  m_UDPFallbackPort = CFG.GetUint16("net.udp_fallback.outbound_port", 6113);
+  m_UDPIPv6Port = CFG.GetUint16("net.udp_ipv6.port", 6110);
   // == SECTION END ==
 
   if (m_SupportUDPOverIPv6) {
     if (m_UDPMainServerEnabled) {
       if (m_UDPIPv6Port == 6112) {
         Print("[CONFIG] <net.udp_ipv6.port> must NOT be 6112.");
-        CFG->SetFailed();
+        CFG.SetFailed();
       }
     } else {
       if (m_UDPFallbackPort != 0 && m_UDPIPv6Port == m_UDPFallbackPort) {
         Print("[CONFIG] <net.udp_ipv6.port> must NOT be the same as <net.udp_fallback.outbound_port>.");
-        CFG->SetFailed();
+        CFG.SetFailed();
       }
     }
   }
 
-  m_ProxyReconnectEnabled        = CFG->GetBool("net.tcp_extensions.gproxy.enabled", true);
+  m_ProxyReconnectEnabled        = CFG.GetBool("net.tcp_extensions.gproxy.enabled", true);
 
-  m_BindAddress4                 = CFG->GetAddressIPv4("net.bind_address", "0.0.0.0");
-  CFG->FailIfErrorLast();
-  m_BindAddress6                 = CFG->GetAddressIPv6("net.bind_address6", "::");
-  CFG->FailIfErrorLast();
+  m_BindAddress4                 = CFG.GetAddressIPv4("net.bind_address", "0.0.0.0");
+  CFG.FailIfErrorLast();
+  m_BindAddress6                 = CFG.GetAddressIPv6("net.bind_address6", "::");
+  CFG.FailIfErrorLast();
 
-  uint16_t onlyHostPort          = CFG->GetUint16("net.host_port.only", 6112);
-  m_MinHostPort                  = CFG->GetUint16("net.host_port.min", onlyHostPort);
-  m_MaxHostPort                  = CFG->GetUint16("net.host_port.max", m_MinHostPort);
+  uint16_t onlyHostPort          = CFG.GetUint16("net.host_port.only", 6112);
+  m_MinHostPort                  = CFG.GetUint16("net.host_port.min", onlyHostPort);
+  m_MaxHostPort                  = CFG.GetUint16("net.host_port.max", m_MinHostPort);
 
-  m_UDPBlockedIPs                = CFG->GetIPStringSet("net.udp_server.block_list", ',', {});
-  m_UDPEnableCustomPortTCP4      = CFG->GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
-  m_UDPCustomPortTCP4            = CFG->GetUint16("net.game_discovery.udp.tcp4_custom_port.value", 6112);
-  m_UDPEnableCustomPortTCP6      = CFG->GetBool("net.game_discovery.udp.tcp6_custom_port.enabled", false);
-  m_UDPCustomPortTCP6            = CFG->GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678); // Actually TCP4 port, but IPv6 clients connect to it
-  m_UDP6TargetPort               = CFG->GetUint16("net.game_discovery.udp.ipv6.target_port", 5678); // UDP port we send information to over IPv6
+  m_UDPBlockedIPs                = CFG.GetIPStringSet("net.udp_server.block_list", ',', {});
+  m_UDPEnableCustomPortTCP4      = CFG.GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
+  m_UDPCustomPortTCP4            = CFG.GetUint16("net.game_discovery.udp.tcp4_custom_port.value", 6112);
+  m_UDPEnableCustomPortTCP6      = CFG.GetBool("net.game_discovery.udp.tcp6_custom_port.enabled", false);
+  m_UDPCustomPortTCP6            = CFG.GetUint16("net.game_discovery.udp.tcp6_custom_port.value", 5678); // Actually TCP4 port, but IPv6 clients connect to it
+  m_UDP6TargetPort               = CFG.GetUint16("net.game_discovery.udp.ipv6.target_port", 5678); // UDP port we send information to over IPv6
 
   // UDP Redirect
-  m_UDPForwardTraffic            = CFG->GetBool("net.udp_redirect.enabled", false);
+  m_UDPForwardTraffic            = CFG.GetBool("net.udp_redirect.enabled", false);
   if (m_SupportUDPOverIPv6) {
-    m_UDPForwardAddress          = CFG->GetAddress("net.udp_redirect.ip_address", "127.0.0.1");
-    if (m_UDPForwardTraffic) CFG->FailIfErrorLast();
+    m_UDPForwardAddress          = CFG.GetAddress("net.udp_redirect.ip_address", "127.0.0.1");
+    if (m_UDPForwardTraffic) CFG.FailIfErrorLast();
   } else {
-    m_UDPForwardAddress          = CFG->GetAddressIPv4("net.udp_redirect.ip_address", "127.0.0.1");
-    if (m_UDPForwardTraffic) CFG->FailIfErrorLast();
+    m_UDPForwardAddress          = CFG.GetAddressIPv4("net.udp_redirect.ip_address", "127.0.0.1");
+    if (m_UDPForwardTraffic) CFG.FailIfErrorLast();
   }
-  uint16_t udpForwardPort        = CFG->GetUint16("net.udp_redirect.port", 6110);
-  if (m_UDPForwardTraffic) CFG->FailIfErrorLast();
+  uint16_t udpForwardPort        = CFG.GetUint16("net.udp_redirect.port", 6110);
+  if (m_UDPForwardTraffic) CFG.FailIfErrorLast();
   SetAddressPort(&m_UDPForwardAddress, udpForwardPort);
 
-  m_UDPForwardGameLists          = CFG->GetBool("net.udp_redirect.realm_game_lists.enabled", false);
+  m_UDPForwardGameLists          = CFG.GetBool("net.udp_redirect.realm_game_lists.enabled", false);
 
   // SO_DONTROUTE
-  m_UDPDoNotRouteEnabled         = CFG->GetBool("net.game_discovery.udp.do_not_route", false);
+  m_UDPDoNotRouteEnabled         = CFG.GetBool("net.game_discovery.udp.do_not_route", false);
 
   // SO_BROADCAST
-  m_UDPBroadcastEnabled          = CFG->GetBool("net.game_discovery.udp.broadcast.enabled", true);
-  m_UDPBroadcastTarget           = CFG->GetAddressIPv4("net.game_discovery.udp.broadcast.address", "255.255.255.255");
-  if (m_UDPBroadcastEnabled) CFG->FailIfErrorLast();
-  m_UDPBroadcastStrictMode       = CFG->GetBool("net.game_discovery.udp.broadcast.strict", true);
+  m_UDPBroadcastEnabled          = CFG.GetBool("net.game_discovery.udp.broadcast.enabled", true);
+  m_UDPBroadcastTarget           = CFG.GetAddressIPv4("net.game_discovery.udp.broadcast.address", "255.255.255.255");
+  if (m_UDPBroadcastEnabled) CFG.FailIfErrorLast();
+  m_UDPBroadcastStrictMode       = CFG.GetBool("net.game_discovery.udp.broadcast.strict", true);
 
 #ifdef DISABLE_MINIUPNP
-  m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", false);
+  m_EnableUPnP                   = CFG.GetBool("net.port_forwarding.upnp.enabled", false);
   if (m_EnableUPnP) {
     Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> unsupported in this Aura distribution");
     Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> requires compilation without #define DISABLE_MINIUPNP");
     m_EnableUPnP = false;
   }
 #else
-  m_EnableUPnP                   = CFG->GetBool("net.port_forwarding.upnp.enabled", true);
+  m_EnableUPnP                   = CFG.GetBool("net.port_forwarding.upnp.enabled", true);
 #endif
 
-  m_EnableTCPWrapUDP             = CFG->GetBool("net.tcp_extensions.udp_tunnel.enabled", true);
-  m_EnableTCPScanUDP             = CFG->GetBool("net.tcp_extensions.udp_scan.enabled", true);
+  m_EnableTCPWrapUDP             = CFG.GetBool("net.tcp_extensions.udp_tunnel.enabled", true);
+  m_EnableTCPScanUDP             = CFG.GetBool("net.tcp_extensions.udp_scan.enabled", true);
 
-  m_ReconnectWaitTime            = CFG->GetUint8("net.tcp_extensions.gproxy.reconnect_wait", 5);
-  m_ReconnectWaitTimeLegacy      = CFG->GetUint8("net.tcp_extensions.gproxy_legacy.reconnect_wait", 3);
+  m_ReconnectWaitTime            = CFG.GetUint8("net.tcp_extensions.gproxy.reconnect_wait", 5);
+  m_ReconnectWaitTimeLegacy      = CFG.GetUint8("net.tcp_extensions.gproxy_legacy.reconnect_wait", 3);
 
-  string ipv4Algorithm           = CFG->GetString("net.ipv4.public_address.algorithm", "api");
+  string ipv4Algorithm           = CFG.GetString("net.ipv4.public_address.algorithm", "api");
   if (ipv4Algorithm == "manual") {
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-    if (!CFG->Exists("net.ipv4.public_address.value")) {
+    if (!CFG.Exists("net.ipv4.public_address.value")) {
       Print("[CONFIG] <net.ipv4.public_address.value> is missing. Set <net.ipv4.public_address.algorithm = none> if this is intended.");
-      CFG->SetFailed();
+      CFG.SetFailed();
     } else {
-      sockaddr_storage inputIPv4 = CFG->GetAddressIPv4("net.ipv4.public_address.value", "0.0.0.0");
-      CFG->FailIfErrorLast();
+      sockaddr_storage inputIPv4 = CFG.GetAddressIPv4("net.ipv4.public_address.value", "0.0.0.0");
+      CFG.FailIfErrorLast();
       m_PublicIPv4Value = AddressToString(inputIPv4);
     }
   } else if (ipv4Algorithm == "api") {
 #ifndef DISABLE_CPR
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
-    m_PublicIPv4Value = CFG->GetString("net.ipv4.public_address.value", "https://api.ipify.org");
+    m_PublicIPv4Value = CFG.GetString("net.ipv4.public_address.value", "https://api.ipify.org");
 #else
     Print("[CONFIG] warning - <net.ipv4.public_address.algorithm = api> unsupported in this Aura distribution");
     Print("[CONFIG] warning - <net.ipv4.public_address.algorithm = api> requires compilation without #define DISABLE_CPR");
@@ -142,27 +142,27 @@ CNetConfig::CNetConfig(CConfig* CFG)
 #endif
   } else if (ipv4Algorithm == "none") {
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv4.public_address.value");
+    CFG.Accept("net.ipv4.public_address.value");
   } else {
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv4.public_address.value");
+    CFG.Accept("net.ipv4.public_address.value");
   }
 
-  string ipv6Algorithm             = CFG->GetString("net.ipv6.public_address.algorithm", "api");
+  string ipv6Algorithm             = CFG.GetString("net.ipv6.public_address.algorithm", "api");
   if (ipv6Algorithm == "manual") {
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-    if (!CFG->Exists("net.ipv6.public_address.value")) {
+    if (!CFG.Exists("net.ipv6.public_address.value")) {
       Print("[CONFIG] <net.ipv6.public_address.value> is missing. Set <net.ipv6.public_address.algorithm = none> if this is intended.");
-      CFG->SetFailed();
+      CFG.SetFailed();
     } else {
-      sockaddr_storage inputIPv6 = CFG->GetAddressIPv6("net.ipv6.public_address.value", "::");
-      CFG->FailIfErrorLast();
+      sockaddr_storage inputIPv6 = CFG.GetAddressIPv6("net.ipv6.public_address.value", "::");
+      CFG.FailIfErrorLast();
       m_PublicIPv6Value = AddressToString(inputIPv6);
     }
   } else if (ipv6Algorithm == "api") {
 #ifndef DISABLE_CPR
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
-    m_PublicIPv6Value = CFG->GetString("net.ipv6.public_address.value", "https://api6.ipify.org");
+    m_PublicIPv6Value = CFG.GetString("net.ipv6.public_address.value", "https://api6.ipify.org");
 #else
     Print("[CONFIG] warning - <net.ipv6.public_address.algorithm = api> unsupported in this Aura distribution");
     Print("[CONFIG] warning - <net.ipv6.public_address.algorithm = api> requires compilation without #define DISABLE_CPR");
@@ -170,13 +170,13 @@ CNetConfig::CNetConfig(CConfig* CFG)
 #endif
   } else if (ipv6Algorithm == "none") {
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv6.public_address.value");
+    CFG.Accept("net.ipv6.public_address.value");
   } else {
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
-    CFG->Accept("net.ipv6.public_address.value");
+    CFG.Accept("net.ipv6.public_address.value");
   }
 
-  m_AllowDownloads               = CFG->GetBool("hosting.map_downloads.enabled", false);
+  m_AllowDownloads               = CFG.GetBool("hosting.map_downloads.enabled", false);
 #ifdef DISABLE_CPR
   if (m_AllowDownloads) {
     Print("[CONFIG] warning - <hosting.map_downloads.enabled = yes> unsupported in this Aura distribution");
@@ -184,17 +184,17 @@ CNetConfig::CNetConfig(CConfig* CFG)
     m_AllowDownloads = false;
   }
 #endif
-  m_DownloadTimeout              = CFG->GetUint16("hosting.map_downloads.timeout", 1000);
-  m_AllowTransfers               = CFG->GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
-  m_MaxDownloaders               = CFG->GetInt("hosting.map_transfers.max_players", 3);
-  m_MaxUploadSize                = CFG->GetInt("hosting.map_transfers.max_size", 8192);
-  m_MaxUploadSpeed               = CFG->GetInt("hosting.map_transfers.max_speed", 1024);
-  m_MaxParallelMapPackets        = CFG->GetInt("hosting.map_transfers.max_parallel_packets", 1000);
-  m_HasBufferBloat               = CFG->GetBool("net.has_buffer_bloat", false);
+  m_DownloadTimeout              = CFG.GetUint16("hosting.map_downloads.timeout", 1000);
+  m_AllowTransfers               = CFG.GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
+  m_MaxDownloaders               = CFG.GetInt("hosting.map_transfers.max_players", 3);
+  m_MaxUploadSize                = CFG.GetInt("hosting.map_transfers.max_size", 8192);
+  m_MaxUploadSpeed               = CFG.GetInt("hosting.map_transfers.max_speed", 1024);
+  m_MaxParallelMapPackets        = CFG.GetInt("hosting.map_transfers.max_parallel_packets", 1000);
+  m_HasBufferBloat               = CFG.GetBool("net.has_buffer_bloat", false);
 
-  m_AnnounceGProxy               = CFG->GetBool("net.tcp_extensions.gproxy.announce_chat", true);
-  m_AnnounceGProxySite           = CFG->GetString("net.tcp_extensions.gproxy.site", "https://www.mymgn.com/gproxy/");
-  m_AnnounceIPv6                 = CFG->GetBool("net.ipv6.tcp.announce_chat", true);
+  m_AnnounceGProxy               = CFG.GetBool("net.tcp_extensions.gproxy.announce_chat", true);
+  m_AnnounceGProxySite           = CFG.GetString("net.tcp_extensions.gproxy.site", "https://www.mymgn.com/gproxy/");
+  m_AnnounceIPv6                 = CFG.GetBool("net.ipv6.tcp.announce_chat", true);
 }
 
 CNetConfig::~CNetConfig() = default;

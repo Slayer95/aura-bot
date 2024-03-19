@@ -52,11 +52,12 @@ class CCLI
 {
 public:
   std::optional<std::filesystem::path>  m_CFGPath;
+  std::optional<std::filesystem::path>  m_HomePath;
+  bool                                  m_UseStandardPaths;
 
 private:
   uint8_t                               m_EarlyAction;
 
-  bool                                  m_UseStandardPaths;
   bool                                  m_Verbose;
   std::optional<bool>                   m_LAN;
   std::optional<bool>                   m_BNET;
@@ -100,9 +101,9 @@ public:
   ~CCLI();
 
   uint8_t Parse(const int argc, char** argv);
-  void RunEarlyOptions();
-  void OverrideConfig(CAura* nAura);
-  void QueueActions(CAura* nAura);
+  void RunEarlyOptions() const;
+  void OverrideConfig(CAura* nAura) const;
+  void QueueActions(CAura* nAura) const;
 };
 
 #endif // AURA_CLI_H_

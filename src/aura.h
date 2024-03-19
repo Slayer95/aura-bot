@@ -64,6 +64,7 @@
 #include <algorithm>
 #include <random>
 #include <unordered_set>
+#include <filesystem>
 
 #define NOMINMAX
 #ifdef _WIN32
@@ -138,13 +139,14 @@ public:
   std::unordered_multiset<std::string>               m_BusyMaps;
   std::set<CCommandContext*>                         m_ActiveContexts;
 
+  std::filesystem::path                              m_HomePath;
   std::filesystem::path                              m_GameInstallPath;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;
   std::map<std::string, CRealm*>                     m_RealmsByInputID;
 
-  explicit CAura(CConfig* CFG, CCLI* nCLI);
+  explicit CAura(CConfig& CFG, const CCLI& nCLI, std::filesystem::path& nHomeDir);
   ~CAura();
   CAura(CAura&) = delete;
 
@@ -194,9 +196,9 @@ public:
   // other functions
 
   bool ReloadConfigs();
-  bool LoadConfigs(CConfig* CFG);
+  bool LoadConfigs(CConfig& CFG);
   void OnLoadConfigs();
-  bool LoadBNETs(CConfig* CFG, std::bitset<240>& definedConfigs);
+  bool LoadBNETs(CConfig& CFG, std::bitset<240>& definedConfigs);
 
   uint8_t ExtractScripts();
   bool CopyScripts();
@@ -204,6 +206,8 @@ public:
   void LoadIPToCountryData();
 
   void CacheMapPresets();
+  
+  std::filesystem::path GetHome();
 };
 
 #endif // AURA_AURA_H_

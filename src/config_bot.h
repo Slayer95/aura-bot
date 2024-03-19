@@ -65,7 +65,7 @@ public:
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                  // master switch to enable/disable ALL bnet configs on startup
   
-  explicit CBotConfig(CConfig* CFG);
+  explicit CBotConfig(CConfig& CFG);
   ~CBotConfig();
 };
 

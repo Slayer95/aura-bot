@@ -99,8 +99,8 @@ public:
   uint8_t m_ServerIndex;                         // unique server ID to identify players' realms through host counters
   std::string m_CFGKeyPrefix;                    // 
 
-  CRealmConfig(CConfig* CFG, CNetConfig* nNetConfig);
-  CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);
+  CRealmConfig(CConfig& CFG, CNetConfig* nNetConfig);
+  CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);
   ~CRealmConfig();
 };
 

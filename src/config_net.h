@@ -100,7 +100,7 @@ public:
   uint16_t                                m_UDPIPv6Port;
   // == SECTION END ==
 
-  explicit CNetConfig(CConfig* CFG);
+  explicit CNetConfig(CConfig& CFG);
   ~CNetConfig();
 };
 

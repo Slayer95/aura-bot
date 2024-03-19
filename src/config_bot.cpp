@@ -39,39 +39,39 @@ using namespace std;
 // CBotConfig
 //
 
-CBotConfig::CBotConfig(CConfig* CFG)
+CBotConfig::CBotConfig(CConfig& CFG)
 {
-  m_Enabled                      = CFG->GetBool("hosting.enabled", true);
-  m_War3Version                  = CFG->GetMaybeUint8("game.version");
-  CFG->FailIfErrorLast();
-  m_Warcraft3Path                = CFG->GetMaybeDirectory("game.install_path");
+  m_Enabled                      = CFG.GetBool("hosting.enabled", true);
+  m_War3Version                  = CFG.GetMaybeUint8("game.version");
+  CFG.FailIfErrorLast();
+  m_Warcraft3Path                = CFG.GetMaybeDirectory("game.install_path");
   // TODO: Default to CFGDirectory instead
-  m_MapCFGPath                   = CFG->GetDirectory("bot.map_configs_path", GetExeDirectory());
-  m_MapPath                      = CFG->GetDirectory("bot.maps_path", GetExeDirectory());
+  m_MapCFGPath                   = CFG.GetDirectory("bot.map_configs_path", GetExeDirectory());
+  m_MapPath                      = CFG.GetDirectory("bot.maps_path", GetExeDirectory());
 
-  m_RTTPings                     = CFG->GetBool("metrics.rtt_pings", false);
+  m_RTTPings                     = CFG.GetBool("metrics.rtt_pings", false);
 
-  m_MinHostCounter               = CFG->GetInt("hosting.namepace.first_game_id", 100);
-  m_MaxGames                     = CFG->GetInt("hosting.max_games", 20);
-  m_EnableDeleteOversizedMaps    = CFG->GetBool("bot.persistence.delete_huge_maps.enabled", false);
-  m_MaxSavedMapSize              = CFG->GetInt("bot.persistence.delete_huge_maps.size", 0x6400); // 25 MiB
+  m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100);
+  m_MaxGames                     = CFG.GetInt("hosting.max_games", 20);
+  m_EnableDeleteOversizedMaps    = CFG.GetBool("bot.persistence.delete_huge_maps.enabled", false);
+  m_MaxSavedMapSize              = CFG.GetInt("bot.persistence.delete_huge_maps.size", 0x6400); // 25 MiB
 
-  optional<filesystem::path> maybeGreeting = CFG->GetMaybePath("bot.greeting_path");
+  optional<filesystem::path> maybeGreeting = CFG.GetMaybePath("bot.greeting_path");
   if (maybeGreeting.has_value() && !maybeGreeting.value().empty()) {
     m_Greeting = ReadChatTemplate(maybeGreeting.value());
   }
 
-  m_StrictSearch                 = CFG->GetBool("bot.load_maps.strict_search", false);
-  m_MapSearchShowSuggestions     = CFG->GetBool("bot.load_maps.show_suggestions", true);
-  m_EnableCFGCache               = CFG->GetBool("bot.load_maps.cache.enabled", true);
-  m_CFGCacheRevalidateAlgorithm  = CFG->GetStringIndex("bot.load_maps.cache.revalidation.algorithm", {"never", "always", "modified"}, CACHE_REVALIDATION_MODIFIED);
+  m_StrictSearch                 = CFG.GetBool("bot.load_maps.strict_search", false);
+  m_MapSearchShowSuggestions     = CFG.GetBool("bot.load_maps.show_suggestions", true);
+  m_EnableCFGCache               = CFG.GetBool("bot.load_maps.cache.enabled", true);
+  m_CFGCacheRevalidateAlgorithm  = CFG.GetStringIndex("bot.load_maps.cache.revalidation.algorithm", {"never", "always", "modified"}, CACHE_REVALIDATION_MODIFIED);
 
-  m_ExitOnStandby                = CFG->GetBool("bot.exit_on_standby", false);
+  m_ExitOnStandby                = CFG.GetBool("bot.exit_on_standby", false);
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
-  m_EnableBNET                   = CFG->GetMaybeBool("bot.toggle_every_realm");
+  m_EnableBNET                   = CFG.GetMaybeBool("bot.toggle_every_realm");
 
-  CFG->Accept("db.storage_file");
+  CFG.Accept("db.storage_file");
 }
 
 CBotConfig::~CBotConfig() = default;

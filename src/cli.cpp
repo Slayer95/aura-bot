@@ -40,8 +40,8 @@ using namespace std;
 //
 
 CCLI::CCLI()
- : m_EarlyAction(0),
-   m_UseStandardPaths(false),
+ : m_UseStandardPaths(false),
+   m_EarlyAction(0),
    m_Verbose(false),
    m_SearchType("any"),
    m_ExecAuth("verified"),
@@ -61,10 +61,10 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 
   app.option_defaults()->ignore_case();
 
-  app.add_option("MAPFILE", m_SearchTarget, "Map, config or URI from which to host a game from the CLI.");
+  app.add_option("MAPFILE", m_SearchTarget, "Map, config or URI from which to host a game from the CLI. File names resolve from map dir, unless --stdpaths.");
   app.add_option("GAMENAME", m_GameName, "Name assigned to a game hosted from the CLI.");
 
-  app.add_flag("--stdpaths", m_UseStandardPaths, "Makes relative paths resolve from CWD when input through the CLI. Commutative.");
+  app.add_flag("--stdpaths", m_UseStandardPaths, "Makes file names always resolve from CWD when input through the CLI. Commutative.");
 #ifndef DISABLE_MINIUPNP
   app.add_flag("--auto-port-forward,--no-auto-port-forward{false}", m_EnableUPnP, "Enable automatic port-forwarding, using Universal Plug-and-Play.");
 #else
@@ -78,7 +78,12 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag("--example,--examples", examples, "Display CLI hosting examples.");
   app.add_flag("--verbose", m_Verbose, "Outputs detailed information when running CLI actions.");
 
-  app.add_option("--config", m_CFGPath, "Customizes the main aura config file. Affected by --stdpaths");
+#ifdef _WIN32
+  app.add_option("--homedir", m_HomePath, "Customizes Aura home dir (%AURA_HOME%).");
+#else
+  app.add_option("--homedir", m_HomePath, "Customizes Aura home dir ($AURA_HOME).");
+#endif
+  app.add_option("--config", m_CFGPath, "Customizes the main Aura config file. File names resolve from home dir, unless --stdpaths.");
   app.add_option("--w3version", m_War3Version, "Customizes the game version.");
   app.add_option("--w3dir", m_War3Path, "Customizes the game path.");
   app.add_option("--mapdir", m_MapPath, "Customizes the maps path.");
@@ -185,7 +190,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   return CLI_OK;
 }
 
-void CCLI::RunEarlyOptions()
+void CCLI::RunEarlyOptions() const
 {
   switch (m_EarlyAction) {
     case CLI_ACTION_ABOUT: {
@@ -204,7 +209,7 @@ void CCLI::RunEarlyOptions()
   }
 }
 
-void CCLI::OverrideConfig(CAura* nAura)
+void CCLI::OverrideConfig(CAura* nAura) const
 {
   if (m_War3Version.has_value())
     nAura->m_Config->m_War3Version = m_War3Version.value();
@@ -241,7 +246,7 @@ void CCLI::OverrideConfig(CAura* nAura)
   }
 }
 
-void CCLI::QueueActions(CAura* nAura)
+void CCLI::QueueActions(CAura* nAura) const
 {
   for (const auto& port : m_PortForwardTCP) {
     vector<string> action{
@@ -313,12 +318,10 @@ void CCLI::QueueActions(CAura* nAura)
     }
   }
 
-  while (!m_ExecCommands.empty()) {
-    string execCommand, execAs, execScope, execAuth;
+  for (const auto& execEntry : m_ExecCommands) {
     vector<string> action{
-        "exec", m_ExecCommands[0], m_ExecAs.value(), m_ExecScope, m_ExecAuth, m_ExecBroadcast ? "1" : "0"
+        "exec", execEntry, m_ExecAs.value(), m_ExecScope, m_ExecAuth, m_ExecBroadcast ? "1" : "0"
     };
     nAura->m_PendingActions.push(action);
-    m_ExecCommands.erase(m_ExecCommands.begin());
   }
 }

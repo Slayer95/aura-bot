@@ -92,12 +92,98 @@ using namespace std;
 static CAura* gAura    = nullptr;
 bool          gRestart = false;
 
+inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
+{
+  if (cliApp.m_HomePath.has_value()) {
+    homeDir = cliApp.m_HomePath.value();
+    return;
+  }
+  {
+    // TODO: Try reading $AURA_HOME
+  }
+  if (cliApp.m_CFGPath.has_value()) {
+    homeDir = cliApp.m_CFGPath.value().parent_path();
+    NormalizeDirectory(homeDir);
+    return;
+  }
+  homeDir = GetExeDirectory();
+}
+
+inline filesystem::path GetConfigPath(const CCLI& cliApp, const filesystem::path& homeDir)
+{
+  if (cliApp.m_CFGPath.has_value()) return cliApp.m_CFGPath.value();
+  return homeDir / "config.ini";
+}
+
+inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeDir)
+{
+  const bool isCustomConfigFile = cliApp.m_CFGPath.has_value();
+  const filesystem::path configPath = GetConfigPath(cliApp, homeDir);
+  if (!CFG.Read(configPath) && isCustomConfigFile) {
+    Print("[AURA] required config file not found [" + PathToString(configPath) + "]");
+    if (!cliApp.m_UseStandardPaths && configPath.parent_path() == homeDir.parent_path()) {
+      Print("[HINT] --config was resolved relative to [" + PathToString(homeDir) + "]");
+      Print("[HINT] use --stdpaths to read [" + PathToString(filesystem::current_path() / configPath.filename()) + "]");
+    }
+#ifdef _WIN32
+    Print("[HINT] using --config=<FILE> is not recommended, prefer --homedir=<DIR>, or setting %AURA_HOME% instead");
+#else
+    Print("[HINT] using --config=<FILE> is not recommended, prefer --homedir=<DIR>, or setting $AURA_HOME instead");
+#endif
+    Print("[HINT] both alternatives auto-initialize \"config.ini\" from \"config-example.ini\" in the same folder");
+    return false;
+  }
+  const bool homePathMatchRequired = CFG.GetBool("bot.home_path.allow_mismatch", false);
+  if (isCustomConfigFile && filesystem::absolute(configPath.parent_path()) != filesystem::absolute(homeDir.parent_path())) {
+    if (homePathMatchRequired) {
+      Print("[AURA] error - config file is not located within home dir [" + PathToString(homeDir) + "] - this is not recommended");
+      Print("[HINT] to skip this check and execute Aura nevertheless, set <bot.home_path.allow_mismatch = yes> in your config file");
+      Print("[HINT] paths in your config file [" + PathToString(configPath) + "] will be resolved relative to the home dir");
+      return false;
+    } else if (cliApp.m_HomePath.has_value()) {
+      Print("[AURA] using --homedir=" + PathToString(homeDir));
+    } else {
+#ifdef _WIN32
+      Print("[AURA] using %AURA_HOME%=" + PathToString(homeDir));
+#else
+      Print("[AURA] using $AURA_HOME=" + PathToString(homeDir));
+#endif
+    }
+  }
+
+  const filesystem::path configExamplePath = homeDir / filesystem::path("config-example.ini");
+
+  int FileSize = 0;
+  const string exampleContents = FileRead(configExamplePath, &FileSize);
+  if (exampleContents.empty()) {
+    // But Aura can actually work without a config file ;)
+    Print("[AURA] config.ini, config-example.ini not found within home dir [" + PathToString(homeDir) + "].");
+    Print("[AURA] using automatic configuration");
+  } else {
+    Print("[AURA] copying config-example.cfg to config.ini...");
+    FileWrite(configPath, reinterpret_cast<const uint8_t*>(exampleContents.c_str()), exampleContents.size());
+    if (!CFG.Read(configPath)) {
+      Print("[AURA] error initializing config.ini");
+      return false;
+    }
+  }
+
+  return true;
+}
+
+inline CAura* StartAura(CConfig& CFG, const CCLI& cliApp, filesystem::path& homeDir)
+{
+  return new CAura(CFG, cliApp, homeDir);
+}
+
 //
 // main
 //
 
 int main(const int argc, char** argv)
 {
+  int exitCode = 0;
+
   // seed the PRNG
   srand(static_cast<uint32_t>(time(nullptr)));
 
@@ -109,54 +195,17 @@ int main(const int argc, char** argv)
   SetConsoleOutputCP(CP_UTF8);
 #endif
 
-  CCLI* cliApp = new CCLI();
-  uint8_t cliResult = cliApp->Parse(argc, argv);
-  if (cliResult == CLI_EARLY_RETURN) {
-    cliApp->RunEarlyOptions();
-    return 0;
-  }
-  if (cliResult != CLI_OK) {
-    Print("[AURA] invalid CLI usage");
-    return 1;
-  }
-
-  CConfig CFG;
-  if (cliApp->m_CFGPath.has_value()) {
-    filesystem::path configPath = cliApp->m_CFGPath.value();
-    if (!CFG.Read(configPath)) return 1;
-  } else {
-    filesystem::path ExeDirectory = GetExeDirectory();
-    filesystem::path configPath = ExeDirectory / filesystem::path("config.ini");
-    if (!CFG.Read(configPath)) {
-      int FileSize = 0;
-      string CFGExample = FileRead(ExeDirectory / filesystem::path("config-example.ini"), &FileSize);
-      if (CFGExample.empty()) {
-        Print("[AURA] config.ini not found");
-        // But Aura can actually work without a config file ;)
-      } else {
-        vector<uint8_t> CFGCopy(CFGExample.begin(), CFGExample.end());
-        Print("[AURA] copying config-example.cfg to config.ini...");
-        FileWrite(configPath, CFGCopy.data(), CFGCopy.size());
-        if (!CFG.Read(configPath)) {
-          Print("[AURA] error initializing config.ini");
-          return 1;
-        }
-      }
-    }
-  }
-
   signal(SIGINT, [](int32_t) -> void {
     Print("[!!!] caught signal SIGINT, exiting NOW");
 
-    if (gAura)
-    {
+    if (gAura) {
       if (gAura->m_Exiting)
         exit(1);
       else
         gAura->m_Exiting = true;
-    }
-    else
+    } else {
       exit(1);
+    }
   });
 
 #ifndef _WIN32
@@ -182,22 +231,43 @@ int main(const int argc, char** argv)
 
   // initialize aura
 
-  gAura = new CAura(&CFG, cliApp);
+  {
+    // extra scope, so that cliApp can be deallocated
+    CCLI cliApp;
+    uint8_t cliResult = cliApp.Parse(argc, argv);
+    if (cliResult == CLI_EARLY_RETURN) {
+      cliApp.RunEarlyOptions();
+      return 0;
+    } else if (cliResult != CLI_OK) {
+      Print("[AURA] invalid CLI usage");
+      exitCode = 1;
+    } else {
+      CConfig CFG;
+      filesystem::path homeDir;
+      GetAuraHome(cliApp, homeDir);
+      if (LoadConfig(CFG, cliApp, homeDir)) {
+        gAura = StartAura(CFG, cliApp, homeDir);
+      } else {
+        Print("[AURA] error loading configuration");
+        exitCode = 1;
+      }
+    }
+  }
 
   // check if it's properly configured
 
-  if (gAura->GetReady())
+  if (gAura && gAura->GetReady())
   {
-    // loop
+    // loop start
 
     while (!gAura->Update())
       ;
+
+    // loop end - shut down
+    Print("[AURA] shutting down");
+    delete gAura;
   }
 
-  // shutdown aura
-
-  Print("[AURA] shutting down");
-  delete gAura;
 
 #ifdef _WIN32
   // shutdown winsock
@@ -216,14 +286,14 @@ int main(const int argc, char** argv)
 #endif
   }
 
-  return 0;
+  return exitCode;
 }
 
 //
 // CAura
 //
 
-CAura::CAura(CConfig* CFG, CCLI* nCLI)
+CAura::CAura(CConfig& CFG, const CCLI& nCLI, filesystem::path& nHomeDir)
   : m_GameProtocol(nullptr),
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
@@ -232,7 +302,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     m_Net(nullptr),
     m_CurrentLobby(nullptr),
 
-    m_ConfigPath(CFG->GetFile()),
+    m_ConfigPath(CFG.GetFile()),
     m_Config(nullptr),
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
@@ -252,7 +322,9 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     m_Exiting(false),
     m_Ready(true),
 
-    m_SudoContext(nullptr)
+    m_SudoContext(nullptr),
+
+    m_HomePath(move(nHomeDir))
 {
   Print("[AURA] Aura version " + m_Version);
 
@@ -267,7 +339,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     m_Ready = false;
     return;
   }
-  nCLI->OverrideConfig(this);
+  nCLI.OverrideConfig(this);
   OnLoadConfigs();
   if (m_GameVersion == 0) {
     Print("[CONFIG] Game version and path are missing.");
@@ -310,9 +382,9 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
     }
   }
 
-  nCLI->QueueActions(this);
+  nCLI.QueueActions(this);
 
-  vector<string> invalidKeys = CFG->GetInvalidKeys(definedRealms);
+  vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
     Print("[CONFIG] warning - some keys are misnamed: " + JoinVector(invalidKeys, false));
   }
@@ -335,7 +407,7 @@ CAura::CAura(CConfig* CFG, CCLI* nCLI)
   CacheMapPresets();
 }
 
-bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
+bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
 {
   // load the battle.net connections
   // we're just loading the config data and creating the CRealm classes here, the connections are established later (in the Update function)
@@ -344,9 +416,9 @@ bool CAura::LoadBNETs(CConfig* CFG, bitset<240>& definedRealms)
   map<string, uint8_t> uniqueInputIds;
   map<string, uint8_t> uniqueNames;
   vector<CRealmConfig*> realmConfigs(240, nullptr);
-  const bool hasGlobalHostName = CFG->Exists("realm_global.host_name");
+  const bool hasGlobalHostName = CFG.Exists("realm_global.host_name");
   for (uint8_t i = 1; i <= 240; ++i) {
-    if (!hasGlobalHostName && !CFG->Exists("realm_" + to_string(i) + ".host_name")) {
+    if (!hasGlobalHostName && !CFG.Exists("realm_" + to_string(i) + ".host_name")) {
       continue;
     }
     CRealmConfig* ThisConfig = new CRealmConfig(CFG, m_RealmDefaultConfig, i);
@@ -813,8 +885,8 @@ bool CAura::ReloadConfigs()
   bool success = true;
   uint8_t WasVersion = m_GameVersion;
   filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
-  CConfig* CFG = new CConfig();
-  CFG->Read(m_ConfigPath);
+  CConfig CFG;
+  CFG.Read(m_ConfigPath);
   if (!LoadConfigs(CFG)) {
     Print("[CONFIG] error - bot configuration invalid: not reloaded");
     success = false;
@@ -825,7 +897,7 @@ bool CAura::ReloadConfigs()
     Print("[CONFIG] error - realms misconfigured: not reloaded");
     success = false;
   }
-  vector<string> invalidKeys = CFG->GetInvalidKeys(definedRealms);
+  vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
     Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinVector(invalidKeys, false));
   }
@@ -846,7 +918,7 @@ bool CAura::ReloadConfigs()
   return success;
 }
 
-bool CAura::LoadConfigs(CConfig* CFG)
+bool CAura::LoadConfigs(CConfig& CFG)
 {
   CBotConfig* BotConfig = new CBotConfig(CFG);
   CNetConfig* NetConfig = new CNetConfig(CFG);
@@ -854,7 +926,7 @@ bool CAura::LoadConfigs(CConfig* CFG)
   CRealmConfig* RealmDefaultConfig = new CRealmConfig(CFG, NetConfig);
   CGameConfig* GameDefaultConfig = new CGameConfig(CFG);
 
-  if (!CFG->GetSuccess()) {
+  if (!CFG.GetSuccess()) {
     delete BotConfig;
     delete NetConfig;
     delete IRCConfig;

@@ -171,7 +171,7 @@ private:
   bool m_HasError;
 
 public:
-  explicit CAuraDB(CConfig* CFG);
+  explicit CAuraDB(CConfig& CFG);
   ~CAuraDB();
   CAuraDB(CAuraDB&) = delete;
 

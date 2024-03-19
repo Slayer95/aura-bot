@@ -64,7 +64,7 @@ public:
 
   bool                     m_UDPEnabled;
 
-  explicit CGameConfig(CConfig* CFG);
+  explicit CGameConfig(CConfig& CFG);
   ~CGameConfig();
 };
 

@@ -216,7 +216,7 @@ string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, i
   return BufferString;
 }
 
-string FileRead(const filesystem::path& file, int *byteSize)
+string FileRead(const filesystem::path& file, int* byteSize)
 {
   ifstream IS;
   IS.open(file.native().c_str(), ios::binary | ios::in);
@@ -253,7 +253,7 @@ string FileRead(const filesystem::path& file, int *byteSize)
     return string();
 }
 
-bool FileWrite(const filesystem::path& file, uint8_t* data, uint32_t length)
+bool FileWrite(const filesystem::path& file, const uint8_t* data, uint32_t length)
 {
   ofstream OS;
   OS.open(file.native().c_str(), ios::binary);
