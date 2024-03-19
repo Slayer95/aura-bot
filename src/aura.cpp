@@ -400,7 +400,13 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   try {
     filesystem::create_directory(m_Config->m_MapCachePath);
   } catch (...) {
-    Print("[AURA] warning - <bot.maps_path> is not a valid directory");
+    Print("[AURA] warning - <bot.map_cache_path> is not a valid directory");
+  }
+
+  try {
+    filesystem::create_directory(m_Config->m_JASSPath);
+  } catch (...) {
+    Print("[AURA] warning - <bot.jass_path> is not a valid directory");
   }
 
   if (m_Config->m_ExtractJASS) {
@@ -919,8 +925,10 @@ bool CAura::ReloadConfigs()
   bool success = true;
   uint8_t WasVersion = m_GameVersion;
   bool WasCacheEnabled = m_Config->m_EnableCFGCache;
-  filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
   filesystem::path WasMapPath = m_Config->m_MapPath;
+  filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
+  filesystem::path WasCachePath = m_Config->m_MapCachePath;
+  filesystem::path WasJASSPath = m_Config->m_JASSPath;
   CConfig CFG;
   CFG.Read(m_ConfigPath);
   if (!LoadConfigs(CFG)) {
@@ -952,14 +960,6 @@ bool CAura::ReloadConfigs()
   }
 
   bool reCachePresets = WasCacheEnabled != m_Config->m_EnableCFGCache;
-  if (WasCFGPath != m_Config->m_MapCFGPath) {
-    try {
-      filesystem::create_directory(m_Config->m_MapCFGPath);
-    } catch (...) {
-      Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
-    }
-    reCachePresets = true;
-  }
   if (WasMapPath != m_Config->m_MapPath) {
     try {
       filesystem::create_directory(m_Config->m_MapPath);
@@ -968,6 +968,29 @@ bool CAura::ReloadConfigs()
     }
     reCachePresets = true;
   }
+  if (WasCachePath != m_Config->m_MapCachePath) {
+    try {
+      filesystem::create_directory(m_Config->m_MapCachePath);
+    } catch (...) {
+      Print("[AURA] warning - <bot.map_cache_path> is not a valid directory");
+    }
+    reCachePresets = true;
+  }
+  if (WasCFGPath != m_Config->m_MapCFGPath) {
+    try {
+      filesystem::create_directory(m_Config->m_MapCFGPath);
+    } catch (...) {
+      Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
+    }
+  }
+  if (WasJASSPath != m_Config->m_JASSPath) {
+    try {
+      filesystem::create_directory(m_Config->m_JASSPath);
+    } catch (...) {
+      Print("[AURA] warning - <bot.jass_path> is not a valid directory");
+    }
+  }
+
   if (reCachePresets) {
     CacheMapPresets();
   } else if (!m_Config->m_EnableCFGCache) {
