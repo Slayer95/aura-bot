@@ -32,7 +32,7 @@ When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the cu
 
 ## \`--about\`
 
-Displays the information of the host bot, including its version.
+Displays the information of Aura, including its version.
 
 ## \`--help\`
 
@@ -44,7 +44,7 @@ Displays more detailed information when running CLI actions.
 
 ## \`--stdpaths\`
 
-When enabled, this flag instructs the host bot to utilize standard paths for directories and files 
+When enabled, this flag instructs Aura to utilize standard paths for directories and files 
 entered from the CLI. That is, it makes them relative to the current working directory (CWD).
 
 Notably, it also ensures that map and configuration file paths are interpreted exactly as entered, thus 
@@ -189,8 +189,8 @@ files (``.cfg``). These flags simply determine how files necessary for hosting f
 Specifies the directory to be used as Aura's home directory. Paths in the config file are resolved relative to the home directory.
 
 - This flag takes precedence over any other method of determining the home directory, including environment variables.
-- If `--homedir` is not provided, the environment variable `HOME_DIR` is used to determine the home directory.
-- If neither `--homedir` nor the `HOME_DIR` environment variable are set, the home directory defaults to the directory where the game host bot executable is located.
+- If `--homedir` is not provided, the environment variable `AURA_HOME` is used to determine the home directory.
+- If neither `--homedir` nor the `AURA_HOME` environment variable are set, the home directory defaults to the directory where Aura's executable is located.
 
 ## `--config <FILE>`
 
@@ -207,20 +207,20 @@ Defaults to ``config.ini`` in the home dir.
 ## \`--w3version <NUMBER>\`
 
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
-compatibility. This parameter allows the host bot to switch versions on the spot.
+compatibility. This parameter allows Aura to switch versions on the spot.
 
 This option is equivalent to ``<game.version>`` in \`config.ini\`
 
 ## \`--w3dir <DIRECTORY>\` 
 
-Specifies the directory where the Warcraft 3 game files are located. This parameter allows the host bot 
+Specifies the directory where the Warcraft 3 game files are located. This parameter allows Aura 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
 
 This option is equivalent to ``<game.install_path>`` in \`config.ini\`
 
 ## \`--mapdir <DIRECTORY>\`
 
-Specifies the directory where Warcraft 3 maps are stored. This parameter allows the host bot to locate  
+Specifies the directory where Warcraft 3 maps are stored. This parameter allows Aura to locate  
 and load maps for hosting games.
 
 This option is equivalent to ``<bot.maps_path>`` in \`config.ini\`
@@ -228,7 +228,7 @@ This option is equivalent to ``<bot.maps_path>`` in \`config.ini\`
 ## \`--cfgdir <DIRECTORY>\`
 
 Specifies the directory where the metadata of Warcraft 3 maps is stored. Aura only needs the metadata 
-in order to host games, even after the actual map files are gone. This parameter allows the host bot 
+in order to host games, even after the actual map files are gone. This parameter allows Aura 
 to locate the metadata files, also referred to as "map config" files, or \`mapcfg\` for short.
 
 This option is equivalent to ``<bot.map_configs_path>`` in \`config.ini\`
@@ -303,7 +303,7 @@ assigned hero.
 
 ## \`-s <TYPE>, --search-type <TYPE>\`
 
-Specifies the type of hostable being referenced. This parameter helps the host bot determine how to resolve 
+Specifies the type of hostable being referenced. This parameter helps Aura determine how to resolve 
 the input when hosting maps from the CLI, whether they are maps, configuration files, or remote resources.
 
 **Options:**
