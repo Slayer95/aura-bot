@@ -312,6 +312,11 @@ int main(const int argc, char** argv)
   WSACleanup();
 #endif
 
+#ifdef _WIN32
+  free(auraHome);
+  free(war3Home);
+#endif
+
   // restart the program
 
   if (gRestart)

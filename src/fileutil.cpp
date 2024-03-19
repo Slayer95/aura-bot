@@ -52,9 +52,10 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <bitset>
 #include <set>
 #include <optional>
-#include <codecvt>
 #include <locale>
 #include <system_error>
+
+#include "../utf8/utf8.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -117,12 +118,14 @@ string GetFileExtension(const string& inputPath) {
 
 string PathToString(const filesystem::path& inputPath) {
 #ifdef _WIN32
-  std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+  wstring wideString = inputPath.wstring();
+  string narrowString;
   try {
-    return converter.to_bytes(inputPath.wstring());
+    utf8::utf16to8(inputPath.wstring().begin(), wideString.end(), back_inserter(narrowString));
   } catch (...) {
     return string();
   }
+  return narrowString;
 #else
   return inputPath.string();
 #endif
