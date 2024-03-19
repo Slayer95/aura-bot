@@ -751,7 +751,6 @@ bool CGameSetup::LoadMap()
   if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
 #ifndef DISABLE_CPR
     if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable || ResolveRemoteMap() != RESOLUTION_OK) {
-      m_Ctx
       return false;
     }
     uint32_t downloadSize = RunDownload();
