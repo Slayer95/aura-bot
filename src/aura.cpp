@@ -79,7 +79,9 @@
 #include <locale>
 
 #ifdef _WIN32
-#define NOMINMAX
+#ifndef NOMINMAX
+#define NOMINMAX 1
+#endif
 #include <ws2tcpip.h>
 #include <winsock.h>
 #include <process.h>
@@ -93,15 +95,27 @@ using namespace std;
 static CAura* gAura    = nullptr;
 bool          gRestart = false;
 
+#ifdef _WIN32
+static wchar_t* auraHome = nullptr;
+static wchar_t* war3Home = nullptr;
+#endif
+
 inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
 {
   if (cliApp.m_HomePath.has_value()) {
     homeDir = cliApp.m_HomePath.value();
     return;
   }
+#ifdef _WIN32
+  size_t valueSize;
+  errno_t err = _wdupenv_s(&auraHome, &valueSize, L"AURA_HOME");
+  if (!err && auraHome != nullptr) {
+    wstring homeDirString = auraHome;
+#else
   const char* envValue = getenv("AURA_HOME");
   if (envValue != nullptr) {
     string homeDirString = envValue;
+#endif
     homeDir = filesystem::path(homeDirString);
     NormalizeDirectory(homeDir);
     return;
@@ -1039,9 +1053,16 @@ bool CAura::LoadConfigs(CConfig& CFG)
   if (m_Config->m_Warcraft3Path.has_value()) {
     m_GameInstallPath = m_Config->m_Warcraft3Path.value();
   } else if (m_GameInstallPath.empty()) {
+#ifdef _WIN32
+    size_t valueSize;
+    errno_t err = _wdupenv_s(&war3Home, &valueSize, L"WAR3_HOME");
+    if (!err && auraHome != nullptr) {
+      wstring war3Path = war3Home;
+#else
     const char* envValue = getenv("WAR3_HOME");
     if (envValue != nullptr) {
       string war3Path = envValue;
+#endif
       m_GameInstallPath = filesystem::path(war3Path);
     } else {
 #ifdef _WIN32

@@ -598,8 +598,8 @@ uint8_t CGameSetup::ResolveRemoteMap()
   string downloadUri, downloadFileName;
   uint64_t SearchTargetType = HashCode(m_SearchTarget.first);
 
-  switch (SearchTargetType) {
 #ifndef DISABLE_CPR
+  switch (SearchTargetType) {
     case HashCode("epicwar"): {
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;
       Print("GET <" + m_MapSiteUri + ">");
@@ -617,12 +617,14 @@ uint8_t CGameSetup::ResolveRemoteMap()
       downloadFileName = DecodeURIComponent(encodedName);
       break;
     }
-#endif
     default: {
+#endif
       Print("Unsupported remote domain: " + m_SearchTarget.first);
       return RESOLUTION_ERR;
+#ifndef DISABLE_CPR
     }
   }
+#endif
 
   if (downloadFileName.empty() || downloadFileName[0] == '.' || downloadFileName[0] == '-' || downloadFileName.length() > 80){
     return RESOLUTION_BAD_NAME;
