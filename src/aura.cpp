@@ -1139,6 +1139,14 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     m_CurrentLobby = nullptr;
     return false;
   }
+
+#ifndef DISABLE_MINIUPNP
+  if (m_Net->m_Config->m_EnableUPnP && m_Games.empty()) {
+    // This is a long synchronous network call.
+    m_Net->RequestUPnP("TCP", m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET), m_CurrentLobby->GetHostPort());
+  }
+#endif
+
   if (m_CurrentLobby->GetCheckIsJoinable()) {
     uint8_t checkMode = HEALTH_CHECK_ALL;
     if (!m_Net->m_SupportTCPOverIPv6) {
