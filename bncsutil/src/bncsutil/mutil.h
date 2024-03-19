@@ -56,8 +56,9 @@
 #endif
 
 #if (!defined(MUTIL_CPU_PPC))
-    #if (defined(__ppc__) || defined(__PPC__) || defined(powerpc) || \
-    defined(powerpc) || defined(ppc) || defined(_M_MPPC))
+    #if (defined(__ppc__) || defined(__PPC__) || defined(__PPC) || defined(PPC) || defined(ppc) || \
+    defined(__powerpc__) || defined(__powerpc) || defined(powerpc) || \
+    defined(_M_MPPC) || defined(_ARCH_PPC))
         #define MUTIL_CPU_PPC 1
         #define MUTIL_CPU_X86 0
     #else
@@ -84,8 +85,20 @@
 #elif MUTIL_CPU_X86
     #define LITTLEENDIAN 1
     #define BIGENDIAN 0
+#elif (defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__))
+    #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+      #define LITTLEENDIAN 1
+      #define BIGENDIAN 0
+    #else
+      #define BIGENDIAN 1
+      #define LITTLEENDIAN 0
+    #endif
+#elif (defined(_BIG_ENDIAN) || defined(__BIG_ENDIAN) || defined(__BIG_ENDIAN__))
+    #define BIGENDIAN 1
+    #define LITTLEENDIAN 0
 #else
     #define LITTLEENDIAN 1
+    #define BIGENDIAN 0
 #endif
 #elif defined(BIGENDIAN) && (!defined(LITTLEENDIAN))
     #undef BIGENDIAN
