@@ -75,6 +75,7 @@
 #include <bitset>
 #include <iterator>
 #include <exception>
+#include <system_error>
 #include <locale>
 
 #ifdef _WIN32
@@ -130,10 +131,13 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
   const bool isCustomConfigFile = cliApp.m_CFGPath.has_value();
   const bool isDirectSuccess = CFG.Read(configPath);
   if (!isDirectSuccess && isCustomConfigFile) {
-    filesystem::path cwd = filesystem::current_path();
+    filesystem::path cwd;
+    try {
+      cwd = filesystem::current_path();
+    } catch (...) {}
     NormalizeDirectory(cwd);
     Print("[AURA] required config file not found [" + PathToString(configPath) + "]");
-    if (!cliApp.m_UseStandardPaths && configPath.parent_path() == homeDir.parent_path() && homeDir.parent_path() != cwd.parent_path()) {
+    if (!cliApp.m_UseStandardPaths && configPath.parent_path() == homeDir.parent_path() && (cwd.empty() || homeDir.parent_path() != cwd.parent_path())) {
       Print("[HINT] --config was resolved relative to [" + PathToString(homeDir) + "]");
       Print("[HINT] use --stdpaths to read [" + PathToString(cwd / configPath.filename()) + "]");
     }
@@ -1055,7 +1059,8 @@ bool CAura::LoadConfigs(CConfig& CFG)
       };
       for (const auto& opt : tryPaths) {
         filesystem::path testPath = opt;
-        if (filesystem::is_directory(testPath)) {
+        error_code ec;
+        if (filesystem::is_directory(testPath, ec)) {
           m_GameInstallPath = testPath;
         }
       }

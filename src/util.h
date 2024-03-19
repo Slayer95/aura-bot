@@ -751,6 +751,7 @@ inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& fi
 }
 
 inline void NormalizeDirectory(std::filesystem::path& filePath) {
+  if (filePath.empty()) return;
   filePath += filePath.preferred_separator;
   filePath = filePath.lexically_normal();
 }

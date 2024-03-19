@@ -54,6 +54,7 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <optional>
 #include <codecvt>
 #include <locale>
+#include <system_error>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -286,6 +287,7 @@ bool FileDelete(const filesystem::path& file)
 optional<int64_t> GetMaybeModifiedTime(const filesystem::path& file)
 {
   optional<int64_t> result;
+  
   try {
     filesystem::file_time_type lastModifiedTime = filesystem::last_write_time(file);
     result = chrono::duration_cast<chrono::seconds>(lastModifiedTime.time_since_epoch()).count();
@@ -324,7 +326,10 @@ filesystem::path GetExeDirectory()
   buffer.resize(length);
 
   filesystem::path executablePath(buffer.data());
-  filesystem::path cwd = filesystem::current_path();
+  filesystem::path cwd;
+  try {
+    cwd = filesystem::current_path();
+  } catch (...) {}
   if (!cwd.empty()) {
     NormalizeDirectory(cwd);
     cwd = cwd.parent_path();
