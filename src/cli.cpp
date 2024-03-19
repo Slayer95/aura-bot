@@ -89,6 +89,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--w3dir", m_War3Path, "Customizes the game install directory.");
   app.add_option("--mapdir", m_MapPath, "Customizes the maps directory.");
   app.add_option("--cfgdir", m_MapCFGPath, "Customizes the map configs directory.");
+  app.add_option("--cachedir", m_MapCachePath, "Customizes the map cache directory.");
+  app.add_option("--jassdir", m_JASSPath, "Customizes the directory where extracted JASS files are stored.");
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
   app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
 
@@ -163,25 +165,14 @@ uint8_t CCLI::Parse(const int argc, char** argv)
     return CLI_EARLY_RETURN;
   }
 
-  if (m_UseStandardPaths) {
-    // TODO: It should be possible to let m_SearchTarget be a relative path
-    if (m_SearchTarget.has_value()) m_SearchTarget = PathToString(filesystem::absolute(m_SearchTarget.value()).lexically_normal());
-    // TODO: Investigate no longer making these absolute. 
-    if (m_CFGPath.has_value()) m_CFGPath = filesystem::absolute(m_CFGPath.value());
-    if (m_War3Path.has_value()) m_War3Path = filesystem::absolute(m_War3Path.value());
-    if (m_MapPath.has_value()) m_MapPath = filesystem::absolute(m_MapPath.value());
-    if (m_MapCFGPath.has_value()) m_MapCFGPath = filesystem::absolute(m_MapCFGPath.value());
-  } else {
-    if (m_CFGPath.has_value() && !m_CFGPath.value().is_absolute()) m_CFGPath = GetExeDirectory() / m_CFGPath.value();
-    if (m_War3Path.has_value() && !m_War3Path.value().is_absolute()) m_War3Path = GetExeDirectory() / m_War3Path.value();
-    if (m_MapPath.has_value() && !m_MapPath.value().is_absolute()) m_MapPath = GetExeDirectory() / m_MapPath.value();
-    if (m_MapCFGPath.has_value() && !m_MapCFGPath.value().is_absolute()) m_MapCFGPath = GetExeDirectory() / m_MapCFGPath.value();
-  }
   // Make sure directories have a trailing slash.
   // But m_CFGPath is just a file.
+  if (m_HomePath.has_value()) NormalizeDirectory(m_HomePath.value());
   if (m_War3Path.has_value()) NormalizeDirectory(m_War3Path.value());
   if (m_MapPath.has_value()) NormalizeDirectory(m_MapPath.value());
   if (m_MapCFGPath.has_value()) NormalizeDirectory(m_MapCFGPath.value());
+  if (m_MapCachePath.has_value()) NormalizeDirectory(m_MapCachePath.value());
+  if (m_JASSPath.has_value()) NormalizeDirectory(m_JASSPath.value());
 
   if (m_SearchTarget.has_value()) {
     if (!m_ExitOnStandby.has_value()) m_ExitOnStandby = true;
@@ -220,6 +211,10 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_Config->m_MapPath = m_MapPath.value();
   if (m_MapCFGPath.has_value())
     nAura->m_Config->m_MapCFGPath = m_MapCFGPath.value();
+  if (m_MapCachePath.has_value())
+    nAura->m_Config->m_MapCachePath = m_MapCachePath.value();
+  if (m_JASSPath.has_value())
+    nAura->m_Config->m_JASSPath = m_JASSPath.value();
 
   if (m_ExtractJASS.has_value())
     nAura->m_Config->m_ExtractJASS = m_ExtractJASS.value();
@@ -283,7 +278,7 @@ void CCLI::QueueActions(CAura* nAura) const
       searchType = SEARCH_TYPE_ANY;
     }
     CCommandContext* ctx = new CCommandContext(nAura, &cout, '!');
-    CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, m_UseStandardPaths, true);
+    CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true);
     if (gameSetup && gameSetup->LoadMap()) {
       if (gameSetup->ApplyMapModifiers(&options)) {
         for (const auto& id : m_ExcludedRealms) {

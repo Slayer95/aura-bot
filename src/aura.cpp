@@ -115,15 +115,20 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
 
 inline filesystem::path GetConfigPath(const CCLI& cliApp, const filesystem::path& homeDir)
 {
-  if (cliApp.m_CFGPath.has_value()) return cliApp.m_CFGPath.value();
-  return homeDir / "config.ini";
+  if (!cliApp.m_CFGPath.has_value()) return homeDir / "config.ini";
+  if (!cliApp.m_UseStandardPaths && (cliApp.m_CFGPath.value() == cliApp.m_CFGPath.value().filename())) {
+    return homeDir / cliApp.m_CFGPath.value();
+  } else {
+    return cliApp.m_CFGPath.value();
+  }
 }
 
 inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeDir)
 {
-  const bool isCustomConfigFile = cliApp.m_CFGPath.has_value();
   const filesystem::path configPath = GetConfigPath(cliApp, homeDir);
-  if (!CFG.Read(configPath) && isCustomConfigFile) {
+  const bool isCustomConfigFile = cliApp.m_CFGPath.has_value();
+  const bool isDirectSuccess = CFG.Read(configPath);
+  if (!isDirectSuccess && isCustomConfigFile) {
     Print("[AURA] required config file not found [" + PathToString(configPath) + "]");
     if (!cliApp.m_UseStandardPaths && configPath.parent_path() == homeDir.parent_path()) {
       Print("[HINT] --config was resolved relative to [" + PathToString(homeDir) + "]");
@@ -137,7 +142,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
     Print("[HINT] both alternatives auto-initialize \"config.ini\" from \"config-example.ini\" in the same folder");
     return false;
   }
-  // TODO: Make sure <bot.home_path.allow_mismatch> is documented.
+  // TODO: Make sure <bot.home_path.allow_mismatch> is documented in CONFIG.md.
   const bool homePathMatchRequired = CFG.GetBool("bot.home_path.allow_mismatch", false);
   if (isCustomConfigFile && filesystem::absolute(configPath.parent_path()) != filesystem::absolute(homeDir.parent_path())) {
     if (homePathMatchRequired) {
@@ -154,6 +159,11 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
       Print("[AURA] using $AURA_HOME=" + PathToString(homeDir));
 #endif
     }
+  }
+
+  if (isDirectSuccess) {
+    CFG.SetHomeDir(move(homeDir));
+    return true;
   }
 
   const filesystem::path configExamplePath = homeDir / filesystem::path("config-example.ini");
@@ -173,12 +183,13 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
     }
   }
 
+  CFG.SetHomeDir(move(homeDir));
   return true;
 }
 
-inline CAura* StartAura(CConfig& CFG, const CCLI& cliApp, filesystem::path& homeDir)
+inline CAura* StartAura(CConfig& CFG, const CCLI& cliApp)
 {
-  return new CAura(CFG, cliApp, homeDir);
+  return new CAura(CFG, cliApp);
 }
 
 //
@@ -251,7 +262,7 @@ int main(const int argc, char** argv)
       filesystem::path homeDir;
       GetAuraHome(cliApp, homeDir);
       if (LoadConfig(CFG, cliApp, homeDir)) {
-        gAura = StartAura(CFG, cliApp, homeDir);
+        gAura = StartAura(CFG, cliApp);
       } else {
         Print("[AURA] error loading configuration");
         exitCode = 1;
@@ -298,7 +309,7 @@ int main(const int argc, char** argv)
 // CAura
 //
 
-CAura::CAura(CConfig& CFG, const CCLI& nCLI, filesystem::path& nHomeDir)
+CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_GameProtocol(nullptr),
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
@@ -327,9 +338,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI, filesystem::path& nHomeDir)
     m_Exiting(false),
     m_Ready(true),
 
-    m_SudoContext(nullptr),
-
-    m_HomePath(move(nHomeDir))
+    m_SudoContext(nullptr)
 {
   Print("[AURA] Aura version " + m_Version);
 
@@ -351,7 +360,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI, filesystem::path& nHomeDir)
     m_Ready = false;
     return;
   }
-  Print("[AURA] Running game version 1." + to_string(m_GameVersion));
+  Print("[AURA] running game version 1." + to_string(m_GameVersion));
 
   if (!m_Net->Init()) {
     Print("[AURA] error - close active instances of Warcraft, and/or pause LANViewer to initialize Aura.");
@@ -360,20 +369,38 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI, filesystem::path& nHomeDir)
   }
 
   if (m_Net->m_Config->m_UDPEnableCustomPortTCP4) {
-    Print("[AURA] Broadcasting games port " + to_string(m_Net->m_Config->m_UDPCustomPortTCP4) + " over LAN");
+    Print("[AURA] broadcasting games port " + to_string(m_Net->m_Config->m_UDPCustomPortTCP4) + " over LAN");
   }
 
   m_RealmsIdentifiers.resize(16);
   if (m_Config->m_EnableBNET.has_value()) {
     if (m_Config->m_EnableBNET.value()) {
-      Print("[AURA] All realms forcibly set to ENABLED <bot.toggle_every_realm = on>");
+      Print("[AURA] all realms forcibly set to ENABLED <bot.toggle_every_realm = on>");
     } else {
-      Print("[AURA] All realms forcibly set to DISABLED <bot.toggle_every_realm = off>");
+      Print("[AURA] all realms forcibly set to DISABLED <bot.toggle_every_realm = off>");
     }
   }
   bitset<240> definedRealms;
   if (m_Config->m_EnableBNET.value_or(true)) {
     LoadBNETs(CFG, definedRealms);
+  }
+
+  try {
+    filesystem::create_directory(m_Config->m_MapPath);
+  } catch (...) {
+    Print("[AURA] warning - <bot.maps_path> is not a valid directory");
+  }
+
+  try {
+    filesystem::create_directory(m_Config->m_MapCFGPath);
+  } catch (...) {
+    Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
+  }
+
+  try {
+    filesystem::create_directory(m_Config->m_MapCachePath);
+  } catch (...) {
+    Print("[AURA] warning - <bot.maps_path> is not a valid directory");
   }
 
   if (m_Config->m_ExtractJASS) {
@@ -408,7 +435,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI, filesystem::path& nHomeDir)
   }
 
   // load the iptocountry data
-  LoadIPToCountryData();
+  LoadIPToCountryData(CFG);
 
   // Read CFG->Map links and cache the reverse.
   CacheMapPresets();
@@ -512,8 +539,8 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
 bool CAura::CopyScripts()
 {
   // Try to use manually extracted files already available in bot.map_configs_path
-  filesystem::path autoExtractedCommonPath = m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j");
-  filesystem::path autoExtractedBlizzardPath = m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j");
+  filesystem::path autoExtractedCommonPath = m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j");
+  filesystem::path autoExtractedBlizzardPath = m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j");
   bool commonExists = FileExists(autoExtractedCommonPath);
   bool blizzardExists = FileExists(autoExtractedBlizzardPath);
   if (commonExists && blizzardExists) {
@@ -521,20 +548,20 @@ bool CAura::CopyScripts()
   }
 
   if (!commonExists) {
-    filesystem::path manuallyExtractedCommonPath = m_Config->m_MapCFGPath / filesystem::path("common.j");
+    filesystem::path manuallyExtractedCommonPath = m_Config->m_JASSPath / filesystem::path("common.j");
     try {
       filesystem::copy_file(manuallyExtractedCommonPath, autoExtractedCommonPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
-      Print("[AURA] File system error at " + PathToString(manuallyExtractedCommonPath) + ": " + string(e.what()));
+      Print("[AURA] " + string(e.what()));
       return false;
     }
   }
   if (!blizzardExists) {
-    filesystem::path manuallyExtractedBlizzardPath = m_Config->m_MapCFGPath / filesystem::path("blizzard.j");
+    filesystem::path manuallyExtractedBlizzardPath = m_Config->m_JASSPath / filesystem::path("blizzard.j");
     try {
       filesystem::copy_file(manuallyExtractedBlizzardPath, autoExtractedBlizzardPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
-      Print("[AURA] File system error at " + PathToString(manuallyExtractedBlizzardPath) + ": " + string(e.what()));
+      Print("[AURA] " + string(e.what()));
       return false;
     }
   }
@@ -891,7 +918,9 @@ bool CAura::ReloadConfigs()
 {
   bool success = true;
   uint8_t WasVersion = m_GameVersion;
+  bool WasCacheEnabled = m_Config->m_EnableCFGCache;
   filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
+  filesystem::path WasMapPath = m_Config->m_MapPath;
   CConfig CFG;
   CFG.Read(m_ConfigPath);
   if (!LoadConfigs(CFG)) {
@@ -922,8 +951,27 @@ bool CAura::ReloadConfigs()
     }
   }
 
+  bool reCachePresets = WasCacheEnabled != m_Config->m_EnableCFGCache;
   if (WasCFGPath != m_Config->m_MapCFGPath) {
+    try {
+      filesystem::create_directory(m_Config->m_MapCFGPath);
+    } catch (...) {
+      Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
+    }
+    reCachePresets = true;
+  }
+  if (WasMapPath != m_Config->m_MapPath) {
+    try {
+      filesystem::create_directory(m_Config->m_MapPath);
+    } catch (...) {
+      Print("[AURA] warning - <bot.maps_path> is not a valid directory");
+    }
+    reCachePresets = true;
+  }
+  if (reCachePresets) {
     CacheMapPresets();
+  } else if (!m_Config->m_EnableCFGCache) {
+    m_CachedMaps.clear();
   }
   m_Net->OnConfigReload();
   return success;
@@ -1027,13 +1075,6 @@ uint8_t CAura::ExtractScripts()
       return m_GameInstallPath / filesystem::path("War3Patch.mpq");
   }();
 
-  try {
-    filesystem::create_directory(m_Config->m_MapCFGPath);
-  } catch (...) {
-    Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
-    return 0;
-  }
-
   void* MPQ;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
@@ -1058,10 +1099,10 @@ uint8_t CAura::ExtractScripts()
   return FilesExtracted;
 }
 
-void CAura::LoadIPToCountryData()
+void CAura::LoadIPToCountryData(const CConfig& CFG)
 {
   ifstream in;
-  filesystem::path GeoFilePath = GetExeDirectory() / filesystem::path("ip-to-country.csv");
+  filesystem::path GeoFilePath = CFG.GetHomeDir() / filesystem::path("ip-to-country.csv");
   in.open(GeoFilePath.native().c_str(), ios::in);
 
   if (in.fail()) {
@@ -1106,21 +1147,14 @@ void CAura::LoadIPToCountryData()
 
 void CAura::CacheMapPresets()
 {
-  try {
-    filesystem::create_directory(m_Config->m_MapPath);
-  } catch (...) {
-    Print("[AURA] warning - <bot.maps_path> is not a valid directory");
-    return;
-  }
-
   // Preload map configs
   m_CachedMaps.clear();
-  const vector<filesystem::path> configFiles = FilesMatch(m_Config->m_MapCFGPath, FILE_EXTENSIONS_CONFIG);
-  for (const auto& cfgName : configFiles) {
-    string localPathString = CConfig::ReadString(m_Config->m_MapCFGPath / cfgName, "map_localpath");
+  const vector<filesystem::path> cacheFiles = FilesMatch(m_Config->m_MapCachePath, FILE_EXTENSIONS_CONFIG);
+  for (const auto& cfgName : cacheFiles) {
+    string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map_localpath");
     filesystem::path localPath = localPathString;
     localPath = localPath.lexically_normal();
-    if (!localPath.is_absolute() || localPath.parent_path() == m_Config->m_MapPath.parent_path()) {
+    if (localPath == localPath.filename() || filesystem::absolute(localPath.parent_path()) == filesystem::absolute(m_Config->m_MapPath.parent_path())) {
       string mapString = PathToString(localPath.filename());
       string cfgString = PathToString(cfgName);
       if (mapString.empty() || cfgString.empty()) continue;

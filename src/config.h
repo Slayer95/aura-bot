@@ -68,6 +68,9 @@ private:
   std::map<std::string, std::string> m_CFG;
   std::filesystem::path              m_File;
   std::set<std::string>              m_ValidKeys;
+  std::filesystem::path              m_HomeDir;
+
+  uint8_t CheckRealmKey(const std::string& key) const;
 
 public:
   CConfig();
@@ -77,7 +80,6 @@ public:
   bool Exists(const std::string& key);
   void Accept(const std::string& key);
   void Delete(const std::string& key);
-  uint8_t CheckRealmKey(const std::string& key) const;
   std::vector<std::string> GetInvalidKeys(const std::bitset<240> definedRealms) const;
   inline std::filesystem::path GetFile() const { return m_File; };
   inline bool GetErrorLast() const { return m_ErrorLast; };
@@ -86,6 +88,8 @@ public:
     if (m_ErrorLast) m_CriticalError = true;
   };
   inline void SetFailed() { m_CriticalError = true; };
+  inline void SetHomeDir(const std::filesystem::path& nHomeDir) { m_HomeDir = nHomeDir; };
+  const std::filesystem::path& GetHomeDir() const { return m_HomeDir; }
 
   std::string GetString(const std::string& key, const std::string& x);
   std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);

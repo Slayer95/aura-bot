@@ -139,14 +139,13 @@ public:
   std::unordered_multiset<std::string>               m_BusyMaps;
   std::set<CCommandContext*>                         m_ActiveContexts;
 
-  std::filesystem::path                              m_HomePath;
   std::filesystem::path                              m_GameInstallPath;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;
   std::map<std::string, CRealm*>                     m_RealmsByInputID;
 
-  explicit CAura(CConfig& CFG, const CCLI& nCLI, std::filesystem::path& nHomeDir);
+  explicit CAura(CConfig& CFG, const CCLI& nCLI);
   ~CAura();
   CAura(CAura&) = delete;
 
@@ -203,7 +202,7 @@ public:
   uint8_t ExtractScripts();
   bool CopyScripts();
 
-  void LoadIPToCountryData();
+  void LoadIPToCountryData(const CConfig& CFG);
 
   void CacheMapPresets();
   

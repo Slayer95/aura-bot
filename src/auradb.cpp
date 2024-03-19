@@ -82,7 +82,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
     RootAdminCheckStmt(nullptr),
     m_HasError(false)
 {
-  m_File = CFG.GetPath("db.storage_file", GetExeDirectory() / filesystem::path("aura.dbs"));
+  m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.dbs"));
   Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");
   m_DB = new CSQLITE3(m_File);
 

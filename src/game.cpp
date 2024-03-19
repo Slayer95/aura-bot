@@ -2510,7 +2510,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     // the player doesn't have the map
 
     string* MapData = m_Map->GetMapData();
-    bool IsMapAvailable = !MapData->empty() && m_Map->GetValidLinkedMap();
+    bool IsMapAvailable = !MapData->empty() && !m_Map->HasMismatch();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
     if (IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER && (player->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge))) {
       if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {

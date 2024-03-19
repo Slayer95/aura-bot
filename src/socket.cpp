@@ -823,16 +823,15 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   }
 
   if (m_Family == AF_INET6) {
-    Print("[DISCOVERY] Listening IPv4/IPv6 UDP traffic on port " + to_string(m_Port));
+    Print("[DISCOVERY] listening IPv4/IPv6 UDP traffic on port " + to_string(m_Port));
   } else {
-    Print("[DISCOVERY] Listening IPv4-only UDP traffic on port " + to_string(m_Port));
+    Print("[DISCOVERY] listening IPv4-only UDP traffic on port " + to_string(m_Port));
   }
   return true;
 }
 
 UDPPkt* CUDPServer::Accept(fd_set* fd) {
   if (m_Socket == INVALID_SOCKET || m_HasError) {
-    Print("Accept() failed socket has error.");
     return nullptr;
   }
 

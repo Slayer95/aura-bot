@@ -145,6 +145,7 @@ public:
   std::string                                     m_Attribution;
   std::string                                     m_SearchRawTarget;
   uint8_t                                         m_SearchType;
+  bool                                            m_AllowPaths;
   bool                                            m_StandardPaths;
   bool                                            m_LuckyMode;
   bool                                            m_Verbose;
@@ -174,11 +175,12 @@ public:
   CRealm*                                         m_CreatorRealm;
 
   CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* mapCFG);
-  CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nUseStandardPaths, const bool nUseLuckyMode);
+  CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode);
   ~CGameSetup();
 
   std::string GetInspectName() const;
 
+  void ParseInputLocal();
   void ParseInput();
   std::pair<uint8_t, std::filesystem::path> SearchInputStandard();
   std::pair<uint8_t, std::filesystem::path> SearchInputLocalExact();

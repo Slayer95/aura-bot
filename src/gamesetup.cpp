@@ -129,6 +129,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_Attribution(nCtx->GetUserAttribution()),
     m_SearchRawTarget(string()),
     m_SearchType(SEARCH_TYPE_ANY),
+    m_AllowPaths(false),
     m_StandardPaths(false),
     m_LuckyMode(false),
 
@@ -145,7 +146,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
   m_Map = GetBaseMapFromConfig(nMapCFG, false);
 }
 
-CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nUseStandardPaths, const bool nUseLuckyMode)
+CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode)
   : m_Aura(nAura),
     m_Map(nullptr),
     m_Ctx(nCtx),
@@ -153,6 +154,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_Attribution(nCtx->GetUserAttribution()),
     m_SearchRawTarget(move(nSearchRawTarget)),
     m_SearchType(nSearchType),
+
+    m_AllowPaths(nAllowPaths),
     m_StandardPaths(nUseStandardPaths),
     m_LuckyMode(nUseLuckyMode),
 
@@ -172,10 +175,21 @@ std::string CGameSetup::GetInspectName() const
   return m_Map->GetConfigName();
 }
 
+void CGameSetup::ParseInputLocal()
+{
+  m_SearchTarget = make_pair("local", m_SearchRawTarget);
+}
+
 void CGameSetup::ParseInput()
 {
-  if (m_StandardPaths || m_SearchType != SEARCH_TYPE_ANY) {
-    m_SearchTarget = make_pair("local", m_SearchRawTarget);
+  if (m_StandardPaths) {
+    ParseInputLocal();
+    return;
+  }
+  const filesystem::path searchPath = filesystem::path(m_SearchRawTarget);
+  const bool isFileName = searchPath == searchPath.filename();
+  if (m_SearchType != SEARCH_TYPE_ANY) {
+    ParseInputLocal();
     return;
   }
 
@@ -184,16 +198,17 @@ void CGameSetup::ParseInput()
     return static_cast<char>(std::tolower(c));
   });
 
+  if (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:") {
+    ParseInputLocal();
+    return;
+  }
+
   // Custom namespace/protocol
   if (lower.substr(0, 8) == "epicwar-" || lower.substr(0, 8) == "epicwar:") {
     m_SearchTarget = make_pair("epicwar", MaybeBase10(lower.substr(8)));
 #ifndef DISABLE_CPR
     m_IsDownloadable = true;
 #endif
-    return;
-  }
-  if (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:") {
-    m_SearchTarget = make_pair("local", m_SearchRawTarget);
     return;
   }
  
@@ -226,7 +241,7 @@ void CGameSetup::ParseInput()
   if (isUri) {
     m_SearchTarget = make_pair("remote", std::string());
   } else {
-    m_SearchTarget = make_pair("local", m_SearchRawTarget);
+    ParseInputLocal();
   }
 }
 
@@ -402,6 +417,17 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
   }
 
   if (m_SearchTarget.first == "local") {
+    filesystem::path testSearchPath = filesystem::path(m_SearchTarget.second);
+    if (testSearchPath != testSearchPath.filename()) {
+      if (m_AllowPaths) {
+        // Search target has slashes. Treat as standard path.
+        return SearchInputStandard();
+      } else {
+        // Search target has slashes. Protect against arbitrary directory traversal.
+        return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());        
+      }
+    }
+
     // Find config or map path
     vector<string> fuzzyMatches;
     pair<uint8_t, filesystem::path> result = SearchInputLocal(fuzzyMatches);
@@ -510,7 +536,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     } else {
       resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg";
     }
-    filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(resolvedCFGName)).lexically_normal();
+    filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCachePath / filesystem::path(resolvedCFGName)).lexically_normal();
 
     vector<uint8_t> bytes = MapCFG.Export();
     FileWrite(resolvedCFGPath, bytes.data(), bytes.size());
@@ -528,14 +554,14 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
   if (fileName.empty()) return nullptr;
   if (m_Aura->m_Config->m_EnableCFGCache && m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
     string cfgName = m_Aura->m_CachedMaps[fileName];
-    filesystem::path cfgPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path(cfgName);
+    filesystem::path cfgPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(cfgName);
     CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true);
     bool cacheSuccess = false;
-    if (cachedResult && cachedResult->GetMapLocalPath() == fileName && cachedResult->GetValidLinkedMap()) {
+    if (cachedResult && cachedResult->GetMapLocalPath() == fileName && !cachedResult->HasMismatch()) {
       cacheSuccess = true;
     }
     if (cacheSuccess) {
-      Print("[DEBUG] Fetching cached config " + cfgName + " -> " + fileName);
+      if (!silent) m_Ctx->SendReply("Map file loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
       return cachedResult;
     } else {
       delete cachedResult;

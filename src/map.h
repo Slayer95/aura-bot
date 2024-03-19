@@ -174,7 +174,7 @@ public:
   ~CMap();
 
   inline bool                   GetValid() const { return m_Valid; }
-  inline bool                   GetValidLinkedMap() const { return m_MapContentMismatch[0] == 0 && m_MapContentMismatch[1] == 0 && m_MapContentMismatch[2] == 0 && m_MapContentMismatch[3] == 0; }
+  inline bool                   HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0; }
   inline std::string            GetConfigName() const { return m_CFGName; }
   inline std::string            GetMapPath() const { return m_MapPath; }
   inline std::vector<uint8_t>   GetMapSize() const { return m_MapSize; }

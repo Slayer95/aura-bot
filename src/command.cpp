@@ -1898,7 +1898,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      bool IsMapAvailable = !m_TargetGame->m_Map->GetMapData()->empty() && m_TargetGame->m_Map->GetValidLinkedMap();
+      bool IsMapAvailable = !m_TargetGame->m_Map->GetMapData()->empty() && !m_TargetGame->m_Map->HasMismatch();
       if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
@@ -3473,14 +3473,14 @@ void CCommandContext::Run(const string& command, const string& payload)
       break;
     }
 
-    case HashCode("synccfg"):
-    case HashCode("initcfg"): {
+    case HashCode("cachemaps"): {
       if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
       vector<filesystem::path> AllMaps = FilesMatch(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP);
-      int counter = 0;
+      int goodCounter = 0;
+      int badCounter = 0;
       
       for (const auto& fileName : AllMaps) {
         string nameString = PathToString(fileName);
@@ -3489,9 +3489,6 @@ void CCommandContext::Run(const string& command, const string& payload)
           continue;
         }
         if (nameString.find(Payload) == string::npos) {
-          continue;
-        }
-        if (!FileExists(m_Aura->m_Config->m_MapPath / fileName)) {
           continue;
         }
 
@@ -3516,17 +3513,22 @@ void CCommandContext::Run(const string& command, const string& payload)
           MapCFG.Set("map_type", "dota");
 
         CMap* ParsedMap = new CMap(m_Aura, &MapCFG);
-        delete ParsedMap;
+        const bool isValid = ParsedMap->GetValid();
+        if (!isValid) {
+          delete ParsedMap;
+          badCounter++;
+          continue;
+        }
 
         string CFGName = "local-" + nameString + ".cfg";
-        filesystem::path CFGPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path(CFGName);
+        filesystem::path CFGPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(CFGName);
 
         vector<uint8_t> OutputBytes = MapCFG.Export();
         FileWrite(CFGPath, OutputBytes.data(), OutputBytes.size());
         m_Aura->m_CachedMaps[nameString] = CFGName;
-        counter++;
+        goodCounter++;
       }
-      SendReply("Initialized " + to_string(counter) + " map config files.");
+      SendReply("Initialized " + to_string(goodCounter) + " map config files. " + to_string(badCounter) + " invalid maps found.");
       return;
     }
 
@@ -3571,7 +3573,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       filesystem::path FileFragment = Payload;
-      if (FileFragment.is_absolute()) {
+      if (FileFragment.is_absolute() || FileFragment != FileFragment.filename()) {
         ErrorReply("Removal failed");
         break;
       }
@@ -3974,7 +3976,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, false);
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, false);
       if (!gameSetup) {
         ErrorReply("Unable to host game");
         break;
@@ -4118,7 +4120,6 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("map"):
-    case HashCode("hostlan"):
     case HashCode("host"): {
       if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
         if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
@@ -4127,7 +4128,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
       }
 
-      bool isHostCommand = CommandHash == HashCode("host") || CommandHash == HashCode("hostlan");
+      bool isHostCommand = CommandHash == HashCode("host");
       vector<string> Args = isHostCommand ? SplitArgs(Payload, 2, 6) : SplitArgs(Payload, 1, 5);
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
@@ -4158,7 +4159,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (4 <= Args.size()) options.ParseMapRandomRaces(Args[3]);
       if (5 <= Args.size()) options.ParseMapRandomHeroes(Args[4]);
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
       if (!gameSetup) {
         ErrorReply("Unable to host game");
         break;
@@ -4182,7 +4183,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
         m_Aura->m_GameSetup->SetName(gameName);
         m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
-        m_Aura->m_GameSetup->SetOwner(m_FromName, CommandHash == HashCode("hostlan") ? nullptr : m_SourceRealm);
+        m_Aura->m_GameSetup->SetOwner(m_FromName, m_SourceRealm);
         m_Aura->m_GameSetup->RunHost();
         delete m_Aura->m_GameSetup;
         m_Aura->m_GameSetup = nullptr;

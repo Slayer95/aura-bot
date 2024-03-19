@@ -45,8 +45,10 @@ public:
   bool                                    m_ExtractJASS;
   std::optional<uint8_t>                  m_War3Version;                 // warcraft 3 version
   std::optional<std::filesystem::path>    m_Warcraft3Path;               // Warcraft 3 path
-  std::filesystem::path                   m_MapCFGPath;                  // map cfg path
   std::filesystem::path                   m_MapPath;                     // map path
+  std::filesystem::path                   m_MapCFGPath;                  // map cfg path
+  std::filesystem::path                   m_MapCachePath;                // map cache path
+  std::filesystem::path                   m_JASSPath;                    // JASS files path
 
   std::filesystem::path                   m_GreetingPath;                // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath

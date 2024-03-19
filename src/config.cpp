@@ -108,13 +108,6 @@ bool CConfig::Read(const filesystem::path& file)
 #else
     Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + string(strerror(errno)));
 #endif
-    if (file.is_absolute()) {
-      // Aura stores all file paths as absolute.
-      // However, it's possible a user has permissions to open() a file at a given relative path,
-      // yet they lack permissions for its equivalent absolute path.
-      // While I figure out a satisfying solution, retry using the relative path.
-      return Read(filesystem::relative(file, filesystem::current_path()));
-    }
     return false;
   }
 
@@ -536,7 +529,7 @@ filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
     SUCCESS(value)
   }
 
-  SUCCESS(filesystem::path(GetExeDirectory() / value).lexically_normal())
+  SUCCESS(filesystem::path(GetHomeDir() / value).lexically_normal())
 }
 
 filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x)
@@ -568,7 +561,7 @@ filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path
     SUCCESS(value)
   }
 
-  value = GetExeDirectory() / value;
+  value = GetHomeDir() / value;
   NormalizeDirectory(value);
   SUCCESS(value)
 }
@@ -739,7 +732,7 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
   if (result.value().is_absolute()) {
     SUCCESS(result)
   }
-  result = (GetExeDirectory() / result.value()).lexically_normal();
+  result = (GetHomeDir() / result.value()).lexically_normal();
   SUCCESS(result)
 }
 
@@ -770,7 +763,7 @@ optional<filesystem::path> CConfig::GetMaybeDirectory(const string &key)
     NormalizeDirectory(result.value());
     SUCCESS(result)
   }
-  result = GetExeDirectory() / result.value();
+  result = GetHomeDir() / result.value();
   NormalizeDirectory(result.value());
   SUCCESS(result)
 }

@@ -380,9 +380,12 @@ void CMap::Load(CConfig* CFG)
     MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
     FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
     ignoreMPQ = (
-      !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED &&
-      CachedModifiedTime.has_value() && FileModifiedTime.has_value() &&
-      FileModifiedTime.value() <= CachedModifiedTime.value()
+      !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
+        !FileModifiedTime.has_value() || (
+          CachedModifiedTime.has_value() && FileModifiedTime.has_value() &&
+          FileModifiedTime.value() <= CachedModifiedTime.value()
+        )
+      )
     );
   }
   if (FileModifiedTime.has_value()) {
@@ -430,14 +433,14 @@ void CMap::Load(CConfig* CFG)
     // calculate map_crc (this is not the CRC) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
 
-    filesystem::path commonPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
+    filesystem::path commonPath = m_Aura->m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
     string CommonJ = FileRead(commonPath, nullptr);
 
     if (CommonJ.empty())
       Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + PathToString(commonPath) + "]");
     else
     {
-      filesystem::path blizzardPath = m_Aura->m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
+      filesystem::path blizzardPath = m_Aura->m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
       string BlizzardJ = FileRead(blizzardPath, nullptr);
 
       if (BlizzardJ.empty())
@@ -914,7 +917,7 @@ void CMap::Load(CConfig* CFG)
 
   if (!m_MapData.empty()) {
     m_MapContentMismatch = MapContentMismatch;
-    if (!GetValidLinkedMap()) {
+    if (HasMismatch()) {
       Print("[CACHE] Map content mismatch: " + ByteArrayToDecString(MapContentMismatch));
     }
   }
