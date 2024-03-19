@@ -310,7 +310,11 @@ void CCLI::QueueActions(CAura* nAura) const
         nAura->UnholdContext(ctx);
       }
     } else {
-      ctx->ErrorReply("Invalid game hosting parameters. Please ensure the provided file is valid. See also: CLI.md");
+      if (searchType == SEARCH_TYPE_ANY) {
+        ctx->ErrorReply("Input does not refer to a valid  map, config, or URL.");
+      } else {
+        ctx->ErrorReply("Input does not refer to a valid " + m_SearchType + " file.");
+      }
       delete gameSetup;
       nAura->UnholdContext(ctx);
     }

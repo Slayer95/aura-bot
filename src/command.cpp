@@ -3982,8 +3982,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       if (!gameSetup->LoadMap()) {
-        delete gameSetup;
         ErrorReply("No map configs found with that name.");
+        delete gameSetup;
         break;
       }
       gameSetup->SetActive();
