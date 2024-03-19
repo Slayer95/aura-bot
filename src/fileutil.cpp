@@ -195,7 +195,7 @@ string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, i
 
   IS.seekg(0, ios::end);
 
-  uint32_t FileLength = static_cast<uint32_t>(IS.tellg();
+  uint32_t FileLength = static_cast<uint32_t>(IS.tellg());
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
@@ -232,7 +232,7 @@ string FileRead(const filesystem::path& file, int* byteSize)
   // get length of file
 
   IS.seekg(0, ios::end);
-  uint32_t FileLength = static_cast<uint32_t>(IS.tellg();
+  uint32_t FileLength = static_cast<uint32_t>(IS.tellg());
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
