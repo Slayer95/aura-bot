@@ -274,9 +274,9 @@ int main(const int argc, char** argv)
     uint8_t cliResult = cliApp.Parse(argc, argv);
     if (cliResult == CLI_EARLY_RETURN) {
       cliApp.RunEarlyOptions();
-      return 0;
+      exitCode = 0;
     } else if (cliResult != CLI_OK) {
-      Print("[AURA] invalid CLI usage");
+      Print("[AURA] invalid CLI usage - please see CLI.md");
       exitCode = 1;
     } else {
       CConfig CFG;
@@ -284,14 +284,16 @@ int main(const int argc, char** argv)
       GetAuraHome(cliApp, homeDir);
       if (LoadConfig(CFG, cliApp, homeDir)) {
         gAura = StartAura(CFG, cliApp);
+        if (!gAura->GetReady()) {
+          exitCode = 1;
+          Print("[AURA] initialization failure - please review your configuration file");
+        }
       } else {
         Print("[AURA] error loading configuration");
         exitCode = 1;
       }
     }
   }
-
-  // check if it's properly configured
 
   if (gAura && gAura->GetReady()) {
     // loop start
@@ -302,8 +304,6 @@ int main(const int argc, char** argv)
     // loop end - shut down
     Print("[AURA] shutting down");
     delete gAura;
-  } else {
-    Print("[AURA] initialization failure");
   }
 
 
