@@ -20,9 +20,9 @@ Assemble:
   # Packages
   - cd $CI_PROJECT_DIR
   - apt-get update && apt-get install -y build-essential curl git libgeoip-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev cmake libbz2-dev
-  - mkdir -p dist/bin-static dist/bin-shared
-  - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "mapcfgs/blizzard.j"
-  - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "mapcfgs/common.j"
+  - mkdir -p jass dist/bin-static dist/bin-shared
+  - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "jass/blizzard.j"
+  - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "jass/common.j"
   # BNCSUtil (dynamic, .so)
   - cd $CI_PROJECT_DIR
   - cd bncsutil/src/bncsutil

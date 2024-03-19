@@ -293,8 +293,7 @@ int main(const int argc, char** argv)
 
   // check if it's properly configured
 
-  if (gAura && gAura->GetReady())
-  {
+  if (gAura && gAura->GetReady()) {
     // loop start
 
     while (!gAura->Update())
@@ -303,6 +302,8 @@ int main(const int argc, char** argv)
     // loop end - shut down
     Print("[AURA] shutting down");
     delete gAura;
+  } else {
+    Print("[AURA] initialization failure");
   }
 
 
