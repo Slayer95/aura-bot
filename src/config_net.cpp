@@ -139,6 +139,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
     Print("[CONFIG] warning - <net.ipv4.public_address.algorithm = api> unsupported in this Aura distribution");
     Print("[CONFIG] warning - <net.ipv4.public_address.algorithm = api> requires compilation without #define DISABLE_CPR");
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG.Accept("net.ipv4.public_address.value");
 #endif
   } else if (ipv4Algorithm == "none") {
     m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
@@ -167,6 +168,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
     Print("[CONFIG] warning - <net.ipv6.public_address.algorithm = api> unsupported in this Aura distribution");
     Print("[CONFIG] warning - <net.ipv6.public_address.algorithm = api> requires compilation without #define DISABLE_CPR");
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
+    CFG.Accept("net.ipv6.public_address.value");
 #endif
   } else if (ipv6Algorithm == "none") {
     m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;

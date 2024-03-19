@@ -252,6 +252,11 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputStandard()
   filesystem::path targetPath = m_SearchTarget.second;
   if (!FileExists(targetPath)) {
     Print("[CLI] File not found: " + PathToString(targetPath));
+    if (!targetPath.is_absolute()) {
+      try {
+        Print("[CLI] (File resolved to: " + PathToString(filesystem::absolute(targetPath)) + ")");
+      } catch (...) {}
+    }
     return make_pair(MATCH_TYPE_NONE, targetPath);
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP) {
