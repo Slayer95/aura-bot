@@ -85,7 +85,7 @@
     #define LITTLEENDIAN 1
     #define BIGENDIAN 0
 #else
-    #error Unable to determine byte order, define BIGENDIAN or LITTLEENDIAN.
+    #define LITTLEENDIAN 1
 #endif
 #elif defined(BIGENDIAN) && (!defined(LITTLEENDIAN))
     #undef BIGENDIAN
