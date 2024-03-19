@@ -284,7 +284,7 @@ int main(const int argc, char** argv)
       GetAuraHome(cliApp, homeDir);
       if (LoadConfig(CFG, cliApp, homeDir)) {
         gAura = StartAura(CFG, cliApp);
-        if (!gAura->GetReady()) {
+        if (!gAura || !gAura->GetReady()) {
           exitCode = 1;
           Print("[AURA] initialization failure - please review your configuration file");
         }

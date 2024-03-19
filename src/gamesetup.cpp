@@ -187,7 +187,6 @@ void CGameSetup::ParseInput()
     return;
   }
   const filesystem::path searchPath = filesystem::path(m_SearchRawTarget);
-  const bool isFileName = searchPath == searchPath.filename();
   if (m_SearchType != SEARCH_TYPE_ANY) {
     ParseInputLocal();
     return;
@@ -596,9 +595,9 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
 uint8_t CGameSetup::ResolveRemoteMap()
 {
   string downloadUri, downloadFileName;
+#ifndef DISABLE_CPR
   uint64_t SearchTargetType = HashCode(m_SearchTarget.first);
 
-#ifndef DISABLE_CPR
   switch (SearchTargetType) {
     case HashCode("epicwar"): {
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;

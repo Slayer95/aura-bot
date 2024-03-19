@@ -72,14 +72,28 @@ Assemble:
   - chmod +x *.so
   - chmod +x *.so.*
   - export LD_LIBRARY_PATH=$PWD
-  ## test setting AURA_HOME
+  ## test setting AURA_HOME (expect OK)
   - export AURA_HOME=$CI_PROJECT_DIR
   - ./aura --verbose --no-bnet --w3version=27 --exit
-  ## test running without a config file
+  ## test --config (expect OK)
+  - ./aura --verbose --no-bnet --w3version=27 --config=config-example.ini --exit
+  ## test --config --stdpaths (expect FAIL)
+  - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit
+  ## test --config --stdpaths matching home dir (expect OK)
+  - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=../../config-example.ini --exit
+  ## test running without a config file (expect FAIL)
   - export AURA_HOME=$PWD
   - ./aura --verbose --no-bnet --w3version=27 --exit
-  ## test hosting games
+  ## test running with misplaced config file (expect FAIL)
+  - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit
+  ## test hosting games (stdpaths, expect FAIL)
   - ./aura --verbose --stdpaths --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "wormwar.cfg"
+  ## test hosting games (file, expect OK)
+  - ./aura --verbose --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "wormwar.cfg"
+  ## test hosting games (relative, expect OK)
+  - ./aura --verbose --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "../../wormwar.cfg"
+  ## test hosting games (relative, expect OK)
+  - ./aura --verbose --stdpaths --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "../../wormwar.cfg"
   - unset AURA_HOME
   - unset LD_LIBRARY_PATH
   ######################
