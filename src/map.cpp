@@ -350,6 +350,8 @@ void CMap::Load(CConfig* CFG)
   m_MapData.clear();
 
   bool IsPartial = CFG->GetBool("cfg_partial", false);
+  bool ignoreMPQ = m_MapLocalPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
+
   int RawMapSize = 0;
   if (IsPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapLocalPath.empty()) {
@@ -365,13 +367,15 @@ void CMap::Load(CConfig* CFG)
       m_MapData.clear();
       return;
     }
+    if (RawMapSize == 0) {
+      ignoreMPQ = true;
+    }
   }
 
   optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map_localmtime");
   optional<int64_t> FileModifiedTime;
   filesystem::path MapMPQFilePath;
 
-  bool ignoreMPQ = m_MapLocalPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
   if (!ignoreMPQ) {
     MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
     FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
