@@ -722,12 +722,13 @@ void CCommandContext::Run(const string& command, const string& payload)
           break;
         }
         try {
-          KickPing = stoul(Payload);
+          int64_t Value = stoul(Payload);
+          if (Value <= 0 || 0xFFFFFFFF < Value) {
+            ErrorReply("Invalid maximum ping [" + Payload + "].");
+            break;
+          }
+          KickPing = Value;
         } catch (...) {
-          ErrorReply("Invalid maximum ping [" + Payload + "].");
-          break;
-        }
-        if (KickPing <= 0) {
           ErrorReply("Invalid maximum ping [" + Payload + "].");
           break;
         }
