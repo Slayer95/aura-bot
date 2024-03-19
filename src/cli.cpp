@@ -43,7 +43,6 @@ CCLI::CCLI()
  : m_UseStandardPaths(false),
    m_EarlyAction(0),
    m_Verbose(false),
-   m_SearchType("any"),
    m_ExecAuth("verified"),
    m_ExecScope("none")
 {
@@ -268,11 +267,17 @@ void CCLI::QueueActions(CAura* nAura) const
     if (m_RandomHeroes.has_value()) options.m_RandomHeroes = m_RandomHeroes.value();
 
     uint8_t searchType;
-    if (m_SearchType == "map") {
-      searchType = SEARCH_TYPE_ONLY_MAP;
-    } else if (m_SearchType == "config") {
-      searchType = SEARCH_TYPE_ONLY_CONFIG;
-    } else if (m_SearchType == "local") {
+    if (m_SearchType.has_value()) {
+      if (m_SearchType.value() == "map") {
+        searchType = SEARCH_TYPE_ONLY_MAP;
+      } else if (m_SearchType.value() == "config") {
+        searchType = SEARCH_TYPE_ONLY_CONFIG;
+      } else if (m_SearchType.value() == "local") {
+        searchType = SEARCH_TYPE_ONLY_FILE;
+      } else {
+        searchType = SEARCH_TYPE_ANY;
+      }
+    } else if (m_UseStandardPaths) {
       searchType = SEARCH_TYPE_ONLY_FILE;
     } else {
       searchType = SEARCH_TYPE_ANY;
@@ -311,9 +316,13 @@ void CCLI::QueueActions(CAura* nAura) const
       }
     } else {
       if (searchType == SEARCH_TYPE_ANY) {
-        ctx->ErrorReply("Input does not refer to a valid  map, config, or URL.");
-      } else {
-        ctx->ErrorReply("Input does not refer to a valid " + m_SearchType + " file.");
+        ctx->ErrorReply("Input does not refer to a valid map, config, or URL.");
+      } else if (searchType == SEARCH_TYPE_ONLY_FILE) {
+        ctx->ErrorReply("Input does not refer to a valid file");
+      } else if (searchType == SEARCH_TYPE_ONLY_MAP) {
+        ctx->ErrorReply("Input does not refer to a valid map (.w3x, .w3m)");
+      } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
+        ctx->ErrorReply("Input does not refer to a valid map config file (.cfg)");
       }
       delete gameSetup;
       nAura->UnholdContext(ctx);

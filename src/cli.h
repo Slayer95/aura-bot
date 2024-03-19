@@ -78,7 +78,7 @@ private:
   std::optional<std::string>            m_GameName;
   std::optional<bool>                   m_RandomRaces;
   std::optional<bool>                   m_RandomHeroes;
-  std::string                           m_SearchType; // Validation?
+  std::optional<std::string>            m_SearchType; // Validation?
   std::optional<std::string>            m_Observers; // Validation?
   std::optional<std::string>            m_Visibility; // Validation?
   std::optional<std::string>            m_Owner;

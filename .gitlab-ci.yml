@@ -72,27 +72,46 @@ Assemble:
   - chmod +x *.so
   - chmod +x *.so.*
   - export LD_LIBRARY_PATH=$PWD
-  ## test setting AURA_HOME (expect OK)
+  ## test setting AURA_HOME
+  ### expects [AURA] copying config-example.cfg to config.ini...
+  ### exit 1: no inputs connected
+  ###          initialization failure - please review your configuration file
   - export AURA_HOME=$CI_PROJECT_DIR
-  - ./aura --verbose --no-bnet --w3version=27 --exit
-  ## test --config (expect OK)
-  - ./aura --verbose --no-bnet --w3version=27 --config=config-example.ini --exit
+  - ! ./aura --verbose --no-bnet --w3version=27 --exit
+  ## test --config
+  ### expects directly reads reads config-example.ini
+  ### exits 1: no inputs connected.
+  ###          initialization failure - please review your configuration file
+  - ! ./aura --verbose --no-bnet --w3version=27 --config=config-example.ini --exit
   ## test --config --stdpaths (expect FAIL)
-  - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit
-  ## test --config --stdpaths matching home dir (expect OK)
-  - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=../../config-example.ini --exit
-  ## test running without a config file (expect FAIL)
+  ### exits 1: error - config file is not located within home dir [...]
+  ###          initialization failure - please review your configuration file
+  - ! ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit
+  ## test --config --stdpaths matching home dir
+  ### exits 1: no inputs connected.
+  ###          initialization failure - please review your configuration file
+  - ! ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=../../config-example.ini --exit
+  ## test running without a config file
+  ### exits 1: no inputs connected.
+  ###          initialization failure - please review your configuration file
   - export AURA_HOME=$PWD
-  - ./aura --verbose --no-bnet --w3version=27 --exit
-  ## test running with misplaced config file (expect FAIL)
-  - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit
-  ## test hosting games (stdpaths, expect FAIL)
+  - ! ./aura --verbose --no-bnet --w3version=27 --exit
+  ## test running with misplaced config file
+  ### exits 1: error - config file is not located within home dir [...]
+  ###          initialization failure - please review your configuration file
+  - ! ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit
+  ## test hosting games (stdpaths, does not exist)
+  ### exits 0: Input does not refer to a valid file
+  ###          shutting down
   - ./aura --verbose --stdpaths --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "wormwar.cfg"
   ## test hosting games (file, expect OK)
+  ## exits 0: lobby time limit exceeded
   - ./aura --verbose --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "wormwar.cfg"
   ## test hosting games (relative, expect OK)
+  ## exits 0: lobby time limit exceeded
   - ./aura --verbose --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "../../wormwar.cfg"
   ## test hosting games (relative, expect OK)
+  ## exits 0: lobby time limit exceeded
   - ./aura --verbose --stdpaths --homedir=$CI_PROJECT_DIR --no-bnet --w3version=27 --auto-port-forward --check-joinable --timeout=1 "../../wormwar.cfg"
   - unset AURA_HOME
   - unset LD_LIBRARY_PATH
