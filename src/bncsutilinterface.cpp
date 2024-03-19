@@ -171,6 +171,10 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
     return true;
   }
 
+  if (war3Path.empty()) {
+    return false;
+  }
+
   const filesystem::path FileWar3EXE = [&]() {
     if (war3Version >= 28)
       return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe");

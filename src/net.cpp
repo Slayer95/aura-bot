@@ -627,11 +627,11 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
   freeUPNPDevlist(devlist);
 
   if (success == 0) {
-    Print("[UPnP] Universal Plug and Play is not supported by the host router.");
+    Print("[UPNP] Universal Plug and Play is not supported by the host router.");
   } else if (0 != (success & 1)) {
-    Print("[UPnP] forwarding " + protocol + " external port " + extPort + " to internal port " + intPort + " OK.");
+    Print("[UPNP] forwarding " + protocol + " external port " + extPort + " to internal port " + intPort + " OK.");
   } else {
-    Print("[UPnP] warning - multi-layer NAT detected, port-forwarding may fail.");
+    Print("[UPNP] warning - multi-layer NAT detected, port-forwarding may fail.");
   }
 
   return success;

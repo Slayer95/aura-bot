@@ -372,14 +372,16 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI, filesystem::path& nHomeDir)
     LoadBNETs(CFG, definedRealms);
   }
 
-  // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
-  // these two files are necessary for calculating "map_crc" when loading maps so we make sure they are available
-  // see CMap :: Load for more information
-  m_ScriptsExtracted = ExtractScripts() == 2;
-  if (!m_ScriptsExtracted) {
-    if (!CopyScripts()) {
-      m_Ready = false;
-      return;
+  if (m_Config->m_ExtractJASS) {
+    // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
+    // these two files are necessary for calculating "map_crc" when loading maps so we make sure they are available
+    // see CMap :: Load for more information
+    m_ScriptsExtracted = ExtractScripts() == 2;
+    if (!m_ScriptsExtracted) {
+      if (!CopyScripts()) {
+        m_Ready = false;
+        return;
+      }
     }
   }
 
@@ -906,12 +908,16 @@ bool CAura::ReloadConfigs()
   if (m_GameVersion != WasVersion) {
     Print("[AURA] Running game version 1." + to_string(m_GameVersion));
   }
-  if (!m_ScriptsExtracted || m_GameVersion != WasVersion) {
-    m_ScriptsExtracted = ExtractScripts() == 2;
-    if (!m_ScriptsExtracted) {
-      CopyScripts();
+
+  if (m_Config->m_ExtractJASS) {
+    if (!m_ScriptsExtracted || m_GameVersion != WasVersion) {
+      m_ScriptsExtracted = ExtractScripts() == 2;
+      if (!m_ScriptsExtracted) {
+        CopyScripts();
+      }
     }
   }
+
   if (WasCFGPath != m_Config->m_MapCFGPath) {
     CacheMapPresets();
   }
