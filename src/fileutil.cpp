@@ -79,7 +79,8 @@ using namespace std;
 
 bool FileExists(const filesystem::path& file)
 {
-  return filesystem::exists(file);
+  error_code ec;
+  return filesystem::exists(file, ec);
 }
 
 #ifdef _WIN32
@@ -214,7 +215,7 @@ string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, i
 
   auto Buffer = new char[length];
   IS.read(Buffer, length);
-  string BufferString = string(Buffer, IS.gcount());
+  string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;
   return BufferString;
@@ -247,7 +248,7 @@ string FileRead(const filesystem::path& file, int* byteSize)
 
   auto Buffer = new char[FileLength];
   IS.read(Buffer, FileLength);
-  string BufferString = string(Buffer, IS.gcount());
+  string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;
 

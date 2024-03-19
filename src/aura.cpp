@@ -286,7 +286,7 @@ int main(const int argc, char** argv)
         gAura = StartAura(CFG, cliApp);
         if (!gAura || !gAura->GetReady()) {
           exitCode = 1;
-          Print("[AURA] initialization failure - please review your configuration file");
+          Print("[AURA] initialization failure");
         }
       } else {
         Print("[AURA] error loading configuration");
@@ -449,7 +449,10 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     }
   }
 
-  nCLI.QueueActions(this);
+  if (!nCLI.QueueActions(this)) {
+    m_Ready = false;
+    return;
+  }
 
   vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
@@ -521,7 +524,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
   }
 
   m_RealmsByHostCounter.clear();
-  uint8_t i = m_Realms.size();
+  uint8_t i = static_cast<uint8_t>(m_Realms.size());
   while (i--) {
     string inputID = m_Realms[i]->GetInputID();
     if (uniqueInputIds.find(inputID) == uniqueInputIds.end()) {

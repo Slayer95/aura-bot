@@ -331,7 +331,7 @@ uint32_t CConfig::GetUint32(const string& key, uint32_t x)
     CONFIG_ERROR(key, x)
   }
 
-  SUCCESS(Value)
+  SUCCESS(static_cast<uint32_t>(Value))
 }
 
 uint16_t CConfig::GetUint16(const string& key, uint16_t x)

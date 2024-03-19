@@ -106,7 +106,7 @@ public:
   uint8_t Parse(const int argc, char** argv);
   void RunEarlyOptions() const;
   void OverrideConfig(CAura* nAura) const;
-  void QueueActions(CAura* nAura) const;
+  bool QueueActions(CAura* nAura) const;
 };
 
 #endif // AURA_CLI_H_

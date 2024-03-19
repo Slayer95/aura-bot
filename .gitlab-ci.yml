@@ -79,26 +79,27 @@ Assemble:
   - export AURA_HOME=$CI_PROJECT_DIR
   - ./aura --verbose --no-bnet --w3version=27 --exit || echo $?
   ## test --config
-  ### expects directly reads reads config-example.ini
+  ### expects directly reads config-example.ini
   ### exits 1: no inputs connected.
   ###          initialization failure - please review your configuration file
   - ./aura --verbose --no-bnet --w3version=27 --config=config-example.ini --exit || echo $?
-  ## test --config --stdpaths (expect FAIL)
-  ### exits 1: error - config file is not located within home dir [...]
-  ###          initialization failure - please review your configuration file
+  ## test --config --stdpaths
+  ### exits 1: required config file not found [config-example.ini]
+  ###          error loading configuration
   - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit || echo $?
   ## test --config --stdpaths matching home dir
-  ### exits 1: no inputs connected.
+  ### exits 1: using $AURA_HOME=/builds/USER/aura-bot/
+  ###          no inputs connected
   ###          initialization failure - please review your configuration file
   - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=../../config-example.ini --exit || echo $?
-  ## test running without a config file
-  ### exits 1: no inputs connected.
-  ###          initialization failure - please review your configuration file
   - export AURA_HOME=$PWD
-  - ./aura --verbose --no-bnet --w3version=27 --exit || echo $?
-  ## test running with misplaced config file
-  ### exits 1: error - config file is not located within home dir [...]
+  ## test running without config file
+  ### exits 1: config.ini, config-example.ini not found within home dir
   ###          initialization failure - please review your configuration file
+  - ./aura --verbose --no-bnet --w3version=27 --exit || echo $?
+  ## test running without config file
+  ### exits 1: required config file not found [config-example.ini]
+  ###          error loading configuration
   - ./aura --verbose --stdpaths --no-bnet --w3version=27 --config=config-example.ini --exit || echo $?
   ## test hosting games (stdpaths, does not exist)
   ### exits 0: Input does not refer to a valid file

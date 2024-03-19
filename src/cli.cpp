@@ -243,7 +243,7 @@ void CCLI::OverrideConfig(CAura* nAura) const
   }
 }
 
-void CCLI::QueueActions(CAura* nAura) const
+bool CCLI::QueueActions(CAura* nAura) const
 {
   for (const auto& port : m_PortForwardTCP) {
     vector<string> action{
@@ -299,7 +299,7 @@ void CCLI::QueueActions(CAura* nAura) const
             Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
             nAura->UnholdContext(ctx);
             delete gameSetup;
-            return;
+            return false;
           }
         }
         gameSetup->SetName(m_GameName.value_or("Join and play"));
@@ -313,6 +313,7 @@ void CCLI::QueueActions(CAura* nAura) const
         ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
         delete gameSetup;
         nAura->UnholdContext(ctx);
+        return false;
       }
     } else {
       if (searchType == SEARCH_TYPE_ANY) {
@@ -326,6 +327,7 @@ void CCLI::QueueActions(CAura* nAura) const
       }
       delete gameSetup;
       nAura->UnholdContext(ctx);
+      return false;
     }
   }
 
@@ -335,4 +337,6 @@ void CCLI::QueueActions(CAura* nAura) const
     };
     nAura->m_PendingActions.push(action);
   }
+
+  return true;
 }
