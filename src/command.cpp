@@ -727,7 +727,7 @@ void CCommandContext::Run(const string& command, const string& payload)
             ErrorReply("Invalid maximum ping [" + Payload + "].");
             break;
           }
-          KickPing = Value;
+          KickPing = static_cast<uint32_t>(Value);
         } catch (...) {
           ErrorReply("Invalid maximum ping [" + Payload + "].");
           break;
