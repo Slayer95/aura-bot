@@ -59,6 +59,9 @@ using namespace std;
 //
 
 CBNCSUtilInterface::CBNCSUtilInterface(const string& userName, const string& userPassword)
+ : m_DefaultEXEVersion({173, 1, 27, 1}),
+   m_DefaultEXEVersionHash({72, 160, 171, 170}),
+   m_DefaultEXEInfo("war3.exe 15/03/16 00:00:00 515048")
 {
   m_NLS = new NLS(userName, userPassword);
 }
@@ -144,8 +147,30 @@ optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
   return version;
 }
 
-bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const string& keyROC, const string& keyTFT, const string& valueStringFormula, const string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version)
+bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version)
 {
+  m_KeyInfoROC     = CreateKeyInfo(realmConfig->m_CDKeyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
+  m_KeyInfoTFT     = CreateKeyInfo(realmConfig->m_CDKeyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
+
+  if (m_KeyInfoROC.size() != 36)
+    Print("[BNCSUI] unable to create ROC key info - invalid ROC key");
+
+  if (m_KeyInfoTFT.size() != 36)
+    Print("[BNCSUI] unable to create TFT key info - invalid TFT key");
+
+  if (realmConfig->m_AuthSkipVersionCheck) {
+    if (realmConfig->m_AuthExeVersion.has_value()) {
+      SetEXEVersion(realmConfig->m_AuthExeVersion.value());
+    }
+    if (realmConfig->m_AuthExeVersionHash.has_value()) {
+      SetEXEVersionHash(realmConfig->m_AuthExeVersionHash.value());
+    }
+    if (!realmConfig->m_AuthExeInfo.empty()) {
+      SetEXEInfo(realmConfig->m_AuthExeInfo);
+    }
+    return true;
+  }
+
   const filesystem::path FileWar3EXE = [&]() {
     if (war3Version >= 28)
       return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe");
@@ -154,15 +179,6 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   }();
   const filesystem::path FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll");
   const filesystem::path FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll");
-
-  m_KeyInfoROC     = CreateKeyInfo(keyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
-  m_KeyInfoTFT     = CreateKeyInfo(keyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
-
-  if (m_KeyInfoROC.size() != 36)
-    Print("[BNCSUI] unable to create ROC key info - invalid ROC key");
-
-  if (m_KeyInfoTFT.size() != 36)
-    Print("[BNCSUI] unable to create TFT key info - invalid TFT key");
 
   if (!FileWar3EXE.empty() && (war3Version >= 29 || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {

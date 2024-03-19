@@ -133,6 +133,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
     Print("[HINT] both alternatives auto-initialize \"config.ini\" from \"config-example.ini\" in the same folder");
     return false;
   }
+  // TODO: Make sure <bot.home_path.allow_mismatch> is documented.
   const bool homePathMatchRequired = CFG.GetBool("bot.home_path.allow_mismatch", false);
   if (isCustomConfigFile && filesystem::absolute(configPath.parent_path()) != filesystem::absolute(homeDir.parent_path())) {
     if (homePathMatchRequired) {
@@ -971,7 +972,7 @@ void CAura::OnLoadConfigs()
 {
   if (m_Config->m_War3Version.has_value()) {
     m_GameVersion = m_Config->m_War3Version.value();
-  } else if (m_GameVersion == 0) {
+  } else if (m_GameVersion == 0 && !m_GameInstallPath.empty()) {
     optional<uint8_t> AutoVersion = CBNCSUtilInterface::GetGameVersion(m_GameInstallPath);
     if (AutoVersion.has_value()) {
       m_GameVersion = AutoVersion.value();

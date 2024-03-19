@@ -47,6 +47,7 @@
 #define AURA_BNCSUTILINTERFACE_H_
 
 #include "fileutil.h"
+#include "config_realm.h"
 
 #include <cstdint>
 #include <vector>
@@ -61,28 +62,37 @@ class CBNCSUtilInterface
 {
 private:
   void*                m_NLS;
-  std::vector<uint8_t> m_EXEVersion;        // set in HELP_SID_AUTH_CHECK
-  std::vector<uint8_t> m_EXEVersionHash;    // set in HELP_SID_AUTH_CHECK
   std::vector<uint8_t> m_KeyInfoROC;        // set in HELP_SID_AUTH_CHECK
   std::vector<uint8_t> m_KeyInfoTFT;        // set in HELP_SID_AUTH_CHECK
   std::vector<uint8_t> m_ClientKey;         // set in HELP_SID_AUTH_ACCOUNTLOGON
   std::vector<uint8_t> m_M1;                // set in HELP_SID_AUTH_ACCOUNTLOGONPROOF
   std::vector<uint8_t> m_PvPGNPasswordHash; // set in HELP_PvPGNPasswordHash
+  std::vector<uint8_t> m_EXEVersion;        // set in HELP_SID_AUTH_CHECK
+  std::vector<uint8_t> m_EXEVersionHash;    // set in HELP_SID_AUTH_CHECK
   std::string          m_EXEInfo;           // set in HELP_SID_AUTH_CHECK
+  std::vector<uint8_t> m_DefaultEXEVersion;        // set in HELP_SID_AUTH_CHECK
+  std::vector<uint8_t> m_DefaultEXEVersionHash;    // set in HELP_SID_AUTH_CHECK
+  std::string          m_DefaultEXEInfo;           // set in HELP_SID_AUTH_CHECK
 
 public:
   CBNCSUtilInterface(const std::string& userName, const std::string& userPassword);
   ~CBNCSUtilInterface();
   CBNCSUtilInterface(CBNCSUtilInterface&) = delete;
 
-  inline std::vector<uint8_t> GetEXEVersion() const { return m_EXEVersion; }
-  inline std::vector<uint8_t> GetEXEVersionHash() const { return m_EXEVersionHash; }
-  inline std::string          GetEXEInfo() const { return m_EXEInfo; }
-  inline std::vector<uint8_t> GetKeyInfoROC() const { return m_KeyInfoROC; }
-  inline std::vector<uint8_t> GetKeyInfoTFT() const { return m_KeyInfoTFT; }
-  inline std::vector<uint8_t> GetClientKey() const { return m_ClientKey; }
-  inline std::vector<uint8_t> GetM1() const { return m_M1; }
-  inline std::vector<uint8_t> GetPvPGNPasswordHash() const { return m_PvPGNPasswordHash; }
+  inline const std::vector<uint8_t>& GetEXEVersion() const { return m_EXEVersion; }
+  inline const std::vector<uint8_t>& GetEXEVersionHash() const { return m_EXEVersionHash; }
+  inline const std::string&          GetEXEInfo() const { return m_EXEInfo; }
+  inline const std::vector<uint8_t>& GetDefaultEXEVersion() const { return m_DefaultEXEVersion; }
+  inline const std::vector<uint8_t>& GetDefaultEXEVersionHash() const { return m_DefaultEXEVersionHash; }
+  inline const std::string&          GetDefaultEXEInfo() const { return m_DefaultEXEInfo; }
+  inline const std::vector<uint8_t>& GetKeyInfoROC() const { return m_KeyInfoROC; }
+  inline const std::vector<uint8_t>& GetKeyInfoTFT() const { return m_KeyInfoTFT; }
+  inline const std::vector<uint8_t>& GetClientKey() const { return m_ClientKey; }
+  inline const std::vector<uint8_t>& GetM1() const { return m_M1; }
+  inline const std::vector<uint8_t>& GetPvPGNPasswordHash() const { return m_PvPGNPasswordHash; }
+  inline bool                  CheckValidEXEVersion() const { return m_EXEVersion.size() == 4; }
+  inline bool                  CheckValidEXEVersionHash() const { return m_EXEVersionHash.size() == 4; }
+  inline bool                  CheckValidEXEInfo() const { return !m_EXEInfo.empty(); }
 
   inline void SetEXEVersion(const std::vector<uint8_t>& nEXEVersion) { m_EXEVersion = nEXEVersion; }
   inline void SetEXEVersionHash(const std::vector<uint8_t>& nEXEVersionHash) { m_EXEVersionHash = nEXEVersionHash; }
@@ -90,7 +100,7 @@ public:
 
   void Reset(const std::string& userName, const std::string& userPassword);
 
-  bool HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const std::string& keyROC, const std::string& keyTFT, const std::string& valueStringFormula, const std::string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version);
+  bool HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const CRealmConfig* realmConfig, const std::string& valueStringFormula, const std::string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version);
   bool HELP_SID_AUTH_ACCOUNTLOGON();
   bool HELP_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& salt, const std::vector<uint8_t>& serverKey);
   bool HELP_PvPGNPasswordHash(const std::string& userPassword);

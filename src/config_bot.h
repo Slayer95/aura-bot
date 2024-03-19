@@ -42,6 +42,7 @@ class CBotConfig
 public:
 
   bool                                    m_Enabled;                     // set to false to prevent new games from being created
+  bool                                    m_ExtractJASS;
   std::optional<uint8_t>                  m_War3Version;                 // warcraft 3 version
   std::optional<std::filesystem::path>    m_Warcraft3Path;               // Warcraft 3 path
   std::filesystem::path                   m_MapCFGPath;                  // map cfg path
