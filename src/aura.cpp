@@ -266,6 +266,10 @@ int main(const int argc, char** argv)
   SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 #endif
 
+  if (htons(0xe017) == 0xe017) {
+    Print("[AURA] warning - big endian system support is experimental");
+  }
+
   // initialize aura
 
   {
@@ -1113,7 +1117,7 @@ void CAura::OnLoadConfigs()
 {
   if (m_Config->m_War3Version.has_value()) {
     m_GameVersion = m_Config->m_War3Version.value();
-  } else if (m_GameVersion == 0 && !m_GameInstallPath.empty()) {
+  } else if (m_GameVersion == 0 && !m_GameInstallPath.empty() && htons(0xe017) == 0x17e0) {
     optional<uint8_t> AutoVersion = CBNCSUtilInterface::GetGameVersion(m_GameInstallPath);
     if (AutoVersion.has_value()) {
       m_GameVersion = AutoVersion.value();

@@ -27,9 +27,6 @@
 #ifndef MUTIL_H
 #define MUTIL_H
 
-#define LITTLEENDIAN 1
-
-
 #ifdef HAVE_CONFIG_H
   #include <config.h>
 #endif
