@@ -989,6 +989,10 @@ void CAura::OnLoadConfigs()
 
 uint8_t CAura::ExtractScripts()
 {
+  if (m_GameInstallPath.empty()) {
+    return 0;
+  }
+
   uint8_t FilesExtracted = 0;
   const filesystem::path MPQFilePath = [&]() {
     if (m_GameVersion >= 28)
