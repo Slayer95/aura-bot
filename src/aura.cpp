@@ -110,6 +110,7 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     NormalizeDirectory(homeDir);
     return;
   }
+
   homeDir = GetExeDirectory();
 }
 
@@ -129,10 +130,12 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
   const bool isCustomConfigFile = cliApp.m_CFGPath.has_value();
   const bool isDirectSuccess = CFG.Read(configPath);
   if (!isDirectSuccess && isCustomConfigFile) {
+    filesystem::path cwd = filesystem::current_path();
+    NormalizeDirectory(cwd);
     Print("[AURA] required config file not found [" + PathToString(configPath) + "]");
-    if (!cliApp.m_UseStandardPaths && configPath.parent_path() == homeDir.parent_path()) {
+    if (!cliApp.m_UseStandardPaths && configPath.parent_path() == homeDir.parent_path() && homeDir.parent_path() != cwd.parent_path()) {
       Print("[HINT] --config was resolved relative to [" + PathToString(homeDir) + "]");
-      Print("[HINT] use --stdpaths to read [" + PathToString(filesystem::current_path() / configPath.filename()) + "]");
+      Print("[HINT] use --stdpaths to read [" + PathToString(cwd / configPath.filename()) + "]");
     }
 #ifdef _WIN32
     Print("[HINT] using --config=<FILE> is not recommended, prefer --homedir=<DIR>, or setting %AURA_HOME% instead");
@@ -1177,11 +1180,15 @@ void CAura::CacheMapPresets()
     string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map_localpath");
     filesystem::path localPath = localPathString;
     localPath = localPath.lexically_normal();
-    if (localPath == localPath.filename() || filesystem::absolute(localPath.parent_path()) == filesystem::absolute(m_Config->m_MapPath.parent_path())) {
-      string mapString = PathToString(localPath.filename());
-      string cfgString = PathToString(cfgName);
-      if (mapString.empty() || cfgString.empty()) continue;
-      m_CachedMaps[mapString] = cfgString;
+    try {
+      if (localPath == localPath.filename() || filesystem::absolute(localPath.parent_path()) == filesystem::absolute(m_Config->m_MapPath.parent_path())) {
+        string mapString = PathToString(localPath.filename());
+        string cfgString = PathToString(cfgName);
+        if (mapString.empty() || cfgString.empty()) continue;
+        m_CachedMaps[mapString] = cfgString;
+      }
+    } catch (...) {
+      // filesystem::absolute may throw errors
     }
   }
 }

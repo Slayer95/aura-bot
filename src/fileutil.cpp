@@ -324,7 +324,29 @@ filesystem::path GetExeDirectory()
   buffer.resize(length);
 
   filesystem::path executablePath(buffer.data());
-  Memoized = executablePath.parent_path();
+  filesystem::path cwd = filesystem::current_path();
+  if (!cwd.empty()) {
+    NormalizeDirectory(cwd);
+    cwd = cwd.parent_path();
+  }
+  bool cwdIsAncestor = cwd.empty();
+  if (!cwdIsAncestor) {
+    filesystem::path exeAncestor = executablePath;
+    while (!exeAncestor.empty()) {
+      exeAncestor = exeAncestor.parent_path();
+      if (exeAncestor == cwd) {
+        cwdIsAncestor = true;
+        break;
+      }
+    }
+  }
+
+  if (cwdIsAncestor) {
+    Memoized = executablePath.parent_path().lexically_relative(cwd);
+  } else {
+    Memoized = executablePath.parent_path();
+  }
+
   NormalizeDirectory(Memoized);
   return Memoized;
 }
