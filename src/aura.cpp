@@ -98,8 +98,12 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     homeDir = cliApp.m_HomePath.value();
     return;
   }
-  {
-    // TODO: Try reading $AURA_HOME
+  const char* envValue = getenv("AURA_HOME");
+  if (envValue != nullptr) {
+    string homeDirString = envValue;
+    homeDir = filesystem::path(homeDirString);
+    NormalizeDirectory(homeDir);
+    return;
   }
   if (cliApp.m_CFGPath.has_value()) {
     homeDir = cliApp.m_CFGPath.value().parent_path();
@@ -956,20 +960,42 @@ bool CAura::LoadConfigs(CConfig& CFG)
 
   if (m_Config->m_Warcraft3Path.has_value()) {
     m_GameInstallPath = m_Config->m_Warcraft3Path.value();
-  } else {
+  } else if (m_GameInstallPath.empty()) {
+    const char* envValue = getenv("WAR3_HOME");
+    if (envValue != nullptr) {
+      string war3Path = envValue;
+      m_GameInstallPath = filesystem::path(war3Path);
+    } else {
 #ifdef _WIN32
-    if (m_GameInstallPath.empty()) {
       optional<filesystem::path> maybeInstallPath = MaybeReadPathFromRegistry(L"InstallPath");
       if (maybeInstallPath.has_value()) {
         m_GameInstallPath = maybeInstallPath.value();
-        NormalizeDirectory(m_GameInstallPath);
-        Print("[AURA] Using <game.install_path = " + PathToString(m_GameInstallPath) + ">");
-      } else {
-        // Make sure this error message can be looked up.
-        Print("[AURA] Registry error loading key 'Warcraft III\\InstallPath'");
+      }
+      vector<wchar_t*> tryPaths = {
+        L"C:\\Program Files (x86)\\Warcraft III\\",
+        L"C:\\Program Files\\Warcraft III\\",
+        L"C:\\Games\\Warcraft III\\",
+        L"C:\\Warcraft III\\",
+        L"D:\\Games\\Warcraft III\\",
+        L"D:\\Warcraft III\\"
+      };
+      for (const auto& opt : tryPaths) {
+        filesystem::path testPath = opt;
+        if (filesystem::is_directory(testPath)) {
+          m_GameInstallPath = testPath;
+        }
       }
     }
 #endif
+    if (m_GameInstallPath.empty()) {
+#ifdef _WIN32
+      // Make sure this error message can be looked up.
+      Print("[AURA] Registry error loading key 'Warcraft III\\InstallPath'");
+#endif
+    } else {
+      NormalizeDirectory(m_GameInstallPath);
+      Print("[AURA] Using <game.install_path = " + PathToString(m_GameInstallPath) + ">");
+    }
   }
   return true;
 }
