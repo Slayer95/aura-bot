@@ -16,11 +16,17 @@ Hosts a game with the given name, using a given map file.
 - `<MAP>`: The name or identifier of the map to be hosted.
 - `<NAME>`: The desired name for the hosted game session.
 
+If ``MAP`` has no slashes, it's resolved relative to Aura's map dir by default.
+When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the current working directory (CWD).
+
 ## `<CONFIG> <NAME>`
 Hosts a game with the given name, using a given map config/metadata file.
 
 - `<CONFIG>`: The configuration settings for the game.
 - `<NAME>`: The desired name for the hosted game session.
+
+If ``CONFIG`` has no slashes, it's resolved relative to Aura's map config dir by default.
+When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the current working directory (CWD).
 
 # Flags
 
@@ -35,6 +41,20 @@ Displays usage information and a list of available flags and parameters.
 ## \`--verbose\`
 
 Displays more detailed information when running CLI actions.
+
+## \`--stdpaths\`
+
+When enabled, this flag instructs the host bot to utilize standard paths for directories and files 
+entered from the CLI. That is, it makes them relative to the current working directory (CWD).
+
+Notably, it also ensures that map and configuration file paths are interpreted exactly as entered, thus 
+disabling fuzzy-matching. However, it's important to note that this flag removes protection against 
+[arbitrary directory traversal][3]. Therefore, it should only be used for paths that have been thoroughly validated.
+
+Additionally, the following CLI flags are affected by ``--stdpaths``:
+- ``--config <FILE>``. When stdpaths is disabled and FILE has no slashes, it resolves relative to Aura's home dir.
+
+This option is commutative.
 
 ## \`--auto-port-forward\`
 
@@ -158,11 +178,31 @@ to obtain and manage these files as you see fit.
 - **Already Extracted**: If you've already extracted the files or prefer a different method, this 
 flag allows you to bypass automatic extraction.
 
-**Important Note**: Even if JASS files are unavailable, you can still host games using map config 
+**Note**: Even if JASS files are unavailable, you can still host games using map config 
 files (``.cfg``). These flags simply determine how files necessary for hosting from map files 
 (``.w3x``, ``.w3m``) are obtained and managed.
 
 # Parameters
+
+## `--homedir <DIRECTORY>`
+
+Specifies the directory to be used as Aura's home directory. Paths in the config file are resolved relative to the home directory.
+
+- This flag takes precedence over any other method of determining the home directory, including environment variables.
+- If `--homedir` is not provided, the environment variable `HOME_DIR` is used to determine the home directory.
+- If neither `--homedir` nor the `HOME_DIR` environment variable are set, the home directory defaults to the directory where the game host bot executable is located.
+
+## `--config <FILE>`
+
+Specifies the location of Aura's main configuration file.
+
+- If `<FILE>` does not contain any slashes, it is resolved relative to the home directory by default, unless overridden by the `--stdpaths` flag.
+- The presence of any slashes causes `<FILE>` to be resolved relative to the current working directory (CWD).
+- When using `--config`, if the configuration file is not located within the home directory, the bot may only start up if the configuration file includes the entry `bot.home_path.allow_mismatch = yes`.
+
+**Note**: Paths in any configuration file are resolved relative to Aura's home directory.
+
+Defaults to ``config.ini`` in the home dir.
 
 ## \`--w3version <NUMBER>\`
 
@@ -241,18 +281,6 @@ by allowing incoming connections on specific ports.
 - Some routers may require user authentication for UPnP requests.
 
 # Flags for CLI games
-
-## \`--stdpaths\`
-
-When enabled, this flag instructs the host bot to utilize standard paths for directories and files 
-entered from the CLI. Notably, it ensures that map and configuration file paths are interpreted 
-exactly as entered, thus disabling fuzzy-matching. It also makes them relative to the current working 
-directory, instead of the root path of the bot.
-
-However, it's important to note that this flag removes protection against [arbitrary directory traversal][3]. 
-Therefore, it should only be used for paths that have been thoroughly validated.
-
-This option is commutative.
 
 ## \`--check-joinable\`
 
