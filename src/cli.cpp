@@ -61,7 +61,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 
   app.option_defaults()->ignore_case();
 
-  app.add_option("MAPFILE", m_SearchTarget, "Map, config or URI from which to host a game from the CLI. File names resolve from map dir, unless --stdpaths.");
+  app.add_option("MAPFILE", m_SearchTarget, "Map, config or URI from which to host a game from the CLI. File names resolve from maps directory, unless --stdpaths.");
   app.add_option("GAMENAME", m_GameName, "Name assigned to a game hosted from the CLI.");
 
   app.add_flag("--stdpaths", m_UseStandardPaths, "Makes file names always resolve from CWD when input through the CLI. Commutative.");
@@ -77,6 +77,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag("--about,--version", about, "Display software information.");
   app.add_flag("--example,--examples", examples, "Display CLI hosting examples.");
   app.add_flag("--verbose", m_Verbose, "Outputs detailed information when running CLI actions.");
+  app.add_flag("--extract-jass,--no-extract-jass{false}", m_ExtractJASS, "Automatically extract files from the game install directory.");
 
 #ifdef _WIN32
   app.add_option("--homedir", m_HomePath, "Customizes Aura home dir (%AURA_HOME%).");
@@ -85,9 +86,9 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 #endif
   app.add_option("--config", m_CFGPath, "Customizes the main Aura config file. File names resolve from home dir, unless --stdpaths.");
   app.add_option("--w3version", m_War3Version, "Customizes the game version.");
-  app.add_option("--w3dir", m_War3Path, "Customizes the game path.");
-  app.add_option("--mapdir", m_MapPath, "Customizes the maps path.");
-  app.add_option("--cfgdir", m_MapCFGPath, "Customizes the map configs path.");
+  app.add_option("--w3dir", m_War3Path, "Customizes the game install directory.");
+  app.add_option("--mapdir", m_MapPath, "Customizes the maps directory.");
+  app.add_option("--cfgdir", m_MapCFGPath, "Customizes the map configs directory.");
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
   app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
 
@@ -220,6 +221,8 @@ void CCLI::OverrideConfig(CAura* nAura) const
   if (m_MapCFGPath.has_value())
     nAura->m_Config->m_MapCFGPath = m_MapCFGPath.value();
 
+  if (m_ExtractJASS.has_value())
+    nAura->m_Config->m_ExtractJASS = m_ExtractJASS.value();
 
   if (m_ExitOnStandby.has_value()) {
     nAura->m_Config->m_ExitOnStandby = m_ExitOnStandby.value();

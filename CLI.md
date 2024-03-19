@@ -135,6 +135,33 @@ Disables caching of map metadata. When caching is disabled, game data is not sto
 each session may experience longer loading times as a result. This option is enabled by default 
 when hosting games from the CLI.
 
+## `--extract-jass`
+
+When you use this flag, Aura will automatically extract necessary files from your game 
+installation. These files are crucial for hosting games directly from game map files. Aura 
+does all the work for you, making sure everything is set up correctly behind the scenes.
+
+**Why Use `--extract-jass`?**
+- **Convenience**: With this flag, you don't need to worry about manually obtaining files. Aura takes care of it for you.
+- **Saves Time**: No need to spend extra time finding and extracting files yourself.
+- **Ensures Compatibility**: Extracting the necessary files ensures compatibility with a wide range of game versions.
+
+## `--no-extract-jass`
+
+By using this flag, you're indicating that you prefer to handle the extraction of necessary files 
+manually. Although Aura won't do it for you automatically, you still have the flexibility 
+to obtain and manage these files as you see fit.
+
+**Why Use `--no-extract-jass`?**
+- **Manual Control**: Some users prefer to have full control over file management.
+- **Customization**: You might have specific preferences or procedures for obtaining these files.
+- **Already Extracted**: If you've already extracted the files or prefer a different method, this 
+flag allows you to bypass automatic extraction.
+
+**Important Note**: Even if JASS files are unavailable, you can still host games using map config 
+files (``.cfg``). These flags simply determine how files necessary for hosting from map files 
+(``.w3x``, ``.w3m``) are obtained and managed.
+
 # Parameters
 
 ## \`--w3version <NUMBER>\`

@@ -69,6 +69,7 @@ private:
   std::optional<std::filesystem::path>  m_War3Path;
   std::optional<std::filesystem::path>  m_MapPath;
   std::optional<std::filesystem::path>  m_MapCFGPath;
+  std::optional<bool>                   m_ExtractJASS;
 
   // Host flags
   std::optional<std::string>            m_SearchTarget;
