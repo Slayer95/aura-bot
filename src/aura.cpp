@@ -985,8 +985,8 @@ bool CAura::LoadConfigs(CConfig& CFG)
           m_GameInstallPath = testPath;
         }
       }
-    }
 #endif
+    }
     if (m_GameInstallPath.empty()) {
 #ifdef _WIN32
       // Make sure this error message can be looked up.
