@@ -304,7 +304,7 @@ bool CCLI::QueueActions(CAura* nAura) const
         }
         gameSetup->SetName(m_GameName.value_or("Join and play"));
         if (m_GameTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameTimeout.value());
-        if (m_GameCheckJoinable.has_value()) gameSetup->SetCheckJoinable(m_GameCheckJoinable.value());
+        if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
         gameSetup->SetVerbose(m_Verbose);
         gameSetup->SetActive();
         vector<string> hostAction{"host"};

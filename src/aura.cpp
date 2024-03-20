@@ -126,6 +126,7 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     return;
   }
 
+  Print("[DEBUG] Using ExeDirectory");
   homeDir = GetExeDirectory();
 }
 
@@ -292,6 +293,7 @@ int main(const int argc, char** argv)
       CConfig CFG;
       filesystem::path homeDir;
       GetAuraHome(cliApp, homeDir);
+      Print("[DEBUG] Home dir is " + PathToString(homeDir));
       if (LoadConfig(CFG, cliApp, homeDir)) {
         gAura = StartAura(CFG, cliApp);
         if (!gAura || !gAura->GetReady()) {
@@ -1286,7 +1288,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 #endif
 
-  if (m_CurrentLobby->GetCheckIsJoinable() && !m_Net->GetIsFetchingIPAddresses()) {
+  if (m_CurrentLobby->GetIsCheckJoinable() && !m_Net->GetIsFetchingIPAddresses()) {
     uint8_t checkMode = HEALTH_CHECK_ALL;
     if (!m_Net->m_SupportTCPOverIPv6) {
       checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
@@ -1296,7 +1298,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
       checkMode |= HEALTH_CHECK_VERBOSE;
     }
     m_Net->QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
-    m_CurrentLobby->SetCheckIsJoinable(false);
+    m_CurrentLobby->SetIsCheckJoinable(false);
   }
 
   if (m_CurrentLobby->GetUDPEnabled()) {

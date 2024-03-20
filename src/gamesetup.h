@@ -216,7 +216,7 @@ public:
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
   void SetName(const std::string& nName) { m_GameName = nName; }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
-  void SetCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
+  void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
   void SetContext(CCommandContext* nCtx) { m_Ctx = nCtx; }
 };

@@ -324,6 +324,7 @@ filesystem::path GetExeDirectory()
   buffer.resize(length);
 
   filesystem::path executablePath(buffer.data());
+  Print("executable path: " + PathToString(executablePath));
   filesystem::path cwd;
   try {
     cwd = filesystem::current_path();
@@ -332,6 +333,7 @@ filesystem::path GetExeDirectory()
     NormalizeDirectory(cwd);
     cwd = cwd.parent_path();
   }
+  Print("cwd: " + PathToString(cwd));
   bool cwdIsAncestor = cwd.empty();
   if (!cwdIsAncestor) {
     filesystem::path exeAncestor = executablePath;
@@ -344,10 +346,12 @@ filesystem::path GetExeDirectory()
     }
   }
 
-  if (cwdIsAncestor) {
+  if (cwdIsAncestor) {    
     Memoized = executablePath.parent_path().lexically_relative(cwd);
+    Print("cwdIsAncestor: " + PathToString(Memoized));
   } else {
     Memoized = executablePath.parent_path();
+    Print("NOT ancestor: " + PathToString(Memoized));
   }
 
   NormalizeDirectory(Memoized);

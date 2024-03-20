@@ -264,7 +264,7 @@ bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
     m_Socket->Disconnect();
   } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && (Ticks - m_LastConnectionFailure > 900)) {
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
-    m_Timeout = Ticks + GAME_TEST_TIMEOUT;
+    m_Timeout = Ticks + IP_ADDRESS_API_TIMEOUT;
   }
 
   return !m_Result.has_value();
@@ -380,7 +380,6 @@ bool CNet::Init()
   if (m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
   if (m_Config->m_UDPDoNotRouteEnabled) PropagateDoNotRouteEnabled(true);
   SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
-
 
 #ifdef DISABLE_CPR
   QueryIPAddress();
@@ -1019,6 +1018,7 @@ bool CNet::QueryIPAddress()
         delete m_IPv4CacheV.second;
         m_IPv4CacheV = make_pair(string(), nullptr);
       }
+      Print("IPv4 API is " + m_Config->m_PublicIPv4Value);
       optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config->m_PublicIPv4Value);
       if (parsedURL.has_value() && get<0>(parsedURL.value()) == "http:") {
         string hostName = get<1>(parsedURL.value());
@@ -1026,11 +1026,16 @@ bool CNet::QueryIPAddress()
         string path = get<3>(parsedURL.value());
         optional<sockaddr_storage> resolvedAddress = port == 80 ? ResolveHostName(hostName) : ResolveHostName(hostName, port);
         if (resolvedAddress.has_value()) {
+          Print("Starting IP address API connection...");
           SetAddressPort(&(resolvedAddress.value()), port);
           CIPAddressAPIConnection* client = new CIPAddressAPIConnection(m_Aura, resolvedAddress.value(), path, hostName);
           m_IPAddressFetchClients.push_back(client);
           m_IPAddressFetchInProgress = true;
+        } else {
+          Print("Failed to resolve A record");
         }
+      } else {
+        Print("Failed to parse URL");
       }
     }
   }
@@ -1076,7 +1081,7 @@ void CNet::HandleIPAddressFetchDone()
   }
   ResetIPAddressFetch();
 
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetCheckIsJoinable()) {
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsCheckJoinable()) {
     uint8_t checkMode = HEALTH_CHECK_ALL;
     if (!m_SupportTCPOverIPv6) {
       checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
@@ -1088,7 +1093,7 @@ void CNet::HandleIPAddressFetchDone()
     CCommandContext* ctx = new CCommandContext(m_Aura, &cout, '!');
     QueryHealthCheck(ctx, checkMode, nullptr, m_Aura->m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
     m_Aura->UnholdContext(ctx);
-    m_Aura->m_CurrentLobby->SetCheckIsJoinable(false);
+    m_Aura->m_CurrentLobby->SetIsCheckJoinable(false);
   }
 }
 
