@@ -886,7 +886,8 @@ bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage
     return false;
   }
   for (auto& testServer: testServers) {
-    m_HealthCheckClients.emplace_back(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer));
+    CGameTestConnection* client = new CGameTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer));
+    m_HealthCheckClients.push_back(client);
   }
   m_Aura->HoldContext(nCtx);
   m_HealthCheckVerbose = isVerbose;
@@ -1026,12 +1027,10 @@ bool CNet::QueryIPAddress()
         optional<sockaddr_storage> resolvedAddress = port == 80 ? ResolveHostName(hostName) : ResolveHostName(hostName, port);
         if (resolvedAddress.has_value()) {
           SetAddressPort(&(resolvedAddress.value()), port);
-          m_IPAddressFetchClients.emplace_back(m_Aura, resolvedAddress.value(), path, hostName);
+          CIPAddressAPIConnection* client = new CIPAddressAPIConnection(m_Aura, resolvedAddress.value(), path, hostName);
+          m_IPAddressFetchClients.push_back(client);
           m_IPAddressFetchInProgress = true;
         }
-      } else {
-        Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> unsupported in this Aura distribution");
-        Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> requires compilation without #define DISABLE_MINIUPNP");
       }
     }
   }
