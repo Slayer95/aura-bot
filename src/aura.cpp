@@ -106,6 +106,7 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     homeDir = cliApp.m_HomePath.value();
     return;
   }
+/*
 #ifdef _WIN32
   size_t valueSize;
   errno_t err = _wdupenv_s(&auraHome, &valueSize, L"AURA_HOME");
@@ -120,6 +121,7 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     NormalizeDirectory(homeDir);
     return;
   }
+*/
   if (cliApp.m_CFGPath.has_value()) {
     homeDir = cliApp.m_CFGPath.value().parent_path();
     NormalizeDirectory(homeDir);

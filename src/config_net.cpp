@@ -139,8 +139,8 @@ CNetConfig::CNetConfig(CConfig& CFG)
       Print("[CONFIG] warning - <net.ipv4.public_address.value = HTTPS> unsupported in this Aura distribution");
       Print("[CONFIG] warning - <net.ipv4.public_address.value = HTTPS> requires compilation without #define DISABLE_CPR");
       Print("[CONFIG] hint: try <net.ipv4.public_address.value = http:" + m_PublicIPv4Value.substr(5) + "> instead");
+      m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
     }
-    m_PublicIPv4Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
     CFG.Accept("net.ipv4.public_address.value");
 #endif
   } else if (ipv4Algorithm == "none") {
@@ -170,8 +170,8 @@ CNetConfig::CNetConfig(CConfig& CFG)
       Print("[CONFIG] warning - <net.ipv6.public_address.value = HTTPS> unsupported in this Aura distribution");
       Print("[CONFIG] warning - <net.ipv6.public_address.value = HTTPS> requires compilation without #define DISABLE_CPR");
       Print("[CONFIG] hint: try <net.ipv6.public_address.value = http:" + m_PublicIPv6Value.substr(5) + "> instead");
+      m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
     }
-    m_PublicIPv6Algorithm = NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE;
     CFG.Accept("net.ipv6.public_address.value");
 #endif
   } else if (ipv6Algorithm == "none") {
