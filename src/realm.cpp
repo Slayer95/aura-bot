@@ -83,6 +83,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_ServerIndex(nRealmConfig->m_ServerIndex),
     m_InternalServerID(nAura->NextServerID()),
     m_PublicServerID(nRealmConfig->m_ServerIndex + 15),
+    m_LastTellCtx(nullptr),
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
     m_LastGameListTime(0),
@@ -642,9 +643,13 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     m_InChat = true;
     m_CurrentChannel = Message;
   } else if (Event == CBNETProtocol::EID_WHISPERSENT) {
-    //m_Realm->m_LastWhisperTo
-    //m_Realm->m_TellFrom
-    Print("[BNET: " + m_Config->m_UniqueName + "] sent whisper to [" + Message + "]");
+    if (Message == m_LastTell && m_LastTellCtx && !m_LastTellCtx->GetPartiallyDestroyed()) {
+      m_LastTellCtx->SendReply("Message sent to " + m_LastTellTo + ".");
+      m_Aura->UnholdContext(m_LastTellCtx);
+      m_LastTellCtx = nullptr;
+    } else {
+      Print("[BNET: " + m_Config->m_UniqueName + "] ACK whisper [" + Message + "]");
+    }
   } else if (Event == CBNETProtocol::EID_INFO) {
     bool LogInfo = m_HadChatActivity;
 
@@ -686,7 +691,14 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       Print("[INFO: " + m_Config->m_UniqueName + "] " + Message);
     }
   } else if (Event == CBNETProtocol::EID_ERROR) {
-    Print("[NOTICE: " + m_Config->m_UniqueName + "] " + Message);
+    if (Message == "That user is not logged on." && m_LastTellCtx) {
+      m_LastTellCtx->SendReply(m_LastTellTo + " is offline.");
+      m_Aura->UnholdContext(m_LastTellCtx);
+      m_LastTellCtx = nullptr;
+      m_LastTellTo.clear();
+      m_LastTell.clear();
+    }
+    Print("[NOTE: " + m_Config->m_UniqueName + "] " + Message);
   }
 }
 
@@ -860,14 +872,13 @@ void CRealm::SendCommand(const string& message)
   if (message.empty() || !m_LoggedIn)
     return;
 
-  Print("[BNET: " + m_Config->m_UniqueName + "] Queued \"" + message + "\"");
-
   size_t MaxMessageSize = GetPvPGN() ? 200 : 255;
   if (message.length() > MaxMessageSize) {
-    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message.substr(0, MaxMessageSize)));
-  } else {
-    QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message));
+    return;
   }
+
+  Print("[BNET: " + m_Config->m_UniqueName + "] Queued \"" + message + "\"");
+  QueuePacket(m_Protocol->SEND_SID_CHATCOMMAND(message));
 
   m_HadChatActivity = true;
 }
@@ -892,15 +903,29 @@ void CRealm::SendChatChannel(const string& message)
 void CRealm::SendWhisper(const string& message, const string& user)
 {
   SendCommand("/w " + user + " " + message);
-  m_LastWhisperTo = user;
-  m_TellFrom.clear();
+  if (m_LastTellCtx) {
+    m_Aura->UnholdContext(m_LastTellCtx);
+    m_LastTellCtx = nullptr;
+    m_LastTellTo.clear();
+  }
 }
 
-void CRealm::SendWhisper(const string& message, const string& user, const string& fromUser)
+void CRealm::SendWhisper(const string& message, const string& user, CCommandContext* fromCtx)
 {
-  SendCommand("/w " + user + " " + message); 
-  m_LastWhisperTo = user;
-  m_TellFrom = fromUser;
+  if (m_LastTellCtx) {
+    m_Aura->UnholdContext(m_LastTellCtx);
+  }
+  m_LastTellCtx = fromCtx;
+  m_Aura->HoldContext(fromCtx);
+
+  size_t MaxMessageSize = GetPvPGN() ? 200 : 255;
+  if (message.length() > MaxMessageSize) {
+    m_LastTell = message.substr(0, MaxMessageSize);
+  } else {
+    m_LastTell = message;
+  }
+  SendCommand("/w " + user + " " + m_LastTell); 
+  m_LastTellTo = user;
 }
 
 void CRealm::SendChatOrWhisper(const string& message, const string& user, bool whisper)

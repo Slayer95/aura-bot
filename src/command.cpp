@@ -907,7 +907,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + GetToken() + "invite [PLAYERNAME]");
+        ErrorReply("Usage: " + GetToken() + "invite [PLAYERNAME]@[REALM]");
         break;
       }
 
@@ -920,16 +920,26 @@ void CCommandContext::Run(const string& command, const string& payload)
         PassedMessage = m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
       }
 
-      bool CanInviteGlobally = 0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE));
-      for (auto& bnet : m_Aura->m_Realms) {
-        if (bnet->GetIsMirror())
-          continue;
-
-        if (bnet == m_SourceRealm || CanInviteGlobally) {
-          bnet->SendWhisper(PassedMessage, Payload, m_FromName);
-        }
+      string inputName = Payload;
+      string inputRealm;
+      string::size_type RealmStart = inputName.find('@');
+      if (RealmStart != string::npos) {
+        inputRealm = TrimString(inputName.substr(RealmStart + 1));
+        inputName = TrimString(inputName.substr(0, RealmStart));
       }
 
+      if (inputName.empty() || inputRealm.empty()) {
+        ErrorReply("Usage: " + GetToken() + "invite [PLAYERNAME]@[REALM]");
+        break;
+      }
+
+      CRealm* matchingRealm = m_Aura->GetRealmByInputId(inputRealm);
+      if (!matchingRealm) {
+        ErrorReply(inputRealm + " is not a valid realm.");
+        break;
+      }
+
+      matchingRealm->SendWhisper(PassedMessage, inputName, this);
       break;
     }
 
@@ -3295,36 +3305,34 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      string Name = TrimString(Payload.substr(0, MessageStart));
-      string SubMessage = TrimString(Payload.substr(MessageStart + 1));
-      string TargetRealm;
-      if (Name.empty() || SubMessage.empty()) {
+      string inputName = TrimString(Payload.substr(0, MessageStart));
+      string subMessage = TrimString(Payload.substr(MessageStart + 1));
+      string inputRealm;
+      if (inputName.empty() || subMessage.empty()) {
         ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
         break;
       }
 
-      string::size_type RealmStart = Name.find('@');
+      string::size_type RealmStart = inputName.find('@');
       if (RealmStart != string::npos) {
-        TargetRealm = TrimString(Name.substr(RealmStart + 1));
-        Name = TrimString(Name.substr(0, RealmStart));
+        inputRealm = TrimString(inputName.substr(RealmStart + 1));
+        inputName = TrimString(inputName.substr(0, RealmStart));
       }
 
-      if (Name.empty()) {
+      if (inputName.empty() || inputRealm.empty()) {
         ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
         break;
       }
 
-      bool ToAllRealms = TargetRealm.empty() || (TargetRealm.length() == 1 && TargetRealm[0] == '*');
-
-      string Message = m_FromName + " at " + (m_HostName.empty() ? "LAN/VPN" : m_HostName) + " says to you: \"" + SubMessage + "\"";
-      for (auto& bnet : m_Aura->m_Realms) {
-        if (bnet->GetIsMirror())
-          continue;
-        if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
-          bnet->SendWhisper(Message, Name, m_FromName);
-        }
+      CRealm* matchingRealm = m_Aura->GetRealmByInputId(inputRealm);
+      if (!matchingRealm) {
+        ErrorReply(inputRealm + " is not a valid realm.");
+        break;
       }
 
+      bool anySent = false;
+      string Message = m_FromName + " at " + (m_HostName.empty() ? "LAN/VPN" : m_HostName) + " tells you: <<" + subMessage + ">>";
+      matchingRealm->SendWhisper(Message, inputName, this);
       break;
     }
     //

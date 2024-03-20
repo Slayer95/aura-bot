@@ -290,8 +290,8 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REQJOIN(const uint32_t HostCounter
   packet.push_back(W3GS_REQJOIN);                            // W3GS_REQJOIN
   packet.push_back(0);                                       // packet length will be assigned later
   packet.push_back(0);                                       // packet length will be assigned later
-  AppendByteArray(packet, HostCounter, false);               // SlotInfo length
-  AppendByteArray(packet, EntryKey, false);                  // SlotInfo length
+  AppendByteArray(packet, HostCounter, false);               // game host counter
+  AppendByteArray(packet, EntryKey, false);                  // game entry key
   packet.push_back(0);                                       //
   AppendByteArray(packet, static_cast<uint16_t>(6112), false);  
   AppendByteArray(packet, Zeros, 4);
