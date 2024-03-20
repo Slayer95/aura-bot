@@ -57,6 +57,8 @@ miniupnpc/msvc/build
 
 config*.ini
 !config-example.ini
+jass/
+mapcache/
 mapcfgs/
 mapcfgs_old/
 !mapcfgs/wormwar.cfg
