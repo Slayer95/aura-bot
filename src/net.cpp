@@ -392,6 +392,9 @@ uint32_t CNet::SetFD(void* fd, void* send_fd, int32_t* nfds)
   for (auto& connection : m_HealthCheckClients)
     NumFDs += connection->SetFD(fd, send_fd, nfds);
 
+  for (auto& connection : m_IPAddressFetchClients)
+    NumFDs += connection->SetFD(fd, send_fd, nfds);
+
   if (m_UDPMainServerEnabled) {
     m_UDPMainServer->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
     ++NumFDs;
