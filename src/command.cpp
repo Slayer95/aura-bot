@@ -912,13 +912,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       const string MapPath = m_TargetGame->m_Map->GetMapPath();
-      string PassedMessage;
       size_t LastSlash = MapPath.rfind('\\');
-      if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
-        PassedMessage = m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
-      } else {
-        PassedMessage = m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
-      }
 
       string inputName = Payload;
       string inputRealm;
@@ -928,18 +922,31 @@ void CCommandContext::Run(const string& command, const string& payload)
         inputName = TrimString(inputName.substr(0, RealmStart));
       }
 
-      if (inputName.empty() || inputRealm.empty()) {
+      if (inputName.empty()) {
         ErrorReply("Usage: " + GetToken() + "invite [PLAYERNAME]@[REALM]");
         break;
       }
 
-      CRealm* matchingRealm = m_Aura->GetRealmByInputId(inputRealm);
+      CRealm* matchingRealm = GetTargetRealmOrCurrent(inputRealm);
       if (!matchingRealm) {
-        ErrorReply(inputRealm + " is not a valid realm.");
+        if (inputRealm.empty()) {
+          ErrorReply("Usage: " + GetToken() + "invite [PLAYERNAME]@[REALM]");
+        } else {
+          ErrorReply(inputRealm + " is not a valid realm.");
+        }
         break;
       }
 
-      matchingRealm->SendWhisper(PassedMessage, inputName, this);
+      // Name of sender and receiver should be included in the message,
+      // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
+      // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
+      if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
+        m_ActionMessage = inputName + ", " + m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
+      } else {
+        m_ActionMessage = inputName + ", " + m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
+      }
+
+      matchingRealm->SendWhisper(m_ActionMessage, inputName, this);
       break;
     }
 
@@ -2160,7 +2167,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       } else if (0 != (result & 1)) {
         SendReply("Opened port " + to_string(extPort) + " with Universal Plug and Play");
       } else {
-        SendReply("Unknown results. Try " + GetToken() + "checknetwork *");
+        SendReply("Unknown results. Try " + GetToken() + "checknetwork");
       }
       break;
     }
@@ -3319,20 +3326,30 @@ void CCommandContext::Run(const string& command, const string& payload)
         inputName = TrimString(inputName.substr(0, RealmStart));
       }
 
-      if (inputName.empty() || inputRealm.empty()) {
+      if (inputName.empty()) {
         ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
         break;
       }
 
-      CRealm* matchingRealm = m_Aura->GetRealmByInputId(inputRealm);
+      CRealm* matchingRealm = GetTargetRealmOrCurrent(inputRealm);
       if (!matchingRealm) {
-        ErrorReply(inputRealm + " is not a valid realm.");
+        if (inputRealm.empty()) {
+          ErrorReply("Usage: " + GetToken() + "w [PLAYERNAME]@[REALM], [MESSAGE]");
+        } else {
+          ErrorReply(inputRealm + " is not a valid realm.");
+        }
         break;
       }
 
-      bool anySent = false;
-      string Message = m_FromName + " at " + (m_HostName.empty() ? "LAN/VPN" : m_HostName) + " tells you: <<" + subMessage + ">>";
-      matchingRealm->SendWhisper(Message, inputName, this);
+      // Name of sender and receiver should be included in the message,
+      // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
+      // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
+      if (m_HostName.empty()) {
+        m_ActionMessage = inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>";
+      } else {
+        m_ActionMessage = inputName + ", " + m_FromName + " at " + m_HostName + " tells you: <<" + subMessage + ">>";
+      }
+      matchingRealm->SendWhisper(m_ActionMessage, inputName, this);
       break;
     }
     //

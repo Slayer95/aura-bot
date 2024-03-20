@@ -80,6 +80,7 @@ protected:
 
   std::string                   m_HostName;
   std::string                   m_ChannelName;
+  std::string                   m_ActionMessage;
 
   std::ostream*                 m_Output;
 
@@ -112,7 +113,9 @@ public:
   void SetPermissions(const uint8_t nPermissions);
   void UpdatePermissions();
   void SetIRCAdmin(const bool& isAdmin);
+  void ClearActionMessage() { m_ActionMessage.clear(); }
   std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
+  bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
 
   void SendReply(const std::string& message);
   void SendReply(const std::string& message, const uint8_t ccFlags);

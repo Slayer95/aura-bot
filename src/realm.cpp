@@ -643,12 +643,14 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     m_InChat = true;
     m_CurrentChannel = Message;
   } else if (Event == CBNETProtocol::EID_WHISPERSENT) {
-    if (Message == m_LastTell && m_LastTellCtx && !m_LastTellCtx->GetPartiallyDestroyed()) {
-      m_LastTellCtx->SendReply("Message sent to " + m_LastTellTo + ".");
+    if (m_LastTellCtx && m_LastTellCtx->CheckActionMessage(Message)) {
+      if (!m_LastTellCtx->GetPartiallyDestroyed()) {
+        m_LastTellCtx->SendReply("Message sent to " + m_LastTellTo + ".");
+      }
       m_Aura->UnholdContext(m_LastTellCtx);
       m_LastTellCtx = nullptr;
     } else {
-      Print("[BNET: " + m_Config->m_UniqueName + "] ACK whisper [" + Message + "]");
+      Print("[BNET: " + m_Config->m_UniqueName + "] whisper sent OK [" + Message + "]");
     }
   } else if (Event == CBNETProtocol::EID_INFO) {
     bool LogInfo = m_HadChatActivity;
@@ -692,11 +694,13 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     }
   } else if (Event == CBNETProtocol::EID_ERROR) {
     if (Message == "That user is not logged on." && m_LastTellCtx) {
-      m_LastTellCtx->SendReply(m_LastTellTo + " is offline.");
+      if (!m_LastTellCtx->GetPartiallyDestroyed()) {
+        m_LastTellCtx->SendReply(m_LastTellTo + " is offline.");
+      }
+      m_LastTellCtx->ClearActionMessage();
       m_Aura->UnholdContext(m_LastTellCtx);
       m_LastTellCtx = nullptr;
       m_LastTellTo.clear();
-      m_LastTell.clear();
     }
     Print("[NOTE: " + m_Config->m_UniqueName + "] " + Message);
   }
@@ -904,6 +908,7 @@ void CRealm::SendWhisper(const string& message, const string& user)
 {
   SendCommand("/w " + user + " " + message);
   if (m_LastTellCtx) {
+    m_LastTellCtx->ClearActionMessage();
     m_Aura->UnholdContext(m_LastTellCtx);
     m_LastTellCtx = nullptr;
     m_LastTellTo.clear();
@@ -913,6 +918,7 @@ void CRealm::SendWhisper(const string& message, const string& user)
 void CRealm::SendWhisper(const string& message, const string& user, CCommandContext* fromCtx)
 {
   if (m_LastTellCtx) {
+    m_LastTellCtx->ClearActionMessage();
     m_Aura->UnholdContext(m_LastTellCtx);
   }
   m_LastTellCtx = fromCtx;
@@ -1037,6 +1043,12 @@ void CRealm::ResetConnection(bool Errored)
   m_LoggedIn         = false;
   m_InChat           = false;
   m_WaitingToConnect = true;
+
+  if (m_LastTellCtx) {
+    m_LastTellCtx->ClearActionMessage();
+    m_Aura->UnholdContext(m_LastTellCtx);
+    m_LastTellCtx = nullptr;
+  }
 }
 
 bool CRealm::GetIsAdmin(string name) const

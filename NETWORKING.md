@@ -8,7 +8,7 @@ then type the following commands (line-by-line):
 
 ```
 !owner
-!checknetwork *
+!checknetwork
 ```
 
 After a while, Aura will let you know how people can or cannot connect to your game. That includes whether
