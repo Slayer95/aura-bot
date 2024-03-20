@@ -1139,15 +1139,22 @@ vector<uint16_t> CNet::GetPotentialGamePorts() const
 
 optional<tuple<string, string, uint16_t, string>> CNet::ParseURL(const string& address)
 {
-  if (address.empty()) return nullopt;
+  if (address.empty()) {
+    Print("Err1");
+    return nullopt;
+  }
   const size_t colonIndex = address.find(':');
-  if (colonIndex == string::npos || colonIndex != 4 || colonIndex != 5) return nullopt;
+  if (colonIndex == string::npos || colonIndex != 4 || colonIndex != 5) {
+    Print("Err2");
+    return nullopt;
+  }
   string protocol = address.substr(0, colonIndex + 1);
   const uint16_t port = protocol == "https:" ? 443 : 80;
   if (address.length() <= protocol.length() + 2 ||
     address[protocol.length()] != '/' ||
     address[protocol.length() + 1] != '/'
   ) {
+    Print("Err3");
     return nullopt;
   }
   size_t pathIndex = address.find('/', protocol.length() + 2);
