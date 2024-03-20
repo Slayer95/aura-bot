@@ -470,9 +470,9 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
 
   if (m_Realms.empty() && m_Config->m_EnableBNET.value_or(true))
-    Print("[AURA] warning - no enabled battle.net connections configured");
+    Print("[AURA] notice - no enabled battle.net connections configured");
   if (!m_IRC->m_Config->m_Enabled)
-    Print("[AURA] warning - no irc connection configured");
+    Print("[AURA] notice - no irc connection configured");
 
   if (m_Realms.empty() && !m_IRC->m_Config->m_Enabled && m_PendingActions.empty()) {
     Print("[AURA] error - no inputs connected");
@@ -700,7 +700,7 @@ bool CAura::HandleAction(vector<string> action)
   } else if (action[0] == "port-forward") {
     uint16_t externalPort = stoi(action[2]);
     uint16_t internalPort = stoi(action[3]);
-    m_Net->RequestUPnP(action[1], externalPort, internalPort);
+    m_Net->RequestUPnP(action[1], externalPort, internalPort, LOG_LEVEL_DEBUG);
 #endif
   } else if (!action.empty()) {
     Print("[AURA] Action type " + action[0] + " unsupported");
@@ -1283,7 +1283,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
 #ifndef DISABLE_MINIUPNP
   if (m_Net->m_Config->m_EnableUPnP && m_Games.empty()) {
     // This is a long synchronous network call.
-    m_Net->RequestUPnP("TCP", m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET), m_CurrentLobby->GetHostPort());
+    m_Net->RequestUPnP("TCP", m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET), m_CurrentLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
 #endif
 

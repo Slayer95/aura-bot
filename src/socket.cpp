@@ -567,12 +567,12 @@ string CTCPServer::GetName() const
 bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool retry)
 {
   if (m_Socket == INVALID_SOCKET) {
-    Print("[TCPServer] Socket invalid");
+    Print("[TCP] Socket invalid");
     return false;
   }
 
   if (m_HasError && !retry) {
-    Print("[TCPServer] Failed to listen TCP at port " + to_string(port) + ". Error " + to_string(m_Error));
+    Print("[TCP] Failed to listen TCP at port " + to_string(port) + ". Error " + to_string(m_Error));
     return false;
   }
 
@@ -587,7 +587,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
-    Print("[TCPSERVER] error (bind) - " + GetErrorString());
+    Print("[TCP] error (bind) - " + GetErrorString());
     return false;
   }
 
@@ -596,7 +596,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   if (listen(m_Socket, 8) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
-    Print("[TCPSERVER] error (listen) - " + GetErrorString());
+    Print("[TCP] error (listen) - " + GetErrorString());
     return false;
   }
 
@@ -604,7 +604,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
     if (getsockname(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength) == -1) {
       m_HasError = true;
       m_Error = GetLastError();
-      Print("[TCPSERVER] error (getsockname) - " + GetErrorString());
+      Print("[TCP] error (getsockname) - " + GetErrorString());
       return false;
     }
     m_Port = GetAddressPort(&address);
@@ -613,9 +613,9 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   }
 
   if (m_Family == AF_INET6) {
-    Print("[TCPSERVER] IPv6 listening on port " + to_string(m_Port) + " (IPv4 too)");
+    Print("[TCP] IPv6 listening on port " + to_string(m_Port) + " (IPv4 too)");
   } else {
-    Print("[TCPSERVER] IPv4 listening on port " + to_string(m_Port));
+    Print("[TCP] IPv4 listening on port " + to_string(m_Port));
   }
   return true;
 }
@@ -692,7 +692,7 @@ bool CUDPSocket::SendTo(const string& addressLiteral, uint16_t port, const vecto
   if (!address.has_value()) {
     m_HasError = true;
     // m_Error = h_error;
-    Print("[DISCOVERY] error (gethostbyname)");
+    Print("[UDP] error (gethostbyname)");
     return false;
   }
   
@@ -806,7 +806,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
-    Print("[DISCOVERY] error (bind) - " + GetErrorString());
+    Print("[UDP] error (bind) - " + GetErrorString());
     return false;
   }
 
@@ -814,7 +814,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
     if (getsockname(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength) == -1) {
       m_HasError = true;
       m_Error = GetLastError();
-      Print("[DISCOVERY] error (getsockname) - " + GetErrorString());
+      Print("[UDP] error (getsockname) - " + GetErrorString());
       return false;
     }
     m_Port = GetAddressPort(&address);
@@ -823,9 +823,9 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   }
 
   if (m_Family == AF_INET6) {
-    Print("[DISCOVERY] listening IPv4/IPv6 UDP traffic on port " + to_string(m_Port));
+    Print("[UDP] listening IPv4/IPv6 UDP traffic on port " + to_string(m_Port));
   } else {
-    Print("[DISCOVERY] listening IPv4-only UDP traffic on port " + to_string(m_Port));
+    Print("[UDP] listening IPv4-only UDP traffic on port " + to_string(m_Port));
   }
   return true;
 }

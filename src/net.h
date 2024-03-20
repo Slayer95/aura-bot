@@ -91,16 +91,18 @@ struct UDPPkt;
 class CGameTestConnection
 {
 public:
-  CGameTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const std::string nName);
+  CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const std::string nName);
   ~CGameTestConnection();
 
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool      Update(void* fd, void* send_fd);
   bool      QueryGameInfo();
+  bool      GetIsRealmOnline();
   uint16_t  GetPort();
 
   sockaddr_storage            m_TargetHost;
   CAura*                      m_Aura;
+  uint32_t                    m_RealmInternalId;
   CTCPClient*                 m_Socket;
   uint8_t                     m_Type;
   std::string                 m_Name;
@@ -200,10 +202,9 @@ public:
   void             FlushSelfIPCache();
 
 #ifndef DISABLE_MINIUPNP
-  uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort);
+  uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel = LOG_LEVEL_INFO);
 #endif
   bool QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* realm, const uint16_t gamePort);
-  bool StartHealthCheck(const std::vector<std::tuple<std::string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx, const bool isVerbose);
   void ResetHealthCheck();
   void ReportHealthCheck();
 

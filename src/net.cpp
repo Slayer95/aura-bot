@@ -44,9 +44,10 @@ using namespace std;
 // CGameTestConnection
 //
 
-CGameTestConnection::CGameTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const string nName)
+CGameTestConnection::CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const string nName)
   : m_TargetHost(nTargetHost),
     m_Aura(nAura),
+    m_RealmInternalId(nRealm->GetInternalID()),
     m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName)),
     m_Type(nType),
     m_Name(nName),
@@ -70,6 +71,15 @@ uint32_t CGameTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
   }
 
   return 0;
+}
+
+bool CGameTestConnection::GetIsRealmOnline()
+{
+  if (m_RealmInternalId < 0x10) return true;
+  string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
+  CRealm* realm = m_Aura->GetRealmByInputId(realmId);
+  if (realm == nullptr) return false;
+  return realm->GetLoggedIn();
 }
 
 uint16_t CGameTestConnection::GetPort()
@@ -189,11 +199,12 @@ bool CIPAddressAPIConnection::QueryIPAddress()
     return false;
   }
 
-  vector<uint8_t> query;
   const vector<uint8_t> method = {0x47, 0x45, 0x54, 0x20}; // GET
   const vector<uint8_t> httpVersion = {0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0xd, 0xa}; // HTTP/1.1\n\r
   const vector<uint8_t> hostHeader = {0x48, 0x4f, 0x53, 0x54, 0x3a, 0x20}; // HOST: 
-  const vector<uint8_t> end = {0xd, 0xa, 0xd, 0xa};
+  const vector<uint8_t> end = {0xd, 0xa, 0xd, 0xa}; // \n\r\n\r
+
+  vector<uint8_t> query;
   AppendByteArrayFast(query, method);
   AppendByteArray(query, m_EndPoint, false);
   AppendByteArrayFast(query, httpVersion);
@@ -322,33 +333,38 @@ bool CNet::Init()
     m_UDPMainServer = new CUDPServer(AF_INET);
     if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, false)) {
       Print("====================================================================");
-      Print("[DISCOVERY] <net.udp_server.enabled = yes> requires active instances of Warcraft to be closed...");
-      Print("[DISCOVERY] Please release port 6112, or set <net.udp_server.enabled = no>");
+      Print("[UDP] <net.udp_server.enabled = yes> requires active instances of Warcraft to be closed...");
+      Print("[UDP] Please release port 6112, or set <net.udp_server.enabled = no>");
       Print("====================================================================");
-      Print("[DISCOVERY] Waiting...");
+      Print("[UDP] Waiting...");
       this_thread::sleep_for(chrono::milliseconds(5000));
       if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, true)) {
         if (m_Config->m_UDPBroadcastEnabled) {
-          Print("[DISCOVERY] Failed to start UDP/IPv4 service on port 6112. Cannot start broadcast service.");
+          Print("[UDP] Failed to start UDP/IPv4 service on port 6112. Cannot start broadcast service.");
         } else {
-          Print("[DISCOVERY] Failed to start UDP/IPv4 service on port 6112");
+          Print("[UDP] Failed to start UDP/IPv4 service on port 6112");
         }
         Print("====================================================================");
         return false;
       }
     }
+#ifndef DISABLE_MINIUPNP
+    if (m_Config->m_EnableUPnP) {
+      RequestUPnP("UDP", 6112, 6112, LOG_LEVEL_DEBUG);
+    }
+#endif
   }
 
   if (!m_UDPMainServerEnabled) {
     m_UDPDeafSocket = new CUDPServer(AF_INET);
     if (!m_UDPDeafSocket->Listen(m_Config->m_BindAddress4, m_UDPFallbackPort, true)) {
       Print("====================================================================");
-      Print("[DISCOVERY] Failed to bind to fallback port " + to_string(m_UDPFallbackPort) + ".");
-      Print("[DISCOVERY] For a random available port, set <net.udp_fallback.outbound_port = 0>");
+      Print("[UDP] Failed to bind to fallback port " + to_string(m_UDPFallbackPort) + ".");
+      Print("[UDP] For a random available port, set <net.udp_fallback.outbound_port = 0>");
       if (m_Config->m_UDPBroadcastEnabled) {
-        Print("[DISCOVERY] Failed to start UDP/IPv4 service. Cannot start broadcast service.");
+        Print("[UDP] Failed to start UDP/IPv4 service. Cannot start broadcast service.");
       } else {
-        Print("[DISCOVERY] Failed to start UDP/IPv4 service");
+        Print("[UDP] Failed to start UDP/IPv4 service");
       }
       Print("====================================================================");
       return false;
@@ -359,9 +375,9 @@ bool CNet::Init()
     m_UDPIPv6Server = new CUDPServer(AF_INET6);
     if (!m_UDPIPv6Server->Listen(m_Config->m_BindAddress6, m_UDPIPv6Port, true)) {
       Print("====================================================================");
-      Print("[DISCOVERY] Failed to bind to port " + to_string(m_UDPIPv6Port) + ".");
-      Print("[DISCOVERY] For a random available port, set <net.udp_ipv6.port = 0>");
-      Print("[DISCOVERY] Failed to start UDP/IPv6 service");
+      Print("[UDP] Failed to bind to port " + to_string(m_UDPIPv6Port) + ".");
+      Print("[UDP] For a random available port, set <net.udp_ipv6.port = 0>");
+      Print("[UDP] Failed to start UDP/IPv6 service");
       Print("====================================================================");
       return false;
     }
@@ -722,7 +738,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
 }
 
 #ifndef DISABLE_MINIUPNP
-uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, const uint16_t internalPort)
+uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel)
 {
   struct UPNPDev* devlist = NULL;
   struct UPNPDev* device;
@@ -741,22 +757,22 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
     // Get the UPnP URLs and IGD data for this device
     int checkIGD = UPNP_GetValidIGD(device, &urls, &data, lanaddr, sizeof(lanaddr));
     if (checkIGD != 1 && checkIGD != 2) {
-      Print("[UPNP] unsupported device found: <" + string(device->descURL) + ">");
+      if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] unsupported device found: <" + string(device->descURL) + ">");
       continue;
     }
     if (checkIGD == 2) {
-      Print("[UPNP] unconnected gateway found: <" + string(urls.controlURL) + ">");
+      if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] unconnected gateway found: <" + string(urls.controlURL) + ">");
     } else {
-      Print("[UPNP] connected gateway found: <" + string(urls.controlURL) + ">");
+      if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] connected gateway found: <" + string(urls.controlURL) + ">");
     }
-    Print("[UPNP] trying to forward traffic to LAN address " + string(lanaddr) + "...");
+    if (logLevel >= LOG_LEVEL_INFO) Print("[UPNP] trying to forward traffic to LAN address " + string(lanaddr) + "...");
 
     int r = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), NULL, "86400");
 
-    if (r != UPNPCOMMAND_SUCCESS) {
-      Print("[UPNP] failed to add port mapping - error " + to_string(r));
-    } else {
+    if (r == UPNPCOMMAND_SUCCESS) {
       success = success | (1 << (checkIGD - 1));
+    } else if (logLevel >= LOG_LEVEL_INFO) {
+      Print("[UPNP] failed to add port mapping - error " + to_string(r));
     }
 
     // Free UPnP URLs and IGD data
@@ -767,12 +783,14 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
   // Free the UPnP device list
   freeUPNPDevlist(devlist);
 
-  if (success == 0) {
-    Print("[UPNP] Universal Plug and Play is not supported by the host router.");
-  } else if (0 != (success & 1)) {
-    Print("[UPNP] forwarding " + protocol + " external port " + extPort + " to internal port " + intPort + " OK.");
-  } else {
-    Print("[UPNP] warning - multi-layer NAT detected, port-forwarding may fail.");
+  if (logLevel >= LOG_LEVEL_INFO) {
+    if (success == 0) {
+      Print("[UPNP] Universal Plug and Play is not supported by the host router.");
+    } else if (0 != (success & 1)) {
+      Print("[UPNP] forwarding " + protocol + " external port " + extPort + " to internal port " + intPort + " OK.");
+    } else {
+      Print("[UPNP] warning - multi-layer NAT detected, port-forwarding may fail.");
+    }
   }
 
   return success;
@@ -785,7 +803,6 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     return false;
   }
 
-  vector<tuple<string, uint8_t, sockaddr_storage>> testServers;
   bool isVerbose = 0 != (checkMode & HEALTH_CHECK_VERBOSE);
 
   if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV4)) {
@@ -795,8 +812,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&loopBackAddress);
     addr4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr4->sin_port = htons(gamePort);
-    tuple<string, uint8_t, sockaddr_storage> testHost("[Loopback]", CONNECTION_TYPE_LOOPBACK, loopBackAddress);
-    testServers.push_back(testHost);
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback]"));
   }
 
   if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV6)) {
@@ -806,26 +822,21 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&loopBackAddress);
     memcpy(&(addr6->sin6_addr), &in6addr_loopback, sizeof(in6_addr));
     addr6->sin6_port = htons(gamePort);
-    tuple<string, uint8_t, sockaddr_storage> testHost("[Loopback IPv6]", CONNECTION_TYPE_LOOPBACK, loopBackAddress);
-    testServers.push_back(testHost);
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback IPv6]"));
   }
 
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
   sockaddr_storage* publicIPv6 = GetPublicIPv6();
   if (publicIPv4 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV4)) && m_Config->m_PublicIPv4Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
-    Print("[Network] Public IPv4 address unknown - check <net.ipv4.public_address.algorithm>, <net.ipv4.public_address.value>");
+    Print("[NET] Public IPv4 address unknown - check <net.ipv4.public_address.algorithm>, <net.ipv4.public_address.value>");
   }
   if (publicIPv6 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6)) && m_Config->m_PublicIPv6Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
-    Print("[Network] Public IPv6 address unknown - check <net.ipv6.public_address.algorithm>, <net.ipv6.public_address.value>");
+    Print("[NET] Public IPv6 address unknown - check <net.ipv6.public_address.algorithm>, <net.ipv6.public_address.value>");
   }
 
   bool anySendsPublicIp = false;
   for (const auto& realm : m_Aura->m_Realms) {
     if ((0 == (checkMode & HEALTH_CHECK_REALM)) && realm != targetRealm) {
-      continue;
-    }
-    if (!realm->GetLoggedIn()) {
-      ctx->SendReply("[Network] Not connected to " + realm->GetUniqueDisplayName(), CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       continue;
     }
     sockaddr_storage* selfIPInThisRealm = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIPv4;
@@ -851,8 +862,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, selfIPInThisRealm, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, port);
-    tuple<string, uint8_t, sockaddr_storage> testHost(realm->GetUniqueDisplayName() + NameSuffix, connectionType, targetHost);
-    testServers.push_back(testHost);
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, realm, targetHost, connectionType, realm->GetUniqueDisplayName()));
 
     if (reinterpret_cast<sockaddr_in*>(selfIPInThisRealm)->sin_addr.s_addr == reinterpret_cast<sockaddr_in*>(publicIPv4)->sin_addr.s_addr) {
       anySendsPublicIp = true;
@@ -864,8 +874,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, gamePort);
-    tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv4]", 0, targetHost);
-    testServers.push_back(testHost);
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, 0, "[Public IPv4]"));
   }
   if (publicIPv6 != nullptr && !IN6_IS_ADDR_UNSPECIFIED(&(reinterpret_cast<sockaddr_in6*>(publicIPv6)->sin6_addr)) && (
     (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6))
@@ -873,26 +882,16 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv6, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, gamePort);
-    tuple<string, uint8_t, sockaddr_storage> testHost("[Public IPv6]", CONNECTION_TYPE_IPV6, targetHost);
-    testServers.push_back(testHost);
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, CONNECTION_TYPE_IPV6, "[Public IPv6]"));
   }
 
-  StartHealthCheck(testServers, ctx, isVerbose);
-  return true;
-}
-
-bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage>> testServers, CCommandContext* nCtx, const bool isVerbose)
-{
-  if (m_HealthCheckInProgress || testServers.empty()) {
+  if (m_HealthCheckClients.empty()) {
     return false;
   }
-  for (auto& testServer: testServers) {
-    CGameTestConnection* client = new CGameTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer));
-    m_HealthCheckClients.push_back(client);
-  }
-  m_Aura->HoldContext(nCtx);
+
+  m_Aura->HoldContext(ctx);
   m_HealthCheckVerbose = isVerbose;
-  m_HealthCheckContext = nCtx;
+  m_HealthCheckContext = ctx;
   m_HealthCheckInProgress = true;
   return true;
 }
@@ -921,13 +920,17 @@ void CNet::ReportHealthCheck()
   for (auto& testConnection : m_HealthCheckClients) {
     bool success = false;
     string ResultText;
-    if (testConnection->m_Passed.value_or(false)) {
-      success = true;
-      ResultText = "OK";
-    } else if (testConnection->m_CanConnect.value_or(false)) {
-      ResultText = "Cannot join";
+    if (testConnection->GetIsRealmOnline()) {
+      if (testConnection->m_Passed.value_or(false)) {
+        success = true;
+        ResultText = "OK";
+      } else if (testConnection->m_CanConnect.value_or(false)) {
+        ResultText = "Error";
+      } else {
+        ResultText = "Offline";
+      }
     } else {
-      ResultText = "Cannot connect";
+      ResultText = "Realm offline";
     }
     ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
     if (!m_HealthCheckContext->GetWritesToStdout()) {
@@ -954,21 +957,21 @@ void CNet::ReportHealthCheck()
       portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(GetPotentialGamePorts(), false) + "}";
     }
     if (anyDirectSuccess) {
-      Print("[Network] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4) + ".");
+      Print("[NET] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4));
       if (!m_HealthCheckContext->GetWritesToStdout()) {
         m_HealthCheckContext->SendAll("This bot CAN be reached through the IPv4 Internet.");
       }
     } else {
-      Print("[Network] This bot is disconnected from the IPv4 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv4) + ".");
-      Print("[Network] Please setup port-forwarding to allow connections.");
+      Print("[NET] This bot is disconnected from the IPv4 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv4));
+      Print("[NET] Please setup port-forwarding to allow connections.");
       if (m_HealthCheckVerbose) {
         if (!portForwardInstructions.empty())
-          Print("[Network] " + portForwardInstructions);
+          Print("[NET] " + portForwardInstructions);
 #ifndef DISABLE_MINIUPNP
-        Print("[Network] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
+        Print("[NET] If your router has Universal Plug and Play, the command [upnp] will automatically setup port-forwarding.");
 #endif
-        Print("[Network] Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
-        Print("[Network] But make sure your firewall allows Aura inbound TCP connections.");
+        Print("[NET] Note that you may still play online if you got a VPN, or an active tunnel. See NETWORKING.md for details.");
+        Print("[NET] But make sure your firewall allows Aura inbound TCP connections.");
         if (!m_HealthCheckContext->GetWritesToStdout()) {
           m_HealthCheckContext->SendAll("============= READ IF YOU ARE RUNNING AURA =====================================");
           m_HealthCheckContext->SendAll("This bot is disconnected from the IPv4 Internet, because its public IPv4 address is unreachable.");
@@ -987,10 +990,10 @@ void CNet::ReportHealthCheck()
   sockaddr_storage* publicIPv6 = GetPublicIPv6();
   if (publicIPv6 != nullptr) {
     if (isIPv6Reachable) {
-      Print("[Network] This bot CAN be reached through the IPv6 Internet. Address: " + AddressToString(*publicIPv6) + ".");
-      Print("[Network] See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
+      Print("[NET] This bot CAN be reached through the IPv6 Internet. Address: " + AddressToString(*publicIPv6));
+      Print("[NET] See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
     } else {
-      Print("[Network] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
+      Print("[NET] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6));
     }
     if (!m_HealthCheckContext->GetWritesToStdout()) {
       if (isIPv6Reachable) {
@@ -998,7 +1001,7 @@ void CNet::ReportHealthCheck()
         m_HealthCheckContext->SendAll("See NETWORKING.md for instructions to use IPv6 TCP tunneling.");
         m_HealthCheckContext->SendAll("=================================================================================");
       } else {
-        Print("[Network] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
+        Print("[NET] This bot is disconnected from the IPv6 Internet, because its public address is unreachable. Address: " + AddressToString(*publicIPv6) + ".");
         m_HealthCheckContext->SendAll("This bot is disconnected from the IPv6 Internet, because its public address is unreachable.");
         m_HealthCheckContext->SendAll("=================================================================================");
       }

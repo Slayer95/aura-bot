@@ -926,7 +926,7 @@ void CCommandContext::Run(const string& command, const string& payload)
           continue;
 
         if (bnet == m_SourceRealm || CanInviteGlobally) {
-          bnet->SendWhisper(PassedMessage, Payload);
+          bnet->SendWhisper(PassedMessage, Payload, m_FromName);
         }
       }
 
@@ -3321,7 +3321,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (bnet->GetIsMirror())
           continue;
         if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
-          bnet->SendWhisper(Message, Name);
+          bnet->SendWhisper(Message, Name, m_FromName);
         }
       }
 
