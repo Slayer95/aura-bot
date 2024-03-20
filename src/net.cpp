@@ -41,10 +41,10 @@
 using namespace std;
 
 //
-// CTestConnection
+// CGameTestConnection
 //
 
-CTestConnection::CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const string nName)
+CGameTestConnection::CGameTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const string nName)
   : m_TargetHost(nTargetHost),
     m_Aura(nAura),
     m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName)),
@@ -56,12 +56,12 @@ CTestConnection::CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, con
 {
 }
 
-CTestConnection::~CTestConnection()
+CGameTestConnection::~CGameTestConnection()
 {
   delete m_Socket;
 }
 
-uint32_t CTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CGameTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
   if (!m_Socket->HasError() && m_Socket->GetConnected())
   {
@@ -72,7 +72,7 @@ uint32_t CTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return 0;
 }
 
-uint16_t CTestConnection::GetPort()
+uint16_t CGameTestConnection::GetPort()
 {
   if (m_TargetHost.ss_family == AF_INET6) {
     sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&m_TargetHost);
@@ -85,7 +85,7 @@ uint16_t CTestConnection::GetPort()
   }
 }
 
-bool CTestConnection::QueryGameInfo()
+bool CGameTestConnection::QueryGameInfo()
 {
   if (m_Socket->HasError() || !m_Socket->GetConnected()) {
     return false;
@@ -106,7 +106,7 @@ bool CTestConnection::QueryGameInfo()
   return true;
 }
 
-bool CTestConnection::Update(void* fd, void* send_fd)
+bool CGameTestConnection::Update(void* fd, void* send_fd)
 {
   static optional<sockaddr_storage> emptyBindAddress;
 
@@ -746,7 +746,7 @@ bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage
     return false;
   }
   for (auto& testServer: testServers) {
-    m_HealthCheckClients.push_back(new CTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer)));
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer)));
   }
   m_Aura->HoldContext(nCtx);
   m_HealthCheckVerbose = isVerbose;

@@ -85,11 +85,11 @@ class CNetConfig;
 struct sockaddr_storage;
 struct UDPPkt;
 
-class CTestConnection
+class CGameTestConnection
 {
 public:
-  CTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const std::string nName);
-  ~CTestConnection();
+  CGameTestConnection(CAura* nAura, sockaddr_storage nTargetHost, const uint8_t nType, const std::string nName);
+  ~CGameTestConnection();
 
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool      Update(void* fd, void* send_fd);
@@ -143,7 +143,7 @@ public:
   std::pair<std::string, sockaddr_storage*>                   m_IPv6CacheV;
   uint8_t                                                     m_IPv6CacheT;
 
-  std::vector<CTestConnection*>                               m_HealthCheckClients;
+  std::vector<CGameTestConnection*>                               m_HealthCheckClients;
   bool                                                        m_HealthCheckVerbose;
   bool                                                        m_HealthCheckInProgress;
   CCommandContext*                                            m_HealthCheckContext;

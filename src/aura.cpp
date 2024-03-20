@@ -165,8 +165,14 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
   }
   // TODO: Make sure <bot.home_path.allow_mismatch> is documented in CONFIG.md.
   const bool homePathMatchRequired = CFG.GetBool("bot.home_path.allow_mismatch", false);
-  if (isCustomConfigFile && filesystem::absolute(configPath.parent_path()) != filesystem::absolute(homeDir.parent_path())) {
-    if (homePathMatchRequired) {
+  if (isCustomConfigFile) {
+    bool pathsMatch = configPath.parent_path() == homeDir.parent_path();
+    if (!pathsMatch) {
+      try {
+        pathsMatch = filesystem::absolute(configPath.parent_path()) == filesystem::absolute(homeDir.parent_path());
+      } catch (...) {}
+    }
+    if (homePathMatchRequired && !pathsMatch) {
       Print("[AURA] error - config file is not located within home dir [" + PathToString(homeDir) + "] - this is not recommended");
       Print("[HINT] to skip this check and execute Aura nevertheless, set <bot.home_path.allow_mismatch = yes> in your config file");
       Print("[HINT] paths in your config file [" + PathToString(configPath) + "] will be resolved relative to the home dir");
@@ -1091,9 +1097,9 @@ bool CAura::LoadConfigs(CConfig& CFG)
         L"D:\\Games\\Warcraft III\\",
         L"D:\\Warcraft III\\"
       };
+      error_code ec;
       for (const auto& opt : tryPaths) {
         filesystem::path testPath = opt;
-        error_code ec;
         if (filesystem::is_directory(testPath, ec)) {
           m_GameInstallPath = testPath;
         }
