@@ -1286,7 +1286,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 #endif
 
-  if (m_CurrentLobby->GetCheckIsJoinable()) {
+  if (m_CurrentLobby->GetCheckIsJoinable() && !m_Net->GetIsFetchingIPAddresses()) {
     uint8_t checkMode = HEALTH_CHECK_ALL;
     if (!m_Net->m_SupportTCPOverIPv6) {
       checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
@@ -1296,6 +1296,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
       checkMode |= HEALTH_CHECK_VERBOSE;
     }
     m_Net->QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
+    m_CurrentLobby->SetCheckIsJoinable(false);
   }
 
   if (m_CurrentLobby->GetUDPEnabled()) {

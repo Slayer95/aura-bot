@@ -368,6 +368,7 @@ public:
   void StopLaggers(const std::string& reason);
   inline bool GetCheckIsJoinable() { return m_CheckJoinable; }
   inline bool GetIsVerbose() { return m_Verbose; }
+  inline void SetCheckIsJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
 
   void OpenObserverSlots();
   void CloseObserverSlots();

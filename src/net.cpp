@@ -111,27 +111,28 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
   static optional<sockaddr_storage> emptyBindAddress;
 
   if (m_Passed.has_value()) {
-    return !m_Passed.has_value();
+    return false;
   }
 
   const int64_t Ticks = GetTicks();
   if (m_Socket->HasError()) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
-    m_Passed = false;
     m_LastConnectionFailure = Ticks;
     m_Socket->Reset();
   } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
-    m_Socket->DoRecv(static_cast<fd_set*>(fd));
-    string* RecvBuffer = m_Socket->GetBytes();
-    std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-    const bool IsJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_SLOTINFOJOIN;
-    RecvBuffer->clear();
+    bool gotJoinedMessage = false;
+    if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+      string* RecvBuffer = m_Socket->GetBytes();
+      std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
+      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_SLOTINFOJOIN;
+      m_Passed = true;
+    }
     if (!m_SentJoinRequest) {
       if (QueryGameInfo()) {
         m_Socket->DoSend(static_cast<fd_set*>(send_fd));
       }
-    } else if (IsJoinedMessage) {
-      m_Passed = true;
+    } else if (gotJoinedMessage) {
+      m_Socket->Reset();
       m_Socket->Disconnect();
     }
   } else if (m_Socket->GetConnecting() && m_Socket->CheckConnect()) {
@@ -141,12 +142,132 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
     m_Passed = false;
     m_LastConnectionFailure = Ticks;
     m_Socket->Reset();
+    m_Socket->Disconnect();
   } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && (Ticks - m_LastConnectionFailure > 900)) {
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
-    m_Timeout = Ticks + 3000;
+    m_Timeout = Ticks + GAME_TEST_TIMEOUT;
   }
 
   return !m_Passed.has_value();
+}
+
+//
+// CIPAddressAPIConnection
+//
+
+CIPAddressAPIConnection::CIPAddressAPIConnection(CAura* nAura, sockaddr_storage nTargetHost, const string nEndPoint, const string nHostName)
+  : m_TargetHost(nTargetHost),
+    m_Aura(nAura),
+    m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nTargetHost.ss_family == AF_INET6 ? "IPv6 Address" : "IPv4 Address")),
+    m_EndPoint(nEndPoint),
+    m_HostName(nHostName),
+    m_Timeout(0),
+    m_LastConnectionFailure(0),
+    m_SentQuery(false)
+{
+}
+
+CIPAddressAPIConnection::~CIPAddressAPIConnection()
+{
+  delete m_Socket;
+}
+
+uint32_t CIPAddressAPIConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
+{
+  if (!m_Socket->HasError() && m_Socket->GetConnected())
+  {
+    m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    return 1;
+  }
+
+  return 0;
+}
+
+bool CIPAddressAPIConnection::QueryIPAddress()
+{
+  if (m_Socket->HasError() || !m_Socket->GetConnected()) {
+    return false;
+  }
+
+  if (!m_Aura->m_CurrentLobby || (!m_Aura->m_CurrentLobby->GetIsLobby() && !m_Aura->m_CurrentLobby->GetIsMirror())) {
+    return false;
+  }
+
+  vector<uint8_t> query;
+  const vector<uint8_t> method = {0x47, 0x45, 0x54, 0x20}; // GET
+  const vector<uint8_t> httpVersion = {0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0xa}; // HTTP/1.1\n
+  const vector<uint8_t> hostHeader = {0x48, 0x4f, 0x53, 0x54, 0x3a, 0x20}; // HOST: 
+  AppendByteArrayFast(query, method);
+  AppendByteArray(query, m_EndPoint, false);
+  AppendByteArrayFast(query, httpVersion);
+  AppendByteArrayFast(query, hostHeader);
+  AppendByteArray(query, m_HostName, false);
+  query.push_back(0xa); // LF
+  m_Socket->PutBytes(query);
+  m_SentQuery = true;
+  return true;
+}
+
+bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
+{
+  static optional<sockaddr_storage> emptyBindAddress;
+
+  if (m_Result.has_value()) {
+    return false;
+  }
+
+  const int64_t Ticks = GetTicks();
+  if (m_Socket->HasError()) {
+    if (!m_CanConnect.has_value()) m_CanConnect = false;
+    m_LastConnectionFailure = Ticks;
+    m_Socket->Reset();
+  } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
+    bool gotAddress = false;
+    if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+      string* RecvBuffer = m_Socket->GetBytes();
+      std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
+      Print("[DEBUG] Got bytes: " + ByteArrayToHexString(Bytes));
+      uint16_t size = static_cast<uint16_t>(Bytes.size());
+      const bool is200 = size >= 15 && Bytes[10] == 0x32 && Bytes[11] == 0x30 && Bytes[12] == 0x30;
+      if (is200) {
+        uint16_t lastLineIndex = 0;
+        uint16_t index = size - 1; // Ignore EOF
+        while (index--) {
+          if (Bytes[index] == 0xa) {
+            lastLineIndex = index;
+            break;
+          }
+        }
+        string responseBody = string(Bytes.begin() + lastLineIndex, Bytes.end() - (Bytes[size - 1] == 0xa ? 1 : 0));
+        optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(responseBody, m_TargetHost.ss_family == AF_INET6 ? ACCEPT_IPV6 : ACCEPT_IPV4);
+        if (maybeAddress.has_value()) {
+          m_Result = move(maybeAddress);
+          gotAddress = true;
+        }
+      }
+      
+      if (!m_SentQuery) {
+        if (QueryIPAddress()) {
+          m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+        }
+      } else if (gotAddress) {
+        m_Socket->Reset();
+        m_Socket->Disconnect();
+      }
+    }
+  } else if (m_Socket->GetConnecting() && m_Socket->CheckConnect()) {
+    m_CanConnect = true;
+  } else if (m_Timeout <= Ticks && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
+    if (!m_CanConnect.has_value()) m_CanConnect = false;
+    m_LastConnectionFailure = Ticks;
+    m_Socket->Reset();
+    m_Socket->Disconnect();
+  } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && (Ticks - m_LastConnectionFailure > 900)) {
+    m_Socket->Connect(emptyBindAddress, m_TargetHost);
+    m_Timeout = Ticks + GAME_TEST_TIMEOUT;
+  }
+
+  return !m_Result.has_value();
 }
 
 //
@@ -174,6 +295,8 @@ CNet::CNet(CAura* nAura)
     m_HealthCheckVerbose(false),
     m_HealthCheckInProgress(false),
     m_HealthCheckContext(nullptr),
+
+    m_IPAddressFetchInProgress(false),
 
     m_LastHostPort(0)
 {
@@ -257,6 +380,12 @@ bool CNet::Init()
   if (m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
   if (m_Config->m_UDPDoNotRouteEnabled) PropagateDoNotRouteEnabled(true);
   SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
+
+
+#ifdef DISABLE_CPR
+  QueryIPAddress();
+#endif
+
   return true;
 }
 
@@ -289,6 +418,17 @@ bool CNet::Update(void* fd, void* send_fd)
     }
     if (!anyPending) {
       ReportHealthCheck();
+    }
+  }
+  if (m_IPAddressFetchInProgress) {
+    bool anyPending = false;
+    for (auto& apiConnection : m_IPAddressFetchClients) {
+      if (apiConnection->Update(fd, send_fd)) {
+        anyPending = true;
+      }
+    }
+    if (!anyPending) {
+      HandleIPAddressFetchDone();
     }
   }
 
@@ -746,7 +886,7 @@ bool CNet::StartHealthCheck(const vector<tuple<string, uint8_t, sockaddr_storage
     return false;
   }
   for (auto& testServer: testServers) {
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer)));
+    m_HealthCheckClients.emplace_back(m_Aura, get<2>(testServer), get<1>(testServer), get<0>(testServer));
   }
   m_Aura->HoldContext(nCtx);
   m_HealthCheckVerbose = isVerbose;
@@ -866,6 +1006,93 @@ void CNet::ReportHealthCheck()
   ResetHealthCheck();
 }
 
+bool CNet::QueryIPAddress()
+{
+  if (m_IPAddressFetchInProgress) {
+    return false;
+  }
+
+  if (m_Config->m_PublicIPv4Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+    if (m_IPv4CacheV.first != m_Config->m_PublicIPv4Value || m_IPv4CacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+      if (m_IPv4CacheV.second != nullptr) {
+        delete m_IPv4CacheV.second;
+        m_IPv4CacheV = make_pair(string(), nullptr);
+      }
+      optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config->m_PublicIPv4Value);
+      if (parsedURL.has_value() && get<0>(parsedURL.value()) == "http:") {
+        string hostName = get<1>(parsedURL.value());
+        uint16_t port = get<2>(parsedURL.value());
+        string path = get<3>(parsedURL.value());
+        optional<sockaddr_storage> resolvedAddress = port == 80 ? ResolveHostName(hostName) : ResolveHostName(hostName, port);
+        if (resolvedAddress.has_value()) {
+          SetAddressPort(&(resolvedAddress.value()), port);
+          m_IPAddressFetchClients.emplace_back(m_Aura, resolvedAddress.value(), path, hostName);
+          m_IPAddressFetchInProgress = true;
+        }
+      } else {
+        Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> unsupported in this Aura distribution");
+        Print("[CONFIG] warning - <net.port_forwarding.upnp.enabled = yes> requires compilation without #define DISABLE_MINIUPNP");
+      }
+    }
+  }
+  if (m_Config->m_PublicIPv6Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+    if (m_IPv6CacheV.first != m_Config->m_PublicIPv6Value || m_IPv6CacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+      if (m_IPv6CacheV.second != nullptr) {
+        delete m_IPv6CacheV.second;
+        m_IPv6CacheV = make_pair(string(), nullptr);
+      }
+      // TODO
+    }
+  }
+
+  return m_IPAddressFetchInProgress;
+}
+
+void CNet::ResetIPAddressFetch()
+{
+  if (!m_IPAddressFetchInProgress)
+    return;
+
+  for (auto& apiClient : m_IPAddressFetchClients) {
+    delete apiClient;
+  }
+  m_IPAddressFetchClients.clear();
+  m_IPAddressFetchInProgress = false;
+}
+
+void CNet::HandleIPAddressFetchDone()
+{
+  for (auto& apiClient : m_IPAddressFetchClients) {
+    if (!apiClient->m_Result.has_value()) continue;
+    if (apiClient->m_TargetHost.ss_family == AF_INET) {
+      sockaddr_storage* cachedAddress = new sockaddr_storage();
+      memcpy(cachedAddress, &(apiClient->m_Result.value()), sizeof(sockaddr_storage));
+      Print("[DEBUG] Your IPv4 address is " + AddressToString(*cachedAddress));
+      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+    } else {
+      // TODO
+      Print("IPv6 CIPAddressAPIConnection not implemented");
+    }
+    m_IPv4CacheT = m_Config->m_PublicIPv4Algorithm;
+  }
+  ResetIPAddressFetch();
+
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetCheckIsJoinable()) {
+    uint8_t checkMode = HEALTH_CHECK_ALL;
+    if (!m_SupportTCPOverIPv6) {
+      checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
+      checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
+    }
+    if (m_Aura->m_CurrentLobby->GetIsVerbose()) {
+      checkMode |= HEALTH_CHECK_VERBOSE;
+    }
+    CCommandContext* ctx = new CCommandContext(m_Aura, &cout, '!');
+    QueryHealthCheck(ctx, checkMode, nullptr, m_Aura->m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
+    m_Aura->UnholdContext(ctx);
+    m_Aura->m_CurrentLobby->SetCheckIsJoinable(false);
+  }
+}
+
 uint16_t CNet::GetUDPPort(const uint8_t protocol) const
 {
   if (protocol == AF_INET) {
@@ -903,6 +1130,29 @@ vector<uint16_t> CNet::GetPotentialGamePorts() const
     result.push_back(m_Config->m_UDPCustomPortTCP4);
   }
   
+  return result;
+}
+
+optional<tuple<string, string, uint16_t, string>> CNet::ParseURL(const string& address)
+{
+  if (address.empty()) return nullopt;
+  const size_t colonIndex = address.find(':');
+  if (colonIndex == string::npos || colonIndex != 4 || colonIndex != 5) return nullopt;
+  string protocol = address.substr(0, colonIndex + 1);
+  const uint16_t port = protocol == "https:" ? 443 : 80;
+  if (address.length() <= protocol.length() + 2 ||
+    address[protocol.length()] != '/' ||
+    address[protocol.length() + 1] != '/'
+  ) {
+    return nullopt;
+  }
+  size_t pathIndex = address.find('/', protocol.length() + 2);
+  if (pathIndex == string::npos) pathIndex = address.size();
+  string hostName = address.substr(protocol.length() + 2, pathIndex - (protocol.length() + 2));
+  string path = pathIndex >= address.length() ? "/" : address.substr(pathIndex);
+  tuple<string, string, uint8_t, string> URL(protocol, hostName, port, path);
+  optional<tuple<string, string, uint8_t, string>> result;
+  result = URL;
   return result;
 }
 

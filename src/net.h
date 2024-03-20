@@ -70,6 +70,9 @@
 #define HEALTH_CHECK_ALL (HEALTH_CHECK_PUBLIC_IPV4 | HEALTH_CHECK_PUBLIC_IPV6 | HEALTH_CHECK_LOOPBACK_IPV4 | HEALTH_CHECK_LOOPBACK_IPV6 | HEALTH_CHECK_REALM)
 #define HEALTH_CHECK_VERBOSE (1 << 5)
 
+#define GAME_TEST_TIMEOUT 3000
+#define IP_ADDRESS_API_TIMEOUT 3000
+
 //
 // CNet
 //
@@ -108,6 +111,28 @@ public:
   bool                        m_SentJoinRequest;
 };
 
+class CIPAddressAPIConnection
+{
+public:
+  CIPAddressAPIConnection(CAura* nAura, sockaddr_storage nTargetHost, const std::string nEndPoint, const std::string nHostName);
+  ~CIPAddressAPIConnection();
+
+  uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
+  bool      Update(void* fd, void* send_fd);
+  bool QueryIPAddress();
+
+  sockaddr_storage                  m_TargetHost;
+  CAura*                            m_Aura;
+  CTCPClient*                       m_Socket;
+  std::string                       m_EndPoint;
+  std::string                       m_HostName;
+  std::optional<sockaddr_storage>   m_Result;
+  std::optional<bool>               m_CanConnect;
+  int64_t                           m_Timeout;
+  int64_t                           m_LastConnectionFailure;
+  bool                              m_SentQuery;
+};
+
 class CNet
 {
 public:
@@ -143,10 +168,12 @@ public:
   std::pair<std::string, sockaddr_storage*>                   m_IPv6CacheV;
   uint8_t                                                     m_IPv6CacheT;
 
-  std::vector<CGameTestConnection*>                               m_HealthCheckClients;
+  std::vector<CGameTestConnection*>                           m_HealthCheckClients;
+  std::vector<CIPAddressAPIConnection*>                       m_IPAddressFetchClients;
   bool                                                        m_HealthCheckVerbose;
   bool                                                        m_HealthCheckInProgress;
   CCommandContext*                                            m_HealthCheckContext;
+  bool                                                        m_IPAddressFetchInProgress;
   uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
 
   void InitPersistentConfig();
@@ -180,8 +207,13 @@ public:
   void ResetHealthCheck();
   void ReportHealthCheck();
 
+  bool QueryIPAddress();
+  void ResetIPAddressFetch();
+  void HandleIPAddressFetchDone();
+
   uint16_t NextHostPort();
 
+  static std::optional<std::tuple<std::string, std::string, uint16_t, std::string>> ParseURL(const std::string& address);
   static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
   void                                   SetBroadcastTarget(sockaddr_storage& subnet);
   void                                   PropagateBroadcastEnabled(const bool nEnable);
@@ -189,6 +221,7 @@ public:
   void                                   OnConfigReload();
 
   bool                                   IsIgnoredDatagramSource(std::string sourceIp);
+  bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }
 };
 
 #endif // AURA_NET_H_
