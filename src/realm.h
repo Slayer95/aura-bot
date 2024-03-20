@@ -97,9 +97,10 @@ private:
   std::string                      m_CurrentChannel;            // the current chat channel
   std::string                      m_HostName;                  // 
   uint8_t                          m_ServerIndex;               // 
-  uint32_t                         m_InternalServerID;                  // internal server ID, maps 1:1 to CRealmConfig::m_InputID
+  uint32_t                         m_InternalServerID;          // internal server ID, maps 1:1 to CRealmConfig::m_InputID
   uint8_t                          m_PublicServerID;            // for building host counters, which allows matching game join requests to a realm (or none)
-  std::string                      m_IRC;                       // IRC channel we're sending the message to
+  std::string                      m_LastWhisperTo;             // last user we sent a whisper to in this realm
+  std::string                      m_TellFrom;                  // who told us to whisper that player (!tell, !invite)
   int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
   int64_t                          m_LastConnectionAttemptTime; // GetTime when we last attempted to connect to battle.net
   int64_t                          m_LastGameListTime;          // GetTime when the last game list request was sent
@@ -171,6 +172,7 @@ public:
   void SendCommand(const std::string& chatCommand);
   void SendChatChannel(const std::string& chatCommand);
   void SendWhisper(const std::string& message, const std::string& user);
+  void SendWhisper(const std::string& message, const std::string& user, const std::string& fromUser);
   void SendChatOrWhisper(const std::string& chatCommand, const std::string& user, bool whisper);
   void TrySendChat(const std::string& chatCommand, const std::string& user, bool isPrivate, std::ostream* errorLog);
   void QueueGameCreate(uint8_t displayMode, const std::string& gameName, CMap* map, uint32_t hostCounter, uint16_t hostPort);

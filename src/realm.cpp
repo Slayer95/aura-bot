@@ -641,6 +641,10 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
     m_InChat = true;
     m_CurrentChannel = Message;
+  } else if (Event == CBNETProtocol::EID_WHISPERSENT) {
+    //m_Realm->m_LastWhisperTo
+    //m_Realm->m_TellFrom
+    Print("[BNET: " + m_Config->m_UniqueName + "] sent whisper to [" + Message + "]");
   } else if (Event == CBNETProtocol::EID_INFO) {
     bool LogInfo = m_HadChatActivity;
 
@@ -682,7 +686,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       Print("[INFO: " + m_Config->m_UniqueName + "] " + Message);
     }
   } else if (Event == CBNETProtocol::EID_ERROR) {
-    Print("[ERROR: " + m_Config->m_UniqueName + "] " + Message);
+    Print("[NOTICE: " + m_Config->m_UniqueName + "] " + Message);
   }
 }
 
@@ -887,7 +891,16 @@ void CRealm::SendChatChannel(const string& message)
 
 void CRealm::SendWhisper(const string& message, const string& user)
 {
+  SendCommand("/w " + user + " " + message);
+  m_LastWhisperTo = user;
+  m_TellFrom.clear();
+}
+
+void CRealm::SendWhisper(const string& message, const string& user, const string& fromUser)
+{
   SendCommand("/w " + user + " " + message); 
+  m_LastWhisperTo = user;
+  m_TellFrom = fromUser;
 }
 
 void CRealm::SendChatOrWhisper(const string& message, const string& user, bool whisper)
