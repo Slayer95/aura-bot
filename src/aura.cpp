@@ -106,7 +106,6 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     homeDir = cliApp.m_HomePath.value();
     return;
   }
-/*
 #ifdef _WIN32
   size_t valueSize;
   errno_t err = _wdupenv_s(&auraHome, &valueSize, L"AURA_HOME");
@@ -121,14 +120,12 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     NormalizeDirectory(homeDir);
     return;
   }
-*/
   if (cliApp.m_CFGPath.has_value()) {
     homeDir = cliApp.m_CFGPath.value().parent_path();
     NormalizeDirectory(homeDir);
     return;
   }
 
-  Print("[DEBUG] Using ExeDirectory");
   homeDir = GetExeDirectory();
 }
 
@@ -295,7 +292,6 @@ int main(const int argc, char** argv)
       CConfig CFG;
       filesystem::path homeDir;
       GetAuraHome(cliApp, homeDir);
-      Print("[DEBUG] Home dir is " + PathToString(homeDir));
       if (LoadConfig(CFG, cliApp, homeDir)) {
         gAura = StartAura(CFG, cliApp);
         if (!gAura || !gAura->GetReady()) {
@@ -1079,7 +1075,9 @@ bool CAura::LoadConfigs(CConfig& CFG)
 #ifdef _WIN32
     size_t valueSize;
     errno_t err = _wdupenv_s(&war3Home, &valueSize, L"WAR3_HOME");
-    if (!err && auraHome != nullptr) {
+    Print("WAR3_HOME err=" + to_string(static_cast<int>(err)));
+    
+    if (!err && war3Home != nullptr) {
       wstring war3Path = war3Home;
 #else
     const char* envValue = getenv("WAR3_HOME");
@@ -1092,20 +1090,21 @@ bool CAura::LoadConfigs(CConfig& CFG)
       optional<filesystem::path> maybeInstallPath = MaybeReadPathFromRegistry(L"InstallPath");
       if (maybeInstallPath.has_value()) {
         m_GameInstallPath = maybeInstallPath.value();
-      }
-      vector<wchar_t*> tryPaths = {
-        L"C:\\Program Files (x86)\\Warcraft III\\",
-        L"C:\\Program Files\\Warcraft III\\",
-        L"C:\\Games\\Warcraft III\\",
-        L"C:\\Warcraft III\\",
-        L"D:\\Games\\Warcraft III\\",
-        L"D:\\Warcraft III\\"
-      };
-      error_code ec;
-      for (const auto& opt : tryPaths) {
-        filesystem::path testPath = opt;
-        if (filesystem::is_directory(testPath, ec)) {
-          m_GameInstallPath = testPath;
+      } else {
+        vector<wchar_t*> tryPaths = {
+          L"C:\\Program Files (x86)\\Warcraft III\\",
+          L"C:\\Program Files\\Warcraft III\\",
+          L"C:\\Games\\Warcraft III\\",
+          L"C:\\Warcraft III\\",
+          L"D:\\Games\\Warcraft III\\",
+          L"D:\\Warcraft III\\"
+        };
+        error_code ec;
+        for (const auto& opt : tryPaths) {
+          filesystem::path testPath = opt;
+          if (filesystem::is_directory(testPath, ec)) {
+            m_GameInstallPath = testPath;
+          }
         }
       }
 #endif

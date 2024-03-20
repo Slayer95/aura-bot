@@ -55,8 +55,6 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <locale>
 #include <system_error>
 
-#include "../utf8/utf8.h"
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #pragma once
@@ -119,14 +117,12 @@ string GetFileExtension(const string& inputPath) {
 
 string PathToString(const filesystem::path& inputPath) {
 #ifdef _WIN32
-  wstring wideString = inputPath.wstring();
-  string narrowString;
-  try {
-    utf8::utf16to8(inputPath.wstring().begin(), wideString.end(), back_inserter(narrowString));
-  } catch (...) {
-    return string();
-  }
-  return narrowString;
+  if (inputPath.empty()) return string();
+  wstring& fromWide = inputPath.wstring();
+  int size = WideCharToMultiByte(CP_UTF8, 0, &fromWide[0], (int)fromWide.size(), nullptr, 0, nullptr, nullptr);
+  string output(size, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, &fromWide[0], (int)fromWide.size(), &output[0], size, nullptr, nullptr);
+  return output;
 #else
   return inputPath.string();
 #endif
@@ -324,7 +320,6 @@ filesystem::path GetExeDirectory()
   buffer.resize(length);
 
   filesystem::path executablePath(buffer.data());
-  Print("executable path: " + PathToString(executablePath));
   filesystem::path cwd;
   try {
     cwd = filesystem::current_path();
@@ -333,7 +328,6 @@ filesystem::path GetExeDirectory()
     NormalizeDirectory(cwd);
     cwd = cwd.parent_path();
   }
-  Print("cwd: " + PathToString(cwd));
   bool cwdIsAncestor = cwd.empty();
   if (!cwdIsAncestor) {
     filesystem::path exeAncestor = executablePath;
@@ -348,10 +342,8 @@ filesystem::path GetExeDirectory()
 
   if (cwdIsAncestor) {    
     Memoized = executablePath.parent_path().lexically_relative(cwd);
-    Print("cwdIsAncestor: " + PathToString(Memoized));
   } else {
     Memoized = executablePath.parent_path();
-    Print("NOT ancestor: " + PathToString(Memoized));
   }
 
   NormalizeDirectory(Memoized);
