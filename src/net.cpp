@@ -200,7 +200,6 @@ bool CIPAddressAPIConnection::QueryIPAddress()
   AppendByteArrayFast(query, hostHeader);
   AppendByteArray(query, m_HostName, false);
   AppendByteArrayFast(query, end);
-  Print("[DEBUG] Sent bytes: " + ByteArrayToHexString(query));
   m_Socket->PutBytes(query);
   m_SentQuery = true;
   return true;
@@ -224,23 +223,26 @@ bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
     if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
       string* RecvBuffer = m_Socket->GetBytes();
       std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-      Print("[DEBUG] Got bytes: " + ByteArrayToHexString(Bytes));
       uint16_t size = static_cast<uint16_t>(Bytes.size());
-      const bool is200 = size >= 15 && Bytes[10] == 0x32 && Bytes[11] == 0x30 && Bytes[12] == 0x30;
+      const bool is200 = size >= 15 && Bytes[9] == 0x32 && Bytes[10] == 0x30 && Bytes[11] == 0x30;
       if (is200) {
-        uint16_t lastLineIndex = 0;
-        uint16_t index = size - 1; // Ignore EOF
+        uint16_t endIndex = size;
+        if (Bytes[endIndex - 1] == 0xa) endIndex = Bytes[endIndex - 2] == 0xd ? endIndex - 2 : endIndex - 1; // Ignore EOF
+        uint16_t responseStart = endIndex;
+        uint16_t index = endIndex;
         while (index--) {
           if (Bytes[index] == 0xa) {
-            lastLineIndex = index;
+            responseStart = index + 1;
             break;
           }
         }
-        string responseBody = string(Bytes.begin() + lastLineIndex, Bytes.end() - (Bytes[size - 1] == 0xa ? 1 : 0));
-        optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(responseBody, m_TargetHost.ss_family == AF_INET6 ? ACCEPT_IPV6 : ACCEPT_IPV4);
-        if (maybeAddress.has_value()) {
-          m_Result = move(maybeAddress);
-          gotAddress = true;
+        if (endIndex > responseStart) {
+          string responseBody = string(Bytes.begin() + responseStart, Bytes.begin() + endIndex);
+          optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(responseBody, m_TargetHost.ss_family == AF_INET6 ? ACCEPT_IPV6 : ACCEPT_IPV4);
+          if (maybeAddress.has_value()) {
+            m_Result = move(maybeAddress);
+            gotAddress = true;
+          }
         }
       }
     }
@@ -1018,7 +1020,6 @@ bool CNet::QueryIPAddress()
         delete m_IPv4CacheV.second;
         m_IPv4CacheV = make_pair(string(), nullptr);
       }
-      Print("IPv4 API is " + m_Config->m_PublicIPv4Value);
       optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config->m_PublicIPv4Value);
       if (parsedURL.has_value() && get<0>(parsedURL.value()) == "http:") {
         string hostName = get<1>(parsedURL.value());
@@ -1027,15 +1028,10 @@ bool CNet::QueryIPAddress()
         optional<sockaddr_storage> resolvedAddress = port == 80 ? ResolveHostName(hostName) : ResolveHostName(hostName, port);
         if (resolvedAddress.has_value()) {
           SetAddressPort(&(resolvedAddress.value()), port);
-          Print("Starting IP address API connection to " + AddressToString(resolvedAddress.value()) + ":" + to_string(port));
           CIPAddressAPIConnection* client = new CIPAddressAPIConnection(m_Aura, resolvedAddress.value(), path, hostName);
           m_IPAddressFetchClients.push_back(client);
           m_IPAddressFetchInProgress = true;
-        } else {
-          Print("Failed to resolve A record");
         }
-      } else {
-        Print("Failed to parse URL");
       }
     }
   }
@@ -1068,16 +1064,15 @@ void CNet::HandleIPAddressFetchDone()
 {
   for (auto& apiClient : m_IPAddressFetchClients) {
     if (!apiClient->m_Result.has_value()) continue;
-    if (apiClient->m_TargetHost.ss_family == AF_INET) {
-      sockaddr_storage* cachedAddress = new sockaddr_storage();
-      memcpy(cachedAddress, &(apiClient->m_Result.value()), sizeof(sockaddr_storage));
-      Print("[DEBUG] Your IPv4 address is " + AddressToString(*cachedAddress));
-      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+    sockaddr_storage* cachedAddress = new sockaddr_storage();
+    memcpy(cachedAddress, &(apiClient->m_Result.value()), sizeof(sockaddr_storage));
+    if (apiClient->m_TargetHost.ss_family == AF_INET6) {
+      m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6CacheT = m_Config->m_PublicIPv6Algorithm;
     } else {
-      // TODO
-      Print("IPv6 CIPAddressAPIConnection not implemented");
+      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4CacheT = m_Config->m_PublicIPv4Algorithm;
     }
-    m_IPv4CacheT = m_Config->m_PublicIPv4Algorithm;
   }
   ResetIPAddressFetch();
 
@@ -1154,8 +1149,8 @@ optional<tuple<string, string, uint16_t, string>> CNet::ParseURL(const string& a
   if (pathIndex == string::npos) pathIndex = address.size();
   string hostName = address.substr(protocol.length() + 2, pathIndex - (protocol.length() + 2));
   string path = pathIndex >= address.length() ? "/" : address.substr(pathIndex);
-  tuple<string, string, uint8_t, string> URL(protocol, hostName, port, path);
-  optional<tuple<string, string, uint8_t, string>> result;
+  tuple<string, string, uint16_t, string> URL(protocol, hostName, port, path);
+  optional<tuple<string, string, uint16_t, string>> result;
   result = URL;
   return result;
 }
