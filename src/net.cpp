@@ -189,10 +189,6 @@ bool CIPAddressAPIConnection::QueryIPAddress()
     return false;
   }
 
-  if (!m_Aura->m_CurrentLobby || (!m_Aura->m_CurrentLobby->GetIsLobby() && !m_Aura->m_CurrentLobby->GetIsMirror())) {
-    return false;
-  }
-
   vector<uint8_t> query;
   const vector<uint8_t> method = {0x47, 0x45, 0x54, 0x20}; // GET
   const vector<uint8_t> httpVersion = {0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0xa}; // HTTP/1.1\n
@@ -203,6 +199,7 @@ bool CIPAddressAPIConnection::QueryIPAddress()
   AppendByteArrayFast(query, hostHeader);
   AppendByteArray(query, m_HostName, false);
   query.push_back(0xa); // LF
+  Print("Query: " + ByteArrayToHexString(query));
   m_Socket->PutBytes(query);
   m_SentQuery = true;
   return true;
@@ -1026,8 +1023,8 @@ bool CNet::QueryIPAddress()
         string path = get<3>(parsedURL.value());
         optional<sockaddr_storage> resolvedAddress = port == 80 ? ResolveHostName(hostName) : ResolveHostName(hostName, port);
         if (resolvedAddress.has_value()) {
-          Print("Starting IP address API connection...");
           SetAddressPort(&(resolvedAddress.value()), port);
+          Print("Starting IP address API connection to " + AddressToString(resolvedAddress.value()) + ":" + to_string(port));
           CIPAddressAPIConnection* client = new CIPAddressAPIConnection(m_Aura, resolvedAddress.value(), path, hostName);
           m_IPAddressFetchClients.push_back(client);
           m_IPAddressFetchInProgress = true;
@@ -1141,7 +1138,7 @@ optional<tuple<string, string, uint16_t, string>> CNet::ParseURL(const string& a
 {
   if (address.empty()) return nullopt;
   const size_t colonIndex = address.find(':');
-  if (colonIndex == string::npos || colonIndex != 4 && colonIndex != 5) return nullopt;
+  if (colonIndex == string::npos || (colonIndex != 4 && colonIndex != 5)) return nullopt;
   string protocol = address.substr(0, colonIndex + 1);
   const uint16_t port = protocol == "https:" ? 443 : 80;
   if (address.length() <= protocol.length() + 2 ||

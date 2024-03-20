@@ -1074,9 +1074,7 @@ bool CAura::LoadConfigs(CConfig& CFG)
   } else if (m_GameInstallPath.empty()) {
 #ifdef _WIN32
     size_t valueSize;
-    errno_t err = _wdupenv_s(&war3Home, &valueSize, L"WAR3_HOME");
-    Print("WAR3_HOME err=" + to_string(static_cast<int>(err)));
-    
+    errno_t err = _wdupenv_s(&war3Home, &valueSize, L"WAR3_HOME"); 
     if (!err && war3Home != nullptr) {
       wstring war3Path = war3Home;
 #else
@@ -1151,8 +1149,8 @@ uint8_t CAura::ExtractScripts()
 
   void* MPQ;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config->m_MapCFGPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config->m_MapCFGPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
     CloseMPQArchive(MPQ);
   } else {
 #ifdef _WIN32
