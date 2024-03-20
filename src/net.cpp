@@ -47,7 +47,7 @@ using namespace std;
 CGameTestConnection::CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const string nName)
   : m_TargetHost(nTargetHost),
     m_Aura(nAura),
-    m_RealmInternalId(nRealm->GetInternalID()),
+    m_RealmInternalId(nRealm ? nRealm->GetInternalID() : 0),
     m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName)),
     m_Type(nType),
     m_Name(nName),
