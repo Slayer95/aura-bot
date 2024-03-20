@@ -238,9 +238,11 @@ void CCLI::OverrideConfig(CAura* nAura) const
       nAura->m_Net->m_Config->m_UDPBroadcastStrictMode = m_LANMode.value() == "strict";
     }
   }
+#ifndef DISABLE_MINIUPNP
   if (m_EnableUPnP.has_value()) {
     nAura->m_Net->m_Config->m_EnableUPnP = m_EnableUPnP.value();
   }
+#endif
 }
 
 bool CCLI::QueueActions(CAura* nAura) const

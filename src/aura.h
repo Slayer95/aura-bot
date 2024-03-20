@@ -78,16 +78,6 @@
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
-#define LOG_LEVEL_EMERGENCY 1
-#define LOG_LEVEL_ALERT 2
-#define LOG_LEVEL_CRITICAL 3
-#define LOG_LEVEL_ERROR 4
-#define LOG_LEVEL_WARNING 5
-#define LOG_LEVEL_NOTICE 6
-#define LOG_LEVEL_INFO 7
-#define LOG_LEVEL_DEBUG 8
-#define LOG_LEVEL_TRACE 9
-
 
 //
 // CAura
