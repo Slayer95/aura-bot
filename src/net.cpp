@@ -191,15 +191,16 @@ bool CIPAddressAPIConnection::QueryIPAddress()
 
   vector<uint8_t> query;
   const vector<uint8_t> method = {0x47, 0x45, 0x54, 0x20}; // GET
-  const vector<uint8_t> httpVersion = {0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0xa}; // HTTP/1.1\n
+  const vector<uint8_t> httpVersion = {0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0xd, 0xa}; // HTTP/1.1\n\r
   const vector<uint8_t> hostHeader = {0x48, 0x4f, 0x53, 0x54, 0x3a, 0x20}; // HOST: 
+  const vector<uint8_t> end = {0xd, 0xa, 0xd, 0xa};
   AppendByteArrayFast(query, method);
   AppendByteArray(query, m_EndPoint, false);
   AppendByteArrayFast(query, httpVersion);
   AppendByteArrayFast(query, hostHeader);
   AppendByteArray(query, m_HostName, false);
-  query.push_back(0xa); // LF
-  Print("Query: " + ByteArrayToHexString(query));
+  AppendByteArrayFast(query, end);
+  Print("[DEBUG] Sent bytes: " + ByteArrayToHexString(query));
   m_Socket->PutBytes(query);
   m_SentQuery = true;
   return true;
@@ -242,15 +243,14 @@ bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
           gotAddress = true;
         }
       }
-      
-      if (!m_SentQuery) {
-        if (QueryIPAddress()) {
-          m_Socket->DoSend(static_cast<fd_set*>(send_fd));
-        }
-      } else if (gotAddress) {
-        m_Socket->Reset();
-        m_Socket->Disconnect();
+    }
+    if (!m_SentQuery) {
+      if (QueryIPAddress()) {
+        m_Socket->DoSend(static_cast<fd_set*>(send_fd));
       }
+    } else if (gotAddress) {
+      m_Socket->Reset();
+      m_Socket->Disconnect();
     }
   } else if (m_Socket->GetConnecting() && m_Socket->CheckConnect()) {
     m_CanConnect = true;
