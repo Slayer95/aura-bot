@@ -305,9 +305,13 @@ by allowing incoming connections on specific ports.
 
 # Flags for CLI games
 
-## \`--check-joinable\`
+## \`--check-joinable\`, \`--no-check-joinable\`
 
 This flag enables automatic connectivity checks to ensure hosted games are joinable from the Internet.
+
+## \`--check-version\`, \`--no-check-version\`
+
+This flag enables version checks to ensure hosted games are compatible with running game version.
 
 ## \`--random-races\`
 

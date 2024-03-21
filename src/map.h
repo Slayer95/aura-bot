@@ -167,10 +167,11 @@ private:
   uint8_t                m_MapFilterSize;
   uint8_t                m_MapFilterObs;
   std::vector<uint8_t>   m_MapContentMismatch;
+  bool                   m_SkipVersionCheck;
   bool                   m_Valid;
 
 public:
-  CMap(CAura* nAura, CConfig* CFG);
+  CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck = false);
   ~CMap();
 
   inline bool                   GetValid() const { return m_Valid; }
@@ -191,6 +192,7 @@ public:
   std::vector<uint8_t>          GetMapGameFlags() const;
   uint32_t                      GetMapGameType() const;
   inline uint32_t               GetMapOptions() const { return m_MapOptions; }
+  inline uint8_t                GetMapMinGameVersion() const { return m_MapMinGameVersion; }
   uint8_t                       GetMapLayoutStyle() const;
   inline std::vector<uint8_t>   GetMapWidth() const { return m_MapWidth; }
   inline std::vector<uint8_t>   GetMapHeight() const { return m_MapHeight; }

@@ -137,6 +137,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_IsDownloaded(false),
     m_MapDownloadSize(0),
 
+    m_SkipVersionCheck(false),
+
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_CreatorRealm(nullptr)
@@ -146,7 +148,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
   m_Map = GetBaseMapFromConfig(nMapCFG, false);
 }
 
-CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode)
+CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck)
   : m_Aura(nAura),
     m_Map(nullptr),
     m_Ctx(nCtx),
@@ -161,6 +163,9 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
 
     m_IsDownloadable(false),
     m_IsDownloaded(false),
+    m_MapDownloadSize(0),
+
+    m_SkipVersionCheck(nSkipVersionCheck),
 
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
@@ -470,7 +475,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
 
 CMap* CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
 {
-  CMap* map = new CMap(m_Aura, mapCFG);
+  CMap* map = new CMap(m_Aura, mapCFG, m_SkipVersionCheck);
   if (!map) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map config", CHAT_SEND_SOURCE_ALL);
     return nullptr;
@@ -522,7 +527,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     MapCFG.Set("map_type", "dota");
   }
 
-  CMap* baseMap = new CMap(m_Aura, &MapCFG);
+  CMap* baseMap = new CMap(m_Aura, &MapCFG, m_SkipVersionCheck);
   if (!baseMap) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map.", CHAT_SEND_SOURCE_ALL);
     return nullptr;

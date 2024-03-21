@@ -65,8 +65,9 @@ using namespace std;
 // CMap
 //
 
-CMap::CMap(CAura* nAura, CConfig* CFG)
-  : m_Aura(nAura)
+CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
+  : m_Aura(nAura),
+    m_SkipVersionCheck(false)
 {
   Load(CFG);
 }
@@ -1189,7 +1190,7 @@ string CMap::CheckProblems()
     }
   }
 
-  if (m_MapMinGameVersion >= m_Aura->m_GameVersion) {
+  if (!m_SkipVersionCheck && m_Aura->m_GameVersion < m_MapMinGameVersion) {
     m_Valid = false;
     return "map requires v1." + to_string(m_MapMinGameVersion) + " (using v1." + to_string(m_Aura->m_GameVersion) + ")";
   }

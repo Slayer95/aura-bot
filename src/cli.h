@@ -86,6 +86,7 @@ private:
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
+  std::optional<bool>                   m_CheckMapVersion;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;

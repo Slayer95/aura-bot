@@ -1312,6 +1312,9 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   } else {
     versionPrefix = "[1." + to_string(m_GameVersion) + "] ";
   }
+  if (m_GameVersion < gameSetup->m_Map->GetMapMinGameVersion()) {
+    Print("[AURA] warning - hosting game that may requiere version 1." + to_string(gameSetup->m_Map->GetMapMinGameVersion()));
+  }
 
   for (auto& bnet : m_Realms) {
     if (gameSetup->m_RealmsExcluded.find(bnet->GetServer()) != gameSetup->m_RealmsExcluded.end()) {

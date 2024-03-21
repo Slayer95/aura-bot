@@ -3538,9 +3538,10 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (nameString.find("DotA") != string::npos)
           MapCFG.Set("map_type", "dota");
 
-        CMap* ParsedMap = new CMap(m_Aura, &MapCFG);
+        CMap* ParsedMap = new CMap(m_Aura, &MapCFG, true);
         const bool isValid = ParsedMap->GetValid();
         if (!isValid) {
+          Print("[AURA] warning - map [" + nameString + "] is not valid.");
           delete ParsedMap;
           badCounter++;
           continue;
@@ -4002,7 +4003,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, false);
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, true, true);
       if (!gameSetup) {
         ErrorReply("Unable to host game");
         break;
@@ -4155,6 +4156,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool isHostCommand = CommandHash == HashCode("host");
+      bool isSkipVersion = CommandHash == HashCode("mapforce");
       vector<string> Args = isHostCommand ? SplitArgs(Payload, 2, 6) : SplitArgs(Payload, 1, 5);
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
@@ -4185,7 +4187,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (4 <= Args.size()) options.ParseMapRandomRaces(Args[3]);
       if (5 <= Args.size()) options.ParseMapRandomHeroes(Args[4]);
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true);
       if (!gameSetup) {
         ErrorReply("Unable to host game");
         break;

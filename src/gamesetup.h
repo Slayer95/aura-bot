@@ -159,6 +159,8 @@ public:
   std::string                                     m_MapSiteUri;
   std::filesystem::path                           m_DownloadFilePath;
 
+  bool                                            m_SkipVersionCheck;
+
   std::string                                     m_GameName;
   std::pair<std::string, std::string>             m_GameOwner;
   std::optional<uint32_t>                         m_GameIdentifier;
@@ -175,7 +177,7 @@ public:
   CRealm*                                         m_CreatorRealm;
 
   CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* mapCFG);
-  CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode);
+  CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck);
   ~CGameSetup();
 
   std::string GetInspectName() const;

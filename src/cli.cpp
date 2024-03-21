@@ -102,7 +102,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--timeout", m_GameTimeout, "Sets the time limit for the game lobby.");
-  app.add_flag(  "--check-joinable", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
+  app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
+  app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
 
   // Command execution
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
@@ -285,7 +286,7 @@ bool CCLI::QueueActions(CAura* nAura) const
       searchType = SEARCH_TYPE_ANY;
     }
     CCommandContext* ctx = new CCommandContext(nAura, &cout, '!');
-    CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true);
+    CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
     if (gameSetup && gameSetup->LoadMap()) {
       if (gameSetup->ApplyMapModifiers(&options)) {
         for (const auto& id : m_ExcludedRealms) {
