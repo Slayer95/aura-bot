@@ -281,6 +281,7 @@ int main(const int argc, char** argv)
   {
     // extra scope, so that cliApp can be deallocated
     CCLI cliApp;
+    // TODO: Aura won't start from C:/ drive, unless %AURA_HOME% is set
     uint8_t cliResult = cliApp.Parse(argc, argv);
     if (cliResult == CLI_EARLY_RETURN) {
       cliApp.RunEarlyOptions();

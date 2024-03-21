@@ -489,19 +489,12 @@ bool CRealm::Update(void* fd, void* send_fd)
     m_FirstConnect = false;
     m_ReconnectNextTick = false;
 
-    optional<sockaddr_storage> resolvedAddress = (
-      m_Config->m_ServerPort == 6112 ? m_Aura->m_Net->ResolveHostName(m_Config->m_HostName) :
-      m_Aura->m_Net->ResolveHostName(m_Config->m_HostName, m_Config->m_ServerPort)
-    );
-    if (!resolvedAddress.has_value()) {
-      m_Socket->m_HasError = true;
-    } else if (resolvedAddress.value().ss_family == AF_INET6) {
-      Print(GetLogPrefix() + "Provide IPv4 addresses for realms.");
-      m_Socket->m_HasError = true;
+    sockaddr_storage resolvedAddress;
+    if (m_Aura->m_Net->ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config->m_HostName, m_Config->m_ServerPort)) {
+      m_Socket->Connect(m_Config->m_BindAddress, resolvedAddress, m_Config->m_ServerPort);
     } else {
-      m_Socket->Connect(m_Config->m_BindAddress, resolvedAddress.value(), m_Config->m_ServerPort);
+      m_Socket->m_HasError = true;
     }
-
     m_WaitingToConnect          = false;
     m_LastConnectionAttemptTime = Time;
   }

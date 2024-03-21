@@ -165,7 +165,7 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
 // CIPAddressAPIConnection
 //
 
-CIPAddressAPIConnection::CIPAddressAPIConnection(CAura* nAura, sockaddr_storage nTargetHost, const string nEndPoint, const string nHostName)
+CIPAddressAPIConnection::CIPAddressAPIConnection(CAura* nAura, const sockaddr_storage& nTargetHost, const string& nEndPoint, const string& nHostName)
   : m_TargetHost(nTargetHost),
     m_Aura(nAura),
     m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nTargetHost.ss_family == AF_INET6 ? "IPv6 Address" : "IPv4 Address")),
@@ -297,10 +297,10 @@ CNet::CNet(CAura* nAura)
     m_UDP4BroadcastTarget(new sockaddr_storage()),
     m_UDP6BroadcastTarget(new sockaddr_storage()),
 
-    m_IPv4CacheV(make_pair(string(), nullptr)),
-    m_IPv4CacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
-    m_IPv6CacheV(make_pair(string(), nullptr)),
-    m_IPv6CacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
+    m_IPv4SelfCacheV(make_pair(string(), nullptr)),
+    m_IPv4SelfCacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
+    m_IPv6SelfCacheV(make_pair(string(), nullptr)),
+    m_IPv6SelfCacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
 
     m_HealthCheckVerbose(false),
     m_HealthCheckInProgress(false),
@@ -641,29 +641,29 @@ sockaddr_storage* CNet::GetPublicIPv4()
 {
   switch (m_Config->m_PublicIPv4Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      if (m_IPv4CacheV.first == m_Config->m_PublicIPv4Value && m_IPv4CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
-        return m_IPv4CacheV.second;
+      if (m_IPv4SelfCacheV.first == m_Config->m_PublicIPv4Value && m_IPv4SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
+        return m_IPv4SelfCacheV.second;
       }
-      if (m_IPv4CacheV.second != nullptr) {
-        delete m_IPv4CacheV.second;
-        m_IPv4CacheV = make_pair(string(), nullptr);
+      if (m_IPv4SelfCacheV.second != nullptr) {
+        delete m_IPv4SelfCacheV.second;
+        m_IPv4SelfCacheV = make_pair(string(), nullptr);
       }
 
       optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv4Value, ACCEPT_IPV4);
       if (!maybeAddress.has_value()) return nullptr; // should never happen
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
-      m_IPv4CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-      return m_IPv4CacheV.second;
+      m_IPv4SelfCacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+      return m_IPv4SelfCacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (m_IPv4CacheV.first == m_Config->m_PublicIPv4Value && m_IPv4CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-        return m_IPv4CacheV.second;
+      if (m_IPv4SelfCacheV.first == m_Config->m_PublicIPv4Value && m_IPv4SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+        return m_IPv4SelfCacheV.second;
       }
-      if (m_IPv4CacheV.second != nullptr) {
-        delete m_IPv4CacheV.second;
-        m_IPv4CacheV = make_pair(string(), nullptr);
+      if (m_IPv4SelfCacheV.second != nullptr) {
+        delete m_IPv4SelfCacheV.second;
+        m_IPv4SelfCacheV = make_pair(string(), nullptr);
       }
 #ifndef DISABLE_CPR
       auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv4Value}, cpr::Timeout{3000});
@@ -675,10 +675,10 @@ sockaddr_storage* CNet::GetPublicIPv4()
       if (!maybeAddress.has_value()) return nullptr;
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
-      m_IPv4CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+      m_IPv4SelfCacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
 #endif
-      return m_IPv4CacheV.second;
+      return m_IPv4SelfCacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
     default:
@@ -690,29 +690,29 @@ sockaddr_storage* CNet::GetPublicIPv6()
 {
   switch (m_Config->m_PublicIPv6Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      if (m_IPv6CacheV.first == m_Config->m_PublicIPv6Value && m_IPv6CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
-        return m_IPv6CacheV.second;
+      if (m_IPv6SelfCacheV.first == m_Config->m_PublicIPv6Value && m_IPv6SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
+        return m_IPv6SelfCacheV.second;
       }
-      if (m_IPv6CacheV.second != nullptr) {
-        delete m_IPv6CacheV.second;
-        m_IPv6CacheV = make_pair(string(), nullptr);
+      if (m_IPv6SelfCacheV.second != nullptr) {
+        delete m_IPv6SelfCacheV.second;
+        m_IPv6SelfCacheV = make_pair(string(), nullptr);
       }
 
       optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv6Value, ACCEPT_IPV6);
       if (!maybeAddress.has_value()) return nullptr; // should never happen
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
-      m_IPv6CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
-      return m_IPv6CacheV.second;
+      m_IPv6SelfCacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
+      return m_IPv6SelfCacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (m_IPv6CacheV.first == m_Config->m_PublicIPv6Value && m_IPv6CacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-        return m_IPv6CacheV.second;
+      if (m_IPv6SelfCacheV.first == m_Config->m_PublicIPv6Value && m_IPv6SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+        return m_IPv6SelfCacheV.second;
       }
-      if (m_IPv6CacheV.second != nullptr) {
-        delete m_IPv6CacheV.second;
-        m_IPv6CacheV = make_pair(string(), nullptr);
+      if (m_IPv6SelfCacheV.second != nullptr) {
+        delete m_IPv6SelfCacheV.second;
+        m_IPv6SelfCacheV = make_pair(string(), nullptr);
       }
 #ifndef DISABLE_CPR
       auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv6Value}, cpr::Timeout{3000});
@@ -726,10 +726,10 @@ sockaddr_storage* CNet::GetPublicIPv6()
       }
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
-      m_IPv6CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
+      m_IPv6SelfCacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
 #endif
-      return m_IPv6CacheV.second;
+      return m_IPv6SelfCacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE:
     default:
@@ -1018,20 +1018,19 @@ bool CNet::QueryIPAddress()
   }
 
   if (m_Config->m_PublicIPv4Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-    if (m_IPv4CacheV.first != m_Config->m_PublicIPv4Value || m_IPv4CacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-      if (m_IPv4CacheV.second != nullptr) {
-        delete m_IPv4CacheV.second;
-        m_IPv4CacheV = make_pair(string(), nullptr);
+    if (m_IPv4SelfCacheV.first != m_Config->m_PublicIPv4Value || m_IPv4SelfCacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+      if (m_IPv4SelfCacheV.second != nullptr) {
+        delete m_IPv4SelfCacheV.second;
+        m_IPv4SelfCacheV = make_pair(string(), nullptr);
       }
       optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config->m_PublicIPv4Value);
       if (parsedURL.has_value() && get<0>(parsedURL.value()) == "http:") {
         string hostName = get<1>(parsedURL.value());
         uint16_t port = get<2>(parsedURL.value());
         string path = get<3>(parsedURL.value());
-        optional<sockaddr_storage> resolvedAddress = port == 80 ? ResolveHostName(hostName) : ResolveHostName(hostName, port);
-        if (resolvedAddress.has_value()) {
-          SetAddressPort(&(resolvedAddress.value()), port);
-          CIPAddressAPIConnection* client = new CIPAddressAPIConnection(m_Aura, resolvedAddress.value(), path, hostName);
+        sockaddr_storage resolvedAddress;
+        if (ResolveHostName(resolvedAddress, ACCEPT_IPV4, hostName, port)) {
+          CIPAddressAPIConnection* client = new CIPAddressAPIConnection(m_Aura, resolvedAddress, path, hostName);
           m_IPAddressFetchClients.push_back(client);
           m_IPAddressFetchInProgress = true;
         }
@@ -1039,12 +1038,23 @@ bool CNet::QueryIPAddress()
     }
   }
   if (m_Config->m_PublicIPv6Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-    if (m_IPv6CacheV.first != m_Config->m_PublicIPv6Value || m_IPv6CacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-      if (m_IPv6CacheV.second != nullptr) {
-        delete m_IPv6CacheV.second;
-        m_IPv6CacheV = make_pair(string(), nullptr);
+    if (m_IPv6SelfCacheV.first != m_Config->m_PublicIPv6Value || m_IPv6SelfCacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+      if (m_IPv6SelfCacheV.second != nullptr) {
+        delete m_IPv6SelfCacheV.second;
+        m_IPv6SelfCacheV = make_pair(string(), nullptr);
       }
-      // TODO
+      optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config->m_PublicIPv6Value);
+      if (parsedURL.has_value() && get<0>(parsedURL.value()) == "http:") {
+        string hostName = get<1>(parsedURL.value());
+        uint16_t port = get<2>(parsedURL.value());
+        string path = get<3>(parsedURL.value());
+        sockaddr_storage resolvedAddress;
+        if (ResolveHostName(resolvedAddress, ACCEPT_IPV6, hostName, port)) {
+          CIPAddressAPIConnection* client = new CIPAddressAPIConnection(m_Aura, resolvedAddress, path, hostName);
+          m_IPAddressFetchClients.push_back(client);
+          m_IPAddressFetchInProgress = true;
+        }
+      }
     }
   }
 
@@ -1070,11 +1080,11 @@ void CNet::HandleIPAddressFetchDone()
     sockaddr_storage* cachedAddress = new sockaddr_storage();
     memcpy(cachedAddress, &(apiClient->m_Result.value()), sizeof(sockaddr_storage));
     if (apiClient->m_TargetHost.ss_family == AF_INET6) {
-      m_IPv6CacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
-      m_IPv6CacheT = m_Config->m_PublicIPv6Algorithm;
+      m_IPv6SelfCacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6SelfCacheT = m_Config->m_PublicIPv6Algorithm;
     } else {
-      m_IPv4CacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
-      m_IPv4CacheT = m_Config->m_PublicIPv4Algorithm;
+      m_IPv4SelfCacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4SelfCacheT = m_Config->m_PublicIPv4Algorithm;
     }
   }
   ResetIPAddressFetch();
@@ -1192,18 +1202,13 @@ optional<sockaddr_storage> CNet::ParseAddress(const string& address, const uint8
   return result;
 }
 
-optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName)
+bool CNet::ResolveHostName4(sockaddr_storage& address, const string& hostName, const uint16_t port)
 {
-  optional<sockaddr_storage> result = ParseAddress(hostName);
-  if (result.has_value()) {
-    return result;
-  }
-
-  string cacheKey = hostName + ":";
-  auto it = m_DNSCache.find(cacheKey);
-  if (it != end(m_DNSCache)) {
-    result = it->second;
-    return result;
+  auto it = m_IPv4DNSCache.find(hostName);
+  if (it != end(m_IPv4DNSCache)) {
+    memcpy(&address, it->second, sizeof(sockaddr_storage));
+    SetAddressPort(&address, port);
+    return true;
   }
 
   struct hostent* HostInfo;
@@ -1211,41 +1216,26 @@ optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName)
 
   if (!HostInfo) {
     Print("[DNS] cannot resolve " + hostName + " - check your Internet connection");
-    return result;
+    return false;
   }
 
-  struct sockaddr_storage address;
-  struct sockaddr_in *addr4 = (struct sockaddr_in *)&address;
+  sockaddr_storage* cacheAddress = new sockaddr_storage();
+  struct sockaddr_in* addr4 = reinterpret_cast<struct sockaddr_in*>(cacheAddress);
   addr4->sin_family = AF_INET;
-  addr4->sin_port = 0;
+  addr4->sin_port = htons(port);
   memcpy(&(addr4->sin_addr.s_addr), HostInfo->h_addr, HostInfo->h_length);
-
-  m_DNSCache[cacheKey] = address;
-  result = address;
-  return result;
+  memcpy(&address, cacheAddress, sizeof(sockaddr_storage));
+  m_IPv4DNSCache[hostName] = cacheAddress;
+  return true;
 }
 
-optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName, const uint16_t hostPort)
+bool CNet::ResolveHostName6(sockaddr_storage& address, const string& hostName, const uint16_t port)
 {
-  optional<sockaddr_storage> result = ParseAddress(hostName);
-  if (result.has_value()) {
-    return result;
-  }
-
-  string cacheKey = hostName + ":" + to_string(hostPort);
-  auto it = m_DNSCache.find(cacheKey);
-  if (it != end(m_DNSCache)) {
-    result = it->second;
-    return result;
-  }
-
-  auto baseMatch = m_DNSCache.find(hostName + ":");
-  if (baseMatch != end(m_DNSCache)) {
-    struct sockaddr_storage addressCopy;
-    memcpy(&addressCopy, &(baseMatch->second), sizeof(sockaddr_storage));
-    m_DNSCache[cacheKey] = addressCopy;
-    result = addressCopy;
-    return result;
+  auto it = m_IPv6DNSCache.find(hostName);
+  if (it != end(m_IPv6DNSCache)) {
+    memcpy(&address, it->second, sizeof(sockaddr_storage));
+    SetAddressPort(&address, port);
+    return true;
   }
 
   struct hostent* HostInfo;
@@ -1253,35 +1243,72 @@ optional<sockaddr_storage> CNet::ResolveHostName(const string& hostName, const u
 
   if (!HostInfo) {
     Print("[DNS] cannot resolve " + hostName + " - check your Internet connection");
-    return result;
+    return false;
   }
 
-  struct sockaddr_storage address;
-  struct sockaddr_in *addr4 = (struct sockaddr_in *)&address;
-  addr4->sin_family = AF_INET;
-  addr4->sin_port = 0;
-  memcpy(&(addr4->sin_addr.s_addr), HostInfo->h_addr, HostInfo->h_length);
+  sockaddr_storage* cacheAddress = new sockaddr_storage();
+  memset(cacheAddress, 0, sizeof(sockaddr_storage));
+  /*
+  struct sockaddr_in6* addr6 = reinterpret_cast<struct sockaddr_in6*>(cacheAddress);
+  addr6->sin6_family = AF_INET6;
+  addr6->sin6_port = htons(port);
+  memcpy(&(addr6->sin6_addr.s6_addr), HostInfo->h_addr, HostInfo->h_length);
+  memcpy(&address, cacheAddress, sizeof(sockaddr_storage));
+  */
+  m_IPv6DNSCache[hostName] = cacheAddress;
+  return true;
+}
 
-  m_DNSCache[cacheKey] = address;
-  result = address;
-  return result;
+bool CNet::ResolveHostName(sockaddr_storage& address, const uint8_t acceptFamily, const string& hostName, const uint16_t port)
+{
+  optional<sockaddr_storage> parseResult = ParseAddress(hostName, acceptFamily);
+  if (parseResult.has_value()) {
+    memcpy(&address, &(parseResult.value()), sizeof(sockaddr_storage));
+    SetAddressPort(&address, port);
+    return true;
+  }
+
+  if (0 != (acceptFamily & ACCEPT_IPV4)) {
+    if (ResolveHostName4(address, hostName, port)) {
+      return true;
+    }
+  }
+  if (0 != (acceptFamily & ACCEPT_IPV6)) {
+    if (ResolveHostName6(address, hostName, port)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void CNet::FlushDNSCache()
 {
-  m_DNSCache.clear();
+  for (auto& entry : m_IPv4DNSCache) {
+    if (entry.second != nullptr) {
+      delete entry.second;
+      entry.second = nullptr;
+    }
+  }
+  for (auto& entry : m_IPv6DNSCache) {
+    if (entry.second != nullptr) {
+      delete entry.second;
+      entry.second = nullptr;
+    }
+  }
+  m_IPv4DNSCache.clear();
+  m_IPv6DNSCache.clear();
 }
 
 void CNet::FlushSelfIPCache()
 {
-  if (m_IPv4CacheV.second != nullptr)
-    delete m_IPv4CacheV.second;
-  if (m_IPv6CacheV.second != nullptr)
-    delete m_IPv6CacheV.second;
-  m_IPv4CacheV = make_pair(string(), nullptr);
-  m_IPv4CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
-  m_IPv6CacheV = make_pair(string(), nullptr);
-  m_IPv6CacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
+  if (m_IPv4SelfCacheV.second != nullptr)
+    delete m_IPv4SelfCacheV.second;
+  if (m_IPv6SelfCacheV.second != nullptr)
+    delete m_IPv6SelfCacheV.second;
+  m_IPv4SelfCacheV = make_pair(string(), nullptr);
+  m_IPv4SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
+  m_IPv6SelfCacheV = make_pair(string(), nullptr);
+  m_IPv6SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
 }
 
 void CNet::PropagateBroadcastEnabled(const bool nEnable)

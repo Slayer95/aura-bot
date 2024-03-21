@@ -51,6 +51,7 @@
 #include "util.h"
 #include "bnetprotocol.h"
 #include "realm.h"
+#include "net.h"
 
 #include <utility>
 #include <algorithm>
@@ -202,16 +203,12 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     Print("[IRC: " + m_Config->m_HostName + "] connecting to server [" + m_Config->m_HostName + "] on port " + to_string(m_Config->m_Port));
     optional<sockaddr_storage> emptyBindAddress;
-    optional<sockaddr_storage> resolvedAddress = (
-      m_Config->m_Port == 6667 ? m_Aura->m_Net->ResolveHostName(m_Config->m_HostName) :
-      m_Aura->m_Net->ResolveHostName(m_Config->m_HostName, m_Config->m_Port)
-    );
-    if (resolvedAddress.has_value()) {
-      m_Socket->Connect(emptyBindAddress, resolvedAddress.value(), m_Config->m_Port);
+    sockaddr_storage resolvedAddress;
+    if (m_Aura->m_Net->ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config->m_HostName, m_Config->m_Port)) {
+      m_Socket->Connect(emptyBindAddress, resolvedAddress, m_Config->m_Port);
     } else {
       m_Socket->m_HasError = true;
     }
-
     m_WaitingToConnect          = false;
     m_LastConnectionAttemptTime = Time;
   }

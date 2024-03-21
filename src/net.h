@@ -116,7 +116,7 @@ public:
 class CIPAddressAPIConnection
 {
 public:
-  CIPAddressAPIConnection(CAura* nAura, sockaddr_storage nTargetHost, const std::string nEndPoint, const std::string nHostName);
+  CIPAddressAPIConnection(CAura* nAura, const sockaddr_storage& nTargetHost, const std::string& nEndPoint, const std::string& nHostName);
   ~CIPAddressAPIConnection();
 
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
@@ -164,11 +164,12 @@ public:
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CGameConnection*>>           m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
-  std::map<std::string, sockaddr_storage>                     m_DNSCache;
-  std::pair<std::string, sockaddr_storage*>                   m_IPv4CacheV;
-  uint8_t                                                     m_IPv4CacheT;
-  std::pair<std::string, sockaddr_storage*>                   m_IPv6CacheV;
-  uint8_t                                                     m_IPv6CacheT;
+  std::map<std::string, sockaddr_storage*>                    m_IPv4DNSCache;
+  std::map<std::string, sockaddr_storage*>                    m_IPv6DNSCache;
+  std::pair<std::string, sockaddr_storage*>                   m_IPv4SelfCacheV;
+  uint8_t                                                     m_IPv4SelfCacheT;
+  std::pair<std::string, sockaddr_storage*>                   m_IPv6SelfCacheV;
+  uint8_t                                                     m_IPv6SelfCacheT;
 
   std::vector<CGameTestConnection*>                           m_HealthCheckClients;
   std::vector<CIPAddressAPIConnection*>                       m_IPAddressFetchClients;
@@ -196,10 +197,11 @@ public:
   std::vector<uint16_t>           GetPotentialGamePorts() const;
   uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
-  std::optional<sockaddr_storage> ResolveHostName(const std::string& hostName);
-  std::optional<sockaddr_storage> ResolveHostName(const std::string& hostName, const uint16_t hostPort);
-  void             FlushDNSCache();
-  void             FlushSelfIPCache();
+  bool                            ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
+  bool                            ResolveHostName4(sockaddr_storage& address, const std::string& hostName, const uint16_t port);
+  bool                            ResolveHostName6(sockaddr_storage& address, const std::string& hostName, const uint16_t port);
+  void                            FlushDNSCache();
+  void                            FlushSelfIPCache();
 
 #ifndef DISABLE_MINIUPNP
   uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel = LOG_LEVEL_INFO);
