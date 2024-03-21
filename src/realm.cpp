@@ -491,7 +491,7 @@ bool CRealm::Update(void* fd, void* send_fd)
 
     sockaddr_storage resolvedAddress;
     if (m_Aura->m_Net->ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config->m_HostName, m_Config->m_ServerPort)) {
-      m_Socket->Connect(m_Config->m_BindAddress, resolvedAddress, m_Config->m_ServerPort);
+      m_Socket->Connect(m_Config->m_BindAddress, resolvedAddress);
     } else {
       m_Socket->m_HasError = true;
     }

@@ -198,8 +198,7 @@ public:
   uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
   bool                            ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
-  bool                            ResolveHostName4(sockaddr_storage& address, const std::string& hostName, const uint16_t port);
-  bool                            ResolveHostName6(sockaddr_storage& address, const std::string& hostName, const uint16_t port);
+  bool                            ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<std::string, sockaddr_storage*>&);
   void                            FlushDNSCache();
   void                            FlushSelfIPCache();
 

@@ -441,7 +441,7 @@ public:
 
   inline bool         GetConnecting() const { return m_Connecting; }
   bool                CheckConnect();
-  void                Connect(std::optional<sockaddr_storage>& localAddress, sockaddr_storage& remoteHost, const uint16_t port = 0);
+  void                Connect(const std::optional<sockaddr_storage>& localAddress, const sockaddr_storage& remoteHost);
 
   // Overrides
   void                Reset();

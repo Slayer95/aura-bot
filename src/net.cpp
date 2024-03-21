@@ -1202,60 +1202,47 @@ optional<sockaddr_storage> CNet::ParseAddress(const string& address, const uint8
   return result;
 }
 
-bool CNet::ResolveHostName4(sockaddr_storage& address, const string& hostName, const uint16_t port)
+bool CNet::ResolveHostNameInner(sockaddr_storage& address, const string& hostName, const uint16_t port, const uint8_t family, map<string, sockaddr_storage*>& cache)
 {
-  auto it = m_IPv4DNSCache.find(hostName);
-  if (it != end(m_IPv4DNSCache)) {
+  auto it = cache.find(hostName);
+  if (it != end(cache)) {
+    // Output to address argument
     memcpy(&address, it->second, sizeof(sockaddr_storage));
     SetAddressPort(&address, port);
     return true;
   }
 
-  struct hostent* HostInfo;
-  HostInfo = gethostbyname(hostName.c_str());
+  struct addrinfo hints, *p;
+  int status;
 
-  if (!HostInfo) {
-    Print("[DNS] cannot resolve " + hostName + " - check your Internet connection");
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = family;
+  hints.ai_socktype = SOCK_STREAM;
+
+  if ((status = getaddrinfo(hostName.c_str(), nullptr, &hints, &p)) != 0) {
+#ifdef _WIN32
+    Print("[DNS] cannot resolve address for " + hostName + " - error " + to_string(status));
+#else
+    Print("[DNS] cannot resolve address for " + hostName + gai_strerror(status));
+#endif
+    Print("[DNS] warning - check your Internet connection");
+    return false;
+  }
+  
+  if (p == nullptr) {
     return false;
   }
 
+  // Save to cache
   sockaddr_storage* cacheAddress = new sockaddr_storage();
-  struct sockaddr_in* addr4 = reinterpret_cast<struct sockaddr_in*>(cacheAddress);
-  addr4->sin_family = AF_INET;
-  addr4->sin_port = htons(port);
-  memcpy(&(addr4->sin_addr.s_addr), HostInfo->h_addr, HostInfo->h_length);
+  memcpy(cacheAddress, reinterpret_cast<sockaddr_storage*>(p->ai_addr), sizeof(sockaddr_storage));
+  SetAddressPort(cacheAddress, port);
+  cache[hostName] = cacheAddress;
+
+  // Output to address argument
   memcpy(&address, cacheAddress, sizeof(sockaddr_storage));
-  m_IPv4DNSCache[hostName] = cacheAddress;
-  return true;
-}
 
-bool CNet::ResolveHostName6(sockaddr_storage& address, const string& hostName, const uint16_t port)
-{
-  auto it = m_IPv6DNSCache.find(hostName);
-  if (it != end(m_IPv6DNSCache)) {
-    memcpy(&address, it->second, sizeof(sockaddr_storage));
-    SetAddressPort(&address, port);
-    return true;
-  }
-
-  struct hostent* HostInfo;
-  HostInfo = gethostbyname(hostName.c_str());
-
-  if (!HostInfo) {
-    Print("[DNS] cannot resolve " + hostName + " - check your Internet connection");
-    return false;
-  }
-
-  sockaddr_storage* cacheAddress = new sockaddr_storage();
-  memset(cacheAddress, 0, sizeof(sockaddr_storage));
-  /*
-  struct sockaddr_in6* addr6 = reinterpret_cast<struct sockaddr_in6*>(cacheAddress);
-  addr6->sin6_family = AF_INET6;
-  addr6->sin6_port = htons(port);
-  memcpy(&(addr6->sin6_addr.s6_addr), HostInfo->h_addr, HostInfo->h_length);
-  memcpy(&address, cacheAddress, sizeof(sockaddr_storage));
-  */
-  m_IPv6DNSCache[hostName] = cacheAddress;
+  freeaddrinfo(p);
   return true;
 }
 
@@ -1267,14 +1254,13 @@ bool CNet::ResolveHostName(sockaddr_storage& address, const uint8_t acceptFamily
     SetAddressPort(&address, port);
     return true;
   }
-
   if (0 != (acceptFamily & ACCEPT_IPV4)) {
-    if (ResolveHostName4(address, hostName, port)) {
+    if (ResolveHostNameInner(address, hostName, port, AF_INET, m_IPv4DNSCache)) {
       return true;
     }
   }
   if (0 != (acceptFamily & ACCEPT_IPV6)) {
-    if (ResolveHostName6(address, hostName, port)) {
+    if (ResolveHostNameInner(address, hostName, port, AF_INET6, m_IPv6DNSCache)) {
       return true;
     }
   }
@@ -1349,6 +1335,7 @@ CNet::~CNet()
   delete m_UDPIPv6Server;
   delete m_UDP4BroadcastTarget;
   delete m_UDP6BroadcastTarget;
+  FlushDNSCache();
   FlushSelfIPCache();
   m_Aura->UnholdContext(m_HealthCheckContext);
   m_HealthCheckContext = nullptr;

@@ -431,24 +431,19 @@ void CTCPClient::Disconnect()
   m_Connecting = false;
 }
 
-void CTCPClient::Connect(optional<sockaddr_storage>& localAddress, sockaddr_storage& remoteHost, const uint16_t port)
+void CTCPClient::Connect(const optional<sockaddr_storage>& localAddress, const sockaddr_storage& remoteHost)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError || m_Connecting || m_Connected)
     return;
 
   if (localAddress.has_value()) {
-    if (localAddress.value().ss_family != AF_INET)
+    if (localAddress.value().ss_family != remoteHost.ss_family) {
+      m_HasError = true;
+      Print("[TCP] Cannot connect to " + AddressToString(remoteHost) + " from bind address " + AddressToString(localAddress.value()));
       return;
+    }
 
-    struct sockaddr_in LocalSIN;
-    memset(&LocalSIN, 0, sizeof(LocalSIN));
-    LocalSIN.sin_family = AF_INET;
-
-    sockaddr_in* ipv4 = reinterpret_cast<sockaddr_in*>(&(localAddress.value()));
-    LocalSIN.sin_addr = ipv4->sin_addr;
-    LocalSIN.sin_port = htons(0);
-
-    if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&LocalSIN), sizeof(LocalSIN)) == SOCKET_ERROR) {
+    if (::bind(m_Socket, reinterpret_cast<const struct sockaddr*>(&localAddress), sizeof(sockaddr_storage)) == SOCKET_ERROR) {
       m_HasError = true;
       m_Error    = GetLastError();
       Print("[TCPCLIENT] (" + GetName() +") error (bind) - " + GetErrorString());
@@ -457,9 +452,6 @@ void CTCPClient::Connect(optional<sockaddr_storage>& localAddress, sockaddr_stor
   }
 
   memcpy(&m_RemoteHost, &remoteHost, sizeof(sockaddr_storage));
-  if (port != 0) {
-    SetAddressPort(&m_RemoteHost, port);
-  }
 
   // connect
   if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_RemoteHost), sizeof(sockaddr_storage)) == SOCKET_ERROR)
@@ -584,7 +576,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   ADDRESS_LENGTH_TYPE addressLength = GetAddressLength();
   SetAddressPort(&address, port);
 
-  if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
+  if (::bind(m_Socket, reinterpret_cast<const struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
     Print("[TCP] error (bind) - " + GetErrorString());
@@ -803,7 +795,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   ADDRESS_LENGTH_TYPE addressLength = GetAddressLength();
   SetAddressPort(&address, port);
 
-  if (::bind(m_Socket, reinterpret_cast<struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
+  if (::bind(m_Socket, reinterpret_cast<const struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
     m_Error    = GetLastError();
     Print("[UDP] error (bind) - " + GetErrorString());

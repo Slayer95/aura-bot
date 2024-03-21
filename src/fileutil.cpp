@@ -328,16 +328,20 @@ filesystem::path GetExeDirectory()
     NormalizeDirectory(cwd);
     cwd = cwd.parent_path();
   }
+
   bool cwdIsAncestor = cwd.empty();
   if (!cwdIsAncestor) {
-    filesystem::path exeAncestor = executablePath;
-    while (!exeAncestor.empty()) {
-      exeAncestor = exeAncestor.parent_path();
-      if (exeAncestor == cwd) {
-        cwdIsAncestor = true;
-        break;
+    try {
+      filesystem::path exeAncestor = executablePath;
+      filesystem::path exeRoot = exeAncestor.root_path();
+      while (exeAncestor != exeRoot) {
+        exeAncestor = exeAncestor.parent_path();
+        if (exeAncestor == cwd) {
+          cwdIsAncestor = true;
+          break;
+        }
       }
-    }
+    } catch (...) {}
   }
 
   if (cwdIsAncestor) {    
