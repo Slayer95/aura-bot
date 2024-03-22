@@ -484,8 +484,9 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   // load the iptocountry data
   LoadIPToCountryData(CFG);
 
-  // Read CFG->Map links and cache the reverse.
-  CacheMapPresets();
+  if (m_Config->m_EnableCFGCache) {
+    CacheMapPresets();
+  }
 }
 
 bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
@@ -1038,10 +1039,10 @@ bool CAura::ReloadConfigs()
     }
   }
 
-  if (reCachePresets) {
-    CacheMapPresets();
-  } else if (!m_Config->m_EnableCFGCache) {
+  if (!m_Config->m_EnableCFGCache) {
     m_CachedMaps.clear();
+  } else if (reCachePresets) {
+    CacheMapPresets();
   }
   m_Net->OnConfigReload();
   return success;
@@ -1227,8 +1228,9 @@ void CAura::LoadIPToCountryData(const CConfig& CFG)
 
 void CAura::CacheMapPresets()
 {
-  // Preload map configs
   m_CachedMaps.clear();
+
+  // Preload map_Localpath -> mapcache entries
   const vector<filesystem::path> cacheFiles = FilesMatch(m_Config->m_MapCachePath, FILE_EXTENSIONS_CONFIG);
   for (const auto& cfgName : cacheFiles) {
     string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map_localpath");
