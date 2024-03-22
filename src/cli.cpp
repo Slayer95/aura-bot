@@ -233,7 +233,14 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_Config->m_EnableCFGCache = m_UseMapCFGCache.value();
   }
   if (m_LogLevel.has_value()) {
-    nAura->m_Config->m_LogLevel = m_LogLevel.value();
+    vector<string> logLevels = {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"};
+    uint8_t maxIndex = static_cast<uint8_t>(logLevels.size());
+    for (uint8_t i = 0; i < maxIndex; ++i) {
+      if (m_LogLevel.value() == logLevels[i]) {
+        nAura->m_Config->m_LogLevel = 1 + i;
+        break;
+      }
+    }
   }
 
   if (m_LANMode.has_value()) {
