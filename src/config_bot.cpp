@@ -69,7 +69,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_EnableCFGCache               = CFG.GetBool("bot.load_maps.cache.enabled", true);
   m_CFGCacheRevalidateAlgorithm  = CFG.GetStringIndex("bot.load_maps.cache.revalidation.algorithm", {"never", "always", "modified"}, CACHE_REVALIDATION_MODIFIED);
 
-  m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"}, LOG_LEVEL_INFO);
+  m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"}, LOG_LEVEL_INFO - 1);
   m_ExitOnStandby                = CFG.GetBool("bot.exit_on_standby", false);
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.
