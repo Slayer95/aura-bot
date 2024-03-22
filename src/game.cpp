@@ -1483,10 +1483,14 @@ void CGame::SendGameDiscoveryInfo() const
   if (!m_Aura->m_Net->SendBroadcast(ipv4Packet)) {
     // Ensure the game is available at loopback.
     if (loopbackIsIPv4Port) {
-      //Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
+      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+        Print("Sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
+      }
       m_Aura->m_Net->Send("127.0.0.1", ipv4Packet);
     } else {
-      //Print("Sending IPv4 GAMEINFO packet to 127.0.0.1 (port " + to_string(m_HostPort) + ")");
+      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+        Print("Sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
+      }
       vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
       m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
     }

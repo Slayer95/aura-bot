@@ -63,6 +63,7 @@
 #define LOG_LEVEL_INFO 7
 #define LOG_LEVEL_DEBUG 8
 #define LOG_LEVEL_TRACE 9
+#define LOG_LEVEL_TRACE2 10
 
 // time
 

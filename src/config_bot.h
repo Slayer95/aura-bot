@@ -40,7 +40,6 @@
 class CBotConfig
 {
 public:
-
   bool                                    m_Enabled;                     // set to false to prevent new games from being created
   bool                                    m_ExtractJASS;
   std::optional<uint8_t>                  m_War3Version;                 // warcraft 3 version
@@ -65,6 +64,7 @@ public:
   bool                                    m_EnableCFGCache;              // save read map CFGs to disk
   uint8_t                                 m_CFGCacheRevalidateAlgorithm; // always, never, modified
 
+  uint8_t                                 m_LogLevel;
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                  // master switch to enable/disable ALL bnet configs on startup
   

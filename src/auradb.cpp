@@ -103,35 +103,32 @@ CAuraDB::CAuraDB(CConfig& CFG)
   sqlite3_stmt* Statement;
   m_DB->Prepare(R"(SELECT value FROM config WHERE name="schema_number")", reinterpret_cast<void**>(&Statement));
 
-  if (Statement)
-  {
+  if (Statement) {
     int32_t RC = m_DB->Step(Statement);
 
-    if (RC == SQLITE_ROW)
-    {
-      if (sqlite3_column_count(Statement) == 1)
+    if (RC == SQLITE_ROW) {
+      if (sqlite3_column_count(Statement) == 1) {
         SchemaNumber = string((char*)sqlite3_column_text(Statement, 0));
-      else
-        Print("[SQLITE3] error getting schema number - row doesn't have 1 column");
+      } else {
+        m_HasError = true;
+        m_Error    = "schema number missing - no columns found";
+        return;
+      }
+    } else if (RC == SQLITE_ERROR) {
+      m_HasError = true;
+      m_Error    = m_DB->GetError();
+      return;
     }
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error getting schema number - " + m_DB->GetError());
 
     m_DB->Finalize(Statement);
   }
-  else
-    Print("[SQLITE3] prepare error getting schema number - " + m_DB->GetError());
 
-  if (SchemaNumber.empty())
-  {
+  if (SchemaNumber.empty()) {
     // couldn't find the schema number
 
-    Print("[SQLITE3] couldn't find schema number, create tables");
+    Print("[SQLITE3] initializing database");
 
-    // assume the database is empty
     // note to self: update the SchemaNumber and the database structure when making a new schema
-
-    Print("[SQLITE3] assuming database is empty");
 
     if (m_DB->Exec(R"(CREATE TABLE admins ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "" ))") != SQLITE_OK)
       Print("[SQLITE3] error creating admins table - " + m_DB->GetError());

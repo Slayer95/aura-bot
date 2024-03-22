@@ -473,7 +473,7 @@ void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
   memcpy(m_UDP4BroadcastTarget, &subnet, sizeof(subnet));
 
   if (reinterpret_cast<sockaddr_in*>(&subnet)->sin_addr.s_addr != htonl(INADDR_BROADCAST))
-    Print("[UDPSOCKET] using broadcast target [" + AddressToString(subnet) + "]");
+    Print("[UDP] broadcasting LAN games to [" + AddressToString(subnet) + "]");
 
   sockaddr_storage addr6 = IPv4ToIPv6(&subnet);
   memcpy(m_UDP6BroadcastTarget, &addr6, sizeof(addr6));
@@ -626,7 +626,9 @@ void CNet::HandleUDP(UDPPkt* pkt)
 
   if (pkt->buf[8] == m_Aura->m_GameVersion || pkt->buf[8] == 0) {
     if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetUDPEnabled() && !m_Aura->m_CurrentLobby->GetCountDownStarted()) {
-      //Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+        Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+      }
       m_Aura->m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
 
       // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.

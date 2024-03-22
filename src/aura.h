@@ -100,6 +100,7 @@ class CCLI;
 class CAura
 {
 public:
+  uint8_t                                            m_LogLevel;
   CGameProtocol*                                     m_GameProtocol;               // class for game protocol
   CGPSProtocol*                                      m_GPSProtocol;                // class for gproxy protocol
   CCRC32*                                            m_CRC;                        // for calculating CRC's
@@ -207,7 +208,7 @@ public:
 
   void CacheMapPresets();
   
-  std::filesystem::path GetHome();
+  bool MatchLogLevel(const uint8_t);
 };
 
 #endif // AURA_AURA_H_

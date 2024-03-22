@@ -199,7 +199,9 @@ bool CRealm::Update(void* fd, void* send_fd)
               AppendByteArray(relayPacket, War3Version);
               AppendByteArrayFast(relayPacket, Data);
               AssignLength(relayPacket);
-              //Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + m_Aura->m_Net->m_Config->m_UDPForwardAddress + ":" + to_string(m_Aura->m_Net->m_Config->m_UDPForwardPort) + " (" + to_string(relayPacket.size()) + " bytes)");
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + AddressToString(m_Aura->m_Net->m_Config->m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)");
+              }
               m_Aura->m_Net->Send(&(m_Aura->m_Net->m_Config->m_UDPForwardAddress), relayPacket);
             }
 
@@ -207,7 +209,9 @@ bool CRealm::Update(void* fd, void* send_fd)
 
           case CBNETProtocol::SID_ENTERCHAT:
             if (m_Protocol->RECEIVE_SID_ENTERCHAT(Data)) {
-              //Print("[BNET: " + m_Config->m_UniqueName + "] joining channel [" + m_FirstChannel + "]");
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                Print("[BNET: " + m_Config->m_UniqueName + "] joining channel [" + m_FirstChannel + "]");
+              }
               JoinFirstChannel();
             }
 
@@ -263,12 +267,14 @@ bool CRealm::Update(void* fd, void* send_fd)
               const vector<uint8_t>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
               const string& exeInfo = m_BNCSUtil->GetEXEInfo();
 
-              Print(
-                "[BNET: " + m_Config->m_UniqueName + "] attempting to auth as WC3: TFT v" +
-                to_string(exeVersion[3]) + "." + to_string(exeVersion[2]) + std::string(1, char(97 + exeVersion[1])) +
-                " (Build " + to_string(exeVersion[0]) + ") - " +
-                "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
-              );
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+                Print(
+                  "[BNET: " + m_Config->m_UniqueName + "] attempting to auth as WC3: TFT v" +
+                  to_string(exeVersion[3]) + "." + to_string(exeVersion[2]) + std::string(1, char(97 + exeVersion[1])) +
+                  " (Build " + to_string(exeVersion[0]) + ") - " +
+                  "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
+                );
+              }
 
               QueuePacket(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, "Aura"), PACKET_TYPE_PRIORITY);
               //QueuePacket(m_Protocol->SEND_SID_NULL());
@@ -290,7 +296,9 @@ bool CRealm::Update(void* fd, void* send_fd)
             if (m_Protocol->RECEIVE_SID_AUTH_CHECK(Data))
             {
               // cd keys accepted
-              //Print("[BNET: " + m_Config->m_UniqueName + "] game OK");
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                Print("[BNET: " + m_Config->m_UniqueName + "] game OK");
+              }
               m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
               QueuePacket(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName), PACKET_TYPE_PRIORITY);
             }
@@ -328,13 +336,17 @@ bool CRealm::Update(void* fd, void* send_fd)
           case CBNETProtocol::SID_AUTH_ACCOUNTLOGON:
             if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data))
             {
-              //Print("[BNET: " + m_Config->m_UniqueName + "] username [" + m_Config->m_UserName + "] OK");
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                Print("[BNET: " + m_Config->m_UniqueName + "] username [" + m_Config->m_UserName + "] OK");
+              }
 
               if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN)
               {
                 // pvpgn logon
 
-                //Print("[BNET: " + m_Config->m_UniqueName + "] using pvpgn logon type");
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                  Print("[BNET: " + m_Config->m_UniqueName + "] using pvpgn logon type");
+                }
                 m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
                 QueuePacket(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()), PACKET_TYPE_PRIORITY);
               }
@@ -342,7 +354,9 @@ bool CRealm::Update(void* fd, void* send_fd)
               {
                 // battle.net logon
 
-                //Print("[BNET: " + m_Config->m_UniqueName + "] using battle.net logon type");
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                  Print("[BNET: " + m_Config->m_UniqueName + "] using battle.net logon type");
+                }
                 m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(m_Protocol->GetSalt(), m_Protocol->GetServerPublicKey());
                 QueuePacket(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()), PACKET_TYPE_PRIORITY);
               }
@@ -508,7 +522,9 @@ bool CRealm::Update(void* fd, void* send_fd)
       // the connection attempt completed
 
       ++m_SessionID;
-      Print("[BNET: " + m_Config->m_UniqueName + "] connected to [" + m_HostName + "]");
+      if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+        Print("[BNET: " + m_Config->m_UniqueName + "] connected to [" + m_HostName + "]");
+      }
       QueuePacket(m_Protocol->SEND_PROTOCOL_INITIALIZE_SELECTOR(), PACKET_TYPE_PRIORITY);
       uint8_t gameVersion = m_Config->m_AuthWar3Version.has_value() ? m_Config->m_AuthWar3Version.value() : m_Aura->m_GameVersion;
       QueuePacket(m_Protocol->SEND_SID_AUTH_INFO(gameVersion, m_Config->m_LocaleID, m_Config->m_CountryShort, m_Config->m_Country), PACKET_TYPE_PRIORITY);

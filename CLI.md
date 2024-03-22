@@ -281,6 +281,22 @@ machine to connect to the Local Area Network.
 
 This option is equivalent to ``<net.udp_server.enabled = no>`` in \`config.ini\`
 
+## \`--log-level <LEVEL>\`
+
+Specifies the level of detail for logging output.
+
+Values:
+ - trace2: Extremely detailed information, typically used for deep debugging purposes.
+ - trace: Detailed information, providing a high level of insight into the bot's internal operations.
+ - debug: Fine-grained informational events that are most useful for debugging purposes.
+ - info: Confirmation that things are working as expected.
+ - notice: Normal but significant events that may require attention.
+ - warning: An indication that something unexpected happened, or indicative of some problem in the near future.
+ - error: Due to a more serious problem, the software has not been able to perform some function.
+ - critical: A serious error that may prevent the bot from functioning correctly.
+
+By default, the logging level is set to info.
+
 ## \`--port-forward-tcp <PORT>\`, \`--port-forward-udp <PORT>\`
 
 The --port-forward-tcp <PORT> and --port-forward-udp <PORT> flags are used to trigger 

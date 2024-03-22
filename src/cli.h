@@ -64,6 +64,7 @@ private:
   std::optional<bool>                   m_ExitOnStandby;
   std::optional<bool>                   m_UseMapCFGCache;
   std::optional<std::string>            m_LANMode; // Validation?
+  std::optional<std::string>            m_LogLevel;
 
   std::optional<uint8_t>                m_War3Version;
   std::optional<std::filesystem::path>  m_War3Path;

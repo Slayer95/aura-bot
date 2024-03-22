@@ -121,7 +121,9 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             m_Socket->PutBytes(packet);
           }
 
-          //Print("Got REQJOIN " + ByteArrayToDecString(Bytes));
+          if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+            Print("Got REQJOIN " + ByteArrayToDecString(Bytes));
+          }
           delete m_IncomingJoinPlayer;
           m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
           if (!m_IncomingJoinPlayer) {

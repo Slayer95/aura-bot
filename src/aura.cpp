@@ -347,7 +347,8 @@ int main(const int argc, char** argv)
 //
 
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
-  : m_GameProtocol(nullptr),
+  : m_LogLevel(LOG_LEVEL_DEBUG),
+    m_GameProtocol(nullptr),
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
@@ -554,7 +555,9 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
       m_RealmsByInputID[entry.first] = matchingRealm;
       m_RealmsIdentifiers.push_back(entry.first);
       // m_RealmsIdentifiers[matchingRealm->GetInternalID()] == matchingRealm->GetInputID();
-      Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
+      if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
+        Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
+      }
     } else {
       const bool DoResetConnection = (
         matchingRealm->GetServer() != realmConfig->m_HostName ||
@@ -565,7 +568,9 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
       matchingRealm->SetConfig(realmConfig);
       matchingRealm->SetHostCounter(realmConfig->m_ServerIndex + 15);
       if (DoResetConnection) matchingRealm->ResetConnection(false);
-      Print("[AURA] server reloaded: " + matchingRealm->GetUniqueDisplayName());
+      if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
+        Print("[AURA] server reloaded: " + matchingRealm->GetUniqueDisplayName());
+      }
     }
 
     if (realmConfig->m_GamePrefix.length() > longestGamePrefixSize)
@@ -824,7 +829,9 @@ bool CAura::Update()
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnectEnabled) {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
-        //Print("Incoming connection from " + incomingConnection->GetIPString());
+        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
+          Print("[AURA] Incoming connection from " + incomingConnection->GetIPString());
+        }
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
         delete socket;
@@ -1122,6 +1129,7 @@ bool CAura::LoadConfigs(CConfig& CFG)
 
 void CAura::OnLoadConfigs()
 {
+  m_LogLevel = m_Config->m_LogLevel;
   if (m_Config->m_War3Version.has_value()) {
     m_GameVersion = m_Config->m_War3Version.value();
   } else if (m_GameVersion == 0 && !m_GameInstallPath.empty() && htons(0xe017) == 0x17e0) {
@@ -1237,6 +1245,12 @@ void CAura::CacheMapPresets()
       // filesystem::absolute may throw errors
     }
   }
+}
+
+bool CAura::MatchLogLevel(const uint8_t logLevel)
+{
+  // 1: emergency ... 9: trace
+  return logLevel <= m_LogLevel;
 }
 
 bool CAura::CreateGame(CGameSetup* gameSetup)
