@@ -584,8 +584,10 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       return;
   }
 
-  if (Event == CBNETProtocol::EID_WHISPER || Event == CBNETProtocol::EID_TALK)
-  {
+  if (Event == CBNETProtocol::EID_WHISPER || Event == CBNETProtocol::EID_TALK) {
+    if (User == GetLoginName()) {
+      return;
+    }
     if (Whisper)
       Print("[WHISPER: " + m_Config->m_UniqueName + "] [" + User + "] " + Message);
     else

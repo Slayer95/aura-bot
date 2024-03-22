@@ -3340,6 +3340,10 @@ void CCommandContext::Run(const string& command, const string& payload)
         }
         break;
       }
+      if (inputName == matchingRealm->GetLoginName()) {
+        ErrorReply("Cannot PM myself.");
+        break;
+      }
 
       // Name of sender and receiver should be included in the message,
       // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
