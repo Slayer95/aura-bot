@@ -28,6 +28,7 @@
 
 #include "aura.h"
 #include "auradb.h"
+#include "config_commands.h"
 #include "realm.h"
 #include "game.h"
 #include "gameplayer.h"
@@ -48,13 +49,13 @@
 #define CHAT_SEND_TARGET_ALL (1 << 1)
 #define CHAT_LOG_CONSOLE (1 << 2)
 
-#define PERM_GAME_PLAYER (1 << 0)
-#define PERM_GAME_OWNER (1 << 1)
-#define PERM_BNET_ADMIN (1 << 3)
-#define PERM_BNET_ROOTADMIN (1 << 4)
-#define PERM_IRC_ADMIN (1 << 5)
-#define PERM_BOT_SUDO_SPOOFABLE (1 << 6)
-#define PERM_BOT_SUDO_OK (1 << 7)
+#define USER_PERMISSIONS_GAME_PLAYER (1 << 0)
+#define USER_PERMISSIONS_GAME_OWNER (1 << 1)
+#define USER_PERMISSIONS_CHANNEL_VERIFIED (1 << 2)
+#define USER_PERMISSIONS_CHANNEL_ADMIN (1 << 3)
+#define USER_PERMISSIONS_CHANNEL_ROOTADMIN (1 << 4)
+#define USER_PERMISSIONS_BOT_SUDO_SPOOFABLE (1 << 6)
+#define USER_PERMISSIONS_BOT_SUDO_OK (1 << 7)
 
 //
 // CCommandContext
@@ -64,6 +65,7 @@ class CCommandContext
 {
 public:
   CAura*                        m_Aura;
+  CCommandConfig*               m_Config;
   CRealm*                       m_SourceRealm;
   CRealm*                       m_TargetRealm;
   CGame*                        m_SourceGame;
@@ -79,6 +81,7 @@ protected:
   uint16_t                      m_Permissions;
 
   std::string                   m_HostName;
+  std::string                   m_ReverseHostName; // user hostname, reversed from their IP (received from IRC chat)
   std::string                   m_ChannelName;
   std::string                   m_ActionMessage;
 
@@ -91,12 +94,12 @@ protected:
   bool                          m_PartiallyDestroyed;
 
 public:
-  CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CGame* targetGame, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGamePlayer* player, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::string& reverseHostName, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::string& reverseHostName, std::ostream* outputStream, char nToken);
   CCommandContext(CAura* nAura, std::ostream* outputStream, char nToken);
 
   inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; };
@@ -112,8 +115,10 @@ public:
   void SetAuthenticated(const bool& nAuthenticated);
   void SetPermissions(const uint8_t nPermissions);
   void UpdatePermissions();
-  void SetIRCAdmin(const bool& isAdmin);
   void ClearActionMessage() { m_ActionMessage.clear(); }
+
+  std::optional<bool> CheckPermissions(const uint8_t nPermissionsRequired) const;
+  bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
   std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
   bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
 

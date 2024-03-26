@@ -81,6 +81,9 @@ public:
   void SendUser(const std::string& message, const std::string& target);
   void SendChannel(const std::string& message, const std::string& target);
   void SendAllChannels(const std::string& message);
+
+  bool GetIsModerator(const std::string& nHostName);
+  bool GetIsSudoer(const std::string& nHostName);
 };
 
 #endif // AURA_IRC_H_

@@ -33,6 +33,9 @@
     <ClCompile Include="config_realm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="config_commands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="config_irc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -120,6 +123,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config_realm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config_commands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config_irc.h">

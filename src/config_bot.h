@@ -27,6 +27,7 @@
 #define AURA_CONFIG_BOT_H_
 
 #include "config.h"
+#include "config_commands.h"
 
 #include <vector>
 #include <set>
@@ -63,6 +64,9 @@ public:
   bool                                    m_MapSearchShowSuggestions;
   bool                                    m_EnableCFGCache;              // save read map CFGs to disk
   uint8_t                                 m_CFGCacheRevalidateAlgorithm; // always, never, modified
+
+  CCommandConfig*                         m_LANCommandCFG;
+
 
   uint8_t                                 m_LogLevel;
   bool                                    m_ExitOnStandby;

@@ -435,6 +435,7 @@
     <ClCompile Include="net.cpp" />
     <ClCompile Include="config.cpp" />
     <ClCompile Include="config_realm.cpp" />
+    <ClCompile Include="config_commands.cpp" />
     <ClCompile Include="config_bot.cpp" />
     <ClCompile Include="config_game.cpp" />
     <ClCompile Include="config_irc.cpp" />
@@ -468,6 +469,7 @@
     <ClInclude Include="net.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="config_realm.h" />
+    <ClInclude Include="config_commands.h" />
     <ClInclude Include="config_bot.h" />
     <ClInclude Include="config_game.h" />
     <ClInclude Include="config_irc.h" />

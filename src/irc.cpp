@@ -277,7 +277,7 @@ void CIRC::ExtractPackets()
       if (Tokens[3].size() < 3)
         continue;
 
-      string Nickname, Hostname;
+      string Nickname, HostName;
 
       // get the nickname
 
@@ -294,7 +294,7 @@ void CIRC::ExtractPackets()
       // get the hostname
 
       for (++i; i < Tokens[0].size(); ++i)
-        Hostname += Tokens[0][i];
+        HostName += Tokens[0][i];
 
       // get the channel
 
@@ -310,8 +310,6 @@ void CIRC::ExtractPackets()
         continue;
 
       char CommandToken = m_Config->m_CommandTrigger;
-
-      bool IsRootAdmin = m_Config->m_RootAdmins.find(Hostname) != m_Config->m_RootAdmins.end();
 
       size_t NSIndex = Message.find(" ", 1);
       if (NSIndex == string::npos)
@@ -330,7 +328,7 @@ void CIRC::ExtractPackets()
       transform(begin(Command), end(Command), begin(Command), ::tolower);
 
       if (CmdNameSpace == "irc") {
-        if (!IsRootAdmin) continue;
+        if (m_Config->m_RootAdmins.find(HostName) == m_Config->m_RootAdmins.end()) continue;
         //
         // !NICK
         //
@@ -342,12 +340,11 @@ void CIRC::ExtractPackets()
         continue;
       }
 
-      if (CmdNameSpace == "aura") {
+      if (CmdNameSpace == "aura" && m_Config->m_CommandCFG->m_Enabled) {
         bool IsWhisper = Channel[0] != '#';
-        CCommandContext* ctx = new CCommandContext(m_Aura, this, Channel, Nickname, IsWhisper, &std::cout, CommandToken);
+        CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, Channel, Nickname, IsWhisper, HostName, &std::cout, CommandToken);
         Print("[IRC] Running command !" + Command + " with payload [" + Payload + "]");
         ctx->UpdatePermissions();
-        ctx->SetIRCAdmin(IsRootAdmin);
         ctx->Run(Command, Payload);
         m_Aura->UnholdContext(ctx);
       }
@@ -437,4 +434,14 @@ void CIRC::SendAllChannels(const string& message)
 {
   for (auto& channel : m_Config->m_Channels)
     m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
+}
+
+bool CIRC::GetIsModerator(const std::string& nHostName)
+{
+  return m_Config->m_RootAdmins.find(nHostName) != m_Config->m_RootAdmins.end();
+}
+
+bool CIRC::GetIsSudoer(const std::string& nHostName)
+{
+  return m_Config->m_SudoUsers.find(nHostName) != m_Config->m_SudoUsers.end();
 }

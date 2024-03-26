@@ -28,6 +28,7 @@
 #include "net.h"
 #include "fileutil.h"
 #include "map.h"
+#include "command.h"
 
 #include <utility>
 #include <algorithm>
@@ -69,6 +70,17 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_EnableCFGCache               = CFG.GetBool("bot.load_maps.cache.enabled", true);
   m_CFGCacheRevalidateAlgorithm  = CFG.GetStringIndex("bot.load_maps.cache.revalidation.algorithm", {"never", "always", "modified"}, CACHE_REVALIDATION_MODIFIED);
 
+  vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
+
+  m_LANCommandCFG = new CCommandConfig(
+    CFG, "lan_realm.", false,
+    CFG.GetStringIndex("lan_realm.commands.common.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("lan_realm.commands.hosting.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("lan_realm.commands.moderator.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("lan_realm.commands.admin.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("lan_realm.commands.bot_owner.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO)
+  );
+
   m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"}, LOG_LEVEL_INFO - 1);
   m_ExitOnStandby                = CFG.GetBool("bot.exit_on_standby", false);
 
@@ -78,4 +90,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   CFG.Accept("db.storage_file");
 }
 
-CBotConfig::~CBotConfig() = default;
+CBotConfig::~CBotConfig()
+{
+ delete m_LANCommandCFG;
+}

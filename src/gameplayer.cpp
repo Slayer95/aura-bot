@@ -598,9 +598,19 @@ bool CGamePlayer::Update(void* fd)
       m_Game->EventPlayerCheckStatus(this);
   }
 
+  if (!m_Verified && m_RealmInternalId >= 0x10 && Time - m_JoinTime >= 60 && m_Game->GetIsLobby()) {
+    CRealm* Realm = GetRealm(false);
+    if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
+      m_DeleteMe = true;
+      m_LeftReason = GetName() + " has been kicked because he is not verified by their realm";
+      m_LeftCode = PLAYERLEAVE_DISCONNECT;
+      m_Game->SendAllChat(GetName() + " has been kicked because he is not verified by " + m_RealmHostName);
+    }
+  }
+
   if (m_Disconnected && m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60) {
     m_DeleteMe = true;
-    m_LeftReason = GetName( ) + " has been kicked because he didn't reconnect in time";
+    m_LeftReason = GetName() + " has been kicked because he didn't reconnect in time";
     m_LeftCode = PLAYERLEAVE_DISCONNECT;
     m_Game->SendAllChat(GetName() + " has been kicked because he didn't reconnect in time." );
   }

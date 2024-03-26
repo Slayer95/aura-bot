@@ -661,6 +661,16 @@ CRealm* CAura::GetRealmByHostCounter(const uint8_t hostCounter) const
   return it->second;
 }
 
+CRealm* CAura::GetRealmByHostName(const string& hostName) const
+{
+  for (const auto& realm : m_Realms) {
+    if (!realm->GetLoggedIn()) continue;
+    if (realm->GetIsMirror()) continue;
+    if (realm->GetServer() == hostName) return realm;
+  }
+  return nullptr;
+}
+
 CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
 {
   auto it = m_Net->m_GameServers.find(inputPort);

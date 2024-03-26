@@ -65,6 +65,11 @@
 #define LOG_LEVEL_TRACE 9
 #define LOG_LEVEL_TRACE2 10
 
+#define ANTI_SPOOF_NONE 0
+#define ANTI_SPOOF_BASIC 1
+#define ANTI_SPOOF_EXTENDED 2
+#define ANTI_SPOOF_FULL 3
+
 // time
 
 inline int64_t GetTime()

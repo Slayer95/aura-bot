@@ -40,18 +40,28 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
   m_CommandTrigger('!')
 {
   const static string emptyString;
-  m_HostName            = CFG.GetString("irc.host_name", emptyString);
-  m_Port                = CFG.GetUint16("irc.port", 6667);
-  m_NickName            = CFG.GetString("irc.nickname", emptyString);
-  m_UserName            = CFG.GetString("irc.username", emptyString);
-  m_Password            = CFG.GetString("irc.password", emptyString);
-  m_Enabled             = CFG.GetBool("irc.enabled", false);
-  m_EnablePublicCreate  = CFG.GetBool("irc.allow_host_non_admins", false);
+  m_HostName               = CFG.GetString("irc.host_name", emptyString);
+  m_Port                   = CFG.GetUint16("irc.port", 6667);
+  m_NickName               = CFG.GetString("irc.nickname", emptyString);
+  m_UserName               = CFG.GetString("irc.username", emptyString);
+  m_Password               = CFG.GetString("irc.password", emptyString);
+  m_Enabled                = CFG.GetBool("irc.enabled", false);
+  m_VerifiedDomain         = CFG.GetString("irc.verified_domain", emptyString);
 
-  string CommandTrigger = CFG.GetString("irc.command_trigger", "!");
+  string CommandTrigger = CFG.GetString("irc.commands.trigger", "!");
   if (CommandTrigger.length() == 1) {
     m_CommandTrigger = CommandTrigger[0];
   }
+
+  vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
+  m_CommandCFG = new CCommandConfig(
+    CFG, "irc.", CFG.GetBool("irc.unverified_users.reject_commands", false),
+    CFG.GetStringIndex("irc.commands.common.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("irc.commands.hosting.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("irc.commands.moderator.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("irc.commands.admin.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("irc.commands.bot_owner.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO)
+  );
 
   if (m_UserName.empty())
     m_UserName = m_NickName;
@@ -59,7 +69,8 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
     m_NickName = m_UserName;
 
   m_Channels = CFG.GetList("irc.channels", ',', m_Channels);
-  m_RootAdmins = CFG.GetSet("irc.root_admins", ',', m_RootAdmins);
+  m_RootAdmins = CFG.GetSet("irc.admins", ',', m_RootAdmins);
+  m_SudoUsers = CFG.GetSet("irc.sudo_users", ',', m_SudoUsers);
 
   for (uint8_t i = 0; i < m_Channels.size(); ++i) {
     if (m_Channels[i].length() > 0 && m_Channels[i][0] != '#') {
@@ -67,9 +78,16 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
     }
   }
 
+  if (!m_VerifiedDomain.empty()) {
+    m_VerifiedDomain = "." + m_VerifiedDomain;
+  }
+
   if (m_Enabled && (m_HostName.empty() || m_NickName.empty() || m_Port == 0)) {
     CFG.SetFailed();
   }
 }
 
-CIRCConfig::~CIRCConfig() = default;
+CIRCConfig::~CIRCConfig()
+{
+  delete m_CommandCFG;
+}

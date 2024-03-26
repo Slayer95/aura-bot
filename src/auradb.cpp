@@ -133,7 +133,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
     if (m_DB->Exec(R"(CREATE TABLE admins ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "" ))") != SQLITE_OK)
       Print("[SQLITE3] error creating admins table - " + m_DB->GetError());
 
-    if (m_DB->Exec("CREATE TABLE bans ( id INTEGER PRIMARY KEY, server TEXT NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, admin TEXT NOT NULL, reason TEXT )") != SQLITE_OK)
+    if (m_DB->Exec("CREATE TABLE bans ( id INTEGER PRIMARY KEY, server TEXT NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, root_admins TEXT NOT NULL, reason TEXT )") != SQLITE_OK)
       Print("[SQLITE3] error creating bans table - " + m_DB->GetError());
 
     if (m_DB->Exec("CREATE TABLE players ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, games INTEGER, dotas INTEGER, loadingtime INTEGER, duration INTEGER, left INTEGER, wins INTEGER, losses INTEGER, kills INTEGER, deaths INTEGER, creepkills INTEGER, creepdenies INTEGER, assists INTEGER, neutralkills INTEGER, towerkills INTEGER, raxkills INTEGER, courierkills INTEGER )") != SQLITE_OK)
@@ -233,12 +233,12 @@ bool CAuraDB::AdminCheck(const string& server, string user)
     if (RC == SQLITE_ROW)
       IsAdmin = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking admin [" + server + " : " + user + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error checking root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
     m_DB->Reset(AdminCheckStmt);
   }
   else
-    Print("[SQLITE3] prepare error checking admin [" + server + " : " + user + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error checking root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
   return IsAdmin;
 }
@@ -262,12 +262,12 @@ bool CAuraDB::AdminCheck(string user)
     if (RC == SQLITE_ROW)
       IsAdmin = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking admin [" + user + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error checking root_admins [" + user + "] - " + m_DB->GetError());
 
     m_DB->Reset(Statement);
   }
   else
-    Print("[SQLITE3] prepare error checking admin [" + user + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error checking root_admins [" + user + "] - " + m_DB->GetError());
 
   return IsAdmin;
 }
@@ -292,12 +292,12 @@ bool CAuraDB::RootAdminCheck(const string& server, string user)
     if (RC == SQLITE_ROW)
       IsRoot = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking admin [" + user + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error checking root_admins [" + user + "] - " + m_DB->GetError());
 
     m_DB->Reset(static_cast<sqlite3_stmt*>(RootAdminCheckStmt));
   }
   else
-    Print("[SQLITE3] prepare error checking admin [" + user + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error checking root_admins [" + user + "] - " + m_DB->GetError());
 
   return IsRoot;
 }
@@ -321,12 +321,12 @@ bool CAuraDB::RootAdminCheck(string user)
     if (RC == SQLITE_ROW)
       IsRoot = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking admin [" + user + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error checking root_admins [" + user + "] - " + m_DB->GetError());
 
     m_DB->Finalize(Statement);
   }
   else
-    Print("[SQLITE3] prepare error checking admin [" + user + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error checking root_admins [" + user + "] - " + m_DB->GetError());
 
   return IsRoot;
 }
@@ -349,12 +349,12 @@ bool CAuraDB::AdminAdd(const string& server, string user)
     if (RC == SQLITE_DONE)
       Success = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error adding admin [" + server + " : " + user + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error adding root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
     m_DB->Finalize(Statement);
   }
   else
-    Print("[SQLITE3] prepare error adding admin [" + server + " : " + user + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error adding root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
   return Success;
 }
@@ -377,12 +377,12 @@ bool CAuraDB::RootAdminAdd(const string& server, string user)
     if (RC == SQLITE_DONE)
       Success = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error adding root admin [" + server + " : " + user + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error adding root root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
     m_DB->Finalize(Statement);
   }
   else
-    Print("[SQLITE3] prepare error adding root admin [" + server + " : " + user + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error adding root root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
   return Success;
 }
@@ -404,12 +404,12 @@ bool CAuraDB::AdminRemove(const string& server, string user)
     if (RC == SQLITE_DONE)
       Success = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error removing admin [" + server + " : " + user + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error removing root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
     m_DB->Finalize(Statement);
   }
   else
-    Print("[SQLITE3] prepare error removing admin [" + server + " : " + user + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error removing root_admins [" + server + " : " + user + "] - " + m_DB->GetError());
 
   return Success;
 }
@@ -445,7 +445,7 @@ CDBBan* CAuraDB::BanCheck(const string& server, string user)
   transform(begin(user), end(user), begin(user), ::tolower);
 
   if (!BanCheckStmt)
-    m_DB->Prepare("SELECT name, date, admin, reason FROM bans WHERE server=? AND name=?", &BanCheckStmt);
+    m_DB->Prepare("SELECT name, date, root_admins, reason FROM bans WHERE server=? AND name=?", &BanCheckStmt);
 
   if (BanCheckStmt)
   {
@@ -479,18 +479,18 @@ CDBBan* CAuraDB::BanCheck(const string& server, string user)
   return Ban;
 }
 
-bool CAuraDB::BanAdd(const string& server, string user, const string& admin, const string& reason)
+bool CAuraDB::BanAdd(const string& server, string user, const string& root_admins, const string& reason)
 {
   bool          Success = false;
   sqlite3_stmt* Statement;
   transform(begin(user), end(user), begin(user), ::tolower);
-  m_DB->Prepare("INSERT INTO bans ( server, name, date, admin, reason ) VALUES ( ?, ?, date('now'), ?, ? )", reinterpret_cast<void**>(&Statement));
+  m_DB->Prepare("INSERT INTO bans ( server, name, date, root_admins, reason ) VALUES ( ?, ?, date('now'), ?, ? )", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
   {
     sqlite3_bind_text(Statement, 1, server.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(Statement, 2, user.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 3, admin.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 3, root_admins.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(Statement, 4, reason.c_str(), -1, SQLITE_TRANSIENT);
 
     const int32_t RC = m_DB->Step(Statement);
@@ -498,12 +498,12 @@ bool CAuraDB::BanAdd(const string& server, string user, const string& admin, con
     if (RC == SQLITE_DONE)
       Success = true;
     else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error adding ban [" + server + " : " + user + " : " + admin + " : " + reason + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error adding ban [" + server + " : " + user + " : " + root_admins + " : " + reason + "] - " + m_DB->GetError());
 
     m_DB->Finalize(Statement);
   }
   else
-    Print("[SQLITE3] prepare error adding ban [" + server + " : " + user + " : " + admin + " : " + reason + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error adding ban [" + server + " : " + user + " : " + root_admins + " : " + reason + "] - " + m_DB->GetError());
 
   return Success;
 }

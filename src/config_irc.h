@@ -27,6 +27,7 @@
 #define AURA_CONFIG_IRC_H_
 
 #include "config.h"
+#include "config_commands.h"
 
 #include <vector>
 #include <string>
@@ -44,11 +45,13 @@ public:
   std::string                         m_UserName;
   std::string                         m_Password;
   bool                                m_Enabled;
-  bool                                m_EnablePublicCreate;
   std::vector<std::string>            m_Channels;
   std::set<std::string>               m_RootAdmins;
+  std::set<std::string>               m_SudoUsers;
   uint16_t                            m_Port;
   char                                m_CommandTrigger;
+  CCommandConfig*                     m_CommandCFG;
+  std::string                         m_VerifiedDomain;
 
   explicit CIRCConfig(CConfig& CFG);
   ~CIRCConfig();

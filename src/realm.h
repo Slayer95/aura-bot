@@ -155,6 +155,11 @@ public:
   std::string          GetPrefixedGameName(const std::string& gameName) const;
   bool                 GetAnnounceHostToChat() const;
 
+  bool                 GetHasEnhancedAntiSpoof() const;
+  bool                 GetUnverifiedCannotStartGame() const;
+  bool                 GetUnverifiedAutoKickedFromLobby() const;
+  CCommandConfig*      GetCommandConfig() const;
+
   // processing functions
 
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
@@ -186,8 +191,8 @@ public:
 
   // other functions
 
+  bool GetIsModerator(std::string name) const;
   bool GetIsAdmin(std::string name) const;
-  bool GetIsRootAdmin(std::string name) const;
   bool GetIsSudoer(std::string name) const;
   bool IsBannedName(std::string name) const;
   void HoldFriends(CGame* game);

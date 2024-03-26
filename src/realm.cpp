@@ -625,7 +625,8 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
         } else if (m_Config->m_CommandTrigger == '%') {
           tokenName = " (percent.)";
         }
-        SendWhisper("Hello, " + User + ". My commands start with " + string(1, m_Config->m_CommandTrigger) + tokenName + " Example: " + string(1, m_Config->m_CommandTrigger) + "host siege", User);
+        string example = m_Aura->m_Net->m_Config->m_AllowDownloads ? "host epicwar-200029" : "host siege";
+        SendWhisper("Hello, " + User + ". My commands start with " + string(1, m_Config->m_CommandTrigger) + tokenName + " Example: " + string(1, m_Config->m_CommandTrigger) + example, User);
       }
       return;
     }
@@ -641,7 +642,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       Command = Message.substr(1);
     }
 
-    CCommandContext* ctx = new CCommandContext(m_Aura, this, User, Whisper, &std::cout, CommandToken);
+    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, User, Whisper, &std::cout, CommandToken);
     ctx->Run(Command, Payload);
     m_Aura->UnholdContext(ctx);
   }
@@ -822,6 +823,30 @@ bool CRealm::GetAnnounceHostToChat() const
   return m_Config->m_AnnounceHostToChat;
 }
 
+bool CRealm::GetHasEnhancedAntiSpoof() const
+{
+  return (
+    (m_Config->m_CommandCFG->m_Enabled && m_Config->m_UnverifiedRejectCommands) ||
+    m_Config->m_UnverifiedCannotStartGame || m_Config->m_UnverifiedAutoKickedFromLobby ||
+    m_Config->m_AlwaysSpoofCheckPlayers
+  );
+}
+
+bool CRealm::GetUnverifiedCannotStartGame() const
+{
+  return m_Config->m_UnverifiedCannotStartGame;
+}
+
+bool CRealm::GetUnverifiedAutoKickedFromLobby() const
+{
+  return m_Config->m_UnverifiedAutoKickedFromLobby;
+}
+
+CCommandConfig* CRealm::GetCommandConfig() const
+{
+  return m_Config->m_CommandCFG;
+}
+
 string CRealm::GetCommandToken() const
 {
   return std::string(1, m_Config->m_CommandTrigger);
@@ -963,7 +988,7 @@ void CRealm::TrySendChat(const string& message, const string& user, bool isPriva
 
   bool IsQuotaOkay = (
     GetIsFloodImmune() ||
-    (message.length() <= 200 && (m_OutPackets.size() <= 3 || (GetIsAdmin(user) || GetIsRootAdmin(user) || GetIsSudoer(user))))
+    (message.length() <= 200 && (m_OutPackets.size() <= 3 || (GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))))
   );
   if (IsQuotaOkay) {
     SendChatOrWhisper(message, user, isPrivate);
@@ -1062,7 +1087,7 @@ void CRealm::ResetConnection(bool Errored)
   }
 }
 
-bool CRealm::GetIsAdmin(string name) const
+bool CRealm::GetIsModerator(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
@@ -1072,7 +1097,7 @@ bool CRealm::GetIsAdmin(string name) const
   return false;
 }
 
-bool CRealm::GetIsRootAdmin(string name) const
+bool CRealm::GetIsAdmin(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 

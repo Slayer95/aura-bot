@@ -50,6 +50,7 @@
 #include "config.h"
 #include "config_bot.h"
 #include "config_game.h"
+#include "config_commands.h"
 #include "socket.h"
 #include "net.h"
 #include "auradb.h"
@@ -1879,7 +1880,12 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
 
-  Player->SetWhoisShouldBeSent(IsUnverifiedAdmin || MatchOwnerName(Player->GetName()));
+  if (matchingRealm) {
+    Player->SetWhoisShouldBeSent(
+      IsUnverifiedAdmin || MatchOwnerName(Player->GetName()) || !HasOwnerSet() ||
+      matchingRealm->GetIsFloodImmune() || matchingRealm->GetHasEnhancedAntiSpoof()
+    );
+  }
 
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
     m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
@@ -1993,7 +1999,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
     if (matchingRealm) {
       JoinedRealm = matchingRealm->GetServer();
-      IsUnverifiedAdmin = matchingRealm->GetIsAdmin(joinRequest->GetName()) || matchingRealm->GetIsRootAdmin(joinRequest->GetName());
+      IsUnverifiedAdmin = matchingRealm->GetIsModerator(joinRequest->GetName()) || matchingRealm->GetIsAdmin(joinRequest->GetName());
     } else {
       // Trying to join from an unknown realm.
       HostCounterID = 0xF;
@@ -2291,20 +2297,27 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       const string Message = chatPlayer->GetMessage();
 
       if (!Message.empty() && Message[0] == m_CommandTrigger) {
-        char CommandToken = m_CommandTrigger;
-        string            Command, Payload;
-        string::size_type PayloadStart = Message.find(' ');
+        CRealm* realm = player->GetRealm(false);
+        CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config->m_LANCommandCFG;
+        const bool commandsEnabled = commandCFG->m_Enabled && (
+          !realm || !(commandCFG->m_RequireVerified && !player->IsRealmVerified())
+        );
+        if (commandsEnabled) {
+          char commandToken = m_CommandTrigger;
+          string            command, payload;
+          string::size_type payloadStart = Message.find(' ');
 
-        if (PayloadStart != string::npos) {
-          Command = Message.substr(1, PayloadStart - 1);
-          Payload = Message.substr(PayloadStart + 1);
-        } else {
-          Command = Message.substr(1);
+          if (payloadStart != string::npos) {
+            command = Message.substr(1, payloadStart - 1);
+            payload = Message.substr(payloadStart + 1);
+          } else {
+            payload = Message.substr(1);
+          }
+
+          transform(begin(command), end(command), begin(command), ::tolower);
+
+          EventPlayerBotCommand(player, commandCFG, commandToken, command, payload);
         }
-
-        transform(begin(Command), end(Command), begin(Command), ::tolower);
-
-        EventPlayerBotCommand(player, CommandToken, Command, Payload);
       }
 
       if (Relay) {
@@ -2343,9 +2356,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
   }
 }
 
-void CGame::EventPlayerBotCommand(CGamePlayer* player, char token, std::string& command, string& payload)
+void CGame::EventPlayerBotCommand(CGamePlayer* player, CCommandConfig* cmdConfig, char token, std::string& command, string& payload)
 {
-  CCommandContext* ctx = new CCommandContext(m_Aura, this, player, &std::cout, token);
+  CCommandContext* ctx = new CCommandContext(m_Aura, cmdConfig, this, player, &std::cout, token);
   ctx->Run(command, payload);
   m_Aura->UnholdContext(ctx);
 }
@@ -3646,8 +3659,15 @@ void CGame::StartCountDown(bool force)
   // otherwise check that the game is ready to start
 
   if (force) {
-    for (auto& player : m_Players) {
-      if (!player->GetHasMap()) {
+    for (const auto& player : m_Players) {
+      bool shouldKick = !player->GetHasMap();
+      if (!shouldKick) {
+        CRealm* realm = player->GetRealm(false);
+        if (realm && realm->GetUnverifiedCannotStartGame() && !player->IsRealmVerified()) {
+          shouldKick = true;
+        }
+      }
+      if (shouldKick) {
         player->SetDeleteMe(true);
         player->SetLeftReason("kicked when starting the game");
         player->SetLeftCode(PLAYERLEAVE_LOBBY);
@@ -3665,7 +3685,7 @@ void CGame::StartCountDown(bool force)
 
     // check if everyone has the map
     string StillDownloading;
-    for (auto& slot : m_Slots) {
+    for (const auto& slot : m_Slots) {
       if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetComputer() == 0 && slot.GetDownloadStatus() != 100) {
         CGamePlayer* Player = GetPlayerFromPID(slot.GetPID());
         if (Player) {
@@ -3687,7 +3707,7 @@ void CGame::StartCountDown(bool force)
     // check if everyone has been pinged enough (3 times) that the autokicker would have kicked them by now
     // see function EventPlayerPongToHost for the autokicker code
     string NotPinged;
-    for (auto& player : m_Players) {
+    for (const auto& player : m_Players) {
       if (!player->GetReserved() && player->GetNumPings() < 3) {
         if (NotPinged.empty())
           NotPinged = player->GetName();
@@ -3695,8 +3715,24 @@ void CGame::StartCountDown(bool force)
           NotPinged += ", " + player->GetName();
       }
     }
+
+    string NotVerified;
+    for (const auto& player : m_Players) {
+      CRealm* realm = player->GetRealm(false);
+      if (realm && realm->GetUnverifiedCannotStartGame() && !player->IsRealmVerified()) {
+        if (NotVerified.empty())
+          NotVerified = player->GetName();
+        else
+          NotVerified += ", " + player->GetName();
+      }
+    }
+
     if (!NotPinged.empty()) {
-      SendAllChat("Players not yet pinged 3 times: " + NotPinged);
+      SendAllChat("Players NOT yet pinged thrice: " + NotPinged);
+      ChecksPassed = false;
+    }
+    if (!NotVerified.empty()) {
+      SendAllChat("Players NOT verified (whisper sc): " + NotVerified);
       ChecksPassed = false;
     }
     if (GetTicks() < m_LastPlayerLeaveTicks + 2000) {

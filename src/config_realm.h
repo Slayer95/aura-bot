@@ -28,6 +28,7 @@
 
 #include "config.h"
 #include "config_net.h"
+#include "config_commands.h"
 #include "socket.h"
 
 #include <vector>
@@ -38,6 +39,10 @@
 #define REALM_AUTH_PVPGN 0
 #define REALM_AUTH_BATTLENET 1
 
+#define COMMANDS_ALLOWED_NONE 0
+#define COMMANDS_ALLOWED_UNVERIFIED 1
+#define COMMANDS_ALLOWED_VERIFIED 2
+
 struct sockaddr_storage;
 
 //
@@ -47,6 +52,31 @@ struct sockaddr_storage;
 class CRealmConfig
 {
 public:
+  // Automatically-assigned values
+  uint8_t m_ServerIndex;                         // unique server ID to identify players' realms through host counters (may be recycled on !reload)
+  std::string m_CFGKeyPrefix;                    // 
+
+  // Inheritable
+  uint8_t m_InheritOnlyCommandCommonBasePermissions;
+  uint8_t m_InheritOnlyCommandHostingBasePermissions;
+  uint8_t m_InheritOnlyCommandModeratorBasePermissions;
+  uint8_t m_InheritOnlyCommandAdminBasePermissions;
+  uint8_t m_InheritOnlyCommandBotOwnerBasePermissions;
+
+  // Inheritable
+  bool m_UnverifiedRejectCommands;
+  bool m_UnverifiedCannotStartGame;
+  bool m_UnverifiedAutoKickedFromLobby;
+  bool m_AlwaysSpoofCheckPlayers;
+
+  CCommandConfig* m_CommandCFG;
+
+  // Inheritable
+  bool        m_Enabled;
+  std::optional<sockaddr_storage> m_BindAddress; // the local address from which we connect
+
+  // Not inheritable
+
   std::string m_InputID;                         // for IRC commands
   std::string m_UniqueName;                      // displayed on the console
   std::string m_CanonicalName;                   // displayed on game rooms
@@ -62,7 +92,6 @@ public:
   uint32_t m_LocaleID;                           // see: http://msdn.microsoft.com/en-us/library/0h88fahh%28VS.85%29.aspx
 
   char m_CommandTrigger;                         // the character prefix to identify commands
-  bool m_EnablePublicCreate;                     // whether non-admins are allowed to create games
   bool m_AnnounceHostToChat;
   bool m_IsMirror;
   bool m_IsVPN;
@@ -92,12 +121,6 @@ public:
   std::string m_GamePrefix;                      // string prepended to game names
   uint32_t m_MaxUploadSize;                      // in KB
   bool m_FloodImmune;                            // whether we are allowed to send unlimited commands to the server
-
-  // Automatically-assigned values
-  bool        m_Enabled;
-  std::optional<sockaddr_storage> m_BindAddress; // the local address from which we connect
-  uint8_t m_ServerIndex;                         // unique server ID to identify players' realms through host counters
-  std::string m_CFGKeyPrefix;                    // 
 
   CRealmConfig(CConfig& CFG, CNetConfig* nNetConfig);
   CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);

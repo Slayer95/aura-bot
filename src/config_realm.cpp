@@ -25,6 +25,7 @@
 
 #include "config_realm.h"
 #include "config_bot.h"
+#include "command.h"
 #include "util.h"
 
 #include <utility>
@@ -37,18 +38,20 @@ using namespace std;
 //
 
 CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
-  : m_UserName(string()),
+  : // Not meant to be inherited
+    m_ServerIndex(0), // m_ServerIndex is one-based
+    m_CFGKeyPrefix("global_realm."),
+    m_CommandCFG(nullptr),
+
+    // Inheritable
+    m_Enabled(true),
+    m_UserName(string()),
     m_PassWord(string()),
 
     m_RootAdmins({}),
     m_GamePrefix(string()),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
-    m_FloodImmune(false),
-
-    m_Enabled(true),
-
-    m_ServerIndex(0), // m_ServerIndex is one-based
-    m_CFGKeyPrefix("global_realm.")
+    m_FloodImmune(false)
 {
   const static string emptyString;
 
@@ -71,7 +74,6 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   CFG.FailIfErrorLast();
   m_CommandTrigger         = commandTrigger[0];
 
-  m_EnablePublicCreate     = CFG.GetBool(m_CFGKeyPrefix + "allow_host_non_admins", true);
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", true);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", false);
   m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", false);
@@ -101,23 +103,54 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
+  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_RootAdmins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
   m_Enabled                = CFG.GetBool(m_CFGKeyPrefix + "enabled", true);
   m_BindAddress            = CFG.GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
+
+  vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
+
+  m_InheritOnlyCommandCommonBasePermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.common.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO);
+  m_InheritOnlyCommandHostingBasePermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.hosting.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO);
+  m_InheritOnlyCommandModeratorBasePermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.moderator.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO);
+  m_InheritOnlyCommandAdminBasePermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.admin.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO);
+  m_InheritOnlyCommandBotOwnerBasePermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.bot_owner.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO);
+
+  m_UnverifiedRejectCommands      = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_commands", false);
+  m_UnverifiedCannotStartGame     = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_start", false);
+  m_UnverifiedAutoKickedFromLobby = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.auto_kick", false);
+  m_AlwaysSpoofCheckPlayers       = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.always_verify", false);
 }
 
 CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)
-  : m_CountryShort(nRootConfig->m_CountryShort),
+  : m_ServerIndex(nServerIndex),
+    m_CFGKeyPrefix("realm_" + to_string(nServerIndex) + "."),
+
+    m_InheritOnlyCommandCommonBasePermissions(nRootConfig->m_InheritOnlyCommandCommonBasePermissions),
+    m_InheritOnlyCommandHostingBasePermissions(nRootConfig->m_InheritOnlyCommandHostingBasePermissions),
+    m_InheritOnlyCommandModeratorBasePermissions(nRootConfig->m_InheritOnlyCommandModeratorBasePermissions),
+    m_InheritOnlyCommandAdminBasePermissions(nRootConfig->m_InheritOnlyCommandAdminBasePermissions),
+    m_InheritOnlyCommandBotOwnerBasePermissions(nRootConfig->m_InheritOnlyCommandBotOwnerBasePermissions),
+
+    m_UnverifiedRejectCommands(nRootConfig->m_UnverifiedRejectCommands),
+    m_UnverifiedCannotStartGame(nRootConfig->m_UnverifiedCannotStartGame),
+    m_UnverifiedAutoKickedFromLobby(nRootConfig->m_UnverifiedAutoKickedFromLobby),
+    m_AlwaysSpoofCheckPlayers(nRootConfig->m_AlwaysSpoofCheckPlayers),
+
+    m_CommandCFG(nullptr),
+
+    m_Enabled(nRootConfig->m_Enabled),
+    m_BindAddress(nRootConfig->m_BindAddress),
+
+    m_CountryShort(nRootConfig->m_CountryShort),
     m_Country(nRootConfig->m_Country),
     m_Locale(nRootConfig->m_Locale),
     m_LocaleID(nRootConfig->m_LocaleID),
 
     m_CommandTrigger(nRootConfig->m_CommandTrigger),
-    m_EnablePublicCreate(nRootConfig->m_EnablePublicCreate),
     m_AnnounceHostToChat(nRootConfig->m_AnnounceHostToChat),
     m_IsMirror(nRootConfig->m_IsMirror),
     m_IsVPN(nRootConfig->m_IsVPN),
@@ -146,13 +179,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_RootAdmins(nRootConfig->m_RootAdmins),
     m_GamePrefix(nRootConfig->m_GamePrefix),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
-    m_FloodImmune(nRootConfig->m_FloodImmune),
-
-    m_Enabled(nRootConfig->m_Enabled),
-    m_BindAddress(nRootConfig->m_BindAddress),
-
-    m_ServerIndex(nServerIndex),
-    m_CFGKeyPrefix("realm_" + to_string(nServerIndex) + ".")
+    m_FloodImmune(nRootConfig->m_FloodImmune)
 {
   m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name", m_HostName);
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", m_ServerPort);
@@ -189,7 +216,6 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   string commandTrigger    = CFG.GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, string(1, m_CommandTrigger));
   CFG.FailIfErrorLast();
   m_CommandTrigger         = commandTrigger[0];
-  m_EnablePublicCreate     = CFG.GetBool(m_CFGKeyPrefix + "allow_host_non_admins", m_EnablePublicCreate);
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
   m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
@@ -226,16 +252,35 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "root_admins", ',', m_RootAdmins);
+  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_RootAdmins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
 
-  m_Enabled                = CFG.GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
+  m_UnverifiedRejectCommands      = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_commands", m_UnverifiedRejectCommands);
+  m_UnverifiedCannotStartGame     = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_start", m_UnverifiedCannotStartGame);
+  m_UnverifiedAutoKickedFromLobby = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.auto_kick", m_UnverifiedAutoKickedFromLobby);
+  m_AlwaysSpoofCheckPlayers       = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.always_verify", m_AlwaysSpoofCheckPlayers);
+
+  vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
+
+  m_CommandCFG             = new CCommandConfig(
+    CFG, m_CFGKeyPrefix, m_UnverifiedRejectCommands,
+    CFG.GetStringIndex(m_CFGKeyPrefix + "commands.common.permissions", commandPermissions, m_InheritOnlyCommandCommonBasePermissions),
+    CFG.GetStringIndex(m_CFGKeyPrefix + "commands.hosting.permissions", commandPermissions, m_InheritOnlyCommandHostingBasePermissions),
+    CFG.GetStringIndex(m_CFGKeyPrefix + "commands.moderator.permissions", commandPermissions, m_InheritOnlyCommandModeratorBasePermissions),
+    CFG.GetStringIndex(m_CFGKeyPrefix + "commands.admin.permissions", commandPermissions, m_InheritOnlyCommandAdminBasePermissions),
+    CFG.GetStringIndex(m_CFGKeyPrefix + "commands.bot_owner.permissions", commandPermissions, m_InheritOnlyCommandBotOwnerBasePermissions)
+  );
+
+  m_Enabled                       = CFG.GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
 
   optional<sockaddr_storage> customBindAddress = CFG.GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
   if (customBindAddress.has_value())
     m_BindAddress            = customBindAddress.value();
 }
 
-CRealmConfig::~CRealmConfig() = default;
+CRealmConfig::~CRealmConfig()
+{
+ delete m_CommandCFG;
+}

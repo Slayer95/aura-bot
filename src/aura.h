@@ -153,6 +153,7 @@ public:
 
   CRealm* GetRealmByInputId(const std::string& inputId) const;
   CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
+  CRealm* GetRealmByHostName(const std::string& hostName) const;
   CTCPServer* GetGameServer(uint16_t, std::string& name);
 
   void HoldContext(CCommandContext* nCtx);

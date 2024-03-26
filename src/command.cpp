@@ -39,8 +39,9 @@ using namespace std;
 //
 
 /* In-game command */
-CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGamePlayer* player, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_Config(config),
 
     m_SourceRealm(player->GetRealm(false)),
     m_TargetRealm(nullptr),
@@ -68,8 +69,9 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* game, CGamePlayer* player,
 }
 
 /* Command received from BNET but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_Config(config),
     m_SourceRealm(fromRealm),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -95,8 +97,9 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CRealm* fromRe
 }
 
 /* Command received from IRC but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, string& reverseHostName, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_Config(config),
     m_SourceRealm(nullptr),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -111,7 +114,8 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwo
 
     m_Permissions(0),
 
-    m_HostName(string()),
+    m_HostName(ircNetwork->m_Config->m_HostName),
+    m_ReverseHostName(reverseHostName),
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
@@ -121,8 +125,9 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, CIRC* ircNetwo
 }
 
 /* Command received from elsewhere but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_Config(config),
     m_SourceRealm(nullptr),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -147,8 +152,9 @@ CCommandContext::CCommandContext(CAura* nAura, CGame* targetGame, ostream* nOutp
 }
 
 /* BNET command */
-CCommandContext::CCommandContext(CAura* nAura, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, string& fromName, bool& isWhisper, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_Config(nullptr),
     m_SourceRealm(fromRealm),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -174,8 +180,9 @@ CCommandContext::CCommandContext(CAura* nAura, CRealm* fromRealm, string& fromNa
 }
 
 /* IRC command */
-CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, ostream* nOutputStream, char nToken)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, string& channelName, string& userName, bool& isWhisper, string& reverseHostName, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_Config(config),
     m_SourceRealm(nullptr),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -189,7 +196,8 @@ CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channel
     m_Token(nToken),
     m_Permissions(0),
 
-    m_HostName(string()),
+    m_HostName(ircNetwork->m_Config->m_HostName),
+    m_ReverseHostName(reverseHostName),
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
@@ -201,6 +209,7 @@ CCommandContext::CCommandContext(CAura* nAura, CIRC* ircNetwork, string& channel
 /* Generic command */
 CCommandContext::CCommandContext(CAura* nAura, ostream* nOutputStream, char nToken)
   : m_Aura(nAura),
+    m_Config(nullptr),
     m_SourceRealm(nullptr),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -241,7 +250,7 @@ string CCommandContext::GetUserAttribution()
   } else if (m_SourceRealm) {
     return m_FromName + "@" + m_SourceRealm->GetServer();
   } else if (m_IRC) {
-    return m_FromName + "@" + (m_IRC->m_Config->m_HostName);
+    return m_FromName + "@" + m_HostName;
   } else if (!m_FromName.empty()) {
     return m_FromName;
   } else {
@@ -282,6 +291,21 @@ void CCommandContext::UpdatePermissions()
   }
 
   m_Permissions = 0;
+
+  if (m_IRC) {
+    string::size_type suffixSize = m_IRC->m_Config->m_VerifiedDomain.length();
+    if (suffixSize > 0) {
+      if (m_ReverseHostName.length() > suffixSize &&
+        m_ReverseHostName.substr(0, m_ReverseHostName.length() - suffixSize) == m_IRC->m_Config->m_VerifiedDomain
+      ) {
+        m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
+      }
+      if (m_IRC->GetIsModerator(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
+      if (m_IRC->GetIsSudoer(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
+    }
+    return;
+  }
+
   bool IsRealmVerified = false;
   if (m_OverrideVerified.has_value()) {
     IsRealmVerified = m_OverrideVerified.value();
@@ -295,41 +319,92 @@ void CCommandContext::UpdatePermissions()
   bool IsOwner = m_TargetGame && m_TargetGame->MatchOwnerName(m_FromName) && m_HostName == m_TargetGame->m_OwnerRealm && (
     IsRealmVerified || (m_Player && m_HostName.empty())
   );
-  bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsRootAdmin(m_FromName);
-  bool IsAdmin = IsRootAdmin || (IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsAdmin(m_FromName));
+  bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsAdmin(m_FromName);
+  bool IsAdmin = IsRootAdmin || (IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsModerator(m_FromName));
   bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
-  // bool IsIRCAdmin = m_IRC != nullptr && m_IRC->GetIsRootAdmin(m_FromName);
 
   // Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
   if (m_Player || (IsOwner && m_TargetGame && m_TargetGame->GetIsLobby())) {
-    m_Permissions |= PERM_GAME_PLAYER;
+    m_Permissions |= USER_PERMISSIONS_GAME_PLAYER;
   }
 
   // Leaver or absent owners are automatically demoted.
-  if (IsOwner && (m_Player || (m_TargetGame && m_TargetGame->GetIsLobby()))) {
-    m_Permissions |= PERM_GAME_OWNER;
+  if (IsRealmVerified) {
+    m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
   }
-  if (IsAdmin) m_Permissions |= PERM_BNET_ADMIN;
-  if (IsRootAdmin) m_Permissions |= PERM_BNET_ROOTADMIN;
-  // if (IsIRCAdmin) m_Permissions |= PERM_IRC_ADMIN;
+  if (IsOwner && (m_Player || (m_TargetGame && m_TargetGame->GetIsLobby()))) {
+    m_Permissions |= USER_PERMISSIONS_GAME_OWNER;
+  }
+  if (IsAdmin) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
+  if (IsRootAdmin) m_Permissions |= USER_PERMISSIONS_CHANNEL_ROOTADMIN;
 
-  // Sudo is a separate permission system.
-  if (IsSudoSpoofable) m_Permissions |= PERM_BOT_SUDO_SPOOFABLE;
+  // Sudo is a permission system separate from channels.
+  if (IsSudoSpoofable) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
 }
 
-void CCommandContext::SetIRCAdmin(const bool& isAdmin)
+optional<bool> CCommandContext::CheckPermissions(const uint8_t requiredPermissions) const
 {
-  if (isAdmin) {
-    m_Permissions |= (PERM_IRC_ADMIN);
-  } else {
-    m_Permissions &= ~(PERM_IRC_ADMIN);
+  optional<bool> result;
+  switch (requiredPermissions) {
+    case COMMAND_PERMISSIONS_DISABLED:
+      result = false;
+      break;
+    case COMMAND_PERMISSIONS_SUDO:
+      result = (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK) > 0;
+      break;
+    case COMMAND_PERMISSIONS_SUDO_UNSAFE:
+      result = (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE) > 0;
+      break;
+    case COMMAND_PERMISSIONS_ROOTADMIN:
+      result = (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) > 0;
+      break;
+    case COMMAND_PERMISSIONS_ADMIN:
+      result = (m_Permissions & (USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) > 0;
+      break;
+    case COMMAND_PERMISSIONS_VERIFIED_OWNER:
+      result = (
+        ((m_Permissions & (USER_PERMISSIONS_CHANNEL_VERIFIED | USER_PERMISSIONS_BOT_SUDO_OK)) > 0) &&
+        ((m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0)
+      );
+    // Note: It's possible to be owner without being verified, if they belong to a LAN realm.
+    case COMMAND_PERMISSIONS_OWNER:
+      // TODO: USER_PERMISSIONS_CHANNEL_ADMIN should only be checked if the game is bound to the user realm.
+      result = (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
+      break;
+    case COMMAND_PERMISSIONS_VERIFIED:
+      result = (m_Permissions & (USER_PERMISSIONS_CHANNEL_VERIFIED | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
+      break;
+    case COMMAND_PERMISSIONS_AUTO:
+      // Let commands special-case nullopt, or call CheckPermissions().value_or(true)
+      break;
+    case COMMAND_PERMISSIONS_POTENTIAL_OWNER:
+      if (m_TargetGame && !m_TargetGame->HasOwnerSet()) {
+        result = (m_Permissions & (USER_PERMISSIONS_GAME_PLAYER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
+      } else {
+        result = (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
+      }
+      break;
+    case COMMAND_PERMISSIONS_UNVERIFIED:
+      result = true;
+      break;
   }
+
+  return result;
+}
+
+bool CCommandContext::CheckPermissions(const uint8_t requiredPermissions, const uint8_t autoPermissions) const
+{
+  // autoPermissions must not be COMMAND_PERMISSIONS_AUTO, nor other unhandled cases.
+  optional<bool> result = CheckPermissions(requiredPermissions);
+  if (result.has_value()) return result.value();
+  return CheckPermissions(autoPermissions).value_or(false);
 }
 
 optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
 {
   optional<pair<string, string>> Result;
-  if (!m_HostName.empty() && !(m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+  // Allow !su for LAN connections
+  if (!m_HostName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
     return Result;
   }
   if (!m_Aura->m_SudoContext) {
@@ -363,7 +438,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     }
     transform(begin(Command), end(Command), begin(Command), ::tolower);
     Result = make_pair(Command, Payload);
-    //m_Permissions |= PERM_BOT_SUDO_OK;
+    //m_Permissions |= USER_PERMISSIONS_BOT_SUDO_OK;
     m_Permissions = 0xFFFF;
   }
   m_Aura->UnholdContext(m_Aura->m_SudoContext);
@@ -507,13 +582,13 @@ CGamePlayer* CCommandContext::GetTargetPlayerOrSelf(const string& target)
     return m_Player;
   }
 
-  CGamePlayer* TargetPlayer = nullptr;
-  if (!m_TargetGame) return TargetPlayer;
-  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, &TargetPlayer);
+  CGamePlayer* targetPlayer = nullptr;
+  if (!m_TargetGame) return targetPlayer;
+  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, &targetPlayer);
   if (Matches > 1) {
-    TargetPlayer = nullptr;
+    targetPlayer = nullptr;
   }
-  return TargetPlayer;
+  return targetPlayer;
 }
 
 CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
@@ -523,7 +598,9 @@ CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
   }
   string realmId = target;
   transform(begin(realmId), end(realmId), begin(realmId), ::tolower);
-  return m_Aura->GetRealmByInputId(realmId);
+  CRealm* exactMatch = m_Aura->GetRealmByInputId(realmId);
+  if (exactMatch) return exactMatch;
+  return m_Aura->GetRealmByHostName(realmId);
 }
 
 CGame* CCommandContext::GetTargetGame(const string& target)
@@ -555,7 +632,7 @@ void CCommandContext::UseImplicitHostedGame()
   if (m_TargetGame) return;
 
   m_TargetGame = m_Aura->m_CurrentLobby;
-  if (m_TargetGame && 0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+  if (m_TargetGame && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
     UpdatePermissions();
   }
 }
@@ -577,7 +654,8 @@ void CCommandContext::Run(const string& command, const string& payload)
   uint64_t CommandHash = HashCode(Command);
 
   if (CommandHash == HashCode("su")) {
-    if (!m_HostName.empty() && 0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+    // Allow !su for LAN connections
+    if (!m_HostName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
       ErrorReply("Forbidden");
       return;
     }
@@ -590,7 +668,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     if (m_SourceRealm && m_FromWhisper) {
       Print("[AURA] Confirm from [" + m_HostName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + GetToken() + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC) {
-      Print("[AURA] Confirm from [" + m_IRC->m_Config->m_HostName + "] with: \"" + GetToken() + "aura sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_HostName + "] with: \"" + GetToken() + "aura sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
       Print("[AURA] Confirm from the game client with: \"" + GetToken() + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     }
@@ -610,7 +688,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
   }
 
-  if (m_TargetGame && m_TargetGame->m_Locked && 0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+  if (m_TargetGame && m_TargetGame->m_Locked && 0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
     (*m_Output) << m_TargetGame->GetLogPrefix() + "Command ignored, the game is locked" << std::endl;
     ErrorReply("Only the game owner and root admins can run game commands when the game is locked.");
     return;
@@ -656,8 +734,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       CRealm* targetPlayerRealm = targetPlayer->GetRealm(true);
       bool IsRealmVerified = targetPlayerRealm != nullptr;
       bool IsOwner = m_TargetGame->MatchOwnerName(targetPlayer->GetName()) && m_TargetGame->HasOwnerInGame();
-      bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsRootAdmin(m_FromName);
-      bool IsAdmin = IsRootAdmin || (IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName));
+      bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName);
+      bool IsAdmin = IsRootAdmin || (IsRealmVerified && targetPlayerRealm->GetIsModerator(m_FromName));
       string SyncStatus;
       if (m_TargetGame->GetGameLoaded()) {
         if (m_TargetGame->m_SyncPlayers[targetPlayer].size() + 1 == m_TargetGame->m_Players.size()) {
@@ -717,7 +795,11 @@ void CCommandContext::Run(const string& command, const string& payload)
       uint32_t KickedCount = 0;
       optional<uint32_t> KickPing;
       if (!Payload.empty()) {
-        if (!m_TargetGame->GetIsLobby() || 0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_OK))) {
+        if (!m_TargetGame->GetIsLobby()) {
+          ErrorReply("Maximum ping may only be set in a lobby.");
+          break;
+        }
+        if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
           ErrorReply("Not allowed to set maximum ping.");
           break;
         }
@@ -798,7 +880,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
 
       if (m_TargetGame->m_GameDisplay == GAME_PRIVATE && !m_Player) {
-        if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
           ErrorReply("This game is private.");
           break;
         }
@@ -1063,7 +1145,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_CommonBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
         ErrorReply("Not allowed to check players geolocalization.");
         break;
       }
@@ -1095,7 +1177,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to ban players.");
         break;
       }
@@ -1124,7 +1206,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -1160,14 +1242,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot end the game.");
-        break;
-      }
-
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK) && false) {
-        // TODO(IceSandslash): Add a time limit.
-        ErrorReply("The game has been running for too many minute(s) and can no longer be ended without sudo access.");
         break;
       }
 
@@ -1199,7 +1275,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame->GetIsLobby())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore change the map settings.");
         break;
       }
@@ -1218,7 +1294,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame)
         break;
 
-      bool isOwner = (0 != (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE)));
+      bool isOwner = CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER);
+      // TODO: Broadcast properly
       SendReply(
         "Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">",
         isOwner ? CHAT_SEND_TARGET_ALL : 0
@@ -1239,7 +1316,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore change the map settings.");
         break;
       }
@@ -1271,7 +1348,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -1302,7 +1379,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -1335,7 +1412,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror() || (m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded()))
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -1384,7 +1461,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -1426,7 +1503,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -1466,16 +1543,14 @@ void CCommandContext::Run(const string& command, const string& payload)
         if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
           break;
         }
-        if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+        if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
           ErrorReply("You are not the game owner, and therefore cannot rehost the game.");
           break;
         }
       } else {
-        if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
-          if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-            ErrorReply("Not allowed to host games.");
-            break;
-          }
+        if (!CheckPermissions(m_Config->m_HostPermissions, COMMAND_PERMISSIONS_ADMIN)) {
+          ErrorReply("Not allowed to host games.");
+          break;
         }
         if (!m_Aura->m_GameSetup) {
           ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
@@ -1551,11 +1626,9 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("pubby"):
     case HashCode("privby"): {
-      if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
-        if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-          ErrorReply("Not allowed to host games.");
-          break;
-        }
+      if (!CheckPermissions(m_Config->m_HostPermissions, COMMAND_PERMISSIONS_ADMIN)) {
+        ErrorReply("Not allowed to host games.");
+        break;
       }
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       string gameName;
@@ -1604,7 +1677,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() && !m_TargetGame->m_PublicStart ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
         ErrorReply("You are not allowed to start this game.");
         break;
       }
@@ -1616,7 +1689,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       }
 
       bool IsForce = Payload == "force";
-      if (IsForce && (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE)))) {
+      if (IsForce && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot forcibly start it.");
         break;
       }
@@ -1634,7 +1707,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot quickstart it.");
         break;
       }
@@ -1659,7 +1732,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit the game permissions.");
         break;
       }
@@ -1693,7 +1766,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot use this command.");
         break;
       }
@@ -1750,7 +1823,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot use this command.");
         break;
       }
@@ -1792,7 +1865,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -1823,7 +1896,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game settings.");
         break;
       }
@@ -1852,7 +1925,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game settings.");
         break;
       }
@@ -1891,7 +1964,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | (m_TargetGame->HasOwnerInGame() ? PERM_BNET_ROOTADMIN : PERM_BNET_ADMIN) | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot unhost this game lobby.");
         break;
       }
@@ -1911,7 +1984,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot unhost this game lobby.");
         break;
       }
@@ -2007,7 +2080,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot mute people.");
         break;
       }
@@ -2044,7 +2117,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror() || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot disable \"All\" chat channel.");
         break;
       }
@@ -2069,7 +2142,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetGameLoading() || m_TargetGame->GetGameLoaded())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot abort game start.");
         break;
       }
@@ -2098,7 +2171,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
       }
 
-      if (0 == (m_Permissions & ((m_TargetGame && m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
         ErrorReply("Not allowed to check network status.");
         break;
       }
@@ -2130,7 +2203,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     case HashCode("portforward"): {
       UseImplicitHostedGame();
 
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -2181,7 +2254,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (m_Aura->m_Realms.empty())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("Not allowed to check ban status.");
         break;
       }
@@ -2216,7 +2289,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("listbans"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_AdminBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN)) {
         ErrorReply("Only root admins may list bans.");
         break;
       }
@@ -2225,7 +2298,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Usage: " + GetToken() + "listbans [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Not allowed to list bans in arbitrary realms.");
         break;
       }
@@ -2241,7 +2314,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("addban"):
     case HashCode("ban"): {
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to ban players.");
         break;
       }
@@ -2316,7 +2389,9 @@ void CCommandContext::Run(const string& command, const string& payload)
         SendAll("Player [" + targetPlayer->GetName() + "] was banned by player [" + m_FromName + "] on server [" + targetPlayer->GetRealmHostName() + "]");
         break;
       } else if (m_SourceRealm) {
-        if (m_SourceRealm->GetIsRootAdmin(Victim) || (m_SourceRealm->GetIsAdmin(Victim) && (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))))) {
+        if (m_SourceRealm->GetIsAdmin(Victim) || (m_SourceRealm->GetIsModerator(Victim) &&
+          !CheckPermissions(m_Config->m_AdminBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN))
+        ) {
           ErrorReply("User [" + Victim + "] is an admin on server [" + m_HostName + "]");
           break;
         }
@@ -2325,7 +2400,7 @@ void CCommandContext::Run(const string& command, const string& payload)
           ErrorReply("User [" + Victim + "] is already banned on server [" + m_HostName + "]");
           break;
         }
-        if (m_SourceRealm->GetIsAdmin(Victim)) {
+        if (m_SourceRealm->GetIsModerator(Victim)) {
           if (!m_Aura->m_DB->AdminRemove(m_SourceRealm->GetDataBaseID(), Victim)) {
             ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_HostName + "]");
             break;
@@ -2349,7 +2424,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("unban"): {
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to ban players.");
         break;
       }
@@ -2379,7 +2454,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore change the map settings.");
         break;
       }
@@ -2423,7 +2498,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore change the game settings.");
         break;
       }
@@ -2497,7 +2572,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore change the game settings.");
         break;
       }
@@ -2530,7 +2605,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & ((m_TargetGame->HasOwnerSet() ? PERM_GAME_OWNER : PERM_GAME_PLAYER) | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
         if (Payload.empty() && m_TargetGame->HasOwnerSet()) {
           SendReply("The owner is [" + m_TargetGame->m_OwnerName + "@" + (m_TargetGame->m_OwnerRealm.empty() ? "@@LAN/VPN" : m_TargetGame->m_OwnerRealm) + "]");
         }
@@ -2563,7 +2638,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (m_Aura->m_Realms.empty())
         break;
 
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN)) {
         ErrorReply("You are not allowed to advertise.");
         break;
       }
@@ -2586,7 +2661,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
       bool IsCommand = Message[0] == '/';
-      if (IsCommand && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+      if (IsCommand && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("You are not allowed to send bnet commands.");
         break;
       }
@@ -2633,7 +2708,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot advertise.");
         break;
       }
@@ -2641,7 +2716,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       bool ToAllRealms = Payload == "*";
       CRealm* targetRealm = nullptr;
       if (ToAllRealms) {
-        if (0 != (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+        if (0 != (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
           ErrorReply("Announcing on all realms requires sudo permissions."); // But not really
           break;
         }
@@ -2687,7 +2762,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -2706,7 +2781,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -2746,7 +2821,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -2796,7 +2871,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -2845,7 +2920,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -2918,7 +2993,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -2968,7 +3043,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -2997,7 +3072,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -3020,7 +3095,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -3044,7 +3119,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -3071,7 +3146,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot pause the game.");
         break;
       }
@@ -3099,7 +3174,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot resume the game.");
         break;
       }
@@ -3125,7 +3200,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -3145,7 +3220,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot lock the game.");
         break;
       }
@@ -3166,7 +3241,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
@@ -3185,7 +3260,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("You are not the game owner nor a root admin, and therefore cannot unlock the game.");
         break;
       }
@@ -3205,7 +3280,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot unmute people.");
         break;
       }
@@ -3243,7 +3318,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot enable \"All\" chat channel.");
         break;
       }
@@ -3268,7 +3343,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot cancel a votekick.");
         break;
       }
@@ -3295,7 +3370,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot send whispers.");
         break;
       }
@@ -3366,8 +3441,8 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("You are not the game owner, and therefore cannot requires /whois check.");
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot ask for /whois.");
         break;
       }
 
@@ -3414,7 +3489,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (0 == (m_Permissions & (PERM_GAME_OWNER | PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot send whispers.");
         break;
       }
@@ -3440,7 +3515,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_SourceRealm)
         break;
 
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3455,7 +3530,7 @@ void CCommandContext::Run(const string& command, const string& payload)
       if (!m_SourceRealm)
         break;
 
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3466,7 +3541,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     case HashCode("game"): {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3492,11 +3567,11 @@ void CCommandContext::Run(const string& command, const string& payload)
       const string SubPayload = PayloadStart == string::npos ? string() : ExecString.substr(PayloadStart + 1);
       CCommandContext* ctx;
       if (m_IRC) {
-        ctx = new CCommandContext(m_Aura, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, &std::cout, m_Token);
+        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, m_HostName, &std::cout, m_Token);
       } else if (m_SourceRealm) {
-        ctx = new CCommandContext(m_Aura, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, &std::cout, m_Token);
+        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, &std::cout, m_Token);
       } else {
-        ctx = new CCommandContext(m_Aura, targetGame, &std::cout, m_Token);
+        ctx = new CCommandContext(m_Aura, m_Config, targetGame, &std::cout, m_Token);
       }
       ctx->Run(SubCmd, SubPayload);
       m_Aura->UnholdContext(ctx);
@@ -3504,7 +3579,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     }
 
     case HashCode("cachemaps"): {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3570,7 +3645,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("countmaps"):
     case HashCode("countcfgs"): {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3589,7 +3664,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("deletecfg"):
     case HashCode("deletemap"): {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3635,7 +3710,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("saygameraw"):
     case HashCode("saygame"): {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3684,7 +3759,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("disable"): {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3698,7 +3773,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("enable"): {
-      if (0 == (m_Permissions & (PERM_BOT_SUDO_OK))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3712,7 +3787,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("disablepub"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
@@ -3721,12 +3796,16 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Usage: " + GetToken() + "disablepub [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
+      if (!targetRealm->m_Config->m_CommandCFG->m_Enabled) {
+        ErrorReply("All commands are already completely disabled in " + targetRealm->GetCanonicalDisplayName());
+        break;
+      }
       SendReply("Creation of new games has been temporarily disabled for non-admins at " + targetRealm->GetCanonicalDisplayName() + ". (Active lobbies will not be unhosted.)");
-      targetRealm->m_Config->m_EnablePublicCreate = false;
+      targetRealm->m_Config->m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
       break;
     }
 
@@ -3735,7 +3814,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("enablepub"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
@@ -3744,12 +3823,16 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Usage: " + GetToken() + "enablepub [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
+      if (!targetRealm->m_Config->m_CommandCFG->m_Enabled) {
+        ErrorReply("All commands are completely disabled in " + targetRealm->GetCanonicalDisplayName());
+        break;
+      }
       SendReply("Creation of new games has been enabled for non-admins at " + targetRealm->GetCanonicalDisplayName());
-      targetRealm->m_Config->m_EnablePublicCreate = true;
+      targetRealm->m_Config->m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
       break;
     }
 
@@ -3770,7 +3853,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         break;
       }
 
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3807,7 +3890,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("reload"): {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3827,7 +3910,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("exit"):
     case HashCode("quit"): {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3847,7 +3930,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("restart"): {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -3876,7 +3959,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("checkadmin"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list admins.");
         break;
       }
@@ -3890,8 +3973,8 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Realm not found.");
         break;
       }
-      bool IsRootAdmin = m_SourceRealm->GetIsRootAdmin(Payload);
-      bool IsAdmin = IsRootAdmin || m_SourceRealm->GetIsAdmin(Payload);
+      bool IsRootAdmin = m_SourceRealm->GetIsAdmin(Payload);
+      bool IsAdmin = IsRootAdmin || m_SourceRealm->GetIsModerator(Payload);
       if (!IsAdmin && !IsRootAdmin)
         SendReply("User [" + Payload + "] is not an admin on server [" + m_HostName + "]");
       else if (IsRootAdmin)
@@ -3907,7 +3990,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("listadmins"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list admins.");
         break;
       }
@@ -3916,7 +3999,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Usage: " + GetToken() + "listadmins [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & PERM_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("Not allowed to list admins in arbitrary realms.");
         break;
       }
@@ -3930,7 +4013,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("addadmin"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may add admins.");
         break;
       }
@@ -3942,7 +4025,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Realm not found.");
         break;
       }
-      if (m_SourceRealm->GetIsAdmin(Payload)) {
+      if (m_SourceRealm->GetIsModerator(Payload)) {
         ErrorReply("User [" + Payload + "] is already an admin on server [" + m_HostName + "]");
         break;
       }
@@ -3959,7 +4042,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("deladmin"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list admins.");
         break;
       }
@@ -3972,7 +4055,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Realm not found.");
         break;
       }
-      if (!m_SourceRealm->GetIsAdmin(Payload)) {
+      if (!m_SourceRealm->GetIsModerator(Payload)) {
         ErrorReply("User [" + Payload + "] is not an admin on server [" + m_HostName + "]");
         break;
       }
@@ -4026,7 +4109,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("flushdns"): {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_OK)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4045,7 +4128,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Usage: " + GetToken() + "netinfo [REALM]");
         break;
       }
-      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Requires sudo permissions."); // But not really
         break;
       }
@@ -4064,7 +4147,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Usage: " + GetToken() + "printgames [REALM]");
         break;
       }
-      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Requires sudo permissions."); // But not really
         break;
       }
@@ -4083,7 +4166,7 @@ void CCommandContext::Run(const string& command, const string& payload)
         ErrorReply("Usage: " + GetToken() + "querygames [REALM]");
         break;
       }
-      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Requires sudo permissions."); // But not really
         break;
       }
@@ -4099,7 +4182,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("channel"): {
-      if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to invite the bot to another channel.");
         break;
       }
@@ -4125,7 +4208,7 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("listgames"):
     case HashCode("getgames"): {
-      if (0 == (m_Permissions & (PERM_BNET_ROOTADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
+      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to list games.");
         break;
       }
@@ -4152,24 +4235,23 @@ void CCommandContext::Run(const string& command, const string& payload)
 
     case HashCode("map"):
     case HashCode("host"): {
-      if (!(m_SourceRealm && m_SourceRealm->m_Config->m_EnablePublicCreate) && !(m_IRC && m_IRC->m_Config->m_EnablePublicCreate)) {
-        if (0 == (m_Permissions & (PERM_BNET_ADMIN | PERM_IRC_ADMIN | PERM_BOT_SUDO_SPOOFABLE))) {
-          ErrorReply("Not allowed to host games.");
-          break;
-        }
+      if (!CheckPermissions(m_Config->m_HostPermissions, COMMAND_PERMISSIONS_ADMIN)) {
+        ErrorReply("Not allowed to host games.");
+        break;
       }
-
       bool isHostCommand = CommandHash == HashCode("host");
       bool isSkipVersion = CommandHash == HashCode("mapforce");
-      vector<string> Args = isHostCommand ? SplitArgs(Payload, 2, 6) : SplitArgs(Payload, 1, 5);
+      vector<string> Args = isHostCommand ? SplitArgs(Payload, 1, 6) : SplitArgs(Payload, 1, 5);
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
         if (isHostCommand) {
           ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [GAME NAME]");
-          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [GAME NAME]");
-          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]");
-          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]");
-          ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]");
+          if (m_Player || !m_SourceRealm || m_SourceRealm->GetIsFloodImmune()) {
+            ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [GAME NAME]");
+            ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]");
+            ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]");
+            ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]");
+          }
           break;
         }
         if (!m_Aura->m_GameSetup) {
@@ -4182,7 +4264,15 @@ void CCommandContext::Run(const string& command, const string& payload)
 
       string gameName;
       if (isHostCommand) {
-        gameName = Args[Args.size() - 1];
+        if (Args.size() >= 2) {
+          gameName = Args[Args.size() - 1];
+        } else {
+          gameName = m_FromName + "'s " + Args[0];
+          if (gameName.length() > m_Aura->m_MaxGameNameSize) {
+            ErrorReply("Usage: " + GetToken() + "host [MAP NAME], [GAME NAME]");
+            break;
+          }
+        }
         Args.pop_back();
       }
       CGameExtraOptions options;
@@ -4228,7 +4318,7 @@ void CCommandContext::Run(const string& command, const string& payload)
     //
 
     case HashCode("mirror"): {
-      if (0 == (m_Permissions & PERM_BOT_SUDO_SPOOFABLE)) {
+      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Not allowed to mirror games.");
         break;
       }

@@ -80,7 +80,6 @@ class CIncomingMapSize;
 class CDBBan;
 class CDBGamePlayer;
 class CStats;
-class CIRC;
 class CRealm;
 
 class CGame
@@ -309,7 +308,7 @@ public:
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
-  void EventPlayerBotCommand(CGamePlayer* player, char token, std::string& command, std::string& payload);
+  void EventPlayerBotCommand(CGamePlayer* player, CCommandConfig* config, char token, std::string& command, std::string& payload);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
   void EventPlayerChangeColour(CGamePlayer* player, uint8_t colour);
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
