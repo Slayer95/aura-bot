@@ -195,7 +195,7 @@ inline uint8_t ExtractMessageTokens(const std::string& message, const std::strin
           if (payloadStart == std::string::npos) {
             matchPayload.clear();
           } else {
-            matchPayload = message.substr(cmdEnd, payloadStart - cmdEnd);
+            matchPayload = message.substr(payloadStart);
           }
         }
       }
@@ -218,7 +218,7 @@ inline uint8_t ExtractMessageTokens(const std::string& message, const std::strin
           if (payloadStart == std::string::npos) {
             matchPayload.clear();
           } else {
-            matchPayload = message.substr(cmdEnd, payloadStart - cmdEnd);
+            matchPayload = message.substr(payloadStart);
           }
         }
       }
