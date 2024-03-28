@@ -99,7 +99,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_AuthWar3Version        = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
   m_AuthExeVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
-  m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", string());
+  m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", emptyString);
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
@@ -182,6 +182,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
     m_FloodImmune(nRootConfig->m_FloodImmune)
 {
+  const static string emptyString;
+
   m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name", m_HostName);
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", m_ServerPort);
   m_UniqueName             = CFG.GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
@@ -245,7 +247,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   optional<uint8_t> authWar3Version            = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
   optional<vector<uint8_t>> authExeVersion     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
-  string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", string());
+  string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", emptyString);
 
   if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
   if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();

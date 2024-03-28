@@ -47,6 +47,9 @@ function getDefaultValue(rest, keyName) {
     return parseInt(rest, 16);
   }
   if (rest === `MAP_TRANSFERS_AUTOMATIC`) return `auto`;
+  if (rest === `COMMAND_PERMISSIONS_AUTO`) return `auto`;
+  if (rest === `REALM_AUTH_PVPGN`) return `pvpgn`;
+  if (rest === `CFG.GetHomeDir(`) return `Aura home directory`;
   return rest.replace(/^"/, '').replace(/"$/, '');
 }
 

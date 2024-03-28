@@ -12,7 +12,7 @@ Error handling: Use default value
 
 ## \`bot.jass_path\`
 Type: directory
-Default value: CFG.GetHomeDir(
+Default value: Aura home directory
 Error handling: Use default value
 
 ## \`bot.latency\`
@@ -47,17 +47,17 @@ Error handling: Use default value
 
 ## \`bot.map_cache_path\`
 Type: directory
-Default value: CFG.GetHomeDir(
+Default value: Aura home directory
 Error handling: Use default value
 
 ## \`bot.map_configs_path\`
 Type: directory
-Default value: CFG.GetHomeDir(
+Default value: Aura home directory
 Error handling: Use default value
 
 ## \`bot.maps_path\`
 Type: directory
-Default value: CFG.GetHomeDir(
+Default value: Aura home directory
 Error handling: Use default value
 
 ## \`bot.perf_limit\`
@@ -114,12 +114,12 @@ Error handling: Use default value
 
 ## \`global_realm.auth_exe_info\`
 Type: string
-Default value: string(
+Default value: Empty
 Error handling: Use default value
 
 ## \`global_realm.auth_exe_info\`
 Type: string
-Default value: string(
+Default value: Empty
 Error handling: Use default value
 
 ## \`global_realm.auth_exe_version\`
@@ -148,7 +148,7 @@ Error handling: Use default value
 
 ## \`global_realm.auth_password_hash_type\`
 Type: stringindex
-Default value: REALM_AUTH_PVPGN
+Default value: pvpgn
 Error handling: Use default value
 
 ## \`global_realm.auth_password_hash_type\`
@@ -193,7 +193,7 @@ Error handling: Use default value
 
 ## \`global_realm.commands.admin.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`global_realm.commands.admin.permissions\`
@@ -203,7 +203,7 @@ Error handling: Use default value
 
 ## \`global_realm.commands.bot_owner.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`global_realm.commands.bot_owner.permissions\`
@@ -233,7 +233,7 @@ Error handling: Use default value
 
 ## \`global_realm.commands.common.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`global_realm.commands.common.permissions\`
@@ -243,7 +243,7 @@ Error handling: Use default value
 
 ## \`global_realm.commands.hosting.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`global_realm.commands.hosting.permissions\`
@@ -253,7 +253,7 @@ Error handling: Use default value
 
 ## \`global_realm.commands.moderator.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`global_realm.commands.moderator.permissions\`
@@ -640,12 +640,12 @@ Error handling: Use default value
 
 ## \`irc.commands.admin.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`irc.commands.bot_owner.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`irc.commands.broadcast.enabled\`
@@ -660,17 +660,17 @@ Error handling: Use default value
 
 ## \`irc.commands.common.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`irc.commands.hosting.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`irc.commands.moderator.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`irc.commands.trigger\`
@@ -725,27 +725,27 @@ Error handling: Use default value
 
 ## \`lan_realm.commands.admin.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`lan_realm.commands.bot_owner.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`lan_realm.commands.common.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`lan_realm.commands.hosting.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`lan_realm.commands.moderator.permissions\`
 Type: stringindex
-Default value: COMMAND_PERMISSIONS_AUTO
+Default value: auto
 Error handling: Use default value
 
 ## \`metrics.rtt_pings\`
