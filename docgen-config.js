@@ -7,8 +7,8 @@ const path = require('path');
 
 const OUTPUT_PATH = `CONFIG.md`;
 const COMMAND_FILES = ['src/net.cpp', 'src/config_bot.cpp', 'src/config_game.cpp', 'src/config_irc.cpp', 'src/config_net.cpp', 'src/config_realm.cpp', 'src/config_commands.cpp'];
-const configMaybeKeyRegexp = /CFG\-\>(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
-const configKeyRegexp = /CFG\-\>(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
+const configMaybeKeyRegexp = /CFG\.(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
+const configKeyRegexp = /CFG\.(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
 
 const ReloadModes = {NONE: 0, INSTANT: 1, NEXT: 2};
 
