@@ -123,6 +123,8 @@ public:
   std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
   bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
 
+  void SendReplyNoFlags(const std::string& message);
+  void SendReplyCustomFlags(const std::string& message, const uint8_t ccFlags);
   void SendReply(const std::string& message);
   void SendReply(const std::string& message, const uint8_t ccFlags);
   void ErrorReply(const std::string& message);

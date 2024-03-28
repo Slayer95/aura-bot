@@ -2313,25 +2313,6 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
           Relay = false;
       }
 
-      // handle bot commands
-      {
-        CRealm* realm = player->GetRealm(false);
-        CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config->m_LANCommandCFG;
-        const bool commandsEnabled = commandCFG->m_Enabled && (
-          !realm || !(commandCFG->m_RequireVerified && !player->IsRealmVerified())
-        );
-        if (commandsEnabled) {
-          const string message = chatPlayer->GetMessage();
-          string cmdToken, command, payload;
-          uint8_t tokenMatch = ExtractMessageTokens(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
-          if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
-            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
-            ctx->Run(cmdToken, command, payload);
-            m_Aura->UnholdContext(ctx);
-          }
-        }
-      }
-
       if (Relay) {
         if (OnlyToObservers) {
           std::vector<uint8_t> TargetPIDs = chatPlayer->GetToPIDs();
@@ -2348,6 +2329,25 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             Print(GetLogPrefix() + "[Obs/Ref] --nobody listening--");
         } else {
           Send(chatPlayer->GetToPIDs(), GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), chatPlayer->GetToPIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
+        }
+      }
+
+      // handle bot commands
+      {
+        CRealm* realm = player->GetRealm(false);
+        CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config->m_LANCommandCFG;
+        const bool commandsEnabled = commandCFG->m_Enabled && (
+          !realm || !(commandCFG->m_RequireVerified && !player->IsRealmVerified())
+        );
+        if (commandsEnabled) {
+          const string message = chatPlayer->GetMessage();
+          string cmdToken, command, payload;
+          uint8_t tokenMatch = ExtractMessageTokens(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
+          if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
+            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+            ctx->Run(cmdToken, command, payload);
+            m_Aura->UnholdContext(ctx);
+          }
         }
       }
     }

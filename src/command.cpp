@@ -452,7 +452,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
   return Result;
 }
 
-void CCommandContext::SendReply(const string& message)
+void CCommandContext::SendReplyNoFlags(const string& message)
 {
   if (message.empty())
     return;
@@ -497,7 +497,7 @@ void CCommandContext::SendReply(const string& message)
   }
 }
 
-void CCommandContext::SendReply(const string& message, const uint8_t ccFlags) {
+void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t ccFlags) {
   bool AllTarget = ccFlags & CHAT_SEND_TARGET_ALL;
   bool AllSource = ccFlags & CHAT_SEND_SOURCE_ALL;
   bool AllSourceSuccess = false;
@@ -531,7 +531,7 @@ void CCommandContext::SendReply(const string& message, const uint8_t ccFlags) {
     }
   }
   if (!AllSourceSuccess) {
-    SendReply(message);
+    SendReplyNoFlags(message);
   }
 
   if (m_FromType != FROM_OTHER && (ccFlags & CHAT_LOG_CONSOLE)) {
@@ -544,6 +544,27 @@ void CCommandContext::SendReply(const string& message, const uint8_t ccFlags) {
     } else {
       (*m_Output) << "[AURA] " + message << std::endl;
     }
+  }
+}
+
+void CCommandContext::SendReply(const string& message)
+{
+  if (message.empty())
+    return;
+
+  if (m_IsBroadcast) {
+    SendReplyCustomFlags(message, CHAT_SEND_SOURCE_ALL);
+    return;
+  }
+
+  SendReplyNoFlags(message);
+}
+
+void CCommandContext::SendReply(const string& message, const uint8_t ccFlags) {
+  if (m_IsBroadcast) {
+    SendReplyCustomFlags(message, ccFlags | CHAT_SEND_SOURCE_ALL);
+  } else {
+    SendReplyCustomFlags(message, ccFlags);
   }
 }
 
@@ -897,7 +918,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string PlayersFragment = Players.empty() ? "No players. " : "Players: " + Players + ". ";
       string ObserversFragment = Observers.empty() ? "No observers" : "Observers: " + Observers + ".";
-        SendReply(PlayersFragment + ObserversFragment);
+      SendReply(PlayersFragment + ObserversFragment);
       break;
     }
 
@@ -1299,11 +1320,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       bool isOwner = CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER);
-      // TODO: Broadcast properly
-      SendReply(
-        "Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">",
-        isOwner ? CHAT_SEND_TARGET_ALL : 0
-      );
+      SendReply("Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">");
       break;
     }
 
