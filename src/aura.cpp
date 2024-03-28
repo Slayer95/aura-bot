@@ -949,10 +949,19 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
     // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
     // Otherwise whisper the game creator that the (re)host failed.
 
-    if (m_CurrentLobby->GetNumHumanPlayers() != 0)
+    if (m_CurrentLobby->GetNumHumanPlayers() != 0) {
       m_CurrentLobby->SendAllChat("Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
-    else if (m_CurrentLobby->GetCreatorRealm()) {
-      m_CurrentLobby->GetCreatorRealm()->SendWhisper("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+    } else {
+      switch (m_CurrentLobby->GetCreatedFromType()) {
+        case GAMESETUP_ORIGIN_REALM:
+          reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->SendWhisper("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+          break;
+        case GAMESETUP_ORIGIN_IRC:
+          reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+          break;
+        default:
+          break;
+      }
     }
 
     Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
@@ -972,9 +981,9 @@ void CAura::EventGameDeleted(CGame* game)
 {
   for (auto& bnet : m_Realms) {
     bnet->SendChatChannel("Game ended: " + game->GetDescription());
-
-    if (bnet == game->GetCreatorRealm())
+    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
       bnet->SendWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
+    }
   }
 }
 
@@ -1365,7 +1374,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
       gameSetup->m_Ctx->SendReply(AnnounceText);
     } else if (bnet->GetAnnounceHostToChat()) {
       bnet->SendChatChannel(AnnounceText);
-    } else if (bnet == gameSetup->m_CreatorRealm) {
+    } else if (gameSetup->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(bnet))) {
       gameSetup->m_Ctx->SendReply(AnnounceText);
     }
     // QueueGameRefresh at QueueGameMirror/QueueGameCreate handles game name prefix

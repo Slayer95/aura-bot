@@ -36,6 +36,7 @@
 
 #include "aura.h"
 #include "command.h"
+#include "irc.h"
 #include "map.h"
 #include "realm.h"
 
@@ -65,8 +66,14 @@
 #define FILE_EXTENSIONS_CONFIG {".cfg"}
 #endif
 
+#define GAMESETUP_ORIGIN_NONE 0
+#define GAMESETUP_ORIGIN_REALM 1
+#define GAMESETUP_ORIGIN_IRC 2
+#define GAMESETUP_ORIGIN_INVALID 255
+
 class CAura;
 class CCommandContext;
+class CIRC;
 class CMap;
 class CRealm;
 
@@ -173,8 +180,9 @@ public:
   std::optional<uint32_t>                         m_LobbyTimeout;
   std::optional<bool>                             m_CheckJoinable;
 
-  std::string                                     m_CreatorName;
-  CRealm*                                         m_CreatorRealm;
+  std::string                                     m_CreatedBy;
+  void*                                           m_CreatedFrom;
+  uint8_t                                         m_CreatedFromType;
 
   CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* mapCFG);
   CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck);
@@ -216,6 +224,9 @@ public:
   void SetDisplayMode(const uint8_t nDisplayMode);
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
+  void SetCreator(const std::string& nCreator, CIRC* nIRC);
+  void RemoveCreator();
+  bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   void SetName(const std::string& nName) { m_GameName = nName; }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }

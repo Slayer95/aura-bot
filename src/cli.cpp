@@ -296,7 +296,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     } else {
       searchType = SEARCH_TYPE_ANY;
     }
-    CCommandContext* ctx = new CCommandContext(nAura, &cout, '!');
+    CCommandContext* ctx = new CCommandContext(nAura, false, &cout);
     CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
     if (gameSetup && gameSetup->LoadMap()) {
       if (gameSetup->ApplyMapModifiers(&options)) {

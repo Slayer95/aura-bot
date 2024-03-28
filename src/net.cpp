@@ -1100,7 +1100,7 @@ void CNet::HandleIPAddressFetchDone()
     if (m_Aura->m_CurrentLobby->GetIsVerbose()) {
       checkMode |= HEALTH_CHECK_VERBOSE;
     }
-    CCommandContext* ctx = new CCommandContext(m_Aura, &cout, '!');
+    CCommandContext* ctx = new CCommandContext(m_Aura, false, &cout);
     QueryHealthCheck(ctx, checkMode, nullptr, m_Aura->m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
     m_Aura->UnholdContext(ctx);
     m_Aura->m_CurrentLobby->SetIsCheckJoinable(false);

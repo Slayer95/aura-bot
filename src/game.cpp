@@ -51,6 +51,7 @@
 #include "config_bot.h"
 #include "config_game.h"
 #include "config_commands.h"
+#include "irc.h"
 #include "socket.h"
 #include "net.h"
 #include "auradb.h"
@@ -85,8 +86,9 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_OwnerName(nGameSetup->m_GameOwner.first),
     m_OwnerRealm(nGameSetup->m_GameOwner.second),
     m_CreatorText(nGameSetup->m_Attribution),
-    m_CreatorName(nGameSetup->m_CreatorName),
-    m_CreatorRealm(nGameSetup->m_CreatorRealm),
+    m_CreatedBy(nGameSetup->m_CreatedBy),
+    m_CreatedFrom(nGameSetup->m_CreatedFrom),
+    m_CreatedFromType(nGameSetup->m_CreatedFromType),
     m_ExcludedServer(string()),
     m_HCLCommandString(nGameSetup->m_Map->GetMapDefaultHCL()),
     m_MapPath(nGameSetup->m_Map->GetMapPath()),
@@ -151,7 +153,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
 
   m_VoteKickPercentage = m_Aura->m_GameDefaultConfig->m_VoteKickPercentage;
-  m_CommandTrigger = m_Aura->m_GameDefaultConfig->m_CommandTrigger;
+  m_PrivateCmdToken = m_Aura->m_GameDefaultConfig->m_PrivateCmdToken;
+  m_BroadcastCmdToken = m_Aura->m_GameDefaultConfig->m_BroadcastCmdToken;
   m_LacksMapKickDelay = m_Aura->m_GameDefaultConfig->m_LacksMapKickDelay;
   m_NotifyJoins = m_Aura->m_GameDefaultConfig->m_NotifyJoins;
   m_PerfThreshold = m_Aura->m_GameDefaultConfig->m_PerfThreshold;
@@ -273,6 +276,18 @@ CGame::~CGame()
       ctx->m_TargetGame = nullptr;
     }
   }
+}
+
+bool CGame::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const
+{
+  if (m_CreatedFromType != fromType) return false;
+  switch (fromType) {
+    case GAMESETUP_ORIGIN_REALM:
+      return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
+    case GAMESETUP_ORIGIN_IRC:
+      return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
+  }
+  return false;
 }
 
 CGameProtocol* CGame::GetProtocol() const
@@ -1240,7 +1255,13 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line.replace(matchIndex, 9, m_CreatorText);
     }
     while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      Line.replace(matchIndex, 11, !m_CreatorRealm ? "@@@LAN/VPN" : ("@" + m_CreatorRealm->GetCanonicalDisplayName()));
+      if (m_CreatedFromType == GAMESETUP_ORIGIN_REALM) {
+        Line.replace(matchIndex, 11, "@" + reinterpret_cast<CRealm*>(m_CreatedFrom)->GetCanonicalDisplayName());
+      } else if (m_CreatedFromType == GAMESETUP_ORIGIN_IRC) {
+        Line.replace(matchIndex, 11, "@" + reinterpret_cast<CIRC*>(m_CreatedFrom)->m_Config->m_HostName);
+      } else {
+        Line.replace(matchIndex, 11, "@@@LAN/VPN");
+      }
     }
     while ((matchIndex = Line.find("{OWNER}")) != string::npos) {
       Line.replace(matchIndex, 7, m_OwnerName);
@@ -1249,7 +1270,7 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line.replace(matchIndex, 12, m_OwnerRealm.empty() ? "@@@LAN/VPN" : ("@" + m_OwnerRealm));
     }
     while ((matchIndex = Line.find("{TRIGGER}")) != string::npos) {
-      Line.replace(matchIndex, 9, string(1, m_CommandTrigger));
+      Line.replace(matchIndex, 9, m_PrivateCmdToken);
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
       Line.replace(matchIndex, 5, GetMapSiteURL());
@@ -2293,30 +2314,19 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       }
 
       // handle bot commands
-
-      const string Message = chatPlayer->GetMessage();
-
-      if (!Message.empty() && Message[0] == m_CommandTrigger) {
+      {
         CRealm* realm = player->GetRealm(false);
         CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config->m_LANCommandCFG;
         const bool commandsEnabled = commandCFG->m_Enabled && (
           !realm || !(commandCFG->m_RequireVerified && !player->IsRealmVerified())
         );
         if (commandsEnabled) {
-          char commandToken = m_CommandTrigger;
-          string            command, payload;
-          string::size_type payloadStart = Message.find(' ');
-
-          if (payloadStart != string::npos) {
-            command = Message.substr(1, payloadStart - 1);
-            payload = Message.substr(payloadStart + 1);
-          } else {
-            payload = Message.substr(1);
+          const string message = chatPlayer->GetMessage();
+          string cmdToken, command, payload;
+          uint8_t tokenMatch = ExtractMessageTokens(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
+          if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
+            EventPlayerBotCommand(player, commandCFG, cmdToken, command, payload);
           }
-
-          transform(begin(command), end(command), begin(command), ::tolower);
-
-          EventPlayerBotCommand(player, commandCFG, commandToken, command, payload);
         }
       }
 
@@ -2356,10 +2366,10 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
   }
 }
 
-void CGame::EventPlayerBotCommand(CGamePlayer* player, CCommandConfig* cmdConfig, char token, std::string& command, string& payload)
+void CGame::EventPlayerBotCommand(CGamePlayer* player, CCommandConfig* cmdConfig, string& token, string& command, string& payload)
 {
-  CCommandContext* ctx = new CCommandContext(m_Aura, cmdConfig, this, player, &std::cout, token);
-  ctx->Run(command, payload);
+  CCommandContext* ctx = new CCommandContext(m_Aura, cmdConfig, this, player, token == m_BroadcastCmdToken, &std::cout);
+  ctx->Run(token, command, payload);
   m_Aura->UnholdContext(ctx);
 }
 
@@ -3605,7 +3615,7 @@ void CGame::ReleaseOwner()
   m_OwnerName = "";
   m_OwnerRealm = "";
   m_Locked = false;
-  SendAllChat("This game is now ownerless. Type " + string(1, m_CommandTrigger) + "owner to take ownership of this game.");
+  SendAllChat("This game is now ownerless. Type " + m_PrivateCmdToken + "owner to take ownership of this game.");
 }
 
 void CGame::ResetSync()
@@ -3740,7 +3750,7 @@ void CGame::StartCountDown(bool force)
       ChecksPassed = false;
     }
     if (GetNumConnectionsOrFake() == 1 && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
-      SendAllChat("Single-player game requires map observers set to referees. Or add a fake player instead (type " + string(1, m_CommandTrigger) + "fp)");
+      SendAllChat("Single-player game requires map observers set to referees. Or add a fake player instead (type " + m_PrivateCmdToken + "fp)");
       ChecksPassed = false;
     }
 

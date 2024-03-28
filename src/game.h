@@ -111,8 +111,9 @@ protected:
   std::string                    m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                    m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
   std::string                    m_CreatorText;                   // who created this game
-  std::string                    m_CreatorName;                   // name of the battle.net user who created this game
-  CRealm*                        m_CreatorRealm;                 // battle.net server the player who created this game was on
+  std::string                    m_CreatedBy;                     // name of the battle.net user who created this game
+  void*                          m_CreatedFrom;                   // battle.net or IRC server the player who created this game was on
+  uint8_t                        m_CreatedFromType;               // type of server m_CreatedFrom is
   std::string                    m_ExcludedServer;                // battle.net server where the mirrored game is not to be broadcasted
   std::string                    m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
   std::string                    m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
@@ -145,7 +146,8 @@ protected:
   uint32_t                       m_AutoKickPing;                  //
   uint32_t                       m_WarnHighPing;                  //
 
-  char                           m_CommandTrigger;
+  std::string                    m_PrivateCmdToken;
+  std::string                    m_BroadcastCmdToken;
   uint32_t                       m_VoteKickPercentage;            // percentage of players required to vote yes for a votekick to pass
   uint32_t                       m_LacksMapKickDelay;
   bool                           m_NotifyJoins;                   // whether the bot should beep when a player joins a hosted game
@@ -214,8 +216,10 @@ public:
   inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
   inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
   inline std::string    GetOwnerName() const { return m_OwnerName; }
-  inline std::string    GetCreatorName() const { return m_CreatorName; }
-  inline CRealm*        GetCreatorRealm() const { return m_CreatorRealm; }
+  inline std::string    GetCreatorName() const { return m_CreatedBy; }
+  inline uint8_t        GetCreatedFromType() const { return m_CreatedFromType; }
+  inline void*          GetCreatedFrom() const { return m_CreatedFrom; }
+  bool                  MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   inline uint32_t       GetHostCounter() const { return m_HostCounter; }
   inline int64_t        GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool           GetLocked() const { return m_Locked; }
@@ -308,7 +312,7 @@ public:
   void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
-  void EventPlayerBotCommand(CGamePlayer* player, CCommandConfig* config, char token, std::string& command, std::string& payload);
+  void EventPlayerBotCommand(CGamePlayer* player, CCommandConfig* config, std::string& token, std::string& command, std::string& payload);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
   void EventPlayerChangeColour(CGamePlayer* player, uint8_t colour);
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
@@ -377,6 +381,12 @@ public:
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);
   void DeleteFakePlayers();
+
+  void RemoveCreator() {
+    m_CreatedBy.clear();
+    m_CreatedFrom = nullptr;
+    m_CreatedFromType = GAMESETUP_ORIGIN_INVALID;
+  }
 };
 
 #endif // AURA_GAME_H_

@@ -91,7 +91,9 @@ public:
   std::string m_Locale;                          // locale used: numeric or "system"
   uint32_t m_LocaleID;                           // see: http://msdn.microsoft.com/en-us/library/0h88fahh%28VS.85%29.aspx
 
-  char m_CommandTrigger;                         // the character prefix to identify commands
+  std::string m_PrivateCmdToken;                 // a symbol prefix to identify commands and send a private reply
+  std::string m_BroadcastCmdToken;               // a symbol prefix to identify commands and send the reply to everyone
+  bool m_EnableBroadcast;
   bool m_AnnounceHostToChat;
   bool m_IsMirror;
   bool m_IsVPN;

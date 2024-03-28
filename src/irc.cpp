@@ -269,7 +269,7 @@ void CIRC::ExtractPackets()
     // in:  :nickname!~username@hostname PRIVMSG #channel :message
     // print the message, check if it's a command then execute if it is
 
-    if (Tokens.size() > 3 && Tokens[1] == "PRIVMSG")
+    if (Tokens.size() > 3 && Tokens[1] == "PRIVMSG" && m_Config->m_CommandCFG->m_Enabled)
     {
       // don't bother parsing if the message is very short (1 character)
       // since it's surely not a command
@@ -277,14 +277,14 @@ void CIRC::ExtractPackets()
       if (Tokens[3].size() < 3)
         continue;
 
-      string Nickname, HostName;
+      string nickName, hostName;
 
       // get the nickname
 
       uint32_t i = 1;
 
       for (; Tokens[0][i] != '!'; ++i)
-        Nickname += Tokens[0][i];
+        nickName += Tokens[0][i];
 
       // skip the username
 
@@ -294,58 +294,27 @@ void CIRC::ExtractPackets()
       // get the hostname
 
       for (++i; i < Tokens[0].size(); ++i)
-        HostName += Tokens[0][i];
+        hostName += Tokens[0][i];
 
       // get the channel
 
-      string Channel = Tokens[2];
+      string channel = Tokens[2];
 
       // get the message
 
-      string Message = Packets_Packet.substr(Tokens[0].size() + Tokens[1].size() + Tokens[2].size() + 4);
+      string message = Packets_Packet.substr(Tokens[0].size() + Tokens[1].size() + Tokens[2].size() + 4);
 
-      // relay messages to bnet
-
-      if (Message.empty() || Channel.empty() || Message[0] != m_Config->m_CommandTrigger)
+      if (message.empty() || channel.empty())
         continue;
 
-      char CommandToken = m_Config->m_CommandTrigger;
-
-      size_t NSIndex = Message.find(" ", 1);
-      if (NSIndex == string::npos)
-        continue;
-
-      string CmdNameSpace = Message.substr(1, NSIndex - 1);
-      string Command = Message.substr(NSIndex + 1);
-      string Payload;
-      size_t PayloadStart = Command.find(" ");
-      if (PayloadStart != string::npos) {
-         Payload = Command.substr(PayloadStart + 1);
-         Command = Command.substr(0, PayloadStart);
-      }
-
-      transform(begin(CmdNameSpace), end(CmdNameSpace), begin(CmdNameSpace), ::tolower);
-      transform(begin(Command), end(Command), begin(Command), ::tolower);
-
-      if (CmdNameSpace == "irc") {
-        if (m_Config->m_RootAdmins.find(HostName) == m_Config->m_RootAdmins.end()) continue;
-        //
-        // !NICK
-        //
-
-        if (Command == "nick") {
-          Send("NICK :" + Payload);
-          m_NickName     = Payload;
-        }        
-        continue;
-      }
-
-      if (CmdNameSpace == "aura" && m_Config->m_CommandCFG->m_Enabled) {
-        bool IsWhisper = Channel[0] != '#';
-        CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, Channel, Nickname, IsWhisper, HostName, &std::cout, CommandToken);
-        Print("[IRC] Running command !" + Command + " with payload [" + Payload + "]");
+      string cmdToken, command, payload;
+      uint8_t tokenMatch = ExtractMessageTokens(message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
+      if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
+        const bool isWhisper = channel[0] != '#';
+        CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, channel, nickName, isWhisper, hostName, cmdToken == m_Config->m_BroadcastCmdToken, &std::cout);
+        Print("[IRC] Running command " + cmdToken + command + " with payload [" + payload + "]");
         ctx->UpdatePermissions();
-        ctx->Run(Command, Payload);
+        ctx->Run(cmdToken, command, payload);
         m_Aura->UnholdContext(ctx);
       }
 

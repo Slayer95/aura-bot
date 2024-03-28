@@ -37,6 +37,8 @@ using namespace std;
 
 CGameConfig::CGameConfig(CConfig& CFG)
 {
+  const static string emptyString;
+
   m_VoteKickPercentage        = CFG.GetInt("hosting.vote_kick.min_percent", 70);
   m_NumPlayersToStartGameOver = CFG.GetInt("hosting.game_over.player_count", 1);
   m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 10);
@@ -53,9 +55,10 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_ExtraDiscoveryAddresses   = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
   m_ExtraDiscoveryStrict      = CFG.GetBool("net.game_discovery.udp.extra_clients.strict", false);
 
-  string BotCommandTrigger    = CFG.GetString("hosting.command_trigger", 1, 1, "!");
-  CFG.FailIfErrorLast();
-  m_CommandTrigger            = BotCommandTrigger[0];
+  m_PrivateCmdToken           = CFG.GetString("hosting.commands.trigger", "!");
+  m_BroadcastCmdToken         = CFG.GetString("hosting.commands.broadcast.trigger", emptyString);
+  m_EnableBroadcast           = CFG.GetBool("hosting.commands.broadcast.enabled", false);
+
   m_IndexVirtualHostName      = CFG.GetString("hosting.index.creator_name", 1, 15, "Aura Bot");
   m_LobbyVirtualHostName      = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 

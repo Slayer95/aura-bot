@@ -93,6 +93,7 @@ public:
 
   std::string GetString(const std::string& key, const std::string& x);
   std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
+
   bool GetBool(const std::string& key, bool x);
 
   int32_t GetInt(const std::string& key, int32_t x);

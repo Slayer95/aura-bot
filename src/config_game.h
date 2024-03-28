@@ -56,7 +56,9 @@ public:
   std::set<std::string>    m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
   bool                     m_ExtraDiscoveryStrict;
 
-  char                     m_CommandTrigger;             // the command trigger inside games
+  std::string              m_PrivateCmdToken;            // a symbol prefix to identify commands and send a private reply
+  std::string              m_BroadcastCmdToken;          // a symbol prefix to identify commands and send the reply to everyone
+  bool                     m_EnableBroadcast;
   std::string              m_IndexVirtualHostName;       // index virtual host name
   std::string              m_LobbyVirtualHostName;       // lobby virtual host name
   bool                     m_NotifyJoins;                // whether the bot should beep when a player joins a hosted game

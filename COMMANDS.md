@@ -27,6 +27,8 @@ Aliases: banlast
 Aliases: close
 Syntax: c [SLOTNUM]
 
+## \`cachemaps\`
+
 ## \`channel\`
 Syntax: channel [CHANNEL]
 
@@ -148,18 +150,15 @@ Aliases: reconnect
 Syntax: hold [PLAYER1], [PLAYER2], ...
 
 ## \`host\`
-Aliases: map, hostlan
+Aliases: map
 Syntax: host [MAP NAME], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]
 
-## \`initcfg\`
-Aliases: synccfg
-
 ## \`invite\`
-Syntax: invite [PLAYERNAME]
+Syntax: invite [PLAYERNAME]@[REALM]
 
 ## \`k\`
 Aliases: closekick, ckick, kick
@@ -186,6 +185,7 @@ Syntax: maptransfers [MODE]: Mode is 0/1/2.
 
 ## \`mirror\`
 Syntax: mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.
+Syntax: mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.
 
 ## \`mute\`
 Syntax: mute [PLAYERNAME]
@@ -194,6 +194,8 @@ Syntax: mute [PLAYERNAME]
 
 ## \`netinfo\`
 Syntax: netinfo [REALM]
+
+## \`nick\`
 
 ## \`no\`
 
@@ -211,6 +213,9 @@ Aliases: ping
 
 ## \`pick\`
 Syntax: pick [OPTION], [OPTION], [OPTION], ...
+
+## \`portforward\`
+Syntax: portforward [EXTPORT], [INTPORT]
 
 ## \`printgames\`
 Syntax: printgames [REALM]
@@ -285,9 +290,6 @@ Syntax: unhold [PLAYER1], [PLAYER2], ...
 Syntax: unmute [PLAYERNAME]
 
 ## \`unmuteall\`
-
-## \`upnp\`
-Syntax: upnp [EXTPORT] [INTPORT]
 
 ## \`virtualhost\`
 Syntax: virtualhost [PLAYERNAME]

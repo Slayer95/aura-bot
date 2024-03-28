@@ -70,9 +70,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     }
   }
 
-  string commandTrigger    = CFG.GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, "!");
-  CFG.FailIfErrorLast();
-  m_CommandTrigger         = commandTrigger[0];
+  m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", "!");
+  m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", emptyString);
+  m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", false);
 
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", true);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", false);
@@ -150,7 +150,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_Locale(nRootConfig->m_Locale),
     m_LocaleID(nRootConfig->m_LocaleID),
 
-    m_CommandTrigger(nRootConfig->m_CommandTrigger),
+    m_PrivateCmdToken(nRootConfig->m_PrivateCmdToken),
+    m_BroadcastCmdToken(nRootConfig->m_BroadcastCmdToken),
     m_AnnounceHostToChat(nRootConfig->m_AnnounceHostToChat),
     m_IsMirror(nRootConfig->m_IsMirror),
     m_IsVPN(nRootConfig->m_IsVPN),
@@ -213,9 +214,10 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     }
   }
 
-  string commandTrigger    = CFG.GetString(m_CFGKeyPrefix + "command_trigger", 1, 1, string(1, m_CommandTrigger));
-  CFG.FailIfErrorLast();
-  m_CommandTrigger         = commandTrigger[0];
+  m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", m_PrivateCmdToken);
+  m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", m_BroadcastCmdToken);
+  m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", m_EnableBroadcast);
+
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
   m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);

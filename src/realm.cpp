@@ -120,6 +120,19 @@ CRealm::~CRealm()
       ctx->m_TargetRealm = nullptr;
     }
   }
+
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+    m_Aura->m_CurrentLobby->RemoveCreator();
+  }
+  for (auto& game : m_Aura->m_Games) {
+    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+      game->RemoveCreator();
+    }
+  }
+
+  if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+    m_Aura->m_GameSetup->RemoveCreator();
+  }
 }
 
 uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds)
@@ -599,51 +612,18 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       return;
     }
 
-    if (Message[0] != m_Config->m_CommandTrigger) {
+    string cmdToken, command, payload;
+    uint8_t tokenMatch = ExtractMessageTokens(Message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
+    if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
       if (Whisper) {
-        string tokenName;
-        if (m_Config->m_CommandTrigger == '!') {
-          tokenName = " (exclamation mark.)";
-        } else if (m_Config->m_CommandTrigger == '?') {
-          tokenName = " (question mark.)";
-        } else if (m_Config->m_CommandTrigger == '.') {
-          tokenName = " (period.)";
-        } else if (m_Config->m_CommandTrigger == ',') {
-          tokenName = " (comma.)";
-        } else if (m_Config->m_CommandTrigger == '~') {
-          tokenName = " (tilde.)";
-        } else if (m_Config->m_CommandTrigger == '-') {
-          tokenName = " (hyphen.)";
-        } else if (m_Config->m_CommandTrigger == '#') {
-          tokenName = " (hashtag.)";
-        } else if (m_Config->m_CommandTrigger == '@') {
-          tokenName = " (at.)";
-        } else if (m_Config->m_CommandTrigger == '&') {
-          tokenName = " (ampersand.)";
-        } else if (m_Config->m_CommandTrigger == '$') {
-          tokenName = " (dollar.)";
-        } else if (m_Config->m_CommandTrigger == '%') {
-          tokenName = " (percent.)";
-        }
+        string tokenName = GetTokenName(m_Config->m_PrivateCmdToken);
         string example = m_Aura->m_Net->m_Config->m_AllowDownloads ? "host epicwar-200029" : "host siege";
-        SendWhisper("Hello, " + User + ". My commands start with " + string(1, m_Config->m_CommandTrigger) + tokenName + " Example: " + string(1, m_Config->m_CommandTrigger) + example, User);
+        SendWhisper("Hello, " + User + ". My commands start with " + m_Config->m_PrivateCmdToken + tokenName + " Example: " + m_Config->m_PrivateCmdToken + example, User);
       }
       return;
     }
-
-    char CommandToken = Message[0];
-    string            Command, Payload;
-    string::size_type PayloadStart = Message.find(' ');
-
-    if (PayloadStart != string::npos) {
-      Command = Message.substr(1, PayloadStart - 1);
-      Payload = Message.substr(PayloadStart + 1);
-    } else {
-      Command = Message.substr(1);
-    }
-
-    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, User, Whisper, &std::cout, CommandToken);
-    ctx->Run(Command, Payload);
+    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, User, Whisper, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+    ctx->Run(cmdToken, command, payload);
     m_Aura->UnholdContext(ctx);
   }
   else if (Event == CBNETProtocol::EID_CHANNEL)
@@ -849,7 +829,7 @@ CCommandConfig* CRealm::GetCommandConfig() const
 
 string CRealm::GetCommandToken() const
 {
-  return std::string(1, m_Config->m_CommandTrigger);
+  return m_Config->m_PrivateCmdToken;
 }
 
 void CRealm::SendGetFriendsList()
@@ -988,7 +968,7 @@ void CRealm::TrySendChat(const string& message, const string& user, bool isPriva
 
   bool IsQuotaOkay = (
     GetIsFloodImmune() ||
-    (message.length() <= 200 && (m_OutPackets.size() <= 3 || (GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))))
+    (message.length() <= 200 && (m_OutPackets.size() <= 4 || (GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))))
   );
   if (IsQuotaOkay) {
     SendChatOrWhisper(message, user, isPrivate);
@@ -999,7 +979,7 @@ void CRealm::TrySendChat(const string& message, const string& user, bool isPriva
   (*errorLog) << "[AURA] Quota exceeded (reply dropped.)" << std::endl;
   if (m_OutPackets.size() <= 5) {
     // TODO(IceSandslash): Throttle these.
-    SendWhisper("[Antiflood] Too many messages (reply dropped.)", user);
+    //SendWhisper("[Antiflood] Too many messages (reply dropped.)", user);
   }
 }
 

@@ -37,7 +37,8 @@ using namespace std;
 
 CIRCConfig::CIRCConfig(CConfig& CFG)
   : m_Port(6667),
-  m_CommandTrigger('!')
+  m_PrivateCmdToken("!"),
+  m_BroadcastCmdToken(string())
 {
   const static string emptyString;
   m_HostName               = CFG.GetString("irc.host_name", emptyString);
@@ -48,10 +49,9 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
   m_Enabled                = CFG.GetBool("irc.enabled", false);
   m_VerifiedDomain         = CFG.GetString("irc.verified_domain", emptyString);
 
-  string CommandTrigger = CFG.GetString("irc.commands.trigger", "!");
-  if (CommandTrigger.length() == 1) {
-    m_CommandTrigger = CommandTrigger[0];
-  }
+  m_PrivateCmdToken        = CFG.GetString("irc.commands.trigger", "!");
+  m_BroadcastCmdToken      = CFG.GetString("irc.commands.broadcast.trigger", emptyString);
+  m_EnableBroadcast        = CFG.GetBool("irc.commands.broadcast.enabled", false);
 
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
   m_CommandCFG = new CCommandConfig(

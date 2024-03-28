@@ -57,6 +57,10 @@
 #define USER_PERMISSIONS_BOT_SUDO_SPOOFABLE (1 << 6)
 #define USER_PERMISSIONS_BOT_SUDO_OK (1 << 7)
 
+#define COMMAND_TOKEN_MATCH_NONE 0
+#define COMMAND_TOKEN_MATCH_PRIVATE 1
+#define COMMAND_TOKEN_MATCH_BROADCAST 2
+
 //
 // CCommandContext
 //
@@ -72,6 +76,7 @@ public:
   CGame*                        m_TargetGame;
   CGamePlayer*                  m_Player;
   CIRC*                         m_IRC;
+  bool                          m_IsBroadcast;
 
 protected:
   std::string                   m_FromName;
@@ -94,19 +99,15 @@ protected:
   bool                          m_PartiallyDestroyed;
 
 public:
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGamePlayer* player, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::string& reverseHostName, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, std::string& fromName, bool& isWhisper, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, std::string& channelName, std::string& userName, bool& isWhisper, std::string& reverseHostName, std::ostream* outputStream, char nToken);
-  CCommandContext(CAura* nAura, std::ostream* outputStream, char nToken);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGamePlayer* player, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, const bool& nIsBroadcast, std::ostream* outputStream);
 
   inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; };
-
-  inline std::string GetToken() {
-    return std::string(1, m_Token);
-  }
 
   std::string GetUserAttribution();
   std::string GetUserAttributionPreffix();
@@ -133,7 +134,7 @@ public:
   CRealm* GetTargetRealmOrCurrent(const std::string& target);
   CGame* GetTargetGame(const std::string& target);
   void UseImplicitHostedGame();
-  void Run(const std::string& command, const std::string& payload);
+  void Run(const std::string& token, const std::string& command, const std::string& payload);
   void Ref() { ++m_RefCount; }
   bool Unref() { return --m_RefCount == 0; }
   void SetPartiallyDestroyed() { m_PartiallyDestroyed = true; }
@@ -141,5 +142,95 @@ public:
 
   ~CCommandContext();
 };
+
+inline std::string GetTokenName(const std::string& token) {
+  if (token.length() != 1) return std::string();
+  switch (token[0]) {
+    case '!':
+      return " (exclamation mark.)";
+    case '?':
+      return " (question mark.)";
+    case '.':
+      return " (period.)";
+    case ',':
+      return " (comma.)";
+    case '~':
+      return " (tilde.)";
+    case '-':
+      return " (hyphen.)";
+    case '#':
+      return " (hashtag.)";
+    case '@':
+      return " (at.)";
+    case '&':
+      return " (ampersand.)";
+    case '$':
+      return " (dollar.)";
+    case '%':
+      return " (percent.)";
+  }
+  return std::string();
+}
+
+inline uint8_t ExtractMessageTokens(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchPayload)
+{
+  uint8_t result = COMMAND_TOKEN_MATCH_NONE;
+  if (message.empty()) return result;
+  if (!privateToken.empty()) {
+    std::string::size_type tokenSize = privateToken.length();
+    if (message.length() > tokenSize && message.substr(0, tokenSize) == privateToken) {
+      std::string::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
+      if (cmdStart != std::string::npos) {
+        matchToken = privateToken;
+        result = COMMAND_TOKEN_MATCH_PRIVATE;
+        std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
+        if (cmdEnd == std::string::npos) {
+          matchCmd = message.substr(cmdStart);
+          matchPayload.clear();
+        } else {
+          matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
+          std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
+          if (payloadStart == std::string::npos) {
+            matchPayload.clear();
+          } else {
+            matchPayload = message.substr(cmdEnd, payloadStart - cmdEnd);
+          }
+        }
+      }
+    }
+  }    
+  if (!result && !broadcastToken.empty()) {
+    std::string::size_type tokenSize = broadcastToken.length();
+    if (message.length() > tokenSize && message.substr(0, tokenSize) == broadcastToken) {
+      size_t cmdStart = message[tokenSize] == ' ' ? tokenSize + 1 : tokenSize;
+      if (cmdStart != std::string::npos) {
+        matchToken = broadcastToken;
+        result = COMMAND_TOKEN_MATCH_BROADCAST;
+        std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
+        if (cmdEnd == std::string::npos) {
+          matchCmd = message.substr(cmdStart);
+          matchPayload.clear();
+        } else {
+          matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
+          std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
+          if (payloadStart == std::string::npos) {
+            matchPayload.clear();
+          } else {
+            matchPayload = message.substr(cmdEnd, payloadStart - cmdEnd);
+          }
+        }
+      }
+    }
+  }
+
+  if (result != COMMAND_TOKEN_MATCH_NONE) {
+    std::transform(std::begin(matchCmd), std::end(matchCmd), std::begin(matchCmd), [](unsigned char c) {
+      return static_cast<char>(std::tolower(c));
+    });
+  }
+
+  return result;
+}
+
 
 #endif

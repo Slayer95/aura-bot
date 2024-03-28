@@ -49,7 +49,9 @@ public:
   std::set<std::string>               m_RootAdmins;
   std::set<std::string>               m_SudoUsers;
   uint16_t                            m_Port;
-  char                                m_CommandTrigger;
+  std::string                         m_PrivateCmdToken;   // a symbol prefix to identify commands and send a private reply
+  std::string                         m_BroadcastCmdToken; // a symbol prefix to identify commands and send the reply to everyone
+  bool                                m_EnableBroadcast;
   CCommandConfig*                     m_CommandCFG;
   std::string                         m_VerifiedDomain;
 

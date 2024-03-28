@@ -9,7 +9,7 @@ const OUTPUT_PATH = `COMMANDS.md`;
 const COMMAND_FILES = ['src/command.cpp'];
 const aliasRegExp = /case HashCode\("([a-zA-Z0-9]+)"\):/;
 const mainCmdRegExp = /case HashCode\("([a-zA-Z0-9]+)"\): \{/;
-const usageRegExp = /"Usage: " \+ GetToken\(\) \+ "([^"]+)"\);/;
+const usageRegExp = /"Usage: " \+ cmdToken \+ "([^"]+)"\);/;
 
 async function main() {
   const aliases = new Map();

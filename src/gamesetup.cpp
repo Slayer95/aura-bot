@@ -141,7 +141,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
 
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
-    m_CreatorRealm(nullptr)
+    m_CreatedFrom(nullptr),
+    m_CreatedFromType(GAMESETUP_ORIGIN_NONE)
     
 {
   memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
@@ -169,7 +170,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
 
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
-    m_CreatorRealm(nullptr)
+    m_CreatedFrom(nullptr),
+    m_CreatedFromType(GAMESETUP_ORIGIN_NONE)
     
 {
   memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
@@ -627,6 +629,7 @@ uint8_t CGameSetup::ResolveRemoteMap()
       downloadFileName = DecodeURIComponent(encodedName);
       break;
     }
+
     default: {
 #endif
       Print("Unsupported remote domain: " + m_SearchTarget.first);
@@ -858,8 +861,35 @@ void CGameSetup::SetOwner(const string& nOwner, const CRealm* nRealm)
 
 void CGameSetup::SetCreator(const string& nCreator, CRealm* nRealm)
 {
-  m_CreatorName = nCreator;
-  m_CreatorRealm = nRealm;
+  m_CreatedBy = nCreator;
+  m_CreatedFrom = reinterpret_cast<void*>(nRealm);
+  m_CreatedFromType = GAMESETUP_ORIGIN_REALM;
+}
+
+void CGameSetup::SetCreator(const string& nCreator, CIRC* nIRC)
+{
+  m_CreatedBy = nCreator;
+  m_CreatedFrom = reinterpret_cast<void*>(nIRC);
+  m_CreatedFromType = GAMESETUP_ORIGIN_IRC;
+}
+
+void CGameSetup::RemoveCreator()
+{
+  m_CreatedBy.clear();
+  m_CreatedFrom = nullptr;
+  m_CreatedFromType = GAMESETUP_ORIGIN_INVALID;
+}
+
+bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const
+{
+  if (m_CreatedFromType != fromType) return false;
+  switch (fromType) {
+    case GAMESETUP_ORIGIN_REALM:
+      return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
+    case GAMESETUP_ORIGIN_IRC:
+      return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
+  }
+  return false;
 }
 
 CGameSetup::~CGameSetup()
@@ -867,5 +897,5 @@ CGameSetup::~CGameSetup()
   m_Aura = nullptr;
   m_Map = nullptr;
   m_Ctx = nullptr;
-  m_CreatorRealm = nullptr;
+  m_CreatedFrom = nullptr;
 }
