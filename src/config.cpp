@@ -285,14 +285,18 @@ int32_t CConfig::GetInt32(const string& key, int32_t x)
     SUCCESS(x)
   }
 
-  int32_t Value = x;
+  int32_t Result = x;
   try {
-    Value = stoul(it->second);
+    long Value = stol(it->second);
+    if (Value > 0xFFFFFF) {
+      CONFIG_ERROR(key, x)
+    }
+    Result = static_cast<int32_t>(Value);
   } catch (...) {
     CONFIG_ERROR(key, x)
   }
 
-  SUCCESS(Value)
+  SUCCESS(Result)
 }
 
 int64_t CConfig::GetInt64(const string& key, int64_t x)
@@ -305,7 +309,7 @@ int64_t CConfig::GetInt64(const string& key, int64_t x)
 
   int64_t Value = x;
   try {
-    Value = stoul(it->second);
+    Value = stol(it->second);
   } catch (...) {
     CONFIG_ERROR(key, x)
   }
@@ -323,7 +327,7 @@ uint32_t CConfig::GetUint32(const string& key, uint32_t x)
 
   int64_t Value = x;
   try {
-    Value = stoul(it->second);
+    Value = stol(it->second);
     if (Value < 0 || 0xFFFFFFFF < Value) {
       CONFIG_ERROR(key, x)
     }
@@ -342,17 +346,18 @@ uint16_t CConfig::GetUint16(const string& key, uint16_t x)
     SUCCESS(x)
   }
 
-  int32_t Value = x;
+  uint16_t Result = x;
   try {
-    Value = stoul(it->second);
+    long Value = stol(it->second);
     if (Value < 0 || 0xFFFF < Value) {
       CONFIG_ERROR(key, x)
     }
+    Result = static_cast<uint16_t>(Value);
   } catch (...) {
     CONFIG_ERROR(key, x)
   }
 
-  SUCCESS(static_cast<uint16_t>(Value))
+  SUCCESS(Result)
 }
 
 uint8_t CConfig::GetUint8(const string& key, uint8_t x)
@@ -363,17 +368,18 @@ uint8_t CConfig::GetUint8(const string& key, uint8_t x)
     SUCCESS(x)
   }
 
-  int32_t Value = x;
+  int32_t Result = x;
   try {
-    Value = stoul(it->second);
+    long Value = stol(it->second);
     if (Value < 0 || 0xFF < Value) {
       CONFIG_ERROR(key, x)
     }
+    Result = static_cast<uint8_t>(Value);
   } catch (...) {
     CONFIG_ERROR(key, x)
   }
 
-  SUCCESS(static_cast<uint8_t>(Value))
+  SUCCESS(Result)
 }
 
 float CConfig::GetFloat(const string& key, float x)
@@ -638,7 +644,7 @@ optional<uint8_t> CConfig::GetMaybeUint8(const string& key)
   }
 
   try {
-    int64_t Value = stoul(it->second);
+    int64_t Value = stol(it->second);
     if (Value < 0 || 0xFF < Value) {
       CONFIG_ERROR(key, result)
     }
@@ -661,8 +667,11 @@ optional<int64_t> CConfig::GetMaybeInt64(const string& key)
   }
 
   try {
-    result = stoul(it->second);
-  } catch (...) {
+    long long value = stoll(it->second);
+    result = static_cast<int64_t>(value);
+  } catch (exception e) {
+    Print("Invalid value: " + it->second);
+    Print("Error parsing int64 - " + string(e.what()));
     CONFIG_ERROR(key, result)
   }
 

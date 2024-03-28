@@ -2325,7 +2325,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
           string cmdToken, command, payload;
           uint8_t tokenMatch = ExtractMessageTokens(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
           if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
-            EventPlayerBotCommand(player, commandCFG, cmdToken, command, payload);
+            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+            ctx->Run(cmdToken, command, payload);
+            m_Aura->UnholdContext(ctx);
           }
         }
       }
@@ -2364,13 +2366,6 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       }
     }
   }
-}
-
-void CGame::EventPlayerBotCommand(CGamePlayer* player, CCommandConfig* cmdConfig, string& token, string& command, string& payload)
-{
-  CCommandContext* ctx = new CCommandContext(m_Aura, cmdConfig, this, player, token == m_BroadcastCmdToken, &std::cout);
-  ctx->Run(token, command, payload);
-  m_Aura->UnholdContext(ctx);
 }
 
 void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)

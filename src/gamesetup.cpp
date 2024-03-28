@@ -204,48 +204,62 @@ void CGameSetup::ParseInput()
     return static_cast<char>(std::tolower(c));
   });
 
-  if (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:") {
+  if (lower.length() >= 6 && (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:")) {
     ParseInputLocal();
     return;
   }
 
   // Custom namespace/protocol
-  if (lower.substr(0, 8) == "epicwar-" || lower.substr(0, 8) == "epicwar:") {
+  if (lower.length() >= 8 && (lower.substr(0, 8) == "epicwar-" || lower.substr(0, 8) == "epicwar:")) {
     m_SearchTarget = make_pair("epicwar", MaybeBase10(lower.substr(8)));
-#ifndef DISABLE_CPR
     m_IsDownloadable = true;
-#endif
+    return;
+  }
+
+  if (lower.length() >= 8 && (lower.substr(0, 8) == "wc3maps-" || lower.substr(0, 8) == "wc3maps:")) {
+    m_SearchTarget = make_pair("wc3maps", MaybeBase10(lower.substr(8)));
+    m_IsDownloadable = true;
     return;
   }
  
 
   bool isUri = false;
-  if (lower.substr(0, 7) == "http://") {
+  if (lower.length() >= 7 && lower.substr(0, 7) == "http://") {
     isUri = true;
     lower = lower.substr(7);
-  } else if (lower.substr(0, 8) == "https://") {
+  } else if (lower.length() >= 8 && lower.substr(0, 8) == "https://") {
     isUri = true;
     lower = lower.substr(8);
   }
 
-  if (lower.substr(0, 12) == "epicwar.com/") {
-    std::string mapCode = lower.substr(17);
+  if (lower.length() >= 17 && lower.substr(0, 12) == "epicwar.com/") {
+    string mapCode = lower.substr(17);
     m_SearchTarget = make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
-#ifndef DISABLE_CPR
     m_IsDownloadable = true;
-#endif
     return;
   }
-  if (lower.substr(0, 16) == "www.epicwar.com/") {
-    std::string mapCode = lower.substr(21);
+  if (lower.length() >= 21 && lower.substr(0, 16) == "www.epicwar.com/") {
+    string mapCode = lower.substr(21);
     m_SearchTarget = make_pair("epicwar", MaybeBase10(TrimTrailingSlash(mapCode)));
-#ifndef DISABLE_CPR
     m_IsDownloadable = true;
-#endif
+    return;
+  }
+  if (lower.length() >= 16 && lower.substr(0, 12) == "wc3maps.com/") {
+    string::size_type mapCodeEnd = lower.find_first_of('/', 16);
+    string mapCode = mapCodeEnd == string::npos ? lower.substr(16) : lower.substr(16, mapCodeEnd - 16);
+    m_SearchTarget = make_pair("wc3maps", MaybeBase10(TrimTrailingSlash(mapCode)));
+    m_IsDownloadable = true;
+    return;
+  }
+  if (lower.length() >= 20 && lower.substr(0, 16) == "www.wc3maps.com/") {
+    string::size_type mapCodeEnd = lower.find_first_of('/', 20);
+    string mapCode = mapCodeEnd == string::npos ? lower.substr(20) : lower.substr(20, mapCodeEnd - 20);
+    m_SearchTarget = make_pair("wc3maps", MaybeBase10(TrimTrailingSlash(mapCode)));
+    m_IsDownloadable = true;
     return;
   }
   if (isUri) {
-    m_SearchTarget = make_pair("remote", std::string());
+    m_SearchTarget = make_pair("remote", string());
   } else {
     ParseInputLocal();
   }
@@ -618,15 +632,28 @@ uint8_t CGameSetup::ResolveRemoteMap()
       auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout});
       if (response.status_code != 200) return RESOLUTION_ERR;
       
-      size_t DownloadUriStartIndex = response.text.find("<a href=\"/maps/download/");
-      if (DownloadUriStartIndex == string::npos) return RESOLUTION_ERR;
-      size_t DownloadUriEndIndex = response.text.find("\"", DownloadUriStartIndex + 24);
-      if (DownloadUriEndIndex == string::npos) return RESOLUTION_ERR;
-      downloadUri = "https://epicwar.com" + response.text.substr(DownloadUriStartIndex + 9, (DownloadUriEndIndex) - (DownloadUriStartIndex + 9));
-      size_t LastSlashIndex = downloadUri.rfind("/");
-      if (LastSlashIndex == string::npos) return RESOLUTION_ERR;
-      string encodedName = downloadUri.substr(LastSlashIndex + 1);
+      size_t downloadUriStartIndex = response.text.find("<a href=\"/maps/download/");
+      if (downloadUriStartIndex == string::npos) return RESOLUTION_ERR;
+      size_t downloadUriEndIndex = response.text.find("\"", downloadUriStartIndex + 24);
+      if (downloadUriEndIndex == string::npos) return RESOLUTION_ERR;
+      downloadUri = "https://epicwar.com" + response.text.substr(downloadUriStartIndex + 9, (downloadUriEndIndex) - (downloadUriStartIndex + 9));
+      size_t lastSlashIndex = downloadUri.rfind("/");
+      if (lastSlashIndex == string::npos) return RESOLUTION_ERR;
+      string encodedName = downloadUri.substr(lastSlashIndex + 1);
       downloadFileName = DecodeURIComponent(encodedName);
+      break;
+    }
+
+    case HashCode("wc3maps"): {
+      m_MapSiteUri = "https://www.wc3maps.com/api/download/" + m_SearchTarget.second;
+      Print("GET <" + m_MapSiteUri + ">");
+      auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout}, cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL});
+      if (response.status_code < 300 || 399 < response.status_code) return RESOLUTION_ERR;
+      downloadUri = response.header["location"];
+      size_t lastSlashIndex = downloadUri.rfind("/");
+      if (lastSlashIndex == string::npos) return RESOLUTION_ERR;
+      downloadFileName = downloadUri.substr(lastSlashIndex + 1);
+      downloadUri = downloadUri.substr(0, lastSlashIndex + 1) + EncodeURIComponent(downloadFileName);
       break;
     }
 
@@ -681,7 +708,7 @@ void CGameSetup::SetDownloadFilePath(filesystem::path&& filePath)
 #ifndef DISABLE_CPR
 uint32_t CGameSetup::RunDownload()
 {
-  if (m_SearchTarget.first != "epicwar") {
+  if (m_SearchTarget.first != "epicwar" && m_SearchTarget.first != "wc3maps") {
     Print("Error!! trying to download from " + m_SearchTarget.first + "!!");
     return 0;
   }
@@ -733,7 +760,8 @@ uint32_t CGameSetup::RunDownload()
   cpr::Response response = cpr::Download(mapFile, cpr::Url{m_MapDownloadUri}, cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}});
   mapFile.close();
   if (response.status_code != 200) {
-    m_Ctx->ErrorReply("Map not found in EpicWar.", CHAT_SEND_SOURCE_ALL);
+    Print("[AURA] Status code: " + to_string(response.status_code));
+    m_Ctx->ErrorReply("Map not found in " + m_SearchTarget.first + " repository.", CHAT_SEND_SOURCE_ALL);
     return 0;
   }
 
@@ -757,8 +785,16 @@ bool CGameSetup::LoadMap()
     return false;
   }
   if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
+    if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable) {
+      return false;
+    }
+    if (m_Aura->m_Config->m_EnableCFGCache) {
+      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg");
+      m_Map = GetBaseMapFromConfigFile(cachePath, true);
+      if (m_Map) return true;
+    }
 #ifndef DISABLE_CPR
-    if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable || ResolveRemoteMap() != RESOLUTION_OK) {
+    if (ResolveRemoteMap() != RESOLUTION_OK) {
       return false;
     }
     uint32_t downloadSize = RunDownload();
@@ -774,7 +810,7 @@ bool CGameSetup::LoadMap()
   } else {
     m_Map = GetBaseMapFromMapFileOrCache(searchResult.second, false);
   }
-  return true;
+  return m_Map != nullptr;
 }
 
 bool CGameSetup::SetActive()
@@ -818,14 +854,14 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   uint16_t gamePort = 0;
   uint32_t gameId = 0;
   try {
-    int64_t value = stoul(rawPort);
+    int64_t value = stol(rawPort);
     if (value <= 0 || value > 0xFF) return false;
     gamePort = static_cast<uint16_t>(value);
   } catch (...) {
     return false;
   }
   try {
-    int64_t value = stoul(rawId);
+    int64_t value = stol(rawId);
     if (value < 0 || value > 0xFFFFFFFF) return false;
     gameId = static_cast<uint32_t>(value);
   } catch (...) {
