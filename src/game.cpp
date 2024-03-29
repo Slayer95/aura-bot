@@ -1269,8 +1269,11 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
     while ((matchIndex = Line.find("{OWNERREALM}")) != string::npos) {
       Line.replace(matchIndex, 12, m_OwnerRealm.empty() ? "@@@LAN/VPN" : ("@" + m_OwnerRealm));
     }
-    while ((matchIndex = Line.find("{TRIGGER}")) != string::npos) {
-      Line.replace(matchIndex, 9, m_PrivateCmdToken);
+    while ((matchIndex = Line.find("{TRIGGER_PRIVATE}")) != string::npos) {
+      Line.replace(matchIndex, 17, m_PrivateCmdToken);
+    }
+    while ((matchIndex = Line.find("{TRIGGER_BROADCAST}")) != string::npos) {
+      Line.replace(matchIndex, 19, m_BroadcastCmdToken);
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
       Line.replace(matchIndex, 5, GetMapSiteURL());
