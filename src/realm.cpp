@@ -940,7 +940,7 @@ void CRealm::SendWhisper(const string& message, const string& user, CCommandCont
   m_LastTellCtx = fromCtx;
   m_Aura->HoldContext(fromCtx);
 
-  size_t MaxMessageSize = GetPvPGN() ? 200 : 255;
+  size_t MaxMessageSize = (GetPvPGN() ? 200 : 255) - 20;
   if (message.length() > MaxMessageSize) {
     m_LastTell = message.substr(0, MaxMessageSize);
   } else {
@@ -966,12 +966,15 @@ void CRealm::TrySendChat(const string& message, const string& user, bool isPriva
   // in some cases the queue may be full of legitimate messages but we don't really care if the bot ignores one of these commands once in awhile
   // e.g. when several users join a game at the same time and cause multiple /whois messages to be queued at once
 
-  bool IsQuotaOkay = (
-    GetIsFloodImmune() ||
-    (message.length() <= 200 && (m_OutPackets.size() <= 4 || (GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))))
-  );
+  bool IsQuotaBypass = GetIsFloodImmune() || GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user);
+  bool IsQuotaOkay = IsQuotaBypass || (message.length() <= 200 && m_OutPackets.size() <= 4);
+  bool IsQuotaReached = m_OutPackets.size() == 4;
   if (IsQuotaOkay) {
-    SendChatOrWhisper(message, user, isPrivate);
+    if (IsQuotaReached && message.length() <= (GetPvPGN() ? 200 : 255) - (isPrivate ? 20 + 47 : 47)) {
+      SendChatOrWhisper(message + " - (Please wait 1 min to send further commands)", user, isPrivate);
+    } else {
+      SendChatOrWhisper(message, user, isPrivate);
+    }
     return;
   }
 
