@@ -1,7 +1,7 @@
 {CREATOR?}Lobby created by {CREATOR}, using AuraBot, a GHost++ fork.
 {CREATOR!}Lobby created {HOSTREALM}, using AuraBot, a GHost++ fork.
-{OWNER?}Current admin: {OWNER}{OWNERREALM}
-{OWNER!}There is no admin. Issue commands with [{TRIGGER}] - take over with [{TRIGGER}owner].
+{OWNER?}Current owner: {OWNER}{OWNERREALM}
+{OWNER!}There is no owner. Issue commands with [{TRIGGER}] - take over with [{TRIGGER}owner].
 Start the game with [{TRIGGER}start]
 {URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]
 {SHORTDESC?}{SHORTDESC}
