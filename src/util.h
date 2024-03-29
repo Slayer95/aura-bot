@@ -75,6 +75,16 @@ inline std::string ToFormattedString(const double d, const uint8_t precision = 2
   return out.str();
 }
 
+inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const size_t size)
+{
+  return std::vector<uint8_t>(a, a + size);
+}
+
+inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const uint32_t size)
+{
+  return std::vector<uint8_t>(a, a + size);
+}
+
 inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const int32_t size)
 {
   if (size < 1)
@@ -215,14 +225,14 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
 
-inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const uint32_t start)
+inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start)
 {
   // start searching the byte array at position 'start' for the first null value
   // if found, return the subarray from 'start' to the null value but not including the null value
 
   if (start < b.size())
   {
-    for (uint32_t i = start; i < b.size(); ++i)
+    for (size_t i = start; i < b.size(); ++i)
     {
       if (b[i] == 0)
         return std::vector<uint8_t>(begin(b) + start, begin(b) + i);
@@ -547,15 +557,15 @@ inline std::vector<std::string> Tokenize(const std::string& s, const char delim)
   return Tokens;
 }
 
-inline uint32_t GetLevenshteinDistance(const std::string& s1, const std::string& s2) {
-  int m = s1.length();
-  int n = s2.length();
+inline std::string::size_type GetLevenshteinDistance(const std::string& s1, const std::string& s2) {
+  std::string::size_type m = s1.length();
+  std::string::size_type n = s2.length();
 
   // Create a 2D vector to store the distances
-  std::vector<std::vector<uint32_t>> dp(m + 1, std::vector<uint32_t>(n + 1, 0));
+  std::vector<std::vector<std::string::size_type>> dp(m + 1, std::vector<std::string::size_type>(n + 1, 0));
 
-  for (int i = 0; i <= m; ++i) {
-    for (int j = 0; j <= n; ++j) {
+  for (std::string::size_type i = 0; i <= m; ++i) {
+    for (std::string::size_type j = 0; j <= n; ++j) {
       if (i == 0) {
           dp[i][j] = j;
       } else if (j == 0) {
@@ -563,7 +573,7 @@ inline uint32_t GetLevenshteinDistance(const std::string& s1, const std::string&
       } else if (s1[i - 1] == s2[j - 1]) {
           dp[i][j] = dp[i - 1][j - 1];
       } else {
-        int cost = (s1[i - 1] == s2[j - 1]) ? 0 : (isdigit(s1[i - 1]) || isdigit(s2[j - 1])) ? 3 : 1;
+        std::string::size_type cost = (s1[i - 1] == s2[j - 1]) ? 0 : (isdigit(s1[i - 1]) || isdigit(s2[j - 1])) ? 3 : 1;
         dp[i][j] = std::min({ dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost });
       }
     }

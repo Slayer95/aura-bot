@@ -130,7 +130,7 @@ private:
   uint32_t                         m_RealmInternalId;
   std::string                      m_RealmHostName;                // the realm the player joined on (probable, can be spoofed)
   std::string                      m_Name;                         // the player's name
-  uint32_t                         m_TotalPacketsSent;             // the total number of packets sent to the player
+  size_t                           m_TotalPacketsSent;             // the total number of packets sent to the player
   uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
   uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
   bool                             m_QuitGame;
@@ -194,8 +194,8 @@ public:
   inline uint8_t               GetPID() const { return m_PID; }
   inline std::string           GetName() const { return m_Name; }
   inline std::vector<uint8_t>  GetIPv4Internal() const { return m_IPv4Internal; }
-  inline uint32_t              GetNumPings() const { return m_Pings.size(); }
-  inline uint32_t              GetNumCheckSums() const { return m_CheckSums.size(); }
+  inline size_t                GetNumPings() const { return m_Pings.size(); }
+  inline size_t                GetNumCheckSums() const { return m_CheckSums.size(); }
   inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }
   inline std::string           GetLeftReason() const { return m_LeftReason; }
   inline uint32_t              GetLeftCode() const { return m_LeftCode; }
@@ -282,7 +282,7 @@ public:
   // other functions
 
   void Send(const std::vector<uint8_t>& data);
-  void EventGProxyReconnect(CStreamIOSocket* NewSocket, uint32_t LastPacket);
+  void EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket);
   void ResetConnection();
 };
 

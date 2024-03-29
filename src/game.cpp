@@ -341,7 +341,7 @@ uint32_t CGame::GetSlotsOpen() const
 
 uint32_t CGame::GetNumConnectionsOrFake() const
 {
-  uint32_t NumHumanPlayers = m_FakePlayers.size();
+  uint32_t NumHumanPlayers = static_cast<uint8_t>(m_FakePlayers.size());
 
   for (const auto& player : m_Players) {
     if (player->GetLeftMessageSent())
@@ -709,7 +709,7 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // start the gameover timer if there's only a configured number of players left
-  uint32_t RemainingPlayers = GetNumHumanPlayers() + m_FakePlayers.size();
+  uint32_t RemainingPlayers = GetNumHumanPlayers() + static_cast<uint32_t>(m_FakePlayers.size());
   if (RemainingPlayers != m_StartPlayers && m_GameOverTime == 0 && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0 || RemainingPlayers <= m_NumPlayersToStartGameOver) {
       m_GameOverTime = Time;
@@ -1326,7 +1326,7 @@ void CGame::SendAllActions()
     CIncomingAction*        Action = m_Actions.front();
     m_Actions.pop();
     SubActions.push(Action);
-    uint32_t SubActionsLength = Action->GetLength();
+    size_t SubActionsLength = Action->GetLength();
 
     while (!m_Actions.empty())
     {
@@ -1334,9 +1334,8 @@ void CGame::SendAllActions()
       m_Actions.pop();
 
       // check if adding the next action to the sub actions queue would put us over the limit (1452 because the INCOMING_ACTION and INCOMING_ACTION2 packets use an extra 8 bytes)
-
-      if (SubActionsLength + Action->GetLength() > 1452)
-      {
+      bool isOverflows = SubActionsLength > 1452 || Action->GetLength() > 1452 || SubActionsLength + Action->GetLength() > 1452;
+      if (isOverflows) {
         // we'd be over the limit if we added the next action to the sub actions queue
         // so send everything already in the queue and then clear it out
         // the W3GS_INCOMING_ACTION2 packet handles the overflow but it must be sent *before* the corresponding W3GS_INCOMING_ACTION packet
@@ -1424,8 +1423,8 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
     0,
     m_MapPath,
     m_Map->GetMapCRC(),
-    m_Slots.size(), // Total Slots
-    m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1, // "Available" Slots
+    static_cast<uint32_t>(m_Slots.size()), // Total Slots
+    static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1), // "Available" Slots
     hostPort,
     m_HostCounter,
     m_EntryKey
@@ -1479,8 +1478,8 @@ void CGame::SendGameDiscoveryRefresh() const
 {
   vector<uint8_t> packet = GetProtocol()->SEND_W3GS_REFRESHGAME(
     m_HostCounter,
-    m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen(),
-    m_Slots.size()
+    static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen()),
+    static_cast<uint32_t>(m_Slots.size())
   );
   m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
 }
@@ -2758,7 +2757,7 @@ void CGame::EventGameStarted()
 
   // record the number of starting players
 
-  m_StartPlayers = GetNumHumanPlayers() + m_FakePlayers.size();
+  m_StartPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
 
   // enable stats
 

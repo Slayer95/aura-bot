@@ -218,7 +218,7 @@ public:
   void Load(CConfig* CFG);
   bool UnlinkFile();
   std::string CheckProblems();
-  uint32_t XORRotateLeft(uint8_t* data, uint32_t length);
+  uint32_t XORRotateLeft(const uint8_t* data, const uint32_t length);
 };
 
 #endif // AURA_MAP_H_

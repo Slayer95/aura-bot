@@ -660,7 +660,7 @@ bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& 
 
   if (m_Family == address->ss_family) {
     const string MessageString = string(begin(message), end(message));
-    return -1 != sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(address), sizeof(sockaddr_storage));
+    return -1 != sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(address), sizeof(sockaddr_storage));
   }
   if (m_Family == AF_INET && address->ss_family == AF_INET6) {
     Print("Error - Attempt to send UDP6 message from UDP4 socket: " + ByteArrayToDecString(message));
@@ -669,7 +669,7 @@ bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& 
   if (m_Family == AF_INET6 && address->ss_family == AF_INET) {
     sockaddr_storage addr6 = IPv4ToIPv6(address);
     const string MessageString = string(begin(message), end(message));
-    return -1 != sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(&addr6), sizeof(addr6));
+    return -1 != sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(&addr6), sizeof(addr6));
   }
   return false;
 }
@@ -708,9 +708,9 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const sockaddr_storage
   int result;
   if (m_Family == AF_INET6) {
     // FIXME: Dead code path. This probably doesn't work because IPv6 doesn't support broadcast at all.
-    result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(addr6), sizeof(sockaddr_in6));
+    result = sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(addr6), sizeof(sockaddr_in6));
   } else {
-    result = sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
+    result = sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
   }
   if (result == -1) {
     return false;

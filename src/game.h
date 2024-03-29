@@ -162,7 +162,7 @@ protected:
 
   uint32_t                       m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
-  uint32_t                       m_StartPlayers;                  // number of players when the game started
+  uint8_t                        m_StartPlayers;                  // number of players when the game started
   int64_t                        m_AutoStartMinTime;
   int64_t                        m_AutoStartMaxTime;
   uint8_t                        m_AutoStartPlayers;

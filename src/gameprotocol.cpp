@@ -673,8 +673,8 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPPART(uint8_t fromPID, uint8_t t
 
     uint32_t End = start + 1442;
 
-    if (End > mapData->size())
-      End = mapData->size();
+    if (End > static_cast<uint32_t>(mapData->size()))
+      End = static_cast<uint32_t>(mapData->size());
 
     // calculate crc
 

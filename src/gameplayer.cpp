@@ -322,7 +322,7 @@ uint32_t CGamePlayer::GetPing() const
   for (const auto& ping : m_Pings)
     AvgPing += ping;
 
-  AvgPing /= m_Pings.size();
+  AvgPing /= static_cast<uint32_t>(m_Pings.size());
 
   return AvgPing;
 }
@@ -516,12 +516,12 @@ bool CGamePlayer::Update(void* fd)
       }
       else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
         if (Bytes[1] == CGPSProtocol::GPS_ACK && Length == 8) {
-          const uint32_t LastPacket             = ByteArrayToUInt32(Data, false, 4);
-          const uint32_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
+          const size_t LastPacket               = ByteArrayToUInt32(Data, false, 4);
+          const size_t PacketsAlreadyUnqueued   = m_TotalPacketsSent - m_GProxyBuffer.size();
 
           if (LastPacket > PacketsAlreadyUnqueued)
           {
-            uint32_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
+            size_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
 
             if (PacketsToUnqueue > m_GProxyBuffer.size())
               PacketsToUnqueue = m_GProxyBuffer.size();
@@ -642,17 +642,17 @@ void CGamePlayer::Send(const std::vector<uint8_t>& data)
     m_Socket->PutBytes(data);
 }
 
-void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, uint32_t LastPacket)
+void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket)
 {
   delete m_Socket;
   m_Socket = NewSocket;
   m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
 
-  const uint32_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
+  const size_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
 
   if (LastPacket > PacketsAlreadyUnqueued)
   {
-    uint32_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
+    size_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
 
     if (PacketsToUnqueue > m_GProxyBuffer.size())
       PacketsToUnqueue = m_GProxyBuffer.size();

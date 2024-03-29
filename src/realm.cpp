@@ -481,7 +481,7 @@ bool CRealm::Update(void* fd, void* send_fd)
         // Game list query
         m_LastGameListTime = Time;
       }
-      m_LastOutPacketSize = m_Socket->PutBytes(get<3>(curPacket));
+      m_LastOutPacketSize = static_cast<uint32_t>(m_Socket->PutBytes(get<3>(curPacket)));
       m_LastOutPacketTicks = Ticks;
       m_OutPackets.pop();
     }

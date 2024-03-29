@@ -98,15 +98,16 @@ CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const std::vector<uin
       const std::vector<uint8_t> Port     = std::vector<uint8_t>(begin(data) + 18, begin(data) + 20);
       const std::vector<uint8_t> IP       = std::vector<uint8_t>(begin(data) + 20, begin(data) + 24);
       const std::vector<uint8_t> GameName = ExtractCString(data, 24);
+      if (GameName.size() > 0xFF) return nullptr;
 
       if (data.size() >= GameName.size() + 35)
       {
         const std::vector<uint8_t> HostCounter =
           {
-            ExtractHex(data, GameName.size() + 27, true),
-            ExtractHex(data, GameName.size() + 29, true),
-            ExtractHex(data, GameName.size() + 31, true),
-            ExtractHex(data, GameName.size() + 33, true)};
+            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 27, true),
+            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 29, true),
+            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 31, true),
+            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 33, true)};
 
         return new CIncomingGameHost(IP,
                                      ByteArrayToUInt16(Port, false),
@@ -156,7 +157,8 @@ CIncomingChatEvent* CBNETProtocol::RECEIVE_SID_CHATEVENT(const std::vector<uint8
     const std::vector<uint8_t> EventID = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
     // std::vector<uint8_t> Ping = std::vector<uint8_t>( data.begin( ) + 12, data.begin( ) + 16 );
     const std::vector<uint8_t> User    = ExtractCString(data, 28);
-    const std::vector<uint8_t> Message = ExtractCString(data, User.size() + 29);
+    if (User.size() > 0xFF) return nullptr;
+    const std::vector<uint8_t> Message = ExtractCString(data, static_cast<uint32_t>(User.size()) + 29);
 
     return new CIncomingChatEvent(static_cast<CBNETProtocol::IncomingChatEvent>(ByteArrayToUInt32(EventID, false)),
                                   string(begin(User), end(User)),
@@ -232,7 +234,8 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data)
     m_ServerToken        = std::vector<uint8_t>(begin(data) + 8, begin(data) + 12);
     m_MPQFileTime        = std::vector<uint8_t>(begin(data) + 16, begin(data) + 24);
     m_IX86VerFileName    = ExtractCString(data, 24);
-    m_ValueStringFormula = ExtractCString(data, m_IX86VerFileName.size() + 25);
+    if (m_IX86VerFileName.size() > 0xFFFFFF00) return false; // WTF
+    m_ValueStringFormula = ExtractCString(data, static_cast<uint32_t>(m_IX86VerFileName.size()) + 25);
     return true;
   }
 
@@ -327,7 +330,7 @@ vector<string> CBNETProtocol::RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>&
 
   if (ValidateLength(data) && data.size() >= 5)
   {
-    uint32_t i     = 5;
+    size_t   i     = 5;
     uint8_t  Total = data[4];
 
     while (Total > 0)
@@ -372,7 +375,7 @@ vector<string> CBNETProtocol::RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8
 
   if (ValidateLength(data) && data.size() >= 9)
   {
-    uint32_t i     = 9;
+    size_t   i     = 9;
     uint8_t  Total = data[8];
 
     while (Total > 0)

@@ -412,11 +412,11 @@ public:
   inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
   bool DoRecv(fd_set* fd);
 
-  inline uint32_t                   PutBytes(const std::string& bytes) {
+  inline size_t                   PutBytes(const std::string& bytes) {
     m_SendBuffer += bytes;
     return bytes.size();
   }
-  inline uint32_t                   PutBytes(const std::vector<uint8_t>& bytes) {
+  inline size_t                   PutBytes(const std::vector<uint8_t>& bytes) {
     m_SendBuffer += std::string(begin(bytes), end(bytes));
     return bytes.size();
   }

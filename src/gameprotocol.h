@@ -223,7 +223,10 @@ public:
   inline uint8_t               GetPID() const { return m_PID; }
   inline std::vector<uint8_t>  GetCRC() const { return m_CRC; }
   inline std::vector<uint8_t>* GetAction() { return &m_Action; }
-  inline uint32_t              GetLength() const { return m_Action.size() + 3; }
+  inline size_t                GetLength() const {
+    size_t result = m_Action.size() + 3;
+    return result < 3 ? m_Action.size() : result;
+  }
 };
 
 //

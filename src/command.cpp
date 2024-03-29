@@ -855,7 +855,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
         PingsText += (*i)->GetName();
         PingsText += ": ";
-        uint32_t NumPings = (*i)->GetNumPings();
+        size_t NumPings = (*i)->GetNumPings();
 
         if (0 < NumPings && NumPings < 3)
           PingsText += "*";
@@ -1150,7 +1150,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, options.size());
+      std::uniform_int_distribution<> distribution(1, static_cast<int>(options.size()));
 
       string randomPick = options[distribution(gen) - 1];
       SendAll("Randomly picked: " + randomPick);

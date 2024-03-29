@@ -766,7 +766,7 @@ uint32_t CGameSetup::RunDownload()
   }
 
   m_IsDownloaded = true;
-  return response.downloaded_bytes;
+  return static_cast<uint32_t>(response.downloaded_bytes);
 }
 #endif
 

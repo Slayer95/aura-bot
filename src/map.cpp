@@ -353,7 +353,7 @@ void CMap::Load(CConfig* CFG)
   bool IsPartial = CFG->GetBool("cfg_partial", false);
   bool ignoreMPQ = m_MapLocalPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
-  int RawMapSize = 0;
+  size_t RawMapSize = 0;
   if (IsPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapLocalPath.empty()) {
       return;
@@ -492,8 +492,8 @@ void CMap::Load(CConfig* CFG)
 
         if (!OverrodeCommonJ)
         {
-          Val = Val ^ XORRotateLeft((uint8_t*)CommonJ.c_str(), CommonJ.size());
-          m_Aura->m_SHA->Update((uint8_t*)CommonJ.c_str(), CommonJ.size());
+          Val = Val ^ XORRotateLeft((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
+          m_Aura->m_SHA->Update((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
         }
 
         if (MapMPQReady)
@@ -532,8 +532,8 @@ void CMap::Load(CConfig* CFG)
 
         if (!OverrodeBlizzardJ)
         {
-          Val = Val ^ XORRotateLeft((uint8_t*)BlizzardJ.c_str(), BlizzardJ.size());
-          m_Aura->m_SHA->Update((uint8_t*)BlizzardJ.c_str(), BlizzardJ.size());
+          Val = Val ^ XORRotateLeft((uint8_t*)BlizzardJ.c_str(), static_cast<uint32_t>(BlizzardJ.size()));
+          m_Aura->m_SHA->Update((uint8_t*)BlizzardJ.c_str(), static_cast<uint32_t>(BlizzardJ.size()));
         }
 
         Val = ROTL(Val, 3);
@@ -1198,7 +1198,7 @@ string CMap::CheckProblems()
   return string();
 }
 
-uint32_t CMap::XORRotateLeft(uint8_t* data, uint32_t length)
+uint32_t CMap::XORRotateLeft(const uint8_t* data, const uint32_t length)
 {
   // a big thank you to Strilanc for figuring this out
 

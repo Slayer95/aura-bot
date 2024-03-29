@@ -129,7 +129,7 @@ public:
   inline bool          GetExiting() const { return m_Exiting; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
   inline bool          GetInChat() const { return m_InChat; }
-  inline uint32_t      GetOutPacketsQueued() const { return m_OutPackets.size(); }
+  inline size_t        GetOutPacketsQueued() const { return m_OutPackets.size(); }
 
   bool                 GetEnabled() const;
   bool                 GetPvPGN() const;

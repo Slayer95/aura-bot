@@ -176,7 +176,7 @@ vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<P
   return Files;
 }
 
-string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, int *byteSize)
+string FileRead(const filesystem::path& file, size_t start, size_t length, size_t* byteSize)
 {
   ifstream IS;
   IS.open(file.native().c_str(), ios::binary | ios::in);
@@ -191,7 +191,7 @@ string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, i
 
   IS.seekg(0, ios::end);
 
-  uint32_t FileLength = static_cast<uint32_t>(IS.tellg());
+  size_t FileLength = IS.tellg();
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
@@ -208,13 +208,16 @@ string FileRead(const filesystem::path& file, uint32_t start, uint32_t length, i
 
   auto Buffer = new char[length];
   IS.read(Buffer, length);
+  if (byteSize != nullptr) {
+    (*byteSize) = static_cast<unsigned int>(IS.gcount());
+  }
   string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;
   return BufferString;
 }
 
-string FileRead(const filesystem::path& file, int* byteSize)
+string FileRead(const filesystem::path& file, size_t* byteSize)
 {
   ifstream IS;
   IS.open(file.native().c_str(), ios::binary | ios::in);
@@ -228,7 +231,7 @@ string FileRead(const filesystem::path& file, int* byteSize)
   // get length of file
 
   IS.seekg(0, ios::end);
-  uint32_t FileLength = static_cast<uint32_t>(IS.tellg());
+  size_t FileLength = IS.tellg();
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
@@ -238,6 +241,9 @@ string FileRead(const filesystem::path& file, int* byteSize)
 
   auto Buffer = new char[FileLength];
   IS.read(Buffer, FileLength);
+  if (byteSize != nullptr) {
+    (*byteSize) = static_cast<unsigned int>(IS.gcount());
+  }
   string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;
@@ -248,7 +254,7 @@ string FileRead(const filesystem::path& file, int* byteSize)
     return string();
 }
 
-bool FileWrite(const filesystem::path& file, const uint8_t* data, uint32_t length)
+bool FileWrite(const filesystem::path& file, const uint8_t* data, size_t length)
 {
   ofstream OS;
   OS.open(file.native().c_str(), ios::binary);
@@ -307,11 +313,11 @@ filesystem::path GetExeDirectory()
   do {
     buffer.resize(buffer.size() * 2);
 #ifdef _WIN32
-    length = GetModuleFileNameW(nullptr, buffer.data(), buffer.size());
+    length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
 #else
     length = readlink("/proc/self/exe", buffer.data(), buffer.size());
 #endif
-  } while (length >= buffer.size() - 1);
+  } while ((buffer.size() <= 0xFFFF) && (buffer.size() - 1 <= static_cast<size_t>(length)));
 
   if (length == 0) {
     Print("Failed to retrieve Aura's directory.");
@@ -413,7 +419,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
       }
     }
     if (startsWithPattern) {
-      inclusionMatches.push_back(make_pair(mapString, mapString.length() - fuzzyPattern.length()));
+      inclusionMatches.push_back(make_pair(mapString, static_cast<int>(mapString.length() - fuzzyPattern.length())));
       if (inclusionMatches.size() >= FUZZY_SEARCH_MAX_RESULTS) {
         break;
       }
@@ -439,7 +445,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
     if ((fuzzyPattern.size() <= cmpName.size() + maxDistance) && (cmpName.size() <= maxDistance + fuzzyPattern.size())) {
       string::size_type distance = GetLevenshteinDistance(fuzzyPattern, cmpName); // source to target
       if (distance <= maxDistance) {
-        distances.emplace_back(mapString, distance * 3);
+        distances.emplace_back(mapString, static_cast<int>(distance * 3));
       }
     }
   }

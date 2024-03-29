@@ -78,7 +78,7 @@ CStats::~CStats()
 
 bool CStats::ProcessAction(CIncomingAction* Action)
 {
-  uint32_t                    i          = 0;
+  size_t                      i          = 0;
   const std::vector<uint8_t>* ActionData = Action->GetAction();
   std::vector<uint8_t>        Data, Key, Value;
 
@@ -93,7 +93,7 @@ bool CStats::ProcessAction(CIncomingAction* Action)
     if ((*ActionData)[i] == 0x6b && (*ActionData)[i + 1] == 0x64 && (*ActionData)[i + 2] == 0x72 && (*ActionData)[i + 3] == 0x2e && (*ActionData)[i + 4] == 0x78 && (*ActionData)[i + 5] == 0x00)
     {
       // we think we've found an action with real time replay data (but we can't be 100% sure)
-      // next we parse out two nullptr terminated strings and a 4 byte int32_teger
+      // next we parse out two nullptr terminated strings and a 4 byte integer
 
       if (ActionData->size() >= i + 7)
       {
