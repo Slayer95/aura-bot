@@ -628,17 +628,26 @@ uint8_t CGameSetup::ResolveRemoteMap()
   switch (SearchTargetType) {
     case HashCode("epicwar"): {
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;
-      Print("GET <" + m_MapSiteUri + ">");
+      Print("[NET] GET <" + m_MapSiteUri + ">");
       auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout});
-      if (response.status_code != 200) return RESOLUTION_ERR;
+      if (response.status_code != 200) {
+        Print("[NET] Remote host unavailable.");
+        return RESOLUTION_ERR;
+      }
       
       size_t downloadUriStartIndex = response.text.find("<a href=\"/maps/download/");
       if (downloadUriStartIndex == string::npos) return RESOLUTION_ERR;
       size_t downloadUriEndIndex = response.text.find("\"", downloadUriStartIndex + 24);
-      if (downloadUriEndIndex == string::npos) return RESOLUTION_ERR;
+      if (downloadUriEndIndex == string::npos) {
+        Print("[NET] Malformed API response");
+        return RESOLUTION_ERR;
+      }
       downloadUri = "https://epicwar.com" + response.text.substr(downloadUriStartIndex + 9, (downloadUriEndIndex) - (downloadUriStartIndex + 9));
       size_t lastSlashIndex = downloadUri.rfind("/");
-      if (lastSlashIndex == string::npos) return RESOLUTION_ERR;
+      if (lastSlashIndex == string::npos) {
+        Print("[NET] Malformed download URI");
+        return RESOLUTION_ERR;
+      }
       string encodedName = downloadUri.substr(lastSlashIndex + 1);
       downloadFileName = DecodeURIComponent(encodedName);
       break;
@@ -646,12 +655,18 @@ uint8_t CGameSetup::ResolveRemoteMap()
 
     case HashCode("wc3maps"): {
       m_MapSiteUri = "https://www.wc3maps.com/api/download/" + m_SearchTarget.second;
-      Print("GET <" + m_MapSiteUri + ">");
+      Print("[NET] GET <" + m_MapSiteUri + ">");
       auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout}, cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL});
-      if (response.status_code < 300 || 399 < response.status_code) return RESOLUTION_ERR;
+      if (response.status_code < 300 || 399 < response.status_code) {
+        Print("[NET] Remote host unavailable.");
+        return RESOLUTION_ERR;
+      }
       downloadUri = response.header["location"];
       size_t lastSlashIndex = downloadUri.rfind("/");
-      if (lastSlashIndex == string::npos) return RESOLUTION_ERR;
+      if (lastSlashIndex == string::npos) {
+        Print("[NET] Malformed download URI");
+        return RESOLUTION_ERR;
+      }
       downloadFileName = downloadUri.substr(lastSlashIndex + 1);
       downloadUri = downloadUri.substr(0, lastSlashIndex + 1) + EncodeURIComponent(downloadFileName);
       break;
@@ -750,7 +765,7 @@ uint32_t CGameSetup::RunDownload()
     m_Ctx->ErrorReply("Download failed - duplicate map name [" + m_BaseDownloadFileName + "].", CHAT_SEND_SOURCE_ALL);
     return 0;
   }
-  Print("[AURA] GET <" + m_MapDownloadUri + "> as [" + PathToString(m_DownloadFilePath.filename()) + "]...");
+  Print("[NET] GET <" + m_MapDownloadUri + "> as [" + PathToString(m_DownloadFilePath.filename()) + "]...");
   std::ofstream mapFile(m_DownloadFilePath.native().c_str(), std::ios_base::out | std::ios_base::binary);
   if (!mapFile.is_open()) {
     mapFile.close();
@@ -795,10 +810,14 @@ bool CGameSetup::LoadMap()
     }
 #ifndef DISABLE_CPR
     if (ResolveRemoteMap() != RESOLUTION_OK) {
+      Print("[AURA] Failed to resolve remote map.");
       return false;
     }
     uint32_t downloadSize = RunDownload();
-    if (downloadSize == 0) return false;
+    if (downloadSize == 0) {
+      Print("[AURA] Failed to download map.");
+      return false;
+    }
     m_Map = GetBaseMapFromMapFileOrCache(m_DownloadFilePath, false);
     return true;
 #else

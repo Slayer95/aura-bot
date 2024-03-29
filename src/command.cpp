@@ -2659,7 +2659,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (m_Aura->m_Realms.empty())
         break;
 
-      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN)) {
+      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("You are not allowed to advertise.");
         break;
       }
@@ -4281,14 +4281,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (isHostCommand) {
         if (Args.size() >= 2) {
           gameName = Args[Args.size() - 1];
+          Args.pop_back();
         } else {
           gameName = m_FromName + "'s " + Args[0];
           if (gameName.length() > m_Aura->m_MaxGameNameSize) {
-            ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [GAME NAME]");
-            break;
+            gameName = m_FromName + "'s game";
+            if (gameName.length() > m_Aura->m_MaxGameNameSize) {
+              ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [GAME NAME]");
+              break;
+            }
           }
         }
-        Args.pop_back();
       }
       CGameExtraOptions options;
       if (2 <= Args.size()) options.ParseMapObservers(Args[1]);
