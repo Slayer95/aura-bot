@@ -49,6 +49,8 @@ CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const boo
   m_HostPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_host.permissions", commandPermissions, hostingPermissions);
   m_HostRawPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_hostraw.permissions", commandPermissions, hostingPermissions);
   m_StartPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_start.permissions", commandPermissions, hostingPermissions);
+  m_TellPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_tell.permissions", commandPermissions, moderatorPermissions);
+  m_WhoisPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_whois.permissions", commandPermissions, moderatorPermissions);
 
   m_Enabled = CFG.GetBool(m_CFGKeyPrefix + "commands.enabled", true);
   m_RequireVerified = requireVerified;

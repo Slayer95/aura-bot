@@ -304,7 +304,7 @@ void CCommandContext::UpdatePermissions()
         m_TargetGame && m_TargetGame->GetCreatedFromType() == GAMESETUP_ORIGIN_IRC &&
         reinterpret_cast<CIRC*>(m_TargetGame->GetCreatedFrom()) == m_IRC
       );
-      if (IsCreatorIRC && m_IRC->GetIsModerator(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
+      if ((!m_TargetGame || IsCreatorIRC) && m_IRC->GetIsModerator(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
       if (m_IRC->GetIsSudoer(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
     }
     return;
@@ -476,17 +476,15 @@ void CCommandContext::SendReplyNoFlags(const string& message)
     }
 
     case FROM_BNET: {
-      if (!m_SourceRealm) break;
-      m_SourceRealm->TrySendChat(message, m_FromName, true, m_Output);
+      if (m_SourceRealm) {
+        m_SourceRealm->TrySendChat(message, m_FromName, true, m_Output);
+      }
       break;
     }
 
     case FROM_IRC: {
-      if (!m_IRC) break;
-      if (m_FromWhisper) {
+      if (m_IRC) {
         m_IRC->SendUser(message, m_FromName);
-      } else {
-        m_IRC->SendChannel(message, m_ChannelName);
       }
       break;
     }
@@ -526,8 +524,10 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       AllSourceSuccess = true;
     }
     if (m_IRC) {
-      m_IRC->SendChannel(message, m_ChannelName);
-      AllSourceSuccess = true;
+      if (!m_FromWhisper && AllSource) {
+        m_IRC->SendChannel(message, m_ChannelName);
+        AllSourceSuccess = true;
+      }
     }
   }
   if (!AllSourceSuccess) {
@@ -3388,11 +3388,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("w"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
-        break;
-
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot send whispers.");
+      if (!CheckPermissions(m_Config->m_TellPermissions, COMMAND_PERMISSIONS_ADMIN)) {
+        ErrorReply("You are not allowed to send whispers.");
         break;
       }
 
@@ -3459,10 +3456,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("whois"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
-        break;
-
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+      if (!CheckPermissions(m_Config->m_WhoisPermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("You are not the game owner, and therefore cannot ask for /whois.");
         break;
       }
