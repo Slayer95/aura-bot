@@ -202,7 +202,7 @@ public:
   std::pair<uint8_t, std::filesystem::path> SearchInputLocal(std::vector<std::string>& fuzzyMatches);
   std::pair<uint8_t, std::filesystem::path> SearchInput();
   CMap* GetBaseMapFromConfig(CConfig* mapCFG, const bool silent);
-  CMap* GetBaseMapFromConfigFile(const std::filesystem::path& filePath, const bool silent);
+  CMap* GetBaseMapFromConfigFile(const std::filesystem::path& filePath, const bool isCache, const bool silent);
   CMap* GetBaseMapFromMapFile(const std::filesystem::path& filePath, const bool silent);
   CMap* GetBaseMapFromMapFileOrCache(const std::filesystem::path& mapPath, const bool silent);
   bool ApplyMapModifiers(CGameExtraOptions* extraOptions);

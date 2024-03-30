@@ -505,14 +505,23 @@ CMap* CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
   return map;
 }
 
-CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, const bool silent)
+CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, const bool isCache, const bool silent)
 {
   CConfig MapCFG;
   if (!MapCFG.Read(filePath)) {
     if (!silent) m_Ctx->ErrorReply("Map config file [" + PathToString(filePath.filename()) + "] not found.", CHAT_SEND_SOURCE_ALL);
     return nullptr;
   }
-  return GetBaseMapFromConfig(&MapCFG, silent);
+  CMap* map = GetBaseMapFromConfig(&MapCFG, silent);
+  if (isCache) {
+    if (map->HasMismatch()) return nullptr;
+    if (MapCFG.GetIsModified()) {
+      vector<uint8_t> bytes = MapCFG.Export();
+      FileWrite(filePath, bytes.data(), bytes.size());
+      Print("[AURA] Updated map cache for [" + PathToString(filePath.filename()) + "] as [" + PathToString(filePath) + "]");
+    }
+  }
+  return map;
 }
 
 CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const bool silent)
@@ -578,20 +587,28 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
 {
   string fileName = PathToString(mapPath.filename());
   if (fileName.empty()) return nullptr;
-  if (m_Aura->m_Config->m_EnableCFGCache && m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
-    string cfgName = m_Aura->m_CachedMaps[fileName];
-    filesystem::path cfgPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(cfgName);
-    CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true);
+  if (m_Aura->m_Config->m_EnableCFGCache) {
     bool cacheSuccess = false;
-    if (cachedResult && cachedResult->GetMapLocalPath() == fileName && !cachedResult->HasMismatch()) {
-      cacheSuccess = true;
+    if (m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
+      string cfgName = m_Aura->m_CachedMaps[fileName];
+      filesystem::path cfgPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(cfgName);
+      CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
+      if (cachedResult && cachedResult->GetMapLocalPath() == fileName) {
+        cacheSuccess = true;
+      }
+      if (cacheSuccess) {
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          Print("[AURA] Cache success");
+        }
+        if (!silent) m_Ctx->SendReply("Map file loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+        return cachedResult;
+      } else {
+        delete cachedResult;
+        m_Aura->m_CachedMaps.erase(fileName);
+      }
     }
-    if (cacheSuccess) {
-      if (!silent) m_Ctx->SendReply("Map file loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
-      return cachedResult;
-    } else {
-      delete cachedResult;
-      m_Aura->m_CachedMaps.erase(fileName);
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+      Print("[AURA] Cache miss");
     }
   }
   return GetBaseMapFromMapFile(mapPath, silent);
@@ -805,7 +822,7 @@ bool CGameSetup::LoadMap()
     }
     if (m_Aura->m_Config->m_EnableCFGCache) {
       filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg");
-      m_Map = GetBaseMapFromConfigFile(cachePath, true);
+      m_Map = GetBaseMapFromConfigFile(cachePath, true, true);
       if (m_Map) return true;
     }
 #ifndef DISABLE_CPR
@@ -825,7 +842,7 @@ bool CGameSetup::LoadMap()
 #endif
   }
   if (searchResult.first == MATCH_TYPE_CONFIG) {
-    m_Map = GetBaseMapFromConfigFile(searchResult.second, false);
+    m_Map = GetBaseMapFromConfigFile(searchResult.second, false, false);
   } else {
     m_Map = GetBaseMapFromMapFileOrCache(searchResult.second, false);
   }

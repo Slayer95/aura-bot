@@ -1037,7 +1037,7 @@ void CRealm::QueueGameRefresh(uint8_t displayMode, const string& gameName, CMap*
       m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapWidth(),
       m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),
       GetPrefixedGameName(gameName), m_Config->m_UserName,
-      0, map->GetMapPath(), map->GetMapCRC(), map->GetMapSHA1(),
+      0, map->GetMapPath(), map->GetMapHash(), map->GetMapSHA1(),
       hostCounter | (useServerNamespace ? (m_PublicServerID << 24) : 0),
       m_Aura->m_MaxSlots
     ), PACKET_TYPE_GAME_REFRESH);

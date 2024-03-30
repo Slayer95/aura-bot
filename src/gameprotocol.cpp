@@ -517,9 +517,9 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_STOP_LAG(CGamePlayer* player)
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(uint8_t war3Version, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(uint8_t war3Version, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
 {
-  if (mapGameType.size() == 4 && mapFlags.size() == 4 && mapWidth.size() == 2 && mapHeight.size() == 2 && !gameName.empty() && !hostName.empty() && !mapPath.empty() && mapCRC.size() == 4)
+  if (mapGameType.size() == 4 && mapFlags.size() == 4 && mapWidth.size() == 2 && mapHeight.size() == 2 && !gameName.empty() && !hostName.empty() && !mapPath.empty() && mapHash.size() == 4)
   {
     const uint8_t Unknown2[] = {1, 0, 0, 0};
 
@@ -530,7 +530,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(uint8_t war3Version, cons
     StatString.push_back(0);
     AppendByteArrayFast(StatString, mapWidth);
     AppendByteArrayFast(StatString, mapHeight);
-    AppendByteArrayFast(StatString, mapCRC);
+    AppendByteArrayFast(StatString, mapHash);
     AppendByteArrayFast(StatString, mapPath);
     AppendByteArrayFast(StatString, hostName);
     StatString.push_back(0);
@@ -560,9 +560,9 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(uint8_t war3Version, cons
   return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GR_GAMEINFO(uint8_t war3Version, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit)
+std::vector<uint8_t> CGameProtocol::SEND_W3GR_GAMEINFO(uint8_t war3Version, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit)
 {
-  std::vector<uint8_t> packet = SEND_W3GS_GAMEINFO(war3Version, mapGameType, mapFlags, mapWidth, mapHeight, gameName, hostName, upTime, mapPath, mapCRC, slotsTotal, slotsAvailableOff, port, hostCounter, entryKey);
+  std::vector<uint8_t> packet = SEND_W3GS_GAMEINFO(war3Version, mapGameType, mapFlags, mapWidth, mapHeight, gameName, hostName, upTime, mapPath, mapHash, slotsTotal, slotsAvailableOff, port, hostCounter, entryKey);
   AppendByteArrayFast(packet, remoteIP);     // internal IP
   AppendByteArray(packet, remotePort, true); // internal port
   //AppendByteArray(packet, static_cast<uint16_t>(6112), true);         // port
@@ -622,15 +622,15 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GR_DECREATEGAME(uint32_t hostCounter)
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash)
 {
-  if (!mapPath.empty() && mapSize.size() == 4 && mapInfo.size() == 4 && mapCRC.size() == 4)
+  if (!mapPath.empty() && mapSize.size() == 4 && mapCRC32.size() == 4 && mapHash.size() == 4)
   {
     std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
     AppendByteArrayFast(packet, mapPath); // map path
     AppendByteArrayFast(packet, mapSize); // map size
-    AppendByteArrayFast(packet, mapInfo); // map info
-    AppendByteArrayFast(packet, mapCRC);  // map crc
+    AppendByteArrayFast(packet, mapCRC32); // map info
+    AppendByteArrayFast(packet, mapHash);  // map crc
     AssignLength(packet);
     return packet;
   }
@@ -639,15 +639,15 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, co
   return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapInfo, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash, const std::vector<uint8_t>& mapSHA1)
 {
-  if (!mapPath.empty() && mapSize.size() == 4 && mapInfo.size() == 4 && mapCRC.size() == 4 && mapSHA1.size() == 20)
+  if (!mapPath.empty() && mapSize.size() == 4 && mapCRC32.size() == 4 && mapHash.size() == 4 && mapSHA1.size() == 20)
   {
     std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
     AppendByteArrayFast(packet, mapPath); // map path
     AppendByteArrayFast(packet, mapSize); // map size
-    AppendByteArrayFast(packet, mapInfo); // map info
-    AppendByteArrayFast(packet, mapCRC);  // map crc
+    AppendByteArrayFast(packet, mapCRC32); // map info
+    AppendByteArrayFast(packet, mapHash);  // map crc
     AppendByteArrayFast(packet, mapSHA1); // map sha1
     AssignLength(packet);
     return packet;

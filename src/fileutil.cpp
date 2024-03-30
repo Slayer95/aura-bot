@@ -466,7 +466,12 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
 
 bool OpenMPQArchive(void** MPQ, const filesystem::path& filePath)
 {
-  Print("[AURA] loading MPQ file [" + PathToString(filePath) + "]");
+  uint32_t locale = SFileGetLocale();
+  if (locale == 0) {
+    Print("[AURA] loading MPQ file [" + PathToString(filePath) + "]");
+  } else {
+    Print("[AURA] loading MPQ file [" + PathToString(filePath) + "] using locale " + to_string(locale));
+  }
   return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, MPQ);
 }
 

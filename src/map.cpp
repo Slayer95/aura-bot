@@ -390,7 +390,10 @@ void CMap::Load(CConfig* CFG)
     );
   }
   if (FileModifiedTime.has_value()) {
-    CFG->SetInt64("map_localmtime", FileModifiedTime.value());
+    if (!CachedModifiedTime.has_value() || FileModifiedTime.value() != CachedModifiedTime.value()) {
+      CFG->SetInt64("map_localmtime", FileModifiedTime.value());
+      CFG->SetIsModified();
+    }
   }
 
   uint32_t mapLocale = CFG->GetUint32("map_locale", 0);
@@ -421,17 +424,17 @@ void CMap::Load(CConfig* CFG)
 
   // try to calculate map_size, map_info, map_crc, map_sha1
 
-  std::vector<uint8_t> MapSize, MapInfo, MapCRC, MapSHA1;
+  std::vector<uint8_t> MapSize, MapCRC32, MapHash, MapSHA1;
 
   if (!m_MapData.empty()) {
     m_Aura->m_SHA->Reset();
 
-    // calculate map_info (this is actually the CRC)
+    // calculate map_info (this is actually the CRC32)
 
-    MapInfo = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
-    //Print("[MAP] calculated <map_info = " + ByteArrayToDecString(MapInfo) + ">");
+    MapCRC32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
+    //Print("[MAP] calculated <map_info = " + ByteArrayToDecString(MapCRC32) + ">");
 
-    // calculate map_crc (this is not the CRC) and map_sha1
+    // calculate map_crc (this is a misnomer) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
 
     filesystem::path commonPath = m_Aura->m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
@@ -596,8 +599,8 @@ void CMap::Load(CConfig* CFG)
           if (!FoundScript)
             Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ file, calculated map_crc/sha1 is probably wrong)");
 
-          MapCRC = CreateByteArray(Val, false);
-          //Print("[MAP] calculated <map_crc = " + ByteArrayToDecString(MapCRC) + ">");
+          MapHash = CreateByteArray(Val, false);
+          //Print("[MAP] calculated <map_crc = " + ByteArrayToDecString(MapHash) + ">");
 
           m_Aura->m_SHA->Final();
           uint8_t SHA1[20];
@@ -880,29 +883,29 @@ void CMap::Load(CConfig* CFG)
 
   if (CFG->Exists("map_info")) {
     string CFGValue = CFG->GetString("map_info", emptyString);
-    if (!MapInfo.empty()) {
-      string MapValue = ByteArrayToDecString(MapInfo);
+    if (!MapCRC32.empty()) {
+      string MapValue = ByteArrayToDecString(MapCRC32);
       MapContentMismatch[1] = CFGValue != MapValue;
     }
-    MapInfo = ExtractNumbers(CFGValue, 4);
-  } else if (!MapInfo.empty()) {
-    CFG->SetUint8Vector("map_info", MapInfo);
+    MapCRC32 = ExtractNumbers(CFGValue, 4);
+  } else if (!MapCRC32.empty()) {
+    CFG->SetUint8Vector("map_info", MapCRC32);
   }
 
-  m_MapInfo = MapInfo;
+  m_MapCRC32 = MapCRC32;
 
   if (CFG->Exists("map_crc")) {
     string CFGValue = CFG->GetString("map_crc", emptyString);
-    if (!MapCRC.empty()) {
-      string MapValue = ByteArrayToDecString(MapCRC);
+    if (!MapHash.empty()) {
+      string MapValue = ByteArrayToDecString(MapHash);
       MapContentMismatch[2] = CFGValue != MapValue;
     }
-    MapCRC = ExtractNumbers(CFGValue, 4);
-  } else if (!MapCRC.empty()) {
-    CFG->SetUint8Vector("map_crc", MapCRC);
+    MapHash = ExtractNumbers(CFGValue, 4);
+  } else if (!MapHash.empty()) {
+    CFG->SetUint8Vector("map_crc", MapHash);
   }
 
-  m_MapCRC = MapCRC;
+  m_MapHash = MapHash;
 
   if (CFG->Exists("map_sha1")) {
     string CFGValue = CFG->GetString("map_sha1", emptyString);
@@ -1112,13 +1115,13 @@ string CMap::CheckProblems()
     return "nonmatching map_size detected";
   }
 
-  if (m_MapInfo.size() != 4)
+  if (m_MapCRC32.size() != 4)
   {
     m_Valid = false;
     return "invalid map_info detected";
   }
 
-  if (m_MapCRC.size() != 4)
+  if (m_MapHash.size() != 4)
   {
     m_Valid = false;
     return "invalid map_crc detected";

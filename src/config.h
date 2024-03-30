@@ -69,6 +69,7 @@ private:
   std::filesystem::path              m_File;
   std::set<std::string>              m_ValidKeys;
   std::filesystem::path              m_HomeDir;
+  bool                               m_IsModified;
 
   uint8_t CheckRealmKey(const std::string& key) const;
 
@@ -89,7 +90,9 @@ public:
   };
   inline void SetFailed() { m_CriticalError = true; };
   inline void SetHomeDir(const std::filesystem::path& nHomeDir) { m_HomeDir = nHomeDir; };
+  inline void SetIsModified() { m_IsModified = true; };
   const std::filesystem::path& GetHomeDir() const { return m_HomeDir; }
+  inline bool GetIsModified() const { return m_IsModified; };
 
   std::string GetString(const std::string& key, const std::string& x);
   std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);

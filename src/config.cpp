@@ -89,7 +89,8 @@ using namespace std;
 
 CConfig::CConfig()
  : m_ErrorLast(false),
-   m_CriticalError(false)
+   m_CriticalError(false),
+   m_IsModified(false)
 {
 }
 

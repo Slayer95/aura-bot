@@ -1425,7 +1425,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
     m_IndexVirtualHostName,
     0,
     m_MapPath,
-    m_Map->GetMapCRC(),
+    m_Map->GetMapHash(),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
     static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1), // "Available" Slots
     hostPort,
@@ -1951,9 +1951,9 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   // send a map check packet to the new player
 
   if (m_Aura->m_GameVersion >= 23) {
-    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapInfo(), m_Map->GetMapCRC(), m_Map->GetMapSHA1()));
+    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapHash(), m_Map->GetMapSHA1()));
   } else {
-    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapInfo(), m_Map->GetMapCRC()));
+    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapHash()));
   }
 
   // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout

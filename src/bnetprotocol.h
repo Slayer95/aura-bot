@@ -74,7 +74,7 @@ public:
     SID_GETADVLISTEX           = 9,   // 0x9
     SID_ENTERCHAT              = 10,  // 0xA
     SID_JOINCHANNEL            = 12,  // 0xC
-    SID_CHATCOMMAND            = 14,  // 0xE
+    SID_CHATCOMMAND            = 14,  // 0xE - PvPGN: CLIENT_MESSAGE
     SID_CHATEVENT              = 15,  // 0xF
     SID_CHECKAD                = 21,  // 0x15
     SID_PUBLICHOST             = 27,  // 0x1B

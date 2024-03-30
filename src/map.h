@@ -139,8 +139,8 @@ public:
 private:
   std::vector<uint8_t>   m_MapSHA1;   // config value: map sha1 (20 bytes)
   std::vector<uint8_t>   m_MapSize;   // config value: map size (4 bytes)
-  std::vector<uint8_t>   m_MapInfo;   // config value: map info (4 bytes) -> this is the real CRC
-  std::vector<uint8_t>   m_MapCRC;    // config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
+  std::vector<uint8_t>   m_MapCRC32;   // config value: map info (4 bytes) -> this is the real CRC
+  std::vector<uint8_t>   m_MapHash;    // config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
   std::vector<uint8_t>   m_MapWidth;  // config value: map width (2 bytes)
   std::vector<uint8_t>   m_MapHeight; // config value: map height (2 bytes)
   std::vector<CGameSlot> m_Slots;
@@ -179,8 +179,8 @@ public:
   inline std::string            GetConfigName() const { return m_CFGName; }
   inline std::string            GetMapPath() const { return m_MapPath; }
   inline std::vector<uint8_t>   GetMapSize() const { return m_MapSize; }
-  inline std::vector<uint8_t>   GetMapInfo() const { return m_MapInfo; }
-  inline std::vector<uint8_t>   GetMapCRC() const { return m_MapCRC; }
+  inline std::vector<uint8_t>   GetMapCRC32() const { return m_MapCRC32; }
+  inline std::vector<uint8_t>   GetMapHash() const { return m_MapHash; }
   inline std::vector<uint8_t>   GetMapSHA1() const { return m_MapSHA1; }
   std::string                   GetMapURL() const { return m_MapURL; }
   std::string                   GetMapSiteURL() const { return m_MapSiteURL; }

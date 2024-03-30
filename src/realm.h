@@ -118,6 +118,20 @@ private:
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
   bool                             m_InChat;                    // if we've entered chat or not (but we're not necessarily in a chat channel yet
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
+  std::map<std::string, uint8_t>   m_ReplyQuota;                // how many messages we are allowed to queue because of each user's commands
+  std::map<std::string, uint8_t>   m_ReplyPendingCount;
+  // ReplyQuota implements exponential backoff
+  // Factor: Log_2(1 + m_ReplyQuota.size()) * (m_ChatQueue.size() / m_RecvMessages[user])
+  // Whenever m_ChatQueue empties:
+  //  m_ReplyQuota.clear();
+  //  m_RecvMessages.clear();
+  //
+  // If in threshold, replace message by:
+  //   "OK, but don't spam (you may be ignored.)" <- 40 chars length
+  //   "Sorry, don't spam (you may be ignored.)" <- 39 chars length
+  //
+  // m_ChatQueueHighPriority
+  // m_ChatQueueLowPriority
 
   friend class CCommandContext;
 

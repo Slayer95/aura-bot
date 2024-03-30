@@ -460,6 +460,10 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     }
   }
 
+  if (m_Config->m_EnableCFGCache) {
+    CacheMapPresets();
+  }
+
   if (!nCLI.QueueActions(this)) {
     m_Ready = false;
     return;
@@ -483,10 +487,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   // load the iptocountry data
   LoadIPToCountryData(CFG);
-
-  if (m_Config->m_EnableCFGCache) {
-    CacheMapPresets();
-  }
 }
 
 bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
