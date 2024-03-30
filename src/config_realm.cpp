@@ -106,7 +106,21 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_RootAdmins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
-  m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
+
+  m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5);
+  m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", 5);
+  m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", 40);
+  m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", 200);
+  m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood.immune", m_FloodImmune);
+
+  if (m_VirtualLineLength > 256) {
+    m_VirtualLineLength = 256;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.wrap>.");
+  }
+  if (m_MaxLineLength > 256) {
+    m_MaxLineLength = 256;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
+  }
 
   m_Enabled                = CFG.GetBool(m_CFGKeyPrefix + "enabled", true);
   m_BindAddress            = CFG.GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
@@ -180,6 +194,11 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_RootAdmins(nRootConfig->m_RootAdmins),
     m_GamePrefix(nRootConfig->m_GamePrefix),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
+
+    m_FloodQuotaLines(nRootConfig->m_FloodQuotaLines),
+    m_FloodQuotaTime(nRootConfig->m_FloodQuotaTime),
+    m_VirtualLineLength(nRootConfig->m_VirtualLineLength),
+    m_MaxLineLength(nRootConfig->m_MaxLineLength),
     m_FloodImmune(nRootConfig->m_FloodImmune)
 {
   const static string emptyString;
@@ -259,7 +278,21 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_RootAdmins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
-  m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood_immune", m_FloodImmune);
+
+  m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", m_FloodQuotaLines);
+  m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", m_FloodQuotaTime);
+  m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", m_VirtualLineLength);
+  m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", m_MaxLineLength);
+  m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood.immune", m_FloodImmune);
+
+  if (m_VirtualLineLength > 256) {
+    m_VirtualLineLength = 256;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.wrap>.");
+  }
+  if (m_MaxLineLength > 256) {
+    m_MaxLineLength = 256;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
+  }
 
   m_UnverifiedRejectCommands      = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_commands", m_UnverifiedRejectCommands);
   m_UnverifiedCannotStartGame     = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_start", m_UnverifiedCannotStartGame);

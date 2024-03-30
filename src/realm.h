@@ -62,6 +62,17 @@
 #define PACKET_TYPE_PRIORITY 1
 #define PACKET_TYPE_DEFAULT 0
 
+struct QueuedChatMessage
+{
+  int64_t time;
+  uint32_t sessionId;
+  uint32_t gameId;
+  uint8_t virtualSize;
+  std::string userTo;
+  std::string userWhy;
+  std::string message;
+};
+
 //
 // CRealm
 //

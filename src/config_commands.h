@@ -71,6 +71,7 @@ public:
   uint8_t m_HostPermissions;
   uint8_t m_HostRawPermissions;
   uint8_t m_StartPermissions;
+  uint8_t m_SayPermissions;
   uint8_t m_TellPermissions;
   uint8_t m_WhoisPermissions;
 

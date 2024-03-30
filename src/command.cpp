@@ -2669,11 +2669,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_Aura->m_CurrentLobby) {
-        ErrorReply("Cannot send bnet chat messages while the bot is hosting a game lobby.");
-        break;
-      }
-
       string::size_type MessageStart = Payload.find(',');
       string RealmId = TrimString(Payload.substr(0, MessageStart));
       string Message = TrimString(Payload.substr(MessageStart + 1));
@@ -2684,6 +2679,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool IsCommand = Message[0] == '/';
       if (IsCommand && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
         ErrorReply("You are not allowed to send bnet commands.");
+        break;
+      }
+      if (!IsCommand && m_Aura->m_CurrentLobby) {
+        ErrorReply("Cannot send bnet chat messages while the bot is hosting a game lobby.");
         break;
       }
       transform(begin(RealmId), end(RealmId), begin(RealmId), ::tolower);
