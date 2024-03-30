@@ -877,13 +877,11 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   if (portStart == string::npos) return false;
   size_t idStart = nInput.find("#", portStart);
   if (idStart == string::npos) return false;
-  size_t keyStart = nInput.find(":", idStart);
-  if (keyStart == string::npos) return false;
   string rawAddress = nInput.substr(0, portStart);
   if (rawAddress.length() < 7) return false;
   string rawPort = nInput.substr(portStart + 1, idStart - (portStart + 1));
   if (rawPort.empty()) return false;
-  string rawId = nInput.substr(idStart + 1, keyStart - (idStart + 1));
+  string rawId = nInput.substr(idStart + 1);
   if (rawId.empty()) return false;
   optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(rawAddress, ACCEPT_IPV4);
   if (!maybeAddress.has_value()) return false;
@@ -891,7 +889,7 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   uint32_t gameId = 0;
   try {
     int64_t value = stol(rawPort);
-    if (value <= 0 || value > 0xFF) return false;
+    if (value <= 0 || value > 0xFFFF) return false;
     gamePort = static_cast<uint16_t>(value);
   } catch (...) {
     return false;
