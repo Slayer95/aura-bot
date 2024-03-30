@@ -1316,7 +1316,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
 #ifndef DISABLE_MINIUPNP
-  if (m_Net->m_Config->m_EnableUPnP && m_Games.empty()) {
+  if (m_Net->m_Config->m_EnableUPnP && m_CurrentLobby->GetIsLobby() && m_Games.empty()) {
     // This is a long synchronous network call.
     m_Net->RequestUPnP("TCP", m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET), m_CurrentLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
