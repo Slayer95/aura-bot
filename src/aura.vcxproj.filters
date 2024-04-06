@@ -21,6 +21,9 @@
     <ClCompile Include="realm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="realm_chat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="bnetprotocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -111,6 +114,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="realm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="realm_chat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bnetprotocol.h">

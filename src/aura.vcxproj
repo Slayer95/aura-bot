@@ -448,6 +448,7 @@
     <ClCompile Include="crc32.cpp" />
     <ClCompile Include="sha1.cpp" />
     <ClCompile Include="realm.cpp" />
+    <ClCompile Include="realm_chat.cpp" />
     <ClCompile Include="irc.cpp" />
     <ClCompile Include="map.cpp" />
     <ClCompile Include="gameplayer.cpp" />
@@ -482,6 +483,7 @@
     <ClInclude Include="crc32.h" />
     <ClInclude Include="sha1.h" />
     <ClInclude Include="realm.h" />
+    <ClInclude Include="realm_chat.h" />
     <ClInclude Include="irc.h" />
     <ClInclude Include="map.h" />
     <ClInclude Include="gameplayer.h" />

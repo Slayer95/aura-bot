@@ -756,11 +756,7 @@ bool CGame::Update(void* fd, void* send_fd)
       if (m_IsMirror && bnet->GetIsMirror())
         continue;
 
-      // don't queue a game refresh message if the queue contains more than 1 packet because they're very low priority
-      if (bnet->GetOutPacketsQueued() > 1)
-        continue;
-
-      bnet->QueueGameRefresh(m_GameDisplay, m_GameName, m_Map, m_HostCounter, !m_IsMirror);
+      bnet->QueueGameRefresh(m_GameDisplay, m_GameName, bnet->GetUsesCustomPort() && !m_IsMirror ? bnet->GetPublicHostPort() : m_HostPort, m_Map, m_HostCounter, !m_IsMirror);
     }
 
     m_LastRefreshTime = Time;
@@ -2825,7 +2821,7 @@ void CGame::EventGameStarted()
       continue;
 
     bnet->QueueGameUncreate();
-    bnet->QueueEnterChat();
+    bnet->SendEnterChat();
   }
 
   // record everything we need to ban each player in case we decide to do so later

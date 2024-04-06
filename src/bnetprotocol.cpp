@@ -466,10 +466,42 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_JOINCHANNEL(const string& channel)
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_CHATCOMMAND(const string& command)
+std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const string& message)
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATCOMMAND, 0, 0};
-  AppendByteArrayFast(packet, command); // Message
+  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0};
+  AppendByteArrayFast(packet, message, true); // null-terminator
+  AssignLength(packet);
+  return packet;
+}
+
+std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const vector<uint8_t>& message)
+{
+  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0};
+  AppendByteArrayFast(packet, message);
+  packet.push_back(0);
+  AssignLength(packet);
+  return packet;
+}
+
+std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const string& message, const string& user)
+{
+  // /w USER MESSAGE
+  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
+  AppendByteArrayFast(packet, user, false);
+  packet.push_back(0x20);
+  AppendByteArrayFast(packet, message, true); // With null terminator
+  AssignLength(packet);
+  return packet;
+}
+
+std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const std::vector<uint8_t>& message, const std::vector<uint8_t>& user)
+{
+  // /w USER MESSAGE
+  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
+  AppendByteArrayFast(packet, user);
+  packet.push_back(0x20);
+  AppendByteArrayFast(packet, message);
+  packet.push_back(0);
   AssignLength(packet);
   return packet;
 }

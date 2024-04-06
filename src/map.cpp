@@ -610,7 +610,7 @@ void CMap::Load(CConfig* CFG)
           //Print("[MAP] calculated <map_sha1 = " + ByteArrayToDecString(MapSHA1) + ">");
         }
         else
-          Print("[MAP] unable to calculate map_crc/sha1 - map MPQ file not loaded");
+          Print("[MAP] skipping map_crc/sha1 calculation - map file not loaded");
       }
     }
   }
@@ -834,28 +834,28 @@ void CMap::Load(CConfig* CFG)
                 ++SlotNum;
               }
             } else {
-              Print("[MAP] unable to calculate <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from MPQ file");
+              Print("[MAP] unable to calculate <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from map file");
               MapNumPlayers = 0;
               MapNumTeams = 0;
             }
           }
         }
         else
-          Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from MPQ file");
+          Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from map file");
 
         delete[] SubFileData;
       }
 
       SFileCloseFile(SubFile);
     } else {
-      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - couldn't find war3map.w3i in MPQ file");
+      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - couldn't find war3map.w3i in map file");
     }
   } else {
     if (!IsPartial) {
       //This is debug log
       //Print("[MAP] using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
     } else if (!MapMPQReady) {
-      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map MPQ file not loaded");
+      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map file not loaded");
     }
   }
 

@@ -209,7 +209,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
     if (Abort) {
       RecvBuffer->clear();
-    } else {
+    } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
   }
@@ -366,9 +366,9 @@ bool CGamePlayer::Update(void* fd)
     CRealm* Realm = GetRealm(false);
     if (Realm) {
       if (m_Game->GetGameState() == GAME_PUBLIC || Realm->GetPvPGN())
-        Realm->SendCommand("/whois " + m_Name);
+        Realm->QueueCommand("/whois " + m_Name);
       else if (m_Game->GetGameState() == GAME_PRIVATE)
-        Realm->SendWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
+        Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
     }
 
     m_WhoisSent = true;
@@ -570,7 +570,7 @@ bool CGamePlayer::Update(void* fd)
 
     if (Abort) {
       RecvBuffer->clear();
-    } else {
+    } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
   }

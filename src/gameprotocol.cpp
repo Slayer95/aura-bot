@@ -115,6 +115,7 @@ uint32_t CGameProtocol::RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data)
   if (ValidateLength(data) && data.size() >= 8)
     return ByteArrayToUInt32(data, false, 4);
 
+  Print("W3GS_LEAVEGAME: " + ByteArrayToDecString(data));
   return 0;
 }
 

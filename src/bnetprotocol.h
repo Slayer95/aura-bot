@@ -74,7 +74,7 @@ public:
     SID_GETADVLISTEX           = 9,   // 0x9
     SID_ENTERCHAT              = 10,  // 0xA
     SID_JOINCHANNEL            = 12,  // 0xC
-    SID_CHATCOMMAND            = 14,  // 0xE - PvPGN: CLIENT_MESSAGE
+    SID_CHATMESSAGE            = 14,  // 0xE - PvPGN: CLIENT_MESSAGE
     SID_CHATEVENT              = 15,  // 0xF
     SID_CHECKAD                = 21,  // 0x15
     SID_PUBLICHOST             = 27,  // 0x1B
@@ -154,6 +154,9 @@ public:
   inline std::vector<uint8_t> GetServerPublicKey() const { return m_ServerPublicKey; }
   inline std::vector<uint8_t> GetUniqueName() const { return m_UniqueName; }
 
+  inline size_t               GetMessageSize(const std::vector<uint8_t> message) const { return message.size(); }
+  inline size_t               GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) const { return message.size() + name.size(); }
+      
   // receive functions
 
   bool RECEIVE_SID_NULL(const std::vector<uint8_t>& data);
@@ -178,7 +181,10 @@ public:
   std::vector<uint8_t> SEND_SID_GETADVLISTEX();
   std::vector<uint8_t> SEND_SID_ENTERCHAT();
   std::vector<uint8_t> SEND_SID_JOINCHANNEL(const std::string& channel);
-  std::vector<uint8_t> SEND_SID_CHATCOMMAND(const std::string& command);
+  std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::string& message);
+  std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::string& message, const std::string& user);
+  std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::vector<uint8_t>& message);
+  std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::vector<uint8_t>& message, const std::vector<uint8_t>& user);
   std::vector<uint8_t> SEND_SID_CHECKAD();
   std::vector<uint8_t> SEND_SID_PUBLICHOST(const std::vector<uint8_t> address, uint16_t port);
   std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);

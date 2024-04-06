@@ -897,13 +897,13 @@ bool CAura::Update()
       delete m_CurrentLobby;
       m_CurrentLobby = nullptr;
 
-      for (auto& bnet : m_Realms)
-      {
+      for (auto& bnet : m_Realms) {
         bnet->QueueGameUncreate();
-        bnet->QueueEnterChat();
+        bnet->SendEnterChat();
       }
-    } else if (m_CurrentLobby)
+    } else if (m_CurrentLobby) {
       m_CurrentLobby->UpdatePost(&send_fd);
+    }
   }
 
   // update running games
@@ -954,7 +954,7 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
     } else {
       switch (m_CurrentLobby->GetCreatedFromType()) {
         case GAMESETUP_ORIGIN_REALM:
-          reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->SendWhisper("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+          reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
           break;
         case GAMESETUP_ORIGIN_IRC:
           reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
@@ -980,9 +980,9 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
 void CAura::EventGameDeleted(CGame* game)
 {
   for (auto& bnet : m_Realms) {
-    bnet->SendChatChannel("Game ended: " + game->GetDescription());
+    bnet->QueueChatChannel("Game ended: " + game->GetDescription());
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-      bnet->SendWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
+      bnet->QueueWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
     }
   }
 }
@@ -1373,21 +1373,16 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE) {
       gameSetup->m_Ctx->SendReply(AnnounceText);
     } else if (bnet->GetAnnounceHostToChat()) {
-      bnet->SendChatChannel(AnnounceText);
+      bnet->QueueChatChannel(AnnounceText);
     } else if (gameSetup->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(bnet))) {
       gameSetup->m_Ctx->SendReply(AnnounceText);
     }
-    // QueueGameRefresh at QueueGameMirror/QueueGameCreate handles game name prefix
-    if (gameSetup->GetIsMirror()) {
-      bnet->QueueGameMirror(
-        gameSetup->m_RealmsDisplayMode, gameSetup->m_GameName, gameSetup->m_Map,
-        m_CurrentLobby->GetHostCounter(), m_CurrentLobby->GetPublicHostPort()
-      );
-    } else {
-      bnet->QueueGameCreate(
-        gameSetup->m_RealmsDisplayMode, gameSetup->m_GameName, gameSetup->m_Map,
-        m_CurrentLobby->GetHostCounter(), m_CurrentLobby->GetHostPort()
-      );
+    bnet->QueueGameRefresh(
+      gameSetup->m_RealmsDisplayMode, gameSetup->m_GameName,
+      bnet->GetUsesCustomPort() && !gameSetup->GetIsMirror() ? bnet->GetPublicHostPort() : m_CurrentLobby->GetHostPort(),
+      gameSetup->m_Map, m_CurrentLobby->GetHostCounter(), !gameSetup->GetIsMirror()
+    );
+    if (!gameSetup->GetIsMirror()) {
       bnet->HoldFriends(m_CurrentLobby);
       bnet->HoldClan(m_CurrentLobby);
     }
@@ -1397,7 +1392,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     // so don't rejoin the chat if we're using PVPGN
 
     if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE && !bnet->GetPvPGN()) {
-      bnet->QueueEnterChat();
+      bnet->SendEnterChat();
     }
   }
 

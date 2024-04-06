@@ -87,6 +87,7 @@ OBJS = src/fileutil.o \
 			 src/crc32.o \
 			 src/sha1.o \
 			 src/realm.o \
+       src/realm-chat.o \
 			 src/irc.o \
 			 src/map.o \
 			 src/gameplayer.o \

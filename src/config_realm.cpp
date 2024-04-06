@@ -51,7 +51,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_RootAdmins({}),
     m_GamePrefix(string()),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
-    m_FloodImmune(false)
+    m_FloodImmune(false),
+
+    m_QueryGameLists(false)
 {
   const static string emptyString;
 
@@ -113,14 +115,28 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", 200);
   m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood.immune", m_FloodImmune);
 
-  if (m_VirtualLineLength > 256) {
+  if (100 < m_FloodQuotaLines) {
+    m_FloodQuotaLines = 100;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.lines>.");
+  }
+  if (60 < m_FloodQuotaTime) {
+    m_FloodQuotaTime = 60;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.time>.");
+  }
+  if (0 == m_VirtualLineLength || 256 < m_VirtualLineLength) {
     m_VirtualLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.wrap>.");
   }
-  if (m_MaxLineLength > 256) {
+  if (m_MaxLineLength < 6 || 256 < m_MaxLineLength) {
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
+  if (static_cast<uint32_t>(m_MaxLineLength) > static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines)) {
+    m_MaxLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
+  }
+
+  m_QueryGameLists         = CFG.GetBool(m_CFGKeyPrefix + "queries.games_list.enabled", m_QueryGameLists);
 
   m_Enabled                = CFG.GetBool(m_CFGKeyPrefix + "enabled", true);
   m_BindAddress            = CFG.GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
@@ -199,7 +215,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_FloodQuotaTime(nRootConfig->m_FloodQuotaTime),
     m_VirtualLineLength(nRootConfig->m_VirtualLineLength),
     m_MaxLineLength(nRootConfig->m_MaxLineLength),
-    m_FloodImmune(nRootConfig->m_FloodImmune)
+    m_FloodImmune(nRootConfig->m_FloodImmune),
+
+    m_QueryGameLists(nRootConfig->m_QueryGameLists)
 {
   const static string emptyString;
 
@@ -238,6 +256,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", m_PrivateCmdToken);
   m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", m_BroadcastCmdToken);
   m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", m_EnableBroadcast);
+
+  if (!m_EnableBroadcast)
+    m_BroadcastCmdToken.clear();
 
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
@@ -285,14 +306,28 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", m_MaxLineLength);
   m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood.immune", m_FloodImmune);
 
-  if (m_VirtualLineLength > 256) {
+  if (100 < m_FloodQuotaLines) {
+    m_FloodQuotaLines = 100;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.lines>.");
+  }
+  if (60 < m_FloodQuotaTime) {
+    m_FloodQuotaTime = 60;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.time>.");
+  }
+  if (0 == m_VirtualLineLength || 256 < m_VirtualLineLength) {
     m_VirtualLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.wrap>.");
   }
-  if (m_MaxLineLength > 256) {
+  if (m_MaxLineLength < 6 || 256 < m_MaxLineLength) {
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
+  if (static_cast<uint32_t>(m_MaxLineLength) > static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines)) {
+    m_MaxLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
+  }
+
+  m_QueryGameLists         = CFG.GetBool(m_CFGKeyPrefix + "queries.games_list.enabled", m_QueryGameLists);
 
   m_UnverifiedRejectCommands      = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_commands", m_UnverifiedRejectCommands);
   m_UnverifiedCannotStartGame     = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_start", m_UnverifiedCannotStartGame);

@@ -148,10 +148,6 @@ public:
 inline std::string GetTokenName(const std::string& token) {
   if (token.length() != 1) return std::string();
   switch (token[0]) {
-    case '!':
-      return " (exclamation mark.)";
-    case '?':
-      return " (question mark.)";
     case '.':
       return " (period.)";
     case ',':
@@ -164,8 +160,6 @@ inline std::string GetTokenName(const std::string& token) {
       return " (hashtag.)";
     case '@':
       return " (at.)";
-    case '&':
-      return " (ampersand.)";
     case '$':
       return " (dollar.)";
     case '%':

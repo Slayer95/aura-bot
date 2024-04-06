@@ -477,7 +477,7 @@ void CCommandContext::SendReplyNoFlags(const string& message)
 
     case FROM_BNET: {
       if (m_SourceRealm) {
-        m_SourceRealm->TrySendChat(message, m_FromName, true, m_Output);
+        m_SourceRealm->TryQueueChat(message, m_FromName, true, m_Output);
       }
       break;
     }
@@ -507,7 +507,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       }
     }
     if (m_TargetRealm) {
-      m_TargetRealm->TrySendChat(message, m_FromName, false, m_Output);
+      m_TargetRealm->TryQueueChat(message, m_FromName, false, m_Output);
       if (m_TargetRealm == m_SourceRealm) {
         AllSourceSuccess = true;
       }
@@ -520,7 +520,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       AllSourceSuccess = true;
     }
     if (m_SourceRealm) {
-      m_SourceRealm->TrySendChat(message, m_FromName, false, m_Output);
+      m_SourceRealm->TryQueueChat(message, m_FromName, false, m_Output);
       AllSourceSuccess = true;
     }
     if (m_IRC) {
@@ -1053,7 +1053,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_ActionMessage = inputName + ", " + m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
       }
 
-      matchingRealm->SendWhisper(m_ActionMessage, inputName, this);
+      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this);
       break;
     }
 
@@ -1608,14 +1608,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           // we assume this won't happen very often since the only downside is a potential false positive
 
           bnet->QueueGameUncreate();
-          bnet->QueueEnterChat();
+          bnet->SendEnterChat();
 
           // we need to send the game creation message now because private games are not refreshed
 
-          bnet->QueueGameCreate(m_TargetGame->m_GameDisplay, m_TargetGame->m_GameName, m_TargetGame->m_Map, m_TargetGame->m_HostCounter, m_TargetGame->m_HostPort);
+          bnet->QueueGameRefresh(m_TargetGame->m_GameDisplay, m_TargetGame->m_GameName, bnet->GetUsesCustomPort() && !m_TargetGame->GetIsMirror() ? bnet->GetPublicHostPort() : m_TargetGame->GetHostPort(), m_TargetGame->m_Map, m_TargetGame->m_HostCounter, !m_TargetGame->GetIsMirror());
 
           if (!bnet->GetPvPGN())
-            bnet->QueueEnterChat();
+            bnet->SendEnterChat();
         }
 
         m_TargetGame->m_CreationTime = m_TargetGame->m_LastRefreshTime = GetTime();
@@ -1692,6 +1692,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("start"):
+    case HashCode("vs"):
     case HashCode("go"): {
       UseImplicitHostedGame();
 
@@ -2695,9 +2696,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           continue;
         if (ToAllRealms || bnet->GetInputID() == RealmId) {
           if (IsCommand) {
-            bnet->SendCommand(Message);
+            bnet->QueueCommand(Message);
           } else {
-            bnet->SendChatChannel(Message);
+            bnet->QueueChatChannel(Message);
           }
           Success = true;
         }
@@ -2755,8 +2756,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ". (Started by " + m_TargetGame->m_OwnerName + ": \"" + bnet->GetPrefixedGameName(m_TargetGame->m_GameName) + "\")"
           );
           bnet->QueueGameUncreate();
-          bnet->QueueEnterChat();
-          bnet->SendChatChannel(AnnounceText);
+          bnet->SendEnterChat();
+          bnet->QueueChatChannel(AnnounceText);
         }
       } else {
         string AnnounceText = (
@@ -2764,8 +2765,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ". (Started by " + m_TargetGame->m_OwnerName + ": \"" + targetRealm->GetPrefixedGameName(m_TargetGame->m_GameName) + "\")"
         );
         targetRealm->QueueGameUncreate();
-        targetRealm->QueueEnterChat();
-        targetRealm->SendChatChannel(AnnounceText);
+        targetRealm->SendEnterChat();
+        targetRealm->QueueChatChannel(AnnounceText);
       }
 
       SendReply("Announcement sent.");
@@ -3445,7 +3446,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         m_ActionMessage = inputName + ", " + m_FromName + " at " + m_HostName + " tells you: <<" + subMessage + ">>";
       }
-      matchingRealm->SendWhisper(m_ActionMessage, inputName, this);
+      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this);
       break;
     }
     //
@@ -3486,7 +3487,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (bnet->GetIsMirror())
           continue;
         if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
-          bnet->SendCommand(Message);
+          bnet->QueueCommand(Message);
         }
       }
 
@@ -4147,7 +4148,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      targetRealm->SendCommand("/netinfo");
+      targetRealm->QueueCommand("/netinfo");
       break;
     }
 
@@ -4166,7 +4167,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      targetRealm->SendCommand("/games");
+      targetRealm->QueueCommand("/games");
       break;
     }
 
@@ -4187,7 +4188,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       int64_t Time = GetTime();
       if (Time - targetRealm->m_LastGameListTime >= 30) {
-        targetRealm->QueuePacket(targetRealm->m_Protocol->SEND_SID_GETADVLISTEX());
+        targetRealm->SendGetGamesList();
       }
       break;
     }
@@ -4212,7 +4213,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Realm not found.");
         break;
       }
-      m_SourceRealm->SendCommand("/join " + Payload);
+      m_SourceRealm->QueueCommand("/join " + Payload);
       break;
     }
 
@@ -4300,23 +4301,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true);
       if (!gameSetup) {
-        ErrorReply("Unable to host game");
+        ErrorReply("Unable to host game", CHAT_SEND_SOURCE_ALL);
         break;
       }
       if (!gameSetup->LoadMap()) {
-        ErrorReply("Map not found");
+        ErrorReply("Map not found", CHAT_SEND_SOURCE_ALL);
         delete gameSetup;
         break;
       }
       if (!gameSetup->ApplyMapModifiers(&options)) {
-        ErrorReply("Invalid map options. Map has fixed player settings.");
+        ErrorReply("Invalid map options. Map has fixed player settings.", CHAT_SEND_SOURCE_ALL);
         delete gameSetup;
         break;
       }
       gameSetup->SetActive();
       if (isHostCommand) {
         if (m_Aura->m_CurrentLobby)  {
-          ErrorReply("Already hosting a game.");
+          ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
           delete gameSetup;
           break;
         }

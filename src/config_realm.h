@@ -125,9 +125,11 @@ public:
 
   uint8_t m_FloodQuotaLines;                     // - PvPGN: corresponds to bnetd.conf: quota_lines (default 5)
   uint8_t m_FloodQuotaTime;                      // - PvPGN: corresponds to bnetd.conf: quota_time (default 5)
-  uint16_t m_VirtualLineLength;                   // - PvPGN: corresponds to bnetd.conf: quota_wrapline (default 40)
-  uint16_t m_MaxLineLength;                       // - PvPGN: corresponds to bnetd.conf: quota_maxline (default 200)
+  uint16_t m_VirtualLineLength;                  // - PvPGN: corresponds to bnetd.conf: quota_wrapline (default 40)
+  uint16_t m_MaxLineLength;                      // - PvPGN: corresponds to bnetd.conf: quota_maxline (default 200)
   bool m_FloodImmune;                            // whether we are allowed to send unlimited commands to the server - PvPGN: corresponds to lua/confg.lua: flood_immunity, or ghost_bots
+
+  bool m_QueryGameLists;                         // whether we should periodically request a list of hosted games
 
   CRealmConfig(CConfig& CFG, CNetConfig* nNetConfig);
   CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);
