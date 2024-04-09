@@ -1105,7 +1105,7 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CComman
   m_ChatQueuedGameAnnouncement = true;
 
   m_ChatQueueJoinCallback = new CQueuedChatMessage(this, fromCtx, isProxy);
-  m_ChatQueueJoinCallback->SetMessage(m_Aura->m_CurrentLobby->GetAnnounceText(this));
+  m_ChatQueueJoinCallback->SetMessage(game->GetAnnounceText(this));
   m_ChatQueueJoinCallback->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
   m_ChatQueueJoinCallback->SetCallback(CHAT_CALLBACK_REFRESH_GAME);
   m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_CURRENT_LOBBY);
@@ -1119,7 +1119,7 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CComman
 
 void CRealm::TryQueueChat(const string& message, const string& user, bool isPrivate, CCommandContext* fromCtx, const uint8_t ctxFlags)
 {
-  // TODO(IceSandslash): TryQueueChat
+  // TODO(IceSandslash): TryQueueChat ctxFlags
   // don't respond to non admins if there are more than 25 messages already in the queue
   // this prevents malicious users from filling up the bot's chat queue and crippling the bot
   // in some cases the queue may be full of legitimate messages but we don't really care if the bot ignores one of these commands once in awhile

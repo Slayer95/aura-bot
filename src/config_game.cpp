@@ -59,6 +59,9 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_BroadcastCmdToken         = CFG.GetString("hosting.commands.broadcast.trigger", emptyString);
   m_EnableBroadcast           = CFG.GetBool("hosting.commands.broadcast.enabled", false);
 
+  if (!m_EnableBroadcast)
+    m_BroadcastCmdToken.clear();
+
   m_IndexVirtualHostName      = CFG.GetString("hosting.index.creator_name", 1, 15, "Aura Bot");
   m_LobbyVirtualHostName      = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 

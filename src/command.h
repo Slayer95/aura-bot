@@ -216,8 +216,8 @@ inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::st
       result = COMMAND_TOKEN_MATCH_PRIVATE;
     }
   }    
-  if (!result && !broadcastToken.empty()) {
-    if (ExtractMessageTokens(message, privateToken, matchCmd, matchPayload)) {
+  if (result == COMMAND_TOKEN_MATCH_NONE && !broadcastToken.empty()) {
+    if (ExtractMessageTokens(message, broadcastToken, matchCmd, matchPayload)) {
       matchToken = broadcastToken;
       result = COMMAND_TOKEN_MATCH_BROADCAST;
     }
