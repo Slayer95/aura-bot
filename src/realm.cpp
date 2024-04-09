@@ -93,9 +93,10 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_ReconnectNextTick(true),
     m_WaitingToConnect(true),
     m_LoggedIn(false),
+    m_GamePort(6112),
     m_HadChatActivity(false),
-    m_AnnounceGameQueued(false),
-    m_AnnounceGameDone(false),
+    m_AnyWhisperRejected(false),
+    m_ChatQueuedGameAnnouncement(false),
     m_ChatQueueJoinCallback(nullptr),
     m_ChatQueueGameHostWhois(nullptr)
 {
@@ -163,7 +164,7 @@ bool CRealm::Update(void* fd, void* send_fd)
   {
     // the socket has an error
     ResetConnection(true);
-    Print("[BNET: " + m_Config->m_UniqueName + "] waiting " + to_string(m_ReconnectDelay) + " seconds to reconnect");
+    Print(GetLogPrefix() + "waiting " + to_string(m_ReconnectDelay) + " seconds to reconnect");
     return m_Exiting;
   }
 
@@ -245,14 +246,14 @@ bool CRealm::Update(void* fd, void* send_fd)
 
             case CBNETProtocol::SID_STARTADVEX3:
               if (!m_Protocol->RECEIVE_SID_STARTADVEX3(Data)) {
-                Print("[BNET: " + m_Config->m_UniqueName + "] Failed to publish hosted game");
+                Print(GetLogPrefix() + "Failed to publish hosted game");
                 m_Aura->EventBNETGameRefreshFailed(this);
               }
 
               break;
 
             case CBNETProtocol::SID_PING:
-              m_Socket->PutBytes(m_Protocol->SEND_SID_PING(m_Protocol->RECEIVE_SID_PING(Data)));
+              SendAuth(m_Protocol->SEND_SID_PING(m_Protocol->RECEIVE_SID_PING(Data)));
               break;
 
             case CBNETProtocol::SID_AUTH_INFO: {
@@ -263,15 +264,15 @@ bool CRealm::Update(void* fd, void* send_fd)
               if (versionSuccess) {
                 if (!m_BNCSUtil->CheckValidEXEVersion()) {
                   m_BNCSUtil->SetEXEVersion(m_BNCSUtil->GetDefaultEXEVersion());
-                  Print("[BNET: " + m_Config->m_UniqueName + "] defaulting to <global_realm.auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetDefaultEXEVersion()) + ">");
+                  Print(GetLogPrefix() + "defaulting to <global_realm.auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetDefaultEXEVersion()) + ">");
                 }
                 if (!m_BNCSUtil->CheckValidEXEVersionHash()) {
                   m_BNCSUtil->SetEXEVersionHash(m_BNCSUtil->GetDefaultEXEVersionHash());
-                  Print("[BNET: " + m_Config->m_UniqueName + "] defaulting to <global_realm.auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetDefaultEXEVersionHash()) + ">");
+                  Print(GetLogPrefix() + "defaulting to <global_realm.auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetDefaultEXEVersionHash()) + ">");
                 }
                 if (!m_BNCSUtil->CheckValidEXEInfo()) {
                   m_BNCSUtil->SetEXEInfo(m_BNCSUtil->GetDefaultEXEInfo());
-                  Print("[BNET: " + m_Config->m_UniqueName + "] defaulting to <global_realm.auth_exe_info = " + m_BNCSUtil->GetDefaultEXEInfo() + ">");
+                  Print(GetLogPrefix() + "defaulting to <global_realm.auth_exe_info = " + m_BNCSUtil->GetDefaultEXEInfo() + ">");
                 }
 
                 const vector<uint8_t>& exeVersion = m_BNCSUtil->GetEXEVersion();
@@ -280,7 +281,7 @@ bool CRealm::Update(void* fd, void* send_fd)
 
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
                   Print(
-                    "[BNET: " + m_Config->m_UniqueName + "] attempting to auth as WC3: TFT v" +
+                    GetLogPrefix() + "attempting to auth as WC3: TFT v" +
                     to_string(exeVersion[3]) + "." + to_string(exeVersion[2]) + std::string(1, char(97 + exeVersion[1])) +
                     " (Build " + to_string(exeVersion[0]) + ") - " +
                     "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
@@ -292,11 +293,11 @@ bool CRealm::Update(void* fd, void* send_fd)
                 SendNetworkConfig();
               } else {
                 if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
-                  Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured <game.install_path>");
+                  Print(GetLogPrefix() + "config error - misconfigured <game.install_path>");
                 } else {
-                  Print("[BNET: " + m_Config->m_UniqueName + "] config error - misconfigured <game.install_path>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.roc>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.tft>");
+                  Print(GetLogPrefix() + "config error - misconfigured <game.install_path>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.roc>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.tft>");
                 }
-                Print("[BNET: " + m_Config->m_UniqueName + "] bncsutil key hash failed, disconnecting...");
+                Print(GetLogPrefix() + "bncsutil key hash failed, disconnecting...");
                 m_Socket->Disconnect();
               }
 
@@ -308,7 +309,7 @@ bool CRealm::Update(void* fd, void* send_fd)
               {
                 // cd keys accepted
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                  Print("[BNET: " + m_Config->m_UniqueName + "] game OK");
+                  Print(GetLogPrefix() + "version OK");
                 }
                 m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
                 SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
@@ -320,22 +321,22 @@ bool CRealm::Update(void* fd, void* send_fd)
                 switch (ByteArrayToUInt32(m_Protocol->GetKeyState(), false))
                 {
                   case CBNETProtocol::KR_ROC_KEY_IN_USE:
-                    Print("[BNET: " + m_Config->m_UniqueName + "] logon failed - ROC CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...");
+                    Print(GetLogPrefix() + "logon failed - ROC CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...");
                     break;
 
                   case CBNETProtocol::KR_TFT_KEY_IN_USE:
-                    Print("[BNET: " + m_Config->m_UniqueName + "] logon failed - TFT CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...");
+                    Print(GetLogPrefix() + "logon failed - TFT CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...");
                     break;
 
                   case CBNETProtocol::KR_OLD_GAME_VERSION:
                   case CBNETProtocol::KR_INVALID_VERSION:
-                    Print("[BNET: " + m_Config->m_UniqueName + "] config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersion()) + ">");
-                    Print("[BNET: " + m_Config->m_UniqueName + "] config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersionHash()) + ">");
-                    Print("[BNET: " + m_Config->m_UniqueName + "] logon failed - version not supported, or version hash invalid, disconnecting...");
+                    Print(GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersion()) + ">");
+                    Print(GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersionHash()) + ">");
+                    Print(GetLogPrefix() + "logon failed - version not supported, or version hash invalid, disconnecting...");
                     break;
 
                   default:
-                    Print("[BNET: " + m_Config->m_UniqueName + "] logon failed - cd keys not accepted, disconnecting...");
+                    Print(GetLogPrefix() + "logon failed - cd keys not accepted, disconnecting...");
                     break;
                 }
 
@@ -348,7 +349,7 @@ bool CRealm::Update(void* fd, void* send_fd)
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data))
               {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                  Print("[BNET: " + m_Config->m_UniqueName + "] username [" + m_Config->m_UserName + "] OK");
+                  Print(GetLogPrefix() + "username [" + m_Config->m_UserName + "] OK");
                 }
 
                 if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN)
@@ -356,7 +357,7 @@ bool CRealm::Update(void* fd, void* send_fd)
                   // pvpgn logon
 
                   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                    Print("[BNET: " + m_Config->m_UniqueName + "] using pvpgn logon type");
+                    Print(GetLogPrefix() + "using pvpgn logon type");
                   }
                   m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
                   SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()));
@@ -366,7 +367,7 @@ bool CRealm::Update(void* fd, void* send_fd)
                   // battle.net logon
 
                   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                    Print("[BNET: " + m_Config->m_UniqueName + "] using battle.net logon type");
+                    Print(GetLogPrefix() + "using battle.net logon type");
                   }
                   m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(m_Protocol->GetSalt(), m_Protocol->GetServerPublicKey());
                   SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()));
@@ -374,30 +375,19 @@ bool CRealm::Update(void* fd, void* send_fd)
               }
               else
               {
-                Print("[BNET: " + m_Config->m_UniqueName + "] logon failed - invalid username, disconnecting");
+                Print(GetLogPrefix() + "logon failed - invalid username, disconnecting");
                 m_Socket->Disconnect();
               }
 
               break;
 
             case CBNETProtocol::SID_AUTH_ACCOUNTLOGONPROOF:
-              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data))
-              {
-                // logon successful
-
-                Print("[BNET: " + m_Config->m_UniqueName + "] logged in as [" + m_Config->m_UserName + "]");
-                m_LoggedIn = true;
-                TrySendGetGamesList();
-                TrySendEnterChat();
-                //SendGetFriendsList();
-                //SendGetClanList();
-              }
-              else
-              {
-                Print("[BNET: " + m_Config->m_UniqueName + "] logon failed - invalid password, disconnecting");
+              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
+                OnLoginOkay();
+              } else {
+                Print(GetLogPrefix() + "logon failed - invalid password, disconnecting");
                 m_Socket->Disconnect();
               }
-
               break;
 
             case CBNETProtocol::SID_FRIENDLIST:
@@ -493,10 +483,10 @@ bool CRealm::Update(void* fd, void* send_fd)
     // attempt to connect to battle.net
 
     if (!m_FirstConnect) {
-      Print("[BNET: " + m_Config->m_UniqueName + "] reconnecting to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]...");
+      Print(GetLogPrefix() + "reconnecting to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]...");
     } else {
       if (m_Config->m_BindAddress.has_value()) {
-        Print("[BNET: " + m_Config->m_UniqueName + "] connecting with local address [" + AddressToString(m_Config->m_BindAddress.value()) + "]...");
+        Print(GetLogPrefix() + "connecting with local address [" + AddressToString(m_Config->m_BindAddress.value()) + "]...");
       }
     }
     m_FirstConnect = false;
@@ -522,7 +512,7 @@ bool CRealm::Update(void* fd, void* send_fd)
 
       ++m_SessionID;
       if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-        Print("[BNET: " + m_Config->m_UniqueName + "] connected to [" + m_HostName + "]");
+        Print(GetLogPrefix() + "connected to [" + m_HostName + "]");
       }
       SendAuth(m_Protocol->SEND_PROTOCOL_INITIALIZE_SELECTOR());
       uint8_t gameVersion = m_Config->m_AuthWar3Version.has_value() ? m_Config->m_AuthWar3Version.value() : m_Aura->m_GameVersion;
@@ -535,8 +525,8 @@ bool CRealm::Update(void* fd, void* send_fd)
     {
       // the connection attempt timed out (10 seconds)
 
-      Print("[BNET: " + m_Config->m_UniqueName + "] failed to connect to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]");
-      Print("[BNET: " + m_Config->m_UniqueName + "] waiting 90 seconds to retry...");
+      Print(GetLogPrefix() + "failed to connect to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]");
+      Print(GetLogPrefix() + "waiting 90 seconds to retry...");
       m_Socket->Reset();
       m_LastDisconnectedTime = Time;
       m_WaitingToConnect     = true;
@@ -555,7 +545,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
   string                           Message  = chatEvent->GetMessage();
 
   if (!m_Socket->GetConnected()) {
-    Print("[BNET: " + m_Config->m_UniqueName + "] not connected - message from [" + User + "] rejected: [" + Message + "]");
+    Print(GetLogPrefix() + "not connected - message from [" + User + "] rejected: [" + Message + "]");
     return;
   }
 
@@ -597,7 +587,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     }
 
     string cmdToken, command, payload;
-    uint8_t tokenMatch = ExtractMessageTokens(Message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
+    uint8_t tokenMatch = ExtractMessageTokensAny(Message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
     if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
       if (Whisper) {
         string tokenName = GetTokenName(m_Config->m_PrivateCmdToken);
@@ -606,25 +596,24 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       }
       return;
     }
-    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, User, Whisper, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, User, Whisper, !Whisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
     ctx->Run(cmdToken, command, payload);
     m_Aura->UnholdContext(ctx);
   }
   else if (Event == CBNETProtocol::EID_CHANNEL)
   {
-    Print("[BNET: " + m_Config->m_UniqueName + "] joined channel [" + Message + "]");
+    Print(GetLogPrefix() + "joined channel [" + Message + "]");
     m_CurrentChannel = Message;
   } else if (Event == CBNETProtocol::EID_WHISPERSENT) {
-    Print("[BNET: " + m_Config->m_UniqueName + "] whisper sent OK [" + Message + "]");
+    Print(GetLogPrefix() + "whisper sent OK [" + Message + "]");
     if (!m_ChatSentWhispers.empty()) {
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
-        if (oldestWhisper->GetProxyCtx()->CheckActionMessage(Message)) {
-          if (!oldestWhisper->GetProxyCtx()->GetPartiallyDestroyed()) {
-            oldestWhisper->GetProxyCtx()->SendReply("Message sent to " + oldestWhisper->GetReceiver() + ".");
-          }
+        CCommandContext* fromCtx = oldestWhisper->GetProxyCtx();
+        if (fromCtx->CheckActionMessage(Message) && !fromCtx->GetPartiallyDestroyed()) {
+          fromCtx->SendReply("Message sent to " + oldestWhisper->GetReceiver() + ".");
         }
-        oldestWhisper->GetProxyCtx()->ClearActionMessage();
+        fromCtx->ClearActionMessage();
       }
       delete oldestWhisper;
       m_ChatSentWhispers.pop();
@@ -670,13 +659,21 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       Print("[INFO: " + m_Config->m_UniqueName + "] " + Message);
     }
   } else if (Event == CBNETProtocol::EID_ERROR) {
-    if (!m_ChatSentWhispers.empty() && Message.length() == 27 && Message == "That user is not logged on.") {
+    // Note that the default English error message <<That user is not logged on.>> is also received in other two circumstances:
+    // - When sending /netinfo <USER>, if the bot has admin permissions in this realm.
+    // - When sending /ban <USER>, if the bot has admin permissions in this realm.
+    //
+    // Therefore, abuse of the !SAY command will temporarily break feedback for !TELL/INVITE, until m_ChatSentWhispers is emptied.
+    // This is (yet another reason) why !SAY /COMMAND must always be gated behind sudo.
+    if (!m_ChatSentWhispers.empty() && Message.length() == m_Config->m_WhisperErrorReply.length() && Message == m_Config->m_WhisperErrorReply) {
+      m_AnyWhisperRejected = true;
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
-        if (!oldestWhisper->GetProxyCtx()->GetPartiallyDestroyed()) {
-          oldestWhisper->GetProxyCtx()->SendReply(oldestWhisper->GetReceiver() + " is offline.");
+        CCommandContext* fromCtx = oldestWhisper->GetProxyCtx();
+        if (!fromCtx->GetPartiallyDestroyed()) {
+          fromCtx->SendReply(oldestWhisper->GetReceiver() + " is offline.");
         }
-        oldestWhisper->GetProxyCtx()->ClearActionMessage();
+        fromCtx->ClearActionMessage();
       }
       delete oldestWhisper;
       m_ChatSentWhispers.pop();
@@ -714,12 +711,19 @@ bool CRealm::CheckWithinChatQuota(const CQueuedChatMessage* message)
 bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 {
   uint8_t selectType;
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+    Print(GetLogPrefix() + "sent <<" + message->GetInnerMessage() + ">>");
+  }
   Send(message->SelectBytes(m_CurrentChannel, selectType));
   if (message->GetSendsEarlyFeedback()) {
     m_ChatQueueMain.push(message->GetEarlyFeedback());
   }
   if (selectType == CHAT_RECV_SELECTED_WHISPER) {
     m_ChatSentWhispers.push(message);
+    if (m_ChatSentWhispers.size() > 25 && !m_AnyWhisperRejected && m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print(GetLogPrefix() + "warning - " + to_string(m_ChatSentWhispers.size()) + " sent whispers have not been confirmed by the server");
+      Print(GetLogPrefix() + "warning - <" + m_Config->m_CFGKeyPrefix + "protocol.whisper.error_reply = " + m_Config->m_WhisperErrorReply + "> may not match the language of this realm's system messages.");
+    }
     // If whisper, return false, meaning that caller must not delete message
     return false;
   }
@@ -727,6 +731,19 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
     uint8_t extraQuota = message->GetVirtualSize(m_Config->m_VirtualLineLength, selectType);
     m_ChatQuotaInUse.push_back(make_pair(GetTicks(), extraQuota));
   }
+
+  switch (message->GetCallback()) {
+    case CHAT_CALLBACK_REFRESH_GAME:
+      m_ChatQueuedGameAnnouncement = false;
+      //assert(m_Aura->m_CurrentLobby != nullptr);
+      m_Aura->m_CurrentLobby->AnnounceToRealm(this);
+      break;
+
+    default:
+      // Do nothing
+      break;
+  }
+
   return true;
 }
 
@@ -891,6 +908,7 @@ void CRealm::SendNetworkConfig()
 {
   if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsMirror() && !m_Config->m_IsMirror) {
     SendAuth(m_Protocol->SEND_SID_PUBLICHOST(m_Aura->m_CurrentLobby->GetPublicHostAddress(), m_Aura->m_CurrentLobby->GetPublicHostPort()));
+    m_GamePort = m_Aura->m_CurrentLobby->GetPublicHostPort();
   } else if (m_Config->m_EnableCustomAddress) {
     uint16_t port = 6112;
     if (m_Config->m_EnableCustomPort) {
@@ -899,8 +917,10 @@ void CRealm::SendNetworkConfig()
       port = m_Aura->m_CurrentLobby->GetHostPort();
     }
     SendAuth(m_Protocol->SEND_SID_PUBLICHOST(AddressToIPv4Vector(&(m_Config->m_PublicHostAddress)), port));
+    m_GamePort = port;
   } else if (m_Config->m_EnableCustomPort) {
     SendAuth(m_Protocol->SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort));
+    m_GamePort = m_Config->m_PublicHostPort;
   }
 }
 
@@ -908,9 +928,9 @@ void CRealm::AutoJoinChat()
 {
   const string& targetChannel = m_AnchorChannel.empty() ? m_Config->m_FirstChannel : m_AnchorChannel;
   if (targetChannel.empty()) return;
-  m_Socket->PutBytes(m_Protocol->SEND_SID_JOINCHANNEL(targetChannel));
+  Send(m_Protocol->SEND_SID_JOINCHANNEL(targetChannel));
   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    Print("[BNET: " + m_Config->m_UniqueName + "] joining channel [" + targetChannel + "]");
+    Print(GetLogPrefix() + "joining channel [" + targetChannel + "]");
   }
 }
 
@@ -929,131 +949,212 @@ void CRealm::TrySendEnterChat()
 void CRealm::Send(const vector<uint8_t>& packet)
 {
   if (m_LoggedIn) {
-    m_Socket->PutBytes(packet);
+    SendAuth(packet);
+  } else if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+    Print(GetLogPrefix() + "packet not sent (not logged in)");
   }
 }
 
 void CRealm::SendAuth(const vector<uint8_t>& packet)
 {
+  // This function is public only for the login phase.
+  // Though it's also privately used by CRealm::Send.
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+    Print(GetLogPrefix() + "sending packet - " + ByteArrayToHexString(packet));
+  }
   m_Socket->PutBytes(packet);
 }
 
-void CRealm::QueueCommand(const string& message)
+void CRealm::OnLoginOkay()
+{
+  m_LoggedIn = true;
+  Print(GetLogPrefix() + "logged in as [" + m_Config->m_UserName + "]");
+
+  TrySendGetGamesList();
+  //SendGetFriendsList();
+  //SendGetClanList();
+
+  TrySendEnterChat();
+  TryQueueGameChatAnnouncement(m_Aura->m_CurrentLobby);
+}
+
+CQueuedChatMessage* CRealm::QueueCommand(const string& message, CCommandContext* fromCtx, const bool isProxy)
 {
   if (message.empty() || !m_LoggedIn)
-    return;
+    return nullptr;
 
   if (message.length() > m_Config->m_MaxLineLength) {
-    return;
+    return nullptr;
   }
 
-  CQueuedChatMessage* entry = new CQueuedChatMessage(this);
-  /*
-  entry->time = GetTime();
-  entry->gameId = m_Aura->m_CurrentLobby ? m_Aura->m_CurrentLobby->GetHostCounter() : 0;
-  entry->callback = 0;
-  entry->virtualSize = GetAntiFloodSize(message);
-  entry->result = 0;
-  entry->userWhy = string();
-  entry->fromCtx = nullptr;
-  entry->userTo = string();
-  entry->message = message;
-  */
+  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  entry->SetMessage(message);
+  entry->SetReceiver(RECV_SELECTOR_SYSTEM);
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
 
-  Print("[BNET: " + m_Config->m_UniqueName + "] Queued \"" + message + "\"");
-  //Send(m_Protocol->SEND_SID_CHAT_PUBLIC(message));
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    Print(GetLogPrefix() + "queued command \"" + message + "\"");
+  }
+  return entry;
 }
 
-void CRealm::QueueChatChannel(const string& message)
+CQueuedChatMessage* CRealm::QueuePriorityWhois(const string& message)
 {
   if (message.empty() || !m_LoggedIn)
-    return;
+    return nullptr;
 
-  CQueuedChatMessage* entry = new CQueuedChatMessage(this);
-  /*
-  entry->time = GetTime();
-  entry->gameId = m_Aura->m_CurrentLobby ? m_Aura->m_CurrentLobby->GetHostCounter() : 0;
-  entry->callback = 0;
-  entry->virtualSize = GetAntiFloodSize(message);
-  entry->result = 0;
-  entry->userWhy = string();
-  entry->fromCtx = nullptr;
-  entry->userTo = string();
-  entry->message = message;
-  */
+  if (message.length() > m_Config->m_MaxLineLength) {
+    return nullptr;
+  }
+
+  if (m_ChatQueueGameHostWhois) {
+    delete m_ChatQueueGameHostWhois;
+  }
+  m_ChatQueueGameHostWhois = new CQueuedChatMessage(this, nullptr, false);
+  m_ChatQueueGameHostWhois->SetMessage(message);
+  m_ChatQueueGameHostWhois->SetReceiver(RECV_SELECTOR_SYSTEM);
+  m_HadChatActivity = true;
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    Print(GetLogPrefix() + "queued fast spoofcheck \"" + message + "\"");
+  }
+  return m_ChatQueueGameHostWhois;
+}
+
+CQueuedChatMessage* CRealm::QueueChatChannel(const string& message, CCommandContext* fromCtx, const bool isProxy)
+{
+  if (message.empty() || !m_LoggedIn)
+    return nullptr;
+
+  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  entry->SetMessage(message);
+  entry->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
 
-  Print("[BNET: " + m_Config->m_UniqueName + "] Queued \"" + message + "\"");
-
-  //size_t MaxMessageSize = GetPvPGN() ? 200 : 255;
-  //if (message.length() > MaxMessageSize) {
-    //Send(m_Protocol->SEND_SID_CHAT_PUBLIC(message.substr(0, MaxMessageSize)));
-  //} else {
-    //Send(m_Protocol->SEND_SID_CHAT_PUBLIC(message));
-  //}
+  Print(GetLogPrefix() + "queued chat message \"" + entry->GetInnerMessage() + "\"");
+  return entry;
 }
 
-void CRealm::QueueWhisper(const string& message, const string& user)
+CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const string& message, const string& user, const uint8_t selector, CCommandContext* fromCtx, const bool isProxy)
 {
-  QueueCommand("/w " + user + " " + message);
+  if (message.empty() || !m_LoggedIn)
+    return nullptr;
+
+  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  entry->SetMessage(messageValue, message);
+  entry->SetReceiver(selector, user);
+  m_ChatQueueMain.push(entry);
+  m_HadChatActivity = true;
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    Print(GetLogPrefix() + "queued reply to [" + user + "] - \"" + message + "\"");
+  }
+  return entry;
 }
 
-void CRealm::QueueWhisper(const string& message, const string& user, CCommandContext* fromCtx)
+CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& user, CCommandContext* fromCtx, const bool isProxy)
 {
-  if (m_Config->m_MaxLineLength - 20 < message.length()) {
-    QueueCommand("/w " + user + " " + message.substr(0, m_Config->m_MaxLineLength - 20)); 
+  if (message.empty() || !m_LoggedIn)
+    return nullptr;
+
+  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  if ((m_Config->m_MaxLineLength - 20) < message.length()) {
+    entry->SetMessage(message.substr(0, m_Config->m_MaxLineLength - 20));
   } else {
-    QueueCommand("/w " + user + " " + message); 
+    entry->SetMessage(message);
+  }
+  entry->SetReceiver(RECV_SELECTOR_ONLY_WHISPER, user);
+  m_ChatQueueMain.push(entry);
+  m_HadChatActivity = true;
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    Print(GetLogPrefix() + "queued whisper to [" + user + "] - \"" + entry->GetInnerMessage() + "\"");
+  }
+  return entry;
+}
+
+void CRealm::TryQueueGameChatAnnouncement(const CGame* game)
+{
+  if (!game || !m_LoggedIn) {
+    return;
+  }
+
+  if (game->GetIsMirror() && GetIsMirror()) {
+    // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+    // Do not display external games in those realms.
+    return;
+  }
+
+  if (game->GetIsRealmExcluded(GetServer())) {
+    return;
+  }
+
+  if (game->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
+    QueueGameChatAnnouncement(game);
+    return;
   }
 }
 
-void CRealm::QueueChatOrWhisper(const string& message, const string& user, bool whisper)
+CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CCommandContext* fromCtx, const bool isProxy)
 {
-  if (whisper) {
-    QueueWhisper(message, user);
-  } else {
-    QueueChatChannel(message);
+  if (!m_LoggedIn)
+    return nullptr;
+
+  m_ChatQueuedGameAnnouncement = true;
+
+  m_ChatQueueJoinCallback = new CQueuedChatMessage(this, fromCtx, isProxy);
+  m_ChatQueueJoinCallback->SetMessage(m_Aura->m_CurrentLobby->GetAnnounceText(this));
+  m_ChatQueueJoinCallback->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
+  m_ChatQueueJoinCallback->SetCallback(CHAT_CALLBACK_REFRESH_GAME);
+  m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_CURRENT_LOBBY);
+  m_HadChatActivity = true;
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    Print(GetLogPrefix() + "queued game announcement");
   }
+  return m_ChatQueueJoinCallback;
 }
 
-void CRealm::TryQueueChat(const string& message, const string& user, bool isPrivate, ostream* errorLog)
+void CRealm::TryQueueChat(const string& message, const string& user, bool isPrivate, CCommandContext* fromCtx, const uint8_t ctxFlags)
 {
-  // don't respond to non admins if there are more than 3 messages already in the queue
+  // TODO(IceSandslash): TryQueueChat
+  // don't respond to non admins if there are more than 25 messages already in the queue
   // this prevents malicious users from filling up the bot's chat queue and crippling the bot
   // in some cases the queue may be full of legitimate messages but we don't really care if the bot ignores one of these commands once in awhile
   // e.g. when several users join a game at the same time and cause multiple /whois messages to be queued at once
 
-  bool IsQuotaBypass = GetIsFloodImmune() || GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user);
-  bool IsQuotaOkay = IsQuotaBypass || message.length() <= 200;
-  bool IsQuotaReached = false;
-  if (IsQuotaOkay) {
-    if (IsQuotaReached && message.length() <= (GetPvPGN() ? 200 : 255) - (isPrivate ? 20 + 47 : 47)) {
-      QueueChatOrWhisper(message + " - (Please wait 1 min to send further commands)", user, isPrivate);
-    } else {
-      QueueChatOrWhisper(message, user, isPrivate);
-    }
+  if (m_ChatQueueMain.size() >= 25 && !(GetIsFloodImmune() || GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))) {
     return;
   }
 
-  (*errorLog) << GetLogPrefix() + message << std::endl;
-  (*errorLog) << "[AURA] Quota exceeded (reply dropped.)" << std::endl;
+  //QueueChatReply(const uint8_t messageValue, const string& message, const string& user, const uint8_t selector, CCommandContext* fromCtx, const bool isProxy)
+
+  bool IsQuotaOkay = true;
+  if (IsQuotaOkay) {
+    //if (IsQuotaReached && message.length() <= (GetPvPGN() ? 200 : 255) - (isPrivate ? 20 + 47 : 47)) {
+      //QueueChatOrWhisper(message + " - (Please wait 1 min to send further commands)", user, isPrivate);
+    //} else {
+    if (isPrivate) {
+      QueueWhisper(message, user);
+    } else {
+      QueueChatChannel(message);
+    }
+    // TODO(IceSandslash): QueueCommand??
+    return;
+  }
+
+  ostream* outStream = fromCtx ? (fromCtx->GetOutputStream()) : &cout;
+  *outStream << GetLogPrefix() + message << std::endl;
+  *outStream << "[AURA] Quota exceeded (reply dropped.)" << std::endl;
 }
 
-void CRealm::QueueGameRefresh(uint8_t displayMode, const string& gameName, const uint16_t connectPort, CMap* map, uint32_t hostCounter, bool useServerNamespace)
+
+void CRealm::SendGameRefresh(uint8_t displayMode, const string& gameName, const uint16_t connectPort, CMap* map, uint32_t hostCounter, bool useServerNamespace)
 {
   if (!m_LoggedIn || !map)
     return;
-
-  if (!m_AnnounceGameDone && (m_AnnounceGameQueued || m_Config->m_AnnounceHostToChat)) {
-    if (!m_CurrentChannel.empty()) {
-      m_AnchorChannel = m_CurrentChannel;
-    }
-    Send(m_Protocol->SEND_SID_NETGAMEPORT(connectPort));
-    m_AnnounceGameDone = true;
-  }
 
   // construct a fixed host counter which will be used to identify players from this realm
   // the fixed host counter's highest-order byte will contain a 8 bit ID (0-255)
@@ -1062,14 +1163,17 @@ void CRealm::QueueGameRefresh(uint8_t displayMode, const string& gameName, const
   // when a player joins a game we can obtain the ID from the received host counter
   // note: LAN broadcasts use an ID of 0, battle.net refreshes use IDs of 16-255, the rest are reserved
 
-  uint32_t MapGameType = map->GetMapGameType();
-  MapGameType |= MAPGAMETYPE_UNKNOWN0;
+  uint32_t mapGameType = map->GetMapGameType();
+  mapGameType |= MAPGAMETYPE_UNKNOWN0;
+  if (displayMode == GAME_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
 
-  if (displayMode == GAME_PRIVATE)
-    MapGameType |= MAPGAMETYPE_PRIVATEGAME;
+  if (m_GamePort != connectPort) {
+    Send(m_Protocol->SEND_SID_NETGAMEPORT(connectPort));
+    m_GamePort = connectPort;
+  }
 
   Send(m_Protocol->SEND_SID_STARTADVEX3(
-    displayMode, CreateByteArray(MapGameType, false), map->GetMapGameFlags(),
+    displayMode, CreateByteArray(mapGameType, false), map->GetMapGameFlags(),
     // use an invalid map width/height to indicate reconnectable games
     m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapWidth(),
     m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),
@@ -1079,22 +1183,24 @@ void CRealm::QueueGameRefresh(uint8_t displayMode, const string& gameName, const
     m_Aura->m_MaxSlots
   ));
 
-  m_CurrentChannel.clear();
+  if (!m_CurrentChannel.empty()) {
+    m_AnchorChannel = m_CurrentChannel;
+    m_CurrentChannel.clear();
+  }
 }
 
 void CRealm::QueueGameUncreate()
 {
-  m_AnnounceGameQueued = false;
-  m_AnnounceGameDone = false;
+  ResetGameAnnouncement();
   Send(m_Protocol->SEND_SID_STOPADV());
 }
 
 void CRealm::ResetConnection(bool Errored)
 {
   if (Errored)
-    Print("[BNET: " + m_Config->m_UniqueName + "] disconnected due to socket error");
+    Print(GetLogPrefix() + "disconnected due to socket error");
   else
-    Print("[BNET: " + m_Config->m_UniqueName + "] disconnected");
+    Print(GetLogPrefix() + "disconnected");
   m_LastDisconnectedTime = GetTime();
   m_BNCSUtil->Reset(m_Config->m_UserName, m_Config->m_PassWord);
   m_Socket->Reset();

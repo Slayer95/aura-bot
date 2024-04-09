@@ -627,7 +627,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
   if (pkt->buf[8] == m_Aura->m_GameVersion || pkt->buf[8] == 0) {
     if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetUDPEnabled() && !m_Aura->m_CurrentLobby->GetCountDownStarted()) {
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-        Print("IP " + ipAddress + " searching from port " + to_string(remotePort) + "...");
+        Print("[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...");
       }
       m_Aura->m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket);
 

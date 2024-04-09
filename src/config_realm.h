@@ -129,6 +129,8 @@ public:
   uint16_t m_MaxLineLength;                      // - PvPGN: corresponds to bnetd.conf: quota_maxline (default 200)
   bool m_FloodImmune;                            // whether we are allowed to send unlimited commands to the server - PvPGN: corresponds to lua/confg.lua: flood_immunity, or ghost_bots
 
+  std::string m_WhisperErrorReply;
+
   bool m_QueryGameLists;                         // whether we should periodically request a list of hosted games
 
   CRealmConfig(CConfig& CFG, CNetConfig* nNetConfig);

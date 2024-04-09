@@ -42,17 +42,26 @@ using namespace std;
 // CQueuedChatMessage
 //
 
-CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm)
+CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, const bool isProxy)
   : m_Realm(nRealm),
     m_Protocol(nRealm->GetProtocol()),
     m_QueuedTime(0),
     m_ReceiverSelector(0),
     m_MessageValue(0),
 
-    m_ProxySenderCtx(nullptr)
+    m_ProxySenderCtx(nullptr),
+    m_Callback(CHAT_CALLBACK_NONE)
 {
-    //m_ReceiverName = vector<uint8_t>();
-    //m_Message = vector<uint8_t>(),
+  if (nCtx && nCtx->m_SourceRealm == nRealm) {
+    m_Channel = nCtx->GetChannelName();
+  }
+  if (m_Channel.empty()) {
+    m_Channel = nRealm->GetCurrentChannel();
+  }
+  if (isProxy) {
+    m_ProxySenderCtx = nCtx;
+    m_ProxySenderName = vector<uint8_t>(nCtx->GetSender().begin(), nCtx->GetSender().end());
+  }
 }
 
 CQueuedChatMessage::~CQueuedChatMessage()
@@ -60,6 +69,22 @@ CQueuedChatMessage::~CQueuedChatMessage()
   if (m_ProxySenderCtx) {
     m_Realm->m_Aura->UnholdContext(m_ProxySenderCtx);
     m_ProxySenderCtx = nullptr;
+  }
+}
+
+void CQueuedChatMessage::SetValidator(const uint8_t validator)
+{
+  switch (validator) {
+    case CHAT_VALIDATOR_CURRENT_LOBBY:
+      if (!m_Realm->m_Aura->m_CurrentLobby) return;
+      m_Validator = vector<uint8_t>(5, validator);
+      m_Validator[1] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter();
+      m_Validator[2] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 8;
+      m_Validator[3] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 16;
+      m_Validator[4] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 24;
+      break;
+    default:
+      break;
   }
 }
 
@@ -74,6 +99,7 @@ bool CQueuedChatMessage::GetIsStale() const
   switch (m_Validator[0]) {
     case CHAT_VALIDATOR_CURRENT_LOBBY:
       if (!m_Realm->m_Aura->m_CurrentLobby) return true;
+      if (m_Realm->m_Aura->m_CurrentLobby->GetIsRealmRefreshError()) return true;
       return m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() != ByteArrayToUInt32(m_Validator, false, 1);
     default:
       return false;
@@ -93,6 +119,8 @@ vector<uint8_t> CQueuedChatMessage::GetWhisper() const
 uint8_t CQueuedChatMessage::QuerySelection(const std::string& currentChannel) const
 {
   switch (m_ReceiverSelector) {
+    case RECV_SELECTOR_SYSTEM:
+      return CHAT_RECV_SELECTED_SYSTEM;
     case RECV_SELECTOR_ONLY_WHISPER:
       return CHAT_RECV_SELECTED_WHISPER;
     case RECV_SELECTOR_ONLY_PUBLIC:
@@ -117,6 +145,7 @@ vector<uint8_t> CQueuedChatMessage::SelectBytes(const std::string& currentChanne
     case CHAT_RECV_SELECTED_WHISPER:
       return GetWhisper();
     case CHAT_RECV_SELECTED_PUBLIC:
+    case CHAT_RECV_SELECTED_SYSTEM:
       return GetMessage();
     default:
       return vector<uint8_t>();
@@ -129,6 +158,7 @@ uint8_t CQueuedChatMessage::SelectSize(const size_t wrapSize, const std::string&
   switch (selectType) {
     case CHAT_RECV_SELECTED_WHISPER:
     case CHAT_RECV_SELECTED_PUBLIC:
+    case CHAT_RECV_SELECTED_SYSTEM:
       return GetVirtualSize(wrapSize, selectType);
     default:
       // m_Message.size() > 0 => GetVirtualSize(...) > 0
@@ -143,6 +173,7 @@ uint8_t CQueuedChatMessage::GetVirtualSize(const size_t wrapSize, const uint8_t 
   if (selectType == CHAT_RECV_SELECTED_WHISPER) {
     result = (m_Protocol->GetWhisperSize(m_Message, m_ReceiverName) + wrapSize - 1) / wrapSize;
   } else {
+    // public or system
     result = (m_Protocol->GetMessageSize(m_Message) + wrapSize - 1) / wrapSize;
   }
   // Note that PvPGN antiflood accepts no more than 100 virtual lines in any given message.

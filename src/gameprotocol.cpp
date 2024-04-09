@@ -672,19 +672,19 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPPART(uint8_t fromPID, uint8_t t
 
     // calculate end position (don't send more than 1442 map bytes in one packet)
 
-    uint32_t End = start + 1442;
+    uint32_t end = start + 1442;
 
-    if (End > static_cast<uint32_t>(mapData->size()))
-      End = static_cast<uint32_t>(mapData->size());
+    if (end > static_cast<uint32_t>(mapData->size()) || end < start)
+      end = static_cast<uint32_t>(mapData->size());
 
     // calculate crc
 
-    const std::vector<uint8_t> crc32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)mapData->c_str() + start, End - start), false);
+    const std::vector<uint8_t> crc32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)mapData->c_str() + start, static_cast<uint32_t>(end - start)), false);
     AppendByteArrayFast(packet, crc32);
 
     // map data
 
-    const std::vector<uint8_t> data = CreateByteArray((uint8_t*)mapData->c_str() + start, End - start);
+    const std::vector<uint8_t> data = CreateByteArray((uint8_t*)mapData->c_str() + start, static_cast<uint32_t>(end - start));
     AppendByteArrayFast(packet, data);
     AssignLength(packet);
     return packet;

@@ -46,7 +46,6 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include "fileutil.h"
 #include "util.h"
 
-#include <fstream>
 #include <algorithm>
 #include <iostream>
 #include <bitset>
@@ -176,7 +175,7 @@ vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<P
   return Files;
 }
 
-string FileRead(const filesystem::path& file, size_t start, size_t length, size_t* byteSize)
+string FileRead(const filesystem::path& file, size_t start, size_t length, streamoff* byteSize)
 {
   ifstream IS;
   IS.open(file.native().c_str(), ios::binary | ios::in);
@@ -191,13 +190,15 @@ string FileRead(const filesystem::path& file, size_t start, size_t length, size_
 
   IS.seekg(0, ios::end);
 
-  size_t FileLength = IS.tellg();
+  streamoff FileLength = IS.tellg();
+  if (FileLength > 0x18000000) {
+    Print("[UTIL] error - refusing to load huge file [" + PathToString(file) + "]");
+    return string();
+  }
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
-
-  if (start > FileLength)
-  {
+  if (start > FileLength) {
     IS.close();
     return string();
   }
@@ -208,16 +209,13 @@ string FileRead(const filesystem::path& file, size_t start, size_t length, size_
 
   auto Buffer = new char[length];
   IS.read(Buffer, length);
-  if (byteSize != nullptr) {
-    (*byteSize) = static_cast<unsigned int>(IS.gcount());
-  }
   string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;
   return BufferString;
 }
 
-string FileRead(const filesystem::path& file, size_t* byteSize)
+string FileRead(const filesystem::path& file, streamoff* byteSize)
 {
   ifstream IS;
   IS.open(file.native().c_str(), ios::binary | ios::in);
@@ -231,7 +229,11 @@ string FileRead(const filesystem::path& file, size_t* byteSize)
   // get length of file
 
   IS.seekg(0, ios::end);
-  size_t FileLength = IS.tellg();
+  streamoff FileLength = IS.tellg();
+  if (FileLength > 0x18000000) {
+    Print("[UTIL] error - refusing to load huge file [" + PathToString(file) + "]");
+    return string();
+  }
   if (byteSize != nullptr) {
     (*byteSize) = FileLength;
   }
@@ -239,11 +241,8 @@ string FileRead(const filesystem::path& file, size_t* byteSize)
 
   // read data
 
-  auto Buffer = new char[FileLength];
+  auto Buffer = new char[static_cast<unsigned int>(FileLength)];
   IS.read(Buffer, FileLength);
-  if (byteSize != nullptr) {
-    (*byteSize) = static_cast<unsigned int>(IS.gcount());
-  }
   string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;

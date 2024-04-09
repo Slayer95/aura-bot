@@ -58,6 +58,7 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include "includes.h"
 #include <vector>
 #include <set>
+#include <fstream>
 #include <filesystem>
 #include <system_error>
 #include <cstdio>
@@ -69,8 +70,8 @@ PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
 PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
 std::string PathToString(const std::filesystem::path& file);
 std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
-std::string FileRead(const std::filesystem::path& file, size_t start, size_t length, int* byteSize);
-std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
+std::string FileRead(const std::filesystem::path& file, size_t start, size_t length, std::streamoff* byteSize);
+std::string FileRead(const std::filesystem::path& file, std::streamoff* byteSize);
 bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileDelete(const std::filesystem::path& File);
 std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);

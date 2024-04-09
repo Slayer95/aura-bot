@@ -308,10 +308,10 @@ void CIRC::ExtractPackets()
         continue;
 
       string cmdToken, command, payload;
-      uint8_t tokenMatch = ExtractMessageTokens(message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
+      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
       if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
         const bool isWhisper = channel[0] != '#';
-        CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, channel, nickName, isWhisper, hostName, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+        CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
         ctx->UpdatePermissions();
         ctx->Run(cmdToken, command, payload);
         m_Aura->UnholdContext(ctx);

@@ -111,9 +111,10 @@ private:
   bool                             m_ReconnectNextTick;         // ignore reconnect delay
   bool                             m_WaitingToConnect;          // if we're waiting to reconnect to battle.net after being disconnected
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
+  uint16_t                         m_GamePort;                  // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
+  bool                             m_ChatQueuedGameAnnouncement;// for !host, !announce
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
-  bool                             m_AnnounceGameQueued;        // for !announce
-  bool                             m_AnnounceGameDone;          // whether game creation has been announced - if not, announce it before sending game refresh (note: wait for joining chat!)
+  bool                             m_AnyWhisperRejected;        // whether the realm rejected any whisper because the receiver was not offline.
   std::queue<CQueuedChatMessage*>             m_ChatQueueMain;
   CQueuedChatMessage*                         m_ChatQueueJoinCallback; // High priority
   CQueuedChatMessage*                         m_ChatQueueGameHostWhois; // Also high priority
@@ -146,6 +147,7 @@ public:
   inline bool          GetExiting() const { return m_Exiting; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
   inline bool          GetInChat() const { return !m_CurrentChannel.empty(); }
+  inline std::string   GetCurrentChannel() const { return m_CurrentChannel; }
 
   bool                 GetEnabled() const;
   bool                 GetPvPGN() const;
@@ -157,7 +159,7 @@ public:
   std::string          GetDataBaseID() const;
   std::string          GetLogPrefix() const;
   inline uint8_t       GetHostCounterID() const { return m_PublicServerID; }
-  inline uint8_t       GetInternalID() const { return m_InternalServerID; }
+  inline uint32_t      GetInternalID() const { return m_InternalServerID; }
   std::string          GetLoginName() const;
   bool                 GetIsMirror() const;
   bool                 GetIsVPN() const;
@@ -170,6 +172,7 @@ public:
   std::string          GetCommandToken() const;
   std::string          GetPrefixedGameName(const std::string& gameName) const;
   bool                 GetAnnounceHostToChat() const;
+  inline bool          GetIsChatQueuedGameAnnouncement() { return m_ChatQueuedGameAnnouncement; }  
 
   bool                 GetHasEnhancedAntiSpoof() const;
   bool                 GetUnverifiedCannotStartGame() const;
@@ -189,24 +192,28 @@ public:
 
   void Send(const std::vector<uint8_t>& packet);
   void SendAuth(const std::vector<uint8_t>& packet);
+  void OnLoginOkay();
   void SendGetFriendsList();
   void SendGetClanList();
   void SendGetGamesList();
   void SendNetworkConfig();
   void AutoJoinChat();
   void SendEnterChat();
-  void QueueCommand(const std::string& chatCommand);
-  void QueueChatChannel(const std::string& chatCommand);
-  void QueueWhisper(const std::string& message, const std::string& user);
-  void QueueWhisper(const std::string& message, const std::string& user, CCommandContext* nFromCtx);
-  void QueueChatOrWhisper(const std::string& chatCommand, const std::string& user, bool whisper);
-  void TryQueueChat(const std::string& chatCommand, const std::string& user, bool isPrivate, std::ostream* errorLog);
-  void QueueGameRefresh(uint8_t displayMode, const std::string& gameName, const uint16_t connectPort, CMap* map, uint32_t hostCounter, bool useServerNamespace);
+  CQueuedChatMessage* QueueCommand(const std::string& message, CCommandContext* fromCtx = nullptr, const bool isProxy = false);
+  CQueuedChatMessage* QueuePriorityWhois(const std::string& message);
+  CQueuedChatMessage* QueueChatChannel(const std::string& message, CCommandContext* fromCtx = nullptr, const bool isProxy = false);
+  CQueuedChatMessage* QueueChatReply(const uint8_t messageValue, const std::string& message, const std::string& user, const uint8_t selector, CCommandContext* fromCtx = nullptr, const bool isProxy = false);
+  CQueuedChatMessage* QueueWhisper(const std::string& message, const std::string& user, CCommandContext* fromCtx = nullptr, const bool isProxy = false);
+  CQueuedChatMessage* QueueGameChatAnnouncement(const CGame* game, CCommandContext* fromCtx = nullptr, const bool isProxy = false);
+  void TryQueueChat(const std::string& chatCommand, const std::string& user, bool isPrivate, CCommandContext* ctx = nullptr, const uint8_t ctxFlags = 0);
+  void TryQueueGameChatAnnouncement(const CGame* game);
+  void SendGameRefresh(uint8_t displayMode, const std::string& gameName, const uint16_t connectPort, CMap* map, uint32_t hostCounter, bool useServerNamespace);
   void QueueGameUncreate();
   void TrySendEnterChat();
   void TrySendGetGamesList();
 
   void ResetConnection(bool hadError);
+  void ResetGameAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
   inline void SetReconnectNextTick(bool nReconnectNextTick) { m_ReconnectNextTick = nReconnectNextTick; };
 
   // other functions

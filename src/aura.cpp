@@ -195,7 +195,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
 
   const filesystem::path configExamplePath = homeDir / filesystem::path("config-example.ini");
 
-  size_t FileSize = 0;
+  streamoff FileSize = 0;
   const string exampleContents = FileRead(configExamplePath, &FileSize);
   if (exampleContents.empty()) {
     // But Aura can actually work without a config file ;)
@@ -360,6 +360,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Config(nullptr),
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
+    m_CommandDefaultConfig(),
 
     m_DB(new CAuraDB(CFG)),
     m_GameSetup(nullptr),
@@ -628,6 +629,7 @@ CAura::~CAura()
   delete m_Config;
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
+  delete m_CommandDefaultConfig;
   delete m_Net;
   delete m_GameProtocol;
   delete m_GPSProtocol;
@@ -1339,61 +1341,53 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     m_CurrentLobby->SendGameDiscoveryCreate();
   }
 
+  for (auto& realm : m_Realms) {
+    if (!gameSetup->GetIsMirror()) {
+      realm->HoldFriends(m_CurrentLobby);
+      realm->HoldClan(m_CurrentLobby);
+    }
+
+    if (!realm->GetLoggedIn()) {
+      continue;
+    }
+    if (gameSetup->GetIsMirror() && realm->GetIsMirror()) {
+      // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+      // Do not display external games in those realms.
+      continue;
+    }
+    if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
+      continue;
+    }
+
+    if (gameSetup->m_RealmsDisplayMode == GAME_PUBLIC && realm->GetAnnounceHostToChat()) {
+      realm->QueueGameChatAnnouncement(m_CurrentLobby);
+    } else {
+      // Send STARTADVEX3
+      m_CurrentLobby->AnnounceToRealm(realm);
+
+      // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
+      // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
+      // so don't rejoin the chat if we're using PVPGN
+
+      if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE && !realm->GetPvPGN()) {
+        realm->SendEnterChat();
+      }
+    }
+  }
+
+  if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ||
+    gameSetup->m_CreatedFromType != GAMESETUP_ORIGIN_REALM ||
+    gameSetup->m_Ctx->GetIsWhisper()) {
+    // TODO: Add an exception: do not send private reply if the user shares a channel where the bot sent an announcement.
+    gameSetup->m_Ctx->SendPrivateReply(m_CurrentLobby->GetAnnounceText());
+  }
+
   uint32_t mapSize = ByteArrayToUInt32(gameSetup->m_Map->GetMapSize(), false);
-  string versionPrefix;
   if (m_GameVersion <= 26 && mapSize > 0x800000) {
     Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + gameSetup->m_Map->GetMapFileName() + "]");
-    versionPrefix = "[1." + to_string(m_GameVersion) + ".UnlockMapSize] ";
-  } else {
-    versionPrefix = "[1." + to_string(m_GameVersion) + "] ";
   }
   if (m_GameVersion < gameSetup->m_Map->GetMapMinGameVersion()) {
-    Print("[AURA] warning - hosting game that may requiere version 1." + to_string(gameSetup->m_Map->GetMapMinGameVersion()));
-  }
-
-  for (auto& bnet : m_Realms) {
-    if (gameSetup->m_RealmsExcluded.find(bnet->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
-      continue;
-    }
-    if (gameSetup->GetIsMirror() && bnet->GetIsMirror()) {
-      continue;
-    }
-    string AnnounceText;
-    if (gameSetup->GetIsMirror()) {
-      AnnounceText = (
-        versionPrefix + "Mirroring " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
-        ": \"" + bnet->GetPrefixedGameName(gameSetup->m_GameName) + "\")"
-      );
-    } else {
-      AnnounceText = (
-        versionPrefix + "Hosting " + (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(gameSetup->m_Map->GetMapLocalPath()) +
-        ". (Started by " + gameSetup->m_GameOwner.first + ": \"" + bnet->GetPrefixedGameName(gameSetup->m_GameName) + "\")"
-      );
-    }
-    if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE) {
-      gameSetup->m_Ctx->SendReply(AnnounceText);
-    } else if (bnet->GetAnnounceHostToChat()) {
-      bnet->QueueChatChannel(AnnounceText);
-    } else if (gameSetup->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(bnet))) {
-      gameSetup->m_Ctx->SendReply(AnnounceText);
-    }
-    bnet->QueueGameRefresh(
-      gameSetup->m_RealmsDisplayMode, gameSetup->m_GameName,
-      bnet->GetUsesCustomPort() && !gameSetup->GetIsMirror() ? bnet->GetPublicHostPort() : m_CurrentLobby->GetHostPort(),
-      gameSetup->m_Map, m_CurrentLobby->GetHostCounter(), !gameSetup->GetIsMirror()
-    );
-    if (!gameSetup->GetIsMirror()) {
-      bnet->HoldFriends(m_CurrentLobby);
-      bnet->HoldClan(m_CurrentLobby);
-    }
-
-    // if we're creating a private game we don't need to send any game refresh messages so we can rejoin the chat immediately
-    // unfortunately this doesn't work on PVPGN servers because they consider an enterchat message to be a gameuncreate message when in a game
-    // so don't rejoin the chat if we're using PVPGN
-
-    if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE && !bnet->GetPvPGN()) {
-      bnet->SendEnterChat();
-    }
+    Print("[AURA] warning - hosting game that may require version 1." + to_string(gameSetup->m_Map->GetMapMinGameVersion()));
   }
 
   return true;

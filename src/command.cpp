@@ -88,7 +88,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 
     m_HostName(fromRealm->GetServer()),
 
-    m_ChannelName(string()),
+    m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
 
     m_Output(nOutputStream),
     m_RefCount(1),
@@ -154,7 +154,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 /* BNET command */
 CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
-    m_Config(nullptr),
+    m_Config(config),
     m_SourceRealm(fromRealm),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -171,7 +171,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* f
 
     m_HostName(fromRealm->GetServer()),
 
-    m_ChannelName(string()),
+    m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
 
     m_Output(nOutputStream),
     m_RefCount(1),
@@ -209,7 +209,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* irc
 /* Generic command */
 CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
-    m_Config(nullptr),
+    m_Config(nAura->m_CommandDefaultConfig),
     m_SourceRealm(nullptr),
     m_TargetRealm(nullptr),
     m_SourceGame(nullptr),
@@ -452,7 +452,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
   return Result;
 }
 
-void CCommandContext::SendReplyNoFlags(const string& message)
+void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxFlags)
 {
   if (message.empty())
     return;
@@ -477,7 +477,7 @@ void CCommandContext::SendReplyNoFlags(const string& message)
 
     case FROM_BNET: {
       if (m_SourceRealm) {
-        m_SourceRealm->TryQueueChat(message, m_FromName, true, m_Output);
+        m_SourceRealm->TryQueueChat(message, m_FromName, true, this, ctxFlags);
       }
       break;
     }
@@ -495,9 +495,9 @@ void CCommandContext::SendReplyNoFlags(const string& message)
   }
 }
 
-void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t ccFlags) {
-  bool AllTarget = ccFlags & CHAT_SEND_TARGET_ALL;
-  bool AllSource = ccFlags & CHAT_SEND_SOURCE_ALL;
+void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t ctxFlags) {
+  bool AllTarget = ctxFlags & CHAT_SEND_TARGET_ALL;
+  bool AllSource = ctxFlags & CHAT_SEND_SOURCE_ALL;
   bool AllSourceSuccess = false;
   if (AllTarget) {
     if (m_TargetGame) {
@@ -507,7 +507,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       }
     }
     if (m_TargetRealm) {
-      m_TargetRealm->TryQueueChat(message, m_FromName, false, m_Output);
+      m_TargetRealm->TryQueueChat(message, m_FromName, false, this, ctxFlags);
       if (m_TargetRealm == m_SourceRealm) {
         AllSourceSuccess = true;
       }
@@ -520,7 +520,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       AllSourceSuccess = true;
     }
     if (m_SourceRealm) {
-      m_SourceRealm->TryQueueChat(message, m_FromName, false, m_Output);
+      m_SourceRealm->TryQueueChat(message, m_FromName, false, this, ctxFlags);
       AllSourceSuccess = true;
     }
     if (m_IRC) {
@@ -531,10 +531,11 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
     }
   }
   if (!AllSourceSuccess) {
-    SendReplyNoFlags(message);
+    SendPrivateReply(message, ctxFlags);
   }
 
-  if (m_FromType != FROM_OTHER && (ccFlags & CHAT_LOG_CONSOLE)) {
+  // Write to console if CHAT_LOG_CONSOLE, but only if we haven't written to it in SendPrivateReply
+  if (m_FromType != FROM_OTHER && (ctxFlags & CHAT_LOG_CONSOLE)) {
     if (m_TargetGame) {
       (*m_Output) << m_TargetGame->GetLogPrefix() + message << std::endl;
     } else if (m_SourceRealm) {
@@ -547,39 +548,42 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
   }
 }
 
-void CCommandContext::SendReply(const string& message)
-{
+void CCommandContext::SendReply(const string& message, const uint8_t ctxFlags) {
   if (message.empty())
     return;
 
   if (m_IsBroadcast) {
-    SendReplyCustomFlags(message, CHAT_SEND_SOURCE_ALL);
-    return;
-  }
-
-  SendReplyNoFlags(message);
-}
-
-void CCommandContext::SendReply(const string& message, const uint8_t ccFlags) {
-  if (m_IsBroadcast) {
-    SendReplyCustomFlags(message, ccFlags | CHAT_SEND_SOURCE_ALL);
+    SendReplyCustomFlags(message, ctxFlags | CHAT_SEND_SOURCE_ALL);
   } else {
-    SendReplyCustomFlags(message, ccFlags);
+    SendReplyCustomFlags(message, ctxFlags);
   }
 }
 
-void CCommandContext::ErrorReply(const string& message)
-{
-  SendReply("Error: " + message);
+void CCommandContext::InfoReply(const string& message, const uint8_t ctxFlags) {
+  SendReply(message, ctxFlags | CHAT_TYPE_INFO);
 }
 
-void CCommandContext::ErrorReply(const string& message, const uint8_t ccFlags) {
-  SendReply("Error: " + message, ccFlags);
+void CCommandContext::DoneReply(const string& message, const uint8_t ctxFlags) {
+  SendReply("Done: " + message, ctxFlags | CHAT_TYPE_DONE);
+}
+
+void CCommandContext::ErrorReply(const string& message, const uint8_t ctxFlags) {
+  SendReply("Error: " + message, ctxFlags | CHAT_TYPE_ERROR);
 }
 
 void CCommandContext::SendAll(const string& message)
 {
   SendReply(message, CHAT_SEND_TARGET_ALL);
+}
+
+void CCommandContext::InfoAll(const string& message)
+{
+  InfoReply(message, CHAT_SEND_TARGET_ALL);
+}
+
+void CCommandContext::DoneAll(const string& message)
+{
+  DoneReply(message, CHAT_SEND_TARGET_ALL);
 }
 
 void CCommandContext::ErrorAll(const string& message)
@@ -1053,7 +1057,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_ActionMessage = inputName + ", " + m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
       }
 
-      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this);
+      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
       break;
     }
 
@@ -1597,7 +1601,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_TargetGame->m_LastGameName = m_TargetGame->m_GameName;
         m_TargetGame->m_GameName     = Payload;
         m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
-        m_TargetGame->m_RefreshError = false;
+        m_TargetGame->m_RealmRefreshError = false;
 
         for (auto& bnet : m_Aura->m_Realms) {
           if (m_TargetGame->m_IsMirror && bnet->GetIsMirror())
@@ -1612,7 +1616,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
           // we need to send the game creation message now because private games are not refreshed
 
-          bnet->QueueGameRefresh(m_TargetGame->m_GameDisplay, m_TargetGame->m_GameName, bnet->GetUsesCustomPort() && !m_TargetGame->GetIsMirror() ? bnet->GetPublicHostPort() : m_TargetGame->GetHostPort(), m_TargetGame->m_Map, m_TargetGame->m_HostCounter, !m_TargetGame->GetIsMirror());
+          m_TargetGame->AnnounceToRealm(bnet);
 
           if (!bnet->GetPvPGN())
             bnet->SendEnterChat();
@@ -2749,6 +2753,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
+      m_TargetGame->m_RealmRefreshError = false;
       if (ToAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {
           string AnnounceText = (
@@ -3446,7 +3451,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         m_ActionMessage = inputName + ", " + m_FromName + " at " + m_HostName + " tells you: <<" + subMessage + ">>";
       }
-      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this);
+      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
       break;
     }
     //

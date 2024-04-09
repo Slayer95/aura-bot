@@ -353,7 +353,7 @@ void CMap::Load(CConfig* CFG)
   bool IsPartial = CFG->GetBool("cfg_partial", false);
   bool ignoreMPQ = m_MapLocalPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
-  size_t RawMapSize = 0;
+  streamoff RawMapSize = 0;
   if (IsPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapLocalPath.empty()) {
       return;

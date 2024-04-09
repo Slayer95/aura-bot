@@ -77,6 +77,7 @@ public:
 
   std::string m_CFGKeyPrefix;                     // 
 
+  CCommandConfig();
   CCommandConfig(CConfig& CFG, const std::string& nKeyPrefix, const bool requireVerified, const uint8_t commonPermissions, const uint8_t hostingPermissions, const uint8_t moderatorPermissions, const uint8_t adminPermissions, const uint8_t botOwnerPermissions);
   ~CCommandConfig();
 };

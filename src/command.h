@@ -48,6 +48,11 @@
 #define CHAT_SEND_SOURCE_ALL (1 << 0)
 #define CHAT_SEND_TARGET_ALL (1 << 1)
 #define CHAT_LOG_CONSOLE (1 << 2)
+#define CHAT_TYPE_INFO (1 << 3)
+#define CHAT_TYPE_DONE (1 << 4)
+#define CHAT_TYPE_ERROR (1 << 5)
+#define CHAT_WRITE_TARGETS (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE)
+#define CHAT_RESPONSE_TYPES (CHAT_TYPE_INFO | CHAT_TYPE_DONE | CHAT_TYPE_ERROR)
 
 #define USER_PERMISSIONS_GAME_PLAYER (1 << 0)
 #define USER_PERMISSIONS_GAME_OWNER (1 << 1)
@@ -107,10 +112,15 @@ public:
   CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
   CCommandContext(CAura* nAura, const bool& nIsBroadcast, std::ostream* outputStream);
 
-  inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; };
+  inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; }
 
   std::string GetUserAttribution();
   std::string GetUserAttributionPreffix();
+  std::ostream* GetOutputStream() { return m_Output; }
+
+  inline bool GetIsWhisper() const { return m_FromWhisper; }
+  inline std::string GetSender() const { return m_FromName; }
+  inline std::string GetChannelName() const { return m_ChannelName; }
 
   bool SetIdentity(const std::string& userName, const std::string& realmId);
   void SetAuthenticated(const bool& nAuthenticated);
@@ -123,13 +133,15 @@ public:
   std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
   bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
 
-  void SendReplyNoFlags(const std::string& message);
-  void SendReplyCustomFlags(const std::string& message, const uint8_t ccFlags);
-  void SendReply(const std::string& message);
-  void SendReply(const std::string& message, const uint8_t ccFlags);
-  void ErrorReply(const std::string& message);
-  void ErrorReply(const std::string& message, const uint8_t ccFlags);
+  void SendPrivateReply(const std::string& message, const uint8_t ctxFlags = 0);
+  void SendReplyCustomFlags(const std::string& message, const uint8_t ctxFlags);
+  void SendReply(const std::string& message, const uint8_t ctxFlags = 0);
+  void InfoReply(const std::string& message, const uint8_t ctxFlags = 0);
+  void DoneReply(const std::string& message, const uint8_t ctxFlags = 0);
+  void ErrorReply(const std::string& message, const uint8_t ctxFlags = 0);
   void SendAll(const std::string& message);
+  void InfoAll(const std::string& message);
+  void DoneAll(const std::string& message);
   void ErrorAll(const std::string& message);
   CGamePlayer* GetTargetPlayer(const std::string& target);
   CGamePlayer* GetTargetPlayerOrSelf(const std::string& target);
@@ -168,54 +180,46 @@ inline std::string GetTokenName(const std::string& token) {
   return std::string();
 }
 
-inline uint8_t ExtractMessageTokens(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchPayload)
+inline bool ExtractMessageTokens(const std::string& message, const std::string& token, std::string& matchCmd, std::string& matchPayload)
+{
+  if (message.empty()) return false;
+  std::string::size_type tokenSize = token.length();
+  if (message.length() > tokenSize && message.substr(0, tokenSize) == token) {
+    std::string::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
+    if (cmdStart != std::string::npos) {
+      std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
+      if (cmdEnd == std::string::npos) {
+        matchCmd = message.substr(cmdStart);
+        matchPayload.clear();
+      } else {
+        matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
+        std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
+        if (payloadStart == std::string::npos) {
+          matchPayload.clear();
+        } else {
+          matchPayload = message.substr(payloadStart);
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchPayload)
 {
   uint8_t result = COMMAND_TOKEN_MATCH_NONE;
   if (message.empty()) return result;
   if (!privateToken.empty()) {
-    std::string::size_type tokenSize = privateToken.length();
-    if (message.length() > tokenSize && message.substr(0, tokenSize) == privateToken) {
-      std::string::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
-      if (cmdStart != std::string::npos) {
-        matchToken = privateToken;
-        result = COMMAND_TOKEN_MATCH_PRIVATE;
-        std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
-        if (cmdEnd == std::string::npos) {
-          matchCmd = message.substr(cmdStart);
-          matchPayload.clear();
-        } else {
-          matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
-          std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
-          if (payloadStart == std::string::npos) {
-            matchPayload.clear();
-          } else {
-            matchPayload = message.substr(payloadStart);
-          }
-        }
-      }
+    if (ExtractMessageTokens(message, privateToken, matchCmd, matchPayload)) {
+      matchToken = privateToken;
+      result = COMMAND_TOKEN_MATCH_PRIVATE;
     }
   }    
   if (!result && !broadcastToken.empty()) {
-    std::string::size_type tokenSize = broadcastToken.length();
-    if (message.length() > tokenSize && message.substr(0, tokenSize) == broadcastToken) {
-      size_t cmdStart = message[tokenSize] == ' ' ? tokenSize + 1 : tokenSize;
-      if (cmdStart != std::string::npos) {
-        matchToken = broadcastToken;
-        result = COMMAND_TOKEN_MATCH_BROADCAST;
-        std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
-        if (cmdEnd == std::string::npos) {
-          matchCmd = message.substr(cmdStart);
-          matchPayload.clear();
-        } else {
-          matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
-          std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
-          if (payloadStart == std::string::npos) {
-            matchPayload.clear();
-          } else {
-            matchPayload = message.substr(payloadStart);
-          }
-        }
-      }
+    if (ExtractMessageTokens(message, privateToken, matchCmd, matchPayload)) {
+      matchToken = broadcastToken;
+      result = COMMAND_TOKEN_MATCH_BROADCAST;
     }
   }
 

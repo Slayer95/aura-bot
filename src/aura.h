@@ -114,6 +114,7 @@ public:
   CBotConfig*                                        m_Config;
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
+  CCommandConfig*                                    m_CommandDefaultConfig;
 
   CAuraDB*                                           m_DB;                         // database
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map

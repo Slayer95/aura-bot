@@ -114,7 +114,7 @@ protected:
   std::string                    m_CreatedBy;                     // name of the battle.net user who created this game
   void*                          m_CreatedFrom;                   // battle.net or IRC server the player who created this game was on
   uint8_t                        m_CreatedFromType;               // type of server m_CreatedFrom is
-  std::string                    m_ExcludedServer;                // battle.net server where the mirrored game is not to be broadcasted
+  std::set<std::string>          m_RealmsExcluded;                // battle.net servers where the mirrored game is not to be broadcasted
   std::string                    m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
   std::string                    m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
   std::string                    m_MapPath;                       // store the map path to save in the database on game end
@@ -180,7 +180,7 @@ protected:
   uint8_t                        m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
   bool                           m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                           m_Locked;                        // if the game owner is the only one allowed to run game commands or not
-  bool                           m_RefreshError;                  // if the game had a refresh error
+  bool                           m_RealmRefreshError;                  // if the game had a refresh error
   bool                           m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
   bool                           m_MuteLobby;                     // if we should stop forwarding lobby chat messages
   bool                           m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
@@ -191,6 +191,7 @@ protected:
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_HadLeaver;                     // if the game has desynced or not
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
+  bool                           m_SentPriorityWhois;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   std::set<std::string>          m_IgnoredNotifyJoinPlayers;
   
@@ -209,12 +210,14 @@ public:
   inline bool           GetPublicHostOverride() const { return m_PublicHostOverride; }
   inline std::vector<uint8_t>    GetPublicHostAddress() const { return m_PublicHostAddress; }
   inline uint16_t       GetPublicHostPort() const { return m_PublicHostPort; }
-  inline uint8_t        GetGameState() const { return m_GameDisplay; }
+  inline uint8_t        GetDisplayMode() const { return m_GameDisplay; }
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
   inline std::string    GetLastGameName() const { return m_LastGameName; }
   inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
   inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
+  std::string           GetPrefixedGameName(const CRealm* realm = nullptr) const;
+  std::string           GetAnnounceText(const CRealm* realm = nullptr) const;
   inline std::string    GetOwnerName() const { return m_OwnerName; }
   inline std::string    GetCreatorName() const { return m_CreatedBy; }
   inline uint8_t        GetCreatedFromType() const { return m_CreatedFromType; }
@@ -247,9 +250,11 @@ public:
   CTCPServer*    GetSocket() const { return m_Socket; };
 
   uint16_t       GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
+  inline bool    GetIsRealmRefreshError() { return m_RealmRefreshError; }
+  inline bool    GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
 
   inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
-  inline void SetRefreshError(bool nRefreshError) { m_RefreshError = nRefreshError; }
+  inline void SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
   inline void SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
 
   // processing functions
@@ -288,6 +293,7 @@ public:
 
   std::vector<uint8_t> GetGameDiscoveryInfo(const uint16_t hostPort) const;
 
+  void AnnounceToRealm(CRealm* realm);
   void AnnounceToAddress(std::string& address) const;
   void ReplySearch(sockaddr_storage* address, CSocket* socket) const;
   void SendGameDiscoveryInfo() const;
@@ -371,6 +377,8 @@ public:
   inline bool GetIsCheckJoinable() { return m_CheckJoinable; }
   inline bool GetIsVerbose() { return m_Verbose; }
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
+  inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
+  void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
 
   void OpenObserverSlots();
   void CloseObserverSlots();

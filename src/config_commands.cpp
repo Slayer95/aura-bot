@@ -35,6 +35,25 @@ using namespace std;
 // CCommandConfig
 //
 
+CCommandConfig::CCommandConfig()
+ :  m_CommonBasePermissions(COMMAND_PERMISSIONS_AUTO),
+  m_HostingBasePermissions(COMMAND_PERMISSIONS_AUTO),
+  m_ModeratorBasePermissions(COMMAND_PERMISSIONS_AUTO),
+  m_AdminBasePermissions(COMMAND_PERMISSIONS_AUTO),
+  m_BotOwnerBasePermissions(COMMAND_PERMISSIONS_AUTO),
+
+  m_HostPermissions(COMMAND_PERMISSIONS_AUTO),
+  m_HostRawPermissions(COMMAND_PERMISSIONS_AUTO),
+  m_StartPermissions(COMMAND_PERMISSIONS_AUTO),
+  m_SayPermissions(COMMAND_PERMISSIONS_AUTO),
+  m_TellPermissions(COMMAND_PERMISSIONS_AUTO),
+  m_WhoisPermissions(COMMAND_PERMISSIONS_AUTO),
+
+  m_Enabled(true),
+  m_RequireVerified(false)
+{
+}
+
 CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const bool requireVerified, const uint8_t commonPermissions, const uint8_t hostingPermissions, const uint8_t moderatorPermissions, const uint8_t adminPermissions, const uint8_t botOwnerPermissions)
   : m_CFGKeyPrefix(nKeyPrefix)
 {

@@ -365,10 +365,16 @@ bool CGamePlayer::Update(void* fd)
   if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Time - m_JoinTime >= 4) {
     CRealm* Realm = GetRealm(false);
     if (Realm) {
-      if (m_Game->GetGameState() == GAME_PUBLIC || Realm->GetPvPGN())
-        Realm->QueueCommand("/whois " + m_Name);
-      else if (m_Game->GetGameState() == GAME_PRIVATE)
+      if (m_Game->GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
+        if (m_Game->GetSentPriorityWhois()) {
+          Realm->QueuePriorityWhois("/whois " + m_Name);
+          m_Game->SetSentPriorityWhois(true);
+        } else {
+          Realm->QueueCommand("/whois " + m_Name);
+        }
+      } else if (m_Game->GetDisplayMode() == GAME_PRIVATE) {
         Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
+      }
     }
 
     m_WhoisSent = true;

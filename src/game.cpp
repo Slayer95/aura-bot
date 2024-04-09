@@ -89,7 +89,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CreatedBy(nGameSetup->m_CreatedBy),
     m_CreatedFrom(nGameSetup->m_CreatedFrom),
     m_CreatedFromType(nGameSetup->m_CreatedFromType),
-    m_ExcludedServer(string()),
+    m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
     m_HCLCommandString(nGameSetup->m_Map->GetMapDefaultHCL()),
     m_MapPath(nGameSetup->m_Map->GetMapPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
@@ -132,7 +132,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_SlotInfoChanged(0),
     m_PublicStart(false),
     m_Locked(false),
-    m_RefreshError(false),
+    m_RealmRefreshError(false),
     m_MuteAll(false),
     m_MuteLobby(false),
     m_IsMirror(nGameSetup->GetIsMirror()),
@@ -142,7 +142,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Lagging(false),
     m_Desynced(false),
     m_HadLeaver(false),
-    m_HasMapLock(false)
+    m_HasMapLock(false),
+    m_SentPriorityWhois(false)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
   m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
@@ -275,6 +276,10 @@ CGame::~CGame()
       ctx->SetPartiallyDestroyed();
       ctx->m_TargetGame = nullptr;
     }
+  }
+
+  for (auto& realm : m_Aura->m_Realms) {
+    realm->ResetGameAnnouncement();
   }
 }
 
@@ -746,17 +751,24 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // refresh every 3 seconds
 
-  if (!m_RefreshError && !m_CountDownStarted && m_GameDisplay == GAME_PUBLIC && GetSlotsOpen() > 0 && Time - m_LastRefreshTime >= 3) {
+  if (!m_RealmRefreshError && !m_CountDownStarted && m_GameDisplay == GAME_PUBLIC && 0 < GetSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
     // send a game refresh packet to each battle.net connection
 
-    for (auto& bnet : m_Aura->m_Realms) {
-      if (bnet->GetInputID() == m_ExcludedServer)
+    for (auto& realm : m_Aura->m_Realms) {
+      if (m_IsMirror && realm->GetIsMirror()) {
+      // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+      // Do not display external games in those realms.
         continue;
-
-      if (m_IsMirror && bnet->GetIsMirror())
+      }
+      if (realm->GetIsChatQueuedGameAnnouncement()) {
+        // Wait til we have sent a chat message first.
         continue;
-
-      bnet->QueueGameRefresh(m_GameDisplay, m_GameName, bnet->GetUsesCustomPort() && !m_IsMirror ? bnet->GetPublicHostPort() : m_HostPort, m_Map, m_HostCounter, !m_IsMirror);
+      }
+      if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
+        continue;
+      }
+      // Send STARTADVEX3
+      AnnounceToRealm(realm);
     }
 
     m_LastRefreshTime = Time;
@@ -1381,6 +1393,39 @@ void CGame::SendAllActions()
   m_LastActionSentTicks = Ticks;
 }
 
+std::string CGame::GetPrefixedGameName(const CRealm* realm) const
+{
+  if (realm == nullptr) return m_GameName;
+  return realm->GetPrefixedGameName(m_GameName);
+}
+
+std::string CGame::GetAnnounceText(const CRealm* realm) const
+{
+  uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  string versionPrefix;
+  if (m_Aura->m_GameVersion <= 26 && mapSize > 0x800000) {
+    versionPrefix = "[1." + to_string(m_Aura->m_GameVersion) + ".UnlockMapSize] ";
+  } else {
+    versionPrefix = "[1." + to_string(m_Aura->m_GameVersion) + "] ";
+  }
+  if (m_IsMirror) {
+    return (
+      versionPrefix + "Mirroring " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetMapLocalPath()) +
+      ": \"" + GetPrefixedGameName(realm) + "\")"
+    );
+  } else if (!m_OwnerName.empty()) {
+    return (
+      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetMapLocalPath()) +
+      ". (Started by " + m_OwnerName + ": \"" + GetPrefixedGameName(realm) + "\")"
+    );
+  } else {
+    return (
+      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetMapLocalPath()) +
+      ". (\"" + GetPrefixedGameName(realm) + "\")"
+    );
+  }
+}
+
 uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
 {
   if (protocol == AF_INET)
@@ -1430,6 +1475,10 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
   );
 }
 
+void CGame::AnnounceToRealm(CRealm* realm)
+{
+  realm->SendGameRefresh(m_GameDisplay, m_GameName, realm->GetUsesCustomPort() && !m_IsMirror ? realm->GetPublicHostPort() : m_HostPort, m_Map, m_HostCounter, !m_IsMirror);
+}
 
 void CGame::AnnounceToAddress(string& addressLiteral) const
 {
@@ -2340,7 +2389,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
         if (commandsEnabled) {
           const string message = chatPlayer->GetMessage();
           string cmdToken, command, payload;
-          uint8_t tokenMatch = ExtractMessageTokens(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
+          uint8_t tokenMatch = ExtractMessageTokensAny(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
           if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
             ctx->Run(cmdToken, command, payload);
@@ -2820,6 +2869,7 @@ void CGame::EventGameStarted()
     if (m_IsMirror && bnet->GetIsMirror())
       continue;
 
+    bnet->ResetGameAnnouncement();
     bnet->QueueGameUncreate();
     bnet->SendEnterChat();
   }

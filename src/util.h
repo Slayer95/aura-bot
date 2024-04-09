@@ -80,19 +80,6 @@ inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const size_t size)
   return std::vector<uint8_t>(a, a + size);
 }
 
-inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const uint32_t size)
-{
-  return std::vector<uint8_t>(a, a + size);
-}
-
-inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const int32_t size)
-{
-  if (size < 1)
-    return std::vector<uint8_t>();
-
-  return std::vector<uint8_t>(a, a + size);
-}
-
 inline std::vector<uint8_t> CreateByteArray(const uint8_t c)
 {
   return std::vector<uint8_t>{c};

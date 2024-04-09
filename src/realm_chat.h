@@ -37,15 +37,17 @@
 #include "command.h"
 #include "bnetprotocol.h"
 
-#define RECV_SELECTOR_ONLY_WHISPER 1
-#define RECV_SELECTOR_ONLY_PUBLIC 2
-#define RECV_SELECTOR_ONLY_PUBLIC_OR_DROP 3
-#define RECV_SELECTOR_PREFER_PUBLIC 4
+#define RECV_SELECTOR_SYSTEM 1
+#define RECV_SELECTOR_ONLY_WHISPER 2
+#define RECV_SELECTOR_ONLY_PUBLIC 3
+#define RECV_SELECTOR_ONLY_PUBLIC_OR_DROP 4
+#define RECV_SELECTOR_PREFER_PUBLIC 5
 
 #define CHAT_RECV_SELECTED_NONE 0
-#define CHAT_RECV_SELECTED_PUBLIC 1
-#define CHAT_RECV_SELECTED_WHISPER 2
-#define CHAT_RECV_SELECTED_DROP 3
+#define CHAT_RECV_SELECTED_SYSTEM 1
+#define CHAT_RECV_SELECTED_PUBLIC 2
+#define CHAT_RECV_SELECTED_WHISPER 3
+#define CHAT_RECV_SELECTED_DROP 4
 
 #define CHAT_CALLBACK_NONE 0
 #define CHAT_CALLBACK_REFRESH_GAME 1
@@ -74,12 +76,31 @@ private:
   std::vector<uint8_t>  m_EarlyFeedback; // If not empty, create another CQueuedChatMessage with init(initializer->m_EarlyFeedback), m_ReceiverName(init->m_ProxySenderName), m_ReceiverSelector(RECV_SELECTOR_ONLY_WHISPER)
 
   std::vector<uint8_t>  m_Validator; // First byte CHAT_VALIDATOR_NONE, CHAT_VALIDATOR_CURRENT_LOBBY. Rest is parsed.
+  uint8_t               m_Callback;
 
 public:
+  void SetMessage(const std::string& body) {
+    m_Message = std::vector<uint8_t>(body.begin(), body.end());
+  }
+  void SetMessage(const uint8_t status, const std::string& body) {
+    m_MessageValue = status;
+    m_Message = std::vector<uint8_t>(body.begin(), body.end());
+  }
+  void SetReceiver(const uint8_t selector) {
+    m_ReceiverSelector = selector;
+  }
+  void SetReceiver(const uint8_t selector, const std::string& name) {
+    m_ReceiverSelector = selector;
+    m_ReceiverName = std::vector<uint8_t>(name.begin(), name.end());
+  }
+  void SetChannel(const std::string& nChannel) { m_Channel = nChannel; }
+  void SetCallback(const uint8_t callback) { m_Callback = callback; }
+  void SetValidator(const uint8_t validator);
   int64_t GetQueuedDuration() const;
   bool GetIsStale() const;
   std::vector<uint8_t> GetMessage() const;
   std::vector<uint8_t> GetWhisper() const;
+  inline std::string GetInnerMessage() const { return std::string(m_Message.begin(), m_Message.end()); }
   uint8_t QuerySelection(const std::string& currentChannel) const;
   std::vector<uint8_t> SelectBytes(const std::string& currentChannel, uint8_t& selectType) const;
   uint8_t GetVirtualSize(const size_t wrapSize, const uint8_t selectType) const;
@@ -87,16 +108,18 @@ public:
   std::pair<bool, uint8_t> OptimizeVirtualSize(const size_t wrapSize) const;
   bool GetSendsEarlyFeedback() const { return !m_EarlyFeedback.empty(); }
   CQueuedChatMessage* GetEarlyFeedback() const {
+    // TODO(IceSandslash): CQueuedChatMessage::GetEarlyFeedback()
     // create another CQueuedChatMessage with init(initializer->m_EarlyFeedback),
     // m_ReceiverName(init->m_ProxySenderName),
     // m_ReceiverSelector(RECV_SELECTOR_ONLY_WHISPER)
-    return new CQueuedChatMessage(m_Realm);
+    return new CQueuedChatMessage(m_Realm, m_ProxySenderCtx, m_ProxySenderCtx != nullptr);
   }
   bool IsProxySent() const { return m_ProxySenderCtx != nullptr; }
   CCommandContext* GetProxyCtx() const { return m_ProxySenderCtx; }
   std::string GetReceiver() const { return std::string(m_ReceiverName.begin(), m_ReceiverName.end()); }
+  inline uint8_t GetCallback() const { return m_Callback; }
 
-  CQueuedChatMessage(CRealm* nRealm);
+  CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, const bool isProxy);
   ~CQueuedChatMessage();
 };
 
