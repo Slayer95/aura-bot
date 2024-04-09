@@ -1323,7 +1323,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      bool isOwner = CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER);
       SendReply("Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">");
       break;
     }
@@ -4260,7 +4259,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       bool isHostCommand = CommandHash == HashCode("host");
-      bool isSkipVersion = CommandHash == HashCode("mapforce");
       vector<string> Args = isHostCommand ? SplitArgs(Payload, 1, 6) : SplitArgs(Payload, 1, 5);
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
@@ -4304,7 +4302,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (4 <= Args.size()) options.ParseMapRandomRaces(Args[3]);
       if (5 <= Args.size()) options.ParseMapRandomHeroes(Args[4]);
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true);
+      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true /* skip version check for convenience */);
       if (!gameSetup) {
         ErrorReply("Unable to host game", CHAT_SEND_SOURCE_ALL);
         break;
