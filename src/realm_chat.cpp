@@ -78,10 +78,10 @@ void CQueuedChatMessage::SetValidator(const uint8_t validator)
     case CHAT_VALIDATOR_CURRENT_LOBBY:
       if (!m_Realm->m_Aura->m_CurrentLobby) return;
       m_Validator = vector<uint8_t>(5, validator);
-      m_Validator[1] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter();
-      m_Validator[2] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 8;
-      m_Validator[3] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 16;
-      m_Validator[4] = m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 24;
+      m_Validator[1] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter());
+      m_Validator[2] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 8);
+      m_Validator[3] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 16);
+      m_Validator[4] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 24);
       break;
     default:
       break;

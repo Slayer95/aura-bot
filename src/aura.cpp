@@ -716,8 +716,8 @@ bool CAura::HandleAction(vector<string> action)
     m_PendingActions.push(lazyAction);
 #ifndef DISABLE_MINIUPNP
   } else if (action[0] == "port-forward") {
-    uint16_t externalPort = stoi(action[2]);
-    uint16_t internalPort = stoi(action[3]);
+    uint16_t externalPort = static_cast<uint16_t>(stoi(action[2]));
+    uint16_t internalPort = static_cast<uint16_t>(stoi(action[3]));
     m_Net->RequestUPnP(action[1], externalPort, internalPort, LOG_LEVEL_DEBUG);
 #endif
   } else if (!action.empty()) {

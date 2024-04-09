@@ -2805,7 +2805,7 @@ void CGame::EventGameStarted()
 
   // record the number of starting players
 
-  m_StartPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
+  m_StartPlayers = static_cast<uint8_t>(GetNumHumanPlayers()) + static_cast<uint8_t>(m_FakePlayers.size());
 
   // enable stats
 

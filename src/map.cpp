@@ -67,7 +67,7 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
   : m_Aura(nAura),
-    m_SkipVersionCheck(false)
+    m_SkipVersionCheck(skipVersionCheck)
 {
   Load(CFG);
 }
@@ -432,7 +432,9 @@ void CMap::Load(CConfig* CFG)
     // calculate map_info (this is actually the CRC32)
 
     MapCRC32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
-    //Print("[MAP] calculated <map_info = " + ByteArrayToDecString(MapCRC32) + ">");
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+      Print("[MAP] calculated <map_info = " + ByteArrayToDecString(MapCRC32) + ">");
+    }
 
     // calculate map_crc (this is a misnomer) and map_sha1
     // a big thank you to Strilanc for figuring the map_crc algorithm out
@@ -600,14 +602,18 @@ void CMap::Load(CConfig* CFG)
             Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ file, calculated map_crc/sha1 is probably wrong)");
 
           MapHash = CreateByteArray(Val, false);
-          //Print("[MAP] calculated <map_crc = " + ByteArrayToDecString(MapHash) + ">");
+          if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+            Print("[MAP] calculated <map_crc = " + ByteArrayToDecString(MapHash) + ">");
+          }
 
           m_Aura->m_SHA->Final();
           uint8_t SHA1[20];
           memset(SHA1, 0, sizeof(uint8_t) * 20);
           m_Aura->m_SHA->GetHash(SHA1);
           MapSHA1 = CreateByteArray(SHA1, 20);
-          //Print("[MAP] calculated <map_sha1 = " + ByteArrayToDecString(MapSHA1) + ">");
+          if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+            Print("[MAP] calculated <map_sha1 = " + ByteArrayToDecString(MapSHA1) + ">");
+          }
         }
         else
           Print("[MAP] skipping map_crc/sha1 calculation - map file not loaded");
@@ -777,7 +783,9 @@ void CMap::Load(CConfig* CFG)
               // the bot only cares about the following options: melee, fixed player settings, custom forces
               // let's not confuse the user by displaying erroneous map options so zero them out now
               MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
-              //Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
+              }
 
               if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
                 MapNumTeams = static_cast<uint8_t>(RawMapNumPlayers);
@@ -824,13 +832,17 @@ void CMap::Load(CConfig* CFG)
 
               uint32_t SlotNum = 1;
 
-              //Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
-              //Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
-              //Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
-              //Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
+                Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
+                Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
+                Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
+              }
 
               for (auto& Slot : Slots) {
-                //Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                  Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
+                }
                 ++SlotNum;
               }
             } else {
@@ -853,7 +865,9 @@ void CMap::Load(CConfig* CFG)
   } else {
     if (!IsPartial) {
       //This is debug log
-      //Print("[MAP] using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
+      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+        Print("[MAP] using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
+      }
     } else if (!MapMPQReady) {
       Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map file not loaded");
     }
@@ -1035,7 +1049,7 @@ void CMap::Load(CConfig* CFG)
     } else if (6053 <= MapEditorVersion && MapEditorVersion <= 6056) {
       MapMinGameVersion = 22; // Not released
     } else if (6050 <= MapEditorVersion && MapEditorVersion <= 6052) {
-      MapMinGameVersion = 17 + (MapEditorVersion - 6050);
+      MapMinGameVersion = 17 + static_cast<uint8_t>(MapEditorVersion - 6050);
     } else if (6046 <= MapEditorVersion) {
       MapMinGameVersion = 16;
     } else if (6043 <= MapEditorVersion) {
@@ -1045,7 +1059,7 @@ void CMap::Load(CConfig* CFG)
     } else if (6038 <= MapEditorVersion) {
       MapMinGameVersion = 14; // Not released
     } else if (6034 <= MapEditorVersion && MapEditorVersion <= 6037) {
-      MapMinGameVersion = 10 + (MapEditorVersion - 6034);
+      MapMinGameVersion = 10 + static_cast<uint8_t>(MapEditorVersion - 6034);
     } else if (6031 <= MapEditorVersion) {
       MapMinGameVersion = 7;
     }
