@@ -712,7 +712,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 {
   uint8_t selectType;
   if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    Print(GetLogPrefix() + "sent <<" + message->GetInnerMessage() + ">>");
+    Print(GetLogPrefix() + "sent << " + message->GetInnerMessage() + ">>");
   }
   Send(message->SelectBytes(m_CurrentChannel, selectType));
   if (message->GetSendsEarlyFeedback()) {
