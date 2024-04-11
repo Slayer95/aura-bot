@@ -165,8 +165,8 @@ private:
   void* FromAddStmt;        // for faster startup time
   void* FromCheckStmt;      // frequently used
   void* BanCheckStmt;       // frequently used
-  void* AdminCheckStmt;     // frequently used
-  void* RootAdminCheckStmt; // frequently used
+  void* ModeratorCheckStmt;     // frequently used
+  void* RootModeratorCheckStmt; // frequently used
 
   bool m_HasError;
 
@@ -186,10 +186,7 @@ public:
   uint32_t AdminCount(const std::string& server);
   bool AdminCheck(const std::string& server, std::string user);
   bool AdminCheck(std::string user);
-  bool RootAdminCheck(const std::string& server, std::string user);
-  bool RootAdminCheck(std::string user);
   bool AdminAdd(const std::string& server, std::string user);
-  bool RootAdminAdd(const std::string& server, std::string user);
   bool AdminRemove(const std::string& server, std::string user);
   uint32_t BanCount(const std::string& server);
   CDBBan* BanCheck(const std::string& server, std::string user);

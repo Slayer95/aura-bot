@@ -578,10 +578,6 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
     if (realmConfig->m_GamePrefix.length() > longestGamePrefixSize)
       longestGamePrefixSize = realmConfig->m_GamePrefix.length();
 
-    for (auto& rootAdmin : realmConfig->m_RootAdmins) {
-      m_DB->RootAdminAdd(realmConfig->m_DataBaseID, rootAdmin);
-    }
-
     m_RealmsByHostCounter[matchingRealm->GetHostCounterID()] = matchingRealm;
   }
 

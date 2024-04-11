@@ -119,7 +119,7 @@ public:
 
   std::string m_FirstChannel;                    //
   std::set<std::string> m_SudoUsers;             //
-  std::set<std::string> m_RootAdmins;            //
+  std::set<std::string> m_Admins;            //
   std::string m_GamePrefix;                      // string prepended to game names
   uint32_t m_MaxUploadSize;                      // in KB
 

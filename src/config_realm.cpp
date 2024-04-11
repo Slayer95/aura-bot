@@ -48,7 +48,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_UserName(string()),
     m_PassWord(string()),
 
-    m_RootAdmins({}),
+    m_Admins({}),
     m_GamePrefix(string()),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
     m_FloodImmune(false),
@@ -106,7 +106,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_RootAdmins);
+  m_Admins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_Admins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
 
@@ -213,7 +213,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
     m_FirstChannel(nRootConfig->m_FirstChannel),
     m_SudoUsers(nRootConfig->m_SudoUsers),
-    m_RootAdmins(nRootConfig->m_RootAdmins),
+    m_Admins(nRootConfig->m_Admins),
     m_GamePrefix(nRootConfig->m_GamePrefix),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
 
@@ -303,7 +303,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_RootAdmins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_RootAdmins);
+  m_Admins             = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', m_Admins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
 

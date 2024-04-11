@@ -406,7 +406,7 @@ void CIRC::SendAllChannels(const string& message)
 
 bool CIRC::GetIsModerator(const std::string& nHostName)
 {
-  return m_Config->m_RootAdmins.find(nHostName) != m_Config->m_RootAdmins.end();
+  return m_Config->m_Admins.find(nHostName) != m_Config->m_Admins.end();
 }
 
 bool CIRC::GetIsSudoer(const std::string& nHostName)

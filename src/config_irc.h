@@ -46,7 +46,7 @@ public:
   std::string                         m_Password;
   bool                                m_Enabled;
   std::vector<std::string>            m_Channels;
-  std::set<std::string>               m_RootAdmins;
+  std::set<std::string>               m_Admins;
   std::set<std::string>               m_SudoUsers;
   uint16_t                            m_Port;
   std::string                         m_PrivateCmdToken;   // a symbol prefix to identify commands and send a private reply

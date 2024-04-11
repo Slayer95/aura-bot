@@ -1244,16 +1244,12 @@ bool CRealm::GetIsModerator(string name) const
 bool CRealm::GetIsAdmin(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
-
-  if (m_Aura->m_DB->RootAdminCheck(m_Config->m_DataBaseID, name))
-    return true;
-
-  return false;
+  return m_Config->m_Admins.find(name) != m_Config->m_Admins.end();
 }
 
 bool CRealm::GetIsSudoer(string name) const
 {
-  // Case-sensitive
+  transform(begin(name), end(name), begin(name), ::tolower);
   return m_Config->m_SudoUsers.find(name) != m_Config->m_SudoUsers.end();
 }
 
