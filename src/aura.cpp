@@ -739,7 +739,8 @@ bool CAura::Update()
     }
   }
 
-  if (m_Config->m_ExitOnStandby && !m_CurrentLobby && m_Games.empty() && !m_Net->m_HealthCheckInProgress) {
+  if (m_Config->m_ExitOnStandby && !m_CurrentLobby && m_Games.empty() && !m_Net->m_HealthCheckInProgress &&
+    !(m_GameSetup && m_GameSetup->GetIsDownloading())) {
     return true;
   }
 
@@ -833,6 +834,14 @@ bool CAura::Update()
   }
 
   bool Exit = false;
+
+  // update map downloads
+  if (m_GameSetup) {
+    if (m_GameSetup->Update()) {
+      delete m_GameSetup;
+      m_GameSetup = nullptr;
+    }
+  }
 
   // if hosting a lobby, accept new connections to its game server
 

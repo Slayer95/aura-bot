@@ -134,18 +134,25 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_LuckyMode(false),
 
     m_IsDownloadable(false),
+    m_IsDownloading(false),
     m_IsDownloaded(false),
     m_MapDownloadSize(0),
+    m_DownloadFileStream(nullptr),
 
     m_SkipVersionCheck(false),
 
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_CreatedFrom(nullptr),
-    m_CreatedFromType(GAMESETUP_ORIGIN_NONE)
-    
+    m_CreatedFromType(GAMESETUP_ORIGIN_NONE),
+
+    m_MapExtraOptions(nullptr),
+    m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
+
+    m_DeleteMe(false)
 {
   memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
+  m_Aura->HoldContext(nCtx);
   m_Map = GetBaseMapFromConfig(nMapCFG, false);
 }
 
@@ -171,10 +178,16 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_CreatedFrom(nullptr),
-    m_CreatedFromType(GAMESETUP_ORIGIN_NONE)
+    m_CreatedFromType(GAMESETUP_ORIGIN_NONE),
+
+    m_MapExtraOptions(nullptr),
+    m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
+
+    m_DeleteMe(false)
     
 {
   memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
+  m_Aura->HoldContext(nCtx);
 }
 
 std::string CGameSetup::GetInspectName() const
@@ -647,8 +660,12 @@ uint8_t CGameSetup::ResolveRemoteMap()
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;
       Print("[NET] GET <" + m_MapSiteUri + ">");
       auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout});
+      if (response.status_code == 0) {
+        Print("[NET] Remote host unavailable (status code " + to_string(response.status_code) + ").");
+        return RESOLUTION_ERR;
+      }
       if (response.status_code != 200) {
-        Print("[NET] Remote host unavailable.");
+        Print("[NET] Failed to access repository (status code " + to_string(response.status_code) + ").");
         return RESOLUTION_ERR;
       }
       
@@ -674,8 +691,12 @@ uint8_t CGameSetup::ResolveRemoteMap()
       m_MapSiteUri = "https://www.wc3maps.com/api/download/" + m_SearchTarget.second;
       Print("[NET] GET <" + m_MapSiteUri + ">");
       auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout}, cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL});
+      if (response.status_code == 0) {
+        Print("[NET] Remote host unavailable (status code " + to_string(response.status_code) + ").");
+        return RESOLUTION_ERR;
+      }
       if (response.status_code < 300 || 399 < response.status_code) {
-        Print("[NET] Remote host unavailable.");
+        Print("[NET] Failed to access repository (status code " + to_string(response.status_code) + ").");
         return RESOLUTION_ERR;
       }
       downloadUri = response.header["location"];
@@ -738,19 +759,93 @@ void CGameSetup::SetDownloadFilePath(filesystem::path&& filePath)
 }
 
 #ifndef DISABLE_CPR
-uint32_t CGameSetup::RunDownload()
+void CGameSetup::RunDownload()
 {
+  if (m_SearchTarget.first != "epicwar" && m_SearchTarget.first != "wc3maps") {
+    Print("Error!! trying to download from " + m_SearchTarget.first + "!!");
+    return;
+  }
+  if (!m_Aura->m_Net->m_Config->m_AllowDownloads) {
+    m_Ctx->ErrorReply("Map downloads are not allowed.", CHAT_SEND_SOURCE_ALL);
+    return;
+  }
+
+  string fileNameFragmentPost = ParseFileExtension(m_BaseDownloadFileName);
+  string fileNameFragmentPre = m_BaseDownloadFileName.substr(0, m_BaseDownloadFileName.length() - fileNameFragmentPost.length());
+  bool nameSuccess = false;
+  string mapSuffix;
+  for (uint8_t i = 0; i < 10; ++i) {
+    if (i != 0) {
+      mapSuffix = "~" + to_string(i);
+    }
+    string testFileName = fileNameFragmentPre + mapSuffix + fileNameFragmentPost;
+    filesystem::path testFilePath = m_Aura->m_Config->m_MapPath / filesystem::path(testFileName);
+    if (FileExists(testFilePath)) {
+      // Map already exists.
+      // I'd rather directly open the file with wx flags to avoid racing conditions,
+      // but there is no standard C++ way to do this, and cstdio isn't very helpful.
+      continue;
+    }
+    if (m_Aura->m_BusyMaps.find(testFileName) != m_Aura->m_BusyMaps.end()) {
+      // Map already hosted.
+      continue;
+    }
+    SetDownloadFilePath(move(testFilePath));
+    nameSuccess = true;
+    break;
+  }
+  if (!nameSuccess) {
+    m_Ctx->ErrorReply("Download failed - duplicate map name [" + m_BaseDownloadFileName + "].", CHAT_SEND_SOURCE_ALL);
+    return;
+  }
+  Print("[NET] GET <" + m_MapDownloadUri + "> as [" + PathToString(m_DownloadFilePath.filename()) + "]...");
+  m_DownloadFileStream = new ofstream(m_DownloadFilePath.native().c_str(), std::ios_base::out | std::ios_base::binary);
+  if (!m_DownloadFileStream->is_open()) {
+    m_DownloadFileStream->close();
+    delete m_DownloadFileStream;
+    m_DownloadFileStream = nullptr;
+    m_Ctx->ErrorReply("Download failed - unable to write to disk.", CHAT_SEND_SOURCE_ALL);
+    return;
+  }
+  m_IsDownloading = true;
+  m_DownloadFuture = async(launch::async, &::CGameSetup::DownloadTask, this);
+}
+void CGameSetup::DownloadTask()
+{
+  if (!m_DownloadFileStream) return;
+  cpr::Response response = cpr::Download(
+    *m_DownloadFileStream,
+    cpr::Url{m_MapDownloadUri},
+    cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}},
+    cpr::Timeout{5000}
+  );
+  m_DownloadFileStream->close();
+  delete m_DownloadFileStream;
+  m_DownloadFileStream = nullptr;
+  if (response.status_code == 0) {
+    Print("[AURA] Download timeout. Check your internet connectivity.");
+    m_Ctx->ErrorReply("Failed to access " + m_SearchTarget.first + " repository.", CHAT_SEND_SOURCE_ALL);
+    return;
+  }
+  if (response.status_code != 200) {
+    Print("[AURA] Download status code: " + to_string(response.status_code));
+    m_Ctx->ErrorReply("Map not found in " + m_SearchTarget.first + " repository.", CHAT_SEND_SOURCE_ALL);
+    return;
+  }
+  Print("[AURA] Download task completed");
+  // Signals completion.
+  m_IsDownloaded = true;
+}
+uint32_t CGameSetup::RunDownloadSync()
+{
+  m_IsDownloading = true;
+
   if (m_SearchTarget.first != "epicwar" && m_SearchTarget.first != "wc3maps") {
     Print("Error!! trying to download from " + m_SearchTarget.first + "!!");
     return 0;
   }
   if (!m_Aura->m_Net->m_Config->m_AllowDownloads) {
     m_Ctx->ErrorReply("Map downloads are not allowed.", CHAT_SEND_SOURCE_ALL);
-    return 0;
-  }
-  if (!m_Aura->m_Games.empty()/* && m_Aura->m_Net->m_Config->m_HasBufferBloat*/) {
-    // Since the download is synchronous, it will lag active games even without bufferbloat.
-    m_Ctx->ErrorReply(string("Currently hosting ") + to_string(m_Aura->m_Games.size()) + " game(s). Downloads are disabled to prevent high latency.", CHAT_SEND_SOURCE_ALL);
     return 0;
   }
 
@@ -789,20 +884,155 @@ uint32_t CGameSetup::RunDownload()
     m_Ctx->ErrorReply("Download failed - unable to write to disk.", CHAT_SEND_SOURCE_ALL);
     return 0;
   }
-  cpr::Response response = cpr::Download(mapFile, cpr::Url{m_MapDownloadUri}, cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}});
+  cpr::Response response = cpr::Download(
+    mapFile,
+    cpr::Url{m_MapDownloadUri},
+    cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}},
+    cpr::Timeout{5000}
+  );
   mapFile.close();
+  if (response.status_code == 0) {
+    Print("[AURA] Download timeout. Check your internet connectivity.");
+    m_Ctx->ErrorReply("Failed to access " + m_SearchTarget.first + " repository.", CHAT_SEND_SOURCE_ALL);
+    return 0;
+  }
   if (response.status_code != 200) {
-    Print("[AURA] Status code: " + to_string(response.status_code));
+    Print("[AURA] Download status code: " + to_string(response.status_code));
     m_Ctx->ErrorReply("Map not found in " + m_SearchTarget.first + " repository.", CHAT_SEND_SOURCE_ALL);
     return 0;
   }
 
   m_IsDownloaded = true;
+  m_IsDownloading = false;
   return static_cast<uint32_t>(response.downloaded_bytes);
 }
 #endif
 
-bool CGameSetup::LoadMap()
+void CGameSetup::LoadMap()
+{
+  if (!m_Ctx) {
+    return;
+  }
+
+  if (m_Map) {
+    OnLoadMapSuccess();
+    return;
+  }
+
+  ParseInput();
+  pair<uint8_t, std::filesystem::path> searchResult = SearchInput();
+  if (searchResult.first == MATCH_TYPE_FORBIDDEN) {
+    OnLoadMapError();
+    return;
+  }
+  if (searchResult.first == MATCH_TYPE_INVALID) {
+    // Exclusive to standard paths mode.
+    m_Ctx->ErrorReply("Invalid file extension for [" + PathToString(searchResult.second.filename()) + "]. Please use --search-type");
+    OnLoadMapError();
+    return;
+  }
+  if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
+    if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable) {
+      OnLoadMapError();
+      return;
+    }
+    if (m_Aura->m_Config->m_EnableCFGCache) {
+      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg");
+      m_Map = GetBaseMapFromConfigFile(cachePath, true, true);
+      if (m_Map) {
+        OnLoadMapSuccess();
+        return;
+      }
+    }
+#ifndef DISABLE_CPR
+    if (ResolveRemoteMap() != RESOLUTION_OK) {
+      Print("[AURA] Failed to resolve remote map.");
+      OnLoadMapError();
+      return;
+    }
+    RunDownload();
+    return;
+#else
+    OnLoadMapError();
+    return;
+#endif
+  }
+  if (searchResult.first == MATCH_TYPE_CONFIG) {
+    m_Map = GetBaseMapFromConfigFile(searchResult.second, false, false);
+  } else {
+    m_Map = GetBaseMapFromMapFileOrCache(searchResult.second, false);
+  }
+  if (m_Map) {
+    OnLoadMapSuccess();
+  } else {
+    OnLoadMapError();
+  }
+//
+}
+
+void CGameSetup::OnLoadMapSuccess()
+{
+  if (!m_Ctx) {
+    return;
+  }
+  if (m_Ctx->GetPartiallyDestroyed()) {
+    m_DeleteMe = true;
+    return;
+  }
+  if (m_MapExtraOptions && !ApplyMapModifiers(m_MapExtraOptions)) {
+    m_Ctx->ErrorReply("Invalid map options. Map has fixed player settings.", CHAT_SEND_SOURCE_ALL);
+    m_DeleteMe = true;
+    return;
+  }
+
+  if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
+    if (m_Aura->m_CurrentLobby)  {
+      m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
+    } else {
+      SetName(m_MapReadyCallbackData);
+      CRealm* sourceRealm = m_Ctx->GetSourceRealm();
+      SetOwner(m_Ctx->GetSender(), sourceRealm);
+      if (sourceRealm) {
+        SetCreator(m_Ctx->GetSender(), sourceRealm);
+      } else if (m_Ctx->GetSourceIRC()) {
+        SetCreator(m_Ctx->GetSender(), m_Ctx->GetSourceIRC());
+      }
+      RunHost();
+    }
+  }
+}
+
+void CGameSetup::OnLoadMapError()
+{
+  if (!m_Ctx) {
+    return;
+  }
+  if (m_Ctx->GetPartiallyDestroyed()) {
+    m_DeleteMe = true;
+    return;
+  }
+  m_Ctx->ErrorReply("Map not found", CHAT_SEND_SOURCE_ALL);
+  m_DeleteMe = true;
+}
+
+#ifndef DISABLE_CPR
+void CGameSetup::OnDownloadMapSuccess()
+{
+  m_Map = GetBaseMapFromMapFileOrCache(m_DownloadFilePath, false);
+  if (m_Map) {
+    OnLoadMapSuccess();
+  } else {
+    OnLoadMapError();
+  }
+}
+
+void CGameSetup::OnDownloadMapError()
+{
+  OnLoadMapError();
+}
+#endif
+
+bool CGameSetup::LoadMapSync()
 {
   if (m_Map) return true;
 
@@ -830,7 +1060,7 @@ bool CGameSetup::LoadMap()
       Print("[AURA] Failed to resolve remote map.");
       return false;
     }
-    uint32_t downloadSize = RunDownload();
+    uint32_t downloadSize = RunDownloadSync();
     if (downloadSize == 0) {
       Print("[AURA] Failed to download map.");
       return false;
@@ -962,10 +1192,27 @@ bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThin
   return false;
 }
 
+bool CGameSetup::Update()
+{
+#ifndef DISABLE_CPR
+  if (!m_IsDownloading) return m_DeleteMe;
+  auto status = m_DownloadFuture.wait_for(chrono::seconds(0));
+  if (status != future_status::ready) return m_DeleteMe;
+  m_IsDownloading = false;
+  if (!m_IsDownloaded) {
+    m_DeleteMe = true;
+    return m_DeleteMe;
+  }
+  OnDownloadMapSuccess();
+#endif
+  return m_DeleteMe;
+}
+
 CGameSetup::~CGameSetup()
 {
-  m_Aura = nullptr;
-  m_Map = nullptr;
+  m_Aura->UnholdContext(m_Ctx);
   m_Ctx = nullptr;
   m_CreatedFrom = nullptr;
+  m_Aura = nullptr;
+  m_Map = nullptr;
 }

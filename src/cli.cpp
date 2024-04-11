@@ -298,7 +298,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     }
     CCommandContext* ctx = new CCommandContext(nAura, false, &cout);
     CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
-    if (gameSetup && gameSetup->LoadMap()) {
+    if (gameSetup && gameSetup->LoadMapSync()) {
       if (gameSetup->ApplyMapModifiers(&options)) {
         for (const auto& id : m_ExcludedRealms) {
           CRealm* excludedRealm = nAura->GetRealmByInputId(id);
@@ -311,8 +311,8 @@ bool CCLI::QueueActions(CAura* nAura) const
         if (m_MirrorSource.has_value()) {
           if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
             Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-            nAura->UnholdContext(ctx);
             delete gameSetup;
+            nAura->UnholdContext(ctx);
             return false;
           }
         }

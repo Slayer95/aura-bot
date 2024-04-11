@@ -31,6 +31,7 @@
 
 #include <random>
 #include <tuple>
+#include <future>
 
 using namespace std;
 
@@ -1320,9 +1321,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("reconnect"):
     case HashCode("gproxy"): {
-      if (!m_TargetGame)
-        break;
-
       SendReply("Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">");
       break;
     }
@@ -1576,7 +1574,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Not allowed to host games.");
           break;
         }
-        if (!m_Aura->m_GameSetup) {
+        if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
           ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
           break;
         }
@@ -1623,7 +1621,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         m_TargetGame->m_CreationTime = m_TargetGame->m_LastRefreshTime = GetTime();
       } else {
-        if (!m_Aura->m_GameSetup) {
+        if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
           ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
           break;
         }
@@ -1638,7 +1636,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_Aura->m_GameSetup->SetOwner(m_FromName, CommandHash == HashCode("hostlan") ? nullptr : m_SourceRealm);
         m_Aura->m_GameSetup->RunHost();
         delete m_Aura->m_GameSetup;
-        m_Aura->m_GameSetup = nullptr;
       }
       break;
     }
@@ -1662,7 +1659,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_Aura->m_GameSetup) {
+      if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
         ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
         break;
       }
@@ -1686,7 +1683,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetOwner(ownerName, ownerRealmName.empty() ? m_SourceRealm : m_Aura->GetRealmByInputId(ownerRealmName));
       m_Aura->m_GameSetup->RunHost();
       delete m_Aura->m_GameSetup;
-      m_Aura->m_GameSetup = nullptr;
       break;
     }
 
@@ -4091,16 +4087,24 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
      *********************/
 
     //
-    // !LOAD (load config file)
+    // !LOADCFG (load config file)
     //
 
-    case HashCode("load"): {
+    case HashCode("loadcfg"): {
       if (Payload.empty()) {
-        if (!m_Aura->m_GameSetup) {
+        if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
           SendReply("There is no map/config file loaded.");
           break;
         }
         SendReply("The currently loaded map/config file is: [" + m_Aura->m_GameSetup->GetInspectName() + "]");
+        break;
+      }
+      if (!CheckPermissions(m_Config->m_HostPermissions, COMMAND_PERMISSIONS_ADMIN)) {
+        ErrorReply("Not allowed to host games.");
+        break;
+      }
+      if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->GetIsDownloading()) {
+        ErrorReply("Another user is hosting a map.");
         break;
       }
 
@@ -4114,12 +4118,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Unable to host game");
         break;
       }
-      if (!gameSetup->LoadMap()) {
-        ErrorReply("No map configs found with that name.");
-        delete gameSetup;
-        break;
-      }
       gameSetup->SetActive();
+      gameSetup->LoadMap();
       break;
     }
 
@@ -4253,6 +4253,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("map"):
+    case HashCode("load"):
     case HashCode("host"): {
       if (!CheckPermissions(m_Config->m_HostPermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to host games.");
@@ -4272,11 +4273,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           }
           break;
         }
-        if (!m_Aura->m_GameSetup) {
+        if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
           SendReply("There is no map/config file loaded.", CHAT_SEND_SOURCE_ALL);
           break;
         }
         SendReply("The currently loaded map/config file is: [" + m_Aura->m_GameSetup->GetInspectName() + "]", CHAT_SEND_SOURCE_ALL);
+        break;
+      }
+      if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->GetIsDownloading()) {
+        ErrorReply("Another user is hosting a map.");
         break;
       }
 
@@ -4307,30 +4312,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Unable to host game", CHAT_SEND_SOURCE_ALL);
         break;
       }
-      if (!gameSetup->LoadMap()) {
-        ErrorReply("Map not found", CHAT_SEND_SOURCE_ALL);
-        delete gameSetup;
-        break;
-      }
-      if (!gameSetup->ApplyMapModifiers(&options)) {
-        ErrorReply("Invalid map options. Map has fixed player settings.", CHAT_SEND_SOURCE_ALL);
-        delete gameSetup;
-        break;
+      if (isHostCommand) {
+        gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, gameName);
       }
       gameSetup->SetActive();
-      if (isHostCommand) {
-        if (m_Aura->m_CurrentLobby)  {
-          ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
-          delete gameSetup;
-          break;
-        }
-        m_Aura->m_GameSetup->SetName(gameName);
-        m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
-        m_Aura->m_GameSetup->SetOwner(m_FromName, m_SourceRealm);
-        m_Aura->m_GameSetup->RunHost();
-        delete m_Aura->m_GameSetup;
-        m_Aura->m_GameSetup = nullptr;
-      }
+      gameSetup->LoadMap();
       break;
     }
 
@@ -4344,7 +4330,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_Aura->m_GameSetup) {
+      if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
         ErrorReply("A map must first be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map.");
         break;
       }
@@ -4399,7 +4385,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
       delete m_Aura->m_GameSetup;
-      m_Aura->m_GameSetup = nullptr;
       break;
     }
 

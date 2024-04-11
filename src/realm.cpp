@@ -712,7 +712,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 {
   uint8_t selectType;
   if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    Print(GetLogPrefix() + "sent << " + message->GetInnerMessage() + ">>");
+    Print(GetLogPrefix() + "sent <<" + message->GetInnerMessage() + ">>");
   }
   Send(message->SelectBytes(m_CurrentChannel, selectType));
   if (message->GetSendsEarlyFeedback()) {
@@ -1126,6 +1126,9 @@ void CRealm::TryQueueChat(const string& message, const string& user, bool isPriv
   // e.g. when several users join a game at the same time and cause multiple /whois messages to be queued at once
 
   if (m_ChatQueueMain.size() >= 25 && !(GetIsFloodImmune() || GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))) {
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print(GetLogPrefix() + "warning - " + to_string(m_ChatQueueMain.size()) + " queued messages");
+    }
     return;
   }
 

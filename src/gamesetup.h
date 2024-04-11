@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <vector>
 #include <optional>
+#include <utility>
 #ifndef DISABLE_CPR
 #include <cpr/cpr.h>
 #endif
@@ -70,6 +71,9 @@
 #define GAMESETUP_ORIGIN_REALM 1
 #define GAMESETUP_ORIGIN_IRC 2
 #define GAMESETUP_ORIGIN_INVALID 255
+
+#define MAP_ONREADY_SET_ACTIVE 1
+#define MAP_ONREADY_HOST 2
 
 class CAura;
 class CCommandContext;
@@ -159,12 +163,17 @@ public:
   std::pair<std::string, std::string>             m_SearchTarget;
 
   bool                                            m_IsDownloadable;
+  bool                                            m_IsDownloading;
   bool                                            m_IsDownloaded;
   std::string                                     m_BaseDownloadFileName;
   std::string                                     m_MapDownloadUri;
   uint32_t                                        m_MapDownloadSize;
   std::string                                     m_MapSiteUri;
   std::filesystem::path                           m_DownloadFilePath;
+  std::ofstream*                                  m_DownloadFileStream;
+#ifndef DISABLE_CPR
+  std::future<void>                               m_DownloadFuture;
+#endif
 
   bool                                            m_SkipVersionCheck;
 
@@ -184,11 +193,18 @@ public:
   void*                                           m_CreatedFrom;
   uint8_t                                         m_CreatedFromType;
 
+  CGameExtraOptions*                              m_MapExtraOptions;
+  uint8_t                                         m_MapReadyCallbackAction;
+  std::string                                     m_MapReadyCallbackData;
+
+  bool                                            m_DeleteMe;
+
   CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* mapCFG);
   CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck);
   ~CGameSetup();
 
   std::string GetInspectName() const;
+  bool GetDeleteMe() const { return m_DeleteMe; }  
 
   void ParseInputLocal();
   void ParseInput();
@@ -209,13 +225,23 @@ public:
   uint8_t ResolveRemoteMap();
   void SetDownloadFilePath(std::filesystem::path&& filePath);
 #ifndef DISABLE_CPR
-  uint32_t RunDownload();
+  void RunDownload();
+  void DownloadTask();
+  uint32_t RunDownloadSync();
 #endif
-  bool LoadMap();
+  void LoadMap();
+  bool LoadMapSync();  
+  void OnLoadMapSuccess();
+  void OnLoadMapError();
+#ifndef DISABLE_CPR
+  void OnDownloadMapSuccess();
+  void OnDownloadMapError();
+#endif
   bool SetActive();
   bool RunHost();
 
   inline bool GetIsMirror() const { return m_GameIsMirror; }
+  inline bool GetIsDownloading() const { return m_IsDownloading; }
 
   bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
   bool SetMirrorSource(const std::string& nInput);
@@ -232,6 +258,12 @@ public:
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
   void SetContext(CCommandContext* nCtx) { m_Ctx = nCtx; }
+  void SetMapReadyCallback(const uint8_t action, const std::string& data) {
+    m_MapReadyCallbackAction = action;
+    m_MapReadyCallbackData = data;
+  }
+
+  bool Update();
 };
 
 #endif // AURA_GAMESETUP_H_

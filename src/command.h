@@ -121,6 +121,8 @@ public:
   inline bool GetIsWhisper() const { return m_FromWhisper; }
   inline std::string GetSender() const { return m_FromName; }
   inline std::string GetChannelName() const { return m_ChannelName; }
+  inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
+  inline CIRC* GetSourceIRC() const { return m_IRC; }
 
   bool SetIdentity(const std::string& userName, const std::string& realmId);
   void SetAuthenticated(const bool& nAuthenticated);
