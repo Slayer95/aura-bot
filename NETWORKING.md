@@ -74,7 +74,15 @@ rate-limited to 1 GB / month.
 ## Packetriot
 
 ### Configuration
-Open your console at the location where Packetriot has been downloaded, and run (line-by-line).
+Open your console at the location where Packetriot has been downloaded, and run.
+
+```
+pktriot configured
+```
+
+Follow the onscreen instructions to setup your Packetriot client. This is requiered to 
+link it to your account, and choosing an appropriate low-latency region. Once that's done, 
+type on the console (line-by-line).
 
 ```
 pktriot tunnel tcp allocate
@@ -104,7 +112,7 @@ pktriot tunnel tcp forward --port <PORT> --destination 127.0.0.1 --dstport <net.
 Open your console at the location where Packetriot has been downloaded, and run.
 
 ```
-packetriot start
+pktriot start
 ```
 
 ### Pros and cons
