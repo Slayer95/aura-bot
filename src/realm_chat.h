@@ -96,6 +96,10 @@ public:
     m_ReceiverSelector = selector;
     m_ReceiverName = std::vector<uint8_t>(name.begin(), name.end());
   }
+  void SetReceiver(const uint8_t selector, const std::vector<uint8_t>& name) {
+    m_ReceiverSelector = selector;
+    m_ReceiverName = name;
+  }
   void SetChannel(const std::string& nChannel) { m_Channel = nChannel; }
   void SetCallback(const uint8_t callback) { m_Callback = callback; }
   void SetValidator(const uint8_t validator);
