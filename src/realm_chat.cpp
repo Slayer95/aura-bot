@@ -166,6 +166,21 @@ uint8_t CQueuedChatMessage::SelectSize(const size_t wrapSize, const std::string&
   }
 }
 
+bool CQueuedChatMessage::GetSendsEarlyFeedback() const
+{
+  if (m_EarlyFeedback.empty() || !m_ProxySenderCtx || m_ProxySenderCtx->GetPartiallyDestroyed()) {
+    return false;
+  }
+  return m_ProxySenderCtx->GetSourceRealm() == m_Realm;
+}
+
+CQueuedChatMessage* CQueuedChatMessage::GetEarlyFeedback() const {
+  CQueuedChatMessage* feedback = new CQueuedChatMessage(m_Realm, m_ProxySenderCtx, m_ProxySenderCtx != nullptr);
+  feedback->SetMessage(m_EarlyFeedback);
+  feedback->SetReceiver(RECV_SELECTOR_ONLY_WHISPER, m_ProxySenderName);
+  return feedback;
+}
+
 uint8_t CQueuedChatMessage::GetVirtualSize(const size_t wrapSize, const uint8_t selectType) const
 {
   // according to realm's antiflood parameters

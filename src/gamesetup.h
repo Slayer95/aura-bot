@@ -262,6 +262,8 @@ public:
     m_MapReadyCallbackAction = action;
     m_MapReadyCallbackData = data;
   }
+  void SetMapExtraOptions(CGameExtraOptions* opts) { m_MapExtraOptions = opts; }
+  void ResetExtraOptions();
 
   bool Update();
 };

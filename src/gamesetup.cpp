@@ -979,10 +979,14 @@ void CGameSetup::OnLoadMapSuccess()
     m_DeleteMe = true;
     return;
   }
-  if (m_MapExtraOptions && !ApplyMapModifiers(m_MapExtraOptions)) {
-    m_Ctx->ErrorReply("Invalid map options. Map has fixed player settings.", CHAT_SEND_SOURCE_ALL);
-    m_DeleteMe = true;
-    return;
+  if (m_MapExtraOptions) {
+    if (!ApplyMapModifiers(m_MapExtraOptions)) {
+      m_Ctx->ErrorReply("Invalid map options. Map has fixed player settings.", CHAT_SEND_SOURCE_ALL);
+      m_DeleteMe = true;
+      ResetExtraOptions();
+      return;
+    }
+    ResetExtraOptions();
   }
 
   if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
@@ -1208,8 +1212,17 @@ bool CGameSetup::Update()
   return m_DeleteMe;
 }
 
+void CGameSetup::ResetExtraOptions()
+{
+  if (m_MapExtraOptions) {
+    delete m_MapExtraOptions;
+    m_MapExtraOptions = nullptr;
+  }
+}
+
 CGameSetup::~CGameSetup()
 {
+  ResetExtraOptions();
   m_Aura->UnholdContext(m_Ctx);
   m_Ctx = nullptr;
   m_CreatedFrom = nullptr;
