@@ -4301,20 +4301,22 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           }
         }
       }
-      CGameExtraOptions options;
-      if (2 <= Args.size()) options.ParseMapObservers(Args[1]);
-      if (3 <= Args.size()) options.ParseMapVisibility(Args[2]);
-      if (4 <= Args.size()) options.ParseMapRandomRaces(Args[3]);
-      if (5 <= Args.size()) options.ParseMapRandomHeroes(Args[4]);
+      CGameExtraOptions* options = new CGameExtraOptions();
+      if (2 <= Args.size()) options->ParseMapObservers(Args[1]);
+      if (3 <= Args.size()) options->ParseMapVisibility(Args[2]);
+      if (4 <= Args.size()) options->ParseMapRandomRaces(Args[3]);
+      if (5 <= Args.size()) options->ParseMapRandomHeroes(Args[4]);
 
       CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true /* skip version check for convenience */);
       if (!gameSetup) {
+        delete options;
         ErrorReply("Unable to host game", CHAT_SEND_SOURCE_ALL);
         break;
       }
       if (isHostCommand) {
         gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, gameName);
       }
+      gameSetup->SetMapExtraOptions(options);
       gameSetup->SetActive();
       gameSetup->LoadMap();
       break;
