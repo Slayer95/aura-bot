@@ -61,6 +61,7 @@ CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, co
   if (isProxy) {
     m_ProxySenderCtx = nCtx;
     m_ProxySenderName = vector<uint8_t>(nCtx->GetSender().begin(), nCtx->GetSender().end());
+    m_Realm->m_Aura->HoldContext(nCtx);
   }
 }
 
@@ -171,14 +172,11 @@ bool CQueuedChatMessage::GetSendsEarlyFeedback() const
   if (m_EarlyFeedback.empty() || !m_ProxySenderCtx || m_ProxySenderCtx->GetPartiallyDestroyed()) {
     return false;
   }
-  return m_ProxySenderCtx->GetSourceRealm() == m_Realm;
+  return true;
 }
 
-CQueuedChatMessage* CQueuedChatMessage::GetEarlyFeedback() const {
-  CQueuedChatMessage* feedback = new CQueuedChatMessage(m_Realm, m_ProxySenderCtx, m_ProxySenderCtx != nullptr);
-  feedback->SetMessage(m_EarlyFeedback);
-  feedback->SetReceiver(RECV_SELECTOR_ONLY_WHISPER, m_ProxySenderName);
-  return feedback;
+void CQueuedChatMessage::SendEarlyFeedback() const {
+  m_ProxySenderCtx->SendReply(m_EarlyFeedback);
 }
 
 uint8_t CQueuedChatMessage::GetVirtualSize(const size_t wrapSize, const uint8_t selectType) const

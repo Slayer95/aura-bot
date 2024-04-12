@@ -73,7 +73,7 @@ private:
 
   CCommandContext*      m_ProxySenderCtx;
   std::vector<uint8_t>  m_ProxySenderName; // !whois, !tell, !invite, !say, !announce
-  std::vector<uint8_t>  m_EarlyFeedback; // If not empty, create another CQueuedChatMessage with init(initializer->m_EarlyFeedback), m_ReceiverName(init->m_ProxySenderName), m_ReceiverSelector(RECV_SELECTOR_ONLY_WHISPER)
+  std::string           m_EarlyFeedback;
 
   std::vector<uint8_t>  m_Validator; // First byte CHAT_VALIDATOR_NONE, CHAT_VALIDATOR_CURRENT_LOBBY. Rest is parsed.
   uint8_t               m_Callback;
@@ -114,7 +114,9 @@ public:
   uint8_t SelectSize(const size_t wrapSize, const std::string& currentChannel) const;
   std::pair<bool, uint8_t> OptimizeVirtualSize(const size_t wrapSize) const;
   bool GetSendsEarlyFeedback() const;
-  CQueuedChatMessage* GetEarlyFeedback() const;
+  void SendEarlyFeedback() const;
+  void SetEarlyFeedback(const std::string& body) { m_EarlyFeedback = body; }
+  inline std::string GetEarlyFeedback() const { return m_EarlyFeedback; }
   bool IsProxySent() const { return m_ProxySenderCtx != nullptr; }
   CCommandContext* GetProxyCtx() const { return m_ProxySenderCtx; }
   std::string GetReceiver() const { return std::string(m_ReceiverName.begin(), m_ReceiverName.end()); }

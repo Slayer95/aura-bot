@@ -239,6 +239,7 @@ public:
   uint32_t       GetSlotsOpen() const;
   uint32_t       GetNumConnectionsOrFake() const;
   uint32_t       GetNumHumanPlayers() const;
+  uint32_t       GetNumControllers() const;
   std::string    GetMapFileName() const;
   std::string    GetMapSiteURL() const { return m_MapSiteURL; }
   std::string    GetDescription() const;

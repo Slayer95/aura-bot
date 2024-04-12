@@ -631,7 +631,15 @@ CAura::~CAura()
   delete m_GPSProtocol;
   delete m_CRC;
   delete m_SHA;
-  delete m_GameSetup;
+  if (m_GameSetup) {
+    if (m_GameSetup->GetIsDownloading()) {
+      // Downloading off-thread. Nullify pointer to CAura.
+      m_GameSetup->m_Aura = nullptr;
+    } else {
+      // Ctrl+C while downloading a map. Prevent crashes.
+      delete m_GameSetup;
+    }
+  }
 
   for (auto& bnet : m_Realms)
     delete bnet;

@@ -550,8 +550,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
 }
 
 void CCommandContext::SendReply(const string& message, const uint8_t ctxFlags) {
-  if (message.empty())
-    return;
+  if (message.empty()) return;
 
   if (m_IsBroadcast) {
     SendReplyCustomFlags(message, ctxFlags | CHAT_SEND_SOURCE_ALL);
@@ -561,34 +560,41 @@ void CCommandContext::SendReply(const string& message, const uint8_t ctxFlags) {
 }
 
 void CCommandContext::InfoReply(const string& message, const uint8_t ctxFlags) {
+  if (message.empty()) return;
   SendReply(message, ctxFlags | CHAT_TYPE_INFO);
 }
 
 void CCommandContext::DoneReply(const string& message, const uint8_t ctxFlags) {
+  if (message.empty()) return;
   SendReply("Done: " + message, ctxFlags | CHAT_TYPE_DONE);
 }
 
 void CCommandContext::ErrorReply(const string& message, const uint8_t ctxFlags) {
+  if (message.empty()) return;
   SendReply("Error: " + message, ctxFlags | CHAT_TYPE_ERROR);
 }
 
 void CCommandContext::SendAll(const string& message)
 {
+  if (message.empty()) return;
   SendReply(message, CHAT_SEND_TARGET_ALL);
 }
 
 void CCommandContext::InfoAll(const string& message)
 {
+  if (message.empty()) return;
   InfoReply(message, CHAT_SEND_TARGET_ALL);
 }
 
 void CCommandContext::DoneAll(const string& message)
 {
+  if (message.empty()) return;
   DoneReply(message, CHAT_SEND_TARGET_ALL);
 }
 
 void CCommandContext::ErrorAll(const string& message)
 {
+  if (message.empty()) return;
   ErrorReply(message, CHAT_SEND_TARGET_ALL);
 }
 
@@ -2641,6 +2647,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       string TargetRealm = TargetPlayer ? TargetPlayer->GetRealmHostName() : m_HostName;
+      if (!TargetPlayer && TargetRealm.empty()) {
+        ErrorReply("Usage: " + cmdToken + "owner [PLAYERNAME]");
+        break;
+      }
       if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
         SendAll(TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game.");
       } else {
@@ -2695,9 +2705,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           continue;
         if (ToAllRealms || bnet->GetInputID() == RealmId) {
           if (IsCommand) {
-            bnet->QueueCommand(Message);
+            bnet->QueueCommand(Message)->SetEarlyFeedback("Command sent.");
           } else {
-            bnet->QueueChatChannel(Message);
+            bnet->QueueChatChannel(Message)->SetEarlyFeedback("Message sent.");
           }
           Success = true;
         }
@@ -2749,27 +2759,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->m_RealmRefreshError = false;
+      string earlyFeedback = "Announcement sent.";
       if (ToAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {
-          string AnnounceText = (
-            string("[1.") + to_string(m_Aura->m_GameVersion) + ".x] Hosting public game of " + m_TargetGame->GetMapFileName() +
-          ". (Started by " + m_TargetGame->m_OwnerName + ": \"" + bnet->GetPrefixedGameName(m_TargetGame->m_GameName) + "\")"
-          );
-          bnet->QueueGameUncreate();
+          bnet->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
+          bnet->QueueGameUncreate(); //?
           bnet->SendEnterChat();
-          bnet->QueueChatChannel(AnnounceText);
         }
       } else {
-        string AnnounceText = (
-            string("[1.") + to_string(m_Aura->m_GameVersion) + ".x] Hosting public game of " + m_TargetGame->GetMapFileName() +
-          ". (Started by " + m_TargetGame->m_OwnerName + ": \"" + targetRealm->GetPrefixedGameName(m_TargetGame->m_GameName) + "\")"
-        );
+        targetRealm->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
         targetRealm->QueueGameUncreate();
         targetRealm->SendEnterChat();
-        targetRealm->QueueChatChannel(AnnounceText);
       }
-
-      SendReply("Announcement sent.");
       break;
     }
 
@@ -2827,7 +2828,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint8_t Skill = static_cast<uint8_t>(Args[1]);
 
       m_TargetGame->DeleteFakePlayer(SID);
-      m_TargetGame->ComputerSlot(SID, Skill, false);
+      if (!m_TargetGame->ComputerSlot(SID, Skill, false)) {
+        ErrorReply("Cannot add computer on that slot.");
+        break;
+      }
       break;
     }
 
@@ -3475,7 +3479,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         Name = TrimString(Name.substr(0, RealmStart));
       }
 
-      if (Name.empty()) {
+      if (Name.empty() || Name.length() > 33) { // TODO: What's the maximum size of a user name?
         ErrorReply("Usage: " + cmdToken + "whois [PLAYERNAME]");
         break;
       }
@@ -4217,7 +4221,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Realm not found.");
         break;
       }
-      m_SourceRealm->QueueCommand("/join " + Payload);
+      if (!m_SourceRealm->QueueCommand("/join " + Payload)) {
+        ErrorReply("Failed to join channel.");
+        break;
+      }
       break;
     }
 

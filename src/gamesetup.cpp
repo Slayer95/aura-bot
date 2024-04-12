@@ -824,12 +824,12 @@ void CGameSetup::DownloadTask()
   m_DownloadFileStream = nullptr;
   if (response.status_code == 0) {
     Print("[AURA] Download timeout. Check your internet connectivity.");
-    m_Ctx->ErrorReply("Failed to access " + m_SearchTarget.first + " repository.", CHAT_SEND_SOURCE_ALL);
+    m_ErrorMessage = "Failed to access " + m_SearchTarget.first + " repository.";
     return;
   }
   if (response.status_code != 200) {
     Print("[AURA] Download status code: " + to_string(response.status_code));
-    m_Ctx->ErrorReply("Map not found in " + m_SearchTarget.first + " repository.", CHAT_SEND_SOURCE_ALL);
+    m_ErrorMessage = "Map not found in " + m_SearchTarget.first + " repository.";
     return;
   }
   Print("[AURA] Download task completed");
@@ -910,10 +910,6 @@ uint32_t CGameSetup::RunDownloadSync()
 
 void CGameSetup::LoadMap()
 {
-  if (!m_Ctx) {
-    return;
-  }
-
   if (m_Map) {
     OnLoadMapSuccess();
     return;
@@ -972,9 +968,6 @@ void CGameSetup::LoadMap()
 
 void CGameSetup::OnLoadMapSuccess()
 {
-  if (!m_Ctx) {
-    return;
-  }
   if (m_Ctx->GetPartiallyDestroyed()) {
     m_DeleteMe = true;
     return;
@@ -1008,9 +1001,6 @@ void CGameSetup::OnLoadMapSuccess()
 
 void CGameSetup::OnLoadMapError()
 {
-  if (!m_Ctx) {
-    return;
-  }
   if (m_Ctx->GetPartiallyDestroyed()) {
     m_DeleteMe = true;
     return;
@@ -1022,6 +1012,7 @@ void CGameSetup::OnLoadMapError()
 #ifndef DISABLE_CPR
 void CGameSetup::OnDownloadMapSuccess()
 {
+  if (!m_Aura) return;
   m_Map = GetBaseMapFromMapFileOrCache(m_DownloadFilePath, false);
   if (m_Map) {
     OnLoadMapSuccess();
@@ -1032,6 +1023,7 @@ void CGameSetup::OnDownloadMapSuccess()
 
 void CGameSetup::OnDownloadMapError()
 {
+  if (!m_Aura) return;
   OnLoadMapError();
 }
 #endif
@@ -1204,6 +1196,7 @@ bool CGameSetup::Update()
   if (status != future_status::ready) return m_DeleteMe;
   m_IsDownloading = false;
   if (!m_IsDownloaded) {
+    m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL);
     m_DeleteMe = true;
     return m_DeleteMe;
   }
@@ -1223,7 +1216,11 @@ void CGameSetup::ResetExtraOptions()
 CGameSetup::~CGameSetup()
 {
   ResetExtraOptions();
-  m_Aura->UnholdContext(m_Ctx);
+  if (m_Aura) {
+    m_Aura->UnholdContext(m_Ctx);
+  } else {
+    delete m_Ctx;
+  }
   m_Ctx = nullptr;
   m_CreatedFrom = nullptr;
   m_Aura = nullptr;

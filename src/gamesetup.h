@@ -174,6 +174,7 @@ public:
 #ifndef DISABLE_CPR
   std::future<void>                               m_DownloadFuture;
 #endif
+  std::string                                     m_ErrorMessage;
 
   bool                                            m_SkipVersionCheck;
 

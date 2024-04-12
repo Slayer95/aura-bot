@@ -716,7 +716,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   }
   Send(message->SelectBytes(m_CurrentChannel, selectType));
   if (message->GetSendsEarlyFeedback()) {
-    m_ChatQueueMain.push(message->GetEarlyFeedback());
+    message->SendEarlyFeedback();
   }
   if (selectType == CHAT_RECV_SELECTED_WHISPER) {
     m_ChatSentWhispers.push(message);
@@ -724,7 +724,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
       Print(GetLogPrefix() + "warning - " + to_string(m_ChatSentWhispers.size()) + " sent whispers have not been confirmed by the server");
       Print(GetLogPrefix() + "warning - <" + m_Config->m_CFGKeyPrefix + "protocol.whisper.error_reply = " + m_Config->m_WhisperErrorReply + "> may not match the language of this realm's system messages.");
     }
-    // If whisper, return false, meaning that caller must not delete message
+    // If whisper, return false, meaning that caller must not delete the message.
     return false;
   }
   if (!m_Config->m_FloodImmune) {

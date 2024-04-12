@@ -374,6 +374,17 @@ uint32_t CGame::GetNumHumanPlayers() const
   return NumHumanPlayers;
 }
 
+uint32_t CGame::GetNumControllers() const
+{
+  uint32_t count = 0;
+  for (const auto& slot : m_Slots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Aura->m_MaxSlots) {
+      ++count;
+    }
+  }
+  return count;
+}
+
 string CGame::GetMapFileName() const
 {
   size_t LastSlash = m_MapPath.rfind('\\');
@@ -1963,14 +1974,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
     // try to pick a team and colour
     // make sure there aren't too many other players already
 
-    uint8_t NumOtherPlayers = 0;
-
-    for (auto& slot : m_Slots) {
-      if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Aura->m_MaxSlots)
-        ++NumOtherPlayers;
-    }
-
-    if (NumOtherPlayers < m_Map->GetMapNumPlayers()) {
+    if (GetNumControllers() < m_Map->GetMapNumPlayers()) {
       if (SID < m_Map->GetMapNumPlayers())
         m_Slots[SID].SetTeam(SID);
       else
@@ -3367,6 +3371,15 @@ bool CGame::CloseSlot(uint8_t SID, bool kick)
 bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
 {
   if (SID < m_Slots.size() && skill < 3) {
+    CGameSlot Slot = m_Slots[SID];
+    if (Slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED && GetNumControllers() == m_Map->GetMapNumPlayers()) {
+      return false;
+    }
+    if (Slot.GetTeam() == m_Aura->m_MaxSlots) {
+      if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
+        return false;
+      }
+    }
     CGamePlayer* Player = GetPlayerFromSID(SID);
     if (Player && !Player->GetDeleteMe()) {
       if (!kick) return false;
@@ -3374,11 +3387,13 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
       Player->SetLeftReason("was kicked when creating a computer in a slot");
       Player->SetLeftCode(PLAYERLEAVE_LOBBY);
     }
-
-    CGameSlot Slot = m_Slots[SID];
     if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
-    m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
+    if (Slot.GetTeam() == m_Aura->m_MaxSlots) {
+      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, 0, Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
+    } else {
+      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
+    }
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
   return true;
@@ -3426,18 +3441,18 @@ void CGame::OpenAllSlots()
 
 void CGame::CloseAllSlots()
 {
-  bool Changed = false;
+  bool anyChanged = false;
 
   for (auto& slot : m_Slots)
   {
     if (slot.GetSlotStatus() == SLOTSTATUS_OPEN)
     {
       slot.SetSlotStatus(SLOTSTATUS_CLOSED);
-      Changed = true;
+      anyChanged = true;
     }
   }
 
-  if (Changed) {
+  if (anyChanged) {
     if (GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -3446,20 +3461,32 @@ void CGame::CloseAllSlots()
 
 void CGame::ComputerAllSlots(uint8_t skill)
 {
-  bool Changed = false;
+  if (m_Map->GetMapNumPlayers() <= GetNumControllers()) {
+    return;
+  }
+  bool anyChanged = false;
 
   uint8_t SID = 0;
+  uint32_t remainingSlots = m_Map->GetMapNumPlayers() - GetNumControllers();
 
-  while (SID < m_Slots.size()) {
+  while (SID < m_Slots.size() && 0 < remainingSlots) {
     CGameSlot Slot = m_Slots[SID];
     if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN) {
-      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
-      Changed = true;
+      if (Slot.GetTeam() == m_Aura->m_MaxSlots) {
+        if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
+          continue;
+        }
+        m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, 0, Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
+      } else {
+        m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
+      }
+      --remainingSlots;
+      anyChanged = true;
     }
     ++SID;
   }
 
-  if (Changed) {
+  if (anyChanged) {
     if (GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
