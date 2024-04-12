@@ -350,6 +350,7 @@ public:
   uint8_t GetHostPID() const;
   uint8_t GetEmptySlot(bool reserved) const;
   uint8_t GetEmptySlot(uint8_t team, uint8_t PID) const;
+  uint8_t GetEmptyObserverSlot() const;
   void SwapSlots(uint8_t SID1, uint8_t SID2);
   bool OpenSlot(uint8_t SID, bool kick);
   bool CloseSlot(uint8_t SID, bool kick);

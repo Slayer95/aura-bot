@@ -1975,11 +1975,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
     // make sure there aren't too many other players already
 
     if (GetNumControllers() < m_Map->GetMapNumPlayers()) {
-      if (SID < m_Map->GetMapNumPlayers())
-        m_Slots[SID].SetTeam(SID);
-      else
-        m_Slots[SID].SetTeam(0);
-
+      m_Slots[SID].SetTeam(SID % m_Map->GetMapNumTeams());
       m_Slots[SID].SetColour(GetNewColour());
     }
   }
@@ -3287,6 +3283,20 @@ uint8_t CGame::GetEmptySlot(uint8_t team, uint8_t PID) const
   return 255;
 }
 
+uint8_t CGame::GetEmptyObserverSlot() const
+{
+  if (m_Slots.size() > 255)
+    return 255;
+
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
+      return i;
+    }
+  }
+
+  return 255;
+}
+
 void CGame::SwapSlots(uint8_t SID1, uint8_t SID2)
 {
   if (SID1 < m_Slots.size() && SID2 < m_Slots.size() && SID1 != SID2)
@@ -3390,7 +3400,7 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
     if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
     if (Slot.GetTeam() == m_Aura->m_MaxSlots) {
-      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, 0, Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
+      m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, SID % m_Map->GetMapNumTeams(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
     } else {
       m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
     }
@@ -3476,7 +3486,7 @@ void CGame::ComputerAllSlots(uint8_t skill)
         if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
           continue;
         }
-        m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, 0, Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
+        m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, SID % m_Map->GetMapNumTeams(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
       } else {
         m_Slots[SID]   = CGameSlot(0, 100, SLOTSTATUS_OCCUPIED, 1, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot), skill);
       }
@@ -3921,17 +3931,27 @@ bool CGame::CreateFakePlayer(const bool useVirtualHostName)
   if (m_FakePlayers.size() + 1 == m_Slots.size())
     return false;
 
-  uint8_t SID = GetEmptySlot(false);
+  const bool isObserver = GetNumControllers() == m_Map->GetMapNumPlayers();
+  if (isObserver && !(m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES)) {
+    return false;
+  }
+
+  const bool isCustomForces = m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES;
+  uint8_t SID = isObserver && isCustomForces ? GetEmptyObserverSlot() : GetEmptySlot(false);
 
   if (SID < m_Slots.size()) {
+    if (isCustomForces && ((m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots) != isObserver)) {
+      return false;
+    }
     if (GetSlotsOpen() == 1)
       DeleteVirtualHost();
 
     const uint8_t              FakePlayerPID = GetNewPID();
     const std::vector<uint8_t> IP            = {0, 0, 0, 0};
+    uint8_t                    Team          = isObserver ? m_Aura->m_MaxSlots : m_Slots[SID].GetTeam();
 
     SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]", IP, IP));
-    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
+    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, Team, m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
     m_FakePlayers.push_back(FakePlayerPID);
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
     return true;
@@ -3945,9 +3965,17 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
   if (m_FakePlayers.size() + 1 == m_Slots.size())
     return false;
 
-  uint8_t SID = GetEmptySlot(false);
+  if (!(m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES)) {
+    return false;
+  }
+
+  const bool isCustomForces = m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES;
+  uint8_t SID = isCustomForces ? GetEmptyObserverSlot() : GetEmptySlot(false);
 
   if (SID < m_Slots.size()) {
+    if (isCustomForces && (m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots)) {
+      return false;
+    }
     if (GetSlotsOpen() == 1)
       DeleteVirtualHost();
 

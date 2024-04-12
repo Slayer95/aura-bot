@@ -2629,8 +2629,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("owner"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
+        Print("Bad !owner context");
         break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
         if (Payload.empty() && m_TargetGame->HasOwnerSet()) {
@@ -2652,8 +2654,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
+        Print("ERROR - Already owner!");
         SendAll(TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game.");
       } else {
+        Print("DONE - Setting owner.");
         m_TargetGame->SetOwner(TargetName, TargetRealm);
         SendReply("Setting game owner to [" + TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       }
@@ -3049,6 +3053,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
         ErrorReply("This map has Custom Forces enabled.");
+        break;
+      }
+
+      if (Team != m_Aura->m_MaxSlots && Team > m_TargetGame->GetMap()->GetMapNumTeams()) {
+        ErrorReply("This map does not allow Team #" + to_string(Args[1]) + ".");
         break;
       }
 
