@@ -191,6 +191,7 @@ protected:
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_HadLeaver;                     // if the game has desynced or not
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
+  bool                           m_UsesCustomReferees;
   bool                           m_SentPriorityWhois;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   std::set<std::string>          m_IgnoredNotifyJoinPlayers;
@@ -381,6 +382,7 @@ public:
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
   void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
+  void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
 
   void OpenObserverSlots();
   void CloseObserverSlots();

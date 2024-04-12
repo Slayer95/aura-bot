@@ -449,6 +449,30 @@ set<string> CConfig::GetSet(const string& key, char separator, const set<string>
   END(Output)
 }
 
+set<string> CConfig::GetSetInsensitive(const string& key, char separator, const set<string> x)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  bool errored = false;
+  set<string> Output;
+  stringstream ss(it->second);
+  while (ss.good()) {
+    string element;
+    getline(ss, element, separator);
+    if (element.empty())
+      continue;
+    transform(begin(element), end(element), begin(element), ::tolower);
+    if (!Output.insert(element).second)
+      errored = true;
+  }
+
+  END(Output)
+}
+
 vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count, const std::vector<uint8_t> &x)
 {
   m_ValidKeys.insert(key);

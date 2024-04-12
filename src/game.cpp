@@ -143,6 +143,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Desynced(false),
     m_HadLeaver(false),
     m_HasMapLock(false),
+    m_UsesCustomReferees(false),
     m_SentPriorityWhois(false)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
@@ -2421,8 +2422,8 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
 
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES)
   {
-    uint8_t oldSID = GetSIDFromPID(player->GetPID());
-    uint8_t newSID = GetEmptySlot(team, player->GetPID());
+    const uint8_t oldSID = GetSIDFromPID(player->GetPID());
+    const uint8_t newSID = GetEmptySlot(team, player->GetPID());
     SwapSlots(oldSID, newSID);
   }
   else
@@ -2437,20 +2438,7 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
     }
     else
     {
-      if (team >= m_Map->GetMapNumPlayers())
-        return;
-
-      // make sure there aren't too many other players already
-
-      uint8_t NumOtherPlayers = 0;
-
-      for (auto& slot : m_Slots)
-      {
-        if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Aura->m_MaxSlots && slot.GetPID() != player->GetPID())
-          ++NumOtherPlayers;
-      }
-
-      if (NumOtherPlayers >= m_Map->GetMapNumPlayers())
+      if (team >= m_Map->GetMapNumTeams())
         return;
     }
 
@@ -2458,18 +2446,22 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
 
     if (SID < m_Slots.size())
     {
+      const bool toObservers = team == m_Aura->m_MaxSlots;
+      if (player->GetObserver() && !toObservers && GetNumControllers() >= m_Map->GetMapNumPlayers()) {
+        return;
+      }
       m_Slots[SID].SetTeam(team);
-      player->SetObserver(team == m_Aura->m_MaxSlots);
-      if (player->GetObserver())
-        player->SetPowerObserver(player->GetObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
-      if (team == m_Aura->m_MaxSlots) {
-        // if they're joining the observer team give them the observer colour
-
+      player->SetObserver(toObservers);
+      if (toObservers) {
+        player->SetPowerObserver(!m_UsesCustomReferees && m_Map->GetMapObservers() == MAPOBS_REFEREES);
+        // observer color
         m_Slots[SID].SetColour(m_Aura->m_MaxSlots);
-      } else if (m_Slots[SID].GetColour() == m_Aura->m_MaxSlots) {
-        // if they're joining a regular team give them an unused colour
-
-        m_Slots[SID].SetColour(GetNewColour());
+      } else {
+        player->SetPowerObserver(false);
+        if (m_Slots[SID].GetColour() == m_Aura->m_MaxSlots) {
+          // from observer to regular team
+          m_Slots[SID].SetColour(GetNewColour());
+        }
       }
 
       m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);

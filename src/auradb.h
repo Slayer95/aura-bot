@@ -49,12 +49,14 @@
 #include "sqlite3.h"
 
 #include <filesystem>
+#include <vector>
+#include <string>
 
 /**************
  *** SCHEMA ***
  **************
 
-CREATE TABLE admins (
+CREATE TABLE moderators (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     server TEXT NOT NULL DEFAULT ""
@@ -65,7 +67,7 @@ CREATE TABLE bans (
     server TEXT NOT NULL,
     name TEXT NOT NULL,
     date TEXT NOT NULL,
-    admin TEXT NOT NULL,
+    moderator TEXT NOT NULL,
     reason TEXT
 )
 
@@ -140,6 +142,7 @@ public:
   inline int32_t Finalize(void* Statement) { return sqlite3_finalize(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Reset(void* Statement) { return sqlite3_reset(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Exec(const std::string& query) { return sqlite3_exec(static_cast<sqlite3*>(m_DB), query.c_str(), nullptr, nullptr, nullptr); }
+  inline const unsigned char* Column(void* Statement, const uint8_t index) { return sqlite3_column_text(static_cast<sqlite3_stmt*>(Statement), index); }
 };
 
 //
@@ -183,16 +186,18 @@ public:
 
   std::string FromCheck(uint32_t ip);
   bool FromAdd(uint32_t ip1, uint32_t ip2, const std::string& country);
-  uint32_t AdminCount(const std::string& server);
-  bool AdminCheck(const std::string& server, std::string user);
-  bool AdminCheck(std::string user);
-  bool AdminAdd(const std::string& server, std::string user);
-  bool AdminRemove(const std::string& server, std::string user);
+  uint32_t ModeratorCount(const std::string& server);
+  bool ModeratorCheck(const std::string& server, std::string user);
+  bool ModeratorCheck(std::string user);
+  bool ModeratorAdd(const std::string& server, std::string user);
+  bool ModeratorRemove(const std::string& server, std::string user);
+  std::vector<std::string> ListModerators(const std::string& server);
   uint32_t BanCount(const std::string& server);
   CDBBan* BanCheck(const std::string& server, std::string user);
   bool BanAdd(const std::string& server, std::string user, const std::string& admin, const std::string& reason);
   bool BanRemove(const std::string& server, std::string user);
   bool BanRemove(std::string user);
+  std::vector<std::string> ListBans(const std::string& server);
   void GamePlayerAdd(std::string name, uint64_t loadingtime, uint64_t duration, uint64_t left);
   CDBGamePlayerSummary* GamePlayerSummaryCheck(std::string name);
   void DotAPlayerAdd(std::string name, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
@@ -209,17 +214,17 @@ private:
   std::string m_Server;
   std::string m_Name;
   std::string m_Date;
-  std::string m_Admin;
+  std::string m_Moderator;
   std::string m_Reason;
 
 public:
-  CDBBan(std::string nServer, std::string nName, std::string nDate, std::string nAdmin, std::string nReason);
+  CDBBan(std::string nServer, std::string nName, std::string nDate, std::string nModerator, std::string nReason);
   ~CDBBan();
 
   inline std::string GetServer() const { return m_Server; }
   inline std::string GetName() const { return m_Name; }
   inline std::string GetDate() const { return m_Date; }
-  inline std::string GetAdmin() const { return m_Admin; }
+  inline std::string GetModerator() const { return m_Moderator; }
   inline std::string GetReason() const { return m_Reason; }
 };
 

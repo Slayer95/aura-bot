@@ -182,12 +182,13 @@ inline std::string GetTokenName(const std::string& token) {
   return std::string();
 }
 
-inline bool ExtractMessageTokens(const std::string& message, const std::string& token, std::string& matchCmd, std::string& matchPayload)
+inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchPayload)
 {
   if (message.empty()) return false;
   std::string::size_type tokenSize = token.length();
   if (message.length() > tokenSize && message.substr(0, tokenSize) == token) {
     std::string::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
+    matchPadding = cmdStart > tokenSize;
     if (cmdStart != std::string::npos) {
       std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
       if (cmdEnd == std::string::npos) {
@@ -213,15 +214,25 @@ inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::st
   uint8_t result = COMMAND_TOKEN_MATCH_NONE;
   if (message.empty()) return result;
   if (!privateToken.empty()) {
-    if (ExtractMessageTokens(message, privateToken, matchCmd, matchPayload)) {
-      matchToken = privateToken;
+    bool matchPadding = false;
+    if (ExtractMessageTokens(message, privateToken, matchPadding, matchCmd, matchPayload)) {
       result = COMMAND_TOKEN_MATCH_PRIVATE;
+      if (matchPadding) {
+        matchToken = privateToken + " ";
+      } else {
+        matchToken = privateToken;
+      }
     }
   }    
   if (result == COMMAND_TOKEN_MATCH_NONE && !broadcastToken.empty()) {
-    if (ExtractMessageTokens(message, broadcastToken, matchCmd, matchPayload)) {
-      matchToken = broadcastToken;
+    bool matchPadding = false;
+    if (ExtractMessageTokens(message, broadcastToken, matchPadding, matchCmd, matchPayload)) {
       result = COMMAND_TOKEN_MATCH_BROADCAST;
+      if (matchPadding) {
+        matchToken = broadcastToken + " ";
+      } else {
+        matchToken = broadcastToken;
+      }
     }
   }
 

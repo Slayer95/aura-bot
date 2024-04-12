@@ -1128,29 +1128,17 @@ void CRealm::TryQueueChat(const string& message, const string& user, bool isPriv
   if (m_ChatQueueMain.size() >= 25 && !(GetIsFloodImmune() || GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
       Print(GetLogPrefix() + "warning - " + to_string(m_ChatQueueMain.size()) + " queued messages");
+      Print(GetLogPrefix() + message);
+      Print("[AURA] Quota exceeded (reply dropped.)");
     }
     return;
   }
 
-  //QueueChatReply(const uint8_t messageValue, const string& message, const string& user, const uint8_t selector, CCommandContext* fromCtx, const bool isProxy)
-
-  bool IsQuotaOkay = true;
-  if (IsQuotaOkay) {
-    //if (IsQuotaReached && message.length() <= (GetPvPGN() ? 200 : 255) - (isPrivate ? 20 + 47 : 47)) {
-      //QueueChatOrWhisper(message + " - (Please wait 1 min to send further commands)", user, isPrivate);
-    //} else {
-    if (isPrivate) {
-      QueueWhisper(message, user);
-    } else {
-      QueueChatChannel(message);
-    }
-    // TODO(IceSandslash): QueueCommand??
-    return;
+  if (isPrivate) {
+    QueueWhisper(message, user);
+  } else {
+    QueueChatChannel(message);
   }
-
-  ostream* outStream = fromCtx ? (fromCtx->GetOutputStream()) : &cout;
-  *outStream << GetLogPrefix() + message << std::endl;
-  *outStream << "[AURA] Quota exceeded (reply dropped.)" << std::endl;
 }
 
 
@@ -1235,7 +1223,7 @@ bool CRealm::GetIsModerator(string name) const
 {
   transform(begin(name), end(name), begin(name), ::tolower);
 
-  if (m_Aura->m_DB->AdminCheck(m_Config->m_DataBaseID, name))
+  if (m_Aura->m_DB->ModeratorCheck(m_Config->m_DataBaseID, name))
     return true;
 
   return false;

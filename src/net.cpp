@@ -332,10 +332,10 @@ bool CNet::Init()
   if (m_UDPMainServerEnabled) {
     m_UDPMainServer = new CUDPServer(AF_INET);
     if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, false)) {
-      Print("====================================================================");
+      Print("=======================================================================================");
       Print("[UDP] <net.udp_server.enabled = yes> requires active instances of Warcraft to be closed...");
       Print("[UDP] Please release port 6112, or set <net.udp_server.enabled = no>");
-      Print("====================================================================");
+      Print("=======================================================================================");
       Print("[UDP] Waiting...");
       this_thread::sleep_for(chrono::milliseconds(5000));
       if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, true)) {
@@ -344,7 +344,7 @@ bool CNet::Init()
         } else {
           Print("[UDP] Failed to start UDP/IPv4 service on port 6112");
         }
-        Print("====================================================================");
+        Print("=======================================================================================");
         return false;
       }
     }

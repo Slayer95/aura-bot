@@ -2086,16 +2086,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (!targetPlayer->GetObserver()) {
-        ErrorReply("[" + targetPlayer->GetName() + "] is not in the observer team.");
+        ErrorReply("[" + targetPlayer->GetName() + "] is not an observer.");
         break;
       }
 
+      m_TargetGame->SetUsesCustomReferees(true);
       for (auto& otherPlayer: m_TargetGame->m_Players) {
         if (otherPlayer->GetObserver())
           otherPlayer->SetPowerObserver(false);
       }
       targetPlayer->SetPowerObserver(true);
-      SendAll("Player [" + targetPlayer->GetName() + "] was promoted to referee by player [" + m_FromName + "] (Other observers may only use observer chat)");
+      SendAll("Player [" + targetPlayer->GetName() + "] was promoted to referee by [" + m_FromName + "] (Other observers may only use observer chat)");
       break;
     }
 
@@ -2298,7 +2299,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         CDBBan* Ban = m_Aura->m_DB->BanCheck(bnet->GetDataBaseID(), Payload);
         if (Ban) {
-          CheckResult.push_back("[" + bnet->GetServer() + "] - banned by [" + Ban->GetAdmin() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
+          CheckResult.push_back("[" + bnet->GetServer() + "] - banned by [" + Ban->GetModerator() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
           delete Ban;
         }
       }
@@ -2329,8 +2330,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to list bans in arbitrary realms.");
         break;
       }
-      // TODO(IceSandslash): Implement !listbans
-      ErrorReply("Unimplemented.");
+      vector<string> bannedUsers = m_Aura->m_DB->ListBans(targetRealm->GetDataBaseID());
+      if (bannedUsers.empty()) {
+        SendReply("No users are banned on " + targetRealm->GetCanonicalDisplayName());
+        break;
+      }
+      SendReply("Banned: " + JoinVector(bannedUsers, false));
       break;
     }
 
@@ -2428,7 +2433,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         if (m_SourceRealm->GetIsModerator(Victim)) {
-          if (!m_Aura->m_DB->AdminRemove(m_SourceRealm->GetDataBaseID(), Victim)) {
+          if (!m_Aura->m_DB->ModeratorRemove(m_SourceRealm->GetDataBaseID(), Victim)) {
             ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_HostName + "]");
             break;
           }
@@ -2843,8 +2848,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !COMPCOLOR (computer colour change)
     //
 
-    case HashCode("compcolour"):
-    case HashCode("compcolor"): {
+    case HashCode("color"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
@@ -2892,9 +2896,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !CHANDICAP (handicap change)
     //
 
-    case HashCode("handicap"):
-    case HashCode("sethandicap"):
-    case HashCode("comphandicap"): {
+    case HashCode("handicap"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
@@ -2943,7 +2945,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !COMPRACE (computer race change)
     //
 
-    case HashCode("comprace"): {
+    case HashCode("comprace"):
+    case HashCode("race"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
@@ -3012,11 +3015,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !CHANGETEAM (forced team change)
+    // !TEAM (forced team change)
     //
 
-    case HashCode("setteam"):
-    case HashCode("compteam"): {
+    case HashCode("compteam"):
+    case HashCode("team"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
@@ -3047,21 +3050,71 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint8_t Team = static_cast<uint8_t>(Args[1]) - 1;
 
       if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
-        ErrorReply("This map has Fixed Player Settings enabled.");
+        ErrorReply("This map has Fixed Player Settings enabled. Instead, swap players with " + cmdToken + "swap.");
         break;
       }
-
       if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-        ErrorReply("This map has Custom Forces enabled.");
+        ErrorReply("This map has Custom Forces enabled. Instead, swap players with " + cmdToken + "swap.");
         break;
       }
-
       if (Team != m_Aura->m_MaxSlots && Team > m_TargetGame->GetMap()->GetMapNumTeams()) {
         ErrorReply("This map does not allow Team #" + to_string(Args[1]) + ".");
         break;
       }
-
+      if (Team == m_Aura->m_MaxSlots && m_TargetGame->m_Slots[SID].GetComputer()) {
+        ErrorReply("Slot " + to_string(Args[0]) + " is a computer slot.");
+        break;
+      }
       m_TargetGame->m_Slots[SID].SetTeam(Team);
+      m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      break;
+    }
+
+    //
+    // !OBSERVER (forced change)
+    //
+
+    case HashCode("obs"):
+    case HashCode("observer"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+        break;
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "observer [SLOT]");
+        break;
+      }
+
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
+      if (Args.empty() || Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size()) {
+        ErrorReply("Usage: " + cmdToken + "observer [SLOT]");
+        break;
+      }
+
+      uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
+      if (!(m_TargetGame->m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_TargetGame->m_Map->GetMapObservers() == MAPOBS_REFEREES)) {
+        ErrorReply("This lobby does not allow observers.");
+        break;
+      }
+      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+        ErrorReply("This map has Fixed Player Settings enabled. Instead, swap players with " + cmdToken + "swap.");
+        break;
+      }
+      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
+        ErrorReply("This map has Custom Forces enabled. Instead, swap players with " + cmdToken + "swap.");
+        break;
+      }
+      if (m_TargetGame->m_Slots[SID].GetComputer()) {
+        ErrorReply("Slot " + to_string(Args[0]) + " is a computer slot.");
+        break;
+      }
+      m_TargetGame->m_Slots[SID].SetTeam(m_Aura->m_MaxSlots);
       m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
@@ -3173,8 +3226,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !PAUSE
     //
 
-    case HashCode("pause"):
-    case HashCode("fppause"): {
+    case HashCode("pause"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
@@ -3201,8 +3253,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !RESUME
     //
 
-    case HashCode("resume"):
-    case HashCode("fpresume"): {
+    case HashCode("resume"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
@@ -3228,7 +3279,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !SP
     //
 
-    case HashCode("sp"): {
+    case HashCode("sp"):
+    case HashCode("shuffle"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
@@ -3832,7 +3884,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("All commands are already completely disabled in " + targetRealm->GetCanonicalDisplayName());
         break;
       }
-      SendReply("Creation of new games has been temporarily disabled for non-admins at " + targetRealm->GetCanonicalDisplayName() + ". (Active lobbies will not be unhosted.)");
+      SendReply("Creation of new games has been temporarily disabled for non-staff at " + targetRealm->GetCanonicalDisplayName() + ". (Active lobbies will not be unhosted.)");
       targetRealm->m_Config->m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
       break;
     }
@@ -3859,7 +3911,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("All commands are completely disabled in " + targetRealm->GetCanonicalDisplayName());
         break;
       }
-      SendReply("Creation of new games has been enabled for non-admins at " + targetRealm->GetCanonicalDisplayName());
+      SendReply("Creation of new games has been enabled for non-staff at " + targetRealm->GetCanonicalDisplayName());
       targetRealm->m_Config->m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
       break;
     }
@@ -3983,17 +4035,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
      *********************/
 
     //
-    // !CHECKADMIN
+    // !CHECKSTAFF
     //
 
-    case HashCode("checkadmin"): {
+    case HashCode("checkadmin"):
+    case HashCode("checkstaff"): {
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("Only root admins may list admins.");
+        ErrorReply("Only root admins may list staff.");
         break;
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "checkadmin [NAME]");
+        ErrorReply("Usage: " + cmdToken + "checkstaff [NAME]");
         break;
       }
 
@@ -4004,49 +4057,56 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool IsRootAdmin = m_SourceRealm->GetIsAdmin(Payload);
       bool IsAdmin = IsRootAdmin || m_SourceRealm->GetIsModerator(Payload);
       if (!IsAdmin && !IsRootAdmin)
-        SendReply("User [" + Payload + "] is not an admin on server [" + m_HostName + "]");
+        SendReply("User [" + Payload + "] is not staff on server [" + m_HostName + "]");
       else if (IsRootAdmin)
         SendReply("User [" + Payload + "] is a root admin on server [" + m_HostName + "]");
       else
-        SendReply("User [" + Payload + "] is an admin on server [" + m_HostName + "]");
+        SendReply("User [" + Payload + "] is a moderator on server [" + m_HostName + "]");
 
       break;
     }
 
     //
-    // !LISTADMINS
+    // !LISTSTAFF
     //
 
-    case HashCode("listadmins"): {
+    case HashCode("liststaff"): {
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("Only root admins may list admins.");
+        ErrorReply("Only root admins may list staff.");
         break;
       }
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "listadmins [REALM]");
+        ErrorReply("Usage: " + cmdToken + "liststaff [REALM]");
         break;
       }
       if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
-        ErrorReply("Not allowed to list admins in arbitrary realms.");
+        ErrorReply("Not allowed to list staff in arbitrary realms.");
         break;
       }
-      // TODO(IceSandslash): Implement !listadmins
-      ErrorReply("Unimplemented.");
+      vector<string> admins = vector<string>(targetRealm->m_Config->m_Admins.begin(), targetRealm->m_Config->m_Admins.end());
+      vector<string> moderators = m_Aura->m_DB->ListModerators(m_SourceRealm->GetDataBaseID());
+      if (admins.empty() && moderators.empty()) {
+        ErrorReply("No staff has been designated in " + targetRealm->GetCanonicalDisplayName());
+        break;
+      }
+      if (!admins.empty()) SendReply("Root admins: " + JoinVector(admins, false));
+      if (!moderators.empty()) SendReply("Moderators: " + JoinVector(moderators, false));
       break;
     }
 
     //
-    // !ADDADMIN
+    // !STAFF
     //
 
-    case HashCode("addadmin"): {
+    case HashCode("admin"):
+    case HashCode("staff"): {
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("Only root admins may add admins.");
+        ErrorReply("Only root admins may add staff.");
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "addadmin [NAME]");
+        ErrorReply("Usage: " + cmdToken + "addstaff [NAME]");
         break;
       }
       if (!m_SourceRealm) {
@@ -4054,28 +4114,28 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_SourceRealm->GetIsModerator(Payload)) {
-        ErrorReply("User [" + Payload + "] is already an admin on server [" + m_HostName + "]");
+        ErrorReply("User [" + Payload + "] is already staff on server [" + m_HostName + "]");
         break;
       }
-      if (!m_Aura->m_DB->AdminAdd(m_SourceRealm->GetDataBaseID(), Payload)) {
-        ErrorReply("Failed to add user [" + Payload + "] as admin [" + m_HostName + "]");
+      if (!m_Aura->m_DB->ModeratorAdd(m_SourceRealm->GetDataBaseID(), Payload)) {
+        ErrorReply("Failed to add user [" + Payload + "] as moderator [" + m_HostName + "]");
         break;
       }
-      SendReply("Added user [" + Payload + "] to the admin database on server [" + m_HostName + "]");
+      SendReply("Added user [" + Payload + "] to the moderator database on server [" + m_HostName + "]");
       break;
     }
 
     //
-    // !DELADMIN
+    // !DELSTAFF
     //
 
-    case HashCode("deladmin"): {
+    case HashCode("delstaff"): {
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
-        ErrorReply("Only root admins may list admins.");
+        ErrorReply("Only root admins may change staff.");
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "deladmin [NAME]");
+        ErrorReply("Usage: " + cmdToken + "delstaff [NAME]");
         break;
       }
 
@@ -4083,15 +4143,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Realm not found.");
         break;
       }
+      if (m_SourceRealm->GetIsAdmin(Payload)) {
+        ErrorReply("User [" + Payload + "] is a root admin on server [" + m_HostName + "]");
+        break;
+      }
       if (!m_SourceRealm->GetIsModerator(Payload)) {
-        ErrorReply("User [" + Payload + "] is not an admin on server [" + m_HostName + "]");
+        ErrorReply("User [" + Payload + "] is not staff on server [" + m_HostName + "]");
         break;
       }
-      if (!m_Aura->m_DB->AdminRemove(m_SourceRealm->GetDataBaseID(), Payload)) {
-        ErrorReply("Error deleting user [" + Payload + "] from the admin database on server [" + m_HostName + "]");
+      if (!m_Aura->m_DB->ModeratorRemove(m_SourceRealm->GetDataBaseID(), Payload)) {
+        ErrorReply("Error deleting user [" + Payload + "] from the moderator database on server [" + m_HostName + "]");
         break;
       }
-      SendReply("Deleted user [" + Payload + "] from the admin database on server [" + m_HostName + "]");
+      SendReply("Deleted user [" + Payload + "] from the moderator database on server [" + m_HostName + "]");
       break;
     }
 

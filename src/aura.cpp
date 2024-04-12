@@ -1391,7 +1391,6 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ||
     gameSetup->m_CreatedFromType != GAMESETUP_ORIGIN_REALM ||
     gameSetup->m_Ctx->GetIsWhisper()) {
-    // TODO: Add an exception: do not send private reply if the user shares a channel where the bot sent an announcement.
     gameSetup->m_Ctx->SendPrivateReply(m_CurrentLobby->GetAnnounceText());
   }
 

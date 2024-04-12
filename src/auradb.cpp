@@ -184,7 +184,7 @@ CAuraDB::~CAuraDB()
   delete m_DB;
 }
 
-uint32_t CAuraDB::AdminCount(const string& server)
+uint32_t CAuraDB::ModeratorCount(const string& server)
 {
   uint32_t      Count = 0;
   sqlite3_stmt* Statement;
@@ -209,7 +209,7 @@ uint32_t CAuraDB::AdminCount(const string& server)
   return Count;
 }
 
-bool CAuraDB::AdminCheck(const string& server, string user)
+bool CAuraDB::ModeratorCheck(const string& server, string user)
 {
   bool IsAdmin = false;
   transform(begin(user), end(user), begin(user), ::tolower);
@@ -239,7 +239,7 @@ bool CAuraDB::AdminCheck(const string& server, string user)
   return IsAdmin;
 }
 
-bool CAuraDB::AdminCheck(string user)
+bool CAuraDB::ModeratorCheck(string user)
 {
   bool IsAdmin = false;
   transform(begin(user), end(user), begin(user), ::tolower);
@@ -268,7 +268,7 @@ bool CAuraDB::AdminCheck(string user)
   return IsAdmin;
 }
 
-bool CAuraDB::AdminAdd(const string& server, string user)
+bool CAuraDB::ModeratorAdd(const string& server, string user)
 {
   bool Success = false;
   transform(begin(user), end(user), begin(user), ::tolower);
@@ -296,7 +296,7 @@ bool CAuraDB::AdminAdd(const string& server, string user)
   return Success;
 }
 
-bool CAuraDB::AdminRemove(const string& server, string user)
+bool CAuraDB::ModeratorRemove(const string& server, string user)
 {
   bool          Success = false;
   sqlite3_stmt* Statement;
@@ -321,6 +321,32 @@ bool CAuraDB::AdminRemove(const string& server, string user)
     Print("[SQLITE3] prepare error removing moderators [" + server + " : " + user + "] - " + m_DB->GetError());
 
   return Success;
+}
+
+vector<string> CAuraDB::ListModerators(const string& server)
+{
+  vector<string> admins;
+
+  sqlite3_stmt* Statement;
+  m_DB->Prepare("SELECT * FROM moderators WHERE server=?", reinterpret_cast<void**>(&Statement));
+
+  if (Statement)
+  {
+    sqlite3_bind_text(Statement, 1, server.c_str(), -1, SQLITE_TRANSIENT);
+
+    int32_t RC;
+    while ((RC = m_DB->Step(Statement)) == SQLITE_ROW) {
+      const unsigned char* user = m_DB->Column(Statement, 1);
+      const string userWrap = string(reinterpret_cast<const char*>(user));
+      Print("Found moderator: " + userWrap);
+      admins.push_back(userWrap);
+    }
+    m_DB->Reset(Statement);
+  }
+  else
+    Print("[SQLITE3] prepare error listing moderators [" + server + "] - " + m_DB->GetError());
+
+  return admins;
 }
 
 uint32_t CAuraDB::BanCount(const string& server)
@@ -442,6 +468,30 @@ bool CAuraDB::BanRemove(const string& server, string user)
     Print("[SQLITE3] prepare error removing ban [" + server + " : " + user + "] - " + m_DB->GetError());
 
   return Success;
+}
+
+vector<string> CAuraDB::ListBans(const string& server)
+{
+  vector<string> bans;
+
+  sqlite3_stmt* Statement;
+  m_DB->Prepare("SELECT * FROM bans WHERE server=?", reinterpret_cast<void**>(&Statement));
+
+  if (Statement)
+  {
+    sqlite3_bind_text(Statement, 1, server.c_str(), -1, SQLITE_TRANSIENT);
+
+    int32_t RC;
+    while ((RC = m_DB->Step(Statement)) == SQLITE_ROW) {
+      const unsigned char* user = m_DB->Column(Statement, 1);
+      bans.push_back(string(reinterpret_cast<const char*>(user)));
+    }
+    m_DB->Reset(Statement);
+  }
+  else
+    Print("[SQLITE3] prepare error listing bans [" + server + "] - " + m_DB->GetError());
+
+  return bans;
 }
 
 bool CAuraDB::BanRemove(string user)
@@ -797,11 +847,11 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
 // CDBBan
 //
 
-CDBBan::CDBBan(string nServer, string nName, string nDate, string nAdmin, string nReason)
+CDBBan::CDBBan(string nServer, string nName, string nDate, string nModerator, string nReason)
   : m_Server(std::move(nServer)),
     m_Name(std::move(nName)),
     m_Date(std::move(nDate)),
-    m_Admin(std::move(nAdmin)),
+    m_Moderator(std::move(nModerator)),
     m_Reason(std::move(nReason))
 {
 }
