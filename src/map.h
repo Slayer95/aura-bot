@@ -167,6 +167,8 @@ private:
   uint8_t                m_MapFilterSize;
   uint8_t                m_MapFilterObs;
   std::vector<uint8_t>   m_MapContentMismatch;
+  bool                   m_MapMPQLoaded;
+  bool                   m_MapMPQErrored;
   bool                   m_SkipVersionCheck;
   bool                   m_Valid;
 

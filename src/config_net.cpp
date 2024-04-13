@@ -190,7 +190,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
     m_AllowDownloads = false;
   }
 #endif
-  m_DownloadTimeout              = CFG.GetUint16("hosting.map_downloads.timeout", 1000);
+  m_DownloadTimeout              = CFG.GetUint16("hosting.map_downloads.timeout", 15000);
   m_AllowTransfers               = CFG.GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG.GetInt("hosting.map_transfers.max_players", 3);
   m_MaxUploadSize                = CFG.GetInt("hosting.map_transfers.max_size", 8192);

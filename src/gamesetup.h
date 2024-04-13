@@ -72,6 +72,11 @@
 #define GAMESETUP_ORIGIN_IRC 2
 #define GAMESETUP_ORIGIN_INVALID 255
 
+#define GAMESETUP_STEP_MAIN 0
+#define GAMESETUP_STEP_RESOLUTION 1
+#define GAMESETUP_STEP_SUGGESTIONS 2
+#define GAMESETUP_STEP_DOWNLOAD 3
+
 #define MAP_ONREADY_SET_ACTIVE 1
 #define MAP_ONREADY_HOST 2
 
@@ -98,27 +103,6 @@ inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::st
 
   return output;
 }
-
-#ifndef DISABLE_CPR
-inline std::vector<std::string> GetEpicWarSuggestions(std::string & pattern, uint8_t maxCount)
-{
-  std::vector<std::string> suggestions;
-  std::string searchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
-  Print("[AURA] Looking up suggestions...");
-  Print("[AURA] GET <" + searchUri + ">");
-  auto response = cpr::Get(cpr::Url{searchUri});
-  if (response.status_code != 200) {
-    return suggestions;
-  }
-
-  std::vector<std::pair<std::string, int>> matchingMaps = ExtractEpicWarMaps(response.text, maxCount);
-
-  for (const auto& element : matchingMaps) {
-    suggestions.push_back(element.first + " (epicwar-" + std::to_string(element.second) + ")");
-  }
-  return suggestions;
-}
-#endif
 
 //
 // CGameExtraOptions
@@ -163,8 +147,8 @@ public:
   std::pair<std::string, std::string>             m_SearchTarget;
 
   bool                                            m_IsDownloadable;
-  bool                                            m_IsDownloading;
-  bool                                            m_IsDownloaded;
+  bool                                            m_IsStepDownloading;
+  bool                                            m_IsStepDownloaded;
   std::string                                     m_BaseDownloadFileName;
   std::string                                     m_MapDownloadUri;
   uint32_t                                        m_MapDownloadSize;
@@ -172,11 +156,13 @@ public:
   std::filesystem::path                           m_DownloadFilePath;
   std::ofstream*                                  m_DownloadFileStream;
 #ifndef DISABLE_CPR
-  std::future<void>                               m_DownloadFuture;
+  std::future<uint32_t>                           m_DownloadFuture;
 #endif
   std::string                                     m_ErrorMessage;
+  uint8_t                                         m_AsyncStep;
 
   bool                                            m_SkipVersionCheck;
+  bool                                            m_IsMapDownloaded;
 
   std::string                                     m_GameName;
   std::pair<std::string, std::string>             m_GameOwner;
@@ -223,26 +209,31 @@ public:
   CMap* GetBaseMapFromMapFile(const std::filesystem::path& filePath, const bool silent);
   CMap* GetBaseMapFromMapFileOrCache(const std::filesystem::path& mapPath, const bool silent);
   bool ApplyMapModifiers(CGameExtraOptions* extraOptions);
-  uint8_t ResolveRemoteMap();
-  void SetDownloadFilePath(std::filesystem::path&& filePath);
 #ifndef DISABLE_CPR
-  void RunDownload();
-  void DownloadTask();
-  uint32_t RunDownloadSync();
+  uint32_t ResolveMapRepositoryTask();
+  void RunResolveMapRepository();
+  uint32_t RunResolveMapRepositorySync();
+  void SetDownloadFilePath(std::filesystem::path&& filePath);
+  bool PrepareDownloadMap();
+  void RunDownloadMap();
+  uint32_t DownloadMapTask();
+  uint32_t RunDownloadMapSync();
+  void OnResolveMapSuccess();
+  void OnDownloadMapSuccess();
+  void OnFetchSuggestionsEnd();
+  std::vector<std::string> GetMapRepositorySuggestions(const std::string & pattern, const uint8_t maxCount);
+
+
 #endif
   void LoadMap();
   bool LoadMapSync();  
   void OnLoadMapSuccess();
   void OnLoadMapError();
-#ifndef DISABLE_CPR
-  void OnDownloadMapSuccess();
-  void OnDownloadMapError();
-#endif
   bool SetActive();
   bool RunHost();
 
   inline bool GetIsMirror() const { return m_GameIsMirror; }
-  inline bool GetIsDownloading() const { return m_IsDownloading; }
+  inline bool GetIsDownloading() const { return m_IsStepDownloading; }
 
   bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
   bool SetMirrorSource(const std::string& nInput);

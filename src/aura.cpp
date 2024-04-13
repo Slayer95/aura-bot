@@ -1197,18 +1197,19 @@ uint8_t CAura::ExtractScripts()
     CloseMPQArchive(MPQ);
   } else {
 #ifdef _WIN32
-    uint32_t ErrorCode = (uint32_t)GetLastError();
-    string ErrorCodeString = (
-      ErrorCode == 2 ? "Config error: <game.install_path> is not the WC3 directory" : (
-      (ErrorCode == 3 || ErrorCode == 15) ? "Config error: <game.install_path> is not a valid directory" : (
-      (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
-      "Error code " + to_string(ErrorCode)
-      )))
+    uint32_t errorCode = (uint32_t)GetLastError();
+    string errorCodeString = (
+      errorCode == 2 ? "Config error: <game.install_path> is not the WC3 directory" : (
+      errorCode == 11 ? "File is corrupted." : (
+      (errorCode == 3 || errorCode == 15) ? "Config error: <game.install_path> is not a valid directory" : (
+      (errorCode == 32 || errorCode == 33) ? "File is currently opened by another process." : (
+      "Error code " + to_string(errorCode)
+      ))))
     );
 #else
-    string ErrorCodeString = "Error code " + to_string(errno);
+    string errorCodeString = "Error code " + to_string(errno);
 #endif
-    Print("[AURA] warning - unable to load MPQ file [" + PathToString(MPQFilePath) + "] - " + ErrorCodeString);
+    Print("[AURA] warning - unable to load MPQ file [" + PathToString(MPQFilePath) + "] - " + errorCodeString);
   }
 
   return FilesExtracted;

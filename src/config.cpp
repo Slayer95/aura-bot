@@ -105,7 +105,14 @@ bool CConfig::Read(const filesystem::path& file)
 
   if (in.fail()) {
 #ifdef _WIN32
-    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - error " + to_string(GetLastError()));
+    uint32_t errorCode = (uint32_t)GetLastError();
+    string errorCodeString = (
+      errorCode == 2 ? "file not found" : (
+      (errorCode == 32 || errorCode == 33) ? "file is currently opened by another process." : (
+      "error code " + to_string(errorCode)
+      ))
+    );
+    Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + errorCodeString);
 #else
     Print("[CONFIG] warning - unable to read file [" + PathToString(file) + "] - " + string(strerror(errno)));
 #endif

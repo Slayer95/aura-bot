@@ -67,6 +67,8 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
   : m_Aura(nAura),
+    m_MapMPQLoaded(false),
+    m_MapMPQErrored(false),
     m_SkipVersionCheck(skipVersionCheck)
 {
   Load(CFG);
@@ -399,26 +401,27 @@ void CMap::Load(CConfig* CFG)
   uint32_t mapLocale = CFG->GetUint32("map_locale", 0);
   SFileSetLocale(mapLocale);
 
-  bool  MapMPQReady = false;
   void* MapMPQ;
   if (!ignoreMPQ) {
     // load the map MPQ file
-    MapMPQReady = OpenMPQArchive(&MapMPQ, MapMPQFilePath);
-    if (!MapMPQReady) {
+    m_MapMPQLoaded = OpenMPQArchive(&MapMPQ, MapMPQFilePath);
+    if (!m_MapMPQLoaded) {
+      m_MapMPQErrored = true;
 #ifdef _WIN32
-      uint32_t ErrorCode = (uint32_t)GetLastError();
-      string ErrorCodeString = (
-        ErrorCode == 2 ? "Map not found" : (
-        (ErrorCode == 3 || ErrorCode == 15) ? "Config error: <bot.maps_path> is not a valid directory" : (
-        (ErrorCode == 32 || ErrorCode == 33) ? "File is currently opened by another process." : (
-        "Error code " + to_string(ErrorCode)
-        )))
+      uint32_t errorCode = (uint32_t)GetLastError();
+      string errorCodeString = (
+        errorCode == 2 ? "Map not found" : (
+        errorCode == 11 ? "File is corrupted." : (
+        (errorCode == 3 || errorCode == 15) ? "Config error: <bot.maps_path> is not a valid directory" : (
+        (errorCode == 32 || errorCode == 33) ? "File is currently opened by another process." : (
+        "Error code " + to_string(errorCode)
+        ))))
       );
 #else
-      int32_t ErrorCode = static_cast<int32_t>(GetLastError());
-      string ErrorCodeString = "Error code " + to_string(ErrorCode);
+      int32_t errorCode = static_cast<int32_t>(GetLastError());
+      string errorCodeString = "Error code " + to_string(errorCode);
 #endif
-      Print("[MAP] warning - unable to load MPQ file [" + PathToString(MapMPQFilePath) + "] - " + ErrorCodeString);
+      Print("[MAP] warning - unable to load MPQ file [" + PathToString(MapMPQFilePath) + "] - " + errorCodeString);
     }
   }
 
@@ -461,7 +464,7 @@ void CMap::Load(CConfig* CFG)
         bool OverrodeCommonJ   = false;
         bool OverrodeBlizzardJ = false;
 
-        if (MapMPQReady)
+        if (m_MapMPQLoaded)
         {
           void* SubFile;
 
@@ -501,7 +504,7 @@ void CMap::Load(CConfig* CFG)
           m_Aura->m_SHA->Update((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
         }
 
-        if (MapMPQReady)
+        if (m_MapMPQLoaded)
         {
           void* SubFile;
 
@@ -545,7 +548,7 @@ void CMap::Load(CConfig* CFG)
         Val = ROTL(Val ^ 0x03F1379E, 3);
         m_Aura->m_SHA->Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
 
-        if (MapMPQReady)
+        if (m_MapMPQLoaded)
         {
           vector<string> FileList;
           FileList.emplace_back("war3map.j");
@@ -616,7 +619,7 @@ void CMap::Load(CConfig* CFG)
           }
         }
         else
-          Print("[MAP] skipping map_crc/sha1 calculation - map file not loaded");
+          Print("[MAP] skipping map_crc/sha1 calculation - map archive not loaded");
       }
     }
   }
@@ -635,7 +638,7 @@ void CMap::Load(CConfig* CFG)
   uint8_t              MapMinGameVersion = 0;
   vector<CGameSlot>    Slots;
 
-  if (IsPartial && MapMPQReady) {
+  if (IsPartial && m_MapMPQLoaded) {
     void* SubFile;
 
     if (SFileOpenFileEx(MapMPQ, "war3map.w3i", 0, &SubFile))
@@ -868,14 +871,14 @@ void CMap::Load(CConfig* CFG)
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
         Print("[MAP] using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
       }
-    } else if (!MapMPQReady) {
-      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map file not loaded");
+    } else if (!m_MapMPQLoaded) {
+      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map archive not loaded");
     }
   }
 
   // close the map MPQ
 
-  if (MapMPQReady)
+  if (m_MapMPQLoaded)
     SFileCloseArchive(MapMPQ);
 
   m_MapPath = CFG->GetString("map_path", emptyString);
@@ -1132,19 +1135,31 @@ string CMap::CheckProblems()
   if (m_MapCRC32.size() != 4)
   {
     m_Valid = false;
-    return "invalid map_info detected";
+    if (m_MapCRC32.empty() && m_MapData.empty()) {
+      return "map file not found";
+    } else {
+      return "invalid map_info detected";
+    }
   }
 
   if (m_MapHash.size() != 4)
   {
     m_Valid = false;
-    return "invalid map_crc detected";
+    if (m_MapHash.empty() && m_MapMPQErrored) {
+      return "cannot load map file as MPQ archive";
+    } else {
+      return "invalid map_crc detected";
+    }
   }
 
   if (m_MapSHA1.size() != 20)
   {
     m_Valid = false;
-    return "invalid map_sha1 detected";
+    if (m_MapSHA1.empty() && m_MapMPQErrored) {
+      return "cannot load map file as MPQ archive";
+    } else {
+      return "invalid map_sha1 detected";
+    }
   }
 
   if (m_MapSpeed != MAPSPEED_SLOW && m_MapSpeed != MAPSPEED_NORMAL && m_MapSpeed != MAPSPEED_FAST)

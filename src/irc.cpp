@@ -251,11 +251,11 @@ void CIRC::ExtractPackets()
 
     // notice packet
     // in: NOTICE AUTH :*** Checking Ident
-    // print the message on console
+    // not actually important
 
     if (Packets_Packet.compare(0, 6, "NOTICE") == 0)
     {
-      Print("[IRC: " + m_Config->m_HostName + "] " + Packets_Packet);
+      //Print("[IRC: " + m_Config->m_HostName + "] " + Packets_Packet);
       continue;
     }
 

@@ -971,8 +971,8 @@ void CRealm::OnLoginOkay()
   Print(GetLogPrefix() + "logged in as [" + m_Config->m_UserName + "]");
 
   TrySendGetGamesList();
-  //SendGetFriendsList();
-  //SendGetClanList();
+  SendGetFriendsList();
+  SendGetClanList();
 
   TrySendEnterChat();
   TryQueueGameChatAnnouncement(m_Aura->m_CurrentLobby);
