@@ -372,7 +372,8 @@ optional<bool> CCommandContext::CheckPermissions(const uint8_t requiredPermissio
         ((m_Permissions & (USER_PERMISSIONS_CHANNEL_VERIFIED | USER_PERMISSIONS_BOT_SUDO_OK)) > 0) &&
         ((m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0)
       );
-    // Note: It's possible to be owner without being verified, if they belong to a LAN realm.
+      // Note: It's possible to be owner without being verified, if they belong to a LAN realm.
+      break;
     case COMMAND_PERMISSIONS_OWNER:
       result = (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
       break;
