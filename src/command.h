@@ -81,12 +81,12 @@ public:
   CGame*                        m_TargetGame;
   CGamePlayer*                  m_Player;
   CIRC*                         m_IRC;
-  bool                          m_IsBroadcast;
 
 protected:
   std::string                   m_FromName;
   bool                          m_FromWhisper;
   uint8_t                       m_FromType;
+  bool                          m_IsBroadcast;
   char                          m_Token;
   uint16_t                      m_Permissions;
 
