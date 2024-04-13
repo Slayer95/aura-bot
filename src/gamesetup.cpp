@@ -123,6 +123,7 @@ CGameExtraOptions::~CGameExtraOptions() = default;
 
 CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
   : m_Aura(nAura),
+    m_RestoredGame(nullptr),
     m_Map(nullptr),
     m_Ctx(nCtx),
 
@@ -162,6 +163,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
 
 CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck)
   : m_Aura(nAura),
+    m_RestoredGame(nullptr),
     m_Map(nullptr),
     m_Ctx(nCtx),
 
@@ -615,7 +617,7 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
       string cfgName = m_Aura->m_CachedMaps[fileName];
       filesystem::path cfgPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(cfgName);
       CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
-      if (cachedResult && cachedResult->GetMapLocalPath() == fileName) {
+      if (cachedResult && cachedResult->GetServerPath() == fileName) {
         cacheSuccess = true;
       }
       if (cacheSuccess) {
@@ -1001,6 +1003,13 @@ void CGameSetup::OnLoadMapSuccess()
     }
     ResetExtraOptions();
   }
+  if (!m_SaveFile.empty()) {
+    if (!RestoreFromSaveFile()) {
+      m_Ctx->ErrorReply("Invalid save file.", CHAT_SEND_SOURCE_ALL);
+      m_DeleteMe = true;
+      return;
+    }
+  }
 
   if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
     if (m_Aura->m_CurrentLobby)  {
@@ -1104,6 +1113,13 @@ bool CGameSetup::SetActive()
   }
   m_Aura->m_GameSetup = this;
   return true;
+}
+
+bool CGameSetup::RestoreFromSaveFile()
+{
+  m_RestoredGame = new CSaveGame(m_Aura, m_SaveFile);
+  if (!m_RestoredGame->Load(m_SaveFile, false)) return false;
+  return m_RestoredGame->Parse();
 }
 
 bool CGameSetup::RunHost()
@@ -1243,6 +1259,17 @@ bool CGameSetup::Update()
   return m_DeleteMe;
 }
 
+void CGameSetup::SetGameSavedFile(const std::filesystem::path& filePath)
+{
+  if (m_StandardPaths) {
+    m_SaveFile = filePath;
+  } else if (filePath != filePath.filename()) {
+    m_SaveFile = filePath;
+  } else {
+    m_SaveFile = m_Aura->m_Config->m_GameSavePath / filePath;
+  }
+}
+
 void CGameSetup::ResetExtraOptions()
 {
   if (m_MapExtraOptions) {
@@ -1259,6 +1286,10 @@ CGameSetup::~CGameSetup()
   } else {
     delete m_Ctx;
   }
+
+  delete m_RestoredGame;
+  m_RestoredGame = nullptr;
+
   m_Ctx = nullptr;
   m_CreatedFrom = nullptr;
   m_Aura = nullptr;

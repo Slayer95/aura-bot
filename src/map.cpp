@@ -228,11 +228,11 @@ uint8_t CMap::GetMapLayoutStyle() const
 
 string CMap::GetMapFileName() const
 {
-  size_t LastSlash = m_MapPath.rfind('\\');
+  size_t LastSlash = m_ClientMapPath.rfind('\\');
   if (LastSlash == string::npos) {
-    return m_MapPath;
+    return m_ClientMapPath;
   }
-  return m_MapPath.substr(LastSlash + 1);
+  return m_ClientMapPath.substr(LastSlash + 1);
 }
 
 bool CMap::SetForcedRandomRaceSlots()
@@ -349,18 +349,18 @@ void CMap::Load(CConfig* CFG)
 
   // load the map data
 
-  m_MapLocalPath = CFG->GetString("map_localpath", emptyString);
+  m_MapServerPath = CFG->GetString("map_localpath", emptyString);
   m_MapData.clear();
 
   bool IsPartial = CFG->GetBool("cfg_partial", false);
-  bool ignoreMPQ = m_MapLocalPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
+  bool ignoreMPQ = m_MapServerPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   size_t RawMapSize = 0;
   if (IsPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
-    if (m_MapLocalPath.empty()) {
+    if (m_MapServerPath.empty()) {
       return;
     }
-    m_MapData = FileRead(m_Aura->m_Config->m_MapPath / m_MapLocalPath, &RawMapSize);
+    m_MapData = FileRead(m_Aura->m_Config->m_MapPath / m_MapServerPath, &RawMapSize);
     if (IsPartial && m_MapData.empty()) {
       Print("[AURA] Local map not found for partial config file");
       return;
@@ -380,7 +380,7 @@ void CMap::Load(CConfig* CFG)
   filesystem::path MapMPQFilePath;
 
   if (!ignoreMPQ) {
-    MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapLocalPath;
+    MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapServerPath;
     FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
     ignoreMPQ = (
       !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
@@ -881,7 +881,7 @@ void CMap::Load(CConfig* CFG)
   if (m_MapMPQLoaded)
     SFileCloseArchive(MapMPQ);
 
-  m_MapPath = CFG->GetString("map_path", emptyString);
+  m_ClientMapPath = CFG->GetString("map_path", emptyString);
   std::vector<uint8_t> MapContentMismatch = {0, 0, 0, 0};
 
   if (CFG->Exists("map_size")) {
@@ -1095,8 +1095,8 @@ void CMap::Load(CConfig* CFG)
 
 bool CMap::UnlinkFile()
 {
-  Print("Deleting " + m_MapLocalPath + "...");
-  filesystem::path mapLocalPath = m_MapLocalPath;
+  Print("Deleting " + m_MapServerPath + "...");
+  filesystem::path mapLocalPath = m_MapServerPath;
   if (mapLocalPath.is_absolute()) {
     return FileDelete(mapLocalPath);
   }
@@ -1106,19 +1106,19 @@ bool CMap::UnlinkFile()
 
 string CMap::CheckProblems()
 {
-  if (m_MapPath.empty())
+  if (m_ClientMapPath.empty())
   {
     m_Valid = false;
     return "map_path not found";
   }
 
-  if (m_MapPath.length() > 53)
+  if (m_ClientMapPath.length() > 53)
   {
     m_Valid = false;
     return "map_path too long";
   }
 
-  if (m_MapPath.find('/') != string::npos)
+  if (m_ClientMapPath.find('/') != string::npos)
     Print(R"(warning - map_path contains forward slashes '/' but it must use Windows style back slashes '\')");
 
   if (m_MapSize.size() != 4)

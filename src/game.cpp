@@ -79,6 +79,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Socket(nullptr),
     m_DBBanLast(nullptr),
     m_Stats(nullptr),
+    m_RestoredGame(nGameSetup->m_RestoredGame),
     m_Slots(nGameSetup->m_Map->GetSlots()),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_GameName),
@@ -91,7 +92,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CreatedFromType(nGameSetup->m_CreatedFromType),
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
     m_HCLCommandString(nGameSetup->m_Map->GetMapDefaultHCL()),
-    m_MapPath(nGameSetup->m_Map->GetMapPath()),
+    m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_GameTicks(0),
     m_CreationTime(GetTime()),
@@ -199,7 +200,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     }
 
     if (!m_Map->GetMapData()->empty()) {
-      m_Aura->m_BusyMaps.insert(m_Map->GetMapLocalPath());
+      m_Aura->m_BusyMaps.insert(m_Map->GetServerPath());
       m_HasMapLock = true;
     }
 
@@ -219,7 +220,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 CGame::~CGame()
 {
   if (m_HasMapLock) {
-    string localPathString = m_Map->GetMapLocalPath();
+    string localPathString = m_Map->GetServerPath();
     m_Aura->m_BusyMaps.erase(localPathString);
     if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
       filesystem::path localPath = localPathString;
@@ -1121,6 +1122,56 @@ void CGame::SendAllAutoStart() const
   SendAllChat(GetAutoStartText());
 }
 
+uint32_t CGame::GetGameType() const
+{
+  uint32_t mapGameType = m_Map->GetMapGameType();
+  if (m_GameDisplay == GAME_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
+  if (m_RestoredGame) {
+    mapGameType |= MAPGAMETYPE_SAVEDGAME;
+  } else {
+    mapGameType |= MAPGAMETYPE_UNKNOWN0;
+  }
+  return mapGameType;
+}
+
+string CGame::GetSourceFilePath() const {
+  if (m_RestoredGame) {
+    return m_RestoredGame->GetClientPath();
+  } else {
+    return m_Map->GetClientPath();
+  }
+}
+vector<uint8_t> CGame::GetSourceFileHash() const
+{
+  if (m_RestoredGame) {
+    return m_RestoredGame->GetSaveHash();
+  } else {
+    return m_Map->GetMapHash();
+  }
+}
+vector<uint8_t> CGame::GetSourceFileSHA1() const
+{
+  return m_Map->GetMapSHA1();
+}
+vector<uint8_t> CGame::GetAnnounceWidth() const
+{
+  if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
+    // use an invalid map width/height to indicate reconnectable games
+    return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
+  }
+  if (m_RestoredGame) return {0, 0};
+  return m_Map->GetMapWidth();
+}
+vector<uint8_t> CGame::GetAnnounceHeight() const
+{
+  if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
+    // use an invalid map width/height to indicate reconnectable games
+    return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
+  }
+  if (m_RestoredGame) return {0, 0};
+  return m_Map->GetMapHeight();
+}
+
 void CGame::SendVirtualHostPlayerInfo(CGameConnection* player) const
 {
   if (m_VirtualHostPID == 255)
@@ -1422,17 +1473,17 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   }
   if (m_IsMirror) {
     return (
-      versionPrefix + "Mirroring " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetMapLocalPath()) +
+      versionPrefix + "Mirroring " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetServerPath()) +
       ": \"" + GetPrefixedGameName(realm) + "\")"
     );
   } else if (!m_OwnerName.empty()) {
     return (
-      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetMapLocalPath()) +
+      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetServerPath()) +
       ". (Started by " + m_OwnerName + ": \"" + GetPrefixedGameName(realm) + "\")"
     );
   } else {
     return (
-      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetMapLocalPath()) +
+      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetServerPath()) +
       ". (\"" + GetPrefixedGameName(realm) + "\")"
     );
   }
@@ -1470,15 +1521,15 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
 
   return GetProtocol()->SEND_W3GS_GAMEINFO(
     m_Aura->m_GameVersion,
-    CreateByteArray(static_cast<uint32_t>(MAPGAMETYPE_UNKNOWN0), false),
+    CreateByteArray(GetGameType(), false),
     m_Map->GetMapGameFlags(),
-    m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapWidth(),
-    m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : m_Map->GetMapHeight(),
+    GetAnnounceWidth(),
+    GetAnnounceHeight(),
     m_GameName,
     m_IndexVirtualHostName,
     0,
-    m_MapPath,
-    m_Map->GetMapHash(),
+    GetSourceFilePath(),
+    GetSourceFileHash(),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
     static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1), // "Available" Slots
     hostPort,
@@ -1489,7 +1540,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
 
 void CGame::AnnounceToRealm(CRealm* realm)
 {
-  realm->SendGameRefresh(m_GameDisplay, m_GameName, realm->GetUsesCustomPort() && !m_IsMirror ? realm->GetPublicHostPort() : m_HostPort, m_Map, m_HostCounter, !m_IsMirror);
+  realm->SendGameRefresh(m_GameDisplay, this);
 }
 
 void CGame::AnnounceToAddress(string& addressLiteral) const
@@ -2749,9 +2800,10 @@ void CGame::EventGameStarted()
   m_StartedLoadingTicks    = GetTicks();
   m_LastLagScreenResetTime = GetTime();
 
+  // Remove the virtual host player to ensure consistent game state and networking.
+  DeleteVirtualHost();
+
   if (GetNumConnectionsOrFake() >= 2) {
-    // Remove the virtual host player to ensure consistent game state and networking.
-    DeleteVirtualHost();
     /*
     // This is an attempt to "rename" a fake player into our virtual host.
     // Unfortunately, it makes game clients quit after the game loads.
@@ -2760,10 +2812,9 @@ void CGame::EventGameStarted()
       CreateFakePlayer(true);
     }
     */
-  } else if (GetSlotsOpen() > 0) {
+  } else if (!m_RestoredGame && GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake player.
-    DeleteVirtualHost();
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
       CreateFakeObserver(true);
     } else {
@@ -2772,14 +2823,13 @@ void CGame::EventGameStarted()
   } else {
     // This is a single-player game. Neither chat events nor bot commands will work.
     // Keeping the virtual host does no good - The game client then refuses to remain in the game.
-    DeleteVirtualHost();
   }
 
   // send a final slot info update for HCL, or in case there are pending updates
   if (m_SlotInfoChanged != 0)
     SendAllSlotInfo();
 
-  m_GameLoading            = true;
+  m_GameLoading = true;
 
   // since we use a fake countdown to deal with leavers during countdown the COUNTDOWN_START and COUNTDOWN_END packets are sent in quick succession
   // send a start countdown packet
@@ -2790,10 +2840,10 @@ void CGame::EventGameStarted()
 
   SendAll(GetProtocol()->SEND_W3GS_COUNTDOWN_END());
 
-  // send a game loaded packet for the fake player (if present)
+  // send a game loaded packet for any fake players
 
-  for (auto& fakeplayer : m_FakePlayers)
-    SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(fakeplayer));
+  for (auto& fakePlayer : m_FakePlayers)
+    SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(fakePlayer));
 
   // record the number of starting players
 
@@ -2801,8 +2851,7 @@ void CGame::EventGameStarted()
 
   // enable stats
 
-  if (m_Map->GetMapType() == "dota")
-  {
+  if (!m_RestoredGame && m_Map->GetMapType() == "dota") {
     if (m_StartPlayers < 6 || !m_FakePlayers.empty())
       Print("[STATS] not using dotastats due to too few players");
     else
@@ -2813,7 +2862,7 @@ void CGame::EventGameStarted()
     std::vector<CGamePlayer*> otherPlayers;
     for (auto& otherPlayer : m_Players) {
       if (otherPlayer != currentPlayer) {
-          otherPlayers.push_back(otherPlayer);
+        otherPlayers.push_back(otherPlayer);
       }
     }
     m_SyncPlayers[currentPlayer] = otherPlayers;
@@ -2832,7 +2881,7 @@ void CGame::EventGameStarted()
   // delete the map data
 
   if (m_HasMapLock) {
-    string localPathString = m_Map->GetMapLocalPath();
+    string localPathString = m_Map->GetServerPath();
     m_Aura->m_BusyMaps.erase(localPathString);
     if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
       filesystem::path localPath = localPathString;
@@ -3593,12 +3642,15 @@ void CGame::AddToRealmVerified(const string& server, CGamePlayer* Player, bool s
 
 void CGame::AddToReserved(string name)
 {
+  if (m_RestoredGame && m_Reserved.size() >= m_Aura->m_MaxSlots) {
+    return;
+  }
+
   transform(begin(name), end(name), begin(name), ::tolower);
 
   // check that the user is not already reserved
 
-  for (auto& player : m_Reserved)
-  {
+  for (auto& player : m_Reserved) {
     if (player == name)
       return;
   }
@@ -3607,8 +3659,7 @@ void CGame::AddToReserved(string name)
 
   // upgrade the user if they're already in the game
 
-  for (auto& player : m_Players)
-  {
+  for (auto& player : m_Players) {
     string NameLower = player->GetName();
     transform(begin(NameLower), end(NameLower), begin(NameLower), ::tolower);
 
@@ -3637,6 +3688,14 @@ void CGame::RemoveFromReserved(string name)
       if (NameLower == name)
         player->SetReserved(false);
     }
+  }
+}
+
+void CGame::RemoveAllReserved()
+{
+  m_Reserved.clear();
+  for (auto& player : m_Players) {
+    player->SetReserved(false);
   }
 }
 
@@ -4019,4 +4078,11 @@ void CGame::DeleteFakePlayers()
   m_FakePlayers.clear();
   CreateVirtualHost();
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+}
+
+void CGame::RemoveCreator()
+{
+  m_CreatedBy.clear();
+  m_CreatedFrom = nullptr;
+  m_CreatedFromType = GAMESETUP_ORIGIN_INVALID;
 }

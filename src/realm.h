@@ -49,6 +49,7 @@
 #include "includes.h"
 #include "config_realm.h"
 #include "realm_chat.h"
+#include "game.h"
 
 #include <queue>
 #include <iostream>
@@ -207,7 +208,7 @@ public:
   CQueuedChatMessage* QueueGameChatAnnouncement(const CGame* game, CCommandContext* fromCtx = nullptr, const bool isProxy = false);
   void TryQueueChat(const std::string& chatCommand, const std::string& user, bool isPrivate, CCommandContext* ctx = nullptr, const uint8_t ctxFlags = 0);
   void TryQueueGameChatAnnouncement(const CGame* game);
-  void SendGameRefresh(uint8_t displayMode, const std::string& gameName, const uint16_t connectPort, CMap* map, uint32_t hostCounter, bool useServerNamespace);
+  void SendGameRefresh(const uint8_t displayMode, const CGame* game);
   void QueueGameUncreate();
   void TrySendEnterChat();
   void TrySendGetGamesList();

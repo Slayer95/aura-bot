@@ -72,6 +72,7 @@ private:
   std::optional<std::filesystem::path>  m_MapCFGPath;
   std::optional<std::filesystem::path>  m_MapCachePath;
   std::optional<std::filesystem::path>  m_JASSPath;
+  std::optional<std::filesystem::path>  m_GameSavePath;
   std::optional<bool>                   m_ExtractJASS;
 
   // Host flags
@@ -88,6 +89,7 @@ private:
   std::optional<uint32_t>               m_GameTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_CheckMapVersion;
+  std::optional<std::filesystem::path>  m_GameSavedPath;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;

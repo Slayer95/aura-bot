@@ -1030,7 +1030,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const string MapPath = m_TargetGame->m_Map->GetMapPath();
+      const string MapPath = m_TargetGame->m_Map->GetClientPath();
       size_t LastSlash = MapPath.rfind('\\');
 
       string inputName = Payload;
@@ -1240,8 +1240,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("c"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -1337,8 +1342,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("hcl"): {
-      if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's configuration.");
+        break;
+      }
 
       if (Payload.empty()) {
         SendReply("The HCL command string is [" + m_TargetGame->m_HCLCommandString + "]");
@@ -1382,7 +1392,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<string> Args = SplitArgs(Payload, 1u, 12u);
+      vector<string> Args = SplitArgs(Payload, 1u, m_Aura->m_MaxSlots);
 
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "hold [PLAYER1], [PLAYER2], ...");
@@ -1416,7 +1426,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<string> Args = SplitArgs(Payload, 1u, 12u);
 
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "unhold [PLAYER1], [PLAYER2], ...");
+        m_TargetGame->RemoveAllReserved();
+        SendAll("Cleared the reservations list.");
         break;
       }
 
@@ -1425,7 +1436,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           continue;
         m_TargetGame->RemoveFromReserved(PlayerName);
       }
-      SendAll("Removed player(s) from the hold list: " + JoinVector(Args, false));
+      SendAll("Removed player(s) from the reservations list: " + JoinVector(Args, false));
       break;
     }
 
@@ -1467,7 +1478,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (m_TargetGame->GetIsLobby()) {
         bool KickAndClose = CommandHash == HashCode("ckick") || CommandHash == HashCode("closekick");
-        if (KickAndClose) {
+        if (KickAndClose && !m_TargetGame->GetIsRestored()) {
           m_TargetGame->CloseSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
         } else {
           m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
@@ -1529,8 +1540,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("o"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -1890,8 +1906,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("sw"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -2484,8 +2505,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("clearhcl"): {
-      if (!m_TargetGame || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's configuration.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore change the map settings.");
@@ -2523,7 +2549,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !SENDLAN
     //
 
-    case HashCode("sendudp"):
     case HashCode("sendlan"): {
       UseImplicitHostedGame();
 
@@ -2597,7 +2622,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !SENDLANINFO
     //
 
-    case HashCode("sendudpinfo"):
     case HashCode("sendlaninfo"): {
       UseImplicitHostedGame();
 
@@ -2791,8 +2815,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("closeall"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -2810,8 +2839,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("comp"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -2852,8 +2886,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("color"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -2900,8 +2939,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("handicap"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -2950,8 +2994,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("race"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3023,8 +3072,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("team"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3079,8 +3133,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("observer"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3128,8 +3187,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("fill"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3157,8 +3221,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("fp"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3166,7 +3235,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!m_TargetGame->CreateFakePlayer(false)) {
-        ErrorReply("Cannot add another fake player");
+        ErrorReply("Cannot add another virtual player");
         break;
       }
 
@@ -3180,8 +3249,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("deletefakes"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3189,7 +3263,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->m_FakePlayers.empty()) {
-        ErrorReply("No fake players found.");
+        ErrorReply("No virtual players found.");
         break;
       }
 
@@ -3204,8 +3278,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("fillfake"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3239,7 +3318,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->m_FakePlayers.empty()) {
-        ErrorReply("Fake player not found.");
+        ErrorReply("Virtual player not found.");
         break;
       }
 
@@ -3266,7 +3345,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->m_FakePlayers.empty()) {
-        ErrorReply("Fake player not found.");
+        ErrorReply("Virtual player not found.");
         break;
       }
 
@@ -3284,8 +3363,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("shuffle"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -3325,8 +3409,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("openall"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");

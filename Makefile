@@ -94,6 +94,8 @@ OBJS = src/fileutil.o \
 			 src/gamesetup.o \
 			 src/gameslot.o \
 			 src/game.o \
+       src/packed.o \
+       src/savegame.o \
 			 src/command.o \
 			 src/aura.o \
 			 src/auradb.o \

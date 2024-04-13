@@ -256,6 +256,13 @@ to host games from map files (``.w3x``, ``.w3m``).
 
 This option is equivalent to ``<bot.jass_path>`` in \`config.ini\`
 
+## \`--savedir <DIRECTORY>\`
+
+Specifies the directory where Warcraft 3 save files (``.w3z``) are stored.
+
+This option is equivalent to ``<bot.save_path>`` in \`config.ini\`
+
+
 ## \`--lan-mode <MODE>\`
 
 Specifies how hosted games available for "Local Area Network" should be made known to potential players.
@@ -408,6 +415,13 @@ This parameter specifies the maximum time a game lobby is allowed to be unattend
 without a game owner. After this time passes, the lobby is unhosted.
 
 - <TIME>: Provided in minutes.
+
+## \`--load <FILE>\`
+
+Specifies the location of a saved game a game lobby will resume.
+
+- If `<FILE>` does not contain any slashes, it is resolved relative to the saved games directory by default, unless overridden by the `--stdpaths` flag.
+- The presence of any slashes causes `<FILE>` to be resolved relative to the current working directory (CWD).
 
 # Flags for CLI commands
 

@@ -49,6 +49,7 @@ public:
   std::filesystem::path                   m_MapCFGPath;                  // map cfg path
   std::filesystem::path                   m_MapCachePath;                // map cache path
   std::filesystem::path                   m_JASSPath;                    // JASS files path
+  std::filesystem::path                   m_GameSavePath;                // save files path
 
   std::filesystem::path                   m_GreetingPath;                // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath

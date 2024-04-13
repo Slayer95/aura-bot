@@ -1142,10 +1142,28 @@ void CRealm::TryQueueChat(const string& message, const string& user, bool isPriv
 }
 
 
-void CRealm::SendGameRefresh(uint8_t displayMode, const string& gameName, const uint16_t connectPort, CMap* map, uint32_t hostCounter, bool useServerNamespace)
+void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
 {
-  if (!m_LoggedIn || !map)
+  if (!m_LoggedIn)
     return;
+
+  const uint16_t connectPort = GetUsesCustomPort() && !game->GetIsMirror() ? GetPublicHostPort() : game->GetHostPort();
+  if (m_GamePort != connectPort) {
+    Send(m_Protocol->SEND_SID_NETGAMEPORT(connectPort));
+    m_GamePort = connectPort;
+  }
+
+  Send(m_Protocol->SEND_SID_STARTADVEX3(
+    displayMode,
+    CreateByteArray(game->GetGameType(), false),
+    game->GetMap()->GetMapGameFlags(),
+    game->GetAnnounceWidth(),
+    game->GetAnnounceHeight(),
+    GetPrefixedGameName(game->GetGameName()), m_Config->m_UserName,
+    0,
+    game->GetSourceFilePath(),
+    game->GetSourceFileHash(),
+    game->GetSourceFileSHA1(),
 
   // construct a fixed host counter which will be used to identify players from this realm
   // the fixed host counter's highest-order byte will contain a 8 bit ID (0-255)
@@ -1154,23 +1172,7 @@ void CRealm::SendGameRefresh(uint8_t displayMode, const string& gameName, const 
   // when a player joins a game we can obtain the ID from the received host counter
   // note: LAN broadcasts use an ID of 0, battle.net refreshes use IDs of 16-255, the rest are reserved
 
-  uint32_t mapGameType = map->GetMapGameType();
-  mapGameType |= MAPGAMETYPE_UNKNOWN0;
-  if (displayMode == GAME_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
-
-  if (m_GamePort != connectPort) {
-    Send(m_Protocol->SEND_SID_NETGAMEPORT(connectPort));
-    m_GamePort = connectPort;
-  }
-
-  Send(m_Protocol->SEND_SID_STARTADVEX3(
-    displayMode, CreateByteArray(mapGameType, false), map->GetMapGameFlags(),
-    // use an invalid map width/height to indicate reconnectable games
-    m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapWidth(),
-    m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled ? m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS() : map->GetMapHeight(),
-    GetPrefixedGameName(gameName), m_Config->m_UserName,
-    0, map->GetMapPath(), map->GetMapHash(), map->GetMapSHA1(),
-    hostCounter | (useServerNamespace ? (m_PublicServerID << 24) : 0),
+    game->GetHostCounter() | (game->GetIsMirror() ? 0 : (m_PublicServerID << 24)),
     m_Aura->m_MaxSlots
   ));
 

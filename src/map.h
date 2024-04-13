@@ -145,10 +145,10 @@ private:
   std::vector<uint8_t>   m_MapHeight; // config value: map height (2 bytes)
   std::vector<CGameSlot> m_Slots;
   std::string            m_CFGName;
-  std::string            m_MapPath;       // config value: map path
+  std::string            m_ClientMapPath;       // config value: map path
   std::string            m_MapType;       // config value: map type (for stats class)
   std::string            m_MapDefaultHCL; // config value: map default HCL to use
-  std::string            m_MapLocalPath;  // config value: map local path
+  std::string            m_MapServerPath;  // config value: map local path
   std::string            m_MapURL;
   std::string            m_MapSiteURL;
   std::string            m_MapShortDesc;
@@ -179,7 +179,7 @@ public:
   inline bool                   GetValid() const { return m_Valid; }
   inline bool                   HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0; }
   inline std::string            GetConfigName() const { return m_CFGName; }
-  inline std::string            GetMapPath() const { return m_MapPath; }
+  inline std::string            GetClientPath() const { return m_ClientMapPath; }
   inline std::vector<uint8_t>   GetMapSize() const { return m_MapSize; }
   inline std::vector<uint8_t>   GetMapCRC32() const { return m_MapCRC32; }
   inline std::vector<uint8_t>   GetMapHash() const { return m_MapHash; }
@@ -200,7 +200,7 @@ public:
   inline std::vector<uint8_t>   GetMapHeight() const { return m_MapHeight; }
   inline std::string            GetMapType() const { return m_MapType; }
   inline std::string            GetMapDefaultHCL() const { return m_MapDefaultHCL; }
-  inline std::string            GetMapLocalPath() const { return m_MapLocalPath; }
+  inline std::string            GetServerPath() const { return m_MapServerPath; }
   std::string                   GetMapFileName() const;
   inline std::string*           GetMapData() { return &m_MapData; }
   inline uint8_t                GetMapNumPlayers() const { return m_MapNumPlayers; }

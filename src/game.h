@@ -48,6 +48,7 @@
 
 #include "gameslot.h"
 #include "gamesetup.h"
+#include "savegame.h"
 #include "socket.h"
 
 #include <set>
@@ -81,6 +82,7 @@ class CDBBan;
 class CDBGamePlayer;
 class CStats;
 class CRealm;
+class CSaveGame;
 
 class CGame
 {
@@ -96,6 +98,7 @@ protected:
   CDBBan*                        m_DBBanLast;                     // last ban for the !banlast command - this is a pointer to one of the items in m_DBBans
   std::vector<CDBBan*>           m_DBBans;                        // std::vector of potential ban data for the database
   CStats*                        m_Stats;                         // class to keep track of game stats such as kills/deaths/assists in dota
+  CSaveGame*                     m_RestoredGame;
   std::vector<CGameSlot>         m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>    m_DBGamePlayers;                 // std::vector of potential gameplayer data for the database
   std::vector<CGamePlayer*>      m_Players;                       // std::vector of players
@@ -232,32 +235,40 @@ public:
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
   inline bool           GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
+  inline bool           GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline bool           GetLagging() const { return m_Lagging; }
   inline bool           GetIsGameOver() const { return m_GameOverTime != 0; }
-  CGameProtocol* GetProtocol() const;
-  int64_t        GetNextTimedActionTicks() const;
-  uint32_t       GetSlotsOccupied() const;
-  uint32_t       GetSlotsOpen() const;
-  uint32_t       GetNumConnectionsOrFake() const;
-  uint32_t       GetNumHumanPlayers() const;
-  uint32_t       GetNumControllers() const;
-  std::string    GetMapFileName() const;
-  std::string    GetMapSiteURL() const { return m_MapSiteURL; }
-  std::string    GetDescription() const;
-  std::string    GetCategory() const;
-  std::string    GetLogPrefix() const;
-  std::string    GetPlayers() const;
-  std::string    GetObservers() const;
-  std::string    GetAutoStartText() const;
-  CTCPServer*    GetSocket() const { return m_Socket; };
+  CGameProtocol*        GetProtocol() const;
+  int64_t               GetNextTimedActionTicks() const;
+  uint32_t              GetSlotsOccupied() const;
+  uint32_t              GetSlotsOpen() const;
+  uint32_t              GetNumConnectionsOrFake() const;
+  uint32_t              GetNumHumanPlayers() const;
+  uint32_t              GetNumControllers() const;
+  std::string           GetMapFileName() const;
+  std::string           GetMapSiteURL() const { return m_MapSiteURL; }
+  std::string           GetDescription() const;
+  std::string           GetCategory() const;
+  uint32_t              GetGameType() const;
+  std::string           GetSourceFilePath() const;
+  std::vector<uint8_t>  GetSourceFileHash() const;
+  std::vector<uint8_t>  GetSourceFileSHA1() const;
+  std::vector<uint8_t>  GetAnnounceWidth() const;
+  std::vector<uint8_t>  GetAnnounceHeight() const;
 
-  uint16_t       GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
-  inline bool    GetIsRealmRefreshError() { return m_RealmRefreshError; }
-  inline bool    GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
+  std::string           GetLogPrefix() const;
+  std::string           GetPlayers() const;
+  std::string           GetObservers() const;
+  std::string           GetAutoStartText() const;
+  CTCPServer*           GetSocket() const { return m_Socket; };
 
-  inline void SetExiting(bool nExiting) { m_Exiting = nExiting; }
-  inline void SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
-  inline void SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
+  uint16_t              GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
+  inline bool           GetIsRealmRefreshError() { return m_RealmRefreshError; }
+  inline bool           GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
+
+  inline void           SetExiting(bool nExiting) { m_Exiting = nExiting; }
+  inline void           SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
+  inline void           SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
 
   // processing functions
 
@@ -367,6 +378,7 @@ public:
   void AddToRealmVerified(const std::string& server, CGamePlayer* player, bool sendMessage);
   void AddToReserved(std::string name);
   void RemoveFromReserved(std::string name);
+  void RemoveAllReserved();
   bool MatchOwnerName(std::string name) const;
   bool GetIsReserved(std::string name) const;
   bool IsDownloading() const;
@@ -392,12 +404,7 @@ public:
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);
   void DeleteFakePlayers();
-
-  void RemoveCreator() {
-    m_CreatedBy.clear();
-    m_CreatedFrom = nullptr;
-    m_CreatedFromType = GAMESETUP_ORIGIN_INVALID;
-  }
+  void RemoveCreator();
 };
 
 #endif // AURA_GAME_H_

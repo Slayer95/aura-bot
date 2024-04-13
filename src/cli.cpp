@@ -90,6 +90,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--cfgdir", m_MapCFGPath, "Customizes the map configs directory.");
   app.add_option("--cachedir", m_MapCachePath, "Customizes the map cache directory.");
   app.add_option("--jassdir", m_JASSPath, "Customizes the directory where extracted JASS files are stored.");
+  app.add_option("--savedir", m_GameSavePath, "Customizes the game save directory.");
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
   app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
   app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: info, debug, trace.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"}));
@@ -103,6 +104,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--timeout", m_GameTimeout, "Sets the time limit for the game lobby.");
+  app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
 
@@ -174,6 +176,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   if (m_MapCFGPath.has_value()) NormalizeDirectory(m_MapCFGPath.value());
   if (m_MapCachePath.has_value()) NormalizeDirectory(m_MapCachePath.value());
   if (m_JASSPath.has_value()) NormalizeDirectory(m_JASSPath.value());
+  if (m_GameSavePath.has_value()) NormalizeDirectory(m_GameSavePath.value());
 
   if (m_SearchTarget.has_value()) {
     if (!m_ExitOnStandby.has_value()) m_ExitOnStandby = true;
@@ -216,6 +219,8 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_Config->m_MapCachePath = m_MapCachePath.value();
   if (m_JASSPath.has_value())
     nAura->m_Config->m_JASSPath = m_JASSPath.value();
+  if (m_GameSavePath.has_value())
+    nAura->m_Config->m_GameSavePath = m_GameSavePath.value();
 
   if (m_ExtractJASS.has_value())
     nAura->m_Config->m_ExtractJASS = m_ExtractJASS.value();
@@ -298,36 +303,47 @@ bool CCLI::QueueActions(CAura* nAura) const
     }
     CCommandContext* ctx = new CCommandContext(nAura, false, &cout);
     CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
-    if (gameSetup && gameSetup->LoadMapSync()) {
-      if (gameSetup->ApplyMapModifiers(&options)) {
-        for (const auto& id : m_ExcludedRealms) {
-          CRealm* excludedRealm = nAura->GetRealmByInputId(id);
-          if (excludedRealm) {
-            nAura->m_GameSetup->AddIgnoredRealm(excludedRealm);
-          } else {
-            Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
+    if (gameSetup) {
+      if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
+      if (gameSetup->LoadMapSync()) {
+        if (gameSetup->ApplyMapModifiers(&options)) {
+          if (!gameSetup->m_SaveFile.empty()) {
+            if (!gameSetup->RestoreFromSaveFile()) {
+              Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
+              delete gameSetup;
+              nAura->UnholdContext(ctx);
+              return false;
+            }
           }
-        }
-        if (m_MirrorSource.has_value()) {
-          if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
-            Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-            delete gameSetup;
-            nAura->UnholdContext(ctx);
-            return false;
+          for (const auto& id : m_ExcludedRealms) {
+            CRealm* excludedRealm = nAura->GetRealmByInputId(id);
+            if (excludedRealm) {
+              nAura->m_GameSetup->AddIgnoredRealm(excludedRealm);
+            } else {
+              Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
+            }
           }
+          if (m_MirrorSource.has_value()) {
+            if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
+              Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
+              delete gameSetup;
+              nAura->UnholdContext(ctx);
+              return false;
+            }
+          }
+          gameSetup->SetName(m_GameName.value_or("Join and play"));
+          if (m_GameTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameTimeout.value());
+          if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
+          gameSetup->SetVerbose(m_Verbose);
+          gameSetup->SetActive();
+          vector<string> hostAction{"host"};
+          nAura->m_PendingActions.push(hostAction);
+        } else {
+          ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
+          delete gameSetup;
+          nAura->UnholdContext(ctx);
+          return false;
         }
-        gameSetup->SetName(m_GameName.value_or("Join and play"));
-        if (m_GameTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameTimeout.value());
-        if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
-        gameSetup->SetVerbose(m_Verbose);
-        gameSetup->SetActive();
-        vector<string> hostAction{"host"};
-        nAura->m_PendingActions.push(hostAction);
-      } else {
-        ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
-        delete gameSetup;
-        nAura->UnholdContext(ctx);
-        return false;
       }
     } else {
       if (searchType == SEARCH_TYPE_ANY) {

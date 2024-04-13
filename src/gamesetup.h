@@ -40,6 +40,7 @@
 #include "irc.h"
 #include "map.h"
 #include "realm.h"
+#include "savegame.h"
 
 #define SEARCH_TYPE_ONLY_MAP 1
 #define SEARCH_TYPE_ONLY_CONFIG 2
@@ -85,6 +86,7 @@ class CCommandContext;
 class CIRC;
 class CMap;
 class CRealm;
+class CSaveGame;
 
 inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount) {
   std::regex pattern(R"(<a href="/maps/(\d+)/"><b>([^<\n]+)</b></a>)");
@@ -134,6 +136,7 @@ class CGameSetup
 {
 public:
   CAura*                                          m_Aura;
+  CSaveGame*                                      m_RestoredGame;
   CMap*                                           m_Map;
   CCommandContext*                                m_Ctx;
 
@@ -164,6 +167,8 @@ public:
 
   bool                                            m_SkipVersionCheck;
   bool                                            m_IsMapDownloaded;
+
+  std::filesystem::path                           m_SaveFile;
 
   std::string                                     m_GameName;
   std::pair<std::string, std::string>             m_GameOwner;
@@ -231,6 +236,7 @@ public:
   void OnLoadMapSuccess();
   void OnLoadMapError();
   bool SetActive();
+  bool RestoreFromSaveFile();
   bool RunHost();
 
   inline bool GetIsMirror() const { return m_GameIsMirror; }
@@ -256,6 +262,7 @@ public:
     m_MapReadyCallbackData = data;
   }
   void SetMapExtraOptions(CGameExtraOptions* opts) { m_MapExtraOptions = opts; }
+  void SetGameSavedFile(const std::filesystem::path& filePath);
   void ResetExtraOptions();
 
   bool Update();
