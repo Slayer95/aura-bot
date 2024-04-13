@@ -1141,6 +1141,7 @@ string CGame::GetSourceFilePath() const {
     return m_Map->GetClientPath();
   }
 }
+
 vector<uint8_t> CGame::GetSourceFileHash() const
 {
   if (m_RestoredGame) {
@@ -1149,10 +1150,12 @@ vector<uint8_t> CGame::GetSourceFileHash() const
     return m_Map->GetMapHash();
   }
 }
+
 vector<uint8_t> CGame::GetSourceFileSHA1() const
 {
   return m_Map->GetMapSHA1();
 }
+
 vector<uint8_t> CGame::GetAnnounceWidth() const
 {
   if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
