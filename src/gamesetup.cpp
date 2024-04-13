@@ -661,7 +661,7 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
 #ifndef DISABLE_CPR
 uint32_t CGameSetup::ResolveMapRepositoryTask()
 {
-  if (m_Aura->m_Config->m_MapRepositories.find(m_SearchTarget.first) == m_Aura->m_Config->m_MapRepositories.end()) {
+  if (m_Aura->m_Net->m_Config->m_MapRepositories.find(m_SearchTarget.first) == m_Aura->m_Net->m_Config->m_MapRepositories.end()) {
     m_ErrorMessage = "Downloads from  " + m_SearchTarget.first + " are disabled.";
     return RESOLUTION_ERR;
   }
