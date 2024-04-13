@@ -117,7 +117,7 @@ string GetFileExtension(const string& inputPath) {
 string PathToString(const filesystem::path& inputPath) {
 #ifdef _WIN32
   if (inputPath.empty()) return string();
-  wstring& fromWide = inputPath.wstring();
+  wstring fromWide = inputPath.wstring();
   int size = WideCharToMultiByte(CP_UTF8, 0, &fromWide[0], (int)fromWide.size(), nullptr, 0, nullptr, nullptr);
   string output(size, '\0');
   WideCharToMultiByte(CP_UTF8, 0, &fromWide[0], (int)fromWide.size(), &output[0], size, nullptr, nullptr);

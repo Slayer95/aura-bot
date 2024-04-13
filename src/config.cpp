@@ -200,7 +200,7 @@ uint8_t CConfig::CheckRealmKey(const string& key) const
   } catch (...) {
   }
   if (1 <= value && value <= 240)
-    return value - 1;
+    return static_cast<uint8_t>(value - 1);
 
   return 0xFF;
 }
@@ -376,7 +376,7 @@ uint8_t CConfig::GetUint8(const string& key, uint8_t x)
     SUCCESS(x)
   }
 
-  int32_t Result = x;
+  uint8_t Result = x;
   try {
     long Value = stol(it->second);
     if (Value < 0 || 0xFF < Value) {
