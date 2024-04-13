@@ -150,7 +150,7 @@ uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds)
 
 bool CRealm::Update(void* fd, void* send_fd)
 {
-  const int64_t Ticks = GetTicks(), Time = GetTime();
+  const int64_t Time = GetTime();
 
   // we return at the end of each if statement so we don't have to deal with errors related to the order of the if statements
   // that means it might take a few ms longer to complete a task involving multiple steps (in this case, reconnecting) due to blocking or sleeping
@@ -1060,8 +1060,8 @@ CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& us
     return nullptr;
 
   CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
-  if ((m_Config->m_MaxLineLength - 20) < message.length()) {
-    entry->SetMessage(message.substr(0, m_Config->m_MaxLineLength - 20));
+  if ((m_Config->m_MaxLineLength - 20u) < message.length()) {
+    entry->SetMessage(message.substr(0, m_Config->m_MaxLineLength - 20u));
   } else {
     entry->SetMessage(message);
   }

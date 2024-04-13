@@ -175,7 +175,7 @@ vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<P
   return Files;
 }
 
-string FileRead(const filesystem::path& file, size_t start, size_t length, streamoff* byteSize)
+string FileRead(const filesystem::path& file, size_t start, size_t length, size_t* byteSize)
 {
   ifstream IS;
   IS.open(file.native().c_str(), ios::binary | ios::in);
@@ -190,7 +190,7 @@ string FileRead(const filesystem::path& file, size_t start, size_t length, strea
 
   IS.seekg(0, ios::end);
 
-  streamoff FileLength = IS.tellg();
+  size_t FileLength = static_cast<long unsigned int>(IS.tellg());
   if (FileLength > 0x18000000) {
     Print("[UTIL] error - refusing to load huge file [" + PathToString(file) + "]");
     return string();
@@ -209,13 +209,13 @@ string FileRead(const filesystem::path& file, size_t start, size_t length, strea
 
   auto Buffer = new char[length];
   IS.read(Buffer, length);
-  string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
+  string BufferString = string(Buffer, static_cast<long unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;
   return BufferString;
 }
 
-string FileRead(const filesystem::path& file, streamoff* byteSize)
+string FileRead(const filesystem::path& file, size_t* byteSize)
 {
   ifstream IS;
   IS.open(file.native().c_str(), ios::binary | ios::in);
@@ -229,7 +229,7 @@ string FileRead(const filesystem::path& file, streamoff* byteSize)
   // get length of file
 
   IS.seekg(0, ios::end);
-  streamoff FileLength = IS.tellg();
+  size_t FileLength = static_cast<long unsigned int>(IS.tellg());
   if (FileLength > 0x18000000) {
     Print("[UTIL] error - refusing to load huge file [" + PathToString(file) + "]");
     return string();
@@ -241,9 +241,9 @@ string FileRead(const filesystem::path& file, streamoff* byteSize)
 
   // read data
 
-  auto Buffer = new char[static_cast<unsigned int>(FileLength)];
+  auto Buffer = new char[FileLength];
   IS.read(Buffer, FileLength);
-  string BufferString = string(Buffer, static_cast<unsigned int>(IS.gcount()));
+  string BufferString = string(Buffer, static_cast<long unsigned int>(IS.gcount()));
   IS.close();
   delete[] Buffer;
 

@@ -112,9 +112,9 @@ private:
   bool                             m_WaitingToConnect;          // if we're waiting to reconnect to battle.net after being disconnected
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
   uint16_t                         m_GamePort;                  // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
-  bool                             m_ChatQueuedGameAnnouncement;// for !host, !announce
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
   bool                             m_AnyWhisperRejected;        // whether the realm rejected any whisper because the receiver was not offline.
+  bool                             m_ChatQueuedGameAnnouncement;// for !host, !announce
   std::queue<CQueuedChatMessage*>             m_ChatQueueMain;
   CQueuedChatMessage*                         m_ChatQueueJoinCallback; // High priority
   CQueuedChatMessage*                         m_ChatQueueGameHostWhois; // Also high priority

@@ -195,7 +195,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
 
   const filesystem::path configExamplePath = homeDir / filesystem::path("config-example.ini");
 
-  streamoff FileSize = 0;
+  size_t FileSize = 0;
   const string exampleContents = FileRead(configExamplePath, &FileSize);
   if (exampleContents.empty()) {
     // But Aura can actually work without a config file ;)

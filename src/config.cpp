@@ -701,7 +701,7 @@ optional<int64_t> CConfig::GetMaybeInt64(const string& key)
   try {
     long long value = stoll(it->second);
     result = static_cast<int64_t>(value);
-  } catch (exception e) {
+  } catch (const exception& e) {
     Print("Invalid value: " + it->second);
     Print("Error parsing int64 - " + string(e.what()));
     CONFIG_ERROR(key, result)

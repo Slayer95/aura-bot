@@ -1303,7 +1303,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (m_TargetGame->GetMapSiteURL().empty()) {
           SendAll("Download URL unknown");
         } else {
-          SendAll("Download [" + m_TargetGame->GetMapFileName() + "] from <" + m_TargetGame->GetMapSiteURL() + ">");
+          SendAll("Visit  <" + m_TargetGame->GetMapSiteURL() + "> to download [" + m_TargetGame->GetMapFileName() + "]);
         }
         break;
       }
