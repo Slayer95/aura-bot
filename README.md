@@ -367,6 +367,36 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 OR OTHER DEALINGS IN THE SOFTWARE.
 
+#### [zlib][23]
+
+version 1.3, August 18th, 2023
+
+Copyright (C) 1995-2023 Jean-loup Gailly and Mark Adler
+
+This software is provided 'as-is', without any express or implied
+warranty.  In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not
+   claim that you wrote the original software. If you use this software
+   in a product, an acknowledgment in the product documentation would be
+   appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be
+   misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+
+Jean-loup Gailly        Mark Adler
+jloup@gzip.org          madler@alumni.caltech.edu
+
+
+The data format used by the zlib library is described by RFCs (Request for
+Comments) 1950 to 1952 in the files http://tools.ietf.org/html/rfc1950
+(zlib format), rfc1951 (deflate format) and rfc1952 (gzip format).
+
 Except as contained in this notice, the name of a copyright holder shall not
 be used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization of the copyright holder.
@@ -393,3 +423,4 @@ in this Software without prior written authorization of the copyright holder.
 [20]: https://github.com/miniupnp/miniupnp
 [21]: https://github.com/libcpr/cpr
 [22]: https://github.com/curl/curl
+[23]: https://github.com/madler/zlib
