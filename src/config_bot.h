@@ -67,7 +67,6 @@ public:
 
   CCommandConfig*                         m_LANCommandCFG;
 
-
   uint8_t                                 m_LogLevel;
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                  // master switch to enable/disable ALL bnet configs on startup

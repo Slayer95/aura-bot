@@ -72,6 +72,7 @@ public:
 
   bool                                    m_AllowDownloads;             // allow map downloads or not
   uint16_t                                m_DownloadTimeout;
+  std::set<std::string>                   m_MapRepositories;             // enabled map repositories
   uint8_t                                 m_AllowTransfers;             // map transfers mode
   uint32_t                                m_MaxDownloaders;             // maximum number of map downloaders at the same time
   uint32_t                                m_MaxUploadSize;              // maximum total map size that we may transfer to players in lobbies

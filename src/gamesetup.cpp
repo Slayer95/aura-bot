@@ -139,6 +139,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
+    m_DownloadTimeout(m_Aura->m_Net->m_Config->m_DownloadTimeout),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
     m_SkipVersionCheck(false),
@@ -177,6 +178,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
+    m_DownloadTimeout(m_Aura->m_Net->m_Config->m_DownloadTimeout),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
     m_SkipVersionCheck(nSkipVersionCheck),
@@ -659,6 +661,11 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
 #ifndef DISABLE_CPR
 uint32_t CGameSetup::ResolveMapRepositoryTask()
 {
+  if (m_Aura->m_Config->m_MapRepositories.find(m_SearchTarget.first) == m_Aura->m_Config->m_MapRepositories.end()) {
+    m_ErrorMessage = "Downloads from  " + m_SearchTarget.first + " are disabled.";
+    return RESOLUTION_ERR;
+  }
+
   string downloadUri, downloadFileName;
   uint64_t SearchTargetType = HashCode(m_SearchTarget.first);
 
@@ -666,13 +673,13 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
     case HashCode("epicwar"): {
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;
       Print("[NET] GET <" + m_MapSiteUri + ">");
-      auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout});
+      auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_DownloadTimeout});
       if (response.status_code == 0) {
-        m_ErrorMessage = "[NET] Remote host unavailable (status code " + to_string(response.status_code) + ").";
+        m_ErrorMessage = "Failed to access " + m_SearchTarget.first + " repository (connectivity error).";
         return RESOLUTION_ERR;
       }
       if (response.status_code != 200) {
-        m_ErrorMessage = "[NET] Failed to access repository (status code " + to_string(response.status_code) + ").";
+        m_ErrorMessage = "Failed to access repository (status code " + to_string(response.status_code) + ").";
         return RESOLUTION_ERR;
       }
       Print("[AURA] resolved " + m_SearchTarget.first + " entry in " + to_string(static_cast<float>(response.elapsed * 1000)) + " ms");
@@ -681,13 +688,13 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
       if (downloadUriStartIndex == string::npos) return RESOLUTION_ERR;
       size_t downloadUriEndIndex = response.text.find("\"", downloadUriStartIndex + 24);
       if (downloadUriEndIndex == string::npos) {
-        m_ErrorMessage = "[NET] Malformed API response";
+        m_ErrorMessage = "Malformed API response";
         return RESOLUTION_ERR;
       }
       downloadUri = "https://epicwar.com" + response.text.substr(downloadUriStartIndex + 9, (downloadUriEndIndex) - (downloadUriStartIndex + 9));
       size_t lastSlashIndex = downloadUri.rfind("/");
       if (lastSlashIndex == string::npos) {
-        m_ErrorMessage = "[NET] Malformed download URI";
+        m_ErrorMessage = "Malformed download URI";
         return RESOLUTION_ERR;
       }
       string encodedName = downloadUri.substr(lastSlashIndex + 1);
@@ -698,20 +705,20 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
     case HashCode("wc3maps"): {
       m_MapSiteUri = "https://www.wc3maps.com/api/download/" + m_SearchTarget.second;
       Print("[NET] GET <" + m_MapSiteUri + ">");
-      auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_Aura->m_Net->m_Config->m_DownloadTimeout}, cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL});
+      auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_DownloadTimeout}, cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL});
       if (response.status_code == 0) {
-        m_ErrorMessage = "[NET] Remote host unavailable (status code " + to_string(response.status_code) + ").";
+        m_ErrorMessage = "Remote host unavailable (status code " + to_string(response.status_code) + ").";
         return RESOLUTION_ERR;
       }
       if (response.status_code < 300 || 399 < response.status_code) {
-        m_ErrorMessage = "[NET] Failed to access repository (status code " + to_string(response.status_code) + ").";
+        m_ErrorMessage = "Failed to access repository (status code " + to_string(response.status_code) + ").";
         return RESOLUTION_ERR;
       }
       Print("[AURA] Resolved " + m_SearchTarget.first + " entry in " + to_string(static_cast<float>(response.elapsed * 1000)) + " ms");
       downloadUri = response.header["location"];
       size_t lastSlashIndex = downloadUri.rfind("/");
       if (lastSlashIndex == string::npos) {
-        m_ErrorMessage = "[NET] Malformed download URI";
+        m_ErrorMessage = "Malformed download URI.";
         return RESOLUTION_ERR;
       }
       downloadFileName = downloadUri.substr(lastSlashIndex + 1);
@@ -858,22 +865,25 @@ uint32_t CGameSetup::DownloadMapTask()
     *m_DownloadFileStream,
     cpr::Url{m_MapDownloadUri},
     cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}},
-    cpr::Timeout{10000}
+    cpr::Timeout{m_DownloadTimeout}
   );
   m_DownloadFileStream->close();
   delete m_DownloadFileStream;
   m_DownloadFileStream = nullptr;
   if (response.status_code == 0) {
-    m_ErrorMessage = "Failed to access " + m_SearchTarget.first + " repository (bad internet connectivity).";
+    m_ErrorMessage = "Failed to access " + m_SearchTarget.first + " repository (connectivity error).";
+    FileDelete(m_DownloadFilePath);
     return 0;
   }
   if (response.status_code != 200) {
     m_ErrorMessage = "Map not found in " + m_SearchTarget.first + " repository (code " + to_string(response.status_code) + ").";
+    FileDelete(m_DownloadFilePath);
     return 0;
   }
   const bool timedOut = cpr::ErrorCode::OPERATION_TIMEDOUT == response.error.code;
   if (timedOut) {
     m_ErrorMessage = "Map download took too long.";
+    FileDelete(m_DownloadFilePath);
     return 0;
   }
   Print("[AURA] download task completed in " + to_string(static_cast<float>(response.elapsed * 1000)) + " ms");

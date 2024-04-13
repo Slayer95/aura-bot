@@ -158,6 +158,7 @@ public:
 #ifndef DISABLE_CPR
   std::future<uint32_t>                           m_DownloadFuture;
 #endif
+  uint16_t                                        m_DownloadTimeout;
   std::string                                     m_ErrorMessage;
   uint8_t                                         m_AsyncStep;
 
