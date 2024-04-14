@@ -952,8 +952,9 @@ void CGame::Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& d
 
 void CGame::SendAll(const std::vector<uint8_t>& data) const
 {
-  for (auto& player : m_Players)
+  for (auto& player : m_Players) {
     player->Send(data);
+  }
 }
 
 void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message) const
@@ -961,6 +962,10 @@ void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message
   // send a private message to one player - it'll be marked [Private] in Warcraft 3
   if (message.empty())
     return;
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+    Print(GetLogPrefix() + "sent <<" + message + ">>");
+  }
 
   if (player)
   {
@@ -1012,6 +1017,10 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message) const
 
   if (GetNumHumanPlayers() <= 0) {
     return;
+  }
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+    Print(GetLogPrefix() + "sent <<" + message + ">>");
   }
 
   // send a public message to all players - it'll be marked [All] in Warcraft 3
