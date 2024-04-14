@@ -994,7 +994,7 @@ CQueuedChatMessage* CRealm::QueueCommand(const string& message, CCommandContext*
   m_HadChatActivity = true;
 
   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    Print(GetLogPrefix() + "queued command \"" + message + "\"");
+    Print(GetLogPrefix() + "queued command \"" + entry->GetInnerMessage() + "\"");
   }
   return entry;
 }
@@ -1017,7 +1017,7 @@ CQueuedChatMessage* CRealm::QueuePriorityWhois(const string& message)
   m_HadChatActivity = true;
 
   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    Print(GetLogPrefix() + "queued fast spoofcheck \"" + message + "\"");
+    Print(GetLogPrefix() + "queued fast spoofcheck \"" + m_ChatQueueGameHostWhois->GetInnerMessage() + "\"");
   }
   return m_ChatQueueGameHostWhois;
 }
@@ -1049,7 +1049,7 @@ CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const str
   m_HadChatActivity = true;
 
   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    Print(GetLogPrefix() + "queued reply to [" + user + "] - \"" + message + "\"");
+    Print(GetLogPrefix() + "queued reply to [" + user + "] - \"" + entry->GetInnerMessage() + "\"");
   }
   return entry;
 }

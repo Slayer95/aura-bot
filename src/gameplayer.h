@@ -177,6 +177,8 @@ private:
   int64_t                          m_TotalDisconnectTime;
   int64_t                          m_LastDisconnectTime;
 
+  std::string                      m_LastCommand;
+
 protected:
   bool m_DeleteMe;
 
@@ -274,6 +276,10 @@ public:
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
   inline void SetKickByTime(int64_t nKickByTime) { m_KickByTime = nKickByTime; }
+
+  inline std::string GetLastCommand() const { return m_LastCommand; }
+  inline void ClearLastCommand() { m_LastCommand.clear(); }
+  inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
 
   // processing functions
 

@@ -406,8 +406,16 @@ bool CCommandContext::CheckPermissions(const uint8_t requiredPermissions, const 
   return CheckPermissions(autoPermissions).value_or(false);
 }
 
-bool CCommandContext::CheckConfirmation(const string& cmdToken, const string& cmd, const string& payload, const string& message)
+bool CCommandContext::CheckConfirmation(const string& cmdToken, const string& cmd, const string& payload, const string& errorMessage)
 {
+  string message = cmdToken + cmd + payload;
+  if (m_Player) {
+    if (m_Player->GetLastCommand() == message) {
+      return true;
+    }
+    m_Player->SetLastCommand(message);
+  }
+  ErrorReply(errorMessage + "Send the command again to confirm.");
   return false;
 }
 
@@ -3620,6 +3628,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         m_ActionMessage = inputName + ", " + m_FromName + " at " + m_HostName + " tells you: <<" + subMessage + ">>";
       }
+
       matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
       break;
     }

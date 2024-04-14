@@ -1418,6 +1418,9 @@ void CAura::UnholdContext(CCommandContext* nCtx)
     return;
 
   if (nCtx->Unref()) {
+    if (MatchLogLevel(LOG_LEVEL_TRACE)) {
+      Print("[AURA] Deleting ctx for message sent by " + nCtx->GetSender());
+    }
     m_ActiveContexts.erase(nCtx);
     delete nCtx;
   }
