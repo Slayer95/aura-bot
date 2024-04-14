@@ -3772,8 +3772,7 @@ bool CGame::MatchOwnerName(const string& name) const
   string ownerLower = m_OwnerName;
   transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
   transform(begin(ownerLower), end(ownerLower), begin(ownerLower), ::tolower);
-
-  return name == ownerLower;
+  return matchLower == ownerLower;
 }
 
 uint8_t CGame::GetReservedIndex(const string& name) const

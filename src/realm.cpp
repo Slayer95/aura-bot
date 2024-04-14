@@ -578,7 +578,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     if (Whisper)
       Print("[WHISPER: " + m_Config->m_UniqueName + "] [" + User + "] " + Message);
     else
-      Print("[LOCAL: " + m_Config->m_UniqueName + "] [" + User + "] " + Message);
+      Print("[CHAT: " + m_Config->m_UniqueName + "] [" + User + "] " + Message);
 
     // handle bot commands
 
