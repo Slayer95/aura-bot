@@ -3318,14 +3318,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->m_FakePlayers.empty()) {
-        ErrorReply("Virtual player not found.");
+        ErrorReply("Virtual players are required in order to use this command.");
         break;
       }
 
-      vector<uint8_t> CRC, Action;
-      Action.push_back(1);
-      // Randomize because each fake player has up to 3 chances to pause the game.
-      m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[rand() % m_TargetGame->m_FakePlayers.size()], CRC, Action));
+      if (!m_TargetGame->Pause()) {
+        ErrorReply("Max pauses reached.");
+        break;
+      }
       break;
     }
 
@@ -3345,13 +3345,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->m_FakePlayers.empty()) {
-        ErrorReply("Virtual player not found.");
+        ErrorReply("Virtual players are required in order to use this command.");
         break;
       }
 
-      vector<uint8_t> CRC, Action;
-      Action.push_back(2);
-      m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[m_TargetGame->m_FakePlayers.size() - 1], CRC, Action));
+      m_TargetGame->Resume();
       break;
     }
 

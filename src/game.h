@@ -389,6 +389,8 @@ public:
   void StartCountDown(bool force);
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
+  bool Pause();
+  void Resume();
   inline bool GetIsCheckJoinable() { return m_CheckJoinable; }
   inline bool GetIsVerbose() { return m_Verbose; }
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }

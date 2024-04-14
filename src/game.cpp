@@ -111,6 +111,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameOverTime(0),
     m_LastPlayerLeaveTicks(0),
     m_LastLagScreenResetTime(0),
+    m_PauseCounter(0),
     m_RandomSeed(0),
     m_HostCounter(nGameSetup->m_GameIdentifier.has_value() ? nGameSetup->m_GameIdentifier.value() : nAura->NextHostCounter()),
     m_EntryKey(0),
@@ -3929,6 +3930,24 @@ void CGame::StopLaggers(const string& reason)
       player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
   }
+}
+
+bool CGame::Pause()
+{
+  if (m_FakePlayers * 3 <= m_PauseCounter) return false;
+  vector<uint8_t> CRC, Action;
+  Action.push_back(1);
+  // Randomize because each fake player has up to 3 chances to pause the game.
+  m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[m_PauseCounter % m_TargetGame->m_FakePlayers.size()], CRC, Action));
+  ++m_PauseCounter;
+  return true;
+}
+
+void CGame::Resume()
+{
+  vector<uint8_t> CRC, Action;
+  Action.push_back(2);
+  m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[m_TargetGame->m_FakePlayers.size() - 1], CRC, Action));
 }
 
 void CGame::OpenObserverSlots()
