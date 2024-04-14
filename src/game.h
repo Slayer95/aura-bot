@@ -111,6 +111,7 @@ protected:
   std::string                    m_LastGameName;                  // last game name (the previous game name before it was rehosted)
   std::string                    m_IndexVirtualHostName;          // host's name
   std::string                    m_LobbyVirtualHostName;          // host's name
+  std::string                    m_LastOwner;                     // name of the player who was owner last time the owner was released
   std::string                    m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                    m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
   std::string                    m_CreatorText;                   // who created this game

@@ -406,6 +406,11 @@ bool CCommandContext::CheckPermissions(const uint8_t requiredPermissions, const 
   return CheckPermissions(autoPermissions).value_or(false);
 }
 
+bool CCommandContext::CheckConfirmation(const string& cmdToken, const string& cmd, const string& payload, const string& message)
+{
+  return false;
+}
+
 optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
 {
   optional<pair<string, string>> Result;
@@ -732,9 +737,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
   }
 
   if (Payload.empty()) {
-    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + cmdToken + Command + "]" << std::endl;
+    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + cmdToken + command + "]" << std::endl;
   } else {
-    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + cmdToken + Command + "] with payload [" + Payload + "]" << std::endl;
+    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + cmdToken + command + "] with payload [" + payload + "]" << std::endl;
   }
 
   /*********************
@@ -2669,8 +2674,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("owner"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
-        Print("Bad !owner context");
+      if (!m_TargetGame) {
+        Print("No game found.");
+        break;
+      }
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
+        Print("Cannot take ownership of this game.");
         break;
       }
 
@@ -2693,11 +2703,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "owner [PLAYERNAME]");
         break;
       }
+      if (!TargetPlayer && !CheckConfirmation(cmdToken, command, payload, "Player [" + TargetName + "] is not in this game lobby. ")) {
+        break;
+      }
       if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
-        Print("ERROR - Already owner!");
         SendAll(TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game.");
       } else {
-        Print("DONE - Setting owner.");
         m_TargetGame->SetOwner(TargetName, TargetRealm);
         SendReply("Setting game owner to [" + TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       }
@@ -4583,7 +4594,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     default: {
-      ErrorReply("Unrecognized command [" + Command + "].");
+      ErrorReply("Unrecognized command [" + command + "].");
       break;
     }
   }

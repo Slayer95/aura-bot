@@ -134,6 +134,7 @@ public:
   bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
   std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
   bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
+  bool CheckConfirmation(const std::string& cmdToken, const std::string& cmd, const std::string& payload, const std::string& message);
 
   void SendPrivateReply(const std::string& message, const uint8_t ctxFlags = 0);
   void SendReplyCustomFlags(const std::string& message, const uint8_t ctxFlags);

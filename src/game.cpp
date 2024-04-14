@@ -1331,6 +1331,30 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       }
       Line = Line.substr(8);
     }
+    if (Line.substr(0, 17) == "{CHECKLASTOWNER?}") {
+      if (m_LastOwner != player->GetName()) {
+        continue;
+      }
+      Line = Line.substr(17);
+    }
+    if (Line.substr(0, 17) == "{CHECKLASTOWNER!}") {
+      if (m_LastOwner == player->GetName()) {
+        continue;
+      }
+      Line = Line.substr(17);
+    }
+    if (Line.substr(0, 6) == "{LAN?}") {
+      if (player->GetRealm(false)) {
+        continue;
+      }
+      Line = Line.substr(6);
+    }
+    if (Line.substr(0, 6) == "{LAN!}") {
+      if (!player->GetRealm(false)) {
+        continue;
+      }
+      Line = Line.substr(6);
+    }
     while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
       Line.replace(matchIndex, 9, m_CreatorText);
     }
@@ -3786,8 +3810,9 @@ void CGame::SetOwner(const string& name, const string& realm)
 void CGame::ReleaseOwner()
 {
   Print("[LOBBY: "  + m_GameName + "] Owner \"" + m_OwnerName + "@" + (m_OwnerRealm.empty() ? "@@LAN/VPN" : m_OwnerRealm) + "\" removed.");
-  m_OwnerName = "";
-  m_OwnerRealm = "";
+  m_LastOwner = m_OwnerName;
+  m_OwnerName.clear();
+  m_OwnerRealm.clear();
   m_Locked = false;
   SendAllChat("This game is now ownerless. Type " + m_PrivateCmdToken + "owner to take ownership of this game.");
 }
