@@ -105,7 +105,9 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--timeout", m_GameTimeout, "Sets the time limit for the game lobby.");
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
+  app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
+  app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
 
   // Command execution
@@ -314,6 +316,12 @@ bool CCLI::QueueActions(CAura* nAura) const
               nAura->UnholdContext(ctx);
               return false;
             }
+            if (m_GameCheckReservation.has_value() && !m_GameCheckReservation.value()) {
+              Print("[AURA] Resuming a loaded game must always check reservations.");
+              delete gameSetup;
+              nAura->UnholdContext(ctx);
+              return false;
+            }
           }
           for (const auto& id : m_ExcludedRealms) {
             CRealm* excludedRealm = nAura->GetRealmByInputId(id);
@@ -334,6 +342,8 @@ bool CCLI::QueueActions(CAura* nAura) const
           gameSetup->SetName(m_GameName.value_or("Join and play"));
           if (m_GameTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameTimeout.value());
           if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
+          if (m_GameCheckReservation.has_value()) gameSetup->SetCheckReservation(m_GameCheckReservation.value());
+          gameSetup->SetReservations(m_GameReservations);
           gameSetup->SetVerbose(m_Verbose);
           gameSetup->SetActive();
           vector<string> hostAction{"host"};

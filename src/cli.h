@@ -88,6 +88,8 @@ private:
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
+  std::optional<bool>                   m_GameCheckReservation;
+  std::vector<std::string>              m_GameReservations;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;
 

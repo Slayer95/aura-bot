@@ -1384,8 +1384,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("hold"): {
       UseImplicitHostedGame();
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's configuration.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -1415,8 +1420,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("unhold"): {
       UseImplicitHostedGame();
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame)
         break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's configuration.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");

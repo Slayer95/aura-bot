@@ -336,6 +336,11 @@ This flag enables automatic connectivity checks to ensure hosted games are joina
 
 This flag enables version checks to ensure hosted games are compatible with running game version.
 
+## \`--check-reservation\`, \`--no-check-reservation\`
+
+This flag enables reservation checks to ensure only players with reservations may join games.
+
+
 ## \`--random-races\`
 
 This flag enables randomization of player races in the hosted game. When this flag is used, each player's 
@@ -422,6 +427,10 @@ Specifies the location of a saved game a game lobby will resume.
 
 - If `<FILE>` does not contain any slashes, it is resolved relative to the saved games directory by default, unless overridden by the `--stdpaths` flag.
 - The presence of any slashes causes `<FILE>` to be resolved relative to the current working directory (CWD).
+
+## \`--reserve <PLAYER>\`
+
+Makes a reservation for a player to join the game lobby. This is required for loaded games to properly work.
 
 # Flags for CLI commands
 

@@ -55,9 +55,9 @@ public:
 	std::string GetClientPath()			{ return m_ClientPath; }
 	std::string GetGameName()				{ return m_GameName; }
 	uint8_t GetNumSlots()		{ return m_NumSlots; }
-	std::vector<CGameSlot> GetSlots()		{ return m_Slots; }
+	const std::vector<CGameSlot>& GetSlots()		{ return m_Slots; }
 	uint32_t GetRandomSeed()			{ return m_RandomSeed; }
-	std::vector<uint8_t> GetSaveHash()			{ return m_SaveHash; }
+	const std::vector<uint8_t>& GetSaveHash()			{ return m_SaveHash; }
 	bool Parse();
 };
 

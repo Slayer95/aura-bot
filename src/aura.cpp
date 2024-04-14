@@ -1356,7 +1356,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   for (auto& realm : m_Realms) {
-    if (!gameSetup->GetIsMirror()) {
+    if (!m_CurrentLobby->GetIsMirror() && !m_CurrentLobby->GetIsRestored()) {
       realm->HoldFriends(m_CurrentLobby);
       realm->HoldClan(m_CurrentLobby);
     }

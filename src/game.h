@@ -139,6 +139,7 @@ protected:
   int64_t                        m_GameOverTime;                  // GetTime when the game was over
   int64_t                        m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
+  uint8_t                        m_PauseCounter;
   uint32_t                       m_RandomSeed;                    // the random seed sent to the Warcraft III clients
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
@@ -194,6 +195,7 @@ protected:
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_HadLeaver;                     // if the game has desynced or not
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
+  bool                           m_CheckReservation;
   bool                           m_UsesCustomReferees;
   bool                           m_SentPriorityWhois;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
@@ -367,7 +369,7 @@ public:
   bool OpenSlot(uint8_t SID, bool kick);
   bool CloseSlot(uint8_t SID, bool kick);
   void SendIncomingPlayerInfo(CGamePlayer* player) const;
-  CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);
+  CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);
   bool ComputerSlot(uint8_t SID, uint8_t skill, bool kick);
   void ColorSlot(uint8_t SID, uint8_t colour);
   void OpenAllSlots();
@@ -376,13 +378,14 @@ public:
   void ShuffleSlots();
   void ReportSpoofed(const std::string& server, CGamePlayer* player);
   void AddToRealmVerified(const std::string& server, CGamePlayer* player, bool sendMessage);
-  void AddToReserved(std::string name);
-  void RemoveFromReserved(std::string name);
+  void AddToReserved(const std::string& name);
+  void RemoveFromReserved(const std::string& name);
   void RemoveAllReserved();
-  bool MatchOwnerName(std::string name) const;
-  bool GetIsReserved(std::string name) const;
+  bool MatchOwnerName(const std::string& name) const;
+  uint8_t GetReservedIndex(const std::string& name) const;
+  bool GetIsReserved(const std::string& name) const;
   bool IsDownloading() const;
-  void SetOwner(std::string name, std::string realm);
+  void SetOwner(const std::string& name, const std::string& realm);
   void ReleaseOwner();
   void ResetSync();
   void CountKickVotes();
@@ -396,6 +399,7 @@ public:
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
   void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
+  void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
   void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
 
   void OpenObserverSlots();

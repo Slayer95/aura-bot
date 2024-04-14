@@ -128,7 +128,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_UDPEnabled(false),
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
     m_GameDisplay(nGameSetup->m_RealmsDisplayMode),
-    m_VirtualHostPID(255),
+    m_VirtualHostPID(0xFF),
     m_Exiting(false),
     m_Saving(false),
     m_SlotInfoChanged(0),
@@ -145,6 +145,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Desynced(false),
     m_HadLeaver(false),
     m_HasMapLock(false),
+    m_CheckReservation(nGameSetup->m_GameChecksReservation.has_value() ? nGameSetup->m_GameChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false)
 {
@@ -173,6 +174,10 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
   if (!nGameSetup->GetIsMirror()) {
     m_CheckJoinable = nGameSetup->m_CheckJoinable.has_value() ? nGameSetup->m_CheckJoinable.value() : m_Aura->m_GameDefaultConfig->m_CheckJoinable;
+
+    for (const auto& playerName : nGameSetup->m_GameReservations) {
+      AddToReserved(playerName);
+    }
 
     random_device rd;
     mt19937 gen(rd());
@@ -1178,7 +1183,7 @@ vector<uint8_t> CGame::GetAnnounceHeight() const
 
 void CGame::SendVirtualHostPlayerInfo(CGameConnection* player) const
 {
-  if (m_VirtualHostPID == 255)
+  if (m_VirtualHostPID == 0xFF)
     return;
 
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
@@ -1188,7 +1193,7 @@ void CGame::SendVirtualHostPlayerInfo(CGameConnection* player) const
 
 void CGame::SendVirtualHostPlayerInfo(CGamePlayer* player) const
 {
-  if (m_VirtualHostPID == 255)
+  if (m_VirtualHostPID == 0xFF)
     return;
 
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
@@ -1996,7 +2001,7 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   }
 }
 
-CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
+CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
 {
   // If realms are reloaded, HostCounter may change.
   // However, internal realm IDs maps to constant realm input IDs.
@@ -2008,7 +2013,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
     if (matchingRealm) internalRealmId = matchingRealm->GetInternalID();
   }
 
-  CGamePlayer* Player = new CGamePlayer(this, connection, GetNewPID(), internalRealmId, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
+  CGamePlayer* Player = new CGamePlayer(this, connection, PID == 0xFF ? GetNewPID() : PID, internalRealmId, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
   // Now, socket belongs to CGamePlayer. Don't look for it in CGameConnection.
 
   m_Players.push_back(Player);
@@ -2023,9 +2028,9 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   }
 
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
+    m_Slots[SID] = CGameSlot(Player->GetPID(), 0xFF, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
   } else {
-    m_Slots[SID] = CGameSlot(Player->GetPID(), 255, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
+    m_Slots[SID] = CGameSlot(Player->GetPID(), 0xFF, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
 
     // try to pick a team and colour
     // make sure there aren't too many other players already
@@ -2194,23 +2199,76 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
   // Check if the player is an admin or root admin on any connected realm for determining reserved status
   // Note: vulnerable to spoofing
-  const bool IsReserved = GetIsReserved(joinRequest->GetName()) || (MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm);
+  const uint8_t reservedIndex = GetReservedIndex(joinRequest->GetName());
+  const bool isReserved = reservedIndex < m_Reserved.size() || (!m_RestoredGame && MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm);
 
-  // try to find an empty slot
+  if (m_CheckReservation && !isReserved) {
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] missing reservation - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    return false;
+  }
 
-  uint8_t SID = GetEmptySlot(false);
+  uint8_t SID = 0xFF;
+  uint8_t PID = 0xFF;
 
-  if (SID == 255 && IsReserved) {
-    // a reserved player is trying to join the game but it's full, try to find a reserved slot
+  if (m_RestoredGame) {
+    uint8_t matchCounter = 0xFF;
+    for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+      if (!m_RestoredGame->GetSlots()[i].GetIsHuman()) {
+        continue;
+      }
+      if (++matchCounter == reservedIndex) {
+        SID = i;
+        PID = m_Slots[i].GetPID();
+        break;
+      }
+    }
+  } else {
+    SID = GetEmptySlot(false);
 
-    SID = GetEmptySlot(true);
-    if (SID != 255) {
+    if (SID == 0xFF && isReserved) {
+      // a reserved player is trying to join the game but it's full, try to find a reserved slot
+
+      SID = GetEmptySlot(true);
+      if (SID != 0xFF) {
+        CGamePlayer* KickedPlayer = GetPlayerFromSID(SID);
+
+        if (KickedPlayer)
+        {
+          KickedPlayer->SetDeleteMe(true);
+          KickedPlayer->SetLeftReason("was kicked to make room for a reserved player [" + joinRequest->GetName() + "]");
+          KickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
+
+          // send a playerleave message immediately since it won't normally get sent until the player is deleted which is after we send a playerjoin message
+          // we don't need to call OpenSlot here because we're about to overwrite the slot data anyway
+
+          SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(KickedPlayer->GetPID(), KickedPlayer->GetLeftCode()));
+          KickedPlayer->SetLeftMessageSent(true);
+        }
+      }
+    }
+
+    if (SID == 0xFF && MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm) {
+      // the owner player is trying to join the game but it's full and we couldn't even find a reserved slot, kick the player in the lowest numbered slot
+      // updated this to try to find a player slot so that we don't end up kicking a computer
+
+      SID = 0;
+
+      for (uint8_t i = 0; i < m_Slots.size(); ++i)
+      {
+        if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[i].GetComputer() == 0)
+        {
+          SID = i;
+          break;
+        }
+      }
+
       CGamePlayer* KickedPlayer = GetPlayerFromSID(SID);
 
       if (KickedPlayer)
       {
         KickedPlayer->SetDeleteMe(true);
-        KickedPlayer->SetLeftReason("was kicked to make room for a reserved player [" + joinRequest->GetName() + "]");
+        KickedPlayer->SetLeftReason("was kicked to make room for the owner player [" + joinRequest->GetName() + "]");
         KickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
 
         // send a playerleave message immediately since it won't normally get sent until the player is deleted which is after we send a playerjoin message
@@ -2222,40 +2280,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     }
   }
 
-  if (SID == 255 && MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm)
-  {
-    // the owner player is trying to join the game but it's full and we couldn't even find a reserved slot, kick the player in the lowest numbered slot
-    // updated this to try to find a player slot so that we don't end up kicking a computer
-
-    SID = 0;
-
-    for (uint8_t i = 0; i < m_Slots.size(); ++i)
-    {
-      if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[i].GetComputer() == 0)
-      {
-        SID = i;
-        break;
-      }
-    }
-
-    CGamePlayer* KickedPlayer = GetPlayerFromSID(SID);
-
-    if (KickedPlayer)
-    {
-      KickedPlayer->SetDeleteMe(true);
-      KickedPlayer->SetLeftReason("was kicked to make room for the owner player [" + joinRequest->GetName() + "]");
-      KickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
-
-      // send a playerleave message immediately since it won't normally get sent until the player is deleted which is after we send a playerjoin message
-      // we don't need to call OpenSlot here because we're about to overwrite the slot data anyway
-
-      SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(KickedPlayer->GetPID(), KickedPlayer->GetLeftCode()));
-      KickedPlayer->SetLeftMessageSent(true);
-    }
-  }
-
-  if (SID >= m_Slots.size())
-  {
+  if (SID >= m_Slots.size()) {
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
@@ -2266,7 +2291,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
     DeleteVirtualHost();
 
-  JoinPlayer(connection, joinRequest, SID, HostCounterID, JoinedRealm, IsReserved, IsUnverifiedAdmin);
+  JoinPlayer(connection, joinRequest, SID, PID, HostCounterID, JoinedRealm, isReserved, IsUnverifiedAdmin);
   return true;
 }
 
@@ -2964,8 +2989,8 @@ void CGame::EventGameLoaded()
 
 uint8_t CGame::GetSIDFromPID(uint8_t PID) const
 {
-  if (m_Slots.size() > 255)
-    return 255;
+  if (m_Slots.size() > 0xFF)
+    return 0xFF;
 
   for (uint8_t i = 0; i < m_Slots.size(); ++i)
   {
@@ -2973,7 +2998,7 @@ uint8_t CGame::GetSIDFromPID(uint8_t PID) const
       return i;
   }
 
-  return 255;
+  return 0xFF;
 }
 
 CGamePlayer* CGame::GetPlayerFromPID(uint8_t PID) const
@@ -3099,7 +3124,7 @@ uint8_t CGame::GetNewPID() const
 {
   // find an unused PID for a new player to use
 
-  for (uint8_t TestPID = 1; TestPID < 255; ++TestPID)
+  for (uint8_t TestPID = 1; TestPID < 0xFF; ++TestPID)
   {
     if (TestPID == m_VirtualHostPID)
       continue;
@@ -3133,7 +3158,7 @@ uint8_t CGame::GetNewPID() const
 
   // this should never happen
 
-  return 255;
+  return 0xFF;
 }
 
 uint8_t CGame::GetNewColour() const
@@ -3193,7 +3218,7 @@ uint8_t CGame::GetHostPID() const
   // return the player to be considered the host (it can be any player) - mainly used for sending text messages from the bot
   // try to find the virtual host player first
 
-  if (m_VirtualHostPID != 255)
+  if (m_VirtualHostPID != 0xFF)
     return m_VirtualHostPID;
 
   // try to find the fakeplayer next
@@ -3227,21 +3252,22 @@ uint8_t CGame::GetHostPID() const
       return player->GetPID();
   }
 
-  return 255;
+  return 0xFF;
 }
 
 uint8_t CGame::GetEmptySlot(bool reserved) const
 {
-  if (m_Slots.size() > 255)
-    return 255;
+  if (m_Slots.size() > 0xFF)
+    return 0xFF;
 
   // look for an empty slot for a new player to occupy
   // if reserved is true then we're willing to use closed or occupied slots as long as it wouldn't displace a player with a reserved slot
 
-  for (uint8_t i = 0; i < m_Slots.size(); ++i)
-  {
-    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN)
-      return i;
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OPEN) {
+      continue;
+    }
+    return i;
   }
 
   if (reserved)
@@ -3258,7 +3284,7 @@ uint8_t CGame::GetEmptySlot(bool reserved) const
     // first look for a player who is downloading the map and has the least amount downloaded so far
 
     uint8_t LeastDownloaded = 100;
-    uint8_t LeastSID        = 255;
+    uint8_t LeastSID        = 0xFF;
 
     for (uint8_t i = 0; i < m_Slots.size(); ++i)
     {
@@ -3271,7 +3297,7 @@ uint8_t CGame::GetEmptySlot(bool reserved) const
       }
     }
 
-    if (LeastSID != 255)
+    if (LeastSID != 0xFF)
       return LeastSID;
 
     // nobody who isn't reserved is downloading the map, just choose the first player who isn't reserved
@@ -3285,13 +3311,13 @@ uint8_t CGame::GetEmptySlot(bool reserved) const
     }
   }
 
-  return 255;
+  return 0xFF;
 }
 
 uint8_t CGame::GetEmptySlot(uint8_t team, uint8_t PID) const
 {
-  if (m_Slots.size() > 255)
-    return 255;
+  if (m_Slots.size() > 0xFF)
+    return 0xFF;
 
   // find an empty slot based on player's current slot
 
@@ -3325,13 +3351,13 @@ uint8_t CGame::GetEmptySlot(uint8_t team, uint8_t PID) const
     }
   }
 
-  return 255;
+  return 0xFF;
 }
 
 uint8_t CGame::GetEmptyObserverSlot() const
 {
-  if (m_Slots.size() > 255)
-    return 255;
+  if (m_Slots.size() > 0xFF)
+    return 0xFF;
 
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
@@ -3339,7 +3365,7 @@ uint8_t CGame::GetEmptyObserverSlot() const
     }
   }
 
-  return 255;
+  return 0xFF;
 }
 
 void CGame::SwapSlots(uint8_t SID1, uint8_t SID2)
@@ -3396,7 +3422,7 @@ bool CGame::OpenSlot(uint8_t SID, bool kick)
     }
 
     CGameSlot Slot = m_Slots[SID];
-    m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
+    m_Slots[SID]   = CGameSlot(0, 0xFF, SLOTSTATUS_OPEN, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
 
@@ -3417,7 +3443,7 @@ bool CGame::CloseSlot(uint8_t SID, bool kick)
     CGameSlot Slot = m_Slots[SID];
     if (Slot.GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumConnectionsOrFake() > 1)
       DeleteVirtualHost();
-    m_Slots[SID]   = CGameSlot(0, 255, SLOTSTATUS_CLOSED, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
+    m_Slots[SID]   = CGameSlot(0, 0xFF, SLOTSTATUS_CLOSED, 0, Slot.GetTeam(), Slot.GetColour(), m_Map->GetLobbyRace(&Slot));
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
   return true;
@@ -3644,53 +3670,57 @@ void CGame::AddToRealmVerified(const string& server, CGamePlayer* Player, bool s
   }
 }
 
-void CGame::AddToReserved(string name)
+void CGame::AddToReserved(const string& name)
 {
+  string inputLower = name;
   if (m_RestoredGame && m_Reserved.size() >= m_Aura->m_MaxSlots) {
     return;
   }
 
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
 
   // check that the user is not already reserved
 
   for (auto& player : m_Reserved) {
-    if (player == name)
+    if (player == inputLower)
       return;
   }
 
-  m_Reserved.push_back(name);
+  m_Reserved.push_back(inputLower);
 
   // upgrade the user if they're already in the game
 
   for (auto& player : m_Players) {
-    string NameLower = player->GetName();
-    transform(begin(NameLower), end(NameLower), begin(NameLower), ::tolower);
+    string matchLower = player->GetName();
+    transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
 
-    if (NameLower == name)
+    if (matchLower == inputLower) {
       player->SetReserved(true);
+      break;
+    }
   }
 }
 
-void CGame::RemoveFromReserved(string name)
+void CGame::RemoveFromReserved(const string& name)
 {
-  transform(begin(name), end(name), begin(name), ::tolower);
+  string inputLower = name;
+  transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
 
-  auto it = find(begin(m_Reserved), end(m_Reserved), name);
+  auto it = find(begin(m_Reserved), end(m_Reserved), inputLower);
 
-  if (it != end(m_Reserved))
-  {
+  if (it != end(m_Reserved)) {
     m_Reserved.erase(it);
 
     // demote the user if they're already in the game
 
-    for (auto& player : m_Players)
-    {
-      string NameLower = player->GetName();
-      transform(begin(NameLower), end(NameLower), begin(NameLower), ::tolower);
+    for (auto& player : m_Players) {
+      string matchLower = player->GetName();
+      transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
 
-      if (NameLower == name)
+      if (matchLower == inputLower) {
         player->SetReserved(false);
+        break;
+      }
     }
   }
 }
@@ -3703,26 +3733,35 @@ void CGame::RemoveAllReserved()
   }
 }
 
-bool CGame::MatchOwnerName(string name) const
+bool CGame::MatchOwnerName(const string& name) const
 {
-  string OwnerLower = m_OwnerName;
-  transform(begin(name), end(name), begin(name), ::tolower);
-  transform(begin(OwnerLower), end(OwnerLower), begin(OwnerLower), ::tolower);
+  string matchLower = name;
+  string ownerLower = m_OwnerName;
+  transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
+  transform(begin(ownerLower), end(ownerLower), begin(ownerLower), ::tolower);
 
-  return name == OwnerLower;
+  return name == ownerLower;
 }
 
-bool CGame::GetIsReserved(string name) const
+uint8_t CGame::GetReservedIndex(const string& name) const
 {
-  transform(begin(name), end(name), begin(name), ::tolower);
+  string lowerName = name;
+  transform(begin(lowerName), end(lowerName), begin(lowerName), ::tolower);
 
-  for (auto& player : m_Reserved)
-  {
-    if (player == name)
-      return true;
+  uint8_t index = 0;
+  for (auto& reservedName : m_Reserved) {
+    if (reservedName == lowerName) {
+      return index;
+    }
+    ++index;
   }
 
-  return false;
+  return 0xFF;
+}
+
+bool CGame::GetIsReserved(const string& name) const
+{
+  return GetReservedIndex(name) < m_Reserved.size();
 }
 
 bool CGame::IsDownloading() const
@@ -3738,7 +3777,7 @@ bool CGame::IsDownloading() const
   return false;
 }
 
-void CGame::SetOwner(std::string name, std::string realm)
+void CGame::SetOwner(const string& name, const string& realm)
 {
   m_OwnerName = name;
   m_OwnerRealm = realm;
@@ -3934,11 +3973,11 @@ void CGame::StopLaggers(const string& reason)
 
 bool CGame::Pause()
 {
-  if (m_FakePlayers * 3 <= m_PauseCounter) return false;
+  if (m_FakePlayers.size() * 3 <= m_PauseCounter) return false;
   vector<uint8_t> CRC, Action;
   Action.push_back(1);
   const uint8_t PID = m_FakePlayers[m_PauseCounter % m_FakePlayers.size()];
-  m_TargetGame->m_Actions.push(new CIncomingAction(PID, CRC, Action));
+  m_Actions.push(new CIncomingAction(PID, CRC, Action));
   ++m_PauseCounter;
   return true;
 }
@@ -3947,7 +3986,7 @@ void CGame::Resume()
 {
   vector<uint8_t> CRC, Action;
   Action.push_back(2);
-  m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[m_TargetGame->m_FakePlayers.size() - 1], CRC, Action));
+  m_Actions.push(new CIncomingAction(m_FakePlayers[m_FakePlayers.size() - 1], CRC, Action));
 }
 
 void CGame::OpenObserverSlots()
@@ -3955,7 +3994,7 @@ void CGame::OpenObserverSlots()
   if (m_Slots.size() >= m_Aura->m_MaxSlots) return;
   Print(GetLogPrefix() + "adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
   while (m_Slots.size() < m_Aura->m_MaxSlots)
-    m_Slots.emplace_back(0, 255, SLOTSTATUS_OPEN, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots.emplace_back(0, 0xFF, SLOTSTATUS_OPEN, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
 }
 
 void CGame::CloseObserverSlots()
@@ -3977,7 +4016,7 @@ void CGame::CloseObserverSlots()
 // Fake players may also accomplish the same purpose.
 bool CGame::CreateVirtualHost()
 {
-  if (m_VirtualHostPID != 255)
+  if (m_VirtualHostPID != 0xFF)
     return false;
 
   m_VirtualHostPID = GetNewPID();
@@ -3990,12 +4029,12 @@ bool CGame::CreateVirtualHost()
 
 bool CGame::DeleteVirtualHost()
 {
-  if (m_VirtualHostPID == 255) {
+  if (m_VirtualHostPID == 0xFF) {
     return false;
   }
 
   SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(m_VirtualHostPID, PLAYERLEAVE_LOBBY));
-  m_VirtualHostPID = 255;
+  m_VirtualHostPID = 0xFF;
   return true;
 }
 
@@ -4070,7 +4109,7 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
   if (SID < m_Slots.size()) {
     for (auto i = begin(m_FakePlayers); i != end(m_FakePlayers); ++i) {
       if (m_Slots[SID].GetPID() == (*i)) {
-        m_Slots[SID] = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
+        m_Slots[SID] = CGameSlot(0, 0xFF, SLOTSTATUS_OPEN, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
         SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(*i, PLAYERLEAVE_LOBBY));
         m_FakePlayers.erase(i);
         CreateVirtualHost();
@@ -4090,7 +4129,7 @@ void CGame::DeleteFakePlayers()
   for (auto& fakeplayer : m_FakePlayers) {
     for (auto& slot : m_Slots) {
       if (slot.GetPID() == fakeplayer) {
-        slot = CGameSlot(0, 255, SLOTSTATUS_OPEN, 0, slot.GetTeam(), slot.GetColour(), m_Map->GetLobbyRace(&slot));
+        slot = CGameSlot(0, 0xFF, SLOTSTATUS_OPEN, 0, slot.GetTeam(), slot.GetColour(), m_Map->GetLobbyRace(&slot));
         SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(fakeplayer, PLAYERLEAVE_LOBBY));
         break;
       }

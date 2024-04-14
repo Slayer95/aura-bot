@@ -174,6 +174,8 @@ public:
   std::pair<std::string, std::string>             m_GameOwner;
   std::optional<uint32_t>                         m_GameIdentifier;
   std::optional<uint32_t>                         m_GameChannelKey;
+  std::optional<bool>                             m_GameChecksReservation;
+  std::vector<std::string>                        m_GameReservations;
   bool                                            m_GameIsMirror;
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
@@ -263,6 +265,8 @@ public:
   }
   void SetMapExtraOptions(CGameExtraOptions* opts) { m_MapExtraOptions = opts; }
   void SetGameSavedFile(const std::filesystem::path& filePath);
+  void SetCheckReservation(const bool nChecksReservation) { m_GameChecksReservation = nChecksReservation; }
+  void SetReservations(const std::vector<std::string>& nReservations) { m_GameReservations = nReservations; }
   void ResetExtraOptions();
 
   bool Update();

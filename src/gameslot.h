@@ -101,6 +101,7 @@ public:
   inline uint8_t              GetRaceSelectable() const { return m_Race & SLOTRACE_SELECTABLE ? SLOTRACE_RANDOM | SLOTRACE_SELECTABLE : m_Race; }
   inline uint8_t              GetComputerType() const { return m_ComputerType; }
   inline uint8_t              GetHandicap() const { return m_Handicap; }
+  inline bool                 GetIsHuman() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == 0; }
   inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_PID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Colour, m_Race, m_ComputerType, m_Handicap}; }
 
   inline void SetPID(uint8_t nPID) { m_PID = nPID; }
