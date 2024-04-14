@@ -3937,8 +3937,8 @@ bool CGame::Pause()
   if (m_FakePlayers * 3 <= m_PauseCounter) return false;
   vector<uint8_t> CRC, Action;
   Action.push_back(1);
-  // Randomize because each fake player has up to 3 chances to pause the game.
-  m_TargetGame->m_Actions.push(new CIncomingAction(m_TargetGame->m_FakePlayers[m_PauseCounter % m_TargetGame->m_FakePlayers.size()], CRC, Action));
+  const uint8_t PID = m_FakePlayers[m_PauseCounter % m_FakePlayers.size()];
+  m_TargetGame->m_Actions.push(new CIncomingAction(PID, CRC, Action));
   ++m_PauseCounter;
   return true;
 }
