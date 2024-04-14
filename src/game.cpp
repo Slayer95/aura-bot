@@ -2437,7 +2437,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 {
   if (chatPlayer->GetFromPID() == player->GetPID())
   {
-    player->ClearLastCommand()
+    player->ClearLastCommand();
 
     if (chatPlayer->GetType() == CIncomingChatPlayer::CTH_MESSAGE || chatPlayer->GetType() == CIncomingChatPlayer::CTH_MESSAGEEXTRA)
     {
