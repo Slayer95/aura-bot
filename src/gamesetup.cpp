@@ -1118,8 +1118,10 @@ bool CGameSetup::SetActive()
 bool CGameSetup::RestoreFromSaveFile()
 {
   m_RestoredGame = new CSaveGame(m_Aura, m_SaveFile);
-  if (!m_RestoredGame->Load(m_SaveFile, false)) return false;
-  return m_RestoredGame->Parse();
+  if (!m_RestoredGame->Load()) return false;
+  bool success = m_RestoredGame->Parse();
+  m_RestoredGame->Unload();
+  return success;
 }
 
 bool CGameSetup::RunHost()
@@ -1224,6 +1226,11 @@ bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThin
       return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
   }
   return false;
+}
+
+void CGameSetup::OnGameCreate()
+{
+  m_RestoredGame = nullptr;
 }
 
 bool CGameSetup::Update()

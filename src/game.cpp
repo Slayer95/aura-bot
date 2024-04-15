@@ -80,7 +80,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_DBBanLast(nullptr),
     m_Stats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
-    m_Slots(nGameSetup->m_Map->GetSlots()),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_GameName),
     m_LastGameName(nGameSetup->m_GameName),
@@ -123,11 +122,12 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_AutoStartMinTime(0),
     m_AutoStartMaxTime(0),
     m_AutoStartPlayers(0),
-    m_PlayersWithMap(0),
+    m_ControllersWithMap(0),
     m_HostPort(0),
     m_UDPEnabled(false),
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
     m_GameDisplay(nGameSetup->m_RealmsDisplayMode),
+    m_IsAutoVirtualPlayers(false),
     m_VirtualHostPID(0xFF),
     m_Exiting(false),
     m_Saving(false),
@@ -216,10 +216,23 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_PublicHostPort = GetAddressPort(&(nGameSetup->m_RealmsAddress));
   }
 
-  if (m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-    OpenObserverSlots();
+  if (m_RestoredGame) {
+    m_Slots = m_RestoredGame->GetSlots();
+		// reset player slots
+    for (auto& slot : m_Slots) {
+      if (slot.GetIsHuman()) {
+        slot.SetPID(0);
+        slot.SetDownloadStatus(255);
+        slot.SetSlotStatus(SLOTSTATUS_OPEN);
+      }
+    }
   } else {
-    CloseObserverSlots();
+    m_Slots = m_Map->GetSlots();
+    if (m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES) {
+      OpenObserverSlots();
+    } else {
+      CloseObserverSlots();
+    }
   }
 }
 
@@ -380,6 +393,17 @@ uint32_t CGame::GetNumHumanPlayers() const
   }
 
   return NumHumanPlayers;
+}
+
+uint32_t CGame::GetNumOccupiedSlots() const
+{
+  uint32_t count = 0;
+  for (const auto& slot : m_Slots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 uint32_t CGame::GetNumControllers() const
@@ -711,14 +735,14 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   if ((!m_GameLoading && !m_GameLoaded) && (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED))) {
-    SendAllSlotInfo(); // Updates m_PlayersWithMap
+    SendAllSlotInfo(); // Updates m_ControllersWithMap
     m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
   }
 
   // start countdown timer if autostart is due
-  if (!m_CountDownStarted && (m_AutoStartMaxTime != 0 || m_AutoStartPlayers != 0) && m_PlayersWithMap >= 2) {
+  if (!m_CountDownStarted && (m_AutoStartMaxTime != 0 || m_AutoStartPlayers != 0) && m_ControllersWithMap >= 2) {
     bool IsTriggerTime = 0 < m_AutoStartMinTime && m_AutoStartMinTime <= Time;
-    bool IsTriggerPlayers = 0 < m_AutoStartPlayers && m_AutoStartPlayers <= m_PlayersWithMap;
+    bool IsTriggerPlayers = 0 < m_AutoStartPlayers && m_AutoStartPlayers <= m_ControllersWithMap;
     bool ShouldStart = false;
     if (IsTriggerTime || IsTriggerPlayers) {
       ShouldStart = (IsTriggerTime && IsTriggerPlayers) || (0 < m_AutoStartMaxTime && m_AutoStartMaxTime <= Time);
@@ -1066,12 +1090,12 @@ void CGame::SendAllSlotInfo()
 
   SendAll(GetProtocol()->SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, m_Map->GetMapLayoutStyle(), m_Map->GetMapNumPlayers()));
 
-  m_PlayersWithMap = 0;
+  m_ControllersWithMap = 0;
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
       CGamePlayer* Player = GetPlayerFromSID(i);
       if (!Player || (Player->GetHasMap() && !Player->GetObserver())) {
-        ++m_PlayersWithMap;
+        ++m_ControllersWithMap;
       }
     }
     m_SlotInfoChanged = 0;
@@ -1139,12 +1163,13 @@ void CGame::SendAllAutoStart() const
 
 uint32_t CGame::GetGameType() const
 {
-  uint32_t mapGameType = m_Map->GetMapGameType();
+  uint32_t mapGameType = 0;
   if (m_GameDisplay == GAME_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
   if (m_RestoredGame) {
     mapGameType |= MAPGAMETYPE_SAVEDGAME;
   } else {
     mapGameType |= MAPGAMETYPE_UNKNOWN0;
+    mapGameType |= m_Map->GetMapGameType();
   }
   return mapGameType;
 }
@@ -1173,20 +1198,22 @@ vector<uint8_t> CGame::GetSourceFileSHA1() const
 
 vector<uint8_t> CGame::GetAnnounceWidth() const
 {
+  if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
   if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
   }
-  if (m_RestoredGame) return {0, 0};
+  //if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapWidth();
 }
 vector<uint8_t> CGame::GetAnnounceHeight() const
 {
+  if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
   if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
   }
-  if (m_RestoredGame) return {0, 0};
+  //if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapHeight();
 }
 
@@ -1561,15 +1588,17 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
   // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
   // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
+  uint32_t mapGameFlags = m_Map->GetMapGameFlags();
+  if (m_RestoredGame) mapGameFlags &= ~0x3000L; // TODO(DEBUG): Delete
   return GetProtocol()->SEND_W3GS_GAMEINFO(
     m_Aura->m_GameVersion,
-    CreateByteArray(GetGameType(), false),
-    m_Map->GetMapGameFlags(),
+    GetGameType(),
+    mapGameFlags,
     GetAnnounceWidth(),
     GetAnnounceHeight(),
     m_GameName,
     m_IndexVirtualHostName,
-    0,
+    GetUptime(),
     GetSourceFilePath(),
     GetSourceFileHash(),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
@@ -2100,7 +2129,8 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
 
   // send a welcome message
 
-	SendWelcomeMessage(Player);
+  if (!m_RestoredGame)
+    SendWelcomeMessage(Player);
 
   // check for multiple IP usage
   if (!Player->GetSocket()->GetIsLoopback()) {
@@ -2134,7 +2164,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   if (m_NotifyJoins && m_IgnoredNotifyJoinPlayers.find(joinRequest->GetName()) == m_IgnoredNotifyJoinPlayers.end()) {
     notifyString = "\x07";
   }
-  Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "] joined - [" + Player->GetSocket()->GetName() + "] (" + Player->GetIPString() + ")" + notifyString);
+  Print(GetLogPrefix() + "player joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetPID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString);
 
   return Player;
 }
@@ -2252,7 +2282,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
       }
       if (++matchCounter == reservedIndex) {
         SID = i;
-        PID = m_Slots[i].GetPID();
+        PID = m_RestoredGame->GetSlots()[i].GetPID();
         break;
       }
     }
@@ -2449,11 +2479,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 
       // calculate timestamp
 
-      if (!ExtraFlags.empty())
-      {
+      if (!ExtraFlags.empty()) {
         if (ExtraFlags[0] == 0) {
           // this is an ingame [All] message, print it to the console
-
           Print(GetLogPrefix() + "[All] [" + player->GetName() + "] " + chatPlayer->GetMessage());
 
           // don't relay ingame messages targeted for all players if we're currently muting all
@@ -2464,6 +2492,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
         } else if (ExtraFlags[0] == 2) {
           // this is an ingame [Obs/Ref] message, print it to the console
 					Print(GetLogPrefix() + "[Obs/Ref] [" + player->GetName() + "] " + chatPlayer->GetMessage());
+        } {
+          // this is an ingame [????] message, print it to the console
+          Print(GetLogPrefix() + "[????] [" + player->GetName() + "] " + chatPlayer->GetMessage());
         }
       }
       else
@@ -2731,12 +2762,12 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     if (!player->GetHasMap()) {
       player->SetHasMap(true);
       if (!player->GetObserver())
-        ++m_PlayersWithMap;
+        ++m_ControllersWithMap;
     }
   } else if (!player->GetHasMap()) {
     player->SetHasMap(true);
     if (!player->GetObserver())
-      ++m_PlayersWithMap;
+      ++m_ControllersWithMap;
   }
 
   uint8_t       NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / MapSize * 100.f);
@@ -2867,6 +2898,18 @@ void CGame::EventGameStarted()
   // Remove the virtual host player to ensure consistent game state and networking.
   DeleteVirtualHost();
 
+  if (m_RestoredGame) {
+    const uint8_t activePlayers = GetNumConnectionsOrFake();
+    const uint8_t expectedPlayers = m_RestoredGame->GetNumHumanSlots();
+    if (activePlayers < expectedPlayers) {
+      if (m_IsAutoVirtualPlayers) {
+        Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + to_string(expectedPlayers - activePlayers) + " virtual players added.");
+      } else {
+        Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + to_string(expectedPlayers - activePlayers) + " missing.");
+      }
+    }
+  }
+
   if (GetNumConnectionsOrFake() >= 2) {
     /*
     // This is an attempt to "rename" a fake player into our virtual host.
@@ -2881,7 +2924,7 @@ void CGame::EventGameStarted()
     // That makes it a fake player.
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
       CreateFakeObserver(true);
-    } else {
+    } else if (m_IsAutoVirtualPlayers) {
       CreateFakePlayer(true);
     }
   } else {
@@ -3017,8 +3060,9 @@ void CGame::EventGameLoaded()
     SendChat(player, "Your load time was " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
 
   if (GetNumConnectionsOrFake() < 2) {
-    // This creates a lag spike client-side.
-    StopPlayers("single-player game untracked");
+    PauseSinglePlayer();
+    // TODO: This creates a lag spike client-side.
+    //StopPlayers("single-player game untracked");
   }
 }
 
@@ -3898,7 +3942,7 @@ void CGame::StartCountDown(bool force)
 
     // check if the HCL command string is short enough
     if (m_HCLCommandString.size() > GetSlotsOccupied()) {
-      SendAllChat("The HCL command string is too long. Use 'force' to start anyway");
+      SendAllChat("The HCL command string is too long. Use [" + m_PrivateCmdToken + "start force] to start anyway");
       ChecksPassed = false;
     }
 
@@ -3918,8 +3962,8 @@ void CGame::StartCountDown(bool force)
     if (!StillDownloading.empty()) {
       SendAllChat("Players still downloading the map: " + StillDownloading);
       ChecksPassed = false;
-    } else if (m_PlayersWithMap < 2) {
-      SendAllChat("Only " + to_string(m_PlayersWithMap) + " player has the map.");
+    } else if (m_ControllersWithMap < 2) {
+      SendAllChat("Only " + to_string(m_ControllersWithMap) + " player has the map.");
       ChecksPassed = false;
     }
 
@@ -3958,10 +4002,6 @@ void CGame::StartCountDown(bool force)
       SendAllChat("Someone left the game less than two seconds ago!");
       ChecksPassed = false;
     }
-    if (GetNumConnectionsOrFake() == 1 && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
-      SendAllChat("Single-player game requires map observers set to referees. Or add a fake player instead (type " + m_PrivateCmdToken + "fp)");
-      ChecksPassed = false;
-    }
 
     if (!ChecksPassed)
       return;
@@ -3978,6 +4018,13 @@ void CGame::StartCountDown(bool force)
   for (auto& player : m_Players) {
     if (player->GetKickQueued())
       player->SetKickByTime(0);
+  }
+
+  if (GetNumConnectionsOrFake() == 1 && (0 == GetSlotsOpen() || m_Map->GetMapObservers() != MAPOBS_REFEREES)) {
+    SendAllChat("HINT: Single-player game detected. In-game commands will be DISABLED.");
+    if (GetNumOccupiedSlots() != m_Aura->m_MaxSlots) {
+      SendAllChat("HINT: To avoid this, you may enable map referees, or add a fake player [" + m_PrivateCmdToken + "fp]");
+    }
   }
 }
 
@@ -4014,6 +4061,23 @@ bool CGame::Pause()
   const uint8_t PID = m_FakePlayers[m_PauseCounter % m_FakePlayers.size()];
   m_Actions.push(new CIncomingAction(PID, CRC, Action));
   ++m_PauseCounter;
+  return true;
+}
+
+bool CGame::PauseSinglePlayer()
+{
+  CGamePlayer* player = nullptr;
+  for (const auto& slot : m_Slots) {
+    if (slot.GetIsHuman()) {
+      player = GetPlayerFromPID(slot.GetPID());
+      break;
+    }
+  }
+  if (!player) return false;
+  vector<uint8_t> CRC, Action;
+  Action.push_back(1);
+  m_Actions.push(new CIncomingAction(player->GetPID(), CRC, Action));
+  SendAllActions();
   return true;
 }
 

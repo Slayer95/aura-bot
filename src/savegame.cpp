@@ -30,29 +30,43 @@ using namespace std;
 //
 
 CSaveGame::CSaveGame(CAura* nAura, const std::filesystem::path& fromPath)
-  : CPacked(nAura),
+  : m_Aura(nAura),
+    m_Packed(new CPacked(nAura)),
+    m_Valid(false),
     m_NumSlots(0),
-    m_RandomSeed(0)
+    m_RandomSeed(0),
+    m_ClientPath("Save\\Multiplayer\\" + PathToString(fromPath.filename())),
+    m_ServerPath(fromPath)
 {
-  m_ServerPath = fromPath;
-  m_ClientPath = "Save\\Multiplayer\\" + PathToString(fromPath.filename());
 }
 
 CSaveGame::~CSaveGame()
 {
+  delete m_Packed;
+}
+
+bool CSaveGame::Load()
+{
+  m_Packed->Load(m_ServerPath, false);
+  if (!m_Packed->GetValid() || m_Packed->GetFlags() != 0) {
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print("[SAVEGAME] invalid file type (flags mismatch)");
+    }
+    Unload();
+    return false;
+  }
+  return true;
+}
+
+void CSaveGame::Unload()
+{
+  delete m_Packed;
+  m_Packed = nullptr;
 }
 
 bool CSaveGame::Parse()
 {
-	if (!m_Valid || m_Flags != 0) {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print("[SAVEGAME] invalid file type (flags mismatch)");
-    }
-		m_Valid = false;
-		return false;
-	}
-
-	istringstream ISS(m_Decompressed);
+	istringstream ISS(m_Packed->GetDecompressed());
 
 	// savegame format figured out by Varlock:
 	// string		-> map path
@@ -86,7 +100,6 @@ bool CSaveGame::Parse()
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
       Print("[SAVEGAME] invalid savegame (too many slots)");
     }
-		m_Valid = false;
 		return false;
 	}
 
@@ -105,10 +118,21 @@ bool CSaveGame::Parse()
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
       Print( "[SAVEGAME] failed to parse savegame header" );
     }
-		m_Valid = false;
 		return false;
 	}
 
 	m_SaveHash = CreateByteArray(SaveHash, false);
+  m_Valid = true;
   return m_Valid;
+}
+
+uint8_t CSaveGame::GetNumHumanSlots()
+{
+  uint8_t count = 0;
+  for (const auto& slot : m_Slots) {
+    if (slot.GetIsHuman()) {
+      ++count;
+    }
+  }
+  return count;
 }

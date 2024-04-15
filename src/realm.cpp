@@ -216,7 +216,7 @@ bool CRealm::Update(void* fd, void* send_fd)
                 AppendByteArray(relayPacket, War3Version);
                 AppendByteArrayFast(relayPacket, Data);
                 AssignLength(relayPacket);
-                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
                   Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + AddressToString(m_Aura->m_Net->m_Config->m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)");
                 }
                 m_Aura->m_Net->Send(&(m_Aura->m_Net->m_Config->m_UDPForwardAddress), relayPacket);
@@ -1155,12 +1155,12 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
 
   Send(m_Protocol->SEND_SID_STARTADVEX3(
     displayMode,
-    CreateByteArray(game->GetGameType(), false),
+    game->GetGameType(),
     game->GetMap()->GetMapGameFlags(),
     game->GetAnnounceWidth(),
     game->GetAnnounceHeight(),
     GetPrefixedGameName(game->GetGameName()), m_Config->m_UserName,
-    0,
+    game->GetUptime(),
     game->GetSourceFilePath(),
     game->GetSourceFileHash(),
     game->GetSourceFileSHA1(),

@@ -34,10 +34,8 @@ class CAura;
 
 class CPacked
 {
-public:
-  CAura* m_Aura;
-
 protected:
+  CAura* m_Aura;
 	bool m_Valid;
 	std::string m_Compressed;
 	std::string m_Decompressed;
@@ -54,31 +52,38 @@ protected:
 
 public:
   CPacked(CAura* nAura);
-	virtual ~CPacked();
+	~CPacked();
 
-	virtual bool GetValid()				{ return m_Valid; }
-	virtual uint32_t GetHeaderSize()		{ return m_HeaderSize; }
-	virtual uint32_t GetCompressedSize()	{ return m_CompressedSize; }
-	virtual uint32_t GetHeaderVersion()	{ return m_HeaderVersion; }
-	virtual uint32_t GetDecompressedSize()	{ return m_DecompressedSize; }
-	virtual uint32_t GetNumBlocks()		{ return m_NumBlocks; }
-	virtual uint32_t GetWar3Identifier()	{ return m_War3Identifier; }
-	virtual uint32_t GetWar3Version()		{ return m_War3Version; }
-	virtual uint16_t GetBuildNumber()		{ return m_BuildNumber; }
-	virtual uint16_t GetFlags()			{ return m_Flags; }
-	virtual uint32_t GetReplayLength()		{ return m_ReplayLength; }
+	bool GetValid()				{ return m_Valid; }
+	uint32_t GetHeaderSize()		{ return m_HeaderSize; }
+	uint32_t GetCompressedSize()	{ return m_CompressedSize; }
+	uint32_t GetHeaderVersion()	{ return m_HeaderVersion; }
+	uint32_t GetDecompressedSize()	{ return m_DecompressedSize; }
+  const std::string& GetDecompressed() { return m_Decompressed; }
+	uint32_t GetNumBlocks()		{ return m_NumBlocks; }
+	uint32_t GetWar3Identifier()	{ return m_War3Identifier; }
+	uint32_t GetWar3Version()		{ return m_War3Version; }
+	uint16_t GetBuildNumber()		{ return m_BuildNumber; }
+	uint16_t GetFlags()			{ return m_Flags; }
+	uint32_t GetReplayLength()		{ return m_ReplayLength; }
 
-	virtual void SetWar3Version(const uint32_t nWar3Version)			{ m_War3Version = nWar3Version; }
-	virtual void SetBuildNumber(const uint16_t nBuildNumber)			{ m_BuildNumber = nBuildNumber; }
-	virtual void SetFlags(const uint16_t nFlags)						{ m_Flags = nFlags; }
-	virtual void SetReplayLength(const uint32_t nReplayLength)			{ m_ReplayLength = nReplayLength; }
+	void SetWar3Version(const uint32_t nWar3Version)			{ m_War3Version = nWar3Version; }
+	void SetBuildNumber(const uint16_t nBuildNumber)			{ m_BuildNumber = nBuildNumber; }
+	void SetFlags(const uint16_t nFlags)						{ m_Flags = nFlags; }
+	void SetReplayLength(const uint32_t nReplayLength)			{ m_ReplayLength = nReplayLength; }
 
-	virtual bool Load(const std::filesystem::path& filePath, const bool allBlocks);
-	virtual bool Save(const bool TFT, const std::filesystem::path& filePath);
-	virtual bool Extract(const std::filesystem::path& inputPath, const std::filesystem::path& outputPath);
-	virtual bool Pack(const bool TFT, const std::filesystem::path& inputPath, const std::filesystem::path& outputPath);
-	virtual void Decompress(const bool allBlocks);
-	virtual void Compress(const bool TFT);
+	bool Load(const std::filesystem::path& filePath, const bool allBlocks);
+	bool Save(const bool TFT, const std::filesystem::path& filePath);
+	bool Extract(const std::filesystem::path& inputPath, const std::filesystem::path& outputPath);
+	bool Pack(const bool TFT, const std::filesystem::path& inputPath, const std::filesystem::path& outputPath);
+	void Decompress(const bool allBlocks);
+	void Compress(const bool TFT);
+
+  void Reset() {
+    m_Valid = true;
+    m_Compressed.clear();
+    m_Decompressed.clear();
+  };
 };
 
 #endif

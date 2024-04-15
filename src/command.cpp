@@ -1154,7 +1154,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         gotRolls.push_back(to_string(distribution(gen)));
       }
 
-      SendAll(m_FromName + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinVector(gotRolls, false));
+      if (Payload.empty()) {
+        SendAll(m_FromName + " rolled " + gotRolls[0] + ".");
+      } else {
+        SendAll(m_FromName + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinVector(gotRolls, false) + ".");
+      }
       break;
     }
 
@@ -1762,7 +1766,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->StartCountDown(IsForce);
-
       break;
     }
 
@@ -1863,9 +1866,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SS >> MinMinutes;
       }
 
-      if (MinSlots <= m_TargetGame->m_PlayersWithMap) {
+      if (MinSlots <= m_TargetGame->m_ControllersWithMap) {
         // Misuse protection. Make sure the user understands AI players are added.
-        ErrorReply("There are already " + to_string(m_TargetGame->m_PlayersWithMap) + " players. Use " + cmdToken + "start instead.");
+        ErrorReply("There are already " + to_string(m_TargetGame->m_ControllersWithMap) + " players. Use " + cmdToken + "start instead.");
         break;
       }
 
@@ -3263,6 +3266,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (Payload == "host") {
+        m_TargetGame->SetAutoVirtualPlayers(true);
+      } else if (Payload == "unhost") {
+        m_TargetGame->SetAutoVirtualPlayers(false);
+      } else {
+        ErrorReply("Usage: " + cmdToken + "fp");
+        ErrorReply("Usage: " + cmdToken + "fp host");
+        break;
+      }
+
       if (!m_TargetGame->CreateFakePlayer(false)) {
         ErrorReply("Cannot add another virtual player");
         break;
@@ -3326,7 +3339,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!Success) {
-        ErrorReply("Cannot add another fake player");
+        ErrorReply("Cannot add another virtual player");
       }
       break;
     }
@@ -3694,6 +3707,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (Payload.empty() || Payload.length() > 15) {
         ErrorReply("Usage: " + cmdToken + "virtualhost [PLAYERNAME]");
+        break;
+      }
+      if (m_TargetGame->m_LobbyVirtualHostName == Payload) {
+        ErrorReply("Virtual host "+ Payload + " is already in the game.");
         break;
       }
 

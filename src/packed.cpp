@@ -150,7 +150,6 @@ void CPacked::Decompress(const bool allBlocks)
   }
 
 	// format found at http://www.thehelper.net/forums/showthread.php?t=42787
-	m_Decompressed.clear();
 	istringstream ISS(m_Compressed);
 	string GarbageString;
 
@@ -300,8 +299,6 @@ void CPacked::Compress(const bool TFT)
   }
 
 	// format found at http://www.thehelper.net/forums/showthread.php?t=42787
-
-	m_Compressed.clear();
 
 	// compress data into blocks of size 8192 bytes
 	// use a buffer of size 8213 bytes because in the worst case zlib will grow the data 0.1% plus 12 bytes

@@ -32,32 +32,38 @@
 // CSaveGame
 //
 
-class CSaveGame : public CPacked
-{
-public:
-  CAura* m_Aura;
+class CAura;
+class CPacked;
 
+class CSaveGame
+{
 private:
-	std::filesystem::path m_ServerPath;
-	std::string m_ClientPath;
+  CAura* m_Aura;
+  CPacked* m_Packed;
+  bool m_Valid;
+	uint8_t m_NumSlots;
+  uint32_t m_RandomSeed;
 	std::string m_MapPath;
 	std::string m_GameName;
-	uint8_t m_NumSlots;
+	std::string m_ClientPath;
+	std::filesystem::path m_ServerPath;
 	std::vector<CGameSlot> m_Slots;
-	uint32_t m_RandomSeed;
 	std::vector<uint8_t> m_SaveHash;
 
 public:
 	CSaveGame(CAura* nAura, const std::filesystem::path& fromPath);
-	virtual ~CSaveGame();
+	~CSaveGame();
 
-	std::filesystem::path GetServerPath()				{ return m_ServerPath; }
-	std::string GetClientPath()			{ return m_ClientPath; }
-	std::string GetGameName()				{ return m_GameName; }
-	uint8_t GetNumSlots()		{ return m_NumSlots; }
-	const std::vector<CGameSlot>& GetSlots()		{ return m_Slots; }
-	uint32_t GetRandomSeed()			{ return m_RandomSeed; }
-	const std::vector<uint8_t>& GetSaveHash()			{ return m_SaveHash; }
+	std::filesystem::path GetServerPath()	const { return m_ServerPath; }
+	std::string GetClientPath() const { return m_ClientPath; }
+	std::string GetGameName()	const { return m_GameName; }
+	uint8_t GetNumSlots() const { return m_NumSlots; }
+  uint8_t GetNumHumanSlots() const;
+	const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
+	uint32_t GetRandomSeed() const { return m_RandomSeed; }
+	const std::vector<uint8_t>& GetSaveHash()	const { return m_SaveHash; }
+  bool Load();
+  void Unload();
 	bool Parse();
 };
 

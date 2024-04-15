@@ -855,14 +855,16 @@ bool CAura::Update()
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnectEnabled) {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
-        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
-          Print("[AURA] Incoming connection from " + incomingConnection->GetIPString());
-        }
+        //if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
+          Print("[AURA] incoming connection 1 from " + incomingConnection->GetIPString());
+        //}
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
+        Print("[AURA] connection to port " + to_string(localPort) + " rejected.");
         delete socket;
       } else {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
+        Print("[AURA] incoming connection 2 from " + incomingConnection->GetIPString());
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       }
     }
@@ -1324,6 +1326,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   m_CurrentLobby = new CGame(this, gameSetup);
+  gameSetup->OnGameCreate();
 
   if (m_CurrentLobby->GetExiting()) {
     delete m_CurrentLobby;
@@ -1419,7 +1422,7 @@ void CAura::UnholdContext(CCommandContext* nCtx)
 
   if (nCtx->Unref()) {
     if (MatchLogLevel(LOG_LEVEL_TRACE)) {
-      Print("[AURA] Deleting ctx for message sent by " + nCtx->GetSender());
+      Print("[AURA] deleting ctx for message sent by [" + nCtx->GetSender() + "].");
     }
     m_ActiveContexts.erase(nCtx);
     delete nCtx;

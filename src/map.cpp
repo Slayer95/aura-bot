@@ -76,7 +76,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
 
 CMap::~CMap() = default;
 
-std::vector<uint8_t> CMap::GetMapGameFlags() const
+uint32_t CMap::GetMapGameFlags() const
 {
   uint32_t GameFlags = 0;
 
@@ -126,7 +126,7 @@ std::vector<uint8_t> CMap::GetMapGameFlags() const
   if (m_MapFlags & MAPFLAG_RANDOMRACES)
     GameFlags |= 0x04000000;
 
-  return CreateByteArray(GameFlags, false);
+  return GameFlags;
 }
 
 uint32_t CMap::GetMapGameType() const

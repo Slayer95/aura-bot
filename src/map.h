@@ -191,7 +191,7 @@ public:
   inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
   inline uint8_t                GetMapObservers() const { return m_MapObservers; }
   inline uint8_t                GetMapFlags() const { return m_MapFlags; }
-  std::vector<uint8_t>          GetMapGameFlags() const;
+  uint32_t                      GetMapGameFlags() const;
   uint32_t                      GetMapGameType() const;
   inline uint32_t               GetMapOptions() const { return m_MapOptions; }
   inline uint8_t                GetMapMinGameVersion() const { return m_MapMinGameVersion; }

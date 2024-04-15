@@ -533,7 +533,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const std::vector<uint8_
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const std::vector<uint8_t>& mapGameType, const std::vector<uint8_t>& mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
 {
   string HostCounterString = ToHexString(hostCounter);
 
@@ -547,7 +547,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const st
   // make the stat string
 
   std::vector<uint8_t> StatString;
-  AppendByteArrayFast(StatString, mapFlags);
+  AppendByteArray(StatString, mapFlags, false);
   StatString.push_back(0);
   AppendByteArrayFast(StatString, mapWidth);
   AppendByteArrayFast(StatString, mapHeight);
@@ -558,7 +558,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const st
   AppendByteArrayFast(StatString, mapSHA1);
   StatString = EncodeStatString(StatString);
 
-  if (mapGameType.size() == 4 && mapFlags.size() == 4 && mapWidth.size() == 2 && mapHeight.size() == 2 && !gameName.empty() && !hostName.empty() && !mapPath.empty() && mapCRC.size() == 4 && mapSHA1.size() == 20 && StatString.size() < 128 && HostCounterString.size() == 8)
+  if (mapWidth.size() == 2 && mapHeight.size() == 2 && !gameName.empty() && !hostName.empty() && !mapPath.empty() && mapCRC.size() == 4 && mapSHA1.size() == 20 && StatString.size() < 128 && HostCounterString.size() == 8)
   {
     // make the rest of the packet
 
@@ -574,7 +574,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const st
     packet.push_back(0);                                   // State continued...
     packet.push_back(0);                                   // State continued...
     AppendByteArray(packet, upTime, false);                // time since creation
-    AppendByteArrayFast(packet, mapGameType);              // Game Type, Parameter
+    AppendByteArray(packet, mapGameType, false);              // Game Type, Parameter
     AppendByteArray(packet, Unknown, 4);                   // ???
     AppendByteArray(packet, CustomGame, 4);                // Custom Game
     AppendByteArrayFast(packet, gameName);                 // Game Name

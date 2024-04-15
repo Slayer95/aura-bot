@@ -171,13 +171,14 @@ protected:
   int64_t                        m_AutoStartMinTime;
   int64_t                        m_AutoStartMaxTime;
   uint8_t                        m_AutoStartPlayers;
-  uint8_t                        m_PlayersWithMap;
+  uint8_t                        m_ControllersWithMap;
   uint16_t                       m_HostPort;                      // the port to host games on
   bool                           m_UDPEnabled;                    // whether this game should be listed in "Local Area Network"
   bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
   std::vector<uint8_t>           m_PublicHostAddress;
   uint16_t                       m_PublicHostPort;
   uint8_t                        m_GameDisplay;                   // game state, public or private
+  bool                           m_IsAutoVirtualPlayers;       // if we should try to add the virtual host as a second (fake) player in single-player games
   uint8_t                        m_VirtualHostPID;                // host's PID
   uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                           m_Exiting;                       // set to true and this class will be deleted next update
@@ -247,6 +248,7 @@ public:
   uint32_t              GetSlotsOpen() const;
   uint32_t              GetNumConnectionsOrFake() const;
   uint32_t              GetNumHumanPlayers() const;
+  uint32_t              GetNumOccupiedSlots() const;
   uint32_t              GetNumControllers() const;
   std::string           GetMapFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
@@ -272,6 +274,8 @@ public:
   inline void           SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void           SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
   inline void           SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
+
+  int64_t               GetUptime() const { return GetTime() - m_CreationTime; }
 
   // processing functions
 
@@ -394,6 +398,7 @@ public:
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
   bool Pause();
+  bool PauseSinglePlayer();
   void Resume();
   inline bool GetIsCheckJoinable() { return m_CheckJoinable; }
   inline bool GetIsVerbose() { return m_Verbose; }
@@ -411,6 +416,8 @@ public:
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);
   void DeleteFakePlayers();
+  bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
+  void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }
   void RemoveCreator();
 };
 

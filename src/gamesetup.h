@@ -269,6 +269,7 @@ public:
   void SetReservations(const std::vector<std::string>& nReservations) { m_GameReservations = nReservations; }
   void ResetExtraOptions();
 
+  void OnGameCreate();
   bool Update();
 };
 
