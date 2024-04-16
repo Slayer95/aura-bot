@@ -3268,6 +3268,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string inputLower = Payload;
       transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
+
+      if (inputLower == "fill") {
+        m_TargetGame->DeleteVirtualHost();
+        m_TargetGame->FakeAllSlots();
+        break;
+      }
+
       const bool isToggle = inputLower == "disable" || inputLower == "enable";
 
       if (!isToggle && !Payload.empty()) {
@@ -3281,7 +3288,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->SetAutoVirtualPlayers(isToggle && inputLower == "disable");
+      m_TargetGame->SetAutoVirtualPlayers(!isToggle || inputLower != "disable");
       if (!isToggle && !m_TargetGame->CreateFakePlayer(false)) {
         ErrorReply("Cannot add another virtual player");
       } else if (isToggle) {

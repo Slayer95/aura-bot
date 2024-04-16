@@ -1198,22 +1198,22 @@ vector<uint8_t> CGame::GetSourceFileSHA1() const
 
 vector<uint8_t> CGame::GetAnnounceWidth() const
 {
-  if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
+  //if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
   if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
   }
-  //if (m_RestoredGame) return {0, 0};
+  if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapWidth();
 }
 vector<uint8_t> CGame::GetAnnounceHeight() const
 {
-  if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
+  //if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
   if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
   }
-  //if (m_RestoredGame) return {0, 0};
+  if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapHeight();
 }
 
@@ -1588,12 +1588,12 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
   // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
   // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
-  uint32_t mapGameFlags = m_Map->GetMapGameFlags();
-  if (m_RestoredGame) mapGameFlags &= ~0x3000L; // TODO(DEBUG): Delete
+  /*uint32_t mapGameFlags = m_Map->GetMapGameFlags();
+  if (m_RestoredGame) mapGameFlags &= ~0x3000L; // TODO(DEBUG): Delete*/
   return GetProtocol()->SEND_W3GS_GAMEINFO(
     m_Aura->m_GameVersion,
     GetGameType(),
-    mapGameFlags,
+    m_Map->GetMapGameFlags(),
     GetAnnounceWidth(),
     GetAnnounceHeight(),
     m_GameName,
@@ -3761,12 +3761,15 @@ void CGame::AddToReserved(const string& name)
 
   // check that the user is not already reserved
 
-  for (auto& player : m_Reserved) {
-    if (player == inputLower)
+  for (const auto& element : m_Reserved) {
+    string matchLower = element;
+    transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
+    if (matchLower == inputLower) {
       return;
+    }
   }
 
-  m_Reserved.push_back(inputLower);
+  m_Reserved.push_back(name);
 
   // upgrade the user if they're already in the game
 
@@ -3783,25 +3786,18 @@ void CGame::AddToReserved(const string& name)
 
 void CGame::RemoveFromReserved(const string& name)
 {
-  string inputLower = name;
-  transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
+  if (m_Reserved.empty()) return;
 
-  auto it = find(begin(m_Reserved), end(m_Reserved), inputLower);
+  uint8_t index = GetReservedIndex(name);
+  if (index == 0xFF) {
+    return;
+  }
+  m_Reserved.erase(m_Reserved.begin() + index);
 
-  if (it != end(m_Reserved)) {
-    m_Reserved.erase(it);
-
-    // demote the user if they're already in the game
-
-    for (auto& player : m_Players) {
-      string matchLower = player->GetName();
-      transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
-
-      if (matchLower == inputLower) {
-        player->SetReserved(false);
-        break;
-      }
-    }
+  // demote the user if they're already in the game
+  CGamePlayer* matchPlayer = GetPlayerFromName(name, false);
+  if (matchPlayer) {
+    matchPlayer->SetReserved(false);
   }
 }
 
@@ -3824,18 +3820,24 @@ bool CGame::MatchOwnerName(const string& name) const
 
 uint8_t CGame::GetReservedIndex(const string& name) const
 {
-  string lowerName = name;
-  transform(begin(lowerName), end(lowerName), begin(lowerName), ::tolower);
+  string inputLower = name;
+  transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
 
   uint8_t index = 0;
-  for (auto& reservedName : m_Reserved) {
-    if (reservedName == lowerName) {
-      return index;
+  while (index < m_Reserved.size()) {
+    string matchLower = m_Reserved[index];
+    transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
+    if (matchLower == inputLower) {
+      break;
     }
     ++index;
   }
 
-  return 0xFF;
+  if (index == m_Reserved.size()) {
+    return 0xFF;
+  }
+
+  return index;
 }
 
 bool CGame::GetIsReserved(const string& name) const
@@ -4236,6 +4238,7 @@ uint8_t CGame::FakeAllSlots()
 {
   uint8_t addedCounter = 0;
   if (m_RestoredGame) {
+    Print("Reserved players: " + JoinVector(m_Reserved, false));
     uint8_t reservedIndex = 0;
     for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {
       if (m_Slots[SID].GetIsHuman()) {
@@ -4245,6 +4248,7 @@ uint8_t CGame::FakeAllSlots()
       if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
         const CGameSlot* savedSlot = &(m_RestoredGame->GetSlots()[SID]);
         CreateFakePlayerInner(SID, savedSlot->GetPID(), savedSlot->GetTeam(), m_Reserved[reservedIndex]);
+        ++reservedIndex;
         ++addedCounter;
       }
     }
