@@ -1121,15 +1121,15 @@ bool CGameSetup::RestoreFromSaveFile()
   if (!m_RestoredGame->Load()) return false;
   bool success = m_RestoredGame->Parse();
   m_RestoredGame->Unload();
-  string mapPathSave = m_RestoredGame->GetClientMapPath();
-  string mapPathActive = m_Map->GetClientPath();
-  std::transform(std::begin(mapPathSave), std::end(mapPathSave), std::begin(mapPathSave), [](unsigned char c) {
+  string mapFileSave = ParseFileName(m_RestoredGame->GetClientMapPath());
+  string mapFileActive = ParseFileName(m_Map->GetClientPath());
+  std::transform(std::begin(mapFileSave), std::end(mapFileSave), std::begin(mapFileSave), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
-  std::transform(std::begin(mapPathActive), std::end(mapPathActive), std::begin(mapPathActive), [](unsigned char c) {
+  std::transform(std::begin(mapFileActive), std::end(mapFileActive), std::begin(mapFileActive), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
-  if (mapPathSave != mapPathActive) {
+  if (mapFileSave != mapFileActive) {
     m_Ctx->ErrorReply("Requires map [" + m_RestoredGame->GetClientMapPath() + "]", CHAT_SEND_SOURCE_ALL);
     return false;
   }
