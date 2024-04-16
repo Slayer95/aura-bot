@@ -1121,6 +1121,10 @@ bool CGameSetup::RestoreFromSaveFile()
   if (!m_RestoredGame->Load()) return false;
   bool success = m_RestoredGame->Parse();
   m_RestoredGame->Unload();
+  if (m_MapPath != m_Map->GetClientPath()) {
+    m_Ctx->ErrorReply("Save file does not match the specified map.", CHAT_SEND_SOURCE_ALL);
+    return false;
+  }
   return success;
 }
 
