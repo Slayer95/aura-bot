@@ -417,6 +417,7 @@ public:
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);
   void DeleteFakePlayers();
+  uint8_t FakeAllSlots();
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
   void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }
   void RemoveCreator();
