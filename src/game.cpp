@@ -1198,7 +1198,6 @@ vector<uint8_t> CGame::GetSourceFileSHA1() const
 
 vector<uint8_t> CGame::GetAnnounceWidth() const
 {
-  //if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
   if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
@@ -1208,7 +1207,6 @@ vector<uint8_t> CGame::GetAnnounceWidth() const
 }
 vector<uint8_t> CGame::GetAnnounceHeight() const
 {
-  //if (m_RestoredGame) return {0, 0}; // TODO(DEBUG): Delete
   if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
@@ -1588,8 +1586,6 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
   // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
   // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
-  /*uint32_t mapGameFlags = m_Map->GetMapGameFlags();
-  if (m_RestoredGame) mapGameFlags &= ~0x3000L; // TODO(DEBUG): Delete*/
   return GetProtocol()->SEND_W3GS_GAMEINFO(
     m_Aura->m_GameVersion,
     GetGameType(),
@@ -3061,9 +3057,9 @@ void CGame::EventGameLoaded()
     SendChat(player, "Your load time was " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
 
   if (GetNumConnectionsOrFake() < 2) {
-    PauseSinglePlayer();
+    SendAllChat("HINT: Single-player game detected. In-game commands will be DISABLED.");
     // TODO: This creates a lag spike client-side.
-    //StopPlayers("single-player game untracked");
+    StopPlayers("single-player game untracked");
   }
 }
 
