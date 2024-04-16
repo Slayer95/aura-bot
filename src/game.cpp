@@ -3961,7 +3961,10 @@ void CGame::StartCountDown(bool force)
     if (!StillDownloading.empty()) {
       SendAllChat("Players still downloading the map: " + StillDownloading);
       ChecksPassed = false;
-    } else if (m_ControllersWithMap < 2) {
+    } else if (0 == m_ControllersWithMap) {
+      SendAllChat("Nobody has downloaded the map yet.");
+      ChecksPassed = false;
+    } else if (m_ControllersWithMap < 2 && !m_RestoredGame) {
       SendAllChat("Only " + to_string(m_ControllersWithMap) + " player has the map.");
       ChecksPassed = false;
     }
@@ -4234,18 +4237,18 @@ uint8_t CGame::FakeAllSlots()
 {
   uint8_t addedCounter = 0;
   if (m_RestoredGame) {
-    Print("Reserved players: " + JoinVector(m_Reserved, false));
+    if (m_Reserved.empty()) return 0;
     uint8_t reservedIndex = 0;
     for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {
       if (m_Slots[SID].GetIsHuman()) {
-        ++reservedIndex;
+        if (++reservedIndex >= m_Reserved.size()) break;
         continue;
       }
       if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
         const CGameSlot* savedSlot = &(m_RestoredGame->GetSlots()[SID]);
         CreateFakePlayerInner(SID, savedSlot->GetPID(), savedSlot->GetTeam(), m_Reserved[reservedIndex]);
-        ++reservedIndex;
         ++addedCounter;
+        if (++reservedIndex >= m_Reserved.size()) break;
       }
     }
   } else {
