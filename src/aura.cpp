@@ -855,16 +855,20 @@ bool CAura::Update()
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnectEnabled) {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
-        //if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
-          Print("[AURA] incoming connection 1 from " + incomingConnection->GetIPString());
-        //}
+        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
+          Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
+        }
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
-        Print("[AURA] connection to port " + to_string(localPort) + " rejected.");
+        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
+          Print("[AURA] connection to port " + to_string(localPort) + " rejected.");
+        }
         delete socket;
       } else {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
-        Print("[AURA] incoming connection 2 from " + incomingConnection->GetIPString());
+        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
+          Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
+        }
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       }
     }
