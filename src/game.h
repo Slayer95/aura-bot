@@ -412,6 +412,7 @@ public:
   void CloseObserverSlots();
   bool CreateVirtualHost();
   bool DeleteVirtualHost();
+  void CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const uint8_t team, const std::string& name);
   bool CreateFakePlayer(const bool useVirtualHostName);
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);

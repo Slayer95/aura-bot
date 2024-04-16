@@ -3256,7 +3256,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -3266,21 +3266,31 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Payload == "host") {
-        m_TargetGame->SetAutoVirtualPlayers(true);
-      } else if (Payload == "unhost") {
-        m_TargetGame->SetAutoVirtualPlayers(false);
-      } else {
+      string inputLower = Payload;
+      transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
+      const bool isToggle = inputLower == "disable" || inputLower == "enable";
+
+      if (!isToggle && !Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "fp");
-        ErrorReply("Usage: " + cmdToken + "fp host");
+        ErrorReply("Usage: " + cmdToken + "fp [ENABLE|DISABLE]");
         break;
       }
 
-      if (!m_TargetGame->CreateFakePlayer(false)) {
+      if (!isToggle && m_TargetGame->GetIsRestored()) {
+        ErrorReply("Usage: " + cmdToken + "fp [ENABLE|DISABLE]");
+        break;
+      }
+
+      m_TargetGame->SetAutoVirtualPlayers(isToggle && inputLower == "disable");
+      if (!isToggle && !m_TargetGame->CreateFakePlayer(false)) {
         ErrorReply("Cannot add another virtual player");
-        break;
+      } else if (isToggle) {
+        if (m_TargetGame->GetIsAutoVirtualPlayers()) {
+          SendReply("Automatic virtual players enabled.");
+        } else {
+          SendReply("Automatic virtual players disabled.");
+        }
       }
-
       break;
     }
 

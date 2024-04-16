@@ -2899,11 +2899,12 @@ void CGame::EventGameStarted()
   DeleteVirtualHost();
 
   if (m_RestoredGame) {
-    const uint8_t activePlayers = GetNumConnectionsOrFake();
+    const uint8_t activePlayers = GetNumConnectionsOrFake(); // though it shouldn't be possible to manually add fake players
     const uint8_t expectedPlayers = m_RestoredGame->GetNumHumanSlots();
     if (activePlayers < expectedPlayers) {
       if (m_IsAutoVirtualPlayers) {
-        Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + to_string(expectedPlayers - activePlayers) + " virtual players added.");
+        const uint8_t addedCounter = FakeAllSlots();
+        Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + to_string(addedCounter) + " virtual players added.");
       } else {
         Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + to_string(expectedPlayers - activePlayers) + " missing.");
       }
@@ -4026,6 +4027,10 @@ void CGame::StartCountDown(bool force)
       SendAllChat("HINT: To avoid this, you may enable map referees, or add a fake player [" + m_PrivateCmdToken + "fp]");
     }
   }
+
+  if (!m_FakePlayers.empty()) {
+    SendAllChat("HINT: " + to_string(m_FakePlayers.size()) + " slots are occupied by fake players.");
+  }
 }
 
 void CGame::StopPlayers(const string& reason)
@@ -4137,6 +4142,23 @@ bool CGame::DeleteVirtualHost()
   return true;
 }
 
+void CGame::CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const uint8_t team, const string& name)
+{
+  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+  SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(PID, name, IP, IP));
+  m_Slots[SID] = CGameSlot(
+    PID,
+    100,
+    SLOTSTATUS_OCCUPIED,
+    0, // Zero computer bit
+    team,
+    team == m_Aura->m_MaxSlots ? m_Aura->m_MaxSlots : m_Slots[SID].GetColour(),
+    m_Map->GetLobbyRace(&m_Slots[SID])
+  );
+  m_FakePlayers.push_back(PID);
+  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+}
+
 bool CGame::CreateFakePlayer(const bool useVirtualHostName)
 {
   if (m_FakePlayers.size() + 1 == m_Slots.size())
@@ -4157,14 +4179,9 @@ bool CGame::CreateFakePlayer(const bool useVirtualHostName)
     if (GetSlotsOpen() == 1)
       DeleteVirtualHost();
 
-    const uint8_t              FakePlayerPID = GetNewPID();
-    const std::vector<uint8_t> IP            = {0, 0, 0, 0};
-    uint8_t                    Team          = isObserver ? m_Aura->m_MaxSlots : m_Slots[SID].GetTeam();
-
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]", IP, IP));
-    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, Team, m_Slots[SID].GetColour(), m_Map->GetLobbyRace(&m_Slots[SID]));
-    m_FakePlayers.push_back(FakePlayerPID);
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    const uint8_t FakePlayerPID = GetNewPID();
+    const uint8_t Team = isObserver ? m_Aura->m_MaxSlots : m_Slots[SID].GetTeam();
+    CreateFakePlayerInner(SID, FakePlayerPID, Team, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]");
     return true;
   }
 
@@ -4190,13 +4207,8 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
     if (GetSlotsOpen() == 1)
       DeleteVirtualHost();
 
-    const uint8_t              FakePlayerPID = GetNewPID();
-    const std::vector<uint8_t> IP            = {0, 0, 0, 0};
-
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(FakePlayerPID, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]", IP, IP));
-    m_Slots[SID] = CGameSlot(FakePlayerPID, 100, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
-    m_FakePlayers.push_back(FakePlayerPID);
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    const uint8_t FakePlayerPID = GetNewPID();
+    CreateFakePlayerInner(SID, FakePlayerPID, m_Aura->m_MaxSlots, useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(FakePlayerPID) + "]");
     return true;
   }
 
@@ -4218,6 +4230,30 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
     }
   }
   return false;
+}
+
+uint8_t CGame::FakeAllSlots()
+{
+  uint8_t addedCounter = 0;
+  if (m_RestoredGame) {
+    uint8_t reservedIndex = 0;
+    for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {
+      if (m_Slots[SID].GetIsHuman()) {
+        ++reservedIndex;
+        continue;
+      }
+      if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
+        const CGameSlot* savedSlot = &(m_RestoredGame->GetSlots()[SID]);
+        CreateFakePlayerInner(SID, savedSlot->GetPID(), savedSlot->GetTeam(), m_Reserved[reservedIndex]);
+        ++addedCounter;
+      }
+    }
+  } else {
+    while (CreateFakePlayer(false)) {
+      ++addedCounter;
+    }
+  }
+  return addedCounter;
 }
 
 void CGame::DeleteFakePlayers()
