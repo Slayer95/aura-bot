@@ -43,7 +43,7 @@ private:
   bool m_Valid;
 	uint8_t m_NumSlots;
   uint32_t m_RandomSeed;
-	std::string m_MapPath;
+	std::string m_ClientMapPath;
 	std::string m_GameName;
 	std::string m_ClientPath;
 	std::filesystem::path m_ServerPath;
@@ -56,6 +56,7 @@ public:
 
 	std::filesystem::path GetServerPath()	const { return m_ServerPath; }
 	std::string GetClientPath() const { return m_ClientPath; }
+  std::string GetClientMapPath() const { return m_ClientMapPath; }
 	std::string GetGameName()	const { return m_GameName; }
 	uint8_t GetNumSlots() const { return m_NumSlots; }
   uint8_t GetNumHumanSlots() const;

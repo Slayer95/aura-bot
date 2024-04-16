@@ -86,7 +86,7 @@ bool CSaveGame::Parse()
 	string GarbageString;
 	uint32_t SaveHash;
 
-	getline(ISS, m_MapPath, '\0');				// map path
+	getline(ISS, m_ClientMapPath, '\0');				// map path
 	getline(ISS, GarbageString, '\0');			// ???
 	getline(ISS, m_GameName, '\0');				// game name
 	getline(ISS, GarbageString, '\0');			// ???
