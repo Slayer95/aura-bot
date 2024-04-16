@@ -54,10 +54,10 @@ public:
 	CSaveGame(CAura* nAura, const std::filesystem::path& fromPath);
 	~CSaveGame();
 
-	std::filesystem::path GetServerPath()	const { return m_ServerPath; }
-	std::string GetClientPath() const { return m_ClientPath; }
-  std::string GetClientMapPath() const { return m_ClientMapPath; }
-	std::string GetGameName()	const { return m_GameName; }
+	const std::filesystem::path& GetServerPath()const { return m_ServerPath; }
+	const std::string& GetClientPath() const { return m_ClientPath; }
+  const std::string& GetClientMapPath() const { return m_ClientMapPath; }
+	const std::string& GetGameName()	const { return m_GameName; }
 	uint8_t GetNumSlots() const { return m_NumSlots; }
   uint8_t GetNumHumanSlots() const;
 	const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
