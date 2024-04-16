@@ -7,4 +7,5 @@
 Start the game with [{TRIGGER_BROADCAST}start]
 {URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]
 {SHORTDESC?}{SHORTDESC}
-{AUTOSTART?}Autostart is active. The game will automatically start {AUTOSTART}.
+{AUTOSTART?}The game will automatically start when conditions are met.
+{AUTOSTART?}{AUTOSTART}.
