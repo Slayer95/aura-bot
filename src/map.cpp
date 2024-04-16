@@ -882,7 +882,7 @@ void CMap::Load(CConfig* CFG)
     SFileCloseArchive(MapMPQ);
 
   m_ClientMapPath = CFG->GetString("map_path", emptyString);
-  std::vector<uint8_t> MapContentMismatch = {0, 0, 0, 0};
+  vector<uint8_t> MapContentMismatch = vector<uint8_t>(4, 0);
 
   if (CFG->Exists("map_size")) {
     string CFGValue = CFG->GetString("map_size", emptyString);

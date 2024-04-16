@@ -49,9 +49,11 @@
 // STL
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <cstring>
 #include <cstdint>
+#include <ctime>
 #include <chrono>
 
 #define LOG_LEVEL_EMERGENCY 1
@@ -84,17 +86,32 @@ inline int64_t GetTicks()
   return std::chrono::duration_cast<std::chrono::milliseconds>(time_now.time_since_epoch()).count();
 }
 
-// output
+inline void LogStream(std::ostream& outStream, const std::string& message)
+{
+  auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  struct tm timeinfo;
+  localtime_s(&timeinfo, &now);
+  outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
+  outStream << std::flush;
+}
+
+inline void LogStream(std::ostream& outStream, const char* message)
+{
+  auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  struct tm timeinfo;
+  localtime_s(&timeinfo, &now);
+  outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
+  outStream << std::flush;
+}
 
 inline void Print(const std::string& message) // outputs to console
 {
-  std::cout << message << std::endl;
-  std::cout << std::flush;
+  LogStream(std::cout, message);
 }
 
 inline void Print(const char* message)
 {
-  std::cout << message << std::endl;
+  LogStream(std::cout, message);
 }
 
 #endif // AURA_INCLUDES_H_

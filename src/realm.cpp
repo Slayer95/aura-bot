@@ -217,7 +217,7 @@ bool CRealm::Update(void* fd, void* send_fd)
                 AppendByteArrayFast(relayPacket, Data);
                 AssignLength(relayPacket);
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-                  Print("[BNET: " + m_Config->m_UniqueName + "@" + ipString + "] sending game list to " + AddressToString(m_Aura->m_Net->m_Config->m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)");
+                  Print(GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net->m_Config->m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)");
                 }
                 m_Aura->m_Net->Send(&(m_Aura->m_Net->m_Config->m_UDPForwardAddress), relayPacket);
               }

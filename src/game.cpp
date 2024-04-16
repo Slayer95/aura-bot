@@ -460,7 +460,7 @@ string CGame::GetLogPrefix() const
   if (SecString.size() == 1)
     SecString.insert(0, "0");
 
-  return "[" + GetCategory() + ": " + GetGameName() + "] (" + MinString + ":" + SecString + ") ";
+  return "[" + GetCategory() + ": " + GetGameName() + "] ";
 }
 
 string CGame::GetPlayers() const
@@ -1537,22 +1537,28 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
     versionPrefix = "[1." + to_string(m_Aura->m_GameVersion) + ".UnlockMapSize] ";
   } else {
     versionPrefix = "[1." + to_string(m_Aura->m_GameVersion) + "] ";
-  }
-  if (m_IsMirror) {
-    return (
-      versionPrefix + "Mirroring " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetServerPath()) +
-      ": \"" + GetPrefixedGameName(realm) + "\")"
-    );
-  } else if (!m_OwnerName.empty()) {
-    return (
-      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetServerPath()) +
-      ". (Started by " + m_OwnerName + ": \"" + GetPrefixedGameName(realm) + "\")"
-    );
+
+}
+  string startedPhrase;
+  if (m_IsMirror || m_RestoredGame || m_OwnerName.empty()) {
+    startedPhrase = ". (\"" + GetPrefixedGameName(realm) + "\")";
   } else {
-    return (
-      versionPrefix + "Hosting " + (m_GameDisplay == GAME_PRIVATE ? "private" : "public") + " game of " + ParseFileName(m_Map->GetServerPath()) +
-      ". (\"" + GetPrefixedGameName(realm) + "\")"
-    );
+    startedPhrase = ". (Started by " + m_OwnerName + ": \"" + GetPrefixedGameName(realm) + "\")";
+  }
+
+  string typeWord;
+  if (m_RestoredGame) {
+    typeWord = "loaded";
+  } else if (m_GameDisplay == GAME_PRIVATE) {
+    typeWord = "private";
+  } else {
+    typeWord = "public";
+  }
+
+  if (m_IsMirror) {
+    return versionPrefix + "Mirroring " + typeWord + " game of " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
+  } else {
+    return versionPrefix + "Hosting " + typeWord + " game of " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
   }
 }
 
@@ -1683,12 +1689,12 @@ void CGame::SendGameDiscoveryInfo() const
     // Ensure the game is available at loopback.
     if (loopbackIsIPv4Port) {
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-        Print("Sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
+        Print(GetLogPrefix() + "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
       }
       m_Aura->m_Net->Send("127.0.0.1", ipv4Packet);
     } else {
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-        Print("Sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
+        Print(GetLogPrefix() + "ending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
       }
       vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
       m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);

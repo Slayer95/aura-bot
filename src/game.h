@@ -275,7 +275,11 @@ public:
   inline void           SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
   inline void           SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
 
-  int64_t               GetUptime() const { return GetTime() - m_CreationTime; }
+  inline uint32_t       GetUptime() const {
+    int64_t time = GetTime();
+    if (time < m_CreationTime) return 0;
+    return static_cast<uint32_t>(time - m_CreationTime);
+  }
 
   // processing functions
 

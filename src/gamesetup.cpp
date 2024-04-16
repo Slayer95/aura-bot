@@ -537,8 +537,8 @@ CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, con
     return nullptr;
   }
   CMap* map = GetBaseMapFromConfig(&MapCFG, silent);
+  if (!map) return nullptr;
   if (isCache) {
-    if (map->HasMismatch()) return nullptr;
     if (MapCFG.GetIsModified()) {
       vector<uint8_t> bytes = MapCFG.Export();
       FileWrite(filePath, bytes.data(), bytes.size());
@@ -1121,8 +1121,16 @@ bool CGameSetup::RestoreFromSaveFile()
   if (!m_RestoredGame->Load()) return false;
   bool success = m_RestoredGame->Parse();
   m_RestoredGame->Unload();
-  if (m_RestoredGame->GetClientMapPath() != m_Map->GetClientPath()) {
-    m_Ctx->ErrorReply("Save file does not match the specified map.", CHAT_SEND_SOURCE_ALL);
+  string mapPathSave = m_RestoredGame->GetClientMapPath();
+  string mapPathActive = m_Map->GetClientPath();
+  std::transform(std::begin(mapPathSave), std::end(mapPathSave), std::begin(mapPathSave), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  std::transform(std::begin(mapPathActive), std::end(mapPathActive), std::begin(mapPathActive), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  if (mapPathSave != mapPathActive) {
+    m_Ctx->ErrorReply("Requires map [" + m_RestoredGame->GetClientMapPath() + "]", CHAT_SEND_SOURCE_ALL);
     return false;
   }
   return success;

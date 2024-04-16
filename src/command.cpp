@@ -446,7 +446,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     m_IRC == m_Aura->m_SudoContext->m_IRC
   );
   if (isValidCaller && message == m_Aura->m_SudoAuthPayload) {
-    (*m_Output) << "[AURA] Confirmed " + m_FromName + " command \"" + m_Aura->m_SudoExecCommand + "\"" << std::endl;
+    LogStream(*m_Output, "[AURA] Confirmed " + m_FromName + " command \"" + m_Aura->m_SudoExecCommand + "\"");
     size_t PayloadStart = m_Aura->m_SudoExecCommand.find(' ');
     string Command, Payload;
     if (PayloadStart != string::npos) {
@@ -505,7 +505,7 @@ void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxF
     }
 
     default: {
-      (*m_Output) << "[AURA] " + message << std::endl;
+      LogStream(*m_Output, "[AURA] " + message);
     }
   }
 }
@@ -552,13 +552,13 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
   // Write to console if CHAT_LOG_CONSOLE, but only if we haven't written to it in SendPrivateReply
   if (m_FromType != FROM_OTHER && (ctxFlags & CHAT_LOG_CONSOLE)) {
     if (m_TargetGame) {
-      (*m_Output) << m_TargetGame->GetLogPrefix() + message << std::endl;
+      LogStream(*m_Output, m_TargetGame->GetLogPrefix() + message);
     } else if (m_SourceRealm) {
-      (*m_Output) << m_SourceRealm->GetLogPrefix() + message << std::endl;
+      LogStream(*m_Output, m_SourceRealm->GetLogPrefix() + message);
     } else if (m_IRC) {
-      (*m_Output) << "[IRC] " + message << std::endl;
+      LogStream(*m_Output, "[IRC] " + message);
     } else {
-      (*m_Output) << "[AURA] " + message << std::endl;
+      LogStream(*m_Output, "[AURA] " + message);
     }
   }
 }
@@ -739,15 +739,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
   }
 
   if (m_TargetGame && m_TargetGame->m_Locked && 0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
-    (*m_Output) << m_TargetGame->GetLogPrefix() + "Command ignored, the game is locked" << std::endl;
+    LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "Command ignored, the game is locked");
     ErrorReply("Only the game owner and root admins can run game commands when the game is locked.");
     return;
   }
 
   if (Payload.empty()) {
-    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + cmdToken + command + "]" << std::endl;
+    LogStream(*m_Output, GetUserAttributionPreffix() + "sent command [" + cmdToken + command + "]");
   } else {
-    (*m_Output) << GetUserAttributionPreffix() + "sent command [" + cmdToken + command + "] with payload [" + payload + "]" << std::endl;
+    LogStream(*m_Output, GetUserAttributionPreffix() + "sent command [" + cmdToken + command + "] with payload [" + payload + "]");
   }
 
   /*********************
@@ -1306,7 +1306,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      (*m_Output) << m_TargetGame->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]" << std::endl;
+      LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]");
       m_TargetGame->StopPlayers("was disconnected (admin ended game)");
       break;
     }

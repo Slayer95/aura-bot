@@ -1325,6 +1325,8 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
 
   if (gameSetup->GetIsMirror()) {
     Print("[AURA] mirroring game [" + gameSetup->m_GameName + "]");
+  } else if (gameSetup->m_RestoredGame) {
+    Print("[AURA] creating loaded game [" + gameSetup->m_GameName + "]");
   } else {
     Print("[AURA] creating game [" + gameSetup->m_GameName + "]");
   }
@@ -1335,6 +1337,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   if (m_CurrentLobby->GetExiting()) {
     delete m_CurrentLobby;
     m_CurrentLobby = nullptr;
+    gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_GameName + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
