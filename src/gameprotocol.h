@@ -9,7 +9,7 @@
   distribute, sublicense, and/or sell copies of the Software, and to
   permit persons to whom the Software is furnished to do so, subject to
   the following conditions:
-
+7
   The above copyright notice and this permission notice shall be
   included in all copies or substantial portions of the Software.
 
@@ -78,6 +78,8 @@
 #define REJECTJOIN_FULL 9
 #define REJECTJOIN_STARTED 10
 #define REJECTJOIN_WRONGPASSWORD 27
+
+#define MAX_PLAYER_NAME_SIZE 15
 
 class CAura;
 class CGamePlayer;

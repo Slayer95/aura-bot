@@ -266,10 +266,10 @@ bool CMap::IsObserverSlot(const CGameSlot* slot) const
   if (slot->GetPID() != 0 || slot->GetDownloadStatus() != 255) {
     return false;
   }
-  if (slot->GetSlotStatus() != SLOTSTATUS_OPEN || slot->GetComputer() != 0 || slot->GetRace() != SLOTRACE_RANDOM) {
+  if (slot->GetSlotStatus() != SLOTSTATUS_OPEN || !slot->GetIsSelectable()) {
     return false;
   }
-  return slot->GetTeam() >= m_MapNumPlayers && slot->GetColour() >= m_MapNumPlayers;
+  return slot->GetTeam() >= m_MapNumControllers && slot->GetColor() >= m_MapNumControllers;
 }
 
 bool CMap::NormalizeSlots()
@@ -736,21 +736,18 @@ void CMap::Load(CConfig* CFG)
             for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
             {
               CGameSlot Slot(0, 255, SLOTSTATUS_OPEN, 0, 0, 1, SLOTRACE_RANDOM);
-              uint32_t  Colour, Status, Race;
-              ISS.read(reinterpret_cast<char*>(&Colour), 4); // colour
-              Slot.SetColour(static_cast<uint8_t>(Colour));
+              uint32_t  Color, Status, Race;
+              ISS.read(reinterpret_cast<char*>(&Color), 4); // colour
+              Slot.SetColor(static_cast<uint8_t>(Color));
               ISS.read(reinterpret_cast<char*>(&Status), 4); // status
 
-              if (Status == 1)
+              if (Status == 1 || Status == 2 && (0 == (RawMapFlags & MAPOPT_FIXEDPLAYERSETTINGS))) {
                 Slot.SetSlotStatus(SLOTSTATUS_OPEN);
-              else if (Status == 2)
-              {
+              } else if (Status == 2) {
                 Slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
-                Slot.SetComputer(1);
+                Slot.SetComputer(SLOTCOMP_YES);
                 Slot.SetComputerType(SLOTCOMP_NORMAL);
-              }
-              else
-              {
+              } else {
                 Slot.SetSlotStatus(SLOTSTATUS_CLOSED);
                 ++ClosedSlots;
               }
@@ -786,6 +783,8 @@ void CMap::Load(CConfig* CFG)
               // the bot only cares about the following options: melee, fixed player settings, custom forces
               // let's not confuse the user by displaying erroneous map options so zero them out now
               MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
+              if (MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) MapOptions |= MAPOPT_CUSTOMFORCES;
+
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
                 Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
               }
@@ -807,8 +806,8 @@ void CMap::Load(CConfig* CFG)
                 }
 
                 for (auto& Slot : Slots) {
-                  if (0 != (PlayerMask & (1 << static_cast<uint32_t>((Slot).GetColour())))) {
-                    (Slot).SetTeam(static_cast<uint8_t>(i));
+                  if (0 != (PlayerMask & (1 << static_cast<uint32_t>((Slot).GetColor())))) {
+                    Slot.SetTeam(static_cast<uint8_t>(i));
                   }
                 }
 
@@ -966,6 +965,7 @@ void CMap::Load(CConfig* CFG)
 
   if (CFG->Exists("map_options")) {
     MapOptions = CFG->GetUint32("map_options", 0);
+    if (MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) MapOptions |= MAPOPT_CUSTOMFORCES;
   } else {
     CFG->SetUint32("map_options", MapOptions);
   }
@@ -1006,7 +1006,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8("map_numplayers", MapNumPlayers);
   }
 
-  m_MapNumPlayers = static_cast<uint8_t>(MapNumPlayers);
+  m_MapNumControllers = static_cast<uint8_t>(MapNumPlayers);
 
   if (CFG->Exists("map_numteams")) {
     MapNumTeams = CFG->GetUint8("map_numteams", 0);
@@ -1192,34 +1192,54 @@ string CMap::CheckProblems()
     return "invalid map_height detected";
   }
 
-  if (m_MapNumPlayers == 0 || m_MapNumPlayers > MAX_SLOTS_MODERN)
+  if (m_MapNumControllers < 2 || m_MapNumControllers > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
     return "invalid map_numplayers detected";
   }
 
-  if (m_MapNumTeams == 0 || m_MapNumTeams > MAX_SLOTS_MODERN)
+  if (m_MapNumTeams < 2 || m_MapNumTeams > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
     return "invalid map_numteams detected";
   }
 
-  if (m_Slots.empty() || m_Slots.size() > MAX_SLOTS_MODERN)
+  if (m_Slots.size() < 2 || m_Slots.size() > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
     return "invalid map_slot<x> detected";
   }
 
-  if (m_MapNumPlayers > m_Aura->m_MaxSlots || m_MapNumTeams > m_Aura->m_MaxSlots || m_Slots.size() > m_Aura->m_MaxSlots) {
+  if (m_MapNumControllers > m_Aura->m_MaxSlots || m_MapNumTeams > m_Aura->m_MaxSlots || m_Slots.size() > m_Aura->m_MaxSlots) {
     m_Valid = false;
     return "map uses more than " + to_string(m_Aura->m_MaxSlots) + " players - v1.29+ required";
   }
 
+  bitset<MAX_SLOTS_MODERN> usedTeams;
+  uint8_t controllerSlotCount = 0;
   for (const auto& slot : m_Slots) {
-    if (slot.GetTeam() > m_Aura->m_MaxSlots || slot.GetColour() > m_Aura->m_MaxSlots) {
+    if (slot.GetTeam() > m_Aura->m_MaxSlots || slot.GetColor() > m_Aura->m_MaxSlots) {
       m_Valid = false;
       return "map uses more than " + to_string(m_Aura->m_MaxSlots) + " players - v1.29+ required";
     }
+    if (slot.GetTeam() == m_Aura->m_MaxSlots) {
+      continue;
+    }
+    if (slot.GetTeam() > m_MapNumTeams) {
+      // TODO: Or just enforce usedTeams.count() <= m_MapNumTeams?
+      m_Valid = false;
+      return "invalid map_slot<x> detected";
+    }
+    usedTeams.set(slot.GetTeam());
+    ++controllerSlotCount;
+  }
+  if (controllerSlotCount != m_MapNumControllers) {
+    m_Valid = false;
+    return "invalid map_slot<x> detected"; 
+  }
+  if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && usedTeams.count() <= 1) {
+    m_Valid = false;
+    return "invalid map_slot<x> detected";
   }
 
   if (!m_SkipVersionCheck && m_Aura->m_GameVersion < m_MapMinGameVersion) {

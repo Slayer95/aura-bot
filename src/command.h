@@ -148,6 +148,8 @@ public:
   void ErrorAll(const std::string& message);
   CGamePlayer* GetTargetPlayer(const std::string& target);
   CGamePlayer* GetTargetPlayerOrSelf(const std::string& target);
+  bool ParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player);
+  bool ParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   CRealm* GetTargetRealmOrCurrent(const std::string& target);
   CGame* GetTargetGame(const std::string& target);
   void UseImplicitHostedGame();

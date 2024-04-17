@@ -250,6 +250,7 @@ public:
   uint32_t              GetNumHumanPlayers() const;
   uint32_t              GetNumOccupiedSlots() const;
   uint32_t              GetNumControllers() const;
+  uint32_t              GetNumComputers() const;
   std::string           GetMapFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
   std::string           GetDescription() const;
@@ -343,7 +344,7 @@ public:
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
-  void EventPlayerChangeColour(CGamePlayer* player, uint8_t colour);
+  void EventPlayerChangeColor(CGamePlayer* player, uint8_t colour);
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
   void EventPlayerChangeHandicap(CGamePlayer* player, uint8_t handicap);
   void EventPlayerDropRequest(CGamePlayer* player);
@@ -363,28 +364,51 @@ public:
   CGamePlayer* GetPlayerFromName(std::string name, bool sensitive) const;
   bool         HasOwnerSet() const;
   bool         HasOwnerInGame() const;
-  uint8_t      GetPlayerFromNamePartial(std::string name, CGamePlayer** player) const;
-  std::string  GetDBPlayerNameFromColour(uint8_t colour) const;
-  CGamePlayer* GetPlayerFromColour(uint8_t colour) const;
+  uint8_t      GetPlayerFromNamePartial(std::string name, CGamePlayer*& player) const;
+  std::string  GetDBPlayerNameFromColor(uint8_t colour) const;
+  CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
-  uint8_t              GetNewColour() const;
+  uint8_t              GetNewColor() const;
   std::vector<uint8_t> GetPIDs() const;
   std::vector<uint8_t> GetPIDs(uint8_t excludePID) const;
   uint8_t GetHostPID() const;
-  uint8_t GetEmptySlot(bool reserved) const;
-  uint8_t GetEmptySlot(uint8_t team, uint8_t PID) const;
-  uint8_t GetEmptyObserverSlot() const;
-  void SwapSlots(uint8_t SID1, uint8_t SID2);
+  uint8_t GetEmptySID(bool reserved) const;
+  uint8_t GetEmptySID(uint8_t team, uint8_t PID) const;
+  uint8_t GetEmptyObserverSID() const;
+  void SendIncomingPlayerInfo(CGamePlayer* player) const;
+  CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  bool CreateVirtualHost();
+  bool DeleteVirtualHost();
+
+  // Slot manipulation
+
+  CGameSlot* GetSlot(const uint8_t SID);
+  void InitSlots();
+  bool SwapEmptyAllySlot(const uint8_t SID);
+  bool SwapSlots(const uint8_t SID1, const uint8_t SID2);
   bool OpenSlot(uint8_t SID, bool kick);
   bool CloseSlot(uint8_t SID, bool kick);
-  void SendIncomingPlayerInfo(CGamePlayer* player) const;
-  CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);
-  bool ComputerSlot(uint8_t SID, uint8_t skill, bool kick);
-  void ColorSlot(uint8_t SID, uint8_t colour);
+  bool ComputerSlotInner(const uint8_t SID, const uint8_t skill);
+  bool ComputerSlot(const uint8_t SID, const uint8_t skill, bool kick);
+  bool SetSlotColor(const uint8_t SID, const uint8_t colour, const bool force);
+  bool SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force);
+  void SetSlotTeamAndColorAuto(const uint8_t SID);
+
+  void OpenObserverSlots();
+  void CloseObserverSlots();
+  void CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const std::string& name);
+  bool CreateFakePlayer(const bool useVirtualHostName);
+  bool CreateFakeObserver(const bool useVirtualHostName);
+  bool DeleteFakePlayer(uint8_t SID);
+
+  uint8_t FakeAllSlots();
+  void DeleteFakePlayers();
   void OpenAllSlots();
   void CloseAllSlots();
-  void ComputerAllSlots(uint8_t skill);
+  bool ComputerNSlots(const uint8_t expectedCount, const uint8_t skill);
+  void ComputerAllSlots(const uint8_t skill);
   void ShuffleSlots();
+
   void ReportSpoofed(const std::string& server, CGamePlayer* player);
   void AddToRealmVerified(const std::string& server, CGamePlayer* player, bool sendMessage);
   void AddToReserved(const std::string& name);
@@ -412,19 +436,28 @@ public:
   void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
   void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
 
-  void OpenObserverSlots();
-  void CloseObserverSlots();
-  bool CreateVirtualHost();
-  bool DeleteVirtualHost();
-  void CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const uint8_t team, const std::string& name);
-  bool CreateFakePlayer(const bool useVirtualHostName);
-  bool CreateFakeObserver(const bool useVirtualHostName);
-  bool DeleteFakePlayer(uint8_t SID);
-  void DeleteFakePlayers();
-  uint8_t FakeAllSlots();
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
   void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }
   void RemoveCreator();
+
+  uint8_t GetNumEnabledTeamSlots(const uint8_t team) const;
+  std::vector<uint8_t> GetNumFixedComputersByTeam() const;
+  std::vector<uint8_t> GetPotentialTeamSizes() const;
+  std::pair<uint8_t, uint8_t> GetLargestPotentialTeam() const;
+  std::pair<uint8_t, uint8_t> GetSmallestPotentialTeam() const;
+  std::vector<uint8_t> GetActiveTeamSizes() const;
+  uint8_t GetSelectableTeamSlot(const uint8_t team, const uint8_t endSID, const bool force) const;
+  uint8_t GetSelectableIsolateTeamSlot(const uint8_t team) const;
+  bool FindHumanVsAITeams(const uint8_t humanCount, const uint8_t computerCount, std::pair<uint8_t, uint8_t>& teams) const;
+  uint8_t GetOneVsAllTeamAll() const;
+  uint8_t GetOneVsAllTeamOne(const uint8_t teamAll) const;
+
+  // These are the main game modes
+  bool SetLayoutFFA();
+  bool SetLayoutOneVsAll(const CGamePlayer* player);
+  bool SetLayoutTwoTeams();
+  bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
+  bool SetLayoutCompact();
 };
 
 #endif // AURA_GAME_H_

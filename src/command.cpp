@@ -615,13 +615,15 @@ void CCommandContext::ErrorAll(const string& message)
 CGamePlayer* CCommandContext::GetTargetPlayer(const string& target)
 {
   CGamePlayer* TargetPlayer = nullptr;
-  if (target.empty() || !m_TargetGame) {
+  if (!m_TargetGame) {
     return TargetPlayer;
   }
 
-  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, &TargetPlayer);
+  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, TargetPlayer);
   if (Matches > 1) {
-    TargetPlayer = nullptr;
+    ErrorReply("Player [" + target + "] ambiguous.");
+  } else if (Matches == 0) {
+    ErrorReply("Player [" + target + "] not found.");
   }
   return TargetPlayer;
 }
@@ -634,11 +636,86 @@ CGamePlayer* CCommandContext::GetTargetPlayerOrSelf(const string& target)
 
   CGamePlayer* targetPlayer = nullptr;
   if (!m_TargetGame) return targetPlayer;
-  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, &targetPlayer);
+  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, targetPlayer);
   if (Matches > 1) {
     targetPlayer = nullptr;
   }
   return targetPlayer;
+}
+
+bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player)
+{
+  if (!m_TargetGame || target.empty()) {
+    ErrorReply("Please provide a player @name or #slot.");
+    return false;
+  }
+  switch (target[0]) {
+    case '#': {
+      uint8_t testSID = ParseSID(target.substr(1));
+      CGameSlot* slot = m_TargetGame->GetSlot(testSID);
+      if (!slot) {
+        ErrorReply("Slot " + ToDecString(testSID + 1) + " not found.");
+        return false;
+      }
+      SID = testSID;
+      player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+      return true;
+    }
+
+    case '@': {
+      player = GetTargetPlayer(target.substr(1));
+      return player != nullptr;
+    }
+
+    default: {
+      uint8_t testSID = ParseSID(target);
+      CGameSlot* slot = m_TargetGame->GetSlot(testSID);
+      CGamePlayer* testPlayer = nullptr;
+      uint8_t matches = m_TargetGame->GetPlayerFromNamePartial(target.substr(1), testPlayer);
+      if (slot && matches > 0 || !slot && matches == 0) {
+        ErrorReply("Please provide a player @name or #slot.");
+        break;
+      }
+      if (matches > 1) {
+        ErrorReply("Player [" + target + "] ambiguous.");
+        break;
+      } else if (matches == 0) {
+        SID = testSID;
+        player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+      } else {
+        SID = m_TargetGame->GetSIDFromPID(testPlayer->GetPID());
+        player = testPlayer;
+      }
+      break;
+    }
+  }
+}
+
+bool CCommandContext::ParseNonPlayerSlot(const std::string& target, uint8_t& SID)
+{
+  if (!m_TargetGame || target.empty()) {
+    ErrorReply("Please provide a player #slot.");
+    return false;
+  }
+
+  uint8_t testSID = 0xFF;
+  if (target[0] == '#') {
+    testSID = ParseSID(target.substr(1));
+  } else {
+    testSID = ParseSID(target);
+  }
+
+  CGameSlot* slot = m_TargetGame->GetSlot(testSID);
+  if (!slot) {
+    ErrorReply("Slot not found.");
+    return false;
+  }
+  if (slot->GetIsHuman()) {
+    ErrorReply("Slot is occupied by a player.");
+    return false;
+  }
+  SID = testSID;
+  return true;
 }
 
 CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
@@ -763,6 +840,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("version"):
     case HashCode("about"): {
       SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project. Say hi at <" + m_Aura->m_IssuesURL + ">");
+      break;
+    }
+
+    //
+    // !SC
+    //
+    case HashCode("sc"): {
+      SendReply("To verify your identity and use commands in game rooms, whisper me two letters: sc");
       break;
     }
 
@@ -965,7 +1050,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
 
@@ -1043,7 +1127,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const string MapPath = m_TargetGame->m_Map->GetClientPath();
+      const string MapPath = m_TargetGame->GetMap()->GetClientPath();
       size_t LastSlash = MapPath.rfind('\\');
 
       string inputName = Payload;
@@ -1275,20 +1359,28 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 12u);
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_Aura->m_MaxSlots);
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "c [SLOTNUM]");
         break;
       }
 
+      vector<string> failedSlots;
       for (auto& elem : Args) {
-        if (elem == 0 || elem > 12) {
+        if (elem == 0 || elem > m_Aura->m_MaxSlots) {
           ErrorReply("Usage: " + cmdToken + "c [SLOTNUM]");
           break;
         }
         uint8_t SID = static_cast<uint8_t>(elem) - 1;
         m_TargetGame->DeleteFakePlayer(SID);
-        m_TargetGame->CloseSlot(SID, CommandHash == HashCode("close"));
+        if (!m_TargetGame->CloseSlot(SID, CommandHash == HashCode("close"))) {
+          failedSlots.push_back(to_string(elem));
+        }
+      }
+      if (!failedSlots.empty()) {
+        SendReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be closed.");
+      } else {
+        SendReply("Opened " + to_string(Args.size()) + " slots.");
       }
       break;
     }
@@ -1355,10 +1447,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !HCL
+    // !MODE
     //
 
-    case HashCode("hcl"): {
+    
+    case HashCode("hcl"):
+    case HashCode("mode"): {
       if (!m_TargetGame)
         break;
 
@@ -1391,7 +1485,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->m_HCLCommandString = Payload;
-      SendAll("Setting game mode to HCL [" + m_TargetGame->m_HCLCommandString + "]");
+      SendAll("Game mode set to [" + m_TargetGame->m_HCLCommandString + "]");
       break;
     }
 
@@ -1450,7 +1544,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<string> Args = SplitArgs(Payload, 1u, 12u);
+      vector<string> Args = SplitArgs(Payload, 1u, m_Aura->m_MaxSlots);
 
       if (Args.empty()) {
         m_TargetGame->RemoveAllReserved();
@@ -1491,7 +1585,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
 
@@ -1534,7 +1627,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       try {
-        uint32_t TargetValue = stoul(Payload);
+        int32_t TargetValue = stol(Payload);
         if (TargetValue <= 0 || TargetValue > 60000) {
           // WC3 clients disconnect after a minute without network activity.
           ErrorReply("Invalid game latency [" + to_string(TargetValue) + "ms].");
@@ -1585,21 +1678,29 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 12u);
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_Aura->m_MaxSlots);
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "o [SLOTNUM]");
         break;
       }
 
+      vector<string> failedSlots;
       for (auto& elem : Args) {
-        if (elem == 0 || elem > 12) {
+        if (elem == 0 || elem > m_Aura->m_MaxSlots) {
           ErrorReply("Usage: " + cmdToken + "o [SLOTNUM]");
           break;
         }
         uint8_t SID = static_cast<uint8_t>(elem) - 1;
         if (!m_TargetGame->DeleteFakePlayer(SID)) {
-          m_TargetGame->OpenSlot(SID, CommandHash == HashCode("open"));
+          if (!m_TargetGame->OpenSlot(SID, CommandHash == HashCode("open"))) {
+            failedSlots.push_back(to_string(elem));
+          }
         }
+      }
+      if (!failedSlots.empty()) {
+        SendReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be opened.");
+      } else {
+        SendReply("Opened " + to_string(Args.size()) + " slots.");
       }
       break;
     }
@@ -1951,78 +2052,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Slots[0] == 0 || Slots[1] == 0 || Slots[0] > 12 || Slots[1] > 12) {
+      if (Slots[0] == 0 || Slots[1] == 0 || Slots[0] > m_Aura->m_MaxSlots || Slots[1] > m_Aura->m_MaxSlots) {
         ErrorReply("Usage: " + cmdToken + "swap <SLOTNUM>, <SLOTNUM>");
         break;
       }
 
       uint8_t SID1 = static_cast<uint8_t>(Slots[0]) - 1;
       uint8_t SID2 = static_cast<uint8_t>(Slots[1]) - 1;
-      m_TargetGame->SwapSlots(SID1, SID2);
-      break;
-    }
-
-    //
-    // !SYNCRESET
-    //
-
-    case HashCode("syncreset"):
-    case HashCode("sr"): {
-      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
-        break;
-
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot edit game settings.");
+      if (!m_TargetGame->SwapSlots(SID1, SID2)) {
+        ErrorReply("These slots cannot be swapped.");
         break;
       }
-
-      if (m_TargetGame->m_Lagging) {
-        ErrorReply("Cannot reset sync counters while there are players lagging.");
-        break;
-      }
-
-      m_TargetGame->ResetSync();
-      SendReply("Sync counters reset.", CHAT_LOG_CONSOLE);
-      break;
-    }
-
-    //
-    // !SYNCLIMIT
-    //
-
-    case HashCode("synclimit"):
-    case HashCode("sl"): {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror())
-        break;
-
-      if (Payload.empty()) {
-        SendReply("Sync limit: " + to_string(m_TargetGame->m_SyncLimit) + " packets.");
-        break;
-      }
-
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot edit game settings.");
-        break;
-      }
-
-      uint32_t     Packets;
-      stringstream SS;
-      SS << Payload;
-      SS >> Packets;
-
-      if (SS.fail()) {
-        ErrorReply("bad input #1 to !sl command");
-        break;
-      }
-
-      if (Packets < 2)
-        Packets = 2;
-      if (Packets > 10000)
-        Packets = 10000;
-
-      m_TargetGame->m_SyncLimit = Packets;
-
-      SendAll("Sync limit updated: " + to_string(m_TargetGame->m_SyncLimit) + " packets.");
+      SendReply("Swapped players at slots " + to_string(Slots[0]) + " and " + to_string(Slots[1]));
       break;
     }
 
@@ -2064,7 +2105,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      bool IsMapAvailable = !m_TargetGame->m_Map->GetMapData()->empty() && !m_TargetGame->m_Map->HasMismatch();
+      bool IsMapAvailable = !m_TargetGame->GetMap()->GetMapData()->empty() && !m_TargetGame->GetMap()->HasMismatch();
       if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
@@ -2085,9 +2126,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const uint8_t SID = m_TargetGame->GetSIDFromPID(targetPlayer->GetPID());
-
-      if (SID >= m_TargetGame->m_Slots.size() || m_TargetGame->m_Slots[SID].GetDownloadStatus() == 100) {
+      const CGameSlot* slot = m_TargetGame->GetSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()));
+      if (!slot || slot->GetDownloadStatus() == 100) {
         ErrorReply("Map transfer failed unexpectedly.", CHAT_LOG_CONSOLE);
         break;
       }
@@ -2168,7 +2208,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
       if (targetPlayer == m_Player) {
@@ -2462,7 +2501,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else if (m_TargetGame) {
         CGamePlayer* targetPlayer = GetTargetPlayer(Victim);
         if (!targetPlayer) {
-          ErrorReply("Player [" + Victim + "] not found.");
           break;
         }
         m_Aura->m_DB->BanAdd(targetPlayer->GetRealmDataBaseID(false), targetPlayer->GetName(), m_FromName, Reason);
@@ -2885,26 +2923,27 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
+        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
+      vector<string> Args = SplitArgs(Payload, 1u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
+        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] > 2) {
-        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2");
+      uint8_t SID = 0xFF;
+      if (!ParseNonPlayerSlot(Args[0], SID)) {
+        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
         break;
       }
-
-      uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
-      uint8_t Skill = static_cast<uint8_t>(Args[1]);
-
+      uint8_t skill = SLOTCOMP_HARD;
+      if (Args.size() >= 2) {
+        skill = ParseComputerSkill(Args[1]);
+      }
       m_TargetGame->DeleteFakePlayer(SID);
-      if (!m_TargetGame->ComputerSlot(SID, Skill, false)) {
+      if (!m_TargetGame->ComputerSlot(SID, skill, false)) {
         ErrorReply("Cannot add computer on that slot.");
         break;
       }
@@ -2912,7 +2951,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !COMPCOLOR (computer colour change)
+    // !COLOR (computer colour change)
     //
 
     case HashCode("color"): {
@@ -2932,40 +2971,44 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
+        ErrorReply("Usage: " + cmdToken + "color [PLAYER], [COLOR] - Color goes from 1 to 12");
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
+        ErrorReply("Usage: " + cmdToken + "color [PLAYER], [COLOR] - Color goes from 1 to 12");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] >= 12) {
-        ErrorReply("Usage: " + cmdToken + "compcolor [SLOT], [COLOR] - Color goes from 0 to 12");
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "color [PLAYER], [COLOR] - Color goes from 1 to 12");
         break;
       }
 
-      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
-        ErrorReply("This map has Fixed Player Settings enabled.");
+      uint8_t color = ParseColor(Args[1]);
+      if (color >= m_Aura->m_MaxSlots) {
+        color = ParseSID(Args[1]);
+
+        if (color >= m_Aura->m_MaxSlots) {
+          ErrorReply("Color identifier \"" + Args[1] + "\" is not valid.");
+          break;
+        }
+      }
+
+      if (!m_TargetGame->SetSlotColor(SID, color, true)) {
+        ErrorReply("Cannot change slot #" + Args[0] + " color to " + Args[1]);
         break;
       }
 
-      uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
-      uint8_t Color = static_cast<uint8_t>(Args[1]);
-
-      if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED || m_TargetGame->m_Slots[SID].GetComputer() != 1) {
-        ErrorReply("There is no computer in slot " + to_string(Args[0]));
-        break;
-      }
-
-      m_TargetGame->ColorSlot(SID, Color);
+      SendReply("Color changed.");
       break;
     }
 
     //
-    // !CHANDICAP (handicap change)
+    // !HANDICAP (handicap change)
     //
 
     case HashCode("handicap"): {
@@ -2985,41 +3028,55 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
+        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
+        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] % 10 != 0 || !(50 <= Args[1] && Args[1] <= 100)) {
-        ErrorReply("Usage: " + cmdToken + "comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100");
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
 
-      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      vector<uint32_t> handicap = SplitNumericArgs(Args[1], 1u, 1u);
+      if (handicap.empty() || handicap[0] % 10 != 0 || !(50 <= handicap[0] && handicap[0] <= 100)) {
+        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
+        break;
+      }
+
+      if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+        // The WC3 client is incapable of modifying handicap when Fixed Player Settings is enabled.
+        // However, the GUI misleads users into thinking that it can be modified.
+        // While it's indeed editable for HCL purposes,
+        // we don't intend to forcibly allow its edition outside of HCL context.
         ErrorReply("This map has Fixed Player Settings enabled.");
         break;
       }
 
-      uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
-      uint8_t Handicap = static_cast<uint8_t>(Args[1]);
-
-      if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
-        ErrorReply("Slot " + to_string(Args[0]) + " is empty.");
+      CGameSlot* slot = m_TargetGame->GetSlot(SID);
+      if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+        ErrorReply("Slot " + Args[0] + " is empty.");
         break;
       }
 
-      m_TargetGame->m_Slots[SID].SetHandicap(Handicap);
+      if (slot->GetHandicap() == handicap[0]) {
+        ErrorReply("Handicap is already at " + Args[1] + "%");
+        break;
+      }
+      slot->SetHandicap(handicap[0]);
       m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
 
     //
-    // !COMPRACE (computer race change)
+    // !RACE (race change)
     //
 
     case HashCode("comprace"):
@@ -3040,58 +3097,49 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
-      uint32_t Slot = 0;
-      try {
-        Slot = stoul(Args[0]);
-        if (Slot == 0 || Slot > m_TargetGame->m_Slots.size()) {
-          ErrorReply("Usage: " + cmdToken + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
-          break;
-        }
-      } catch (...) {
-        ErrorReply("Usage: " + cmdToken + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
-      if (Args[1] != "random" && Args[1] != "human" && Args[1] != "orc" && Args[1] != "undead" && Args[1] != "elf" && Args[1] != "nightelf" && Args[1] != "night elf") {
-        ErrorReply("Usage: " + cmdToken + "comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random");
+      const uint8_t Race = ParseRace(Args[1]);
+      if (Race == SLOTRACE_INVALID) {
+        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
         break;
       }
 
-      uint8_t SID = static_cast<uint8_t>(Slot) - 1;
-      string Race = Args[1];
-
-      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
         ErrorReply("This map has Fixed Player Settings enabled.");
         break;
       }
 
-      if (m_TargetGame->m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+      if (m_TargetGame->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
         ErrorReply("This game has Random Races enabled.");
         break;
       }
 
-      if (Race == "human") {
-        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_HUMAN | SLOTRACE_SELECTABLE);
-      } else if (Race == "orc") {
-        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_ORC | SLOTRACE_SELECTABLE);
-      } else if (Race == "elf" || Race == "nightelf" || Race == "night elf") {
-        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_NIGHTELF | SLOTRACE_SELECTABLE);
-      } else if (Race == "undead") {
-        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_UNDEAD | SLOTRACE_SELECTABLE);
-      } else if (Race == "random") {
-        m_TargetGame->m_Slots[SID].SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
-        
+      CGameSlot* slot = m_TargetGame->GetSlot(SID);
+      if (!slot || slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == m_Aura->m_MaxSlots) {
+        ErrorReply("Slot " + Args[0] + " is not playable.");
+        break;
       }
+      if (0 == (slot->GetRace() & Race)) {
+        ErrorReply("Slot " + Args[0] + " is already " + Args[1]);
+        break;
+      }
+      slot->SetRace(Race | SLOTRACE_SELECTABLE);
       m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
@@ -3128,7 +3176,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() || Args[1] >= 14) {
+      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() ||
+        Args[1] > m_Aura->m_MaxSlots + 1) { // accept 13/25 as observer
         ErrorReply("Usage: " + cmdToken + "compteam [SLOT], [TEAM]");
         break;
       }
@@ -3136,24 +3185,29 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
       uint8_t Team = static_cast<uint8_t>(Args[1]) - 1;
 
-      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
-        ErrorReply("This map has Fixed Player Settings enabled. Instead, swap players with " + cmdToken + "swap.");
+      if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+        ErrorReply("Slot " + to_string(Args[0]) + " is empty.");
         break;
       }
-      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-        ErrorReply("This map has Custom Forces enabled. Instead, swap players with " + cmdToken + "swap.");
-        break;
-      }
-      if (Team != m_Aura->m_MaxSlots && Team > m_TargetGame->GetMap()->GetMapNumTeams()) {
+
+      if (Team == m_Aura->m_MaxSlots) {
+        if (m_TargetGame->GetMap()->GetMapObservers() != MAPOBS_ALLOWED && m_TargetGame->GetMap()->GetMapObservers() != MAPOBS_REFEREES) {
+          ErrorReply("This game does not have observers enabled.");
+          break;
+        }
+        if (m_TargetGame->m_Slots[SID].GetIsComputer()) {
+          ErrorReply("Computer slots cannot be moved to observers team.");
+          break;
+        }
+      } else if (Team > m_TargetGame->GetMap()->GetMapNumTeams()) {
         ErrorReply("This map does not allow Team #" + to_string(Args[1]) + ".");
         break;
       }
-      if (Team == m_Aura->m_MaxSlots && m_TargetGame->m_Slots[SID].GetComputer()) {
-        ErrorReply("Slot " + to_string(Args[0]) + " is a computer slot.");
-        break;
+      if (!m_TargetGame->SetSlotTeam(SID, Team, true)) {
+        ErrorReply("Cannot move player to Team #" + to_string(Args[1])+ ".");
+      } else {
+        SendReply("Team updated.");
       }
-      m_TargetGame->m_Slots[SID].SetTeam(Team);
-      m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
 
@@ -3190,24 +3244,24 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
-      if (!(m_TargetGame->m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_TargetGame->m_Map->GetMapObservers() == MAPOBS_REFEREES)) {
+      if (!(m_TargetGame->GetMap()->GetMapObservers() == MAPOBS_ALLOWED || m_TargetGame->GetMap()->GetMapObservers() == MAPOBS_REFEREES)) {
         ErrorReply("This lobby does not allow observers.");
         break;
       }
-      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
-        ErrorReply("This map has Fixed Player Settings enabled. Instead, swap players with " + cmdToken + "swap.");
+      if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+        ErrorReply("Slot " + to_string(Args[0]) + " is empty.");
         break;
       }
-      if (m_TargetGame->m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-        ErrorReply("This map has Custom Forces enabled. Instead, swap players with " + cmdToken + "swap.");
+      if (m_TargetGame->m_Slots[SID].GetIsComputer()) {
+        ErrorReply("Computer slots cannot be moved to observers team.");
         break;
       }
-      if (m_TargetGame->m_Slots[SID].GetComputer()) {
-        ErrorReply("Slot " + to_string(Args[0]) + " is a computer slot.");
-        break;
+
+      if (!m_TargetGame->SetSlotTeam(SID, m_Aura->m_MaxSlots, true)) {
+        ErrorReply("Cannot move player to Team #" + to_string(Args[1])+ ".");
+      } else {
+        SendReply("Player moved to observers team.");
       }
-      m_TargetGame->m_Slots[SID].SetTeam(m_Aura->m_MaxSlots);
-      m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
 
@@ -3232,19 +3286,180 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
-      if (Payload.empty()) Args.push_back(2);
-
-      if (Args.empty() || Args[0] > 2) {
-        ErrorReply("Usage: " + cmdToken + "fill [SKILL] - Skill is any of: 0, 1, 2");
+      const uint8_t targetSkill = ParseComputerSkill(Payload);
+      if (targetSkill == SLOTCOMP_INVALID) {
+        ErrorReply("Usage: " + cmdToken + "fill [SKILL] - Skill is any of: easy, normal, insane");
         break;
       }
-
-      uint8_t Skill = static_cast<uint8_t>(Args[0]);
-      m_TargetGame->ComputerAllSlots(Skill);
+      m_TargetGame->ComputerAllSlots(targetSkill);
       break;
     }
 
+    //
+    // !FFA
+    //
+
+    case HashCode("ffa"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+
+      if (m_TargetGame->GetNumControllers() <= 1) {
+        ErrorReply("Not enough players in this game.");
+        break;
+      }
+
+      if (!m_TargetGame->SetLayoutFFA()) {
+        ErrorReply("This map does not support FFA.");
+      } else {
+        SendReply("Game set to free-for-all.");
+      }
+      break;
+    }
+
+    //
+    // !VSALL
+    //
+
+    case HashCode("pro"):
+    case HashCode("lynch"):
+    case HashCode("vsall"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+
+      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      if (!targetPlayer) {
+        ErrorReply("Player [" + Payload + "] not found.");
+        break;
+      }
+
+      const uint8_t othersCount = m_TargetGame->GetNumControllers() - 1;
+      if (othersCount < 2) {
+        ErrorReply("There are too few players in the game.");
+        break;
+      }
+
+      if (!m_TargetGame->SetLayoutOneVsAll(targetPlayer)) {
+        ErrorReply("This map does not support " + ToDecString(othersCount) + " vs 1.");
+      } else {
+        SendReply("Game set to everyone against " + targetPlayer->GetName());
+      }
+
+      break;
+    }
+
+    //
+    // !TERMINATOR
+    //
+
+    case HashCode("vsai"):
+    case HashCode("terminator"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+
+      if (!Payload.empty()) {
+        vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
+        if (Args[0] <= 0 || Args[0] >= m_TargetGame->m_Slots.size()) {
+          ErrorReply("Usage: " + cmdToken + "terminator");
+          ErrorReply("Usage: " + cmdToken + "terminator [NUMBER]");
+          break;
+        }
+        if (!m_TargetGame->ComputerNSlots(Args[0], SLOTCOMP_HARD)) {
+          ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumConnectionsOrFake()) + " vs " + to_string(Args[0]) + " AIs.");
+          break;
+        }
+      }
+      const uint8_t computersCount = m_TargetGame->GetNumComputers();
+      if (computersCount == 0) {
+        ErrorReply("No computer slots found. Use [" + cmdToken + "terminator NUMBER] to play against one or more insane computers.");
+        break;
+      }
+      const uint8_t humansCount = m_TargetGame->GetNumConnectionsOrFake();
+      pair<uint8_t, uint8_t> matchedTeams;
+      if (!m_TargetGame->FindHumanVsAITeams(humansCount, computersCount, matchedTeams)) {
+        ErrorReply("This map does not support " + ToDecString(humansCount) + " vs " + ToDecString(computersCount) + " computers.");
+        break;
+      }
+
+      if (!m_TargetGame->SetLayoutHumansVsAI(matchedTeams.first, matchedTeams.second)) {
+        ErrorReply("This map does not support " + ToDecString(humansCount) + " vs " + ToDecString(computersCount) + " computers.");
+      } else {
+        SendReply("Game set to versus AI.");
+      }
+      break;
+    }
+
+    //
+    // !TEAMS
+    //
+
+    case HashCode("teams"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+      if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+        if (m_TargetGame->GetMap()->GetMapNumTeams() == 2) {
+          // This is common enough to warrant a special case.
+          if (m_TargetGame->SetLayoutTwoTeams()) {
+            SendReply("Teams automatically arranged.");
+            break;
+          }
+        }
+      } else {
+        if (m_TargetGame->SetLayoutCompact()) {
+          SendReply("Teams automatically arranged.");
+          break;
+        }
+      }
+      ErrorReply("Failed to automatically assign teams.");
+      break;
+    }
+    
     //
     // !FAKEPLAYER
     //
@@ -3524,7 +3739,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
       if (targetPlayer == m_Player) {
@@ -3688,7 +3902,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         Name = TrimString(Name.substr(0, RealmStart));
       }
 
-      if (Name.empty() || Name.length() > 33) { // TODO: What's the maximum size of a user name?
+      if (Name.empty() || Name.length() > MAX_PLAYER_NAME_SIZE) {
         ErrorReply("Usage: " + cmdToken + "whois [PLAYERNAME]");
         break;
       }
@@ -4090,9 +4304,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<uint32_t> TargetValue;
+      optional<int32_t> TargetValue;
       try {
-        TargetValue = stoul(Payload);
+        TargetValue = stol(Payload);
       } catch (...) {
       }
 

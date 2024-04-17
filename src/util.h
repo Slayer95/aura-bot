@@ -59,6 +59,11 @@
 
 #pragma once
 
+inline std::string ToDecString(const uint8_t byte)
+{
+  return std::to_string(static_cast<uint16_t>(byte));
+}
+
 inline std::string ToHexString(uint32_t i)
 {
   std::string       result;
@@ -751,6 +756,14 @@ inline void NormalizeDirectory(std::filesystem::path& filePath) {
   if (filePath.empty()) return;
   filePath += filePath.preferred_separator;
   filePath = filePath.lexically_normal();
+}
+
+inline bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> counters)
+{
+  do {
+    --element;
+  } while (counters[element] != 0 && element > 0);
+  return counters[element] == 0;
 }
 
 #endif // AURA_UTIL_H_

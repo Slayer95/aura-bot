@@ -369,8 +369,9 @@ filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const s
     std::transform(mutated_file.begin(), mutated_file.end(), mutated_file.begin(), ::tolower);
 
     for (size_t index = 0; index < bs.size() && index < mutated_file.size(); ++index) {
-      if (bs[index])
+      if (bs[index]) {
         mutated_file[index] = static_cast<char>(::toupper(mutated_file[index]));
+      }
     }
 
     filesystem::path testPath = path / filesystem::path(mutated_file);

@@ -238,16 +238,16 @@ private:
   std::string m_Name;
   uint64_t    m_LoadingTime;
   uint64_t    m_Left;
-  uint8_t     m_Colour;
+  uint8_t     m_Color;
 
 public:
-  CDBGamePlayer(std::string name, uint64_t nLoadingTime, uint64_t nLeft, uint32_t nColour);
+  CDBGamePlayer(std::string name, uint64_t nLoadingTime, uint64_t nLeft, uint32_t nColor);
   ~CDBGamePlayer();
 
   inline std::string GetName() const { return m_Name; }
   inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
   inline uint64_t    GetLeft() const { return m_Left; }
-  inline uint8_t     GetColour() const { return m_Colour; }
+  inline uint8_t     GetColor() const { return m_Color; }
 
   inline void SetLoadingTime(uint64_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
   inline void SetLeft(uint64_t nLeft) { m_Left = nLeft; }
@@ -280,8 +280,8 @@ public:
 class CDBDotAPlayer
 {
 private:
-  uint8_t  m_Colour;
-  uint32_t m_NewColour;
+  uint8_t  m_Color;
+  uint32_t m_NewColor;
   uint32_t m_Kills;
   uint32_t m_Deaths;
   uint32_t m_CreepKills;
@@ -297,8 +297,8 @@ public:
   CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills);
   ~CDBDotAPlayer();
 
-  inline uint8_t GetColour() const { return m_Colour; }
-  inline uint8_t GetNewColour() const { return m_NewColour; }
+  inline uint8_t GetColor() const { return m_Color; }
+  inline uint8_t GetNewColor() const { return m_NewColor; }
   inline uint32_t GetKills() const { return m_Kills; }
   inline uint32_t GetDeaths() const { return m_Deaths; }
   inline uint32_t GetCreepKills() const { return m_CreepKills; }
@@ -316,8 +316,8 @@ public:
   inline void IncRaxKills() { ++m_RaxKills; }
   inline void IncCourierKills() { ++m_CourierKills; }
 
-  inline void SetColour(uint32_t nColour) { m_Colour = nColour; }
-  inline void SetNewColour(uint32_t nNewColour) { m_NewColour = nNewColour; }
+  inline void SetColor(uint32_t nColor) { m_Color = nColor; }
+  inline void SetNewColor(uint32_t nNewColor) { m_NewColor = nNewColor; }
   inline void SetCreepKills(uint32_t nCreepKills) { m_CreepKills = nCreepKills; }
   inline void SetCreepDenies(uint32_t nCreepDenies) { m_CreepDenies = nCreepDenies; }
   inline void SetNeutralKills(uint32_t nNeutralKills) { m_NeutralKills = nNeutralKills; }

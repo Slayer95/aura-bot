@@ -186,7 +186,7 @@ CIncomingChatPlayer* CGameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<
   // elseif( Flag == 17 )
   //		1 byte            -> Team
   // elseif( Flag == 18 )
-  //		1 byte            -> Colour
+  //		1 byte            -> Color
   // elseif( Flag == 19 )
   //		1 byte            -> Race
   // elseif( Flag == 20 )
@@ -344,7 +344,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REJECTJOIN(uint32_t reason)
 
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t PID, const string& name, const std::vector<uint8_t>& externalIP, const std::vector<uint8_t>& internalIP)
 {
-  if (name.empty() || name.size() > 15) {
+  if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
     Print("[GAMEPROTO] Invalid player name");
     return std::vector<uint8_t>();
   }

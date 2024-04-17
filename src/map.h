@@ -156,7 +156,7 @@ private:
   uint32_t               m_MapOptions;
   uint32_t               m_MapEditorVersion;
   uint8_t                m_MapMinGameVersion;
-  uint8_t                m_MapNumPlayers; // config value: max map number of players
+  uint8_t                m_MapNumControllers; // config value: max map number of players
   uint8_t                m_MapNumTeams;   // config value: max map number of teams
   uint8_t                m_MapSpeed;
   uint8_t                m_MapVisibility;
@@ -203,7 +203,7 @@ public:
   inline std::string            GetServerPath() const { return m_MapServerPath; }
   std::string                   GetMapFileName() const;
   inline std::string*           GetMapData() { return &m_MapData; }
-  inline uint8_t                GetMapNumPlayers() const { return m_MapNumPlayers; }
+  inline uint8_t                GetMapNumControllers() const { return m_MapNumControllers; }
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
   uint8_t                       GetLobbyRace(const CGameSlot* slot) const;

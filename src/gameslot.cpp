@@ -58,7 +58,7 @@ CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
     m_SlotStatus(SLOTSTATUS_OPEN),
     m_Computer(0),
     m_Team(0),
-    m_Colour(1),
+    m_Color(1),
     m_Race(SLOTRACE_RANDOM),
     m_ComputerType(SLOTCOMP_NORMAL),
     m_Handicap(100)
@@ -72,7 +72,7 @@ CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
     m_SlotStatus     = n[2];
     m_Computer       = n[3];
     m_Team           = n[4];
-    m_Colour         = n[5];
+    m_Color         = n[5];
     m_Race           = n[6];
 
     if (size >= 8)
@@ -85,13 +85,13 @@ CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
   }
 }
 
-CGameSlot::CGameSlot(const uint8_t nPID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColour, const uint8_t nRace, const uint8_t nComputerType, const uint8_t nHandicap)
+CGameSlot::CGameSlot(const uint8_t nPID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType, const uint8_t nHandicap)
   : m_PID(nPID),
     m_DownloadStatus(nDownloadStatus),
     m_SlotStatus(nSlotStatus),
     m_Computer(nComputer),
     m_Team(nTeam),
-    m_Colour(nColour),
+    m_Color(nColor),
     m_Race(nRace),
     m_ComputerType(nComputerType),
     m_Handicap(nHandicap)

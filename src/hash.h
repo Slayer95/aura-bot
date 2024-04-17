@@ -1,3 +1,6 @@
+#ifndef AURA_HASH_H_
+#define AURA_HASH_H_
+
 #include <string>
 
 // compile time functions for char*
@@ -18,3 +21,4 @@ static uint64_t HashCode(const std::string& str)
 {
   return HashCode(str.c_str());
 }
+#endif

@@ -129,20 +129,20 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                 // a hero died
 
                 const string   VictimName   = KeyString.substr(4);
-                uint8_t  KillerColour       = static_cast<uint8_t>(ValueInt);
-                uint8_t  VictimColour = 0;
+                uint8_t  KillerColor       = static_cast<uint8_t>(ValueInt);
+                uint8_t  VictimColor = 0;
                 try {
-                  VictimColour = static_cast<uint8_t>(stoul(VictimName));
+                  VictimColor = static_cast<uint8_t>(stoul(VictimName));
                 } catch (...) {
                 }
-                CGamePlayer*   Killer       = m_Game->GetPlayerFromColour(KillerColour);
-                CGamePlayer*   Victim       = m_Game->GetPlayerFromColour(VictimColour);
+                CGamePlayer*   Killer       = m_Game->GetPlayerFromColor(KillerColor);
+                CGamePlayer*   Victim       = m_Game->GetPlayerFromColor(VictimColor);
 
-                if (!m_Players[KillerColour])
-                  m_Players[KillerColour] = new CDBDotAPlayer();
+                if (!m_Players[KillerColor])
+                  m_Players[KillerColor] = new CDBDotAPlayer();
 
-                if (!m_Players[VictimColour])
-                  m_Players[VictimColour] = new CDBDotAPlayer();
+                if (!m_Players[VictimColor])
+                  m_Players[VictimColor] = new CDBDotAPlayer();
 
                 if (Victim)
                 {
@@ -150,19 +150,19 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                   {
                     // check for hero denies
 
-                    if (!((KillerColour <= 5 && VictimColour <= 5) || (KillerColour >= 7 && VictimColour >= 7)))
+                    if (!((KillerColor <= 5 && VictimColor <= 5) || (KillerColor >= 7 && VictimColor >= 7)))
                     {
                       // non-leaver killed a non-leaver
 
-                      m_Players[KillerColour]->IncKills();
-                      m_Players[VictimColour]->IncDeaths();
+                      m_Players[KillerColor]->IncKills();
+                      m_Players[VictimColor]->IncDeaths();
                     }
                   }
                   else
                   {
                     // Scourge/Sentinel/leaver killed a non-leaver
 
-                    m_Players[VictimColour]->IncDeaths();
+                    m_Players[VictimColor]->IncDeaths();
                   }
                 }
               }
@@ -170,19 +170,19 @@ bool CStats::ProcessAction(CIncomingAction* Action)
               {
                 // check if the assist was on a non-leaver
 
-                if (m_Game->GetPlayerFromColour(static_cast<uint8_t>(ValueInt)))
+                if (m_Game->GetPlayerFromColor(static_cast<uint8_t>(ValueInt)))
                 {
                   string         AssisterName   = KeyString.substr(6);
-                  uint8_t  AssisterColour       = 0;
+                  uint8_t  AssisterColor       = 0;
                   try {
-                    AssisterColour = static_cast<uint8_t>(stoul(AssisterName));
+                    AssisterColor = static_cast<uint8_t>(stoul(AssisterName));
                   } catch (...) {
                   }
 
-                  if (!m_Players[AssisterColour])
-                    m_Players[AssisterColour] = new CDBDotAPlayer();
+                  if (!m_Players[AssisterColor])
+                    m_Players[AssisterColor] = new CDBDotAPlayer();
 
-                  m_Players[AssisterColour]->IncAssists();
+                  m_Players[AssisterColor]->IncAssists();
                 }
               }
               else if (KeyString.size() >= 8 && KeyString.compare(0, 5, "Tower") == 0)
@@ -256,7 +256,7 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                 if (!m_Players[ID])
                 {
                   m_Players[ID] = new CDBDotAPlayer();
-                  m_Players[ID]->SetColour(ID);
+                  m_Players[ID]->SetColor(ID);
                 }
 
                 // Key "3"		-> Creep Kills
@@ -285,9 +285,9 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                       // unfortunately the actual player colours are from 1-5 and from 7-11 so we need to deal with this case here
 
                       if (ValueInt >= 6)
-                        m_Players[ID]->SetNewColour(ValueInt + 1);
+                        m_Players[ID]->SetNewColor(ValueInt + 1);
                       else
-                        m_Players[ID]->SetNewColour(ValueInt);
+                        m_Players[ID]->SetNewColor(ValueInt);
                     }
 
                     break;
@@ -334,9 +334,9 @@ void CStats::Save(CAura* Aura, CAuraDB* DB)
     {
       if (m_Players[i])
       {
-        const uint8_t Colour = m_Players[i]->GetNewColour();
+        const uint8_t Color = m_Players[i]->GetNewColor();
 
-        if (!((Colour >= 1 && Colour <= 5) || (Colour >= 7 && Colour <= 11)))
+        if (!((Color >= 1 && Color <= 5) || (Color >= 7 && Color <= 11)))
         {
           Print("[STATS: " + m_Game->GetGameName() + "] discarding player data, invalid colour found");
           delete m_Players[i];
@@ -346,7 +346,7 @@ void CStats::Save(CAura* Aura, CAuraDB* DB)
 
         for (uint32_t j = i + 1; j < 12; ++j)
         {
-          if (m_Players[j] && Colour == m_Players[j]->GetNewColour())
+          if (m_Players[j] && Color == m_Players[j]->GetNewColor())
           {
             Print("[STATS: " + m_Game->GetGameName() + "] discarding player data, duplicate colour found");
             delete m_Players[j];
@@ -360,17 +360,17 @@ void CStats::Save(CAura* Aura, CAuraDB* DB)
     {
       if (player)
       {
-        const uint8_t  Colour = player->GetNewColour();
-        const string   Name   = m_Game->GetDBPlayerNameFromColour(Colour);
+        const uint8_t  Color = player->GetNewColor();
+        const string   Name   = m_Game->GetDBPlayerNameFromColor(Color);
 
         if (Name.empty())
           continue;
 
         uint8_t Win = 0;
 
-        if ((m_Winner == 1 && Colour >= 1 && Colour <= 5) || (m_Winner == 2 && Colour >= 7 && Colour <= 11))
+        if ((m_Winner == 1 && Color >= 1 && Color <= 5) || (m_Winner == 2 && Color >= 7 && Color <= 11))
           Win = 1;
-        else if ((m_Winner == 2 && Colour >= 1 && Colour <= 5) || (m_Winner == 1 && Colour >= 7 && Colour <= 11))
+        else if ((m_Winner == 2 && Color >= 1 && Color <= 5) || (m_Winner == 1 && Color >= 7 && Color <= 11))
           Win = 2;
 
         Aura->m_DB->DotAPlayerAdd(Name, Win, player->GetKills(), player->GetDeaths(), player->GetCreepKills(), player->GetCreepDenies(), player->GetAssists(), player->GetNeutralKills(), player->GetTowerKills(), player->GetRaxKills(), player->GetCourierKills());

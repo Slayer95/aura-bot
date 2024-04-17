@@ -862,11 +862,11 @@ CDBBan::~CDBBan() = default;
 // CDBGamePlayer
 //
 
-CDBGamePlayer::CDBGamePlayer(string nName, uint64_t nLoadingTime, uint64_t nLeft, uint32_t nColour)
+CDBGamePlayer::CDBGamePlayer(string nName, uint64_t nLoadingTime, uint64_t nLeft, uint32_t nColor)
   : m_Name(std::move(nName)),
     m_LoadingTime(nLoadingTime),
     m_Left(nLeft),
-    m_Colour(nColour)
+    m_Color(nColor)
 {
 }
 
@@ -890,8 +890,8 @@ CDBGamePlayerSummary::~CDBGamePlayerSummary() = default;
 //
 
 CDBDotAPlayer::CDBDotAPlayer()
-  : m_Colour(0),
-    m_NewColour(0),
+  : m_Color(0),
+    m_NewColor(0),
     m_Kills(0),
     m_Deaths(0),
     m_CreepKills(0),
@@ -905,8 +905,8 @@ CDBDotAPlayer::CDBDotAPlayer()
 }
 
 CDBDotAPlayer::CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills)
-  : m_Colour(0),
-    m_NewColour(0),
+  : m_Color(0),
+    m_NewColor(0),
     m_Kills(nKills),
     m_Deaths(nDeaths),
     m_CreepKills(nCreepKills),
