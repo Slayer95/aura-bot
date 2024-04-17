@@ -91,9 +91,7 @@ wstring GetFileExtension(const wstring& inputPath) {
   size_t extIndex = fileName.find_last_of(L".");
   if (extIndex == wstring::npos) return wstring();
   wstring extension = fileName.substr(extIndex);
-  std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](wchar_t c) {
-    return std::tolower(c);
-  });
+  std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](wchar_t c) { return static_cast<wchar_t>(std::tolower(c)); });
   return extension;
 }
 #else
@@ -140,7 +138,7 @@ vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<P
 
   while (handle != INVALID_HANDLE_VALUE) {
     wstring fileName(data.cFileName);
-    transform(begin(fileName), end(fileName), begin(fileName), ::tolower);
+    transform(begin(fileName), end(fileName), begin(fileName), [](wchar_t c) { return static_cast<wchar_t>(std::tolower(c)); });
     if (fileName != L"..") {
       if (extensions.empty() || extensions.find(GetFileExtension(fileName)) != extensions.end()) {
         Files.emplace_back(fileName);
@@ -161,7 +159,7 @@ vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<P
 
   while ((dp = readdir(dir)) != nullptr) {
     string fileName = string(dp->d_name);
-    transform(begin(fileName), end(fileName), begin(fileName), ::tolower);
+    transform(begin(fileName), end(fileName), begin(fileName), [](char c) { return static_cast<char>(std::tolower(c)); });
     if (fileName != "." && fileName != "..") {
       if (extensions.empty() || extensions.find(GetFileExtension(fileName)) != extensions.end()) {
         Files.emplace_back(dp->d_name);
@@ -366,7 +364,7 @@ filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const s
 
   for (size_t perm = 0; perm < NumberOfCombinations; ++perm) {
     std::bitset<64> bs(perm);
-    std::transform(mutated_file.begin(), mutated_file.end(), mutated_file.begin(), ::tolower);
+    std::transform(mutated_file.begin(), mutated_file.end(), mutated_file.begin(), [](char c) { return static_cast<char>(std::tolower(c)); });
 
     for (size_t index = 0; index < bs.size() && index < mutated_file.size(); ++index) {
       if (bs[index]) {
@@ -441,7 +439,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
     string mapString = PathToString(mapName);
     if (mapString.empty()) continue;
     string cmpName = RemoveNonAlphanumeric(mapString);
-    transform(begin(cmpName), end(cmpName), begin(cmpName), ::tolower);
+    transform(begin(cmpName), end(cmpName), begin(cmpName), [](char c) { return static_cast<char>(std::tolower(c)); });
     if ((fuzzyPattern.size() <= cmpName.size() + maxDistance) && (cmpName.size() <= maxDistance + fuzzyPattern.size())) {
       string::size_type distance = GetLevenshteinDistance(fuzzyPattern, cmpName); // source to target
       if (distance <= maxDistance) {

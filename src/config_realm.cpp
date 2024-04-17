@@ -233,7 +233,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_UniqueName             = CFG.GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
   m_CanonicalName          = CFG.GetString(m_CFGKeyPrefix + "canonical_name", m_UniqueName); // may be shared by several servers
   m_InputID                = CFG.GetString(m_CFGKeyPrefix + "input_id", m_UniqueName); // expected unique
-  transform(begin(m_InputID), end(m_InputID), begin(m_InputID), ::tolower);
+  transform(begin(m_InputID), end(m_InputID), begin(m_InputID), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DataBaseID             = CFG.GetString(m_CFGKeyPrefix + "db_id", m_HostName); // may be shared by several servers
   m_CDKeyROC               = CFG.GetString(m_CFGKeyPrefix + "cd_key.roc", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
   m_CDKeyTFT               = CFG.GetString(m_CFGKeyPrefix + "cd_key.tft", 26, 26, "FFFFFFFFFFFFFFFFFFFFFFFFFF");
@@ -243,8 +243,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_CDKeyTFT.erase(remove(begin(m_CDKeyTFT), end(m_CDKeyTFT), '-'), end(m_CDKeyTFT));
   m_CDKeyROC.erase(remove(begin(m_CDKeyROC), end(m_CDKeyROC), ' '), end(m_CDKeyROC));
   m_CDKeyTFT.erase(remove(begin(m_CDKeyTFT), end(m_CDKeyTFT), ' '), end(m_CDKeyTFT));
-  transform(begin(m_CDKeyROC), end(m_CDKeyROC), begin(m_CDKeyROC), ::toupper);
-  transform(begin(m_CDKeyTFT), end(m_CDKeyTFT), begin(m_CDKeyTFT), ::toupper);
+  transform(begin(m_CDKeyROC), end(m_CDKeyROC), begin(m_CDKeyROC), [](char c) { return static_cast<char>(std::toupper(c)); });
+  transform(begin(m_CDKeyTFT), end(m_CDKeyTFT), begin(m_CDKeyTFT), [](char c) { return static_cast<char>(std::toupper(c)); });
 
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", m_Country);

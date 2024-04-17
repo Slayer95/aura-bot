@@ -1223,7 +1223,7 @@ void CRealm::ResetConnection(bool Errored)
 
 bool CRealm::GetIsModerator(string name) const
 {
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   if (m_Aura->m_DB->ModeratorCheck(m_Config->m_DataBaseID, name))
     return true;
@@ -1233,19 +1233,19 @@ bool CRealm::GetIsModerator(string name) const
 
 bool CRealm::GetIsAdmin(string name) const
 {
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   return m_Config->m_Admins.find(name) != m_Config->m_Admins.end();
 }
 
 bool CRealm::GetIsSudoer(string name) const
 {
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   return m_Config->m_SudoUsers.find(name) != m_Config->m_SudoUsers.end();
 }
 
 bool CRealm::IsBannedName(string name) const
 {
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   CDBBan* Ban = m_Aura->m_DB->BanCheck(m_Config->m_DataBaseID, name);
   if (!Ban) return false;
   delete Ban;

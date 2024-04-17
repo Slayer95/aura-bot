@@ -212,7 +212,7 @@ uint32_t CAuraDB::ModeratorCount(const string& server)
 bool CAuraDB::ModeratorCheck(const string& server, string user)
 {
   bool IsAdmin = false;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   if (!ModeratorCheckStmt)
     m_DB->Prepare("SELECT * FROM moderators WHERE server=? AND name=?", &ModeratorCheckStmt);
@@ -242,7 +242,7 @@ bool CAuraDB::ModeratorCheck(const string& server, string user)
 bool CAuraDB::ModeratorCheck(string user)
 {
   bool IsAdmin = false;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   sqlite3_stmt* Statement;
   m_DB->Prepare("SELECT * FROM moderators WHERE name=?", reinterpret_cast<void**>(&Statement));
@@ -271,7 +271,7 @@ bool CAuraDB::ModeratorCheck(string user)
 bool CAuraDB::ModeratorAdd(const string& server, string user)
 {
   bool Success = false;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   sqlite3_stmt* Statement;
   m_DB->Prepare("INSERT INTO moderators ( server, name ) VALUES ( ?, ? )", reinterpret_cast<void**>(&Statement));
@@ -300,7 +300,7 @@ bool CAuraDB::ModeratorRemove(const string& server, string user)
 {
   bool          Success = false;
   sqlite3_stmt* Statement;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("DELETE FROM moderators WHERE server=? AND name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -377,7 +377,7 @@ uint32_t CAuraDB::BanCount(const string& server)
 CDBBan* CAuraDB::BanCheck(const string& server, string user)
 {
   CDBBan* Ban = nullptr;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   if (!BanCheckStmt)
     m_DB->Prepare("SELECT name, date, moderators, reason FROM bans WHERE server=? AND name=?", &BanCheckStmt);
@@ -418,7 +418,7 @@ bool CAuraDB::BanAdd(const string& server, string user, const string& moderators
 {
   bool          Success = false;
   sqlite3_stmt* Statement;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("INSERT INTO bans ( server, name, date, moderators, reason ) VALUES ( ?, ?, date('now'), ?, ? )", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -447,7 +447,7 @@ bool CAuraDB::BanRemove(const string& server, string user)
 {
   bool          Success = false;
   sqlite3_stmt* Statement;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("DELETE FROM bans WHERE server=? AND name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -498,7 +498,7 @@ bool CAuraDB::BanRemove(string user)
 {
   bool          Success = false;
   sqlite3_stmt* Statement;
-  transform(begin(user), end(user), begin(user), ::tolower);
+  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("DELETE FROM bans WHERE name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -523,7 +523,7 @@ bool CAuraDB::BanRemove(string user)
 void CAuraDB::GamePlayerAdd(string name, uint64_t loadingtime, uint64_t duration, uint64_t left)
 {
   sqlite3_stmt* Statement;
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   // check if entry exists
 
@@ -603,7 +603,7 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(string name)
 {
   sqlite3_stmt*         Statement;
   CDBGamePlayerSummary* GamePlayerSummary = nullptr;
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -644,7 +644,7 @@ void CAuraDB::DotAPlayerAdd(string name, uint32_t winner, uint32_t kills, uint32
 {
   bool          Success = false;
   sqlite3_stmt* Statement;
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?", reinterpret_cast<void**>(&Statement));
 
   int32_t  RC;
@@ -731,7 +731,7 @@ CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(string name)
 {
   sqlite3_stmt*         Statement;
   CDBDotAPlayerSummary* DotAPlayerSummary = nullptr;
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)

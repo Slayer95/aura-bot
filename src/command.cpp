@@ -455,7 +455,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     } else {
       Command = m_Aura->m_SudoExecCommand;
     }
-    transform(begin(Command), end(Command), begin(Command), ::tolower);
+    transform(begin(Command), end(Command), begin(Command), [](char c) { return static_cast<char>(std::tolower(c)); });
     Result = make_pair(Command, Payload);
     //m_Permissions |= USER_PERMISSIONS_BOT_SUDO_OK;
     m_Permissions = 0xFFFF;
@@ -674,19 +674,20 @@ bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID,
       uint8_t matches = m_TargetGame->GetPlayerFromNamePartial(target.substr(1), testPlayer);
       if (slot && matches > 0 || !slot && matches == 0) {
         ErrorReply("Please provide a player @name or #slot.");
-        break;
+        return false;
       }
       if (matches > 1) {
         ErrorReply("Player [" + target + "] ambiguous.");
-        break;
-      } else if (matches == 0) {
+        return false;
+      }
+      if (matches == 0) {
         SID = testSID;
         player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
       } else {
         SID = m_TargetGame->GetSIDFromPID(testPlayer->GetPID());
         player = testPlayer;
       }
-      break;
+      return true;
     }
   }
 }
@@ -724,7 +725,7 @@ CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
     return m_SourceRealm;
   }
   string realmId = target;
-  transform(begin(realmId), end(realmId), begin(realmId), ::tolower);
+  transform(begin(realmId), end(realmId), begin(realmId), [](char c) { return static_cast<char>(std::tolower(c)); });
   CRealm* exactMatch = m_Aura->GetRealmByInputId(realmId);
   if (exactMatch) return exactMatch;
   return m_Aura->GetRealmByHostName(realmId);
@@ -736,7 +737,7 @@ CGame* CCommandContext::GetTargetGame(const string& target)
     return nullptr;
   }
   string gameId = target;
-  transform(begin(gameId), end(gameId), begin(gameId), ::tolower);
+  transform(begin(gameId), end(gameId), begin(gameId), [](char c) { return static_cast<char>(std::tolower(c)); });
   if (gameId == "lobby") {
     return m_Aura->m_CurrentLobby;
   }
@@ -2465,7 +2466,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (m_TargetGame && m_TargetGame->GetGameLoaded()) {
         string VictimLower = Victim;
-        transform(begin(VictimLower), end(VictimLower), begin(VictimLower), ::tolower);
+        transform(begin(VictimLower), end(VictimLower), begin(VictimLower), [](char c) { return static_cast<char>(std::tolower(c)); });
         uint32_t Matches   = 0;
         CDBBan*  LastMatch = nullptr;
 
@@ -2474,7 +2475,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         for (auto& ban : m_TargetGame->m_DBBans) {
           string TestName = ban->GetName();
-          transform(begin(TestName), end(TestName), begin(TestName), ::tolower);
+          transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
 
           if (TestName.find(VictimLower) != string::npos) {
             ++Matches;
@@ -2799,7 +2800,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Cannot send bnet chat messages while the bot is hosting a game lobby.");
         break;
       }
-      transform(begin(RealmId), end(RealmId), begin(RealmId), ::tolower);
+      transform(begin(RealmId), end(RealmId), begin(RealmId), [](char c) { return static_cast<char>(std::tolower(c)); });
 
       const bool ToAllRealms = RealmId.length() == 1 && RealmId[0] == '*';
       bool Success = false;
@@ -3066,11 +3067,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (slot->GetHandicap() == handicap[0]) {
+      if (slot->GetHandicap() == static_cast<uint8_t>(handicap[0])) {
         ErrorReply("Handicap is already at " + Args[1] + "%");
         break;
       }
-      slot->SetHandicap(handicap[0]);
+      slot->SetHandicap(static_cast<uint8_t>(handicap[0]));
       m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       break;
     }
@@ -3166,31 +3167,35 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "compteam [SLOT], [TEAM]");
+        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 2u, 2u);
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "compteam [SLOT], [TEAM]");
+        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
 
-      if (Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size() ||
-        Args[1] > m_Aura->m_MaxSlots + 1) { // accept 13/25 as observer
-        ErrorReply("Usage: " + cmdToken + "compteam [SLOT], [TEAM]");
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
 
-      uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
-      uint8_t Team = static_cast<uint8_t>(Args[1]) - 1;
-
-      if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
-        ErrorReply("Slot " + to_string(Args[0]) + " is empty.");
+      const uint8_t targetTeam = ParseSID(Args[1]);
+      if (targetTeam > m_Aura->m_MaxSlots + 1) { // accept 13/25 as observer
+        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
 
-      if (Team == m_Aura->m_MaxSlots) {
+      if (m_TargetGame->GetSlot(SID)->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+        ErrorReply("Slot " + Args[0] + " is empty.");
+        break;
+      }
+
+      if (targetTeam == m_Aura->m_MaxSlots) {
         if (m_TargetGame->GetMap()->GetMapObservers() != MAPOBS_ALLOWED && m_TargetGame->GetMap()->GetMapObservers() != MAPOBS_REFEREES) {
           ErrorReply("This game does not have observers enabled.");
           break;
@@ -3199,12 +3204,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Computer slots cannot be moved to observers team.");
           break;
         }
-      } else if (Team > m_TargetGame->GetMap()->GetMapNumTeams()) {
-        ErrorReply("This map does not allow Team #" + to_string(Args[1]) + ".");
+      } else if (targetTeam > m_TargetGame->GetMap()->GetMapNumTeams()) {
+        ErrorReply("This map does not allow Team #" + Args[1] + ".");
         break;
       }
-      if (!m_TargetGame->SetSlotTeam(SID, Team, true)) {
-        ErrorReply("Cannot move player to Team #" + to_string(Args[1])+ ".");
+
+      if (!m_TargetGame->SetSlotTeam(SID, targetTeam, true)) {
+        ErrorReply("Cannot move player to Team #" + Args[1]+ ".");
       } else {
         SendReply("Team updated.");
       }
@@ -3233,23 +3239,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "observer [SLOT]");
+        ErrorReply("Usage: " + cmdToken + "observer [PLAYER]");
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
-      if (Args.empty() || Args[0] == 0 || Args[0] > m_TargetGame->m_Slots.size()) {
-        ErrorReply("Usage: " + cmdToken + "observer [SLOT]");
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "observer [PLAYER]");
         break;
       }
 
-      uint8_t SID = static_cast<uint8_t>(Args[0]) - 1;
       if (!(m_TargetGame->GetMap()->GetMapObservers() == MAPOBS_ALLOWED || m_TargetGame->GetMap()->GetMapObservers() == MAPOBS_REFEREES)) {
         ErrorReply("This lobby does not allow observers.");
         break;
       }
       if (m_TargetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
-        ErrorReply("Slot " + to_string(Args[0]) + " is empty.");
+        ErrorReply("Slot " + Payload + " is empty.");
         break;
       }
       if (m_TargetGame->m_Slots[SID].GetIsComputer()) {
@@ -3258,7 +3264,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!m_TargetGame->SetSlotTeam(SID, m_Aura->m_MaxSlots, true)) {
-        ErrorReply("Cannot move player to Team #" + to_string(Args[1])+ ".");
+        ErrorReply("Cannot turn the player into an observer.");
       } else {
         SendReply("Player moved to observers team.");
       }
@@ -3399,7 +3405,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Usage: " + cmdToken + "terminator [NUMBER]");
           break;
         }
-        if (!m_TargetGame->ComputerNSlots(Args[0], SLOTCOMP_HARD)) {
+        if (!m_TargetGame->ComputerNSlots(static_cast<uint8_t>(Args[0]), SLOTCOMP_HARD)) {
           ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumConnectionsOrFake()) + " vs " + to_string(Args[0]) + " AIs.");
           break;
         }
@@ -3409,7 +3415,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("No computer slots found. Use [" + cmdToken + "terminator NUMBER] to play against one or more insane computers.");
         break;
       }
-      const uint8_t humansCount = m_TargetGame->GetNumConnectionsOrFake();
+      const uint8_t humansCount = static_cast<uint8_t>(m_TargetGame->GetNumConnectionsOrFake());
       pair<uint8_t, uint8_t> matchedTeams;
       if (!m_TargetGame->FindHumanVsAITeams(humansCount, computersCount, matchedTeams)) {
         ErrorReply("This map does not support " + ToDecString(humansCount) + " vs " + ToDecString(computersCount) + " computers.");
@@ -3482,7 +3488,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       string inputLower = Payload;
-      transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
+      transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
       if (inputLower == "fill") {
         m_TargetGame->DeleteVirtualHost();

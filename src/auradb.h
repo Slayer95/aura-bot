@@ -281,7 +281,7 @@ class CDBDotAPlayer
 {
 private:
   uint8_t  m_Color;
-  uint32_t m_NewColor;
+  uint8_t  m_NewColor;
   uint32_t m_Kills;
   uint32_t m_Deaths;
   uint32_t m_CreepKills;
@@ -316,8 +316,8 @@ public:
   inline void IncRaxKills() { ++m_RaxKills; }
   inline void IncCourierKills() { ++m_CourierKills; }
 
-  inline void SetColor(uint32_t nColor) { m_Color = nColor; }
-  inline void SetNewColor(uint32_t nNewColor) { m_NewColor = nNewColor; }
+  inline void SetColor(uint8_t nColor) { m_Color = nColor; }
+  inline void SetNewColor(uint8_t nNewColor) { m_NewColor = nNewColor; }
   inline void SetCreepKills(uint32_t nCreepKills) { m_CreepKills = nCreepKills; }
   inline void SetCreepDenies(uint32_t nCreepDenies) { m_CreepDenies = nCreepDenies; }
   inline void SetNeutralKills(uint32_t nNeutralKills) { m_NeutralKills = nNeutralKills; }

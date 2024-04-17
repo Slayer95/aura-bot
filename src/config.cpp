@@ -472,7 +472,7 @@ set<string> CConfig::GetSetInsensitive(const string& key, char separator, const 
     getline(ss, element, separator);
     if (element.empty())
       continue;
-    transform(begin(element), end(element), begin(element), ::tolower);
+    transform(begin(element), end(element), begin(element), [](char c) { return static_cast<char>(std::tolower(c)); });
     if (!Output.insert(element).second)
       errored = true;
   }

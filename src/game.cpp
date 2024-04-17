@@ -378,7 +378,7 @@ void CGame::InitSlots()
       slotRace.reset(6); // Fixed Players Settings means unselectable races.
       slotRace.reset(4);
       uint8_t chosenRaceBit = 5; // SLOTRACE_RANDOM
-      bool foundRace = foundRace;
+      bool foundRace = false;
       while (chosenRaceBit--) {
         // Iterate backwards so that SLOTRACE_RANDOM is preferred
         if (foundRace) {
@@ -488,9 +488,9 @@ uint32_t CGame::GetNumHumanPlayers() const
   return NumHumanPlayers;
 }
 
-uint32_t CGame::GetNumOccupiedSlots() const
+uint8_t CGame::GetNumOccupiedSlots() const
 {
-  uint32_t count = 0;
+  uint8_t count = 0;
   for (const auto& slot : m_Slots) {
     if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
       ++count;
@@ -499,9 +499,9 @@ uint32_t CGame::GetNumOccupiedSlots() const
   return count;
 }
 
-uint32_t CGame::GetNumControllers() const
+uint8_t CGame::GetNumControllers() const
 {
-  uint32_t count = 0;
+  uint8_t count = 0;
   for (const auto& slot : m_Slots) {
     if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Aura->m_MaxSlots) {
       ++count;
@@ -510,9 +510,9 @@ uint32_t CGame::GetNumControllers() const
   return count;
 }
 
-uint32_t CGame::GetNumComputers() const
+uint8_t CGame::GetNumComputers() const
 {
-  uint32_t count = 0;
+  uint8_t count = 0;
   for (const auto& slot : m_Slots) {
     if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetIsComputer()) {
       ++count;
@@ -1249,7 +1249,7 @@ pair<uint8_t, uint8_t> CGame::GetLargestPotentialTeam() const
   // Only for Custom Forces
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes = GetPotentialTeamSizes();
-  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Aura->m_MaxSlots, 0);
+  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Aura->m_MaxSlots, 0u);
   for (uint8_t team = 0; team < numTeams; ++team) {
     if (teamSizes[team] > largestTeam.second) {
       largestTeam = make_pair(team, teamSizes[team]);
@@ -1427,8 +1427,7 @@ bool CGame::SetLayoutCompact()
     }
   }
 
-  uint8_t freePlayers = 0;
-  const uint8_t autoTeamOffset = fullTeams.count();
+  const uint8_t autoTeamOffset = static_cast<uint8_t>(fullTeams.count());
 
   for (auto& slot : m_Slots) {
     uint8_t team = slot.GetTeam();
@@ -1482,7 +1481,7 @@ bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerT
 {
   const bool isSwap = m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES;
   if (isSwap) {
-    uint8_t SID = m_Slots.size();
+    uint8_t SID = static_cast<uint8_t>(m_Slots.size());
     while (SID != 0) {
       CGameSlot* slot = GetSlot(SID);
       if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
@@ -1534,7 +1533,7 @@ bool CGame::SetLayoutFFA()
   if (!FindNextMissingElementBack(nextTeam, lockedTeams)) {
     return true; // every team got 1 fixed computer slot
   }
-  uint8_t SID = m_Slots.size();
+  uint8_t SID = static_cast<uint8_t>(m_Slots.size());
   while (SID--) {
     CGameSlot* slot = GetSlot(SID);
     if (slot->GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
@@ -1633,7 +1632,7 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
 {
   const bool isSwap = GetMap()->GetMapOptions() & MAPOPT_CUSTOMFORCES;
   uint8_t targetSID = GetSIDFromPID(targetPlayer->GetPID());
-  uint8_t targetTeam = m_Slots[targetSID].GetTeam();
+  //uint8_t targetTeam = m_Slots[targetSID].GetTeam();
 
   const uint8_t teamAll = GetOneVsAllTeamAll();
   const uint8_t teamOne = GetOneVsAllTeamOne(teamAll);
@@ -1654,7 +1653,7 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
 
   // Move the rest of players.
   if (isSwap) {
-    uint8_t SID = m_Slots.size();
+    uint8_t SID = static_cast<uint8_t>(m_Slots.size());
     while (SID != 0) {
       if (SID == targetSID || m_Slots[SID].GetTeam() == teamAll) {
         --SID;
@@ -1671,7 +1670,7 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
       --SID;
     }
   } else {
-    uint8_t SID = m_Slots.size();
+    uint8_t SID = static_cast<uint8_t>(m_Slots.size());
     while (SID--) {
       if (SID == targetSID) continue;
       m_Slots[SID].SetTeam(teamAll);
@@ -3445,14 +3444,14 @@ void CGame::EventGameStarted()
   DeleteVirtualHost();
 
   if (m_RestoredGame) {
-    const uint8_t activePlayers = GetNumConnectionsOrFake(); // though it shouldn't be possible to manually add fake players
+    const uint8_t activePlayers = static_cast<uint8_t>(GetNumConnectionsOrFake()); // though it shouldn't be possible to manually add fake players
     const uint8_t expectedPlayers = m_RestoredGame->GetNumHumanSlots();
     if (activePlayers < expectedPlayers) {
       if (m_IsAutoVirtualPlayers) {
         const uint8_t addedCounter = FakeAllSlots();
         Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + to_string(addedCounter) + " virtual players added.");
       } else {
-        Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + to_string(expectedPlayers - activePlayers) + " missing.");
+        Print(GetLogPrefix() + "resuming " + to_string(expectedPlayers) + "-player game. " + ToDecString(expectedPlayers - activePlayers) + " missing.");
       }
     }
   }
@@ -3670,7 +3669,7 @@ bool CGame::HasOwnerInGame() const
 CGamePlayer* CGame::GetPlayerFromName(string name, bool sensitive) const
 {
   if (!sensitive)
-    transform(begin(name), end(name), begin(name), ::tolower);
+    transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   for (auto& player : m_Players)
   {
@@ -3679,7 +3678,7 @@ CGamePlayer* CGame::GetPlayerFromName(string name, bool sensitive) const
       string TestName = player->GetName();
 
       if (!sensitive)
-        transform(begin(TestName), end(TestName), begin(TestName), ::tolower);
+        transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
 
       if (TestName == name)
         return player;
@@ -3694,7 +3693,7 @@ uint8_t CGame::GetPlayerFromNamePartial(string name, CGamePlayer*& player) const
   uint8_t Matches = 0;
   if (name.empty()) return Matches;
 
-  transform(begin(name), end(name), begin(name), ::tolower);
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   // try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
 
@@ -3703,7 +3702,7 @@ uint8_t CGame::GetPlayerFromNamePartial(string name, CGamePlayer*& player) const
     if (!realplayer->GetLeftMessageSent())
     {
       string TestName = realplayer->GetName();
-      transform(begin(TestName), end(TestName), begin(TestName), ::tolower);
+      transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
 
       if (TestName.find(name) != string::npos)
       {
@@ -4138,7 +4137,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
     return false;
   }
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-    const uint8_t newSID = GetSelectableTeamSlot(team, m_Slots.size(), force);
+    const uint8_t newSID = GetSelectableTeamSlot(team, static_cast<uint8_t>(m_Slots.size()), force);
     if (newSID == 0xFF) return false;
     return SwapSlots(SID, newSID);
   } else {
@@ -4194,7 +4193,7 @@ bool CGame::SetSlotColor(const uint8_t SID, const uint8_t colour, const bool for
   }
 
   CGameSlot* takenSlot = nullptr;
-  uint8_t takenSID;
+  uint8_t takenSID = 0xFF;
 
   // if the requested color is taken, try to exchange colors
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
@@ -4455,13 +4454,13 @@ void CGame::AddToReserved(const string& name)
     return;
   }
 
-  transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
+  transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   // check that the user is not already reserved
 
   for (const auto& element : m_Reserved) {
     string matchLower = element;
-    transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
+    transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
     if (matchLower == inputLower) {
       return;
     }
@@ -4473,7 +4472,7 @@ void CGame::AddToReserved(const string& name)
 
   for (auto& player : m_Players) {
     string matchLower = player->GetName();
-    transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
+    transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
     if (matchLower == inputLower) {
       player->SetReserved(true);
@@ -4511,20 +4510,20 @@ bool CGame::MatchOwnerName(const string& name) const
 {
   string matchLower = name;
   string ownerLower = m_OwnerName;
-  transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
-  transform(begin(ownerLower), end(ownerLower), begin(ownerLower), ::tolower);
+  transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+  transform(begin(ownerLower), end(ownerLower), begin(ownerLower), [](char c) { return static_cast<char>(std::tolower(c)); });
   return matchLower == ownerLower;
 }
 
 uint8_t CGame::GetReservedIndex(const string& name) const
 {
   string inputLower = name;
-  transform(begin(inputLower), end(inputLower), begin(inputLower), ::tolower);
+  transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   uint8_t index = 0;
   while (index < m_Reserved.size()) {
     string matchLower = m_Reserved[index];
-    transform(begin(matchLower), end(matchLower), begin(matchLower), ::tolower);
+    transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
     if (matchLower == inputLower) {
       break;
     }
@@ -4801,7 +4800,7 @@ void CGame::OpenObserverSlots()
   if (m_Slots.size() >= m_Aura->m_MaxSlots) return;
   Print(GetLogPrefix() + "adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
   while (m_Slots.size() < m_Aura->m_MaxSlots) {
-    m_Slots.emplace_back(0, 0xFF, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots.emplace_back(0u, 0xFFu, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
   }
 }
 

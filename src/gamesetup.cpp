@@ -31,6 +31,8 @@
 #include "hash.h"
 #include "map.h"
 
+#define SEARCH_RESULT(a, b) (make_pair(a, b))
+
 using namespace std;
 
 // CGameExtraOptions
@@ -302,26 +304,26 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputStandard()
         Print("[CLI] (File resolved to: " + PathToString(filesystem::absolute(targetPath)) + ")");
       } catch (...) {}
     }
-    return make_pair(MATCH_TYPE_NONE, targetPath);
+    return SEARCH_RESULT(MATCH_TYPE_NONE, targetPath);
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP) {
-    return make_pair(MATCH_TYPE_MAP, targetPath);
+    return SEARCH_RESULT(MATCH_TYPE_MAP, targetPath);
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG) {
-    return make_pair(MATCH_TYPE_CONFIG, targetPath);
+    return SEARCH_RESULT(MATCH_TYPE_CONFIG, targetPath);
   }
   if (m_SearchTarget.second.length() < 5) {
-    return make_pair(MATCH_TYPE_INVALID, targetPath);
+    return SEARCH_RESULT(MATCH_TYPE_INVALID, targetPath);
   }
 
   string targetExt = ParseFileExtension(PathToString(targetPath.filename()));
   if (targetExt == ".w3m" || targetExt == ".w3x") {
-    return make_pair(MATCH_TYPE_MAP, targetPath);
+    return SEARCH_RESULT(MATCH_TYPE_MAP, targetPath);
   }
   if (targetExt == ".cfg") {
-    return make_pair(MATCH_TYPE_CONFIG, targetPath);
+    return SEARCH_RESULT(MATCH_TYPE_CONFIG, targetPath);
   }
-  return make_pair(MATCH_TYPE_INVALID, targetPath);
+  return SEARCH_RESULT(MATCH_TYPE_INVALID, targetPath);
 }
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
@@ -330,22 +332,22 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
     if (testPath.parent_path() != m_Aura->m_Config->m_MapPath.parent_path()) {
-      return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
+      return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if ((fileExtension == ".w3m" || fileExtension == ".w3x") && FileExists(testPath)) {
-      return make_pair(MATCH_TYPE_MAP, testPath);
+      return SEARCH_RESULT(MATCH_TYPE_MAP, testPath);
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
     if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
-      return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
+      return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if ((fileExtension == ".cfg") && FileExists(testPath)) {
-      return make_pair(MATCH_TYPE_CONFIG, testPath);
+      return SEARCH_RESULT(MATCH_TYPE_CONFIG, testPath);
     }
   }
-  return make_pair(MATCH_TYPE_NONE, filesystem::path());
+  return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
 }
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
@@ -353,31 +355,31 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
   string fileExtension = ParseFileExtension(m_SearchTarget.second);
   bool hasExtension = fileExtension == ".w3x" || fileExtension == ".w3m" || fileExtension == ".cfg";
   if (hasExtension) {
-    return make_pair(MATCH_TYPE_NONE, filesystem::path());
+    return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second + ".w3x")).lexically_normal();
     if (testPath.parent_path() != m_Aura->m_Config->m_MapPath.parent_path()) {
-      return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
+      return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if (FileExists(testPath)) {
-      return make_pair(MATCH_TYPE_MAP, testPath);
+      return SEARCH_RESULT(MATCH_TYPE_MAP, testPath);
     }
     testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second + ".w3m")).lexically_normal();
     if (FileExists(testPath)) {
-      return make_pair(MATCH_TYPE_MAP, testPath);
+      return SEARCH_RESULT(MATCH_TYPE_MAP, testPath);
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second + ".cfg")).lexically_normal();
     if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
-      return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
+      return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if (FileExists(testPath)) {
-      return make_pair(MATCH_TYPE_CONFIG, testPath);
+      return SEARCH_RESULT(MATCH_TYPE_CONFIG, testPath);
     }
   }
-  return make_pair(MATCH_TYPE_NONE, filesystem::path());
+  return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
 }
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>& fuzzyMatches)
@@ -394,7 +396,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
     allResults.insert(allResults.end(), cfgResults.begin(), cfgResults.end());
   }
   if (allResults.empty()) {
-    return make_pair(MATCH_TYPE_NONE, filesystem::path());
+    return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
   }
 
   size_t resultCount = min(FUZZY_SEARCH_MAX_RESULTS, static_cast<int>(allResults.size()));
@@ -409,9 +411,9 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
 
   if (m_LuckyMode || allResults.size() == 1) {
     if ((allResults[0].second & 0x80) == 0) {
-      return make_pair(MATCH_TYPE_CONFIG, m_Aura->m_Config->m_MapCFGPath / filesystem::path(allResults[0].first));
+      return SEARCH_RESULT(MATCH_TYPE_CONFIG, m_Aura->m_Config->m_MapCFGPath / filesystem::path(allResults[0].first));
     } else {
-      return make_pair(MATCH_TYPE_MAP, m_Aura->m_Config->m_MapPath / filesystem::path(allResults[0].first));
+      return SEARCH_RESULT(MATCH_TYPE_MAP, m_Aura->m_Config->m_MapPath / filesystem::path(allResults[0].first));
     }
   }
 
@@ -420,7 +422,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
     fuzzyMatches.push_back(allResults[i].first);
   }
 
-  return make_pair(MATCH_TYPE_NONE, filesystem::path());
+  return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
 }
 
 #ifndef DISABLE_CPR
@@ -451,7 +453,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocal(vector<string>& fuz
       return fuzzyResult;
     }
   }
-  return make_pair(MATCH_TYPE_NONE, filesystem::path());
+  return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
 }
 
 pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
@@ -463,7 +465,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
   if (m_SearchTarget.first == "remote") {
     // "remote" means unsupported URL.
     // Supported URLs specify the domain in m_SearchTarget.first, such as "epicwar".
-    return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
+    return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
   }
 
   if (m_SearchTarget.first == "local") {
@@ -474,7 +476,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
         return SearchInputStandard();
       } else {
         // Search target has slashes. Protect against arbitrary directory traversal.
-        return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());        
+        return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());        
       }
     }
 
@@ -497,7 +499,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
       }
     }
 
-    return make_pair(MATCH_TYPE_NONE, filesystem::path());
+    return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
   }
 
   // Input corresponds to a namespace, such as epicwar.
@@ -505,12 +507,12 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
   string resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg";
   filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(resolvedCFGName)).lexically_normal();
   if (PathHasNullBytes(resolvedCFGPath) || resolvedCFGPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
-    return make_pair(MATCH_TYPE_FORBIDDEN, filesystem::path());
+    return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
   }
   if (FileExists(resolvedCFGPath)) {
-    return make_pair(MATCH_TYPE_CONFIG, resolvedCFGPath);
+    return SEARCH_RESULT(MATCH_TYPE_CONFIG, resolvedCFGPath);
   }
-  return make_pair(MATCH_TYPE_NONE, resolvedCFGPath);
+  return SEARCH_RESULT(MATCH_TYPE_NONE, resolvedCFGPath);
 }
 
 CMap* CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
