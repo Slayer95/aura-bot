@@ -1205,7 +1205,8 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message) const
   if (message.empty())
     return;
 
-  if (GetHostPID() == 0xFF) {
+  vector<uint8_t> toPIDs = GetPIDs();
+  if (toPIDs.empty()) {
     return;
   }
 
@@ -1218,9 +1219,9 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message) const
   uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
   if (message.size() < maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), message));
+        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, toPIDs, 16, std::vector<uint8_t>(), message));
     } else {
-        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
+        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, toPIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
     }
     return;
   }
@@ -1228,18 +1229,18 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message) const
   string leftMessage = message;
   while (leftMessage.size() > maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, toPIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
     } else {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, toPIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
     }
     leftMessage = leftMessage.substr(0, maxSize);
   }
 
   if (!leftMessage.empty()) {
     if (!m_GameLoading && !m_GameLoaded) {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 16, std::vector<uint8_t>(), leftMessage));
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, toPIDs, 16, std::vector<uint8_t>(), leftMessage));
     } else {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, GetPIDs(), 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
+      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, toPIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
     }
   }
 }
@@ -3133,7 +3134,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
         } else if (ExtraFlags[0] == 2) {
           // this is an ingame [Obs/Ref] message, print it to the console
 					Print(GetLogPrefix() + "[Obs/Ref] [" + player->GetName() + "] " + chatPlayer->GetMessage());
-        } {
+        } else {
           // this is an ingame [????] message, print it to the console
           Print(GetLogPrefix() + "[????] [" + player->GetName() + "] " + chatPlayer->GetMessage());
         }
