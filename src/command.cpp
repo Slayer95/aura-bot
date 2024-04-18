@@ -3476,6 +3476,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     //
     // !DRAFT
+    //
 
     case HashCode("draft"): {
       UseImplicitHostedGame();
