@@ -1356,7 +1356,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "c [SLOTNUM]");
+        if (!m_TargetGame->CloseSlot()) {
+          ErrorReply("No slots are open.");
+        } else {
+          SendReply("One slot closed.");
+        }
         break;
       }
 
@@ -1378,10 +1382,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           failedSlots.push_back(to_string(elem));
         }
       }
-      if (!failedSlots.empty()) {
-        SendReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be closed.");
+      if (Args.size() == failedSlots.size()) {
+        ErrorReply("Failed to close slot.");
+      } else if (failedSlots.empty()) {
+        SendReply("Closed " + to_string(Args.size()) + " slot(s).");
       } else {
-        SendReply("Opened " + to_string(Args.size()) + " slots.");
+        ErrorReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be closed.");
       }
       break;
     }
@@ -1675,7 +1681,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "o [SLOTNUM]");
+        if (!m_TargetGame->OpenSlot()) {
+          ErrorReply("Cannot open further slots.");
+        } else {
+          SendReply("One slot opened.");
+        }
         break;
       }
 
@@ -1698,10 +1708,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           }
         }
       }
-      if (!failedSlots.empty()) {
-        SendReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be opened.");
+      if (Args.size() == failedSlots.size()) {
+        ErrorReply("Failed to open slot.");
+      } else if (failedSlots.empty()) {
+        SendReply("Opened " + to_string(Args.size()) + " slot(s).");
       } else {
-        SendReply("Opened " + to_string(Args.size()) + " slots.");
+        ErrorReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be opened.");
       }
       break;
     }
@@ -1855,7 +1867,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint32_t ConnectionCount = m_TargetGame->GetNumConnectionsOrFake();
+      uint32_t ConnectionCount = m_TargetGame->GetNumHumanOrFakeControllers();
       if (ConnectionCount == 0) {
         ErrorReply("Not enough players have joined.");
         break;
@@ -2924,7 +2936,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
+        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, 1)) {
+          ErrorReply("No slots available.");
+        } else {
+          SendReply("Insane computer added.");
+        }
         break;
       }
 
@@ -2948,6 +2964,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Cannot add computer on that slot.");
         break;
       }
+      SendReply("Computer slot added.");
       break;
     }
 
@@ -3136,7 +3153,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Slot " + Args[0] + " is not playable.");
         break;
       }
-      if (0 == (slot->GetRace() & Race)) {
+      if (Race == (slot->GetRace() & Race)) {
         ErrorReply("Slot " + Args[0] + " is already " + Args[1]);
         break;
       }
@@ -3408,7 +3425,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         if (!m_TargetGame->ComputerNSlots(static_cast<uint8_t>(Args[0]), SLOTCOMP_HARD)) {
-          ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumConnectionsOrFake()) + " vs " + to_string(Args[0]) + " AIs.");
+          ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumHumanOrFakeControllers()) + " vs " + to_string(Args[0]) + " AIs.");
           break;
         }
       }
@@ -3417,7 +3434,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("No computer slots found. Use [" + cmdToken + "terminator NUMBER] to play against one or more insane computers.");
         break;
       }
-      const uint8_t humansCount = static_cast<uint8_t>(m_TargetGame->GetNumConnectionsOrFake());
+      const uint8_t humansCount = static_cast<uint8_t>(m_TargetGame->GetNumHumanOrFakeControllers());
       pair<uint8_t, uint8_t> matchedTeams;
       if (!m_TargetGame->FindHumanVsAITeams(humansCount, computersCount, matchedTeams)) {
         ErrorReply("This map does not support " + ToDecString(humansCount) + " vs " + ToDecString(computersCount) + " computers.");
@@ -3525,10 +3542,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !DELETEFAKE
+    // !DELETEFP
 
     case HashCode("deletefake"):
-    case HashCode("deletefakes"): {
+    case HashCode("deletefp"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame)

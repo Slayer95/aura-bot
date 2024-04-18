@@ -246,7 +246,8 @@ public:
   int64_t               GetNextTimedActionTicks() const;
   uint32_t              GetSlotsOccupied() const;
   uint32_t              GetSlotsOpen() const;
-  uint32_t              GetNumConnectionsOrFake() const;
+  bool                  HasSlotsOpen() const;
+  uint32_t              GetNumHumanOrFakeControllers() const;
   uint32_t              GetNumHumanPlayers() const;
   uint8_t               GetNumOccupiedSlots() const;
   uint8_t               GetNumControllers() const;
@@ -313,6 +314,7 @@ public:
   void SendFakePlayersInfo(CGameConnection* player) const;
   void SendJoinedPlayersInfo(CGameConnection* player) const;
   void SendWelcomeMessage(CGamePlayer* player) const;
+  void SendLeftMessage(CGamePlayer* player, const bool sendChat) const;
   void SendAllActions();
   void SendAllAutoStart() const;
 
@@ -369,6 +371,7 @@ public:
   CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
   uint8_t              GetNewColor() const;
+  bool                 HasPlayers() const;
   std::vector<uint8_t> GetPIDs() const;
   std::vector<uint8_t> GetPIDs(uint8_t excludePID) const;
   uint8_t GetHostPID() const;
@@ -387,7 +390,10 @@ public:
   bool SwapEmptyAllySlot(const uint8_t SID);
   bool SwapSlots(const uint8_t SID1, const uint8_t SID2);
   bool OpenSlot(uint8_t SID, bool kick);
+  bool CanLockSlotForJoins(uint8_t SID);
   bool CloseSlot(uint8_t SID, bool kick);
+  bool OpenSlot();
+  bool CloseSlot();
   bool ComputerSlotInner(const uint8_t SID, const uint8_t skill);
   bool ComputerSlot(const uint8_t SID, const uint8_t skill, bool kick);
   bool SetSlotColor(const uint8_t SID, const uint8_t colour, const bool force);

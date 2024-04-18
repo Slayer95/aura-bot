@@ -338,7 +338,12 @@ void CMap::Load(CConfig* CFG)
     if (m_MapServerPath.empty()) {
       return;
     }
-    m_MapData = FileRead(m_Aura->m_Config->m_MapPath / m_MapServerPath, &RawMapSize);
+    filesystem::path mapServerPath(m_MapServerPath);
+    if (mapServerPath.filename() == mapServerPath) {
+      m_MapData = FileRead(m_Aura->m_Config->m_MapPath / mapServerPath, &RawMapSize);
+    } else {
+      m_MapData = FileRead(m_MapServerPath, &RawMapSize);
+    }
     if (IsPartial && m_MapData.empty()) {
       Print("[AURA] Local map not found for partial config file");
       return;
@@ -355,10 +360,14 @@ void CMap::Load(CConfig* CFG)
 
   optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map_localmtime");
   optional<int64_t> FileModifiedTime;
-  filesystem::path MapMPQFilePath;
+  filesystem::path MapMPQFilePath(m_MapServerPath);
 
   if (!ignoreMPQ) {
-    MapMPQFilePath = m_Aura->m_Config->m_MapPath / m_MapServerPath;
+    if (MapMPQFilePath.filename() == MapMPQFilePath) {
+      MapMPQFilePath = m_Aura->m_Config->m_MapPath / MapMPQFilePath;
+    } else {
+      MapMPQFilePath = m_MapServerPath;
+    }    
     FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
     ignoreMPQ = (
       !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (

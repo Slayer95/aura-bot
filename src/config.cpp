@@ -894,7 +894,7 @@ std::vector<uint8_t> CConfig::Export() const
 {
   std::ostringstream SS;
   for (auto it = m_CFG.begin(); it != m_CFG.end(); ++it) {
-    SS << (it->first + " =" + it->second + "\n");
+    SS << (it->first + " = " + it->second + "\n");
   }
 
   std::string str = SS.str();
