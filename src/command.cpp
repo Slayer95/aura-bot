@@ -564,7 +564,6 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
 }
 
 void CCommandContext::SendReply(const string& message, const uint8_t ctxFlags) {
-  Print("SendReply(" + message + ")");
   if (message.empty()) return;
 
   if (m_IsBroadcast) {
@@ -3389,6 +3388,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           m_TargetGame->SetDraftMode(true);
           SendReply("Draft mode enabled. Only draft captains may assign teams.");
         } else if (Args[0] == "disable") {
+          m_TargetGame->ResetDraft();
           m_TargetGame->SetDraftMode(false);
           SendReply("Draft mode disabled. Everyone may choose their own team.");
         } else {
