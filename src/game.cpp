@@ -144,6 +144,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameLoaded(false),
     m_Lagging(false),
     m_Desynced(false),
+    m_IsDraftMode(false),
     m_HadLeaver(false),
     m_HasMapLock(false),
     m_CheckReservation(nGameSetup->m_GameChecksReservation.has_value() ? nGameSetup->m_GameChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
@@ -3162,14 +3163,20 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
     else
     {
       if (!m_CountDownStarted && !m_RestoredGame) {
-        if (chatPlayer->GetType() == CIncomingChatPlayer::CTH_TEAMCHANGE)
-          EventPlayerChangeTeam(player, chatPlayer->GetByte());
-        else if (chatPlayer->GetType() == CIncomingChatPlayer::CTH_COLOURCHANGE)
-          EventPlayerChangeColor(player, chatPlayer->GetByte());
-        else if (chatPlayer->GetType() == CIncomingChatPlayer::CTH_RACECHANGE)
-          EventPlayerChangeRace(player, chatPlayer->GetByte());
-        else if (chatPlayer->GetType() == CIncomingChatPlayer::CTH_HANDICAPCHANGE)
-          EventPlayerChangeHandicap(player, chatPlayer->GetByte());
+        switch (chatPlayer->GetType()) {
+          case CIncomingChatPlayer::CTH_TEAMCHANGE:
+            EventPlayerChangeTeam(player, chatPlayer->GetByte());
+            break;
+          case CIncomingChatPlayer::CTH_COLOURCHANGE:
+            EventPlayerChangeColor(player, chatPlayer->GetByte());
+            break;
+          case CIncomingChatPlayer::CTH_RACECHANGE:
+            EventPlayerChangeRace(player, chatPlayer->GetByte());
+            break;
+          case CIncomingChatPlayer::CTH_HANDICAPCHANGE:
+            EventPlayerChangeHandicap(player, chatPlayer->GetByte());
+            break;
+        }
       }
     }
   }
@@ -3191,18 +3198,20 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
     return;
   }
 
+  if (m_IsDraftMode) {
+    return;
+  }
+
   uint8_t SID = GetSIDFromPID(player->GetPID());
-  CGameSlot* slot = GetSlot(SID);
+  const CGameSlot* slot = InspectSlot(SID);
   if (!slot) {
     return;
   }
 
   if (team == slot->GetTeam()) {
-    if (!SwapEmptyAllySlot(SID)) {
-      Print(GetLogPrefix() + player->GetName() + " failed to switch to ally slot");
-    }
-  } else if (!SetSlotTeam(GetSIDFromPID(player->GetPID()), team, false)) {
-    Print(GetLogPrefix() + player->GetName() + " failed to switch to team " + ToDecString(team + 1));
+    if (!SwapEmptyAllySlot(SID)) return;
+  } else {
+    SetSlotTeam(GetSIDFromPID(player->GetPID()), team, false);
   }
 }
 
@@ -4066,7 +4075,7 @@ uint8_t CGame::GetEmptyObserverSID() const
 
 bool CGame::SwapEmptyAllySlot(const uint8_t SID)
 {
-  if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
+  if (!(m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES)) {
     return false;
   }
   const uint8_t team = m_Slots[SID].GetTeam();
@@ -4347,7 +4356,7 @@ bool CGame::SetSlotColor(const uint8_t SID, const uint8_t colour, const bool for
     // but it's useful for !color.
     //
     // Old: !swap 3 7
-    // Now: !color Grubby, teal
+    // Now: !color Arthas, teal
     if (!takenSlot) {
       // But we found no slot to swap with.
       return false;
@@ -4702,6 +4711,14 @@ void CGame::ReleaseOwner()
   m_OwnerRealm.clear();
   m_Locked = false;
   SendAllChat("This game is now ownerless. Type " + m_PrivateCmdToken + "owner to take ownership of this game.");
+}
+
+void CGame::ResetDraft()
+{
+  m_IsDraftMode = true;
+  for (auto& player : m_Players) {
+    player->SetDraftCaptain(0);
+  }
 }
 
 void CGame::ResetSync()

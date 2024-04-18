@@ -178,6 +178,7 @@ private:
   int64_t                          m_LastDisconnectTime;
 
   std::string                      m_LastCommand;
+  uint8_t                          m_TeamCaptain;
 
 protected:
   bool m_DeleteMe;
@@ -246,6 +247,7 @@ public:
   inline bool                  GetMuted() const { return m_Muted; }
   inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
+  inline uint8_t               GetDraftCaptain() { return m_TeamCaptain; }
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
@@ -280,6 +282,7 @@ public:
   inline std::string GetLastCommand() const { return m_LastCommand; }
   inline void ClearLastCommand() { m_LastCommand.clear(); }
   inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
+  inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
 
   // processing functions
 

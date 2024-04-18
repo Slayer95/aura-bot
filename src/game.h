@@ -195,7 +195,8 @@ protected:
   bool                           m_GameLoaded;                    // if the game has loaded or not
   bool                           m_Lagging;                       // if the lag screen is active or not
   bool                           m_Desynced;                      // if the game has desynced or not
-  bool                           m_HadLeaver;                     // if the game has desynced or not
+  bool                           m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
+  bool                           m_HadLeaver;                     // if the game had a leaver after it started
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
   bool                           m_CheckReservation;
   bool                           m_UsesCustomReferees;
@@ -236,6 +237,7 @@ public:
   inline bool           GetLocked() const { return m_Locked; }
   inline bool           GetCountDownStarted() const { return m_CountDownStarted; }
   inline bool           GetIsMirror() const { return m_IsMirror; }
+  inline bool           GetIsDraftMode() const { return m_IsDraftMode; }
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
   inline bool           GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
@@ -429,6 +431,7 @@ public:
   bool IsDownloading() const;
   void SetOwner(const std::string& name, const std::string& realm);
   void ReleaseOwner();
+  void ResetDraft();
   void ResetSync();
   void CountKickVotes();
   void StartCountDown(bool force);
@@ -462,6 +465,7 @@ public:
   uint8_t GetOneVsAllTeamOne(const uint8_t teamAll) const;
 
   // These are the main game modes
+  inline void SetDraftMode(const bool nIsDraftMode) { m_IsDraftMode = nIsDraftMode; }
   bool SetLayoutFFA();
   bool SetLayoutOneVsAll(const CGamePlayer* player);
   bool SetLayoutTwoTeams();

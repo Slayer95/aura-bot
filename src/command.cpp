@@ -3178,18 +3178,26 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+      const bool isSudo = (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK)));
+      if (m_TargetGame->GetIsDraftMode()) {
+        if (!isSudo && (!m_Player || m_Player->GetDraftCaptain() == 0)) {
+          ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
+          break;
+        }
+      } else if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
 
       if (Payload.empty()) {
+        if (m_Player) ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
         ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
 
-      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      vector<string> Args = SplitArgs(Payload, 1u, 2u);
       if (Args.empty()) {
+        if (m_Player) ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
         ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
@@ -3197,13 +3205,36 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+        if (m_Player) ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
         ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
 
-      const uint8_t targetTeam = ParseSID(Args[1]);
+      uint8_t targetTeam = 0xFF;
+      if (Args.size() >= 2) {
+        targetTeam = ParseSID(Args[1]);
+      } else {      
+        if (!m_Player) {
+          ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+          break;
+        }
+        const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromPID(m_Player->GetPID()));
+        if (!slot) {
+          ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+          break;
+        }
+
+        // If there are several admins in the game,
+        // let them directly pick their team members with e.g. !team Arthas
+        targetTeam = slot->GetTeam();
+      }
       if (targetTeam > m_Aura->m_MaxSlots + 1) { // accept 13/25 as observer
+        ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
         ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+        break;
+      }
+      if (m_TargetGame->GetIsDraftMode() && !isSudo && !(m_Player && m_Player->GetDraftCaptain() == targetTeam + 1)) {
+        ErrorReply("You are not the captain of team " + ToDecString(targetTeam + 1));
         break;
       }
 
@@ -3222,12 +3253,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       } else if (targetTeam > m_TargetGame->GetMap()->GetMapNumTeams()) {
-        ErrorReply("This map does not allow Team #" + Args[1] + ".");
+        ErrorReply("This map does not allow Team #" + ToDecString(targetTeam + 1) + ".");
         break;
       }
 
       if (!m_TargetGame->SetSlotTeam(SID, targetTeam, true)) {
-        ErrorReply("Cannot move player to Team #" + Args[1]+ ".");
+        ErrorReply("Cannot move player to Team #" + ToDecString(targetTeam + 1) + ".");
       } else {
         SendReply("Team updated.");
       }
@@ -3320,6 +3351,76 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    //
+    // !DRAFT
+
+    case HashCode("draft"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "draft enable/disable");
+        ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
+        break;
+      }
+
+      vector<string> Args = SplitArgs(Payload, 1u, m_TargetGame->GetMap()->GetMapNumTeams());
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "draft enable/disable");
+        ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
+        break;
+      }
+
+      if (Args.size() == 1) {
+        if (Args[0] == "enable") {
+          m_TargetGame->SetDraftMode(true);
+        } else if (Args[0] == "disable") {
+          m_TargetGame->SetDraftMode(false);
+        } else {
+          ErrorReply("Usage: " + cmdToken + "draft enable/disable");
+          ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
+        }
+        break;
+      }
+
+      m_TargetGame->ResetDraft();
+      vector<string> failPlayers;
+
+      uint8_t team = Args.size();
+      while (team--) {
+        CGamePlayer* player = GetTargetPlayer(Args[team]);
+        if (player) {
+          const uint8_t SID = m_TargetGame->GetSIDFromPID(player->GetPID());
+          if (m_TargetGame->SetSlotTeam(SID, team, true)) {
+            player->SetDraftCaptain(team + 1);
+          } else {
+            failPlayers.push_back(player->GetName());
+          }
+        } else {
+          failPlayers.push_back(Args[team]);
+        }
+      }
+      if (failPlayers.empty()) {
+        SendReply("Draft captains assigned.");
+      } else {
+        ErrorReply("Cannot assign draft captains: " + JoinVector(failPlayers, false));
+      }
+      break;
+    }
+
+    //
     //
     // !FFA
     //
