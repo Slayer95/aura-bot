@@ -415,7 +415,7 @@ public:
   uint8_t FakeAllSlots();
   void DeleteFakePlayers();
   void OpenAllSlots();
-  void CloseAllSlots();
+  bool CloseAllSlots();
   bool ComputerNSlots(const uint8_t expectedCount, const uint8_t skill);
   bool ComputerAllSlots(const uint8_t skill);
   void ShuffleSlots();

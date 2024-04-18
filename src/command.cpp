@@ -2160,7 +2160,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("These slots cannot be swapped.");
         break;
       }
-      SendReply("Swapped players at slots " + ToDecString(slotNumOne) + " and " + ToDecString(slotNumTwo));
+      if ((playerOne != nullptr) && (playerTwo != nullptr)) {
+        SendReply("Swapped " + playerOne->GetName() + " with " + playerTwo->GetName() + ".");
+      } else if (!playerOne && !playerTwo) {
+        SendReply("Swapped slots " + ToDecString(slotNumOne + 1) + " and " + ToDecString(slotNumTwo + 1) + ".");
+      } else if (playerOne) {
+        SendReply("Swapped player [" + playerOne->GetName() + "] to slot " + ToDecString(slotNumTwo + 1) + ".");
+      } else {
+        SendReply("Swapped player [" + playerTwo->GetName() + "] to slot " + ToDecString(slotNumOne + 1) + ".");
+      }
       break;
     }
 
@@ -2995,7 +3003,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->CloseAllSlots();
+      if (m_TargetGame->CloseAllSlots()) {
+        // Also sent if there was no player, and so all slots except one were closed.
+        SendReply("Closed all slots.");
+      } else {
+        ErrorReply("There are no open slots.");
+      }
+      
       break;
     }
 
@@ -3174,6 +3188,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       slot->SetHandicap(static_cast<uint8_t>(handicap[0]));
       m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      if (targetPlayer) {
+        SendReply("Player [" + targetPlayer->GetName() + "] handicap is now [" + Args[1] + "].");
+      } else {
+        SendReply("Race updated.");
+      }
       break;
     }
 
@@ -3234,15 +3253,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CGameSlot* slot = m_TargetGame->GetSlot(SID);
       if (!slot || slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == m_Aura->m_MaxSlots) {
-        ErrorReply("Slot " + Args[0] + " is not playable.");
+        ErrorReply("Slot " + ToDecString(SID + 1) + " is not playable.");
         break;
       }
       if (Race == (slot->GetRace() & Race)) {
-        ErrorReply("Slot " + Args[0] + " is already " + Args[1]);
+        ErrorReply("Slot " + ToDecString(SID + 1) + " is already [" + Args[1] + "] race.");
         break;
       }
       slot->SetRace(Race | SLOTRACE_SELECTABLE);
       m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      if (targetPlayer) {
+        SendReply("Player [" + targetPlayer->GetName() + "] race is now [" + Args[1] + "].");
+      } else {
+        SendReply("Race updated.");
+      }
       break;
     }
 
@@ -3344,9 +3368,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!m_TargetGame->SetSlotTeam(SID, targetTeam, true)) {
-        ErrorReply("Cannot move player to Team #" + ToDecString(targetTeam + 1) + ".");
+        if (targetPlayer) {
+          ErrorReply("Cannot transfer [" + targetPlayer->GetName() + "] to team " + ToDecString(targetTeam + 1) + ".");
+        } else {
+          ErrorReply("Cannot transfer to team " + ToDecString(targetTeam + 1) + ".");
+        }
+      } else if (targetPlayer) {
+        SendReply("[" + targetPlayer->GetName() + "] is now in team " + ToDecString(targetTeam + 1) + ".");
       } else {
-        SendReply("Team updated.");
+        SendReply("Transferred to team " + ToDecString(targetTeam + 1) + ".");
       }
       break;
     }
@@ -3398,9 +3428,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!m_TargetGame->SetSlotTeam(SID, m_Aura->m_MaxSlots, true)) {
-        ErrorReply("Cannot turn the player into an observer.");
+        if (targetPlayer) {
+          ErrorReply("Cannot turn [" + targetPlayer->GetName() + "] into an observer.");
+        } else {
+          ErrorReply("Cannot turn the player into an observer.");
+        }
+      } else if (targetPlayer) {
+        SendReply("[" + targetPlayer->GetName() + "] is now an observer.");
       } else {
-        SendReply("Player moved to observers team.");
+        SendReply("Moved to observers team.");
       }
       break;
     }
@@ -3434,6 +3470,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame->ComputerAllSlots(targetSkill)) {
         ErrorReply("No remaining slots available.");
       }
+      SendReply("Computers added.");
       break;
     }
 

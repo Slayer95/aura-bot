@@ -4395,13 +4395,26 @@ void CGame::OpenAllSlots()
   }
 }
 
-void CGame::CloseAllSlots()
+bool CGame::CloseAllSlots()
 {
-  bool anyChanged = false;
+  bool hasPlayer = false;
+  uint8_t firstSID = 0xFF;
+  for (uint8_t SID = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
+      if (firstSID == 0xFF) firstSID = SID + 1;
+      if (hasPlayer) break;
+    } else if (GetIsPlayerSlot(SID)) {
+      hasPlayer = true;
+      if (firstSID != 0xFF) break;
+    }
+  }
 
-  for (auto& slot : m_Slots) {
-    if (slot.GetSlotStatus() == SLOTSTATUS_OPEN) {
-      slot.SetSlotStatus(SLOTSTATUS_CLOSED);
+  bool anyChanged = false;
+  if (hasPlayer) firstSID = 0;
+  uint8_t SID = m_Slots.size();
+  while (firstSID < SID--) {
+    if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
+      m_Slots[SID].SetSlotStatus(SLOTSTATUS_CLOSED);
       anyChanged = true;
     }
   }
@@ -4411,6 +4424,8 @@ void CGame::CloseAllSlots()
       DeleteVirtualHost();
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
+
+  return anyChanged;
 }
 
 bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill)
