@@ -195,6 +195,7 @@ public:
 
   void EventBNETGameRefreshFailed(CRealm* bnet);
   void EventGameDeleted(CGame* game);
+  void EventGameRemake(CGame* game);
 
   // other functions
 

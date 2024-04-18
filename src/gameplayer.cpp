@@ -114,7 +114,8 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
       const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
       if (Bytes[0] == W3GS_HEADER_CONSTANT || (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled)) {
-        if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
+        if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN &&
+          m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror() && !m_Aura->m_CurrentLobby->GetLobbyLoading()) {
           if (m_IsUDPTunnel) {
             m_IsUDPTunnel = false;
             vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};

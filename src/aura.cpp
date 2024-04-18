@@ -931,9 +931,14 @@ bool CAura::Update()
 
   for (auto it = begin(m_Games); it != end(m_Games);) {
     if ((*it)->Update(&fd, &send_fd)) {
-      Print("[AURA] deleting game [" + (*it)->GetGameName() + "]");
-      EventGameDeleted(*it);
-      delete *it;
+      if ((*it)->GetExiting()) {
+        Print("[AURA] deleting game [" + (*it)->GetGameName() + "]");
+        EventGameDeleted(*it);
+        delete *it;
+      } else {
+        Print("[AURA] remaking game [" + (*it)->GetGameName() + "]");
+        EventGameRemake(*it);
+      }
       it = m_Games.erase(it);
     } else {
       (*it)->UpdatePost(&send_fd);
@@ -1000,6 +1005,16 @@ void CAura::EventGameDeleted(CGame* game)
     bnet->QueueChatChannel("Game ended: " + game->GetDescription());
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
       bnet->QueueWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
+    }
+  }
+}
+
+void CAura::EventGameRemake(CGame* game)
+{
+  for (auto& bnet : m_Realms) {
+    bnet->QueueChatChannel("Game remake: " + game->GetDescription());
+    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+      bnet->QueueWhisper("Game remake: " + game->GetDescription(), game->GetCreatorName());
     }
   }
 }

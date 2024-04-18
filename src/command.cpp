@@ -1880,12 +1880,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->Remake()) {
-        ErrorReply("Failed to remake the game.");
-      } else {
-        m_TargetGame->SendAllChat("Please rejoin the remade game <<" + m_TargetGame->GetGameName() + ">>.");
-        m_TargetGame->StopPlayers("was disconnected (admin remade game)");
+      if (!m_TargetGame->GetIsRemakeable()) {
+        ErrorReply("This game cannot be remade.");
+        break;
       }
+      m_TargetGame->SendAllChat("Please rejoin the remade game <<" + m_TargetGame->GetGameName() + ">>.");
+      m_TargetGame->StopPlayers("was disconnected (admin remade game)");
+      m_TargetGame->Remake();
       break;
     }
 
@@ -3559,7 +3560,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_TargetGame->ResetDraft();
       vector<string> failPlayers;
 
-      uint8_t team = Args.size();
+      uint8_t team = static_cast<uint8_t>(Args.size());
       while (team--) {
         CGamePlayer* player = GetTargetPlayer(Args[team]);
         if (player) {

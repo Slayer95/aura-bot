@@ -104,7 +104,7 @@ protected:
   std::vector<CGamePlayer*>      m_Players;                       // std::vector of players
   std::queue<CIncomingAction*>   m_Actions;                       // queue of actions to be sent
   std::vector<std::string>       m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
-  std::set<std::string>          m_ReportedJoinFailNames;                  // set of player names to NOT print ban messages for when joining because they've already been printed
+  std::set<std::string>          m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
   std::vector<uint16_t>          m_FakePlayers;                  // the fake player's PIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   CMap*                          m_Map;                           // map data
   std::string                    m_GameName;                      // game name
@@ -191,6 +191,7 @@ protected:
   bool                           m_CountDownStarted;              // if the game start countdown has started or not
   bool                           m_GameLoading;                   // if the game is currently loading or not
   bool                           m_GameLoaded;                    // if the game has loaded or not
+  bool                           m_LobbyLoading;                  // if the lobby is being setup asynchronously
   bool                           m_Lagging;                       // if the lag screen is active or not
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
@@ -237,6 +238,7 @@ public:
   inline bool           GetIsDraftMode() const { return m_IsDraftMode; }
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
+  inline bool           GetLobbyLoading() const { return m_LobbyLoading; }
   inline bool           GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool           GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline bool           GetLagging() const { return m_Lagging; }
@@ -357,7 +359,8 @@ public:
   void EventGameStarted();
   void EventGameLoaded();
   void Reset(const bool saveStats);
-  bool Remake();
+  bool GetIsRemakeable();
+  void Remake();
 
   // other functions
 

@@ -140,6 +140,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CountDownStarted(false),
     m_GameLoading(false),
     m_GameLoaded(false),
+    m_LobbyLoading(false),
     m_Lagging(false),
     m_Desynced(false),
     m_IsDraftMode(false),
@@ -675,8 +676,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // changed this to ping during game loading as well to hopefully fix some problems with people disconnecting during loading
   // changed this to ping during the game as well
 
-  if (Time - m_LastPingTime >= 5)
-  {
+  if (!m_LobbyLoading && (Time - m_LastPingTime >= 5)) {
     // note: we must send pings to players who are downloading the map because Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the player takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
 
@@ -706,6 +706,19 @@ bool CGame::Update(void* fd, void* send_fd)
       i = m_Players.erase(i);
     } else {
       ++i;
+    }
+  }
+
+  if (m_LobbyLoading) {
+    if (m_Players.empty()) {
+      // This is a remake.
+      // All players left the original game, and they can rejoin now.
+      m_LobbyLoading = false;
+      CreateVirtualHost();
+    } else {
+      // Just remove reference from m_Aura->m_Games
+      // Do not actually destroy the game nor set m_Exiting
+      return true;
     }
   }
 
@@ -856,12 +869,12 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // end the game if there aren't any players left
 
-  if (m_Players.empty() && (m_GameLoading || m_GameLoaded))
-  {
+  if (m_Players.empty() && (m_GameLoading || m_GameLoaded)) {
     Print(GetLogPrefix() + "is over (no players left)");
     Print(GetLogPrefix() + "saving game data to database");
 
-    return true;
+    m_Exiting = true;
+    return m_Exiting;
   }
 
   // check if the game is loaded
@@ -918,7 +931,6 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // finish the gameover timer
-
   if (m_GameOverTime != 0 && Time - m_GameOverTime >= 60) {
     for (auto& player : m_Players) {
       if (!player->GetDeleteMe()) {
@@ -930,7 +942,6 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // expire the votekick
-
   if (!m_KickVotePlayer.empty() && Time - m_StartedKickVoteTime >= 60) {
     Print(GetLogPrefix() + "votekick against player [" + m_KickVotePlayer + "] expired");
     SendAllChat("A votekick against player [" + m_KickVotePlayer + "] has expired");
@@ -938,8 +949,9 @@ bool CGame::Update(void* fd, void* send_fd)
     m_StartedKickVoteTime = 0;
   }
 
-  if (m_GameLoaded)
+  if (m_GameLoaded) {
     return m_Exiting;
+  }
 
   // refresh every 3 seconds
 
@@ -1077,7 +1089,8 @@ bool CGame::Update(void* fd, void* send_fd)
       }
       if (TimeSinceSeenOwner > 60 * static_cast<int64_t>(m_LobbyTimeLimit)) {
         Print(GetLogPrefix() + "is over (lobby time limit hit)");
-        return true;
+        m_Exiting = true;
+        return m_Exiting;
       }
     }
   }
@@ -2378,7 +2391,7 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
     }
     m_SyncPlayers.erase(player);
     m_HadLeaver = true;
-  } else {
+  } else if (!m_LobbyLoading) {
     if (MatchOwnerName(player->GetName()) && m_OwnerRealm == player->GetRealmHostName() && player->GetRealmHostName().empty()) {
       ReleaseOwner();
     }
@@ -3678,12 +3691,16 @@ void CGame::EventGameLoaded()
   }
 }
 
-bool CGame::Remake()
+bool CGame::GetIsRemakeable()
 {
   if (!m_Map || m_RestoredGame) {
     return false;
   }
+  return true;
+}
 
+void CGame::Remake()
+{
   Reset(false);
 
   int64_t Time = GetTime();
@@ -3726,6 +3743,7 @@ bool CGame::Remake()
   m_CountDownStarted = false;
   m_GameLoading = false;
   m_GameLoaded = false;
+  m_LobbyLoading = true;
   m_Lagging = false;
   m_Desynced = false;
   m_IsDraftMode = false;
@@ -3737,16 +3755,10 @@ bool CGame::Remake()
   m_HostCounter = m_Aura->NextHostCounter();
   InitPRNG();
   InitSlots();
-  CreateVirtualHost();
+
+  m_KickVotePlayer.clear();
 
   m_Aura->m_CurrentLobby = this;
-  for (auto it = begin(m_Aura->m_Games); it != end(m_Aura->m_Games);) {
-    if (*it == this) {
-      m_Aura->m_Games.erase(it);
-    }
-  }
-
-  return true;
 }
 
 uint8_t CGame::GetSIDFromPID(uint8_t PID) const
