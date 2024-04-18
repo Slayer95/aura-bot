@@ -3179,7 +3179,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const bool isSudo = (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK)));
+      const bool isSudo = (0 != (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK)));
       if (m_TargetGame->GetIsDraftMode()) {
         if (!isSudo && (!m_Player || m_Player->GetDraftCaptain() == 0)) {
           ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
