@@ -1873,6 +1873,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!m_TargetGame->GetGameLoading() && !m_TargetGame->GetGameLoaded()) {
         ErrorReply("This game has not started yet.");
+        break;
       }
 
       if (m_Aura->m_CurrentLobby) {
