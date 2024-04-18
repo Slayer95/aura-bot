@@ -4399,7 +4399,7 @@ bool CGame::CloseAllSlots()
 {
   bool hasPlayer = false;
   uint8_t firstSID = 0xFF;
-  for (uint8_t SID = 0; i < m_Slots.size(); ++i) {
+  for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {
     if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
       if (firstSID == 0xFF) firstSID = SID + 1;
       if (hasPlayer) break;
