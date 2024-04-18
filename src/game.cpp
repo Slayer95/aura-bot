@@ -3199,6 +3199,7 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
   }
 
   if (m_IsDraftMode) {
+    SendChat(player, "This game has draft mode enabled. Only the team captains may assign players.");
     return;
   }
 
@@ -4435,9 +4436,23 @@ bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill)
 
 bool CGame::ComputerNSlots(const uint8_t skill, const uint8_t expectedCount)
 {
-  if (expectedCount <= GetNumComputers()) {
+  uint8_t currentCount = GetNumComputers();
+  if (expectedCount == currentCount) {
+    // noop
     return true;
   }
+
+  if (expectedCount < GetNumControllers()) {
+    uint8_t SID = m_Slots.size();
+    while (SID--) {
+      if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[SID].GetIsComputer()) {
+        if (OpenSlot(SID, false) && --currentCount == expectedCount) {
+          return true;
+        }
+      }
+    }
+  }
+
   if (m_Map->GetMapNumControllers() <= GetNumControllers()) {
     return false;
   }
@@ -4445,7 +4460,7 @@ bool CGame::ComputerNSlots(const uint8_t skill, const uint8_t expectedCount)
   const bool hasPlayers = GetHasAnyPlayer(); // Ensure this is called outside the loop.
   uint8_t remainingControllers = m_Map->GetMapNumControllers() - GetNumControllers();
   if (!hasPlayers) --remainingControllers; // Refuse to lock the last slot
-  uint8_t remainingComputers = expectedCount - GetNumComputers();
+  uint8_t remainingComputers = expectedCount - currentCount;
   if (remainingComputers > remainingControllers) {
     return false;
   }
@@ -4458,7 +4473,7 @@ bool CGame::ComputerNSlots(const uint8_t skill, const uint8_t expectedCount)
     ++SID;
   }
 
-  if (hasPlayers) DeleteVirtualHost();
+  if (GetSlotsOpen() == 0 && GetNumHumanOrFakeControllers() > 1) DeleteVirtualHost();
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
 
   return remainingComputers == 0;
@@ -5014,6 +5029,7 @@ void CGame::CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const st
     isCustomForces ? m_Slots[SID].GetColor() : m_Aura->m_MaxSlots,
     m_Map->GetLobbyRace(&m_Slots[SID])
   );
+  if (!isCustomForces) SetSlotTeamAndColorAuto(SID);
 
   m_FakePlayers.push_back(PID | (SID << 8));
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
@@ -5029,7 +5045,6 @@ bool CGame::CreateFakePlayer(const bool useVirtualHostName)
     DeleteVirtualHost();
 
   CreateFakePlayerInner(SID, GetNewPID(), useVirtualHostName ? m_LobbyVirtualHostName : ("User[" + ToDecString(SID + 1) + "]"));
-  SetSlotTeamAndColorAuto(SID);
   return true;
 }
 

@@ -96,9 +96,9 @@ bool CSaveGame::Parse()
 	ISS.read(reinterpret_cast<char*>(&Garbage2), 2);				// ???
 	ISS.read(reinterpret_cast<char*>(&m_NumSlots), 1);			// number of slots
 
-	if (m_NumSlots > m_Aura->m_MaxSlots) {
+	if (m_NumSlots == 0 || m_NumSlots > m_Aura->m_MaxSlots) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print("[SAVEGAME] invalid savegame (too many slots)");
+      Print("[SAVEGAME] invalid savegame (slot count invalid)");
     }
 		return false;
 	}

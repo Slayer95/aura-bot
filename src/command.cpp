@@ -2936,7 +2936,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, 1)) {
+        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, m_TargetGame->GetNumComputers() + 1)) {
           ErrorReply("No slots available.");
         } else {
           SendReply("Insane computer added.");
@@ -3406,7 +3406,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         CGamePlayer* player = GetTargetPlayer(Args[team]);
         if (player) {
           const uint8_t SID = m_TargetGame->GetSIDFromPID(player->GetPID());
-          if (m_TargetGame->SetSlotTeam(SID, team, true)) {
+          if (m_TargetGame->SetSlotTeam(SID, team, true) ||
+            m_TargetGame->InspectSlot(SID)->GetTeam() == team) {
             player->SetDraftCaptain(team + 1);
           } else {
             failPlayers.push_back(player->GetName());
@@ -3418,7 +3419,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (failPlayers.empty()) {
         SendReply("Draft captains assigned.");
       } else {
-        ErrorReply("Cannot assign draft captains: " + JoinVector(failPlayers, false));
+        ErrorReply("Draft mode enabled, but failed to assign captains: " + JoinVector(failPlayers, false));
       }
       break;
     }
@@ -3523,13 +3524,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!Payload.empty()) {
         vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
-        if (Args[0] <= 0 || Args[0] >= m_TargetGame->m_Slots.size()) {
+        // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
+        if (Args[0] <= 0 || Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots) {
           ErrorReply("Usage: " + cmdToken + "terminator");
           ErrorReply("Usage: " + cmdToken + "terminator [NUMBER]");
           break;
         }
-        if (!m_TargetGame->ComputerNSlots(static_cast<uint8_t>(Args[0]), SLOTCOMP_HARD)) {
-          ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumHumanOrFakeControllers()) + " vs " + to_string(Args[0]) + " AIs.");
+        uint8_t computerCount = static_cast<uint8_t>(Args[0]);
+        if (computerCount == m_Aura->m_MaxSlots) --computerCount; // Fix 1v12 into 1v11
+        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, computerCount)) {
+          ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumHumanOrFakeControllers()) + " vs " + ToDecString(computerCount) + " AIs.");
           break;
         }
       }
