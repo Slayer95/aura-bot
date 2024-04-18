@@ -111,8 +111,9 @@ uint32_t CMap::GetMapGameFlags() const
 
   // teams/units/hero/race
 
-  if (m_MapFlags & MAPFLAG_TEAMSTOGETHER)
+  if (m_MapFlags & MAPFLAG_TEAMSTOGETHER) {
     GameFlags |= 0x00004000;
+  }
 
   if (m_MapFlags & MAPFLAG_FIXEDTEAMS)
     GameFlags |= 0x00060000;
@@ -123,8 +124,13 @@ uint32_t CMap::GetMapGameFlags() const
   if (m_MapFlags & MAPFLAG_RANDOMHERO)
     GameFlags |= 0x02000000;
 
-  if (m_MapFlags & MAPFLAG_RANDOMRACES)
-    GameFlags |= 0x04000000;
+  if (!(m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
+    // WC3 GUI is misleading in displaying the Random Races tickbox when creating LAN games.
+    // It even shows Random Races: Yes in the game lobby.
+    // However, this flag is totally ignored when Fixed Player Settings is enabled.
+    if (m_MapFlags & MAPFLAG_RANDOMRACES)
+      GameFlags |= 0x04000000;
+  }
 
   return GameFlags;
 }
@@ -235,32 +241,6 @@ string CMap::GetMapFileName() const
   return m_ClientMapPath.substr(LastSlash + 1);
 }
 
-bool CMap::SetForcedRandomRaceSlots()
-{
-  if (GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
-    return false;
-  }
-  uint8_t i = static_cast<uint8_t>(m_Slots.size());
-  while (i--) {
-    m_Slots[i].SetRace(SLOTRACE_RANDOM);
-  }
-  Print("[MAP] forcing random races");
-  return true;
-}
-
-bool CMap::SetSelectableSlots()
-{
-  if (GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
-    return false;
-  }
-  uint8_t i = static_cast<uint8_t>(m_Slots.size());
-  while (i--) {
-    m_Slots[i].SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
-  }
-  Print("[MAP] setting selectable races");
-  return true;
-}
-
 bool CMap::IsObserverSlot(const CGameSlot* slot) const
 {
   if (slot->GetPID() != 0 || slot->GetDownloadStatus() != 255) {
@@ -328,17 +308,15 @@ bool CMap::SetRandomHeroes(const bool nEnable)
 
 bool CMap::SetRandomRaces(const bool nEnable)
 {
+  if (m_MapFlags & MAPOPT_FIXEDPLAYERSETTINGS) {
+    return false;
+  }
   if (nEnable) {
     m_MapFlags |= MAPFLAG_RANDOMRACES;
   } else {
     m_MapFlags &= ~MAPFLAG_RANDOMRACES;
   }
-
-  if (nEnable) {
-    return SetForcedRandomRaceSlots();
-  } else {
-    return SetSelectableSlots();
-  }
+  return true;
 }
 
 void CMap::Load(CConfig* CFG)
@@ -735,13 +713,14 @@ void CMap::Load(CConfig* CFG)
 
             for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
             {
-              CGameSlot Slot(0, 255, SLOTSTATUS_OPEN, 0, 0, 1, SLOTRACE_RANDOM);
+              CGameSlot Slot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, 0, 1, SLOTRACE_RANDOM);
               uint32_t  Color, Status, Race;
               ISS.read(reinterpret_cast<char*>(&Color), 4); // colour
               Slot.SetColor(static_cast<uint8_t>(Color));
               ISS.read(reinterpret_cast<char*>(&Status), 4); // status
 
               if (Status == 1 || Status == 2 && (0 == (RawMapFlags & MAPOPT_FIXEDPLAYERSETTINGS))) {
+                // WC3 ignores computer slots defined in WorldEdit if Fixed Player Settings is disabled.
                 Slot.SetSlotStatus(SLOTSTATUS_OPEN);
               } else if (Status == 2) {
                 Slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
@@ -1072,7 +1051,7 @@ void CMap::Load(CConfig* CFG)
 
   // if random races is set force every slot's race to random
 
-  if (m_MapFlags & MAPFLAG_RANDOMRACES) {
+  if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) && (m_MapFlags & MAPFLAG_RANDOMRACES)) {
     Print("[MAP] forcing races to random");
 
     for (auto& slot : m_Slots)

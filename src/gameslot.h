@@ -77,6 +77,10 @@
 #define SLOTCOMP_YES 1u
 #define SLOTCOMP_FIXED 2u
 
+#define SLOTPROG_NEW 0u
+#define SLOTPROG_RDY 100u
+#define SLOTPROG_RST 255u
+
 constexpr int MAX_SLOTS_MODERN = 24;
 constexpr int MAX_SLOTS_LEGACY = 12;
 

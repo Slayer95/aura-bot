@@ -212,8 +212,6 @@ public:
   bool                          SetRandomHeroes(const bool nEnable);
   bool                          SetMapVisibility(const uint8_t nMapVisibility);
   bool                          SetMapObservers(const uint8_t nMapObservers);
-  bool                          SetForcedRandomRaceSlots();
-  bool                          SetSelectableSlots();
   bool                          IsObserverSlot(const CGameSlot* slot) const;
   bool                          NormalizeSlots();
 

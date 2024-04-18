@@ -318,21 +318,38 @@ void CGame::InitSlots()
   const bool customForces = m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES;
   const bool fixedPlayers = m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS;
   bitset<MAX_SLOTS_MODERN> usedColors;
+  uint32_t counter = 1;
   for (auto& slot : m_Slots) {
     slot.SetPID(0);
-    slot.SetDownloadStatus(0);
-    slot.SetSlotStatus(slot.GetSlotStatus() & SLOTSTATUS_VALID);
-    // SLOTCOMP_FIXED makes GetIsSelectable() false
-    // This also means that when Fixed Player Settings is off, there are no unselectable slots.
-    slot.SetComputer(fixedPlayers && slot.GetIsComputer() ? SLOTCOMP_YES | SLOTCOMP_FIXED : SLOTCOMP_NO);
+    slot.SetDownloadStatus(SLOTPROG_RST);
+    if (slot.GetIsComputer()) {
+      // The way WC3 client treats computer slots defined from WorldEdit depends on the
+      // Fixed Player Settings flag:
+      //  - OFF: Any computer slots are ignored, and they are treated as Open slots instead.
+      //  - ON: Computer slots are enforced. They cannot be removed, or edited in any way.
+      //
+      // For Aura, enforcing computer slots with Fixed Player Setting ON is a must.
+      // However, we can support default editable computer slots even when it's OFF, through mapcfg files.
+      //
+      // All this also means that when Fixed Player Settings is off, there are no unselectable slots.
+      slot.SetComputer(SLOTCOMP_YES | (fixedPlayers ? SLOTCOMP_FIXED : SLOTCOMP_NO));
+      slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
+    } else {
+      slot.SetComputer(SLOTCOMP_NO);
+      slot.SetSlotStatus(slot.GetSlotStatus() & SLOTSTATUS_VALID);
+    }
 
     if (!slot.GetIsSelectable()) {
+      // There is no way to define default handicaps using WorldEdit.
       slot.SetHandicap(100);
+      // There is no way to define default difficulty using WorldEdit.
       slot.SetComputerType(SLOTCOMP_NORMAL);
     } else {
       // Handicap valid engine values are 50, 60, 70, 80, 90, 100
       // The other 250 uint8 values may be set on-the-fly by Aura,
       // and are used by maps that implement HCL.
+      //
+      // Aura supports default handicaps through mapcfg files.
       uint8_t handicap = slot.GetHandicap() / 10;
       if (handicap < 5) handicap = 5;
       if (handicap > 10) handicap = 10;
@@ -342,7 +359,7 @@ void CGame::InitSlots()
 
     if (!customForces) {
       // default user-customizable slot is always observer
-      // when players join, only then we assign it a team
+      // only when players join do we assign them a team
       // (if they leave, the slots are reset to observers)
       slot.SetTeam(m_Aura->m_MaxSlots);
     }
@@ -365,9 +382,10 @@ void CGame::InitSlots()
       }
     }
 
-    if (!fixedPlayers || (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)) {
+    // When Fixed Player Settings is enabled, MAPFLAG_RANDOMRACES cannot be turned on.
+    if (!fixedPlayers && (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)) {
       // default user-customizable slot is always random
-      // when players join, only then we assign it the selectable race bit
+      // only when players join do we assign them the selectable race bit
       // (if they leave, the slots are reset to pure random)
       slot.SetRace(SLOTRACE_RANDOM);
     } else {
@@ -375,7 +393,13 @@ void CGame::InitSlots()
       // so we gotta unset contradictory bits.
       bitset<8> slotRace(slot.GetRace());
       slotRace.reset(7);
-      slotRace.reset(6); // Fixed Players Settings means unselectable races.
+      if (fixedPlayers) {
+        // disable SLOTRACE_SELECTABLE
+        slotRace.reset(6);
+      } else {
+        // enable SLOTRACE_SELECTABLE
+        slotRace.set(6);
+      }
       slotRace.reset(4);
       uint8_t chosenRaceBit = 5; // SLOTRACE_RANDOM
       bool foundRace = false;
@@ -2669,10 +2693,11 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
     );
   }
 
+  // The game client soft-crashes if the first player does not have the map.
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-    m_Slots[SID] = CGameSlot(Player->GetPID(), 0, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColor(), m_Map->GetLobbyRace(&m_Slots[SID]));
+    m_Slots[SID] = CGameSlot(Player->GetPID(), SLOTPROG_RST, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColor(), m_Map->GetLobbyRace(&m_Slots[SID]));
   } else {
-    m_Slots[SID] = CGameSlot(Player->GetPID(), 0, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
+    m_Slots[SID] = CGameSlot(Player->GetPID(), SLOTPROG_RST, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
     SetSlotTeamAndColorAuto(SID);
   }
 
@@ -4063,9 +4088,9 @@ bool CGame::OpenSlot(uint8_t SID, bool kick)
     Player->SetLeftCode(PLAYERLEAVE_LOBBY);
   }
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-    m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
+    m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
   } else {
-    m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
   }
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   return true;
@@ -4088,9 +4113,9 @@ bool CGame::CloseSlot(uint8_t SID, bool kick)
     DeleteVirtualHost();
 
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-    m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_CLOSED, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
+    m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_CLOSED, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
   } else {
-    m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_CLOSED, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_CLOSED, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
   }
   
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -4244,6 +4269,7 @@ void CGame::SetSlotTeamAndColorAuto(const uint8_t SID)
     slot->SetTeam(SID % m_Map->GetMapNumTeams());
     slot->SetColor(GetNewColor());
   }
+  Print("Slot " + ToDecString(SID) + " has team " + ToDecString(slot->GetTeam()) + ", color " + ToDecString(slot->GetColor()));
 }
 
 void CGame::OpenAllSlots()
@@ -4290,9 +4316,9 @@ bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill)
     if (slot->GetTeam() == m_Aura->m_MaxSlots) {
       return false;
     }
-    m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_OCCUPIED, SLOTCOMP_YES, slot->GetTeam(), slot->GetColor(), m_Map->GetLobbyRace(slot), skill);
+    m_Slots[SID] = CGameSlot(0, SLOTPROG_RDY, SLOTSTATUS_OCCUPIED, SLOTCOMP_YES, slot->GetTeam(), slot->GetColor(), m_Map->GetLobbyRace(slot), skill);
   } else {
-    m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_OCCUPIED, SLOTCOMP_YES, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(slot), skill);
+    m_Slots[SID] = CGameSlot(0, SLOTPROG_RDY, SLOTSTATUS_OCCUPIED, SLOTCOMP_YES, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(slot), skill);
     SetSlotTeamAndColorAuto(SID);
   }
   return true;
@@ -4330,10 +4356,10 @@ bool CGame::ComputerNSlots(const uint8_t skill, const uint8_t expectedCount)
   return remainingComputers == 0;
 }
 
-void CGame::ComputerAllSlots(const uint8_t skill)
+bool CGame::ComputerAllSlots(const uint8_t skill)
 {
   if (m_Map->GetMapNumControllers() <= GetNumControllers()) {
-    return;
+    return false;
   }
 
   bool anyChanged = false;
@@ -4352,6 +4378,7 @@ void CGame::ComputerAllSlots(const uint8_t skill)
     if (GetNumConnectionsOrFake() > 1) DeleteVirtualHost();
     m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
   }
+  return anyChanged;
 }
 
 void CGame::ShuffleSlots()
@@ -4800,7 +4827,7 @@ void CGame::OpenObserverSlots()
   if (m_Slots.size() >= m_Aura->m_MaxSlots) return;
   Print(GetLogPrefix() + "adding " + to_string(m_Aura->m_MaxSlots - m_Slots.size()) + " observer slots");
   while (m_Slots.size() < m_Aura->m_MaxSlots) {
-    m_Slots.emplace_back(0u, 0xFFu, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots.emplace_back(0u, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
   }
 }
 
@@ -4852,13 +4879,14 @@ void CGame::CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const st
   SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(PID, name, IP, IP));
   m_Slots[SID] = CGameSlot(
     PID,
-    100,
+    SLOTPROG_RDY,
     SLOTSTATUS_OCCUPIED,
     SLOTCOMP_NO,
     isCustomForces ? m_Slots[SID].GetTeam() : m_Aura->m_MaxSlots,
     isCustomForces ? m_Slots[SID].GetColor() : m_Aura->m_MaxSlots,
     m_Map->GetLobbyRace(&m_Slots[SID])
   );
+
   m_FakePlayers.push_back(PID);
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
 }
@@ -4915,9 +4943,9 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
   for (auto i = begin(m_FakePlayers); i != end(m_FakePlayers); ++i) {
     if (slot->GetPID() == (*i)) {
       if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-        m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
+        m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
       } else {
-        m_Slots[SID] = CGameSlot(0, 0, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+        m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
       }
       SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(*i, PLAYERLEAVE_LOBBY));
       m_FakePlayers.erase(i);
@@ -4964,9 +4992,9 @@ void CGame::DeleteFakePlayers()
     for (auto& slot : m_Slots) {
       if (slot.GetPID() != fakeplayer) continue;
       if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
-        slot = CGameSlot(0, 0, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot.GetTeam(), slot.GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(&slot));
+        slot = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot.GetTeam(), slot.GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(&slot));
       } else {
-        slot = CGameSlot(0, 0, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+        slot = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
       }
       SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(fakeplayer, PLAYERLEAVE_LOBBY));
       break;

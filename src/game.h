@@ -406,7 +406,7 @@ public:
   void OpenAllSlots();
   void CloseAllSlots();
   bool ComputerNSlots(const uint8_t expectedCount, const uint8_t skill);
-  void ComputerAllSlots(const uint8_t skill);
+  bool ComputerAllSlots(const uint8_t skill);
   void ShuffleSlots();
 
   void ReportSpoofed(const std::string& server, CGamePlayer* player);

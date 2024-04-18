@@ -3292,12 +3292,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const uint8_t targetSkill = ParseComputerSkill(Payload);
+      uint8_t targetSkill = Payload.empty() ? SLOTCOMP_HARD : ParseComputerSkill(Payload);
       if (targetSkill == SLOTCOMP_INVALID) {
         ErrorReply("Usage: " + cmdToken + "fill [SKILL] - Skill is any of: easy, normal, insane");
         break;
       }
-      m_TargetGame->ComputerAllSlots(targetSkill);
+      if (!m_TargetGame->ComputerAllSlots(targetSkill)) {
+        ErrorReply("No remaining slots available.");
+      }
       break;
     }
 
