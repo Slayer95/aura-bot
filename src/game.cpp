@@ -3207,7 +3207,7 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
   if (team == slot->GetTeam()) {
     if (!SwapEmptyAllySlot(SID)) return;
   } else if (m_IsDraftMode) {
-    SendChat(player, "This game has draft mode enabled. Only the team captains may assign players.");
+    SendChat(player, "This lobby has draft mode enabled. Only team captains may assign players.");
   } else {
     SetSlotTeam(GetSIDFromPID(player->GetPID()), team, false);
   }
