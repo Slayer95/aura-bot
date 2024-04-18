@@ -929,19 +929,15 @@ bool CAura::Update()
 
   // update running games
 
-  for (auto i = begin(m_Games); i != end(m_Games);)
-  {
-    if ((*i)->Update(&fd, &send_fd))
-    {
-      Print("[AURA] deleting game [" + (*i)->GetGameName() + "]");
-      EventGameDeleted(*i);
-      delete *i;
-      i = m_Games.erase(i);
-    }
-    else
-    {
-      (*i)->UpdatePost(&send_fd);
-      ++i;
+  for (auto it = begin(m_Games); it != end(m_Games);) {
+    if ((*it)->Update(&fd, &send_fd)) {
+      Print("[AURA] deleting game [" + (*it)->GetGameName() + "]");
+      EventGameDeleted(*it);
+      delete *it;
+      it = m_Games.erase(it);
+    } else {
+      (*it)->UpdatePost(&send_fd);
+      ++it;
     }
   }
 

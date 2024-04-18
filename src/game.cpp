@@ -83,7 +83,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_GameName),
-    m_LastGameName(nGameSetup->m_GameName),
     m_OwnerName(nGameSetup->m_GameOwner.first),
     m_OwnerRealm(nGameSetup->m_GameOwner.second),
     m_CreatorText(nGameSetup->m_Attribution),
@@ -131,7 +130,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_IsAutoVirtualPlayers(false),
     m_VirtualHostPID(0xFF),
     m_Exiting(false),
-    m_Saving(false),
     m_SlotInfoChanged(0),
     m_PublicStart(false),
     m_Locked(false),
@@ -181,11 +179,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
       AddToReserved(playerName);
     }
 
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<uint32_t> dis;
-    m_RandomSeed = dis(gen);
-    m_EntryKey = nGameSetup->m_GameChannelKey.has_value() ? nGameSetup->m_GameChannelKey.value() : dis(gen);
+    InitPRNG();
 
     // wait time of 1 minute  = 0 empty actions required
     // wait time of 2 minutes = 1 empty action required...
@@ -221,57 +215,40 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   InitSlots();
 }
 
-CGame::~CGame()
+void CGame::Reset(const bool saveStats)
 {
-  if (m_HasMapLock) {
-    string localPathString = m_Map->GetServerPath();
-    m_Aura->m_BusyMaps.erase(localPathString);
-    if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
-      filesystem::path localPath = localPathString;
-      bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
-      if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
-        bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
-        if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
-          m_Map->UnlinkFile();
-        }
-      }
-    }
-    m_HasMapLock = false;
-  }
-  delete m_Map;
-
   for (auto& entry : m_SyncPlayers) {
     entry.second.clear();
   }
   m_SyncPlayers.clear();
 
-  for (auto& player : m_Players)
-    delete player;
-
-  // store the CDBGamePlayers in the database
-  // add non-dota stats
-
-  for (auto& player : m_DBGamePlayers)
-    m_Aura->m_DB->GamePlayerAdd(player->GetName(), player->GetLoadingTime(), m_GameTicks / 1000, player->GetLeft());
-
-  // store the dota stats in the database
-
-  if (m_Stats)
-    m_Stats->Save(m_Aura, m_Aura->m_DB);
-
-  while (!m_Actions.empty())
-  {
+  while (!m_Actions.empty()) {
     delete m_Actions.front();
     m_Actions.pop();
   }
 
-  for (auto& player : m_DBGamePlayers)
-    delete player;
+  // store the CDBGamePlayers in the database
+  // add non-dota stats
+  for (auto& player : m_DBGamePlayers) {
+    m_Aura->m_DB->GamePlayerAdd(player->GetName(), player->GetLoadingTime(), m_GameTicks / 1000, player->GetLeft());
+  }
+  // store the dota stats in the database
+  if (saveStats && m_Stats) {
+    m_Stats->Save(m_Aura, m_Aura->m_DB);
+  }
 
-  for (auto& ban : m_DBBans)
+  for (auto& player : m_DBGamePlayers) {
+    delete player;
+  }
+  m_DBGamePlayers.clear();
+
+  for (auto& ban : m_DBBans) {
     delete ban;
+  }
+  m_DBBans.clear();
 
   delete m_Stats;
+  m_Stats = nullptr;
 
   for (auto& ctx : m_Aura->m_ActiveContexts) {
     if (ctx->m_SourceGame == this) {
@@ -287,6 +264,41 @@ CGame::~CGame()
   for (auto& realm : m_Aura->m_Realms) {
     realm->ResetGameAnnouncement();
   }
+}
+
+CGame::~CGame()
+{
+  Reset(true);
+
+  if (m_HasMapLock) {
+    string localPathString = m_Map->GetServerPath();
+    m_Aura->m_BusyMaps.erase(localPathString);
+    if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
+      filesystem::path localPath = localPathString;
+      bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
+      if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
+        bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
+        if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
+          m_Map->UnlinkFile();
+        }
+      }
+    }
+    m_HasMapLock = false;
+  }
+
+  delete m_Map;
+  for (auto& player : m_Players) {
+    delete player;
+  }
+}
+
+void CGame::InitPRNG()
+{
+  random_device rd;
+  mt19937 gen(rd());
+  uniform_int_distribution<uint32_t> dis;
+  m_RandomSeed = dis(gen);
+  m_EntryKey = dis(gen);
 }
 
 void CGame::InitSlots()
@@ -687,16 +699,14 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // update players
 
-  for (auto i = begin(m_Players); i != end(m_Players);)
-  {
-    if ((*i)->Update(fd))
-    {
-      EventPlayerDeleted(*i);
+  for (auto i = begin(m_Players); i != end(m_Players);) {
+    if ((*i)->Update(fd)) {
+      EventPlayerDeleted(*i, fd, send_fd);
       delete *i;
       i = m_Players.erase(i);
-    }
-    else
+    } else {
       ++i;
+    }
   }
 
   // keep track of the largest sync counter (the number of keepalive packets received by each player)
@@ -867,8 +877,8 @@ bool CGame::Update(void* fd, void* send_fd)
 
     if (FinishedLoading) {
       m_LastActionSentTicks = Ticks;
-      m_GameLoading         = false;
-      m_GameLoaded          = true;
+      m_GameLoading = false;
+      m_GameLoaded = true;
       EventGameLoaded();
     }
   }
@@ -1042,8 +1052,8 @@ bool CGame::Update(void* fd, void* send_fd)
       } else {
         // Some operations may remove fake players during countdown.
         // Ensure that the game doesn't start if there are neither real nor fake players.
-        // (If a player leaves or joins, the countdown is aborted elsewhere.)
-        Print(GetLogPrefix() + "countdown aborted - lobby is empty.");
+        // (If a player leaves or joins, the countdown is stopped elsewhere.)
+        Print(GetLogPrefix() + "countdown stopped - lobby is empty.");
         m_CountDownStarted = false;
         m_CountDownCounter = 0;
       }
@@ -2349,7 +2359,7 @@ void CGame::SendGameDiscoveryInfo() const
   }
 }
 
-void CGame::EventPlayerDeleted(CGamePlayer* player)
+void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
 {
   Print(GetLogPrefix() + "deleting player [" + player->GetName() + "]: " + player->GetLeftReason());
 
@@ -2384,7 +2394,7 @@ void CGame::EventPlayerDeleted(CGamePlayer* player)
 
   // abort the countdown if there was one in progress
   if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded) {
-    SendAllChat("Countdown aborted because [" + player->GetName() + "] left!");
+    SendAllChat("Countdown stopped because [" + player->GetName() + "] left!");
     m_CountDownStarted = false;
   }
 
@@ -2415,6 +2425,9 @@ void CGame::EventPlayerDeleted(CGamePlayer* player)
         m_DBBanLast = ban;
     }
   }
+
+  // Flush queued data before the socket is destroyed.
+  player->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
 }
 
 void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
@@ -2782,7 +2795,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
 
   if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded)
   {
-    SendAllChat("Countdown aborted!");
+    SendAllChat("Countdown stopped!");
     m_CountDownStarted = false;
   }
 
@@ -3601,8 +3614,9 @@ void CGame::EventGameStarted()
     m_HasMapLock = false;
   }
 
-  delete m_Map;
-  m_Map = nullptr;
+  if (m_Map) {
+    m_Map->ClearMapData();
+  }
 
   // move the game to the games in progress vector
 
@@ -3662,6 +3676,77 @@ void CGame::EventGameLoaded()
     // TODO: This creates a lag spike client-side.
     StopPlayers("single-player game untracked");
   }
+}
+
+bool CGame::Remake()
+{
+  if (!m_Map || m_RestoredGame) {
+    return false;
+  }
+
+  Reset(false);
+
+  int64_t Time = GetTime();
+  int64_t Ticks = GetTicks();
+
+  m_GameTicks = 0;
+  m_CreationTime = Time;
+  m_LastPingTime = Time;
+  m_LastRefreshTime = Time;
+  m_LastDownloadTicks = Time;
+  m_LastDownloadCounterResetTicks = Ticks;
+  m_LastCountDownTicks = 0;
+  m_StartedLoadingTicks = 0;
+  m_LastActionSentTicks = 0;
+  m_LastActionLateBy = 0;
+  m_StartedLaggingTime = 0;
+  m_LastLagScreenTime = 0;
+  m_LastOwnerSeen = Time;
+  m_StartedKickVoteTime = 0;
+  m_GameOverTime = 0;
+  m_LastPlayerLeaveTicks = 0;
+  m_LastLagScreenResetTime = 0;
+  m_PauseCounter = 0;
+  m_SyncCounter = 0;
+
+  m_DownloadCounter = 0;
+  m_CountDownCounter = 0;
+  m_StartPlayers = 0;
+  m_AutoStartMinTime = 0;
+  m_AutoStartMaxTime = 0;
+  m_AutoStartPlayers = 0;
+  m_ControllersWithMap = 0;
+
+  m_IsAutoVirtualPlayers = false;
+  m_VirtualHostPID = 0xFF;
+  m_SlotInfoChanged = 0;
+  m_PublicStart = false;
+  m_Locked = false;
+  m_RealmRefreshError = false;
+  m_CountDownStarted = false;
+  m_GameLoading = false;
+  m_GameLoaded = false;
+  m_Lagging = false;
+  m_Desynced = false;
+  m_IsDraftMode = false;
+  m_HadLeaver = false;
+  m_HasMapLock = false;
+  m_UsesCustomReferees = false;
+  m_SentPriorityWhois = false;
+
+  m_HostCounter = m_Aura->NextHostCounter();
+  InitPRNG();
+  InitSlots();
+  CreateVirtualHost();
+
+  m_Aura->m_CurrentLobby = this;
+  for (auto it = begin(m_Aura->m_Games); it != end(m_Aura->m_Games);) {
+    if (*it == this) {
+      m_Aura->m_Games.erase(it);
+    }
+  }
+
+  return true;
 }
 
 uint8_t CGame::GetSIDFromPID(uint8_t PID) const

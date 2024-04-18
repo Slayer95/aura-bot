@@ -1411,6 +1411,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]");
+      m_TargetGame->SendAllChat("Ending the game.");
       m_TargetGame->StopPlayers("was disconnected (admin ended game)");
       break;
     }
@@ -1764,7 +1765,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool IsPrivate = CommandHash == HashCode("priv");
       if (m_TargetGame) {
         m_TargetGame->m_GameDisplay  = IsPrivate ? GAME_PRIVATE : GAME_PUBLIC;
-        m_TargetGame->m_LastGameName = m_TargetGame->m_GameName;
         m_TargetGame->m_GameName     = Payload;
         m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
         m_TargetGame->m_RealmRefreshError = false;
@@ -1852,6 +1852,40 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetOwner(ownerName, ownerRealmName.empty() ? m_SourceRealm : m_Aura->GetRealmByInputId(ownerRealmName));
       m_Aura->m_GameSetup->RunHost();
       delete m_Aura->m_GameSetup;
+      break;
+    }
+
+    //
+    // !REMAKE
+    //
+
+    case HashCode("remake"):
+    case HashCode("rmk"): {
+      if (!m_TargetGame) {
+        ErrorReply("No game is selected.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot remake the game.");
+        break;
+      }
+
+      if (!m_TargetGame->GetGameLoading() && !m_TargetGame->GetGameLoaded()) {
+        ErrorReply("This game has not started yet.");
+      }
+
+      if (m_Aura->m_CurrentLobby) {
+        ErrorReply("There is already a lobby hosted.");
+        break;
+      }
+
+      if (!m_TargetGame->Remake()) {
+        ErrorReply("Failed to remake the game.");
+      } else {
+        m_TargetGame->SendAllChat("Please rejoin the remade game <<" + m_TargetGame->GetGameName() + ">>.");
+        m_TargetGame->StopPlayers("was disconnected (admin remade game)");
+      }
       break;
     }
 
@@ -2368,7 +2402,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetCountDownStarted()) {
-        SendAll("Countdown aborted!");
+        SendAll("Countdown stopped!");
         m_TargetGame->m_CountDownStarted = false;
       } else {
         m_TargetGame->m_AutoStartMinTime = 0;

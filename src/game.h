@@ -108,7 +108,6 @@ protected:
   std::vector<uint16_t>          m_FakePlayers;                  // the fake player's PIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   CMap*                          m_Map;                           // map data
   std::string                    m_GameName;                      // game name
-  std::string                    m_LastGameName;                  // last game name (the previous game name before it was rehosted)
   std::string                    m_IndexVirtualHostName;          // host's name
   std::string                    m_LobbyVirtualHostName;          // host's name
   std::string                    m_LastOwner;                     // name of the player who was owner last time the owner was released
@@ -182,7 +181,6 @@ protected:
   uint8_t                        m_VirtualHostPID;                // host's PID
   uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                           m_Exiting;                       // set to true and this class will be deleted next update
-  bool                           m_Saving;                        // if we're currently saving game data to the database
   uint8_t                        m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
   bool                           m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                           m_Locked;                        // if the game owner is the only one allowed to run game commands or not
@@ -222,7 +220,6 @@ public:
   inline uint8_t        GetDisplayMode() const { return m_GameDisplay; }
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
-  inline std::string    GetLastGameName() const { return m_LastGameName; }
   inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
   inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
   std::string           GetPrefixedGameName(const CRealm* realm = nullptr) const;
@@ -334,7 +331,7 @@ public:
   // note: these are only called while iterating through the m_Potentials or m_Players std::vectors
   // therefore you can't modify those std::vectors and must use the player's m_DeleteMe member to flag for deletion
 
-  void EventPlayerDeleted(CGamePlayer* player);
+  void EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd);
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
@@ -359,6 +356,8 @@ public:
 
   void EventGameStarted();
   void EventGameLoaded();
+  void Reset(const bool saveStats);
+  bool Remake();
 
   // other functions
 
@@ -391,6 +390,7 @@ public:
 
   CGameSlot* GetSlot(const uint8_t SID);
   const CGameSlot* InspectSlot(const uint8_t SID) const;
+  void InitPRNG();
   void InitSlots();
   bool SwapEmptyAllySlot(const uint8_t SID);
   bool SwapSlots(const uint8_t SID1, const uint8_t SID2);
