@@ -1325,19 +1325,21 @@ vector<uint8_t> CGame::GetActiveTeamSizes() const
 
 uint8_t CGame::GetSelectableTeamSlot(const uint8_t team, const uint8_t endSID, const bool force) const
 {
+  uint8_t forceResult = 0xFF;
   for (uint8_t i = 0; i < endSID; ++i) {
     const CGameSlot& slot = m_Slots[i];
     if (slot.GetTeam() != team) continue;
     if (slot.GetSlotStatus() == SLOTSTATUS_CLOSED) continue;
     if (!slot.GetIsSelectable()) continue;
-    if (!force) {
-      // player team change request
-      if (slot.GetSlotStatus() != SLOTSTATUS_OPEN) {
-        continue;
-      }
+    // player team change request
+    if (slot.GetSlotStatus() != SLOTSTATUS_OPEN) {
+      // When force is used, fallback to the highest occupied SID
+      forceResult = i;
+      continue;
     }
     return i;
   }
+  if (force) return forceResult;
   return 0xFF;
 }
 
@@ -1858,8 +1860,11 @@ void CGame::SendFakePlayersInfo(CGameConnection* player) const
 
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
 
-  for (auto& fakeplayer : m_FakePlayers)
-    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "User[" + to_string(fakeplayer) + "]", IP, IP));
+  for (const uint16_t fakePlayer : m_FakePlayers) {
+    // The higher 8 bytes are the original SID the player was created at.
+    // This information is important for letting hosts know which !open, !close, commands to execute.
+    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
+  }
 }
 
 void CGame::SendFakePlayersInfo(CGamePlayer* player) const
@@ -1869,8 +1874,11 @@ void CGame::SendFakePlayersInfo(CGamePlayer* player) const
 
   const std::vector<uint8_t> IP = {0, 0, 0, 0};
 
-  for (auto& fakeplayer : m_FakePlayers)
-    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(fakeplayer, "User[" + to_string(fakeplayer) + "]", IP, IP));
+  for (const uint16_t fakePlayer : m_FakePlayers) {
+    // The higher 8 bytes are the original SID the player was created at.
+    // This information is important for letting hosts know which !open, !close, commands to execute.
+    Send(player, GetProtocol()->SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
+  }
 }
 
 void CGame::SendJoinedPlayersInfo(CGameConnection* connection) const
@@ -3533,7 +3541,7 @@ void CGame::EventGameStarted()
   // send a game loaded packet for any fake players
 
   for (auto& fakePlayer : m_FakePlayers)
-    SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(fakePlayer));
+    SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
 
   // record the number of starting players
 
@@ -3792,10 +3800,8 @@ uint8_t CGame::GetNewPID() const
 
     bool InUse = false;
 
-    for (auto& fakeplayer : m_FakePlayers)
-    {
-      if (fakeplayer == TestPID)
-      {
+    for (const uint16_t fakePlayer : m_FakePlayers) {
+      if (static_cast<uint8_t>(fakePlayer) == TestPID) {
         InUse = true;
         break;
       }
@@ -3836,7 +3842,7 @@ uint8_t CGame::GetNewColor() const
   return m_Aura->m_MaxSlots; // should never happen
 }
 
-bool CGame::HasPlayers() const
+bool CGame::GetHasAnyPlayer() const
 {
   if (m_Players.empty()) {
     return false;
@@ -3848,6 +3854,24 @@ bool CGame::HasPlayers() const
     }
   }
   return false;
+}
+
+bool CGame::GetIsPlayerSlot(const uint8_t SID) const
+{
+  const CGameSlot* slot = InspectSlot(SID);
+  if (!slot || !slot->GetIsHuman()) return false;
+  const CGamePlayer* player = GetPlayerFromSID(SID);
+  if (player == nullptr) return false;
+  return !player->GetDeleteMe();
+}
+
+bool CGame::GetHasAnotherPlayer(const uint8_t ExceptSID) const
+{
+  uint8_t SID = ExceptSID;
+  do {
+    SID = (SID + 1) % m_Slots.size();
+  } while (!GetIsPlayerSlot(SID) && SID != ExceptSID);
+  return SID != ExceptSID;
 }
 
 std::vector<uint8_t> CGame::GetPIDs() const
@@ -3919,6 +3943,12 @@ uint8_t CGame::GetHostPID() const
 }
 
 CGameSlot* CGame::GetSlot(const uint8_t SID)
+{
+  if (SID > m_Slots.size()) return nullptr;
+  return &(m_Slots[SID]);
+}
+
+const CGameSlot* CGame::InspectSlot(const uint8_t SID) const
 {
   if (SID > m_Slots.size()) return nullptr;
   return &(m_Slots[SID]);
@@ -4145,10 +4175,10 @@ bool CGame::CanLockSlotForJoins(const uint8_t SID)
   }
   if (slot->GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
     if (openSlots >= 1) return true;
-    return HasPlayers();
+    return GetHasAnotherPlayer(SID);
   }
 
-  return HasPlayers();
+  return GetHasAnyPlayer();
 }
 
 bool CGame::CloseSlot(uint8_t SID, bool kick)
@@ -4403,7 +4433,7 @@ bool CGame::ComputerNSlots(const uint8_t skill, const uint8_t expectedCount)
     return false;
   }
 
-  const bool hasPlayers = HasPlayers(); // Ensure this is called outside the loop.
+  const bool hasPlayers = GetHasAnyPlayer(); // Ensure this is called outside the loop.
   uint8_t remainingControllers = m_Map->GetMapNumControllers() - GetNumControllers();
   if (!hasPlayers) --remainingControllers; // Refuse to lock the last slot
   uint8_t remainingComputers = expectedCount - GetNumComputers();
@@ -4431,7 +4461,7 @@ bool CGame::ComputerAllSlots(const uint8_t skill)
     return false;
   }
 
-  const bool hasPlayers = HasPlayers(); // Ensure this is called outside the loop.
+  const bool hasPlayers = GetHasAnyPlayer(); // Ensure this is called outside the loop.
   uint32_t remainingSlots = m_Map->GetMapNumControllers() - GetNumControllers();
 
   // Refuse to lock the last slot
@@ -4465,8 +4495,9 @@ void CGame::ShuffleSlots()
   vector<CGameSlot> PlayerSlots;
 
   for (auto& slot : m_Slots) {
-    if (slot.GetIsHuman() && slot.GetTeam() != m_Aura->m_MaxSlots)
+    if (slot.GetIsHuman() && slot.GetTeam() != m_Aura->m_MaxSlots) {
       PlayerSlots.push_back(slot);
+    }
   }
 
   // now we shuffle PlayerSlots
@@ -4867,7 +4898,7 @@ bool CGame::Pause()
   if (m_FakePlayers.size() * 3 <= m_PauseCounter) return false;
   vector<uint8_t> CRC, Action;
   Action.push_back(1);
-  const uint8_t PID = m_FakePlayers[m_PauseCounter % m_FakePlayers.size()];
+  const uint8_t PID = static_cast<uint8_t>(m_FakePlayers[m_PauseCounter % m_FakePlayers.size()]);
   m_Actions.push(new CIncomingAction(PID, CRC, Action));
   ++m_PauseCounter;
   return true;
@@ -4894,7 +4925,8 @@ void CGame::Resume()
 {
   vector<uint8_t> CRC, Action;
   Action.push_back(2);
-  m_Actions.push(new CIncomingAction(m_FakePlayers[m_FakePlayers.size() - 1], CRC, Action));
+  const uint8_t PID = static_cast<uint8_t>(m_FakePlayers[m_FakePlayers.size() - 1]);
+  m_Actions.push(new CIncomingAction(PID, CRC, Action));
 }
 
 void CGame::OpenObserverSlots()
@@ -4966,7 +4998,7 @@ void CGame::CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const st
     m_Map->GetLobbyRace(&m_Slots[SID])
   );
 
-  m_FakePlayers.push_back(PID);
+  m_FakePlayers.push_back(PID | (SID << 8));
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
 }
 
@@ -4979,7 +5011,7 @@ bool CGame::CreateFakePlayer(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakePlayerInner(SID, GetNewPID(), useVirtualHostName ? m_LobbyVirtualHostName : ("User[" + ToDecString(SID) + "]"));
+  CreateFakePlayerInner(SID, GetNewPID(), useVirtualHostName ? m_LobbyVirtualHostName : ("User[" + ToDecString(SID + 1) + "]"));
   SetSlotTeamAndColorAuto(SID);
   return true;
 }
@@ -5003,7 +5035,7 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakePlayerInner(SID, GetNewPID(), useVirtualHostName ? m_LobbyVirtualHostName : "User[" + to_string(SID) + "]");
+  CreateFakePlayerInner(SID, GetNewPID(), useVirtualHostName ? m_LobbyVirtualHostName : ("User[" + ToDecString(SID + 1) + "]"));
   return true;
 }
 
@@ -5011,16 +5043,16 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
 {
   CGameSlot* slot = GetSlot(SID);
   if (!slot) return false;
-  for (auto i = begin(m_FakePlayers); i != end(m_FakePlayers); ++i) {
-    if (slot->GetPID() == (*i)) {
+  for (auto it = begin(m_FakePlayers); it != end(m_FakePlayers); ++it) {
+    if (slot->GetPID() == static_cast<uint8_t>(*it)) {
       if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
         m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
       } else {
         m_Slots[SID] = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
       }
       // Ensure this is sent before virtual host rejoins
-      SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(*i, PLAYERLEAVE_LOBBY));
-      m_FakePlayers.erase(i);
+      SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(*it), PLAYERLEAVE_LOBBY));
+      m_FakePlayers.erase(it);
       CreateVirtualHost();
       m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
       return true;
@@ -5032,7 +5064,7 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
 uint8_t CGame::FakeAllSlots()
 {
   // Ensure this is called outside any loops.
-  const bool hasPlayers = HasPlayers();
+  const bool hasPlayers = GetHasAnyPlayer();
 
   uint8_t addedCounter = 0;
   if (m_RestoredGame) {
@@ -5045,7 +5077,7 @@ uint8_t CGame::FakeAllSlots()
         continue;
       }
       if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
-        const CGameSlot* savedSlot = &(m_RestoredGame->GetSlots()[SID]);
+        const CGameSlot* savedSlot = m_RestoredGame->InspectSlot(SID);
         CreateFakePlayerInner(SID, savedSlot->GetPID(), m_Reserved[reservedIndex]);
         ++addedCounter;
         if (++reservedIndex >= reservedEnd) break;
@@ -5060,7 +5092,7 @@ uint8_t CGame::FakeAllSlots()
       if (m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OPEN) {
         continue;
       }
-      CreateFakePlayerInner(SID, GetNewPID(), "User[" + ToDecString(SID) + "]");
+      CreateFakePlayerInner(SID, GetNewPID(), "User[" + ToDecString(SID + 1) + "]");
       ++addedCounter;
       if (0 == --remainingControllers) {
         break;
@@ -5076,16 +5108,16 @@ void CGame::DeleteFakePlayers()
   if (m_FakePlayers.empty())
     return;
 
-  for (auto& fakeplayer : m_FakePlayers) {
+  for (uint16_t fakePlayer : m_FakePlayers) {
     for (auto& slot : m_Slots) {
-      if (slot.GetPID() != fakeplayer) continue;
+      if (slot.GetPID() != static_cast<uint8_t>(fakePlayer)) continue;
       if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
         slot = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot.GetTeam(), slot.GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(&slot));
       } else {
         slot = CGameSlot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
       }
       // Ensure this is sent before virtual host rejoins
-      SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(fakeplayer, PLAYERLEAVE_LOBBY));
+      SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(fakePlayer, PLAYERLEAVE_LOBBY));
       break;
     }
   }

@@ -105,7 +105,7 @@ protected:
   std::queue<CIncomingAction*>   m_Actions;                       // queue of actions to be sent
   std::vector<std::string>       m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>          m_ReportedJoinFailNames;                  // set of player names to NOT print ban messages for when joining because they've already been printed
-  std::vector<uint8_t>           m_FakePlayers;                   // the fake player's PIDs (if present)
+  std::vector<uint16_t>          m_FakePlayers;                  // the fake player's PIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   CMap*                          m_Map;                           // map data
   std::string                    m_GameName;                      // game name
   std::string                    m_LastGameName;                  // last game name (the previous game name before it was rehosted)
@@ -371,7 +371,9 @@ public:
   CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
   uint8_t              GetNewColor() const;
-  bool                 HasPlayers() const;
+  bool                 GetHasAnyPlayer() const;
+  bool                 GetIsPlayerSlot(const uint8_t SID) const;
+  bool                 GetHasAnotherPlayer(const uint8_t ExceptSID) const;
   std::vector<uint8_t> GetPIDs() const;
   std::vector<uint8_t> GetPIDs(uint8_t excludePID) const;
   uint8_t GetHostPID() const;
@@ -386,6 +388,7 @@ public:
   // Slot manipulation
 
   CGameSlot* GetSlot(const uint8_t SID);
+  const CGameSlot* InspectSlot(const uint8_t SID) const;
   void InitSlots();
   bool SwapEmptyAllySlot(const uint8_t SID);
   bool SwapSlots(const uint8_t SID1, const uint8_t SID2);

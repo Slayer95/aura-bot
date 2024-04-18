@@ -136,3 +136,9 @@ uint8_t CSaveGame::GetNumHumanSlots() const
   }
   return count;
 }
+
+const CGameSlot* CSaveGame::InspectSlot(const uint8_t SID) const
+{
+  if (SID >= m_Slots.size()) return nullptr;
+  return &(m_Slots[SID]);
+}

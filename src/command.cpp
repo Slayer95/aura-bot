@@ -652,7 +652,7 @@ bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID,
   switch (target[0]) {
     case '#': {
       uint8_t testSID = ParseSID(target.substr(1));
-      CGameSlot* slot = m_TargetGame->GetSlot(testSID);
+      const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
       if (!slot) {
         ErrorReply("Slot " + ToDecString(testSID + 1) + " not found.");
         return false;
@@ -669,7 +669,7 @@ bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID,
 
     default: {
       uint8_t testSID = ParseSID(target);
-      CGameSlot* slot = m_TargetGame->GetSlot(testSID);
+      const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
       CGamePlayer* testPlayer = nullptr;
       uint8_t matches = m_TargetGame->GetPlayerFromNamePartial(target.substr(1), testPlayer);
       if (slot && matches > 0 || !slot && matches == 0) {
@@ -706,7 +706,7 @@ bool CCommandContext::ParseNonPlayerSlot(const std::string& target, uint8_t& SID
     testSID = ParseSID(target);
   }
 
-  CGameSlot* slot = m_TargetGame->GetSlot(testSID);
+  const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
   if (!slot) {
     ErrorReply("Slot not found.");
     return false;
@@ -2139,7 +2139,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const CGameSlot* slot = m_TargetGame->GetSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()));
+      const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()));
       if (!slot || slot->GetDownloadStatus() == 100) {
         ErrorReply("Map transfer failed unexpectedly.", CHAT_LOG_CONSOLE);
         break;

@@ -63,6 +63,7 @@ public:
 	const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
 	uint32_t GetRandomSeed() const { return m_RandomSeed; }
 	const std::vector<uint8_t>& GetSaveHash()	const { return m_SaveHash; }
+  const CGameSlot* InspectSlot(const uint8_t SID) const;
   bool Load();
   void Unload();
 	bool Parse();

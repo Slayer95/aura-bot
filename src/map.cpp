@@ -259,7 +259,7 @@ bool CMap::NormalizeSlots()
   bool updated = false;
   bool anyNonObserver = false;
   while (i--) {
-    CGameSlot slot = m_Slots[i];
+    const CGameSlot slot = m_Slots[i];
     if (!IsObserverSlot(&slot)) {
       anyNonObserver = true;
       break;
