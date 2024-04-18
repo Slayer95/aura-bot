@@ -247,7 +247,7 @@ public:
   inline bool                  GetMuted() const { return m_Muted; }
   inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
-  inline uint8_t               GetDraftCaptain() { return m_TeamCaptain; }
+  inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }

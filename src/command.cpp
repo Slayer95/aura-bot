@@ -2062,7 +2062,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool onlyDraft = false;
       if (!GetIsSudo()) {
         if ((m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_CUSTOMFORCES) && (onlyDraft = m_TargetGame->GetIsDraftMode())) {
-          if (!m_Player || m_Player->GetDraftCaptain() == 0) {
+          if (!m_Player || !m_Player->GetIsDraftCaptain()) {
             ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
             break;
           }
@@ -3265,7 +3265,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool onlyDraft = false;
       if (!GetIsSudo()) {
         if (onlyDraft = m_TargetGame->GetIsDraftMode()) {
-          if (!m_Player || m_Player->GetDraftCaptain() == 0) {
+          if (!m_Player || !m_Player->GetIsDraftCaptain()) {
             ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
             break;
           }
