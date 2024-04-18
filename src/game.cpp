@@ -3198,11 +3198,6 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
     return;
   }
 
-  if (m_IsDraftMode) {
-    SendChat(player, "This game has draft mode enabled. Only the team captains may assign players.");
-    return;
-  }
-
   uint8_t SID = GetSIDFromPID(player->GetPID());
   const CGameSlot* slot = InspectSlot(SID);
   if (!slot) {
@@ -3211,6 +3206,8 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
 
   if (team == slot->GetTeam()) {
     if (!SwapEmptyAllySlot(SID)) return;
+  } else if (m_IsDraftMode) {
+    SendChat(player, "This game has draft mode enabled. Only the team captains may assign players.");
   } else {
     SetSlotTeam(GetSIDFromPID(player->GetPID()), team, false);
   }
