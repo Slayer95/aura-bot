@@ -508,9 +508,9 @@ uint32_t CGame::GetNumHumanOrFakeControllers() const
   return NumHumanPlayers;
 }
 
-uint32_t CGame::GetNumHumanPlayers() const
+uint8_t CGame::GetNumHumanPlayers() const
 {
-  uint32_t NumHumanPlayers = 0;
+  uint8_t NumHumanPlayers = 0;
 
   for (const auto& player : m_Players) {
     if (player->GetDeleteMe())
