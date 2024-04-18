@@ -571,7 +571,7 @@ string CGame::GetDescription() const
   if (m_IsMirror)
      return "[" + GetMapFileName() + "] (Mirror) \"" + m_GameName + "\"";
 
-  string Description = "[" + GetMapFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " + to_string(GetNumHumanPlayers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size());
+  string Description = "[" + GetMapFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " + ToDecString(GetNumHumanPlayers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size());
 
   if (m_GameLoading || m_GameLoaded)
     Description += " : " + to_string((m_GameTicks / 1000) / 60) + "min";
@@ -896,7 +896,7 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // start the gameover timer if there's only a configured number of players left
-  uint32_t RemainingPlayers = GetNumHumanPlayers() + static_cast<uint32_t>(m_FakePlayers.size());
+  uint8_t RemainingPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
   if (RemainingPlayers != m_StartPlayers && m_GameOverTime == 0 && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0 || RemainingPlayers <= m_NumPlayersToStartGameOver) {
       m_GameOverTime = Time;
@@ -1182,7 +1182,7 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message) const
   if (message.empty())
     return;
 
-  if (GetNumHumanPlayers() <= 0) {
+  if (GetHostPID() == 0xFF) {
     return;
   }
 
@@ -3427,7 +3427,7 @@ void CGame::EventPlayerPongToHost(CGamePlayer* player)
 
 void CGame::EventGameStarted()
 {
-  Print(GetLogPrefix() + "started loading with " + to_string(GetNumHumanPlayers()) + " players");
+  Print(GetLogPrefix() + "started loading with " + ToDecString(GetNumHumanPlayers()) + " players");
 
   if (m_UDPEnabled)
     SendGameDiscoveryDecreate();
@@ -3554,7 +3554,7 @@ void CGame::EventGameStarted()
 
   // record the number of starting players
 
-  m_StartPlayers = static_cast<uint8_t>(GetNumHumanPlayers()) + static_cast<uint8_t>(m_FakePlayers.size());
+  m_StartPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
 
   // enable stats
 
@@ -3634,7 +3634,7 @@ void CGame::EventGameStarted()
 
 void CGame::EventGameLoaded()
 {
-  Print(GetLogPrefix() + "finished loading with " + to_string(GetNumHumanPlayers()) + " players");
+  Print(GetLogPrefix() + "finished loading with " + ToDecString(GetNumHumanPlayers()) + " players");
 
   // send shortest, longest, and personal load times to each player
 

@@ -564,6 +564,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
 }
 
 void CCommandContext::SendReply(const string& message, const uint8_t ctxFlags) {
+  Print("SendReply(" + message + ")");
   if (message.empty()) return;
 
   if (m_IsBroadcast) {
@@ -1076,7 +1077,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SendReply("Votekick against player [" + m_TargetGame->m_KickVotePlayer + "] started by player [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       if (m_Player && m_Player != targetPlayer) {
         m_Player->SetKickVote(true);
-        SendAll("Player [" + m_Player->GetName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil((m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
+        SendAll("Player [" + m_Player->GetName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
       }
       SendAll("Type " + cmdToken + "yes or " + cmdToken + "no to vote.");
 
@@ -1091,7 +1092,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || m_Player->GetKickVote().value_or(false))
         break;
 
-      uint32_t VotesNeeded = static_cast<uint32_t>(ceil((m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100));
+      uint32_t VotesNeeded = static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100));
       m_Player->SetKickVote(true);
       m_TargetGame->SendAllChat("Player [" + m_Player->GetName() + "] voted for kicking player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
       m_TargetGame->CountKickVotes();
@@ -3386,8 +3387,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (Args.size() == 1) {
         if (Args[0] == "enable") {
           m_TargetGame->SetDraftMode(true);
+          SendReply("Draft mode enabled. Only draft captains may assign teams.");
         } else if (Args[0] == "disable") {
           m_TargetGame->SetDraftMode(false);
+          SendReply("Draft mode disabled. Everyone may choose their own team.");
         } else {
           ErrorReply("Usage: " + cmdToken + "draft enable/disable");
           ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");

@@ -250,7 +250,7 @@ public:
   uint32_t              GetSlotsOpen() const;
   bool                  HasSlotsOpen() const;
   uint32_t              GetNumHumanOrFakeControllers() const;
-  uint32_t              GetNumHumanPlayers() const;
+  uint8_t               GetNumHumanPlayers() const;
   uint8_t               GetNumOccupiedSlots() const;
   uint8_t               GetNumControllers() const;
   uint8_t               GetNumComputers() const;
