@@ -133,6 +133,7 @@ public:
   std::optional<bool> CheckPermissions(const uint8_t nPermissionsRequired) const;
   bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
   std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
+  bool GetIsSudo() const;
   bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
   bool CheckConfirmation(const std::string& cmdToken, const std::string& cmd, const std::string& payload, const std::string& errorMessage);
 

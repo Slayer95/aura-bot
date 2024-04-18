@@ -467,6 +467,11 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
   return Result;
 }
 
+bool CCommandContext::GetIsSudo() const
+{
+  return (0 != (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK)));
+}
+
 void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxFlags)
 {
   if (message.empty())
@@ -760,7 +765,7 @@ void CCommandContext::UseImplicitHostedGame()
   if (m_TargetGame) return;
 
   m_TargetGame = m_Aura->m_CurrentLobby;
-  if (m_TargetGame && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+  if (m_TargetGame && !GetIsSudo()) {
     UpdatePermissions();
   }
 }
@@ -2054,29 +2059,108 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+      bool onlyDraft = false;
+      if (!GetIsSudo()) {
+        if ((m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_CUSTOMFORCES) && (onlyDraft = m_TargetGame->GetIsDraftMode())) {
+          if (!m_Player || m_Player->GetDraftCaptain() == 0) {
+            ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
+            break;
+          }
+        } else if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+          ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+          break;
+        }
+      }
+
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "swap <PLAYER>, <PLAYER>");
         break;
       }
 
-      vector<uint32_t> Slots = SplitNumericArgs(Payload, 2u, 2u);
-      if (Slots.empty()) {
-        ErrorReply("Usage: " + cmdToken + "swap <SLOTNUM>, <SLOTNUM>");
+      CGamePlayer* playerOne = nullptr;
+      CGamePlayer* playerTwo = nullptr;
+      uint8_t slotNumOne = 0xFF;
+      uint8_t slotNumTwo = 0xFF;
+      if (!ParsePlayerOrSlot(Args[0], slotNumOne, playerOne) || !ParsePlayerOrSlot(Args[1], slotNumTwo, playerTwo)) {
+        break;
+      }
+      if (slotNumOne == slotNumTwo) {
+        ErrorReply("Usage: " + cmdToken + "swap <PLAYER>, <PLAYER>");
         break;
       }
 
-      if (Slots[0] == 0 || Slots[1] == 0 || Slots[0] > m_Aura->m_MaxSlots || Slots[1] > m_Aura->m_MaxSlots) {
-        ErrorReply("Usage: " + cmdToken + "swap <SLOTNUM>, <SLOTNUM>");
-        break;
+      if (onlyDraft) {
+
+        //
+        // Swapping is allowed in these circumstances
+        // 1. Both slots belong to own authorized team.
+        // 2. The following conditions hold simultaneously:
+        //     i. One slot belongs to own authorized team, and the other slot is on a different team.
+        //    ii. One slot is controlled by an actual player, and the other slot is empty. 
+        //
+
+        const CGameSlot* slotOne = m_TargetGame->GetSlot(slotNumOne);
+        const CGameSlot* slotTwo = m_TargetGame->GetSlot(slotNumTwo);
+
+        if (slotOne->GetSlotStatus() == SLOTSTATUS_CLOSED || slotTwo->GetSlotStatus() == SLOTSTATUS_CLOSED) {
+          ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+          break;
+        }
+        if (slotOne->GetSlotStatus() == SLOTSTATUS_OPEN && slotTwo->GetSlotStatus() == SLOTSTATUS_OPEN) {
+          ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+          break;
+        }
+
+        // Targetting either
+        // - OCCUPIED, OCCUPIED
+        // - OPEN, OCCUPIED
+        // - OCCUPIED, OPEN
+
+        if (slotOne->GetTeam() != slotTwo->GetTeam()) {
+          // Ensure user is already captain of the targetted player, or captain of the team we want to move it to.
+          if (!m_Player->GetIsDraftCaptainOf(slotOne->GetTeam()) && !m_Player->GetIsDraftCaptainOf(slotTwo->GetTeam())) {
+            // Attempting to swap two slots of different unauthorized teams.
+            ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+            break;
+          }
+          // One targetted slot is authorized. The other one belongs to another team.
+          // Allow snatching or donating the player, but not trading it for another player.
+          // Non-players cannot be transferred.
+          if ((playerOne == nullptr) == (playerTwo == nullptr)) {
+            ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+            break;
+          }
+          if (playerOne == nullptr) {
+            // slotOne is guaranteed to be occupied by a non-player
+            // slotTwo is guaranteed to be occupied by a player
+            if (slotOne->GetSlotStatus() != SLOTSTATUS_OPEN) {
+              ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+              break;
+            }
+          } else {
+            // slotTwo is guaranteed to be occupied by a non-player
+            // slotOne is guaranteed to be occupied by a player
+            if (slotTwo->GetSlotStatus() != SLOTSTATUS_OPEN) {
+              ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+              break;
+            }
+          }
+        } else if (!m_Player->GetIsDraftCaptainOf(slotOne->GetTeam())) {
+          // Both targetted slots belong to the same team, but not to the authorized team.
+          ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+          break;
+        } else {
+          // OK. Attempting to swap two slots within own team.
+          // They could do it themselves tbh. But let's think of the afks.
+        }
       }
 
-      uint8_t SID1 = static_cast<uint8_t>(Slots[0]) - 1;
-      uint8_t SID2 = static_cast<uint8_t>(Slots[1]) - 1;
-      if (!m_TargetGame->SwapSlots(SID1, SID2)) {
+      if (!m_TargetGame->SwapSlots(slotNumOne, slotNumTwo)) {
         ErrorReply("These slots cannot be swapped.");
         break;
       }
-      SendReply("Swapped players at slots " + to_string(Slots[0]) + " and " + to_string(Slots[1]));
+      SendReply("Swapped players at slots " + ToDecString(slotNumOne) + " and " + ToDecString(slotNumTwo));
       break;
     }
 
@@ -2331,7 +2415,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("portforward"): {
       UseImplicitHostedGame();
 
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -2426,7 +2510,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "listbans [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to list bans in arbitrary realms.");
         break;
       }
@@ -2804,7 +2888,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       bool IsCommand = Message[0] == '/';
-      if (IsCommand && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (IsCommand && !GetIsSudo()) {
         ErrorReply("You are not allowed to send bnet commands.");
         break;
       }
@@ -3178,15 +3262,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const bool isSudo = (0 != (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK)));
-      if (m_TargetGame->GetIsDraftMode()) {
-        if (!isSudo && (!m_Player || m_Player->GetDraftCaptain() == 0)) {
-          ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
+      bool onlyDraft = false;
+      if (!GetIsSudo()) {
+        if (onlyDraft = m_TargetGame->GetIsDraftMode()) {
+          if (!m_Player || m_Player->GetDraftCaptain() == 0) {
+            ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
+            break;
+          }
+        } else if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+          ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
           break;
         }
-      } else if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
-        break;
       }
 
       if (Payload.empty()) {
@@ -3233,7 +3319,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
         break;
       }
-      if (m_TargetGame->GetIsDraftMode() && !isSudo && !(m_Player && m_Player->GetDraftCaptain() == targetTeam + 1)) {
+      if (onlyDraft && !m_Player->GetIsDraftCaptainOf(targetTeam)) {
         ErrorReply("You are not the captain of team " + ToDecString(targetTeam + 1));
         break;
       }
@@ -4094,7 +4180,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_SourceRealm)
         break;
 
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4109,7 +4195,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_SourceRealm)
         break;
 
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4120,7 +4206,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("game"): {
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4158,7 +4244,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("cachemaps"): {
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4224,7 +4310,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("countmaps"):
     case HashCode("countcfgs"): {
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4243,7 +4329,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("deletecfg"):
     case HashCode("deletemap"): {
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4289,7 +4375,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("saygameraw"):
     case HashCode("saygame"): {
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4338,7 +4424,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("disable"): {
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4352,7 +4438,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("enable"): {
-      if (0 == (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4375,7 +4461,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "disablepub [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
@@ -4402,7 +4488,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "enablepub [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
@@ -4432,7 +4518,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4469,7 +4555,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("reload"): {
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4489,7 +4575,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("exit"):
     case HashCode("quit"): {
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4509,7 +4595,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("restart"): {
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
@@ -4579,7 +4665,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "liststaff [REALM]");
         break;
       }
-      if (targetRealm != m_SourceRealm && (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK))) {
+      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to list staff in arbitrary realms.");
         break;
       }
@@ -4704,7 +4790,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("flushdns"): {
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_OK)) {
+      if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }

@@ -248,6 +248,7 @@ public:
   inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline uint8_t               GetDraftCaptain() { return m_TeamCaptain; }
+  inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
