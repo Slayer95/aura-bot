@@ -228,9 +228,9 @@ public:
 	int64_t                      GetLastDisconnectTime() const { return m_LastDisconnectTime; }
 	int64_t                      GetTotalDisconnectTime() const;
   
-  inline bool                  GetReserved() const { return m_Reserved; }
-  inline bool                  GetObserver() const { return m_Observer; }
-  inline bool                  GetPowerObserver() const { return m_PowerObserver; }
+  inline bool                  GetIsReserved() const { return m_Reserved; }
+  inline bool                  GetIsObserver() const { return m_Observer; }
+  inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
   inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
   inline bool                  GetWhoisSent() const { return m_WhoisSent; }
   inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }

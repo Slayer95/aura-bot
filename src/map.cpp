@@ -831,7 +831,7 @@ void CMap::Load(CConfig* CFG)
 
               for (auto& Slot : Slots) {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                  Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetByteArray()) + ">");
+                  Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetProtocolArray()) + ">");
                 }
                 ++SlotNum;
               }
@@ -1019,7 +1019,7 @@ void CMap::Load(CConfig* CFG)
   } else if (!Slots.empty()) {
     uint32_t SlotNum = 0;
     for (auto& Slot : Slots) {
-      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetByteArray());
+      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetProtocolArray());
     }
   }
 

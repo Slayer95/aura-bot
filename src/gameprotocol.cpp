@@ -757,7 +757,7 @@ std::vector<uint8_t> CGameProtocol::EncodeSlotInfo(const vector<CGameSlot>& slot
   SlotInfo.push_back(static_cast<uint8_t>(slots.size())); // number of slots
 
   for (auto& slot : slots)
-    AppendByteArray(SlotInfo, slot.GetByteArray());
+    AppendByteArray(SlotInfo, slot.GetProtocolArray());
 
   AppendByteArray(SlotInfo, randomSeed, false); // random seed
   SlotInfo.push_back(layoutStyle);              // LayoutStyle (0 = melee, 1 = custom forces, 3 = custom forces + fixed player settings)

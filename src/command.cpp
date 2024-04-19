@@ -716,7 +716,7 @@ bool CCommandContext::ParseNonPlayerSlot(const std::string& target, uint8_t& SID
     ErrorReply("Slot not found.");
     return false;
   }
-  if (slot->GetIsHuman()) {
+  if (slot->GetIsPlayerOrFake()) {
     ErrorReply("Slot is occupied by a player.");
     return false;
   }
@@ -858,6 +858,53 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !KEY
+    //
+    case HashCode("key"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+        break;
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("Not allowed to inspect raw slots.");
+        break;
+      }
+
+      SendReply("Game ID is " + to_string(m_TargetGame->GetHostCounter()) + " (" + ToHexString(m_TargetGame->GetHostCounter()) + ")");
+      SendReply("Entry key is " + to_string(m_TargetGame->GetEntryKey()) + " (" + ToHexString(m_TargetGame->GetEntryKey()) + ")");
+    }
+    //
+    // !SLOT
+    //
+
+    case HashCode("slot"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+        break;
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("Not allowed to inspect raw slots.");
+        break;
+      }
+
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "SLOT [PLAYER]");
+        break;
+      }
+      const CGameSlot* slot = m_TargetGame->InspectSlot(SID);
+      if (targetPlayer) {
+        SendReply("Player " + targetPlayer->GetName() + " (slot #" + ToDecString(SID + 1) + ") = " + ByteArrayToDecString(slot->GetByteArray()));
+      } else {
+        SendReply("Slot #" + ToDecString(SID + 1) + " = " + ByteArrayToDecString(slot->GetByteArray()));
+      }
+      break;
+    }
+
+    //
     // !CHECKME
     // !CHECK <PLAYER>
     //
@@ -916,7 +963,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         IPVersionFragment = ", IPv4";
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + IPVersionFragment + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
-      SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetReserved() ? "Yes" : "No"));
+      SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
       SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       break;
     }
@@ -979,7 +1026,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (NumPings > 0) {
           PingsText += to_string((*i)->GetPing());
 
-          if (m_TargetGame->GetIsLobby() && !(*i)->GetReserved()) {
+          if (m_TargetGame->GetIsLobby() && !(*i)->GetIsReserved()) {
             if (KickPing.has_value() && (*i)->GetPing() > m_TargetGame->m_AutoKickPing) {
               (*i)->SetKickByTime(GetTime() + 5);
               (*i)->SetLeftReason("was kicked for excessive ping " + to_string((*i)->GetPing()) + " > " + to_string(m_TargetGame->m_AutoKickPing));
@@ -1067,7 +1114,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Unable to start votekick. There aren't enough players in the game for a votekick");
         break;
       }
-      if (targetPlayer->GetReserved()) {
+      if (targetPlayer->GetIsReserved()) {
         ErrorAll("Unable to votekick player [" + targetPlayer->GetName() + "]. That player is reserved and cannot be votekicked");
         break;
       }
@@ -2314,14 +2361,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
-      if (!targetPlayer->GetObserver()) {
+      if (!targetPlayer->GetIsObserver()) {
         ErrorReply("[" + targetPlayer->GetName() + "] is not an observer.");
         break;
       }
 
       m_TargetGame->SetUsesCustomReferees(true);
       for (auto& otherPlayer: m_TargetGame->m_Players) {
-        if (otherPlayer->GetObserver())
+        if (otherPlayer->GetIsObserver())
           otherPlayer->SetPowerObserver(false);
       }
       targetPlayer->SetPowerObserver(true);
@@ -3103,6 +3150,34 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !DELETECOMP (remove computer slots)
+    //
+
+    case HashCode("deletecomp"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's slots.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+
+      if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, 0)) {
+        ErrorReply("Failed to remove computer slots.");
+        break;
+      }
+      SendReply("Computer slots removed.");
+      break;
+    }
+
+    //
     // !COLOR (computer colour change)
     //
 
@@ -3605,7 +3680,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetNumControllers() <= 1) {
+      if (m_TargetGame->GetNumPotentialControllers() <= 1) {
         ErrorReply("Not enough players in this game.");
         break;
       }
@@ -3646,7 +3721,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const uint8_t othersCount = m_TargetGame->GetNumControllers() - 1;
+      const uint8_t othersCount = m_TargetGame->GetNumPotentialControllers() - 1;
       if (othersCount < 2) {
         ErrorReply("There are too few players in the game.");
         break;
@@ -3735,7 +3810,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
-      if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
         if (m_TargetGame->GetMap()->GetMapNumTeams() == 2) {
           // This is common enough to warrant a special case.
           if (m_TargetGame->SetLayoutTwoTeams()) {

@@ -117,10 +117,11 @@ public:
   inline uint8_t              GetRaceSelectable() const { return (m_Race & SLOTRACE_SELECTABLE) ? SLOTRACE_RANDOM | SLOTRACE_SELECTABLE : m_Race; }
   inline uint8_t              GetComputerType() const { return m_ComputerType; }
   inline uint8_t              GetHandicap() const { return m_Handicap; }
-  inline bool                 GetIsHuman() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == 0; } // Human or fake controller
+  inline bool                 GetIsPlayerOrFake() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == 0; }
   inline bool                 GetIsComputer() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && ((m_Computer & SLOTCOMP_YES) == SLOTCOMP_YES); }
   inline bool                 GetIsSelectable() const { return (m_Computer & SLOTCOMP_FIXED) == 0; }
-  inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_PID, m_DownloadStatus, m_SlotStatus, static_cast<uint8_t>(m_Computer & SLOTCOMP_YES), m_Team, m_Color, m_Race, m_ComputerType, m_Handicap}; }
+  inline std::vector<uint8_t> GetProtocolArray() const { return std::vector<uint8_t>{m_PID, m_DownloadStatus, m_SlotStatus, static_cast<uint8_t>(m_Computer & SLOTCOMP_YES), m_Team, m_Color, m_Race, m_ComputerType, m_Handicap}; }
+  inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_PID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap}; }
 
   inline void SetPID(uint8_t nPID) { m_PID = nPID; }
   inline void SetDownloadStatus(uint8_t nDownloadStatus) { m_DownloadStatus = nDownloadStatus; }

@@ -251,6 +251,7 @@ public:
   uint32_t              GetNumHumanOrFakeControllers() const;
   uint8_t               GetNumHumanPlayers() const;
   uint8_t               GetNumOccupiedSlots() const;
+  uint8_t               GetNumPotentialControllers() const;
   uint8_t               GetNumControllers() const;
   uint8_t               GetNumComputers() const;
   std::string           GetMapFileName() const;
@@ -459,10 +460,9 @@ public:
   std::vector<uint8_t> GetNumFixedComputersByTeam() const;
   std::vector<uint8_t> GetPotentialTeamSizes() const;
   std::pair<uint8_t, uint8_t> GetLargestPotentialTeam() const;
-  std::pair<uint8_t, uint8_t> GetSmallestPotentialTeam() const;
+  std::pair<uint8_t, uint8_t> GetSmallestPotentialTeam(const uint8_t minSize, const uint8_t exceptTeam) const;
   std::vector<uint8_t> GetActiveTeamSizes() const;
-  uint8_t GetSelectableTeamSlot(const uint8_t team, const uint8_t endSID, const bool force) const;
-  uint8_t GetSelectableIsolateTeamSlot(const uint8_t team) const;
+  uint8_t GetSelectableTeamSlot(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endSID, const bool force) const;
   bool FindHumanVsAITeams(const uint8_t humanCount, const uint8_t computerCount, std::pair<uint8_t, uint8_t>& teams) const;
   uint8_t GetOneVsAllTeamAll() const;
   uint8_t GetOneVsAllTeamOne(const uint8_t teamAll) const;

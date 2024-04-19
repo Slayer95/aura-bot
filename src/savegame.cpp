@@ -130,7 +130,7 @@ uint8_t CSaveGame::GetNumHumanSlots() const
 {
   uint8_t count = 0;
   for (const auto& slot : m_Slots) {
-    if (slot.GetIsHuman()) {
+    if (slot.GetIsPlayerOrFake()) {
       ++count;
     }
   }
