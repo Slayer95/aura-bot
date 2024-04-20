@@ -58,7 +58,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ga
 
     m_Permissions(0),
 
-
     m_HostName(player->GetRealmHostName()),
 
     m_ChannelName(string()),

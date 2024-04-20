@@ -1756,7 +1756,7 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
 
   // Move the alone player to its own team.
   if (isSwap) {
-    const uint8_t swapSID = GetSelectableTeamSlot(teamOne, m_Slots.size(), m_Slots.size(), true);
+    const uint8_t swapSID = GetSelectableTeamSlot(teamOne, static_cast<uint8_t>(m_Slots.size()), static_cast<uint8_t>(m_Slots.size()), true);
     if (swapSID == 0xFF) {
       return false;
     }
@@ -4186,7 +4186,7 @@ uint8_t CGame::GetHostPID() const
   // try to find the fakeplayer next
 
   if (!m_FakePlayers.empty())
-    return m_FakePlayers[m_FakePlayers.size() - 1];
+    return static_cast<uint8_t>(m_FakePlayers[m_FakePlayers.size() - 1]);
 
   // try to find the owner player next
 
@@ -5228,6 +5228,7 @@ bool CGame::Resume()
   Action.push_back(ACTION_RESUME);
   m_Actions.push(new CIncomingAction(PID, CRC, Action));
   m_Paused = false;
+  return true;
 }
 
 string CGame::GetSaveFileName(CGamePlayer* player) const
@@ -5251,6 +5252,7 @@ bool CGame::Save(CGamePlayer* player)
   Action.push_back(ACTION_SAVE);
   AppendByteArray(Action, fileName);
   m_Actions.push(new CIncomingAction(PID, CRC, Action));
+  return true;
 }
 
 void CGame::OpenObserverSlots()

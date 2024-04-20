@@ -54,6 +54,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_JASSPath                     = CFG.GetDirectory("bot.jass_path", CFG.GetHomeDir() / filesystem::path("jass"));
   m_GameSavePath                 = CFG.GetDirectory("bot.save_path", CFG.GetHomeDir() / filesystem::path("saves"));
 
+  // Non-configurable?
   m_AliasesPath                  = CFG.GetHomeDir() / filesystem::path("aliases.ini");
 
   m_RTTPings                     = CFG.GetBool("metrics.rtt_pings", false);
