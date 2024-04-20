@@ -154,12 +154,15 @@ class CDBGamePlayerSummary;
 class CConfig;
 class CDBBan;
 
+#define SCHEMA_NUMBER 2
+
 class CAuraDB
 {
 private:
   CSQLITE3*             m_DB;
   std::filesystem::path m_File;
   std::string           m_Error;
+  bool                  m_FirstRun;
 
   // we keep some prepared statements in memory rather than recreating them each function call
   // this is an optimization because preparing statements takes time
@@ -167,9 +170,10 @@ private:
 
   void* FromAddStmt;        // for faster startup time
   void* FromCheckStmt;      // frequently used
+  void* AliasAddStmt;
+  void* AliasCheckStmt;     // very frequently used
   void* BanCheckStmt;       // frequently used
   void* ModeratorCheckStmt;     // frequently used
-  void* RootModeratorCheckStmt; // frequently used
 
   bool m_HasError;
 
@@ -178,14 +182,18 @@ public:
   ~CAuraDB();
   CAuraDB(CAuraDB&) = delete;
 
+  inline bool        GetIsFirstRun() const { return m_FirstRun; }
   inline bool        HasError() const { return m_HasError; }
   inline std::string GetError() const { return m_Error; }
+  inline std::filesystem::path GetFile() const { return m_File; }
 
   inline bool Begin() const { return m_DB->Exec("BEGIN TRANSACTION") == SQLITE_OK; }
   inline bool Commit() const { return m_DB->Exec("COMMIT TRANSACTION") == SQLITE_OK; }
 
   std::string FromCheck(uint32_t ip);
   bool FromAdd(uint32_t ip1, uint32_t ip2, const std::string& country);
+  bool AliasAdd(const std::string& alias, const std::string& target);
+  std::string AliasCheck(const std::string& alias);
   uint32_t ModeratorCount(const std::string& server);
   bool ModeratorCheck(const std::string& server, std::string user);
   bool ModeratorCheck(std::string user);

@@ -93,6 +93,7 @@ public:
   inline void SetIsModified() { m_IsModified = true; };
   const std::filesystem::path& GetHomeDir() const { return m_HomeDir; }
   inline bool GetIsModified() const { return m_IsModified; };
+  inline const std::map<std::string, std::string>& GetEntries() const { return m_CFG; }
 
   std::string GetString(const std::string& key, const std::string& x);
   std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);

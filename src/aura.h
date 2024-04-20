@@ -92,6 +92,7 @@ class CRealm;
 class CGame;
 class CCommandContext;
 class CAuraDB;
+class CConfig;
 class CNet;
 class CGameSetup;
 class CIRC;
@@ -207,6 +208,7 @@ public:
   uint8_t ExtractScripts();
   bool CopyScripts();
 
+  void LoadMapAliases();
   void LoadIPToCountryData(const CConfig& CFG);
 
   void CacheMapPresets();

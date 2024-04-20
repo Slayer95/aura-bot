@@ -111,6 +111,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_LastPlayerLeaveTicks(0),
     m_LastLagScreenResetTime(0),
     m_PauseCounter(0),
+    m_SaveCounter(0),
     m_RandomSeed(0),
     m_HostCounter(nGameSetup->m_GameIdentifier.has_value() ? nGameSetup->m_GameIdentifier.value() : nAura->NextHostCounter()),
     m_EntryKey(0),
@@ -142,6 +143,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameLoaded(false),
     m_LobbyLoading(false),
     m_Lagging(false),
+    m_Paused(false),
     m_Desynced(false),
     m_IsDraftMode(false),
     m_HadLeaver(false),
@@ -1362,9 +1364,10 @@ vector<uint8_t> CGame::GetActiveTeamSizes() const
   return teamSizes;
 }
 
-uint8_t CGame::GetSelectableTeamSlot(const uint8_t team, const uint8_t endOccupiedSID, const uint8_t endSID, const bool force) const
+uint8_t CGame::GetSelectableTeamSlot(const uint8_t team, const uint8_t endOccupiedSID, const uint8_t endOpenSID, const bool force) const
 {
   uint8_t forceResult = 0xFF;
+  uint8_t endSID = endOccupiedSID < endOpenSID ? endOpenSID : endOccupiedSID;
   for (uint8_t i = 0; i < endSID; ++i) {
     const CGameSlot& slot = m_Slots[i];
     if (slot.GetTeam() != team) continue;
@@ -3101,10 +3104,24 @@ void CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
 
   // check for players saving the game and notify everyone
 
-  if (!action->GetAction()->empty() && (*action->GetAction())[0] == 6)
-  {
-    Print(GetLogPrefix() + "player [" + player->GetName() + "] is saving the game");
-    SendAllChat("Player [" + player->GetName() + "] is saving the game");
+  if (!action->GetAction()->empty()) {
+    switch((*action->GetAction())[0]) {
+      case ACTION_SAVE:
+        Print(GetLogPrefix() + "player [" + player->GetName() + "] is saving the game");
+        SendAllChat("Player [" + player->GetName() + "] is saving the game");
+        player->SetSaved(true);
+        break;
+      case ACTION_PAUSE:
+        Print(GetLogPrefix() + "player [" + player->GetName() + "] paused the game");
+        player->AddPauseCounter();
+        m_Paused = true;
+        break;
+      case ACTION_RESUME:
+        m_Paused = false;
+        break;
+      default:
+        break;
+    }
   }
 
   // give the stats class a chance to process the action
@@ -3189,9 +3206,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
     {
       // relay the chat message to other players
 
-      bool                       Relay           = !player->GetMuted();
-      bool                       OnlyToObservers = player->GetIsObserver() && (m_GameLoading || m_GameLoaded) && !player->GetIsPowerObserver();
-      const std::vector<uint8_t> ExtraFlags      = chatPlayer->GetExtraFlags();
+      bool Relay = !player->GetMuted();
+      bool OnlyToObservers = player->GetIsObserver() && (m_GameLoading || m_GameLoaded) && !player->GetIsPowerObserver();
+      const vector<uint8_t> ExtraFlags = chatPlayer->GetExtraFlags();
 
       // calculate timestamp
 
@@ -3210,7 +3227,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 					Print(GetLogPrefix() + "[Obs/Ref] [" + player->GetName() + "] " + chatPlayer->GetMessage());
         } else {
           // this is an ingame [????] message, print it to the console
-          Print(GetLogPrefix() + "[????] [" + player->GetName() + "] " + chatPlayer->GetMessage());
+          Print(GetLogPrefix() + "[" + to_string(ByteArrayToUInt32(ExtraFlags, false)) + "] [" + player->GetName() + "] " + chatPlayer->GetMessage());
         }
       }
       else
@@ -3227,16 +3244,23 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
         if (OnlyToObservers) {
           std::vector<uint8_t> TargetPIDs = chatPlayer->GetToPIDs();
           std::vector<uint8_t> ObserversPIDs;
+          std::vector<string> ForbiddenNames;
           for (uint8_t i = 0; i < TargetPIDs.size(); ++i) {
             CGamePlayer* TargetPlayer = GetPlayerFromPID(TargetPIDs[i]);
-            if (TargetPlayer && TargetPlayer->GetIsObserver()) {
+            if (!TargetPlayer) continue;
+            if (TargetPlayer->GetIsObserver()) {
               ObserversPIDs.push_back(TargetPIDs[i]);
+            } else {
+              ForbiddenNames.push_back(TargetPlayer->GetName());
             }
           }
-          if (!ObserversPIDs.empty())
+          if (!ObserversPIDs.empty()) {
             Send(ObserversPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), ObserversPIDs, chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
-          else
+          } else if (ForbiddenNames.empty()) {
             Print(GetLogPrefix() + "[Obs/Ref] --nobody listening--");
+          } else {
+            Print(GetLogPrefix() + "[Private] [" + player->GetName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
+          }
         } else {
           Send(chatPlayer->GetToPIDs(), GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), chatPlayer->GetToPIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
         }
@@ -3799,6 +3823,7 @@ void CGame::Remake()
   m_LastPlayerLeaveTicks = 0;
   m_LastLagScreenResetTime = 0;
   m_PauseCounter = 0;
+  m_SaveCounter = 0;
   m_SyncCounter = 0;
 
   m_DownloadCounter = 0;
@@ -4019,6 +4044,77 @@ uint8_t CGame::GetNewColor() const
     }
   }
   return m_Aura->m_MaxSlots; // should never happen
+}
+
+uint8_t CGame::SimulateActionPID(const uint8_t actionType, CGamePlayer* player)
+{
+  switch (actionType) {
+    case ACTION_PAUSE: {
+      if (m_PauseCounter < m_FakePlayers.size() * 3) {
+        return static_cast<uint8_t>(m_FakePlayers[m_PauseCounter++ % m_FakePlayers.size()]);
+      }
+      if (player && !player->GetLeftMessageSent() && player->GetCanPause()) {
+        player->AddPauseCounter();
+        return player->GetPID();
+      }
+      CGamePlayer* controllerPlayer = nullptr;
+      for (auto& otherPlayer : m_Players) {
+        if (!otherPlayer->GetLeftMessageSent() && otherPlayer->GetCanPause()) {
+          if (otherPlayer->GetIsObserver()) {
+            otherPlayer->AddPauseCounter();
+            return otherPlayer->GetPID();
+          } else {
+            controllerPlayer = otherPlayer;
+          }
+        }
+      }
+      if (controllerPlayer) {
+        controllerPlayer->AddPauseCounter();
+        return controllerPlayer->GetPID();
+      }
+      return 0xFF;
+    }
+    case ACTION_RESUME: {
+      if (!m_FakePlayers.empty()) {
+        return static_cast<uint8_t>(m_FakePlayers[m_FakePlayers.size() - 1]);
+      }
+      for (auto& otherPlayer : m_Players) {
+        if (!otherPlayer->GetLeftMessageSent()) {
+          return otherPlayer->GetPID();
+        }
+      }
+      return 0xFF;
+    }
+
+    case ACTION_SAVE: {
+      if (player && !player->GetLeftMessageSent() && !player->GetSaved()) {
+        return player->GetPID();
+      }
+      if (m_SaveCounter < m_FakePlayers.size()) {
+        return static_cast<uint8_t>(m_FakePlayers[m_SaveCounter++]);
+      }
+      CGamePlayer* controllerPlayer = nullptr;
+      for (auto& otherPlayer : m_Players) {
+        if (!otherPlayer->GetLeftMessageSent() && !otherPlayer->GetSaved()) {
+          if (otherPlayer->GetIsObserver()) {
+            otherPlayer->SetSaved(true);
+            return otherPlayer->GetPID();
+          } else {
+            controllerPlayer = otherPlayer;
+          }
+        }
+      }
+      if (controllerPlayer) {
+        controllerPlayer->SetSaved(true);
+        return controllerPlayer->GetPID();
+      }
+      return 0xFF;
+    }
+
+    default: {
+      return 0xFF;
+    }
+  }
 }
 
 bool CGame::GetHasAnyPlayer() const
@@ -5110,39 +5206,50 @@ void CGame::StopLaggers(const string& reason)
   }
 }
 
-bool CGame::Pause()
+bool CGame::Pause(CGamePlayer* player)
 {
-  if (m_FakePlayers.size() * 3 <= m_PauseCounter) return false;
+  const uint8_t PID = SimulateActionPID(ACTION_PAUSE, player);
+  if (PID == 0xFF) return false;
+
   vector<uint8_t> CRC, Action;
-  Action.push_back(1);
-  const uint8_t PID = static_cast<uint8_t>(m_FakePlayers[m_PauseCounter % m_FakePlayers.size()]);
+  Action.push_back(ACTION_PAUSE);
   m_Actions.push(new CIncomingAction(PID, CRC, Action));
   ++m_PauseCounter;
+  m_Paused = true;
   return true;
 }
 
-bool CGame::PauseSinglePlayer()
+bool CGame::Resume()
 {
-  CGamePlayer* player = nullptr;
-  for (const auto& slot : m_Slots) {
-    if (slot.GetIsPlayerOrFake()) {
-      player = GetPlayerFromPID(slot.GetPID());
-      break;
-    }
-  }
-  if (!player) return false;
+  const uint8_t PID = SimulateActionPID(ACTION_RESUME, nullptr);
+  if (PID == 0xFF) return false;
+
   vector<uint8_t> CRC, Action;
-  Action.push_back(1);
-  m_Actions.push(new CIncomingAction(player->GetPID(), CRC, Action));
-  SendAllActions();
-  return true;
+  Action.push_back(ACTION_RESUME);
+  m_Actions.push(new CIncomingAction(PID, CRC, Action));
+  m_Paused = false;
 }
 
-void CGame::Resume()
+string CGame::GetSaveFileName(CGamePlayer* player) const
 {
+  auto now = chrono::system_clock::to_time_t(chrono::system_clock::now());
+  struct tm timeinfo;
+  localtime_s(&timeinfo, &now);
+
+  ostringstream oss;
+  oss << put_time(&timeinfo, "%m-%d_%H-%M");
+  return "aura_autosave_p" + ToDecString(GetSIDFromPID(player->GetPID()) + 1) + "_" + oss.str() + ".w3z";
+}
+
+bool CGame::Save(CGamePlayer* player)
+{
+  const uint8_t PID = SimulateActionPID(ACTION_SAVE, nullptr);
+  if (PID == 0xFF) return false;
+  string fileName = GetSaveFileName(player);
+  Print(GetLogPrefix() + "saving as " + fileName);
   vector<uint8_t> CRC, Action;
-  Action.push_back(2);
-  const uint8_t PID = static_cast<uint8_t>(m_FakePlayers[m_FakePlayers.size() - 1]);
+  Action.push_back(ACTION_SAVE);
+  AppendByteArray(Action, fileName);
   m_Actions.push(new CIncomingAction(PID, CRC, Action));
 }
 

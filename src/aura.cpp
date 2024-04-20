@@ -381,6 +381,12 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 {
   Print("[AURA] Aura version " + m_Version);
 
+  if (m_DB->HasError()) {
+    Print("[CONFIG] Error: Critical errors found in " + PathToString(m_DB->GetFile()) + ".");
+    m_Ready = false;
+    return;
+  }
+
   m_GameProtocol = new CGameProtocol(this);
   m_Net = new CNet(this);
   m_IRC = new CIRC(this);
@@ -486,8 +492,10 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     return;
   }
 
-  // load the iptocountry data
-  LoadIPToCountryData(CFG);
+  if (m_DB->GetIsFirstRun()) {
+    LoadMapAliases();
+    LoadIPToCountryData(CFG);
+  }
 }
 
 bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
@@ -1232,6 +1240,27 @@ uint8_t CAura::ExtractScripts()
   return FilesExtracted;
 }
 
+void CAura::LoadMapAliases()
+{
+  CConfig aliases;
+  if (!aliases.Read(m_Config->m_AliasesPath)) {
+    return;
+  }
+
+  if (!m_DB->Begin()) {
+    Print("[AURA] internal database error - map aliases will not be available");
+    return;
+  }
+
+  for (const auto& entry : aliases.GetEntries()) {
+    m_DB->AliasAdd(entry.first, entry.second);
+  }
+
+  if (!m_DB->Commit()) {
+    Print("[AURA] internal database error - map aliases will not be available");
+  }
+}
+
 void CAura::LoadIPToCountryData(const CConfig& CFG)
 {
   ifstream in;
@@ -1240,42 +1269,43 @@ void CAura::LoadIPToCountryData(const CConfig& CFG)
 
   if (in.fail()) {
     Print("[AURA] warning - unable to read file [ip-to-country.csv], geolocalization data not loaded");
-  } else {
-    // the begin and commit statements are optimizations
-    // we're about to insert ~4 MB of data into the database so if we allow the database to treat each insert as a transaction it will take a LONG time
-
-    if (!m_DB->Begin())
-      Print("[AURA] warning - failed to begin database transaction, geolocalization data not loaded");
-    else
-    {
-      string    Line, Skip, IP1, IP2, Country;
-      CSVParser parser;
-
-      in.seekg(0, ios::end);
-      in.seekg(0, ios::beg);
-
-      while (!in.eof())
-      {
-        getline(in, Line);
-
-        if (Line.empty())
-          continue;
-
-        parser << Line;
-        parser >> Skip;
-        parser >> Skip;
-        parser >> IP1;
-        parser >> IP2;
-        parser >> Country;
-        m_DB->FromAdd(stoul(IP1), stoul(IP2), Country);
-      }
-
-      if (!m_DB->Commit())
-        Print("[AURA] warning - failed to commit database transaction, geolocalization data not loaded");
-    }
-
-    in.close();
+    return;
   }
+  // the begin and commit statements are optimizations
+  // we're about to insert ~4 MB of data into the database so if we allow the database to treat each insert as a transaction it will take a LONG time
+
+  if (!m_DB->Begin()) {
+    Print("[AURA] internal database error - geolocalization will not be available");
+    in.close();
+    return;
+  }
+
+  string    Line, Skip, IP1, IP2, Country;
+  CSVParser parser;
+
+  in.seekg(0, ios::end);
+  in.seekg(0, ios::beg);
+
+  while (!in.eof()) {
+    getline(in, Line);
+
+    if (Line.empty())
+      continue;
+
+    parser << Line;
+    parser >> Skip;
+    parser >> Skip;
+    parser >> IP1;
+    parser >> IP2;
+    parser >> Country;
+    m_DB->FromAdd(stoul(IP1), stoul(IP2), Country);
+  }
+
+  if (!m_DB->Commit()) {
+    Print("[AURA] internal database error - geolocalization will not be available");
+  }
+
+  in.close();
 }
 
 void CAura::CacheMapPresets()

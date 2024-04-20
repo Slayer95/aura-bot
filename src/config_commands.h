@@ -68,9 +68,16 @@ public:
   uint8_t m_AdminBasePermissions;
   uint8_t m_BotOwnerBasePermissions;
 
+  // Admin commands
+  uint8_t m_AliasPermissions;
+  uint8_t m_ImportPermissions;
+
+  // Hosting commands
   uint8_t m_HostPermissions;
   uint8_t m_HostRawPermissions;
   uint8_t m_StartPermissions;
+
+  // Chat commands
   uint8_t m_SayPermissions;
   uint8_t m_TellPermissions;
   uint8_t m_WhoisPermissions;

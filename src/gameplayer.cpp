@@ -296,6 +296,8 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_LastDisconnectTime(0),
 
     m_TeamCaptain(0),
+    m_Saved(false),
+    m_PauseCounter(0),
     m_DeleteMe(false)
 {
 }

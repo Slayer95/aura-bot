@@ -77,16 +77,18 @@ CSQLITE3::~CSQLITE3()
 CAuraDB::CAuraDB(CConfig& CFG)
   : FromAddStmt(nullptr),
     FromCheckStmt(nullptr),
+    AliasAddStmt(nullptr),
+    AliasCheckStmt(nullptr),
     BanCheckStmt(nullptr),
     ModeratorCheckStmt(nullptr),
+    m_FirstRun(false),
     m_HasError(false)
 {
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.dbs"));
   Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");
   m_DB = new CSQLITE3(m_File);
 
-  if (!m_DB->GetReady())
-  {
+  if (!m_DB->GetReady()) {
     // setting m_HasError to true indicates there's been a critical error and we want Aura to shutdown
     // this is okay here because we're in the constructor so we're not dropping any games or players
 
@@ -98,7 +100,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
 
   // find the schema number so we can determine whether we need to upgrade or not
 
-  string        SchemaNumber;
+  int64_t schemaNumber = 0;
   sqlite3_stmt* Statement;
   m_DB->Prepare(R"(SELECT value FROM config WHERE name="schema_number")", reinterpret_cast<void**>(&Statement));
 
@@ -107,7 +109,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
 
     if (RC == SQLITE_ROW) {
       if (sqlite3_column_count(Statement) == 1) {
-        SchemaNumber = string((char*)sqlite3_column_text(Statement, 0));
+        schemaNumber = sqlite3_column_int64(Statement, 0);
       } else {
         m_HasError = true;
         m_Error    = "schema number missing - no columns found";
@@ -120,49 +122,55 @@ CAuraDB::CAuraDB(CConfig& CFG)
     }
 
     m_DB->Finalize(Statement);
-  }
 
-  if (SchemaNumber.empty()) {
-    // couldn't find the schema number
-
-    Print("[SQLITE3] initializing database");
-
-    // note to self: update the SchemaNumber and the database structure when making a new schema
-
-    if (m_DB->Exec(R"(CREATE TABLE moderators ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "" ))") != SQLITE_OK)
-      Print("[SQLITE3] error creating moderators table - " + m_DB->GetError());
-
-    if (m_DB->Exec("CREATE TABLE bans ( id INTEGER PRIMARY KEY, server TEXT NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, moderators TEXT NOT NULL, reason TEXT )") != SQLITE_OK)
-      Print("[SQLITE3] error creating bans table - " + m_DB->GetError());
-
-    if (m_DB->Exec("CREATE TABLE players ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, games INTEGER, dotas INTEGER, loadingtime INTEGER, duration INTEGER, left INTEGER, wins INTEGER, losses INTEGER, kills INTEGER, deaths INTEGER, creepkills INTEGER, creepdenies INTEGER, assists INTEGER, neutralkills INTEGER, towerkills INTEGER, raxkills INTEGER, courierkills INTEGER )") != SQLITE_OK)
-      Print("[SQLITE3] error creating players table - " + m_DB->GetError());
-
-    if (m_DB->Exec("CREATE TABLE config ( name TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL )") != SQLITE_OK)
-      Print("[SQLITE3] error creating config table - " + m_DB->GetError());
-
-    m_DB->Prepare(R"(INSERT INTO config VALUES ( "schema_number", ? ))", reinterpret_cast<void**>(&Statement));
-
-    if (Statement)
-    {
-      sqlite3_bind_text(Statement, 1, "1", -1, SQLITE_TRANSIENT);
-
-      const int32_t RC = m_DB->Step(Statement);
-
-      if (RC == SQLITE_ERROR)
-        Print("[SQLITE3] error inserting schema number [1] - " + m_DB->GetError());
-
-      m_DB->Finalize(Statement);
+    if (schemaNumber == SCHEMA_NUMBER) {
+      return; // Up to date
     }
-    else
-      Print("[SQLITE3] prepare error inserting schema number [1] - " + m_DB->GetError());
+
+    if (schemaNumber != 0) {
+      // Josko's original schema number is 1, but text.
+      // I am using 2 as int64.
+      // Neither Josko's nor other legacy schemas are supported.
+      Print("[SQLITE3] incompatible database file [aura.dbs] found");
+      m_HasError = true;
+      m_Error    = "incompatible database format";
+      return;
+    }
   }
 
-  if (m_DB->Exec("CREATE TEMPORARY TABLE iptocountry ( ip1 INTEGER NOT NULL, ip2 INTEGER NOT NULL, country TEXT NOT NULL, PRIMARY KEY ( ip1, ip2 ) )") != SQLITE_OK)
-    Print("[SQLITE3] error creating temporary iptocountry table - " + m_DB->GetError());
+  // Initialize database
+  m_FirstRun = true;
 
-  if (m_DB->Exec(R"(CREATE TEMPORARY TABLE moderators ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "" ))") != SQLITE_OK)
-    Print("[SQLITE3] error creating temporary moderators table - " + m_DB->GetError());
+  Print("[SQLITE3] initializing database");
+
+  if (m_DB->Exec(R"(CREATE TABLE moderators ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "" ))") != SQLITE_OK)
+    Print("[SQLITE3] error creating moderators table - " + m_DB->GetError());
+
+  if (m_DB->Exec("CREATE TABLE bans ( id INTEGER PRIMARY KEY, server TEXT NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, moderators TEXT NOT NULL, reason TEXT )") != SQLITE_OK)
+    Print("[SQLITE3] error creating bans table - " + m_DB->GetError());
+
+  if (m_DB->Exec("CREATE TABLE players ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, games INTEGER, dotas INTEGER, loadingtime INTEGER, duration INTEGER, left INTEGER, wins INTEGER, losses INTEGER, kills INTEGER, deaths INTEGER, creepkills INTEGER, creepdenies INTEGER, assists INTEGER, neutralkills INTEGER, towerkills INTEGER, raxkills INTEGER, courierkills INTEGER )") != SQLITE_OK)
+    Print("[SQLITE3] error creating players table - " + m_DB->GetError());
+
+  if (m_DB->Exec("CREATE TABLE config ( name TEXT NOT NULL PRIMARY KEY, value INTEGER )") != SQLITE_OK)
+    Print("[SQLITE3] error creating config table - " + m_DB->GetError());
+
+  if (m_DB->Exec("CREATE TABLE iptocountry ( ip1 INTEGER NOT NULL, ip2 INTEGER NOT NULL, country TEXT NOT NULL, PRIMARY KEY ( ip1, ip2 ) )") != SQLITE_OK)
+    Print("[SQLITE3] error creating iptocountry table - " + m_DB->GetError());
+
+  if (m_DB->Exec("CREATE TABLE aliases ( alias TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL )") != SQLITE_OK)
+    Print("[SQLITE3] error creating aliases table - " + m_DB->GetError());
+
+  // Insert schema number
+  m_DB->Prepare(R"(INSERT INTO config VALUES ( "schema_number", ? ))", reinterpret_cast<void**>(&Statement));
+  if (Statement) {
+    sqlite3_bind_int64(Statement, 1, SCHEMA_NUMBER);
+    const int32_t RC = m_DB->Step(Statement);
+    if (RC == SQLITE_ERROR) {
+      Print("[SQLITE3] error inserting schema number [1] - " + m_DB->GetError());
+    }
+    m_DB->Finalize(Statement);
+  }
 }
 
 CAuraDB::~CAuraDB()
@@ -172,11 +180,17 @@ CAuraDB::~CAuraDB()
   if (FromAddStmt)
     m_DB->Finalize(FromAddStmt);
 
-  if (BanCheckStmt)
-    m_DB->Finalize(BanCheckStmt);
-
   if (FromCheckStmt)
     m_DB->Finalize(FromCheckStmt);
+
+  if (AliasAddStmt)
+    m_DB->Finalize(AliasAddStmt);
+
+  if (AliasCheckStmt)
+    m_DB->Finalize(AliasCheckStmt);
+
+  if (BanCheckStmt)
+    m_DB->Finalize(BanCheckStmt);
 
   if (ModeratorCheckStmt)
     m_DB->Finalize(ModeratorCheckStmt);
@@ -784,29 +798,29 @@ string CAuraDB::FromCheck(uint32_t ip)
   if (!FromCheckStmt)
     m_DB->Prepare("SELECT country FROM iptocountry WHERE ip1<=? AND ip2>=?", &FromCheckStmt);
 
-  if (FromCheckStmt)
-  {
-    // we bind the ip as an int32_t64 because SQLite treats it as signed
-
-    sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromCheckStmt), 1, ip);
-    sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromCheckStmt), 2, ip);
-
-    const int32_t RC = m_DB->Step(FromCheckStmt);
-
-    if (RC == SQLITE_ROW)
-    {
-      if (sqlite3_column_count(static_cast<sqlite3_stmt*>(FromCheckStmt)) == 1)
-        From = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(FromCheckStmt), 0));
-      else
-        Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - row doesn't have 1 column");
-    }
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError());
-
-    m_DB->Reset(FromCheckStmt);
-  }
-  else
+  if (!FromCheckStmt) {
     Print("[SQLITE3] prepare error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError());
+    return From;
+  }
+
+  // we bind the ip as an int64 because SQLite treats it as signed
+
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromCheckStmt), 1, ip);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromCheckStmt), 2, ip);
+
+  const int32_t RC = m_DB->Step(FromCheckStmt);
+
+  if (RC == SQLITE_ROW)
+  {
+    if (sqlite3_column_count(static_cast<sqlite3_stmt*>(FromCheckStmt)) == 1)
+      From = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(FromCheckStmt), 0));
+    else
+      Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - row doesn't have 1 column");
+  }
+  else if (RC == SQLITE_ERROR)
+    Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError());
+
+  m_DB->Reset(FromCheckStmt);
 
   return From;
 }
@@ -820,27 +834,88 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
   if (!FromAddStmt)
     m_DB->Prepare("INSERT INTO iptocountry VALUES ( ?, ?, ? )", &FromAddStmt);
 
-  if (FromAddStmt)
-  {
-    // we bind the ip as an int32_t64 because SQLite treats it as signed
-
-    sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromAddStmt), 1, ip1);
-    sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromAddStmt), 2, ip2);
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(FromAddStmt), 3, country.c_str(), -1, SQLITE_TRANSIENT);
-
-    int32_t RC = m_DB->Step(FromAddStmt);
-
-    if (RC == SQLITE_DONE)
-      Success = true;
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError());
-
-    m_DB->Reset(FromAddStmt);
-  }
-  else
+  if (!FromAddStmt) {
     Print("[SQLITE3] prepare error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError());
+    return false;
+  }
+
+  // we bind the ip as an int64 because SQLite treats it as signed
+
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromAddStmt), 1, ip1);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromAddStmt), 2, ip2);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(FromAddStmt), 3, country.c_str(), -1, SQLITE_TRANSIENT);
+
+  int32_t RC = m_DB->Step(FromAddStmt);
+
+  if (RC == SQLITE_DONE)
+    Success = true;
+  else if (RC == SQLITE_ERROR)
+    Print("[SQLITE3] error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError());
+
+  m_DB->Reset(FromAddStmt);
 
   return Success;
+}
+
+bool CAuraDB::AliasAdd(const string& alias, const string& target)
+{
+  bool Success = false;
+
+  if (!AliasAddStmt)
+    m_DB->Prepare("INSERT INTO aliases VALUES ( ?, ? )", &AliasAddStmt);
+
+  if (!AliasAddStmt) {
+    Print("[SQLITE3] prepare error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError());
+    return false;
+  }
+
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(AliasAddStmt), 3, alias.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(AliasAddStmt), 3, target.c_str(), -1, SQLITE_TRANSIENT);
+
+  int32_t RC = m_DB->Step(AliasAddStmt);
+
+  if (RC == SQLITE_DONE)
+    Success = true;
+  else if (RC == SQLITE_ERROR)
+    Print("[SQLITE3] error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError());
+
+  m_DB->Reset(AliasAddStmt);
+
+  return Success;
+}
+
+string CAuraDB::AliasCheck(const string& alias)
+{
+  string value;
+
+  if (!AliasCheckStmt)
+    m_DB->Prepare("SELECT value FROM aliases WHERE name=?", &AliasCheckStmt);
+
+  if (!AliasCheckStmt) {
+    Print("[SQLITE3] prepare error checking alias [" + alias + "] - " + m_DB->GetError());
+    return value;
+  }
+
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(AliasCheckStmt), 1, alias.c_str(), -1, SQLITE_TRANSIENT);
+
+  const int32_t RC = m_DB->Step(AliasCheckStmt);
+
+  if (RC == SQLITE_ERROR) {
+    Print("[SQLITE3] error checking alias [" + alias + "] - " + m_DB->GetError());
+    return value;
+  }
+
+  if (RC == SQLITE_ROW){
+    if (sqlite3_column_count(static_cast<sqlite3_stmt*>(AliasCheckStmt)) == 1) {
+      value = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(AliasCheckStmt), 0));
+    } else {
+      Print("[SQLITE3] error checking alias [" + alias + "] - row doesn't have 1 column");
+    }
+  }
+
+  m_DB->Reset(AliasCheckStmt);
+
+  return value;
 }
 
 //

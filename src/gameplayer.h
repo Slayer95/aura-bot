@@ -180,6 +180,10 @@ private:
   std::string                      m_LastCommand;
   uint8_t                          m_TeamCaptain;
 
+  // Actions
+  bool                             m_Saved;
+  uint8_t                          m_PauseCounter;
+
 protected:
   bool m_DeleteMe;
 
@@ -249,6 +253,8 @@ public:
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
+  inline bool                  GetCanPause() { return m_PauseCounter < 3; }
+  inline bool                  GetSaved() { return m_Saved; }
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
@@ -284,6 +290,8 @@ public:
   inline void ClearLastCommand() { m_LastCommand.clear(); }
   inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
   inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
+  inline void SetSaved(const bool nValue) { m_Saved = nValue; }
+  inline void AddPauseCounter() { ++m_PauseCounter; }
 
   // processing functions
 

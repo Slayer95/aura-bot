@@ -139,7 +139,8 @@ protected:
   int64_t                        m_GameOverTime;                  // GetTime when the game was over
   int64_t                        m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
-  uint8_t                        m_PauseCounter;
+  uint8_t                        m_PauseCounter;                  // Counter of all fake player pauses.
+  uint8_t                        m_SaveCounter;                   // Counter of all fake player saves.
   uint32_t                       m_RandomSeed;                    // the random seed sent to the Warcraft III clients
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
@@ -193,6 +194,7 @@ protected:
   bool                           m_GameLoaded;                    // if the game has loaded or not
   bool                           m_LobbyLoading;                  // if the lobby is being setup asynchronously
   bool                           m_Lagging;                       // if the lag screen is active or not
+  bool                           m_Paused;                        // if the game is paused or not
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
   bool                           m_HadLeaver;                     // if the game had a leaver after it started
@@ -242,6 +244,7 @@ public:
   inline bool           GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool           GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline bool           GetLagging() const { return m_Lagging; }
+  inline bool           GetPaused() const { return m_Paused; }
   inline bool           GetIsGameOver() const { return m_GameOverTime != 0; }
   CGameProtocol*        GetProtocol() const;
   int64_t               GetNextTimedActionTicks() const;
@@ -376,6 +379,7 @@ public:
   CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
   uint8_t              GetNewColor() const;
+  uint8_t              SimulateActionPID(const uint8_t actionType, CGamePlayer* player);
   bool                 GetHasAnyPlayer() const;
   bool                 GetIsPlayerSlot(const uint8_t SID) const;
   bool                 GetHasAnotherPlayer(const uint8_t ExceptSID) const;
@@ -441,9 +445,10 @@ public:
   void StartCountDown(bool force);
   void StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
-  bool Pause();
-  bool PauseSinglePlayer();
-  void Resume();
+  bool Pause(CGamePlayer* player);
+  bool Resume();
+  std::string GetSaveFileName(CGamePlayer* player) const;
+  bool Save(CGamePlayer* player);
   inline bool GetIsCheckJoinable() { return m_CheckJoinable; }
   inline bool GetIsVerbose() { return m_Verbose; }
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
@@ -462,7 +467,7 @@ public:
   std::pair<uint8_t, uint8_t> GetLargestPotentialTeam() const;
   std::pair<uint8_t, uint8_t> GetSmallestPotentialTeam(const uint8_t minSize, const uint8_t exceptTeam) const;
   std::vector<uint8_t> GetActiveTeamSizes() const;
-  uint8_t GetSelectableTeamSlot(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endSID, const bool force) const;
+  uint8_t GetSelectableTeamSlot(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endOpenSID, const bool force) const;
   bool FindHumanVsAITeams(const uint8_t humanCount, const uint8_t computerCount, std::pair<uint8_t, uint8_t>& teams) const;
   uint8_t GetOneVsAllTeamAll() const;
   uint8_t GetOneVsAllTeamOne(const uint8_t teamAll) const;

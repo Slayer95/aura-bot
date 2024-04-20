@@ -204,6 +204,7 @@ public:
   void ParseInputLocal();
   void ParseInput();
   std::pair<uint8_t, std::filesystem::path> SearchInputStandard();
+  std::pair<uint8_t, std::filesystem::path> SearchInputAlias();
   std::pair<uint8_t, std::filesystem::path> SearchInputLocalExact();
   std::pair<uint8_t, std::filesystem::path> SearchInputLocalTryExtensions();
   std::pair<uint8_t, std::filesystem::path> SearchInputLocalFuzzy(std::vector<std::string>& fuzzyMatches);

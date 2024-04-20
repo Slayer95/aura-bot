@@ -219,7 +219,7 @@ void CGameSetup::ParseInput()
     ParseInputLocal();
     return;
   }
-  const filesystem::path searchPath = filesystem::path(m_SearchRawTarget);
+
   if (m_SearchType != SEARCH_TYPE_ANY) {
     ParseInputLocal();
     return;
@@ -229,6 +229,12 @@ void CGameSetup::ParseInput()
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
+
+  string alias = m_Aura->m_DB->AliasCheck(lower);
+  if (!alias.empty()) {
+    Print("[AURA] Using alias " + lower + " -> " + alias);
+    m_SearchRawTarget = alias;
+  }
 
   if (lower.length() >= 6 && (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:")) {
     ParseInputLocal();

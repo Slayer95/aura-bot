@@ -39,11 +39,19 @@ CCommandConfig::CCommandConfig()
  : m_Enabled(true),
    m_RequireVerified(false),
 
+   // Everything is COMMAND_PERMISSIONS_AUTO (auto) by default.
+   // When CheckPermissions(permissions, DEFAULT) is called with
+   // permissions == COMMAND_PERMISSIONS_AUTO, that's equivalent to
+   // CheckPermissions(DEFAULT)
+
    m_CommonBasePermissions(COMMAND_PERMISSIONS_AUTO),
    m_HostingBasePermissions(COMMAND_PERMISSIONS_AUTO),
    m_ModeratorBasePermissions(COMMAND_PERMISSIONS_AUTO),
    m_AdminBasePermissions(COMMAND_PERMISSIONS_AUTO),
    m_BotOwnerBasePermissions(COMMAND_PERMISSIONS_AUTO),
+
+   m_AliasPermissions(COMMAND_PERMISSIONS_AUTO),
+   m_ImportPermissions(COMMAND_PERMISSIONS_AUTO),
 
    m_HostPermissions(COMMAND_PERMISSIONS_AUTO),
    m_HostRawPermissions(COMMAND_PERMISSIONS_AUTO),
@@ -59,12 +67,14 @@ CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const boo
 {
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
 
+  // Inheritable permissions
   m_CommonBasePermissions = commonPermissions;
   m_HostingBasePermissions = hostingPermissions;
   m_ModeratorBasePermissions = moderatorPermissions;
   m_AdminBasePermissions = adminPermissions;
   m_BotOwnerBasePermissions = botOwnerPermissions;
 
+  m_AliasPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_alias.permissions", commandPermissions, COMMAND_PERMISSIONS_SUDO);
   m_HostPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_host.permissions", commandPermissions, hostingPermissions);
   m_HostRawPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_hostraw.permissions", commandPermissions, hostingPermissions);
   m_StartPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_start.permissions", commandPermissions, hostingPermissions);

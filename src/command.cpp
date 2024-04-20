@@ -400,7 +400,8 @@ optional<bool> CCommandContext::CheckPermissions(const uint8_t requiredPermissio
 
 bool CCommandContext::CheckPermissions(const uint8_t requiredPermissions, const uint8_t autoPermissions) const
 {
-  // autoPermissions must not be COMMAND_PERMISSIONS_AUTO, nor other unhandled cases.
+  // autoPermissions must not be COMMAND_PERMISSIONS_AUTO, nor other unhandled cases
+  // (that results in infinite recursion)
   optional<bool> result = CheckPermissions(requiredPermissions);
   if (result.has_value()) return result.value();
   return CheckPermissions(autoPermissions).value_or(false);
@@ -871,9 +872,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      SendReply("Game ID is " + to_string(m_TargetGame->GetHostCounter()) + " (" + ToHexString(m_TargetGame->GetHostCounter()) + ")");
-      SendReply("Entry key is " + to_string(m_TargetGame->GetEntryKey()) + " (" + ToHexString(m_TargetGame->GetEntryKey()) + ")");
+      SendReply(
+        "Name <<" + m_TargetGame->GetGameName() + ">> | ID " +
+        to_string(m_TargetGame->GetHostCounter()) + " (" + ToHexString(m_TargetGame->GetHostCounter()) + ")" + " | Key " +
+        to_string(m_TargetGame->GetEntryKey()) + " (" + ToHexString(m_TargetGame->GetEntryKey()) + ")"
+      );
     }
+
     //
     // !SLOT
     //
@@ -2615,6 +2620,59 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !IMPORT
+    //
+
+    case HashCode("import"): {
+      if (!CheckPermissions(m_Config->m_ImportPermissions, COMMAND_PERMISSIONS_SUDO)) {
+        ErrorReply("Not allowed to import files to the database.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage " + cmdToken + "import [DATA TYPE]. Supported data types are: aliases");
+        break;
+      }
+      transform(begin(Payload), end(Payload), begin(Payload), [](char c) { return static_cast<char>(std::tolower(c)); });
+
+      if (Payload == "aliases") {
+        m_Aura->LoadMapAliases();
+        SendReply("Commited map aliases to SQLite.");
+      } else {
+        ErrorReply("Usage " + cmdToken + "import [DATA TYPE]. Supported data types are: aliases");
+      }
+      break;
+    }
+
+    //
+    // !ALIAS
+    //
+
+    case HashCode("alias"): {
+      if (!CheckPermissions(m_Config->m_AliasPermissions, COMMAND_PERMISSIONS_SUDO)) {
+        ErrorReply("Not allowed to update map aliases.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage " + cmdToken + "alias [ALIAS], [FILE NAME]");
+        ErrorReply("Usage " + cmdToken + "alias [ALIAS], [MAP IDENTIFIER]");
+        break;
+      }
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage " + cmdToken + "alias [ALIAS], [FILE NAME]");
+        ErrorReply("Usage " + cmdToken + "alias [ALIAS], [MAP IDENTIFIER]");
+        break;
+      }
+      string alias = Args[0];
+      transform(begin(alias), end(alias), begin(alias), [](char c) { return static_cast<char>(std::tolower(c)); });
+      if (!m_Aura->m_DB->AliasAdd(alias, Args[1])) {
+        ErrorReply("Failed to add alias [" + alias + "]");
+      } else {
+        SendReply("Added [" + alias + "] as alias to [" + Args[1] + "].");
+      }
+    }
+    
+    //
     // !ADDBAN
     // !BAN
     //
@@ -3959,15 +4017,41 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->m_FakePlayers.empty()) {
-        ErrorReply("Virtual players are required in order to use this command.");
+      if (m_TargetGame->GetPaused()) {
+        ErrorReply("Game already paused.");
         break;
       }
 
-      if (!m_TargetGame->Pause()) {
+      if (!m_TargetGame->Pause(m_Player)) {
         ErrorReply("Max pauses reached.");
         break;
       }
+
+      SendReply("Game paused.");
+      break;
+    }
+
+    //
+    // !SAVE
+    //
+
+    case HashCode("save"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
+        break;
+
+      if (!m_Player && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot save the game.");
+        break;
+      }
+
+      if (!m_TargetGame->Save(m_Player)) {
+        ErrorReply("Can only save once per player per game session.");
+        break;
+      }
+
+      SendReply("Saving game..");
       break;
     }
 
@@ -3986,8 +4070,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->m_FakePlayers.empty()) {
-        ErrorReply("Virtual players are required in order to use this command.");
+      if (!m_TargetGame->GetPaused()) {
+        ErrorReply("Game is not paused.");
         break;
       }
 
