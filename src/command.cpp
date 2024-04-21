@@ -2671,6 +2671,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         SendReply("Added [" + alias + "] as alias to [" + Args[1] + "].");
       }
+      break;
     }
     
     //
