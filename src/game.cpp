@@ -5254,7 +5254,11 @@ string CGame::GetSaveFileName(const uint8_t PID) const
 {
   auto now = chrono::system_clock::to_time_t(chrono::system_clock::now());
   struct tm timeinfo;
+#ifdef _WIN32
   localtime_s(&timeinfo, &now);
+#else
+  localtime_r(&timeinfo, &now);
+#endif
 
   ostringstream oss;
   oss << put_time(&timeinfo, "%m-%d_%H-%M");

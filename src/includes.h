@@ -91,7 +91,11 @@ inline void LogStream(std::ostream& outStream, const std::string& message)
 {
   auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   struct tm timeinfo;
+#ifdef _WIN32
   localtime_s(&timeinfo, &now);
+#else
+  localtime_r(&timeinfo, &now);
+#endif
   outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
   outStream << std::flush;
 }
@@ -100,7 +104,11 @@ inline void LogStream(std::ostream& outStream, const char* message)
 {
   auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   struct tm timeinfo;
+#ifdef _WIN32
   localtime_s(&timeinfo, &now);
+#else
+  localtime_r(&timeinfo, &now);
+#endif
   outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
   outStream << std::flush;
 }
