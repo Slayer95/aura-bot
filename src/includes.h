@@ -94,7 +94,7 @@ inline void LogStream(std::ostream& outStream, const std::string& message)
 #ifdef _WIN32
   localtime_s(&timeinfo, &now);
 #else
-  localtime_r(&timeinfo, &now);
+  localtime_r(&now, &timeinfo);
 #endif
   outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
   outStream << std::flush;
@@ -107,7 +107,7 @@ inline void LogStream(std::ostream& outStream, const char* message)
 #ifdef _WIN32
   localtime_s(&timeinfo, &now);
 #else
-  localtime_r(&timeinfo, &now);
+  localtime_r(&now, &timeinfo);
 #endif
   outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
   outStream << std::flush;

@@ -5257,7 +5257,7 @@ string CGame::GetSaveFileName(const uint8_t PID) const
 #ifdef _WIN32
   localtime_s(&timeinfo, &now);
 #else
-  localtime_r(&timeinfo, &now);
+  localtime_r(&now, &timeinfo);
 #endif
 
   ostringstream oss;
