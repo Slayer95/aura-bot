@@ -728,7 +728,7 @@ void CMap::Load(CConfig* CFG)
               Slot.SetColor(static_cast<uint8_t>(Color));
               ISS.read(reinterpret_cast<char*>(&Status), 4); // status
 
-              if (Status == 1 || Status == 2 && (0 == (RawMapFlags & MAPOPT_FIXEDPLAYERSETTINGS))) {
+              if (Status == 1 || (Status == 2 && !(RawMapFlags & MAPOPT_FIXEDPLAYERSETTINGS))) {
                 // WC3 ignores computer slots defined in WorldEdit if Fixed Player Settings is disabled.
                 Slot.SetSlotStatus(SLOTSTATUS_OPEN);
               } else if (Status == 2) {

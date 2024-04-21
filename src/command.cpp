@@ -677,7 +677,7 @@ bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID,
       const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
       CGamePlayer* testPlayer = nullptr;
       uint8_t matches = m_TargetGame->GetPlayerFromNamePartial(target.substr(1), testPlayer);
-      if (slot && matches > 0 || !slot && matches == 0) {
+      if ((slot && matches > 0) || (!slot && matches == 0)) {
         ErrorReply("Please provide a player @name or #slot.");
         return false;
       }
@@ -876,6 +876,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         to_string(m_TargetGame->GetHostCounter()) + " (" + ToHexString(m_TargetGame->GetHostCounter()) + ")" + " | Key " +
         to_string(m_TargetGame->GetEntryKey()) + " (" + ToHexString(m_TargetGame->GetEntryKey()) + ")"
       );
+      break;
     }
 
     //
@@ -3457,7 +3458,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       bool onlyDraft = false;
       if (!GetIsSudo()) {
-        if (onlyDraft = m_TargetGame->GetIsDraftMode()) {
+        if ((onlyDraft = m_TargetGame->GetIsDraftMode())) {
           if (!m_Player || !m_Player->GetIsDraftCaptain()) {
             ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
             break;
@@ -3818,7 +3819,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!Payload.empty()) {
         vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
         // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
-        if (Args[0] <= 0 || Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots) {
+        if (Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots)) {
           ErrorReply("Usage: " + cmdToken + "terminator");
           ErrorReply("Usage: " + cmdToken + "terminator [NUMBER]");
           break;

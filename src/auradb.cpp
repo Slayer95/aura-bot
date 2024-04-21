@@ -75,14 +75,14 @@ CSQLITE3::~CSQLITE3()
 //
 
 CAuraDB::CAuraDB(CConfig& CFG)
-  : FromAddStmt(nullptr),
+  : m_FirstRun(false),
+    m_HasError(false),
+    FromAddStmt(nullptr),
     FromCheckStmt(nullptr),
     AliasAddStmt(nullptr),
     AliasCheckStmt(nullptr),
     BanCheckStmt(nullptr),
-    ModeratorCheckStmt(nullptr),
-    m_FirstRun(false),
-    m_HasError(false)
+    ModeratorCheckStmt(nullptr)
 {
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
   Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");

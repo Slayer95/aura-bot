@@ -1493,7 +1493,7 @@ bool CGame::SetLayoutCompact()
     // Compacting is used for NvNvN...
     return false;
   }
-  const uint8_t expectedMaxTeam = expectedFullTeams - (extraPlayers == 0);
+  //const uint8_t expectedMaxTeam = expectedFullTeams - (extraPlayers == 0);
   vector<uint8_t> premadeMappings(numTeams, m_Aura->m_MaxSlots);
   bitset<MAX_SLOTS_MODERN> fullTeams;
   for (uint8_t team = 0; team < numTeams; ++team) {
@@ -3347,6 +3347,8 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             break;
           case CIncomingChatPlayer::CTH_HANDICAPCHANGE:
             EventPlayerChangeHandicap(player, chatPlayer->GetByte());
+            break;
+          default:
             break;
         }
       }

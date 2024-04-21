@@ -161,8 +161,9 @@ class CAuraDB
 private:
   CSQLITE3*             m_DB;
   std::filesystem::path m_File;
-  std::string           m_Error;
   bool                  m_FirstRun;
+  bool                  m_HasError;
+  std::string           m_Error;
 
   // we keep some prepared statements in memory rather than recreating them each function call
   // this is an optimization because preparing statements takes time
@@ -174,8 +175,6 @@ private:
   void* AliasCheckStmt;     // very frequently used
   void* BanCheckStmt;       // frequently used
   void* ModeratorCheckStmt;     // frequently used
-
-  bool m_HasError;
 
 public:
   explicit CAuraDB(CConfig& CFG);
