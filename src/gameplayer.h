@@ -165,6 +165,8 @@ private:
   bool                             m_Muted;                        // if the player is muted or not
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
   bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
+  bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
+  bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
   int64_t                          m_CheckStatusByTime;
 
   bool                             m_GProxy;                       // if the player is using GProxy++
@@ -251,6 +253,8 @@ public:
   inline bool                  GetMuted() const { return m_Muted; }
   inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
+  inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
+  inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
   inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
   inline bool                  GetCanPause() { return m_PauseCounter < 3; }
@@ -291,6 +295,8 @@ public:
   inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
   inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
   inline void SetSaved(const bool nValue) { m_Saved = nValue; }
+  inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
+  inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
   inline void AddPauseCounter() { ++m_PauseCounter; }
 
   // processing functions

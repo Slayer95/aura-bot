@@ -378,4 +378,16 @@ public:
   inline float    GetAvgCourierKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCourierKills) / m_TotalGames : 0.f; }
 };
 
+inline uint32_t signed_to_unsigned_32(const int32_t value)
+{
+  // Add 128 to preserve ordering.
+  return static_cast<uint32_t>(static_cast<int64_t>(value) - static_cast<int64_t>(INT32_MIN));
+}
+
+inline int32_t unsigned_to_signed_32(const uint32_t value)
+{
+  // Subtract 128 to preserve ordering.
+  return static_cast<int32_t>(static_cast<int64_t>(value) + static_cast<int64_t>(INT32_MIN));
+}
+
 #endif // AURA_AURADB_H_

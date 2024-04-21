@@ -467,6 +467,11 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     }
   }
 
+  if (m_DB->GetIsFirstRun()) {
+    LoadMapAliases();
+    LoadIPToCountryData(CFG);
+  }
+
   if (m_Config->m_EnableCFGCache) {
     CacheMapPresets();
   }
@@ -490,11 +495,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     Print("[AURA] error - no inputs connected");
     m_Ready = false;
     return;
-  }
-
-  if (m_DB->GetIsFirstRun()) {
-    LoadMapAliases();
-    LoadIPToCountryData(CFG);
   }
 }
 

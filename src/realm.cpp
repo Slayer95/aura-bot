@@ -700,19 +700,28 @@ uint8_t CRealm::CountChatQuota()
   return static_cast<uint8_t>(spentQuota);
 }
 
-bool CRealm::CheckWithinChatQuota(const CQueuedChatMessage* message)
+bool CRealm::CheckWithinChatQuota(CQueuedChatMessage* message)
 {
   if (m_Config->m_FloodImmune) return true;
   uint16_t spentQuota = CountChatQuota();
-  if (m_Config->m_FloodQuotaLines <= spentQuota) return false;
-  return message->SelectSize(m_Config->m_VirtualLineLength, m_CurrentChannel) + spentQuota <= m_Config->m_FloodQuotaLines;
+  if (m_Config->m_FloodQuotaLines <= spentQuota) {
+    message->SetWasThrottled(true);
+    return false;
+  }
+  const bool success = message->SelectSize(m_Config->m_VirtualLineLength, m_CurrentChannel) + spentQuota <= m_Config->m_FloodQuotaLines;
+  if (!success) message->SetWasThrottled(true);
+  return success;
 }
 
 bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 {
   uint8_t selectType;
   if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    Print(GetLogPrefix() + "sent <<" + message->GetInnerMessage() + ">>");
+    if (message->GetWasThrottled()) {
+      Print(GetLogPrefix() + "sent (was throttled) <<" + message->GetInnerMessage() + ">>");
+    } else {
+      Print(GetLogPrefix() + "sent <<" + message->GetInnerMessage() + ">>");
+    }
   }
   Send(message->SelectBytes(m_CurrentChannel, selectType));
   if (message->GetSendsEarlyFeedback()) {

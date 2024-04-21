@@ -283,6 +283,8 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_Muted(false),
     m_LeftMessageSent(false),
     m_StatusMessageSent(false),
+    m_UsedAnyCommands(false),
+    m_SentAutoCommandsHelp(false),
     m_CheckStatusByTime(GetTime() + 5),
 
     m_GProxy(false),

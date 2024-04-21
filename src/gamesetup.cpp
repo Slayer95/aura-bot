@@ -54,13 +54,13 @@ bool CGameExtraOptions::ParseMapObservers(const string& s) {
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
-  if (lower == "no" || lower == "no observers" || lower == "no obs" || lower == "sin obs" || lower == "sin observador" || lower == "sin observadores") {
+  if (lower == "no" || lower == "none" || lower == "no observers" || lower == "no obs" || lower == "sin obs" || lower == "sin observador" || lower == "sin observadores") {
     m_Observers = MAPOBS_NONE;
   } else if (lower == "referee" || lower == "referees" || lower == "arbiter" || lower == "arbitro" || lower == "arbitros" || lower == "árbitros") {
     m_Observers = MAPOBS_REFEREES;
-  } else if (lower == "observadores derrotados" || lower == "derrotados" || lower == "obs derrotados" || lower == "obs on defeat" || lower == "observers on defeat" || lower == "on defeat" || lower == "defeat") {
+  } else if (lower == "observadores derrotados" || lower == "derrotados" || lower == "obs derrotados" || lower == "obs on defeat" || lower == "observers on defeat" || lower == "on defeat" || lower == "defeat" || lower == "ondefeat") {
     m_Observers = MAPOBS_ONDEFEAT;
-  } else if (lower == "full observers" || lower == "solo observadores") {
+  } else if (lower == "full observers" || lower == "solo observadores" || lower == "full") {
     m_Observers = MAPOBS_ALLOWED;
   } else {
     return false;
@@ -73,9 +73,9 @@ bool CGameExtraOptions::ParseMapVisibility(const string& s) {
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
-  if (lower == "no" || lower == "default" || lower == "predeterminado" || lower == "fog" || lower == "fog of war" || lower == "niebla" || lower == "niebla de guerra") {
+  if (lower == "no" || lower == "default" || lower == "predeterminado" || lower == "fog" || lower == "fog of war" || lower == "niebla" || lower == "niebla de guerra" || lower == "fow") {
     m_Visibility = MAPVIS_DEFAULT;
-  } else if (lower == "hide terrain" || lower == "hide" || lower == "ocultar terreno" || lower == "ocultar") {
+  } else if (lower == "hide terrain" || lower == "hide" || lower == "ocultar terreno" || lower == "ocultar" || lower == "hidden") {
     m_Visibility = MAPVIS_HIDETERRAIN;
   } else if (lower == "explored map" || lower == "map explored" || lower == "explored" || lower == "mapa explorado" || lower == "explorado") {
     m_Visibility = MAPVIS_EXPLORED;
@@ -137,6 +137,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_StandardPaths(false),
     m_LuckyMode(false),
 
+    m_FoundSuggestions(false),
     m_IsDownloadable(false),
     m_IsStepDownloading(false),
     m_IsStepDownloaded(false),
@@ -177,6 +178,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_StandardPaths(nUseStandardPaths),
     m_LuckyMode(nUseLuckyMode),
 
+    m_FoundSuggestions(false),
     m_IsDownloadable(false),
     m_IsStepDownloading(false),
     m_IsStepDownloaded(false),
@@ -225,15 +227,20 @@ void CGameSetup::ParseInput()
     return;
   }
 
-  std::string lower = m_SearchRawTarget;
-  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
+  string lower = m_SearchRawTarget;
+  transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
-  string alias = m_Aura->m_DB->AliasCheck(lower);
-  if (!alias.empty()) {
-    Print("[AURA] Using alias " + lower + " -> " + alias);
-    m_SearchRawTarget = alias;
+  string targetValue = m_Aura->m_DB->AliasCheck(lower);
+  if (!targetValue.empty()) {
+    m_SearchRawTarget = targetValue;
+    lower = m_SearchRawTarget;
+    transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
+  } else {
+    auto it = m_Aura->m_LastMapSuggestions.find(lower);
+    if (it != m_Aura->m_LastMapSuggestions.end()) {
+      m_SearchRawTarget = it->second;
+      lower = m_SearchRawTarget;
+    }
   }
 
   if (lower.length() >= 6 && (lower.substr(0, 6) == "local-" || lower.substr(0, 6) == "local:")) {
@@ -434,9 +441,17 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
 #ifndef DISABLE_CPR
 void CGameSetup::SearchInputRemoteFuzzy(vector<string>& fuzzyMatches) {
   if (fuzzyMatches.size() >= 5) return;
-  vector<string> remoteSuggestions = GetMapRepositorySuggestions(m_SearchTarget.second, 5 - static_cast<uint8_t>(fuzzyMatches.size()));
+  vector<pair<string, string>> remoteSuggestions = GetMapRepositorySuggestions(m_SearchTarget.second, 5 - static_cast<uint8_t>(fuzzyMatches.size()));
+  if (remoteSuggestions.empty()) {
+    return;
+  }
   // Return suggestions through passed argument.
-  fuzzyMatches.insert(end(fuzzyMatches), begin(remoteSuggestions), end(remoteSuggestions));
+  m_FoundSuggestions = true;
+  m_Aura->m_LastMapSuggestions.clear();
+  for (const auto& suggestion : remoteSuggestions) {
+    m_Aura->m_LastMapSuggestions[suggestion.first] = suggestion.second;
+    fuzzyMatches.push_back(suggestion.first + " (" + suggestion.second + ")");
+  }
 }
 #endif
 
@@ -662,8 +677,9 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
       failed = true;
   }
   if (extraOptions->m_Observers.has_value()) {
-    if (!m_Map->SetMapObservers(extraOptions->m_Observers.value()))
+    if (!m_Map->SetMapObservers(extraOptions->m_Observers.value())) {
       failed = true;
+    }
   }
   return !failed;
 }
@@ -919,13 +935,14 @@ uint32_t CGameSetup::RunDownloadMapSync()
     m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return 0;
   }
+  m_IsMapDownloaded = true;
   m_IsStepDownloaded = false;
   return byteSize;
 }
 
-vector<string> CGameSetup::GetMapRepositorySuggestions(const string& pattern, const uint8_t maxCount)
+vector<pair<string, string>> CGameSetup::GetMapRepositorySuggestions(const string& pattern, const uint8_t maxCount)
 {
-  vector<string> suggestions;
+  vector<pair<string, string>> suggestions;
   string searchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
   Print("[AURA] Looking up suggestions...");
   Print("[AURA] GET <" + searchUri + ">");
@@ -936,7 +953,7 @@ vector<string> CGameSetup::GetMapRepositorySuggestions(const string& pattern, co
 
   vector<pair<string, int>> matchingMaps = ExtractEpicWarMaps(response.text, maxCount);
   for (const auto& element : matchingMaps) {
-    suggestions.push_back(element.first + " (epicwar-" + to_string(element.second) + ")");
+    suggestions.push_back(make_pair(element.first, "epicwar-" + to_string(element.second)));
   }
   return suggestions;
 }
@@ -1042,7 +1059,11 @@ void CGameSetup::OnLoadMapError()
     m_DeleteMe = true;
     return;
   }
-  m_Ctx->ErrorReply("Map not found", CHAT_SEND_SOURCE_ALL);
+  if (m_FoundSuggestions) {
+    m_Ctx->ErrorReply("Not found. Use the epicwar-number identifiers.", CHAT_SEND_SOURCE_ALL);
+  } else {
+    m_Ctx->ErrorReply("Map not found", CHAT_SEND_SOURCE_ALL);
+  }
   m_DeleteMe = true;
 }
 

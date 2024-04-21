@@ -1463,7 +1463,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]");
       m_TargetGame->SendAllChat("Ending the game.");
-      m_TargetGame->StopPlayers("was disconnected (admin ended game)");
+      m_TargetGame->StopPlayers("was disconnected (admin ended game)", false);
       break;
     }
 
@@ -1937,7 +1937,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       m_TargetGame->SendAllChat("Please rejoin the remade game <<" + m_TargetGame->GetGameName() + ">>.");
-      m_TargetGame->StopPlayers("was disconnected (admin remade game)");
+      m_TargetGame->StopPlayers("was disconnected (admin remade game)", true);
+      m_TargetGame->SendEveryoneElseLeft();
       m_TargetGame->Remake();
       break;
     }
@@ -4021,7 +4022,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->Pause(m_Player)) {
+      if (m_TargetGame->m_FakePlayers.empty()) {
+        ErrorReply("This game does not support the " + cmdToken + "pause command. Use the game menu instead.");
+        break;
+      }
+
+      if (!m_TargetGame->Pause(m_Player, false)) {
         ErrorReply("Max pauses reached.");
         break;
       }
@@ -4034,6 +4040,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !SAVE
     //
 
+    case HashCode("autosave"):
     case HashCode("save"): {
       UseImplicitHostedGame();
 
@@ -4045,12 +4052,33 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->Save(m_Player)) {
-        ErrorReply("Can only save once per player per game session.");
+      if (m_TargetGame->m_FakePlayers.empty()) {
+        ErrorReply("This game does not support the " + cmdToken + "save command. Use the game menu instead.");
         break;
       }
 
-      SendReply("Saving game..");
+      if (Payload.empty()) {
+        if (!m_TargetGame->Save(m_Player, false)) {
+          ErrorReply("Can only save once per player per game session.");
+          break;
+        }
+        SendReply("Saving game...");
+        break;
+      }
+
+      string lower = Payload;
+      transform(begin(Command), end(Command), begin(Command), [](char c) { return static_cast<char>(std::tolower(c)); });
+
+      if (lower == "enable") {
+        m_TargetGame->SetSaveOnLeave(SAVE_ON_LEAVE_ALWAYS);
+        SendReply("Autosave on disconnections enabled.");
+      } else if (lower == "disable") {
+        m_TargetGame->SetSaveOnLeave(SAVE_ON_LEAVE_NEVER);
+        SendReply("Autosave on disconnections disabled.");
+      } else {
+        ErrorReply("Usage: " + cmdToken);
+        ErrorReply("Usage: " + cmdToken + "enable/disable");
+      }
       break;
     }
 
@@ -4074,7 +4102,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->m_FakePlayers.empty()) {
+        ErrorReply("This game does not support the " + cmdToken + "resume command. Use the game menu instead.");
+        break;
+      }
+
       m_TargetGame->Resume();
+      SendReply("Resuming game...");
       break;
     }
 
@@ -4918,7 +4952,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("admin"):
     case HashCode("staff"): {
+      Print("[AURA] " + m_FromName + " used !ADMIN");
+
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
+        Print("[AURA] unauthorized usage of !ADMIN");
         ErrorReply("Only root admins may add staff.");
         break;
       }

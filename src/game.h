@@ -61,6 +61,10 @@
 #define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)
 #define SLOTS_HCL_INJECTED (1 << 2)
 
+#define SAVE_ON_LEAVE_NEVER 0u
+#define SAVE_ON_LEAVE_AUTO 1u
+#define SAVE_ON_LEAVE_ALWAYS 2u
+
 //
 // CGame
 //
@@ -130,6 +134,7 @@ protected:
   int64_t                        m_LastDownloadCounterResetTicks; // GetTicks when the download counter was last reset
   int64_t                        m_LastCountDownTicks;            // GetTicks when the last countdown message was sent
   int64_t                        m_StartedLoadingTicks;           // GetTicks when the game started loading
+  int64_t                        m_FinishedLoadingTicks;          // GetTicks when the game finished loading
   int64_t                        m_LastActionSentTicks;           // GetTicks when the last action packet was sent
   int64_t                        m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
   int64_t                        m_StartedLaggingTime;            // GetTime when the last lag screen started
@@ -202,6 +207,7 @@ protected:
   bool                           m_CheckReservation;
   bool                           m_UsesCustomReferees;
   bool                           m_SentPriorityWhois;
+  uint8_t                        m_SaveOnLeave;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   std::set<std::string>          m_IgnoredNotifyJoinPlayers;
   
@@ -262,6 +268,7 @@ public:
   std::string           GetDescription() const;
   std::string           GetCategory() const;
   uint32_t              GetGameType() const;
+  uint32_t              GetGameFlags() const;
   std::string           GetSourceFilePath() const;
   std::vector<uint8_t>  GetSourceFileHash() const;
   std::vector<uint8_t>  GetSourceFileSHA1() const;
@@ -319,7 +326,9 @@ public:
   void SendFakePlayersInfo(CGameConnection* player) const;
   void SendJoinedPlayersInfo(CGameConnection* player) const;
   void SendWelcomeMessage(CGamePlayer* player) const;
+  void SendCommandsHelp(const std::string& cmdToken, CGamePlayer* player, const bool isIntro) const;
   void SendLeftMessage(CGamePlayer* player, const bool sendChat) const;
+  void SendEveryoneElseLeft() const;
   void SendAllActions();
   void SendAllAutoStart() const;
 
@@ -379,7 +388,7 @@ public:
   CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
   uint8_t              GetNewColor() const;
-  uint8_t              SimulateActionPID(const uint8_t actionType, CGamePlayer* player);
+  uint8_t              SimulateActionPID(const uint8_t actionType, CGamePlayer* player, const bool isDisconnect);
   bool                 GetHasAnyPlayer() const;
   bool                 GetIsPlayerSlot(const uint8_t SID) const;
   bool                 GetHasAnotherPlayer(const uint8_t ExceptSID) const;
@@ -443,12 +452,13 @@ public:
   void ResetSync();
   void CountKickVotes();
   void StartCountDown(bool force);
-  void StopPlayers(const std::string& reason);
+  bool StopPlayers(const std::string& reason, const bool allowLocal);
   void StopLaggers(const std::string& reason);
-  bool Pause(CGamePlayer* player);
+  bool Pause(CGamePlayer* player, const bool isDisconnect);
   bool Resume();
-  std::string GetSaveFileName(CGamePlayer* player) const;
-  bool Save(CGamePlayer* player);
+  std::string GetSaveFileName(const uint8_t PID) const;
+  bool Save(CGamePlayer* player, const bool isDisconnect);
+  bool TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary);
   inline bool GetIsCheckJoinable() { return m_CheckJoinable; }
   inline bool GetIsVerbose() { return m_Verbose; }
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
@@ -456,6 +466,7 @@ public:
   void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
   void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
   void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
+  void SetSaveOnLeave(const uint8_t nValue) { m_SaveOnLeave = nValue; }
 
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
   void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }

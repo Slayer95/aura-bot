@@ -85,6 +85,10 @@
 
 #define MAX_PLAYER_NAME_SIZE 15
 
+#define CHAT_RECV_ALL 0
+#define CHAT_RECV_ALLY 1
+#define CHAT_RECV_OBS 2
+
 class CAura;
 class CGamePlayer;
 class CIncomingJoinRequest;

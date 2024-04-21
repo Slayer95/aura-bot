@@ -50,7 +50,8 @@ CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, co
     m_MessageValue(0),
 
     m_ProxySenderCtx(nullptr),
-    m_Callback(CHAT_CALLBACK_NONE)
+    m_Callback(CHAT_CALLBACK_NONE),
+    m_WasThrottled(false)
 {
   if (nCtx && nCtx->m_SourceRealm == nRealm) {
     m_Channel = nCtx->GetChannelName();

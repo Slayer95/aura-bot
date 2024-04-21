@@ -84,7 +84,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
     m_FirstRun(false),
     m_HasError(false)
 {
-  m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.dbs"));
+  m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
   Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");
   m_DB = new CSQLITE3(m_File);
 
@@ -131,7 +131,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
       // Josko's original schema number is 1, but text.
       // I am using 2 as int64.
       // Neither Josko's nor other legacy schemas are supported.
-      Print("[SQLITE3] incompatible database file [aura.dbs] found");
+      Print("[SQLITE3] incompatible database file [aura.db] found");
       m_HasError = true;
       m_Error    = "incompatible database format";
       return;
@@ -803,10 +803,8 @@ string CAuraDB::FromCheck(uint32_t ip)
     return From;
   }
 
-  // we bind the ip as an int64 because SQLite treats it as signed
-
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromCheckStmt), 1, ip);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromCheckStmt), 2, ip);
+  sqlite3_bind_int(static_cast<sqlite3_stmt*>(FromCheckStmt), 1, unsigned_to_signed_32(ip));
+  sqlite3_bind_int(static_cast<sqlite3_stmt*>(FromCheckStmt), 2, unsigned_to_signed_32(ip));
 
   const int32_t RC = m_DB->Step(FromCheckStmt);
 
@@ -839,10 +837,11 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
     return false;
   }
 
-  // we bind the ip as an int64 because SQLite treats it as signed
-
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromAddStmt), 1, ip1);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(FromAddStmt), 2, ip2);
+  // Losslessly converting IPs to signed 32-bits integers rather than to same-value 64-bits integers
+  // This saves ~400 KB in initial database size, down from 3.6 MB to just about 3.17 MB
+  // (for reference, ip-to-country.csv is 5.92 MB)
+  sqlite3_bind_int(static_cast<sqlite3_stmt*>(FromAddStmt), 1, unsigned_to_signed_32(ip1));
+  sqlite3_bind_int(static_cast<sqlite3_stmt*>(FromAddStmt), 2, unsigned_to_signed_32(ip2));
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(FromAddStmt), 3, country.c_str(), -1, SQLITE_TRANSIENT);
 
   int32_t RC = m_DB->Step(FromAddStmt);
@@ -869,8 +868,8 @@ bool CAuraDB::AliasAdd(const string& alias, const string& target)
     return false;
   }
 
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(AliasAddStmt), 3, alias.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(AliasAddStmt), 3, target.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(AliasAddStmt), 1, alias.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(AliasAddStmt), 2, target.c_str(), -1, SQLITE_TRANSIENT);
 
   int32_t RC = m_DB->Step(AliasAddStmt);
 
@@ -889,7 +888,7 @@ string CAuraDB::AliasCheck(const string& alias)
   string value;
 
   if (!AliasCheckStmt)
-    m_DB->Prepare("SELECT value FROM aliases WHERE name=?", &AliasCheckStmt);
+    m_DB->Prepare("SELECT value FROM aliases WHERE alias=?", &AliasCheckStmt);
 
   if (!AliasCheckStmt) {
     Print("[SQLITE3] prepare error checking alias [" + alias + "] - " + m_DB->GetError());
@@ -905,8 +904,9 @@ string CAuraDB::AliasCheck(const string& alias)
     return value;
   }
 
-  if (RC == SQLITE_ROW){
+  if (RC == SQLITE_ROW) {
     if (sqlite3_column_count(static_cast<sqlite3_stmt*>(AliasCheckStmt)) == 1) {
+      Print("AliasCheck ok");
       value = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(AliasCheckStmt), 0));
     } else {
       Print("[SQLITE3] error checking alias [" + alias + "] - row doesn't have 1 column");

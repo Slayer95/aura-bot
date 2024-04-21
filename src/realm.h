@@ -186,7 +186,7 @@ public:
   bool Update(void* fd, void* send_fd);
   void ProcessChatEvent(const CIncomingChatEvent* chatEvent);
   uint8_t CountChatQuota();
-  bool CheckWithinChatQuota(const CQueuedChatMessage* message);
+  bool CheckWithinChatQuota(CQueuedChatMessage* message);
   bool SendQueuedMessage(CQueuedChatMessage* message);
 
   // functions to send packets to battle.net

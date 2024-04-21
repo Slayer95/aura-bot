@@ -149,6 +149,7 @@ public:
   bool                                            m_Verbose;
   std::pair<std::string, std::string>             m_SearchTarget;
 
+  bool                                            m_FoundSuggestions;
   bool                                            m_IsDownloadable;
   bool                                            m_IsStepDownloading;
   bool                                            m_IsStepDownloaded;
@@ -161,7 +162,7 @@ public:
 #ifndef DISABLE_CPR
   std::future<uint32_t>                           m_DownloadFuture;
 #endif
-  uint16_t                                        m_DownloadTimeout;
+  int32_t                                         m_DownloadTimeout;
   std::string                                     m_ErrorMessage;
   uint8_t                                         m_AsyncStep;
 
@@ -230,7 +231,7 @@ public:
   void OnResolveMapSuccess();
   void OnDownloadMapSuccess();
   void OnFetchSuggestionsEnd();
-  std::vector<std::string> GetMapRepositorySuggestions(const std::string & pattern, const uint8_t maxCount);
+  std::vector<std::pair<std::string, std::string>> GetMapRepositorySuggestions(const std::string & pattern, const uint8_t maxCount);
 
 
 #endif
