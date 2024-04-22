@@ -224,12 +224,12 @@ uint8_t CMap::GetMapLayoutStyle() const
   // 3 = custom forces + fixed player settings
 
   if (!(m_MapOptions & MAPOPT_CUSTOMFORCES))
-    return 0;
+    return MAPLAYOUT_ANY;
 
   if (!(m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS))
-    return 1;
+    return MAPLAYOUT_CUSTOM_FORCES;
 
-  return 3;
+  return MAPLAYOUT_FIXED_PLAYERS;
 }
 
 string CMap::GetMapFileName() const

@@ -3666,29 +3666,36 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "draft enable/disable");
+        ErrorReply("Usage: " + cmdToken + "draft [enable|disable]");
         ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 1u, m_TargetGame->GetMap()->GetMapNumTeams());
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "draft enable/disable");
+        ErrorReply("Usage: " + cmdToken + "draft [enable|disable]");
         ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
         break;
       }
 
       if (Args.size() == 1) {
-        if (Args[0] == "enable") {
+        optional<bool> targetValue;
+        if (!ParseBoolean(Payload, targetValue)) {
+          ErrorReply("Usage: " + cmdToken + "draft [enable|disable]");
+          ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
+          break;
+        }
+        if (targetValue.value_or(true)) {
           m_TargetGame->SetDraftMode(true);
+
+          // Only has effect if observers are allowed.
+          m_TargetGame->ResetTeams(false);
+
           SendReply("Draft mode enabled. Only draft captains may assign teams.");
-        } else if (Args[0] == "disable") {
+        } else {
           m_TargetGame->ResetDraft();
           m_TargetGame->SetDraftMode(false);
           SendReply("Draft mode disabled. Everyone may choose their own team.");
-        } else {
-          ErrorReply("Usage: " + cmdToken + "draft enable/disable");
-          ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
         }
         break;
       }
@@ -3711,6 +3718,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           failPlayers.push_back(Args[team]);
         }
       }
+
+      // Only has effect if observers are allowed.
+      m_TargetGame->ResetTeams(false);
+
       if (failPlayers.empty()) {
         SendReply("Draft captains assigned.");
       } else {
@@ -3745,6 +3756,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      optional<bool> targetValue;
+      if (!ParseBoolean(Payload, targetValue)) {
+        ErrorReply("Usage: " + cmdToken + "ffa [enable|disable]");
+        break;
+      }
+      if (!targetValue.value_or(true)) {
+        m_TargetGame->ResetLayout();
+        SendReply("FFA mode disabled.");
+        break;
+      }
       if (!m_TargetGame->SetLayoutFFA()) {
         ErrorReply("This map does not support FFA.");
       } else {
@@ -3787,6 +3808,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      optional<bool> targetValue;
+      if (ParseBoolean(Payload, targetValue) && targetValue.value_or(true) == false) {
+        // Branching here means that you can't actually set a player named "Disable" against everyone else.
+        m_TargetGame->ResetLayout();
+        SendReply("One-VS-All mode disabled.");
+        break;
+      }
       if (!m_TargetGame->SetLayoutOneVsAll(targetPlayer)) {
         ErrorReply("This map does not support " + ToDecString(othersCount) + " vs 1.");
       } else {
@@ -3817,11 +3845,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!Payload.empty()) {
+      optional<bool> targetValue;
+      if (!ParseBoolean(Payload, targetValue)) {
         vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
         // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
         if (Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots)) {
-          ErrorReply("Usage: " + cmdToken + "terminator");
+          ErrorReply("Usage: " + cmdToken + "terminator [enable|disable]");
           ErrorReply("Usage: " + cmdToken + "terminator [NUMBER]");
           break;
         }
@@ -3831,6 +3860,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumHumanOrFakeControllers()) + " vs " + ToDecString(computerCount) + " AIs.");
           break;
         }
+        break;
+      }
+      if (!targetValue.value_or(false)) {
+        m_TargetGame->ResetLayout();
+        SendReply("Humans-VS-AI mode disabled.");
+        break;
       }
       const uint8_t computersCount = m_TargetGame->GetNumComputers();
       if (computersCount == 0) {
@@ -3868,6 +3903,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+      optional<bool> targetValue;
+      if (!ParseBoolean(Payload, targetValue)) {
+        ErrorReply("Usage: " + cmdToken + "teams [enable|disable]");
+        break;
+      }
+      if (!targetValue.value_or(false)) {
+        m_TargetGame->ResetLayout();
+        // This doesn't have any effect, since
+        // both CUSTOM_LAYOUT_COMPACT nor CUSTOM_LAYOUT_ISOPLAYERS are
+        // missing from CUSTOM_LAYOUT_LOCKTEAMS mask.
+        SendReply("No longer enforcing teams.");
         break;
       }
       if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_CUSTOMFORCES) {
@@ -4079,7 +4127,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply("Autosave on disconnections disabled.");
       } else {
         ErrorReply("Usage: " + cmdToken);
-        ErrorReply("Usage: " + cmdToken + "enable/disable");
+        ErrorReply("Usage: " + cmdToken + "[enable|disable]");
       }
       break;
     }

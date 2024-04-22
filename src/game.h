@@ -65,6 +65,15 @@
 #define SAVE_ON_LEAVE_AUTO 1u
 #define SAVE_ON_LEAVE_ALWAYS 2u
 
+#define CUSTOM_LAYOUT_NONE 0u
+#define CUSTOM_LAYOUT_ONE_VS_ALL 1u
+#define CUSTOM_LAYOUT_HUMANS_VS_AI 2u
+#define CUSTOM_LAYOUT_FFA 4u
+#define CUSTOM_LAYOUT_DRAFT 8u
+#define CUSTOM_LAYOUT_LOCKTEAMS 15u
+#define CUSTOM_LAYOUT_COMPACT 16u
+#define CUSTOM_LAYOUT_ISOPLAYERS 32u
+
 //
 // CGame
 //
@@ -177,13 +186,15 @@ protected:
   int64_t                        m_AutoStartMaxTime;
   uint8_t                        m_AutoStartPlayers;
   uint8_t                        m_ControllersWithMap;
+  uint8_t                        m_CustomLayout;
+  std::pair<uint8_t, uint8_t>    m_CustomLayoutData;
   uint16_t                       m_HostPort;                      // the port to host games on
   bool                           m_UDPEnabled;                    // whether this game should be listed in "Local Area Network"
   bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
   std::vector<uint8_t>           m_PublicHostAddress;
   uint16_t                       m_PublicHostPort;
   uint8_t                        m_GameDisplay;                   // game state, public or private
-  bool                           m_IsAutoVirtualPlayers;       // if we should try to add the virtual host as a second (fake) player in single-player games
+  bool                           m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
   uint8_t                        m_VirtualHostPID;                // host's PID
   uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                           m_Exiting;                       // set to true and this class will be deleted next update
@@ -252,6 +263,9 @@ public:
   inline bool           GetLagging() const { return m_Lagging; }
   inline bool           GetPaused() const { return m_Paused; }
   inline bool           GetIsGameOver() const { return m_GameOverTime != 0; }
+  uint8_t               GetLayout() const;
+  uint8_t               GetCustomLayout() const { return m_CustomLayout; }
+  bool                  GetIsCustomForces() const;
   CGameProtocol*        GetProtocol() const;
   int64_t               GetNextTimedActionTicks() const;
   uint32_t              GetSlotsOccupied() const;
@@ -347,6 +361,7 @@ public:
   // therefore you can't modify those std::vectors and must use the player's m_DeleteMe member to flag for deletion
 
   void EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd);
+  void EventLobbyLastPlayerLeaves();
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
@@ -387,6 +402,7 @@ public:
   std::string  GetDBPlayerNameFromColor(uint8_t colour) const;
   CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
+  uint8_t              GetNewTeam() const;
   uint8_t              GetNewColor() const;
   uint8_t              SimulateActionPID(const uint8_t actionType, CGamePlayer* player, const bool isDisconnect);
   bool                 GetHasAnyPlayer() const;
@@ -411,12 +427,12 @@ public:
   void InitSlots();
   bool SwapEmptyAllySlot(const uint8_t SID);
   bool SwapSlots(const uint8_t SID1, const uint8_t SID2);
-  bool OpenSlot(uint8_t SID, bool kick);
+  bool OpenSlot(const uint8_t SID, const bool kick);
   bool CanLockSlotForJoins(uint8_t SID);
-  bool CloseSlot(uint8_t SID, bool kick);
+  bool CloseSlot(const uint8_t SID, const bool kick);
   bool OpenSlot();
   bool CloseSlot();
-  bool ComputerSlotInner(const uint8_t SID, const uint8_t skill);
+  bool ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool ignoreLayout);
   bool ComputerSlot(const uint8_t SID, const uint8_t skill, bool kick);
   bool SetSlotColor(const uint8_t SID, const uint8_t colour, const bool force);
   bool SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force);
@@ -432,6 +448,9 @@ public:
   uint8_t FakeAllSlots();
   void DeleteFakePlayers();
   void OpenAllSlots();
+  uint8_t GetFirstCloseableSlot();
+  bool CloseAllTeamSlots(const uint8_t team);
+  bool CloseAllTeamSlots(const std::bitset<MAX_SLOTS_MODERN> occupiedTeams);
   bool CloseAllSlots();
   bool ComputerNSlots(const uint8_t expectedCount, const uint8_t skill);
   bool ComputerAllSlots(const uint8_t skill);
@@ -449,6 +468,7 @@ public:
   void SetOwner(const std::string& name, const std::string& realm);
   void ReleaseOwner();
   void ResetDraft();
+  void ResetTeams(const bool alsoCaptains);
   void ResetSync();
   void CountKickVotes();
   void StartCountDown(bool force);
@@ -484,7 +504,16 @@ public:
   uint8_t GetOneVsAllTeamOne(const uint8_t teamAll) const;
 
   // These are the main game modes
-  inline void SetDraftMode(const bool nIsDraftMode) { m_IsDraftMode = nIsDraftMode; }
+  inline void SetDraftMode(const bool nIsDraftMode) {
+    m_IsDraftMode = nIsDraftMode;
+    if (nIsDraftMode) {
+      m_CustomLayout |= CUSTOM_LAYOUT_DRAFT;
+    } else {
+      m_CustomLayout &= ~CUSTOM_LAYOUT_DRAFT;
+    }
+  }
+
+  void ResetLayout() { m_CustomLayout = CUSTOM_LAYOUT_NONE; }
   bool SetLayoutFFA();
   bool SetLayoutOneVsAll(const CGamePlayer* player);
   bool SetLayoutTwoTeams();

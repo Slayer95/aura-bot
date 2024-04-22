@@ -249,5 +249,19 @@ inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::st
   return result;
 }
 
+inline bool ParseBoolean(const std::string& payload, std::optional<bool>& result)
+{
+  if (payload.empty()) return false;
+  std::string inputLower = payload;
+  std::transform(std::begin(inputLower), std::end(inputLower), std::begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+  if (inputLower == "enable") {
+    result = true;
+    return true;
+  } else if (inputLower == "disable") {
+    result = false;
+    return true;
+  }
+  return false;
+}
 
 #endif
