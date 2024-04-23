@@ -3,8 +3,8 @@
 {CHECKLASTOWNER?}{LAN!}You are no longer game owner because you left the LAN game.
 {CHECKLASTOWNER?}{LAN?}You are no longer game owner because you left the game for too long.
 {OWNER?}Current owner: {OWNER}{OWNERREALM}
-{OWNER!}There is no owner. Issue commands with [{TRIGGER_BROADCAST}] - take over with [{TRIGGER_BROADCAST}owner].
-Start the game with [{TRIGGER_BROADCAST}start]
+{OWNER!}There is no owner. Issue commands with [{TRIGGER_PREFER_BROADCAST}] - take over with [{TRIGGER_PREFER_BROADCAST}owner].
+Start the game with [{TRIGGER_PREFER_BROADCAST}start]
 {URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]
 {SHORTDESC?}{SHORTDESC}
 {AUTOSTART?}The game will automatically start when conditions are met.

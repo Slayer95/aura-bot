@@ -2174,6 +2174,12 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
     while ((matchIndex = Line.find("{TRIGGER_BROADCAST}")) != string::npos) {
       Line.replace(matchIndex, 19, m_BroadcastCmdToken);
     }
+    while ((matchIndex = Line.find("{TRIGGER_PREFER_PRIVATE}")) != string::npos) {
+      Line.replace(matchIndex, 24, m_PrivateCmdToken.empty() ? m_BroadcastCmdToken : m_PrivateCmdToken);
+    }
+    while ((matchIndex = Line.find("{TRIGGER_PREFER_BROADCAST}")) != string::npos) {
+      Line.replace(matchIndex, 26, m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken);
+    }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
       Line.replace(matchIndex, 5, GetMapSiteURL());
     }
@@ -3368,9 +3374,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (isLobbyChat && !player->GetUsedAnyCommands() && !player->GetSentAutoCommandsHelp()) {
-            SendCommandsHelp(m_PrivateCmdToken, player, true);
+            SendCommandsHelp(m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken, player, true);
           } else if (payload == "?trigger") {
-            SendCommandsHelp(m_PrivateCmdToken, player, false);
+            SendCommandsHelp(m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken, player, false);
           }
         }
       }
