@@ -973,8 +973,6 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map_width", MapWidth);
   }
 
-  m_MapWidth = MapWidth;
-
   if (CFG->Exists("map_height")) {
     MapHeight = ExtractNumbers(CFG->GetString("map_height", emptyString), 2);
   } else {
@@ -986,9 +984,11 @@ void CMap::Load(CConfig* CFG)
   } else {
     CFG->SetUint32("map_editorversion", MapEditorVersion);
   }
-  m_MapHeight        = MapHeight;
+
+  m_MapWidth = MapWidth;
+  m_MapHeight = MapHeight;
   m_MapEditorVersion = MapEditorVersion;
-  m_MapType       = CFG->GetString("map_type", emptyString);
+  m_MapType = CFG->GetString("map_type", emptyString);
   m_MapDefaultHCL = CFG->GetString("map_defaulthcl", emptyString);
 
   if (CFG->Exists("map_numplayers")) {
@@ -1175,18 +1175,6 @@ string CMap::CheckProblems()
     return "invalid map_observers detected";
   }
 
-  if (m_MapWidth.size() != 2)
-  {
-    m_Valid = false;
-    return "invalid map_width detected";
-  }
-
-  if (m_MapHeight.size() != 2)
-  {
-    m_Valid = false;
-    return "invalid map_height detected";
-  }
-
   if (m_MapNumControllers < 2 || m_MapNumControllers > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
@@ -1235,6 +1223,16 @@ string CMap::CheckProblems()
   if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && usedTeams.count() <= 1) {
     m_Valid = false;
     return "invalid map_slot<x> detected";
+  }
+
+  if (m_MapWidth.size() != 2) {
+    m_Valid = false;
+    return "invalid map_width detected";
+  }
+
+  if (m_MapHeight.size() != 2) {
+    m_Valid = false;
+    return "invalid map_height detected";
   }
 
   if (!m_SkipVersionCheck && m_Aura->m_GameVersion < m_MapMinGameVersion) {
