@@ -208,9 +208,15 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
       m_Exiting = true;
     }
 
-    if (!m_Map->GetMapData()->empty()) {
-      m_Aura->m_BusyMaps.insert(m_Map->GetServerPath());
-      m_HasMapLock = true;
+    if (!m_Map->GetUseStandardPaths() && !m_Map->GetMapData()->empty()) {
+      filesystem::path localPath = m_Map->GetServerPath();
+      const bool isFileName = localPath == localPath.filename();
+      if (isFileName) {
+        // Only maps with paths that are filenames but not standard set map lock
+        // implied: only maps in <bot.maps_path>
+        m_HasMapLock = true;
+        m_Aura->m_BusyMaps.insert(m_Map->GetServerPath());
+      }
     }
 
     m_UDPEnabled = nAura->m_GameDefaultConfig->m_UDPEnabled;
@@ -273,26 +279,38 @@ void CGame::Reset(const bool saveStats)
   }
 }
 
-CGame::~CGame()
+void CGame::ReleaseMap()
 {
-  Reset(true);
+  if (!m_Map) return;
 
   if (m_HasMapLock) {
-    string localPathString = m_Map->GetServerPath();
+    // Only maps with paths that are filenames but not standard set map lock
+    // implied: only maps in <bot.maps_path>
+    const string localPathString = m_Map->GetServerPath();
+    const filesystem::path localPath = localPathString;
     m_Aura->m_BusyMaps.erase(localPathString);
     if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
-      filesystem::path localPath = localPathString;
-      bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
-      if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
-        bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
+      // Ensure the mapcache cfg file has been created before trying to delete from disk
+      if (m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
+        const bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
         if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
+          // Release from disk
           m_Map->UnlinkFile();
         }
       }
     }
-    m_HasMapLock = false;
   }
 
+  m_HasMapLock = false;
+
+  // Release from memory
+  m_Map->ClearMapData();
+}
+
+CGame::~CGame()
+{
+  Reset(true);
+  ReleaseMap();
   delete m_Map;
   for (auto& player : m_Players) {
     delete player;
@@ -3946,26 +3964,7 @@ void CGame::EventGameStarted()
   }
 
   // delete the map data
-
-  if (m_HasMapLock) {
-    string localPathString = m_Map->GetServerPath();
-    m_Aura->m_BusyMaps.erase(localPathString);
-    if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
-      filesystem::path localPath = localPathString;
-      bool isFileName = !localPath.is_absolute() && localPath == localPath.filename();
-      if (isFileName && m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
-        bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
-        if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
-          m_Map->UnlinkFile();
-        }
-      }
-    }
-    m_HasMapLock = false;
-  }
-
-  if (m_Map) {
-    m_Map->ClearMapData();
-  }
+  ReleaseMap();
 
   // move the game to the games in progress vector
 

@@ -175,6 +175,7 @@ private:
   bool                   m_MapMPQLoaded;
   bool                   m_MapMPQErrored;
   uint8_t                m_ProxyReconnect;
+  bool                   m_UseStandardPaths;
   bool                   m_SkipVersionCheck;
   bool                   m_Valid;
 
@@ -214,11 +215,13 @@ public:
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
   uint8_t                       GetLobbyRace(const CGameSlot* slot) const;
   uint8_t                       GetProxyReconnect() const { return m_ProxyReconnect; }
+  bool                          GetUseStandardPaths() const { return m_UseStandardPaths; }
   void                          ClearMapData() { m_MapData.clear(); }
   bool                          SetRandomRaces(const bool nEnable);
   bool                          SetRandomHeroes(const bool nEnable);
   bool                          SetMapVisibility(const uint8_t nMapVisibility);
   bool                          SetMapObservers(const uint8_t nMapObservers);
+  void                          SetUseStandardPaths(const bool nValue) { m_UseStandardPaths = nValue; }
   bool                          IsObserverSlot(const CGameSlot* slot) const;
   bool                          NormalizeSlots();
 

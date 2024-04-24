@@ -70,6 +70,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
     m_MapMPQLoaded(false),
     m_MapMPQErrored(false),
     m_ProxyReconnect(RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED),
+    m_UseStandardPaths(false),
     m_SkipVersionCheck(skipVersionCheck)
 {
   Load(CFG);
@@ -328,24 +329,25 @@ void CMap::Load(CConfig* CFG)
 
   // load the map data
 
+  m_UseStandardPaths = CFG->GetBool("map_stdpaths", false);
   m_MapServerPath = CFG->GetString("map_localpath", emptyString);
   m_MapData.clear();
 
-  bool IsPartial = CFG->GetBool("cfg_partial", false);
-  bool ignoreMPQ = m_MapServerPath.empty() || (!IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
+  bool isPartial = CFG->GetBool("cfg_partial", false);
+  bool ignoreMPQ = m_MapServerPath.empty() || (!isPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   size_t RawMapSize = 0;
-  if (IsPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+  if (isPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapServerPath.empty()) {
       return;
     }
     filesystem::path mapServerPath(m_MapServerPath);
-    if (mapServerPath.filename() == mapServerPath && !CFG->GetBool("map_stdpaths", false)) {
+    if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
       m_MapData = FileRead(m_Aura->m_Config->m_MapPath / mapServerPath, &RawMapSize);
     } else {
       m_MapData = FileRead(m_MapServerPath, &RawMapSize);
     }
-    if (IsPartial && m_MapData.empty()) {
+    if (isPartial && m_MapData.empty()) {
       Print("[AURA] Local map not found for partial config file");
       return;
     }
@@ -364,14 +366,14 @@ void CMap::Load(CConfig* CFG)
   filesystem::path MapMPQFilePath(m_MapServerPath);
 
   if (!ignoreMPQ) {
-    if (MapMPQFilePath.filename() == MapMPQFilePath) {
+    if (MapMPQFilePath.filename() == MapMPQFilePath && !m_UseStandardPaths) {
       MapMPQFilePath = m_Aura->m_Config->m_MapPath / MapMPQFilePath;
     } else {
       MapMPQFilePath = m_MapServerPath;
     }    
     FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
     ignoreMPQ = (
-      !IsPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
+      !isPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
         !FileModifiedTime.has_value() || (
           CachedModifiedTime.has_value() && FileModifiedTime.has_value() &&
           FileModifiedTime.value() <= CachedModifiedTime.value()
@@ -626,7 +628,7 @@ void CMap::Load(CConfig* CFG)
   uint8_t              MapMinGameVersion = 0;
   vector<CGameSlot>    Slots;
 
-  if (IsPartial && m_MapMPQLoaded) {
+  if (isPartial && m_MapMPQLoaded) {
     void* SubFile;
 
     if (SFileOpenFileEx(MapMPQ, "war3map.w3i", 0, &SubFile))
@@ -854,7 +856,7 @@ void CMap::Load(CConfig* CFG)
       Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - couldn't find war3map.w3i in map file");
     }
   } else {
-    if (!IsPartial) {
+    if (!isPartial) {
       //This is debug log
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
         Print("[MAP] using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
@@ -1081,7 +1083,7 @@ void CMap::Load(CConfig* CFG)
 
   if (!ErrorMessage.empty()) {
     Print("[MAP] " + ErrorMessage);
-  } else if (IsPartial) {
+  } else if (isPartial) {
     CFG->Delete("cfg_partial");
   }
 }

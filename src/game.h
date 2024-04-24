@@ -388,6 +388,7 @@ public:
 
   void EventGameStarted();
   void EventGameLoaded();
+  void ReleaseMap();
   void Reset(const bool saveStats);
   bool GetIsRemakeable();
   void Remake();
