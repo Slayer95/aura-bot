@@ -340,7 +340,7 @@ void CMap::Load(CConfig* CFG)
       return;
     }
     filesystem::path mapServerPath(m_MapServerPath);
-    if (mapServerPath.filename() == mapServerPath) {
+    if (mapServerPath.filename() == mapServerPath && !CFG->GetBool("map_stdpaths")) {
       m_MapData = FileRead(m_Aura->m_Config->m_MapPath / mapServerPath, &RawMapSize);
     } else {
       m_MapData = FileRead(m_MapServerPath, &RawMapSize);

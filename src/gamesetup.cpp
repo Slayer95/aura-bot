@@ -585,8 +585,9 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
 
   CConfig MapCFG;
   MapCFG.SetBool("cfg_partial", true);
+  if (m_StandardPaths) MapCFG.SetBool("map_stdpaths", true);
   MapCFG.Set("map_path", R"(Maps\Download\)" + baseFileName);
-  string localPath = isInMapsFolder ? fileName : PathToString(filePath);
+  string localPath = isInMapsFolder && !m_StandardPaths ? fileName : PathToString(filePath);
   MapCFG.Set("map_localpath", localPath);
 
   if (m_IsMapDownloaded) {
@@ -611,7 +612,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     return nullptr;
   }
 
-  if (m_Aura->m_Config->m_EnableCFGCache && isInMapsFolder) {
+  if (m_Aura->m_Config->m_EnableCFGCache && isInMapsFolder && !m_StandardPaths) {
     string resolvedCFGName;
     if (m_SearchTarget.first == "local") {
       resolvedCFGName = m_SearchTarget.first + "-" + fileName + ".cfg";
