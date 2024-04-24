@@ -61,7 +61,16 @@ CNetConfig::CNetConfig(CConfig& CFG)
     }
   }
 
-  m_ProxyReconnectEnabled        = CFG.GetBool("net.tcp_extensions.gproxy.enabled", true);
+  bool isAnyReconnect = CFG.GetBool("net.tcp_extensions.gproxy.basic.enabled", true);
+  bool isMGNReconnect = CFG.GetBool("net.tcp_extensions.gproxy.long.enabled", true);
+  m_ProxyReconnect = 0;
+  if (isAnyReconnect) {
+    m_ProxyReconnect |= RECONNECT_ENABLED_GPROXY_BASIC;
+    if (isMGNReconnect) m_ProxyReconnect |= RECONNECT_ENABLED_GPROXY_EXTENDED;
+  } else if (isMGNReconnect) {
+    Print("[CONFIG] <net.tcp_extensions.gproxy.basic.enabled = yes> is required for <net.tcp_extensions.gproxy.long.enabled = yes>.");
+    CFG.SetFailed();
+  }
 
   m_BindAddress4                 = CFG.GetAddressIPv4("net.bind_address", "0.0.0.0");
   CFG.FailIfErrorLast();

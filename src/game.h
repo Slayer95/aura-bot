@@ -171,8 +171,8 @@ protected:
   uint32_t                       m_LacksMapKickDelay;
   bool                           m_NotifyJoins;                   // whether the bot should beep when a player joins a hosted game
   uint32_t                       m_PerfThreshold;                 // the max expected delay between updates - if exceeded it means performance is suffering
-  uint32_t                       m_LobbyNoOwnerTime;              // relinquish game ownership after this many minutes
-  uint32_t                       m_LobbyTimeLimit;                // auto close the game lobby after this many minutes without any owner
+  uint32_t                       m_LobbyNoOwnerTime;              // relinquish game ownership after these many seconds
+  uint32_t                       m_LobbyTimeLimit;                // auto close the game lobby after these many seconds without any owner
   uint32_t                       m_NumPlayersToStartGameOver;     // when this player count is reached, the game over timer will start
 
   bool                           m_CheckJoinable;
@@ -467,6 +467,8 @@ public:
   bool MatchOwnerName(const std::string& name) const;
   uint8_t GetReservedIndex(const std::string& name) const;
   bool GetIsReserved(const std::string& name) const;
+  bool GetIsProxyReconnectable() const;
+  bool GetIsProxyReconnectableLong() const;
   bool IsDownloading() const;
   void SetOwner(const std::string& name, const std::string& realm);
   void ReleaseOwner();

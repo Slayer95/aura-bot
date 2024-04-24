@@ -86,7 +86,8 @@ private:
   std::optional<std::string>            m_Owner;
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
-  std::optional<uint32_t>               m_GameTimeout;
+  std::optional<uint32_t>               m_GameLobbyTimeout;
+  std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_GameCheckReservation;
   std::vector<std::string>              m_GameReservations;

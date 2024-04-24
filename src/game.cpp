@@ -1126,12 +1126,12 @@ bool CGame::Update(void* fd, void* send_fd)
     } else {
       // check if we've hit the time limit
       int64_t TimeSinceSeenOwner = Time - m_LastOwnerSeen;
-      if (TimeSinceSeenOwner > 60 * static_cast<int64_t>(m_LobbyNoOwnerTime)) {
+      if (TimeSinceSeenOwner > static_cast<int64_t>(m_LobbyNoOwnerTime)) {
         if (!m_OwnerName.empty()) {
           ReleaseOwner();
         }
       }
-      if (TimeSinceSeenOwner > 60 * static_cast<int64_t>(m_LobbyTimeLimit)) {
+      if (TimeSinceSeenOwner > static_cast<int64_t>(m_LobbyTimeLimit)) {
         Print(GetLogPrefix() + "is over (lobby time limit hit)");
         m_Exiting = true;
         return m_Exiting;
@@ -2072,7 +2072,7 @@ vector<uint8_t> CGame::GetSourceFileSHA1() const
 
 vector<uint8_t> CGame::GetAnnounceWidth() const
 {
-  if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
+  if (GetIsProxyReconnectable()) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
   }
@@ -2081,7 +2081,7 @@ vector<uint8_t> CGame::GetAnnounceWidth() const
 }
 vector<uint8_t> CGame::GetAnnounceHeight() const
 {
-  if (m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
+  if (GetIsProxyReconnectable()) {
     // use an invalid map width/height to indicate reconnectable games
     return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
   }
@@ -2972,11 +2972,15 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   }
 
   string GProxyFragment;
-  if (m_Aura->m_Net->m_Config->m_AnnounceGProxy) {
+  if (m_Aura->m_Net->m_Config->m_AnnounceGProxy && GetIsProxyReconnectable()) {
     if (player->GetGProxyExtended()) {
       GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
     } else if (player->GetGProxyAny()) {
-      GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
+      if (GetIsProxyReconnectableLong()) {
+        GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
+      } else {
+        GProxyFragment = " is using GProxy, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
+      }
     } else if (m_Aura->m_GameVersion < 26 || 29 < m_Aura->m_GameVersion) {
       GProxyFragment = " is not using disconnection protection. You may download it at: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
     }
@@ -5346,6 +5350,16 @@ uint8_t CGame::GetReservedIndex(const string& name) const
 bool CGame::GetIsReserved(const string& name) const
 {
   return GetReservedIndex(name) < m_Reserved.size();
+}
+
+bool CGame::GetIsProxyReconnectable() const
+{
+  return 0 != (m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Map->GetProxyReconnect());
+}
+
+bool CGame::GetIsProxyReconnectableLong() const
+{
+  return 0 != ((m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Map->GetProxyReconnect()) & RECONNECT_ENABLED_GPROXY_EXTENDED);
 }
 
 bool CGame::IsDownloading() const

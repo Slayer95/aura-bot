@@ -174,6 +174,7 @@ private:
   std::vector<uint8_t>   m_MapContentMismatch;
   bool                   m_MapMPQLoaded;
   bool                   m_MapMPQErrored;
+  uint8_t                m_ProxyReconnect;
   bool                   m_SkipVersionCheck;
   bool                   m_Valid;
 
@@ -212,6 +213,7 @@ public:
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
   uint8_t                       GetLobbyRace(const CGameSlot* slot) const;
+  uint8_t                       GetProxyReconnect() const { return m_ProxyReconnect; }
   void                          ClearMapData() { m_MapData.clear(); }
   bool                          SetRandomRaces(const bool nEnable);
   bool                          SetRandomHeroes(const bool nEnable);

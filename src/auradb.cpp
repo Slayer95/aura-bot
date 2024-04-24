@@ -906,7 +906,6 @@ string CAuraDB::AliasCheck(const string& alias)
 
   if (RC == SQLITE_ROW) {
     if (sqlite3_column_count(static_cast<sqlite3_stmt*>(AliasCheckStmt)) == 1) {
-      Print("AliasCheck ok");
       value = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(AliasCheckStmt), 0));
     } else {
       Print("[SQLITE3] error checking alias [" + alias + "] - row doesn't have 1 column");

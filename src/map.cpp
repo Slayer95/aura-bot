@@ -69,6 +69,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
   : m_Aura(nAura),
     m_MapMPQLoaded(false),
     m_MapMPQErrored(false),
+    m_ProxyReconnect(RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED),
     m_SkipVersionCheck(skipVersionCheck)
 {
   Load(CFG);
@@ -1057,6 +1058,10 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint32("map_gameversion_min", MapMinGameVersion);
   }
   m_MapMinGameVersion = MapMinGameVersion;
+
+  if (CFG->Exists("map_proxy_reconnect")) {
+    m_ProxyReconnect = CFG->GetUint8("map_proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
+  }
 
   // if random races is set force every slot's race to random
 

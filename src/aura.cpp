@@ -861,7 +861,7 @@ bool CAura::Update()
     uint16_t localPort = pair.first;
     CStreamIOSocket* socket = pair.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
-      if (m_Net->m_Config->m_ProxyReconnectEnabled) {
+      if (m_Net->m_Config->m_ProxyReconnect > 0) {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());

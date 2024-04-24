@@ -258,6 +258,7 @@ public:
   bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   void SetName(const std::string& nName) { m_GameName = nName; }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
+  void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
   void SetContext(CCommandContext* nCtx) { m_Ctx = nCtx; }

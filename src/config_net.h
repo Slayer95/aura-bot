@@ -45,7 +45,7 @@ class CNetConfig
 {
 public:
 
-  bool                                    m_ProxyReconnectEnabled;      // whether to listen to GProxy++ reconnects
+  uint8_t                                 m_ProxyReconnect;             // whether to listen to GProxy++ reconnects
   sockaddr_storage                        m_BindAddress4;               // Defaults to 0.0.0.0
   sockaddr_storage                        m_BindAddress6;               // Defaults to ::
   uint16_t                                m_MinHostPort;                // the min port to host games on

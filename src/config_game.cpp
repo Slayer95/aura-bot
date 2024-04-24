@@ -45,8 +45,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 3);
   m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 300);
   m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 200);
-  m_LobbyTimeLimit            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 10);
-  m_LobbyNoOwnerTime          = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 2);
+  m_LobbyTimeLimit            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
+  m_LobbyNoOwnerTime          = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
   m_Latency                   = CFG.GetUint16("bot.latency", 100);
   m_PerfThreshold             = CFG.GetInt("bot.perf_limit", 150);
   m_LacksMapKickDelay         = CFG.GetInt("hosting.map_missing.kick_delay", 60); // default: 1 minute

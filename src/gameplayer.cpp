@@ -54,6 +54,7 @@
 #include "gpsprotocol.h"
 #include "game.h"
 #include "socket.h"
+#include "net.h"
 
 using namespace std;
 
@@ -113,7 +114,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
       if (Bytes.size() < Length) break;
       const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-      if (Bytes[0] == W3GS_HEADER_CONSTANT || (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled)) {
+      if (Bytes[0] == W3GS_HEADER_CONSTANT || (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0)) {
         if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN &&
           m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror() && !m_Aura->m_CurrentLobby->GetLobbyLoading()) {
           if (m_IsUDPTunnel) {
@@ -157,7 +158,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
           CGamePlayer* Match = nullptr;
 
           for (auto& game : m_Aura->m_Games) {
-            if (game->GetGameLoaded()) {
+            if (game->GetGameLoaded() && game->GetIsProxyReconnectable()) {
               CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
               if (Player && Player->GetGProxyAny() && Player->GetGProxyReconnectKey() == ReconnectKey) {
                 Match = Player;
@@ -526,7 +527,7 @@ bool CGamePlayer::Update(void* fd)
             break;
         }
       }
-      else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->m_Aura->m_Net->m_Config->m_ProxyReconnectEnabled) {
+      else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->GetIsProxyReconnectable()) {
         if (Bytes[1] == CGPSProtocol::GPS_ACK && Length == 8) {
           const size_t LastPacket               = ByteArrayToUInt32(Data, false, 4);
           const size_t PacketsAlreadyUnqueued   = m_TotalPacketsSent - m_GProxyBuffer.size();
@@ -566,8 +567,10 @@ bool CGamePlayer::Update(void* fd)
           Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
         } else if (Bytes[1] == CGPSProtocol::GPS_SUPPORT_EXTENDED && Length >= 8) {
           //uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
-          m_GProxyExtended = true;
-          Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] is using GProxy Extended");
+          if (m_Game->GetIsProxyReconnectableLong()) {
+            m_GProxyExtended = true;
+            Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] is using GProxy Extended");
+          }
         }
       }
 
