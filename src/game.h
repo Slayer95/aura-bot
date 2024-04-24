@@ -277,6 +277,7 @@ public:
   uint8_t               GetNumPotentialControllers() const;
   uint8_t               GetNumControllers() const;
   uint8_t               GetNumComputers() const;
+  uint8_t               GetNumTeamControllersOrOpen(const uint8_t team) const;
   std::string           GetMapFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
   std::string           GetDescription() const;
@@ -293,6 +294,7 @@ public:
   std::string           GetPlayers() const;
   std::string           GetObservers() const;
   std::string           GetAutoStartText() const;
+  std::string           GetCmdToken() const { return m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken; }
   CTCPServer*           GetSocket() const { return m_Socket; };
 
   uint16_t              GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
@@ -405,6 +407,7 @@ public:
   uint8_t              GetNewTeam() const;
   uint8_t              GetNewColor() const;
   uint8_t              SimulateActionPID(const uint8_t actionType, CGamePlayer* player, const bool isDisconnect);
+  bool                 GetHasAnyActiveTeam() const;
   bool                 GetHasAnyPlayer() const;
   bool                 GetIsPlayerSlot(const uint8_t SID) const;
   bool                 GetHasAnotherPlayer(const uint8_t ExceptSID) const;
@@ -432,7 +435,7 @@ public:
   bool CloseSlot(const uint8_t SID, const bool kick);
   bool OpenSlot();
   bool CloseSlot();
-  bool ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool ignoreLayout);
+  bool ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool ignoreLayout = false, const bool overrideComputers = false);
   bool ComputerSlot(const uint8_t SID, const uint8_t skill, bool kick);
   bool SetSlotColor(const uint8_t SID, const uint8_t colour, const bool force);
   bool SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force);
@@ -452,7 +455,7 @@ public:
   bool CloseAllTeamSlots(const uint8_t team);
   bool CloseAllTeamSlots(const std::bitset<MAX_SLOTS_MODERN> occupiedTeams);
   bool CloseAllSlots();
-  bool ComputerNSlots(const uint8_t expectedCount, const uint8_t skill);
+  bool ComputerNSlots(const uint8_t expectedCount, const uint8_t skill, const bool ignoreLayout = false, const bool overrideComputers = false);
   bool ComputerAllSlots(const uint8_t skill);
   void ShuffleSlots();
 
@@ -498,7 +501,10 @@ public:
   std::pair<uint8_t, uint8_t> GetLargestPotentialTeam() const;
   std::pair<uint8_t, uint8_t> GetSmallestPotentialTeam(const uint8_t minSize, const uint8_t exceptTeam) const;
   std::vector<uint8_t> GetActiveTeamSizes() const;
-  uint8_t GetSelectableTeamSlot(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endOpenSID, const bool force) const;
+  uint8_t GetSelectableTeamSlotFront(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endOpenSID, const bool force) const;
+  uint8_t GetSelectableTeamSlotBack(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endOpenSID, const bool force) const;
+  uint8_t GetSelectableTeamSlotBackExceptHumanLike(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endOpenSID, const bool force) const;
+  uint8_t GetSelectableTeamSlotBackExceptComputer(const uint8_t team, const uint8_t endOccupiedSID,const uint8_t endOpenSID, const bool force) const;
   bool FindHumanVsAITeams(const uint8_t humanCount, const uint8_t computerCount, std::pair<uint8_t, uint8_t>& teams) const;
   uint8_t GetOneVsAllTeamAll() const;
   uint8_t GetOneVsAllTeamOne(const uint8_t teamAll) const;
@@ -513,7 +519,8 @@ public:
     }
   }
 
-  void ResetLayout() { m_CustomLayout = CUSTOM_LAYOUT_NONE; }
+  void ResetLayout(const bool quiet);
+  void ResetLayoutIfNotMatching();
   bool SetLayoutFFA();
   bool SetLayoutOneVsAll(const CGamePlayer* player);
   bool SetLayoutTwoTeams();

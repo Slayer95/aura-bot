@@ -760,6 +760,7 @@ inline void NormalizeDirectory(std::filesystem::path& filePath) {
 
 inline bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> counters)
 {
+  if (element == 0) return false;
   do {
     --element;
   } while (counters[element] != 0 && element > 0);

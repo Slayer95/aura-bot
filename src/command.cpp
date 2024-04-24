@@ -716,7 +716,7 @@ bool CCommandContext::ParseNonPlayerSlot(const std::string& target, uint8_t& SID
     ErrorReply("Slot not found.");
     return false;
   }
-  if (slot->GetIsPlayerOrFake()) {
+  if (m_TargetGame->GetIsPlayerSlot(testSID)) {
     ErrorReply("Slot is occupied by a player.");
     return false;
   }
@@ -1434,7 +1434,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         uint8_t SID = static_cast<uint8_t>(elem) - 1;
-        m_TargetGame->DeleteFakePlayer(SID);
         if (!m_TargetGame->CloseSlot(SID, CommandHash == HashCode("close"))) {
           failedSlots.push_back(to_string(elem));
         }
@@ -1442,7 +1441,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (Args.size() == failedSlots.size()) {
         ErrorReply("Failed to close slot.");
       } else if (failedSlots.empty()) {
-        SendReply("Closed " + to_string(Args.size()) + " slot(s).");
+        if (Args.size() == 1) {
+          SendReply("Closed slot #" + to_string(Args[0] + 1) + ".");
+        } else {
+          SendReply("Closed " + to_string(Args.size()) + " slot(s).");
+        }
       } else {
         ErrorReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be closed.");
       }
@@ -1527,7 +1530,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        SendReply("The HCL command string is [" + m_TargetGame->m_HCLCommandString + "]");
+        SendReply("Game mode (HCL) is [" + m_TargetGame->m_HCLCommandString + "]");
         break;
       }
 
@@ -1537,7 +1540,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.size() > m_TargetGame->m_Slots.size()) {
-        ErrorReply("Unable to set HCL command string because it's too long - it must not exceed the amount of occupied game slots");
+        ErrorReply("Unable to set mode (HCL) because it's too long - it must not exceed the amount of occupied game slots");
         break;
       }
 
@@ -1545,12 +1548,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       size_t IllegalIndex = Payload.find_first_not_of(HCLChars);
 
       if (IllegalIndex != string::npos) {
-        ErrorReply("Unable to set HCL command string because it contains invalid character [" + cmdToken + "]");
+        ErrorReply("Unable to set mode (HCL) because it contains invalid character [" + cmdToken + "]");
         break;
       }
 
       m_TargetGame->m_HCLCommandString = Payload;
-      SendAll("Game mode set to [" + m_TargetGame->m_HCLCommandString + "]");
+      SendAll("Game mode (HCL) set to [" + m_TargetGame->m_HCLCommandString + "]");
       break;
     }
 
@@ -1759,17 +1762,24 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Usage: " + cmdToken + "o [SLOTNUM]");
           break;
         }
-        uint8_t SID = static_cast<uint8_t>(elem) - 1;
-        if (!m_TargetGame->DeleteFakePlayer(SID)) {
-          if (!m_TargetGame->OpenSlot(SID, CommandHash == HashCode("open"))) {
-            failedSlots.push_back(to_string(elem));
-          }
+        const uint8_t SID = static_cast<uint8_t>(elem) - 1;
+        const CGameSlot* slot = m_TargetGame->GetSlot(SID);
+        if (!slot || slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
+          failedSlots.push_back(to_string(elem));
+          continue;
+        }
+        if (!m_TargetGame->OpenSlot(SID, CommandHash == HashCode("open"))) {
+          failedSlots.push_back(to_string(elem));
         }
       }
       if (Args.size() == failedSlots.size()) {
         ErrorReply("Failed to open slot.");
       } else if (failedSlots.empty()) {
-        SendReply("Opened " + to_string(Args.size()) + " slot(s).");
+        if (Args.size() == 1) {
+          SendReply("Opened slot #" + to_string(Args[0] + 1) + ".");
+        } else {
+          SendReply("Opened " + to_string(Args.size()) + " slot(s).");
+        }
       } else {
         ErrorReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be opened.");
       }
@@ -2249,6 +2259,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("These slots cannot be swapped.");
         break;
       }
+      m_TargetGame->ResetLayoutIfNotMatching();
       if ((playerOne != nullptr) && (playerTwo != nullptr)) {
         SendReply("Swapped " + playerOne->GetName() + " with " + playerTwo->GetName() + ".");
       } else if (!playerOne && !playerTwo) {
@@ -3177,7 +3188,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, m_TargetGame->GetNumComputers() + 1)) {
+        // ignore layout, don't override computers
+        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, m_TargetGame->GetNumComputers() + 1), true, false) {
           ErrorReply("No slots available.");
         } else {
           SendReply("Insane computer added.");
@@ -3193,18 +3205,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       if (!ParseNonPlayerSlot(Args[0], SID)) {
-        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
         break;
       }
       uint8_t skill = SLOTCOMP_HARD;
       if (Args.size() >= 2) {
         skill = ParseComputerSkill(Args[1]);
       }
-      m_TargetGame->DeleteFakePlayer(SID);
       if (!m_TargetGame->ComputerSlot(SID, skill, false)) {
         ErrorReply("Cannot add computer on that slot.");
         break;
       }
+      m_TargetGame->ResetLayoutIfNotMatching();
       SendReply("Computer slot added.");
       break;
     }
@@ -3544,10 +3555,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         } else {
           ErrorReply("Cannot transfer to team " + ToDecString(targetTeam + 1) + ".");
         }
-      } else if (targetPlayer) {
-        SendReply("[" + targetPlayer->GetName() + "] is now in team " + ToDecString(targetTeam + 1) + ".");
       } else {
-        SendReply("Transferred to team " + ToDecString(targetTeam + 1) + ".");
+        m_TargetGame->ResetLayoutIfNotMatching();
+        if (targetPlayer) {
+          SendReply("[" + targetPlayer->GetName() + "] is now in team " + ToDecString(targetTeam + 1) + ".");
+        } else {
+          SendReply("Transferred to team " + ToDecString(targetTeam + 1) + ".");
+        }
       }
       break;
     }
@@ -3604,10 +3618,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         } else {
           ErrorReply("Cannot turn the player into an observer.");
         }
-      } else if (targetPlayer) {
-        SendReply("[" + targetPlayer->GetName() + "] is now an observer.");
       } else {
-        SendReply("Moved to observers team.");
+        m_TargetGame->ResetLayoutIfNotMatching();
+        if (targetPlayer) {
+          SendReply("[" + targetPlayer->GetName() + "] is now an observer.");
+        } else {
+          SendReply("Moved to observers team.");
+        }
       }
       break;
     }
@@ -3639,7 +3656,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (!m_TargetGame->ComputerAllSlots(targetSkill)) {
-        ErrorReply("No remaining slots available.");
+        if (m_TargetGame->GetCustomLayout() == CUSTOM_LAYOUT_HUMANS_VS_AI) {
+          ErrorReply("No remaining slots available (lobby is set to humans vs AI.");
+        } else {
+          ErrorReply("No remaining slots available.");
+        }
       }
       SendReply("Computers added.");
       break;
@@ -3686,6 +3707,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         if (targetValue.value_or(true)) {
+          if (m_TargetGame->GetIsDraftMode()) {
+            ErrorReply("Draft mode is already enabled.");
+            break;
+          }
           m_TargetGame->SetDraftMode(true);
 
           // Only has effect if observers are allowed.
@@ -3693,6 +3718,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
           SendReply("Draft mode enabled. Only draft captains may assign teams.");
         } else {
+          if (!m_TargetGame->GetIsDraftMode()) {
+            ErrorReply("Draft mode is already disabled.");
+            break;
+          }
           m_TargetGame->ResetDraft();
           m_TargetGame->SetDraftMode(false);
           SendReply("Draft mode disabled. Everyone may choose their own team.");
@@ -3751,23 +3780,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetNumPotentialControllers() <= 1) {
-        ErrorReply("Not enough players in this game.");
-        break;
-      }
-
       optional<bool> targetValue;
       if (!ParseBoolean(Payload, targetValue)) {
         ErrorReply("Usage: " + cmdToken + "ffa [enable|disable]");
         break;
       }
       if (!targetValue.value_or(true)) {
-        m_TargetGame->ResetLayout();
+        m_TargetGame->ResetLayout(true);
         SendReply("FFA mode disabled.");
         break;
       }
+      if (m_TargetGame->GetNumPotentialControllers() <= 1) {
+        ErrorReply("Not enough players in this game.");
+        break;
+      }
       if (!m_TargetGame->SetLayoutFFA()) {
-        ErrorReply("This map does not support FFA.");
+        m_TargetGame->ResetLayout(true);
+        ErrorReply("Cannot arrange a FFA match.");
       } else {
         SendReply("Game set to free-for-all.");
       }
@@ -3796,6 +3825,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      optional<bool> targetValue;
+      if (ParseBoolean(Payload, targetValue) && targetValue.value_or(true) == false) {
+        // Branching here means that you can't actually set a player named "Disable" against everyone else.
+        m_TargetGame->ResetLayout(true);
+        SendReply("One-VS-All mode disabled.");
+        break;
+      }
+
       CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
         ErrorReply("Player [" + Payload + "] not found.");
@@ -3808,15 +3845,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> targetValue;
-      if (ParseBoolean(Payload, targetValue) && targetValue.value_or(true) == false) {
-        // Branching here means that you can't actually set a player named "Disable" against everyone else.
-        m_TargetGame->ResetLayout();
-        SendReply("One-VS-All mode disabled.");
-        break;
-      }
       if (!m_TargetGame->SetLayoutOneVsAll(targetPlayer)) {
-        ErrorReply("This map does not support " + ToDecString(othersCount) + " vs 1.");
+        m_TargetGame->ResetLayout(true);
+        ErrorReply("Cannot arrange a " + ToDecString(othersCount) + "-VS-1 match.");
+        
       } else {
         SendReply("Game set to everyone against " + targetPlayer->GetName());
       }
@@ -3849,21 +3881,22 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!ParseBoolean(Payload, targetValue)) {
         vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
         // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
-        if (Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots)) {
+        if (Args.empty() || Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots)) {
           ErrorReply("Usage: " + cmdToken + "terminator [enable|disable]");
           ErrorReply("Usage: " + cmdToken + "terminator [NUMBER]");
           break;
         }
+        m_TargetGame->ResetLayout(false);
         uint8_t computerCount = static_cast<uint8_t>(Args[0]);
         if (computerCount == m_Aura->m_MaxSlots) --computerCount; // Fix 1v12 into 1v11
-        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, computerCount)) {
-          ErrorReply("This map does not support " + to_string(m_TargetGame->GetNumHumanOrFakeControllers()) + " vs " + ToDecString(computerCount) + " AIs.");
+        // ignore layout, don't override computers
+        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, computerCount, true, false)) {
+          ErrorReply("Not enough open slots for " + ToDecString(computerCount) + " computers.");
           break;
         }
-        break;
       }
-      if (!targetValue.value_or(false)) {
-        m_TargetGame->ResetLayout();
+      if (!targetValue.value_or(true)) {
+        m_TargetGame->ResetLayout(true);
         SendReply("Humans-VS-AI mode disabled.");
         break;
       }
@@ -3875,12 +3908,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       const uint8_t humansCount = static_cast<uint8_t>(m_TargetGame->GetNumHumanOrFakeControllers());
       pair<uint8_t, uint8_t> matchedTeams;
       if (!m_TargetGame->FindHumanVsAITeams(humansCount, computersCount, matchedTeams)) {
-        ErrorReply("This map does not support " + ToDecString(humansCount) + " vs " + ToDecString(computersCount) + " computers.");
+        ErrorReply("Not enough open slots to host " + ToDecString(humansCount) + " humans VS " + ToDecString(computersCount) + " computers game.");
         break;
       }
 
       if (!m_TargetGame->SetLayoutHumansVsAI(matchedTeams.first, matchedTeams.second)) {
-        ErrorReply("This map does not support " + ToDecString(humansCount) + " vs " + ToDecString(computersCount) + " computers.");
+        m_TargetGame->ResetLayout(true);
+        ErrorReply("Cannot arrange a " + ToDecString(humansCount) + " humans VS " + ToDecString(computersCount) + " computers match.");
       } else {
         SendReply("Game set to versus AI.");
       }
@@ -3910,8 +3944,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "teams [enable|disable]");
         break;
       }
-      if (!targetValue.value_or(false)) {
-        m_TargetGame->ResetLayout();
+      if (!targetValue.value_or(true)) {
+        m_TargetGame->ResetLayout(true);
         // This doesn't have any effect, since
         // both CUSTOM_LAYOUT_COMPACT nor CUSTOM_LAYOUT_ISOPLAYERS are
         // missing from CUSTOM_LAYOUT_LOCKTEAMS mask.
@@ -3932,6 +3966,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       }
+      m_TargetGame->ResetLayout(true);
       ErrorReply("Failed to automatically assign teams.");
       break;
     }
