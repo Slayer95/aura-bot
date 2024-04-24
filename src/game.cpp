@@ -289,14 +289,15 @@ void CGame::ReleaseMap()
     const string localPathString = m_Map->GetServerPath();
     const filesystem::path localPath = localPathString;
     m_Aura->m_BusyMaps.erase(localPathString);
-    if (m_Aura->m_Config->m_EnableDeleteOversizedMaps) {
+    const bool deleteTooLarge = (
+      m_Aura->m_Config->m_EnableDeleteOversizedMaps &&
+      (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024)
+    );
+    if (deleteTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
       // Ensure the mapcache cfg file has been created before trying to delete from disk
       if (m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
-        const bool IsTooLarge = ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024;
-        if (IsTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
-          // Release from disk
-          m_Map->UnlinkFile();
-        }
+        // Release from disk
+        m_Map->UnlinkFile();
       }
     }
   }
