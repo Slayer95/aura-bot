@@ -414,12 +414,19 @@ administrative control over the game session. Here's the format for specifying t
 - <USER>: The username of the owner.
 - <SERVER>: The server the user is registered in.
 
-## \`--timeout <TIME>\`
+## \`--lobby-timeout <TIME>\`
 
 This parameter specifies the maximum time a game lobby is allowed to be unattended, that is,
 without a game owner. After this time passes, the lobby is unhosted.
 
-- <TIME>: Provided in minutes.
+- <TIME>: Provided in seconds.
+
+## \`--download-timeout <TIME>\`
+
+This parameter specifies the maximum time a map download is allowed to take. Once this time is
+exceeded, the map download and game hosting are cancelled.
+
+- <TIME>: Provided in seconds.
 
 ## \`--load <FILE>\`
 
