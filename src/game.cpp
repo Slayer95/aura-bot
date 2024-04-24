@@ -1439,28 +1439,14 @@ uint8_t CGame::GetSelectableTeamSlotBackExceptHumanLike(const uint8_t team, cons
   uint8_t forceResult = 0xFF;
   uint8_t SID = endOccupiedSID < endOpenSID ? endOpenSID : endOccupiedSID;
   while (SID--) {
-    Print("Checking slot " + ToDecString(SID + 1));
     const CGameSlot* slot = InspectSlot(SID);
-    if (!slot || slot->GetTeam() != team) {
-      Print("Bad SID error 1");
-      continue;
-    }
-    if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
-      Print("Bad SID error 2");
-      continue;
-    }
-    if (!slot->GetIsSelectable()) {
-      Print("Bad SID error 3");
-      continue;
-    }
-    if (slot->GetIsPlayerOrFake()) {
-      Print("Bad SID error 4");
-      continue;
-    }
+    if (!slot || slot->GetTeam() != team) continue;
+    if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) continue;
+    if (!slot->GetIsSelectable()) continue;
+    if (slot->GetIsPlayerOrFake()) continue;
     if (slot->GetSlotStatus() != SLOTSTATUS_OPEN && SID < endOccupiedSID) {
       // When force is used, fallback to the highest occupied SID
       if (forceResult == 0xFF) forceResult = SID;
-      Print("Enforceable SID");
       continue;
     }
     return SID;
@@ -1474,28 +1460,14 @@ uint8_t CGame::GetSelectableTeamSlotBackExceptComputer(const uint8_t team, const
   uint8_t forceResult = 0xFF;
   uint8_t SID = endOccupiedSID < endOpenSID ? endOpenSID : endOccupiedSID;
   while (SID--) {
-    Print("Checking slot " + ToDecString(SID + 1));
     const CGameSlot* slot = InspectSlot(SID);
-    if (!slot || slot->GetTeam() != team) {
-      Print("Bad SID error 1");
-      continue;
-    }
-    if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
-      Print("Bad SID error 2");
-      continue;
-    }
-    if (!slot->GetIsSelectable()) {
-      Print("Bad SID error 3");
-      continue;
-    }
-    if (slot->GetIsComputer()) {
-      Print("Bad SID error 4");
-      continue;
-    }
+    if (!slot || slot->GetTeam() != team) continue;
+    if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) continue;
+    if (!slot->GetIsSelectable()) continue;
+    if (slot->GetIsComputer()) continue;
     if (slot->GetSlotStatus() != SLOTSTATUS_OPEN && SID < endOccupiedSID) {
       // When force is used, fallback to the highest occupied SID
       if (forceResult == 0xFF) forceResult = SID;
-      Print("Enforceable SID");
       continue;
     }
     return SID;
@@ -1744,7 +1716,6 @@ bool CGame::SetLayoutTwoTeams()
 bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam)
 {
   m_CustomLayout = CUSTOM_LAYOUT_HUMANS_VS_AI;
-  Print("[HumanVsAI] Teams: " + ToDecString(humanTeam + 1) + " (humanTeam), " + ToDecString(computerTeam + 1) + " (computerTeam)");
   const bool isSwap = GetIsCustomForces();
   if (isSwap) {
     uint8_t SID = static_cast<uint8_t>(m_Slots.size()) - 1;
@@ -1753,7 +1724,6 @@ bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerT
     while (SID != 0xFF) {
       CGameSlot* slot = GetSlot(SID);
       if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
-        Print("[HumanVsAI] Skipping slot " + ToDecString(SID + 1) + " - not occupied");
         --SID;
         continue;
       }
@@ -1761,11 +1731,6 @@ bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerT
       const uint8_t currentTeam = slot->GetTeam();
       const uint8_t targetTeam = isComputer ? computerTeam : humanTeam;
       if (currentTeam == targetTeam) {
-        if (isComputer) {
-          Print("[HumanVsAI] slot " + ToDecString(SID + 1) + " (computer) is already team " + ToDecString(m_Slots[SID].GetTeam() + 1));
-        } else {
-          Print("[HumanVsAI] slot " + ToDecString(SID + 1) + " (human) is already team " + ToDecString(m_Slots[SID].GetTeam() + 1));
-        }
         --SID;
         continue;
       }
@@ -1774,41 +1739,21 @@ bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerT
       uint8_t swapSID = 0xFF;
       if (isComputer) {
         swapSID = GetSelectableTeamSlotBackExceptComputer(targetTeam, SID, selfEndSID, true);
-        Print("Until " + ToDecString(SID + 1) + ", " + ToDecString(selfEndSID + 1) + " - found computer at slot " + ToDecString(swapSID + 1));
       } else {
         swapSID = GetSelectableTeamSlotBackExceptHumanLike(targetTeam, SID, selfEndSID, true);
-        Print("Until " + ToDecString(SID + 1) + ", " + ToDecString(selfEndSID + 1) + " - found human-like at slot " + ToDecString(swapSID + 1));
       }
       if (swapSID == 0xFF) {
-        Print("[HumanVsAI] No selectable slot found in team " + ToDecString(targetTeam + 1) + " before slot " + ToDecString(selfEndSID + 1));
         return false;
       }
       const bool isTwoWays = InspectSlot(swapSID)->GetSlotStatus() == SLOTSTATUS_OCCUPIED;
       if (!SwapSlots(SID, swapSID)) {
-        Print("[HumanVsAI] Failed to swap slots " + ToDecString(SID + 1) + " and " + ToDecString(swapSID + 1));
         Print(ByteArrayToDecString(InspectSlot(SID)->GetByteArray()));
         Print(ByteArrayToDecString(InspectSlot(swapSID)->GetByteArray()));
       } else {
         // slot still points to the same SID
-        if (isTwoWays) Print("[HumanVsAI] Swapped two-ways");
         selfEndSID = swapSID;
-        if (isComputer) {
-          if (selfEndSID != endComputerSID) {
-            Print("[HumanVsAI] AFTER Bad reference (is computer)");
-          }
-        } else {
-          if (selfEndSID != endHumanSID) {
-            Print("[HumanVsAI] AFTER Bad reference (is human-like)");
-          }
-        }
         if (isTwoWays && SID > otherEndSID) {
-          Print("[HumanVsAI] Swapped computer with human slots");
           otherEndSID = SID;
-        }
-        if (isComputer) {
-          Print("[HumanVsAI] Swapped computer slot " + ToDecString(SID + 1) + " with slot " + ToDecString(swapSID + 1));
-        } else {
-          Print("[HumanVsAI] Swapped human slot " + ToDecString(SID + 1) + " with slot " + ToDecString(swapSID + 1));
         }
       }
       m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
@@ -1851,7 +1796,6 @@ bool CGame::SetLayoutFFA()
   }
   uint8_t SID = static_cast<uint8_t>(m_Slots.size());
   bitset<MAX_SLOTS_MODERN> occupiedTeams;
-  Print("[FFA] Searching team " + ToDecString(nextTeam + 1));
   while (SID--) {
     CGameSlot* slot = GetSlot(SID);
     if (slot->GetTeam() == m_Aura->m_MaxSlots) continue;
@@ -1862,23 +1806,18 @@ bool CGame::SetLayoutFFA()
       if (!FindNextMissingElementBack(nextTeam, lockedTeams)) {
         break;
       }
-      Print("[FFA] Found team OK. Searching next team " + ToDecString(nextTeam + 1) + "...");
       continue;
     }
     if (isSwap) {
       uint8_t swapSID = GetSelectableTeamSlotBack(nextTeam, SID, static_cast<uint8_t>(m_Slots.size()), true);
       if (swapSID == 0xFF) {
-        Print("[FFA] Failed to find selectable slot in team " + ToDecString(nextTeam + 1));
         return false;
       }
       if (!SwapSlots(SID, swapSID)) {
-        Print("[FFA] Failed to swap slots " + ToDecString(SID + 1) + " and " + ToDecString(swapSID + 1));
         return false;
       }
-      Print("[FFA] Swapped slots " + ToDecString(SID + 1) + " and " + ToDecString(swapSID + 1));
       m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       if (!FindNextMissingElementBack(nextTeam, lockedTeams)) {
-        Print("[FFA] finished sorting all teams");
         break;
       }
       occupiedTeams.set(nextTeam);
@@ -1886,7 +1825,6 @@ bool CGame::SetLayoutFFA()
       slot->SetTeam(nextTeam);
       m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       if (!FindNextMissingElementBack(nextTeam, lockedTeams)) {
-        Print("[FFA] finished sorting all teams");
         break;
       }
       occupiedTeams.set(nextTeam);
@@ -1970,8 +1908,6 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
   if (teamAll == 0xFF) return false;
   const uint8_t teamOne = GetOneVsAllTeamOne(teamAll);
 
-  Print("[1vsAll] Teams: " + ToDecString(teamOne + 1) + " (lone), " + ToDecString(teamAll + 1) + " (alliance)");
-
   // Move the alone player to its own team.
   if (isSwap) {
     const uint8_t swapSID = GetSelectableTeamSlotBack(teamOne, static_cast<uint8_t>(m_Slots.size()), static_cast<uint8_t>(m_Slots.size()), true);
@@ -1979,7 +1915,6 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
       return false;
     }
     SwapSlots(targetSID, swapSID);
-    Print("[1vsAll] Moved lone slot " + ToDecString(targetSID + 1) + " to " + ToDecString(swapSID + 1));
     targetSID = swapSID; // Sync slot index on swap.
   } else {
     CGameSlot* slot = GetSlot(targetSID);
@@ -1994,7 +1929,6 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
     uint8_t SID = static_cast<uint8_t>(m_Slots.size()) - 1;
     while (SID != 0xFF) {
       if (SID == targetSID || m_Slots[SID].GetTeam() == teamAll || m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
-        Print("[1vsAll] Skipping slot " + ToDecString(SID + 1) + " - team is " + ToDecString(m_Slots[SID].GetTeam() + 1));
         --SID;
         continue;
       }
@@ -2003,28 +1937,21 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
       bool toObservers = swapSID == 0xFF; // Alliance team is full.
       if (toObservers) {
         if (m_Slots[SID].GetIsComputer()) {
-          Print("[1vsAll] No selectable slot found in team " + ToDecString(teamAll + 1) + "before slot " + ToDecString(endAllSID + 1));
           return false;
         }
         swapSID = GetSelectableTeamSlotBack(m_Aura->m_MaxSlots, SID, endObserverSID, true);
         if (swapSID == 0xFF) {
-          Print("[1vsAll] No observer slot found before slot " + ToDecString(endObserverSID + 1));
           return false;
-        } else {
-          Print("[1vsAll] No selectable slot found in team " + ToDecString(teamAll + 1) + "before slot " + ToDecString(endAllSID + 1));
         }
       }
       if (!SwapSlots(SID, swapSID)) {
-        Print("[1vsAll] Failed to swap slots " + ToDecString(SID + 1) + " and " + ToDecString(swapSID + 1));
         Print(ByteArrayToDecString(InspectSlot(SID)->GetByteArray()));
         Print(ByteArrayToDecString(InspectSlot(swapSID)->GetByteArray()));
         return false;
       } else if (toObservers) {
         endObserverSID = swapSID;
-        Print("[1vsAll] Moved player at slot " + ToDecString(SID + 1) + " to observer slot " + ToDecString(swapSID + 1));
       } else {
         endAllSID = swapSID;
-        Print("[1vsAll] Moved ally slot " + ToDecString(SID + 1) + " to " + ToDecString(swapSID + 1));
       }
       CloseAllTeamSlots(teamOne);
       m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
@@ -2715,7 +2642,6 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
       std::vector<CGamePlayer*>& BackList = m_SyncPlayers[otherPlayer];
       auto BackIterator = std::find(BackList.begin(), BackList.end(), player);
       if (BackIterator == BackList.end()) {
-        Print("[ERROR] Player " + player->GetName() + " not found in back iterator from " + otherPlayer->GetName() + "@ EventPlayerDeleted");
       } else {
         *BackIterator = std::move(BackList.back());
         BackList.pop_back();
@@ -3458,7 +3384,6 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
       std::vector<CGamePlayer*>& BackList = m_SyncPlayers[*it];
       auto BackIterator = std::find(BackList.begin(), BackList.end(), player);
       if (BackIterator == BackList.end()) {
-        Print("[ERROR] Player " + player->GetName() + " not found in back iterator from " + (*it)->GetName() + "@ EventPlayerKeepAlive");
       } else {
         *BackIterator = std::move(BackList.back());
         BackList.pop_back();
@@ -4834,21 +4759,17 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
 
   CGameSlot Slot = m_Slots[SID];
   if (!Slot.GetIsSelectable()) {
-    Print("[AURA] Cannot add computer to unselectable slot.");
     return false;
   }
   if (Slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED && GetNumControllers() == m_Map->GetMapNumControllers()) {
-    Print("[AURA] Cannot add computer to full lobby.");
     return false;
   }
   if (Slot.GetTeam() == m_Aura->m_MaxSlots) {
     if (GetIsCustomForces()) {
-      Print("[AURA] Cannot add computer to observer slot.");
       return false;
     }
   }
   if (!CanLockSlotForJoins(SID)) {
-    Print("[AURA] Cannot lock slot for joins (trying to add computer)");
     return false;
   }
   CGamePlayer* Player = GetPlayerFromSID(SID);
