@@ -797,7 +797,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // TODO(IceSandslash): GetSudoAuthPayload should only be executed after some local input.
     m_Aura->m_SudoAuthPayload = m_Aura->GetSudoAuthPayload(Payload);
     m_Aura->m_SudoExecCommand = Payload;
-    Print("[AURA] Sudoer " + m_FromName + " requests command \"" + Payload + "\"");
+    Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + Payload + "\"");
     if (m_SourceRealm && m_FromWhisper) {
       Print("[AURA] Confirm from [" + m_HostName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC) {
