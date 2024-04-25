@@ -1253,7 +1253,9 @@ void CAura::LoadMapAliases()
   }
 
   for (const auto& entry : aliases.GetEntries()) {
-    m_DB->AliasAdd(entry.first, entry.second);
+    string normalizedAlias = GetNormalizedAlias(entry.first);
+    if (normalizedAlias.empty()) continue;
+    m_DB->AliasAdd(normalizedAlias, entry.second);
   }
 
   if (!m_DB->Commit()) {

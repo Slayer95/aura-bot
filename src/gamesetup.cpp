@@ -230,9 +230,11 @@ void CGameSetup::ParseInput()
   string lower = m_SearchRawTarget;
   transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
-  string targetValue = m_Aura->m_DB->AliasCheck(lower);
-  if (!targetValue.empty()) {
-    m_SearchRawTarget = targetValue;
+  string aliasSource = GetNormalizedAlias(lower);
+  string aliasTarget;
+  if (!aliasSource.empty()) aliasTarget = m_Aura->m_DB->AliasCheck(aliasSource);
+  if (!aliasTarget.empty()) {
+    m_SearchRawTarget = aliasTarget;
     lower = m_SearchRawTarget;
     transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
   } else {
@@ -449,7 +451,9 @@ void CGameSetup::SearchInputRemoteFuzzy(vector<string>& fuzzyMatches) {
   m_FoundSuggestions = true;
   m_Aura->m_LastMapSuggestions.clear();
   for (const auto& suggestion : remoteSuggestions) {
-    m_Aura->m_LastMapSuggestions[suggestion.first] = suggestion.second;
+    string lowerName = suggestion.first;
+    transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
+    m_Aura->m_LastMapSuggestions[lowerName] = suggestion.second;
     fuzzyMatches.push_back(suggestion.first + " (" + suggestion.second + ")");
   }
 }

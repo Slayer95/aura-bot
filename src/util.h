@@ -52,8 +52,10 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <regex>
 #include <filesystem>
+#include "../utf8/utf8.h"
 
 #undef min
 
@@ -752,7 +754,60 @@ inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& fi
   return fileContents;
 }
 
-inline void NormalizeDirectory(std::filesystem::path& filePath) {
+inline std::string GetNormalizedAlias(const std::string& alias)
+{
+  if (alias.empty()) return alias;
+
+  std::string result;
+  if (!utf8::is_valid(alias.begin(), alias.end())) {
+    return result;
+  }
+
+  std::vector<unsigned short> utf16line;
+  utf8::utf8to16(alias.begin(), alias.end(), std::back_inserter(utf16line));
+  // Note that MSVC 2019 doesn't fully support unicode string literals.
+  for (const auto& c : utf16line) {
+    switch (c) {
+      case 32: case 39: case 45: case 95: // whitespace ( ), single quote ('), hyphen (-), underscore (_)
+        break;
+      case 224: case 225: case 226: case 227: case 228: case 229: // à á â ã ä å
+        result += 'a'; break;
+      case 231: // ç
+        result += 'c'; break;
+      case 232: case 233: case 234: case 235: // è é ê ë
+        result += 'e'; break;
+      case 236: case 237: case 238: case 239: // ì í î ï
+        result += 'i'; break;
+      case 241: // ñ
+        result += 'n'; break;
+      case 242: case 243: case 244: case 245: case 246: case 248: // ò ó ô õ ö ø
+        result += 'o'; break;
+      case 249: case 250: case 251: case 252: // ù ú û ü
+        result += 'u'; break;
+      case 253: case 255: // ý ÿ
+        result += 'y'; break;
+      default:
+        if (c <= 0x7f) {
+          // Single-byte UTF-8 encoding for ASCII characters
+          result += static_cast<char>(c & 0x7F);
+          continue;
+        } else if (c <= 0x7FF) {
+          // Two-byte UTF-8 encoding
+          result += static_cast<char>(0xC0 | ((c >> 6) & 0x1F));
+          result += static_cast<char>(0x80 | (c & 0x3F));
+        } else {
+          // Three-byte UTF-8 encoding
+          result += static_cast<char>(0xE0 | ((c >> 12) & 0x0F));
+          result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+          result += static_cast<char>(0x80 | (c & 0x3F));
+        }
+    }
+  }
+  return result;
+}
+
+inline void NormalizeDirectory(std::filesystem::path& filePath)
+{
   if (filePath.empty()) return;
   filePath += filePath.preferred_separator;
   filePath = filePath.lexically_normal();

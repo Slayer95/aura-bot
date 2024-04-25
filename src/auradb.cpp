@@ -886,6 +886,9 @@ bool CAuraDB::AliasAdd(const string& alias, const string& target)
 string CAuraDB::AliasCheck(const string& alias)
 {
   string value;
+  if (alias.empty()) {
+    return value;
+  }
 
   if (!AliasCheckStmt)
     m_DB->Prepare("SELECT value FROM aliases WHERE alias=?", &AliasCheckStmt);
