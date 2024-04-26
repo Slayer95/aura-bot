@@ -176,7 +176,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\bncsutil\src;..\StormLib\src;..\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\zlib\vcpkg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\bncsutil\src;..\StormLib\src;..\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\zlib\vcpkg\include;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -198,8 +198,8 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\bncsutil\vc8_build\Release;..\StormLib\bin\StormLib\Win32\ReleaseUS;..\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\zlib\vcpkg\bin\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;zlib.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\bncsutil\vc8_build\Release;..\StormLib\bin\StormLib\Win32\ReleaseUS;..\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\zlib\vcpkg\bin\Release;..\dpp\official\bin\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -439,6 +439,7 @@
     <ClCompile Include="config_bot.cpp" />
     <ClCompile Include="config_game.cpp" />
     <ClCompile Include="config_irc.cpp" />
+    <ClCompile Include="config_discord.cpp" />
     <ClCompile Include="config_net.cpp" />
     <ClCompile Include="cli.cpp" />
     <ClCompile Include="bnetprotocol.cpp" />
@@ -450,6 +451,7 @@
     <ClCompile Include="realm.cpp" />
     <ClCompile Include="realm_chat.cpp" />
     <ClCompile Include="irc.cpp" />
+    <ClCompile Include="discord.cpp" />
     <ClCompile Include="map.cpp" />
     <ClCompile Include="packed.cpp" />
     <ClCompile Include="savegame.cpp" />
@@ -476,6 +478,7 @@
     <ClInclude Include="config_bot.h" />
     <ClInclude Include="config_game.h" />
     <ClInclude Include="config_irc.h" />
+    <ClInclude Include="config_discord.h" />
     <ClInclude Include="config_net.h" />
     <ClInclude Include="cli.h" />
     <ClInclude Include="bnetprotocol.h" />
@@ -487,6 +490,7 @@
     <ClInclude Include="realm.h" />
     <ClInclude Include="realm_chat.h" />
     <ClInclude Include="irc.h" />
+    <ClInclude Include="discord.h" />
     <ClInclude Include="map.h" />
     <ClInclude Include="packed.h" />
     <ClInclude Include="savegame.h" />

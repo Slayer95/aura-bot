@@ -599,8 +599,12 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     MapCFG.Set("map_url", m_MapDownloadUri);
     MapCFG.Set("downloaded_by", m_Attribution);
   }
+  if (baseFileName.find("_evrgrn3") != string::npos) {
+    if (m_MapSiteUri.empty()) MapCFG.Set("map_site", "https://www.hiveworkshop.com/threads/351924/");
+    MapCFG.Set("map_shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
+  }
 
-  if (fileName.find("DotA") != string::npos) {
+  if (baseFileName.find("DotA") != string::npos) {
     MapCFG.Set("map_type", "dota");
   }
 
@@ -1041,7 +1045,13 @@ void CGameSetup::OnLoadMapSuccess()
     }
   }
 
-  if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
+  if (m_MapReadyCallbackAction == MAP_ONREADY_ALIAS) {
+    if (m_Aura->m_DB->AliasAdd(m_MapReadyCallbackData, m_Map->GetServerFileName())) {
+      m_Ctx->SendReply("Alias [" + m_MapReadyCallbackData + "] added for [" + m_Map->GetServerFileName() + "]");
+    } else {
+      m_Ctx->ErrorReply("Failed to add alias.");
+    }
+  } else if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
     if (m_Aura->m_CurrentLobby)  {
       m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
     } else {

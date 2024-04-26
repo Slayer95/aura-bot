@@ -710,6 +710,28 @@ optional<int64_t> CConfig::GetMaybeInt64(const string& key)
   SUCCESS(result)
 }
 
+optional<uint64_t> CConfig::GetMaybeUint64(const string& key)
+{
+  m_ValidKeys.insert(key);
+  optional<uint64_t> result;
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
+
+  try {
+    long long value = stoll(it->second);
+    result = static_cast<uint64_t>(value);
+  } catch (const exception& e) {
+    Print("Invalid value: " + it->second);
+    Print("Error parsing int64 - " + string(e.what()));
+    CONFIG_ERROR(key, result)
+  }
+
+  SUCCESS(result)
+}
+
 optional<vector<uint8_t>> CConfig::GetMaybeUint8Vector(const string &key, const uint32_t count)
 {
   m_ValidKeys.insert(key);

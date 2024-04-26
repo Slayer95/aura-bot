@@ -395,7 +395,7 @@ void CIRC::SendUser(const string& message, const string& target)
 void CIRC::SendChannel(const string& message, const string& target)
 {
   // Sending messages to channels or to user works exactly the same, except that channels start with #.
-  return SendUser(message, target);
+  SendUser(message, target);
 }
 
 void CIRC::SendAllChannels(const string& message)

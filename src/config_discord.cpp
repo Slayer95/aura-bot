@@ -1,0 +1,79 @@
+/*
+
+  Copyright [2024] [Leonardo Julca]
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
+#include "config_discord.h"
+#include "util.h"
+
+#include <utility>
+#include <algorithm>
+
+using namespace std;
+
+//
+// CDiscordConfig
+//
+
+CDiscordConfig::CDiscordConfig(CConfig& CFG)
+{
+  const static string emptyString;
+  m_HostName               = CFG.GetString("discord.host_name", "discord.com");
+  m_Token                  = CFG.GetString("discord.token", emptyString);
+  m_Enabled                = CFG.GetBool("discord.enabled", false);
+
+#ifdef DISABLE_DPP
+  if (m_Enabled) {
+    Print("[CONFIG] warning - <discord.enabled = yes> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <discord.enabled = yes> requires compilation without #define DISABLE_DPP");
+    m_Enabled = false;
+  }
+#endif
+
+  vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
+  m_CommandCFG = new CCommandConfig(
+    CFG, "discord.", CFG.GetBool("discord.unverified_users.reject_commands", false),
+    CFG.GetStringIndex("discord.commands.common.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("discord.commands.hosting.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("discord.commands.moderator.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("discord.commands.admin.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
+    CFG.GetStringIndex("discord.commands.bot_owner.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO)
+  );
+
+  //m_Guilds = CFG.GetList("discord.guilds", ',', m_Guilds);
+  //m_Admins = CFG.GetSet("discord.admins", ',', m_Admins);
+
+  optional<uint64_t> maybeSudoUser = CFG.GetMaybeUint64("discord.sudo_users");
+  if (maybeSudoUser.has_value()) {
+    m_SudoUsers.insert(maybeSudoUser.value());
+  }
+
+  if (m_Enabled && m_Token.empty()) {
+    CFG.SetFailed();
+  }
+}
+
+CDiscordConfig::~CDiscordConfig()
+{
+  delete m_CommandCFG;
+}

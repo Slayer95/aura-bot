@@ -208,7 +208,8 @@ public:
   inline std::string            GetMapType() const { return m_MapType; }
   inline std::string            GetMapDefaultHCL() const { return m_MapDefaultHCL; }
   inline std::string            GetServerPath() const { return m_MapServerPath; }
-  std::string                   GetMapFileName() const;
+  std::string                   GetServerFileName() const;
+  std::string                   GetClientFileName() const;
   inline std::string*           GetMapData() { return &m_MapData; }
   inline uint8_t                GetMapNumControllers() const { return m_MapNumControllers; }
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }

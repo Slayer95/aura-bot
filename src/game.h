@@ -278,7 +278,7 @@ public:
   uint8_t               GetNumControllers() const;
   uint8_t               GetNumComputers() const;
   uint8_t               GetNumTeamControllersOrOpen(const uint8_t team) const;
-  std::string           GetMapFileName() const;
+  std::string           GetClientFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
   std::string           GetDescription() const;
   std::string           GetCategory() const;

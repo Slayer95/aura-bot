@@ -859,6 +859,9 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
 bool CAuraDB::AliasAdd(const string& alias, const string& target)
 {
   bool Success = false;
+  if (alias.empty() || target.empty()) {
+    return Success;
+  }
 
   if (!AliasAddStmt)
     m_DB->Prepare("INSERT INTO aliases VALUES ( ?, ? )", &AliasAddStmt);

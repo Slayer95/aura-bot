@@ -41,6 +41,16 @@ else
   endif
 endif
 
+ifeq ($(AURALINKDPP), 0)
+  CXXFLAGS += -DDISABLE_DPP
+else
+  ifeq ($(AURASTATIC), 1)
+    LFLAGS += -ldpp
+  else
+    LFLAGS += -ldpp
+  endif
+endif
+
 ifeq ($(ARCH),x86_64)
 	CCFLAGS += -m64
 	CXXFLAGS += -m64
@@ -82,6 +92,7 @@ OBJS = src/fileutil.o \
 			 src/config_commands.o \
 			 src/config_game.o \
 			 src/config_irc.o \
+			 src/config_discord.o \
 			 src/config_net.o \
 			 src/cli.o \
 			 src/crc32.o \
@@ -89,6 +100,7 @@ OBJS = src/fileutil.o \
 			 src/realm.o \
        src/realm_chat.o \
 			 src/irc.o \
+			 src/discord.o \
 			 src/map.o \
 			 src/gameplayer.o \
 			 src/gamesetup.o \

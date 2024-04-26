@@ -129,6 +129,7 @@ public:
   std::optional<bool> GetMaybeBool(const std::string& key);
   std::optional<uint8_t> GetMaybeUint8(const std::string& key);
   std::optional<int64_t> GetMaybeInt64(const std::string& key);
+  std::optional<uint64_t> GetMaybeUint64(const std::string& key);
   std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);
   std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
   std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);

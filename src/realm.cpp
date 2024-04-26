@@ -59,7 +59,6 @@
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
 #include "game.h"
-#include "irc.h"
 #include "includes.h"
 #include "hash.h"
 

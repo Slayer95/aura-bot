@@ -33,6 +33,10 @@
 #include <tuple>
 #include <future>
 
+#ifndef DISABLE_DPP
+#include <dpp/dpp.h>
+#endif
+
 using namespace std;
 
 //
@@ -50,8 +54,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ga
     m_TargetGame(game),
     m_Player(player),
     m_IRC(nullptr),
+    m_DiscordAPI(nullptr),
 
     m_FromName(player->GetName()),
+    m_FromIdentifier(0),
     m_FromWhisper(false),
     m_FromType(FROM_GAME),
     m_IsBroadcast(nIsBroadcast),
@@ -78,8 +84,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
     m_TargetGame(targetGame),
     m_Player(nullptr),
     m_IRC(nullptr),
+    m_DiscordAPI(nullptr),
 
     m_FromName(fromName),
+    m_FromIdentifier(0),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_BNET),
     m_IsBroadcast(nIsBroadcast),
@@ -106,8 +114,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
     m_TargetGame(targetGame),
     m_Player(nullptr),
     m_IRC(ircNetwork),
+    m_DiscordAPI(nullptr),
 
     m_FromName(userName),
+    m_FromIdentifier(0),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_IRC),
     m_IsBroadcast(nIsBroadcast),
@@ -124,6 +134,37 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 {
 }
 
+#ifndef DISABLE_DPP
+/* Command received from Discord but targetting a game */
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
+  : m_Aura(nAura),
+    m_Config(config),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(targetGame),
+    m_Player(nullptr),
+    m_IRC(nullptr),
+    m_DiscordAPI(discordAPI),
+
+    m_FromName(discordAPI->command.get_issuing_user().username),
+    m_FromIdentifier(discordAPI->command.get_issuing_user().id),
+    m_FromWhisper(false),
+    m_FromType(FROM_DISCORD),
+    m_IsBroadcast(true),
+
+    m_Permissions(0),
+
+    m_HostName(nAura->m_Discord->m_Config->m_HostName),
+    //m_ChannelName(channelName),
+
+    m_Output(nOutputStream),
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
+{
+}
+#endif
+
 /* Command received from elsewhere but targetting a game */
 CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
@@ -134,8 +175,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
     m_TargetGame(targetGame),
     m_Player(nullptr),
     m_IRC(nullptr),
+    m_DiscordAPI(nullptr),
 
     m_FromName(string()),
+    m_FromIdentifier(0),
     m_FromWhisper(false),
     m_FromType(FROM_OTHER),
     m_IsBroadcast(nIsBroadcast),
@@ -161,8 +204,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* f
     m_TargetGame(nullptr),
     m_Player(nullptr),
     m_IRC(nullptr),
+    m_DiscordAPI(nullptr),
 
     m_FromName(fromName),
+    m_FromIdentifier(0),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_BNET),
     m_IsBroadcast(nIsBroadcast),
@@ -189,8 +234,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* irc
     m_TargetGame(nullptr),
     m_Player(nullptr),
     m_IRC(ircNetwork),
+    m_DiscordAPI(nullptr),
 
     m_FromName(userName),
+    m_FromIdentifier(0),
     m_FromWhisper(isWhisper),
     m_FromType(FROM_IRC),
     m_IsBroadcast(nIsBroadcast),
@@ -206,6 +253,36 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* irc
 {
 }
 
+#ifndef DISABLE_DPP
+/* Discord command */
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
+  : m_Aura(nAura),
+    m_Config(config),
+    m_SourceRealm(nullptr),
+    m_TargetRealm(nullptr),
+    m_SourceGame(nullptr),
+    m_TargetGame(nullptr),
+    m_Player(nullptr),
+    m_IRC(nullptr),
+    m_DiscordAPI(discordAPI),
+
+    m_FromName(discordAPI->command.get_issuing_user().username),
+    m_FromIdentifier(discordAPI->command.get_issuing_user().id),
+    m_FromWhisper(false),
+    m_FromType(FROM_DISCORD),
+    m_IsBroadcast(true),
+    m_Permissions(0),
+
+    m_HostName(nAura->m_Discord->m_Config->m_HostName),
+    //m_ChannelName(channelName),
+
+    m_Output(nOutputStream),
+    m_RefCount(1),
+    m_PartiallyDestroyed(false)
+{
+}
+#endif
+
 /* Generic command */
 CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
@@ -216,8 +293,10 @@ CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream
     m_TargetGame(nullptr),
     m_Player(nullptr),
     m_IRC(nullptr),
+    m_DiscordAPI(nullptr),
 
     m_FromName(string()),
+    m_FromIdentifier(0),
     m_FromWhisper(false),
     m_FromType(FROM_OTHER),
     m_IsBroadcast(nIsBroadcast),
@@ -251,6 +330,8 @@ string CCommandContext::GetUserAttribution()
     return m_FromName + "@" + m_SourceRealm->GetServer();
   } else if (m_IRC) {
     return m_FromName + "@" + m_HostName;
+  } else if (m_DiscordAPI) {
+    return m_FromName + "@" + m_HostName;
   } else if (!m_FromName.empty()) {
     return m_FromName;
   } else {
@@ -266,6 +347,8 @@ string CCommandContext::GetUserAttributionPreffix()
     return m_SourceRealm->GetLogPrefix() + "User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (m_IRC) {
     return "[IRC] User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
+  } else if (m_DiscordAPI) {
+    return "[DISCORD] User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (!m_FromName.empty()) {
     return "[SYSTEM] User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else {
@@ -306,6 +389,12 @@ void CCommandContext::UpdatePermissions()
       );
       if ((!m_TargetGame || IsCreatorIRC) && m_IRC->GetIsModerator(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
       if (m_IRC->GetIsSudoer(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
+    }
+    return;
+  }
+  if (m_DiscordAPI) {
+    if (m_Aura->m_Discord->GetIsSudoer(m_FromIdentifier)) {
+      m_Permissions = 0xFFFF &~ (USER_PERMISSIONS_BOT_SUDO_OK);
     }
     return;
   }
@@ -444,6 +533,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     m_TargetGame == m_Aura->m_SudoContext->m_TargetGame &&
     m_Player == m_Aura->m_SudoContext->m_Player &&
     m_IRC == m_Aura->m_SudoContext->m_IRC
+    // TODO: Discord !aura su
   );
   if (isValidCaller && message == m_Aura->m_SudoAuthPayload) {
     LogStream(*m_Output, "[AURA] Confirmed " + m_FromName + " command \"" + m_Aura->m_SudoExecCommand + "\"");
@@ -509,6 +599,15 @@ void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxF
       break;
     }
 
+#ifndef DISABLE_DPP
+    case FROM_DISCORD: {
+      if (m_DiscordAPI) {
+        m_Aura->m_Discord->SendUser(message, m_FromIdentifier);
+      }
+      break;
+    }
+#endif
+
     default: {
       LogStream(*m_Output, "[AURA] " + message);
     }
@@ -532,7 +631,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
         AllSourceSuccess = true;
       }
     }
-    // IRC is not a valid target.
+    // IRC/Discord are not valid targets, only sources.
   }
   if (AllSource && !AllSourceSuccess && !m_FromWhisper) {
     if (m_SourceGame) {
@@ -544,11 +643,16 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       AllSourceSuccess = true;
     }
     if (m_IRC) {
-      if (!m_FromWhisper && AllSource) {
-        m_IRC->SendChannel(message, m_ChannelName);
-        AllSourceSuccess = true;
-      }
+      m_IRC->SendChannel(message, m_ChannelName);
+      AllSourceSuccess = true;
     }
+#ifndef DISABLE_DPP
+    if (m_DiscordAPI) {
+      //TODO: CCommandContext::SendReplyCustomFlags
+      m_DiscordAPI->edit_original_response(dpp::message(message));
+      AllSourceSuccess = true;
+    }
+#endif
   }
   if (!AllSourceSuccess) {
     SendPrivateReply(message, ctxFlags);
@@ -562,6 +666,8 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       LogStream(*m_Output, m_SourceRealm->GetLogPrefix() + message);
     } else if (m_IRC) {
       LogStream(*m_Output, "[IRC] " + message);
+    } else if (m_DiscordAPI) {
+      LogStream(*m_Output, "[DISCORD] " + message);
     } else {
       LogStream(*m_Output, "[AURA] " + message);
     }
@@ -801,6 +907,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     if (m_SourceRealm && m_FromWhisper) {
       Print("[AURA] Confirm from [" + m_HostName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC) {
+      Print("[AURA] Confirm from [" + m_HostName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+    } else if (m_DiscordAPI) {
       Print("[AURA] Confirm from [" + m_HostName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
       Print("[AURA] Confirm from the game client with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
@@ -1486,7 +1594,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (m_TargetGame->GetMapSiteURL().empty()) {
           SendAll("Download URL unknown");
         } else {
-          SendAll("Visit  <" + m_TargetGame->GetMapSiteURL() + "> to download [" + m_TargetGame->GetMapFileName() + "]");
+          SendAll("Visit  <" + m_TargetGame->GetMapSiteURL() + "> to download [" + m_TargetGame->GetClientFileName() + "]");
         }
         break;
       }
@@ -2861,8 +2969,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (const auto& bnet : m_Aura->m_Realms)
         message += "[" + bnet->GetServer() + "]" + (bnet->GetLoggedIn() ? " - online " : " - offline ");
 
-      if (m_Aura->m_IRC)
+      if (m_Aura->m_IRC) {
         message += m_Aura->m_IRC->m_Config->m_HostName + (!m_Aura->m_IRC->m_WaitingToConnect ? " [online]" : " [offline]");
+      }
+
+      if (m_Aura->m_Discord) {
+        //TODO: Support Discord in !status
+        //message += m_Aura->m_DiscordAPI->m_Config->m_HostName + (m_Aura->m_DiscordAPI->GetConnected() ? " [online]" : " [offline]");
+      }
 
       SendReply(message);
       break;
@@ -4584,6 +4698,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CCommandContext* ctx;
       if (m_IRC) {
         ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, m_HostName, m_IsBroadcast, &std::cout);
+      } else if (m_DiscordAPI) {
+        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_DiscordAPI, &std::cout);
       } else if (m_SourceRealm) {
         ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, m_IsBroadcast, &std::cout);
       } else {
@@ -4617,13 +4733,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         MapCFG.Set("cfg_partial", "1");
         MapCFG.Set("map_path", R"(Maps\Download\)" + nameString);
         MapCFG.Set("map_localpath", nameString);
-        if (nameString.find("_evrgrn32") != string::npos) {
+        if (nameString.find("_evrgrn3") != string::npos) {
           MapCFG.Set("map_site", "https://www.hiveworkshop.com/threads/351924/");
         } else {
           MapCFG.Set("map_site", "");
         }
         MapCFG.Set("map_url", "");
-        if (nameString.find("_evrgrn32") != string::npos) {
+        if (nameString.find("_evrgrn3") != string::npos) {
           MapCFG.Set("map_shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
         } else {
           MapCFG.Set("map_shortdesc", "");
@@ -5440,5 +5556,9 @@ CCommandContext::~CCommandContext()
   m_SourceRealm = nullptr;
   m_TargetRealm = nullptr;
   m_IRC = nullptr;
+#ifndef DISABLE_DPP
+  delete m_DiscordAPI;
+  m_DiscordAPI = nullptr;
+#endif
   m_Output = nullptr;
 }

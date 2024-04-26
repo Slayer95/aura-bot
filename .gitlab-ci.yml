@@ -62,9 +62,11 @@ Assemble:
   - cd $CI_PROJECT_DIR
   - export AURALINKMINIUPNP=1
   - export AURALINKCPR=0
+  - export AURALINKDPP=0
   - make && make install
   - unset AURALINKMINIUPNP
   - unset AURALINKCPR
+  - unset AURALINKDPP
   ## on static build failures, the error is reported iff mv below fails
   - mv /usr/bin/aura dist/bin-shared
   - cd dist/bin-shared
@@ -162,6 +164,7 @@ Assemble:
   - cd $CI_PROJECT_DIR
   #- export AURALINKMINIUPNP=0
   - export AURALINKCPR=0
+  - export AURALINKDPP=0
   - export AURASTATIC=1
   - make clean && make && make install
   - unset AURALINKCPR

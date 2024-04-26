@@ -39,10 +39,14 @@
 #include <optional>
 #include <ostream>
 #include <utility>
+#ifndef DISABLE_DPP
+#include <dpp/dpp.h>
+#endif
 
 #define FROM_GAME (1 << 0)
 #define FROM_BNET (1 << 1)
 #define FROM_IRC (1 << 2)
+#define FROM_DISCORD (1 << 3)
 #define FROM_OTHER (1 << 7)
 
 #define CHAT_SEND_SOURCE_ALL (1 << 0)
@@ -81,9 +85,13 @@ public:
   CGame*                        m_TargetGame;
   CGamePlayer*                  m_Player;
   CIRC*                         m_IRC;
+#ifndef DISABLE_DPP
+  dpp::slashcommand_t*          m_DiscordAPI;
+#endif
 
 protected:
   std::string                   m_FromName;
+  uint64_t                      m_FromIdentifier;
   bool                          m_FromWhisper;
   uint8_t                       m_FromType;
   bool                          m_IsBroadcast;
@@ -104,13 +112,26 @@ protected:
   bool                          m_PartiallyDestroyed;
 
 public:
+  // Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGamePlayer* player, const bool& nIsBroadcast, std::ostream* outputStream);
+
+  // Realm, Realm->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const bool& nIsBroadcast, std::ostream* outputStream);
   CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+
+  // IRC, IRC->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+
+#ifndef DISABLE_DPP
+  // Discord, Discord->Game
+  CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
+#endif
+
+  // Arbitrary, Arbitrary->Game
   CCommandContext(CAura* nAura, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const bool& nIsBroadcast, std::ostream* outputStream);
 
   inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; }
 
@@ -123,6 +144,9 @@ public:
   inline std::string GetChannelName() const { return m_ChannelName; }
   inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
   inline CIRC* GetSourceIRC() const { return m_IRC; }
+#ifndef DISABLE_DPP
+  inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
+#endif
 
   bool SetIdentity(const std::string& userName, const std::string& realmId);
   void SetAuthenticated(const bool& nAuthenticated);

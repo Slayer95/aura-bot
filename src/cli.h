@@ -93,6 +93,7 @@ private:
   std::vector<std::string>              m_GameReservations;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;
+  std::optional<std::string>            m_GameMapAlias;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;

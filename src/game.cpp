@@ -632,7 +632,7 @@ uint8_t CGame::GetNumTeamControllersOrOpen(const uint8_t team) const
   return count;
 }
 
-string CGame::GetMapFileName() const
+string CGame::GetClientFileName() const
 {
   size_t LastSlash = m_MapPath.rfind('\\');
   if (LastSlash == string::npos) {
@@ -644,9 +644,9 @@ string CGame::GetMapFileName() const
 string CGame::GetDescription() const
 {
   if (m_IsMirror)
-     return "[" + GetMapFileName() + "] (Mirror) \"" + m_GameName + "\"";
+     return "[" + GetClientFileName() + "] (Mirror) \"" + m_GameName + "\"";
 
-  string Description = "[" + GetMapFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " + ToDecString(GetNumHumanPlayers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size());
+  string Description = "[" + GetClientFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " + ToDecString(GetNumHumanPlayers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size());
 
   if (m_GameLoading || m_GameLoaded)
     Description += " : " + to_string((m_GameTicks / 1000) / 60) + "min";
@@ -2322,7 +2322,7 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line.replace(matchIndex, 5, GetMapSiteURL());
     }
     while ((matchIndex = Line.find("{FILENAME}")) != string::npos) {
-      Line.replace(matchIndex, 10, GetMapFileName());
+      Line.replace(matchIndex, 10, GetClientFileName());
     }
     while ((matchIndex = Line.find("{SHORTDESC}")) != string::npos) {
       Line.replace(matchIndex, 11, m_Map->GetMapShortDesc());

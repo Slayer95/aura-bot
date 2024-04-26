@@ -42,6 +42,9 @@
     <ClCompile Include="config_irc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="config_discord.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="config_game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,6 +111,9 @@
     <ClCompile Include="irc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="discord.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="fileutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -141,6 +147,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config_irc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config_discord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config_game.h">
@@ -219,6 +228,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="irc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="discord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="fileutil.h">

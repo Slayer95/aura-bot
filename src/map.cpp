@@ -234,7 +234,13 @@ uint8_t CMap::GetMapLayoutStyle() const
   return MAPLAYOUT_FIXED_PLAYERS;
 }
 
-string CMap::GetMapFileName() const
+string CMap::GetServerFileName() const
+{
+  filesystem::path filePath = m_MapServerPath;
+  return PathToString(filePath.filename());
+}
+
+string CMap::GetClientFileName() const
 {
   size_t LastSlash = m_ClientMapPath.rfind('\\');
   if (LastSlash == string::npos) {

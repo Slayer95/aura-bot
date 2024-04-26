@@ -352,6 +352,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_GPSProtocol(new CGPSProtocol()),
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
+    m_Discord(nullptr),
     m_IRC(nullptr),
     m_Net(nullptr),
     m_CurrentLobby(nullptr),
@@ -360,7 +361,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Config(nullptr),
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
-    m_CommandDefaultConfig(),
+    m_CommandDefaultConfig(new CCommandConfig()),
 
     m_DB(new CAuraDB(CFG)),
     m_GameSetup(nullptr),
@@ -389,6 +390,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   m_GameProtocol = new CGameProtocol(this);
   m_Net = new CNet(this);
+  m_Discord = new CDiscord(this);
   m_IRC = new CIRC(this);
 
   m_CRC->Initialize();
@@ -490,8 +492,10 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     Print("[AURA] notice - no enabled battle.net connections configured");
   if (!m_IRC->m_Config->m_Enabled)
     Print("[AURA] notice - no irc connection configured");
+  if (!m_Discord->m_Config->m_Enabled)
+    Print("[AURA] notice - no discord connection configured");
 
-  if (m_Realms.empty() && !m_IRC->m_Config->m_Enabled && m_PendingActions.empty()) {
+  if (m_Realms.empty() && !m_IRC->m_Config->m_Enabled && !m_Discord->m_Config->m_Enabled && m_PendingActions.empty()) {
     Print("[AURA] error - no inputs connected");
     m_Ready = false;
     return;
@@ -659,6 +663,7 @@ CAura::~CAura()
 
   delete m_DB;
   delete m_IRC;
+  delete m_Discord;
 }
 
 CRealm* CAura::GetRealmByInputId(const string& inputId) const
@@ -966,6 +971,10 @@ bool CAura::Update()
   if (m_IRC && m_IRC->Update(&fd, &send_fd))
     Exit = true;
 
+  // update discord
+  if (m_Discord && m_Discord->Update())
+    Exit = true;
+
   // update UDP sockets, outgoing test connections
   m_Net->Update(&fd, &send_fd);
 
@@ -1112,6 +1121,7 @@ bool CAura::LoadConfigs(CConfig& CFG)
   CBotConfig* BotConfig = new CBotConfig(CFG);
   CNetConfig* NetConfig = new CNetConfig(CFG);
   CIRCConfig* IRCConfig = new CIRCConfig(CFG);
+  CDiscordConfig* DiscordConfig = new CDiscordConfig(CFG);
   CRealmConfig* RealmDefaultConfig = new CRealmConfig(CFG, NetConfig);
   CGameConfig* GameDefaultConfig = new CGameConfig(CFG);
 
@@ -1119,6 +1129,7 @@ bool CAura::LoadConfigs(CConfig& CFG)
     delete BotConfig;
     delete NetConfig;
     delete IRCConfig;
+    delete DiscordConfig;
     delete RealmDefaultConfig;
     delete GameDefaultConfig;
     return false;
@@ -1127,12 +1138,14 @@ bool CAura::LoadConfigs(CConfig& CFG)
   delete m_Config;
   delete m_Net->m_Config;
   delete m_IRC->m_Config;
+  delete m_Discord->m_Config;
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
 
   m_Config = BotConfig;
   m_Net->m_Config = NetConfig;
   m_IRC->m_Config = IRCConfig;
+  m_Discord->m_Config = DiscordConfig;
   m_RealmDefaultConfig = RealmDefaultConfig;
   m_GameDefaultConfig = GameDefaultConfig;
 
@@ -1448,9 +1461,19 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     gameSetup->m_Ctx->SendPrivateReply(m_CurrentLobby->GetAnnounceText());
   }
 
+  if (gameSetup->m_RealmsDisplayMode == GAME_PUBLIC) {
+    if (m_IRC) {
+     m_IRC->SendAllChannels(m_CurrentLobby->GetAnnounceText());
+    }
+    if (m_Discord) {
+      //TODO: Discord game created announcement
+      //m_Discord->SendAnnouncementChannels(m_CurrentLobby->GetAnnounceText());
+    }
+  }
+
   uint32_t mapSize = ByteArrayToUInt32(gameSetup->m_Map->GetMapSize(), false);
   if (m_GameVersion <= 26 && mapSize > 0x800000) {
-    Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + gameSetup->m_Map->GetMapFileName() + "]");
+    Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + gameSetup->m_Map->GetServerFileName() + "]");
   }
   if (m_GameVersion < gameSetup->m_Map->GetMapMinGameVersion()) {
     Print("[AURA] warning - hosting game that may require version 1." + to_string(gameSetup->m_Map->GetMapMinGameVersion()));

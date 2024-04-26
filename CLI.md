@@ -374,6 +374,11 @@ This makes hosted games invisible in the specified server. The server is to be s
 unique `Input ID`, which corresponds to ``realm_N.input_id`` in \`config.ini\`. Note that this value may be 
 missing, and thus defaults to ``realm_N.unique_name`` (which itself defaults to \`realm_N.host_name\`).
 
+## \`--alias <ALIAS>\`
+
+This option lets Aura automatically register an alias for the map hosted. Aliases are case-insensitive, and 
+normalized according to the rules listed in \`aliases.ini\`.
+
 ## \`--mirror <IP:PORT#ID>\`
 
 This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 

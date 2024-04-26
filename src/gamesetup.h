@@ -80,6 +80,7 @@
 
 #define MAP_ONREADY_SET_ACTIVE 1
 #define MAP_ONREADY_HOST 2
+#define MAP_ONREADY_ALIAS 3
 
 class CAura;
 class CCommandContext;
@@ -200,7 +201,7 @@ public:
   ~CGameSetup();
 
   std::string GetInspectName() const;
-  bool GetDeleteMe() const { return m_DeleteMe; }  
+  bool GetDeleteMe() const { return m_DeleteMe; }
 
   void ParseInputLocal();
   void ParseInput();
@@ -214,6 +215,7 @@ public:
 #endif
   std::pair<uint8_t, std::filesystem::path> SearchInputLocal(std::vector<std::string>& fuzzyMatches);
   std::pair<uint8_t, std::filesystem::path> SearchInput();
+  inline CMap* GetMap() const { return m_Map; }
   CMap* GetBaseMapFromConfig(CConfig* mapCFG, const bool silent);
   CMap* GetBaseMapFromConfigFile(const std::filesystem::path& filePath, const bool isCache, const bool silent);
   CMap* GetBaseMapFromMapFile(const std::filesystem::path& filePath, const bool silent);

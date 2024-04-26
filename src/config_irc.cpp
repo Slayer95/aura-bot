@@ -37,8 +37,8 @@ using namespace std;
 
 CIRCConfig::CIRCConfig(CConfig& CFG)
   : m_Port(6667),
-  m_PrivateCmdToken("!"),
-  m_BroadcastCmdToken(string())
+    m_PrivateCmdToken("!"),
+    m_BroadcastCmdToken(string())
 {
   const static string emptyString;
   m_HostName               = CFG.GetString("irc.host_name", emptyString);

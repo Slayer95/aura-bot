@@ -101,6 +101,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--visibility", m_Visibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
   app.add_option("--random-races", m_RandomRaces, "Toggles random races when hosting from the CLI.");
   app.add_option("--random-heroes", m_RandomHeroes, "Toggles random heroes when hosting from the CLI.");
+  app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
@@ -331,6 +332,15 @@ bool CCLI::QueueActions(CAura* nAura) const
               nAura->m_GameSetup->AddIgnoredRealm(excludedRealm);
             } else {
               Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
+            }
+          }
+          if (m_GameMapAlias.has_value()) {
+            string normalizedAlias = GetNormalizedAlias(m_GameMapAlias.value());
+            string mapFileName = gameSetup->GetMap()->GetServerFileName();
+            if (nAura->m_DB->AliasAdd(normalizedAlias, mapFileName)) {
+              Print("Alias [" + m_GameMapAlias.value() + "] added for [" + mapFileName + "]");
+            } else {
+              Print("Failed to add alias.");
             }
           }
           if (m_MirrorSource.has_value()) {

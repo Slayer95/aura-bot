@@ -51,6 +51,8 @@
 #include "config_realm.h"
 #include "config_game.h"
 #include "cli.h"
+#include "irc.h"
+#include "discord.h"
 #include "command.h"
 #include "net.h"
 #include "gamesetup.h"
@@ -95,6 +97,7 @@ class CAuraDB;
 class CConfig;
 class CNet;
 class CGameSetup;
+class CDiscord;
 class CIRC;
 class CCLI;
 
@@ -107,6 +110,7 @@ public:
   CCRC32*                                            m_CRC;                        // for calculating CRC's
   CSHA1*                                             m_SHA;                        // for calculating SHA1's
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
+  CDiscord*                                          m_Discord;                    // Discord client
   CIRC*                                              m_IRC;                        // IRC client
   CNet*                                              m_Net;                        // network manager
   CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any
