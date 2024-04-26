@@ -155,13 +155,16 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 
     m_Permissions(0),
 
-    m_ServerName(discordAPI->command.get_guild().name),
-    m_ChannelName(discordAPI->command.get_channel().name),
-
     m_Output(nOutputStream),
     m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  try {
+    m_ServerName = discordAPI->command.get_guild().name;
+    m_ChannelName = discordAPI->command.get_channel().name;
+  } catch (...) {
+    m_FromWhisper = true;
+  }
 }
 #endif
 
@@ -273,13 +276,19 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slas
     m_IsBroadcast(true),
     m_Permissions(0),
 
-    m_ServerName(discordAPI->command.get_guild().name),
-    m_ChannelName(discordAPI->command.get_channel().name),
-
     m_Output(nOutputStream),
     m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  try {
+    m_ServerName = discordAPI->command.get_guild().name;
+    m_ChannelName = discordAPI->command.get_channel().name;
+    Print("[DISCORD] Received slash command in " + m_ServerName + "'s server - channel " + m_ChannelName);
+  } catch (...) {
+    Print("[DISCORD] Received slash command on " + m_FromName + "'s DM");
+    m_ServerName = "users.discord.com";
+    m_FromWhisper = true;
+  }
 }
 #endif
 
@@ -394,7 +403,13 @@ void CCommandContext::UpdatePermissions()
   }
   if (m_DiscordAPI) {
     if (m_Aura->m_Discord->GetIsSudoer(m_FromIdentifier)) {
+      Print("[DISCORD] User " + GetUserAttribution() + " is sudoer");
       m_Permissions = 0xFFFF &~ (USER_PERMISSIONS_BOT_SUDO_OK);
+    } else if (m_DiscordAPI->command.get_issuing_user().is_verified()) {
+      Print("[DISCORD] User " + GetUserAttribution() + " is verified");
+      m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
+    } else {
+      Print("[DISCORD] User " + GetUserAttribution() + " is unverified");
     }
     return;
   }

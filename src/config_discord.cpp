@@ -60,12 +60,14 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
     CFG.GetStringIndex("discord.commands.bot_owner.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO)
   );
 
-  //m_Guilds = CFG.GetList("discord.guilds", ',', m_Guilds);
-  //m_Admins = CFG.GetSet("discord.admins", ',', m_Admins);
-
-  optional<uint64_t> maybeSudoUser = CFG.GetMaybeUint64("discord.sudo_users");
-  if (maybeSudoUser.has_value()) {
-    m_SudoUsers.insert(maybeSudoUser.value());
+  vector<string> invitesMode = {"all", "none", "allow_list", "deny_list"};
+  m_FilterJoinServersMode = CFG.GetStringIndex("discord.server_invites.mode", invitesMode, FILTER_SERVERS_ALLOW_ALL);
+  m_FilterJoinServersList = CFG.GetUint64Set("discord.server_invites.list", ',', {});
+  m_SudoUsers = CFG.GetUint64Set("discord.sudo_users", ',', {});
+  if (m_FilterJoinServersList.empty()) {
+    Print("[DISCORD] Filter join server list empty");
+  } else for (auto& elem : m_FilterJoinServersList) {
+    Print("[DISCORD] Filter join server: " + to_string(elem));
   }
 
   if (m_Enabled && m_Token.empty()) {

@@ -37,6 +37,8 @@
 #include <algorithm>
 #include <variant>
 
+#define THINKING_PUBLIC false
+
 class CDiscordConfig;
 
 using namespace std;
@@ -76,7 +78,12 @@ bool CDiscord::Init()
   m_Client->on_log(dpp::utility::cout_logger());
  
   m_Client->on_slashcommand([this](const dpp::slashcommand_t& event) {
-    event.thinking(false); // Publicly visible
+    try {
+      if (!GetIsServerAllowed(event.command.get_guild().id)) return;
+    } catch (...) {
+      Print("[DISCORD] on_slashcommand recv slash command on DM");
+    }
+    event.thinking(THINKING_PUBLIC);
     m_CommandQueue.push(new dpp::slashcommand_t(event));
   });
 
@@ -99,6 +106,16 @@ bool CDiscord::Init()
       );
       m_Client->global_command_create(hostShortcut);
       m_Client->global_bulk_command_create({hostShortcut, nameSpace});
+    }
+  });
+
+  m_Client->on_guild_create([this](const dpp::guild_create_t& event) {
+    if (!GetIsServerAllowed(event.created->id)) {
+      LeaveServer(event.created->id, event.created->name);
+      return;
+    }
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+      Print("[DISCORD] Joined server <<" + event.created->name + ">> (#" + to_string(event.created->id) + ").");
     }
   });
 
@@ -153,6 +170,7 @@ bool CDiscord::Update()
   return m_Exiting;
 }
 
+#ifndef DISABLE_DPP
 void CDiscord::SendUser(const string& message, const uint64_t target)
 {
   m_Client->direct_message_create(target, dpp::message(message), [this](const dpp::confirmation_callback_t& callback){
@@ -169,10 +187,31 @@ void CDiscord::SendUser(const string& message, const uint64_t target)
   });
 }
 
-bool CDiscord::GetIsModerator(const string& nHostName)
+bool CDiscord::GetIsServerAllowed(const uint64_t target) const
 {
-  return m_Config->m_Admins.find(nHostName) != m_Config->m_Admins.end();
+  switch (m_Config->m_FilterJoinServersMode) {
+  case FILTER_SERVERS_ALLOW_ALL:
+    return true;
+  case FILTER_SERVERS_DENY_ALL:
+    return false;
+  case FILTER_SERVERS_ALLOW_LIST:
+    return m_Config->m_FilterJoinServersList.find(target) != m_Config->m_FilterJoinServersList.end();
+  case FILTER_SERVERS_DENY_LIST:
+    return m_Config->m_FilterJoinServersList.find(target) == m_Config->m_FilterJoinServersList.end();
+  default:
+    return false;
+  }
 }
+
+void CDiscord::LeaveServer(const uint64_t target, const string& name)
+{
+  m_Client->current_user_leave_guild(target, [this, target, name](const dpp::confirmation_callback_t& callback){
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
+      Print("[DISCORD] Left server <<" + name + ">> (#" + to_string(target) + ").");
+    }
+  });
+}
+#endif
 
 bool CDiscord::GetIsSudoer(const uint64_t nIdentifier)
 {

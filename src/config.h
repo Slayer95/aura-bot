@@ -113,6 +113,7 @@ public:
   std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
   std::set<std::string> GetSet(const std::string& key, char separator, const std::set<std::string> x);
   std::set<std::string> GetSetInsensitive(const std::string& key, char separator, const std::set<std::string> x);
+  std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
 
   std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
   std::vector<uint8_t> GetIPv4(const std::string& key, const std::vector<uint8_t>& x);

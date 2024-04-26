@@ -480,6 +480,39 @@ set<string> CConfig::GetSetInsensitive(const string& key, char separator, const 
   END(Output)
 }
 
+set<uint64_t> CConfig::GetUint64Set(const string& key, char separator, const set<uint64_t> x)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  bool errored = false;
+  set<uint64_t> Output;
+  stringstream ss(it->second);
+  while (ss.good()) {
+    string element;
+    getline(ss, element, separator);
+    if (element.empty())
+      continue;
+
+    uint64_t result = 0;
+    try {
+      long long value = stoll(element);
+      result = static_cast<uint64_t>(value);
+    } catch (const exception& e) {
+      Print("Invalid value: " + element);
+      Print("Error parsing uint64 - " + string(e.what()));
+      CONFIG_ERROR(key, Output)
+    }
+    if (!Output.insert(result).second)
+      errored = true;
+  }
+
+  END(Output)
+}
+
 vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count, const std::vector<uint8_t> &x)
 {
   m_ValidKeys.insert(key);

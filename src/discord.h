@@ -73,10 +73,14 @@ public:
 
   bool Init();
   bool Update();
-  void SendUser(const std::string& message, const uint64_t target);
 
+#ifndef DISABLE_DPP
+  void SendUser(const std::string& message, const uint64_t target);
+  void LeaveServer(const uint64_t target, const std::string& name);
+#endif
+
+  bool GetIsServerAllowed(const uint64_t target) const;
   bool GetIsActive() const { return m_Client != nullptr; }
-  bool GetIsModerator(const std::string& nHostName);
   bool GetIsSudoer(const uint64_t nIdentifier);
 };
 
