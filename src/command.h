@@ -98,7 +98,7 @@ protected:
   char                          m_Token;
   uint16_t                      m_Permissions;
 
-  std::string                   m_HostName;
+  std::string                   m_ServerName;
   std::string                   m_ReverseHostName; // user hostname, reversed from their IP (received from IRC chat)
   std::string                   m_ChannelName;
   std::string                   m_ActionMessage;

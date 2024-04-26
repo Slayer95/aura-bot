@@ -64,7 +64,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ga
 
     m_Permissions(0),
 
-    m_HostName(player->GetRealmHostName()),
+    m_ServerName(player->GetRealmHostName()),
 
     m_ChannelName(string()),
 
@@ -94,7 +94,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 
     m_Permissions(0),
 
-    m_HostName(fromRealm->GetServer()),
+    m_ServerName(fromRealm->GetServer()),
 
     m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
 
@@ -124,7 +124,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 
     m_Permissions(0),
 
-    m_HostName(ircNetwork->m_Config->m_HostName),
+    m_ServerName(ircNetwork->m_Config->m_HostName),
     m_ReverseHostName(reverseHostName),
     m_ChannelName(channelName),
 
@@ -155,8 +155,8 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 
     m_Permissions(0),
 
-    m_HostName(nAura->m_Discord->m_Config->m_HostName),
-    //m_ChannelName(channelName),
+    m_ServerName(discordAPI->command.get_guild().name),
+    m_ChannelName(discordAPI->command.get_channel().name),
 
     m_Output(nOutputStream),
     m_RefCount(1),
@@ -185,7 +185,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 
     m_Permissions(0),
 
-    m_HostName(string()),
+    m_ServerName(string()),
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
@@ -214,7 +214,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* f
     m_Permissions(0),
 
 
-    m_HostName(fromRealm->GetServer()),
+    m_ServerName(fromRealm->GetServer()),
 
     m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
 
@@ -243,7 +243,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* irc
     m_IsBroadcast(nIsBroadcast),
     m_Permissions(0),
 
-    m_HostName(ircNetwork->m_Config->m_HostName),
+    m_ServerName(ircNetwork->m_Config->m_HostName),
     m_ReverseHostName(reverseHostName),
     m_ChannelName(channelName),
 
@@ -273,8 +273,8 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slas
     m_IsBroadcast(true),
     m_Permissions(0),
 
-    m_HostName(nAura->m_Discord->m_Config->m_HostName),
-    //m_ChannelName(channelName),
+    m_ServerName(discordAPI->command.get_guild().name),
+    m_ChannelName(discordAPI->command.get_channel().name),
 
     m_Output(nOutputStream),
     m_RefCount(1),
@@ -302,7 +302,7 @@ CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream
     m_IsBroadcast(nIsBroadcast),
     m_Permissions(0),
 
-    m_HostName(string()),
+    m_ServerName(string()),
 
     m_ChannelName(string()),
 
@@ -318,20 +318,20 @@ bool CCommandContext::SetIdentity(const string& userName, const string& realmId)
   if (m_SourceRealm == nullptr)
     return false;
   m_FromName = userName;
-  m_HostName = m_SourceRealm->GetServer();
+  m_ServerName = m_SourceRealm->GetServer();
   return true;
 }
 
 string CCommandContext::GetUserAttribution()
 {
   if (m_Player) {
-    return m_FromName + "@" + (m_HostName.empty() ? "@@LAN/VPN" : m_HostName);
+    return m_FromName + "@" + (m_ServerName.empty() ? "@@LAN/VPN" : m_ServerName);
   } else if (m_SourceRealm) {
     return m_FromName + "@" + m_SourceRealm->GetServer();
   } else if (m_IRC) {
-    return m_FromName + "@" + m_HostName;
+    return m_FromName + "@" + m_ServerName;
   } else if (m_DiscordAPI) {
-    return m_FromName + "@" + m_HostName;
+    return m_FromName + "@[" + m_ServerName + "].discord.com";
   } else if (!m_FromName.empty()) {
     return m_FromName;
   } else {
@@ -342,7 +342,7 @@ string CCommandContext::GetUserAttribution()
 string CCommandContext::GetUserAttributionPreffix()
 {
   if (m_Player) {
-    return m_TargetGame->GetLogPrefix() + "Player [" + m_FromName + "@" + (m_HostName.empty() ? "@@LAN/VPN" : m_HostName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
+    return m_TargetGame->GetLogPrefix() + "Player [" + m_FromName + "@" + (m_ServerName.empty() ? "@@LAN/VPN" : m_ServerName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (m_SourceRealm) {
     return m_SourceRealm->GetLogPrefix() + "User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (m_IRC) {
@@ -409,8 +409,8 @@ void CCommandContext::UpdatePermissions()
   // Trust PvPGN servers on player identities for admin powers. Their impersonation is not a threat we worry about.
   // However, do NOT trust them regarding sudo access, since those commands may cause data deletion or worse.
   // Note also that sudo permissions must be ephemeral, since neither WC3 nor PvPGN TCP connections are secure.
-  bool IsOwner = m_TargetGame && m_TargetGame->MatchOwnerName(m_FromName) && m_HostName == m_TargetGame->m_OwnerRealm && (
-    IsRealmVerified || (m_Player && m_HostName.empty())
+  bool IsOwner = m_TargetGame && m_TargetGame->MatchOwnerName(m_FromName) && m_ServerName == m_TargetGame->m_OwnerRealm && (
+    IsRealmVerified || (m_Player && m_ServerName.empty())
   );
   bool IsCreatorRealm = m_TargetGame && m_SourceRealm && m_TargetGame->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(m_SourceRealm));
   bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && (!m_TargetGame || IsCreatorRealm) && m_SourceRealm->GetIsAdmin(m_FromName);
@@ -512,7 +512,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
 {
   optional<pair<string, string>> Result;
   // Allow !su for LAN connections
-  if (!m_HostName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
+  if (!m_ServerName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
     return Result;
   }
   if (!m_Aura->m_SudoContext) {
@@ -648,7 +648,6 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
     }
 #ifndef DISABLE_DPP
     if (m_DiscordAPI) {
-      //TODO: CCommandContext::SendReplyCustomFlags
       m_DiscordAPI->edit_original_response(dpp::message(message));
       AllSourceSuccess = true;
     }
@@ -894,7 +893,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
   if (CommandHash == HashCode("su")) {
     // Allow !su for LAN connections
-    if (!m_HostName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
+    if (!m_ServerName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
       ErrorReply("Forbidden");
       return;
     }
@@ -905,11 +904,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     m_Aura->m_SudoExecCommand = Payload;
     Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + Payload + "\"");
     if (m_SourceRealm && m_FromWhisper) {
-      Print("[AURA] Confirm from [" + m_HostName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC) {
-      Print("[AURA] Confirm from [" + m_HostName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_DiscordAPI) {
-      Print("[AURA] Confirm from [" + m_HostName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
       Print("[AURA] Confirm from the game client with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     }
@@ -924,7 +923,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CommandHash = HashCode(Command);
     } else {
       ErrorReply("Sudo check failure.");
-      Print(m_FromName + "@" + m_HostName + " failed sudo authentication.");
+      Print(GetUserAttribution() + " failed sudo authentication.");
       return;
     }
   }
@@ -2877,25 +2876,25 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (m_SourceRealm->GetIsAdmin(Victim) || (m_SourceRealm->GetIsModerator(Victim) &&
           !CheckPermissions(m_Config->m_AdminBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN))
         ) {
-          ErrorReply("User [" + Victim + "] is an admin on server [" + m_HostName + "]");
+          ErrorReply("User [" + Victim + "] is an admin on server [" + m_ServerName + "]");
           break;
         }
 
         if (m_SourceRealm->IsBannedName(Victim)) {
-          ErrorReply("User [" + Victim + "] is already banned on server [" + m_HostName + "]");
+          ErrorReply("User [" + Victim + "] is already banned on server [" + m_ServerName + "]");
           break;
         }
         if (m_SourceRealm->GetIsModerator(Victim)) {
           if (!m_Aura->m_DB->ModeratorRemove(m_SourceRealm->GetDataBaseID(), Victim)) {
-            ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_HostName + "]");
+            ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_ServerName + "]");
             break;
           }
         }
         if (!m_Aura->m_DB->BanAdd(m_SourceRealm->GetDataBaseID(), Victim, m_FromName, Reason)) {
-          ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_HostName + "]");
+          ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_ServerName + "]");
           break;
         }
-        SendAll("User [" + Victim + "] banned on server [" + m_HostName + "]");
+        SendAll("User [" + Victim + "] banned on server [" + m_ServerName + "]");
         break;
       } else {
         ErrorReply("Realm unknown.");
@@ -2967,15 +2966,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string message = "Status: ";
 
       for (const auto& bnet : m_Aura->m_Realms)
-        message += "[" + bnet->GetServer() + "]" + (bnet->GetLoggedIn() ? " - online " : " - offline ");
+        message += "[" + bnet->GetUniqueDisplayName() + (bnet->GetLoggedIn() ? " - online] " : " - offline] ");
 
       if (m_Aura->m_IRC) {
-        message += m_Aura->m_IRC->m_Config->m_HostName + (!m_Aura->m_IRC->m_WaitingToConnect ? " [online]" : " [offline]");
+        message += "[" + m_Aura->m_IRC->m_Config->m_HostName + (!m_Aura->m_IRC->m_WaitingToConnect ? " - online]" : " - offline]");
       }
 
       if (m_Aura->m_Discord) {
         //TODO: Support Discord in !status
-        //message += m_Aura->m_DiscordAPI->m_Config->m_HostName + (m_Aura->m_DiscordAPI->GetConnected() ? " [online]" : " [offline]");
+        //message += m_Aura->m_DiscordAPI->m_Config->m_ServerName + (m_Aura->m_DiscordAPI->GetConnected() ? " [online]" : " [offline]");
       }
 
       SendReply(message);
@@ -3120,7 +3119,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "owner [PLAYERNAME]");
         break;
       }
-      string TargetRealm = TargetPlayer ? TargetPlayer->GetRealmHostName() : m_HostName;
+      string TargetRealm = TargetPlayer ? TargetPlayer->GetRealmHostName() : m_ServerName;
       if (!TargetPlayer && TargetRealm.empty()) {
         ErrorReply("Usage: " + cmdToken + "owner [PLAYERNAME]");
         break;
@@ -4551,10 +4550,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       // Name of sender and receiver should be included in the message,
       // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
-      if (m_HostName.empty()) {
+      if (m_ServerName.empty()) {
         m_ActionMessage = inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>";
       } else {
-        m_ActionMessage = inputName + ", " + m_FromName + " at " + m_HostName + " tells you: <<" + subMessage + ">>";
+        m_ActionMessage = inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>";
       }
 
       matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
@@ -4651,7 +4650,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_SourceRealm->SendGetClanList();
-      SendReply("Fetching clan member list from " + m_HostName + "...");
+      SendReply("Fetching clan member list from " + m_ServerName + "...");
       break;
     }
 
@@ -4666,7 +4665,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_SourceRealm->SendGetFriendsList();
-      SendReply("Fetching friends list from " + m_HostName + "...");
+      SendReply("Fetching friends list from " + m_ServerName + "...");
       break;
     }
 
@@ -4697,7 +4696,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       const string SubPayload = PayloadStart == string::npos ? string() : ExecString.substr(PayloadStart + 1);
       CCommandContext* ctx;
       if (m_IRC) {
-        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, m_HostName, m_IsBroadcast, &std::cout);
+        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
       } else if (m_DiscordAPI) {
         ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_DiscordAPI, &std::cout);
       } else if (m_SourceRealm) {
@@ -5109,11 +5108,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool IsRootAdmin = m_SourceRealm->GetIsAdmin(Payload);
       bool IsAdmin = IsRootAdmin || m_SourceRealm->GetIsModerator(Payload);
       if (!IsAdmin && !IsRootAdmin)
-        SendReply("User [" + Payload + "] is not staff on server [" + m_HostName + "]");
+        SendReply("User [" + Payload + "] is not staff on server [" + m_ServerName + "]");
       else if (IsRootAdmin)
-        SendReply("User [" + Payload + "] is a root admin on server [" + m_HostName + "]");
+        SendReply("User [" + Payload + "] is a root admin on server [" + m_ServerName + "]");
       else
-        SendReply("User [" + Payload + "] is a moderator on server [" + m_HostName + "]");
+        SendReply("User [" + Payload + "] is a moderator on server [" + m_ServerName + "]");
 
       break;
     }
@@ -5169,14 +5168,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_SourceRealm->GetIsModerator(Payload)) {
-        ErrorReply("User [" + Payload + "] is already staff on server [" + m_HostName + "]");
+        ErrorReply("User [" + Payload + "] is already staff on server [" + m_ServerName + "]");
         break;
       }
       if (!m_Aura->m_DB->ModeratorAdd(m_SourceRealm->GetDataBaseID(), Payload)) {
-        ErrorReply("Failed to add user [" + Payload + "] as moderator [" + m_HostName + "]");
+        ErrorReply("Failed to add user [" + Payload + "] as moderator [" + m_ServerName + "]");
         break;
       }
-      SendReply("Added user [" + Payload + "] to the moderator database on server [" + m_HostName + "]");
+      SendReply("Added user [" + Payload + "] to the moderator database on server [" + m_ServerName + "]");
       break;
     }
 
@@ -5199,18 +5198,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_SourceRealm->GetIsAdmin(Payload)) {
-        ErrorReply("User [" + Payload + "] is a root admin on server [" + m_HostName + "]");
+        ErrorReply("User [" + Payload + "] is a root admin on server [" + m_ServerName + "]");
         break;
       }
       if (!m_SourceRealm->GetIsModerator(Payload)) {
-        ErrorReply("User [" + Payload + "] is not staff on server [" + m_HostName + "]");
+        ErrorReply("User [" + Payload + "] is not staff on server [" + m_ServerName + "]");
         break;
       }
       if (!m_Aura->m_DB->ModeratorRemove(m_SourceRealm->GetDataBaseID(), Payload)) {
-        ErrorReply("Error deleting user [" + Payload + "] from the moderator database on server [" + m_HostName + "]");
+        ErrorReply("Error deleting user [" + Payload + "] from the moderator database on server [" + m_ServerName + "]");
         break;
       }
-      SendReply("Deleted user [" + Payload + "] from the moderator database on server [" + m_HostName + "]");
+      SendReply("Deleted user [" + Payload + "] from the moderator database on server [" + m_ServerName + "]");
       break;
     }
 
