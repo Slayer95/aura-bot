@@ -523,12 +523,12 @@ bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& 
 }
 
 #ifdef _WIN32
-optional<filesystem::path> MaybeReadPathFromRegistry(const wchar_t* name)
+optional<wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey)
 {
-  optional<filesystem::path> result;
+  optional<wstring> result;
   HKEY hKey;
-  LPCWSTR registryPath = L"SOFTWARE\\Blizzard Entertainment\\Warcraft III";
-  LPCWSTR keyName = name;
+  LPCWSTR registryPath = mainKey;
+  LPCWSTR keyName = subKey;
   WCHAR buffer[1024];
 
   if (RegOpenKeyExW(HKEY_CURRENT_USER, registryPath, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
@@ -538,8 +538,7 @@ optional<filesystem::path> MaybeReadPathFromRegistry(const wchar_t* name)
     if (RegQueryValueExW(hKey, keyName, nullptr, &valueType, reinterpret_cast<BYTE*>(buffer), &bufferSize) == ERROR_SUCCESS) {
       if (valueType == REG_SZ && 0 < bufferSize && bufferSize < 1024) {
         buffer[bufferSize / sizeof(WCHAR)] = L'\0';
-        filesystem::path installPath = wstring(buffer);
-        result = installPath;
+        result = wstring(buffer);
       }
     }
     // Close the key
@@ -548,11 +547,23 @@ optional<filesystem::path> MaybeReadPathFromRegistry(const wchar_t* name)
   return result;
 }
 
-bool DeleteUserRegistryKey(const wchar_t* subKey) {
+optional<filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey)
+{
+  optional<wstring> content = MaybeReadRegistry(mainKey, subKey);
+  if (!content.has_value()) return nullopt;
+
+  optional<filesystem::path> result;
+  result = filesystem::path(content.value());
+  return result;
+}
+
+bool DeleteUserRegistryKey(const wchar_t* subKey)
+{
   return RegDeleteTree(HKEY_CURRENT_USER, subKey) == ERROR_SUCCESS;
 }
 
-bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value) {
+bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value)
+{
   HKEY hKey;
   LONG result = RegCreateKeyEx(HKEY_CURRENT_USER, subKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL);
   if (result == ERROR_SUCCESS) {
@@ -564,3 +575,24 @@ bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, cons
 }
 
 #endif
+
+optional<string> GetUserMultiPlayerName()
+{
+#ifdef _WIN32
+  optional<wstring> localName = MaybeReadRegistry(L"SOFTWARE\\Blizzard Entertainment\\Warcraft III\\String", L"userlocal");
+  if (!localName.has_value()) {
+    // Fallback to Battle.net name
+    localName = MaybeReadRegistry(L"SOFTWARE\\Blizzard Entertainment\\Warcraft III\\String", L"userbnet");
+  }
+  if (!localName.has_value()) return nullopt;
+
+  optional<string> result;
+  int size = WideCharToMultiByte(CP_UTF8, 0, &localName.value()[0], (int)localName.value().size(), nullptr, 0, nullptr, nullptr);
+  string multiByte(size, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, &localName.value()[0], (int)localName.value().size(), &multiByte[0], size, nullptr, nullptr);
+  result = multiByte;
+  return result;
+#else
+  return nullopt;
+#endif
+}

@@ -215,7 +215,9 @@ public:
 
   void LoadMapAliases();
   void LoadIPToCountryData(const CConfig& CFG);
-  void InitSystemSettings();
+  void InitContextMenu();
+  void InitPathVariable();
+  void InitSystem();
 
   void CacheMapPresets();
   

@@ -56,6 +56,20 @@ Additionally, the following CLI flags are affected by ``--stdpaths``:
 
 This option is commutative.
 
+## \`--init-system\`
+
+When enabled, this flag instructs Aura to install itself to various relevant places.
+
+- User PATH environment variable. This allows easily invoking Aura from anywhere in the CLI.
+- Windows Explorer context menu. This allows easily hosting WC3 map files by right-clicking them.
+
+This option is enabled by default when Aura is executed for the first time.
+
+## \`--no-init-system\`
+
+When enabled, this flag instructs Aura NOT to install itself to various relevant places. 
+This can help in avoiding cluttering the system GUI and environment variables.
+
 ## \`--auto-port-forward\`
 
 This flag enables Universal Plug and Play (UPnP) functionality within the game 

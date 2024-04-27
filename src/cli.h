@@ -65,6 +65,7 @@ private:
   std::optional<bool>                   m_UseMapCFGCache;
   std::optional<std::string>            m_LANMode; // Validation?
   std::optional<std::string>            m_LogLevel;
+  std::optional<bool>                   m_InitSystem;
 
   std::optional<uint8_t>                m_War3Version;
   std::optional<std::filesystem::path>  m_War3Path;
@@ -115,6 +116,7 @@ public:
   void RunEarlyOptions() const;
   void OverrideConfig(CAura* nAura) const;
   bool QueueActions(CAura* nAura) const;
+  inline std::optional<bool> GetInitSystem() const { return m_InitSystem; };
 };
 
 #endif // AURA_CLI_H_

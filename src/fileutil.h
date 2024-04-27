@@ -83,9 +83,11 @@ bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
 #ifdef _WIN32
-std::optional<std::filesystem::path> MaybeReadPathFromRegistry(const wchar_t* keyName);
+std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
+std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
 bool DeleteUserRegistryKey(const wchar_t* subKey);
 bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
+std::optional<std::string> GetUserMultiPlayerName();
 #endif
 
 #endif // AURA_FILEUTIL_H_

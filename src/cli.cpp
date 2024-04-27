@@ -64,6 +64,11 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("GAMENAME", m_GameName, "Name assigned to a game hosted from the CLI.");
 
   app.add_flag("--stdpaths", m_UseStandardPaths, "Makes file names always resolve from CWD when input through the CLI. Commutative.");
+#ifdef _WIN32
+  app.add_flag("--init-system,--no-init-system{false}", m_InitSystem, "Adds Aura to the PATH environment variable, as well as to Windows Explorer context menu.");
+#else
+  app.add_flag("--init-system,--no-init-system{false}", m_InitSystem, "Adds Aura to the PATH environment variable.");
+#endif
 #ifndef DISABLE_MINIUPNP
   app.add_flag("--auto-port-forward,--no-auto-port-forward{false}", m_EnableUPnP, "Enable automatic port-forwarding, using Universal Plug-and-Play.");
 #else
@@ -351,7 +356,16 @@ bool CCLI::QueueActions(CAura* nAura) const
               return false;
             }
           }
-          gameSetup->SetName(m_GameName.value_or("Join and play"));
+          if (m_GameName.has_value()) {
+            gameSetup->SetName(m_GameName.value());
+          } else {
+            optional<string> userName = GetUserMultiPlayerName();
+            if (userName.has_value()) {
+              gameSetup->SetName(userName.value() + "'s game");
+            } else {
+              gameSetup->SetName("Join and play");
+            }
+          }
           if (m_GameLobbyTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameLobbyTimeout.value());
           if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
           if (m_GameCheckReservation.has_value()) gameSetup->SetCheckReservation(m_GameCheckReservation.value());

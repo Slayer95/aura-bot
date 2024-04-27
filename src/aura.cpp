@@ -472,7 +472,11 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   if (m_DB->GetIsFirstRun()) {
     LoadMapAliases();
     LoadIPToCountryData(CFG);
-    InitSystemSettings();
+    if (nCLI.GetInitSystem().value_or(true)) {
+      InitSystem();
+    }
+  } else if (nCLI.GetInitSystem().value_or(false)) {
+    InitSystem();
   }
 
   if (m_Config->m_EnableCFGCache) {
@@ -1171,7 +1175,7 @@ bool CAura::LoadConfigs(CConfig& CFG)
       m_GameInstallPath = filesystem::path(war3Path);
     } else {
 #ifdef _WIN32
-      optional<filesystem::path> maybeInstallPath = MaybeReadPathFromRegistry(L"InstallPath");
+      optional<filesystem::path> maybeInstallPath = MaybeReadRegistryPath(L"SOFTWARE\\Blizzard Entertainment\\Warcraft III", L"InstallPath");
       if (maybeInstallPath.has_value()) {
         m_GameInstallPath = maybeInstallPath.value();
       } else {
@@ -1329,7 +1333,7 @@ void CAura::LoadIPToCountryData(const CConfig& CFG)
   in.close();
 }
 
-void CAura::InitSystemSettings()
+void CAura::InitContextMenu()
 {
 #ifdef _WIN32
   DeleteUserRegistryKey(L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.w3m");
@@ -1342,6 +1346,23 @@ void CAura::InitSystemSettings()
   CreateUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
   CreateUserRegistryKey(L"Software\\Classes\\WorldEdit.ScenarioEx\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
 #endif
+}
+
+void CAura::InitPathVariable()
+{
+  // Check if the directory is already there
+  // If not, add it.
+  filesystem::path exeDirectory = GetExeDirectory();
+#ifdef _WIN32
+  
+#else
+#endif
+}
+
+void CAura::InitSystem()
+{
+  InitContextMenu();
+  InitPathVariable();
 }
 
 void CAura::CacheMapPresets()
