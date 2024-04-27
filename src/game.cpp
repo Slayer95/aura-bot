@@ -469,6 +469,8 @@ bool CGame::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) co
       return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
     case GAMESETUP_ORIGIN_IRC:
       return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
+    case GAMESETUP_ORIGIN_DISCORD:
+      return reinterpret_cast<const CDiscord*>(m_CreatedFrom) == reinterpret_cast<const CDiscord*>(fromThing);
   }
   return false;
 }
@@ -3974,13 +3976,13 @@ void CGame::EventGameStarted()
 
   // and finally reenter battle.net chat
 
-  for (auto& bnet : m_Aura->m_Realms) {
-    if (m_IsMirror && bnet->GetIsMirror())
+  for (auto& realm : m_Aura->m_Realms) {
+    if (m_IsMirror && realm->GetIsMirror())
       continue;
 
-    bnet->ResetGameAnnouncement();
-    bnet->QueueGameUncreate();
-    bnet->SendEnterChat();
+    realm->ResetGameAnnouncement();
+    realm->QueueGameUncreate();
+    realm->SendEnterChat();
   }
 
   // record everything we need to ban each player in case we decide to do so later

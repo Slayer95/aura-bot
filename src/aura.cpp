@@ -472,6 +472,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   if (m_DB->GetIsFirstRun()) {
     LoadMapAliases();
     LoadIPToCountryData(CFG);
+    InitSystemSettings();
   }
 
   if (m_Config->m_EnableCFGCache) {
@@ -998,6 +999,11 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
         case GAMESETUP_ORIGIN_IRC:
           reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
           break;
+        /*
+        // TODO: CAura::EventBNETGameRefreshFailed SendUser()
+        case GAMESETUP_ORIGIN_DISCORD:
+          reinterpret_cast<CDiscord*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+          break;*/
         default:
           break;
       }
@@ -1321,6 +1327,21 @@ void CAura::LoadIPToCountryData(const CConfig& CFG)
   }
 
   in.close();
+}
+
+void CAura::InitSystemSettings()
+{
+#ifdef _WIN32
+  DeleteUserRegistryKey(L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.w3m");
+  DeleteUserRegistryKey(L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.w3x");
+
+  wstring openWithAuraCommand = L"\"";
+  openWithAuraCommand += GetExePath().wstring();
+  openWithAuraCommand += L"\" \"%1\" --stdpaths";
+
+  CreateUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
+  CreateUserRegistryKey(L"Software\\Classes\\WorldEdit.ScenarioEx\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
+#endif
 }
 
 void CAura::CacheMapPresets()

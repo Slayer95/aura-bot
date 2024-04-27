@@ -293,7 +293,7 @@ optional<int64_t> GetMaybeModifiedTime(const filesystem::path& file)
   return result;
 }
 
-filesystem::path GetExeDirectory()
+filesystem::path GetExePath()
 {
   static filesystem::path Memoized;
   if (!Memoized.empty())
@@ -322,7 +322,13 @@ filesystem::path GetExeDirectory()
   }
   buffer.resize(length);
 
-  filesystem::path executablePath(buffer.data());
+  Memoized = filesystem::path(buffer.data());
+  return Memoized;
+}
+
+filesystem::path GetExeDirectory()
+{
+  filesystem::path executablePath = GetExePath();
   filesystem::path cwd;
   try {
     cwd = filesystem::current_path();
@@ -347,14 +353,15 @@ filesystem::path GetExeDirectory()
     } catch (...) {}
   }
 
+  filesystem::path exeDirectory;
   if (cwdIsAncestor) {    
-    Memoized = executablePath.parent_path().lexically_relative(cwd);
+    exeDirectory = executablePath.parent_path().lexically_relative(cwd);
   } else {
-    Memoized = executablePath.parent_path();
+    exeDirectory = executablePath.parent_path();
   }
 
-  NormalizeDirectory(Memoized);
-  return Memoized;
+  NormalizeDirectory(exeDirectory);
+  return exeDirectory;
 }
 
 filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const string& file)
@@ -540,4 +547,20 @@ optional<filesystem::path> MaybeReadPathFromRegistry(const wchar_t* name)
   }
   return result;
 }
+
+bool DeleteUserRegistryKey(const wchar_t* subKey) {
+  return RegDeleteTree(HKEY_CURRENT_USER, subKey) == ERROR_SUCCESS;
+}
+
+bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value) {
+  HKEY hKey;
+  LONG result = RegCreateKeyEx(HKEY_CURRENT_USER, subKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL);
+  if (result == ERROR_SUCCESS) {
+    result = RegSetValueEx(hKey, valueName, 0, REG_SZ, (BYTE*)value, (wcslen(value) + 1) * sizeof(wchar_t));
+    RegCloseKey(hKey);
+    return true;
+  }
+  return false;
+}
+
 #endif

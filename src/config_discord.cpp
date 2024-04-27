@@ -64,11 +64,6 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   m_FilterJoinServersMode = CFG.GetStringIndex("discord.server_invites.mode", invitesMode, FILTER_SERVERS_ALLOW_ALL);
   m_FilterJoinServersList = CFG.GetUint64Set("discord.server_invites.list", ',', {});
   m_SudoUsers = CFG.GetUint64Set("discord.sudo_users", ',', {});
-  if (m_FilterJoinServersList.empty()) {
-    Print("[DISCORD] Filter join server list empty");
-  } else for (auto& elem : m_FilterJoinServersList) {
-    Print("[DISCORD] Filter join server: " + to_string(elem));
-  }
 
   if (m_Enabled && m_Token.empty()) {
     CFG.SetFailed();

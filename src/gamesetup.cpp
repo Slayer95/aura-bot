@@ -1002,6 +1002,7 @@ void CGameSetup::LoadMap()
       }
     }
 #ifndef DISABLE_CPR
+    m_Ctx->SendReply("Resolving map repository...");
     RunResolveMapRepository();
     return;
 #else
@@ -1062,6 +1063,10 @@ void CGameSetup::OnLoadMapSuccess()
         SetCreator(m_Ctx->GetSender(), sourceRealm);
       } else if (m_Ctx->GetSourceIRC()) {
         SetCreator(m_Ctx->GetSender(), m_Ctx->GetSourceIRC());
+#ifndef DISABLE_DPP
+      } else if (m_Ctx->GetDiscordAPI()) {
+        SetCreator(m_Ctx->GetSender(), m_Aura->m_Discord);
+#endif
       }
       RunHost();
     }
@@ -1265,6 +1270,14 @@ void CGameSetup::SetCreator(const string& nCreator, CIRC* nIRC)
   m_CreatedFromType = GAMESETUP_ORIGIN_IRC;
 }
 
+void CGameSetup::SetCreator(const string& nCreator, CDiscord* nDiscord)
+{
+  // TODO: CGameSetup::SetCreator() - Discord case
+  m_CreatedBy = nCreator;
+  m_CreatedFrom = reinterpret_cast<void*>(nDiscord);
+  m_CreatedFromType = GAMESETUP_ORIGIN_DISCORD;
+}
+
 void CGameSetup::RemoveCreator()
 {
   m_CreatedBy.clear();
@@ -1280,6 +1293,8 @@ bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThin
       return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
     case GAMESETUP_ORIGIN_IRC:
       return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
+    case GAMESETUP_ORIGIN_DISCORD:
+      return reinterpret_cast<const CDiscord*>(m_CreatedFrom) == reinterpret_cast<const CDiscord*>(fromThing);
   }
   return false;
 }

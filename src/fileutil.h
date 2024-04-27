@@ -75,6 +75,7 @@ std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
 bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileDelete(const std::filesystem::path& File);
 std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
+std::filesystem::path GetExePath();
 std::filesystem::path GetExeDirectory();
 std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
 std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
@@ -83,6 +84,8 @@ void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
 #ifdef _WIN32
 std::optional<std::filesystem::path> MaybeReadPathFromRegistry(const wchar_t* keyName);
+bool DeleteUserRegistryKey(const wchar_t* subKey);
+bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
 #endif
 
 #endif // AURA_FILEUTIL_H_

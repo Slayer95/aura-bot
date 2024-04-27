@@ -71,6 +71,7 @@
 #define GAMESETUP_ORIGIN_NONE 0
 #define GAMESETUP_ORIGIN_REALM 1
 #define GAMESETUP_ORIGIN_IRC 2
+#define GAMESETUP_ORIGIN_DISCORD 3
 #define GAMESETUP_ORIGIN_INVALID 255
 
 #define GAMESETUP_STEP_MAIN 0
@@ -85,6 +86,7 @@
 class CAura;
 class CCommandContext;
 class CIRC;
+class CDiscord;
 class CMap;
 class CRealm;
 class CSaveGame;
@@ -256,6 +258,7 @@ public:
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CIRC* nIRC);
+  void SetCreator(const std::string& nCreator, CDiscord* nDiscord);
   void RemoveCreator();
   bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   void SetName(const std::string& nName) { m_GameName = nName; }
