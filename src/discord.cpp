@@ -84,7 +84,7 @@ bool CDiscord::Init()
     try {
       if (!GetIsServerAllowed(event.command.get_guild().id)) return;
     } catch (...) {
-      Print("[DISCORD] on_slashcommand recv slash command on DM");
+      Print("[DISCORD] on_slashcommand recv slash command on DM from " + event.command.get_issuing_user().username);
     }
     event.thinking(THINKING_PUBLIC);
     m_CommandQueue.push(new dpp::slashcommand_t(event));
@@ -120,6 +120,7 @@ void CDiscord::RegisterCommands()
   nameSpace.add_option(
     dpp::command_option(dpp::co_string, "payload", "Any comma-separated parameters for the command.", false)
   );
+  nameSpace.set_dm_permission(true);
   commands.push_back(nameSpace);
 
   if (m_Config->m_CommandCFG->m_HostPermissions != COMMAND_PERMISSIONS_DISABLED) {
@@ -130,6 +131,7 @@ void CDiscord::RegisterCommands()
     hostShortcut.add_option(
       dpp::command_option(dpp::co_string, "title", "Display title for the hosted game lobby.", true)
     );
+    hostShortcut.set_dm_permission(true);
     commands.push_back(hostShortcut);
   }
   m_Client->global_bulk_command_create(commands);
