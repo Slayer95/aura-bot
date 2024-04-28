@@ -26,21 +26,6 @@
 #include "osutil.h"
 #include "util.h"
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#pragma once
-#include <windows.h>
-#define stat _stat
-#else
-#include <sys/stat.h>
-#include <dirent.h>
-#include <cstring>
-#include <unistd.h>
-#include <limits.h>
-#endif
-
-// unistd.h and limits.h
-
 using namespace std;
 
 #ifdef _WIN32

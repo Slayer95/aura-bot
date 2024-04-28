@@ -52,6 +52,12 @@
 #include "util.h"
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#pragma once
+#include <windows.h>
+#endif
+
+#ifdef _WIN32
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #include <errno.h>
@@ -147,7 +153,6 @@ typedef int32_t SOCKET;
 
 #define closesocket close
 
-//extern int32_t GetLastOSError();
 #endif
 
 #ifndef INADDR_NONE
