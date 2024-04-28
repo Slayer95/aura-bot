@@ -63,17 +63,20 @@ CDiscord::~CDiscord()
 {
   delete m_Config;
 
+#ifndef DISABLE_DPP
+  delete m_Client;
   for (auto& ctx : m_Aura->m_ActiveContexts) {
     if (ctx->m_DiscordAPI) {
       ctx->m_DiscordAPI = nullptr;
       ctx->SetPartiallyDestroyed();
     }
   }
+#endif
 }
 
+#ifndef DISABLE_DPP
 bool CDiscord::Init()
 {
-#ifndef DISABLE_DPP
   m_Client = new dpp::cluster(m_Config->m_Token);
   m_Client->on_log(dpp::utility::cout_logger());
  
@@ -103,7 +106,6 @@ bool CDiscord::Init()
   });
 
   m_Client->start(dpp::st_return);  
-#endif
 
   return true;
 }
@@ -132,16 +134,23 @@ void CDiscord::RegisterCommands()
   }
   m_Client->global_bulk_command_create(commands);
 }
+#endif
 
 bool CDiscord::Update()
 {
   if (m_Config->m_Enabled == (m_Client == nullptr)) {
     if (m_Config->m_Enabled) {
+#ifndef DISABLE_DPP
       if (!Init()){
         return m_Exiting;
       }
+#else
+      return m_Exiting;
+#endif
     } else {
+#ifndef DISABLE_DPP
       delete m_Client;
+#endif
       return m_Exiting;
     }
   }
