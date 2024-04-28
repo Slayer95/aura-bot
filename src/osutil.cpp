@@ -50,16 +50,18 @@ optional<wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKe
   HKEY hKey;
   LPCWSTR registryPath = mainKey;
   LPCWSTR keyName = subKey;
-  WCHAR buffer[1024];
+  WCHAR buffer[2048];
 
   if (RegOpenKeyExW(HKEY_CURRENT_USER, registryPath, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
     DWORD bufferSize = sizeof(buffer);
     DWORD valueType;
     // Query the value of the desired registry entry
     if (RegQueryValueExW(hKey, keyName, nullptr, &valueType, reinterpret_cast<BYTE*>(buffer), &bufferSize) == ERROR_SUCCESS) {
-      if (valueType == REG_SZ && 0 < bufferSize && bufferSize < 1024) {
+      if (valueType == REG_SZ && 0 < bufferSize && bufferSize < 2048) {
         buffer[bufferSize / sizeof(WCHAR)] = L'\0';
         result = wstring(buffer);
+      } else {
+        Print("[REGISTRY] error - value too long");
       }
     }
     // Close the key
@@ -142,7 +144,7 @@ filesystem::path GetExePath()
   } while ((buffer.size() <= 0xFFFF) && (buffer.size() - 1 <= static_cast<size_t>(length)));
 
   if (length == 0) {
-    Print("Failed to retrieve Aura's directory.");
+    Print("[AURA] Failed to retrieve Aura's directory.");
     return Memoized;
   }
   buffer.resize(length);
@@ -213,7 +215,6 @@ void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath)
 
 bool GetIsDirectoryInUserPath(const filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath)
 {
-  if (nDirectory.empty()) return false;
   nUserPath = ReadPersistentUserPathEnvironment();
   size_t startPos = 0;
   size_t endPos = nUserPath.find(PATH_ENVVAR_SEPARATOR, startPos);
@@ -236,24 +237,16 @@ bool GetIsDirectoryInUserPath(const filesystem::path& nDirectory, PLATFORM_STRIN
 void AddDirectoryToUserPath(const filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath)
 {
   if (nDirectory.empty()) return;
-  Print("Adding directory to user path [" + PathToString(nDirectory) + "]");
-  Print("BEFORE:");
-  Print("========");
-  Print(PathToString(filesystem::path(nUserPath)));
-  Print("========");
   nUserPath = nDirectory.native() + PLATFORM_STRING_TYPE(PATH_ENVVAR_SEPARATOR) + nUserPath;
-  Print("AFTER:");
-  Print("========");
-  Print(PathToString(filesystem::path(nUserPath)));
-  Print("========");
-  //SetPersistentUserPathEnvironment(nUserPath);
+  SetPersistentUserPathEnvironment(nUserPath);
 }
 
-void EnsureDirectoryInUserPath(const filesystem::path& nPath)
+void EnsureDirectoryInUserPath(const filesystem::path& nDirectory)
 {
+  if (nDirectory.empty()) return;
   PLATFORM_STRING_TYPE userPath;
-  if (!GetIsDirectoryInUserPath(nPath, userPath)) {
+  if (!GetIsDirectoryInUserPath(nDirectory, userPath)) {
+    AddDirectoryToUserPath(nDirectory, userPath);
     Print("[AURA] Installed to user PATH environment variable.");
-    AddDirectoryToUserPath(nPath, userPath);
   }
 }

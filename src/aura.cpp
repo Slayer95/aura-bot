@@ -1353,7 +1353,11 @@ void CAura::InitContextMenu()
 void CAura::InitPathVariable()
 {
   filesystem::path exeDirectory = GetExeDirectory();
-  EnsureDirectoryInUserPath(GetExeDirectory());
+  try {
+    filesystem::path exeDirectoryAbsolute = filesystem::absolute(exeDirectory);
+    EnsureDirectoryInUserPath(exeDirectoryAbsolute);
+  } catch (...) {
+  }
 }
 
 void CAura::InitSystem()
