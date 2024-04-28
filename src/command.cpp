@@ -402,6 +402,7 @@ void CCommandContext::UpdatePermissions()
     return;
   }
   if (m_DiscordAPI) {
+#ifndef DISABLE_DPP
     if (m_Aura->m_Discord->GetIsSudoer(m_FromIdentifier)) {
       Print("[DISCORD] User " + GetUserAttribution() + " is sudoer");
       m_Permissions = 0xFFFF &~ (USER_PERMISSIONS_BOT_SUDO_OK);
@@ -411,6 +412,7 @@ void CCommandContext::UpdatePermissions()
     } else {
       Print("[DISCORD] User " + GetUserAttribution() + " is unverified");
     }
+#endif
     return;
   }
 
@@ -3328,7 +3330,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (Payload.empty()) {
         // ignore layout, don't override computers
-        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, m_TargetGame->GetNumComputers() + 1), true, false) {
+        if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, m_TargetGame->GetNumComputers() + 1, true, false)) {
           ErrorReply("No slots available.");
         } else {
           SendReply("Insane computer added.");

@@ -4651,7 +4651,7 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   if (!slot || !slot->GetIsSelectable()) {
     return false;
   }
-  bool wasClosed = false;
+
   CGamePlayer* player = GetPlayerFromSID(SID);
   if (player && !player->GetDeleteMe()) {
     if (!kick) return false;
@@ -5056,7 +5056,7 @@ bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool
   // if it does, reset the layout
   bool resetLayout = false;
   if (m_CustomLayout == CUSTOM_LAYOUT_HUMANS_VS_AI) {
-    if (slot->GetSlotStatus() == SLOTSTATUS_OPEN || GetIsCustomForces() && slot->GetTeam() != m_CustomLayoutData.second) {
+    if (slot->GetSlotStatus() == SLOTSTATUS_OPEN || (GetIsCustomForces() && slot->GetTeam() != m_CustomLayoutData.second)) {
       if (ignoreLayout) {
         resetLayout = true;
       } else {
