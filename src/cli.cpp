@@ -77,6 +77,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 #endif
   app.add_flag("--lan,--no-lan{false}", m_LAN, "Show hosted games on Local Area Network.");
   app.add_flag("--bnet,--no-bnet{false}", m_BNET, "Switch to enable or disable every defined realm.");
+  app.add_flag("--irc,--no-irc{false}", m_IRC, "Switch to enable or disable IRC integration.");
+  app.add_flag("--discord,--no-discord{false}", m_Discord, "Switch to enable or disable Discord integration.");
   app.add_flag("--exit,--no-exit{false}", m_ExitOnStandby, "Terminates the process when idle.");
   app.add_flag("--cache,--no-cache{false}", m_UseMapCFGCache, "Caches loaded map files into the map configs folder.");
   app.add_flag("--about,--version", about, "Display software information.");
@@ -240,6 +242,12 @@ void CCLI::OverrideConfig(CAura* nAura) const
   }
   if (m_BNET.has_value()) {
     nAura->m_Config->m_EnableBNET = m_BNET.value();
+  }
+  if (m_IRC.has_value()) {
+    nAura->m_IRC->m_Config->m_Enabled = m_IRC.value();
+  }
+  if (m_Discord.has_value()) {
+    nAura->m_IRC->m_Discord->m_Enabled = m_Discord.value();
   }
   if (m_LAN.has_value()) {
     nAura->m_GameDefaultConfig->m_UDPEnabled = m_LAN.value();

@@ -61,6 +61,8 @@ private:
   bool                                  m_Verbose;
   std::optional<bool>                   m_LAN;
   std::optional<bool>                   m_BNET;
+  std::optional<bool>                   m_IRC;
+  std::optional<bool>                   m_Discord;
   std::optional<bool>                   m_ExitOnStandby;
   std::optional<bool>                   m_UseMapCFGCache;
   std::optional<std::string>            m_LANMode; // Validation?

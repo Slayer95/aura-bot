@@ -144,6 +144,30 @@ Blizzard's Battle.net platform, nor through alternative PvPGN servers.
 
 This option is equivalent to ``<bot.toggle_every_realm = no>`` in \`config.ini\`
 
+## \`--irc\`
+
+When enabled, this flag instructs Aura to connect to the configured IRC server.
+
+This option is equivalent to ``<irc.enabled = yes>`` in \`config.ini\`
+
+## \`--no-irc\`
+
+When enabled, this flag instructs Aura not to connect to IRC.
+
+This option is equivalent to ``<irc.enabled = no>`` in \`config.ini\`
+
+## \`--discord\`
+
+When enabled, this flag instructs Aura to connect to Discord using the defined configuration.
+
+This option is equivalent to ``<discord.enabled = yes>`` in \`config.ini\`
+
+## \`--no-discord\`
+
+When enabled, this flag instructs Aura not to connect to Discord.
+
+This option is equivalent to ``<discord.enabled = no>`` in \`config.ini\`
+
 ## \`--exit\`
 
 Enables the option to automatically exit the bot after hosting all games queued through the CLI. 
