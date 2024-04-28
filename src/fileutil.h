@@ -65,6 +65,24 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <optional>
 #include <ctime>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#pragma once
+#include <windows.h>
+#define stat _stat
+#else
+#include <sys/stat.h>
+#include <dirent.h>
+#include <cstring>
+#include <unistd.h>
+#include <limits.h>
+#endif
+
+#define __STORMLIB_SELF__
+#include <StormLib.h>
+
+// unistd.h and limits.h
+
 bool FileExists(const std::filesystem::path& file);
 PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
 PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
@@ -75,19 +93,10 @@ std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
 bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileDelete(const std::filesystem::path& File);
 std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
-std::filesystem::path GetExePath();
-std::filesystem::path GetExeDirectory();
 std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
 std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
 bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
-#ifdef _WIN32
-std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
-std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
-bool DeleteUserRegistryKey(const wchar_t* subKey);
-bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
-std::optional<std::string> GetUserMultiPlayerName();
-#endif
 
 #endif // AURA_FILEUTIL_H_

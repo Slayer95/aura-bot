@@ -83,9 +83,10 @@ public:
   uint8_t m_WhoisPermissions;
 
   std::string m_CFGKeyPrefix;                     // 
+  std::string m_NameSpace;
 
   CCommandConfig();
-  CCommandConfig(CConfig& CFG, const std::string& nKeyPrefix, const bool requireVerified, const uint8_t commonPermissions, const uint8_t hostingPermissions, const uint8_t moderatorPermissions, const uint8_t adminPermissions, const uint8_t botOwnerPermissions);
+  CCommandConfig(CConfig& CFG, const std::string& nKeyPrefix, const bool useDefaultNamespace, const bool requireVerified, const uint8_t commonPermissions, const uint8_t hostingPermissions, const uint8_t moderatorPermissions, const uint8_t adminPermissions, const uint8_t botOwnerPermissions);
   ~CCommandConfig();
 };
 

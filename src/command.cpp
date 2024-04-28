@@ -5563,6 +5563,30 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    case HashCode("discord"): {
+      if (!m_Aura->m_Discord->m_Client) {
+        ErrorReply("Not connected to Discord.");
+        break;
+      }
+
+      if (m_Aura->m_Discord->m_Config->m_InviteUrl.empty()) {
+        ErrorReply("This bot is invite-only. Ask the owner for an invitation link.");
+        break;
+      }
+
+      switch (m_Aura->m_Discord->m_Config->m_FilterJoinServersMode) {
+        case FILTER_SERVERS_DENY_ALL:
+          SendReply("Install me to your user (DM-only) at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
+          break;
+        case FILTER_SERVERS_ALLOW_LIST:
+          SendReply("Install me to your server (requires approval) at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
+          break;
+        default:
+          SendReply("Install me to your server at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
+      }
+      break;
+    }
+
     default: {
       ErrorReply("Unrecognized command [" + command + "].");
       break;

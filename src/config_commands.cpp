@@ -62,9 +62,10 @@ CCommandConfig::CCommandConfig()
 {
 }
 
-CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const bool requireVerified, const uint8_t commonPermissions, const uint8_t hostingPermissions, const uint8_t moderatorPermissions, const uint8_t adminPermissions, const uint8_t botOwnerPermissions)
+CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const bool useDefaultNamespace, const bool requireVerified, const uint8_t commonPermissions, const uint8_t hostingPermissions, const uint8_t moderatorPermissions, const uint8_t adminPermissions, const uint8_t botOwnerPermissions)
   : m_CFGKeyPrefix(nKeyPrefix)
 {
+  const static string emptyString;
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
 
   // Inheritable permissions
@@ -83,6 +84,7 @@ CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const boo
   m_WhoisPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_whois.permissions", commandPermissions, moderatorPermissions);
 
   m_Enabled = CFG.GetBool(m_CFGKeyPrefix + "commands.enabled", true);
+  m_NameSpace = CFG.GetString(m_CFGKeyPrefix + "commands.namespace", useDefaultNamespace ? "aura" : emptyString);
   m_RequireVerified = requireVerified;
 }
 

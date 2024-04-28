@@ -72,11 +72,12 @@ public:
   CDiscord(CDiscord&) = delete;
 
   bool Init();
+  void RegisterCommands();
   bool Update();
 
 #ifndef DISABLE_DPP
   void SendUser(const std::string& message, const uint64_t target);
-  void LeaveServer(const uint64_t target, const std::string& name);
+  void LeaveServer(const uint64_t target, const std::string& name, const bool isJoining);
 #endif
 
   bool GetIsServerAllowed(const uint64_t target) const;

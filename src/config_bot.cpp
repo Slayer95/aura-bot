@@ -77,7 +77,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
 
   m_LANCommandCFG = new CCommandConfig(
-    CFG, "lan_realm.", false,
+    CFG, "lan_realm.", false, false,
     CFG.GetStringIndex("lan_realm.commands.common.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
     CFG.GetStringIndex("lan_realm.commands.hosting.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
     CFG.GetStringIndex("lan_realm.commands.moderator.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),

@@ -29,6 +29,7 @@
 #include "config_net.h"
 #include "net.h"
 #include "fileutil.h"
+#include "osutil.h"
 #include "gamesetup.h"
 #include "realm.h"
 #include "CLI11.hpp"

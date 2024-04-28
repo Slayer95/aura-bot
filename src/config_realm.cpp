@@ -350,7 +350,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
 
   m_CommandCFG             = new CCommandConfig(
-    CFG, m_CFGKeyPrefix, m_UnverifiedRejectCommands,
+    CFG, m_CFGKeyPrefix, false, m_UnverifiedRejectCommands,
     CFG.GetStringIndex(m_CFGKeyPrefix + "commands.common.permissions", commandPermissions, m_InheritOnlyCommandCommonBasePermissions),
     CFG.GetStringIndex(m_CFGKeyPrefix + "commands.hosting.permissions", commandPermissions, m_InheritOnlyCommandHostingBasePermissions),
     CFG.GetStringIndex(m_CFGKeyPrefix + "commands.moderator.permissions", commandPermissions, m_InheritOnlyCommandModeratorBasePermissions),

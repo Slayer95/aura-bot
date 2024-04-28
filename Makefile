@@ -79,6 +79,7 @@ CCFLAGS += $(OFLAGS) -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -I.
 CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ibncsutil/src/ -IStormLib/src/ -Iminiupnpc/include/
 
 OBJS = src/fileutil.o \
+			 src/osutil.o \
 			 src/socket.o \
 			 src/net.o \
 			 src/csvparser.o \

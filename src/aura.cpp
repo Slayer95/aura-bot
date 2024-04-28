@@ -65,6 +65,7 @@
 #include "irc.h"
 #include "util.h"
 #include "fileutil.h"
+#include "osutil.h"
 
 #include <csignal>
 #include <cstdlib>
@@ -1350,13 +1351,8 @@ void CAura::InitContextMenu()
 
 void CAura::InitPathVariable()
 {
-  // Check if the directory is already there
-  // If not, add it.
   filesystem::path exeDirectory = GetExeDirectory();
-#ifdef _WIN32
-  
-#else
-#endif
+  EnsureDirectoryInPath(GetExeDirectory());
 }
 
 void CAura::InitSystem()

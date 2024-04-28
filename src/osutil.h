@@ -23,39 +23,25 @@
 
  */
 
-#ifndef AURA_CONFIG_DISCORD_H_
-#define AURA_CONFIG_DISCORD_H_
+#ifndef AURA_OSUTIL_H_
+#define AURA_OSUTIL_H_
 
-#include "config.h"
-#include "config_commands.h"
+#include "fileutil.h"
 
-#include <vector>
-#include <string>
-#include <map>
-
-#define FILTER_SERVERS_ALLOW_ALL 0
-#define FILTER_SERVERS_DENY_ALL 1
-#define FILTER_SERVERS_ALLOW_LIST 2
-#define FILTER_SERVERS_DENY_LIST 3
-
-//
-// CDiscordConfig
-//
-
-class CDiscordConfig
-{
-public:
-  std::string                         m_HostName;
-  std::string                         m_Token;
-  std::string                         m_InviteUrl;
-  bool                                m_Enabled;
-  uint8_t                             m_FilterJoinServersMode;
-  std::set<uint64_t>                  m_FilterJoinServersList;
-  std::set<uint64_t>                  m_SudoUsers;
-  CCommandConfig*                     m_CommandCFG;
-
-  explicit CDiscordConfig(CConfig& CFG);
-  ~CDiscordConfig();
-};
-
+#ifdef _WIN32
+std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
+std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
+bool DeleteUserRegistryKey(const wchar_t* subKey);
+bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
+std::optional<std::string> GetUserMultiPlayerName();
 #endif
+
+std::filesystem::path GetExePath();
+std::filesystem::path GetExeDirectory();
+PLATFORM_STRING_TYPE ReadPersistentPathEnvironment();
+void SetPersistentPathEnvironment(const PLATFORM_STRING_TYPE&);
+bool GetIsDirectoryInPath(const std::filesystem::path& nPath);
+void AddDirectoryToPath(const std::filesystem::path& nPath);
+void EnsureDirectoryInPath(const std::filesystem::path& nPath);
+
+#endif // AURA_FILEUTIL_H_

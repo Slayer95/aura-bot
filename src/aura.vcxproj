@@ -431,6 +431,7 @@
   <ItemGroup>
     <ClCompile Include="csvparser.cpp" />
     <ClCompile Include="fileutil.cpp" />
+    <ClCompile Include="osutil.cpp" />
     <ClCompile Include="socket.cpp" />
     <ClCompile Include="net.cpp" />
     <ClCompile Include="config.cpp" />
@@ -470,6 +471,7 @@
     <ClInclude Include="CLI11.hpp" />
     <ClInclude Include="csvparser.h" />
     <ClInclude Include="fileutil.h" />
+    <ClInclude Include="osutil.h" />
     <ClInclude Include="socket.h" />
     <ClInclude Include="net.h" />
     <ClInclude Include="config.h" />

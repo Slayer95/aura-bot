@@ -55,7 +55,7 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
 
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
   m_CommandCFG = new CCommandConfig(
-    CFG, "irc.", CFG.GetBool("irc.unverified_users.reject_commands", false),
+    CFG, "irc.", false, CFG.GetBool("irc.unverified_users.reject_commands", false),
     CFG.GetStringIndex("irc.commands.common.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
     CFG.GetStringIndex("irc.commands.hosting.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
     CFG.GetStringIndex("irc.commands.moderator.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),

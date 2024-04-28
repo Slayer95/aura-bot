@@ -117,6 +117,9 @@
     <ClCompile Include="fileutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="osutil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -234,6 +237,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="fileutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="osutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CLI11.hpp">

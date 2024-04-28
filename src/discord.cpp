@@ -88,30 +88,13 @@ bool CDiscord::Init()
   });
 
   m_Client->on_ready([this](const dpp::ready_t& event) {
-    if (dpp::run_once<struct register_bot_commands>()) {
-      dpp::slashcommand nameSpace("aura", "Run any of Aura's commands.", m_Client->me.id);
-      nameSpace.add_option(
-        dpp::command_option(dpp::co_string, "command", "The command to be executed.", true)
-      );
-      nameSpace.add_option(
-        dpp::command_option(dpp::co_string, "payload", "Any comma-separated parameters for the command.", false)
-      );
-
-      dpp::slashcommand hostShortcut("host", "Let Aura host a Warcraft 3 game.", m_Client->me.id);
-      hostShortcut.add_option(
-        dpp::command_option(dpp::co_string, "map", "Map to be hosted.", true)
-      );
-      hostShortcut.add_option(
-        dpp::command_option(dpp::co_string, "title", "Display title for the hosted game lobby.", true)
-      );
-      m_Client->global_command_create(hostShortcut);
-      m_Client->global_bulk_command_create({hostShortcut, nameSpace});
-    }
+    if (!dpp::run_once<struct register_bot_commands>()) return;
+    RegisterCommands();
   });
 
   m_Client->on_guild_create([this](const dpp::guild_create_t& event) {
     if (!GetIsServerAllowed(event.created->id)) {
-      LeaveServer(event.created->id, event.created->name);
+      LeaveServer(event.created->id, event.created->name, true);
       return;
     }
     if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
@@ -123,6 +106,31 @@ bool CDiscord::Init()
 #endif
 
   return true;
+}
+
+void CDiscord::RegisterCommands()
+{
+  vector<dpp::slashcommand> commands;
+  dpp::slashcommand nameSpace(m_Config->m_CommandCFG->m_NameSpace, "Run any of Aura's commands.", m_Client->me.id);
+  nameSpace.add_option(
+    dpp::command_option(dpp::co_string, "command", "The command to be executed.", true)
+  );
+  nameSpace.add_option(
+    dpp::command_option(dpp::co_string, "payload", "Any comma-separated parameters for the command.", false)
+  );
+  commands.push_back(nameSpace);
+
+  if (m_Config->m_CommandCFG->m_HostPermissions != COMMAND_PERMISSIONS_DISABLED) {
+    dpp::slashcommand hostShortcut("host", "Let Aura host a Warcraft 3 game.", m_Client->me.id);
+    hostShortcut.add_option(
+      dpp::command_option(dpp::co_string, "map", "Map to be hosted.", true)
+    );
+    hostShortcut.add_option(
+      dpp::command_option(dpp::co_string, "title", "Display title for the hosted game lobby.", true)
+    );
+    commands.push_back(hostShortcut);
+  }
+  m_Client->global_bulk_command_create(commands);
 }
 
 bool CDiscord::Update()
@@ -145,9 +153,9 @@ bool CDiscord::Update()
 #ifndef DISABLE_DPP
   while (!m_CommandQueue.empty()) {
     string cmdToken, command, payload;
-    cmdToken = "/aura ";
+    cmdToken = "/" + m_Config->m_CommandCFG->m_NameSpace + " ";
     dpp::slashcommand_t* event = m_CommandQueue.front();
-    if (event->command.get_command_name() == "aura") {
+    if (event->command.get_command_name() == m_Config->m_CommandCFG->m_NameSpace) {
       dpp::command_value maybePayload = event->get_parameter("payload");
       if (holds_alternative<string>(maybePayload)) {
         payload = get<string>(maybePayload);
@@ -160,6 +168,10 @@ bool CDiscord::Update()
       command = "host";
       payload = mapName + ", " + gameName;
       event->edit_original_response(dpp::message("Hosting your game briefly!"));
+    } else {
+      delete event;
+      m_CommandQueue.pop();
+      continue;
     }
     CCommandContext* ctx = new CCommandContext(m_Aura, m_Aura->m_CommandDefaultConfig, event, &std::cout);
     ctx->Run(cmdToken, command, payload);
@@ -203,11 +215,15 @@ bool CDiscord::GetIsServerAllowed(const uint64_t target) const
   }
 }
 
-void CDiscord::LeaveServer(const uint64_t target, const string& name)
+void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool isJoining)
 {
-  m_Client->current_user_leave_guild(target, [this, target, name](const dpp::confirmation_callback_t& callback){
+  m_Client->current_user_leave_guild(target, [this, target, name, isJoining](const dpp::confirmation_callback_t& callback){
     if (m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
-      Print("[DISCORD] Left server <<" + name + ">> (#" + to_string(target) + ").");
+      if (isJoining) {
+        Print("[DISCORD] Refused to join server <<" + name + ">> (#" + to_string(target) + ").");
+      } else {
+        Print("[DISCORD] Left server <<" + name + ">> (#" + to_string(target) + ").");
+      }
     }
   });
 }

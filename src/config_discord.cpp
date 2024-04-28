@@ -40,6 +40,7 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   const static string emptyString;
   m_HostName               = CFG.GetString("discord.host_name", "discord.com");
   m_Token                  = CFG.GetString("discord.token", emptyString);
+  m_InviteUrl              = CFG.GetString("discord.invites.url", emptyString);
   m_Enabled                = CFG.GetBool("discord.enabled", false);
 
 #ifdef DISABLE_DPP
@@ -52,7 +53,7 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
 
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
   m_CommandCFG = new CCommandConfig(
-    CFG, "discord.", CFG.GetBool("discord.unverified_users.reject_commands", false),
+    CFG, "discord.", true, CFG.GetBool("discord.unverified_users.reject_commands", false),
     CFG.GetStringIndex("discord.commands.common.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
     CFG.GetStringIndex("discord.commands.hosting.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
     CFG.GetStringIndex("discord.commands.moderator.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO),
@@ -61,8 +62,8 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   );
 
   vector<string> invitesMode = {"all", "none", "allow_list", "deny_list"};
-  m_FilterJoinServersMode = CFG.GetStringIndex("discord.server_invites.mode", invitesMode, FILTER_SERVERS_ALLOW_ALL);
-  m_FilterJoinServersList = CFG.GetUint64Set("discord.server_invites.list", ',', {});
+  m_FilterJoinServersMode = CFG.GetStringIndex("discord.invites.mode", invitesMode, FILTER_SERVERS_ALLOW_ALL);
+  m_FilterJoinServersList = CFG.GetUint64Set("discord.invites.list", ',', {});
   m_SudoUsers = CFG.GetUint64Set("discord.sudo_users", ',', {});
 
   if (m_Enabled && m_Token.empty()) {
