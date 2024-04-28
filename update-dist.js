@@ -15,6 +15,7 @@ const manifestFileName = 'build.txt';
 
 const buildBasePath = path.resolve(__dirname, 'dist');
 const buildFolderNames = fs.readdirSync(buildBasePath);
+const dynamicLibrariesBasePath = path.resolve(__dirname, 'dpp', 'official', 'dll');
 
 const winFolderMappings = new Map([
   ['win32-compat', 'ReleaseLite'],
@@ -70,6 +71,14 @@ async function main() {
         path.resolve(__dirname, '.msvc', fromFolderName, 'aura.exe'),
         path.resolve(buildPath, 'aura.exe')
       );
+      if (folderName.endsWith(`-full`)) {
+        for (const dllFileName of path.resolve(dynamicLibrariesBasePath, fromFolderName)) {
+          fs.copySync(
+            path.resolve(dynamicLibrariesBasePath, fromFolderName, dllFileName),
+            path.resolve(buildPath, dllFileName)
+          );
+        }
+      }
     } else {
       console.log(`Update required at ${buildPath}: aura, *.so`);
     }
