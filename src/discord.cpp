@@ -63,7 +63,6 @@ CDiscord::~CDiscord()
 {
   delete m_Config;
 
-#ifndef DISABLE_DPP
   delete m_Client;
   for (auto& ctx : m_Aura->m_ActiveContexts) {
     if (ctx->m_DiscordAPI) {
@@ -71,7 +70,6 @@ CDiscord::~CDiscord()
       ctx->SetPartiallyDestroyed();
     }
   }
-#endif
 }
 
 #ifndef DISABLE_DPP

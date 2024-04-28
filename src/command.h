@@ -87,6 +87,8 @@ public:
   CIRC*                         m_IRC;
 #ifndef DISABLE_DPP
   dpp::slashcommand_t*          m_DiscordAPI;
+#else
+  void*                         m_DiscordAPI;
 #endif
 
 protected:
