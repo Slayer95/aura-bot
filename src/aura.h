@@ -68,7 +68,9 @@
 #include <unordered_set>
 #include <filesystem>
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #pragma once
