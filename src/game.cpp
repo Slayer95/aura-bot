@@ -366,8 +366,8 @@ void CGame::InitSlots()
       //  - OFF: Any computer slots are ignored, and they are treated as Open slots instead.
       //  - ON: Computer slots are enforced. They cannot be removed, or edited in any way.
       //
-      // For Aura, enforcing computer slots with Fixed Player Setting ON is a must.
-      // However, we can support default editable computer slots even when it's OFF, through mapcfg files.
+      // For Aura, enforcing computer slots with Fixed Player Settings ON is a must.
+      // However, we can support default editable computer slots when it's OFF, through mapcfg files.
       //
       // All this also means that when Fixed Player Settings is off, there are no unselectable slots.
       slot.SetComputer(SLOTCOMP_YES | (fixedPlayers ? SLOTCOMP_FIXED : SLOTCOMP_NO));
