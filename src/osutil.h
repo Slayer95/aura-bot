@@ -54,8 +54,8 @@ std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wcha
 std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
 bool DeleteUserRegistryKey(const wchar_t* subKey);
 bool SetUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
-std::optional<std::string> GetUserMultiPlayerName();
 #endif
+std::optional<std::string> GetUserMultiPlayerName();
 
 std::filesystem::path GetExePath();
 std::filesystem::path GetExeDirectory();

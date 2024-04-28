@@ -101,6 +101,7 @@ optional<string> GetUserMultiPlayerName()
   result = multiByte;
   return result;
 #else
+  // TODO: GetUserMultiPlayerName() in Darwin
   return nullopt;
 #endif
 }
