@@ -29,19 +29,25 @@
 #include "fileutil.h"
 
 #ifdef _WIN32
+#define PATH_ENVVAR_SEPARATOR L";"
+#else
+#define PATH_ENVVAR_SEPARATOR ":"
+#endif
+
+#ifdef _WIN32
 std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
 std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
 bool DeleteUserRegistryKey(const wchar_t* subKey);
-bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
+bool SetUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
 std::optional<std::string> GetUserMultiPlayerName();
 #endif
 
 std::filesystem::path GetExePath();
 std::filesystem::path GetExeDirectory();
-PLATFORM_STRING_TYPE ReadPersistentPathEnvironment();
-void SetPersistentPathEnvironment(const PLATFORM_STRING_TYPE&);
-bool GetIsDirectoryInPath(const std::filesystem::path& nPath);
-void AddDirectoryToPath(const std::filesystem::path& nPath);
-void EnsureDirectoryInPath(const std::filesystem::path& nPath);
+PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment();
+void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath);
+bool GetIsDirectoryInUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);
+void AddDirectoryToUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);
+void EnsureDirectoryInUserPath(const std::filesystem::path& nDirectory);
 
 #endif // AURA_FILEUTIL_H_

@@ -83,7 +83,7 @@ bool DeleteUserRegistryKey(const wchar_t* subKey)
   return RegDeleteTree(HKEY_CURRENT_USER, subKey) == ERROR_SUCCESS;
 }
 
-bool CreateUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value)
+bool SetUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value)
 {
   HKEY hKey;
   LONG result = RegCreateKeyEx(HKEY_CURRENT_USER, subKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL);
@@ -189,35 +189,71 @@ filesystem::path GetExeDirectory()
   return exeDirectory;
 } 
 
-PLATFORM_STRING_TYPE ReadPersistentPathEnvironment()
+PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment()
 {
+#ifdef _WIN32
+  optional<PLATFORM_STRING_TYPE> userPath = MaybeReadRegistry(L"Environment", L"PATH");
+  if (userPath.has_value()) {
+    return userPath.value();
+  }
+#else
+  // Maybe ~/.bash_profile, maybe ~/.bash_rc, maybe...
+  // This is a mess.
+#endif
   return PLATFORM_STRING_TYPE();
 }
 
-void SetPersistentPathEnvironment(const PLATFORM_STRING_TYPE&)
-{
-}
-
-bool GetIsDirectoryInPath(const filesystem::path& nPath)
+void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath)
 {
 #ifdef _WIN32
-  
-#else
-#endif
-  return true;
-}
-
-void AddDirectoryToPath(const filesystem::path& nPath)
-{
-#ifdef _WIN32
-  
+  SetUserRegistryKey(L"Environment", L"PATH", nUserPath.c_str());
 #else
 #endif
 }
 
-void EnsureDirectoryInPath(const filesystem::path& nPath)
+bool GetIsDirectoryInUserPath(const filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath)
 {
-  if (!GetIsDirectoryInPath(nPath)) {
-    AddDirectoryToPath(nPath);
+  if (nDirectory.empty()) return false;
+  nUserPath = ReadPersistentUserPathEnvironment();
+  size_t startPos = 0;
+  size_t endPos = nUserPath.find(PATH_ENVVAR_SEPARATOR, startPos);
+  while (endPos != PLATFORM_STRING_TYPE::npos) {
+    PLATFORM_STRING_TYPE currentDirectory = nUserPath.substr(startPos, endPos - startPos);
+    if (currentDirectory == nDirectory.native()) {
+      return true;
+    }
+    if (!nDirectory.empty() && !currentDirectory.empty() &&
+      (currentDirectory.substr(0, currentDirectory.size() - 1) == nDirectory.native().substr(0, nDirectory.native().size() - 1))
+    ) {
+      return true;
+    }
+    startPos = endPos + 1;
+    endPos = nUserPath.find(PATH_ENVVAR_SEPARATOR, startPos);
+  }
+  return false;
+}
+
+void AddDirectoryToUserPath(const filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath)
+{
+  if (nDirectory.empty()) return;
+  Print("Adding directory to user path [" + PathToString(nDirectory) + "]");
+  Print("BEFORE:");
+  Print("========");
+  Print(PathToString(filesystem::path(nUserPath)));
+  Print("========");
+  nUserPath = nDirectory.native() + PLATFORM_STRING_TYPE(PATH_ENVVAR_SEPARATOR) + nUserPath;
+  Print("AFTER:");
+  Print("========");
+  Print(PathToString(filesystem::path(nUserPath)));
+  Print("========");
+  //SetPersistentUserPathEnvironment(nUserPath);
+}
+
+void EnsureDirectoryInUserPath(const filesystem::path& nPath)
+{
+  PLATFORM_STRING_TYPE userPath;
+  if (!GetIsDirectoryInUserPath(nPath, userPath)) {
+    Print("[AURA] Installed to user PATH environment variable.");
+    AddDirectoryToUserPath(nPath, userPath);
   }
 }

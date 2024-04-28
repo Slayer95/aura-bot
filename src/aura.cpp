@@ -1344,15 +1344,16 @@ void CAura::InitContextMenu()
   openWithAuraCommand += GetExePath().wstring();
   openWithAuraCommand += L"\" \"%1\" --stdpaths";
 
-  CreateUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
-  CreateUserRegistryKey(L"Software\\Classes\\WorldEdit.ScenarioEx\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
+  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
+  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.ScenarioEx\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
+  Print("[AURA] Installed to context menu.");
 #endif
 }
 
 void CAura::InitPathVariable()
 {
   filesystem::path exeDirectory = GetExeDirectory();
-  EnsureDirectoryInPath(GetExeDirectory());
+  EnsureDirectoryInUserPath(GetExeDirectory());
 }
 
 void CAura::InitSystem()

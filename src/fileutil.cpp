@@ -54,24 +54,6 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <locale>
 #include <system_error>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#pragma once
-#include <windows.h>
-#define stat _stat
-#else
-#include <sys/stat.h>
-#include <dirent.h>
-#include <cstring>
-#include <unistd.h>
-#include <limits.h>
-#endif
-
-#define __STORMLIB_SELF__
-#include <StormLib.h>
-
-// unistd.h and limits.h
-
 using namespace std;
 
 bool FileExists(const filesystem::path& file)
