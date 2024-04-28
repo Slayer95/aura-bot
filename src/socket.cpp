@@ -49,13 +49,6 @@
 
 using namespace std;
 
-#ifndef _WIN32
-int32_t GetLastError()
-{
-  return errno;
-}
-#endif
-
 #ifndef UNREFERENCED_PARAMETER
 #define UNREFERENCED_PARAMETER(x) (void)(x)
 #endif
@@ -216,7 +209,7 @@ void CSocket::Allocate(const uint8_t family, int type)
   if (m_Socket == INVALID_SOCKET)
   {
     m_HasError = true;
-    m_Error    = GetLastError();
+    m_Error    = GetLastOSError();
     Print("[SOCKET] error (socket) - " + GetErrorString());
     return;
   }
@@ -343,10 +336,10 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     return true;
   }
 
-  if (c == SOCKET_ERROR && GetLastError() != EWOULDBLOCK) {
+  if (c == SOCKET_ERROR && GetLastOSError() != EWOULDBLOCK) {
     // receive error
     m_HasError = true;
-    m_Error    = GetLastError();
+    m_Error    = GetLastOSError();
     Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
   } else if (c == 0) {
     // the other end closed the connection
@@ -375,12 +368,12 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
 
       m_SendBuffer = m_SendBuffer.substr(s);
     }
-    else if (s == SOCKET_ERROR && GetLastError() != EWOULDBLOCK)
+    else if (s == SOCKET_ERROR && GetLastOSError() != EWOULDBLOCK)
     {
       // send error
 
       m_HasError = true;
-      m_Error    = GetLastError();
+      m_Error    = GetLastOSError();
       Print("[TCPSOCKET] (" + GetName() +") error (send) - " + GetErrorString());
       return;
     }
@@ -445,7 +438,7 @@ void CTCPClient::Connect(const optional<sockaddr_storage>& localAddress, const s
 
     if (::bind(m_Socket, reinterpret_cast<const struct sockaddr*>(&localAddress), sizeof(sockaddr_storage)) == SOCKET_ERROR) {
       m_HasError = true;
-      m_Error    = GetLastError();
+      m_Error    = GetLastOSError();
       Print("[TCPCLIENT] (" + GetName() +") error (bind) - " + GetErrorString());
       return;
     }
@@ -456,12 +449,12 @@ void CTCPClient::Connect(const optional<sockaddr_storage>& localAddress, const s
   // connect
   if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_RemoteHost), sizeof(sockaddr_storage)) == SOCKET_ERROR)
   {
-    if (GetLastError() != EINPROGRESS && GetLastError() != EWOULDBLOCK)
+    if (GetLastOSError() != EINPROGRESS && GetLastOSError() != EWOULDBLOCK)
     {
       // connect error
 
       m_HasError = true;
-      m_Error    = GetLastError();
+      m_Error    = GetLastOSError();
       Print("[TCPCLIENT] (" + GetName() +") error (connect) - " + GetErrorString());
       return;
     }
@@ -492,7 +485,7 @@ bool CTCPClient::CheckConnect()
 #endif
   {
     m_HasError = true;
-    m_Error    = GetLastError();
+    m_Error    = GetLastOSError();
     return false;
   }
 
@@ -578,7 +571,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
 
   if (::bind(m_Socket, reinterpret_cast<const struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
-    m_Error    = GetLastError();
+    m_Error    = GetLastOSError();
     Print("[TCP] error (bind) - " + GetErrorString());
     return false;
   }
@@ -587,7 +580,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
 
   if (listen(m_Socket, 8) == SOCKET_ERROR) {
     m_HasError = true;
-    m_Error    = GetLastError();
+    m_Error    = GetLastOSError();
     Print("[TCP] error (listen) - " + GetErrorString());
     return false;
   }
@@ -595,7 +588,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   if (port == 0) {
     if (getsockname(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength) == -1) {
       m_HasError = true;
-      m_Error = GetLastError();
+      m_Error = GetLastOSError();
       Print("[TCP] error (getsockname) - " + GetErrorString());
       return false;
     }
@@ -797,7 +790,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
 
   if (::bind(m_Socket, reinterpret_cast<const struct sockaddr*>(&address), addressLength) == SOCKET_ERROR) {
     m_HasError = true;
-    m_Error    = GetLastError();
+    m_Error    = GetLastOSError();
     Print("[UDP] error (bind) - " + GetErrorString());
     return false;
   }
@@ -805,7 +798,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   if (port == 0) {
     if (getsockname(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength) == -1) {
       m_HasError = true;
-      m_Error = GetLastError();
+      m_Error = GetLastOSError();
       Print("[UDP] error (getsockname) - " + GetErrorString());
       return false;
     }

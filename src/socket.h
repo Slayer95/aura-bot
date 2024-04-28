@@ -47,6 +47,7 @@
 #define AURA_SOCKET_H_
 
 #include <optional>
+#include <iostream>
 
 #include "util.h"
 
@@ -146,7 +147,7 @@ typedef int32_t SOCKET;
 
 #define closesocket close
 
-//extern int32_t GetLastError();
+//extern int32_t GetLastOSError();
 #endif
 
 #ifndef INADDR_NONE
@@ -178,7 +179,17 @@ typedef int32_t SOCKET;
 #define INADDR_MULTICAST_END 0xEFFFFFFF 
 #endif
 
-#include <iostream>
+#ifdef _WIN32
+inline int32_t GetLastOSError()
+{
+  return GetLastError();
+}
+#else
+inline int32_t GetLastOSError()
+{
+  return errno;
+}
+#endif
 
 class CStreamIOSocket;
 class CTCPServer;

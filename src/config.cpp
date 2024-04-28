@@ -105,7 +105,7 @@ bool CConfig::Read(const filesystem::path& file)
 
   if (in.fail()) {
 #ifdef _WIN32
-    uint32_t errorCode = (uint32_t)GetLastError();
+    uint32_t errorCode = (uint32_t)GetLastOSError();
     string errorCodeString = (
       errorCode == 2 ? "file not found" : (
       (errorCode == 32 || errorCode == 33) ? "file is currently opened by another process." : (

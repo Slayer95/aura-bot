@@ -1246,7 +1246,7 @@ uint8_t CAura::ExtractScripts()
     CloseMPQArchive(MPQ);
   } else {
 #ifdef _WIN32
-    uint32_t errorCode = (uint32_t)GetLastError();
+    uint32_t errorCode = (uint32_t)GetLastOSError();
     string errorCodeString = (
       errorCode == 2 ? "Config error: <game.install_path> is not the WC3 directory" : (
       errorCode == 11 ? "File is corrupted." : (

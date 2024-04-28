@@ -404,7 +404,7 @@ void CMap::Load(CConfig* CFG)
     if (!m_MapMPQLoaded) {
       m_MapMPQErrored = true;
 #ifdef _WIN32
-      uint32_t errorCode = (uint32_t)GetLastError();
+      uint32_t errorCode = (uint32_t)GetLastOSError();
       string errorCodeString = (
         errorCode == 2 ? "Map not found" : (
         errorCode == 11 ? "File is corrupted." : (
@@ -414,7 +414,7 @@ void CMap::Load(CConfig* CFG)
         ))))
       );
 #else
-      int32_t errorCode = static_cast<int32_t>(GetLastError());
+      int32_t errorCode = static_cast<int32_t>(GetLastOSError());
       string errorCodeString = "Error code " + to_string(errorCode);
 #endif
       Print("[MAP] warning - unable to load MPQ file [" + PathToString(MapMPQFilePath) + "] - " + errorCodeString);
