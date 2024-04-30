@@ -2748,10 +2748,14 @@ void CGame::ReportPlayerDisconnected(CGamePlayer* player)
       m_LastLagScreenResetTime = Time;
     }
 
+    // Report lagging players:
+    // - Just disconnected player
+    // - Players outside safe sync limit
+    // Since the disconnected player has already been flagged with SetGProxyDisconnectNoticeSent, they get
+    // excluded from the output vector of CalculateNewLaggingPlayers(),
+    // So we have to add them afterwards.
     vector<CGamePlayer*> laggingPlayers = CalculateNewLaggingPlayers();
-    if (std::find(laggingPlayers.begin(), laggingPlayers.end(), player) == laggingPlayers.end()) {
-      laggingPlayers.push_back(player);
-    }
+    laggingPlayers.push_back(player);
     for (auto& laggingPlayer : laggingPlayers) {
       laggingPlayer->SetLagging(true);
       laggingPlayer->SetStartedLaggingTicks(Ticks);
@@ -2766,7 +2770,7 @@ void CGame::ReportPlayerDisconnected(CGamePlayer* player)
     TimeRemaining = 0;
 
   SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
-  player->SetLastGProxyWaitNoticeSentTime(GetTime());
+  player->SetLastGProxyWaitNoticeSentTime(Time);
 }
 
 void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
