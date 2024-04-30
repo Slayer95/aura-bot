@@ -231,7 +231,7 @@ inline bool ExtractMessageTokens(const std::string& message, const std::string& 
           matchPayload.clear();
         } else {
           std::string::size_type payloadEnd = message.find_last_not_of(' ');
-          if (payloadEnd == std::string:npos) {
+          if (payloadEnd == std::string::npos) {
             matchPayload.clear();
           } else {
             matchPayload = message.substr(payloadStart, payloadEnd + 1 - payloadStart);
