@@ -24,7 +24,7 @@ you may manually disable troublesome components in the project ``"Configuration 
 
 Linux users will probably need some packages for it to build:
 
-* Debian/Ubuntu -- `apt-get install git build-essential m4 libgmp3-dev libssl-dev cmake libbz2-dev zlib1g-dev libcurl4-openssl-dev`
+* Debian/Ubuntu -- `apt-get install git build-essential m4 libgmp3-dev libssl-dev cmake libbz2-dev zlib1g-dev libcurl4-openssl-dev curl`
 * Arch Linux -- `pacman -S base-devel cmake libssl-dev libgmp3-dev curl libssl-dev`
 
 #### Steps
