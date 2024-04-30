@@ -147,7 +147,8 @@ private:
   int64_t                          m_KickByTime;
   int64_t                          m_LastGProxyAckTime;            // GetTime when we last acknowledged GProxy++ packet
   uint8_t                          m_PID;                          // the player's PID
-  bool                             m_Verified;                      // if the player has spoof checked or not
+  bool                             m_Verified;                     // if the player has spoof checked or not
+  bool                             m_Owner;                        // if the player has spoof checked or not
   bool                             m_Reserved;                     // if the player is reserved (VIP) or not
   bool                             m_Observer;                     // if the player is an observer
   bool                             m_PowerObserver;                // if the player is a referee - referees can be demoted to full observers
@@ -230,8 +231,8 @@ public:
   inline bool                  GetGProxyExtended() const { return m_GProxyExtended; }
   inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
   
-	bool                         GetDisconnected() const { return m_Disconnected; }
-	int64_t                      GetLastDisconnectTime() const { return m_LastDisconnectTime; }
+	inline bool                  GetDisconnected() const { return m_Disconnected; }
+	inline int64_t               GetLastDisconnectTime() const { return m_LastDisconnectTime; }
 	int64_t                      GetTotalDisconnectTime() const;
   
   inline bool                  GetIsReserved() const { return m_Reserved; }
@@ -255,6 +256,7 @@ public:
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
   inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
+  bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
   inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
   inline bool                  GetCanPause() { return m_PauseCounter < 3; }
@@ -271,6 +273,7 @@ public:
   inline void SetFinishedDownloadingTime(uint64_t nFinishedDownloadingTime) { m_FinishedDownloadingTime = nFinishedDownloadingTime; }
   inline void SetStartedLaggingTicks(uint64_t nStartedLaggingTicks) { m_StartedLaggingTicks = nStartedLaggingTicks; }
   inline void SetRealmVerified(bool nVerified) { m_Verified = nVerified; }
+  inline void SetOwner(bool nOwner) { m_Owner = nOwner; }
   inline void SetReserved(bool nReserved) { m_Reserved = nReserved; }
   inline void SetObserver(bool nObserver) { m_Observer = nObserver; }
   inline void SetPowerObserver(bool nPowerObserver) { m_PowerObserver = nPowerObserver; }

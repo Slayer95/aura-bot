@@ -426,9 +426,12 @@ void CCommandContext::UpdatePermissions()
   // Trust PvPGN servers on player identities for admin powers. Their impersonation is not a threat we worry about.
   // However, do NOT trust them regarding sudo access, since those commands may cause data deletion or worse.
   // Note also that sudo permissions must be ephemeral, since neither WC3 nor PvPGN TCP connections are secure.
-  bool IsOwner = m_TargetGame && m_TargetGame->MatchOwnerName(m_FromName) && m_ServerName == m_TargetGame->m_OwnerRealm && (
-    IsRealmVerified || (m_Player && m_ServerName.empty())
-  );
+  bool IsOwner = false;
+  if (m_Player && m_Player->m_Game == m_TargetGame) {
+    IsOwner = m_Player->GetIsOwner(m_OverrideVerified);
+  } else if (m_TargetGame) {
+    IsOwner = IsRealmVerified && m_TargetGame->MatchOwnerName(m_FromName) && m_ServerName == m_TargetGame->GetOwnerRealm();
+  }
   bool IsCreatorRealm = m_TargetGame && m_SourceRealm && m_TargetGame->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(m_SourceRealm));
   bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && (!m_TargetGame || IsCreatorRealm) && m_SourceRealm->GetIsAdmin(m_FromName);
   bool IsAdmin = IsRootAdmin || (IsRealmVerified && m_SourceRealm != nullptr && (!m_TargetGame || IsCreatorRealm) && m_SourceRealm->GetIsModerator(m_FromName));
@@ -1050,7 +1053,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       CRealm* targetPlayerRealm = targetPlayer->GetRealm(true);
       bool IsRealmVerified = targetPlayerRealm != nullptr;
-      bool IsOwner = m_TargetGame->MatchOwnerName(targetPlayer->GetName()) && m_TargetGame->HasOwnerInGame();
+      bool IsOwner = targetPlayer->GetIsOwner(nullopt);
       bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName);
       bool IsAdmin = IsRootAdmin || (IsRealmVerified && targetPlayerRealm->GetIsModerator(m_FromName));
       string SyncStatus;
@@ -3155,13 +3158,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!TargetPlayer && !CheckConfirmation(cmdToken, command, payload, "Player [" + TargetName + "] is not in this game lobby. ")) {
         break;
       }
+      if ((TargetPlayer && TargetPlayer != m_Player && !TargetRealm.empty() && !TargetPlayer->IsRealmVerified()) &&
+        !CheckConfirmation(cmdToken, command, payload, "Player [" + TargetName + "] has not been verified by " + TargetRealm + ". ")) {
+        break;
+      }
       if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
         SendAll(TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game.");
       } else {
         m_TargetGame->SetOwner(TargetName, TargetRealm);
         SendReply("Setting game owner to [" + TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       }
-      if (TargetPlayer) TargetPlayer->SetWhoisShouldBeSent(true);
+      if (TargetPlayer) {
+        TargetPlayer->SetWhoisShouldBeSent(true);
+        TargetPlayer->SetOwner(true);
+      }
       break;
     }
 

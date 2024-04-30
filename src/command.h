@@ -107,7 +107,7 @@ protected:
 
   std::ostream*                 m_Output;
 
-  std::optional<uint8_t>        m_OverrideVerified;
+  std::optional<bool>           m_OverrideVerified;
   std::optional<uint8_t>        m_OverridePermissions;
 
   uint16_t                      m_RefCount; // How many pointers exist to this CCommandContext? The one in CAura::m_ActiveContexts is not counted.

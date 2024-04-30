@@ -245,6 +245,7 @@ public:
   std::string           GetPrefixedGameName(const CRealm* realm = nullptr) const;
   std::string           GetAnnounceText(const CRealm* realm = nullptr) const;
   inline std::string    GetOwnerName() const { return m_OwnerName; }
+  inline std::string    GetOwnerRealm() const { return m_OwnerRealm; }
   inline std::string    GetCreatorName() const { return m_CreatedBy; }
   inline uint8_t        GetCreatedFromType() const { return m_CreatedFromType; }
   inline void*          GetCreatedFrom() const { return m_CreatedFrom; }
@@ -471,6 +472,7 @@ public:
   bool GetIsProxyReconnectable() const;
   bool GetIsProxyReconnectableLong() const;
   bool IsDownloading() const;
+  void UncacheOwner();
   void SetOwner(const std::string& name, const std::string& realm);
   void ReleaseOwner();
   void ResetDraft();

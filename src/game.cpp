@@ -2984,9 +2984,8 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   }
 
   bool IsOwnerName = MatchOwnerName(player->GetName());
-  bool IsOwner = IsOwnerName && HasOwnerInGame();
   string OwnerFragment;
-  if (IsOwner) {
+  if (player->GetIsOwner()) {
     OwnerFragment = " (game owner)";
   } else if (IsOwnerName) {
     OwnerFragment = " (unverified game owner, send me a whisper: \"sc\")";
@@ -4150,9 +4149,7 @@ bool CGame::HasOwnerInGame() const
 {
   CGamePlayer* MaybeOwner = GetPlayerFromName(m_OwnerName, false);
   if (!MaybeOwner) return false;
-  if (MaybeOwner->IsRealmVerified() && MaybeOwner->GetRealmHostName() == m_OwnerRealm) return true;
-  if (MaybeOwner->GetRealmHostName().empty() && m_OwnerRealm.empty()) return true;
-  return false;
+  return MaybeOwner->GetIsOwner(nullopt);
 }
 
 CGamePlayer* CGame::GetPlayerFromName(string name, bool sensitive) const
@@ -5377,10 +5374,18 @@ bool CGame::IsDownloading() const
   return false;
 }
 
+void CGame::UncacheOwner()
+{
+  for (auto& player : m_Players) {
+    player->SetOwner(false);
+  }
+}
+
 void CGame::SetOwner(const string& name, const string& realm)
 {
   m_OwnerName = name;
   m_OwnerRealm = realm;
+  UncacheOwner();
 }
 
 void CGame::ReleaseOwner()
@@ -5389,6 +5394,7 @@ void CGame::ReleaseOwner()
   m_LastOwner = m_OwnerName;
   m_OwnerName.clear();
   m_OwnerRealm.clear();
+  UncacheOwner();
   ResetLayout(false);
   m_Locked = false;
   SendAllChat("This game is now ownerless. Type " + GetCmdToken() + "owner to take ownership of this game.");

@@ -267,6 +267,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_LastGProxyAckTime(0),
     m_PID(nPID),
     m_Verified(false),
+    m_Owner(false),
     m_Reserved(nReserved),
     m_Observer(false),
     m_PowerObserver(false),
@@ -706,4 +707,18 @@ int64_t CGamePlayer::GetTotalDisconnectTime() const
   } else {
     return m_TotalDisconnectTime + GetTime() - m_LastDisconnectTime;
   }
+}
+
+bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const
+{
+  if (m_Owner) return true;
+  bool isVerified = false;
+  if (assumeVerified.has_value()) {
+    isVerified = assumeVerified.value();
+  } else {
+    isVerified = IsRealmVerified();
+  }
+  return m_Game->MatchOwnerName(m_Name) && m_RealmHostName == m_Game->GetOwnerRealm() && (
+    isVerified || m_RealmHostName.empty()
+  );
 }
