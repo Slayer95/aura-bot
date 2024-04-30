@@ -72,7 +72,7 @@ Assemble:
   - cd dpp-src && mkdir build && cd build
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON
   - cmake --build . --parallel
-  - cmake --install .
+  - make install
   - cd $CI_PROJECT_DIR
   ## Shared library
   - cp /usr/local/lib/libdpp.so* dist/bin-shared

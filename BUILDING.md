@@ -69,6 +69,15 @@ Afterwards, C++ Requests
 
 Finally, D++
 
+  cd ../../
+  git clone https://github.com/brainboxdotcc/DPP.git dpp-src
+  cd dpp-src
+  mkdir build
+  cd build
+  cmake .. -DCPR_USE_SYSTEM_CURL=ON
+  cmake --build . --parallel
+  make install
+
   (Or disable it by setting an environment variable: ``export AURALINKDPP=0``)
 
 Then, proceed to build Aura:
