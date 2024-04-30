@@ -65,7 +65,6 @@ Assemble:
   - cmake --build . --parallel
   - cmake --install .
   ## Shared library
-  - cp /usr/local/lib/libcpr.so /usr/local/lib
   - cp /usr/local/lib/libcpr.so* dist/bin-shared
   ## Log all library locations
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libgmp.so*
