@@ -24,7 +24,7 @@
 - MySQL is no longer required
 - Uses SQLite and a simpler database schema.
 
-Setup:
+# Setup:
 - Config is much more readable
 - Config keys have been renamed
 - Config now uses its correct extension (.ini)
@@ -47,7 +47,7 @@ Setup:
 - Maps and configs have their names fuzzy-matched
 - Maps can be assigned aliases
 
-Hosting:
+# Hosting:
 - Automatically identifies maps larger than the vanilla map size limit
 - Automatically verifies identity ("spoofcheck") in private games in PvPGNs
 - Supports custom lobby layouts: FFA, One-VS-All, Humans-VS-AI
@@ -67,7 +67,7 @@ from chatting with players.
 - Game ownership is revoked after leaving games for too long
 - Game owners that joined over LAN are revoked as soon as they leave
 
-Playing:
+# Playing:
 - Automatically sends intro messages to players
 - Automatically links the map download URL in the game lobby
 - Issues high-ping warnings, and eventually autokicks players
@@ -76,7 +76,7 @@ Playing:
 - Users can send whispers cross-realm
 - Can send cross-realm game invitations to other players
 
-Permissions:
+# Permissions:
 - Staff from some PvPGN realms no longer have access to 
 privileged bot commands nor can affect other realms.
 - "Admins" and "root admins" renamed to "moderators" and "admins", respectively.
@@ -86,7 +86,7 @@ are identified by their names/IDs from each realm, IRC server, or Discord.
 in Aura's console.
 - Sudo users may use any bot command anywhere by upgrading them to privileged commands.
 
-Advanced:
+# Advanced:
 - Can enable per-game autosave on disconnection
 - Saved games can be loaded without a replay
 - Can mirror the game lobby of a third party cross-realms
@@ -94,11 +94,12 @@ Advanced:
 - Can use UDP strict mode to more accurately simulate game clients
 - Can forward PvPGN realms' game lists to another IP:PORT
 
-Other:
+# Other:
 - Uses DotA stats automatically according to maps' file names
 - Identifies Evergreen maps automatically according to maps' file names
+- Many commands were implemented. See the full list at [3]
 
-Removed features from [GHost++][2]:
+# Removed features from [GHost++][2]:
 - Autohost
 - Localization
 - Replays
@@ -106,3 +107,4 @@ Removed features from [GHost++][2]:
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/uakfdotb/ghostpp
+[3]: https://gitlab.com/ivojulca/aura-bot/COMMANDS.md
