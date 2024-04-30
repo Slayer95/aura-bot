@@ -1006,7 +1006,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !SLOT
     //
 
-    case HashCode("slot"): {
+    case HashCode("slot"):
+    {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
@@ -1020,7 +1021,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "SLOT [PLAYER]");
+        ErrorReply("Usage: " + cmdToken + "slot [PLAYER]");
         break;
       }
       const CGameSlot* slot = m_TargetGame->InspectSlot(SID);
@@ -1914,8 +1915,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !PRIV (create or recreate as private game)
     //
 
-    case HashCode("pub"):
-    case HashCode("priv"): {
+    case HashCode("priv"):
+    case HashCode("pub"): {
       if (m_TargetGame) {
         if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
           break;
@@ -2011,8 +2012,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !PRIVBY (create private game by other player)
     //
 
-    case HashCode("pubby"):
-    case HashCode("privby"): {
+    case HashCode("privby"):
+    case HashCode("pubby"): {
       if (!CheckPermissions(m_Config->m_HostPermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to host games.");
         break;
@@ -4274,7 +4275,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("autosave"):
-    case HashCode("save"): {
+    case HashCode("save"):
+    {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
