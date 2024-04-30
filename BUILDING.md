@@ -113,15 +113,22 @@ Now proceed by following the [steps for Linux users](#steps) and omit StormLib i
 
 ### Optional components
 
+When using Makefile and setting the appropriate environment variables to disable components, as described in the
+Linux build steps, this section will be automatically taken care of.
+
+When using MSVC, follow these steps to disable components.
+
 - **C++ Requests** (CPR) is disabled with the preprocessor directive ``DISABLE_CPR``. The following linked libraries must be removed:
 
   Windows: cpr.lib;libcurl.lib;Crypt32.lib;Wldap32.lib
-  Linux: -lcpr -lcurl
 
 - **MiniUPnP** is disabled with the preprocessor directive ``DISABLE_MINIUPNP``. The following linked libraries must be removed:
 
   Windows: miniupnpc.lib
-  Linux: -lminiupnpc
+  
+- **D++** is disabled with the preprocessor directive ``DISABLE_DPP``. The following linked libraries must be removed:
+
+  Windows: dpp.lib
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/libcpr/cpr
