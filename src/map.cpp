@@ -818,7 +818,9 @@ void CMap::Load(CConfig* CFG)
               MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - ClosedSlots;
 
               if (MapOptions & MAPOPT_MELEE) {
-                Print("[MAP] found melee map");
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                  Print("[MAP] found melee map");
+                }
                 MapFilterType = MAPFILTER_TYPE_MELEE;
               }
 
