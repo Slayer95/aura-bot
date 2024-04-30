@@ -3,34 +3,106 @@
 
 [Aura][1] has a revamped core, and has had features not only added, but also removed.
 
-TODO: Update this feature list for Aura 2.0
+# Technical changes:
+- Uses C++17
+- Has a Windows 64-bit build
+- Has an Ubuntu 24 CI build
+- Implements a command-line interface (CLI)
+- Implements integration with Windows Explorer
+- Higher modularization
+- Statically analyzed with clang-analyzer and cppcheck
+- Using aggressive optimizations
+- IPv6 supported
+- Unified commands system
+- Stricter chat queue system
+- Maps are more strictly parsed and sanitized
+- Loaded map metadata is cached
+- Supports various log levels
+- Docs automatically generated
+- Updated libraries: StormLib, SQLite, zlib
+- Boost is no longer required
+- MySQL is no longer required
+- Uses SQLite and a simpler database schema.
+
+Setup:
+- Config is much more readable
+- Config keys have been renamed
+- Config now uses its correct extension (.ini)
+- Config is validated
+- Config can be hot-reloaded, including realms settings
+- Blizzard.j, common.j moved to their own folder (jass/)
+- Games can be hosted from the command line
+- Games can be hosted from Windows Explorer
+- Connects to and can be controlled from Discord, or IRC
+- Automatically performs port-forwarding (UPnP)
+- Automatically checks network connectivity
+- Can configure TCP tunneling to host games in PvPGN realms
+- Automatically detects Warcraft III location and version
+- Runs simultaneously with the Warcraft III game client
+- May connect to some PvPGN servers with unknown exe version hashes
+- Implements inheritance in PvPGN realms settings ("global_realm")
+- Reconnectable games (GProxy) do not require exclusive ports
+- Reconnectable games can wait for players for as much time as configured
+- Permissionss required by many commands are configurable.
+- Maps and configs have their names fuzzy-matched
+- Maps can be assigned aliases
+
+Hosting:
+- Automatically identifies maps larger than the vanilla map size limit
+- Automatically verifies identity ("spoofcheck") in private games in PvPGNs
+- Supports custom lobby layouts: FFA, One-VS-All, Humans-VS-AI
+- Supports assigning team captains and drafting players in the game lobby
+- Supports assigning exclusive referees: demotes other referees, preventing them
+from chatting with players.
+- Improved game lobby commands to modify not only AI properties, but also other players.
+- Commands accept player names in addition to game slots
+- Player races, color, and AI difficulty can be typed in English
+- Shorthand commands for adding or removing computers (defaults to Insane)
+- Unlimited virtual players can be added.
+- Games can be hosted through IPv6
+- Beeps when a player joins your game
+- Games are reconnectable
+- Can remake games
+- Can define a timer and/or an amount of players for starting the game
+- Game ownership is revoked after leaving games for too long
+- Game owners that joined over LAN are revoked as soon as they leave
+
+Playing:
+- Automatically sends intro messages to players
+- Automatically links the map download URL in the game lobby
+- Issues high-ping warnings, and eventually autokicks players
+- Supports rolling dice with D&D notation
+- Supports flipping coins, and randomly picking items from a list
+- Users can send whispers cross-realm
+- Can send cross-realm game invitations to other players
+
+Permissions:
+- Staff from some PvPGN realms no longer have access to 
+privileged bot commands nor can affect other realms.
+- "Admins" and "root admins" renamed to "moderators" and "admins", respectively.
+- Privileged bot commands are gated behind a new category: "sudo users". Sudo users 
+are identified by their names/IDs from each realm, IRC server, or Discord.
+- Privileged bot commands must be confirmed with a randomly generated key displayed 
+in Aura's console.
+- Sudo users may use any bot command anywhere by upgrading them to privileged commands.
+
+Advanced:
+- Can enable per-game autosave on disconnection
+- Saved games can be loaded without a replay
+- Can mirror the game lobby of a third party cross-realms
+- Can listen to port 6112 and forward network traffic to another IP:PORT
+- Can use UDP strict mode to more accurately simulate game clients
+- Can forward PvPGN realms' game lists to another IP:PORT
+
+Other:
+- Uses DotA stats automatically according to maps' file names
+- Identifies Evergreen maps automatically according to maps' file names
 
 Removed features from [GHost++][2]:
-* No MySQL support
-* No autohost
-* No admin game
-* No language.cfg
-* No W3MMD support
-* No replay saving
-* No save/load games
-* No BNLS support
-* No boost required
-
-Other changes:
-* Uses C++17
-* Single-threaded
-* Has a Windows 64-bit build
-* Uses SQLite and a different database organization.
-* Tested on OS X (see [Building][2] -> OS X](#os-x) for detailed requirements)
-* Updated libraries: StormLib, SQLite, zlib
-* Connects to and can be controlled via IRC
-* Using aggressive optimizations
-* Up to 11 fakeplayers can be added.
-* Uses DotA stats automagically on maps with 'DotA' in the filename
-* Auto spoofcheck in private games on PvPGNs
-* More commands added either ingame or bnet
-* Checked with various tools such as clang-analyzer and cppcheck
+- Autohost
+- Localization
+- Replays
+- W3MMD
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/uakfdotb/ghostpp
-[3]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md
