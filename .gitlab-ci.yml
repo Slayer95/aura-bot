@@ -58,6 +58,12 @@ Assemble:
   ## Shared library
   - cp /usr/lib/libminiupnpc.so /usr/local/lib
   - cp /usr/lib/libminiupnpc.so* dist/bin-shared
+  # CPR (shared, .so)
+  - git clone https://github.com/libcpr/cpr.git cpr-src
+  - cd cpr-src && mkdir build && cd build
+  - cmake .. -DCPR_USE_SYSTEM_CURL=ON
+  - cmake --build . --parallel
+  - cmake --install .
   ## Log all library locations
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libgmp.so*
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libgmp.a*
@@ -74,7 +80,7 @@ Assemble:
   # Aura (all shared libraries)
   - cd $CI_PROJECT_DIR
   - export AURALINKMINIUPNP=1
-  - export AURALINKCPR=0
+  - export AURALINKCPR=1
   - export AURALINKDPP=0
   - make && make install
   - unset AURALINKMINIUPNP

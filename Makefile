@@ -76,7 +76,7 @@ ifeq ($(SYSTEM),SunOS)
 endif
 
 CCFLAGS += $(OFLAGS) -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -I.
-CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ibncsutil/src/ -IStormLib/src/ -Iminiupnpc/include/
+CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ibncsutil/src/ -IStormLib/src/ -Iminiupnpc/include/ -Icpr-src/include/
 
 OBJS = src/fileutil.o \
 			 src/osutil.o \
