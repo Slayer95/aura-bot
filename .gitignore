@@ -52,6 +52,11 @@ Thumbs.db
 **/Release-x64/
 miniupnpc/msvc/build
 
+# CMake directories #
+#####################
+
+build/
+
 # Other #
 #########
 
