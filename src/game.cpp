@@ -2301,6 +2301,8 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
         Line.replace(matchIndex, 11, "@" + reinterpret_cast<CRealm*>(m_CreatedFrom)->GetCanonicalDisplayName());
       } else if (m_CreatedFromType == GAMESETUP_ORIGIN_IRC) {
         Line.replace(matchIndex, 11, "@" + reinterpret_cast<CIRC*>(m_CreatedFrom)->m_Config->m_HostName);
+      } else if (m_CreatedFromType == GAMESETUP_ORIGIN_DISCORD) {
+        // TODO: {HOSTREALM} Discord
       } else {
         Line.replace(matchIndex, 11, "@@@LAN/VPN");
       }

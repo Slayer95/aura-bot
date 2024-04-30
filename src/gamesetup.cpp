@@ -1256,6 +1256,13 @@ void CGameSetup::SetOwner(const string& nOwner, const CRealm* nRealm)
   }
 }
 
+void CGameSetup::SetCreator(const string& nCreator)
+{
+  m_CreatedBy = nCreator;
+  m_CreatedFrom = nullptr;
+  m_CreatedFromType = GAMESETUP_ORIGIN_NONE;
+}
+
 void CGameSetup::SetCreator(const string& nCreator, CRealm* nRealm)
 {
   m_CreatedBy = nCreator;

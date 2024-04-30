@@ -256,6 +256,7 @@ public:
   void RemoveIgnoredRealm(const CRealm* nRealm);
   void SetDisplayMode(const uint8_t nDisplayMode);
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
+  void SetCreator(const std::string& nCreator);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CIRC* nIRC);
   void SetCreator(const std::string& nCreator, CDiscord* nDiscord);
