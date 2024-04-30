@@ -4118,7 +4118,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       ErrorReply("Failed to automatically assign teams.");
       break;
     }
-    
+
     //
     // !FAKEPLAYER
     //
