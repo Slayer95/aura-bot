@@ -2737,11 +2737,8 @@ void CGame::EventLobbyLastPlayerLeaves()
 
 void CGame::ReportPlayerDisconnected(CGamePlayer* player)
 {
-  int64_t Time = GetTime();
+  int64_t Time = GetTime(), Ticks = GetTicks();
   if (!player->GetLagging()) {
-    player->SetLagging(true);
-    player->SetStartedLaggingTicks(GetTicks());
-
     for (auto& eachPlayer : m_Players)
       eachPlayer->SetDropVote(false);
 
@@ -2754,6 +2751,10 @@ void CGame::ReportPlayerDisconnected(CGamePlayer* player)
     vector<CGamePlayer*> laggingPlayers = CalculateNewLaggingPlayers();
     if (std::find(laggingPlayers.begin(), laggingPlayers.end(), player) == laggingPlayers.end()) {
       laggingPlayers.push_back(player);
+    }
+    for (auto& laggingPlayer : laggingPlayers) {
+      laggingPlayer->SetLagging(true);
+      laggingPlayer->SetStartedLaggingTicks(Ticks);
     }
     SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
   }
