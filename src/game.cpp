@@ -157,6 +157,9 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_SaveOnLeave(SAVE_ON_LEAVE_AUTO)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
+  if (m_IndexVirtualHostName.empty()) {
+    m_IndexVirtualHostName = m_OwnerName.empty() ? "Aura Bot" : m_OwnerName;
+  }
   m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
   m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
   m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
