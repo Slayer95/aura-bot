@@ -7,8 +7,7 @@ Aliases: abort
 ## \`about\`
 Aliases: version
 
-## \`addadmin\`
-Syntax: addadmin [NAME]
+## \`alias\`
 
 ## \`announce\`
 Syntax: announce [REALM]
@@ -33,10 +32,7 @@ Syntax: c [SLOTNUM]
 Syntax: channel [CHANNEL]
 
 ## \`check\`
-Aliases: checkme
-
-## \`checkadmin\`
-Syntax: checkadmin [NAME]
+Aliases: slot, checkme
 
 ## \`checkban\`
 Syntax: checkban [PLAYERNAME]
@@ -45,47 +41,47 @@ Syntax: checkban [PLAYERNAME]
 Syntax: checknetwork *
 Syntax: checknetwork [REALM]
 
+## \`checkstaff\`
+Aliases: checkadmin
+Syntax: checkstaff [NAME]
+
 ## \`clearhcl\`
 
 ## \`closeall\`
 
+## \`color\`
+Syntax: color [PLAYER], [COLOR] - Color goes from 1 to 12
+
 ## \`comp\`
-Syntax: comp [SLOT], [SKILL] - Skill is any of: 0, 1, 2
-
-## \`compcolor\`
-Aliases: compcolour
-Syntax: compcolor [SLOT], [COLOR] - Color goes from 0 to 12
-
-## \`comphandicap\`
-Aliases: handicap, sethandicap
-Syntax: comphandicap [SLOT], [HANDICAP] - Handicap is percent 50/60/70/80/90/100
-
-## \`comprace\`
-Syntax: comprace [SLOT], [RACE] - Race is human/orc/undead/elf/random
-
-## \`compteam\`
-Aliases: setteam
-Syntax: compteam [SLOT], [TEAM]
+Syntax: comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane
 
 ## \`countcfgs\`
 Aliases: countmaps
 
-## \`deladmin\`
-Syntax: deladmin [NAME]
+## \`deletecomp\`
 
-## \`deletefakes\`
+## \`deletefp\`
 Aliases: deletefake
 
 ## \`deletemap\`
 Aliases: deletecfg
+
+## \`delstaff\`
+Syntax: delstaff [NAME]
 
 ## \`disable\`
 
 ## \`disablepub\`
 Syntax: disablepub [REALM]
 
+## \`discord\`
+
 ## \`dl\`
 Aliases: download
+
+## \`draft\`
+Syntax: draft [enable|disable]
+Syntax: draft [CAPTAIN1], [CAPTAIN2]
 
 ## \`drop\`
 
@@ -99,9 +95,12 @@ Syntax: enablepub [REALM]
 ## \`f\`
 Aliases: from
 
+## \`ffa\`
+Syntax: ffa [enable|disable]
+
 ## \`fill\`
 Aliases: compall
-Syntax: fill [SKILL] - Skill is any of: 0, 1, 2
+Syntax: fill [SKILL] - Skill is any of: easy, normal, insane
 
 ## \`fillfake\`
 
@@ -116,12 +115,8 @@ Syntax: forceautostart <minutes>
 
 ## \`fp\`
 Aliases: fakeplayer
-
-## \`fppause\`
-Aliases: pause
-
-## \`fpresume\`
-Aliases: resume
+Syntax: fp
+Syntax: fp [ENABLE|DISABLE]
 
 ## \`freestart\`
 
@@ -139,23 +134,26 @@ Aliases: listgames
 Aliases: getplayers
 
 ## \`go\`
-Aliases: start
+Aliases: start, vs
 
 ## \`gproxy\`
 Aliases: reconnect
 
-## \`hcl\`
+## \`handicap\`
+Syntax: handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100
 
 ## \`hold\`
 Syntax: hold [PLAYER1], [PLAYER2], ...
 
 ## \`host\`
-Aliases: map
+Aliases: map, load
 Syntax: host [MAP NAME], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]
 Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]
+
+## \`import\`
 
 ## \`invite\`
 Syntax: invite [PLAYERNAME]@[REALM]
@@ -164,18 +162,20 @@ Syntax: invite [PLAYERNAME]@[REALM]
 Aliases: closekick, ckick, kick
 Syntax: kick [PLAYERNAME]
 
+## \`key\`
+
 ## \`latency\`
 
 ## \`link\`
 Aliases: url
 
-## \`listadmins\`
-Syntax: listadmins [REALM]
-
 ## \`listbans\`
 Syntax: listbans [REALM]
 
-## \`load\`
+## \`liststaff\`
+Syntax: liststaff [REALM]
+
+## \`loadcfg\`
 
 ## \`lock\`
 
@@ -186,6 +186,9 @@ Syntax: maptransfers [MODE]: Mode is 0/1/2.
 ## \`mirror\`
 Syntax: mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.
 Syntax: mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.
+
+## \`mode\`
+Aliases: hcl
 
 ## \`mute\`
 Syntax: mute [PLAYERNAME]
@@ -203,6 +206,10 @@ Syntax: netinfo [REALM]
 Aliases: open
 Syntax: o [SLOTNUM]
 
+## \`observer\`
+Aliases: obs
+Syntax: observer [PLAYER]
+
 ## \`openall\`
 
 ## \`owner\`
@@ -210,6 +217,8 @@ Syntax: owner [PLAYERNAME]
 
 ## \`p\`
 Aliases: ping
+
+## \`pause\`
 
 ## \`pick\`
 Syntax: pick [OPTION], [OPTION], [OPTION], ...
@@ -220,13 +229,13 @@ Syntax: portforward [EXTPORT], [INTPORT]
 ## \`printgames\`
 Syntax: printgames [REALM]
 
-## \`priv\`
-Aliases: pub
-Syntax: priv [GAMENAME]
+## \`pub\`
+Aliases: priv
+Syntax: pub [GAMENAME]
 
-## \`privby\`
-Aliases: pubby
-Syntax: privby [OWNER], [GAMENAME]
+## \`pubby\`
+Aliases: privby
+Syntax: pubby [OWNER], [GAMENAME]
 
 ## \`querygames\`
 Syntax: querygames [REALM]
@@ -236,11 +245,21 @@ Syntax: querygames [REALM]
 ## \`quit\`
 Aliases: exit
 
+## \`race\`
+Aliases: comprace
+Syntax: race [PLAYER], [RACE] - Race is human/orc/undead/elf/random
+
 ## \`referee\`
 
 ## \`reload\`
 
 ## \`restart\`
+
+## \`resume\`
+Aliases: autosave, save
+
+## \`rmk\`
+Aliases: remake
 
 ## \`roll\`
 Syntax: roll [FACES]
@@ -252,28 +271,40 @@ Syntax: say [REALM], [MESSAGE]
 Aliases: saygameraw
 Syntax: saygame [GAMEID], [MESSAGE]
 
+## \`sc\`
+
 ## \`sendlan\`
-Aliases: sendudp
 Syntax: sendlan ON/OFF
 Syntax: sendlan [IP]
 
 ## \`sendlaninfo\`
-Aliases: sendudpinfo
 Syntax: sendlaninfo
 
-## \`sl\`
-Aliases: synclimit
+## \`shuffle\`
+Aliases: sp
 
-## \`sp\`
-
-## \`sr\`
-Aliases: syncreset
+## \`staff\`
+Aliases: admin
+Syntax: addstaff [NAME]
 
 ## \`status\`
 
 ## \`sw\`
 Aliases: swap
-Syntax: swap <SLOTNUM>, <SLOTNUM>
+Syntax: swap <PLAYER>, <PLAYER>
+
+## \`team\`
+Aliases: compteam
+Syntax: team [PLAYER]
+Syntax: team [PLAYER], [TEAM]
+
+## \`teams\`
+Syntax: teams [enable|disable]
+
+## \`terminator\`
+Aliases: vsai
+Syntax: terminator [enable|disable]
+Syntax: terminator [NUMBER]
 
 ## \`uh\`
 Aliases: unhost
@@ -282,7 +313,6 @@ Aliases: unhost
 Syntax: unban [PLAYERNAME]
 
 ## \`unhold\`
-Syntax: unhold [PLAYER1], [PLAYER2], ...
 
 ## \`unlock\`
 
@@ -298,6 +328,9 @@ Syntax: virtualhost [PLAYERNAME]
 
 ## \`votekick\`
 Syntax: votekick [PLAYERNAME]
+
+## \`vsall\`
+Aliases: pro, lynch
 
 ## \`w\`
 Aliases: tell

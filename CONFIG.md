@@ -75,6 +75,11 @@ Type: int
 Default value: 25600
 Error handling: Use default value
 
+## \`bot.save_path\`
+Type: directory
+Default value: Aura home directory
+Error handling: Use default value
+
 ## \`bot.toggle_every_realm\`
 Type: bool
 Error handling: Use default value
@@ -93,12 +98,12 @@ Type: uint8
 Error handling: Use default value
 
 ## \`global_realm.admins\`
-Type: set
+Type: setinsensitive
 Default value: Empty
 Error handling: Use default value
 
 ## \`global_realm.admins\`
-Type: set
+Type: setinsensitive
 Default value: Empty
 Error handling: Use default value
 
@@ -355,13 +360,53 @@ Type: string
 Default value: Empty
 Error handling: Use default value
 
-## \`global_realm.flood_immune\`
+## \`global_realm.flood.immune\`
 Type: bool
 Default value: Empty
 Error handling: Use default value
 
-## \`global_realm.flood_immune\`
+## \`global_realm.flood.immune\`
 Type: bool
+Default value: Empty
+Error handling: Use default value
+
+## \`global_realm.flood.lines\`
+Type: uint8
+Default value: 5
+Error handling: Use default value
+
+## \`global_realm.flood.lines\`
+Type: uint8
+Default value: Empty
+Error handling: Use default value
+
+## \`global_realm.flood.max_size\`
+Type: uint16
+Default value: 200
+Error handling: Use default value
+
+## \`global_realm.flood.max_size\`
+Type: uint16
+Default value: Empty
+Error handling: Use default value
+
+## \`global_realm.flood.time\`
+Type: uint8
+Default value: 5
+Error handling: Use default value
+
+## \`global_realm.flood.time\`
+Type: uint8
+Default value: Empty
+Error handling: Use default value
+
+## \`global_realm.flood.wrap\`
+Type: uint16
+Default value: 40
+Error handling: Use default value
+
+## \`global_realm.flood.wrap\`
+Type: uint16
 Default value: Empty
 Error handling: Use default value
 
@@ -431,6 +476,26 @@ Type: string
 Default value: Empty
 Error handling: Use default value
 
+## \`global_realm.protocol.whisper.error_reply\`
+Type: string
+Default value: Empty
+Error handling: Use default value
+
+## \`global_realm.protocol.whisper.error_reply\`
+Type: string
+Default value: Empty
+Error handling: Use default value
+
+## \`global_realm.queries.games_list.enabled\`
+Type: bool
+Default value: Empty
+Error handling: Use default value
+
+## \`global_realm.queries.games_list.enabled\`
+Type: bool
+Default value: Empty
+Error handling: Use default value
+
 ## \`global_realm.server_port\`
 Type: uint16
 Default value: 6112
@@ -442,12 +507,12 @@ Default value: Empty
 Error handling: Use default value
 
 ## \`global_realm.sudo_users\`
-Type: set
+Type: setinsensitive
 Default value: Empty
 Error handling: Use default value
 
 ## \`global_realm.sudo_users\`
-Type: set
+Type: setinsensitive
 Default value: Empty
 Error handling: Use default value
 
@@ -518,12 +583,12 @@ Error handling: Use default value
 
 ## \`hosting.abandoned_lobby.game_expiry_time\`
 Type: int
-Default value: 10
+Default value: 600
 Error handling: Use default value
 
 ## \`hosting.abandoned_lobby.owner_expiry_time\`
 Type: int
-Default value: 2
+Default value: 120
 Error handling: Use default value
 
 ## \`hosting.commands.broadcast.enabled\`
@@ -564,7 +629,7 @@ Error handling: Use default value
 ## \`hosting.index.creator_name\`
 Type: string
 Constraints: Min length: 1. Max length: 15.
-Default value: Aura Bot
+Default value: Empty
 Error handling: Use default value
 
 ## \`hosting.map_downloads.enabled\`
@@ -572,9 +637,14 @@ Type: bool
 Default value: false
 Error handling: Use default value
 
+## \`hosting.map_downloads.repositories\`
+Type: setinsensitive
+Default value: "epicwar" "wc3maps"
+Error handling: Use default value
+
 ## \`hosting.map_downloads.timeout\`
-Type: uint16
-Default value: 1000
+Type: int32
+Default value: 15000
 Error handling: Use default value
 
 ## \`hosting.map_missing.kick_delay\`
@@ -918,7 +988,12 @@ Type: bool
 Default value: true
 Error handling: Use default value
 
-## \`net.tcp_extensions.gproxy.enabled\`
+## \`net.tcp_extensions.gproxy.basic.enabled\`
+Type: bool
+Default value: true
+Error handling: Use default value
+
+## \`net.tcp_extensions.gproxy.long.enabled\`
 Type: bool
 Default value: true
 Error handling: Use default value
