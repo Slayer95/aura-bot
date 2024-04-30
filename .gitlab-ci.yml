@@ -19,7 +19,7 @@ Assemble:
   script:
   # Packages
   - cd $CI_PROJECT_DIR
-  - apt-get update && apt-get install -y build-essential curl git libssl-dev libgmp-dev zlib1g-dev libcurl4-gnutls-dev cmake libbz2-dev
+  - apt-get update && apt-get install -y build-essential git libssl-dev libgmp3-dev zlib1g-dev libcurl4-openssl-dev cmake libbz2-dev
   - mkdir -p jass dist/bin-static dist/bin-shared
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "jass/blizzard.j"
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "jass/common.j"
@@ -64,6 +64,9 @@ Assemble:
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON
   - cmake --build . --parallel
   - cmake --install .
+  ## Shared library
+  - cp /usr/local/lib/libcpr.so /usr/local/lib
+  - cp /usr/local/lib/libcpr.so* dist/bin-shared
   ## Log all library locations
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libgmp.so*
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libgmp.a*

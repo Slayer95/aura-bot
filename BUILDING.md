@@ -24,8 +24,8 @@ you may manually disable troublesome components in the project ``"Configuration 
 
 Linux users will probably need some packages for it to build:
 
-* Debian/Ubuntu -- `apt-get install git build-essential m4 libgmp3-dev cmake libbz2-dev zlib1g-dev`
-* Arch Linux -- `pacman -S base-devel cmake`
+* Debian/Ubuntu -- `apt-get install git build-essential m4 libgmp3-dev libssl-dev cmake libbz2-dev zlib1g-dev libcurl4-openssl-dev`
+* Arch Linux -- `pacman -S base-devel cmake libssl-dev libgmp3-dev curl libssl-dev`
 
 #### Steps
 
@@ -47,7 +47,7 @@ Next, build bncsutil:
 
 Continue building miniupnpc
 
-	cd ../..
+	cd ../../..
 	cd miniupnpc
 	make
 	sudo make install
@@ -56,9 +56,20 @@ Continue building miniupnpc
 
 Afterwards, C++ Requests
 
-  See the [CPR repository][2] for instructions.
+  cd ..
+  git clone https://github.com/libcpr/cpr.git cpr-src
+  cd cpr-src
+  mkdir build
+  cd build
+  cmake .. -DCPR_USE_SYSTEM_CURL=ON
+  cmake --build . --parallel
+  cmake --install .
 
   (Or disable it by setting an environment variable: ``export AURALINKCPR=0``)
+
+Finally, D++
+
+  (Or disable it by setting an environment variable: ``export AURALINKDPP=0``)
 
 Then, proceed to build Aura:
 
