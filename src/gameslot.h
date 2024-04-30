@@ -137,6 +137,9 @@ public:
 inline uint8_t ParseSID(const std::string& input)
 {
   int32_t SID = 0xFF;
+  if (input.length() > 2) {
+    return 0xFF;
+  }
   try {
     SID = std::stoi(input);
   } catch (...) {
