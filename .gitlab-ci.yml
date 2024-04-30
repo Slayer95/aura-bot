@@ -64,6 +64,7 @@ Assemble:
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON
   - cmake --build . --parallel
   - cmake --install .
+  - cd $CI_PROJECT_DIR
   ## Shared library
   - cp /usr/local/lib/libcpr.so* dist/bin-shared
   ## Log all library locations
