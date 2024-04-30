@@ -2985,7 +2985,7 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
 
   bool IsOwnerName = MatchOwnerName(player->GetName());
   string OwnerFragment;
-  if (player->GetIsOwner()) {
+  if (player->GetIsOwner(nullopt)) {
     OwnerFragment = " (game owner)";
   } else if (IsOwnerName) {
     OwnerFragment = " (unverified game owner, send me a whisper: \"sc\")";
