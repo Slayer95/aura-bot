@@ -313,4 +313,13 @@ public:
   void ResetConnection();
 };
 
+inline std::string PlayersToNameListString(std::vector<CGamePlayer*> playerList) {
+  if (playerList.empty()) return std::string();
+  std::vector<std::string> playerNames;
+  for (const auto& player : playerList) {
+    playerNames.push_back(player->GetName());
+  }
+  return JoinVector(playerNames, ", ", false);
+}
+
 #endif // AURA_GAMEPLAYER_H_

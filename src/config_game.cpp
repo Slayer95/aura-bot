@@ -43,6 +43,10 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_NumPlayersToStartGameOver = CFG.GetInt("hosting.game_over.player_count", 1);
   m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 10);
   m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 3);
+  if (m_SyncLimit <= m_SyncLimitSafe) {
+    Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
+    CFG.SetFailed();
+  }
   m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 300);
   m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 200);
   m_LobbyTimeLimit            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);

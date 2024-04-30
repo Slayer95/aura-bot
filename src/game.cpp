@@ -195,7 +195,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     // wait time of 2 minutes = 1 empty action required...
 
     if (m_GProxyEmptyActions > 0) {
-      m_GProxyEmptyActions = m_GProxyEmptyActions - 1;
+      m_GProxyEmptyActions = m_Aura->m_Net->m_Config->m_ReconnectWaitTimeLegacy - 1;
       if (m_GProxyEmptyActions > 9)
         m_GProxyEmptyActions = 9;
     }
@@ -792,62 +792,65 @@ bool CGame::Update(void* fd, void* send_fd)
   // keep track of the largest sync counter (the number of keepalive packets received by each player)
   // if anyone falls behind by more than m_SyncLimit keepalives we start the lag screen
 
-  if (m_GameLoaded)
-  {
+  if (m_GameLoaded) {
     // check if anyone has started lagging
     // we consider a player to have started lagging if they're more than m_SyncLimit keepalives behind
 
     if (!m_Lagging) {
       string LaggingString;
-      uint32_t MaxAbsFramesBehind = 0;
-
-      for (auto& player : m_Players) {
-        if (player->GetIsObserver())
-          continue;
-        uint32_t FramesBehind = m_SyncCounter - player->GetSyncCounter();
-        if (m_SyncCounter > player->GetSyncCounter() && FramesBehind > m_SyncLimit) {
-          player->SetLagging(true);
-          player->SetStartedLaggingTicks(Ticks);
-          m_Lagging            = true;
-          m_StartedLaggingTime = Time;
-
-          if (LaggingString.empty())
-            LaggingString = player->GetName();
-          else
-            LaggingString += ", " + player->GetName();
-
-          if (FramesBehind > MaxAbsFramesBehind)
-            MaxAbsFramesBehind = FramesBehind;
+      bool startedLagging = false;
+      vector<uint32_t> framesBehind = GetPlayersFramesBehind();
+      uint8_t i = static_cast<uint8_t>(m_Players.size());
+      while (i--) {
+        if (framesBehind[i] > m_SyncLimit) {
+          startedLagging = true;
+          break;
         }
       }
+      if (startedLagging) {
+        uint8_t worstLaggerIndex = 0;
+        uint32_t worstLaggerFrames = 0;
+        vector<CGamePlayer*> laggingPlayers;
+        i = static_cast<uint8_t>(m_Players.size());
+        while (i--) {
+          if (framesBehind[i] > m_SyncLimitSafe) {
+            m_Players[i]->SetLagging(true);
+            m_Players[i]->SetStartedLaggingTicks(Ticks);
+            laggingPlayers.push_back(m_Players[i]);
+            if (framesBehind[i] > worstLaggerFrames) {
+              worstLaggerIndex = i;
+              worstLaggerFrames = framesBehind[i];
+            }
+          }
+        }
 
-      if (m_Lagging) {
         // start the lag screen
-
-        Print(GetLogPrefix() + "started lagging on [" + LaggingString + "] (" + to_string(MaxAbsFramesBehind) + " frames)");
-        SendAll(GetProtocol()->SEND_W3GS_START_LAG(m_Players));
+        float worstLaggerSeconds = static_cast<float>(worstLaggerFrames) * static_cast<float>(m_Latency) / 1000.;
+        Print(GetLogPrefix() + "started lagging on [" + PlayersToNameListString(laggingPlayers) + "].");
+        Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(worstLaggerSeconds) + " seconds behind)");
+        SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
 
         // reset everyone's drop vote
-
-        for (auto& player : m_Players)
+        for (auto& player : m_Players) {
           player->SetDropVote(false);
+        }
 
+        m_Lagging            = true;
+        m_StartedLaggingTime = Time;
         m_LastLagScreenResetTime = Time;
       }
-    }
-
-    if (m_Lagging) {
-      bool UsingLegacyGProxy = false;
+    } else {
+      bool anyUsingLegacyGProxy = false;
       for (auto& player : m_Players) {
         if (player->GetGProxyLegacy()) {
-          UsingLegacyGProxy = true;
+          anyUsingLegacyGProxy = true;
           break;
         }
       }
 
       int64_t WaitTime = 60;
 
-      if (UsingLegacyGProxy)
+      if (anyUsingLegacyGProxy)
         WaitTime = (m_GProxyEmptyActions + 1) * 60;
 
       if (Time - m_StartedLaggingTime >= WaitTime)
@@ -869,7 +872,7 @@ bool CGame::Update(void* fd, void* send_fd)
           // send an empty update
           // this resets the lag screen timer
 
-          if (UsingLegacyGProxy && !(_i)->GetGProxyAny()) {
+          if (anyUsingLegacyGProxy && !(_i)->GetGProxyAny()) {
             // we must send additional empty actions to non-GProxy++ players
             // GProxy++ will insert these itself so we don't need to send them to GProxy++ players
             // empty actions are used to extend the time a player can use when reconnecting
@@ -879,14 +882,12 @@ bool CGame::Update(void* fd, void* send_fd)
           }
 
           Send(_i, GetProtocol()->SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0));
-
-          // start the lag screen
-
-          Send(_i, GetProtocol()->SEND_W3GS_START_LAG(m_Players));
         }
 
-        // Warcraft III doesn't seem to respond to empty actions
+        // start the lag screen
+        SendAll(GetProtocol()->SEND_W3GS_START_LAG(GetLaggingPlayers()));
 
+        // Warcraft III doesn't seem to respond to empty actions
         m_LastLagScreenResetTime = Time;
       }
 
@@ -918,7 +919,9 @@ bool CGame::Update(void* fd, void* send_fd)
       if (PlayersStillLagging == 0) {
         m_Lagging = false;
       }
+    }
 
+    if (m_Lagging) {
       // reset m_LastActionSentTicks because we want the game to stop running while the lag screen is up
       m_LastActionSentTicks = Ticks;
 
@@ -2732,6 +2735,39 @@ void CGame::EventLobbyLastPlayerLeaves()
   ResetLayout(false);
 }
 
+void CGame::ReportPlayerDisconnected(CGamePlayer* player)
+{
+  int64_t Time = GetTime();
+  if (!player->GetLagging()) {
+    player->SetLagging(true);
+    player->SetStartedLaggingTicks(GetTicks());
+
+    for (auto& eachPlayer : m_Players)
+      eachPlayer->SetDropVote(false);
+
+    if (!GetLagging()) {
+      m_Lagging = true;
+      m_StartedLaggingTime = Time;
+      m_LastLagScreenResetTime = Time;
+    }
+
+    vector<CGamePlayer*> laggingPlayers = CalculateNewLaggingPlayers();
+    if (std::find(laggingPlayers.begin(), laggingPlayers.end(), player) == laggingPlayers.end()) {
+      laggingPlayers.push_back(player);
+    }
+    SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
+  }
+  int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
+
+  if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
+    TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
+  else if (TimeRemaining < 0)
+    TimeRemaining = 0;
+
+  SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
+  player->SetLastGProxyWaitNoticeSentTime(GetTime());
+}
+
 void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
 {
   if (player->GetGProxyAny() && m_GameLoaded) {
@@ -2745,28 +2781,7 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
     }
 
     if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      int64_t Time = GetTime();
-      if (!player->GetLagging()) {
-        player->SetLagging(true);
-        player->SetStartedLaggingTicks(GetTicks());
-        if (!GetLagging()) {
-          m_Lagging = true;
-          m_StartedLaggingTime = Time;
-          m_LastLagScreenResetTime = Time;
-        }
-        for (auto& eachPlayer : m_Players)
-          eachPlayer->SetDropVote(false);
-        SendAll(GetProtocol()->SEND_W3GS_START_LAG(m_Players));
-      }
-      int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
-
-      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
-        TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
-      else if (TimeRemaining < 0)
-        TimeRemaining = 0;
-
-      SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
-      player->SetLastGProxyWaitNoticeSentTime(GetTime());
+      ReportPlayerDisconnected(player);
     }
 
     return;
@@ -2792,35 +2807,13 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
 void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
 {
   if (player->GetGProxyAny() && m_GameLoaded) {
-    if (!player->GetGProxyDisconnectNoticeSent())
-    {
+    if (!player->GetGProxyDisconnectNoticeSent()) {
       SendAllChat(player->GetName() + " " + "has disconnected (connection error - " + player->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
     if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      int64_t Time = GetTime();
-      if (!player->GetLagging()) {
-        player->SetLagging(true);
-        player->SetStartedLaggingTicks(GetTicks());
-        if (!GetLagging()) {
-          m_Lagging = true;
-          m_StartedLaggingTime = Time;
-          m_LastLagScreenResetTime = Time;
-        }
-        for (auto& eachPlayer : m_Players)
-          eachPlayer->SetDropVote(false);
-        SendAll(GetProtocol()->SEND_W3GS_START_LAG(m_Players));
-      }
-      int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
-
-      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
-        TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
-      else if (TimeRemaining < 0)
-        TimeRemaining = 0;
-
-      SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
-      player->SetLastGProxyWaitNoticeSentTime(GetTime());
+      ReportPlayerDisconnected(player);
     }
 
     return;
@@ -2839,37 +2832,14 @@ void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
 
 void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
 {
-  if (player->GetGProxyAny() && m_GameLoaded)
-  {
-    if (!player->GetGProxyDisconnectNoticeSent())
-    {
+  if (player->GetGProxyAny() && m_GameLoaded) {
+    if (!player->GetGProxyDisconnectNoticeSent()) {
       SendAllChat(player->GetName() + " " + "has terminated the connection, but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
     if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      int64_t Time = GetTime();
-      if (!player->GetLagging()) {
-        player->SetLagging(true);
-        player->SetStartedLaggingTicks(GetTicks());
-        if (!GetLagging()) {
-          m_Lagging = true;
-          m_StartedLaggingTime = Time;
-          m_LastLagScreenResetTime = Time;
-        }
-        for (auto& eachPlayer : m_Players)
-          eachPlayer->SetDropVote(false);
-        SendAll(GetProtocol()->SEND_W3GS_START_LAG(m_Players));
-      }
-      int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
-
-      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
-        TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
-      else if (TimeRemaining < 0)
-        TimeRemaining = 0;
-
-      SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
-      player->SetLastGProxyWaitNoticeSentTime(GetTime());
+      ReportPlayerDisconnected(player);
     }
 
     return;
@@ -2889,35 +2859,13 @@ void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
 void CGame::EventPlayerDisconnectGameProtocolError(CGamePlayer* player)
 {
   if (player->GetGProxyAny() && m_GameLoaded) {
-    if (!player->GetGProxyDisconnectNoticeSent())
-    {
+    if (!player->GetGProxyDisconnectNoticeSent()) {
       SendAllChat(player->GetName() + " " + "has disconnected (protocol error) but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
     if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      int64_t Time = GetTime();
-      if (!player->GetLagging()) {
-        player->SetLagging(true);
-        player->SetStartedLaggingTicks(GetTicks());
-        if (!GetLagging()) {
-          m_Lagging = true;
-          m_StartedLaggingTime = Time;
-          m_LastLagScreenResetTime = Time;
-        }
-        for (auto& eachPlayer : m_Players)
-          eachPlayer->SetDropVote(false);
-        SendAll(GetProtocol()->SEND_W3GS_START_LAG(m_Players));
-      }
-      int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
-
-      if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
-        TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
-      else if (TimeRemaining < 0)
-        TimeRemaining = 0;
-
-      SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
-      player->SetLastGProxyWaitNoticeSentTime(GetTime());
+      ReportPlayerDisconnected(player);
     }
 
     return;
@@ -5349,6 +5297,56 @@ uint8_t CGame::GetReservedIndex(const string& name) const
   }
 
   return index;
+}
+
+vector<uint32_t> CGame::GetPlayersFramesBehind() const
+{
+  uint8_t i = static_cast<uint8_t>(m_Players.size());
+  vector<uint32_t> framesBehind(i, 0);
+  while (i--) {
+    if (m_Players[i]->GetIsObserver()) {
+      continue;
+    }
+    if (m_SyncCounter <= m_Players[i]->GetSyncCounter()) {
+      continue;
+    }
+    framesBehind[i] = m_SyncCounter - m_Players[i]->GetSyncCounter();
+  }
+  return framesBehind;
+}
+
+vector<CGamePlayer*> CGame::GetLaggingPlayers() const
+{
+  vector<CGamePlayer*> laggingPlayers;
+  if (!m_Lagging) return laggingPlayers;
+  for (const auto& player : m_Players) {
+    if (!player->GetLagging()) {
+      continue;
+    }
+    laggingPlayers.push_back(player);
+  }
+  return laggingPlayers;
+}
+
+vector<CGamePlayer*> CGame::CalculateNewLaggingPlayers() const
+{
+  vector<CGamePlayer*> laggingPlayers;
+  if (!m_Lagging) return laggingPlayers;
+  for (const auto& player : m_Players) {
+    if (player->GetIsObserver()) {
+      continue;
+    }
+    if (player->GetLagging() || player->GetGProxyDisconnectNoticeSent()) {
+      continue;
+    }
+    if (m_SyncCounter <= player->GetSyncCounter()) {
+      continue;
+    }
+    if (m_SyncCounter - player->GetSyncCounter() > m_SyncLimitSafe) {
+      laggingPlayers.push_back(player);
+    }
+  }
+  return laggingPlayers;
 }
 
 bool CGame::GetIsReserved(const string& name) const

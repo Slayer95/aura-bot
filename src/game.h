@@ -365,6 +365,7 @@ public:
 
   void EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd);
   void EventLobbyLastPlayerLeaves();
+  void ReportPlayerDisconnected(CGamePlayer* player);
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
@@ -468,6 +469,9 @@ public:
   void RemoveAllReserved();
   bool MatchOwnerName(const std::string& name) const;
   uint8_t GetReservedIndex(const std::string& name) const;
+  std::vector<uint32_t> GetPlayersFramesBehind() const;
+  std::vector<CGamePlayer*> GetLaggingPlayers() const;
+  std::vector<CGamePlayer*> CalculateNewLaggingPlayers() const;
   bool GetIsReserved(const std::string& name) const;
   bool GetIsProxyReconnectable() const;
   bool GetIsProxyReconnectableLong() const;
