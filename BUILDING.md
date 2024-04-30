@@ -67,7 +67,7 @@ Afterwards, C++ Requests
 
   (Or disable it by setting an environment variable: ``export AURALINKCPR=0``)
 
-Optionally, D++ for Discord integration. Note that this step can take several hours.
+Optionally, D++ for Discord integration. Note that this step can take around half an hour.
 
   cd ../../
   git clone https://github.com/brainboxdotcc/DPP.git dpp-src
@@ -75,7 +75,7 @@ Optionally, D++ for Discord integration. Note that this step can take several ho
   mkdir build
   cd build
   cmake .. -DCPR_USE_SYSTEM_CURL=ON
-  cmake --build . --parallel
+  cmake --build . -j4
   make install
 
   (Or disable it by setting an environment variable: ``export AURALINKDPP=0``)
