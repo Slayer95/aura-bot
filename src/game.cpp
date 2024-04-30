@@ -2349,7 +2349,7 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGamePlayer* player, const 
   if (m_OwnerName.empty() || MatchOwnerName(player->GetName())) {
     SendChat(player, cmdToken + "open [NUMBER] - opens a slot");
     SendChat(player, cmdToken + "close [NUMBER] - closes a slot");
-    SendChat(player, cmdToken + "fill - adds computers");
+    SendChat(player, cmdToken + "fill [DIFFICULTY] - adds computers");
     SendChat(player, cmdToken + "ffa - sets free for all game mode");
     SendChat(player, cmdToken + "vsall - sets one vs all game mode");
     SendChat(player, cmdToken + "terminator - sets humans vs computers");
