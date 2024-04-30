@@ -93,7 +93,8 @@ Assemble:
   - cd $CI_PROJECT_DIR
   - export AURALINKMINIUPNP=1
   - export AURALINKCPR=1
-  - export AURALINKDPP=1
+  # This takes too long.
+  - export AURALINKDPP=0
   - make && make install
   - unset AURALINKMINIUPNP
   - unset AURALINKCPR
@@ -195,7 +196,8 @@ Assemble:
   - cd $CI_PROJECT_DIR
   #- export AURALINKMINIUPNP=0
   - export AURALINKCPR=1
-  - export AURALINKDPP=1
+  # This takes too long.
+  - export AURALINKDPP=0
   - export AURASTATIC=1
   - make clean && make && make install
   - unset AURALINKCPR

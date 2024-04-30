@@ -67,7 +67,7 @@ Afterwards, C++ Requests
 
   (Or disable it by setting an environment variable: ``export AURALINKCPR=0``)
 
-Finally, D++
+Optionally, D++ for Discord integration. Note that this step can take several hours.
 
   cd ../../
   git clone https://github.com/brainboxdotcc/DPP.git dpp-src
