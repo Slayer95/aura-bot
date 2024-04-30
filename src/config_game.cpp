@@ -41,8 +41,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_VoteKickPercentage        = CFG.GetInt("hosting.vote_kick.min_percent", 70);
   m_NumPlayersToStartGameOver = CFG.GetInt("hosting.game_over.player_count", 1);
-  m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 10);
-  m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 3);
+  m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 32);
+  m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 8);
   if (m_SyncLimit <= m_SyncLimitSafe) {
     Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
     CFG.SetFailed();
