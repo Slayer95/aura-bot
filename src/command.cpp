@@ -1021,7 +1021,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "slot [PLAYER]");
+        ErrorReply("Usage: " + cmdToken + "slot <PLAYER>");
         break;
       }
       const CGameSlot* slot = m_TargetGame->InspectSlot(SID);
@@ -1226,7 +1226,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       if (Payload.empty()){
-        ErrorReply("Usage: " + cmdToken + "votekick [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "votekick <PLAYERNAME>");
         break;
       }
 
@@ -1305,7 +1305,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "invite [PLAYERNAME]@[REALM]");
+        ErrorReply("Usage: " + cmdToken + "invite <PLAYERNAME>@<REALM>");
         break;
       }
 
@@ -1321,14 +1321,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (inputName.empty()) {
-        ErrorReply("Usage: " + cmdToken + "invite [PLAYERNAME]@[REALM]");
+        ErrorReply("Usage: " + cmdToken + "invite <PLAYERNAME>@<REALM>");
         break;
       }
 
       CRealm* matchingRealm = GetTargetRealmOrCurrent(inputRealm);
       if (!matchingRealm) {
         if (inputRealm.empty()) {
-          ErrorReply("Usage: " + cmdToken + "invite [PLAYERNAME]@[REALM]");
+          ErrorReply("Usage: " + cmdToken + "invite <PLAYERNAME>@<REALM>");
         } else {
           ErrorReply(inputRealm + " is not a valid realm.");
         }
@@ -1361,11 +1361,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         try {
           chancePercent = stod(Payload);
         } catch (...) {
-          ErrorReply("Usage: " + cmdToken + "flip [CHANCE%]");
+          ErrorReply("Usage: " + cmdToken + "flip <CHANCE%>");
           break;
         }
         if (chancePercent < 0. || chancePercent > 100.) {
-          ErrorReply("Usage: " + cmdToken + "flip [CHANCE%]");
+          ErrorReply("Usage: " + cmdToken + "flip <CHANCE%>");
           break;
         }
         chance = chancePercent / 100.;
@@ -1398,7 +1398,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         rollCount = static_cast<uint8_t>(stoi(rawRollCount));
         rollFaces = static_cast<uint16_t>(stoi(rawRollFaces));
       } catch (...) {
-        ErrorReply("Usage: " + cmdToken + "roll [FACES]");
+        ErrorReply("Usage: " + cmdToken + "roll <FACES>");
         break;
       }
 
@@ -1434,7 +1434,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("pick"): {
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "pick [OPTION], [OPTION], [OPTION], ...");
+        ErrorReply("Usage: " + cmdToken + "pick <OPTION> , <OPTION> , <OPTION>, ...");
         break;
       }
 
@@ -1547,14 +1547,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_Aura->m_MaxSlots);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "c [SLOTNUM]");
+        ErrorReply("Usage: " + cmdToken + "c <SLOTNUM>");
         break;
       }
 
       vector<string> failedSlots;
       for (auto& elem : Args) {
         if (elem == 0 || elem > m_Aura->m_MaxSlots) {
-          ErrorReply("Usage: " + cmdToken + "c [SLOTNUM]");
+          ErrorReply("Usage: " + cmdToken + "c <SLOTNUM>");
           break;
         }
         uint8_t SID = static_cast<uint8_t>(elem) - 1;
@@ -1703,7 +1703,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<string> Args = SplitArgs(Payload, 1u, m_Aura->m_MaxSlots);
 
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "hold [PLAYER1], [PLAYER2], ...");
+        ErrorReply("Usage: " + cmdToken + "hold <PLAYER1> , <PLAYER2>, ...");
         break;
       }
 
@@ -1771,7 +1771,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "kick [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "kick <PLAYERNAME>");
         break;
       }
 
@@ -1876,14 +1876,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_Aura->m_MaxSlots);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "o [SLOTNUM]");
+        ErrorReply("Usage: " + cmdToken + "o <SLOTNUM>");
         break;
       }
 
       vector<string> failedSlots;
       for (auto& elem : Args) {
         if (elem == 0 || elem > m_Aura->m_MaxSlots) {
-          ErrorReply("Usage: " + cmdToken + "o [SLOTNUM]");
+          ErrorReply("Usage: " + cmdToken + "o <SLOTNUM>");
           break;
         }
         const uint8_t SID = static_cast<uint8_t>(elem) - 1;
@@ -1935,8 +1935,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         if (Payload.empty()) {
-          ErrorReply("Usage: " + cmdToken + "pub [GAMENAME]");
-          ErrorReply("Usage: " + cmdToken + "priv [GAMENAME]");
+          ErrorReply("Usage: " + cmdToken + "pub <GAMENAME>");
+          ErrorReply("Usage: " + cmdToken + "priv <GAMENAME>");
           break;
         }
       }
@@ -2021,8 +2021,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       string gameName;
       if (Args.empty() || (gameName = TrimString(Args[1])).empty()) {
-        ErrorReply("Usage: " + cmdToken + "pubby [OWNER], [GAMENAME]");
-        ErrorReply("Usage: " + cmdToken + "privby [OWNER], [GAMENAME]");
+        ErrorReply("Usage: " + cmdToken + "pubby <OWNER> , <GAMENAME>");
+        ErrorReply("Usage: " + cmdToken + "privby <OWNER> , <GAMENAME>");
         break;
       }
 
@@ -2206,7 +2206,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SS >> MinSlots;
 
       if (SS.fail()) {
-        ErrorReply("Usage: " + cmdToken + "autostart <slots>, <minutes>");
+        ErrorReply("Usage: " + cmdToken + "autostart <slots> , <minutes>");
         break;
       }
 
@@ -2308,7 +2308,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "swap <PLAYER>, <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "swap <PLAYER> , <PLAYER>");
         break;
       }
 
@@ -2320,7 +2320,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (slotNumOne == slotNumTwo) {
-        ErrorReply("Usage: " + cmdToken + "swap <PLAYER>, <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "swap <PLAYER> , <PLAYER>");
         break;
       }
 
@@ -2636,7 +2636,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         targetRealm = GetTargetRealmOrCurrent(Payload);
         if (!targetRealm) {
           ErrorReply("Usage: " + cmdToken + "checknetwork *");
-          ErrorReply("Usage: " + cmdToken + "checknetwork [REALM]");
+          ErrorReply("Usage: " + cmdToken + "checknetwork <REALM>");
           break;
         }
       }
@@ -2667,20 +2667,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<uint32_t> Args = SplitNumericArgs(Payload, 1, 2);
       if (Args.size() == 1) {
         if (Args[0] == 0 || Args[0] > 0xFFFF) {
-          ErrorReply("Usage: " + cmdToken + "portforward [EXTPORT], [INTPORT]");
+          ErrorReply("Usage: " + cmdToken + "portforward <EXTPORT> , <INTPORT>");
           break;
         }
         Args.push_back(Args[0]);
       } else if (Args.empty()) {
         if (!Payload.empty() || !m_TargetGame) {
-          ErrorReply("Usage: " + cmdToken + "portforward [EXTPORT], [INTPORT]");
+          ErrorReply("Usage: " + cmdToken + "portforward <EXTPORT> , <INTPORT>");
           break;
         }
         Args.push_back(m_TargetGame->GetHostPort());
         Args.push_back(m_TargetGame->GetHostPort());
       } else {
         if (Args[0] == 0 || Args[0] > 0xFFFF || Args[1] == 0 || Args[1] > 0xFFFF) {
-          ErrorReply("Usage: " + cmdToken + "portforward [EXTPORT], [INTPORT]");
+          ErrorReply("Usage: " + cmdToken + "portforward <EXTPORT> , <INTPORT>");
           break;
         }
       }
@@ -2715,7 +2715,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "checkban [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "checkban <PLAYERNAME>");
         break;
       }
 
@@ -2750,7 +2750,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "listbans [REALM]");
+        ErrorReply("Usage: " + cmdToken + "listbans <REALM>");
         break;
       }
       if (targetRealm != m_SourceRealm && !GetIsSudo()) {
@@ -2836,7 +2836,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "ban [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
         break;
       }
 
@@ -2945,7 +2945,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "unban [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>");
         break;
       }
 
@@ -3042,7 +3042,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(Payload);
         if (!maybeAddress.has_value()) {
           ErrorReply("Usage: " + cmdToken + "sendlan ON/OFF");
-          ErrorReply("Usage: " + cmdToken + "sendlan [IP]");
+          ErrorReply("Usage: " + cmdToken + "sendlan <IP>");
           break;
         }
         sockaddr_storage* address = &(maybeAddress.value());
@@ -3100,7 +3100,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "sendlaninfo");
-        ErrorReply("You may want !sendlan [IP] or !sendlan on/off instead");
+        ErrorReply("You may want !sendlan <IP> or !sendlan <ON/OFF> instead");
         break;
       }
 
@@ -3144,12 +3144,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CGamePlayer* TargetPlayer = GetTargetPlayerOrSelf(Payload);
       string TargetName = TargetPlayer ? TargetPlayer->GetName() : Payload;
       if (TargetName.empty()) {
-        ErrorReply("Usage: " + cmdToken + "owner [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>");
         break;
       }
       string TargetRealm = TargetPlayer ? TargetPlayer->GetRealmHostName() : m_ServerName;
       if (!TargetPlayer && TargetRealm.empty()) {
-        ErrorReply("Usage: " + cmdToken + "owner [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>");
         break;
       }
       if (!TargetPlayer && !CheckConfirmation(cmdToken, command, payload, "Player [" + TargetName + "] is not in this game lobby. ")) {
@@ -3186,7 +3186,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "say [REALM], [MESSAGE]");
+        ErrorReply("Usage: " + cmdToken + "say <REALM> , <MESSAGE>");
         break;
       }
 
@@ -3194,7 +3194,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string RealmId = TrimString(Payload.substr(0, MessageStart));
       string Message = TrimString(Payload.substr(MessageStart + 1));
       if (Message.empty()) {
-        ErrorReply("Usage: " + cmdToken + "say [REALM], [MESSAGE]");
+        ErrorReply("Usage: " + cmdToken + "say <REALM> , <MESSAGE>");
         break;
       }
       bool IsCommand = Message[0] == '/';
@@ -3264,7 +3264,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         targetRealm = GetTargetRealmOrCurrent(Payload);
         if (!targetRealm) {
-          ErrorReply("Usage: " + cmdToken + "announce [REALM]");
+          ErrorReply("Usage: " + cmdToken + "announce <REALM>");
           break;
         }
       }
@@ -3347,13 +3347,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> Args = SplitArgs(Payload, 1u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
+        ErrorReply("Usage: " + cmdToken + "comp <SLOT> , <SKILL> - Skill is any of: easy, normal, insane");
         break;
       }
 
       uint8_t SID = 0xFF;
       if (!ParseNonPlayerSlot(Args[0], SID)) {
-        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
+        ErrorReply("Usage: " + cmdToken + "comp <SLOT> , <SKILL> - Skill is any of: easy, normal, insane");
         break;
       }
       uint8_t skill = SLOTCOMP_HARD;
@@ -3418,20 +3418,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "color [PLAYER], [COLOR] - Color goes from 1 to 12");
+        ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "color [PLAYER], [COLOR] - Color goes from 1 to 12");
+        ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
         break;
       }
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "color [PLAYER], [COLOR] - Color goes from 1 to 12");
+        ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
         break;
       }
 
@@ -3475,26 +3475,26 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
+        ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
+        ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
+        ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
 
       vector<uint32_t> handicap = SplitNumericArgs(Args[1], 1u, 1u);
       if (handicap.empty() || handicap[0] % 10 != 0 || !(50 <= handicap[0] && handicap[0] <= 100)) {
-        ErrorReply("Usage: " + cmdToken + "handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100");
+        ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
 
@@ -3549,26 +3549,26 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
         break;
       }
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
         break;
       }
 
       const uint8_t Race = ParseRace(Args[1]);
       if (Race == SLOTRACE_INVALID) {
-        ErrorReply("Usage: " + cmdToken + "race [PLAYER], [RACE] - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
         break;
       }
 
@@ -3631,23 +3631,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        if (m_Player) ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
-        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+        if (m_Player) ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 1u, 2u);
       if (Args.empty()) {
-        if (m_Player) ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
-        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+        if (m_Player) ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
       }
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
-        if (m_Player) ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
-        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+        if (m_Player) ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
       }
 
@@ -3656,12 +3656,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         targetTeam = ParseSID(Args[1]);
       } else {      
         if (!m_Player) {
-          ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+          ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
           break;
         }
         const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromPID(m_Player->GetPID()));
         if (!slot) {
-          ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+          ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
           break;
         }
 
@@ -3670,8 +3670,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         targetTeam = slot->GetTeam();
       }
       if (targetTeam > m_Aura->m_MaxSlots + 1) { // accept 13/25 as observer
-        ErrorReply("Usage: " + cmdToken + "team [PLAYER]");
-        ErrorReply("Usage: " + cmdToken + "team [PLAYER], [TEAM]");
+        ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
       }
       if (onlyDraft && !m_Player->GetIsDraftCaptainOf(targetTeam)) {
@@ -3737,14 +3737,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "observer [PLAYER]");
+        ErrorReply("Usage: " + cmdToken + "observer <PLAYER>");
         break;
       }
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "observer [PLAYER]");
+        ErrorReply("Usage: " + cmdToken + "observer <PLAYER>");
         break;
       }
 
@@ -3801,7 +3801,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t targetSkill = Payload.empty() ? SLOTCOMP_HARD : ParseComputerSkill(Payload);
       if (targetSkill == SLOTCOMP_INVALID) {
-        ErrorReply("Usage: " + cmdToken + "fill [SKILL] - Skill is any of: easy, normal, insane");
+        ErrorReply("Usage: " + cmdToken + "fill <SKILL> - Skill is any of: easy, normal, insane");
         break;
       }
       if (!m_TargetGame->ComputerAllSlots(targetSkill)) {
@@ -3836,23 +3836,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "draft [enable|disable]");
-        ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
+        ErrorReply("Usage: " + cmdToken + "draft <ON|OFF>");
+        ErrorReply("Usage: " + cmdToken + "draft <CAPTAIN1> , <CAPTAIN2>");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 1u, m_TargetGame->GetMap()->GetMapNumTeams());
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "draft [enable|disable]");
-        ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
+        ErrorReply("Usage: " + cmdToken + "draft <ON|OFF>");
+        ErrorReply("Usage: " + cmdToken + "draft <CAPTAIN1> , <CAPTAIN2>");
         break;
       }
 
       if (Args.size() == 1) {
         optional<bool> targetValue;
         if (!ParseBoolean(Payload, targetValue)) {
-          ErrorReply("Usage: " + cmdToken + "draft [enable|disable]");
-          ErrorReply("Usage: " + cmdToken + "draft [CAPTAIN1], [CAPTAIN2]");
+          ErrorReply("Usage: " + cmdToken + "draft <ON|OFF>");
+          ErrorReply("Usage: " + cmdToken + "draft <CAPTAIN1> , <CAPTAIN2>");
           break;
         }
         if (targetValue.value_or(true)) {
@@ -3931,7 +3931,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       optional<bool> targetValue;
       if (!ParseBoolean(Payload, targetValue)) {
-        ErrorReply("Usage: " + cmdToken + "ffa [enable|disable]");
+        ErrorReply("Usage: " + cmdToken + "ffa <ON|OFF>");
         break;
       }
       if (!targetValue.value_or(true)) {
@@ -4031,8 +4031,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
         // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
         if (Args.empty() || Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots)) {
-          ErrorReply("Usage: " + cmdToken + "terminator [enable|disable]");
-          ErrorReply("Usage: " + cmdToken + "terminator [NUMBER]");
+          ErrorReply("Usage: " + cmdToken + "terminator <ON|OFF>");
+          ErrorReply("Usage: " + cmdToken + "terminator <NUMBER>");
           break;
         }
         m_TargetGame->ResetLayout(false);
@@ -4090,7 +4090,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       optional<bool> targetValue;
       if (!ParseBoolean(Payload, targetValue)) {
-        ErrorReply("Usage: " + cmdToken + "teams [enable|disable]");
+        ErrorReply("Usage: " + cmdToken + "teams <ON|OFF>");
         break;
       }
       if (!targetValue.value_or(true)) {
@@ -4154,12 +4154,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!isToggle && !Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "fp");
-        ErrorReply("Usage: " + cmdToken + "fp [ENABLE|DISABLE]");
+        ErrorReply("Usage: " + cmdToken + "fp <ON|OFF>");
         break;
       }
 
       if (!isToggle && m_TargetGame->GetIsRestored()) {
-        ErrorReply("Usage: " + cmdToken + "fp [ENABLE|DISABLE]");
+        ErrorReply("Usage: " + cmdToken + "fp <ON|OFF>");
         break;
       }
 
@@ -4311,8 +4311,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_TargetGame->SetSaveOnLeave(SAVE_ON_LEAVE_NEVER);
         SendReply("Autosave on disconnections disabled.");
       } else {
-        ErrorReply("Usage: " + cmdToken);
-        ErrorReply("Usage: " + cmdToken + "[enable|disable]");
+        ErrorReply("Usage: " + cmdToken + "save");
+        ErrorReply("Usage: " + cmdToken + "save <ON|OFF>");
       }
       break;
     }
@@ -4454,7 +4454,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "unmute [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "unmute <PLAYERNAME>");
         break;
       }
       CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
@@ -4540,14 +4540,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w [PLAYERNAME]@[REALM], [MESSAGE]");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
         break;
       }
 
       string::size_type MessageStart = Payload.find(',');
 
       if (MessageStart == string::npos) {
-        ErrorReply("Usage: " + cmdToken + "w [PLAYERNAME]@[REALM], [MESSAGE]");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
         break;
       }
 
@@ -4555,7 +4555,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string subMessage = TrimString(Payload.substr(MessageStart + 1));
       string inputRealm;
       if (inputName.empty() || subMessage.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w [PLAYERNAME]@[REALM], [MESSAGE]");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
         break;
       }
 
@@ -4566,14 +4566,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (inputName.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w [PLAYERNAME]@[REALM], [MESSAGE]");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
         break;
       }
 
       CRealm* matchingRealm = GetTargetRealmOrCurrent(inputRealm);
       if (!matchingRealm) {
         if (inputRealm.empty()) {
-          ErrorReply("Usage: " + cmdToken + "w [PLAYERNAME]@[REALM], [MESSAGE]");
+          ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
         } else {
           ErrorReply(inputRealm + " is not a valid realm.");
         }
@@ -4609,7 +4609,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "whois [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "whois <PLAYERNAME>");
         break;
       }
 
@@ -4623,7 +4623,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Name.empty() || Name.length() > MAX_PLAYER_NAME_SIZE) {
-        ErrorReply("Usage: " + cmdToken + "whois [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "whois <PLAYERNAME>");
         break;
       }
 
@@ -4657,7 +4657,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty() || Payload.length() > 15) {
-        ErrorReply("Usage: " + cmdToken + "virtualhost [PLAYERNAME]");
+        ErrorReply("Usage: " + cmdToken + "virtualhost <PLAYERNAME>");
         break;
       }
       if (m_TargetGame->m_LobbyVirtualHostName == Payload) {
@@ -4714,13 +4714,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       size_t CommandStart = Payload.find(',');
       if (CommandStart == string::npos) {
-        ErrorReply("Usage: " + cmdToken + "game [GAMEID], [COMMAND] - See game ids with !listgames");
+        ErrorReply("Usage: " + cmdToken + "game <GAMEID> , <COMMAND> - See game ids with !listgames");
         break;
       }
       string GameId = TrimString(Payload.substr(0, CommandStart));
       string ExecString = TrimString(Payload.substr(CommandStart + 1));
       if (GameId.empty() || ExecString.empty()) {
-        ErrorReply("Usage: " + cmdToken + "game [GAMEID], [COMMAND] - See game ids with !listgames");
+        ErrorReply("Usage: " + cmdToken + "game <GAMEID> , <COMMAND> - See game ids with !listgames");
         break;
       }
       CGame* targetGame = GetTargetGame(GameId);
@@ -4885,7 +4885,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string::size_type MessageStart = Payload.find(',');
       if (MessageStart == string::npos) {
-        ErrorReply("Usage: " + cmdToken + "saygame [GAMEID], [MESSAGE]");
+        ErrorReply("Usage: " + cmdToken + "saygame <GAMEID> , <MESSAGE>");
         break;
       }
       bool IsRaw = CommandHash == HashCode("saygameraw");
@@ -4961,7 +4961,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "disablepub [REALM]");
+        ErrorReply("Usage: " + cmdToken + "disablepub <REALM>");
         break;
       }
       if (targetRealm != m_SourceRealm && !GetIsSudo()) {
@@ -4988,7 +4988,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "enablepub [REALM]");
+        ErrorReply("Usage: " + cmdToken + "enablepub <REALM>");
         break;
       }
       if (targetRealm != m_SourceRealm && !GetIsSudo()) {
@@ -5033,12 +5033,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!TargetValue.has_value()) {
-        ErrorReply("Usage: " + cmdToken + "maptransfers [MODE]: Mode is 0/1/2.");
+        ErrorReply("Usage: " + cmdToken + "maptransfers <MODE>: Mode is 0/1/2.");
         break;
       }
 
       if (TargetValue.value() != MAP_TRANSFERS_NEVER && TargetValue.value() != MAP_TRANSFERS_AUTOMATIC && TargetValue.value() != MAP_TRANSFERS_MANUAL) {
-        ErrorReply("Usage: " + cmdToken + "maptransfers [MODE]: Mode is 0/1/2.");
+        ErrorReply("Usage: " + cmdToken + "maptransfers <MODE>: Mode is 0/1/2.");
         break;
       }
 
@@ -5134,7 +5134,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "checkstaff [NAME]");
+        ErrorReply("Usage: " + cmdToken + "checkstaff <NAME>");
         break;
       }
 
@@ -5165,7 +5165,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "liststaff [REALM]");
+        ErrorReply("Usage: " + cmdToken + "liststaff <REALM>");
         break;
       }
       if (targetRealm != m_SourceRealm && !GetIsSudo()) {
@@ -5197,7 +5197,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "addstaff [NAME]");
+        ErrorReply("Usage: " + cmdToken + "addstaff <NAME>");
         break;
       }
       if (!m_SourceRealm) {
@@ -5226,7 +5226,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "delstaff [NAME]");
+        ErrorReply("Usage: " + cmdToken + "delstaff <NAME>");
         break;
       }
 
@@ -5312,7 +5312,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("netinfo"): {
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "netinfo [REALM]");
+        ErrorReply("Usage: " + cmdToken + "netinfo <REALM>");
         break;
       }
       if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
@@ -5331,7 +5331,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("printgames"): {
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "printgames [REALM]");
+        ErrorReply("Usage: " + cmdToken + "printgames <REALM>");
         break;
       }
       if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
@@ -5350,7 +5350,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("querygames"): {
       CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "querygames [REALM]");
+        ErrorReply("Usage: " + cmdToken + "querygames <REALM>");
         break;
       }
       if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
@@ -5378,7 +5378,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "channel [CHANNEL]");
+        ErrorReply("Usage: " + cmdToken + "channel <CHANNEL>");
         break;
       }
       if (!m_SourceRealm) {
@@ -5435,12 +5435,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
         if (isHostCommand) {
-          ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [GAME NAME]");
+          ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <GAME NAME>");
           if (m_Player || !m_SourceRealm || m_SourceRealm->GetIsFloodImmune()) {
-            ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [OBSERVERS], [GAME NAME]");
-            ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]");
-            ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]");
-            ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]");
+            ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <OBSERVERS> , <GAME NAME>");
+            ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <GAME NAME>");
+            ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <RANDOM RACES> , <GAME NAME>");
+            ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <RANDOM RACES> , <RANDOM HEROES> , <GAME NAME>");
           }
           break;
         }
@@ -5466,7 +5466,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           if (gameName.length() > m_Aura->m_MaxGameNameSize) {
             gameName = m_FromName + "'s game";
             if (gameName.length() > m_Aura->m_MaxGameNameSize) {
-              ErrorReply("Usage: " + cmdToken + "host [MAP NAME], [GAME NAME]");
+              ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <GAME NAME>");
               break;
             }
           }
@@ -5509,7 +5509,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.");
+        ErrorReply("Usage: " + cmdToken + "mirror <EXCLUDESERVER> , <IP> , <PORT> , <GAMEID> , <GAMEKEY> , <GAMENAME> - GAMEID, GAMEKEY expected hex.");
         break;
       }
 
@@ -5536,11 +5536,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         size_t posId;
         gameHostCounter = stoul(Args[3], &posId, 16);
         if (posId != Args[3].length()) {
-          ErrorReply("Usage: " + cmdToken + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.");
+          ErrorReply("Usage: " + cmdToken + "mirror <EXCLUDESERVER> , <IP> , <PORT> , <GAMEID> , <GAMEKEY> , <GAMENAME> - GAMEID expected hex.");
           break;
         }
       } catch (...) {
-        ErrorReply("Usage: " + cmdToken + "mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.");
+        ErrorReply("Usage: " + cmdToken + "mirror <EXCLUDESERVER> , <IP> , <PORT> , <GAMEID> , <GAMEKEY> , <GAMENAME> - GAMEID expected hex.");
         break;
       }
 
