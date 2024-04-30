@@ -365,15 +365,18 @@ bool CCLI::QueueActions(CAura* nAura) const
               return false;
             }
           }
+          optional<string> userName = GetUserMultiPlayerName();
           if (m_GameName.has_value()) {
             gameSetup->SetName(m_GameName.value());
           } else {
-            optional<string> userName = GetUserMultiPlayerName();
             if (userName.has_value()) {
               gameSetup->SetName(userName.value() + "'s game");
             } else {
               gameSetup->SetName("Join and play");
             }
+          }
+          if (userName.has_value()) {
+            gameSetup->SetCreator(userName.value());
           }
           if (m_GameLobbyTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameLobbyTimeout.value());
           if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());

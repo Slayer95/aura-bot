@@ -158,7 +158,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
   if (m_IndexVirtualHostName.empty()) {
-    m_IndexVirtualHostName = m_OwnerName.empty() ? "Aura Bot" : m_OwnerName;
+    m_IndexVirtualHostName = m_CreatedBy.empty() ? "Aura Bot" : m_CreatedBy;
   }
   m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
   m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
