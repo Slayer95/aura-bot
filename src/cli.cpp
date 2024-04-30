@@ -320,6 +320,10 @@ bool CCLI::QueueActions(CAura* nAura) const
       searchType = SEARCH_TYPE_ANY;
     }
     CCommandContext* ctx = new CCommandContext(nAura, false, &cout);
+    optional<string> userName = GetUserMultiPlayerName();
+    if (userName.has_value()) {
+      ctx->SetIdentity(userName.value());
+    }
     CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
     if (gameSetup) {
       if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
@@ -365,7 +369,6 @@ bool CCLI::QueueActions(CAura* nAura) const
               return false;
             }
           }
-          optional<string> userName = GetUserMultiPlayerName();
           if (m_GameName.has_value()) {
             gameSetup->SetName(m_GameName.value());
           } else {

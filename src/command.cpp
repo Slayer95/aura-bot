@@ -321,13 +321,9 @@ CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream
 {
 }
 
-bool CCommandContext::SetIdentity(const string& userName, const string& realmId)
+bool CCommandContext::SetIdentity(const string& userName)
 {
-  m_SourceRealm = m_Aura->GetRealmByInputId(realmId);
-  if (m_SourceRealm == nullptr)
-    return false;
   m_FromName = userName;
-  m_ServerName = m_SourceRealm->GetServer();
   return true;
 }
 

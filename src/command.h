@@ -150,7 +150,7 @@ public:
   inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
 #endif
 
-  bool SetIdentity(const std::string& userName, const std::string& realmId);
+  bool SetIdentity(const std::string& userName);
   void SetAuthenticated(const bool& nAuthenticated);
   void SetPermissions(const uint8_t nPermissions);
   void UpdatePermissions();
