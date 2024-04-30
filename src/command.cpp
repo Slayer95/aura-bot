@@ -3356,7 +3356,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       if (!ParseNonPlayerSlot(Args[0], SID)) {
-        ErrorReply("Cannot add computer on that slot.");
+        ErrorReply("Usage: " + cmdToken + "comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane");
         break;
       }
       uint8_t skill = SLOTCOMP_HARD;
