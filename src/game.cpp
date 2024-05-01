@@ -2799,15 +2799,17 @@ void CGame::ReportPlayerDisconnected(CGamePlayer* player)
     }
     SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
   }
-  int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
+  if (Time - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
+    int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
 
-  if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
-    TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
-  else if (TimeRemaining < 0)
-    TimeRemaining = 0;
+    if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
+      TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
+    else if (TimeRemaining < 0)
+      TimeRemaining = 0;
 
-  SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
-  player->SetLastGProxyWaitNoticeSentTime(Time);
+    SendAllChat(player->GetPID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
+    player->SetLastGProxyWaitNoticeSentTime(Time);
+  }
 }
 
 void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
@@ -2821,11 +2823,7 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
       }
       player->SetGProxyDisconnectNoticeSent(true);
     }
-
-    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      ReportPlayerDisconnected(player);
-    }
-
+    ReportPlayerDisconnected(player);
     return;
   }
 
@@ -2854,10 +2852,7 @@ void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
-    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      ReportPlayerDisconnected(player);
-    }
-
+    ReportPlayerDisconnected(player);
     return;
   }
 
@@ -2880,10 +2875,7 @@ void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
-    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      ReportPlayerDisconnected(player);
-    }
-
+    ReportPlayerDisconnected(player);
     return;
   }
 
@@ -2906,10 +2898,7 @@ void CGame::EventPlayerDisconnectGameProtocolError(CGamePlayer* player)
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
-    if (GetTime() - player->GetLastGProxyWaitNoticeSentTime() >= 20 && !player->GetGProxyExtended()) {
-      ReportPlayerDisconnected(player);
-    }
-
+    ReportPlayerDisconnected(player);
     return;
   }
 
