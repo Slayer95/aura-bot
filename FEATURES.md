@@ -16,15 +16,17 @@
 - Automatically performs port-forwarding (UPnP)
 - Automatically checks network connectivity
 - Can configure TCP tunneling to host games in PvPGN realms
+- Supports Warcraft III versions 1.21 to 1.29.2
 - Automatically detects Warcraft III location and version
 - Runs simultaneously with the Warcraft III game client
 - May connect to some PvPGN servers with unknown exe version hashes
 - Implements inheritance in PvPGN realms settings ("global_realm")
 - Reconnectable games (GProxy) do not require exclusive ports
 - Reconnectable games can wait for players for as much time as configured
-- Permissionss required by many commands are configurable.
-- Maps and configs have their names fuzzy-matched
+- Permissions required by many commands are configurable.
 - Maps can be assigned aliases
+- Maps are automatically downloaded from EpicWar and WC3Maps repositories
+- Maps and configs have their names fuzzy-matched
 
 # Hosting:
 - Automatically identifies maps larger than the vanilla map size limit
@@ -101,6 +103,7 @@ in Aura's console.
 
 # Removed features from [GHost++][2]:
 - Autohost
+- CASC
 - Localization
 - Replays
 - W3MMD
