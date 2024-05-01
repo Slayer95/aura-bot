@@ -175,6 +175,7 @@ public:
   std::filesystem::path                           m_SaveFile;
 
   std::string                                     m_GameName;
+  std::string                                     m_GameBaseName;
   std::pair<std::string, std::string>             m_GameOwner;
   std::optional<uint32_t>                         m_GameIdentifier;
   std::optional<uint32_t>                         m_GameChannelKey;
@@ -186,6 +187,8 @@ public:
   std::set<std::string>                           m_RealmsExcluded;
 
   bool                                            m_LobbyReplaceable;
+  bool                                            m_LobbyAutoRehosted;
+  uint16_t                                        m_CreationCounter;
   std::optional<uint32_t>                         m_LobbyTimeout;
   std::optional<bool>                             m_CheckJoinable;
 
@@ -264,8 +267,13 @@ public:
   void RemoveCreator();
   bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   void SetName(const std::string& nName) { m_GameName = nName; }
+  void SetBaseName(const std::string& nName) {
+    m_GameName = nName;
+    m_GameBaseName = nName;
+  }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
   void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
+  void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }

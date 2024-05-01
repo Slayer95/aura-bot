@@ -2051,7 +2051,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         m_Aura->m_GameSetup->SetContext(this);
-        m_Aura->m_GameSetup->SetName(Payload);
+        m_Aura->m_GameSetup->SetBaseName(Payload);
         m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
 
         m_Aura->m_GameSetup->SetOwner(m_FromName, m_SourceRealm);
@@ -2105,7 +2105,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ownerName = TrimString(ownerName.substr(0, realmStart));
       }
       m_Aura->m_GameSetup->SetContext(this);
-      m_Aura->m_GameSetup->SetName(gameName);
+      m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
       m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
       m_Aura->m_GameSetup->SetOwner(ownerName, ownerRealmName.empty() ? m_SourceRealm : m_Aura->GetRealmByInputId(ownerRealmName));
@@ -5637,7 +5637,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SetAddressPort(&(maybeAddress.value()), gamePort);
       m_Aura->m_GameSetup->SetContext(this);
       m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter);
-      m_Aura->m_GameSetup->SetName(gameName);
+      m_Aura->m_GameSetup->SetBaseName(gameName);
       if (excludedServer) m_Aura->m_GameSetup->AddIgnoredRealm(excludedServer);
       m_Aura->m_GameSetup->RunHost();
       for (auto& bnet : m_Aura->m_Realms) {

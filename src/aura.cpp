@@ -367,6 +367,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
     m_DB(new CAuraDB(CFG)),
     m_GameSetup(nullptr),
+    m_AutoRehostGameSetup(nullptr),
     m_Version(AURA_VERSION),
     m_RepositoryURL(AURA_REPOSITORY_URL),
     m_IssuesURL(AURA_ISSUES_URL),
@@ -723,16 +724,20 @@ bool CAura::HandleAction(vector<string> action)
   if (action[0] == "exec") {
     Print("[AURA] Exec cli unsupported yet");
     return false;
-  } else if (action[0] == "host") {
+  } else if (action[0] == "host" || action[0] == "rehost") {
     bool success = false;
-    if (m_GameSetup) {
+    if (m_GameSetup && (action[0] != "rehost" || m_GameSetup == m_AutoRehostGameSetup)) {
       success = m_GameSetup->RunHost();
-      UnholdContext(m_GameSetup->m_Ctx);
-      delete m_GameSetup;
+      if (!m_GameSetup->m_LobbyAutoRehosted) {
+        UnholdContext(m_GameSetup->m_Ctx);
+        m_GameSetup->m_Ctx = nullptr;
+        delete m_GameSetup;
+      }
       m_GameSetup = nullptr;
     }
 
     if (!success) {
+      // Delete all other pending actions
       return false;
     }
   } else if (action[0] == "lazy") {
@@ -763,8 +768,21 @@ bool CAura::Update()
     }
   }
 
-  if (m_Config->m_ExitOnStandby && !m_CurrentLobby && m_Games.empty() && !m_Net->m_HealthCheckInProgress &&
-    !(m_GameSetup && m_GameSetup->GetIsDownloading())) {
+  if (!m_CurrentLobby && !(m_GameSetup && m_GameSetup->GetIsDownloading())) {
+    if (m_AutoRehostGameSetup) {
+      m_AutoRehostGameSetup->SetActive();
+      vector<string> hostAction{"rehost"};
+      m_PendingActions.push(hostAction);
+    }
+  }
+
+  bool isStandby = (
+    !m_CurrentLobby && m_Games.empty() &&
+    !m_Net->m_HealthCheckInProgress &&
+    !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
+    !m_AutoRehostGameSetup 
+  );
+  if (isStandby && m_Config->m_ExitOnStandby) {
     return true;
   }
 
@@ -1433,12 +1451,15 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
 
   m_CurrentLobby = new CGame(this, gameSetup);
   m_CanReplaceLobby = gameSetup->m_LobbyReplaceable;
+  if (gameSetup->m_LobbyAutoRehosted) {
+    m_AutoRehostGameSetup = gameSetup;
+  }
   gameSetup->OnGameCreate();
 
   if (m_CurrentLobby->GetExiting()) {
     delete m_CurrentLobby;
     m_CurrentLobby = nullptr;
-    gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_GameName + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + m_CurrentLobby->GetGameName() + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
@@ -1475,7 +1496,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     if (!realm->GetLoggedIn()) {
       continue;
     }
-    if (gameSetup->GetIsMirror() && realm->GetIsMirror()) {
+    if (m_CurrentLobby->GetIsMirror() && realm->GetIsMirror()) {
       // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
       // Do not display external games in those realms.
       continue;
@@ -1484,7 +1505,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
       continue;
     }
 
-    if (gameSetup->m_RealmsDisplayMode == GAME_PUBLIC && realm->GetAnnounceHostToChat()) {
+    if (m_CurrentLobby->GetDisplayMode() == GAME_PUBLIC && realm->GetAnnounceHostToChat()) {
       realm->QueueGameChatAnnouncement(m_CurrentLobby);
     } else {
       // Send STARTADVEX3
@@ -1494,19 +1515,19 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
       // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
       // so don't rejoin the chat if we're using PVPGN
 
-      if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE && !realm->GetPvPGN()) {
+      if (m_CurrentLobby->GetDisplayMode() == GAME_PRIVATE && !realm->GetPvPGN()) {
         realm->SendEnterChat();
       }
     }
   }
 
-  if (gameSetup->m_RealmsDisplayMode != GAME_PUBLIC ||
+  if (m_CurrentLobby->GetDisplayMode() != GAME_PUBLIC ||
     gameSetup->m_CreatedFromType != GAMESETUP_ORIGIN_REALM ||
     gameSetup->m_Ctx->GetIsWhisper()) {
     gameSetup->m_Ctx->SendPrivateReply(m_CurrentLobby->GetAnnounceText());
   }
 
-  if (gameSetup->m_RealmsDisplayMode == GAME_PUBLIC) {
+  if (m_CurrentLobby->GetDisplayMode() == GAME_PUBLIC) {
     if (m_IRC) {
      m_IRC->SendAllChannels(m_CurrentLobby->GetAnnounceText());
     }
@@ -1516,12 +1537,12 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     }
   }
 
-  uint32_t mapSize = ByteArrayToUInt32(gameSetup->m_Map->GetMapSize(), false);
+  uint32_t mapSize = ByteArrayToUInt32(m_CurrentLobby->GetMap()->GetMapSize(), false);
   if (m_GameVersion <= 26 && mapSize > 0x800000) {
-    Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + gameSetup->m_Map->GetServerFileName() + "]");
+    Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + m_CurrentLobby->GetMap()->GetServerFileName() + "]");
   }
-  if (m_GameVersion < gameSetup->m_Map->GetMapMinGameVersion()) {
-    Print("[AURA] warning - hosting game that may require version 1." + to_string(gameSetup->m_Map->GetMapMinGameVersion()));
+  if (m_GameVersion < m_CurrentLobby->GetMap()->GetMapMinGameVersion()) {
+    Print("[AURA] warning - hosting game that may require version 1." + to_string(m_CurrentLobby->GetMap()->GetMapMinGameVersion()));
   }
 
   return true;

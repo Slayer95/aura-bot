@@ -126,6 +126,7 @@ public:
 
   CAuraDB*                                           m_DB;                         // database
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map
+  CGameSetup*                                        m_AutoRehostGameSetup;            // game setup to be rehosted whenever free
   std::string                                        m_Version;                    // Aura version string
   std::string                                        m_RepositoryURL;              // Aura repository URL
   std::string                                        m_IssuesURL;                  // Aura issues URL

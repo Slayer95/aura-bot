@@ -94,6 +94,7 @@ private:
   std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_GameLobbyReplaceable;
+  std::optional<bool>                   m_GameLobbyAutoRehosted;
   std::optional<bool>                   m_GameCheckReservation;
   std::vector<std::string>              m_GameReservations;
   std::optional<bool>                   m_CheckMapVersion;

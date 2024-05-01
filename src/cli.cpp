@@ -123,6 +123,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
   app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
+  app.add_flag(  "--auto-rehost,--no-auto-rehost{false}", m_GameLobbyAutoRehosted, "Registers the provided game setup, and rehosts it whenever there is no active lobby.");
 
   // Command execution
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
@@ -355,14 +356,21 @@ bool CCLI::QueueActions(CAura* nAura) const
       if (gameSetup->LoadMapSync()) {
         if (gameSetup->ApplyMapModifiers(&options)) {
           if (!gameSetup->m_SaveFile.empty()) {
+            bool loadFailure = false;
             if (!gameSetup->RestoreFromSaveFile()) {
               Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
-              delete gameSetup;
-              nAura->UnholdContext(ctx);
-              return false;
-            }
-            if (m_GameCheckReservation.has_value() && !m_GameCheckReservation.value()) {
+              loadFailure = true;
+            } else if (m_GameCheckReservation.has_value() && !m_GameCheckReservation.value()) {
               Print("[AURA] Resuming a loaded game must always check reservations.");
+              loadFailure = true;
+            } else if (m_GameLobbyAutoRehosted.value_or(false)) {
+              // Do not allow automatically rehosting loads of the same savefile,
+              // Because that would mean keeping the CSaveGame around.
+              // Also, what's this? The Battle for Wesnoth?
+              Print("[AURA] A loaded game cannot be auto rehosted.");
+              loadFailure = true;
+            }
+            if (loadFailure) {
               delete gameSetup;
               nAura->UnholdContext(ctx);
               return false;
@@ -394,12 +402,12 @@ bool CCLI::QueueActions(CAura* nAura) const
             }
           }
           if (m_GameName.has_value()) {
-            gameSetup->SetName(m_GameName.value());
+            gameSetup->SetBaseName(m_GameName.value());
           } else {
             if (userName.has_value()) {
-              gameSetup->SetName(userName.value() + "'s game");
+              gameSetup->SetBaseName(userName.value() + "'s game");
             } else {
-              gameSetup->SetName("Join and play");
+              gameSetup->SetBaseName("Join and play");
             }
           }
           if (userName.has_value()) {
@@ -409,6 +417,7 @@ bool CCLI::QueueActions(CAura* nAura) const
           if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
           if (m_GameCheckReservation.has_value()) gameSetup->SetCheckReservation(m_GameCheckReservation.value());
           if (m_GameLobbyReplaceable.has_value()) gameSetup->SetLobbyReplaceable(m_GameLobbyReplaceable.value());
+          if (m_GameLobbyAutoRehosted.has_value()) gameSetup->SetLobbyAutoRehosted(m_GameLobbyAutoRehosted.value());
           gameSetup->SetReservations(m_GameReservations);
           gameSetup->SetVerbose(m_Verbose);
           gameSetup->SetDisplayMode(displayMode);

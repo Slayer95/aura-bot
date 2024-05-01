@@ -152,6 +152,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_LobbyReplaceable(false),
+    m_LobbyAutoRehosted(false),
+    m_CreationCounter(0),
 
     m_CreatedFrom(nullptr),
     m_CreatedFromType(GAMESETUP_ORIGIN_NONE),
@@ -194,6 +196,10 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
 
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
+    m_LobbyReplaceable(false),
+    m_LobbyAutoRehosted(false),
+    m_CreationCounter(0),
+
     m_CreatedFrom(nullptr),
     m_CreatedFromType(GAMESETUP_ORIGIN_NONE),
 
@@ -1063,7 +1069,7 @@ void CGameSetup::OnLoadMapSuccess()
       m_Aura->m_CurrentLobby->SendAllChat("Another lobby is being created. <<" + m_Aura->m_CurrentLobby->GetGameName() + ">> will be closed soon.");
       m_Aura->m_CurrentLobby->StartGameOverTimer();
     }
-    SetName(m_MapReadyCallbackData);
+    SetBaseName(m_MapReadyCallbackData);
     CRealm* sourceRealm = m_Ctx->GetSourceRealm();
     SetOwner(m_Ctx->GetSender(), sourceRealm);
     if (sourceRealm) {
@@ -1165,7 +1171,9 @@ bool CGameSetup::LoadMapSync()
 
 bool CGameSetup::SetActive()
 {
-  if (m_Aura->m_GameSetup) {
+  if (m_Aura->m_GameSetup && m_Aura->m_AutoRehostGameSetup != m_Aura->m_GameSetup) {
+    m_Aura->UnholdContext(m_Aura->m_GameSetup->m_Ctx);
+    m_Aura->m_GameSetup->m_Ctx = nullptr;
     delete m_Aura->m_GameSetup;
   }
   m_Aura->m_GameSetup = this;
@@ -1318,6 +1326,14 @@ void CGameSetup::OnGameCreate()
 {
   // Transferred to CGame. Do not deallocate.
   m_RestoredGame = nullptr;
+  if (m_LobbyAutoRehosted) {
+    if (m_CreationCounter < 10) {
+      SetName(m_GameBaseName + "-" + string(1, 48 + m_CreationCounter));
+    } else {
+      SetName(m_GameBaseName + "-" + string(1, 97 + m_CreationCounter));
+    }
+    m_CreationCounter = (m_CreationCounter + 1) % 36;
+  }
 }
 
 bool CGameSetup::Update()
@@ -1375,16 +1391,17 @@ void CGameSetup::ResetExtraOptions()
 CGameSetup::~CGameSetup()
 {
   ResetExtraOptions();
+
   if (m_Aura) {
     m_Aura->UnholdContext(m_Ctx);
   } else {
     delete m_Ctx;
   }
+  m_Ctx = nullptr;
 
   delete m_RestoredGame;
   m_RestoredGame = nullptr;
 
-  m_Ctx = nullptr;
   m_CreatedFrom = nullptr;
   m_Aura = nullptr;
   m_Map = nullptr;

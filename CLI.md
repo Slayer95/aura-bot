@@ -391,6 +391,10 @@ This flag enables reservation checks to ensure only players with reservations ma
 
 This flag enables users to use the !host command to replace the hosted game by another one.
 
+## \`--auto-rehost\`, \`--no-auto-rehost\`
+
+This flag enables automatic rehosting of the same game setup so long as Aura is not hosting another lobby.
+
 ## \`--random-races\`
 
 This flag enables randomization of player races in the hosted game. When this flag is used, each player's 
