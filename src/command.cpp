@@ -1134,7 +1134,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<CGamePlayer*> SortedPlayers = m_TargetGame->m_Players;
       sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
-        return a->GetPing() < b->GetPing();
+        return a->GetPing() > b->GetPing();
       });
       string PingsText;
 
@@ -2106,7 +2106,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      bool IsForce = Payload == "force";
+      bool IsForce = Payload == "force" || Payload == "f";
       if (IsForce && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot forcibly start it.");
         break;
@@ -2120,6 +2120,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !QUICKSTART
     //
 
+    case HashCode("sn"):
+    case HashCode("startn"):
     case HashCode("quickstart"): {
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
@@ -2544,15 +2546,25 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!targetPlayer) {
         break;
       }
-      if (targetPlayer == m_Player) {
-        ErrorReply("Cannot mute yourself.");
-        break;
+      if (!GetIsSudo()) {
+        if (targetPlayer == m_Player) {
+          ErrorReply("Cannot mute yourself.");
+          break;
+        }
+        if (m_SourceRealm && (
+          m_SourceRealm->GetIsAdmin(targetPlayer->GetName()) || (
+            m_SourceRealm->GetIsModerator(targetPlayer->GetName()) &&
+            !CheckPermissions(m_Config->m_AdminBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN)
+          )
+        )) {
+          ErrorReply("User [" + targetPlayer->GetName() + "] is an admin on server [" + m_ServerName + "]");
+          break;
+        }
       }
       if (targetPlayer->GetMuted()) {
         ErrorReply("Player [" + targetPlayer->GetName() + "] is already muted.");
         break;
       }
-
       targetPlayer->SetMuted(true);
       SendAll("Player [" + targetPlayer->GetName() + "] was muted by player [" + m_FromName + "]");
       break;
@@ -4455,12 +4467,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!targetPlayer) {
         break;
       }
-      if (targetPlayer == m_Player) {
-        ErrorReply("Cannot unmute yourself.");
+      if (!targetPlayer->GetMuted()) {
+        // Let this be transparent info.
+        // And, more crucially, don't show "cannot unmute yourself" to people who aren't muted.
+        ErrorReply("Player [" + targetPlayer->GetName() + "] is not muted.");
         break;
       }
-      if (!targetPlayer->GetMuted()) {
-        ErrorReply("Player [" + targetPlayer->GetName() + "] is not muted.");
+      if (targetPlayer == m_Player && !GetIsSudo()) {
+        ErrorReply("Cannot unmute yourself.");
         break;
       }
 
@@ -5078,7 +5092,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
-        if (Payload != "force") {
+        if (Payload != "force" && Payload != "f") {
           ErrorReply("At least one game is in the lobby or in progress. Use '!exit force' to shutdown anyway");
           break;
         }
@@ -5098,7 +5112,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
-        if (Payload != "force") {
+        if (Payload != "force" && Payload != "f") {
           ErrorReply("At least one game is in the lobby or in progress. Use '!restart force' to restart anyway");
           break;
         }
