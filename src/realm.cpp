@@ -485,7 +485,13 @@ bool CRealm::Update(void* fd, void* send_fd)
       Print(GetLogPrefix() + "reconnecting to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]...");
     } else {
       if (m_Config->m_BindAddress.has_value()) {
-        Print(GetLogPrefix() + "connecting with local address [" + AddressToString(m_Config->m_BindAddress.value()) + "]...");
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+          Print(GetLogPrefix() + "connecting with local address [" + AddressToString(m_Config->m_BindAddress.value()) + "]...");
+        }
+      } else {
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+          Print(GetLogPrefix() + "connecting...");
+        }
       }
     }
     m_FirstConnect = false;
@@ -1198,13 +1204,18 @@ void CRealm::QueueGameUncreate()
 
 void CRealm::ResetConnection(bool Errored)
 {
-  if (Errored)
-    Print(GetLogPrefix() + "disconnected due to socket error");
-  else
-    Print(GetLogPrefix() + "disconnected");
   m_LastDisconnectedTime = GetTime();
   m_BNCSUtil->Reset(m_Config->m_UserName, m_Config->m_PassWord);
-  m_Socket->Reset();
+
+  if (m_Socket) {
+    m_Socket->Reset();
+    if (Errored) {
+      Print(GetLogPrefix() + "disconnected due to socket error");
+    } else {
+      Print(GetLogPrefix() + "disconnected");
+    }
+  }
+
   m_LoggedIn         = false;
   m_CurrentChannel.clear();
   m_AnchorChannel.clear();
