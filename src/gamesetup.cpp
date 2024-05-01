@@ -151,6 +151,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
 
     m_GameIsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
+    m_LobbyReplaceable(false),
+
     m_CreatedFrom(nullptr),
     m_CreatedFromType(GAMESETUP_ORIGIN_NONE),
 
@@ -1053,25 +1055,29 @@ void CGameSetup::OnLoadMapSuccess()
       m_Ctx->ErrorReply("Failed to add alias.");
     }
   } else if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
-    if (m_Aura->m_CurrentLobby)  {
-      m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
-    } else {
-      SetName(m_MapReadyCallbackData);
-      CRealm* sourceRealm = m_Ctx->GetSourceRealm();
-      SetOwner(m_Ctx->GetSender(), sourceRealm);
-      if (sourceRealm) {
-        SetCreator(m_Ctx->GetSender(), sourceRealm);
-      } else if (m_Ctx->GetSourceIRC()) {
-        SetCreator(m_Ctx->GetSender(), m_Ctx->GetSourceIRC());
-#ifndef DISABLE_DPP
-      } else if (m_Ctx->GetDiscordAPI()) {
-        SetCreator(m_Ctx->GetSender(), m_Aura->m_Discord);
-#endif
-      } else {
-        SetCreator(m_Ctx->GetSender());
+    if (m_Aura->m_CurrentLobby) {
+      if (!m_Aura->m_CanReplaceLobby) {
+        m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
+        return;
       }
-      RunHost();
+      m_Aura->m_CurrentLobby->SendAllChat("Another lobby is being created. <<" + m_Aura->m_CurrentLobby->GetGameName() + ">> will be closed soon.");
+      m_Aura->m_CurrentLobby->StartGameOverTimer();
     }
+    SetName(m_MapReadyCallbackData);
+    CRealm* sourceRealm = m_Ctx->GetSourceRealm();
+    SetOwner(m_Ctx->GetSender(), sourceRealm);
+    if (sourceRealm) {
+      SetCreator(m_Ctx->GetSender(), sourceRealm);
+    } else if (m_Ctx->GetSourceIRC()) {
+      SetCreator(m_Ctx->GetSender(), m_Ctx->GetSourceIRC());
+#ifndef DISABLE_DPP
+    } else if (m_Ctx->GetDiscordAPI()) {
+      SetCreator(m_Ctx->GetSender(), m_Aura->m_Discord);
+#endif
+    } else {
+      SetCreator(m_Ctx->GetSender());
+    }
+    RunHost();
   }
 }
 
@@ -1310,6 +1316,7 @@ bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThin
 
 void CGameSetup::OnGameCreate()
 {
+  // Transferred to CGame. Do not deallocate.
   m_RestoredGame = nullptr;
 }
 

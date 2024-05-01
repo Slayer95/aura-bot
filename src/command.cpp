@@ -1257,7 +1257,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (m_TargetGame->m_GameDisplay == GAME_PRIVATE && !m_Player) {
+      if (m_TargetGame->m_DisplayMode == GAME_PRIVATE && !m_Player) {
         if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
           ErrorReply("This game is private.");
           break;
@@ -2013,7 +2013,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       bool IsPrivate = CommandHash == HashCode("priv");
       if (m_TargetGame) {
-        m_TargetGame->m_GameDisplay  = IsPrivate ? GAME_PRIVATE : GAME_PUBLIC;
+        m_TargetGame->m_DisplayMode  = IsPrivate ? GAME_PRIVATE : GAME_PUBLIC;
         m_TargetGame->m_GameName     = Payload;
         m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
         m_TargetGame->m_RealmRefreshError = false;
@@ -3317,7 +3317,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
-      if (m_TargetGame->m_GameDisplay == GAME_PRIVATE) {
+      if (m_TargetGame->m_DisplayMode == GAME_PRIVATE) {
         ErrorReply("This game is private.");
         break;
       }
@@ -3342,6 +3342,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
+      m_TargetGame->m_DisplayMode = GAME_PUBLIC;
       m_TargetGame->m_RealmRefreshError = false;
       string earlyFeedback = "Announcement sent.";
       if (ToAllRealms) {
@@ -5160,7 +5161,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
         if (Payload != "force" && Payload != "f") {
-          ErrorReply("At least one game is in the lobby or in progress. Use '!exit force' to shutdown anyway");
+          ErrorReply("At least one game is in progress, or a lobby is hosted. Use '"+ cmdToken + "exit force' to shutdown anyway");
           break;
         }
       }
@@ -5180,7 +5181,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
         if (Payload != "force" && Payload != "f") {
-          ErrorReply("At least one game is in the lobby or in progress. Use '!restart force' to restart anyway");
+          ErrorReply("At least one game is in progress, or a lobby is hosted. Use '" + cmdToken + "restart force' to restart anyway");
           break;
         }
       }
@@ -5527,7 +5528,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->GetIsDownloading()) {
-        ErrorReply("Another user is hosting a map.");
+        ErrorReply("Another user is hosting a game.");
+        break;
+      }
+      if (m_Aura->m_CurrentLobby && (!m_Aura->m_CanReplaceLobby || (!GetIsSudo() && (
+        // This block defines under which circumstances a replaceable lobby can actually be replaced.
+        // Do not allow replacements when using !host from another game, unless sudo.
+        (m_SourceGame && m_SourceGame != m_Aura->m_CurrentLobby)
+        // The following check defines whether players in the replaceable lobby get priority,
+        // or external users (PvPGN/IRC/Discord) get it.
+        // By commenting it out, external users get priority.
+        // (Replaceable lobbies are NOT admin games.)
+        //|| (!m_SourceGame && m_Aura->m_CurrentLobby->GetHasAnyPlayer())
+      )))) {
+        ErrorReply("Another user is hosting a game.");
         break;
       }
 

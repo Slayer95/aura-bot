@@ -193,7 +193,7 @@ protected:
   bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
   std::vector<uint8_t>           m_PublicHostAddress;
   uint16_t                       m_PublicHostPort;
-  uint8_t                        m_GameDisplay;                   // game state, public or private
+  uint8_t                        m_DisplayMode;                   // game state, public or private
   bool                           m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
   uint8_t                        m_VirtualHostPID;                // host's PID
   uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
@@ -201,7 +201,8 @@ protected:
   uint8_t                        m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
   bool                           m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                           m_Locked;                        // if the game owner is the only one allowed to run game commands or not
-  bool                           m_RealmRefreshError;                  // if the game had a refresh error
+  bool                           m_RealmRefreshError;             // if the game had a refresh error
+  bool                           m_ChatOnly;                      // if we should ignore game start commands
   bool                           m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
   bool                           m_MuteLobby;                     // if we should stop forwarding lobby chat messages
   bool                           m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
@@ -237,7 +238,7 @@ public:
   inline bool           GetPublicHostOverride() const { return m_PublicHostOverride; }
   inline std::vector<uint8_t>    GetPublicHostAddress() const { return m_PublicHostAddress; }
   inline uint16_t       GetPublicHostPort() const { return m_PublicHostPort; }
-  inline uint8_t        GetDisplayMode() const { return m_GameDisplay; }
+  inline uint8_t        GetDisplayMode() const { return m_DisplayMode; }
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
   inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
@@ -283,6 +284,7 @@ public:
   uint8_t               GetNumTeamControllersOrOpen(const uint8_t team) const;
   std::string           GetClientFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
+  inline bool           GetChatOnly() const { return m_ChatOnly; }
   std::string           GetDescription() const;
   std::string           GetCategory() const;
   uint32_t              GetGameType() const;
@@ -311,6 +313,7 @@ public:
   inline void           SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void           SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
   inline void           SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
+  inline void           SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
 
   inline uint32_t       GetUptime() const {
     int64_t time = GetTime();
@@ -358,6 +361,7 @@ public:
   std::vector<uint8_t> GetGameDiscoveryInfo(const uint16_t hostPort) const;
 
   void AnnounceToRealm(CRealm* realm);
+  void AnnounceDecreateToRealms();
   void AnnounceToAddress(std::string& address) const;
   void ReplySearch(sockaddr_storage* address, CSocket* socket) const;
   void SendGameDiscoveryInfo() const;
@@ -397,6 +401,7 @@ public:
   void EventGameStarted();
   void EventGameLoaded();
   void ReleaseMap();
+  void StartGameOverTimer();
   void Reset(const bool saveStats);
   bool GetIsRemakeable();
   void Remake();

@@ -357,6 +357,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_IRC(nullptr),
     m_Net(nullptr),
     m_CurrentLobby(nullptr),
+    m_CanReplaceLobby(false),
 
     m_ConfigPath(CFG.GetFile()),
     m_Config(nullptr),
@@ -1431,6 +1432,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   m_CurrentLobby = new CGame(this, gameSetup);
+  m_CanReplaceLobby = gameSetup->m_LobbyReplaceable;
   gameSetup->OnGameCreate();
 
   if (m_CurrentLobby->GetExiting()) {
@@ -1498,7 +1500,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     }
   }
 
-  if (gameSetup->m_RealmsDisplayMode == GAME_PRIVATE ||
+  if (gameSetup->m_RealmsDisplayMode != GAME_PUBLIC ||
     gameSetup->m_CreatedFromType != GAMESETUP_ORIGIN_REALM ||
     gameSetup->m_Ctx->GetIsWhisper()) {
     gameSetup->m_Ctx->SendPrivateReply(m_CurrentLobby->GetAnnounceText());

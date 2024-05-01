@@ -130,7 +130,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_HostPort(0),
     m_UDPEnabled(false),
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
-    m_GameDisplay(nGameSetup->m_RealmsDisplayMode),
+    m_DisplayMode(nGameSetup->m_RealmsDisplayMode),
     m_IsAutoVirtualPlayers(false),
     m_VirtualHostPID(0xFF),
     m_Exiting(false),
@@ -138,6 +138,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_PublicStart(false),
     m_Locked(false),
     m_RealmRefreshError(false),
+    m_ChatOnly(false),
     m_MuteAll(false),
     m_MuteLobby(false),
     m_IsMirror(nGameSetup->GetIsMirror()),
@@ -309,6 +310,29 @@ void CGame::ReleaseMap()
 
   // Release from memory
   m_Map->ClearMapData();
+}
+
+void CGame::StartGameOverTimer()
+{
+  m_GameOverTime = GetTime();
+  Print(GetLogPrefix() + "gameover timer started (" + ToDecString(GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size())) + " player(s) left)");
+  if (GetNumHumanPlayers() > 0) {
+    SendAllChat("Gameover timer started (disconnecting in 60 seconds...)");
+  }
+
+  if (this == m_Aura->m_CurrentLobby) {
+    if (m_UDPEnabled) {
+      SendGameDiscoveryDecreate();
+      m_UDPEnabled = false;
+    }
+    if (m_DisplayMode != GAME_NONE) {
+      AnnounceDecreateToRealms();
+      m_DisplayMode = GAME_NONE;
+    }
+    m_ChatOnly = true;
+    m_Aura->m_Games.push_back(this);
+    m_Aura->m_CurrentLobby = nullptr;
+  }
 }
 
 CGame::~CGame()
@@ -987,11 +1011,7 @@ bool CGame::Update(void* fd, void* send_fd)
   uint8_t RemainingPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
   if (RemainingPlayers != m_StartPlayers && m_GameOverTime == 0 && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0 || RemainingPlayers <= m_NumPlayersToStartGameOver || (RemainingPlayers == 1 && GetNumComputers() == 0)) {
-      m_GameOverTime = Time;
-      Print(GetLogPrefix() + "gameover timer started (" + std::to_string(RemainingPlayers) + " player(s) left)");
-      if (GetNumHumanPlayers() > 0) {
-        SendAllChat("Gameover timer started (disconnecting in 60 seconds...)");
-      }
+      StartGameOverTimer();
     }
   }
 
@@ -999,7 +1019,7 @@ bool CGame::Update(void* fd, void* send_fd)
   if (m_GameOverTime != 0 && Time - m_GameOverTime >= 60) {
     // Disconnect the player socket, destroy it, but do not send W3GS_PLAYERLEAVE
     // Sending it would force them to actually quit the game, and go to the scorescreen.
-    if (StopPlayers("was disconnected (gameover timer finished)", true)) {
+    if (StopPlayers("was disconnected (gameover timer finished)", m_GameLoading || m_GameLoaded)) {
       Print(GetLogPrefix() + "is over (gameover timer finished)");
       SendEveryoneElseLeft();
     }
@@ -1019,7 +1039,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // refresh every 3 seconds
 
-  if (!m_RealmRefreshError && !m_CountDownStarted && m_GameDisplay == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
+  if (!m_RealmRefreshError && !m_CountDownStarted && m_DisplayMode == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
     // send a game refresh packet to each battle.net connection
 
     for (auto& realm : m_Aura->m_Realms) {
@@ -1122,7 +1142,7 @@ bool CGame::Update(void* fd, void* send_fd)
       // doing it this way ensures it's always "5 4 3 2 1" but each int32_terval might not be *exactly* the same length
 
       SendAllChat(to_string(m_CountDownCounter--) + ". . .");
-    } else {
+    } else if (!m_ChatOnly) {
       if (GetNumHumanOrFakeControllers() >= 1) {
         EventGameStarted();
       } else {
@@ -2052,7 +2072,7 @@ void CGame::SendAllAutoStart() const
 uint32_t CGame::GetGameType() const
 {
   uint32_t mapGameType = 0;
-  if (m_GameDisplay == GAME_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
+  if (m_DisplayMode == GAME_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
   if (m_RestoredGame) {
     mapGameType |= MAPGAMETYPE_SAVEDGAME;
   } else {
@@ -2470,7 +2490,7 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   string typeWord;
   if (m_RestoredGame) {
     typeWord = "loaded";
-  } else if (m_GameDisplay == GAME_PRIVATE) {
+  } else if (m_DisplayMode == GAME_PRIVATE) {
     typeWord = "private";
   } else {
     typeWord = "public";
@@ -2586,7 +2606,20 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
 
 void CGame::AnnounceToRealm(CRealm* realm)
 {
-  realm->SendGameRefresh(m_GameDisplay, this);
+  if (m_DisplayMode == GAME_NONE) return;
+  realm->SendGameRefresh(m_DisplayMode, this);
+}
+
+void CGame::AnnounceDecreateToRealms()
+{
+  for (auto& realm : m_Aura->m_Realms) {
+    if (m_IsMirror && realm->GetIsMirror())
+      continue;
+
+    realm->ResetGameAnnouncement();
+    realm->QueueGameUncreate();
+    realm->SendEnterChat();
+  }
 }
 
 void CGame::AnnounceToAddress(string& addressLiteral) const
@@ -3960,15 +3993,7 @@ void CGame::EventGameStarted()
   m_Aura->m_Games.push_back(this);
 
   // and finally reenter battle.net chat
-
-  for (auto& realm : m_Aura->m_Realms) {
-    if (m_IsMirror && realm->GetIsMirror())
-      continue;
-
-    realm->ResetGameAnnouncement();
-    realm->QueueGameUncreate();
-    realm->SendEnterChat();
-  }
+  AnnounceDecreateToRealms();
 
   // record everything we need to ban each player in case we decide to do so later
   // this is because when a player leaves the game an admin might want to ban that player
@@ -5513,6 +5538,14 @@ void CGame::StartCountDown(bool force)
   if (m_CountDownStarted)
     return;
 
+  if (m_ChatOnly) {
+    SendAllChat("This lobby is in chat-only mode. Please join another hosted game.");
+    if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby != this) {
+      SendAllChat("Currently hosting: " + m_Aura->m_CurrentLobby->GetDescription());
+    }
+    return;
+  }
+
   // if the player sent "!start force" skip the checks and start the countdown
   // otherwise check that the game is ready to start
 
@@ -5605,6 +5638,7 @@ void CGame::StartCountDown(bool force)
       return;
   }
 
+  m_Aura->m_CanReplaceLobby = false;
   m_CountDownStarted = true;
   m_CountDownCounter = 5;
 

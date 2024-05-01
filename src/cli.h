@@ -83,20 +83,22 @@ private:
   std::optional<std::string>            m_GameName;
   std::optional<bool>                   m_RandomRaces;
   std::optional<bool>                   m_RandomHeroes;
-  std::optional<std::string>            m_SearchType; // Validation?
-  std::optional<std::string>            m_Observers; // Validation?
-  std::optional<std::string>            m_Visibility; // Validation?
+  std::optional<std::string>            m_SearchType;
+  std::optional<std::string>            m_Observers;
+  std::optional<std::string>            m_Visibility;
   std::optional<std::string>            m_Owner;
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameLobbyTimeout;
   std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
+  std::optional<bool>                   m_GameLobbyReplaceable;
   std::optional<bool>                   m_GameCheckReservation;
   std::vector<std::string>              m_GameReservations;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;
   std::optional<std::string>            m_GameMapAlias;
+  std::optional<std::string>            m_GameDisplayMode;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;

@@ -378,6 +378,9 @@ This flag enables version checks to ensure hosted games are compatible with runn
 
 This flag enables reservation checks to ensure only players with reservations may join games.
 
+## \`--replaceable\`, \`--no-replaceable\`
+
+This flag enables users to use the !host command to replace the hosted game by another one.
 
 ## \`--random-races\`
 

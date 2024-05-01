@@ -116,6 +116,7 @@ public:
   CIRC*                                              m_IRC;                        // IRC client
   CNet*                                              m_Net;                        // network manager
   CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any
+  bool                                               m_CanReplaceLobby;           // whether usage of the host command is allowed - doing so will cause this game to be destroyed after 60 seconds
 
   std::filesystem::path                              m_ConfigPath;
   CBotConfig*                                        m_Config;

@@ -185,6 +185,7 @@ public:
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
 
+  bool                                            m_LobbyReplaceable;
   std::optional<uint32_t>                         m_LobbyTimeout;
   std::optional<bool>                             m_CheckJoinable;
 
@@ -264,6 +265,7 @@ public:
   bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   void SetName(const std::string& nName) { m_GameName = nName; }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
+  void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }

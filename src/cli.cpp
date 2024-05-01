@@ -30,6 +30,7 @@
 #include "net.h"
 #include "fileutil.h"
 #include "osutil.h"
+#include "gameprotocol.h"
 #include "gamesetup.h"
 #include "realm.h"
 #include "CLI11.hpp"
@@ -107,6 +108,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--owner", m_Owner, "Customizes the game owner when hosting from the CLI.");
   app.add_option("--observers", m_Observers, "Customizes observers when hosting from the CLI. Values: no, referees, defeat, full")->check(CLI::IsMember({"no", "referees", "defeat", "full"}));
   app.add_option("--visibility", m_Visibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
+  app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
   app.add_option("--random-races", m_RandomRaces, "Toggles random races when hosting from the CLI.");
   app.add_option("--random-heroes", m_RandomHeroes, "Toggles random heroes when hosting from the CLI.");
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
@@ -119,6 +121,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
+  app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
 
   // Command execution
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
@@ -319,6 +322,18 @@ bool CCLI::QueueActions(CAura* nAura) const
     } else {
       searchType = SEARCH_TYPE_ANY;
     }
+    uint8_t displayMode;
+    if (m_GameDisplayMode.has_value()) {
+      if (m_GameDisplayMode.value() == "public") {
+        displayMode = GAME_PUBLIC;
+      } else if (m_GameDisplayMode.value() == "private") {
+        displayMode = GAME_PRIVATE;
+      } else {
+        displayMode = GAME_NONE;
+      }
+    } else {
+      displayMode = GAME_PUBLIC;
+    }
     CCommandContext* ctx = new CCommandContext(nAura, false, &cout);
     optional<string> userName = GetUserMultiPlayerName();
     if (userName.has_value()) {
@@ -384,8 +399,10 @@ bool CCLI::QueueActions(CAura* nAura) const
           if (m_GameLobbyTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameLobbyTimeout.value());
           if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
           if (m_GameCheckReservation.has_value()) gameSetup->SetCheckReservation(m_GameCheckReservation.value());
+          if (m_GameLobbyReplaceable.has_value()) gameSetup->SetLobbyReplaceable(m_GameLobbyReplaceable.value());
           gameSetup->SetReservations(m_GameReservations);
           gameSetup->SetVerbose(m_Verbose);
+          gameSetup->SetDisplayMode(displayMode);
           gameSetup->SetActive();
           vector<string> hostAction{"host"};
           nAura->m_PendingActions.push(hostAction);
