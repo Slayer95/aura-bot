@@ -3,27 +3,6 @@
 
 [Aura][1] has a revamped core, and has had features not only added, but also removed.
 
-# Technical changes:
-- Uses C++17
-- Has a Windows 64-bit build
-- Has an Ubuntu 24 CI build
-- Implements a command-line interface (CLI)
-- Implements integration with Windows Explorer
-- Higher modularization
-- Statically analyzed with clang-analyzer and cppcheck
-- Using aggressive optimizations
-- IPv6 supported
-- Unified commands system
-- Stricter chat queue system
-- Maps are more strictly parsed and sanitized
-- Loaded map metadata is cached
-- Supports various log levels
-- Docs automatically generated
-- Updated libraries: StormLib, SQLite, zlib
-- Boost is no longer required
-- MySQL is no longer required
-- Uses SQLite and a simpler database schema.
-
 # Setup:
 - Config is much more readable
 - Config keys have been renamed
@@ -98,6 +77,27 @@ in Aura's console.
 - Uses DotA stats automatically according to maps' file names
 - Identifies Evergreen maps automatically according to maps' file names
 - Many commands were implemented. See the full list at [3]
+
+# Technical changes:
+- Uses C++17
+- Has a Windows 64-bit build
+- Has an Ubuntu 24 CI build
+- Implements a command-line interface (CLI)
+- Implements integration with Windows Explorer
+- Higher modularization
+- Statically analyzed with clang-analyzer and cppcheck
+- Using aggressive optimizations
+- IPv6 supported
+- Unified commands system
+- Stricter chat queue system
+- Maps are more strictly parsed and sanitized
+- Loaded map metadata is cached
+- Supports various log levels
+- Docs automatically generated
+- Updated libraries: StormLib, SQLite, zlib
+- Boost is no longer required
+- MySQL is no longer required
+- Uses SQLite and a simpler database schema.
 
 # Removed features from [GHost++][2]:
 - Autohost
