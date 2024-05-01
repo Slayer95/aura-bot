@@ -834,7 +834,7 @@ bool CCommandContext::ParseNonPlayerSlot(const std::string& target, uint8_t& SID
 
   const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
   if (!slot) {
-    ErrorReply("Slot not found.");
+    ErrorReply("Slot [" + target + "] not found.");
     return false;
   }
   if (m_TargetGame->GetIsPlayerSlot(testSID)) {
