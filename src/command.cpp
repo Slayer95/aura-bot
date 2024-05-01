@@ -1091,7 +1091,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
-
     //
     // !PING
     //
@@ -1174,6 +1173,74 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (KickedCount > 0)
         SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_TargetGame->m_AutoKickPing) + "...");
+
+      break;
+    }
+
+    //
+    // !STATSDOTA
+    // !STATS
+    //
+
+    case HashCode("statsdota"):
+    case HashCode("stats"): {
+      if (!CheckPermissions(m_Config->m_StatsPermissions, COMMAND_PERMISSIONS_VERIFIED)) {
+        ErrorReply("Not allowed to look up stats.");
+        break;
+      }
+      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      if (!targetPlayer) {
+        ErrorReply("Player [" + Payload + "] not found.");
+        break;
+      }
+      const bool isDota = CommandHash == HashCode("statsdota") || m_TargetGame->GetClientFileName().find("DotA") != string::npos;
+      const bool isUnverified = targetPlayer->GetRealm(false) != nullptr && !targetPlayer->IsRealmVerified();
+      string targetIdentity = "[" + targetPlayer->GetName() + "]";
+      if (isUnverified) targetIdentity += " (unverified)";
+
+      if (isDota) {
+        CDBDotAPlayerSummary* DotAPlayerSummary = m_Aura->m_DB->DotAPlayerSummaryCheck(targetPlayer->GetName());
+        if (!DotAPlayerSummary) {
+          SendReply(targetIdentity + " has no registered DotA games.");
+          break;
+        }
+        const string summaryText = (
+          targetIdentity +
+          " - " + to_string(DotAPlayerSummary->GetTotalGames()) + " games (W/L: " +
+          to_string(DotAPlayerSummary->GetTotalWins()) + "/" + to_string(DotAPlayerSummary->GetTotalLosses()) +
+          ") Hero K/D/A: " + to_string(DotAPlayerSummary->GetTotalKills()) +
+          "/" + to_string(DotAPlayerSummary->GetTotalDeaths()) +
+          "/" + to_string(DotAPlayerSummary->GetTotalAssists()) +
+          " (" + to_string(DotAPlayerSummary->GetAvgKills()) +
+          "/" + to_string(DotAPlayerSummary->GetAvgDeaths()) +
+          "/" + to_string(DotAPlayerSummary->GetAvgAssists()) +
+          ") Creep K/D/N: " + to_string(DotAPlayerSummary->GetTotalCreepKills()) +
+          "/" + to_string(DotAPlayerSummary->GetTotalCreepDenies()) +
+          "/" + to_string(DotAPlayerSummary->GetTotalNeutralKills()) +
+          " (" + to_string(DotAPlayerSummary->GetAvgCreepKills()) +
+          "/" + to_string(DotAPlayerSummary->GetAvgCreepDenies()) +
+          "/" + to_string(DotAPlayerSummary->GetAvgNeutralKills()) +
+          ") T/R/C: " + to_string(DotAPlayerSummary->GetTotalTowerKills()) +
+          "/" + to_string(DotAPlayerSummary->GetTotalRaxKills()) +
+          "/" + to_string(DotAPlayerSummary->GetTotalCourierKills())
+        );
+        SendReply(summaryText);
+        delete DotAPlayerSummary;
+      } else {
+        CDBGamePlayerSummary* GamePlayerSummary = m_Aura->m_DB->GamePlayerSummaryCheck(targetPlayer->GetName());
+        if (!GamePlayerSummary) {
+          SendReply(targetIdentity + " has no registered games.");
+          break;
+        }
+        const string summaryText = (
+          targetIdentity + " has played " +
+          to_string(GamePlayerSummary->GetTotalGames()) + " games with this bot. Average loading time: " +
+          to_string(GamePlayerSummary->GetAvgLoadingTime()) + " seconds. Average stay: " +
+          to_string(GamePlayerSummary->GetAvgLeftPercent()) + " percent"
+        );
+        SendReply(summaryText);
+        delete GamePlayerSummary;
+      }
 
       break;
     }

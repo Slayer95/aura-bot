@@ -82,6 +82,9 @@ public:
   uint8_t m_TellPermissions;
   uint8_t m_WhoisPermissions;
 
+  // Stats commands
+  uint8_t m_StatsPermissions;
+
   std::string m_CFGKeyPrefix;                     // 
   std::string m_NameSpace;
 

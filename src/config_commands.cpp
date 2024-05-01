@@ -58,7 +58,8 @@ CCommandConfig::CCommandConfig()
    m_StartPermissions(COMMAND_PERMISSIONS_AUTO),
    m_SayPermissions(COMMAND_PERMISSIONS_AUTO),
    m_TellPermissions(COMMAND_PERMISSIONS_AUTO),
-   m_WhoisPermissions(COMMAND_PERMISSIONS_AUTO)
+   m_WhoisPermissions(COMMAND_PERMISSIONS_AUTO),
+   m_StatsPermissions(COMMAND_PERMISSIONS_AUTO)
 {
 }
 
@@ -76,12 +77,15 @@ CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const boo
   m_BotOwnerBasePermissions = botOwnerPermissions;
 
   m_AliasPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_alias.permissions", commandPermissions, COMMAND_PERMISSIONS_SUDO);
+  m_ImportPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_import.permissions", commandPermissions, COMMAND_PERMISSIONS_SUDO);
+
   m_HostPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_host.permissions", commandPermissions, hostingPermissions);
   m_HostRawPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_hostraw.permissions", commandPermissions, hostingPermissions);
   m_StartPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_start.permissions", commandPermissions, hostingPermissions);
   m_SayPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_say.permissions", commandPermissions, moderatorPermissions);
   m_TellPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_tell.permissions", commandPermissions, moderatorPermissions);
   m_WhoisPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_whois.permissions", commandPermissions, moderatorPermissions);
+  m_StatsPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_stats.permissions", commandPermissions, moderatorPermissions);
 
   m_Enabled = CFG.GetBool(m_CFGKeyPrefix + "commands.enabled", true);
   m_NameSpace = CFG.GetString(m_CFGKeyPrefix + "commands.namespace", useDefaultNamespace ? "aura" : emptyString);
