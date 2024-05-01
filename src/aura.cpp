@@ -1426,6 +1426,10 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     return false;
   }
 
+  if (!gameSetup->m_Map) {
+    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    return false;
+  }
   if (!gameSetup->m_Map || !gameSetup->m_Map->GetValid()) {
     gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;

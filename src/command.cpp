@@ -5502,7 +5502,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("map"):
     case HashCode("load"):
     case HashCode("host"): {
-      if (!CheckPermissions(m_Config->m_HostPermissions, COMMAND_PERMISSIONS_ADMIN)) {
+      if (!CheckPermissions(m_Config->m_HostPermissions, (
+        m_SourceGame == m_Aura->m_CurrentLobby && m_Aura->m_CanReplaceLobby ?
+        COMMAND_PERMISSIONS_UNVERIFIED :
+        COMMAND_PERMISSIONS_ADMIN
+      ))) {
         ErrorReply("Not allowed to host games.");
         break;
       }

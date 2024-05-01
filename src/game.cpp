@@ -283,9 +283,13 @@ void CGame::Reset(const bool saveStats)
   }
 }
 
-void CGame::ReleaseMap()
+bool CGame::ReleaseMap()
 {
-  if (!m_Map) return;
+  if (!m_Map) return false;
+
+  if (m_Aura->m_AutoRehostGameSetup && m_Aura->m_AutoRehostGameSetup->m_Map == m_Map) {
+    return false;
+  }
 
   if (m_HasMapLock) {
     // Only maps with paths that are filenames but not standard set map lock
@@ -310,6 +314,7 @@ void CGame::ReleaseMap()
 
   // Release from memory
   m_Map->ClearMapData();
+  return true;
 }
 
 void CGame::StartGameOverTimer()
@@ -338,8 +343,10 @@ void CGame::StartGameOverTimer()
 CGame::~CGame()
 {
   Reset(true);
-  ReleaseMap();
-  delete m_Map;
+  if (ReleaseMap()) {
+    delete m_Map;
+    m_Map = nullptr;
+  }
   for (auto& player : m_Players) {
     delete player;
   }
@@ -2296,6 +2303,18 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
         continue;
       }
       Line = Line.substr(17);
+    }
+    if (Line.substr(0, 14) == "{REPLACEABLE?}") {
+      if (!m_Aura->m_CanReplaceLobby) {
+        continue;
+      }
+      Line = Line.substr(14);
+    }
+    if (Line.substr(0,14) == "{REPLACEABLE!}") {
+      if (m_Aura->m_CanReplaceLobby) {
+        continue;
+      }
+      Line = Line.substr(14);
     }
     if (Line.substr(0, 6) == "{LAN?}") {
       if (!player->GetRealm(false)) {

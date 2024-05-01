@@ -400,7 +400,7 @@ public:
 
   void EventGameStarted();
   void EventGameLoaded();
-  void ReleaseMap();
+  bool ReleaseMap();
   void StartGameOverTimer();
   void Reset(const bool saveStats);
   bool GetIsRemakeable();
