@@ -250,6 +250,7 @@ void CGameSetup::ParseInput()
     if (it != m_Aura->m_LastMapSuggestions.end()) {
       m_SearchRawTarget = it->second;
       lower = m_SearchRawTarget;
+      transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
     }
   }
 
@@ -411,6 +412,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
     vector<pair<string, int>> mapResults = FuzzySearchFiles(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP, m_SearchTarget.second);
     for (const auto& result : mapResults) {
+      // Whether 0x80 is set flags the type of result: If it is there, it's a map
       allResults.push_back(make_pair(result.first, result.second | 0x80));
     }
   }
@@ -433,10 +435,10 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
   );
 
   if (m_LuckyMode || allResults.size() == 1) {
-    if ((allResults[0].second & 0x80) == 0) {
-      return SEARCH_RESULT(MATCH_TYPE_CONFIG, m_Aura->m_Config->m_MapCFGPath / filesystem::path(allResults[0].first));
-    } else {
+    if (allResults[0].second & 0x80) {
       return SEARCH_RESULT(MATCH_TYPE_MAP, m_Aura->m_Config->m_MapPath / filesystem::path(allResults[0].first));
+    } else {
+      return SEARCH_RESULT(MATCH_TYPE_CONFIG, m_Aura->m_Config->m_MapCFGPath / filesystem::path(allResults[0].first));
     }
   }
 
@@ -653,16 +655,19 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
   if (fileName.empty()) return nullptr;
   if (m_Aura->m_Config->m_EnableCFGCache) {
     bool cacheSuccess = false;
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+      Print("[AURA] Searching map in cache [" + fileName + "]");
+    }
     if (m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
       string cfgName = m_Aura->m_CachedMaps[fileName];
       filesystem::path cfgPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(cfgName);
       CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
-      if (cachedResult && cachedResult->GetServerPath() == fileName) {
+      if (cachedResult && FileNameEquals(cachedResult->GetServerPath(), fileName)) {
         cacheSuccess = true;
       }
       if (cacheSuccess) {
         if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-          Print("[AURA] Cache success");
+          Print("[AURA] Map cache success");
         }
         if (!silent) m_Ctx->SendReply("Map file loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
         return cachedResult;
@@ -672,7 +677,7 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
       }
     }
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      Print("[AURA] Cache miss");
+      Print("[AURA] Map cache miss");
     }
   }
   return GetBaseMapFromMapFile(mapPath, silent);
@@ -1186,15 +1191,11 @@ bool CGameSetup::RestoreFromSaveFile()
   if (!m_RestoredGame->Load()) return false;
   bool success = m_RestoredGame->Parse();
   m_RestoredGame->Unload();
-  string mapFileSave = ParseFileName(m_RestoredGame->GetClientMapPath());
-  string mapFileActive = ParseFileName(m_Map->GetClientPath());
-  std::transform(std::begin(mapFileSave), std::end(mapFileSave), std::begin(mapFileSave), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
-  std::transform(std::begin(mapFileActive), std::end(mapFileActive), std::begin(mapFileActive), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
-  if (mapFileSave != mapFileActive) {
+  if (!CaseInsensitiveEquals(
+    // Not using FileNameEquals because these are client paths
+    ParseFileName(m_RestoredGame->GetClientMapPath()),
+    ParseFileName(m_Map->GetClientPath())
+  )) {
     m_Ctx->ErrorReply("Requires map [" + m_RestoredGame->GetClientMapPath() + "]", CHAT_SEND_SOURCE_ALL);
     return false;
   }
@@ -1327,10 +1328,11 @@ void CGameSetup::OnGameCreate()
   // Transferred to CGame. Do not deallocate.
   m_RestoredGame = nullptr;
   if (m_LobbyAutoRehosted) {
+    // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
     if (m_CreationCounter < 10) {
       SetName(m_GameBaseName + "-" + string(1, 48 + m_CreationCounter));
     } else {
-      SetName(m_GameBaseName + "-" + string(1, 97 + m_CreationCounter));
+      SetName(m_GameBaseName + "-" + string(1, 87 + m_CreationCounter));
     }
     m_CreationCounter = (m_CreationCounter + 1) % 36;
   }

@@ -1184,7 +1184,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("statsdota"):
     case HashCode("stats"): {
-      if (!CheckPermissions(m_Config->m_StatsPermissions, COMMAND_PERMISSIONS_VERIFIED)) {
+      if (
+        !(m_SourceGame && m_SourceGame->GetIsLobby()) &&
+        !CheckPermissions(m_Config->m_StatsPermissions, COMMAND_PERMISSIONS_VERIFIED)
+      ) {
         ErrorReply("Not allowed to look up stats.");
         break;
       }

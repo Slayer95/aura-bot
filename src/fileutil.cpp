@@ -316,7 +316,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   vector<filesystem::path> folderContents = FilesMatch(directory, extensions);
   set<filesystem::path> filesSet(folderContents.begin(), folderContents.end());
 
-  // 1. Try files that start with the given pattern (up to digits).
+  // 1. Try files that start with the given pattern (up to digits and parens).
   //    These have triple weight.
   vector<pair<string, int>> inclusionMatches;
   for (const auto& mapName : filesSet) {
@@ -329,7 +329,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
     }
     bool startsWithPattern = true;
     for (uint8_t i = 0; i < fuzzyPatternIndex; ++i) {
-      if (!isdigit(mapString[i])) {
+      if (!isdigit(mapString[i]) && mapString[i] != '(' && mapString[i] != ')') {
         startsWithPattern = false;
         break;
       }
@@ -348,8 +348,15 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
 
   // 2. Try fuzzy searching
   string::size_type maxDistance = FUZZY_SEARCH_MAX_DISTANCE;
-  if (fuzzyPattern.size() < maxDistance) {
-    maxDistance = fuzzyPattern.size() / 2;
+  if (fuzzyPattern.size() < 3 * (maxDistance - 4)) {
+    // This formula approximates how PS !esdata fuzzy-matches
+    // It's my hope that it works here as well.
+    // 3->0, 4->1, 8->2
+    // 3->5, 4->5, 8->6
+    //
+    // I add approx +4 because PreparePatternForFuzzySearch removes .w3m/.w3x extension
+    // In the case of 3->0, I effectively add +5, because 3->0 has always been too strict.
+    maxDistance = fuzzyPattern.size() / 3 + 4;
   }
 
   vector<pair<string, int>> distances;

@@ -703,6 +703,26 @@ inline std::string ParseFileExtension(const std::string& inputPath) {
   return extension;
 }
 
+inline bool CaseInsensitiveEquals(const std::string& nameOne, const std::string& nameTwo) {
+  std::string lowerOne = nameOne;
+  std::string lowerTwo = nameTwo;
+  std::transform(std::begin(lowerOne), std::end(lowerOne), std::begin(lowerOne), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  std::transform(std::begin(lowerTwo), std::end(lowerTwo), std::begin(lowerTwo), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  return lowerOne == lowerTwo;
+}
+
+inline bool FileNameEquals(const std::string& nameOne, const std::string& nameTwo) {
+#ifndef _WIN32
+  return nameOne == nameTwo;
+#else
+  return CaseInsensitiveEquals(nameOne, nameTwo);
+#endif
+}
+
 inline bool HasNullOrBreak(const std::string& unsafeInput) {
   for (const auto& c : unsafeInput) {
     if (c == '\0' || c == '\n' || c == '\r' || c == '\f') {
