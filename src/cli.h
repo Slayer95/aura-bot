@@ -65,7 +65,8 @@ private:
   std::optional<bool>                   m_Discord;
   std::optional<bool>                   m_ExitOnStandby;
   std::optional<bool>                   m_UseMapCFGCache;
-  std::optional<std::string>            m_LANMode; // Validation?
+  std::optional<std::string>            m_BindAddress;
+  std::optional<std::string>            m_LANMode;
   std::optional<std::string>            m_LogLevel;
   std::optional<bool>                   m_InitSystem;
 

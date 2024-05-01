@@ -300,6 +300,15 @@ Specifies the directory where Warcraft 3 save files (``.w3z``) are stored.
 
 This option is equivalent to ``<bot.save_path>`` in \`config.ini\`
 
+## \`--bind-address <IPv4>\`
+
+If specified, Aura's game server will only allow connections from the provided IPv4 address.
+Note that \`0.0.0.0\` is a special value that will allow connections from every IPv4 address.
+
+The most interesting value is \`127.0.0.1\`, which will only allow connections from your 
+[loopback interface][4] (i.e. connections only from the local machine where the server is running.)
+
+This option is equivalent to ``<net.bind_address>`` in \`config.ini\`
 
 ## \`--lan-mode <MODE>\`
 
@@ -542,3 +551,4 @@ Choose the appropriate scope based on where you want the command to be executed.
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://gitlab.com/ivojulca/aura-bot/NETWORKING.md
 [3]: https://owasp.org/www-community/attacks/Path_Traversal
+[4]: https://en.wikipedia.org/wiki/Localhost
