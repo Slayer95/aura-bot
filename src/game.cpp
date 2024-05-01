@@ -840,13 +840,7 @@ bool CGame::Update(void* fd, void* send_fd)
         m_LastLagScreenResetTime = Time;
       }
     } else {
-      bool anyUsingLegacyGProxy = false;
-      for (auto& player : m_Players) {
-        if (player->GetGProxyLegacy()) {
-          anyUsingLegacyGProxy = true;
-          break;
-        }
-      }
+      const bool anyUsingLegacyGProxy = GetAnyUsingGProxyLegacy();
 
       int64_t WaitTime = 60;
 
@@ -905,11 +899,10 @@ bool CGame::Update(void* fd, void* send_fd)
           continue;
         }
 
-        uint32_t FramesBehind = m_SyncCounter - player->GetSyncCounter();
-        if (m_SyncCounter > player->GetSyncCounter() && FramesBehind >= m_SyncLimitSafe) {
+        if (m_SyncCounter > player->GetSyncCounter() && m_SyncCounter - player->GetSyncCounter() >= m_SyncLimitSafe) {
           ++PlayersStillLagging;
         } else {
-          Print(GetLogPrefix() + "stopped lagging on [" + player->GetName() + "] (" + to_string(player->GetSyncCounter()) + "/" + to_string(m_SyncCounter) + ")");
+          Print(GetLogPrefix() + "stopped lagging on [" + player->GetName() + "] (" + player->GetDelayText() + ")");
           SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(player));
           player->SetLagging(false);
           player->SetStartedLaggingTicks(0);
@@ -1218,13 +1211,13 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
   }
 }
 
-void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message) const
+void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message, const uint8_t logLevel) const
 {
   // send a private message to one player - it'll be marked [Private] in Warcraft 3
   if (message.empty())
     return;
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+  if (m_Aura->MatchLogLevel(logLevel)) {
     Print(GetLogPrefix() + "sent <<" + message + ">>");
   }
 
@@ -1256,19 +1249,19 @@ void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message
   }
 }
 
-void CGame::SendChat(uint8_t fromPID, uint8_t toPID, const string& message) const
+void CGame::SendChat(uint8_t fromPID, uint8_t toPID, const string& message, const uint8_t logLevel) const
 {
-  SendChat(fromPID, GetPlayerFromPID(toPID), message);
+  SendChat(fromPID, GetPlayerFromPID(toPID), message, logLevel);
 }
 
-void CGame::SendChat(CGamePlayer* player, const string& message) const
+void CGame::SendChat(CGamePlayer* player, const string& message, const uint8_t logLevel) const
 {
-  SendChat(GetHostPID(), player, message);
+  SendChat(GetHostPID(), player, message, logLevel);
 }
 
-void CGame::SendChat(uint8_t toPID, const string& message) const
+void CGame::SendChat(uint8_t toPID, const string& message, const uint8_t logLevel) const
 {
-  SendChat(GetHostPID(), toPID, message);
+  SendChat(GetHostPID(), toPID, message, logLevel);
 }
 
 void CGame::SendAllChat(uint8_t fromPID, const string& message) const
@@ -2340,44 +2333,36 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
     while ((matchIndex = Line.find("{AUTOSTART}")) != string::npos) {
       Line.replace(matchIndex, 11, GetAutoStartText());
     }
-    SendChat(player, Line);
+    SendChat(player, Line, LOG_LEVEL_TRACE);
   }
 }
 
 void CGame::SendCommandsHelp(const string& cmdToken, CGamePlayer* player, const bool isIntro) const
 {
-  if (isIntro) SendChat(player, "Welcome, " + player->GetName() + ".");
-  SendChat(player, "Use " + cmdToken + GetTokenName(cmdToken) + " for commands.");
+  if (isIntro) SendChat(player, "Welcome, " + player->GetName() + ".", LOG_LEVEL_TRACE);
+  SendChat(player, "Use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LOG_LEVEL_TRACE);
   if (!isIntro) return;
-  SendChat(player, cmdToken + "ping - view your latency");
-  SendChat(player, cmdToken + "start - starts the game");
+  SendChat(player, cmdToken + "ping - view your latency", LOG_LEVEL_TRACE);
+  SendChat(player, cmdToken + "start - starts the game", LOG_LEVEL_TRACE);
   if (m_OwnerName.empty()) {
-    SendChat(player, cmdToken + "owner - acquire permissions over this game");
+    SendChat(player, cmdToken + "owner - acquire permissions over this game", LOG_LEVEL_TRACE);
   }
   if (m_OwnerName.empty() || MatchOwnerName(player->GetName())) {
-    SendChat(player, cmdToken + "open [NUMBER] - opens a slot");
-    SendChat(player, cmdToken + "close [NUMBER] - closes a slot");
-    SendChat(player, cmdToken + "fill [DIFFICULTY] - adds computers");
-    SendChat(player, cmdToken + "ffa - sets free for all game mode");
-    SendChat(player, cmdToken + "vsall - sets one vs all game mode");
-    SendChat(player, cmdToken + "terminator - sets humans vs computers");
+    SendChat(player, cmdToken + "open [NUMBER] - opens a slot", LOG_LEVEL_TRACE);
+    SendChat(player, cmdToken + "close [NUMBER] - closes a slot", LOG_LEVEL_TRACE);
+    SendChat(player, cmdToken + "fill [DIFFICULTY] - adds computers", LOG_LEVEL_TRACE);
+    SendChat(player, cmdToken + "ffa - sets free for all game mode", LOG_LEVEL_TRACE);
+    SendChat(player, cmdToken + "vsall - sets one vs all game mode", LOG_LEVEL_TRACE);
+    SendChat(player, cmdToken + "terminator - sets humans vs computers", LOG_LEVEL_TRACE);
   }
   player->SetSentAutoCommandsHelp(true);
 }
 
 void CGame::SendAllActions()
 {
-  bool UsingGProxyAny = false;
-  for (auto& player : m_Players) {
-    if (player->GetGProxyAny()) {
-      UsingGProxyAny = true;
-      break;
-    }
-  }
-
   m_GameTicks += m_Latency;
 
-  if (UsingGProxyAny) {
+  if (GetAnyUsingGProxy()) {
     // we must send empty actions to non-GProxy++ players
     // GProxy++ will insert these itself so we don't need to send them to GProxy++ players
     // empty actions are used to extend the time a player can use when reconnecting
@@ -2507,6 +2492,58 @@ uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
     return m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
 
   return m_HostPort;
+}
+
+uint8_t CGame::GetActiveReconnectProtocols() const
+{
+  uint8_t protocols = 0;
+  for (const auto& player : m_Players) {
+    if (!player->GetGProxyAny()) continue;
+    if (player->GetGProxyExtended()) {
+      protocols |= RECONNECT_ENABLED_GPROXY_EXTENDED;
+      if (protocols != RECONNECT_ENABLED_GPROXY_EXTENDED) break;
+    } else {
+      protocols |= RECONNECT_ENABLED_GPROXY_BASIC;
+      if (protocols != RECONNECT_ENABLED_GPROXY_BASIC) break;
+    }
+  }
+  return protocols;
+}
+
+string CGame::GetActiveReconnectProtocolsDetails() const
+{
+  vector<string> protocols;
+  for (const auto& player : m_Players) {
+    if (!player->GetGProxyAny()) {
+      protocols.push_back("[" + player->GetName() + ": OFF]");
+    } else if (player->GetGProxyExtended()) {
+      protocols.push_back("[" + player->GetName() + ": EXT]");
+    } else {
+      protocols.push_back("[" + player->GetName() + ": ON]");
+    }
+  }
+  return JoinVector(protocols, false);
+}
+
+bool CGame::GetAnyUsingGProxy() const
+{
+  for (const auto& player : m_Players) {
+    if (player->GetGProxyAny()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool CGame::GetAnyUsingGProxyLegacy() const
+{
+  for (const auto& player : m_Players) {
+    if (!player->GetGProxyAny()) continue;
+    if (!player->GetGProxyExtended()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
@@ -3355,7 +3392,7 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
   player->GetCheckSums()->pop();
 
   bool DesyncDetected = false;
-  string DesyncedPlayers;
+  vector<CGamePlayer*> DesyncedPlayers;
   typename std::vector<CGamePlayer*>::iterator it = OtherPlayers.begin();
   while (it != OtherPlayers.end()) {
     if ((*it)->GetCheckSums()->front() == MyCheckSum) {
@@ -3371,20 +3408,22 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
         BackList.pop_back();
       }
 
-      DesyncedPlayers += (*it)->GetName() + ", ";
+      DesyncedPlayers.push_back(*it);
       std::iter_swap(it, OtherPlayers.end() - 1);
       OtherPlayers.pop_back();
     }
   }
   if (DesyncDetected) {
-    string SyncedPlayers;
-    for (auto& sp : m_SyncPlayers[player]) {
-      SyncedPlayers += sp->GetName() + ", ";
-    }
     m_Desynced = true;
-    Print(GetLogPrefix() + player->GetName() + " no longer synchronized with " + DesyncedPlayers.substr(0, DesyncedPlayers.length() - 2));
-    Print(GetLogPrefix() + player->GetName() + " still synchronized with " + SyncedPlayers.substr(0, SyncedPlayers.length() - 2));
-    SendAllChat("Warning! Desync detected (" + player->GetName() + " is not in the same game as " + DesyncedPlayers.substr(0, DesyncedPlayers.length() - 2) + ")");
+    string syncListText = PlayersToNameListString(m_SyncPlayers[player]);
+    string desyncListText = PlayersToNameListString(DesyncedPlayers);
+    uint8_t GProxyMode = GetActiveReconnectProtocols();
+    Print(GetLogPrefix() + " [GProxy=" + ToDecString(GProxyMode) + "] " + player->GetName() + " (" + player->GetDelayText() + ") is synchronized with " + to_string(m_SyncPlayers[player].size()) + " player(s): " + syncListText);
+    Print(GetLogPrefix() + " [GProxy=" + ToDecString(GProxyMode) + "] " + player->GetName() + " (" + player->GetDelayText() + ") no longer synchronized with " + desyncListText);
+    if (GProxyMode > 0) {
+      Print(GetLogPrefix() + "GProxy: " + GetActiveReconnectProtocolsDetails());
+    }
+    SendAllChat("Warning! Desync detected (" + player->GetName() + " (" + player->GetDelayText() + ") may not be in the same game as " + desyncListText);
   }
 }
 

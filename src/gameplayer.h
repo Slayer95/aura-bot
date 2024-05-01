@@ -234,6 +234,7 @@ public:
 	inline bool                  GetDisconnected() const { return m_Disconnected; }
 	inline int64_t               GetLastDisconnectTime() const { return m_LastDisconnectTime; }
 	int64_t                      GetTotalDisconnectTime() const;
+  std::string                  GetDelayText() const;
   
   inline bool                  GetIsReserved() const { return m_Reserved; }
   inline bool                  GetIsObserver() const { return m_Observer; }

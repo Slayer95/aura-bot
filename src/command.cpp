@@ -1067,12 +1067,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           SyncStatus = SyncStatus.substr(0, SyncStatus.length() - 2);
         }
       }
-      bool IsForwards = targetPlayer->GetSyncCounter() >= m_TargetGame->m_SyncCounter;
-      uint32_t OffsetAbs = (
-        IsForwards ? targetPlayer->GetSyncCounter() - m_TargetGame->m_SyncCounter :
-        m_TargetGame->m_SyncCounter - targetPlayer->GetSyncCounter()
-      );
-      string SyncOffsetText = IsForwards ? " +" + to_string(OffsetAbs) : " -" + to_string(OffsetAbs);
       string SlotFragment;
       if (m_TargetGame->GetIsLobby()) {
         SlotFragment = "Slot #" + to_string(1 + m_TargetGame->GetSIDFromPID(targetPlayer->GetPID())) + ". ";
@@ -1091,7 +1085,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         IPVersionFragment = ", IPv4";
       }
-      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + (targetPlayer->GetNumPings() > 0 ? to_string(targetPlayer->GetPing()) + "ms" : "N/A") + IPVersionFragment + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus + SyncOffsetText : ""));
+      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + targetPlayer->GetDelayText() + IPVersionFragment + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
       SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       break;

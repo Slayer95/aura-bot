@@ -261,6 +261,8 @@ public:
   inline bool           GetLobbyLoading() const { return m_LobbyLoading; }
   inline bool           GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool           GetIsRestored() const { return m_RestoredGame != nullptr; }
+  inline uint32_t       GetSyncCounter() const { return m_SyncCounter; }
+  inline uint16_t       GetLatency() const { return m_Latency; }
   inline bool           GetLagging() const { return m_Lagging; }
   inline bool           GetPaused() const { return m_Paused; }
   inline bool           GetIsGameOver() const { return m_GameOverTime != 0; }
@@ -301,6 +303,10 @@ public:
   uint16_t              GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
   inline bool           GetIsRealmRefreshError() { return m_RealmRefreshError; }
   inline bool           GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
+  uint8_t               GetActiveReconnectProtocols() const;
+  std::string           GetActiveReconnectProtocolsDetails() const;
+  bool                  GetAnyUsingGProxy() const;
+  bool                  GetAnyUsingGProxyLegacy() const;
 
   inline void           SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void           SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
@@ -329,10 +335,10 @@ public:
 
   // functions to send packets to players
 
-  void SendChat(uint8_t fromPID, CGamePlayer* player, const std::string& message) const;
-  void SendChat(uint8_t fromPID, uint8_t toPID, const std::string& message) const;
-  void SendChat(CGamePlayer* player, const std::string& message) const;
-  void SendChat(uint8_t toPID, const std::string& message) const;
+  void SendChat(uint8_t fromPID, CGamePlayer* player, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void SendChat(uint8_t fromPID, uint8_t toPID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void SendChat(CGamePlayer* player, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void SendChat(uint8_t toPID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void SendAllChat(uint8_t fromPID, const std::string& message) const;
   void SendAllChat(const std::string& message) const;
   void SendAllSlotInfo();

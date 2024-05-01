@@ -709,6 +709,24 @@ int64_t CGamePlayer::GetTotalDisconnectTime() const
   }
 }
 
+string CGamePlayer::GetDelayText() const
+{
+  string pingText, syncText;
+  if (GetNumPings() > 0) {
+    pingText = GetPing() + "ms";
+  } else {
+    pingText = "N/A";
+  }
+  if (!m_Game->GetGameLoaded()) {
+    return pingText;
+  }
+  if (GetSyncCounter() < m_Game->GetSyncCounter()) {
+    float syncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
+    syncText = to_string(static_cast<uint32_t>(syncDelay)) + "ms";
+  }
+  return pingText + "/" + syncText;
+}
+
 bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const
 {
   if (m_Owner) return true;
