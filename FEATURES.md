@@ -101,12 +101,34 @@ in Aura's console.
 - MySQL is no longer required
 - Uses SQLite and a simpler database schema.
 
+# Reworked features from [GHost++][2]:
+- Admin game:
+  There is no specific setting to host a game that grants unlimited permissions to
+  anyone who knows or guesses the password transmitted through insecure TCP.
+
+  Instead, the CLI flag \`--replaceable\` can be provided when hosting a game. 
+  This allows players that join the game to use the \`!host\` command inside to create 
+  another game lobby, thereafter replacing the original lobby.
+
+  When the new game lobby starts, if the CLI flag \`--auto-rehost\` was provided,
+  the replaceable lobby will be created again.
+
 # Removed features from [GHost++][2]:
-- Autohost
-- CASC
+- CASC:
+  Bots owners are encouraged to extract the good old MPQ files (i.e., \`.w3x\`.) and place
+  them in the <bot.maps_path> folder.
+
+  Much of the same applies for necessary \`Blizzard.j\` and \`common.j\`, which should be placed 
+  in the <bot.jass_path> folder.
+
 - Localization
+  I like localization, but it's quite a bit of work. PRs are welcome.
+
 - Replays
+  Please open an issue if this is important to you.
+
 - W3MMD
+  Please open an issue if this is important to you.
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/uakfdotb/ghostpp
