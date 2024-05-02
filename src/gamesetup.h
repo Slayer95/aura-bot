@@ -190,6 +190,10 @@ public:
   bool                                            m_LobbyAutoRehosted;
   uint16_t                                        m_CreationCounter;
   std::optional<uint32_t>                         m_LobbyTimeout;
+  std::optional<uint8_t>                          m_AutoStartPlayers;
+  std::optional<int64_t>                          m_AutoStartMinSeconds;
+  std::optional<int64_t>                          m_AutoStartMaxSeconds;
+  std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
 
   std::string                                     m_CreatedBy;
@@ -286,6 +290,16 @@ public:
   void SetGameSavedFile(const std::filesystem::path& filePath);
   void SetCheckReservation(const bool nChecksReservation) { m_GameChecksReservation = nChecksReservation; }
   void SetReservations(const std::vector<std::string>& nReservations) { m_GameReservations = nReservations; }
+  void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
+  void SetAutoStartMinSeconds(const int64_t nValue) {
+    m_AutoStartMinSeconds = nValue;
+    if (m_AutoStartMaxSeconds < nValue) m_AutoStartMaxSeconds = nValue;
+  }
+  void SetAutoStartMaxSeconds(const int64_t nValue) {
+    m_AutoStartMaxSeconds = nValue;
+    if (m_AutoStartMinSeconds > nValue) m_AutoStartMinSeconds = nValue;
+  }
+  void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
   void ResetExtraOptions();
 
   void OnGameCreate();

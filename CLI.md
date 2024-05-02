@@ -395,6 +395,10 @@ This flag enables users to use the !host command to replace the hosted game by a
 
 This flag enables automatic rehosting of the same game setup so long as Aura is not hosting another lobby.
 
+## \`--ffa\`
+
+This flag forces players joining the game into different teams.
+
 ## \`--random-races\`
 
 This flag enables randomization of player races in the hosted game. When this flag is used, each player's 
@@ -486,6 +490,23 @@ This parameter specifies the maximum time a map download is allowed to take. Onc
 exceeded, the map download and game hosting are cancelled.
 
 - <TIME>: Provided in seconds.
+
+## \`--auto-start-players <COUNT>\`
+
+This parameter specifies that the game may automatically start when the provided ``COUNT`` of slots 
+have been occupied in the game. This includes computer slots, virtual player slots, and actual players that 
+have downloaded the map.
+
+## \`--auto-start-min-time <SECONDS>\`
+
+Together with \`--auto-start-players\`, this parameter specifies that, even if the required ``PLAYERS`` 
+count is reached, the game will not automatically start until the provided ``SECONDS`` have passed since 
+the game was created.
+
+## \`--auto-start-max-time <SECONDS>\`
+
+This parameter specifies that, independently of \`--auto-start-players\`, the game will automatically start 
+as soon as ``SECONDS`` have passed since the game was created.
 
 ## \`--load <FILE>\`
 

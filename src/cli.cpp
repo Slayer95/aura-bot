@@ -116,11 +116,15 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
+  app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");
+  app.add_option("--auto-start-min-time", m_GameAutoStartMinSeconds, "Sets a minimum time that should pass before automatically starting the game (seconds.)");
+  app.add_option("--auto-start-max-time", m_GameAutoStartMinSeconds, "Sets a timeout that will forcibly start the game when over (seconds.)");
   app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
+  app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
   app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
   app.add_flag(  "--auto-rehost,--no-auto-rehost{false}", m_GameLobbyAutoRehosted, "Registers the provided game setup, and rehosts it whenever there is no active lobby.");
@@ -418,6 +422,10 @@ bool CCLI::QueueActions(CAura* nAura) const
           if (m_GameCheckReservation.has_value()) gameSetup->SetCheckReservation(m_GameCheckReservation.value());
           if (m_GameLobbyReplaceable.has_value()) gameSetup->SetLobbyReplaceable(m_GameLobbyReplaceable.value());
           if (m_GameLobbyAutoRehosted.has_value()) gameSetup->SetLobbyAutoRehosted(m_GameLobbyAutoRehosted.value());
+          if (m_GameAutoStartPlayers.has_value()) gameSetup->SetAutoStartPlayers(m_GameAutoStartPlayers.value());
+          if (m_GameAutoStartMinSeconds.has_value()) gameSetup->SetAutoStartMinSeconds(m_GameAutoStartMinSeconds.value());
+          if (m_GameAutoStartMaxSeconds.has_value()) gameSetup->SetAutoStartMaxSeconds(m_GameAutoStartMaxSeconds.value());
+          if (m_GameFreeForAll.value_or(false)) gameSetup->SetCustomLayout(CUSTOM_LAYOUT_FFA);
           gameSetup->SetReservations(m_GameReservations);
           gameSetup->SetVerbose(m_Verbose);
           gameSetup->SetDisplayMode(displayMode);

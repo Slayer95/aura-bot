@@ -91,11 +91,15 @@ private:
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameLobbyTimeout;
+  std::optional<uint8_t>                m_GameAutoStartPlayers;
+  std::optional<int64_t>                m_GameAutoStartMinSeconds;
+  std::optional<int64_t>                m_GameAutoStartMaxSeconds;
   std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_GameLobbyReplaceable;
   std::optional<bool>                   m_GameLobbyAutoRehosted;
   std::optional<bool>                   m_GameCheckReservation;
+  std::optional<bool>                   m_GameFreeForAll;
   std::vector<std::string>              m_GameReservations;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;
