@@ -2390,7 +2390,9 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGamePlayer* player, const 
     SendChat(player, cmdToken + "open [NUMBER] - opens a slot", LOG_LEVEL_TRACE);
     SendChat(player, cmdToken + "close [NUMBER] - closes a slot", LOG_LEVEL_TRACE);
     SendChat(player, cmdToken + "fill [DIFFICULTY] - adds computers", LOG_LEVEL_TRACE);
-    SendChat(player, cmdToken + "ffa - sets free for all game mode", LOG_LEVEL_TRACE);
+    if (m_Map->GetMapNumTeams() > 2) {
+      SendChat(player, cmdToken + "ffa - sets free for all game mode", LOG_LEVEL_TRACE);
+    }
     SendChat(player, cmdToken + "vsall - sets one vs all game mode", LOG_LEVEL_TRACE);
     SendChat(player, cmdToken + "terminator - sets humans vs computers", LOG_LEVEL_TRACE);
   }

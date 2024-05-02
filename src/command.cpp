@@ -4016,8 +4016,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply("FFA mode disabled.");
         break;
       }
-      if (m_TargetGame->GetNumPotentialControllers() <= 1) {
-        ErrorReply("Not enough players in this game.");
+      if (m_TargetGame->GetMap()->GetNumControllers() <= 2) {
+        ErrorReply("This map does not support FFA mode.");
         break;
       }
       if (!m_TargetGame->SetLayoutFFA()) {
