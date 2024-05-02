@@ -4016,7 +4016,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply("FFA mode disabled.");
         break;
       }
-      if (m_TargetGame->GetMap()->GetNumControllers() <= 2) {
+      if (m_TargetGame->GetMap()->GetMapNumControllers() <= 2) {
         ErrorReply("This map does not support FFA mode.");
         break;
       }
@@ -4682,7 +4682,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("whois"): {
       UseImplicitHostedGame();
 
-      if (!CheckPermissions(m_Config->m_WhoisPermissions, COMMAND_PERMISSIONS_ADMIN)) {
+      if (!CheckPermissions(m_Config->m_WhoisPermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot ask for /whois.");
         break;
       }
