@@ -4670,8 +4670,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         CGame* matchingGame = GetTargetGame(inputLocation);
         bool success = false;
         if (matchingGame) {
-          if (matchingGame->GetGameLoaded() && matchingGame->GetMuteAll()) {
-            ErrorReply("Chat is disabled in <<" + matchingGame->GetGameName() + ">>.");
+          if (matchingGame->GetGameLoaded() && !GetIsSudo()) {
+            ErrorReply("Cannot send messages to a game that has already started.");
             break;
           }
           CGamePlayer* targetPlayer = nullptr;
