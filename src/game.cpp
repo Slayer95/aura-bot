@@ -3577,7 +3577,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
           uint8_t tokenMatch = ExtractMessageTokensAny(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
           if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
             player->SetUsedAnyCommands(true);
-            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, !m_MuteAll && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (isLobbyChat && !player->GetUsedAnyCommands() && !player->GetSentAutoCommandsHelp()) {
