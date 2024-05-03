@@ -254,6 +254,7 @@ public:
   inline uint32_t       GetHostCounter() const { return m_HostCounter; }
   inline int64_t        GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool           GetLocked() const { return m_Locked; }
+  inline bool           GetMuteAll() const { return m_MuteAll; }
   inline bool           GetCountDownStarted() const { return m_CountDownStarted; }
   inline bool           GetIsMirror() const { return m_IsMirror; }
   inline bool           GetIsDraftMode() const { return m_IsDraftMode; }
@@ -506,6 +507,7 @@ public:
   inline bool GetIsVerbose() { return m_Verbose; }
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
+  inline bool GetUsesCustomReferees() const { return m_UsesCustomReferees; }
   void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
   void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
   void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }

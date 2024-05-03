@@ -4619,60 +4619,83 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
         break;
       }
 
       string::size_type MessageStart = Payload.find(',');
 
       if (MessageStart == string::npos) {
-        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
         break;
       }
 
       string inputName = TrimString(Payload.substr(0, MessageStart));
       string subMessage = TrimString(Payload.substr(MessageStart + 1));
-      string inputRealm;
+      string inputLocation;
       if (inputName.empty() || subMessage.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
         break;
       }
 
       string::size_type RealmStart = inputName.find('@');
       if (RealmStart != string::npos) {
-        inputRealm = TrimString(inputName.substr(RealmStart + 1));
+        inputLocation = TrimString(inputName.substr(RealmStart + 1));
         inputName = TrimString(inputName.substr(0, RealmStart));
       }
 
       if (inputName.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
         break;
       }
 
-      CRealm* matchingRealm = GetTargetRealmOrCurrent(inputRealm);
-      if (!matchingRealm) {
-        if (inputRealm.empty()) {
-          ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<REALM> , <MESSAGE>");
-        } else {
-          ErrorReply(inputRealm + " is not a valid realm.");
+      CRealm* matchingRealm = GetTargetRealmOrCurrent(inputLocation);
+      if (matchingRealm) {
+        if (inputName == matchingRealm->GetLoginName()) {
+          ErrorReply("Cannot PM myself.");
+          break;
         }
-        break;
-      }
-      if (inputName == matchingRealm->GetLoginName()) {
-        ErrorReply("Cannot PM myself.");
-        break;
-      }
 
-      // Name of sender and receiver should be included in the message,
-      // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
-      // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
-      if (m_ServerName.empty()) {
-        m_ActionMessage = inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>";
+        // Name of sender and receiver should be included in the message,
+        // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
+        // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
+        if (m_ServerName.empty()) {
+          m_ActionMessage = inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>";
+        } else {
+          m_ActionMessage = inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>";
+        }
+
+        matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
       } else {
-        m_ActionMessage = inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>";
+        CGame* matchingGame = GetTargetGame(inputLocation);
+        bool success = false;
+        if (matchingGame) {
+          if (matchingGame->GetGameLoaded() && matchingGame->GetMuteAll()) {
+            ErrorReply("Chat is disabled in <<" + matchingGame->GetGameName() + ">>.");
+            break;
+          }
+          CGamePlayer* targetPlayer = nullptr;
+          if (matchingGame->GetPlayerFromNamePartial(inputName, targetPlayer) != 1) {
+            ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetGameName() + ">>.");
+            break;
+          }
+          if (targetPlayer) {
+            success = true;
+            if (m_ServerName.empty()) {
+              matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>");
+            } else {
+              matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>");
+            }
+          }
+        }
+        if (!success) {
+          if (inputLocation.empty()) {
+            ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
+          } else {
+            ErrorReply(inputLocation + " is not a valid location.");
+          }
+        }
       }
-
-      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
       break;
     }
     //
