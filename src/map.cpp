@@ -629,6 +629,7 @@ void CMap::Load(CConfig* CFG)
   uint32_t             MapEditorVersion = 0;
   uint32_t             MapOptions    = 0;
   uint8_t              MapNumPlayers = 0;
+  uint8_t              MapNumDisabled = 0;
   uint8_t              MapFilterType = MAPFILTER_TYPE_SCENARIO;
   uint8_t              MapNumTeams   = 0;
   uint8_t              MapMinGameVersion = 0;
@@ -727,26 +728,40 @@ void CMap::Load(CConfig* CFG)
 
             ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
             if (RawMapNumPlayers > MAX_SLOTS_MODERN) RawMapNumPlayers = 0;
-            uint8_t ClosedSlots = 0;
+            uint8_t closedSlots = 0;
+            uint8_t disabledSlots = 0;
 
             for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
             {
-              CGameSlot Slot(0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, 0, 1, SLOTRACE_RANDOM);
-              uint32_t  Color, Status, Race;
+              CGameSlot Slot(SLOTTYPE_AUTO, 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, 0, 1, SLOTRACE_RANDOM);
+              uint32_t  Color, Type, Race;
               ISS.read(reinterpret_cast<char*>(&Color), 4); // colour
               Slot.SetColor(static_cast<uint8_t>(Color));
-              ISS.read(reinterpret_cast<char*>(&Status), 4); // status
+              ISS.read(reinterpret_cast<char*>(&Type), 4); // type
 
-              if (Status == 1 || (Status == 2 && !(RawMapFlags & MAPOPT_FIXEDPLAYERSETTINGS))) {
-                // WC3 ignores computer slots defined in WorldEdit if Fixed Player Settings is disabled.
-                Slot.SetSlotStatus(SLOTSTATUS_OPEN);
-              } else if (Status == 2) {
-                Slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
-                Slot.SetComputer(SLOTCOMP_YES);
-                Slot.SetComputerType(SLOTCOMP_NORMAL);
-              } else {
+              if (Type == SLOTTYPE_NONE) {
+                Slot.SetType(Type);
                 Slot.SetSlotStatus(SLOTSTATUS_CLOSED);
-                ++ClosedSlots;
+                ++closedSlots;
+              } else {
+                if (!(RawMapFlags & MAPOPT_FIXEDPLAYERSETTINGS)) {
+                  // WC3 ignores slots defined in WorldEdit if Fixed Player Settings is disabled.
+                  Type = SLOTTYPE_USER;
+                }
+                if (Type <= SLOTTYPE_RESCUEABLE) {
+                  Slot.SetType(Type);
+                }
+                if (Type == SLOTTYPE_USER) {
+                  Slot.SetSlotStatus(SLOTSTATUS_OPEN);
+                } else if (Type == SLOTTYPE_COMP) {
+                  Slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
+                  Slot.SetComputer(SLOTCOMP_YES);
+                  Slot.SetComputerType(SLOTCOMP_NORMAL);
+                } else {
+                  Slot.SetSlotStatus(SLOTSTATUS_CLOSED);
+                  ++closedSlots;
+                  ++disabledSlots;
+                }
               }
 
               ISS.read(reinterpret_cast<char*>(&Race), 4); // race
@@ -815,7 +830,8 @@ void CMap::Load(CConfig* CFG)
 
               MapWidth = CreateByteArray(static_cast<uint16_t>(RawMapWidth), false);
               MapHeight = CreateByteArray(static_cast<uint16_t>(RawMapHeight), false);
-              MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - ClosedSlots;
+              MapNumPlayers = static_cast<uint8_t>(RawMapNumPlayers) - closedSlots;
+              MapNumDisabled = disabledSlots;
 
               if (MapOptions & MAPOPT_MELEE) {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
@@ -836,8 +852,9 @@ void CMap::Load(CConfig* CFG)
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
                 Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
                 Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
-                Print("[MAP] calculated <map_numplayers = " + to_string(MapNumPlayers) + ">");
-                Print("[MAP] calculated <map_numteams = " + to_string(MapNumTeams) + ">");
+                Print("[MAP] calculated <map_numdisabled = " + ToDecString(MapNumDisabled) + ">");
+                Print("[MAP] calculated <map_numplayers = " + ToDecString(MapNumPlayers) + ">");
+                Print("[MAP] calculated <map_numteams = " + ToDecString(MapNumTeams) + ">");
               }
 
               for (auto& Slot : Slots) {
@@ -848,8 +865,6 @@ void CMap::Load(CConfig* CFG)
               }
             } else {
               Print("[MAP] unable to calculate <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from map file");
-              MapNumPlayers = 0;
-              MapNumTeams = 0;
             }
           }
         }
@@ -999,13 +1014,21 @@ void CMap::Load(CConfig* CFG)
   m_MapType = CFG->GetString("map_type", emptyString);
   m_MapDefaultHCL = CFG->GetString("map_defaulthcl", emptyString);
 
+  if (CFG->Exists("map_numdisabled")) {
+    MapNumDisabled = CFG->GetUint8("map_numdisabled", 0);
+  } else {
+    CFG->SetUint8("map_numdisabled", MapNumDisabled);
+  }
+
+  m_MapNumDisabled = MapNumDisabled;
+
   if (CFG->Exists("map_numplayers")) {
     MapNumPlayers = CFG->GetUint8("map_numplayers", 0);
   } else {
     CFG->SetUint8("map_numplayers", MapNumPlayers);
   }
 
-  m_MapNumControllers = static_cast<uint8_t>(MapNumPlayers);
+  m_MapNumControllers = MapNumPlayers;
 
   if (CFG->Exists("map_numteams")) {
     MapNumTeams = CFG->GetUint8("map_numteams", 0);
@@ -1024,13 +1047,13 @@ void CMap::Load(CConfig* CFG)
       if (SlotString.empty())
         break;
 
-      std::vector<uint8_t> SlotData = ExtractNumbers(SlotString, 9);
+      std::vector<uint8_t> SlotData = ExtractNumbers(SlotString, 10);
       Slots.emplace_back(SlotData);
     }
   } else if (!Slots.empty()) {
     uint32_t SlotNum = 0;
     for (auto& Slot : Slots) {
-      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetProtocolArray());
+      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetByteArray());
     }
   }
 
@@ -1183,7 +1206,13 @@ string CMap::CheckProblems()
     return "invalid map_observers detected";
   }
 
-  if (m_MapNumControllers < 2 || m_MapNumControllers > MAX_SLOTS_MODERN)
+  if (m_MapNumDisabled > MAX_SLOTS_MODERN)
+  {
+    m_Valid = false;
+    return "invalid map_numdisabled detected";
+  }
+
+  if (m_MapNumControllers < 2 || m_MapNumControllers > MAX_SLOTS_MODERN || m_MapNumControllers + m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
     return "invalid map_numplayers detected";
@@ -1201,7 +1230,11 @@ string CMap::CheckProblems()
     return "invalid map_slot<x> detected";
   }
 
-  if (m_MapNumControllers > m_Aura->m_MaxSlots || m_MapNumTeams > m_Aura->m_MaxSlots || m_Slots.size() > m_Aura->m_MaxSlots) {
+  if (
+    m_MapNumControllers + m_MapNumDisabled > m_Aura->m_MaxSlots ||
+    m_MapNumTeams > m_Aura->m_MaxSlots ||
+    m_Slots.size() > m_Aura->m_MaxSlots
+  ) {
     m_Valid = false;
     return "map uses more than " + to_string(m_Aura->m_MaxSlots) + " players - v1.29+ required";
   }

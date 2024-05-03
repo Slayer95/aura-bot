@@ -392,7 +392,7 @@ bool CCLI::QueueActions(CAura* nAura) const
             string normalizedAlias = GetNormalizedAlias(m_GameMapAlias.value());
             string mapFileName = gameSetup->GetMap()->GetServerFileName();
             if (nAura->m_DB->AliasAdd(normalizedAlias, mapFileName)) {
-              Print("Alias [" + m_GameMapAlias.value() + "] added for [" + mapFileName + "]");
+              Print("[AURA] Alias <<" + m_GameMapAlias.value() + ">> added for [" + mapFileName + "]");
             } else {
               Print("Failed to add alias.");
             }

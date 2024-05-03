@@ -53,7 +53,8 @@ using namespace std;
 //
 
 CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
-  : m_PID(0),
+  : m_Type(SLOTTYPE_AUTO),
+    m_PID(0),
     m_DownloadStatus(255),
     m_SlotStatus(SLOTSTATUS_OPEN),
     m_Computer(0),
@@ -64,29 +65,29 @@ CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
     m_Handicap(100)
 {
   const size_t size = n.size();
+  if (size < 7) return;
 
-  if (size >= 7)
-  {
-    m_PID            = n[0];
-    m_DownloadStatus = n[1];
-    m_SlotStatus     = n[2];
-    m_Computer       = n[3];
-    m_Team           = n[4];
-    m_Color         = n[5];
-    m_Race           = n[6];
-
-    if (size >= 8)
-    {
+  switch (size) {
+    case 10:
+      m_Type = n[9];
+    case 9:
+      m_Handicap = n[8];
+    case 8:
       m_ComputerType = n[7];
-
-      if (size >= 9)
-        m_Handicap = n[8];
-    }
+    default:
+      m_PID            = n[0];
+      m_DownloadStatus = n[1];
+      m_SlotStatus     = n[2];
+      m_Computer       = n[3];
+      m_Team           = n[4];
+      m_Color          = n[5];
+      m_Race           = n[6];
   }
 }
 
-CGameSlot::CGameSlot(const uint8_t nPID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType, const uint8_t nHandicap)
-  : m_PID(nPID),
+CGameSlot::CGameSlot(const uint8_t nType, const uint8_t nPID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType, const uint8_t nHandicap)
+  : m_Type(nType),
+    m_PID(nPID),
     m_DownloadStatus(nDownloadStatus),
     m_SlotStatus(nSlotStatus),
     m_Computer(nComputer),

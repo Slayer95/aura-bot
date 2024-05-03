@@ -161,6 +161,7 @@ private:
   uint32_t               m_MapOptions;
   uint32_t               m_MapEditorVersion;
   uint8_t                m_MapMinGameVersion;
+  uint8_t                m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
   uint8_t                m_MapNumControllers; // config value: max map number of players
   uint8_t                m_MapNumTeams;   // config value: max map number of teams
   uint8_t                m_MapSpeed;
@@ -211,6 +212,7 @@ public:
   std::string                   GetServerFileName() const;
   std::string                   GetClientFileName() const;
   inline std::string*           GetMapData() { return &m_MapData; }
+  inline uint8_t                GetMapNumDisabled() const { return m_MapNumDisabled; }
   inline uint8_t                GetMapNumControllers() const { return m_MapNumControllers; }
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
