@@ -4686,6 +4686,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
             } else {
               matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>");
             }
+            SendReply("Message sent to " + targetPlayer->GetName() + ".");
           }
         }
         if (!success) {
