@@ -155,7 +155,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CheckReservation(nGameSetup->m_GameChecksReservation.has_value() ? nGameSetup->m_GameChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false),
-    m_SaveOnLeave(SAVE_ON_LEAVE_AUTO)
+    m_SaveOnLeave(SAVE_ON_LEAVE_NEVER)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
   if (m_IndexVirtualHostName.empty()) {
@@ -5808,6 +5808,10 @@ bool CGame::Save(CGamePlayer* player, const bool isDisconnect)
 
 bool CGame::TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary)
 {
+  if (m_SaveOnLeave == SAVE_ON_LEAVE_NEVER) {
+    return false;
+  }
+
   if (!m_GameLoaded || m_Players.size() <= 1) {
     // Nobody can actually save this game.
     return false;
@@ -5850,14 +5854,12 @@ bool CGame::TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary)
     }
   }
 
-  /*  
   if (Save(player, true)) {
     Pause(player, true);
     SendAllChat("Game saved on " + player->GetName() + "'s disconnection.");
     SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
     return true;
   }
-  //*/
 
   return false;
 }
