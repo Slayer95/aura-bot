@@ -193,6 +193,9 @@ public:
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartMinSeconds;
   std::optional<int64_t>                          m_AutoStartMaxSeconds;
+  std::optional<uint16_t>                         m_LatencyAverage;
+  std::optional<uint16_t>                         m_LatencyMaxFrames;
+  std::optional<uint16_t>                         m_LatencySafeFrames;
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
 
@@ -299,6 +302,9 @@ public:
     m_AutoStartMaxSeconds = nValue;
     if (m_AutoStartMinSeconds > nValue) m_AutoStartMinSeconds = nValue;
   }
+  void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
+  void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
+  void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }
   void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
   void ResetExtraOptions();
 

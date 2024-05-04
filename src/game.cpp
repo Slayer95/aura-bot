@@ -162,9 +162,9 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_IndexVirtualHostName = m_CreatedBy.empty() ? "Aura Bot" : m_CreatedBy;
   }
   m_LobbyVirtualHostName = m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName;
-  m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
-  m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
-  m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+  m_Latency = nGameSetup->m_LatencyAverage.has_value() ? nGameSetup->m_LatencyAverage.value() : m_Aura->m_GameDefaultConfig->m_Latency;
+  m_SyncLimit = nGameSetup->m_LatencyMaxFrames.has_value() ? nGameSetup->m_LatencyMaxFrames.value() : m_Aura->m_GameDefaultConfig->m_SyncLimit;
+  m_SyncLimitSafe = nGameSetup->m_LatencySafeFrames.has_value() ? nGameSetup->m_LatencySafeFrames.value() : m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
   m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
   m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
 

@@ -118,7 +118,10 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
   app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");
   app.add_option("--auto-start-min-time", m_GameAutoStartMinSeconds, "Sets a minimum time that should pass before automatically starting the game (seconds.)");
-  app.add_option("--auto-start-max-time", m_GameAutoStartMinSeconds, "Sets a timeout that will forcibly start the game when over (seconds.)");
+  app.add_option("--auto-start-max-time", m_GameAutoStartMaxSeconds, "Sets a timeout that will forcibly start the game when over (seconds.)");
+  app.add_option("--latency", m_GameLatencyAverage, "Sets the refresh period for the game as a ping equalizer, in milliseconds.");
+  app.add_option("--latency-max-frames", m_GameLatencyMaxFrames, "Sets a maximum amount of frames clients may fall behind. When exceeded, the lag screen shows up.");
+  app.add_option("--latency-safe-frames", m_GameLatencySafeFrames, "Sets a frame difference clients must catch up to in order for the lag screen to go away.");
   app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
@@ -425,6 +428,9 @@ bool CCLI::QueueActions(CAura* nAura) const
           if (m_GameAutoStartPlayers.has_value()) gameSetup->SetAutoStartPlayers(m_GameAutoStartPlayers.value());
           if (m_GameAutoStartMinSeconds.has_value()) gameSetup->SetAutoStartMinSeconds(m_GameAutoStartMinSeconds.value());
           if (m_GameAutoStartMaxSeconds.has_value()) gameSetup->SetAutoStartMaxSeconds(m_GameAutoStartMaxSeconds.value());
+          if (m_GameLatencyAverage.has_value()) gameSetup->SetLatencyAverage(m_GameLatencyAverage.value());
+          if (m_GameLatencyMaxFrames.has_value()) gameSetup->SetLatencyMaxFrames(m_GameLatencyMaxFrames.value());
+          if (m_GameLatencySafeFrames.has_value()) gameSetup->SetLatencySafeFrames(m_GameLatencySafeFrames.value());
           if (m_GameFreeForAll.value_or(false)) gameSetup->SetCustomLayout(CUSTOM_LAYOUT_FFA);
           gameSetup->SetReservations(m_GameReservations);
           gameSetup->SetVerbose(m_Verbose);

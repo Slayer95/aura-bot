@@ -94,6 +94,9 @@ private:
   std::optional<uint8_t>                m_GameAutoStartPlayers;
   std::optional<int64_t>                m_GameAutoStartMinSeconds;
   std::optional<int64_t>                m_GameAutoStartMaxSeconds;
+  std::optional<uint16_t>               m_GameLatencyAverage;
+  std::optional<uint16_t>               m_GameLatencyMaxFrames;
+  std::optional<uint16_t>               m_GameLatencySafeFrames;
   std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_GameLobbyReplaceable;
