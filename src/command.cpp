@@ -1882,29 +1882,72 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      try {
-        int32_t TargetValue = stol(Payload);
-        if (TargetValue <= 0 || TargetValue > 60000) {
-          // WC3 clients disconnect after a minute without network activity.
-          ErrorReply("Invalid game latency [" + to_string(TargetValue) + "ms].");
-          break;
-        }
-        m_TargetGame->m_Latency = static_cast<uint16_t>(TargetValue);
-      } catch (...) {
-        ErrorReply("Invalid game latency [" + Payload + "].");
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "latency [REFRESH]");
+        ErrorReply("Usage: " + cmdToken + "latency [REFRESH], [TOLERANCE]");
         break;
       }
 
-      if (m_TargetGame->m_Latency <= 10) {
-        m_TargetGame->m_Latency = 10;
-        SendAll("Setting game latency to the minimum of 10 ms");
-      } else if (m_TargetGame->m_Latency >= 500) {
-        m_TargetGame->m_Latency = 500;
-        SendAll("Setting game latency to the maximum of 500 ms");
-      } else {
-        SendAll("Setting game latency to " + to_string(m_TargetGame->m_Latency) + " ms");
+      if (Args[0] <= 0 || Args[0] > 60000) {
+        // WC3 clients disconnect after a minute without network activity.
+        ErrorReply("Invalid game refresh period [" + to_string(Args[0]) + "ms].");
+        break;
       }
 
+      double refreshTime = static_cast<double>(Args[0]);
+      optional<double> tolerance;
+      if (Args.size() >= 2) {
+        tolerance = static_cast<double>(Args[1]);
+        if (tolerance.value() <= LAG_TOLERANCE_MIN_TIME) {
+          ErrorReply("Minimum spike tolerance is " + to_string(LAG_TOLERANCE_MIN_TIME) + " ms.");
+          break;
+        }
+        if (tolerance.value() >= LAG_TOLERANCE_MAX_TIME) {
+          ErrorReply("Maximum spike tolerance is " + to_string(LAG_TOLERANCE_MAX_TIME) + " ms.");
+          break;
+        }
+      }
+
+      if (refreshTime < REFRESH_PERIOD_MIN) {
+        refreshTime = REFRESH_PERIOD_MIN;
+      } else if (refreshTime > REFRESH_PERIOD_MAX) {
+        refreshTime = REFRESH_PERIOD_MAX;
+      }
+
+      const double oldRefresh = m_TargetGame->m_Latency;
+      const double oldSyncLimit = m_TargetGame->m_SyncLimit;
+      const double oldSyncLimitSafe = m_TargetGame->m_SyncLimitSafe;
+
+      double syncLimit, syncLimitSafe;
+      double resolvedTolerance = (
+        tolerance.has_value() ?
+        tolerance.value() :
+        oldSyncLimit * oldRefresh
+      );
+      syncLimit = resolvedTolerance / refreshTime;
+      syncLimitSafe = oldSyncLimitSafe * syncLimit / oldSyncLimit;
+      if (syncLimit < 4) syncLimit = 4;
+      if (syncLimitSafe < syncLimit / 2) syncLimitSafe = syncLimit / 2;
+      if (syncLimitSafe < 1) syncLimitSafe = 1;
+
+      m_TargetGame->m_Latency = static_cast<uint16_t>(refreshTime);
+      m_TargetGame->m_SyncLimit = static_cast<uint16_t>(syncLimit);
+      m_TargetGame->m_SyncLimitSafe = static_cast<uint16_t>(syncLimitSafe);
+
+      const uint32_t finalToleranceMilliseconds = (
+        static_cast<uint32_t>(m_TargetGame->m_Latency) *
+        static_cast<uint32_t>(m_TargetGame->m_SyncLimit)
+      );
+
+      if (refreshTime == REFRESH_PERIOD_MIN) {
+        SendAll("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)");
+      } else if (refreshTime == REFRESH_PERIOD_MAX) {
+        SendAll("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)");
+      } else {
+        SendAll("Game will be updated with a delay of " + to_string(m_TargetGame->m_Latency) + "ms.");
+      }
+      SendAll("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.");
       break;
     }
 
