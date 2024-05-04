@@ -864,7 +864,7 @@ bool CAuraDB::AliasAdd(const string& alias, const string& target)
   }
 
   if (!AliasAddStmt)
-    m_DB->Prepare("INSERT INTO aliases VALUES ( ?, ? )", &AliasAddStmt);
+    m_DB->Prepare("INSERT OR REPLACE INTO aliases VALUES ( ?, ? )", &AliasAddStmt);
 
   if (!AliasAddStmt) {
     Print("[SQLITE3] prepare error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError());
