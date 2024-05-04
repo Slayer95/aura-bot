@@ -882,9 +882,9 @@ bool CGame::Update(void* fd, void* send_fd)
         }
 
         // start the lag screen
-        float worstLaggerSeconds = static_cast<float>(worstLaggerFrames) * static_cast<float>(m_Latency) / 1000.;
+        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_Latency) / static_cast<double>(1000.);
         Print(GetLogPrefix() + "started lagging on [" + PlayersToNameListString(laggingPlayers) + "].");
-        Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(worstLaggerSeconds) + " seconds behind)");
+        Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(static_cast<float>(worstLaggerSeconds)) + " seconds behind)");
         SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
 
         // reset everyone's drop vote

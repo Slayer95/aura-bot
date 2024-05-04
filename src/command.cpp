@@ -1882,6 +1882,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (Payload == "default" || Payload == "reset") {
+        m_TargetGame->m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
+        m_TargetGame->m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
+        m_TargetGame->m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+        SendReply("Latency settings reset to default.");
+        break;
+      }
+
       vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 2u);
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "latency [REFRESH]");
