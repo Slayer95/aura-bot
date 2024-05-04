@@ -1132,47 +1132,38 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       // copy the m_Players vector so we can sort by descending ping so it's easier to find players with high pings
 
       vector<CGamePlayer*> SortedPlayers = m_TargetGame->m_Players;
-      sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
-        return a->GetPing() > b->GetPing();
-      });
-      string PingsText;
+      if (m_TargetGame->GetGameLoaded()) {
+        sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
+          return a->GetSyncCounter() < b->GetSyncCounter();
+        });
+      } else {
+        sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
+          return a->GetPing() > b->GetPing();
+        });
+      }
+      vector<string> pingsText;
 
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
-        PingsText += (*i)->GetName();
-        PingsText += ": ";
-        size_t NumPings = (*i)->GetNumPings();
-
-        if (0 < NumPings && NumPings < 3)
-          PingsText += "*";
-        
-        if (NumPings > 0) {
-          PingsText += to_string((*i)->GetPing());
-
-          if (m_TargetGame->GetIsLobby() && !(*i)->GetIsReserved()) {
-            if (KickPing.has_value() && (*i)->GetPing() > m_TargetGame->m_AutoKickPing) {
-              (*i)->SetKickByTime(GetTime() + 5);
-              (*i)->SetLeftReason("was kicked for excessive ping " + to_string((*i)->GetPing()) + " > " + to_string(m_TargetGame->m_AutoKickPing));
-              (*i)->SetLeftCode(PLAYERLEAVE_LOBBY);
-              ++KickedCount;
-            } else if ((*i)->GetKickQueued() && ((*i)->GetHasMap() || (*i)->GetDownloadStarted())) {
-              (*i)->SetKickByTime(0);
-              (*i)->SetLeftReason(emptyString);
-            }
+        pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText());
+        size_t numPings = (*i)->GetNumPings();
+        if (m_TargetGame->GetIsLobby() && !(*i)->GetIsReserved() && 0 < numPings) {
+          if (KickPing.has_value() && (*i)->GetPing() > m_TargetGame->m_AutoKickPing) {
+            (*i)->SetKickByTime(GetTime() + 5);
+            (*i)->SetLeftReason("was kicked for excessive ping " + to_string((*i)->GetPing()) + " > " + to_string(m_TargetGame->m_AutoKickPing));
+            (*i)->SetLeftCode(PLAYERLEAVE_LOBBY);
+            ++KickedCount;
+          } else if ((*i)->GetKickQueued() && ((*i)->GetHasMap() || (*i)->GetDownloadStarted())) {
+            (*i)->SetKickByTime(0);
+            (*i)->SetLeftReason(emptyString);
           }
-
-          PingsText += "ms";
-        } else {
-          PingsText += "N/A";
         }
-
-        if (i != end(SortedPlayers) - 1)
-          PingsText += ", ";
       }
 
-      SendAll(PingsText);
+      SendAll(JoinVector(pingsText, false));
 
-      if (KickedCount > 0)
+      if (KickedCount > 0) {
         SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_TargetGame->m_AutoKickPing) + "...");
+      }
 
       break;
     }
@@ -1869,6 +1860,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("latency"): {
+      UseImplicitHostedGame();      
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
@@ -1878,7 +1870,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        ErrorReply("You are not the game owner, and therefore cannot modify the game latency.");
         break;
       }
 

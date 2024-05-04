@@ -712,10 +712,12 @@ int64_t CGamePlayer::GetTotalDisconnectTime() const
 string CGamePlayer::GetDelayText() const
 {
   string pingText, syncText;
-  if (GetNumPings() > 0) {
-    pingText = GetPing() + "ms";
+  if (GetNumPings() == 0) {
+    pingText = "?";
+  } else if (GetNumPings() < 3) {
+    pingText = "*" + to_string(GetPing()) + "ms";
   } else {
-    pingText = "N/A";
+    pingText = to_string(GetPing()) + "ms";
   }
   if (!m_Game->GetGameLoaded()) {
     return pingText;

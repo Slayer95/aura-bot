@@ -302,6 +302,7 @@ public:
   inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
   inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
   inline void AddPauseCounter() { ++m_PauseCounter; }
+  inline void ClearPings() { m_Pings.clear(); }
 
   // processing functions
 
@@ -318,7 +319,7 @@ inline std::string PlayersToNameListString(std::vector<CGamePlayer*> playerList)
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {
-    playerNames.push_back(player->GetName());
+    playerNames.push_back("[" + player->GetName() + "]");
   }
   return JoinVector(playerNames, ", ", false);
 }

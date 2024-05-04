@@ -873,6 +873,7 @@ bool CGame::Update(void* fd, void* send_fd)
           if (framesBehind[i] > m_SyncLimitSafe) {
             m_Players[i]->SetLagging(true);
             m_Players[i]->SetStartedLaggingTicks(Ticks);
+            m_Players[i]->ClearPings(); // When someone ask for their ping, calculate it from their sync counter instead
             laggingPlayers.push_back(m_Players[i]);
             if (framesBehind[i] > worstLaggerFrames) {
               worstLaggerIndex = i;
@@ -882,9 +883,6 @@ bool CGame::Update(void* fd, void* send_fd)
         }
 
         // start the lag screen
-        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_Latency) / static_cast<double>(1000.);
-        Print(GetLogPrefix() + "started lagging on [" + PlayersToNameListString(laggingPlayers) + "].");
-        Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(static_cast<float>(worstLaggerSeconds)) + " seconds behind)");
         SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
 
         // reset everyone's drop vote
@@ -892,9 +890,14 @@ bool CGame::Update(void* fd, void* send_fd)
           player->SetDropVote(false);
         }
 
-        m_Lagging            = true;
+        m_Lagging = true;
         m_StartedLaggingTime = Time;
         m_LastLagScreenResetTime = Time;
+
+        // print debug information
+        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_Latency) / static_cast<double>(1000.);
+        Print(GetLogPrefix() + "started lagging on " + PlayersToNameListString(laggingPlayers) + ".");
+        Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(static_cast<float>(worstLaggerSeconds)) + " seconds behind)");
       }
     } else {
       const bool anyUsingLegacyGProxy = GetAnyUsingGProxyLegacy();
@@ -904,8 +907,9 @@ bool CGame::Update(void* fd, void* send_fd)
       if (anyUsingLegacyGProxy)
         WaitTime = (m_GProxyEmptyActions + 1) * 60;
 
-      if (Time - m_StartedLaggingTime >= WaitTime)
+      if (Time - m_StartedLaggingTime >= WaitTime) {
         StopLaggers("was automatically dropped after " + to_string(WaitTime) + " seconds");
+      }
 
       // we cannot allow the lag screen to stay up for more than ~65 seconds because Warcraft III disconnects if it doesn't receive an action packet at least this often
       // one (easy) solution is to simply drop all the laggers if they lag for more than 60 seconds
@@ -959,15 +963,18 @@ bool CGame::Update(void* fd, void* send_fd)
         if (m_SyncCounter > player->GetSyncCounter() && m_SyncCounter - player->GetSyncCounter() >= m_SyncLimitSafe) {
           ++PlayersStillLagging;
         } else {
-          Print(GetLogPrefix() + "stopped lagging on [" + player->GetName() + "] (" + player->GetDelayText() + ")");
           SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(player));
           player->SetLagging(false);
           player->SetStartedLaggingTicks(0);
+          Print(GetLogPrefix() + "player no longer lagging [" + player->GetName() + "] (" + player->GetDelayText() + ")");
         }
       }
 
       if (PlayersStillLagging == 0) {
         m_Lagging = false;
+        m_LastActionSentTicks = Ticks - m_Latency;
+        m_LastActionLateBy = 0;
+        Print(GetLogPrefix() + "stopped lagging after " + to_string(Time - m_StartedLaggingTime) + " seconds");
       }
     }
 
@@ -2500,12 +2507,17 @@ void CGame::SendAllActions()
   const int64_t ExpectedSendInterval = m_Latency - m_LastActionLateBy;
   m_LastActionLateBy                 = ActualSendInterval - ExpectedSendInterval;
 
-  if (m_LastActionLateBy > m_PerfThreshold)
-  {
+  if (m_LastActionLateBy > m_PerfThreshold) {
     // something is going terribly wrong - Aura is probably starved of resources
     // print a message because even though this will take more resources it should provide some information to the administrator for future reference
     // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
-    Print(GetLogPrefix() + "warning - last update was late by " + to_string(m_LastActionLateBy) + "ms");
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print(GetLogPrefix() + "warning - refresh period is " + to_string(m_Latency) + "ms, but last update was late by " + to_string(m_LastActionLateBy) + "ms");
+    }
+  }
+
+  if (m_LastActionLateBy > m_Latency) {
+    m_LastActionLateBy = m_Latency;
   }
 
   m_LastActionSentTicks = Ticks;
@@ -2876,6 +2888,7 @@ void CGame::ReportPlayerDisconnected(CGamePlayer* player)
     for (auto& laggingPlayer : laggingPlayers) {
       laggingPlayer->SetLagging(true);
       laggingPlayer->SetStartedLaggingTicks(Ticks);
+      laggingPlayer->ClearPings(); // When someone asks for their ping, calculate it from their sync counter instead
     }
     SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
   }
@@ -5837,11 +5850,16 @@ bool CGame::TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary)
     }
   }
 
-  if (!Save(player, true)) return false;
-  Pause(player, true);
-  SendAllChat("Game saved on " + player->GetName() + "'s disconnection.");
-  SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
-  return true;
+  /*  
+  if (Save(player, true)) {
+    Pause(player, true);
+    SendAllChat("Game saved on " + player->GetName() + "'s disconnection.");
+    SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
+    return true;
+  }
+  //*/
+
+  return false;
 }
 
 void CGame::OpenObserverSlots()
