@@ -96,7 +96,7 @@ inline void LogStream(std::ostream& outStream, const std::string& message)
 #else
   localtime_r(&now, &timeinfo);
 #endif
-  outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
+  outStream << "[" << std::put_time(&timeinfo, "%H:%M:%S") << "] " << message << std::endl;
   outStream << std::flush;
 }
 
@@ -109,7 +109,7 @@ inline void LogStream(std::ostream& outStream, const char* message)
 #else
   localtime_r(&now, &timeinfo);
 #endif
-  outStream << "[" << std::put_time(&timeinfo, "%H:%M") << "] " << message << std::endl;
+  outStream << "[" << std::put_time(&timeinfo, "%H:%M:%S") << "] " << message << std::endl;
   outStream << std::flush;
 }
 
