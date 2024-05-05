@@ -41,6 +41,8 @@
 
  */
 
+#include "aura.h"
+
 #ifndef AURA_GPSPROTOCOL_H_
 #define AURA_GPSPROTOCOL_H_
 
@@ -52,6 +54,8 @@
 
 #define REJECTGPS_INVALID 1
 #define REJECTGPS_NOTFOUND 2
+
+class CAura;
 
 class CGPSProtocol
 {
@@ -69,7 +73,9 @@ public:
     GPS_SUPPORT_EXTENDED	= 50
   };
 
-  CGPSProtocol();
+  CAura* m_Aura;
+
+  CGPSProtocol(CAura* nAura);
   ~CGPSProtocol();
 
   // receive functions

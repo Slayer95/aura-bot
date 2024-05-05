@@ -62,6 +62,8 @@ using namespace std;
 CGameProtocol::CGameProtocol(CAura* nAura)
   : m_Aura(nAura)
 {
+  // Empty actions are sent very often
+  m_EmptyAction = SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0);
 }
 
 CGameProtocol::~CGameProtocol() = default;
@@ -435,7 +437,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_COUNTDOWN_END()
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*> actions, uint16_t sendInterval)
 {
   std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_INCOMING_ACTION, 0, 0};
-  AppendByteArray(packet, sendInterval, false); // send int32_terval
+  AppendByteArray(packet, sendInterval, false); // send interval
 
   // create subpacket
 

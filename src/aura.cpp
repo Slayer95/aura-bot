@@ -350,7 +350,7 @@ int main(const int argc, char** argv)
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
     m_GameProtocol(nullptr),
-    m_GPSProtocol(new CGPSProtocol()),
+    m_GPSProtocol(nullptr),
     m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
     m_Discord(nullptr),
@@ -392,6 +392,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
 
   m_GameProtocol = new CGameProtocol(this);
+  m_GPSProtocol = new CGPSProtocol(this);
   m_Net = new CNet(this);
   m_Discord = new CDiscord(this);
   m_IRC = new CIRC(this);

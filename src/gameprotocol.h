@@ -101,6 +101,7 @@ class CGameProtocol
 {
 public:
   CAura* m_Aura;
+  std::vector<uint8_t>  m_EmptyAction;
 
   enum Protocol
   {
@@ -144,6 +145,10 @@ public:
 
   explicit CGameProtocol(CAura* nAura);
   ~CGameProtocol();
+
+  // utility functions
+
+  const std::vector<uint8_t>& GetEmptyAction() const { return m_EmptyAction; }
 
   // receive functions
 

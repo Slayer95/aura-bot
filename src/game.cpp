@@ -940,10 +940,10 @@ bool CGame::Update(void* fd, void* send_fd)
             // empty actions are used to extend the time a player can use when reconnecting
 
             for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j)
-              Send(_i, GetProtocol()->SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0));
+              Send(_i, GetProtocol()->GetEmptyAction());
           }
 
-          Send(_i, GetProtocol()->SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0));
+          Send(_i, GetProtocol()->GetEmptyAction());
         }
 
         // start the lag screen
@@ -2463,7 +2463,7 @@ void CGame::SendAllActions()
     for (auto& player : m_Players) {
       if (!player->GetGProxyAny()) {
         for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j)
-          Send(player, GetProtocol()->SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0));
+          Send(player, GetProtocol()->GetEmptyAction());
       }
     }
   }

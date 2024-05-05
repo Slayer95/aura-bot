@@ -42,14 +42,23 @@
  */
 
 #include "aura.h"
+#include "game.h"
+#include "gameprotocol.h"
 #include "util.h"
 #include "gpsprotocol.h"
+
+#include <queue>
+
+using namespace std;
 
 //
 // CGPSProtocol
 //
 
-CGPSProtocol::CGPSProtocol() = default;
+CGPSProtocol::CGPSProtocol(CAura* nAura)
+ : m_Aura(nAura)
+{
+}
 
 CGPSProtocol::~CGPSProtocol() = default;
 
@@ -61,31 +70,31 @@ CGPSProtocol::~CGPSProtocol() = default;
 // SEND FUNCTIONS //
 ////////////////////
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSC_INIT(const uint32_t version) const
+vector<uint8_t> CGPSProtocol::SEND_GPSC_INIT(const uint32_t version) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 8, 0};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 8, 0};
   AppendByteArray(packet, version, false);
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSC_RECONNECT(const uint8_t PID, const uint32_t reconnectKey, const uint32_t lastPacket) const
+vector<uint8_t> CGPSProtocol::SEND_GPSC_RECONNECT(const uint8_t PID, const uint32_t reconnectKey, const uint32_t lastPacket) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 13, 0, PID};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 13, 0, PID};
   AppendByteArray(packet, reconnectKey, false);
   AppendByteArray(packet, lastPacket, false);
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSC_ACK(const uint32_t lastPacket) const
+vector<uint8_t> CGPSProtocol::SEND_GPSC_ACK(const uint32_t lastPacket) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
   AppendByteArray(packet, lastPacket, false);
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t PID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t PID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 12, 0};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 12, 0};
   AppendByteArray(packet, reconnectPort, false);
   packet.push_back(PID);
   AppendByteArray(packet, reconnectKey, false);
@@ -93,36 +102,36 @@ std::vector<uint8_t> CGPSProtocol::SEND_GPSS_INIT(const uint16_t reconnectPort, 
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSS_RECONNECT(const uint32_t lastPacket) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_RECONNECT(const uint32_t lastPacket) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 8, 0};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 8, 0};
   AppendByteArray(packet, lastPacket, false);
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSS_ACK(const uint32_t lastPacket) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_ACK(const uint32_t lastPacket) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
   AppendByteArray(packet, lastPacket, false);
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSS_REJECT(const uint32_t reason) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_REJECT(const uint32_t reason) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_REJECT, 8, 0};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_REJECT, 8, 0};
   AppendByteArray(packet, reason, false);
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const uint32_t seconds) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const uint32_t seconds) const
 {
-  std::vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_SUPPORT_EXTENDED, 8, 0};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_SUPPORT_EXTENDED, 8, 0};
   AppendByteArray(packet, seconds, false);
   return packet;
 }
 
-std::vector<uint8_t> CGPSProtocol::SEND_GPSS_DIMENSIONS() const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_DIMENSIONS() const
 {
-  std::vector<uint8_t> packet = {192, 7};
+  vector<uint8_t> packet = {192, 7};
   return packet;
 }
