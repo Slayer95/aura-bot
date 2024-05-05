@@ -2506,22 +2506,23 @@ void CGame::SendAllActions()
   const int64_t Ticks                = GetTicks();
   const int64_t ActualSendInterval   = Ticks - m_LastActionSentTicks;
   const int64_t ExpectedSendInterval = m_Latency - m_LastActionLateBy;
-  m_LastActionLateBy                 = ActualSendInterval - ExpectedSendInterval;
+  const int64_t ThisActionLateBy     = ActualSendInterval - ExpectedSendInterval;
 
-  if (m_LastActionLateBy > m_PerfThreshold) {
+  if (ThisActionLateBy > m_PerfThreshold) {
     // something is going terribly wrong - Aura is probably starved of resources
     // print a message because even though this will take more resources it should provide some information to the administrator for future reference
     // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print(GetLogPrefix() + "warning - refresh period is " + to_string(m_Latency) + "ms, but last update was late by " + to_string(m_LastActionLateBy) + "ms");
+      Print(GetLogPrefix() + "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(m_Latency) + "ms]");
     }
   }
 
-  if (m_LastActionLateBy > m_Latency) {
-    m_LastActionLateBy = m_Latency;
+  if (ThisActionLateBy > m_Latency) {
+    ThisActionLateBy = m_Latency;
   }
 
   m_LastActionSentTicks = Ticks;
+  m_LastActionLateBy = ThisActionLateBy;
 }
 
 std::string CGame::GetPrefixedGameName(const CRealm* realm) const
