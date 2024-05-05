@@ -324,6 +324,16 @@ bool CMap::SetTeamsTogether(const bool nEnable)
   return true;
 }
 
+bool CMap::SetAdvancedSharedUnitControl(const bool nEnable)
+{
+  if (nEnable) {
+    m_MapFlags |= MAPFLAG_UNITSHARE;
+  } else {
+    m_MapFlags &= ~MAPFLAG_UNITSHARE;
+  }
+  return true;
+}
+
 bool CMap::SetRandomHeroes(const bool nEnable)
 {
   if (nEnable) {

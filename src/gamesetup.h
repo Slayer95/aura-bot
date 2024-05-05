@@ -123,6 +123,7 @@ public:
 
   std::optional<bool>         m_TeamsLocked;
   std::optional<bool>         m_TeamsTogether;
+  std::optional<bool>         m_AdvancedSharedUnitControl;
   std::optional<bool>         m_RandomRaces;
   std::optional<bool>         m_RandomHeroes;
   std::optional<uint8_t>      m_Visibility;

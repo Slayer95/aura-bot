@@ -379,25 +379,62 @@ by allowing incoming connections on specific ports.
 
 This flag enables automatic connectivity checks to ensure hosted games are joinable from the Internet.
 
+This flag is disabled by default.
+
 ## \`--check-version\`, \`--no-check-version\`
 
-This flag enables version checks to ensure hosted games are compatible with running game version.
+This flag enables version checks to ensure hosted games are compatible with the used game version.
+
+This flag is enabled by default when hosting from the CLI.
 
 ## \`--check-reservation\`, \`--no-check-reservation\`
 
 This flag enables reservation checks to ensure only players with reservations may join games.
 
+This flag is disabled by default.
+
 ## \`--replaceable\`, \`--no-replaceable\`
 
 This flag enables users to use the !host command to replace the hosted game by another one.
+
+This flag is disabled by default.
 
 ## \`--auto-rehost\`, \`--no-auto-rehost\`
 
 This flag enables automatic rehosting of the same game setup so long as Aura is not hosting another lobby.
 
+This flag is disabled by default.
+
 ## \`--ffa\`
 
 This flag forces players joining the game into different teams.
+
+This flag is disabled by default.
+
+## \`--lock-teams\`, \`--no-lock-teams\`
+
+This flag enforces fair play in team games. When disabled, players are allowed to arbitrarily change their
+diplomatic relationship to other players, including.
+- Becoming allied or foes.
+- Sharing vision or unsharing it, even with foes.
+- Sharing units or unsharing them, only with (current) allies.
+- Sharing your victory conditions with your allies ('Allied Victory'.)
+- Trading resources with foes.
+
+This flag is enabled by default.
+
+## \`--teams-together\`, \`--no-teams-together\`
+
+This flag enables automatic grouping of teammates' starting positions.
+
+This flag is enabled by default.
+
+## \`--share-advanced\`, \`--no-share-advanced\`
+
+This flag enables 'Advanced Shared Unit Control'. When this setting is active, if a player shares their units 
+with someone else, they will be allowed to train units, and build structures on their behalf.
+
+This flag is disabled by default.
 
 ## \`--random-races\`
 
@@ -405,12 +442,22 @@ This flag enables randomization of player races in the hosted game. When this fl
 race will be randomly assigned at the start of the game session. This adds an element of unpredictability 
 and variety to the game, as players may need to adapt their strategies based on their randomly assigned race.
 
+This flag is disabled by default.
+
 ## \`--random-heroes\`
 
 This flag enables randomization of player heroes in the hosted game. With this flag, each player's hero will 
 be randomly selected at the beginning of the game session. Randomizing heroes adds excitement and diversity 
 to the gameplay, as players must adapt their tactics based on the strengths and abilities of their randomly 
 assigned hero.
+
+This flag is disabled by default.
+
+## \`--ownerless\`
+
+This flag prevents players from taking ownership of the hosted game.
+
+This flag is disabled by default.
 
 # Parameters for CLI games
 
@@ -507,6 +554,14 @@ the game was created.
 
 This parameter specifies that, independently of \`--auto-start-players\`, the game will automatically start 
 as soon as ``SECONDS`` have passed since the game was created.
+
+## \`--hcl\`
+
+This parameter specifies a custom game mode to be prepicked for maps that implement the HCL standard.
+For instance, ``--hcl ap`` sets 'All Pick' mode in DotA games.
+
+This flag should never be used for maps that aren't known to support HCL. Otherwise, it will corrupt 
+player handicaps.
 
 ## \`--load <FILE>\`
 

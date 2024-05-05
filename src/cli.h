@@ -80,14 +80,15 @@ public:
 
   // Host flags
   std::optional<std::string>            m_SearchTarget;
-  std::optional<std::string>            m_GameName;
-  std::optional<bool>                   m_TeamsLocked;
-  std::optional<bool>                   m_TeamsTogether;
-  std::optional<bool>                   m_RandomRaces;
-  std::optional<bool>                   m_RandomHeroes;
   std::optional<std::string>            m_SearchType;
-  std::optional<std::string>            m_Observers;
-  std::optional<std::string>            m_Visibility;
+  std::optional<std::string>            m_GameName;
+  std::optional<bool>                   m_GameTeamsLocked;
+  std::optional<bool>                   m_GameTeamsTogether;
+  std::optional<bool>                   m_GameAdvancedSharedUnitControl;
+  std::optional<bool>                   m_GameRandomRaces;
+  std::optional<bool>                   m_GameRandomHeroes;
+  std::optional<std::string>            m_GameObservers;
+  std::optional<std::string>            m_GameVisibility;
   std::optional<std::string>            m_GameOwner;
   std::optional<bool>                   m_GameOwnerLess;
   std::vector<std::string>              m_ExcludedRealms;

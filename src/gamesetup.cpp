@@ -120,12 +120,13 @@ bool CGameExtraOptions::ParseMapRandomHeroes(const string& s) {
 }
 
 void CGameExtraOptions::AcquireCLI(const CCLI* nCLI) {
-  if (nCLI->m_Observers.has_value()) ParseMapObservers(nCLI->m_Observers.value());
-  if (nCLI->m_Visibility.has_value()) ParseMapVisibility(nCLI->m_Visibility.value());
-  if (nCLI->m_TeamsLocked.has_value()) m_TeamsLocked = nCLI->m_TeamsLocked.value();
-  if (nCLI->m_TeamsTogether.has_value()) m_TeamsTogether = nCLI->m_TeamsTogether.value();
-  if (nCLI->m_RandomRaces.has_value()) m_RandomRaces = nCLI->m_RandomRaces.value();
-  if (nCLI->m_RandomHeroes.has_value()) m_RandomHeroes = nCLI->m_RandomHeroes.value();
+  if (nCLI->m_GameObservers.has_value()) ParseMapObservers(nCLI->m_GameObservers.value());
+  if (nCLI->m_GameVisibility.has_value()) ParseMapVisibility(nCLI->m_GameVisibility.value());
+  if (nCLI->m_GameTeamsLocked.has_value()) m_TeamsLocked = nCLI->m_GameTeamsLocked.value();
+  if (nCLI->m_GameTeamsTogether.has_value()) m_TeamsTogether = nCLI->m_GameTeamsTogether.value();
+  if (nCLI->m_GameAdvancedSharedUnitControl.has_value()) m_AdvancedSharedUnitControl = nCLI->m_GameAdvancedSharedUnitControl.value();
+  if (nCLI->m_GameRandomRaces.has_value()) m_RandomRaces = nCLI->m_GameRandomRaces.value();
+  if (nCLI->m_GameRandomHeroes.has_value()) m_RandomHeroes = nCLI->m_GameRandomHeroes.value();
 }
 
 CGameExtraOptions::~CGameExtraOptions() = default;
@@ -705,6 +706,10 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
   }
   if (extraOptions->m_TeamsTogether.has_value()) {
     if (!m_Map->SetTeamsTogether(extraOptions->m_TeamsTogether.value()))
+      failed = true;
+  }
+  if (extraOptions->m_AdvancedSharedUnitControl.has_value()) {
+    if (!m_Map->SetAdvancedSharedUnitControl(extraOptions->m_AdvancedSharedUnitControl.value()))
       failed = true;
   }
   if (extraOptions->m_RandomRaces.has_value()) {

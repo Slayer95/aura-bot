@@ -222,6 +222,7 @@ public:
   void                          ClearMapData() { m_MapData.clear(); }
   bool                          SetTeamsLocked(const bool nEnable);
   bool                          SetTeamsTogether(const bool nEnable);
+  bool                          SetAdvancedSharedUnitControl(const bool nEnable);
   bool                          SetRandomRaces(const bool nEnable);
   bool                          SetRandomHeroes(const bool nEnable);
   bool                          SetMapVisibility(const uint8_t nMapVisibility);
