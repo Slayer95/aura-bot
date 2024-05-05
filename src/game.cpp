@@ -2504,25 +2504,27 @@ void CGame::SendAllActions()
     SendAll(GetProtocol()->SEND_W3GS_INCOMING_ACTION(m_Actions, m_Latency));
 
   const int64_t Ticks                = GetTicks();
-  const int64_t ActualSendInterval   = Ticks - m_LastActionSentTicks;
-  const int64_t ExpectedSendInterval = m_Latency - m_LastActionLateBy;
-  const int64_t ThisActionLateBy     = ActualSendInterval - ExpectedSendInterval;
+  if (m_LastActionSentTicks != 0) {
+    const int64_t ActualSendInterval   = Ticks - m_LastActionSentTicks;
+    const int64_t ExpectedSendInterval = m_Latency - m_LastActionLateBy;
+    int64_t ThisActionLateBy     = ActualSendInterval - ExpectedSendInterval;
 
-  if (ThisActionLateBy > m_PerfThreshold) {
-    // something is going terribly wrong - Aura is probably starved of resources
-    // print a message because even though this will take more resources it should provide some information to the administrator for future reference
-    // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print(GetLogPrefix() + "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(m_Latency) + "ms]");
+    if (ThisActionLateBy > m_PerfThreshold) {
+      // something is going terribly wrong - Aura is probably starved of resources
+      // print a message because even though this will take more resources it should provide some information to the administrator for future reference
+      // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
+      if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+        Print(GetLogPrefix() + "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(m_Latency) + "ms]");
+      }
     }
-  }
 
-  if (ThisActionLateBy > m_Latency) {
-    ThisActionLateBy = m_Latency;
-  }
+    if (ThisActionLateBy > m_Latency) {
+      ThisActionLateBy = m_Latency;
+    }
 
+    m_LastActionLateBy = ThisActionLateBy;
+  }
   m_LastActionSentTicks = Ticks;
-  m_LastActionLateBy = ThisActionLateBy;
 }
 
 std::string CGame::GetPrefixedGameName(const CRealm* realm) const
