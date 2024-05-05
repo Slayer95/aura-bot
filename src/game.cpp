@@ -2098,7 +2098,7 @@ string CGame::GetAutoStartText() const
     if (m_AutoStartMinTime != 0) {
       return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " after " + MinTimeString;
     } else {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " (AI are counted, but observers are not).";
+      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers());
     }
   } else {
     return "Autostarts in " + MaxTimeString;
