@@ -2335,8 +2335,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (MinSlots > m_TargetGame->m_Slots.size()) {
-        ErrorReply("This map does not allow " + to_string(MinSlots) + " slots.");
+      if (MinSlots > m_TargetGame->GetMap()->GetMapNumControllers()) {
+        ErrorReply("This map does not allow " + to_string(MinSlots) + " players.");
         break;
       }
 

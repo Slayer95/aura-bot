@@ -2090,15 +2090,15 @@ string CGame::GetAutoStartText() const
 
   if (m_AutoStartPlayers != 0 && m_AutoStartMaxTime != 0) {
     if (m_AutoStartMinTime != 0) {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + to_string(m_Slots.size()) + " after " + MinTimeString + " Max " + MaxTimeString;
+      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " after " + MinTimeString + " Max " + MaxTimeString;
     } else {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + to_string(m_Slots.size()) + ". Max " + MaxTimeString;
+      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + ". Max " + MaxTimeString;
     }
   } else if (m_AutoStartPlayers != 0) {
     if (m_AutoStartMinTime != 0) {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + to_string(m_Slots.size()) + " after " + MinTimeString;
+      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " after " + MinTimeString;
     } else {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + to_string(m_Slots.size()) + " (AI are counted, but observers are not).";
+      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " (AI are counted, but observers are not).";
     }
   } else {
     return "Autostarts in " + MaxTimeString;
