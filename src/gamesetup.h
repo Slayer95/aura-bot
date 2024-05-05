@@ -278,6 +278,9 @@ public:
     m_GameName = nName;
     m_GameBaseName = nName;
   }
+  void SetOwner(const std::string& ownerName, const std::string& ownerRealm) {
+    m_GameOwner = std::make_pair(ownerName, ownerRealm);
+  }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
   void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
   void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }

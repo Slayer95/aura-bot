@@ -87,7 +87,7 @@ private:
   std::optional<std::string>            m_SearchType;
   std::optional<std::string>            m_Observers;
   std::optional<std::string>            m_Visibility;
-  std::optional<std::string>            m_Owner;
+  std::optional<std::string>            m_GameOwner;
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameLobbyTimeout;

@@ -106,7 +106,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: info, debug, trace.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"}));
 
   // Game hosting
-  app.add_option("--owner", m_Owner, "Customizes the game owner when hosting from the CLI.");
+  app.add_option("--owner", m_GameOwner, "Customizes the game owner when hosting from the CLI.");
   app.add_option("--observers", m_Observers, "Customizes observers when hosting from the CLI. Values: no, referees, defeat, full")->check(CLI::IsMember({"no", "referees", "defeat", "full"}));
   app.add_option("--visibility", m_Visibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
@@ -419,6 +419,17 @@ bool CCLI::QueueActions(CAura* nAura) const
           }
           if (userName.has_value()) {
             gameSetup->SetCreator(userName.value());
+          }
+          if (m_GameOwner.has_value()) {
+            string::size_type realmStart = m_GameOwner.value().find('@');
+            string ownerName, ownerRealm;
+            if (realmStart != string::npos) {
+              ownerName = TrimString(m_GameOwner.value().substr(0, realmStart));
+              ownerRealm = TrimString(m_GameOwner.value().substr(realmStart + 1));
+            } else {
+              ownerName = m_GameOwner.value();
+            }
+            gameSetup->SetOwner(ownerName, ownerRealm);
           }
           if (m_GameLobbyTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameLobbyTimeout.value());
           if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
