@@ -607,6 +607,11 @@ bool CGame::HasSlotsOpen() const
   return false;
 }
 
+bool CGame::GetIsSinglePlayerMode() const
+{
+  return GetNumHumanOrFakeControllers() < 2;
+}
+
 uint32_t CGame::GetNumHumanOrFakeControllers() const
 {
   uint32_t NumHumanPlayers = static_cast<uint8_t>(m_FakePlayers.size());
@@ -2315,6 +2320,18 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       }
       Line = Line.substr(10);
     }
+    if (Line.substr(0, 12) == "{OWNERLESS?}") {
+      if (!m_OwnerLess) {
+        continue;
+      }
+      Line = Line.substr(12);
+    }
+    if (Line.substr(0, 12) == "{OWNERLESS!}") {
+      if (m_OwnerLess) {
+        continue;
+      }
+      Line = Line.substr(12);
+    }
     if (Line.substr(0, 8) == "{OWNER?}") {
       if (m_OwnerName.empty()) {
         continue;
@@ -2326,18 +2343,6 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
         continue;
       }
       Line = Line.substr(8);
-    }
-    if (Line.substr(0, 12) == "{OWNERLESS?}") {
-      if (!m_OwnerLess) {
-        continue;
-      }
-      Line = Line.substr(12);
-    }
-    if (Line.substr(0, 12) == "{OWNERLESSS!}") {
-      if (m_OwnerLess) {
-        continue;
-      }
-      Line = Line.substr(12);
     }
     if (Line.substr(0, 17) == "{CHECKLASTOWNER?}") {
       if (m_LastOwner != player->GetName()) {
@@ -2522,7 +2527,7 @@ void CGame::SendAllActions()
     const int64_t ExpectedSendInterval = m_Latency - m_LastActionLateBy;
     int64_t ThisActionLateBy     = ActualSendInterval - ExpectedSendInterval;
 
-    if (ThisActionLateBy > m_PerfThreshold) {
+    if (ThisActionLateBy > m_PerfThreshold && !GetIsSinglePlayerMode()) {
       // something is going terribly wrong - Aura is probably starved of resources
       // print a message because even though this will take more resources it should provide some information to the administrator for future reference
       // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
@@ -4109,9 +4114,9 @@ void CGame::EventGameLoaded()
   for (auto& player : m_Players)
     SendChat(player, "Your load time was " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
 
-  if (GetNumHumanOrFakeControllers() < 2) {
+  if (GetIsSinglePlayerMode()) {
     SendAllChat("HINT: Single-player game detected. In-game commands will be DISABLED.");
-    // TODO: This creates a lag spike client-side.
+    // FIXME? This creates a lag spike client-side.
     StopPlayers("single-player game untracked", true);
   }
 }

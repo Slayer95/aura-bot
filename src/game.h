@@ -282,6 +282,7 @@ public:
   uint32_t              GetSlotsOccupied() const;
   uint32_t              GetSlotsOpen() const;
   bool                  HasSlotsOpen() const;
+  bool                  GetIsSinglePlayerMode() const;
   uint32_t              GetNumHumanOrFakeControllers() const;
   uint8_t               GetNumHumanPlayers() const;
   uint8_t               GetNumOccupiedSlots() const;
