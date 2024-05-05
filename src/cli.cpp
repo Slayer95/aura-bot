@@ -107,11 +107,13 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 
   // Game hosting
   app.add_option("--owner", m_GameOwner, "Customizes the game owner when hosting from the CLI.");
+  app.add_flag("--lock-teams,--no-lock-teams{false}", m_TeamsLocked, "Toggles 'Lock Teams' setting when hosting from the CLI.");
+  app.add_flag("--teams-together,--no-teams-together{false}", m_TeamsTogether, "Toggles 'Teams Together' setting when hosting from the CLI.");
+  app.add_flag("--random-races,--no-random-races{false}", m_RandomRaces, "Toggles 'Random Races' setting when hosting from the CLI.");
+  app.add_flag("--random-heroes,--no-random-heroes{false}", m_RandomHeroes, "Toggles 'Random Heroes' when hosting from the CLI.");
   app.add_option("--observers", m_Observers, "Customizes observers when hosting from the CLI. Values: no, referees, defeat, full")->check(CLI::IsMember({"no", "referees", "defeat", "full"}));
   app.add_option("--visibility", m_Visibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
-  app.add_option("--random-races", m_RandomRaces, "Toggles random races when hosting from the CLI.");
-  app.add_option("--random-heroes", m_RandomHeroes, "Toggles random heroes when hosting from the CLI.");
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
@@ -318,10 +320,7 @@ bool CCLI::QueueActions(CAura* nAura) const
 
   if (m_SearchTarget.has_value()) {
     CGameExtraOptions options;
-    if (m_Observers.has_value()) options.ParseMapObservers(m_Observers.value());
-    if (m_Visibility.has_value()) options.ParseMapVisibility(m_Visibility.value());
-    if (m_RandomRaces.has_value()) options.m_RandomRaces = m_RandomRaces.value();
-    if (m_RandomHeroes.has_value()) options.m_RandomHeroes = m_RandomHeroes.value();
+    options.AcquireCLI(this);
 
     uint8_t searchType;
     if (m_SearchType.has_value()) {

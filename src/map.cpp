@@ -304,6 +304,26 @@ bool CMap::SetMapVisibility(const uint8_t nMapVisibility)
   return true;
 }
 
+bool CMap::SetTeamsLocked(const bool nEnable)
+{
+  if (nEnable) {
+    m_MapFlags |= MAPFLAG_FIXEDTEAMS;
+  } else {
+    m_MapFlags &= ~MAPFLAG_FIXEDTEAMS;
+  }
+  return true;
+}
+
+bool CMap::SetTeamsTogether(const bool nEnable)
+{
+  if (nEnable) {
+    m_MapFlags |= MAPFLAG_TEAMSTOGETHER;
+  } else {
+    m_MapFlags &= ~MAPFLAG_TEAMSTOGETHER;
+  }
+  return true;
+}
+
 bool CMap::SetRandomHeroes(const bool nEnable)
 {
   if (nEnable) {

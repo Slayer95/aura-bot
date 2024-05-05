@@ -42,7 +42,9 @@ CGameExtraOptions::CGameExtraOptions()
 }
 
 CGameExtraOptions::CGameExtraOptions(const optional<bool>& nRandomRaces, const optional<bool>& nRandomHeroes, const optional<uint8_t>& nVisibility, const optional<uint8_t>& nObservers)
-  : m_RandomRaces(nRandomRaces),
+  : m_TeamsLocked(false),
+    m_TeamsTogether(false),
+    m_RandomRaces(nRandomRaces),
     m_RandomHeroes(nRandomHeroes),
     m_Visibility(nVisibility),
     m_Observers(nObservers)
@@ -115,6 +117,15 @@ bool CGameExtraOptions::ParseMapRandomHeroes(const string& s) {
     return false;
   }
   return true;
+}
+
+void CGameExtraOptions::AcquireCLI(const CCLI* nCLI) {
+  if (nCLI->m_Observers.has_value()) ParseMapObservers(nCLI->m_Observers.value());
+  if (nCLI->m_Visibility.has_value()) ParseMapVisibility(nCLI->m_Visibility.value());
+  if (nCLI->m_TeamsLocked.has_value()) m_TeamsLocked = nCLI->m_TeamsLocked.value();
+  if (nCLI->m_TeamsTogether.has_value()) m_TeamsTogether = nCLI->m_TeamsTogether.value();
+  if (nCLI->m_RandomRaces.has_value()) m_RandomRaces = nCLI->m_RandomRaces.value();
+  if (nCLI->m_RandomHeroes.has_value()) m_RandomHeroes = nCLI->m_RandomHeroes.value();
 }
 
 CGameExtraOptions::~CGameExtraOptions() = default;
@@ -686,6 +697,14 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
 bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
 {
   bool failed = false;
+  if (extraOptions->m_TeamsLocked.has_value()) {
+    if (!m_Map->SetTeamsLocked(extraOptions->m_TeamsLocked.value()))
+      failed = true;
+  }
+  if (extraOptions->m_TeamsTogether.has_value()) {
+    if (!m_Map->SetTeamsTogether(extraOptions->m_TeamsTogether.value()))
+      failed = true;
+  }
   if (extraOptions->m_RandomRaces.has_value()) {
     if (!m_Map->SetRandomRaces(extraOptions->m_RandomRaces.value()))
       failed = true;

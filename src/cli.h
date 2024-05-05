@@ -55,7 +55,6 @@ public:
   std::optional<std::filesystem::path>  m_HomePath;
   bool                                  m_UseStandardPaths;
 
-private:
   uint8_t                               m_EarlyAction;
 
   bool                                  m_Verbose;
@@ -82,6 +81,8 @@ private:
   // Host flags
   std::optional<std::string>            m_SearchTarget;
   std::optional<std::string>            m_GameName;
+  std::optional<bool>                   m_TeamsLocked;
+  std::optional<bool>                   m_TeamsTogether;
   std::optional<bool>                   m_RandomRaces;
   std::optional<bool>                   m_RandomHeroes;
   std::optional<std::string>            m_SearchType;
@@ -121,7 +122,6 @@ private:
   std::vector<std::string>              m_ExecCommands;
   bool                                  m_ExecBroadcast;
 
-public:
   CCLI();
   ~CCLI();
 
