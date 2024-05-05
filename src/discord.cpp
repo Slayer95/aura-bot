@@ -78,13 +78,17 @@ CDiscord::~CDiscord()
 bool CDiscord::Init()
 {
   m_Client = new dpp::cluster(m_Config->m_Token);
-  m_Client->on_log(dpp::utility::cout_logger());
+  m_Client->on_log([](const dpp::log_t& event) {
+		if (event.severity > dpp::ll_info) {
+      Print("[DISCORD] " + dpp::utility::loglevel(event.severity) + " - " + event.message);
+		}
+	});
  
   m_Client->on_slashcommand([this](const dpp::slashcommand_t& event) {
     try {
       if (!GetIsServerAllowed(event.command.get_guild().id)) return;
     } catch (...) {
-      Print("[DISCORD] on_slashcommand recv slash command on DM from " + event.command.get_issuing_user().username);
+      if (!GetIsUserAllowed(event.command.get_issuing_user().id)) return;
     }
     event.thinking(THINKING_PUBLIC);
     m_CommandQueue.push(new dpp::slashcommand_t(event));
@@ -213,14 +217,30 @@ void CDiscord::SendUser(const string& message, const uint64_t target)
 bool CDiscord::GetIsServerAllowed(const uint64_t target) const
 {
   switch (m_Config->m_FilterJoinServersMode) {
-  case FILTER_SERVERS_ALLOW_ALL:
+  case FILTER_ALLOW_ALL:
     return true;
-  case FILTER_SERVERS_DENY_ALL:
+  case FILTER_DENY_ALL:
     return false;
-  case FILTER_SERVERS_ALLOW_LIST:
+  case FILTER_ALLOW_LIST:
     return m_Config->m_FilterJoinServersList.find(target) != m_Config->m_FilterJoinServersList.end();
-  case FILTER_SERVERS_DENY_LIST:
+  case FILTER_DENY_LIST:
     return m_Config->m_FilterJoinServersList.find(target) == m_Config->m_FilterJoinServersList.end();
+  default:
+    return false;
+  }
+}
+
+bool CDiscord::GetIsUserAllowed(const uint64_t target) const
+{
+  switch (m_Config->m_FilterInstallUsersMode) {
+  case FILTER_ALLOW_ALL:
+    return true;
+  case FILTER_DENY_ALL:
+    return false;
+  case FILTER_ALLOW_LIST:
+    return m_Config->m_FilterInstallUsersList.find(target) != m_Config->m_FilterInstallUsersList.end();
+  case FILTER_DENY_LIST:
+    return m_Config->m_FilterInstallUsersList.find(target) == m_Config->m_FilterInstallUsersList.end();
   default:
     return false;
   }

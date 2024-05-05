@@ -62,8 +62,10 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   );
 
   vector<string> invitesMode = {"all", "none", "allow_list", "deny_list"};
-  m_FilterJoinServersMode = CFG.GetStringIndex("discord.invites.mode", invitesMode, FILTER_SERVERS_ALLOW_ALL);
+  m_FilterJoinServersMode = CFG.GetStringIndex("discord.invites.mode", invitesMode, FILTER_ALLOW_ALL);
   m_FilterJoinServersList = CFG.GetUint64Set("discord.invites.list", ',', {});
+  m_FilterInstallUsersMode = CFG.GetStringIndex("discord.direct_messages.mode", invitesMode, FILTER_ALLOW_ALL);
+  m_FilterInstallUsersList = CFG.GetUint64Set("discord.direct_messages.list", ',', {});
   m_SudoUsers = CFG.GetUint64Set("discord.sudo_users", ',', {});
 
   if (m_Enabled && m_Token.empty()) {

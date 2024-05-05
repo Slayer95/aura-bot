@@ -33,10 +33,10 @@
 #include <string>
 #include <map>
 
-#define FILTER_SERVERS_ALLOW_ALL 0
-#define FILTER_SERVERS_DENY_ALL 1
-#define FILTER_SERVERS_ALLOW_LIST 2
-#define FILTER_SERVERS_DENY_LIST 3
+#define FILTER_ALLOW_ALL 0
+#define FILTER_DENY_ALL 1
+#define FILTER_ALLOW_LIST 2
+#define FILTER_DENY_LIST 3
 
 //
 // CDiscordConfig
@@ -51,6 +51,8 @@ public:
   bool                                m_Enabled;
   uint8_t                             m_FilterJoinServersMode;
   std::set<uint64_t>                  m_FilterJoinServersList;
+  uint8_t                             m_FilterInstallUsersMode;
+  std::set<uint64_t>                  m_FilterInstallUsersList;
   std::set<uint64_t>                  m_SudoUsers;
   CCommandConfig*                     m_CommandCFG;
 

@@ -32,6 +32,7 @@
 #include <random>
 #include <tuple>
 #include <future>
+#include <algorithm>
 
 #ifndef DISABLE_DPP
 #include <dpp/dpp.h>
@@ -400,13 +401,9 @@ void CCommandContext::UpdatePermissions()
   if (m_DiscordAPI) {
 #ifndef DISABLE_DPP
     if (m_Aura->m_Discord->GetIsSudoer(m_FromIdentifier)) {
-      Print("[DISCORD] User " + GetUserAttribution() + " is sudoer");
       m_Permissions = 0xFFFF &~ (USER_PERMISSIONS_BOT_SUDO_OK);
     } else if (m_DiscordAPI->command.get_issuing_user().is_verified()) {
-      Print("[DISCORD] User " + GetUserAttribution() + " is verified");
       m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
-    } else {
-      Print("[DISCORD] User " + GetUserAttribution() + " is unverified");
     }
 #endif
     return;
@@ -1142,14 +1139,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         });
       }
       vector<string> pingsText;
+      uint32_t maxPing = 0;
 
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
         pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText());
         size_t numPings = (*i)->GetNumPings();
-        if (m_TargetGame->GetIsLobby() && !(*i)->GetIsReserved() && 0 < numPings) {
-          if (KickPing.has_value() && (*i)->GetPing() > m_TargetGame->m_AutoKickPing) {
+        if (numPings == 0) continue;
+        uint32_t ping = (*i)->GetPing();
+        if (ping > maxPing) maxPing = ping;
+        if (m_TargetGame->GetIsLobby() && !(*i)->GetIsReserved()) {
+          if (KickPing.has_value() && ping > m_TargetGame->m_AutoKickPing) {
             (*i)->SetKickByTime(GetTime() + 5);
-            (*i)->SetLeftReason("was kicked for excessive ping " + to_string((*i)->GetPing()) + " > " + to_string(m_TargetGame->m_AutoKickPing));
+            (*i)->SetLeftReason("was kicked for excessive ping " + to_string(ping) + " > " + to_string(m_TargetGame->m_AutoKickPing));
             (*i)->SetLeftCode(PLAYERLEAVE_LOBBY);
             ++KickedCount;
           } else if ((*i)->GetKickQueued() && ((*i)->GetHasMap() || (*i)->GetDownloadStarted())) {
@@ -1163,6 +1164,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (KickedCount > 0) {
         SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_TargetGame->m_AutoKickPing) + "...");
+      }
+      if (0 < maxPing && maxPing < m_TargetGame->m_Latency) {
+        SendAll("HINT: Using ping equalizer at " + to_string(m_TargetGame->m_Latency) + "ms. Decrease it with " + cmdToken + "latency [VALUE]");
       }
 
       break;
@@ -1874,11 +1878,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Payload == "default" || Payload == "reset") {
+      string lower = Payload;
+      transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
+
+      if (lower == "default" || lower == "reset") {
         m_TargetGame->m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
         m_TargetGame->m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
         m_TargetGame->m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
         SendReply("Latency settings reset to default.");
+        break;
+      } else if (lower == "ignore") {
+        vector<uint32_t> framesBehind = m_TargetGame->GetPlayersFramesBehind();
+        if (!framesBehind.empty()) {
+          auto worstFramesBehind = max_element(framesBehind.begin(), framesBehind.end());
+          m_TargetGame->m_SyncLimit += (*worstFramesBehind);
+          m_TargetGame->m_SyncLimitSafe += (*worstFramesBehind);
+        }
+        SendReply("Ignoring lagging players. (They may not be able to control their units.)");
         break;
       }
 
@@ -2898,9 +2914,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage " + cmdToken + "import [DATA TYPE]. Supported data types are: aliases");
         break;
       }
-      transform(begin(Payload), end(Payload), begin(Payload), [](char c) { return static_cast<char>(std::tolower(c)); });
+      string lower = Payload;
+      transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
-      if (Payload == "aliases") {
+      if (lower == "aliases") {
         m_Aura->LoadMapAliases();
         SendReply("Commited map aliases to SQLite.");
       } else {
@@ -5749,10 +5766,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       switch (m_Aura->m_Discord->m_Config->m_FilterJoinServersMode) {
-        case FILTER_SERVERS_DENY_ALL:
+        case FILTER_DENY_ALL:
           SendReply("Install me to your user (DM-only) at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
           break;
-        case FILTER_SERVERS_ALLOW_LIST:
+        case FILTER_ALLOW_LIST:
           SendReply("Install me to your server (requires approval) at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
           break;
         default:

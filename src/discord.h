@@ -81,6 +81,7 @@ public:
 #endif
 
   bool GetIsServerAllowed(const uint64_t target) const;
+  bool GetIsUserAllowed(const uint64_t target) const;
   bool GetIsActive() const { return m_Client != nullptr; }
   bool GetIsSudoer(const uint64_t nIdentifier);
 };
