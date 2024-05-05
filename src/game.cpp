@@ -83,15 +83,16 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Stats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_Map(nGameSetup->m_Map),
-    m_GameName(nGameSetup->m_GameName),
-    m_OwnerName(nGameSetup->m_GameOwner.first),
-    m_OwnerRealm(nGameSetup->m_GameOwner.second),
+    m_GameName(nGameSetup->m_Name),
+    m_OwnerLess(nGameSetup->m_OwnerLess),
+    m_OwnerName(nGameSetup->m_Owner.first),
+    m_OwnerRealm(nGameSetup->m_Owner.second),
     m_CreatorText(nGameSetup->m_Attribution),
     m_CreatedBy(nGameSetup->m_CreatedBy),
     m_CreatedFrom(nGameSetup->m_CreatedFrom),
     m_CreatedFromType(nGameSetup->m_CreatedFromType),
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
-    m_HCLCommandString(nGameSetup->m_Map->GetMapDefaultHCL()),
+    m_HCLCommandString(nGameSetup->m_HCL.has_value() ? nGameSetup->m_HCL.value() : nGameSetup->m_Map->GetMapDefaultHCL()),
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_GameTicks(0),
@@ -115,7 +116,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_PauseCounter(0),
     m_SaveCounter(0),
     m_RandomSeed(0),
-    m_HostCounter(nGameSetup->m_GameIdentifier.has_value() ? nGameSetup->m_GameIdentifier.value() : nAura->NextHostCounter()),
+    m_HostCounter(nGameSetup->m_Identifier.has_value() ? nGameSetup->m_Identifier.value() : nAura->NextHostCounter()),
     m_EntryKey(0),
     m_SyncCounter(0),
     m_CheckJoinable(false),
@@ -153,7 +154,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_IsDraftMode(false),
     m_HadLeaver(false),
     m_HasMapLock(false),
-    m_CheckReservation(nGameSetup->m_GameChecksReservation.has_value() ? nGameSetup->m_GameChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
+    m_CheckReservation(nGameSetup->m_ChecksReservation.has_value() ? nGameSetup->m_ChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_NEVER)
@@ -187,7 +188,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   if (!nGameSetup->GetIsMirror()) {
     m_CheckJoinable = nGameSetup->m_CheckJoinable.has_value() ? nGameSetup->m_CheckJoinable.value() : m_Aura->m_GameDefaultConfig->m_CheckJoinable;
 
-    for (const auto& playerName : nGameSetup->m_GameReservations) {
+    for (const auto& playerName : nGameSetup->m_Reservations) {
       AddToReserved(playerName);
     }
 

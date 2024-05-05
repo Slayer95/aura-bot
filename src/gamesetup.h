@@ -179,14 +179,15 @@ public:
 
   std::filesystem::path                           m_SaveFile;
 
-  std::string                                     m_GameName;
-  std::string                                     m_GameBaseName;
-  std::pair<std::string, std::string>             m_GameOwner;
-  std::optional<uint32_t>                         m_GameIdentifier;
-  std::optional<uint32_t>                         m_GameChannelKey;
-  std::optional<bool>                             m_GameChecksReservation;
-  std::vector<std::string>                        m_GameReservations;
-  bool                                            m_GameIsMirror;
+  std::string                                     m_Name;
+  std::string                                     m_BaseName;
+  bool                                            m_OwnerLess;
+  std::pair<std::string, std::string>             m_Owner;
+  std::optional<uint32_t>                         m_Identifier;
+  std::optional<uint32_t>                         m_ChannelKey;
+  std::optional<bool>                             m_ChecksReservation;
+  std::vector<std::string>                        m_Reservations;
+  bool                                            m_IsMirror;
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
@@ -201,6 +202,7 @@ public:
   std::optional<uint16_t>                         m_LatencyAverage;
   std::optional<uint16_t>                         m_LatencyMaxFrames;
   std::optional<uint16_t>                         m_LatencySafeFrames;
+  std::optional<std::string>                      m_HCL;
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
 
@@ -263,7 +265,7 @@ public:
   bool RestoreFromSaveFile();
   bool RunHost();
 
-  inline bool GetIsMirror() const { return m_GameIsMirror; }
+  inline bool GetIsMirror() const { return m_IsMirror; }
   inline bool GetIsDownloading() const { return m_IsStepDownloading; }
 
   bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
@@ -272,19 +274,20 @@ public:
   void RemoveIgnoredRealm(const CRealm* nRealm);
   void SetDisplayMode(const uint8_t nDisplayMode);
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
+  void SetOwnerLess(const bool nValue) { m_OwnerLess = nValue; }
   void SetCreator(const std::string& nCreator);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CIRC* nIRC);
   void SetCreator(const std::string& nCreator, CDiscord* nDiscord);
   void RemoveCreator();
   bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
-  void SetName(const std::string& nName) { m_GameName = nName; }
+  void SetName(const std::string& nName) { m_Name = nName; }
   void SetBaseName(const std::string& nName) {
-    m_GameName = nName;
-    m_GameBaseName = nName;
+    m_Name = nName;
+    m_BaseName = nName;
   }
   void SetOwner(const std::string& ownerName, const std::string& ownerRealm) {
-    m_GameOwner = std::make_pair(ownerName, ownerRealm);
+    m_Owner = std::make_pair(ownerName, ownerRealm);
   }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
   void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
@@ -299,8 +302,8 @@ public:
   }
   void SetMapExtraOptions(CGameExtraOptions* opts) { m_MapExtraOptions = opts; }
   void SetGameSavedFile(const std::filesystem::path& filePath);
-  void SetCheckReservation(const bool nChecksReservation) { m_GameChecksReservation = nChecksReservation; }
-  void SetReservations(const std::vector<std::string>& nReservations) { m_GameReservations = nReservations; }
+  void SetCheckReservation(const bool nChecksReservation) { m_ChecksReservation = nChecksReservation; }
+  void SetReservations(const std::vector<std::string>& nReservations) { m_Reservations = nReservations; }
   void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
   void SetAutoStartMinSeconds(const int64_t nValue) {
     m_AutoStartMinSeconds = nValue;
@@ -313,6 +316,7 @@ public:
   void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
   void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
   void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }
+  void SetHCL(const std::string& nHCL) { m_HCL = nHCL; }
   void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
   void ResetExtraOptions();
 

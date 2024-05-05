@@ -89,6 +89,7 @@ public:
   std::optional<std::string>            m_Observers;
   std::optional<std::string>            m_Visibility;
   std::optional<std::string>            m_GameOwner;
+  std::optional<bool>                   m_GameOwnerLess;
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameLobbyTimeout;
@@ -103,6 +104,7 @@ public:
   std::optional<bool>                   m_GameLobbyReplaceable;
   std::optional<bool>                   m_GameLobbyAutoRehosted;
   std::optional<bool>                   m_GameCheckReservation;
+  std::optional<std::string>            m_GameHCL;
   std::optional<bool>                   m_GameFreeForAll;
   std::vector<std::string>              m_GameReservations;
   std::optional<bool>                   m_CheckMapVersion;

@@ -1430,40 +1430,40 @@ bool CAura::MatchLogLevel(const uint8_t logLevel)
 bool CAura::CreateGame(CGameSetup* gameSetup)
 {
   if (!m_Config->m_Enabled) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
-  if (gameSetup->m_GameName.size() > m_MaxGameNameSize) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. The game name is too long (max " + to_string(m_MaxGameNameSize) + " characters)", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+  if (gameSetup->m_Name.size() > m_MaxGameNameSize) {
+    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The game name is too long (max " + to_string(m_MaxGameNameSize) + " characters)", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (!gameSetup->m_Map) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
   if (!gameSetup->m_Map || !gameSetup->m_Map->GetValid()) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (m_CurrentLobby) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. Another game lobby [" + m_CurrentLobby->GetDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. Another game lobby [" + m_CurrentLobby->GetDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (m_Games.size() >= m_Config->m_MaxGames) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_GameName + "]. There are too many active games already.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. There are too many active games already.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (gameSetup->GetIsMirror()) {
-    Print("[AURA] mirroring game [" + gameSetup->m_GameName + "]");
+    Print("[AURA] mirroring game [" + gameSetup->m_Name + "]");
   } else if (gameSetup->m_RestoredGame) {
-    Print("[AURA] creating loaded game [" + gameSetup->m_GameName + "]");
+    Print("[AURA] creating loaded game [" + gameSetup->m_Name + "]");
   } else {
-    Print("[AURA] creating game [" + gameSetup->m_GameName + "]");
+    Print("[AURA] creating game [" + gameSetup->m_Name + "]");
   }
 
   m_CurrentLobby = new CGame(this, gameSetup);

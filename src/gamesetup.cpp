@@ -160,7 +160,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_SkipVersionCheck(false),
     m_IsMapDownloaded(false),
 
-    m_GameIsMirror(false),    
+    m_OwnerLess(false),
+    m_IsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
@@ -205,7 +206,8 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_SkipVersionCheck(nSkipVersionCheck),
     m_IsMapDownloaded(false),
 
-    m_GameIsMirror(false),    
+    m_OwnerLess(false),
+    m_IsMirror(false),    
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
@@ -1228,8 +1230,8 @@ bool CGameSetup::RunHost()
 
 bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier)
 {
-  m_GameIsMirror = true;
-  m_GameIdentifier = nGameIdentifier;
+  m_IsMirror = true;
+  m_Identifier = nGameIdentifier;
   memcpy(&m_RealmsAddress, &nSourceAddress, sizeof(sockaddr_storage));
   return true;
 }
@@ -1286,9 +1288,9 @@ void CGameSetup::SetDisplayMode(const uint8_t nDisplayMode)
 void CGameSetup::SetOwner(const string& nOwner, const CRealm* nRealm)
 {
   if (nRealm == nullptr) {
-    m_GameOwner = make_pair(nOwner, string());
+    m_Owner = make_pair(nOwner, string());
   } else {
-    m_GameOwner = make_pair(nOwner, nRealm->GetServer());
+    m_Owner = make_pair(nOwner, nRealm->GetServer());
   }
 }
 
@@ -1349,9 +1351,9 @@ void CGameSetup::OnGameCreate()
   if (m_LobbyAutoRehosted) {
     // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
     if (m_CreationCounter < 10) {
-      SetName(m_GameBaseName + "-" + string(1, 48 + m_CreationCounter));
+      SetName(m_BaseName + "-" + string(1, 48 + m_CreationCounter));
     } else {
-      SetName(m_GameBaseName + "-" + string(1, 87 + m_CreationCounter));
+      SetName(m_BaseName + "-" + string(1, 87 + m_CreationCounter));
     }
     m_CreationCounter = (m_CreationCounter + 1) % 36;
   }

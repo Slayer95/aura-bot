@@ -107,6 +107,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 
   // Game hosting
   app.add_option("--owner", m_GameOwner, "Customizes the game owner when hosting from the CLI.");
+  app.add_flag("--no-owner", m_GameOwnerLess, "Disables the game owner feature when hosting from the CLI.");
   app.add_flag("--lock-teams,--no-lock-teams{false}", m_TeamsLocked, "Toggles 'Lock Teams' setting when hosting from the CLI.");
   app.add_flag("--teams-together,--no-teams-together{false}", m_TeamsTogether, "Toggles 'Teams Together' setting when hosting from the CLI.");
   app.add_flag("--random-races,--no-random-races{false}", m_RandomRaces, "Toggles 'Random Races' setting when hosting from the CLI.");
@@ -129,6 +130,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
+  app.add_flag(  "--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
   app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
@@ -375,6 +377,9 @@ bool CCLI::QueueActions(CAura* nAura) const
               // Also, what's this? The Battle for Wesnoth?
               Print("[AURA] A loaded game cannot be auto rehosted.");
               loadFailure = true;
+            } else if (m_GameOwnerLess.value_or(false) && m_GameOwner.has_value()) {
+              Print("[AURA] Conflicting --owner and --no-owner flags.");
+              loadFailure = true;
             }
             if (loadFailure) {
               delete gameSetup;
@@ -429,6 +434,8 @@ bool CCLI::QueueActions(CAura* nAura) const
               ownerName = m_GameOwner.value();
             }
             gameSetup->SetOwner(ownerName, ownerRealm);
+          } else if (m_GameOwnerLess.value_or(false)) {
+            gameSetup->SetOwnerLess(true);
           }
           if (m_GameLobbyTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameLobbyTimeout.value());
           if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
@@ -441,6 +448,7 @@ bool CCLI::QueueActions(CAura* nAura) const
           if (m_GameLatencyAverage.has_value()) gameSetup->SetLatencyAverage(m_GameLatencyAverage.value());
           if (m_GameLatencyMaxFrames.has_value()) gameSetup->SetLatencyMaxFrames(m_GameLatencyMaxFrames.value());
           if (m_GameLatencySafeFrames.has_value()) gameSetup->SetLatencySafeFrames(m_GameLatencySafeFrames.value());
+          if (m_GameHCL.has_value()) gameSetup->SetHCL(m_GameHCL.value());
           if (m_GameFreeForAll.value_or(false)) gameSetup->SetCustomLayout(CUSTOM_LAYOUT_FFA);
           gameSetup->SetReservations(m_GameReservations);
           gameSetup->SetVerbose(m_Verbose);
