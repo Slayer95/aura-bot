@@ -2327,6 +2327,18 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       }
       Line = Line.substr(8);
     }
+    if (Line.substr(0, 12) == "{OWNERLESS?}") {
+      if (!m_OwnerLess) {
+        continue;
+      }
+      Line = Line.substr(12);
+    }
+    if (Line.substr(0, 12) == "{OWNERLESSS!}") {
+      if (m_OwnerLess) {
+        continue;
+      }
+      Line = Line.substr(12);
+    }
     if (Line.substr(0, 17) == "{CHECKLASTOWNER?}") {
       if (m_LastOwner != player->GetName()) {
         continue;
