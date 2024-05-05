@@ -925,6 +925,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     } else {
       Print("[AURA] Confirm from the game client with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     }
+    SendReply("Sudo command requested. See Aura's console for further steps.");
     return;
   }
 
