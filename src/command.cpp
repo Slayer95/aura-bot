@@ -3260,12 +3260,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       UseImplicitHostedGame();
 
       if (!m_TargetGame) {
-        Print("No game found.");
+        ErrorReply("No game found.");
         break;
       }
 
       if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess && !GetIsSudo()) {
-        Print("Cannot take ownership of this game.");
+        ErrorReply("Cannot take ownership of this game.");
         break;
       }
 
@@ -5352,11 +5352,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("admin"):
     case HashCode("staff"): {
-      Print("[AURA] " + m_FromName + " used !ADMIN");
-
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
-        Print("[AURA] unauthorized usage of !ADMIN");
-        ErrorReply("Only root admins may add staff.");
+        if (m_SourceGame && !m_SourceGame->m_OwnerLess) {
+          ErrorReply("Only root admins may add staff. Did you mean to acquire control of this game? Use " + cmdToken + "owner");
+        } else {
+          ErrorReply("Only root admins may add staff.");
+        }
         break;
       }
       if (Payload.empty()) {
