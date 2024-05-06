@@ -915,17 +915,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // TODO(IceSandslash): GetSudoAuthPayload should only be executed after some local input.
     m_Aura->m_SudoAuthPayload = m_Aura->GetSudoAuthPayload(Payload);
     m_Aura->m_SudoExecCommand = Payload;
-    Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + Payload + "\"");
+    SendReply("Sudo command requested. See Aura's console for further steps.");
+    Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + cmdToken + Payload + "\"");
     if (m_SourceRealm && m_FromWhisper) {
       Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
-    } else if (m_IRC) {
-      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
-    } else if (m_DiscordAPI) {
+    } else if (m_IRC || m_DiscordAPI) {
       Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
       Print("[AURA] Confirm from the game client with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
     }
-    SendReply("Sudo command requested. See Aura's console for further steps.");
     return;
   }
 
@@ -936,8 +934,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       Payload = RunOverride.value().second;
       CommandHash = HashCode(Command);
     } else {
+      if (m_Aura->m_SudoExecCommand.empty()) {
+        Print("[AURA] " + GetUserAttribution() + " sent command [" + cmdToken + command + "] with payload [" + payload + "], but " + cmdToken + "sudo was not requested.");
+      } else {
+        Print("[AURA] " + GetUserAttribution() + " failed sudo authentication.");
+      }
       ErrorReply("Sudo check failure.");
-      Print(GetUserAttribution() + " failed sudo authentication.");
       return;
     }
   }
@@ -1166,7 +1168,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (KickedCount > 0) {
         SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_TargetGame->m_AutoKickPing) + "...");
       }
-      if (0 < maxPing && maxPing < m_TargetGame->m_Latency) {
+      if (0 < maxPing && maxPing < m_TargetGame->m_Latency && REFRESH_PERIOD_MIN < m_TargetGame->m_Latency) {
         SendAll("HINT: Using ping equalizer at " + to_string(m_TargetGame->m_Latency) + "ms. Decrease it with " + cmdToken + "latency [VALUE]");
       }
 
@@ -5780,8 +5782,21 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    case HashCode("v"):
+      SendReply("v" + cmdToken);
+      break;
+
     default: {
-      ErrorReply("Unrecognized command [" + command + "].");
+      bool hasLetter = false;
+      for (const auto& c : command) {
+        if (97 <= c && c <= 122) {
+          hasLetter = true;
+          break;
+        }
+      }
+      if (hasLetter) {
+        ErrorReply("Unrecognized command [" + command + "].");
+      }
       break;
     }
   }
