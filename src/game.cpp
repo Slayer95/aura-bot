@@ -2436,6 +2436,18 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
   }
 }
 
+void CGame::SendOwnerCommandsHelp(const string& cmdToken, CGamePlayer* player) const
+{
+  SendChat(player, cmdToken + "open [NUMBER] - opens a slot", LOG_LEVEL_TRACE);
+  SendChat(player, cmdToken + "close [NUMBER] - closes a slot", LOG_LEVEL_TRACE);
+  SendChat(player, cmdToken + "fill [DIFFICULTY] - adds computers", LOG_LEVEL_TRACE);
+  if (m_Map->GetMapNumTeams() > 2) {
+    SendChat(player, cmdToken + "ffa - sets free for all game mode", LOG_LEVEL_TRACE);
+  }
+  SendChat(player, cmdToken + "vsall - sets one vs all game mode", LOG_LEVEL_TRACE);
+  SendChat(player, cmdToken + "terminator - sets humans vs computers", LOG_LEVEL_TRACE);
+}
+
 void CGame::SendCommandsHelp(const string& cmdToken, CGamePlayer* player, const bool isIntro) const
 {
   if (isIntro) SendChat(player, "Welcome, " + player->GetName() + ".", LOG_LEVEL_TRACE);
@@ -2447,14 +2459,7 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGamePlayer* player, const 
     SendChat(player, cmdToken + "owner - acquire permissions over this game", LOG_LEVEL_TRACE);
   }
   if (MatchOwnerName(player->GetName())) {
-    SendChat(player, cmdToken + "open [NUMBER] - opens a slot", LOG_LEVEL_TRACE);
-    SendChat(player, cmdToken + "close [NUMBER] - closes a slot", LOG_LEVEL_TRACE);
-    SendChat(player, cmdToken + "fill [DIFFICULTY] - adds computers", LOG_LEVEL_TRACE);
-    if (m_Map->GetMapNumTeams() > 2) {
-      SendChat(player, cmdToken + "ffa - sets free for all game mode", LOG_LEVEL_TRACE);
-    }
-    SendChat(player, cmdToken + "vsall - sets one vs all game mode", LOG_LEVEL_TRACE);
-    SendChat(player, cmdToken + "terminator - sets humans vs computers", LOG_LEVEL_TRACE);
+    SendOwnerCommandsHelp(cmdToken, player);
   }
   player->SetSentAutoCommandsHelp(true);
 }
@@ -3642,10 +3647,16 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, !m_MuteAll && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
-          } else if (isLobbyChat && !player->GetUsedAnyCommands() && !player->GetSentAutoCommandsHelp()) {
-            SendCommandsHelp(m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken, player, true);
           } else if (payload == "?trigger") {
             SendCommandsHelp(m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken, player, false);
+          } else if (isLobbyChat && !player->GetUsedAnyCommands() && !player->GetSentAutoCommandsHelp()) {
+            bool anySentCommands = false;
+            for (const auto& otherPlayer : m_Players) {
+              if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
+            }
+            if (!anySentCommands) {
+              SendCommandsHelp(m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken, player, true);
+            }
           }
         }
       }

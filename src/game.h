@@ -361,6 +361,7 @@ public:
   void SendFakePlayersInfo(CGameConnection* player) const;
   void SendJoinedPlayersInfo(CGameConnection* player) const;
   void SendWelcomeMessage(CGamePlayer* player) const;
+  void SendOwnerCommandsHelp(const std::string& cmdToken, CGamePlayer* player) const;
   void SendCommandsHelp(const std::string& cmdToken, CGamePlayer* player, const bool isIntro) const;
   void SendLeftMessage(CGamePlayer* player, const bool sendChat) const;
   void SendEveryoneElseLeft() const;

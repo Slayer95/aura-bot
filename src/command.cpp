@@ -3307,6 +3307,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (TargetPlayer) {
         TargetPlayer->SetWhoisShouldBeSent(true);
         TargetPlayer->SetOwner(true);
+        m_TargetGame->SendOwnerCommandsHelp(cmdToken, TargetPlayer);
       }
       break;
     }
