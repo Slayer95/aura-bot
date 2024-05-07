@@ -1062,10 +1062,11 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
 
 void CAura::EventGameDeleted(CGame* game)
 {
-  for (auto& bnet : m_Realms) {
-    bnet->QueueChatChannel("Game ended: " + game->GetDescription());
+  for (auto& realm : m_Realms) {
+    if (!realm->GetAnnounceHostToChat()) continue;
+    realm->QueueChatChannel("Game ended: " + game->GetDescription());
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-      bnet->QueueWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
+      realm->QueueWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
     }
   }
 }
