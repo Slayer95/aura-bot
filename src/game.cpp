@@ -874,7 +874,9 @@ bool CGame::Update(void* fd, void* send_fd)
       }
       if (startedLagging) {
         uint8_t worstLaggerIndex = 0;
+        uint8_t bestLaggerIndex = 0;
         uint32_t worstLaggerFrames = 0;
+        uint32_t bestLaggerFrames = 0xFFFFFFFF;
         vector<CGamePlayer*> laggingPlayers;
         i = static_cast<uint8_t>(m_Players.size());
         while (i--) {
@@ -887,7 +889,17 @@ bool CGame::Update(void* fd, void* send_fd)
               worstLaggerIndex = i;
               worstLaggerFrames = framesBehind[i];
             }
+            if (framesBehind[i] < bestLaggerFrames) {
+              bestLaggerIndex = i;
+              bestLaggerFrames = framesBehind[i];
+            }
           }
+        }
+        if (laggingPlayers.size() == m_Players.size()) {
+          // Avoid showing everyone as lagging
+          m_Players[bestLaggerIndex]->SetLagging(false);
+          m_Players[bestLaggerIndex]->SetStartedLaggingTicks(0);
+          laggingPlayers.erase(laggingPlayers.begin() + (m_Players.size() - 1 - bestLaggerIndex));
         }
 
         // start the lag screen
@@ -907,7 +919,7 @@ bool CGame::Update(void* fd, void* send_fd)
         Print(GetLogPrefix() + "started lagging on " + PlayersToNameListString(laggingPlayers) + ".");
         Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(static_cast<float>(worstLaggerSeconds)) + " seconds behind)");
       }
-    } else {
+    } else if (!m_Players.empty()) {
       const bool anyUsingLegacyGProxy = GetAnyUsingGProxyLegacy();
 
       int64_t WaitTime = 60;
