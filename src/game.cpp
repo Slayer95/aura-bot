@@ -3567,8 +3567,6 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 {
   if (chatPlayer->GetFromPID() == player->GetPID())
   {
-    player->ClearLastCommand();
-
     if (chatPlayer->GetType() == CIncomingChatPlayer::CTH_MESSAGE || chatPlayer->GetType() == CIncomingChatPlayer::CTH_MESSAGEEXTRA)
     {
       // relay the chat message to other players
@@ -3638,11 +3636,13 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
         const bool commandsEnabled = commandCFG->m_Enabled && (
           !realm || !(commandCFG->m_RequireVerified && !player->IsRealmVerified())
         );
+        bool isCommand = false;
         if (commandsEnabled) {
           const string message = chatPlayer->GetMessage();
           string cmdToken, command, payload;
           uint8_t tokenMatch = ExtractMessageTokensAny(message, m_PrivateCmdToken, m_BroadcastCmdToken, cmdToken, command, payload);
-          if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
+          isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
+          if (isCommand) {
             player->SetUsedAnyCommands(true);
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, !m_MuteAll && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
@@ -3658,6 +3658,9 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
               SendCommandsHelp(m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken, player, true);
             }
           }
+        }
+        if (!isCommand) {
+          player->ClearLastCommand();
         }
       }
     }

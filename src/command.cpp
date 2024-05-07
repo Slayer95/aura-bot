@@ -513,9 +513,11 @@ bool CCommandContext::CheckConfirmation(const string& cmdToken, const string& cm
   string message = cmdToken + cmd + payload;
   if (m_Player) {
     if (m_Player->GetLastCommand() == message) {
+      m_Player->ClearLastCommand();
       return true;
+    } else {
+      m_Player->SetLastCommand(message);
     }
-    m_Player->SetLastCommand(message);
   }
   ErrorReply(errorMessage + "Send the command again to confirm.");
   return false;
