@@ -367,10 +367,10 @@ bool CGamePlayer::Update(void* fd)
 {
   const int64_t Time = GetTime();
 
-  // wait 4 seconds after joining before sending the /whois or /w
+  // wait 5 seconds after joining before sending the /whois or /w
   // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
 
-  if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Time - m_JoinTime >= 4) {
+  if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Time - m_JoinTime >= 5) {
     CRealm* Realm = GetRealm(false);
     if (Realm) {
       if (m_Game->GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
