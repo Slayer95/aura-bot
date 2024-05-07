@@ -2443,10 +2443,10 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGamePlayer* player, const 
   if (!isIntro) return;
   SendChat(player, cmdToken + "ping - view your latency", LOG_LEVEL_TRACE);
   SendChat(player, cmdToken + "start - starts the game", LOG_LEVEL_TRACE);
-  if (m_OwnerName.empty()) {
+  if (!m_OwnerLess && m_OwnerName.empty()) {
     SendChat(player, cmdToken + "owner - acquire permissions over this game", LOG_LEVEL_TRACE);
   }
-  if (m_OwnerName.empty() || MatchOwnerName(player->GetName())) {
+  if (MatchOwnerName(player->GetName())) {
     SendChat(player, cmdToken + "open [NUMBER] - opens a slot", LOG_LEVEL_TRACE);
     SendChat(player, cmdToken + "close [NUMBER] - closes a slot", LOG_LEVEL_TRACE);
     SendChat(player, cmdToken + "fill [DIFFICULTY] - adds computers", LOG_LEVEL_TRACE);
