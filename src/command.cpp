@@ -2434,9 +2434,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "swap <PLAYER> , <PLAYER>");
+        break;
+      }
+
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "swap <PLAYER> , <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "swap <PLAYER> , <PLAYER>" + HelpMissingComma(Payload));
         break;
       }
 
@@ -3565,7 +3570,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
+        ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12" + HelpMissingComma(Payload));
         break;
       }
 
@@ -3622,7 +3627,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
+        ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100" + HelpMissingComma(Payload));
         break;
       }
 
@@ -3696,7 +3701,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random" + HelpMissingComma(Payload));
         break;
       }
 

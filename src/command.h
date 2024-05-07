@@ -212,6 +212,11 @@ inline std::string GetTokenName(const std::string& token) {
   return std::string();
 }
 
+inline std::string HelpMissingComma(const std::string& payload) {
+  if (payload.find(',') == std::string::npos) return " - did you miss the comma?";
+  return std::string();
+}
+
 inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchPayload)
 {
   if (message.empty()) return false;
