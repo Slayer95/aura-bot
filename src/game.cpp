@@ -881,7 +881,7 @@ bool CGame::Update(void* fd, void* send_fd)
           if (framesBehind[i] > m_SyncLimitSafe) {
             m_Players[i]->SetLagging(true);
             m_Players[i]->SetStartedLaggingTicks(Ticks);
-            m_Players[i]->ClearPings(); // When someone ask for their ping, calculate it from their sync counter instead
+            m_Players[i]->ClearStalePings(); // When someone ask for their ping, calculate it from their sync counter instead
             laggingPlayers.push_back(m_Players[i]);
             if (framesBehind[i] > worstLaggerFrames) {
               worstLaggerIndex = i;
@@ -2942,7 +2942,7 @@ void CGame::ReportPlayerDisconnected(CGamePlayer* player)
     for (auto& laggingPlayer : laggingPlayers) {
       laggingPlayer->SetLagging(true);
       laggingPlayer->SetStartedLaggingTicks(Ticks);
-      laggingPlayer->ClearPings(); // When someone asks for their ping, calculate it from their sync counter instead
+      laggingPlayer->ClearStalePings(); // When someone asks for their ping, calculate it from their sync counter instead
     }
     SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
   }

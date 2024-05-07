@@ -302,6 +302,12 @@ public:
   inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
   inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
   inline void AddPauseCounter() { ++m_PauseCounter; }
+  inline void ClearStalePings() {
+    if (m_Pings.empty()) return;
+    uint32_t lastPing = m_Pings[m_Pings.size() - 1];
+    m_Pings.clear();
+    m_Pings.push_back(lastPing);
+  }
   inline void ClearPings() { m_Pings.clear(); }
 
   // processing functions
