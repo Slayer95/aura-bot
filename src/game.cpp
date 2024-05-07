@@ -2897,7 +2897,7 @@ void CGame::EventLobbyLastPlayerLeaves()
 void CGame::ReportAllPings() const
 {
   vector<CGamePlayer*> SortedPlayers = m_Players;
-  if (m_TargetGame->GetGameLoaded()) {
+  if (GetGameLoaded()) {
     sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
       return a->GetSyncCounter() < b->GetSyncCounter();
     });
@@ -2910,7 +2910,7 @@ void CGame::ReportAllPings() const
   for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
     pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText());
   }
-  SendAll(JoinVector(pingsText, false));
+  SendAllChat(JoinVector(pingsText, false));
 }
 
 void CGame::ReportPlayerDisconnected(CGamePlayer* player)
