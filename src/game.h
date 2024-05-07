@@ -154,6 +154,7 @@ protected:
   int64_t                        m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
   int64_t                        m_StartedLaggingTime;            // GetTime when the last lag screen started
   int64_t                        m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
+  uint32_t                       m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
   int64_t                        m_LastOwnerSeen;                 // GetTime when the last reserved player was seen in the lobby
   int64_t                        m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                        m_GameOverTime;                  // GetTime when the game was over
@@ -383,6 +384,7 @@ public:
 
   void EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd);
   void EventLobbyLastPlayerLeaves();
+  void ReportAllPings() const;
   void ReportPlayerDisconnected(CGamePlayer* player);
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);

@@ -712,21 +712,34 @@ int64_t CGamePlayer::GetTotalDisconnectTime() const
 string CGamePlayer::GetDelayText() const
 {
   string pingText, syncText;
-  if (GetNumPings() == 0) {
+  // Note: When someone is lagging, we actually clear their ping data.
+  const bool anyPings = GetNumPings() > 0;
+  if (!anyPings) {
     pingText = "?";
   } else if (GetNumPings() < 3) {
-    pingText = "*" + to_string(GetPing()) + "ms";
+    pingText = "*" + to_string(GetPing());
   } else {
-    pingText = to_string(GetPing()) + "ms";
+    pingText = to_string(GetPing());
   }
-  if (!m_Game->GetGameLoaded()) {
+  if (!m_Game->GetGameLoaded() || GetSyncCounter() >= m_Game->GetSyncCounter()) {
+    if (anyPings) return pingText + "ms";
     return pingText;
   }
-  if (GetSyncCounter() < m_Game->GetSyncCounter()) {
-    float syncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
-    syncText = to_string(static_cast<uint32_t>(syncDelay)) + "ms";
+  float rtt = static_cast<float>(GetPing());
+  if (!m_Game->m_Aura->m_Config->m_RTTPings) rtt *= 2;
+  float syncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
+
+  // Expect clients to always be at least one RTT behind.
+  // The "sync delay" is defined as the additional delay they got.
+  syncDelay -= rtt;
+
+  if (!anyPings) {
+    return "+" + to_string(static_cast<uint32_t>(syncDelay)) + "ms";
+  } else if (syncDelay <= 0) {
+    return pingText + "ms";
+  } else {
+    return pingText + "+" + to_string(static_cast<uint32_t>(syncDelay)) + "ms";
   }
-  return pingText + "/" + syncText;
 }
 
 bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const

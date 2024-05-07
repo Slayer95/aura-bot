@@ -108,6 +108,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_LastActionLateBy(0),
     m_StartedLaggingTime(0),
     m_LastLagScreenTime(0),
+    m_PingReportedSinceLagTimes(0),
     m_LastOwnerSeen(GetTime()),
     m_StartedKickVoteTime(0),
     m_GameOverTime(0),
@@ -981,6 +982,7 @@ bool CGame::Update(void* fd, void* send_fd)
         m_Lagging = false;
         m_LastActionSentTicks = Ticks - m_Latency;
         m_LastActionLateBy = 0;
+        m_PingReportedSinceLagTimes = 0;
         Print(GetLogPrefix() + "stopped lagging after " + to_string(Time - m_StartedLaggingTime) + " seconds");
       }
     }
@@ -991,6 +993,12 @@ bool CGame::Update(void* fd, void* send_fd)
 
       // keep track of the last lag screen time so we can avoid timing out players
       m_LastLagScreenTime = Time;
+
+      // every 11 seconds, report most recent lag data
+      if (Time - m_StartedLaggingTime >= m_PingReportedSinceLagTimes * 11) {
+        ReportAllPings();
+        ++m_PingReportedSinceLagTimes;
+      }
     }
   }
 
@@ -2886,6 +2894,25 @@ void CGame::EventLobbyLastPlayerLeaves()
   ResetLayout(false);
 }
 
+void CGame::ReportAllPings() const
+{
+  vector<CGamePlayer*> SortedPlayers = m_Players;
+  if (m_TargetGame->GetGameLoaded()) {
+    sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
+      return a->GetSyncCounter() < b->GetSyncCounter();
+    });
+  } else {
+    sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
+      return a->GetPing() > b->GetPing();
+    });
+  }
+  vector<string> pingsText;
+  for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
+    pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText());
+  }
+  SendAll(JoinVector(pingsText, false));
+}
+
 void CGame::ReportPlayerDisconnected(CGamePlayer* player)
 {
   int64_t Time = GetTime(), Ticks = GetTicks();
@@ -4149,6 +4176,7 @@ void CGame::Remake()
   m_LastActionLateBy = 0;
   m_StartedLaggingTime = 0;
   m_LastLagScreenTime = 0;
+  m_PingReportedSinceLagTimes = 0;
   m_LastOwnerSeen = Time;
   m_StartedKickVoteTime = 0;
   m_GameOverTime = 0;
