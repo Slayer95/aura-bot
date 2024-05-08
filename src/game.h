@@ -494,6 +494,8 @@ public:
   std::vector<uint32_t> GetPlayersFramesBehind() const;
   std::vector<CGamePlayer*> GetLaggingPlayers() const;
   std::vector<CGamePlayer*> CalculateNewLaggingPlayers() const;
+  void ResetLatency();
+  void NormalizeSyncCounters() const;
   bool GetIsReserved(const std::string& name) const;
   bool GetIsProxyReconnectable() const;
   bool GetIsProxyReconnectableLong() const;

@@ -1136,7 +1136,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<CGamePlayer*> SortedPlayers = m_TargetGame->m_Players;
       if (m_TargetGame->GetGameLoaded()) {
         sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
-          return a->GetSyncCounter() < b->GetSyncCounter();
+          return a->GetNormalSyncCounter() < b->GetNormalSyncCounter();
         });
       } else {
         sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
@@ -1887,19 +1887,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
       if (lower == "default" || lower == "reset") {
-        m_TargetGame->m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
-        m_TargetGame->m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
-        m_TargetGame->m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
-        SendReply("Latency settings reset to default.");
+        m_TargetGame->ResetLatency();
+        SendAll("Latency settings reset to default.");
         break;
-      } else if (lower == "ignore") {
-        vector<uint32_t> framesBehind = m_TargetGame->GetPlayersFramesBehind();
-        if (!framesBehind.empty()) {
-          auto worstFramesBehind = max_element(framesBehind.begin(), framesBehind.end());
-          m_TargetGame->m_SyncLimit += (*worstFramesBehind);
-          m_TargetGame->m_SyncLimitSafe += (*worstFramesBehind);
+      } else if (lower == "ignore" || lower == "bypass") {
+        if (!m_TargetGame->GetGameLoaded()) {
+          ErrorReply("This command must be used after the game has loaded.");
+          break;
         }
-        SendReply("Ignoring lagging players. (They may not be able to control their units.)");
+        m_TargetGame->NormalizeSyncCounters();
+        SendAll("Ignoring lagging players. (They may not be able to control their units.)");
         break;
       }
 

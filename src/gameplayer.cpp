@@ -253,6 +253,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_TotalPacketsReceived(1),
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_QuitGame(false),
+    m_SyncCounterOffset(0),
     m_SyncCounter(0),
     m_JoinTime(GetTime()),
     m_LastMapPartSent(0),
@@ -721,17 +722,19 @@ string CGamePlayer::GetDelayText() const
   } else {
     pingText = to_string(GetPing());
   }
-  if (!m_Game->GetGameLoaded() || GetSyncCounter() >= m_Game->GetSyncCounter()) {
+  if (!m_Game->GetGameLoaded() || GetNormalSyncCounter() >= m_Game->GetSyncCounter()) {
     if (anyPings) return pingText + "ms";
     return pingText;
   }
-  float rtt = static_cast<float>(GetPing());
-  if (!m_Game->m_Aura->m_Config->m_RTTPings) rtt *= 2;
-  float syncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
+  float syncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
 
-  // Expect clients to always be at least one RTT behind.
-  // The "sync delay" is defined as the additional delay they got.
-  syncDelay -= rtt;
+  if (m_SyncCounterOffset == 0) {
+    // Expect clients to always be at least one RTT behind.
+    // The "sync delay" is defined as the additional delay they got.
+    float rtt = static_cast<float>(GetPing());
+    if (!m_Game->m_Aura->m_Config->m_RTTPings) rtt *= 2;
+    syncDelay -= rtt;
+  }
 
   if (!anyPings) {
     return "+" + to_string(static_cast<uint32_t>(syncDelay)) + "ms";

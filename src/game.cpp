@@ -980,7 +980,7 @@ bool CGame::Update(void* fd, void* send_fd)
           continue;
         }
 
-        if (m_SyncCounter > player->GetSyncCounter() && m_SyncCounter - player->GetSyncCounter() >= m_SyncLimitSafe) {
+        if (m_SyncCounter > player->GetNormalSyncCounter() && m_SyncCounter - player->GetNormalSyncCounter() >= m_SyncLimitSafe) {
           ++PlayersStillLagging;
         } else {
           SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(player));
@@ -1010,6 +1010,11 @@ bool CGame::Update(void* fd, void* send_fd)
       if (Time - m_StartedLaggingTime >= m_PingReportedSinceLagTimes * 11) {
         ReportAllPings();
         ++m_PingReportedSinceLagTimes;
+      }
+      if (m_PingReportedSinceLagTimes == 3 && 60000 < Ticks - m_FinishedLoadingTicks) {
+        // After 33 seconds lagging, only before 1 minute mark.
+        // This guarantees sync counters are automatically normalized just once.
+        NormalizeSyncCounters();
       }
     }
   }
@@ -2916,7 +2921,7 @@ void CGame::ReportAllPings() const
   vector<CGamePlayer*> SortedPlayers = m_Players;
   if (GetGameLoaded()) {
     sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
-      return a->GetSyncCounter() < b->GetSyncCounter();
+      return a->GetNormalSyncCounter() < b->GetNormalSyncCounter();
     });
   } else {
     sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
@@ -5501,10 +5506,10 @@ vector<uint32_t> CGame::GetPlayersFramesBehind() const
     if (m_Players[i]->GetIsObserver()) {
       continue;
     }
-    if (m_SyncCounter <= m_Players[i]->GetSyncCounter()) {
+    if (m_SyncCounter <= m_Players[i]->GetNormalSyncCounter()) {
       continue;
     }
-    framesBehind[i] = m_SyncCounter - m_Players[i]->GetSyncCounter();
+    framesBehind[i] = m_SyncCounter - m_Players[i]->GetNormalSyncCounter();
   }
   return framesBehind;
 }
@@ -5533,14 +5538,36 @@ vector<CGamePlayer*> CGame::CalculateNewLaggingPlayers() const
     if (player->GetLagging() || player->GetGProxyDisconnectNoticeSent()) {
       continue;
     }
-    if (m_SyncCounter <= player->GetSyncCounter()) {
+    if (m_SyncCounter <= player->GetNormalSyncCounter()) {
       continue;
     }
-    if (m_SyncCounter - player->GetSyncCounter() > m_SyncLimitSafe) {
+    if (m_SyncCounter - player->GetNormalSyncCounter() > m_SyncLimitSafe) {
       laggingPlayers.push_back(player);
     }
   }
   return laggingPlayers;
+}
+
+void CGame::ResetLatency()
+{
+  m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
+  m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
+  m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+  for (auto& player : m_Players)  {
+    player->ResetSyncCounterOffset();
+  }
+}
+
+void CGame::NormalizeSyncCounters() const
+{
+  for (auto& player : m_Players) {
+    if (player->GetIsObserver()) continue;
+    uint32_t normalSyncCounter = player->GetNormalSyncCounter();
+    if (m_SyncCounter <= normalSyncCounter) {
+      continue;
+    }
+    player->AddSyncCounterOffset(m_SyncCounter - normalSyncCounter);
+  }
 }
 
 bool CGame::GetIsReserved(const string& name) const

@@ -134,6 +134,7 @@ private:
   uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
   uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
   bool                             m_QuitGame;
+  uint32_t                         m_SyncCounterOffset;              // missed keepalive packets we are gonna ignore
   uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
   int64_t                          m_JoinTime;                     // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
   uint32_t                         m_LastMapPartSent;              // the last mappart sent to the player (for sending more than one part at a time)
@@ -216,6 +217,7 @@ public:
   inline std::string           GetRealmHostName() const { return m_RealmHostName; }
   inline bool                  IsRealmVerified() const { return m_Verified; }
   inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
+  inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
   inline int64_t               GetJoinTime() const { return m_JoinTime; }
   inline uint32_t              GetLastMapPartSent() const { return m_LastMapPartSent; }
   inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
@@ -268,6 +270,8 @@ public:
   inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
   inline void SetQuitGame(bool nQuitGame) { m_QuitGame = nQuitGame; }
   inline void SetSyncCounter(uint32_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
+  inline void AddSyncCounterOffset(const uint32_t nOffset) { m_SyncCounterOffset += nOffset; }
+  inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
   inline void SetLastMapPartSent(uint32_t nLastMapPartSent) { m_LastMapPartSent = nLastMapPartSent; }
   inline void SetLastMapPartAcked(uint32_t nLastMapPartAcked) { m_LastMapPartAcked = nLastMapPartAcked; }
   inline void SetStartedDownloadingTicks(uint64_t nStartedDownloadingTicks) { m_StartedDownloadingTicks = nStartedDownloadingTicks; }

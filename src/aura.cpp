@@ -406,6 +406,18 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
   nCLI.OverrideConfig(this);
   OnLoadConfigs();
+
+  // Eagerly install as shell extension.
+  if (m_DB->GetIsFirstRun()) {
+    LoadMapAliases();
+    LoadIPToCountryData(CFG);
+    if (nCLI.GetInitSystem().value_or(true)) {
+      InitSystem();
+    }
+  } else if (nCLI.GetInitSystem().value_or(false)) {
+    InitSystem();
+  }
+
   if (m_GameVersion == 0) {
     Print("[CONFIG] Game version and path are missing.");
     m_Ready = false;
@@ -471,16 +483,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
         return;
       }
     }
-  }
-
-  if (m_DB->GetIsFirstRun()) {
-    LoadMapAliases();
-    LoadIPToCountryData(CFG);
-    if (nCLI.GetInitSystem().value_or(true)) {
-      InitSystem();
-    }
-  } else if (nCLI.GetInitSystem().value_or(false)) {
-    InitSystem();
   }
 
   if (m_Config->m_EnableCFGCache) {
