@@ -43,6 +43,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_NumPlayersToStartGameOver = CFG.GetInt("hosting.game_over.player_count", 1);
   m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 32);
   m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 8);
+  m_SyncNormalize             = CFG.GetBool("net.sync_normalization.enabled", true);
   if (m_SyncLimit <= m_SyncLimitSafe) {
     Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
     CFG.SetFailed();

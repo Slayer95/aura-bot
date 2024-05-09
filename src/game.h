@@ -168,6 +168,7 @@ protected:
   uint16_t                       m_Latency;                       // the number of ms to wait between sending action packets (we queue any received during this time)
   uint32_t                       m_SyncLimit;                     // the maximum number of packets a player can fall out of sync before starting the lag screen
   uint32_t                       m_SyncLimitSafe;                 // stop lag screen if players are within this same amount of packets
+  bool                           m_SyncNormalize;
   uint32_t                       m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
   uint32_t                       m_AutoKickPing;                  //
   uint32_t                       m_WarnHighPing;                  //

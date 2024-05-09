@@ -168,6 +168,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_Latency = nGameSetup->m_LatencyAverage.has_value() ? nGameSetup->m_LatencyAverage.value() : m_Aura->m_GameDefaultConfig->m_Latency;
   m_SyncLimit = nGameSetup->m_LatencyMaxFrames.has_value() ? nGameSetup->m_LatencyMaxFrames.value() : m_Aura->m_GameDefaultConfig->m_SyncLimit;
   m_SyncLimitSafe = nGameSetup->m_LatencySafeFrames.has_value() ? nGameSetup->m_LatencySafeFrames.value() : m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+  m_SyncNormalize = m_Aura->m_GameDefaultConfig->m_SyncNormalize;
   m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
   m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
 
@@ -902,22 +903,24 @@ bool CGame::Update(void* fd, void* send_fd)
           laggingPlayers.erase(laggingPlayers.begin() + (m_Players.size() - 1 - bestLaggerIndex));
         }
 
-        // start the lag screen
-        SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
+        if (!laggingPlayers.empty()) {
+          // start the lag screen
+          SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
 
-        // reset everyone's drop vote
-        for (auto& player : m_Players) {
-          player->SetDropVote(false);
+          // reset everyone's drop vote
+          for (auto& player : m_Players) {
+            player->SetDropVote(false);
+          }
+
+          m_Lagging = true;
+          m_StartedLaggingTime = Time;
+          m_LastLagScreenResetTime = Time;
+
+          // print debug information
+          double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_Latency) / static_cast<double>(1000.);
+          Print(GetLogPrefix() + "started lagging on " + PlayersToNameListString(laggingPlayers) + ".");
+          Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(static_cast<float>(worstLaggerSeconds)) + " seconds behind)");
         }
-
-        m_Lagging = true;
-        m_StartedLaggingTime = Time;
-        m_LastLagScreenResetTime = Time;
-
-        // print debug information
-        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_Latency) / static_cast<double>(1000.);
-        Print(GetLogPrefix() + "started lagging on " + PlayersToNameListString(laggingPlayers) + ".");
-        Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(static_cast<float>(worstLaggerSeconds)) + " seconds behind)");
       }
     } else if (!m_Players.empty()) {
       const bool anyUsingLegacyGProxy = GetAnyUsingGProxyLegacy();
@@ -1011,10 +1014,12 @@ bool CGame::Update(void* fd, void* send_fd)
         ReportAllPings();
         ++m_PingReportedSinceLagTimes;
       }
-      if (m_PingReportedSinceLagTimes == 3 && 60000 < Ticks - m_FinishedLoadingTicks) {
-        // After 33 seconds lagging, only before 1 minute mark.
-        // This guarantees sync counters are automatically normalized just once.
-        NormalizeSyncCounters();
+      if (m_SyncNormalize) {
+        if (m_PingReportedSinceLagTimes == 3 && 60000 < Ticks - m_FinishedLoadingTicks) {
+          NormalizeSyncCounters();
+        } else if (m_PingReportedSinceLagTimes == 5 && 180000 < Ticks - m_FinishedLoadingTicks) {
+          NormalizeSyncCounters();
+        }
       }
     }
   }
