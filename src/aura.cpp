@@ -84,7 +84,7 @@
 #define NOMINMAX 1
 #endif
 #include <ws2tcpip.h>
-#include <winsock.h>
+#include <winsock2.h>
 #include <process.h>
 #endif
 
