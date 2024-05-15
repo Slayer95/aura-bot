@@ -2472,8 +2472,11 @@ void CGame::SendOwnerCommandsHelp(const string& cmdToken, CGamePlayer* player) c
 
 void CGame::SendCommandsHelp(const string& cmdToken, CGamePlayer* player, const bool isIntro) const
 {
-  if (isIntro) SendChat(player, "Welcome, " + player->GetName() + ".", LOG_LEVEL_TRACE);
-  SendChat(player, "Use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LOG_LEVEL_TRACE);
+  if (isIntro) {
+    SendChat(player, "Welcome, " + player->GetName() + ". Please use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LOG_LEVEL_TRACE);
+  } else {
+    SendChat(player, "Use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LOG_LEVEL_TRACE);
+  }
   if (!isIntro) return;
   SendChat(player, cmdToken + "ping - view your latency", LOG_LEVEL_TRACE);
   SendChat(player, cmdToken + "start - starts the game", LOG_LEVEL_TRACE);
@@ -3086,7 +3089,7 @@ void CGame::SendLeftMessage(CGamePlayer* player, const bool sendChat) const
 {
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which PIDs Aura considers available.
-  if (sendChat) {
+  if (sendChat || player->GetKickQueued()) {
     if (player->GetQuitGame()) {
       SendAllChat(player->GetPID(), player->GetLeftReason() + ".");
     } else {
@@ -3880,13 +3883,13 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
         player->SetKickByTime(Time + m_LacksMapKickDelay);
         if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
-          player->SetLeftReason("doesn't have the map and uploads are disabled");
+          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
         } else if (IsMapTooLarge) {
-          player->SetLeftReason("doesn't have the map and the map is too large to send");
+          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
         } else if (MapData->empty()) {
-          player->SetLeftReason("doesn't have the map and there is no local copy of the map to send");
+          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
         } else {
-          player->SetLeftReason("doesn't have the map and the local copy of the map is invalid");
+          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");
         }
         player->SetLeftCode(PLAYERLEAVE_LOBBY);
         if (GetMapSiteURL().empty()) {
@@ -5394,7 +5397,7 @@ void CGame::ReportSpoofed(const string& server, CGamePlayer* player)
   SendAllChat("Name spoof detected. The real [" + player->GetName() + "@" + server + "] is not in this game.");
   if (GetIsLobby() && MatchOwnerName(player->GetName())) {
     player->SetDeleteMe(true);
-    player->SetLeftReason("was kicked for spoofing the game owner");
+    player->SetLeftReason("was autokicked for spoofing the game owner");
     player->SetLeftCode(PLAYERLEAVE_LOBBY);
     const uint8_t SID = GetSIDFromPID(player->GetPID());
     OpenSlot(SID, false);

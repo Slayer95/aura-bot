@@ -616,11 +616,11 @@ void CNet::HandleUDP(UDPPkt* pkt)
     Send(&(m_Config->m_UDPForwardAddress), relayPacket);
   }
 
-  if (static_cast<unsigned char>(pkt->buf[0]) != W3GS_HEADER_CONSTANT) {
+  if (pkt->buf[0] != W3GS_HEADER_CONSTANT) {
     return;
   }
 
-  if (!(pkt->length >= 16 && static_cast<unsigned char>(pkt->buf[1]) == CGameProtocol::W3GS_SEARCHGAME)) {
+  if (!(pkt->length >= 16 && pkt->buf[1] == CGameProtocol::W3GS_SEARCHGAME)) {
     return;
   }
 
@@ -1209,6 +1209,7 @@ bool CNet::ResolveHostNameInner(sockaddr_storage& address, const string& hostNam
   auto it = cache.find(hostName);
   if (it != end(cache)) {
     // Output to address argument
+    memset(&address, 0, sizeof(sockaddr_storage));
     memcpy(&address, it->second, sizeof(sockaddr_storage));
     SetAddressPort(&address, port);
     return true;

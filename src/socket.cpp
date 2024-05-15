@@ -326,7 +326,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     return false;
 
   // data is waiting, receive it
-  char    buffer[1024];
+  char buffer[1024];
   int32_t c = recv(m_Socket, buffer, 1024, 0);
 
   if (c > 0) {

@@ -1096,6 +1096,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
     // !PING
     //
+
+    case HashCode("pingall"):
     case HashCode("ping"):
     case HashCode("p"): {
       // kick players with ping higher than payload if payload isn't empty
@@ -1255,7 +1257,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("getplayers"):
     case HashCode("getobservers"): {
-      UseImplicitHostedGame();
+      if (!Payload.empty()) {
+        m_TargetGame = GetTargetGame(Payload);
+      } else if (m_SourceGame) {
+        m_TargetGame = m_SourceGame;
+      } else {
+        UseImplicitHostedGame();
+      }
 
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
@@ -2326,24 +2334,21 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint32_t MinSlots = 2;
-      uint32_t MinMinutes = 0;
-      stringstream SS;
-      SS << Payload;
-      SS >> MinSlots;
-
-      if (SS.fail()) {
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 2u);
+      if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "autostart <slots> , <minutes>");
         break;
+      }
+
+      uint32_t MinSlots = Args[0];
+      uint32_t MinMinutes = 0;
+      if (Args.size() >= 2) {
+        MinMinutes = Args[1];
       }
 
       if (MinSlots > m_TargetGame->GetMap()->GetMapNumControllers()) {
         ErrorReply("This map does not allow " + to_string(MinSlots) + " players.");
         break;
-      }
-
-      if (!SS.eof()) {
-        SS >> MinMinutes;
       }
 
       if (MinSlots <= m_TargetGame->m_ControllersWithMap) {

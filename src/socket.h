@@ -204,7 +204,7 @@ struct UDPPkt
 {
   sockaddr_storage* sender;
   int length;
-  char buf[1024];
+  unsigned char buf[1024];
   CSocket* socket;
 };
 
@@ -395,15 +395,15 @@ public:
 class CStreamIOSocket : public CSocket
 {
 public:
-  std::string               m_RecvBuffer;
-  std::string               m_SendBuffer;
-  uint32_t                  m_RemoteSocketCounter;
-  int64_t                   m_LastRecv;
-  bool                      m_Connected;
+  std::string                m_RecvBuffer;
+  std::string                m_SendBuffer;
+  uint32_t                   m_RemoteSocketCounter;
+  int64_t                    m_LastRecv;
+  bool                       m_Connected;
 
-  sockaddr_storage          m_RemoteHost;
-  CTCPServer*               m_Server;
-  uint16_t                  m_Counter;
+  sockaddr_storage           m_RemoteHost;
+  CTCPServer*                m_Server;
+  uint16_t                   m_Counter;
 
   CStreamIOSocket(uint8_t nFamily, std::string nName);
   CStreamIOSocket(SOCKET nSocket, sockaddr_storage& remoteAddress, CTCPServer* nServer, const uint16_t nCounter);
