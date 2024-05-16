@@ -1394,7 +1394,7 @@ void CGame::SendAllChat(uint8_t fromPID, const string& message) const
     } else {
       SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, toPIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
     }
-    leftMessage = leftMessage.substr(0, maxSize);
+    leftMessage = leftMessage.substr(maxSize);
   }
 
   if (!leftMessage.empty()) {
