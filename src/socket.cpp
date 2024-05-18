@@ -857,6 +857,10 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
 }
 
 void CUDPServer::Discard(fd_set* fd) {
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
+    return;
+  }
+
   if (!FD_ISSET(m_Socket, fd)){
     return;
   }

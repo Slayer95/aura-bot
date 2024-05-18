@@ -3276,7 +3276,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess && !GetIsSudo()) {
+      if ((!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess) && !GetIsSudo()) {
         ErrorReply("Cannot take ownership of this game.");
         break;
       }

@@ -72,6 +72,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_NotifyJoins               = CFG.GetBool("ui.notify_joins.enabled", false);
   m_IgnoredNotifyJoinPlayers  = CFG.GetSet("ui.notify_joins.exceptions", ',', {});
+  m_DesyncHandler             = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_UDPEnabled                = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
   if (m_VoteKickPercentage > 100)

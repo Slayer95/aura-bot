@@ -228,6 +228,7 @@ protected:
   bool                           m_UsesCustomReferees;
   bool                           m_SentPriorityWhois;
   uint8_t                        m_SaveOnLeave;
+  uint8_t                        m_DesyncHandler;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   std::set<std::string>          m_IgnoredNotifyJoinPlayers;
   
@@ -511,6 +512,7 @@ public:
   void StartCountDown(bool force);
   bool StopPlayers(const std::string& reason, const bool allowLocal);
   void StopLaggers(const std::string& reason);
+  void StopDesynchronized(const std::string& reason);
   bool Pause(CGamePlayer* player, const bool isDisconnect);
   bool Resume();
   std::string GetSaveFileName(const uint8_t PID) const;

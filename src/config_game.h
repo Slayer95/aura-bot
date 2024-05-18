@@ -33,6 +33,10 @@
 #include <string>
 #include <map>
 
+#define ON_DESYNC_NONE 0
+#define ON_DESYNC_NOTIFY 1
+#define ON_DESYNC_DROP 2
+
 //
 // CGameConfig
 //
@@ -64,6 +68,7 @@ public:
   std::string              m_LobbyVirtualHostName;       // lobby virtual host name
   bool                     m_NotifyJoins;                // whether the bot should beep when a player joins a hosted game
   std::set<std::string>    m_IgnoredNotifyJoinPlayers;
+  uint8_t                  m_DesyncHandler;
 
   bool                     m_UDPEnabled;
 

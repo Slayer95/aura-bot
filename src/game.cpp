@@ -186,6 +186,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;
 
   m_IgnoredNotifyJoinPlayers = m_Aura->m_GameDefaultConfig->m_IgnoredNotifyJoinPlayers;
+  m_DesyncHandler = m_Aura->m_GameDefaultConfig->m_DesyncHandler;
 
   if (!nGameSetup->GetIsMirror()) {
     m_CheckJoinable = nGameSetup->m_CheckJoinable.has_value() ? nGameSetup->m_CheckJoinable.value() : m_Aura->m_GameDefaultConfig->m_CheckJoinable;
@@ -1311,38 +1312,36 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
 void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message, const uint8_t logLevel) const
 {
   // send a private message to one player - it'll be marked [Private] in Warcraft 3
-  if (message.empty())
+
+  if (m_GameLoading)
+    return;
+
+  if (message.empty() || !player)
     return;
 
   if (m_Aura->MatchLogLevel(logLevel)) {
     Print(GetLogPrefix() + "sent <<" + message + ">>");
   }
 
-  if (player)
-  {
-    if (!m_GameLoading && !m_GameLoaded)
-    {
-      if (message.size() > 254)
-        Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
-      else
-        Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 16, std::vector<uint8_t>(), message));
-    }
+  if (!m_GameLoaded) {
+    if (message.size() > 254)
+      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
     else
-    {
-      uint8_t ExtraFlags[] = {3, 0, 0, 0};
+      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 16, std::vector<uint8_t>(), message));
+  } else {
+    uint8_t ExtraFlags[] = {3, 0, 0, 0};
 
-      // based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
+    // based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
 
-      uint8_t SID = GetSIDFromPID(player->GetPID());
+    uint8_t SID = GetSIDFromPID(player->GetPID());
 
-      if (SID < m_Slots.size())
-        ExtraFlags[0] = 3 + m_Slots[SID].GetColor();
+    if (SID < m_Slots.size())
+      ExtraFlags[0] = 3 + m_Slots[SID].GetColor();
 
-      if (message.size() > 127)
-        Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(ExtraFlags, 4), message.substr(0, 127)));
-      else
-        Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(ExtraFlags, 4), message));
-    }
+    if (message.size() > 127)
+      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(ExtraFlags, 4), message.substr(0, 127)));
+    else
+      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(ExtraFlags, 4), message));
   }
 }
 
@@ -1363,6 +1362,9 @@ void CGame::SendChat(uint8_t toPID, const string& message, const uint8_t logLeve
 
 void CGame::SendAllChat(uint8_t fromPID, const string& message) const
 {
+  if (m_GameLoading)
+    return;
+
   if (message.empty())
     return;
 
@@ -2819,7 +2821,7 @@ void CGame::SendGameDiscoveryInfo() const
       m_Aura->m_Net->Send("127.0.0.1", ipv4Packet);
     } else {
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-        Print(GetLogPrefix() + "ending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
+        Print(GetLogPrefix() + "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
       }
       vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
       m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
@@ -3584,7 +3586,14 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
     if (GProxyMode > 0) {
       Print(GetLogPrefix() + "GProxy: " + GetActiveReconnectProtocolsDetails());
     }
-    SendAllChat("Warning! Desync detected (" + player->GetName() + " (" + player->GetDelayText() + ") may not be in the same game as " + desyncListText);
+    if (m_GameLoaded) {
+      if (m_DesyncHandler == ON_DESYNC_DROP || m_DesyncHandler == ON_DESYNC_NOTIFY) {
+        SendAllChat("Warning! Desync detected (" + player->GetName() + " (" + player->GetDelayText() + ") may not be in the same game as " + desyncListText);
+        if (m_DesyncHandler == ON_DESYNC_DROP) {
+          StopDesynchronized("was automatically dropped after desync");
+        }
+      }
+    }
   }
 }
 
@@ -4162,19 +4171,33 @@ void CGame::EventGameLoaded()
   const CGamePlayer* Shortest = nullptr;
   const CGamePlayer* Longest  = nullptr;
 
-  for (const auto& player : m_Players)
-  {
+  uint8_t majorityThreshold = m_Players.size() / 2;
+  vector<CGamePlayer*> DesyncedPlayers;
+  for (const auto& player : m_Players) {
     if (!Shortest || player->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks())
       Shortest = player;
 
     if (!Longest || player->GetFinishedLoadingTicks() > Longest->GetFinishedLoadingTicks())
       Longest = player;
+
+    if (m_SyncPlayers[player].size() < majorityThreshold) {
+      DesyncedPlayers.push_back(player);
+    }
   }
 
   if (Shortest && Longest)
   {
     SendAllChat("Shortest load by player [" + Shortest->GetName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
     SendAllChat("Longest load by player [" + Longest->GetName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+
+    if (!DesyncedPlayers.empty()) {
+      if (m_DesyncHandler == ON_DESYNC_DROP || m_DesyncHandler == ON_DESYNC_NOTIFY) {
+        SendAllChat("Some players desynchronized during game load: " + PlayersToNameListString(DesyncedPlayers));
+        if (m_DesyncHandler == ON_DESYNC_DROP) {
+          StopDesynchronized("was automatically dropped after desync");
+        }
+      }
+    }
   }
 
   for (auto& player : m_Players)
@@ -5858,6 +5881,18 @@ void CGame::StopLaggers(const string& reason)
 {
   for (auto& player : m_Players) {
     if (player->GetLagging()) {
+      player->SetDeleteMe(true);
+      player->SetLeftReason(reason);
+      player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    }
+  }
+}
+
+void CGame::StopDesynchronized(const string& reason)
+{
+  uint8_t majorityThreshold = m_Players.size() / 2;
+  for (auto& player : m_Players) {
+    if (m_SyncPlayers[player].size() < majorityThreshold) {
       player->SetDeleteMe(true);
       player->SetLeftReason(reason);
       player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
