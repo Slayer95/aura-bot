@@ -1431,6 +1431,19 @@ bool CAura::MatchLogLevel(const uint8_t logLevel)
   return logLevel <= m_LogLevel;
 }
 
+void CAura::LogPersistent(const string& logText)
+{
+  ofstream writeStream;
+  writeStream.open(m_Config->m_LogPath.native().c_str(), ios::binary | ios::app );
+
+  if (writeStream.fail( )) {
+    return;
+  }
+  
+  LogStream(writeStream, logText);
+  writeStream.close( );
+}
+
 bool CAura::CreateGame(CGameSetup* gameSetup)
 {
   if (!m_Config->m_Enabled) {

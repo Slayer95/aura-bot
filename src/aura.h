@@ -226,6 +226,7 @@ public:
   void CacheMapPresets();
   
   bool MatchLogLevel(const uint8_t);
+  void LogPersistent(const std::string& logText);
 };
 
 #endif // AURA_AURA_H_

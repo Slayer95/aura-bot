@@ -48,7 +48,7 @@ public:
   uint32_t                 m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
   uint32_t                 m_SyncLimit;                  // the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
   uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
-  bool                     m_SyncNormalize;    // before 3-minute mark, try to keep players in the game
+  bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
   uint32_t                 m_AutoKickPing;               // auto kick players with ping higher than this
   uint32_t                 m_WarnHighPing;               // auto kick players with ping higher than this
   uint32_t                 m_LobbyTimeLimit;             // auto close the game lobby after this many minutes without any owner
@@ -68,6 +68,7 @@ public:
   std::string              m_LobbyVirtualHostName;       // lobby virtual host name
   bool                     m_NotifyJoins;                // whether the bot should beep when a player joins a hosted game
   std::set<std::string>    m_IgnoredNotifyJoinPlayers;
+  std::set<std::string>    m_LoggedWords;
   uint8_t                  m_DesyncHandler;
 
   bool                     m_UDPEnabled;

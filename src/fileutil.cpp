@@ -251,6 +251,24 @@ bool FileWrite(const filesystem::path& file, const uint8_t* data, size_t length)
   return true;
 }
 
+bool FileAppend(const filesystem::path& file, const uint8_t* data, size_t length)
+{
+  ofstream OS;
+  OS.open(file.native().c_str(), ios::binary | ios::app);
+
+  if (OS.fail())
+  {
+    Print("[UTIL] warning - unable to write file [" + PathToString(file) + "]");
+    return false;
+  }
+
+  // write data
+
+  OS.write(reinterpret_cast<const char*>(data), length);
+  OS.close();
+  return true;
+}
+
 bool FileDelete(const filesystem::path& file)
 {
   error_code e;

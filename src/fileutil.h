@@ -91,6 +91,7 @@ std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path,
 std::string FileRead(const std::filesystem::path& file, size_t start, size_t length, size_t* byteSize);
 std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
 bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t length);
+bool FileAppend(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileDelete(const std::filesystem::path& File);
 std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
 std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);

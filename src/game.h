@@ -231,6 +231,7 @@ protected:
   uint8_t                        m_DesyncHandler;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   std::set<std::string>          m_IgnoredNotifyJoinPlayers;
+  std::vector<std::string>       m_LoggedWords;
   
 
 public:

@@ -56,6 +56,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   // Non-configurable?
   m_AliasesPath                  = CFG.GetHomeDir() / filesystem::path("aliases.ini");
+  m_LogPath                      = CFG.GetHomeDir() / filesystem::path("aura.log");
 
   m_RTTPings                     = CFG.GetBool("metrics.rtt_pings", false);
 

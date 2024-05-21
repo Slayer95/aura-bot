@@ -186,6 +186,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;
 
   m_IgnoredNotifyJoinPlayers = m_Aura->m_GameDefaultConfig->m_IgnoredNotifyJoinPlayers;
+  m_LoggedWords = vector<string>(m_Aura->m_GameDefaultConfig->m_LoggedWords.begin(), m_Aura->m_GameDefaultConfig->m_LoggedWords.end());
   m_DesyncHandler = m_Aura->m_GameDefaultConfig->m_DesyncHandler;
 
   if (!nGameSetup->GetIsMirror()) {
@@ -3612,6 +3613,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
 
       // calculate timestamp
 
+      string chatTypeFragment;
       if (isLobbyChat) {
         Print(GetLogPrefix() + "[" + player->GetName() + "] " + chatPlayer->GetMessage());
 
@@ -3619,7 +3621,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
           Relay = false;
       } else {
         if (ExtraFlags[0] == CHAT_RECV_ALL) {
-          Print(GetLogPrefix() + "[All] [" + player->GetName() + "] " + chatPlayer->GetMessage());
+          chatTypeFragment = "[All] ";
 
           if (m_MuteAll) {
             // don't relay ingame messages targeted for all players if we're currently muting all
@@ -3627,14 +3629,16 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             Relay = false;
           }
         } else if (ExtraFlags[0] == CHAT_RECV_ALLY) {
-          Print(GetLogPrefix() + "[Allies] [" + player->GetName() + "] " + chatPlayer->GetMessage());
+          chatTypeFragment = "[Allies] ";
         } else if (ExtraFlags[0] == CHAT_RECV_OBS) {
           // [Observer] or [Referees]
-					Print(GetLogPrefix() + "[Observer] [" + player->GetName() + "] " + chatPlayer->GetMessage());
+          chatTypeFragment = "[Observer] ";
         } else {
           uint8_t privateTarget = ExtraFlags[0] - 2;
-          Print(GetLogPrefix() + "[Private " + ToDecString(privateTarget) + "] [" + player->GetName() + "] " + chatPlayer->GetMessage());
+          chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
+
+        Print(GetLogPrefix() + chatTypeFragment + "[" + player->GetName() + "] " + chatPlayer->GetMessage());
       }
 
       if (Relay) {
@@ -3695,6 +3699,16 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
         }
         if (!isCommand) {
           player->ClearLastCommand();
+        }
+        bool logMessage = false;
+        for (const auto& word : m_LoggedWords) {
+          if (chatPlayer->GetMessage().find(word) != string::npos) {
+            logMessage = true;
+            break;
+          }
+        }
+        if (logMessage) {
+          m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ player->GetName() + "] " + chatPlayer->GetMessage());
         }
       }
     }
