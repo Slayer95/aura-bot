@@ -64,6 +64,8 @@
 #define PACKET_TYPE_PRIORITY 1
 #define PACKET_TYPE_DEFAULT 0
 
+#define REALM_SOCKET_TIMEOUT 600
+
 //
 // CRealm
 //
