@@ -402,8 +402,8 @@ bool CRealm::Update(void* fd, void* send_fd)
         LengthProcessed += Length;
         Bytes = vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
       } else if (m_Socket->GetLastRecv() + REALM_SOCKET_TIMEOUT < Time) {
-        ResetConnection(true);
         Print(GetLogPrefix() + "socket inactivity timeout");
+        ResetConnection(true);
         return m_Exiting;
       }
 
