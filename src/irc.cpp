@@ -145,8 +145,9 @@ bool CIRC::Update(void* fd, void* send_fd)
       m_LastAntiIdleTime = Time;
     }
 
-    m_Socket->DoRecv(static_cast<fd_set*>(fd));
-    ExtractPackets();
+    if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+      ExtractPackets();
+    }
     m_Socket->DoSend(static_cast<fd_set*>(send_fd));
     return m_Exiting;
   }
