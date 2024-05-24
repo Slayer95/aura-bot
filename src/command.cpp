@@ -577,6 +577,46 @@ bool CCommandContext::GetIsSudo() const
   return (0 != (m_Permissions & (USER_PERMISSIONS_BOT_SUDO_OK)));
 }
 
+vector<string> CCommandContext::JoinReplyListCompact(const vector<string>& stringList) const
+{
+  vector<string> result;
+
+  if (m_FromType == FROM_GAME && m_TargetGame) {
+    string bufferedLine;
+    for (const auto& element : stringList) {
+      if (element.size() > 100) {
+        if (!bufferedLine.empty()) {
+          result.push_back(bufferedLine);
+          bufferedLine.clear();
+        }
+        string leftElement = element;
+        do {
+          result.push_back(leftElement.substr(0, 100));
+          leftElement = leftElement.substr(100);
+        } while (leftElement.length() > 100);
+        if (!leftElement.empty()) {
+          result.push_back(leftElement);
+        }
+      } else if (bufferedLine.size() + element.size() > 97) {
+        result.push_back(bufferedLine);
+        bufferedLine = element;
+      } else if (bufferedLine.empty()) {
+        bufferedLine = element;
+      } else {
+        bufferedLine += " | " + element;
+      }
+    }
+    if (!bufferedLine.empty()) {
+      result.push_back(bufferedLine);
+      bufferedLine.clear();
+    }
+  } else {
+    result.push_back(JoinVector(stringList, false));
+  }
+
+  return result;
+}
+
 void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxFlags)
 {
   if (message.empty())
