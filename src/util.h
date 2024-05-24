@@ -576,9 +576,47 @@ inline std::string::size_type GetLevenshteinDistance(const std::string& s1, cons
   return dp[m][n];
 }
 
+inline std::string::size_type GetLevenshteinDistanceForSearch(const std::string& s1, const std::string& s2, const std::string::size_type bestDistance) {
+  std::string::size_type m = s1.length();
+  std::string::size_type n = s2.length();
+
+  if (m > n + bestDistance) {
+    return m - n;
+  }
+
+  if (n > m + bestDistance) {
+    return n - m;
+  }
+
+  // Create a 2D vector to store the distances
+  std::vector<std::vector<std::string::size_type>> dp(m + 1, std::vector<std::string::size_type>(n + 1, 0));
+
+  for (std::string::size_type i = 0; i <= m; ++i) {
+    for (std::string::size_type j = 0; j <= n; ++j) {
+      if (i == 0) {
+          dp[i][j] = j;
+      } else if (j == 0) {
+          dp[i][j] = i;
+      } else if (s1[i - 1] == s2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        std::string::size_type cost = (s1[i - 1] == s2[j - 1]) ? 0 : (isdigit(s1[i - 1]) || isdigit(s2[j - 1])) ? 3 : 1;
+        dp[i][j] = std::min({ dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost });
+      }
+    }
+  }
+
+  return dp[m][n];
+}
+
 inline std::string RemoveNonAlphanumeric(const std::string& s) {
     std::regex nonAlphanumeric("[^a-zA-Z0-9]");
     return std::regex_replace(s, nonAlphanumeric, "");
+}
+
+inline std::string RemoveNonAlphanumericNorHyphen(const std::string& s) {
+    std::regex nonAlphanumericNorHyphen("[^a-zA-Z0-9-]");
+    return std::regex_replace(s, nonAlphanumericNorHyphen, "");
 }
 
 inline bool IsValidMapName(const std::string& s) {
@@ -742,6 +780,16 @@ inline bool PathHasNullBytes(const std::filesystem::path& filePath) {
 }
 
 inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
+{
+  std::string pattern = rawPattern;
+  std::transform(std::begin(pattern), std::end(pattern), std::begin(pattern), [](unsigned char c) {
+    if (c == static_cast<char>(0x20)) return static_cast<char>(0x2d);
+    return static_cast<char>(std::tolower(c));
+  });
+  return RemoveNonAlphanumericNorHyphen(pattern);
+}
+
+inline std::string PrepareMapPatternForFuzzySearch(const std::string& rawPattern)
 {
   std::string pattern = rawPattern;
   std::transform(std::begin(pattern), std::end(pattern), std::begin(pattern), [](unsigned char c) {
