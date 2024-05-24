@@ -504,6 +504,7 @@
     <ClInclude Include="aura.h" />
     <ClInclude Include="auradb.h" />
     <ClInclude Include="includes.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="ms_stdint.h" />
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="sqlite3ext.h" />

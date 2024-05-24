@@ -72,4 +72,6 @@ Share/
 Share*
 log.txt
 patch.diff
+gamedata-update.js
+*.json
 
