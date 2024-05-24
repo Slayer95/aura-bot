@@ -2604,8 +2604,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->m_Exiting = true;
+      LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin cancelled game) [" + m_FromName + "]");
       SendReply("Aborting " + m_TargetGame->GetDescription());
+      m_TargetGame->StopPlayers("was disconnected (admin cancelled game)", false);
+      m_TargetGame->m_Exiting = true;
       break;
     }
 
