@@ -1087,9 +1087,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         IPVersionFragment = ", IPv4";
       }
-      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + targetPlayer->GetDelayText() + IPVersionFragment + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
+      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
-      SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
+      if (IsOwner || IsAdmin || IsRootAdmin) {
+        SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
+      }
       break;
     }
 
@@ -1149,7 +1151,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint32_t maxPing = 0;
 
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
-        pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText());
+        pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText(false));
         size_t numPings = (*i)->GetNumPings();
         if (numPings == 0) continue;
         uint32_t ping = (*i)->GetPing();
@@ -1898,7 +1900,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_TargetGame->ResetLatency();
         SendAll("Latency settings reset to default.");
         break;
-      } else if (lower == "ignore" || lower == "bypass") {
+      } else if (lower == "ignore" || lower == "bypass" || lower == "normal") {
         if (!m_TargetGame->GetGameLoaded()) {
           ErrorReply("This command must be used after the game has loaded.");
           break;

@@ -714,7 +714,7 @@ int64_t CGamePlayer::GetTotalDisconnectTime() const
   }
 }
 
-string CGamePlayer::GetDelayText() const
+string CGamePlayer::GetDelayText(bool displaySync) const
 {
   string pingText, syncText;
   // Note: When someone is lagging, we actually clear their ping data.
@@ -726,7 +726,7 @@ string CGamePlayer::GetDelayText() const
   } else {
     pingText = to_string(GetPing());
   }
-  if (!m_Game->GetGameLoaded() || GetNormalSyncCounter() >= m_Game->GetSyncCounter()) {
+  if (!displaySync || !m_Game->GetGameLoaded() || GetNormalSyncCounter() >= m_Game->GetSyncCounter()) {
     if (anyPings) return pingText + "ms";
     return pingText;
   }
@@ -747,6 +747,28 @@ string CGamePlayer::GetDelayText() const
   } else {
     return pingText + "+" + to_string(static_cast<uint32_t>(syncDelay)) + "ms";
   }
+}
+
+string CGamePlayer::GetSyncText() const
+{
+  if (!m_Game->GetGameLoaded() || GetSyncCounter() >= m_Game->GetSyncCounter()) {
+    return string();
+  }
+  bool isNormalized = m_SyncCounterOffset > 0;
+  string behindTimeText;
+  if (GetNormalSyncCounter() < m_Game->GetSyncCounter()) {
+    float normalSyncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
+    behindTimeText = to_string(normalSyncDelay / 1000) + "s behind";
+  }
+  if (isNormalized && GetSyncCounter() < m_Game->GetSyncCounter()) {
+    float totalSyncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
+    if (behindTimeText.empty()) {
+      behindTimeText += to_string(totalSyncDelay / 1000) + "s behind unnormalized";
+    } else {
+      behindTimeText += "(" + to_string(totalSyncDelay / 1000) + "s unnormalized)";
+    }
+  }
+  return behindTimeText;
 }
 
 bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const

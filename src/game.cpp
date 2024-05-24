@@ -991,7 +991,7 @@ bool CGame::Update(void* fd, void* send_fd)
           SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(player));
           player->SetLagging(false);
           player->SetStartedLaggingTicks(0);
-          Print(GetLogPrefix() + "player no longer lagging [" + player->GetName() + "] (" + player->GetDelayText() + ")");
+          Print(GetLogPrefix() + "player no longer lagging [" + player->GetName() + "] (" + player->GetDelayText(true) + ")");
         }
       }
 
@@ -2930,7 +2930,9 @@ void CGame::EventLobbyLastPlayerLeaves()
 void CGame::ReportAllPings() const
 {
   vector<CGamePlayer*> SortedPlayers = m_Players;
-  if (GetGameLoaded()) {
+  if (SortedPlayers.empty()) return;
+
+  if (m_Lagging) {
     sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
       return a->GetNormalSyncCounter() < b->GetNormalSyncCounter();
     });
@@ -2941,9 +2943,18 @@ void CGame::ReportAllPings() const
   }
   vector<string> pingsText;
   for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
-    pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText());
+    pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText(false));
   }
+  
   SendAllChat(JoinVector(pingsText, false));
+
+  if (m_Lagging) {
+    CGamePlayer* worstLagger = SortedPlayers[0];
+    string syncDelayText = worstLagger->GetSyncText();
+    if (!syncDelayText.empty()) {
+      SendAllChat("[" + worstLagger->GetName() + "] is " + syncDelayText);
+    }
+  }
 }
 
 void CGame::ReportPlayerDisconnected(CGamePlayer* player)
@@ -3582,14 +3593,14 @@ void CGame::EventPlayerKeepAlive(CGamePlayer* player)
     string syncListText = PlayersToNameListString(m_SyncPlayers[player]);
     string desyncListText = PlayersToNameListString(DesyncedPlayers);
     uint8_t GProxyMode = GetActiveReconnectProtocols();
-    Print(GetLogPrefix() + " [GProxy=" + ToDecString(GProxyMode) + "] " + player->GetName() + " (" + player->GetDelayText() + ") is synchronized with " + to_string(m_SyncPlayers[player].size()) + " player(s): " + syncListText);
-    Print(GetLogPrefix() + " [GProxy=" + ToDecString(GProxyMode) + "] " + player->GetName() + " (" + player->GetDelayText() + ") no longer synchronized with " + desyncListText);
+    Print(GetLogPrefix() + " [GProxy=" + ToDecString(GProxyMode) + "] " + player->GetName() + " (" + player->GetDelayText(true) + ") is synchronized with " + to_string(m_SyncPlayers[player].size()) + " player(s): " + syncListText);
+    Print(GetLogPrefix() + " [GProxy=" + ToDecString(GProxyMode) + "] " + player->GetName() + " (" + player->GetDelayText(true) + ") no longer synchronized with " + desyncListText);
     if (GProxyMode > 0) {
       Print(GetLogPrefix() + "GProxy: " + GetActiveReconnectProtocolsDetails());
     }
     if (m_GameLoaded) {
       if (m_DesyncHandler == ON_DESYNC_DROP || m_DesyncHandler == ON_DESYNC_NOTIFY) {
-        SendAllChat("Warning! Desync detected (" + player->GetName() + " (" + player->GetDelayText() + ") may not be in the same game as " + desyncListText);
+        SendAllChat("Warning! Desync detected (" + player->GetName() + " (" + player->GetDelayText(true) + ") may not be in the same game as " + desyncListText);
         if (m_DesyncHandler == ON_DESYNC_DROP) {
           StopDesynchronized("was automatically dropped after desync");
         }
