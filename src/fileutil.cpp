@@ -330,7 +330,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   } else {
     extensions = baseExtensions;
   }
-  string fuzzyPattern = PreparePatternForFuzzySearch(rawPattern);
+  string fuzzyPattern = PrepareMapPatternForFuzzySearch(rawPattern);
   vector<filesystem::path> folderContents = FilesMatch(directory, extensions);
   set<filesystem::path> filesSet(folderContents.begin(), folderContents.end());
 
@@ -340,7 +340,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   for (const auto& mapName : filesSet) {
     string mapString = PathToString(mapName);
     if (mapName.empty()) continue;
-    string cmpName = PreparePatternForFuzzySearch(mapString);
+    string cmpName = PrepareMapPatternForFuzzySearch(mapString);
     size_t fuzzyPatternIndex = cmpName.find(fuzzyPattern);
     if (fuzzyPatternIndex == string::npos) {
       continue;
@@ -372,7 +372,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
     // 3->0, 4->1, 8->2
     // 3->5, 4->5, 8->6
     //
-    // I add approx +4 because PreparePatternForFuzzySearch removes .w3m/.w3x extension
+    // I add approx +4 because PrepareMapPatternForFuzzySearch removes .w3m/.w3x extension
     // In the case of 3->0, I effectively add +5, because 3->0 has always been too strict.
     maxDistance = fuzzyPattern.size() / 3 + 4;
   }
