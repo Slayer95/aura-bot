@@ -1566,6 +1566,48 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    case HashCode("twrpg"): {
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "twrpg <NOMBRE>");
+        break;
+      }
+
+      string name = Payload;
+      uint8_t matchType = m_Aura->m_DB->FindData(MAP_TYPE_TWRPG, MAP_DATA_TYPE_ANY, name, false);
+      if (matchType == MAP_DATA_TYPE_NONE) {
+        vector<string> words = Tokenize(name, ' ');
+        if (words.size() <= 1) {
+          ErrorReply("[" + Payload + "] not found.");
+          break;
+        }
+        string intermediate = words[0];
+        words[0] = words[words.size() - 1];
+        words[words.size() - 1] = intermediate;
+        name = JoinVector(words, " ", false);
+        matchType = m_Aura->m_DB->FindData(MAP_TYPE_TWRPG, MAP_DATA_TYPE_ANY, name, false);
+        if (matchType == MAP_DATA_TYPE_NONE) {
+          ErrorReply("[" + Payload + "] not found.");
+          break;
+        }
+      }
+      if (matchType == MAP_DATA_TYPE_ANY) {
+        ErrorReply("Did you mean any of these? " + name);
+        break;
+      }
+
+      vector<string> descriptionLines = m_Aura->m_DB->GetDescription(MAP_TYPE_TWRPG, matchType, name);
+      if (descriptionLines.empty()) {
+        ErrorReply("Item description not found.");
+        break;
+      }
+
+      vector<string> replyLines = JoinReplyListCompact(descriptionLines);
+      for (const auto& line : replyLines) {
+        SendReply(line);
+      }
+      break;
+    }
+
     /*****************
      * ADMIN COMMANDS *
      ******************/

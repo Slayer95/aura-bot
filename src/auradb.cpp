@@ -145,6 +145,26 @@ uint8_t CSearchableMapData::Search(string& rwSearchName, const uint8_t searchDat
 
 void CSearchableMapData::LoadData(filesystem::path sourceFile)
 {
+  m_Data[MAP_DATA_TYPE_ITEM] = map<string, vector<string>>();
+
+  ifstream twrpgFile;
+  twrpgFile.open(sourceFile.native().c_str(), ios::in);
+  if (twrpgFile.fail()) {
+    Print("[AURA] warning - [" + PathToString(sourceFile) + "] not found");
+  } else {
+    try {
+      nlohmann::json data = nlohmann::json::parse(twrpgFile);
+      for (const auto& element : data["items"].items()) {
+        m_Items.push_back(string(element.key()));
+        m_Data[MAP_DATA_TYPE_ITEM][string(element.key())] = vector<string>(element.value().begin(), element.value().end());
+      }
+      for (const auto& element : data["aliases"].items()) {
+        m_Aliases[string(element.key())] = make_pair((uint8_t)(element.value()[0]), string(element.value()[1]));
+      }
+    } catch (nlohmann::json::exception e) {
+      Print("[AURA] error loading [" + PathToString(sourceFile) + "] - " + string(e.what()));
+    }
+  }
 }
 
 //
@@ -161,6 +181,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
     BanCheckStmt(nullptr),
     ModeratorCheckStmt(nullptr)
 {
+  m_TWRPGFile = CFG.GetPath("game_data.twrpg_path", CFG.GetHomeDir() / filesystem::path("twrpg.json"));
   InitMapData();
 
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
@@ -275,6 +296,8 @@ CAuraDB::~CAuraDB()
     m_DB->Finalize(ModeratorCheckStmt);
 
   delete m_DB;
+
+  delete m_SearchableMapData[MAP_TYPE_TWRPG];
 }
 
 uint32_t CAuraDB::ModeratorCount(const string& server)
@@ -1003,11 +1026,18 @@ string CAuraDB::AliasCheck(const string& alias)
 
 void CAuraDB::InitMapData()
 {
+  m_SearchableMapData[MAP_TYPE_TWRPG] = new CSearchableMapData(MAP_TYPE_TWRPG);
+  m_SearchableMapData[MAP_TYPE_TWRPG]->LoadData(m_TWRPGFile);
 }
 
 CSearchableMapData* CAuraDB::GetMapData(uint8_t mapType) const
 {
   switch (mapType) {
+    case MAP_TYPE_TWRPG: {
+      auto it = m_SearchableMapData.find(mapType);
+      if (it == m_SearchableMapData.end()) return nullptr;
+      return it->second;
+    }
     default:
       return nullptr;
   }

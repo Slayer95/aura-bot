@@ -56,6 +56,7 @@
 #define MAP_TYPE_NONE 0
 #define MAP_TYPE_MELEE 1
 #define MAP_TYPE_DOTA 2
+#define MAP_TYPE_TWRPG 3
 
 #define MAP_DATA_TYPE_NONE 0u
 #define MAP_DATA_TYPE_UNIT 1u
@@ -195,6 +196,7 @@ class CAuraDB
 private:
   CSQLITE3*             m_DB;
   std::filesystem::path m_File;
+  std::filesystem::path m_TWRPGFile;
   bool                  m_FirstRun;
   bool                  m_HasError;
   std::string           m_Error;
