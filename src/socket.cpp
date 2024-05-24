@@ -380,6 +380,15 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
   }
 }
 
+void CStreamIOSocket::Flush()
+{
+  if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected || m_SendBuffer.empty())
+    return;
+
+  int32_t s = send(m_Socket, m_SendBuffer.c_str(), static_cast<int32_t>(m_SendBuffer.size()), MSG_NOSIGNAL);
+  m_SendBuffer.clear();
+}
+
 void CStreamIOSocket::SendReply(const sockaddr_storage* address, const vector<uint8_t>& message)
 {
   UNREFERENCED_PARAMETER(address);

@@ -438,6 +438,7 @@ public:
   }
   inline void                           ClearSendBuffer() { m_SendBuffer.clear(); }
   void DoSend(fd_set* send_fd);
+  void Flush();
 
   void Reset();
   void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override;

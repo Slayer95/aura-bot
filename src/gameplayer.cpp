@@ -309,6 +309,10 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
 
 CGamePlayer::~CGamePlayer()
 {
+  if (!m_LeftMessageSent) {
+    Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetPID(), GetLeftCode()));
+  }
+  m_Socket->Flush();
   delete m_Socket;
 
   for (auto& ctx : m_Game->m_Aura->m_ActiveContexts) {
