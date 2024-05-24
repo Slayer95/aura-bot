@@ -401,10 +401,6 @@ bool CRealm::Update(void* fd, void* send_fd)
 
         LengthProcessed += Length;
         Bytes = vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
-      } else if (m_Socket->GetLastRecv() + REALM_SOCKET_TIMEOUT < Time) {
-        Print(GetLogPrefix() + "socket inactivity timeout");
-        ResetConnection(true);
-        return m_Exiting;
       }
 
       if (Abort) {
@@ -412,6 +408,10 @@ bool CRealm::Update(void* fd, void* send_fd)
       } else if (LengthProcessed > 0) {
         *RecvBuffer = RecvBuffer->substr(LengthProcessed);
       }
+    } else if (m_Socket->GetLastRecv() + REALM_SOCKET_TIMEOUT < Time) {
+      Print(GetLogPrefix() + "socket inactivity timeout");
+      ResetConnection(true);
+      return m_Exiting;
     }
 
     if (m_LoggedIn) {
@@ -1001,7 +1001,7 @@ CQueuedChatMessage* CRealm::QueueCommand(const string& message, CCommandContext*
   if (message.empty() || !m_LoggedIn)
     return nullptr;
 
-  if (message.length() > m_Config->m_MaxLineLength) {
+  if (!m_Config->m_FloodImmune && message.length() > m_Config->m_MaxLineLength) {
     return nullptr;
   }
 
@@ -1022,7 +1022,7 @@ CQueuedChatMessage* CRealm::QueuePriorityWhois(const string& message)
   if (message.empty() || !m_LoggedIn)
     return nullptr;
 
-  if (message.length() > m_Config->m_MaxLineLength) {
+  if (!m_Config->m_FloodImmune && message.length() > m_Config->m_MaxLineLength) {
     return nullptr;
   }
 
@@ -1046,7 +1046,11 @@ CQueuedChatMessage* CRealm::QueueChatChannel(const string& message, CCommandCont
     return nullptr;
 
   CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
-  entry->SetMessage(message);
+  if (!m_Config->m_FloodImmune && m_Config->m_MaxLineLength < message.length()) {
+    entry->SetMessage(message.substr(0, m_Config->m_MaxLineLength));
+  } else {
+    entry->SetMessage(message);
+  }
   entry->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
@@ -1078,7 +1082,7 @@ CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& us
     return nullptr;
 
   CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
-  if ((m_Config->m_MaxLineLength - 20u) < message.length()) {
+  if (!m_Config->m_FloodImmune && (m_Config->m_MaxLineLength - 20u) < message.length()) {
     entry->SetMessage(message.substr(0, m_Config->m_MaxLineLength - 20u));
   } else {
     entry->SetMessage(message);
