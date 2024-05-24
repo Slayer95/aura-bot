@@ -48,7 +48,9 @@
 #include "util.h"
 #include "config.h"
 #include "sqlite3.h"
+#include "json.hpp"
 
+#include <fstream>
 #include <utility>
 #include <algorithm>
 
@@ -71,6 +73,81 @@ CSQLITE3::~CSQLITE3()
 }
 
 //
+// CSearchableMapData
+//
+
+CSearchableMapData::CSearchableMapData(uint8_t nMapType)
+ : m_MapType(nMapType)
+{
+}
+
+CSearchableMapData::~CSearchableMapData()
+{
+}
+
+uint8_t CSearchableMapData::Search(string& rwSearchName, const uint8_t searchDataType, const bool exactMatch)
+{
+  auto aliasMatch = m_Aliases.find(rwSearchName);
+  if (aliasMatch != m_Aliases.end()) {
+    if (searchDataType == MAP_DATA_TYPE_ANY || searchDataType == aliasMatch->second.first) {
+      rwSearchName = aliasMatch->second.second;
+      return aliasMatch->second.first;
+    }
+  }
+
+  string fuzzyPattern = PreparePatternForFuzzySearch(rwSearchName);
+
+  string::size_type maxDistance = 0;
+  if (!exactMatch) {
+    maxDistance = fuzzyPattern.size() / 3;
+  }
+
+  bool allowInclusion = !exactMatch && fuzzyPattern.size() >= 5;
+  bool gotExactMatch = false;
+  uint8_t bestMatchType = MAP_DATA_TYPE_NONE;
+  string::size_type bestDistance = maxDistance + 1;
+  string bestMatch;
+  vector<string> inclusionMatches;
+
+  if (searchDataType == MAP_DATA_TYPE_ANY || searchDataType == MAP_DATA_TYPE_ITEM) {
+    for (const std::string& element : m_Items) {
+      if (element == fuzzyPattern) {
+        rwSearchName = element;
+        return MAP_DATA_TYPE_ITEM;
+      }
+      if (allowInclusion && element.find(fuzzyPattern) != string::npos) {
+        inclusionMatches.push_back(element);
+      }
+    }
+    if (inclusionMatches.size() == 1) {
+      rwSearchName = inclusionMatches[0];
+      return MAP_DATA_TYPE_ITEM;
+    } else if (!inclusionMatches.empty()) {
+      rwSearchName = JoinVector(inclusionMatches, false);
+      return MAP_DATA_TYPE_ANY;
+    } else if (!exactMatch) {
+      for (const std::string& element : m_Items) {
+        string::size_type distance = GetLevenshteinDistanceForSearch(element, fuzzyPattern, bestDistance);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestMatch = element;
+          bestMatchType = MAP_DATA_TYPE_ITEM;
+        }
+      }
+    }
+  }
+
+  if (!bestMatch.empty()) {
+    rwSearchName = bestMatch;
+  }
+  return bestMatchType;
+}
+
+void CSearchableMapData::LoadData(filesystem::path sourceFile)
+{
+}
+
+//
 // CAuraDB
 //
 
@@ -84,6 +161,8 @@ CAuraDB::CAuraDB(CConfig& CFG)
     BanCheckStmt(nullptr),
     ModeratorCheckStmt(nullptr)
 {
+  InitMapData();
+
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
   Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");
   m_DB = new CSQLITE3(m_File);
@@ -352,7 +431,6 @@ vector<string> CAuraDB::ListModerators(const string& server)
     while ((RC = m_DB->Step(Statement)) == SQLITE_ROW) {
       const unsigned char* user = m_DB->Column(Statement, 1);
       const string userWrap = string(reinterpret_cast<const char*>(user));
-      Print("Found moderator: " + userWrap);
       admins.push_back(userWrap);
     }
     m_DB->Reset(Statement);
@@ -921,6 +999,39 @@ string CAuraDB::AliasCheck(const string& alias)
   m_DB->Reset(AliasCheckStmt);
 
   return value;
+}
+
+void CAuraDB::InitMapData()
+{
+}
+
+CSearchableMapData* CAuraDB::GetMapData(uint8_t mapType) const
+{
+  switch (mapType) {
+    default:
+      return nullptr;
+  }
+}
+
+uint8_t CAuraDB::FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const
+{
+  CSearchableMapData* index = GetMapData(mapType);
+  if (index == nullptr) return MAP_DATA_TYPE_NONE;
+  return index->Search(objectName, searchDataType, exactMatch);
+}
+
+vector<string> CAuraDB::GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string objectName) const
+{
+  CSearchableMapData* index = GetMapData(mapType);
+  if (index == nullptr) return vector<string>();
+  auto dataIt = index->m_Data.find(searchDataType);
+  if (dataIt == index->m_Data.end()) return vector<string>();
+  map<string, vector<string>> descriptions = dataIt->second;
+  auto descIt = descriptions.find(objectName);
+  if (descIt == descriptions.end()) {
+    return vector<string>();
+  }
+  return descIt->second;
 }
 
 //

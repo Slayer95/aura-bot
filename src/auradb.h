@@ -50,7 +50,19 @@
 
 #include <filesystem>
 #include <vector>
+#include <map>
 #include <string>
+
+#define MAP_TYPE_NONE 0
+#define MAP_TYPE_MELEE 1
+#define MAP_TYPE_DOTA 2
+
+#define MAP_DATA_TYPE_NONE 0u
+#define MAP_DATA_TYPE_UNIT 1u
+#define MAP_DATA_TYPE_ITEM 2u
+#define MAP_DATA_TYPE_DESTRUCTABLE 3u
+// ... Others
+#define MAP_DATA_TYPE_ANY 255u
 
 /**************
  *** SCHEMA ***
@@ -146,6 +158,28 @@ public:
 };
 
 //
+// CSearchableMapData
+//
+
+class CSearchableMapData
+{
+public:
+  uint8_t m_MapType;
+  std::map<uint8_t, std::map<std::string, std::vector<std::string>>> m_Data;
+  std::map<std::string, std::pair<uint8_t, std::string>> m_Aliases;
+  std::vector<std::string> m_Units;
+  std::vector<std::string> m_Items;
+  std::vector<std::string> m_Abilities;
+  std::vector<std::string> m_Buffs;
+
+  CSearchableMapData(uint8_t nMapType);
+  ~CSearchableMapData();
+
+  uint8_t Search(std::string& rwSearchName, const uint8_t searchDataType, const bool exactMatch);
+  void LoadData(std::filesystem::path sourcePath);
+};
+
+//
 // CAuraDB
 //
 
@@ -174,7 +208,9 @@ private:
   void* AliasAddStmt;
   void* AliasCheckStmt;     // very frequently used
   void* BanCheckStmt;       // frequently used
-  void* ModeratorCheckStmt;     // frequently used
+  void* ModeratorCheckStmt; // frequently used
+
+  std::map<uint8_t, CSearchableMapData*> m_SearchableMapData;
 
 public:
   explicit CAuraDB(CConfig& CFG);
@@ -209,6 +245,11 @@ public:
   CDBGamePlayerSummary* GamePlayerSummaryCheck(std::string name);
   void DotAPlayerAdd(std::string name, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
   CDBDotAPlayerSummary* DotAPlayerSummaryCheck(std::string name);
+
+  void InitMapData();
+  CSearchableMapData* GetMapData(uint8_t mapType) const;
+  uint8_t FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
+  std::vector<std::string> GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string objectName) const;
 };
 
 //
