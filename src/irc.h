@@ -52,6 +52,7 @@
 #include <cstdint>
 
 #define LF ('\x0A')
+#define IRC_TCP_KEEPALIVE_IDLE_TIME 300
 
 class CAura;
 class CTCPClient;
@@ -75,6 +76,7 @@ public:
   CIRC(CIRC&) = delete;
 
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
+  void ResetConnection();
   bool Update(void* fd, void* send_fd);
   void ExtractPackets();
   void Send(const std::string& message);

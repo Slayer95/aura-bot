@@ -75,6 +75,7 @@ CIRC::CIRC(CAura* nAura)
     m_Exiting(false),
     m_WaitingToConnect(true)
 {
+    m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
 }
 
 CIRC::~CIRC()
@@ -103,13 +104,20 @@ uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return 1;
 }
 
+void CIRC::ResetConnection()
+{
+  m_Socket->Reset();
+  m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
+  m_WaitingToConnect = true;
+}
+
 bool CIRC::Update(void* fd, void* send_fd)
 {
   const int64_t Time = GetTime();
 
   if (!m_Config->m_Enabled) {
     if (m_Socket && m_Socket->GetConnected()) {
-      m_Socket->Reset();
+      ResetConnection();
       m_WaitingToConnect = false;
     }
     return m_Exiting;
@@ -121,8 +129,7 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     Print("[IRC: " + m_Config->m_HostName + "] disconnected due to socket error");
     Print("[IRC: " + m_Config->m_HostName + "] waiting 60 seconds to reconnect");
-    m_Socket->Reset();
-    m_WaitingToConnect          = true;
+    ResetConnection();
     m_LastConnectionAttemptTime = Time;
     return m_Exiting;
   }
@@ -134,8 +141,7 @@ bool CIRC::Update(void* fd, void* send_fd)
     if (Time - m_LastPacketTime > 210)
     {
       Print("[IRC: " + m_Config->m_HostName + "] ping timeout, reconnecting...");
-      m_Socket->Reset();
-      m_WaitingToConnect = true;
+      ResetConnection();
       return m_Exiting;
     }
 
@@ -157,8 +163,7 @@ bool CIRC::Update(void* fd, void* send_fd)
     // the socket was disconnected
 
     Print("[IRC: " + m_Config->m_HostName + "] disconnected, waiting 60 seconds to reconnect");
-    m_Socket->Reset();
-    m_WaitingToConnect          = true;
+    ResetConnection();
     m_LastConnectionAttemptTime = Time;
     return m_Exiting;
   }
@@ -192,9 +197,8 @@ bool CIRC::Update(void* fd, void* send_fd)
       // the connection attempt timed out (15 seconds)
 
       Print("[IRC: " + m_Config->m_HostName + "] connect timed out, waiting 60 seconds to reconnect");
-      m_Socket->Reset();
+      ResetConnection();
       m_LastConnectionAttemptTime = Time;
-      m_WaitingToConnect          = true;
       return m_Exiting;
     }
   }

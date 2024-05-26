@@ -64,7 +64,8 @@
 #define PACKET_TYPE_PRIORITY 1
 #define PACKET_TYPE_DEFAULT 0
 
-#define REALM_SOCKET_TIMEOUT 600
+#define REALM_TCP_KEEPALIVE_IDLE_TIME 900
+#define REALM_APP_KEEPALIVE_IDLE_TIME 600
 
 //
 // CRealm
@@ -109,6 +110,7 @@ private:
   int64_t                          m_LastBanRefreshTime;        // GetTime when the ban list was last refreshed from the database
   int64_t                          m_ReconnectDelay;            // interval between two consecutive connect attempts
   uint32_t                         m_SessionID;                 // reconnection counter
+  uint32_t                         m_NullPacketsSent;
   bool                             m_Exiting;                   // set to true and this class will be deleted next update
   bool                             m_FirstConnect;              // if we haven't tried to connect to battle.net yet
   bool                             m_ReconnectNextTick;         // ignore reconnect delay

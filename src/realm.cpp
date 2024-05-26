@@ -87,6 +87,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_LastAdminRefreshTime(GetTime()),
     m_LastBanRefreshTime(GetTime()),
     m_SessionID(0),
+    m_NullPacketsSent(0),
     m_Exiting(false),
     m_FirstConnect(true),
     m_ReconnectNextTick(true),
@@ -157,6 +158,7 @@ bool CRealm::Update(void* fd, void* send_fd)
 
   if (!m_Socket) {
     m_Socket = new CTCPClient(AF_INET, m_Config->m_HostName);
+    m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
   }
 
   if (m_Socket->HasError())
@@ -195,6 +197,9 @@ bool CRealm::Update(void* fd, void* send_fd)
         // byte 0 is always 255
         if (Bytes[0] == BNET_HEADER_CONSTANT)
         {
+          // Any BNET packet is fine to reset app-level inactivity timeout.
+          m_NullPacketsSent = 0;
+
           switch (Bytes[1])
           {
             case CBNETProtocol::SID_NULL:
@@ -408,10 +413,17 @@ bool CRealm::Update(void* fd, void* send_fd)
       } else if (LengthProcessed > 0) {
         *RecvBuffer = RecvBuffer->substr(LengthProcessed);
       }
-    } else if (m_Socket->GetLastRecv() + REALM_SOCKET_TIMEOUT < Time) {
-      Print(GetLogPrefix() + "socket inactivity timeout");
-      ResetConnection(true);
-      return m_Exiting;
+    } else if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
+      // Many PvPGN servers do not implement TCP Keep Alive. However, all PvPGN servers reply to BNET protocol null packets.
+      int64_t expectedNullsSent = 1 + (Time - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TIME) / 60;
+      if (expectedNullsSent > 5) {
+        Print(GetLogPrefix() + "socket inactivity timeout");
+        ResetConnection(false);
+        return m_Exiting;
+      } else if (m_NullPacketsSent < expectedNullsSent) {
+        Send(m_Protocol->SEND_SID_NULL());
+        ++m_NullPacketsSent;
+      }
     }
 
     if (m_LoggedIn) {
@@ -537,6 +549,7 @@ bool CRealm::Update(void* fd, void* send_fd)
       Print(GetLogPrefix() + "failed to connect to [" + m_HostName + ":" + to_string(m_Config->m_ServerPort) + "]");
       Print(GetLogPrefix() + "waiting 90 seconds to retry...");
       m_Socket->Reset();
+      m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
       m_LastDisconnectedTime = Time;
       m_WaitingToConnect     = true;
       return m_Exiting;
@@ -1217,6 +1230,7 @@ void CRealm::ResetConnection(bool Errored)
 
   if (m_Socket) {
     m_Socket->Reset();
+    m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
     if (Errored) {
       Print(GetLogPrefix() + "disconnected due to socket error");
     } else {
