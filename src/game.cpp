@@ -4189,7 +4189,8 @@ void CGame::EventGameStarted()
 
 void CGame::EventGameLoaded()
 {
-  Print(GetLogPrefix() + "finished loading with " + ToDecString(GetNumHumanPlayers()) + " players");
+  uint8_t finishedLoadingPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
+  Print(GetLogPrefix() + "finished loading with " + ToDecString(finishedLoadingPlayers) + " players");
 
   // send shortest, longest, and personal load times to each player
 
@@ -4215,6 +4216,9 @@ void CGame::EventGameLoaded()
     SendAllChat("Shortest load by player [" + Shortest->GetName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
     SendAllChat("Longest load by player [" + Longest->GetName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
 
+    if (finishedLoadingPlayers < m_StartPlayers) {
+      SendAllChat(ToDecString(m_StartPlayers - finishedLoadingPlayers) + " player(s) disconnected during game load.");
+    }
     if (!DesyncedPlayers.empty()) {
       if (m_DesyncHandler == ON_DESYNC_DROP || m_DesyncHandler == ON_DESYNC_NOTIFY) {
         SendAllChat("Some players desynchronized during game load: " + PlayersToNameListString(DesyncedPlayers));

@@ -758,14 +758,14 @@ string CGamePlayer::GetSyncText() const
   string behindTimeText;
   if (GetNormalSyncCounter() < m_Game->GetSyncCounter()) {
     float normalSyncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
-    behindTimeText = to_string(normalSyncDelay / 1000) + "s behind";
+    behindTimeText = ToFormattedString(normalSyncDelay / 1000) + "s behind";
   }
   if (isNormalized && GetSyncCounter() < m_Game->GetSyncCounter()) {
     float totalSyncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
     if (behindTimeText.empty()) {
-      behindTimeText += to_string(totalSyncDelay / 1000) + "s behind unnormalized";
+      behindTimeText += ToFormattedString(totalSyncDelay / 1000) + "s behind unnormalized";
     } else {
-      behindTimeText += "(" + to_string(totalSyncDelay / 1000) + "s unnormalized)";
+      behindTimeText += "(" + ToFormattedString(totalSyncDelay / 1000) + "s unnormalized)";
     }
   }
   return behindTimeText;
