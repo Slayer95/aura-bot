@@ -255,9 +255,7 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
 #endif
 
   // disable Nagle's algorithm
-
-  int32_t OptVal = 1;
-  setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  SetNoDelay(true);
 }
 
 CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTCPServer* nServer, const uint16_t nCounter)
@@ -292,6 +290,36 @@ CStreamIOSocket::~CStreamIOSocket()
     closesocket(m_Socket);
 
   m_Server = nullptr;
+}
+
+void CStreamIOSocket::SetNoDelay(const bool noDelay)
+{
+  int32_t OptVal = noDelay;
+  setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+}
+
+void CStreamIOSocket::SetKeepAlive(const bool keepAlive, const uint32_t seconds)
+{
+#ifdef _WIN32
+  tcp_keepalive keepAliveSettings;
+  keepAliveSettings.onoff = keepAlive;
+  keepAliveSettings.keepalivetime = seconds * 1000;
+  keepAliveSettings.keepaliveinterval = 30000;
+
+  DWORD bytesReturned;
+  WSAIoctl(m_Socket, SIO_KEEPALIVE_VALS, &keepAliveSettings, sizeof(keepAliveSettings), NULL, 0, &bytesReturned, NULL, NULL);
+#else
+  int32_t OptVal = keepAlive;
+  setsockopt(m_Socket, IPPROTO_TCP, SO_KEEPALIVE, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+
+  if (keepAlive) {
+    setsockopt(m_Socket, IPPROTO_TCP, TCP_KEEPIDLE, reinterpret_cast<const char*>(&seconds), sizeof(seconds));
+    int32_t keepAliveInterval = 30;
+    int32_t keepAliveProbes = 4;
+    setsockopt(m_Socket, IPPROTO_TCP, TCP_KEEPINTVL, reinterpret_cast<const char*>(&keepAliveInterval), sizeof(keepAliveInterval));
+    setsockopt(m_Socket, IPPROTO_TCP, TCP_KEEPCNT, reinterpret_cast<const char*>(&keepAliveProbes), sizeof(keepAliveProbes));
+  }
+#endif
 }
 
 void CStreamIOSocket::Reset()

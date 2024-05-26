@@ -60,6 +60,7 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #include <winsock2.h>
+#include <mstcpip.h>
 #include <errno.h>
 
 #undef EBADF /* override definition in errno.h */
@@ -134,6 +135,7 @@
 #define EDQUOT WSAEDQUOT
 #define ESTALE WSAESTALE
 #define EREMOTE WSAEREMOTE
+// end _WIN32
 #else
 #include <arpa/inet.h>
 #include <errno.h>
@@ -419,6 +421,7 @@ public:
   inline std::string                GetIPString() const { return AddressToString(m_RemoteHost); }
   inline std::string                GetIPStringStrict() const { return AddressToStringStrict(m_RemoteHost); }
   inline bool GetIsLoopback() const { return isLoopbackAddress(&m_RemoteHost); }
+  inline uint16_t GetRemotePort() const { return GetAddressPort(&m_RemoteHost); }
 
   inline bool                       GetConnected() const { return m_Connected; }
   void Disconnect();
@@ -442,6 +445,8 @@ public:
 
   void Reset();
   void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override;
+  void SetNoDelay(const bool noDelay);
+  void SetKeepAlive(const bool keepAlive, const uint32_t seconds);
 };
 
 //
