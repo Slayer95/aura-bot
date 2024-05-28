@@ -3179,7 +3179,6 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   player->SetStatusMessageSent(true);
   if (OwnerFragment.empty() && GProxyFragment.empty()) {
     if (m_Aura->m_Net->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
-      Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPStringStrict() + ").");
       SendAllChat(player->GetName() + " joined the game over IPv6.");
     }
     return;
@@ -3187,14 +3186,12 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
 
   string IPv6Fragment;
   if (player->GetUsingIPv6()) {
-    Print(player->GetName() + " joined the game over IPv6 (" + player->GetIPStringStrict() + ").");
     IPv6Fragment = ". (Joined over IPv6).";
   }
   if (!OwnerFragment.empty() && !GProxyFragment.empty()) {
     SendAllChat(player->GetName() + OwnerFragment + GProxyFragment + IPv6Fragment);
   } else if (!OwnerFragment.empty()) {
     if (player->GetUsingIPv6()) {
-      Print(player->GetName() + OwnerFragment + " joined the game over IPv6 (" + player->GetIPStringStrict() + ").");
       SendAllChat(player->GetName() + OwnerFragment + " joined the game over IPv6.");
     } else {
       SendAllChat(player->GetName() + OwnerFragment + " joined the game.");

@@ -597,7 +597,7 @@ bool CGamePlayer::Update(void* fd)
     }
   }
 
-  // EventPlayerLeft sets the game in an state where this player is still in m_Players, but it has no associated slot.
+  // EventPlayerLeft sets the game in a state where this player is still in m_Players, but it has no associated slot.
   // It's therefore crucial to check the Abort flag that it sets to avoid modifying it further.
   // As soon as the CGamePlayer::Update() call returns, EventPlayerDeleted takes care of erasing from the m_Players vector.
   if (!Abort) {
@@ -633,11 +633,13 @@ bool CGamePlayer::Update(void* fd)
     m_Game->SendAllChat(GetName() + " has been kicked because he didn't reconnect in time." );
   }
 
-  if (m_GProxy && m_Game->GetGameLoaded())
+  if (m_GProxy && m_Game->GetGameLoaded()) {
     return m_DeleteMe;
+  }
 
-  if (m_DeleteMe)
+  if (m_DeleteMe) {
     return true;
+  }
 
   if (m_Socket) {
     return m_Socket->HasError() || m_Socket->HasFin() || !m_Socket->GetConnected();
@@ -763,7 +765,7 @@ string CGamePlayer::GetSyncText() const
     if (behindTimeText.empty()) {
       behindTimeText += ToFormattedString(totalSyncDelay / 1000) + "s behind unnormalized";
     } else {
-      behindTimeText += "(" + ToFormattedString(totalSyncDelay / 1000) + "s unnormalized)";
+      behindTimeText += " (" + ToFormattedString(totalSyncDelay / 1000) + "s unnormalized)";
     }
   }
   return behindTimeText;

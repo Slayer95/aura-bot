@@ -373,7 +373,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
   } else if (c == 0) {
     // the other end closed the connection
     if (!m_HasFin) {
-      Print("[TCPSOCKET] (" + GetName() +") terminated the connection");
+      Print("[TCPSOCKET] (" + GetName() +") remote terminated the connection");
     }
     m_HasFin = true;
   }
