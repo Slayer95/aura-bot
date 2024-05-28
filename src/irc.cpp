@@ -95,7 +95,7 @@ uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
   // irc socket
 
-  if (!m_Socket->HasError() && m_Socket->GetConnected())
+  if (!m_Socket->HasError() && !m_Socket->HasFin() && m_Socket->GetConnected())
   {
     m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
     return 0;
@@ -123,11 +123,15 @@ bool CIRC::Update(void* fd, void* send_fd)
     return m_Exiting;
   }
 
-  if (m_Socket->HasError())
+  if (m_Socket->HasError() || m_Socket->HasFin())
   {
-    // the socket has an error
-
-    Print("[IRC: " + m_Config->m_HostName + "] disconnected due to socket error");
+    if (m_Socket->HasError()) {
+      // the socket has an error
+      Print("[IRC: " + m_Config->m_HostName + "] disconnected due to socket error");
+    } else {
+      // remote end terminated the connection
+      Print("[IRC: " + m_Config->m_HostName + "] remote terminated the connection");
+    }
     Print("[IRC: " + m_Config->m_HostName + "] waiting 60 seconds to reconnect");
     ResetConnection();
     m_LastConnectionAttemptTime = Time;
@@ -153,6 +157,9 @@ bool CIRC::Update(void* fd, void* send_fd)
 
     if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
       ExtractPackets();
+    }
+    if (m_Socket->HasError() || m_Socket->HasFin()) {
+      return m_Exiting;
     }
     m_Socket->DoSend(static_cast<fd_set*>(send_fd));
     return m_Exiting;

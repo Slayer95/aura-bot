@@ -376,6 +376,7 @@ public:
   inline std::vector<uint8_t> GetPortBE() const { return CreateByteArray(m_Port, true); } // Network-byte-order
   inline int32_t              GetError() const { return m_Error; }
   inline bool                 HasError() const { return m_HasError; }
+  inline bool                 HasFin() const { return m_HasFin; }
 
   inline ADDRESS_LENGTH_TYPE  GetAddressLength() const {
     if (m_Family == AF_INET6)

@@ -223,6 +223,7 @@ void CSocket::Reset()
   m_Socket = INVALID_SOCKET;
   m_HasError = false;
   m_Error    = 0;
+  m_HasFin   = false;
 }
 
 void CSocket::SendReply(const sockaddr_storage* address, const vector<uint8_t>& message)
@@ -381,7 +382,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
 
 void CStreamIOSocket::DoSend(fd_set* send_fd)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected || m_SendBuffer.empty())
+  if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())
     return;
 
   if (FD_ISSET(m_Socket, send_fd))
@@ -410,7 +411,7 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
 
 void CStreamIOSocket::Flush()
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected || m_SendBuffer.empty())
+  if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())
     return;
 
   int32_t s = send(m_Socket, m_SendBuffer.c_str(), static_cast<int32_t>(m_SendBuffer.size()), MSG_NOSIGNAL);

@@ -139,7 +139,7 @@ CRealm::~CRealm()
 
 uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
-  if (m_Socket && !m_Socket->HasError() && m_Socket->GetConnected())
+  if (m_Socket && !m_Socket->HasError() && !m_Socket->HasFin() && m_Socket->GetConnected())
   {
     m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
     return 1;
@@ -161,9 +161,9 @@ bool CRealm::Update(void* fd, void* send_fd)
     m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
   }
 
-  if (m_Socket->HasError())
+  if (m_Socket->HasError() || m_Socket->HasFin())
   {
-    // the socket has an error
+    // the socket has an error, or the server terminated the connection
     ResetConnection(true);
     Print(GetLogPrefix() + "waiting " + to_string(m_ReconnectDelay) + " seconds to reconnect");
     return m_Exiting;
@@ -413,7 +413,13 @@ bool CRealm::Update(void* fd, void* send_fd)
       } else if (LengthProcessed > 0) {
         *RecvBuffer = RecvBuffer->substr(LengthProcessed);
       }
-    } else if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
+    }
+
+    if (m_Socket->HasError() || m_Socket->HasFin()) {
+      return m_Exiting;
+    }
+
+    if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
       // Many PvPGN servers do not implement TCP Keep Alive. However, all PvPGN servers reply to BNET protocol null packets.
       int64_t expectedNullsSent = 1 + (Time - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TIME) / 60;
       if (expectedNullsSent > 5) {

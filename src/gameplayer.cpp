@@ -219,7 +219,8 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
   if (Abort)
     m_DeleteMe = true;
 
-  if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError()) {
+  // At this point, m_Socket may have been transferred to CGamePlayer
+  if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
     return PREPLAYER_CONNECTION_DESTROY;
   }
 
@@ -600,23 +601,19 @@ bool CGamePlayer::Update(void* fd)
   // It's therefore crucial to check the Abort flag that it sets to avoid modifying it further.
   // As soon as the CGamePlayer::Update() call returns, EventPlayerDeleted takes care of erasing from the m_Players vector.
   if (!Abort) {
-    if (m_Socket) {
-      // try to find out why we're requesting deletion
-      // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
-      if (m_Socket->HasError()) {
-        m_Game->EventPlayerDisconnectSocketError(this);
-        ResetConnection();
-      } else if (!m_Socket->GetConnected()) {
-        m_Game->EventPlayerDisconnectConnectionClosed(this);
-        ResetConnection();
-      }
-    }
-
-    if (GetKickQueued() && m_KickByTime < Time)
+    // try to find out why we're requesting deletion
+    // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
+    if (m_Socket->HasError()) {
+      m_Game->EventPlayerDisconnectSocketError(this);
+      ResetConnection();
+    } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
+      m_Game->EventPlayerDisconnectConnectionClosed(this);
+      ResetConnection();
+    } else if (GetKickQueued() && m_KickByTime < Time) {
       m_Game->EventPlayerKickHandleQueued(this);
-
-    if (!m_StatusMessageSent && m_CheckStatusByTime < Time)
+    } else if (!m_StatusMessageSent && m_CheckStatusByTime < Time) {
       m_Game->EventPlayerCheckStatus(this);
+    }
   }
 
   if (!m_Verified && m_RealmInternalId >= 0x10 && Time - m_JoinTime >= 60 && m_Game->GetIsLobby()) {
@@ -642,8 +639,9 @@ bool CGamePlayer::Update(void* fd)
   if (m_DeleteMe)
     return true;
 
-  if (m_Socket)
-    return m_Socket->HasError() || !m_Socket->GetConnected();
+  if (m_Socket) {
+    return m_Socket->HasError() || m_Socket->HasFin() || !m_Socket->GetConnected();
+  }
 
   return false;
 }
