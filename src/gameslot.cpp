@@ -70,10 +70,13 @@ CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
   switch (size) {
     case 10:
       m_Type = n[9];
+      // falls through
     case 9:
       m_Handicap = n[8];
+      // falls through
     case 8:
       m_ComputerType = n[7];
+      // falls through
     default:
       m_PID            = n[0];
       m_DownloadStatus = n[1];

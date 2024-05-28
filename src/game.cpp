@@ -1765,7 +1765,7 @@ bool CGame::SetLayoutCompact()
   if (controllerCount < 2) {
     return false;
   }
-  const uint8_t extraPlayers = controllerCount % largestTeam.second;
+  //const uint8_t extraPlayers = controllerCount % largestTeam.second;
   const uint8_t expectedFullTeams = controllerCount / largestTeam.second;
   if (expectedFullTeams < 2) {
     // Compacting is used for NvNvN...
@@ -3295,7 +3295,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
     if (joinName == otherPlayer->GetName()) {
       continue;
     }
-    if (memcmp(&(otherPlayer->GetSocket()->m_RemoteHost), sourceAddress, sizeof sockaddr_storage) == 0) {
+    if (memcmp(&(otherPlayer->GetSocket()->m_RemoteHost), sourceAddress, sizeof(sockaddr_storage)) == 0) {
       playersSameIP.push_back(otherPlayer);
     }
   }
@@ -3368,6 +3368,10 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   }
 
   if (GetPlayerFromName(joinRequest->GetName(), false)) {
+    if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
+      SendAllChat("Entry denied for another player with the same name: [" + joinRequest->GetName() + "@" + JoinedRealm + "]");
+      m_ReportedJoinFailNames.insert(joinRequest->GetName());
+    }
     Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
