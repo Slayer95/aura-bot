@@ -1196,6 +1196,13 @@ bool CAura::LoadConfigs(CConfig& CFG)
   m_RealmDefaultConfig = RealmDefaultConfig;
   m_GameDefaultConfig = GameDefaultConfig;
 
+  return true;
+}
+
+void CAura::OnLoadConfigs()
+{
+  m_LogLevel = m_Config->m_LogLevel;
+
   if (m_Config->m_Warcraft3Path.has_value()) {
     m_GameInstallPath = m_Config->m_Warcraft3Path.value();
   } else if (m_GameInstallPath.empty()) {
@@ -1244,12 +1251,7 @@ bool CAura::LoadConfigs(CConfig& CFG)
       Print("[AURA] Using <game.install_path = " + PathToString(m_GameInstallPath) + ">");
     }
   }
-  return true;
-}
 
-void CAura::OnLoadConfigs()
-{
-  m_LogLevel = m_Config->m_LogLevel;
   if (m_Config->m_War3Version.has_value()) {
     m_GameVersion = m_Config->m_War3Version.value();
   } else if (m_GameVersion == 0 && !m_GameInstallPath.empty() && htons(0xe017) == 0x17e0) {
@@ -1258,6 +1260,7 @@ void CAura::OnLoadConfigs()
       m_GameVersion = AutoVersion.value();
     }
   }
+
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
 }
 
