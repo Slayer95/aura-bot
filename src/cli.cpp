@@ -116,6 +116,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--observers", m_GameObservers, "Customizes observers when hosting from the CLI. Values: no, referees, defeat, full")->check(CLI::IsMember({"no", "referees", "defeat", "full"}));
   app.add_option("--visibility", m_GameVisibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
+  app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
@@ -454,6 +455,15 @@ bool CCLI::QueueActions(CAura* nAura) const
           gameSetup->SetReservations(m_GameReservations);
           gameSetup->SetVerbose(m_Verbose);
           gameSetup->SetDisplayMode(displayMode);
+          if (m_GameIPFloodHandler.has_value()) {
+            if (m_GameIPFloodHandler.value() == "none") {
+              gameSetup->SetIPFloodHandler(ON_IPFLOOD_NONE);
+            } else if (m_GameIPFloodHandler.value() == "notify") {
+              gameSetup->SetIPFloodHandler(ON_IPFLOOD_NOTIFY);
+            } else if (m_GameIPFloodHandler.value() == "deny") {
+              gameSetup->SetIPFloodHandler(ON_IPFLOOD_DENY);
+            }
+          }
           gameSetup->SetActive();
           vector<string> hostAction{"host"};
           nAura->m_PendingActions.push(hostAction);

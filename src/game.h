@@ -193,6 +193,8 @@ protected:
   int64_t                        m_AutoStartMinTime;
   int64_t                        m_AutoStartMaxTime;
   uint8_t                        m_AutoStartPlayers;
+  uint8_t                        m_MaxPlayersLoopback;
+  uint8_t                        m_MaxPlayersSameIP;
   uint8_t                        m_ControllersWithMap;
   uint8_t                        m_CustomLayout;
   std::pair<uint8_t, uint8_t>    m_CustomLayoutData;
@@ -229,6 +231,7 @@ protected:
   bool                           m_SentPriorityWhois;
   uint8_t                        m_SaveOnLeave;
   uint8_t                        m_DesyncHandler;
+  uint8_t                        m_IPFloodHandler;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   std::set<std::string>          m_IgnoredNotifyJoinPlayers;
   std::vector<std::string>       m_LoggedWords;
@@ -439,6 +442,7 @@ public:
   bool                 GetHasAnyPlayer() const;
   bool                 GetIsPlayerSlot(const uint8_t SID) const;
   bool                 GetHasAnotherPlayer(const uint8_t ExceptSID) const;
+  bool                 CheckIPFlood(const std::string joinName, const sockaddr_storage* sourceAddress) const;
   std::vector<uint8_t> GetPIDs() const;
   std::vector<uint8_t> GetPIDs(uint8_t excludePID) const;
   uint8_t GetHostPID() const;

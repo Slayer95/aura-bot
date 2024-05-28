@@ -112,6 +112,7 @@ public:
   std::optional<std::filesystem::path>  m_GameSavedPath;
   std::optional<std::string>            m_GameMapAlias;
   std::optional<std::string>            m_GameDisplayMode;
+  std::optional<std::string>            m_GameIPFloodHandler;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;

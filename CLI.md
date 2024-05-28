@@ -574,6 +574,16 @@ Specifies the location of a saved game a game lobby will resume.
 
 Makes a reservation for a player to join the game lobby. This is required for loaded games to properly work.
 
+## \`--on-ipflood <ACTION>\`
+
+This parameter customizes behavior when an excessive amount of players join the game from the same IP address.
+
+**Options:**
+
+- none: Accepts any amount of players joinig from the same IP address.
+- notify: Sends a message to the game chat.
+- deny: Prevents new players from joining the game.
+
 # Flags for CLI commands
 
 ## \`--exec-broadcast\`

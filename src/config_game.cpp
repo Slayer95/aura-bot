@@ -41,6 +41,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_VoteKickPercentage        = CFG.GetInt("hosting.vote_kick.min_percent", 70);
   m_NumPlayersToStartGameOver = CFG.GetInt("hosting.game_over.player_count", 1);
+  m_MaxPlayersLoopback        = CFG.GetInt("hosting.ip_filter.max_same_ip", 8);
+  m_MaxPlayersSameIP          = CFG.GetInt("hosting.ip_filter.max_loopback", 8);
   m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 32);
   m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 8);
   m_SyncNormalize             = CFG.GetBool("net.sync_normalization.enabled", true);
@@ -74,6 +76,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_IgnoredNotifyJoinPlayers  = CFG.GetSet("ui.notify_joins.exceptions", ',', {});
   m_LoggedWords               = CFG.GetSetInsensitive("hosting.log_words", ',', {});
   m_DesyncHandler             = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
+  m_IPFloodHandler            = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
   m_UDPEnabled                = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
   if (m_VoteKickPercentage > 100)

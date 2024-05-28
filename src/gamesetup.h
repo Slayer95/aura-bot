@@ -200,6 +200,7 @@ public:
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartMinSeconds;
   std::optional<int64_t>                          m_AutoStartMaxSeconds;
+  std::optional<uint8_t>                          m_IPFloodHandler;
   std::optional<uint16_t>                         m_LatencyAverage;
   std::optional<uint16_t>                         m_LatencyMaxFrames;
   std::optional<uint16_t>                         m_LatencySafeFrames;
@@ -314,6 +315,7 @@ public:
     m_AutoStartMaxSeconds = nValue;
     if (m_AutoStartMinSeconds > nValue) m_AutoStartMinSeconds = nValue;
   }
+  void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
   void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
   void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
   void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }

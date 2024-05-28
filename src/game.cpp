@@ -181,6 +181,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
   m_LobbyTimeLimit = nGameSetup->m_LobbyTimeout.has_value() ? nGameSetup->m_LobbyTimeout.value() : m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
+  m_MaxPlayersLoopback = m_Aura->m_GameDefaultConfig->m_MaxPlayersLoopback;
+  m_MaxPlayersSameIP = m_Aura->m_GameDefaultConfig->m_MaxPlayersSameIP;
 
   m_ExtraDiscoveryAddresses = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses;
   m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;
@@ -188,6 +190,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_IgnoredNotifyJoinPlayers = m_Aura->m_GameDefaultConfig->m_IgnoredNotifyJoinPlayers;
   m_LoggedWords = vector<string>(m_Aura->m_GameDefaultConfig->m_LoggedWords.begin(), m_Aura->m_GameDefaultConfig->m_LoggedWords.end());
   m_DesyncHandler = m_Aura->m_GameDefaultConfig->m_DesyncHandler;
+  m_IPFloodHandler = nGameSetup->m_IPFloodHandler.has_value() ? nGameSetup->m_IPFloodHandler.value() : m_Aura->m_GameDefaultConfig->m_IPFloodHandler;
 
   if (!nGameSetup->GetIsMirror()) {
     m_CheckJoinable = nGameSetup->m_CheckJoinable.has_value() ? nGameSetup->m_CheckJoinable.value() : m_Aura->m_GameDefaultConfig->m_CheckJoinable;
@@ -3263,24 +3266,8 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   if (!m_RestoredGame)
     SendWelcomeMessage(Player);
 
-  // check for multiple IP usage
-  if (!Player->GetSocket()->GetIsLoopback()) {
-    string Others;
-    for (auto& player : m_Players){
-      if (Player == player)
-        continue;
-      if (Player->GetIPString() != player->GetIPString())
-        continue;
-
-      if (Others.empty())
-        Others = player->GetName();
-      else
-        Others += ", " + player->GetName();
-    }
-
-    if (!Others.empty()) {
-      SendAllChat("Player [" + joinRequest->GetName() + "] has the same IP address as: " + Others);
-    }
+  if (m_IPFloodHandler == ON_IPFLOOD_NOTIFY) {
+    CheckIPFlood(joinRequest->GetName(), &(Player->GetSocket()->m_RemoteHost));
   }
 
   // abort the countdown if there was one in progress
@@ -3298,6 +3285,33 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   Print(GetLogPrefix() + "player joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetPID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString);
 
   return Player;
+}
+
+bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAddress) const
+{
+  // check for multiple IP usage
+  vector<CGamePlayer*> playersSameIP;
+  for (auto& otherPlayer : m_Players) {
+    if (joinName == otherPlayer->GetName()) {
+      continue;
+    }
+    if (memcmp(&(otherPlayer->GetSocket()->m_RemoteHost), sourceAddress, sizeof sockaddr_storage) == 0) {
+      playersSameIP.push_back(otherPlayer);
+    }
+  }
+
+  if (playersSameIP.empty()) {
+    return true;
+  }
+
+  uint8_t maxPlayersFromSameIp = isLoopbackAddress(sourceAddress) ? m_MaxPlayersLoopback : m_MaxPlayersSameIP;
+  if (static_cast<uint8_t>(playersSameIP.size()) >= maxPlayersFromSameIp) {
+    if (m_IPFloodHandler == ON_IPFLOOD_NOTIFY) {
+      SendAllChat("Player [" + joinName + "] has the same IP address as: " + PlayersToNameListString(playersSameIP));
+    }
+    return false;
+  }
+  return true;
 }
 
 bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest)
@@ -3466,6 +3480,14 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   if (SID >= static_cast<uint8_t>(m_Slots.size())) {
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
+  }
+
+  if (m_IPFloodHandler == ON_IPFLOOD_DENY) {
+    if (!CheckIPFlood(joinRequest->GetName(), &(connection->GetSocket()->m_RemoteHost))) {
+      Print(GetLogPrefix() + "ipflood rejected from " + AddressToStringStrict(connection->GetSocket()->m_RemoteHost));
+      connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+      return false;
+    }
   }
 
   // we have a slot for the new player

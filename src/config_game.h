@@ -37,6 +37,10 @@
 #define ON_DESYNC_NOTIFY 1
 #define ON_DESYNC_DROP 2
 
+#define ON_IPFLOOD_NONE 0
+#define ON_IPFLOOD_NOTIFY 1
+#define ON_IPFLOOD_DENY 2
+
 //
 // CGameConfig
 //
@@ -46,6 +50,8 @@ class CGameConfig
 public:
   uint32_t                 m_VoteKickPercentage;         // percentage of players required to vote yes for a votekick to pass
   uint32_t                 m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
+  uint32_t                 m_MaxPlayersLoopback;
+  uint32_t                 m_MaxPlayersSameIP;
   uint32_t                 m_SyncLimit;                  // the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
   uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
   bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
@@ -70,6 +76,7 @@ public:
   std::set<std::string>    m_IgnoredNotifyJoinPlayers;
   std::set<std::string>    m_LoggedWords;
   uint8_t                  m_DesyncHandler;
+  uint8_t                  m_IPFloodHandler;
 
   bool                     m_UDPEnabled;
 
