@@ -206,8 +206,6 @@ bool CRealm::Update(void* fd, void* send_fd)
               // warning: we do not respond to NULL packets with a NULL packet of our own
               // this is because PVPGN servers are programmed to respond to NULL packets so it will create a vicious cycle of useless traffic
               // official battle.net servers do not respond to NULL packets
-
-              m_Protocol->RECEIVE_SID_NULL(Data);
               break;
 
             case CBNETProtocol::SID_GETADVLISTEX:
@@ -293,7 +291,7 @@ bool CRealm::Update(void* fd, void* send_fd)
                 }
 
                 SendAuth(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, "Aura"));
-                //SendAuth(m_Protocol->SEND_SID_NULL());
+                SendAuth(m_Protocol->SEND_SID_NULL());
                 SendNetworkConfig();
               } else {
                 if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
@@ -421,14 +419,16 @@ bool CRealm::Update(void* fd, void* send_fd)
 
     if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
       // Many PvPGN servers do not implement TCP Keep Alive. However, all PvPGN servers reply to BNET protocol null packets.
-      int64_t expectedNullsSent = 1 + (Time - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TIME) / 60;
-      if (expectedNullsSent > 5) {
+      int64_t expectedNullsSent = ((Time - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TIME) / REALM_APP_KEEPALIVE_INTERVAL) + 1;
+      if (expectedNullsSent > REALM_APP_KEEPALIVE_MAX_MISSED) {
         Print(GetLogPrefix() + "socket inactivity timeout");
         ResetConnection(false);
         return m_Exiting;
-      } else if (m_NullPacketsSent < expectedNullsSent) {
-        Send(m_Protocol->SEND_SID_NULL());
+      }
+      if (m_NullPacketsSent < expectedNullsSent) {
+        SendAuth(m_Protocol->SEND_SID_NULL());
         ++m_NullPacketsSent;
+        m_Socket->Flush();
       }
     }
 
