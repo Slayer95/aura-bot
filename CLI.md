@@ -10,7 +10,7 @@ Below is a detailed explanation of each flag and parameter along with usage exam
 
 # Positional arguments
 
-## `<MAP> <NAME>`
+## \`<MAP> <NAME>`
 Hosts a game with the given name, using a given map file.
 
 - `<MAP>`: The name or identifier of the map to be hosted.
@@ -19,7 +19,7 @@ Hosts a game with the given name, using a given map file.
 If ``MAP`` has no slashes, it's resolved relative to Aura's map dir by default.
 When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the current working directory (CWD).
 
-## `<CONFIG> <NAME>`
+## \`<CONFIG> <NAME>`
 Hosts a game with the given name, using a given map config/metadata file.
 
 - `<CONFIG>`: The configuration settings for the game.
@@ -103,7 +103,7 @@ Disabling UPnP may require manual configuration of port forwarding rules on the 
 which could be inconvenient for game hosts. Ensure that you can properly handle the 
 implications of using this flag.
 
-This option is equivalent to ``<net.port_forwarding.upnp.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<net.port_forwarding.upnp.enabled = no>`` in `config.ini`
 
 ## \`--lan\`
 
@@ -113,7 +113,7 @@ will be available to players on the same network, as well as players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
-This option is equivalent to ``<net.game_discovery.udp.enabled = yes>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.enabled = yes>`` in `config.ini`
 
 This flag is enabled by default.
 
@@ -125,48 +125,48 @@ will NOT be available to players on the same network, nor to players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
-This option is equivalent to ``<net.game_discovery.udp.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.enabled = no>`` in `config.ini`
 
 ## \`--bnet\`
 
-Sets all Battle.net/PvPGN realms registered in \`config.ini\` to enabled. This flag overrides 
+Sets all Battle.net/PvPGN realms registered in `config.ini` to enabled. This flag overrides 
 any ``realm_N.enabled = no`` entries in the configuration file. This forces hosted games 
 to be playable over the internet through Blizzard's Battle.net platform, as well as 
 through alternative PvPGN servers.
 
-This option is equivalent to ``<bot.toggle_every_realm = yes>`` in \`config.ini\`
+This option is equivalent to ``<bot.toggle_every_realm = yes>`` in `config.ini`
 
 ## \`--no-bnet\`
 
-Sets all Battle.net/PvPGN realms registered in \`config.ini\` to disabled. This prevents Aura from 
+Sets all Battle.net/PvPGN realms registered in `config.ini` to disabled. This prevents Aura from 
 connecting to them. If this flag is enabled, games cannot be played over the internet through 
 Blizzard's Battle.net platform, nor through alternative PvPGN servers.
 
-This option is equivalent to ``<bot.toggle_every_realm = no>`` in \`config.ini\`
+This option is equivalent to ``<bot.toggle_every_realm = no>`` in `config.ini`
 
 ## \`--irc\`
 
 When enabled, this flag instructs Aura to connect to the configured IRC server.
 
-This option is equivalent to ``<irc.enabled = yes>`` in \`config.ini\`
+This option is equivalent to ``<irc.enabled = yes>`` in `config.ini`
 
 ## \`--no-irc\`
 
 When enabled, this flag instructs Aura not to connect to IRC.
 
-This option is equivalent to ``<irc.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<irc.enabled = no>`` in `config.ini`
 
 ## \`--discord\`
 
 When enabled, this flag instructs Aura to connect to Discord using the defined configuration.
 
-This option is equivalent to ``<discord.enabled = yes>`` in \`config.ini\`
+This option is equivalent to ``<discord.enabled = yes>`` in `config.ini`
 
 ## \`--no-discord\`
 
 When enabled, this flag instructs Aura not to connect to Discord.
 
-This option is equivalent to ``<discord.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<discord.enabled = no>`` in `config.ini`
 
 ## \`--exit\`
 
@@ -193,7 +193,7 @@ Disables caching of map metadata. When caching is disabled, game data is not sto
 each session may experience longer loading times as a result. This option is enabled by default 
 when hosting games from the CLI.
 
-## `--extract-jass`
+## \`--extract-jass\`
 
 When you use this flag, Aura will automatically extract necessary files from your game 
 installation. These files are crucial for hosting games directly from game map files. Aura 
@@ -204,7 +204,7 @@ does all the work for you, making sure everything is set up correctly behind the
 - **Saves Time**: No need to spend extra time finding and extracting files yourself.
 - **Ensures Compatibility**: Extracting the necessary files ensures compatibility with a wide range of game versions.
 
-## `--no-extract-jass`
+## \`--no-extract-jass\`
 
 By using this flag, you're indicating that you prefer to handle the extraction of necessary files 
 manually. Although Aura won't do it for you automatically, you still have the flexibility 
@@ -222,7 +222,7 @@ files (``.cfg``). These flags simply determine how files necessary for hosting f
 
 # Parameters
 
-## `--homedir <DIRECTORY>`
+## \`--homedir <DIRECTORY>\`
 
 Specifies the directory to be used as Aura's home directory. Paths in the config file are resolved relative to the home directory.
 
@@ -230,7 +230,7 @@ Specifies the directory to be used as Aura's home directory. Paths in the config
 - If `--homedir` is not provided, the environment variable `AURA_HOME` is used to determine the home directory.
 - If neither `--homedir` nor the `AURA_HOME` environment variable are set, the home directory defaults to the directory where Aura's executable is located.
 
-## `--config <FILE>`
+## \`--config <FILE>\`
 
 Specifies the location of Aura's main configuration file.
 
@@ -242,26 +242,26 @@ Specifies the location of Aura's main configuration file.
 
 Defaults to ``config.ini`` in the home dir.
 
-## \`--w3version <NUMBER>\`
+## \`--w3version <NUMBER>\\`
 
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
 compatibility. This parameter allows Aura to switch versions on the spot.
 
-This option is equivalent to ``<game.version>`` in \`config.ini\`
+This option is equivalent to ``<game.version>`` in `config.ini`
 
 ## \`--w3dir <DIRECTORY>\` 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows Aura 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
 
-This option is equivalent to ``<game.install_path>`` in \`config.ini\`
+This option is equivalent to ``<game.install_path>`` in `config.ini`
 
 ## \`--mapdir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 maps are stored. This parameter allows Aura to locate  
 and load maps for hosting games.
 
-This option is equivalent to ``<bot.maps_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.maps_path>`` in `config.ini`
 
 ## \`--cfgdir <DIRECTORY>\`
 
@@ -274,7 +274,7 @@ This option enables users to specify a custom directory for Aura to locate exist
 metadata. It's particularly useful for organizing and accessing map configurations 
 separately from other application data.
 
-This option is equivalent to ``<bot.map_configs_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.map_configs_path>`` in `config.ini`
 
 ## \`--cachedir <DIRECTORY>\`
 
@@ -285,20 +285,20 @@ files, but are generated by the application to optimize performance.
 Separating cache files from user-created files allows for better organization and 
 maintenance of map metadata.
 
-This option is equivalent to ``<bot.map_cache_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.map_cache_path>`` in `config.ini`
 
 ## \`--jassdir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 script files are stored. These files are needed in order 
 to host games from map files (``.w3x``, ``.w3m``).
 
-This option is equivalent to ``<bot.jass_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.jass_path>`` in `config.ini`
 
 ## \`--savedir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 save files (``.w3z``) are stored.
 
-This option is equivalent to ``<bot.save_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.save_path>`` in `config.ini`
 
 ## \`--bind-address <IPv4>\`
 
@@ -308,7 +308,7 @@ Note that \`0.0.0.0\` is a special value that will allow connections from every 
 The most interesting value is \`127.0.0.1\`, which will only allow connections from your 
 [loopback interface][4] (i.e. connections only from the local machine where the server is running.)
 
-This option is equivalent to ``<net.bind_address>`` in \`config.ini\`
+This option is equivalent to ``<net.bind_address>`` in `config.ini`
 
 ## \`--lan-mode <MODE>\`
 
@@ -320,20 +320,20 @@ Specifies how hosted games available for "Local Area Network" should be made kno
 tiny periodic messages over the network that prompts open Warcraft III clients to request further 
 information. Once Aura provides them with that information, game clients may join your hosted game.
 
-This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = yes>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = yes>`` in `config.ini`
 
 - lax: Aura periodically sends the full information needed to join a hosted game to all machines in the 
 same network. Additionally, it will reply to the information request that happens when a game client first 
 opens the "Local Area Network" menu.
 
-This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = no>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = no>`` in `config.ini`
 
 - free: Aura periodically sends the full information needed to join a hosted game to all machines in the 
 same network. It will not reply to any information requests, nor process any UDP traffic. Port 6112 is not 
 used by Aura's UDP server. This is the only UDP mode that allows a Warcraft III game client in the host 
 machine to connect to the Local Area Network.
 
-This option is equivalent to ``<net.udp_server.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<net.udp_server.enabled = no>`` in `config.ini`
 
 ## \`--log-level <LEVEL>\`
 
@@ -476,7 +476,7 @@ the input when hosting maps from the CLI, whether they are maps, configuration f
 ## \`--exclude <SERVER>\`
 
 This makes hosted games invisible in the specified server. The server is to be specified through their 
-unique `Input ID`, which corresponds to ``realm_N.input_id`` in \`config.ini\`. Note that this value may be 
+unique `Input ID`, which corresponds to ``realm_N.input_id`` in `config.ini`. Note that this value may be 
 missing, and thus defaults to ``realm_N.unique_name`` (which itself defaults to \`realm_N.host_name\`).
 
 ## \`--alias <ALIAS>\`
@@ -521,22 +521,22 @@ to players and observers.
 This parameter specifies the owner of the hosted game. The owner is typically the user who has 
 administrative control over the game session. Here's the format for specifying the owner:
 
-- <USER>: The username of the owner.
-- <SERVER>: The server the user is registered in.
+- USER: The username of the owner.
+- SERVER: The server the user is registered in.
 
 ## \`--lobby-timeout <TIME>\`
 
 This parameter specifies the maximum time a game lobby is allowed to be unattended, that is,
 without a game owner. After this time passes, the lobby is unhosted.
 
-- <TIME>: Provided in seconds.
+- TIME: Provided in seconds.
 
 ## \`--download-timeout <TIME>\`
 
 This parameter specifies the maximum time a map download is allowed to take. Once this time is
 exceeded, the map download and game hosting are cancelled.
 
-- <TIME>: Provided in seconds.
+- TIME: Provided in seconds.
 
 ## \`--auto-start-players <COUNT>\`
 
@@ -602,15 +602,15 @@ a collaborative and informed environment during the game session.
 This parameter allows the execution of a specific command after the bot start up, and the CLI game (if any) 
 has been created. Here's how it works:
 
-- <COMMAND>: The command to be executed. The command token is not to be included (e.g. ! or .)
+- COMMAND: The command to be executed. The command token is not to be included (e.g. ! or .)
 
 ## \`--exec-as <USER@SERVER>\`
 
 This parameter specifies the user and server on which the command specified by --exec should be executed. 
 It allows the execution of commands as a specific user on a particular server. Here's the format:
 
-- <USER>: The username to whom the command is attributed.
-- <SERVER>: The server the user is registered in.
+- USER: The username to whom the command is attributed.
+- SERVER: The server the user is registered in.
 
 ## \`--exec-auth <AUTH>\`
 
