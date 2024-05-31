@@ -10,20 +10,20 @@ Below is a detailed explanation of each flag and parameter along with usage exam
 
 # Positional arguments
 
-## `\<MAP> \<NAME>`
+## `<MAP> <NAME>`
 Hosts a game with the given name, using a given map file.
 
-- `\<MAP>`: The name or identifier of the map to be hosted.
-- `\<NAME>`: The desired name for the hosted game session.
+- `<MAP>`: The name or identifier of the map to be hosted.
+- `<NAME>`: The desired name for the hosted game session.
 
 If ``MAP`` has no slashes, it's resolved relative to Aura's map dir by default.
 When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the current working directory (CWD).
 
-## `\<CONFIG> \<NAME>`
+## `<CONFIG> <NAME>`
 Hosts a game with the given name, using a given map config/metadata file.
 
-- `\<CONFIG>`: The configuration settings for the game.
-- `\<NAME>`: The desired name for the hosted game session.
+- `<CONFIG>`: The configuration settings for the game.
+- `<NAME>`: The desired name for the hosted game session.
 
 If ``CONFIG`` has no slashes, it's resolved relative to Aura's map config dir by default.
 When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the current working directory (CWD).
@@ -52,7 +52,7 @@ disabling fuzzy-matching. However, it's important to note that this flag removes
 [arbitrary directory traversal][3]. Therefore, it should only be used for paths that have been thoroughly validated.
 
 Additionally, the following CLI flags are affected by ``--stdpaths``:
-- ``--config \<FILE>``. When stdpaths is disabled and FILE has no slashes, it resolves relative to Aura's home dir.
+- ``--config <FILE>``. When stdpaths is disabled and FILE has no slashes, it resolves relative to Aura's home dir.
 
 This option is commutative.
 
@@ -103,7 +103,7 @@ Disabling UPnP may require manual configuration of port forwarding rules on the 
 which could be inconvenient for game hosts. Ensure that you can properly handle the 
 implications of using this flag.
 
-This option is equivalent to ``\<net.port_forwarding.upnp.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<net.port_forwarding.upnp.enabled = no>`` in \`config.ini\`
 
 ## \`--lan\`
 
@@ -113,7 +113,7 @@ will be available to players on the same network, as well as players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
-This option is equivalent to ``\<net.game_discovery.udp.enabled = yes>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.enabled = yes>`` in \`config.ini\`
 
 This flag is enabled by default.
 
@@ -125,7 +125,7 @@ will NOT be available to players on the same network, nor to players
 sharing the same VPNs or the IPv6 TCP tunneling mechanism. 
 See [NETWORKING.md][2] for more information.
 
-This option is equivalent to ``\<net.game_discovery.udp.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.enabled = no>`` in \`config.ini\`
 
 ## \`--bnet\`
 
@@ -134,7 +134,7 @@ any ``realm_N.enabled = no`` entries in the configuration file. This forces host
 to be playable over the internet through Blizzard's Battle.net platform, as well as 
 through alternative PvPGN servers.
 
-This option is equivalent to ``\<bot.toggle_every_realm = yes>`` in \`config.ini\`
+This option is equivalent to ``<bot.toggle_every_realm = yes>`` in \`config.ini\`
 
 ## \`--no-bnet\`
 
@@ -142,31 +142,31 @@ Sets all Battle.net/PvPGN realms registered in \`config.ini\` to disabled. This 
 connecting to them. If this flag is enabled, games cannot be played over the internet through 
 Blizzard's Battle.net platform, nor through alternative PvPGN servers.
 
-This option is equivalent to ``\<bot.toggle_every_realm = no>`` in \`config.ini\`
+This option is equivalent to ``<bot.toggle_every_realm = no>`` in \`config.ini\`
 
 ## \`--irc\`
 
 When enabled, this flag instructs Aura to connect to the configured IRC server.
 
-This option is equivalent to ``\<irc.enabled = yes>`` in \`config.ini\`
+This option is equivalent to ``<irc.enabled = yes>`` in \`config.ini\`
 
 ## \`--no-irc\`
 
 When enabled, this flag instructs Aura not to connect to IRC.
 
-This option is equivalent to ``\<irc.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<irc.enabled = no>`` in \`config.ini\`
 
 ## \`--discord\`
 
 When enabled, this flag instructs Aura to connect to Discord using the defined configuration.
 
-This option is equivalent to ``\<discord.enabled = yes>`` in \`config.ini\`
+This option is equivalent to ``<discord.enabled = yes>`` in \`config.ini\`
 
 ## \`--no-discord\`
 
 When enabled, this flag instructs Aura not to connect to Discord.
 
-This option is equivalent to ``\<discord.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<discord.enabled = no>`` in \`config.ini\`
 
 ## \`--exit\`
 
@@ -222,7 +222,7 @@ files (``.cfg``). These flags simply determine how files necessary for hosting f
 
 # Parameters
 
-## `--homedir \<DIRECTORY>`
+## `--homedir <DIRECTORY>`
 
 Specifies the directory to be used as Aura's home directory. Paths in the config file are resolved relative to the home directory.
 
@@ -230,40 +230,40 @@ Specifies the directory to be used as Aura's home directory. Paths in the config
 - If `--homedir` is not provided, the environment variable `AURA_HOME` is used to determine the home directory.
 - If neither `--homedir` nor the `AURA_HOME` environment variable are set, the home directory defaults to the directory where Aura's executable is located.
 
-## `--config \<FILE>`
+## `--config <FILE>`
 
 Specifies the location of Aura's main configuration file.
 
-- If `\<FILE>` does not contain any slashes, it is resolved relative to the home directory by default, unless overridden by the `--stdpaths` flag.
-- The presence of any slashes causes `\<FILE>` to be resolved relative to the current working directory (CWD).
-- When using `--config`, if the configuration file is not located within the home directory, the bot may only start up if the configuration file includes the entry `\<bot.home_path.allow_mismatch = yes>`.
+- If `<FILE>` does not contain any slashes, it is resolved relative to the home directory by default, unless overridden by the `--stdpaths` flag.
+- The presence of any slashes causes `<FILE>` to be resolved relative to the current working directory (CWD).
+- When using `--config`, if the configuration file is not located within the home directory, the bot may only start up if the configuration file includes the entry `<bot.home_path.allow_mismatch = yes>`.
 
 **Note**: Paths in any configuration file are resolved relative to Aura's home directory.
 
 Defaults to ``config.ini`` in the home dir.
 
-## \`--w3version \<NUMBER>\`
+## \`--w3version <NUMBER>\`
 
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
 compatibility. This parameter allows Aura to switch versions on the spot.
 
-This option is equivalent to ``\<game.version>`` in \`config.ini\`
+This option is equivalent to ``<game.version>`` in \`config.ini\`
 
-## \`--w3dir \<DIRECTORY>\` 
+## \`--w3dir <DIRECTORY>\` 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows Aura 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
 
-This option is equivalent to ``\<game.install_path>`` in \`config.ini\`
+This option is equivalent to ``<game.install_path>`` in \`config.ini\`
 
-## \`--mapdir \<DIRECTORY>\`
+## \`--mapdir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 maps are stored. This parameter allows Aura to locate  
 and load maps for hosting games.
 
-This option is equivalent to ``\<bot.maps_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.maps_path>`` in \`config.ini\`
 
-## \`--cfgdir \<DIRECTORY>\`
+## \`--cfgdir <DIRECTORY>\`
 
 Specifies the directory path where Aura reads metadata files for Warcraft 3 maps. 
 These metadata files, also known as "map config" files or mapcfg, are essential 
@@ -274,9 +274,9 @@ This option enables users to specify a custom directory for Aura to locate exist
 metadata. It's particularly useful for organizing and accessing map configurations 
 separately from other application data.
 
-This option is equivalent to ``\<bot.map_configs_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.map_configs_path>`` in \`config.ini\`
 
-## \`--cachedir \<DIRECTORY>\`
+## \`--cachedir <DIRECTORY>\`
 
 Specifies the directory path where Aura automatically generates and stores cache files 
 for Warcraft 3 maps. These cache files serve the same purpose as user-created metadata 
@@ -285,22 +285,22 @@ files, but are generated by the application to optimize performance.
 Separating cache files from user-created files allows for better organization and 
 maintenance of map metadata.
 
-This option is equivalent to ``\<bot.map_cache_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.map_cache_path>`` in \`config.ini\`
 
-## \`--jassdir \<DIRECTORY>\`
+## \`--jassdir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 script files are stored. These files are needed in order 
 to host games from map files (``.w3x``, ``.w3m``).
 
-This option is equivalent to ``\<bot.jass_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.jass_path>`` in \`config.ini\`
 
-## \`--savedir \<DIRECTORY>\`
+## \`--savedir <DIRECTORY>\`
 
 Specifies the directory where Warcraft 3 save files (``.w3z``) are stored.
 
-This option is equivalent to ``\<bot.save_path>`` in \`config.ini\`
+This option is equivalent to ``<bot.save_path>`` in \`config.ini\`
 
-## \`--bind-address \<IPv4>\`
+## \`--bind-address <IPv4>\`
 
 If specified, Aura's game server will only allow connections from the provided IPv4 address.
 Note that \`0.0.0.0\` is a special value that will allow connections from every IPv4 address.
@@ -308,9 +308,9 @@ Note that \`0.0.0.0\` is a special value that will allow connections from every 
 The most interesting value is \`127.0.0.1\`, which will only allow connections from your 
 [loopback interface][4] (i.e. connections only from the local machine where the server is running.)
 
-This option is equivalent to ``\<net.bind_address>`` in \`config.ini\`
+This option is equivalent to ``<net.bind_address>`` in \`config.ini\`
 
-## \`--lan-mode \<MODE>\`
+## \`--lan-mode <MODE>\`
 
 Specifies how hosted games available for "Local Area Network" should be made known to potential players.
 
@@ -320,22 +320,22 @@ Specifies how hosted games available for "Local Area Network" should be made kno
 tiny periodic messages over the network that prompts open Warcraft III clients to request further 
 information. Once Aura provides them with that information, game clients may join your hosted game.
 
-This option is equivalent to ``\<net.game_discovery.udp.broadcast.strict = yes>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = yes>`` in \`config.ini\`
 
 - lax: Aura periodically sends the full information needed to join a hosted game to all machines in the 
 same network. Additionally, it will reply to the information request that happens when a game client first 
 opens the "Local Area Network" menu.
 
-This option is equivalent to ``\<net.game_discovery.udp.broadcast.strict = no>`` in \`config.ini\`
+This option is equivalent to ``<net.game_discovery.udp.broadcast.strict = no>`` in \`config.ini\`
 
 - free: Aura periodically sends the full information needed to join a hosted game to all machines in the 
 same network. It will not reply to any information requests, nor process any UDP traffic. Port 6112 is not 
 used by Aura's UDP server. This is the only UDP mode that allows a Warcraft III game client in the host 
 machine to connect to the Local Area Network.
 
-This option is equivalent to ``\<net.udp_server.enabled = no>`` in \`config.ini\`
+This option is equivalent to ``<net.udp_server.enabled = no>`` in \`config.ini\`
 
-## \`--log-level \<LEVEL>\`
+## \`--log-level <LEVEL>\`
 
 Specifies the level of detail for logging output.
 
@@ -351,20 +351,20 @@ Values:
 
 By default, the logging level is set to info.
 
-## \`--port-forward-tcp \<PORT>\`, \`--port-forward-udp \<PORT>\`
+## \`--port-forward-tcp <PORT>\`, \`--port-forward-udp <PORT>\`
 
-The --port-forward-tcp \<PORT> and --port-forward-udp \<PORT> flags are used to trigger 
+The --port-forward-tcp <PORT> and --port-forward-udp <PORT> flags are used to trigger 
 Universal Plug and Play (UPnP) requests from the command line interface (CLI) for TCP and UDP 
 port forwarding, respectively. These flags facilitate the hosting and discovery of multiplayer games 
 by allowing incoming connections on specific ports.
 
   TCP (Transmission Control Protocol):
-      The --port-forward-tcp \<PORT> flag initiates UPnP requests to forward TCP traffic on the specified port.
+      The --port-forward-tcp <PORT> flag initiates UPnP requests to forward TCP traffic on the specified port.
       TCP is used for establishing connections between the game server and multiple clients for multiplayer gameplay.
       Enabling TCP port forwarding ensures that incoming TCP connections can reach the game server, allowing players to join multiplayer games seamlessly.
 
   UDP (User Datagram Protocol):
-      The --port-forward-udp \<PORT> flag initiates UPnP requests to forward UDP traffic on the specified port.
+      The --port-forward-udp <PORT> flag initiates UPnP requests to forward UDP traffic on the specified port.
       UDP is utilized for server and client communication to discover hosted games and exchange game data efficiently.
       Enabling UDP port forwarding ensures that UDP packets related to game discovery and communication can reach the game server and clients.
 
@@ -461,7 +461,7 @@ This flag is disabled by default.
 
 # Parameters for CLI games
 
-## \`-s \<TYPE>, --search-type \<TYPE>\`
+## \`-s <TYPE>, --search-type <TYPE>\`
 
 Specifies the type of hostable being referenced. This parameter helps Aura determine how to resolve 
 the input when hosting maps from the CLI, whether they are maps, configuration files, or remote resources.
@@ -473,18 +473,18 @@ the input when hosting maps from the CLI, whether they are maps, configuration f
 - local: Indicates that both maps and config files are allowed, but only in the local machine.
 - any: Indicates that the specified file may be found in the cloud.
 
-## \`--exclude \<SERVER>\`
+## \`--exclude <SERVER>\`
 
 This makes hosted games invisible in the specified server. The server is to be specified through their 
 unique `Input ID`, which corresponds to ``realm_N.input_id`` in \`config.ini\`. Note that this value may be 
 missing, and thus defaults to ``realm_N.unique_name`` (which itself defaults to \`realm_N.host_name\`).
 
-## \`--alias \<ALIAS>\`
+## \`--alias <ALIAS>\`
 
 This option lets Aura automatically register an alias for the map hosted. Aliases are case-insensitive, and 
 normalized according to the rules listed in \`aliases.ini\`.
 
-## \`--mirror \<IP:PORT#ID>\`
+## \`--mirror <IP:PORT#ID>\`
 
 This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 
 instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms. The actual host is identified 
@@ -492,7 +492,7 @@ by their IPv4 address and PORT. The game ID, also known as "host counter", must 
 
 Aura will remain in game mirroring mode until the process finishes.
 
-## \`--observers \<OBSERVER>\`
+## \`--observers <OBSERVER>\`
 
 This parameter sets the observer mode for the hosted game. Observer mode determines how spectators are 
 allowed to observe the game.
@@ -504,7 +504,7 @@ allowed to observe the game.
 - referees: Allows spectators to observe the game, and communicate with the players, either in public chat, or private chat.
 - observers on defeat: Players that lose the game are allowed to remain in the game, as spectators.
 
-## \`--visibility \<VISIBILITY>\`
+## \`--visibility <VISIBILITY>\`
 
 This parameter sets the visibility mode for the hosted game, determining how much of the map is visible 
 to players and observers.
@@ -516,41 +516,41 @@ to players and observers.
 - map explored: Reveals the entire map to players, allowing them to see all terrain but not enemy units or structures unless they have vision of them.
 - always visible: Grants players and observers full visibility of the entire map, including enemy units and structures, without the need for vision.
 
-## \`--owner \<USER@SERVER>\`
+## \`--owner <USER@SERVER>\`
 
 This parameter specifies the owner of the hosted game. The owner is typically the user who has 
 administrative control over the game session. Here's the format for specifying the owner:
 
-- \<USER>: The username of the owner.
-- \<SERVER>: The server the user is registered in.
+- <USER>: The username of the owner.
+- <SERVER>: The server the user is registered in.
 
-## \`--lobby-timeout \<TIME>\`
+## \`--lobby-timeout <TIME>\`
 
 This parameter specifies the maximum time a game lobby is allowed to be unattended, that is,
 without a game owner. After this time passes, the lobby is unhosted.
 
-- \<TIME>: Provided in seconds.
+- <TIME>: Provided in seconds.
 
-## \`--download-timeout \<TIME>\`
+## \`--download-timeout <TIME>\`
 
 This parameter specifies the maximum time a map download is allowed to take. Once this time is
 exceeded, the map download and game hosting are cancelled.
 
-- \<TIME>: Provided in seconds.
+- <TIME>: Provided in seconds.
 
-## \`--auto-start-players \<COUNT>\`
+## \`--auto-start-players <COUNT>\`
 
 This parameter specifies that the game may automatically start when the provided ``COUNT`` of slots 
 have been occupied in the game. This includes computer slots, virtual player slots, and actual players that 
 have downloaded the map.
 
-## \`--auto-start-min-time \<SECONDS>\`
+## \`--auto-start-min-time <SECONDS>\`
 
 Together with \`--auto-start-players\`, this parameter specifies that, even if the required ``PLAYERS`` 
 count is reached, the game will not automatically start until the provided ``SECONDS`` have passed since 
 the game was created.
 
-## \`--auto-start-max-time \<SECONDS>\`
+## \`--auto-start-max-time <SECONDS>\`
 
 This parameter specifies that, independently of \`--auto-start-players\`, the game will automatically start 
 as soon as ``SECONDS`` have passed since the game was created.
@@ -563,18 +563,18 @@ For instance, ``--hcl ap`` sets 'All Pick' mode in DotA games.
 This flag should never be used for maps that aren't known to support HCL. Otherwise, it will corrupt 
 player handicaps.
 
-## \`--load \<FILE>\`
+## \`--load <FILE>\`
 
 Specifies the location of a saved game a game lobby will resume.
 
-- If `\<FILE>` does not contain any slashes, it is resolved relative to the saved games directory by default, unless overridden by the `--stdpaths` flag.
-- The presence of any slashes causes `\<FILE>` to be resolved relative to the current working directory (CWD).
+- If `<FILE>` does not contain any slashes, it is resolved relative to the saved games directory by default, unless overridden by the `--stdpaths` flag.
+- The presence of any slashes causes `<FILE>` to be resolved relative to the current working directory (CWD).
 
-## \`--reserve \<PLAYER>\`
+## \`--reserve <PLAYER>\`
 
 Makes a reservation for a player to join the game lobby. This is required for loaded games to properly work.
 
-## \`--on-ipflood \<ACTION>\`
+## \`--on-ipflood <ACTION>\`
 
 This parameter customizes behavior when an excessive amount of players join the game from the same IP address.
 
@@ -597,22 +597,22 @@ a collaborative and informed environment during the game session.
 
 # Parameters for CLI commands
 
-## \`--exec \<COMMAND>\`
+## \`--exec <COMMAND>\`
 
 This parameter allows the execution of a specific command after the bot start up, and the CLI game (if any) 
 has been created. Here's how it works:
 
-- \<COMMAND>: The command to be executed. The command token is not to be included (e.g. ! or .)
+- <COMMAND>: The command to be executed. The command token is not to be included (e.g. ! or .)
 
-## \`--exec-as \<USER@SERVER>\`
+## \`--exec-as <USER@SERVER>\`
 
 This parameter specifies the user and server on which the command specified by --exec should be executed. 
 It allows the execution of commands as a specific user on a particular server. Here's the format:
 
-- \<USER>: The username to whom the command is attributed.
-- \<SERVER>: The server the user is registered in.
+- <USER>: The username to whom the command is attributed.
+- <SERVER>: The server the user is registered in.
 
-## \`--exec-auth \<AUTH>\`
+## \`--exec-auth <AUTH>\`
 
 This parameter sets the authentication mode for executing commands specified by --exec.
 
@@ -624,7 +624,7 @@ This parameter sets the authentication mode for executing commands specified by 
 - rootadmin: Treats the user as a root admin of their server.
 - sudo: Treats the user as a bot sudoer. These are the highest privileges.
 
-## \`--exec-scope \<SCOPE>\`
+## \`--exec-scope <SCOPE>\`
 
 This parameter determines where the command specified by --exec will be run.
 
@@ -633,7 +633,7 @@ This parameter determines where the command specified by --exec will be run.
 - none: The command runs without any specific scope. This is the default behavior.
 - lobby: The command runs in the currently hosted game lobby.
 - server: The command runs in the user's realm or server.
-- game#\<GAME>: The command runs in the game with the specified ID.
+- game#<GAME>: The command runs in the game with the specified ID.
 
 Choose the appropriate scope based on where you want the command to be executed.
 
