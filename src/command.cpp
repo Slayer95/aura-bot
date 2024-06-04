@@ -5878,9 +5878,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
-    case HashCode("v"):
+    case HashCode("v"): {
       SendReply("v" + cmdToken);
       break;
+    }
+
+    case HashCode("ready"): {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+        return;
+
+      SendReply("You are always assumed to be ready. Please don't go AFK.");
+      break;
+    }
 
     default: {
       bool hasLetter = false;
