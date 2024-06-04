@@ -2709,7 +2709,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("drop"): {
-      if (!m_TargetGame || m_TargetGame->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
       if (!m_TargetGame->GetLagging()) {
