@@ -389,6 +389,46 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t PID, const stri
   return packet;
 }
 
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t PID, const string& name)
+{
+  if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
+    Print("[GAMEPROTO] Invalid player name");
+    return std::vector<uint8_t>();
+  }
+
+  std::vector<uint8_t> packet;
+
+  const uint8_t PlayerJoinCounter[] = {2, 0, 0, 0};
+  const uint8_t Zeros[]             = {0, 0, 0, 0};
+
+  packet.push_back(W3GS_HEADER_CONSTANT);        // W3GS header constant
+  packet.push_back(W3GS_PLAYERINFO);             // W3GS_PLAYERINFO
+  packet.push_back(0);                           // packet length will be assigned later
+  packet.push_back(0);                           // packet length will be assigned later
+  AppendByteArray(packet, PlayerJoinCounter, 4); // player join counter
+  packet.push_back(PID);                         // PID
+  AppendByteArrayFast(packet, name);             // player name
+  packet.push_back(1);                           // ???
+  packet.push_back(0);                           // ???
+  packet.push_back(2);                           // AF_INET
+  packet.push_back(0);                           // AF_INET continued...
+  packet.push_back(0);                           // port
+  packet.push_back(0);                           // port continued...
+  AppendByteArray(packet, Zeros, 4);	         // external IP hidden
+  AppendByteArray(packet, Zeros, 4);             // ???
+  AppendByteArray(packet, Zeros, 4);             // ???
+  packet.push_back(2);                           // AF_INET
+  packet.push_back(0);                           // AF_INET continued...
+  packet.push_back(0);                           // port
+  packet.push_back(0);                           // port continued...
+  AppendByteArray(packet, Zeros, 4);	         // internal IP hidden
+  AppendByteArray(packet, Zeros, 4);             // ???
+  AppendByteArray(packet, Zeros, 4);             // ???
+  AssignLength(packet);
+
+  return packet;
+}
+
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t PID, uint32_t leftCode)
 {
   if (PID != 255)

@@ -168,6 +168,7 @@ public:
   std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t PID, const std::vector<uint8_t>& port, const std::vector<uint8_t>& externalIP, const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   std::vector<uint8_t> SEND_W3GS_REJECTJOIN(uint32_t reason);
   std::vector<uint8_t> SEND_W3GS_PLAYERINFO(uint8_t PID, const std::string& name, const std::vector<uint8_t>& externalIP, const std::vector<uint8_t>& internalIP);
+  std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t PID, const std::string& name);
   std::vector<uint8_t> SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t PID, uint32_t leftCode);
   std::vector<uint8_t> SEND_W3GS_GAMELOADED_OTHERS(uint8_t PID);
   std::vector<uint8_t> SEND_W3GS_SLOTINFO(std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
