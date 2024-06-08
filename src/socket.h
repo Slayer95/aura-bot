@@ -330,6 +330,21 @@ inline uint16_t GetAddressPort(const sockaddr_storage* address)
   }
 }
 
+inline bool GetSameAddresses(const sockaddr_storage* reference, const sockaddr_storage* subject)
+{
+  if (isLoopbackAddress(reference) && isLoopbackAddress(subject)) {
+    return true;
+  }
+	if (reference->ss_family != subject->ss_family) {
+		return false;
+	}
+  if (subject->ss_family == AF_INET6) {
+    return memcmp(&(reinterpret_cast<const sockaddr_in6*>(reference)->sin6_addr), &(reinterpret_cast<const sockaddr_in6*>(subject)->sin6_addr), sizeof(sockaddr_in6)) == 0;
+  } else {
+    return memcmp(&(reinterpret_cast<const sockaddr_in*>(reference)->sin_addr), &(reinterpret_cast<const sockaddr_in*>(subject)->sin_addr), sizeof(sockaddr_in)) == 0;
+  }
+}
+
 inline std::vector<uint8_t> AddressToIPv4Vector(const sockaddr_storage* address) {
   if (address->ss_family == AF_INET) {
     std::vector<uint8_t> ipBytes(4);

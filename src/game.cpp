@@ -3295,7 +3295,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
     if (joinName == otherPlayer->GetName()) {
       continue;
     }
-    if (memcmp(&(otherPlayer->GetSocket()->m_RemoteHost), sourceAddress, sizeof(sockaddr_storage)) == 0) {
+    if (GetSameAddresses(sourceAddress, &(otherPlayer->GetSocket()->m_RemoteHost))) {
       playersSameIP.push_back(otherPlayer);
     }
   }
@@ -4220,7 +4220,7 @@ void CGame::EventGameLoaded()
   const CGamePlayer* Shortest = nullptr;
   const CGamePlayer* Longest  = nullptr;
 
-  uint8_t majorityThreshold = m_Players.size() / 2;
+  uint8_t majorityThreshold = static_cast<uint8_t>(m_Players.size() / 2);
   vector<CGamePlayer*> DesyncedPlayers;
   for (const auto& player : m_Players) {
     if (!Shortest || player->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks())
@@ -5942,7 +5942,7 @@ void CGame::StopLaggers(const string& reason)
 
 void CGame::StopDesynchronized(const string& reason)
 {
-  uint8_t majorityThreshold = m_Players.size() / 2;
+  uint8_t majorityThreshold = static_cast<uint8_t>(m_Players.size() / 2);
   for (auto& player : m_Players) {
     if (m_SyncPlayers[player].size() < majorityThreshold) {
       player->SetDeleteMe(true);
