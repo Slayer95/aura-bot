@@ -134,7 +134,7 @@ bool CConfig::Read(const filesystem::path& file)
     }
 
     // ignore blank lines and comments
-    if (RawLine.empty() || RawLine[0] == '#' || RawLine == "\n") {
+    if (RawLine.empty() || RawLine[0] == '#' || RawLine[0] == ';' || RawLine == "\n") {
       continue;
     }
 
@@ -979,7 +979,7 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
     }
 
     // ignore blank lines and comments
-    if (RawLine.empty() || RawLine[0] == '#' || RawLine == "\n")
+    if (RawLine.empty() || RawLine[0] == '#' || RawLine[0] == ';' || RawLine == "\n") {
       continue;
 
     // remove CR
