@@ -77,7 +77,7 @@ rate-limited to 1 GB / month.
 Open your console at the location where Packetriot has been downloaded, and run.
 
 ```
-pktriot configured
+pktriot configure
 ```
 
 Follow the onscreen instructions to setup your Packetriot client. This is requiered to 
