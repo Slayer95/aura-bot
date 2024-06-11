@@ -80,7 +80,7 @@ Open your console at the location where Packetriot has been downloaded, and run.
 pktriot configure
 ```
 
-Follow the onscreen instructions to setup your Packetriot client. This is requiered to 
+Follow the onscreen instructions to setup your Packetriot client. This is required to 
 link it to your account, and choosing an appropriate low-latency region. Once that's done, 
 type on the console (line-by-line).
 
