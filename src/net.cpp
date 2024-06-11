@@ -490,6 +490,7 @@ bool CNet::SendBroadcast(const vector<uint8_t>& packet)
   bool mainSuccess = false;
   if (m_UDPMainServerEnabled) {
     if (m_UDPMainServer->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
+    if (m_Config->m_ProxyReconnect) m_UDPMainServer->Broadcast(m_ProxyBroadcastTarget, packet);
   } else {
     if (m_UDPDeafSocket->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
     if (m_Config->m_ProxyReconnect) m_UDPDeafSocket->Broadcast(m_ProxyBroadcastTarget, packet);
