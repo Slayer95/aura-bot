@@ -515,7 +515,7 @@ public:
 
   bool                        SendTo(const sockaddr_storage* address, const std::vector<uint8_t>& message);
   bool                        SendTo(const std::string& addressLiteral, uint16_t port, const std::vector<uint8_t>& message);
-  bool                        Broadcast(const sockaddr_storage* addr4, const sockaddr_storage* addr6, const std::vector<uint8_t>& message);
+  bool                        Broadcast(const sockaddr_storage* addr4, const std::vector<uint8_t>& message);
 
   void                        Reset();
   void                        SetBroadcastEnabled(const bool nEnable);

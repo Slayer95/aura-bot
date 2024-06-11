@@ -2801,6 +2801,7 @@ void CGame::SendGameDiscoveryRefresh() const
 
 void CGame::SendGameDiscoveryInfo() const
 {
+  // TODO: VLAN
   // See CNet::SendGameDiscovery()
   bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4;
   bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6;

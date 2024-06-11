@@ -724,25 +724,16 @@ bool CUDPSocket::SendTo(const string& addressLiteral, uint16_t port, const vecto
   return SendTo(targetAddress, message);
 }
 
-bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const sockaddr_storage* addr6, const vector<uint8_t>& message)
+bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const vector<uint8_t>& message)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError) {
     Print("Broadcast critical error");
     return false;
   }
-  if (!isIPv4MappedAddress(addr6)) {
-    Print("[DEBUG] Broadcast is only allowed to IPv4 addresses");
-    return false;
-  }
 
   const string MessageString = string(begin(message), end(message));
-  int result;
-  if (m_Family == AF_INET6) {
-    // FIXME: Dead code path. This probably doesn't work because IPv6 doesn't support broadcast at all.
-    result = sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(addr6), sizeof(sockaddr_in6));
-  } else {
-    result = sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
-  }
+  int result = sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
+
   if (result == -1) {
     return false;
   }

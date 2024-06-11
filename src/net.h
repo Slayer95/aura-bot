@@ -161,9 +161,10 @@ public:
   CUDPServer*                                                 m_UDPIPv6Server;
 
   uint16_t                                                    m_UDP4TargetPort;
-  uint16_t                                                    m_UDP6TargetPort;
-  sockaddr_storage*                                           m_UDP4BroadcastTarget;
-  sockaddr_storage*                                           m_UDP6BroadcastTarget;
+  uint16_t                                                    m_UDP4TargetProxyPort;
+  uint16_t                                                    m_UDP6TargetPort;             // only unicast
+  sockaddr_storage*                                           m_MainBroadcastTarget;
+  sockaddr_storage*                                           m_ProxyBroadcastTarget;
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CGameConnection*>>           m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
