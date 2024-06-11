@@ -2823,13 +2823,13 @@ void CGame::SendGameDiscoveryInfo() const
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
         Print(GetLogPrefix() + "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
       }
-      m_Aura->m_Net->Send("127.0.0.1", ipv4Packet);
+      m_Aura->m_Net->SendLoopback(ipv4Packet);
     } else {
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
         Print(GetLogPrefix() + "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
       }
       vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
-      m_Aura->m_Net->Send("127.0.0.1", hostPortPacket);
+      m_Aura->m_Net->SendLoopback(hostPortPacket);
     }
   }
 

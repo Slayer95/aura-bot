@@ -191,6 +191,7 @@ public:
   void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet);
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet);
   void Send(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
+  void SendLoopback(const std::vector<uint8_t>& packet);
   void SendArbitraryUnicast(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
   void HandleUDP(UDPPkt* pkt);

@@ -294,9 +294,9 @@ CNet::CNet(CAura* nAura)
     m_UDPIPv6Server(nullptr),
     m_UDP4TargetPort(6112), // Constant
 
-    // GProxy's port is actually configurable client-side,
+    // GProxy's port is actually configurable client-side (lan_port),
     // but this port is always used by Aura in deaf UDP mode.
-    m_UDP4TargetProxyPort(6118), // Constant
+    m_UDP4TargetProxyPort(6116), // Constant
     m_UDP6TargetPort(5678), // Only unicast. <net.game_discovery.udp.ipv6.target_port>
     m_MainBroadcastTarget(new sockaddr_storage()),
     m_ProxyBroadcastTarget(new sockaddr_storage()),
@@ -493,7 +493,9 @@ bool CNet::SendBroadcast(const vector<uint8_t>& packet)
     if (m_Config->m_ProxyReconnect) m_UDPMainServer->Broadcast(m_ProxyBroadcastTarget, packet);
   } else {
     if (m_UDPDeafSocket->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
-    if (m_Config->m_ProxyReconnect) m_UDPDeafSocket->Broadcast(m_ProxyBroadcastTarget, packet);
+    if (m_Config->m_ProxyReconnect) {
+      m_UDPDeafSocket->Broadcast(m_ProxyBroadcastTarget, packet);
+    }
   }
 
   return mainSuccess;
@@ -540,6 +542,14 @@ void CNet::Send(const string& addressLiteral, const uint16_t port, const vector<
   Send(address, packet);
 }
 
+void CNet::SendLoopback(const vector<uint8_t>& packet)
+{
+  Send("127.0.0.1", m_UDP4TargetPort, packet);
+  if (m_Config->m_ProxyReconnect) {
+    Send("127.0.0.1", m_UDP4TargetProxyPort, packet);
+  }
+}
+
 void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t port, const vector<uint8_t>& packet)
 {
   optional<sockaddr_storage> maybeAddress = ParseAddress(addressLiteral);
@@ -560,8 +570,7 @@ void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t por
 
 void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& clientIps)
 {
-  /*if (!SendBroadcast(packet))
-    return;*/
+  SendBroadcast(packet);
 
   if (!clientIps.empty()) {
     if (m_Config->m_UDPBroadcastEnabled)
