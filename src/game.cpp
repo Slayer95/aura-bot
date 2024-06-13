@@ -3939,7 +3939,9 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
       }
     } else if (!player->GetKickQueued()) {
         player->SetKickByTime(Time + m_LacksMapKickDelay);
-        if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
+        if (m_Remade) {
+          player->SetLeftReason("autokicked - they don't have the map (remade game)");
+        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
           player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
         } else if (IsMapTooLarge) {
@@ -4327,6 +4329,7 @@ void CGame::Remake()
   m_HasMapLock = false;
   m_UsesCustomReferees = false;
   m_SentPriorityWhois = false;
+  m_Remade = true;
 
   m_HostCounter = m_Aura->NextHostCounter();
   InitPRNG();
