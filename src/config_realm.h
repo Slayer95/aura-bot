@@ -109,7 +109,7 @@ public:
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
 
-  bool m_AuthSkipVersionCheck;
+  bool m_AuthUseCustomVersion;
   uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net
 
   std::optional<uint8_t> m_AuthWar3Version;                  // WC3 minor version

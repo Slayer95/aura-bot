@@ -161,12 +161,12 @@ Type: stringindex
 Default value: Empty
 Error handling: Use default value
 
-## \`global_realm.auth_skip_version_check\`
+## \`global_realm.auth_custom\`
 Type: bool
-Default value: true
+Default value: false
 Error handling: Use default value
 
-## \`global_realm.auth_skip_version_check\`
+## \`global_realm.auth_custom\`
 Type: bool
 Default value: Empty
 Error handling: Use default value

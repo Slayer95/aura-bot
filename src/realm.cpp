@@ -77,6 +77,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_Socket(nullptr),
     m_Protocol(new CBNETProtocol()),
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
+    m_GameVersion(0),
     m_HostName(nRealmConfig->m_HostName),
     m_ServerIndex(nRealmConfig->m_ServerIndex),
     m_InternalServerID(nAura->NextServerID()),
@@ -211,7 +212,7 @@ bool CRealm::Update(void* fd, void* send_fd)
             case CBNETProtocol::SID_GETADVLISTEX:
               if (m_Aura->m_Net->m_Config->m_UDPForwardGameLists) {
                 std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
-                std::vector<uint8_t> War3Version = {m_Aura->m_GameVersion, 0, 0, 0};
+                std::vector<uint8_t> War3Version = {m_GameVersion, 0, 0, 0};
                 std::string ipString = m_Socket->GetIPString();
                 AppendByteArray(relayPacket, ipString, true);
                 AppendByteArray(relayPacket, static_cast<uint16_t>(6112u), true);
@@ -542,8 +543,8 @@ bool CRealm::Update(void* fd, void* send_fd)
         Print(GetLogPrefix() + "connected to [" + m_HostName + "]");
       }
       SendAuth(m_Protocol->SEND_PROTOCOL_INITIALIZE_SELECTOR());
-      uint8_t gameVersion = m_Config->m_AuthWar3Version.has_value() ? m_Config->m_AuthWar3Version.value() : m_Aura->m_GameVersion;
-      SendAuth(m_Protocol->SEND_SID_AUTH_INFO(gameVersion, m_Config->m_LocaleID, m_Config->m_CountryShort, m_Config->m_Country));
+      m_GameVersion = m_Config->m_AuthWar3Version.has_value() ? m_Config->m_AuthWar3Version.value() : m_Aura->m_GameVersion;
+      SendAuth(m_Protocol->SEND_SID_AUTH_INFO(m_GameVersion, m_Config->m_LocaleID, m_Config->m_CountryShort, m_Config->m_Country));
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
       m_LastGameListTime       = Time;
       return m_Exiting;

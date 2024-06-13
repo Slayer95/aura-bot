@@ -158,7 +158,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   if (m_KeyInfoTFT.size() != 36)
     Print("[BNCSUI] unable to create TFT key info - invalid TFT key");
 
-  if (realmConfig->m_AuthSkipVersionCheck) {
+  if (realmConfig->m_AuthUseCustomVersion) {
     if (realmConfig->m_AuthExeVersion.has_value()) {
       SetEXEVersion(realmConfig->m_AuthExeVersion.value());
     }

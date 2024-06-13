@@ -96,7 +96,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthSkipVersionCheck   = CFG.GetBool(m_CFGKeyPrefix + "auth_skip_version_check", true);
+  m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
   m_AuthWar3Version        = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
@@ -203,7 +203,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_UserName(nRootConfig->m_UserName),
     m_PassWord(nRootConfig->m_PassWord),    
 
-    m_AuthSkipVersionCheck(nRootConfig->m_AuthSkipVersionCheck),
+    m_AuthUseCustomVersion(nRootConfig->m_AuthUseCustomVersion),
     m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
 
     m_AuthWar3Version(nRootConfig->m_AuthWar3Version),
@@ -287,7 +287,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthSkipVersionCheck   = CFG.GetBool(m_CFGKeyPrefix + "auth_skip_version_check", m_AuthSkipVersionCheck);
+  m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", m_AuthUseCustomVersion);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
 
   // These are optional, since they can be figured out with bncsutil.

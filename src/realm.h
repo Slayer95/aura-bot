@@ -97,6 +97,7 @@ private:
   CBNCSUtilInterface*              m_BNCSUtil;                                             // the interface to the bncsutil library (used for logging into battle.net)
   std::vector<std::string>         m_Friends;                                              // std::vector of friends
   std::vector<std::string>         m_Clan;                                                 // std::vector of clan members
+  uint8_t                          m_GameVersion;
   std::vector<uint8_t>             m_EXEVersion;                                           // custom exe version for PvPGN users
   std::vector<uint8_t>             m_EXEVersionHash;                                       // custom exe version hash for PvPGN users
   std::string                      m_CurrentChannel;            // the current chat channel
@@ -151,6 +152,7 @@ public:
   CRealm(CRealm&) = delete;
 
   CBNETProtocol*       GetProtocol() const { return m_Protocol; }
+  inline uint8_t       GetGameVersion() const { return m_GameVersion; }
   inline bool          GetExiting() const { return m_Exiting; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
   inline bool          GetInChat() const { return !m_CurrentChannel.empty(); }

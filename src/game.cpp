@@ -158,6 +158,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CheckReservation(nGameSetup->m_ChecksReservation.has_value() ? nGameSetup->m_ChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false),
+    m_Remade(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_NEVER)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
@@ -2600,9 +2601,9 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
   if (m_Aura->m_GameVersion <= 26 && mapSize > 0x800000) {
-    versionPrefix = "[1." + to_string(m_Aura->m_GameVersion) + ".UnlockMapSize] ";
+    versionPrefix = "[1." + ToDecString(realm->GetGameVersion()) + ".UnlockMapSize] ";
   } else {
-    versionPrefix = "[1." + to_string(m_Aura->m_GameVersion) + "] ";
+    versionPrefix = "[1." + ToDecString(realm->GetGameVersion()) + "] ";
 
 }
   string startedPhrase;
@@ -2802,6 +2803,7 @@ void CGame::SendGameDiscoveryRefresh() const
 void CGame::SendGameDiscoveryInfo() const
 {
   // TODO: VLAN
+  // TODO: Crossplay
   // See CNet::SendGameDiscovery()
   bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4;
   bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6;
