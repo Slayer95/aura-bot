@@ -233,6 +233,13 @@ protected:
   uint8_t                        m_SaveOnLeave;
   uint8_t                        m_DesyncHandler;
   uint8_t                        m_IPFloodHandler;
+  std::bitset<64>                m_SupportedGameVersions;
+  uint8_t                        m_SupportedGameVersionsMin;
+  uint8_t                        m_SupportedGameVersionsMax;
+  bool                           m_GameDiscoveryInfoChanged;
+  std::vector<uint8_t>           m_GameDiscoveryInfo;
+  uint16_t                       m_GameDiscoveryInfoVersionOffset;
+  uint16_t                       m_GameDiscoveryInfoDynamicOffset;
   std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
   std::set<std::string>          m_IgnoredNotifyJoinPlayers;
   std::vector<std::string>       m_LoggedWords;
@@ -375,14 +382,18 @@ public:
   void SendAllActions();
   void SendAllAutoStart() const;
 
-  std::vector<uint8_t> GetGameDiscoveryInfo(const uint16_t hostPort) const;
+  std::vector<uint8_t> GetGameDiscoveryInfo(const uint8_t gameVersion, const uint16_t hostPort);
+  std::vector<uint8_t>* GetGameDiscoveryInfoTemplate();
+  std::vector<uint8_t> GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
 
   void AnnounceToRealm(CRealm* realm);
   void AnnounceDecreateToRealms();
-  void AnnounceToAddress(std::string& address) const;
-  void ReplySearch(sockaddr_storage* address, CSocket* socket) const;
-  void SendGameDiscoveryInfo() const;
+  void AnnounceToAddress(std::string& address, uint8_t gameVersion);
+  void ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion);
+  void SendGameDiscoveryInfo(uint8_t gameVersion);
+  void SendGameDiscoveryInfo();
   void SendGameDiscoveryRefresh() const;
+  void SendGameDiscoveryCreate(uint8_t gameVersion) const;
   void SendGameDiscoveryCreate() const;
   void SendGameDiscoveryDecreate() const;
 
@@ -529,9 +540,11 @@ public:
   inline void SetIsCheckJoinable(const bool nCheckIsJoinable) { m_CheckJoinable = nCheckIsJoinable; }
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
   inline bool GetUsesCustomReferees() const { return m_UsesCustomReferees; }
+  inline bool GetIsSupportedGameVersion(uint8_t nVersion) const { return nVersion < 64 && m_SupportedGameVersions.test(nVersion); }
   void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
   void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
   void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
+  void SetSupportedGameVersion(uint8_t nVersion) { if (nVersion < 64) m_SupportedGameVersions.set(nVersion); }
   void SetSaveOnLeave(const uint8_t nValue) { m_SaveOnLeave = nValue; }
 
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }

@@ -79,6 +79,7 @@ public:
   uint8_t                  m_IPFloodHandler;
 
   bool                     m_UDPEnabled;
+  std::vector<uint8_t>     m_SupportedGameVersions;
 
   explicit CGameConfig(CConfig& CFG);
   ~CGameConfig();

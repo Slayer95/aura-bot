@@ -82,6 +82,32 @@ inline std::string ToFormattedString(const double d, const uint8_t precision = 2
   return out.str();
 }
 
+inline void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const uint32_t offset, bool bigEndian = false)
+{
+  if (!bigEndian) {
+    buffer[offset] = static_cast<uint8_t>(value);
+    buffer[offset + 1] = static_cast<uint8_t>(value >> 8);
+  } else {
+    buffer[offset] = static_cast<uint8_t>(value >> 8);
+    buffer[offset + 1] = static_cast<uint8_t>(value);
+  }
+}
+
+inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, const uint32_t offset, bool bigEndian = false)
+{
+  if (!bigEndian) {
+    buffer[offset] = static_cast<uint8_t>(value);
+    buffer[offset + 1] = static_cast<uint8_t>(value >> 8);
+    buffer[offset + 2] = static_cast<uint8_t>(value >> 16);
+    buffer[offset + 3] = static_cast<uint8_t>(value >> 24);
+  } else {
+    buffer[offset] = static_cast<uint8_t>(value >> 24);
+    buffer[offset + 1] = static_cast<uint8_t>(value >> 16);
+    buffer[offset + 2] = static_cast<uint8_t>(value >> 8);
+    buffer[offset + 3] = static_cast<uint8_t>(value);
+  }
+}
+
 inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const size_t size)
 {
   return std::vector<uint8_t>(a, a + size);

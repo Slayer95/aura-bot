@@ -130,6 +130,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
+  app.add_option("--crossplay", m_GameCrossplayVersions, "Adds support for game clients on the given version to crossplay. Repeatable.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_flag(  "--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
@@ -453,6 +454,7 @@ bool CCLI::QueueActions(CAura* nAura) const
           if (m_GameHCL.has_value()) gameSetup->SetHCL(m_GameHCL.value());
           if (m_GameFreeForAll.value_or(false)) gameSetup->SetCustomLayout(CUSTOM_LAYOUT_FFA);
           gameSetup->SetReservations(m_GameReservations);
+          gameSetup->SetSupportedGameVersions(m_GameCrossplayVersions);
           gameSetup->SetVerbose(m_Verbose);
           gameSetup->SetDisplayMode(displayMode);
           if (m_GameIPFloodHandler.has_value()) {

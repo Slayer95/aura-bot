@@ -574,6 +574,16 @@ Specifies the location of a saved game a game lobby will resume.
 
 Makes a reservation for a player to join the game lobby. This is required for loaded games to properly work.
 
+## \`--crossplay <VERSION>\`
+
+Adds support for clients running the given game version to join the game lobby. Note that crossplay has an 
+inherent risk of desynchronization between game clients. Usage of this feature is only recommended when hosting 
+well-tested maps with custom game data.
+
+Avoid using crossplay for melee or altered melee maps, in order to minimize potential issues.
+
+Note also that versions 1.29, and 1.23 are not compatible with earlier game versions.
+
 ## \`--on-ipflood <ACTION>\`
 
 This parameter customizes behavior when an excessive amount of players join the game from the same IP address.

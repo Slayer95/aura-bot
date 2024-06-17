@@ -774,7 +774,9 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
     case CHAT_CALLBACK_REFRESH_GAME:
       m_ChatQueuedGameAnnouncement = false;
       //assert(m_Aura->m_CurrentLobby != nullptr);
-      m_Aura->m_CurrentLobby->AnnounceToRealm(this);
+      if (m_Aura->m_CurrentLobby->GetIsSupportedGameVersion(GetGameVersion())) {
+        m_Aura->m_CurrentLobby->AnnounceToRealm(this);
+      }
       break;
 
     default:

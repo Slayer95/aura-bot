@@ -108,6 +108,7 @@ public:
   std::optional<std::string>            m_GameHCL;
   std::optional<bool>                   m_GameFreeForAll;
   std::vector<std::string>              m_GameReservations;
+  std::vector<uint8_t>                  m_GameCrossplayVersions;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;
   std::optional<std::string>            m_GameMapAlias;

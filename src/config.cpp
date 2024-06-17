@@ -529,6 +529,39 @@ vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count,
   SUCCESS(Output)
 }
 
+set<uint8_t> CConfig::GetUint8Set(const string& key, char separator, const std::set<uint8_t> x)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  bool errored = false;
+  set<uint8_t> Output;
+  stringstream ss(it->second);
+  while (ss.good()) {
+    string element;
+    getline(ss, element, separator);
+    if (element.empty())
+      continue;
+
+    try {
+      long Value = stol(element);
+      if (Value < 0 || Value > 0xFF) {
+        CONFIG_ERROR(key, x)
+      }
+      if (!Output.insert(static_cast<uint8_t>(Value)).second) {
+        errored = true;
+      }
+    } catch (...) {
+      CONFIG_ERROR(key, x)
+    }
+  }
+
+  END(Output)
+}
+
 vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x)
 {
   m_ValidKeys.insert(key);

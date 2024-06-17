@@ -601,6 +601,60 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(const uint8_t war3Version
   return packet;
 }
 
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
+{
+  if (mapWidth.size() != 2 || mapHeight.size() != 2) {
+    Print("[GAMEPROTO] invalid dimensions passed to SEND_W3GS_GAMEINFO");
+    return std::vector<uint8_t>();
+  }
+  if (gameName.empty() || hostName.empty() || mapPath.empty()) {
+    Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
+    return std::vector<uint8_t>();
+  }
+  if (mapHash.size() != 4) {
+    Print("[GAMEPROTO] invalid map hash passed to SEND_W3GS_GAMEINFO: " + ByteArrayToDecString(mapHash));
+    return std::vector<uint8_t>();
+  }
+
+  const uint8_t Unknown2[] = {1, 0, 0, 0};
+  const uint8_t Zeros[] = {0, 0, 0, 0};
+
+  // make the stat string
+
+  std::vector<uint8_t> StatString;
+  AppendByteArray(StatString, mapFlags, false);
+  StatString.push_back(0);
+  AppendByteArrayFast(StatString, mapWidth);
+  AppendByteArrayFast(StatString, mapHeight);
+  AppendByteArrayFast(StatString, mapHash);
+  AppendByteArrayFast(StatString, mapPath);
+  AppendByteArrayFast(StatString, hostName);
+  StatString.push_back(0);
+  StatString = EncodeStatString(StatString);
+
+  // make the rest of the packet
+
+  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_GAMEINFO, 0, 0, 80, 88, 51, 87};
+  *gameVersionOffset = packet.size();          // Game version
+  AppendByteArray(packet, Zeros, 4);
+  AppendByteArray(packet, hostCounter, false); // Host Counter
+  AppendByteArray(packet, entryKey, false);    // Entry Key
+  AppendByteArrayFast(packet, gameName);       // Game Name
+  packet.push_back(0);                         // ??? (maybe game password)
+  AppendByteArrayFast(packet, StatString);     // Stat String
+  packet.push_back(0);                         // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
+  AppendByteArray(packet, slotsTotal, false);  // Slots Total
+  AppendByteArray(packet, mapGameType, false);    // Game Type
+  AppendByteArray(packet, Unknown2, 4);        // ???
+  *dynamicInfoOffset = packet.size();          // TCP port
+  AppendByteArray(packet, Zeros, 4);          // Slots Available off-by-one
+  AppendByteArray(packet, Zeros, 4);          // time since creation
+  packet.push_back(0);
+  packet.push_back(0);
+  AssignLength(packet);
+  return packet;
+}
+
 std::vector<uint8_t> CGameProtocol::SEND_W3GR_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit)
 {
   std::vector<uint8_t> packet = SEND_W3GS_GAMEINFO(war3Version, mapGameType, mapFlags, mapWidth, mapHeight, gameName, hostName, upTime, mapPath, mapHash, slotsTotal, slotsAvailableOff, port, hostCounter, entryKey);

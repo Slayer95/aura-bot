@@ -1093,8 +1093,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CRealm* targetPlayerRealm = targetPlayer->GetRealm(true);
       bool IsRealmVerified = targetPlayerRealm != nullptr;
       bool IsOwner = targetPlayer->GetIsOwner(nullopt);
-      bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(m_FromName);
-      bool IsAdmin = IsRootAdmin || (IsRealmVerified && targetPlayerRealm->GetIsModerator(m_FromName));
+      bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(targetPlayer->GetName());
+      bool IsAdmin = IsRootAdmin || (IsRealmVerified && targetPlayerRealm->GetIsModerator(targetPlayer->GetName()));
       string SyncStatus;
       if (m_TargetGame->GetGameLoaded()) {
         if (m_TargetGame->m_SyncPlayers[targetPlayer].size() + 1 == m_TargetGame->m_Players.size()) {
@@ -2158,6 +2158,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
+      if (m_SourceRealm && m_Aura->m_GameVersion != m_SourceRealm->GetGameVersion() &&
+        find(m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.begin(), m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.end(), m_SourceRealm->GetGameVersion()) == m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.end()
+        && !GetIsSudo()) {
+        ErrorReply("Hosting games on v1." + to_string(m_SourceRealm->GetGameVersion()) + " is disabled.");
+        break;
+      }
+
       if (Payload.length() >= 31) {
         ErrorReply("Unable to create game [" + Payload + "]. The game name is too long (the maximum is 31 characters)");
         break;
@@ -2247,8 +2254,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
         break;
       }
+
       if (m_Aura->m_CurrentLobby) {
         ErrorReply("Already hosting a game.");
+        break;
+      }
+
+      if (m_SourceRealm && m_Aura->m_GameVersion != m_SourceRealm->GetGameVersion() &&
+        find(m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.begin(), m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.end(), m_SourceRealm->GetGameVersion()) == m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.end()
+        && !GetIsSudo()) {
+        ErrorReply("Hosting games on v1." + to_string(m_SourceRealm->GetGameVersion()) + " is disabled.");
         break;
       }
 
@@ -3502,6 +3517,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Usage: " + cmdToken + "announce <REALM>");
           break;
         }
+        if (!m_TargetGame->GetIsSupportedGameVersion(targetRealm->GetGameVersion())) {
+          ErrorReply("Crossplay is not enabled. [" + targetRealm->GetCanonicalDisplayName() + "] is running v1." + to_string(targetRealm->GetGameVersion()));
+          break;
+        }
       }
 
       m_TargetGame->m_DisplayMode = GAME_PUBLIC;
@@ -3509,13 +3528,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string earlyFeedback = "Announcement sent.";
       if (ToAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {
-          bnet->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
+          if (!m_TargetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
           bnet->QueueGameUncreate(); //?
+          bnet->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
           bnet->SendEnterChat();
         }
       } else {
-        targetRealm->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
         targetRealm->QueueGameUncreate();
+        targetRealm->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
         targetRealm->SendEnterChat();
       }
       break;
@@ -5716,6 +5736,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         SendReply("The currently loaded map/config file is: [" + m_Aura->m_GameSetup->GetInspectName() + "]", CHAT_SEND_SOURCE_ALL);
+        break;
+      }
+      if (m_SourceRealm && m_Aura->m_GameVersion != m_SourceRealm->GetGameVersion() &&
+        find(m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.begin(), m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.end(), m_SourceRealm->GetGameVersion()) == m_Aura->m_GameDefaultConfig->m_SupportedGameVersions.end()
+        && !GetIsSudo()) {
+        ErrorReply("Hosting games on v1." + to_string(m_SourceRealm->GetGameVersion()) + " is disabled.");
         break;
       }
       if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->GetIsDownloading()) {

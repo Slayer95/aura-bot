@@ -159,7 +159,12 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false),
     m_Remade(false),
-    m_SaveOnLeave(SAVE_ON_LEAVE_NEVER)
+    m_SaveOnLeave(SAVE_ON_LEAVE_NEVER),
+    m_SupportedGameVersionsMin(nAura->m_GameVersion),
+    m_SupportedGameVersionsMax(nAura->m_GameVersion),
+    m_GameDiscoveryInfoChanged(false),
+    m_GameDiscoveryInfoVersionOffset(0),
+    m_GameDiscoveryInfoDynamicOffset(0)
 {
   m_IndexVirtualHostName = m_Aura->m_GameDefaultConfig->m_IndexVirtualHostName;
   if (m_IndexVirtualHostName.empty()) {
@@ -192,6 +197,27 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_LoggedWords = vector<string>(m_Aura->m_GameDefaultConfig->m_LoggedWords.begin(), m_Aura->m_GameDefaultConfig->m_LoggedWords.end());
   m_DesyncHandler = m_Aura->m_GameDefaultConfig->m_DesyncHandler;
   m_IPFloodHandler = nGameSetup->m_IPFloodHandler.has_value() ? nGameSetup->m_IPFloodHandler.value() : m_Aura->m_GameDefaultConfig->m_IPFloodHandler;
+
+  m_SupportedGameVersionsMin = m_Aura->m_GameVersion;
+  m_SupportedGameVersionsMax = m_Aura->m_GameVersion;
+  m_SupportedGameVersions.set(m_Aura->m_GameVersion);
+  vector<uint8_t> supportedGameVersions = !nGameSetup->m_SupportedGameVersions.empty() ? nGameSetup->m_SupportedGameVersions : m_Aura->m_GameDefaultConfig->m_SupportedGameVersions;
+  for (const auto& version : supportedGameVersions) {
+    if (version >= 64) continue;
+    if (m_Aura->m_GameVersion >= 29) {
+      if (version < 29) continue;
+    } else {
+      if (version >= 29) continue;
+    }
+    if (m_Aura->m_GameVersion >= 23) {
+      if (version < 23) continue;
+    } else {
+      if (version >= 23) continue;
+    }
+    m_SupportedGameVersions.set(version);
+    if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
+    if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
+  }
 
   if (!nGameSetup->GetIsMirror()) {
     m_CheckJoinable = nGameSetup->m_CheckJoinable.has_value() ? nGameSetup->m_CheckJoinable.value() : m_Aura->m_GameDefaultConfig->m_CheckJoinable;
@@ -1126,6 +1152,9 @@ bool CGame::Update(void* fd, void* send_fd)
     // send a game refresh packet to each battle.net connection
 
     for (auto& realm : m_Aura->m_Realms) {
+      if (!realm->GetLoggedIn()) {
+        continue;
+      }
       if (m_IsMirror && realm->GetIsMirror()) {
       // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
       // Do not display external games in those realms.
@@ -1134,6 +1163,10 @@ bool CGame::Update(void* fd, void* send_fd)
       if (realm->GetIsChatQueuedGameAnnouncement()) {
         // Wait til we have sent a chat message first.
         continue;
+      }
+      if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
+        continue;
+
       }
       if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
         continue;
@@ -2598,12 +2631,13 @@ std::string CGame::GetPrefixedGameName(const CRealm* realm) const
 
 std::string CGame::GetAnnounceText(const CRealm* realm) const
 {
+  uint8_t gameVersion = realm ? realm->GetGameVersion() : m_Aura->m_GameVersion;
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
-  if (m_Aura->m_GameVersion <= 26 && mapSize > 0x800000) {
-    versionPrefix = "[1." + ToDecString(realm->GetGameVersion()) + ".UnlockMapSize] ";
+  if (gameVersion <= 26 && mapSize > 0x800000) {
+    versionPrefix = "[1." + ToDecString(gameVersion) + ".UnlockMapSize] ";
   } else {
-    versionPrefix = "[1." + ToDecString(realm->GetGameVersion()) + "] ";
+    versionPrefix = "[1." + ToDecString(gameVersion) + "] ";
 
 }
   string startedPhrase;
@@ -2631,9 +2665,11 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
 
 uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
 {
+  // Uses <net.game_discovery.udp.tcp4_custom_port.value>
   if (protocol == AF_INET)
     return m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4 ? m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 : m_HostPort;
 
+  // Uses <net.game_discovery.udp.tcp6_custom_port.value>
   if (protocol == AF_INET6)
     return m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
 
@@ -2697,7 +2733,29 @@ uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
   return m_Aura->m_Net->GetUDPPort(protocol);
 }
 
-vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
+vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint8_t gameVersion, const uint16_t hostPort)
+{
+  vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
+  WriteUint32(info, gameVersion, m_GameDiscoveryInfoVersionOffset);
+  uint32_t slotsOff = static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1);
+  uint32_t uptime = GetUptime();
+  WriteUint32(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
+  WriteUint32(info, uptime, m_GameDiscoveryInfoDynamicOffset + 4);
+  WriteUint16(info, hostPort, m_GameDiscoveryInfoDynamicOffset + 8);
+  return info;
+}
+
+vector<uint8_t>* CGame::GetGameDiscoveryInfoTemplate()
+{
+  if (!m_GameDiscoveryInfoChanged && !m_GameDiscoveryInfo.empty()) {
+    return &m_GameDiscoveryInfo;
+  }
+  m_GameDiscoveryInfo = GetGameDiscoveryInfoTemplateInner(&m_GameDiscoveryInfoVersionOffset, &m_GameDiscoveryInfoDynamicOffset);
+  m_GameDiscoveryInfoChanged = false;
+  return &m_GameDiscoveryInfo;
+}
+
+vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const
 {
   // we send 12 for SlotsTotal because this determines how many PID's Warcraft 3 allocates
   // we need to make sure Warcraft 3 allocates at least SlotsTotal + 1 but at most 12 PID's
@@ -2711,20 +2769,17 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint16_t hostPort) const
   // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
   // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
-  return GetProtocol()->SEND_W3GS_GAMEINFO(
-    m_Aura->m_GameVersion,
+  return GetProtocol()->SEND_W3GS_GAMEINFO_TEMPLATE(
+    gameVersionOffset, dynamicInfoOffset,
     GetGameType(),
     GetGameFlags(),
     GetAnnounceWidth(),
     GetAnnounceHeight(),
     m_GameName,
     m_IndexVirtualHostName,
-    GetUptime(),
     GetSourceFilePath(),
     GetSourceFileHash(),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
-    static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1), // "Available" Slots
-    hostPort,
     m_HostCounter,
     m_EntryKey
   );
@@ -2748,8 +2803,9 @@ void CGame::AnnounceDecreateToRealms()
   }
 }
 
-void CGame::AnnounceToAddress(string& addressLiteral) const
+void CGame::AnnounceToAddress(string& addressLiteral, uint8_t gameVersion)
 {
+  if (gameVersion == 0) gameVersion = m_Aura->m_GameVersion;
   optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(addressLiteral);
   if (!maybeAddress.has_value())
     return;
@@ -2757,31 +2813,43 @@ void CGame::AnnounceToAddress(string& addressLiteral) const
   sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, 6112);
   if (isLoopbackAddress(address)) {
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(m_HostPort));
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
   } else {
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
 
-void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket) const
+void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion)
 {
+  if (gameVersion == 0) gameVersion = m_Aura->m_GameVersion;
   if (socket->m_Type == SOCK_DGRAM) {
     CUDPServer* server = reinterpret_cast<CUDPServer*>(socket);
     if (isLoopbackAddress(address)) {
-      server->SendReply(address, GetGameDiscoveryInfo(m_HostPort));
+      server->SendReply(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
     } else {
-      server->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
+      server->SendReply(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
     }
   } else if (socket->m_Type == SOCK_STREAM) {
     CStreamIOSocket* tcpSocket = reinterpret_cast<CStreamIOSocket*>(socket);
-    tcpSocket->SendReply(address, GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
+    tcpSocket->SendReply(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
+}
+
+void CGame::SendGameDiscoveryCreate(uint8_t gameVersion) const
+{
+  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_CREATEGAME(gameVersion, m_HostCounter);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
 }
 
 void CGame::SendGameDiscoveryCreate() const
 {
-  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_CREATEGAME(m_Aura->m_GameVersion, m_HostCounter);
-  m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
+  uint8_t version = m_SupportedGameVersionsMin;
+  while (version <= m_SupportedGameVersionsMax) {
+    if (GetIsSupportedGameVersion(version)) {
+      SendGameDiscoveryCreate(version);
+    }
+    ++version;
+  }
 }
 
 void CGame::SendGameDiscoveryDecreate() const
@@ -2800,61 +2868,50 @@ void CGame::SendGameDiscoveryRefresh() const
   m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
 }
 
-void CGame::SendGameDiscoveryInfo() const
+void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
 {
   // TODO: VLAN
-  // TODO: Crossplay
   // See CNet::SendGameDiscovery()
-  bool loopbackIsIPv4Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4;
-  bool loopbackIsIPv6Port = m_HostPort == m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 || !m_Aura->m_Net->m_SupportTCPOverIPv6 || !m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6;
-  bool thereCouldBeUDPTunnelsOverTCP = m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP && !m_Aura->m_Net->m_IncomingConnections.empty();
-  if (loopbackIsIPv4Port && (loopbackIsIPv6Port || (m_ExtraDiscoveryAddresses.empty() && !thereCouldBeUDPTunnelsOverTCP))) {
-    vector<uint8_t> packet = GetGameDiscoveryInfo(m_HostPort);
-    m_Aura->m_Net->SendGameDiscovery(packet, m_ExtraDiscoveryAddresses);
-    return;
-  }
 
-  vector<uint8_t> ipv4Packet = GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(AF_INET)); // Uses <net.game_discovery.udp.tcp4_custom_port.value>
-  vector<uint8_t> ipv6Packet;
-  if (m_Aura->m_Net->m_SupportTCPOverIPv6)
-    ipv6Packet = GetGameDiscoveryInfo(GetHostPortForDiscoveryInfo(AF_INET6)); // Uses <net.game_discovery.udp.tcp6_custom_port.value>
-
-  if (!m_Aura->m_Net->SendBroadcast(ipv4Packet)) {
+  if (!m_Aura->m_Net->SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(AF_INET)))) {
     // Ensure the game is available at loopback.
-    if (loopbackIsIPv4Port) {
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-        Print(GetLogPrefix() + "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(GetHostPortForDiscoveryInfo(AF_INET)) + ")");
-      }
-      m_Aura->m_Net->SendLoopback(ipv4Packet);
-    } else {
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-        Print(GetLogPrefix() + "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
-      }
-      vector<uint8_t> hostPortPacket = GetGameDiscoveryInfo(m_HostPort);
-      m_Aura->m_Net->SendLoopback(hostPortPacket);
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+      Print(GetLogPrefix() + "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")");
     }
+    m_Aura->m_Net->SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
   }
 
   for (auto& clientIp : m_ExtraDiscoveryAddresses) {
     optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(clientIp);
     if (!maybeAddress.has_value()) continue; // Should never happen.
     sockaddr_storage* address = &(maybeAddress.value());
-    if (isLoopbackAddress(address)) continue; // We already secure sending loopback packets above.
+    if (isLoopbackAddress(address)) continue; // We already ensure sending loopback packets above.
     bool isIPv6 = GetInnerIPVersion(address) == AF_INET6;
     if (isIPv6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) {
       continue;
     }
-    m_Aura->m_Net->Send(address, isIPv6 ? ipv6Packet : ipv4Packet);
+    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(isIPv6 ? AF_INET6 : AF_INET)));
   }
 
   // Send to active UDP in TCP tunnels
-  if (thereCouldBeUDPTunnelsOverTCP) for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
+  if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
     for (auto& connection : pair.second) {
       if (connection->GetDeleteMe()) continue;
       if (connection->m_IsUDPTunnel) {
-        connection->Send(connection->GetUsingIPv6() ? ipv6Packet : ipv4Packet);
+        connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
       }
     }
+  }
+}
+
+void CGame::SendGameDiscoveryInfo()
+{
+  uint8_t version = m_SupportedGameVersionsMin;
+  while (version <= m_SupportedGameVersionsMax) {
+    if (GetIsSupportedGameVersion(version)) {
+      SendGameDiscoveryInfo(version);
+    }
+    ++version;
   }
 }
 
@@ -3177,8 +3234,6 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
       } else {
         GProxyFragment = " is using GProxy, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
       }
-    } else if (m_Aura->m_GameVersion < 26 || 29 < m_Aura->m_GameVersion) {
-      GProxyFragment = " is not using disconnection protection. You may download it at: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
     }
   }
   

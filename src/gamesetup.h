@@ -192,6 +192,7 @@ public:
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
+  std::vector<uint8_t>                            m_SupportedGameVersions;
 
   bool                                            m_LobbyReplaceable;
   bool                                            m_LobbyAutoRehosted;
@@ -306,6 +307,7 @@ public:
   void SetGameSavedFile(const std::filesystem::path& filePath);
   void SetCheckReservation(const bool nChecksReservation) { m_ChecksReservation = nChecksReservation; }
   void SetReservations(const std::vector<std::string>& nReservations) { m_Reservations = nReservations; }
+  void SetSupportedGameVersions(const std::vector<uint8_t>& nVersions) { m_SupportedGameVersions = nVersions; }
   void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
   void SetAutoStartMinSeconds(const int64_t nValue) {
     m_AutoStartMinSeconds = nValue;

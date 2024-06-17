@@ -1541,6 +1541,12 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
       continue;
     }
+    if (!m_CurrentLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
+      if (MatchLogLevel(LOG_LEVEL_WARNING)) {
+        Print(realm->GetLogPrefix() + "skipping announcement for v 1." + ToDecString(realm->GetGameVersion()) + "(check <hosting.crossplay.versions>)");
+      }
+      continue;
+    }
 
     if (m_CurrentLobby->GetDisplayMode() == GAME_PUBLIC && realm->GetAnnounceHostToChat()) {
       realm->QueueGameChatAnnouncement(m_CurrentLobby);

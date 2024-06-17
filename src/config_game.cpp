@@ -79,6 +79,9 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_IPFloodHandler            = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
   m_UDPEnabled                = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
+  set<uint8_t> supportedGameVersions = CFG.GetUint8Set("hosting.crossplay.versions", ',', {});
+  m_SupportedGameVersions = vector<uint8_t>(supportedGameVersions.begin(), supportedGameVersions.end());
+
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;
 }
