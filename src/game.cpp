@@ -3166,7 +3166,8 @@ void CGame::SendLeftMessage(CGamePlayer* player, const bool sendChat) const
 {
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which PIDs Aura considers available.
-  if (sendChat || player->GetKickQueued()) {
+  if (sendChat || player->GetKickQueued() && player->GetLeftCode() != PLAYERLEAVE_LOST) {
+    // player->GetKickQueued() is only true if this player was kicked due to missing map.
     if (player->GetQuitGame()) {
       SendAllChat(player->GetPID(), player->GetLeftReason() + ".");
     } else {
