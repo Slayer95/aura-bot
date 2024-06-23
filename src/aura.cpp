@@ -1530,9 +1530,6 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
       realm->HoldClan(m_CurrentLobby);
     }
 
-    if (!realm->GetLoggedIn()) {
-      continue;
-    }
     if (m_CurrentLobby->GetIsMirror() && realm->GetIsMirror()) {
       // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
       // Do not display external games in those realms.
@@ -1541,7 +1538,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
       continue;
     }
-    if (!m_CurrentLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
+    if (realm->GetGameVersion() > 0 && !m_CurrentLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
       if (MatchLogLevel(LOG_LEVEL_WARNING)) {
         Print(realm->GetLogPrefix() + "skipping announcement for v 1." + ToDecString(realm->GetGameVersion()) + "(check <hosting.crossplay.versions>)");
       }
