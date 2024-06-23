@@ -884,7 +884,7 @@ void CGameSetup::SetDownloadFilePath(filesystem::path&& filePath)
 bool CGameSetup::PrepareDownloadMap()
 {
   if (m_SearchTarget.first != "epicwar" && m_SearchTarget.first != "wc3maps") {
-    Print("Error!! trying to download from " + m_SearchTarget.first + "!!");
+    Print("Error!! trying to download from unsupported repository [" + m_SearchTarget.first + "] !!");
     return false;
   }
   if (!m_Aura->m_Net->m_Config->m_AllowDownloads) {
