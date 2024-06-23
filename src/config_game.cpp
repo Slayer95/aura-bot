@@ -40,9 +40,9 @@ CGameConfig::CGameConfig(CConfig& CFG)
   const static string emptyString;
 
   m_VoteKickPercentage        = CFG.GetInt("hosting.vote_kick.min_percent", 70);
-  m_NumPlayersToStartGameOver = CFG.GetInt("hosting.game_over.player_count", 1);
-  m_MaxPlayersLoopback        = CFG.GetInt("hosting.ip_filter.max_loopback", 8);
-  m_MaxPlayersSameIP          = CFG.GetInt("hosting.ip_filter.max_same_ip", 8);
+  m_NumPlayersToStartGameOver = CFG.GetUint8("hosting.game_over.player_count", 1);
+  m_MaxPlayersLoopback        = CFG.GetUint8("hosting.ip_filter.max_loopback", 8);
+  m_MaxPlayersSameIP          = CFG.GetUint8("hosting.ip_filter.max_same_ip", 8);
   m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 32);
   m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 8);
   m_SyncNormalize             = CFG.GetBool("net.sync_normalization.enabled", true);
