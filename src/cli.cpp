@@ -393,7 +393,7 @@ bool CCLI::QueueActions(CAura* nAura) const
           for (const auto& id : m_ExcludedRealms) {
             CRealm* excludedRealm = nAura->GetRealmByInputId(id);
             if (excludedRealm) {
-              nAura->m_GameSetup->AddIgnoredRealm(excludedRealm);
+              gameSetup->AddIgnoredRealm(excludedRealm);
             } else {
               Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
             }
