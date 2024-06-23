@@ -156,6 +156,7 @@ private:
   bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
   bool                             m_WhoisSent;                    // if we've sent a battle.net /whois for this player yet (for spoof checking)
   bool                             m_HasMap;                       // if we're allowed to download the map or not (used with permission based map downloads)
+  std::optional<bool>              m_Ready;
   bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
   bool                             m_DownloadAllowed;              // if we're allowed to download the map or not (used with permission based map downloads)
   bool                             m_DownloadStarted;              // if we've started downloading the map or not

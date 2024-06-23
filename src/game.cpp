@@ -189,6 +189,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
   m_MaxPlayersLoopback = m_Aura->m_GameDefaultConfig->m_MaxPlayersLoopback;
   m_MaxPlayersSameIP = m_Aura->m_GameDefaultConfig->m_MaxPlayersSameIP;
+  m_PlayersReadyMode = m_Aura->m_GameDefaultConfig->m_PlayersReadyMode;
 
   m_ExtraDiscoveryAddresses = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses;
   m_ExtraDiscoveryStrict = m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryStrict;

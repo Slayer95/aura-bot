@@ -195,6 +195,7 @@ protected:
   uint8_t                        m_AutoStartPlayers;
   uint8_t                        m_MaxPlayersLoopback;
   uint8_t                        m_MaxPlayersSameIP;
+  uint8_t                        m_PlayersReadyMode;
   uint8_t                        m_ControllersWithMap;
   uint8_t                        m_CustomLayout;
   std::pair<uint8_t, uint8_t>    m_CustomLayoutData;
