@@ -242,6 +242,7 @@ public:
   inline bool                  GetIsReserved() const { return m_Reserved; }
   inline bool                  GetIsObserver() const { return m_Observer; }
   inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
+  bool                         GetCanUsePublicChat() const;
   inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
   inline bool                  GetWhoisSent() const { return m_WhoisSent; }
   inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }

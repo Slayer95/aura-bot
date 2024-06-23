@@ -1209,7 +1209,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
-      SendAll(JoinVector(pingsText, false));
+      SendReply(JoinVector(pingsText, false), !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
 
       if (KickedCount > 0) {
         SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_TargetGame->m_AutoKickPing) + "...");
@@ -1492,7 +1492,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       std::bernoulli_distribution bernoulliDist(chance);
       bool result = bernoulliDist(gen);
 
-      SendAll(m_FromName + " flipped a coin and got " + (result ? "heads" : "tails") + ".");
+      SendReply(m_FromName + " flipped a coin and got " + (result ? "heads" : "tails") + ".", !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -1535,9 +1535,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        SendAll(m_FromName + " rolled " + gotRolls[0] + ".");
+        SendReply(m_FromName + " rolled " + gotRolls[0] + ".", !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendAll(m_FromName + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinVector(gotRolls, false) + ".");
+        SendReply(m_FromName + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinVector(gotRolls, false) + ".", !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       }
       break;
     }
@@ -1562,7 +1562,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       std::uniform_int_distribution<> distribution(1, static_cast<int>(options.size()));
 
       string randomPick = options[distribution(gen) - 1];
-      SendAll("Randomly picked: " + randomPick);
+      SendReply("Randomly picked: " + randomPick, !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -1640,7 +1640,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           Froms += ", ";
       }
 
-      SendAll(Froms);
+      SendReply(Froms, !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 

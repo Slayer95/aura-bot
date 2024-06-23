@@ -771,6 +771,12 @@ string CGamePlayer::GetSyncText() const
   return behindTimeText;
 }
 
+bool CGamePlayer::GetCanUsePublicChat() const
+{
+  if (!m_Observer || m_PowerObserver) return true;
+  return !m_Game->GetUsesCustomReferees() && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
+}
+
 bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const
 {
   if (m_Owner) return true;
