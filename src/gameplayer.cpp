@@ -431,7 +431,7 @@ bool CGamePlayer::Update(void* fd)
       // bytes 2 and 3 contain the length of the packet
       const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
-        m_Game->EventPlayerDisconnectGameProtocolError(this);
+        m_Game->EventPlayerDisconnectGameProtocolError(this, true);
         ResetConnection();
         Abort = true;
         break;
@@ -468,8 +468,13 @@ bool CGamePlayer::Update(void* fd)
           case CGameProtocol::W3GS_OUTGOING_ACTION:
             Action = m_Protocol->RECEIVE_W3GS_OUTGOING_ACTION(Data, m_PID);
 
-            if (Action)
-              m_Game->EventPlayerAction(this, Action);
+            if (Action) {
+              if (!m_Game->EventPlayerAction(this, Action)) {
+                m_Game->EventPlayerDisconnectGameProtocolError(this, false);
+                ResetConnection();
+                Abort = true;
+              }
+            }
 
             // don't delete Action here because the game is going to store it in a queue and delete it later
 

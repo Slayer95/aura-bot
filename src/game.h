@@ -408,7 +408,7 @@ public:
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
-  void EventPlayerDisconnectGameProtocolError(CGamePlayer* player);
+  void EventPlayerDisconnectGameProtocolError(CGamePlayer* player, bool canRecover);
   void EventPlayerKickHandleQueued(CGamePlayer* player);
   void EventPlayerCheckStatus(CGamePlayer* player);
   bool EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest);

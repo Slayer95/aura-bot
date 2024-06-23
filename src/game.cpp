@@ -3141,9 +3141,9 @@ void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
   }
 }
 
-void CGame::EventPlayerDisconnectGameProtocolError(CGamePlayer* player)
+void CGame::EventPlayerDisconnectGameProtocolError(CGamePlayer* player, bool canRecover)
 {
-  if (player->GetGProxyAny() && m_GameLoaded) {
+  if (canRecover && player->GetGProxyAny() && m_GameLoaded) {
     if (!player->GetGProxyDisconnectNoticeSent()) {
       SendAllChat(player->GetName() + " " + "has disconnected (protocol error) but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
@@ -3155,7 +3155,11 @@ void CGame::EventPlayerDisconnectGameProtocolError(CGamePlayer* player)
 
   TrySaveOnDisconnect(player, false);
   player->SetDeleteMe(true);
-  player->SetLeftReason("has lost the connection (protocol error)");
+  if (canRecover) {
+    player->SetLeftReason("has lost the connection (protocol error)");
+  } else {
+    player->SetLeftReason("has lost the connection (unrecoverable protocol error)");
+  }
   player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
 
   if (!m_GameLoading && !m_GameLoaded) {
@@ -3587,7 +3591,7 @@ void CGame::EventPlayerLoaded(CGamePlayer* player)
   SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(player->GetPID()));
 }
 
-void CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
+bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
 {
   m_Actions.push(action);
 
@@ -3620,6 +3624,8 @@ void CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
     Print(GetLogPrefix() + "gameover timer started (stats class reported game over)");
     m_GameOverTime = GetTime();
   }
+
+  return true;
 }
 
 void CGame::EventPlayerKeepAlive(CGamePlayer* player)
