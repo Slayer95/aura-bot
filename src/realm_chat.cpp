@@ -102,6 +102,7 @@ bool CQueuedChatMessage::GetIsStale() const
     case CHAT_VALIDATOR_CURRENT_LOBBY:
       if (!m_Realm->m_Aura->m_CurrentLobby) return true;
       if (m_Realm->m_Aura->m_CurrentLobby->GetIsRealmRefreshError()) return true;
+      if (!m_Realm->m_Aura->m_CurrentLobby->GetIsSupportedGameVersion(m_Realm->GetGameVersion())) return true;
       return m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() != ByteArrayToUInt32(m_Validator, false, 1);
     default:
       return false;
