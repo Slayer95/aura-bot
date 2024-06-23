@@ -2300,7 +2300,7 @@ void CGame::SendJoinedPlayersInfo(CGameConnection* connection) const
     if (otherPlayer->GetDeleteMe())
       continue;
     Send(connection,
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetPID(), otherPlayer->GetName())
+      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetPID(), otherPlayer->GetName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
 }
@@ -2313,7 +2313,7 @@ void CGame::SendJoinedPlayersInfo(CGamePlayer* player) const
     if (otherPlayer->GetDeleteMe())
       continue;
     Send(player,
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetPID(), otherPlayer->GetName())
+      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetPID(), otherPlayer->GetName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
 }
@@ -2325,7 +2325,9 @@ void CGame::SendIncomingPlayerInfo(CGamePlayer* player) const
       continue;
     if (otherPlayer->GetDeleteMe())
       break;
-    otherPlayer->Send(GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(player->GetPID(), player->GetName()));
+    otherPlayer->Send(
+      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(player->GetPID(), player->GetName()/*, player->GetIPv4(), player->GetIPv4Internal()*/)
+    );
   }
 }
 
