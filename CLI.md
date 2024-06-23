@@ -499,10 +499,10 @@ allowed to observe the game.
 
 **Options:**
 
-- none: No observers allowed. Spectators cannot join the game.
-- full observers: Allows spectators to exclusively observe the game, and chat among themselves.
+- no: No observers allowed. Spectators cannot join the game.
+- full: Allows spectators to exclusively observe the game, and chat among themselves.
 - referees: Allows spectators to observe the game, and communicate with the players, either in public chat, or private chat.
-- observers on defeat: Players that lose the game are allowed to remain in the game, as spectators.
+- defeat: Players that lose the game are allowed to remain in the game, as spectators.
 
 ## \`--visibility <VISIBILITY>\`
 

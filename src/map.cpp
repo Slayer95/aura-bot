@@ -294,7 +294,7 @@ bool CMap::NormalizeSlots()
 
 bool CMap::SetMapObservers(const uint8_t nMapObservers)
 {
-  m_MapVisibility = nMapObservers;
+  m_MapObservers = nMapObservers;
   return true;
 }
 
@@ -1230,7 +1230,7 @@ string CMap::CheckProblems()
     return "invalid map_visibility detected";
   }
 
-  if (m_MapObservers != MAPOBS_NONE && m_MapObservers != MAPOBS_ONDEFEAT && m_MapObservers != MAPOBS_ALLOWED && m_MapObservers != MAPOBS_REFEREES && m_MapObservers != MAPOBS_ONANY)
+  if (m_MapObservers != MAPOBS_NONE && m_MapObservers != MAPOBS_ONDEFEAT && m_MapObservers != MAPOBS_ALLOWED && m_MapObservers != MAPOBS_REFEREES)
   {
     m_Valid = false;
     return "invalid map_observers detected";
