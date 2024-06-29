@@ -415,7 +415,7 @@ public:
   bool EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest);
   void EventPlayerLeft(CGamePlayer* player);
   void EventPlayerLoaded(CGamePlayer* player);
-  void EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
+  bool EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
   void EventPlayerKeepAlive(CGamePlayer* player);
   void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
   void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
