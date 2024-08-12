@@ -2374,8 +2374,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       m_TargetGame->StartCountDown(true);
-      m_TargetGame->m_CountDownCounter = 1;
-      // 500 ms countdown
+      if (m_TargetGame->GetCountDownStarted()) {
+        // 500 ms countdown
+        m_TargetGame->m_CountDownCounter = 1;
+      }
       break;
     }
 
@@ -2684,7 +2686,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool IsMapAvailable = !m_TargetGame->GetMap()->GetMapData()->empty() && !m_TargetGame->GetMap()->HasMismatch();
-      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable) {
+      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {

@@ -3998,7 +3998,9 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     string* MapData = m_Map->GetMapData();
     bool IsMapAvailable = !MapData->empty() && !m_Map->HasMismatch();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
-    if (IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER && (player->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge))) {
+    if (IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER &&
+      (player->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
+	  (m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxGames)) {
       if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
         // inform the client that we are willing to send the map
 
@@ -4013,7 +4015,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
         player->SetKickByTime(Time + m_LacksMapKickDelay);
         if (m_Remade) {
           player->SetLeftReason("autokicked - they don't have the map (remade game)");
-        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
+        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
           // Even if manual, claim they are disabled.
           player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
         } else if (IsMapTooLarge) {
@@ -5868,6 +5870,11 @@ void CGame::StartCountDown(bool force)
     if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby != this) {
       SendAllChat("Currently hosting: " + m_Aura->m_CurrentLobby->GetDescription());
     }
+    return;
+  }
+
+  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
+    SendAllChat("This game cannot be started while there are " +  to_string(m_Aura->m_Config->m_MaxGames) + " additional games in progress.");
     return;
   }
 

@@ -784,7 +784,7 @@ bool CAura::Update()
     }
   }
 
-  if (!m_CurrentLobby && !(m_GameSetup && m_GameSetup->GetIsDownloading())) {
+  if (!m_CurrentLobby && !(m_GameSetup && m_GameSetup->GetIsDownloading()) && (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby))) {
     if (m_AutoRehostGameSetup) {
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
@@ -1473,7 +1473,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     return false;
   }
 
-  if (m_Games.size() >= m_Config->m_MaxGames) {
+  if (m_Games.size() > m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && !m_Config->m_AllowExtraLobby)) {
     gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. There are too many active games already.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }

@@ -61,6 +61,7 @@ public:
 
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
   uint32_t                                m_MaxGames;                    // maximum number of games in progress
+  bool                                    m_AllowExtraLobby;             // when auto rehost is active, always create the next lobby even if max games limit has been reached (cannot be started, though)
   bool                                    m_EnableDeleteOversizedMaps;   // may delete maps in m_MapPath exceeding m_MaxSavedMapSize
   uint32_t                                m_MaxSavedMapSize;             // maximum byte size of maps kept persistently in the m_MapPath folder
 
