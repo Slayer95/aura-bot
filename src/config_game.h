@@ -65,6 +65,8 @@ public:
   uint32_t                 m_WarnHighPing;               // auto kick players with ping higher than this
   uint32_t                 m_LobbyTimeLimit;             // auto close the game lobby after this many minutes without any owner
   uint32_t                 m_LobbyNoOwnerTime;           // relinquish game ownership after this many minutes
+  uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
+  uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
   uint16_t                 m_Latency;                    // the latency (by default)
   uint32_t                 m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;

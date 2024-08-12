@@ -187,6 +187,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_PerfThreshold = m_Aura->m_GameDefaultConfig->m_PerfThreshold;
   m_LobbyNoOwnerTime = m_Aura->m_GameDefaultConfig->m_LobbyNoOwnerTime;
   m_LobbyTimeLimit = nGameSetup->m_LobbyTimeout.has_value() ? nGameSetup->m_LobbyTimeout.value() : m_Aura->m_GameDefaultConfig->m_LobbyTimeLimit;
+  m_LobbyCountDownInterval = m_Aura->m_GameDefaultConfig->m_LobbyCountDownInterval;
+  m_LobbyCountDownStartValue = m_Aura->m_GameDefaultConfig->m_LobbyCountDownStartValue;
   m_NumPlayersToStartGameOver = m_Aura->m_GameDefaultConfig->m_NumPlayersToStartGameOver;
   m_MaxPlayersLoopback = m_Aura->m_GameDefaultConfig->m_MaxPlayersLoopback;
   m_MaxPlayersSameIP = m_Aura->m_GameDefaultConfig->m_MaxPlayersSameIP;
@@ -1251,13 +1253,13 @@ bool CGame::Update(void* fd, void* send_fd)
     m_LastDownloadTicks = Ticks;
   }
 
-  // countdown every 500 ms
+  // countdown every m_LobbyCountDownInterval ms (default 500 ms)
 
-  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded && Ticks - m_LastCountDownTicks >= 500) {
+  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded && Ticks - m_LastCountDownTicks >= m_LobbyCountDownInterval) {
     if (m_CountDownCounter > 0) {
       // we use a countdown counter rather than a "finish countdown time" here because it might alternately round up or down the count
       // this sometimes resulted in a countdown of e.g. "6 5 3 2 1" during my testing which looks pretty dumb
-      // doing it this way ensures it's always "5 4 3 2 1" but each int32_terval might not be *exactly* the same length
+      // doing it this way ensures it's always "5 4 3 2 1" but each interval might not be *exactly* the same length
 
       SendAllChat(to_string(m_CountDownCounter--) + ". . .");
     } else if (!m_ChatOnly) {
@@ -5979,7 +5981,7 @@ void CGame::StartCountDown(bool force)
 
   m_Aura->m_CanReplaceLobby = false;
   m_CountDownStarted = true;
-  m_CountDownCounter = 5;
+  m_CountDownCounter = m_LobbyCountDownStartValue;
 
   if (!m_KickVotePlayer.empty()) {
     m_KickVotePlayer.clear();

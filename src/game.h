@@ -181,6 +181,8 @@ protected:
   uint32_t                       m_PerfThreshold;                 // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                       m_LobbyNoOwnerTime;              // relinquish game ownership after these many seconds
   uint32_t                       m_LobbyTimeLimit;                // auto close the game lobby after these many seconds without any owner
+  uint32_t                       m_LobbyCountDownInterval;        // ms between each number count down when !start is issued
+  uint32_t                       m_LobbyCountDownStartValue;      // number at which !start count down begins
   uint32_t                       m_NumPlayersToStartGameOver;     // when this player count is reached, the game over timer will start
 
   bool                           m_CheckJoinable;
