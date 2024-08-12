@@ -1722,7 +1722,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Failed to close slot.");
       } else if (failedSlots.empty()) {
         if (Args.size() == 1) {
-          SendReply("Closed slot #" + to_string(Args[0] + 1) + ".");
+          SendReply("Closed slot #" + to_string(Args[0]) + ".");
         } else {
           SendReply("Closed " + to_string(Args.size()) + " slot(s).");
         }
@@ -2117,7 +2117,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Failed to open slot.");
       } else if (failedSlots.empty()) {
         if (Args.size() == 1) {
-          SendReply("Opened slot #" + to_string(Args[0] + 1) + ".");
+          SendReply("Opened slot #" + to_string(Args[0]) + ".");
         } else {
           SendReply("Opened " + to_string(Args.size()) + " slot(s).");
         }
@@ -2663,8 +2663,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin cancelled game) [" + m_FromName + "]");
       SendReply("Aborting " + m_TargetGame->GetDescription());
-      m_TargetGame->StopPlayers("was disconnected (admin cancelled game)", false);
       m_TargetGame->m_Exiting = true;
+      m_TargetGame->StopPlayers("was disconnected (admin cancelled game)", false);
       break;
     }
 
@@ -4624,8 +4624,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      SendAll("Shuffling players");
       m_TargetGame->ShuffleSlots();
+      SendAll("Players shuffled");
       break;
     }
 

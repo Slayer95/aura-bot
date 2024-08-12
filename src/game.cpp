@@ -2920,7 +2920,9 @@ void CGame::SendGameDiscoveryInfo()
 
 void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
 {
-  Print(GetLogPrefix() + "deleting player [" + player->GetName() + "]: " + player->GetLeftReason());
+  if (!m_Exiting) {
+    Print(GetLogPrefix() + "deleting player [" + player->GetName() + "]: " + player->GetLeftReason());
+  }
 
   m_LastPlayerLeaveTicks = GetTicks();
 
@@ -3599,6 +3601,9 @@ bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
   // check for players saving the game and notify everyone
 
   if (!action->GetAction()->empty()) {
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+      Print(GetLogPrefix() + "player [" + player->GetName() + "] action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]");
+    }
     switch((*action->GetAction())[0]) {
       case ACTION_SAVE:
         Print(GetLogPrefix() + "player [" + player->GetName() + "] is saving the game");
@@ -5768,6 +5773,9 @@ void CGame::SetOwner(const string& name, const string& realm)
 
 void CGame::ReleaseOwner()
 {
+  if (m_Exiting) {
+    return;
+  }
   Print("[LOBBY: "  + m_GameName + "] Owner \"" + m_OwnerName + "@" + (m_OwnerRealm.empty() ? "@@LAN/VPN" : m_OwnerRealm) + "\" removed.");
   m_LastOwner = m_OwnerName;
   m_OwnerName.clear();

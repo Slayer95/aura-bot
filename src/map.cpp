@@ -645,7 +645,7 @@ void CMap::Load(CConfig* CFG)
           }
         }
         else
-          Print("[MAP] skipping map_crc/sha1 calculation - map archive not loaded");
+          Print("[MAP] skipping map_crc/sha1 calculation - map not decompressed");
       }
     }
   }

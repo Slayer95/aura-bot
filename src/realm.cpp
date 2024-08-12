@@ -745,16 +745,22 @@ bool CRealm::CheckWithinChatQuota(CQueuedChatMessage* message)
 bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 {
   uint8_t selectType;
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    if (message->GetWasThrottled()) {
-      Print(GetLogPrefix() + "sent (was throttled) <<" + message->GetInnerMessage() + ">>");
-    } else {
-      Print(GetLogPrefix() + "sent <<" + message->GetInnerMessage() + ">>");
-    }
-  }
   Send(message->SelectBytes(m_CurrentChannel, selectType));
   if (message->GetSendsEarlyFeedback()) {
     message->SendEarlyFeedback();
+  }
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+    string modeFragment = "sent message <<";
+    if (message->GetWasThrottled()) {
+      if (selectType == CHAT_RECV_SELECTED_WHISPER) {
+        modeFragment = "sent whisper (throttled) <<";
+      } else {
+        modeFragment = "sent message (throttled) <<";
+      }
+    } else if (selectType == CHAT_RECV_SELECTED_WHISPER) {
+      modeFragment = "sent whisper <<";
+    }
+    Print(GetLogPrefix() + modeFragment + message->GetInnerMessage() + ">>");
   }
   if (selectType == CHAT_RECV_SELECTED_WHISPER) {
     m_ChatSentWhispers.push(message);
