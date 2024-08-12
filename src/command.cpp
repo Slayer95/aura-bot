@@ -693,7 +693,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       m_SourceGame->SendAllChat(message);
       AllSourceSuccess = true;
     }
-    if (m_SourceRealm) {
+    if (m_SourceRealm && !AllSourceSuccess) {
       m_SourceRealm->TryQueueChat(message, m_FromName, false, this, ctxFlags);
       AllSourceSuccess = true;
     }
