@@ -133,7 +133,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--crossplay", m_GameCrossplayVersions, "Adds support for game clients on the given version to crossplay. Repeatable.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
-  app.add_flag(  "--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
+  app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
   app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
