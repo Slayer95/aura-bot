@@ -155,8 +155,9 @@ private:
   bool                             m_PowerObserver;                // if the player is a referee - referees can be demoted to full observers
   bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
   bool                             m_WhoisSent;                    // if we've sent a battle.net /whois for this player yet (for spoof checking)
-  bool                             m_HasMap;                       // if we're allowed to download the map or not (used with permission based map downloads)
-  std::optional<bool>              m_Ready;
+  bool                             m_MapReady;                     // if we're allowed to download the map or not (used with permission based map downloads)
+  std::optional<bool>              m_UserReady;
+  bool                             m_Ready;
   bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
   bool                             m_DownloadAllowed;              // if we're allowed to download the map or not (used with permission based map downloads)
   bool                             m_DownloadStarted;              // if we've started downloading the map or not
@@ -250,7 +251,7 @@ public:
   inline bool                  GetDownloadStarted() const { return m_DownloadStarted; }
   inline bool                  GetDownloadFinished() const { return m_DownloadFinished; }
   inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
-  inline bool                  GetHasMap() const { return m_HasMap; }
+  inline bool                  GetMapReady() const { return m_MapReady; }
   inline bool                  GetHasHighPing() const { return m_HasHighPing; }
   inline int64_t               GetKickByTime() const { return m_KickByTime; }
   inline bool                  GetKickQueued() const { return m_KickByTime != 0; }
@@ -289,7 +290,7 @@ public:
   inline void SetDownloadAllowed(bool nDownloadAllowed) { m_DownloadAllowed = nDownloadAllowed; }
   inline void SetDownloadStarted(bool nDownloadStarted) { m_DownloadStarted = nDownloadStarted; }
   inline void SetDownloadFinished(bool nDownloadFinished) { m_DownloadFinished = nDownloadFinished; }
-  inline void SetHasMap(bool nHasMap) { m_HasMap = nHasMap; }
+  inline void SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
   inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
   inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }

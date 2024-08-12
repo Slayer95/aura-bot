@@ -1212,7 +1212,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
             (*i)->SetLeftReason("was kicked for excessive ping " + to_string(ping) + " > " + to_string(m_TargetGame->m_AutoKickPing));
             (*i)->SetLeftCode(PLAYERLEAVE_LOBBY);
             ++KickedCount;
-          } else if ((*i)->GetKickQueued() && ((*i)->GetHasMap() || (*i)->GetDownloadStarted())) {
+          } else if ((*i)->GetKickQueued() && ((*i)->GetMapReady() || (*i)->GetDownloadStarted())) {
             (*i)->SetKickByTime(0);
             (*i)->SetLeftReason(emptyString);
           }

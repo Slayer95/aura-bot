@@ -127,6 +127,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_AutoStartMinTime(nGameSetup->m_AutoStartMinSeconds.has_value() ? GetTime() + nGameSetup->m_AutoStartMinSeconds.value() : 0),
     m_AutoStartMaxTime(nGameSetup->m_AutoStartMaxSeconds.has_value() ? GetTime() + nGameSetup->m_AutoStartMaxSeconds.value() : 0),
     m_AutoStartPlayers(nGameSetup->m_AutoStartPlayers.has_value() ? nGameSetup->m_AutoStartPlayers.value() : 0),
+    m_ControllersReadyCount(0),
     m_ControllersWithMap(0),
     m_CustomLayout(nGameSetup->m_CustomLayout.has_value() ? nGameSetup->m_CustomLayout.value() : MAPLAYOUT_ANY),
     m_CustomLayoutData(make_pair(nAura->m_MaxSlots, nAura->m_MaxSlots)),
@@ -1463,7 +1464,7 @@ void CGame::SendAllSlotInfo()
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
       CGamePlayer* Player = GetPlayerFromSID(i);
-      if (!Player || (Player->GetHasMap() && !Player->GetIsObserver())) {
+      if (!Player || (Player->GetMapReady() && !Player->GetIsObserver())) {
         ++m_ControllersWithMap;
       }
     }
@@ -4043,13 +4044,13 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     SendAllChat("Player [" + player->GetName() + "] downloaded the map in " + ToFormattedString(Seconds) + " seconds (" + ToFormattedString(Rate) + " KB/sec)");
     player->SetDownloadFinished(true);
     player->SetFinishedDownloadingTime(GetTime());
-    if (!player->GetHasMap()) {
-      player->SetHasMap(true);
+    if (!player->GetMapReady()) {
+      player->SetMapReady(true);
       if (!player->GetIsObserver())
         ++m_ControllersWithMap;
     }
-  } else if (!player->GetHasMap()) {
-    player->SetHasMap(true);
+  } else if (!player->GetMapReady()) {
+    player->SetMapReady(true);
     if (!player->GetIsObserver())
       ++m_ControllersWithMap;
   }
@@ -5886,7 +5887,7 @@ void CGame::StartCountDown(bool force)
 
   if (force) {
     for (const auto& player : m_Players) {
-      bool shouldKick = !player->GetHasMap();
+      bool shouldKick = !player->GetMapReady();
       if (!shouldKick) {
         CRealm* realm = player->GetRealm(false);
         if (realm && realm->GetUnverifiedCannotStartGame() && !player->IsRealmVerified()) {
