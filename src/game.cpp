@@ -4015,26 +4015,29 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
       } else {
         player->SetLastMapPartAcked(mapSize->GetMapSize());
       }
-    } else if (!player->GetKickQueued()) {
+    } else if (!player->GetMapKicked()) {
+      player->SetMapKicked(true);
+      if (!player->GetKickQueued()) {
         player->SetKickByTime(Time + m_LacksMapKickDelay);
-        if (m_Remade) {
-          player->SetLeftReason("autokicked - they don't have the map (remade game)");
-        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
-          // Even if manual, claim they are disabled.
-          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-        } else if (IsMapTooLarge) {
-          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
-        } else if (MapData->empty()) {
-          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
-        } else {
-          player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");
-        }
-        player->SetLeftCode(PLAYERLEAVE_LOBBY);
-        if (GetMapSiteURL().empty()) {
-          SendChat(player, "" + player->GetName() + ", please download the map before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
-        } else {
-          SendChat(player, "" + player->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
-        }
+      }
+      if (m_Remade) {
+        player->SetLeftReason("autokicked - they don't have the map (remade game)");
+      } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
+        // Even if manual, claim they are disabled.
+        player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
+      } else if (IsMapTooLarge) {
+        player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
+      } else if (MapData->empty()) {
+        player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
+      } else {
+        player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");
+      }
+      player->SetLeftCode(PLAYERLEAVE_LOBBY);
+      if (GetMapSiteURL().empty()) {
+        SendChat(player, "" + player->GetName() + ", please download the map before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
+      } else {
+        SendChat(player, "" + player->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_LacksMapKickDelay) + " seconds...)");
+      }
     }
   } else if (player->GetDownloadStarted()) {
     // calculate download rate

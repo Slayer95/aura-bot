@@ -156,6 +156,7 @@ private:
   bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
   bool                             m_WhoisSent;                    // if we've sent a battle.net /whois for this player yet (for spoof checking)
   bool                             m_MapReady;                     // if we're allowed to download the map or not (used with permission based map downloads)
+  bool                             m_MapKicked;
   std::optional<bool>              m_UserReady;
   bool                             m_Ready;
   bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
@@ -252,6 +253,7 @@ public:
   inline bool                  GetDownloadFinished() const { return m_DownloadFinished; }
   inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
   inline bool                  GetMapReady() const { return m_MapReady; }
+  inline bool                  GetMapKicked() const { return m_MapKicked; }
   inline bool                  GetHasHighPing() const { return m_HasHighPing; }
   inline int64_t               GetKickByTime() const { return m_KickByTime; }
   inline bool                  GetKickQueued() const { return m_KickByTime != 0; }
@@ -291,6 +293,7 @@ public:
   inline void SetDownloadStarted(bool nDownloadStarted) { m_DownloadStarted = nDownloadStarted; }
   inline void SetDownloadFinished(bool nDownloadFinished) { m_DownloadFinished = nDownloadFinished; }
   inline void SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
+  inline void SetMapKicked(bool nMapKicked) { m_MapKicked = nMapKicked; }
   inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
   inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
