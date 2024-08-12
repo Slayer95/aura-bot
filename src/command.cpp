@@ -1015,6 +1015,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !HELP
+    //
+
+    case HashCode("git"):
+    case HashCode("help"): {
+      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project. Read more at <" + m_Aura->m_RepositoryURL + ">");
+      break;
+    }
+
+    //
     // !SC
     //
     case HashCode("sc"): {
@@ -1616,6 +1626,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !FROM
     //
 
+    case HashCode("where"):
     case HashCode("from"):
     case HashCode("f"): {
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
