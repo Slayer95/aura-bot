@@ -346,7 +346,7 @@ bool CMap::SetRandomHeroes(const bool nEnable)
 
 bool CMap::SetRandomRaces(const bool nEnable)
 {
-  if (m_MapFlags & MAPOPT_FIXEDPLAYERSETTINGS) {
+  if (m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) {
     return false;
   }
   if (nEnable) {
