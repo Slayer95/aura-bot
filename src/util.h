@@ -635,6 +635,20 @@ inline std::string::size_type GetLevenshteinDistanceForSearch(const std::string&
   return dp[m][n];
 }
 
+inline std::string DurationLeftToString(int64_t remainingSeconds) {
+  if (remainingSeconds < 0)
+    remainingSeconds = 0;
+  int64_t remainingMinutes = remainingSeconds / 60;
+  remainingSeconds = remainingSeconds % 60;
+  if (remainingMinutes == 0) {
+    return std::to_string(remainingSeconds) + " seconds";
+  } else if (remainingSeconds == 0) {
+    return std::to_string(remainingMinutes) + " minutes";
+  } else {
+    return std::to_string(remainingMinutes) + " min " + std::to_string(remainingSeconds) + "s";
+  }
+}
+
 inline std::string RemoveNonAlphanumeric(const std::string& s) {
     std::regex nonAlphanumeric("[^a-zA-Z0-9]");
     return std::regex_replace(s, nonAlphanumeric, "");
