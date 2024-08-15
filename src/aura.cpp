@@ -1450,31 +1450,31 @@ void CAura::LogPersistent(const string& logText)
 bool CAura::CreateGame(CGameSetup* gameSetup)
 {
   if (!m_Config->m_Enabled) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (gameSetup->m_Name.size() > m_MaxGameNameSize) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The game name is too long (max " + to_string(m_MaxGameNameSize) + " characters)", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The game name is too long (max " + to_string(m_MaxGameNameSize) + " characters)", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (!gameSetup->m_Map) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
   if (!gameSetup->m_Map || !gameSetup->m_Map->GetValid()) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (m_CurrentLobby) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. Another game lobby [" + m_CurrentLobby->GetDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Another game lobby [" + m_CurrentLobby->GetDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
   if (m_Games.size() > m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && !m_Config->m_AllowExtraLobby)) {
-    gameSetup->m_Ctx->ErrorReply("Unable to create game [" + gameSetup->m_Name + "]. There are too many active games already.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Too many active games.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 

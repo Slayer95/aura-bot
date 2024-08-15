@@ -2648,17 +2648,17 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
 
   string typeWord;
   if (m_RestoredGame) {
-    typeWord = "loaded";
+    typeWord = "Loaded game";
   } else if (m_DisplayMode == GAME_PRIVATE) {
-    typeWord = "private";
+    typeWord = "Private game";
   } else {
-    typeWord = "public";
+    typeWord = "Game";
   }
 
   if (m_IsMirror) {
-    return versionPrefix + "Mirroring " + typeWord + " game of " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
+    return versionPrefix + typeWord + " mirrored: " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
   } else {
-    return versionPrefix + "Hosting " + typeWord + " game of " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
+    return versionPrefix + typeWord + " hosted: " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
   }
 }
 

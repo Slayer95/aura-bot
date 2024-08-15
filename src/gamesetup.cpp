@@ -659,7 +659,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     Print("[AURA] Cached map config for [" + fileName + "] as [" + PathToString(resolvedCFGPath) + "]");
   }
 
-  if (!silent) m_Ctx->SendReply("Map file loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+  if (!silent) m_Ctx->SendReply("Loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
   return baseMap;
 }
 
@@ -683,7 +683,7 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
         if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
           Print("[AURA] Map cache success");
         }
-        if (!silent) m_Ctx->SendReply("Map file loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+        if (!silent) m_Ctx->SendReply("Loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
         return cachedResult;
       } else {
         delete cachedResult;
@@ -1092,6 +1092,10 @@ void CGameSetup::OnLoadMapSuccess()
       m_Ctx->ErrorReply("Failed to add alias.");
     }
   } else if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
+    /*if (m_Aura->m_Games.size() > m_Aura->m_Config->m_MaxGames || m_Aura->m_Games.size() == m_Aura->m_Config->m_MaxGames && !m_Aura->m_Config->m_AllowExtraLobby) {
+      m_Ctx->ErrorReply("Games hosted quota reached.", CHAT_SEND_SOURCE_ALL);
+      return;
+	}*/
     if (m_Aura->m_CurrentLobby) {
       if (!m_Aura->m_CanReplaceLobby) {
         m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
