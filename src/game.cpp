@@ -1109,6 +1109,7 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   if (GetIsAutoStartDue()) {
+    SendAllChat("Game automatically starting in. . .");
     StartCountDown(false, true);
   }
 
