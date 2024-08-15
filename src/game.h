@@ -192,9 +192,7 @@ protected:
   uint32_t                       m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
   uint8_t                        m_StartPlayers;                  // number of players when the game started
-  int64_t                        m_AutoStartMinTime;
-  int64_t                        m_AutoStartMaxTime;
-  uint8_t                        m_AutoStartPlayers;
+  std::vector<std::pair<uint8_t, int64_t>> m_AutoStartRequirements;
   uint8_t                        m_MaxPlayersLoopback;
   uint8_t                        m_MaxPlayersSameIP;
   uint8_t                        m_PlayersReadyMode;
@@ -221,6 +219,7 @@ protected:
   bool                           m_MuteLobby;                     // if we should stop forwarding lobby chat messages
   bool                           m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
   bool                           m_CountDownStarted;              // if the game start countdown has started or not
+  bool                           m_CountDownUserInitiated;
   bool                           m_GameLoading;                   // if the game is currently loading or not
   bool                           m_GameLoaded;                    // if the game has loaded or not
   bool                           m_LobbyLoading;                  // if the lobby is being setup asynchronously
@@ -281,6 +280,7 @@ public:
   inline bool           GetLocked() const { return m_Locked; }
   inline bool           GetMuteAll() const { return m_MuteAll; }
   inline bool           GetCountDownStarted() const { return m_CountDownStarted; }
+  inline bool           GetCountDownUserInitiated() const { return m_CountDownUserInitiated; }
   inline bool           GetIsMirror() const { return m_IsMirror; }
   inline bool           GetIsDraftMode() const { return m_IsDraftMode; }
   inline bool           GetGameLoading() const { return m_GameLoading; }
@@ -325,6 +325,7 @@ public:
   std::string           GetLogPrefix() const;
   std::string           GetPlayers() const;
   std::string           GetObservers() const;
+  bool                  GetIsAutoStartDue() const;
   std::string           GetAutoStartText() const;
   std::string           GetCmdToken() const { return m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken; }
   CTCPServer*           GetSocket() const { return m_Socket; };
@@ -336,11 +337,14 @@ public:
   std::string           GetActiveReconnectProtocolsDetails() const;
   bool                  GetAnyUsingGProxy() const;
   bool                  GetAnyUsingGProxyLegacy() const;
+  inline uint8_t        GetPlayersReadyMode() const { return m_PlayersReadyMode; }
 
   inline void           SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void           SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
   inline void           SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
   inline void           SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
+
+  void UpdateReadyCounters();
 
   inline uint32_t       GetUptime() const {
     int64_t time = GetTime();
@@ -530,7 +534,8 @@ public:
   void ResetTeams(const bool alsoCaptains);
   void ResetSync();
   void CountKickVotes();
-  void StartCountDown(bool force);
+  bool GetCanStartGracefulCountDown() const;
+  void StartCountDown(bool fromUser, bool force);
   bool StopPlayers(const std::string& reason, const bool allowLocal);
   void StopLaggers(const std::string& reason);
   void StopDesynchronized(const std::string& reason);

@@ -122,8 +122,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
   app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");
-  app.add_option("--auto-start-min-time", m_GameAutoStartMinSeconds, "Sets a minimum time that should pass before automatically starting the game (seconds.)");
-  app.add_option("--auto-start-max-time", m_GameAutoStartMaxSeconds, "Sets a timeout that will forcibly start the game when over (seconds.)");
+  app.add_option("--auto-start-time", m_GameAutoStartSeconds, "Sets a time that should pass before automatically starting the game (seconds.)");
   app.add_option("--latency", m_GameLatencyAverage, "Sets the refresh period for the game as a ping equalizer, in milliseconds.");
   app.add_option("--latency-max-frames", m_GameLatencyMaxFrames, "Sets a maximum amount of frames clients may fall behind. When exceeded, the lag screen shows up.");
   app.add_option("--latency-safe-frames", m_GameLatencySafeFrames, "Sets a frame difference clients must catch up to in order for the lag screen to go away.");
@@ -446,8 +445,7 @@ bool CCLI::QueueActions(CAura* nAura) const
           if (m_GameLobbyReplaceable.has_value()) gameSetup->SetLobbyReplaceable(m_GameLobbyReplaceable.value());
           if (m_GameLobbyAutoRehosted.has_value()) gameSetup->SetLobbyAutoRehosted(m_GameLobbyAutoRehosted.value());
           if (m_GameAutoStartPlayers.has_value()) gameSetup->SetAutoStartPlayers(m_GameAutoStartPlayers.value());
-          if (m_GameAutoStartMinSeconds.has_value()) gameSetup->SetAutoStartMinSeconds(m_GameAutoStartMinSeconds.value());
-          if (m_GameAutoStartMaxSeconds.has_value()) gameSetup->SetAutoStartMaxSeconds(m_GameAutoStartMaxSeconds.value());
+          if (m_GameAutoStartSeconds.has_value()) gameSetup->SetAutoStartSeconds(m_GameAutoStartSeconds.value());
           if (m_GameLatencyAverage.has_value()) gameSetup->SetLatencyAverage(m_GameLatencyAverage.value());
           if (m_GameLatencyMaxFrames.has_value()) gameSetup->SetLatencyMaxFrames(m_GameLatencyMaxFrames.value());
           if (m_GameLatencySafeFrames.has_value()) gameSetup->SetLatencySafeFrames(m_GameLatencySafeFrames.value());

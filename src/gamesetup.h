@@ -199,8 +199,7 @@ public:
   uint16_t                                        m_CreationCounter;
   std::optional<uint32_t>                         m_LobbyTimeout;
   std::optional<uint8_t>                          m_AutoStartPlayers;
-  std::optional<int64_t>                          m_AutoStartMinSeconds;
-  std::optional<int64_t>                          m_AutoStartMaxSeconds;
+  std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_IPFloodHandler;
   std::optional<uint16_t>                         m_LatencyAverage;
   std::optional<uint16_t>                         m_LatencyMaxFrames;
@@ -309,14 +308,7 @@ public:
   void SetReservations(const std::vector<std::string>& nReservations) { m_Reservations = nReservations; }
   void SetSupportedGameVersions(const std::vector<uint8_t>& nVersions) { m_SupportedGameVersions = nVersions; }
   void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
-  void SetAutoStartMinSeconds(const int64_t nValue) {
-    m_AutoStartMinSeconds = nValue;
-    if (m_AutoStartMaxSeconds < nValue) m_AutoStartMaxSeconds = nValue;
-  }
-  void SetAutoStartMaxSeconds(const int64_t nValue) {
-    m_AutoStartMaxSeconds = nValue;
-    if (m_AutoStartMinSeconds > nValue) m_AutoStartMinSeconds = nValue;
-  }
+  void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
   void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
   void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
   void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }

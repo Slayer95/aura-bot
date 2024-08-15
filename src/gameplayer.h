@@ -265,6 +265,7 @@ public:
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
   inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
+  bool                         UpdateReady();
   bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
   inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
@@ -304,6 +305,7 @@ public:
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
   inline void SetKickByTime(int64_t nKickByTime) { m_KickByTime = nKickByTime; }
+  inline void SetUserReady(bool nReady) { m_UserReady = nReady; }
 
   inline std::string GetLastCommand() const { return m_LastCommand; }
   inline void ClearLastCommand() { m_LastCommand.clear(); }

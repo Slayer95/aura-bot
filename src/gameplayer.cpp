@@ -797,3 +797,35 @@ bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const
     isVerified || m_RealmHostName.empty()
   );
 }
+
+bool CGamePlayer::UpdateReady()
+{
+  if (m_UserReady.has_value()) {
+    m_Ready = m_UserReady.value();
+    return m_Ready;
+  }
+  switch (m_Game->GetPlayersReadyMode()) {
+    case READY_MODE_FAST:
+      m_Ready = true;
+      break;
+    case READY_MODE_EXPECT_RACE:
+      if (m_Game->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+        m_Ready = true;
+      } else if (m_Game->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+        m_Ready = true;
+      } else {
+        const CGameSlot* slot = m_Game->InspectSlot(m_Game->GetSIDFromPID(GetPID()));
+        if (slot) {
+          m_Ready = slot->GetRaceFixed() != SLOTRACE_RANDOM;
+        } else {
+          m_Ready = false;
+        }
+      }
+      break;
+    case READY_MODE_EXPLICIT:
+    default: {
+      m_Ready = false;
+    }
+  }
+  return m_Ready;
+}

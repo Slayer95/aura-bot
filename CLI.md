@@ -544,16 +544,14 @@ This parameter specifies that the game may automatically start when the provided
 have been occupied in the game. This includes computer slots, virtual player slots, and actual players that 
 have downloaded the map.
 
-## \`--auto-start-min-time <SECONDS>\`
+If \`--auto-start-time\` is also supplied, the game will start only when both conditions are met simultaneously.
 
-Together with \`--auto-start-players\`, this parameter specifies that, even if the required ``PLAYERS`` 
-count is reached, the game will not automatically start until the provided ``SECONDS`` have passed since 
+## \`--auto-start-time <SECONDS>\`
+
+This parameter specifies that the game will automatically start when the provided ``SECONDS`` have passed since 
 the game was created.
 
-## \`--auto-start-max-time <SECONDS>\`
-
-This parameter specifies that, independently of \`--auto-start-players\`, the game will automatically start 
-as soon as ``SECONDS`` have passed since the game was created.
+If \`--auto-start-players\` is also supplied, the game will start only when both conditions are met simultaneously.
 
 ## \`--hcl\`
 

@@ -124,9 +124,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_DownloadCounter(0),
     m_CountDownCounter(0),
     m_StartPlayers(0),
-    m_AutoStartMinTime(nGameSetup->m_AutoStartMinSeconds.has_value() ? GetTime() + nGameSetup->m_AutoStartMinSeconds.value() : 0),
-    m_AutoStartMaxTime(nGameSetup->m_AutoStartMaxSeconds.has_value() ? GetTime() + nGameSetup->m_AutoStartMaxSeconds.value() : 0),
-    m_AutoStartPlayers(nGameSetup->m_AutoStartPlayers.has_value() ? nGameSetup->m_AutoStartPlayers.value() : 0),
     m_ControllersReadyCount(0),
     m_ControllersWithMap(0),
     m_CustomLayout(nGameSetup->m_CustomLayout.has_value() ? nGameSetup->m_CustomLayout.value() : MAPLAYOUT_ANY),
@@ -147,6 +144,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_MuteLobby(false),
     m_IsMirror(nGameSetup->GetIsMirror()),
     m_CountDownStarted(false),
+    m_CountDownUserInitiated(false),
     m_GameLoading(false),
     m_GameLoaded(false),
     m_LobbyLoading(false),
@@ -228,6 +226,13 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
     for (const auto& playerName : nGameSetup->m_Reservations) {
       AddToReserved(playerName);
+    }
+
+    if (nGameSetup->m_AutoStartSeconds.has_value() || nGameSetup->m_AutoStartPlayers.has_value()) {
+      m_AutoStartRequirements.push_back(make_pair(
+        (uint8_t)nGameSetup->m_AutoStartPlayers.value_or(0),
+        m_CreationTime + (int64_t)nGameSetup->m_AutoStartSeconds.value_or(0)
+      ));
     }
 
     InitPRNG();
@@ -1098,25 +1103,13 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   if ((!m_GameLoading && !m_GameLoaded) && (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED))) {
-    SendAllSlotInfo(); // Updates m_ControllersWithMap
+    SendAllSlotInfo();
+    UpdateReadyCounters();
     m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
   }
 
-  // start countdown timer if autostart is due
-  if (!m_CountDownStarted && (m_AutoStartMaxTime != 0 || m_AutoStartPlayers != 0) && m_ControllersWithMap >= 2) {
-    bool IsTriggerTime = 0 < m_AutoStartMinTime && m_AutoStartMinTime <= Time;
-    bool IsTriggerPlayers = 0 < m_AutoStartPlayers && m_AutoStartPlayers <= m_ControllersWithMap;
-    bool ShouldStart = false;
-    if (IsTriggerTime || IsTriggerPlayers) {
-      ShouldStart = (IsTriggerTime && IsTriggerPlayers) || (0 < m_AutoStartMaxTime && m_AutoStartMaxTime <= Time);
-      if (!ShouldStart) {
-        ShouldStart = 0 == (IsTriggerTime ? m_AutoStartPlayers : m_AutoStartMinTime);
-      }
-    }
-
-    if (ShouldStart) {
-      StartCountDown(true);
-    }
+  if (GetIsAutoStartDue()) {
+    StartCountDown(false, true);
   }
 
   // start the gameover timer if there's only a configured number of players left
@@ -1191,6 +1184,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
     if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
       SendAllSlotInfo();
+      UpdateReadyCounters();
       m_SlotInfoChanged &= ~(SLOTS_DOWNLOAD_PROGRESS_CHANGED);
     }
 
@@ -1455,23 +1449,33 @@ void CGame::SendAllChat(const string& message) const
   SendAllChat(GetHostPID(), message);
 }
 
+void CGame::UpdateReadyCounters()
+{
+  m_ControllersWithMap = 0;
+  m_ControllersReadyCount = 0;
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[i].GetTeam() != m_Aura->m_MaxSlots) {
+      CGamePlayer* Player = GetPlayerFromSID(i);
+      if (!Player) {
+        ++m_ControllersWithMap;
+        ++m_ControllersReadyCount;
+      } else if (Player->GetMapReady()) {
+        ++m_ControllersWithMap;
+        if (Player->UpdateReady()) {
+          ++m_ControllersReadyCount;
+        }
+      }
+    }
+  }
+}
+
 void CGame::SendAllSlotInfo()
 {
   if (m_GameLoading || m_GameLoaded)
     return;
 
   SendAll(GetProtocol()->SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
-
-  m_ControllersWithMap = 0;
-  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
-      CGamePlayer* Player = GetPlayerFromSID(i);
-      if (!Player || (Player->GetMapReady() && !Player->GetIsObserver())) {
-        ++m_ControllersWithMap;
-      }
-    }
-    m_SlotInfoChanged = 0;
-  }
+  m_SlotInfoChanged = 0;
 }
 
 uint8_t CGame::GetNumEnabledTeamSlots(const uint8_t team) const
@@ -2131,58 +2135,47 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
   return true;
 }
 
+bool CGame::GetIsAutoStartDue() const
+{
+  if (m_CountDownStarted || m_AutoStartRequirements.empty()) {
+    return false;
+  }
+
+  const int64_t Time = GetTime();
+  for (const auto& requirement : m_AutoStartRequirements) {
+    if (requirement.first <= m_ControllersReadyCount && requirement.second <= Time) {
+      return GetCanStartGracefulCountDown();
+    }
+  }
+
+  return false;
+}
+
 string CGame::GetAutoStartText() const
 {
-  if (m_AutoStartMaxTime == 0 && m_AutoStartPlayers == 0)
+  if (m_AutoStartRequirements.empty()) {
     return "Autostart is not set.";
+  }
 
   int64_t Time = GetTime();
-  string MinTimeString;
-  string MaxTimeString;
-  if (m_AutoStartMinTime != 0) {
-    int64_t RemainingSeconds = m_AutoStartMinTime - Time;
-    if (RemainingSeconds < 0)
-      RemainingSeconds = 0;
-    int64_t RemainingMinutes = RemainingSeconds / 60;
-    RemainingSeconds = RemainingSeconds % 60;
-    if (RemainingMinutes == 0) {
-      MinTimeString = to_string(RemainingSeconds) + " seconds";
-    } else if (RemainingSeconds == 0) {
-      MinTimeString = to_string(RemainingMinutes) + " minutes";
+  vector<string> fragments; 
+  for (const auto& requirement : m_AutoStartRequirements) {
+    if (requirement.first == 0 && requirement.second <= Time) {
+      fragments.push_back("now");
+    } else if (requirement.first == 0) {
+      fragments.push_back("in " + DurationLeftToString(requirement.second - Time));
+    } else if (requirement.second <= Time) {
+      fragments.push_back("at " + to_string(requirement.first) + "/" + ToDecString(m_Map->GetMapNumControllers()));
     } else {
-      MinTimeString = to_string(RemainingMinutes) + " min " + to_string(RemainingSeconds) + "s.";
-    }
-  }
-  if (m_AutoStartMaxTime != 0) {
-    int64_t RemainingSeconds = m_AutoStartMaxTime - Time;
-    if (RemainingSeconds < 0)
-      RemainingSeconds = 0;
-    int64_t RemainingMinutes = RemainingSeconds / 60;
-    RemainingSeconds = RemainingSeconds % 60;
-    if (RemainingMinutes == 0) {
-      MaxTimeString = to_string(RemainingSeconds) + " seconds.";
-    } else if (RemainingSeconds == 0) {
-      MaxTimeString = to_string(RemainingMinutes) + " minutes";
-    } else {
-      MaxTimeString = to_string(RemainingMinutes) + " min " + to_string(RemainingSeconds) + "s.";
+      fragments.push_back("at " + to_string(requirement.first) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " after " + DurationLeftToString(requirement.second - Time));
     }
   }
 
-  if (m_AutoStartPlayers != 0 && m_AutoStartMaxTime != 0) {
-    if (m_AutoStartMinTime != 0) {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " after " + MinTimeString + " Max " + MaxTimeString;
-    } else {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + ". Max " + MaxTimeString;
-    }
-  } else if (m_AutoStartPlayers != 0) {
-    if (m_AutoStartMinTime != 0) {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " after " + MinTimeString;
-    } else {
-      return "Autostarts at " + to_string(m_AutoStartPlayers) + "/" + ToDecString(m_Map->GetMapNumControllers());
-    }
-  } else {
-    return "Autostarts in " + MaxTimeString;
+  if (fragments.size() == 1) {
+    return "Autostarts " + fragments[0];
   }
+
+  return "Autostarts " + JoinVector(fragments, "or", false);
 }
 
 void CGame::SendAllAutoStart() const
@@ -2372,7 +2365,7 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line = Line.substr(11);
     }
     if (Line.substr(0, 12) == "{AUTOSTART?}") {
-      if (m_AutoStartMinTime == 0 && m_AutoStartPlayers == 0) {
+      if (m_AutoStartRequirements.empty()) {
         continue;
       }
       Line = Line.substr(12);
@@ -3331,6 +3324,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
 
   // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
   SendAllSlotInfo();
+  UpdateReadyCounters();
 
   // send a welcome message
 
@@ -4223,8 +4217,10 @@ void CGame::EventGameStarted()
   }
 
   // send a final slot info update for HCL, or in case there are pending updates
-  if (m_SlotInfoChanged != 0)
+  if (m_SlotInfoChanged != 0) {
     SendAllSlotInfo();
+    UpdateReadyCounters();
+  }
 
   m_GameLoading = true;
 
@@ -4389,9 +4385,7 @@ void CGame::Remake()
   m_DownloadCounter = 0;
   m_CountDownCounter = 0;
   m_StartPlayers = 0;
-  m_AutoStartMinTime = 0;
-  m_AutoStartMaxTime = 0;
-  m_AutoStartPlayers = 0;
+  m_AutoStartRequirements.clear();
   m_ControllersWithMap = 0;
   m_CustomLayout = 0;
 
@@ -4402,6 +4396,7 @@ void CGame::Remake()
   m_Locked = false;
   m_RealmRefreshError = false;
   m_CountDownStarted = false;
+  m_CountDownUserInitiated = false;
   m_GameLoading = false;
   m_GameLoaded = false;
   m_LobbyLoading = true;
@@ -5869,7 +5864,67 @@ void CGame::CountKickVotes()
   }
 }
 
-void CGame::StartCountDown(bool force)
+bool CGame::GetCanStartGracefulCountDown() const
+{
+  if (m_CountDownStarted || m_ChatOnly) {
+    return false;
+  }
+
+  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
+    return false;
+  }
+
+  if (m_HCLCommandString.size() > GetSlotsOccupied()) {
+    return false;
+  }
+
+  bool enoughTeams = false;
+  uint8_t sameTeam = m_Aura->m_MaxSlots;
+  for (const auto& slot : m_Slots) {
+    if (slot.GetIsPlayerOrFake() && slot.GetDownloadStatus() != 100) {
+      CGamePlayer* Player = GetPlayerFromPID(slot.GetPID());
+      if (Player) {
+        return false;
+      }
+    }
+    if (slot.GetTeam() != m_Aura->m_MaxSlots) {
+      if (sameTeam == m_Aura->m_MaxSlots) {
+        sameTeam = slot.GetTeam();
+      } else if (sameTeam != slot.GetTeam()) {
+        enoughTeams = true;
+      }
+    }
+  }
+
+  if (0 == m_ControllersWithMap) {
+    return false;
+  } else if (m_ControllersWithMap < 2 && !m_RestoredGame) {
+    return false;
+  } else if (!enoughTeams) {
+    return false;
+  }
+
+  for (const auto& player : m_Players) {
+    if (!player->GetIsReserved() && player->GetNumPings() < 3) {
+      return false;
+    }
+  }
+
+  for (const auto& player : m_Players) {
+    CRealm* realm = player->GetRealm(false);
+    if (realm && realm->GetUnverifiedCannotStartGame() && !player->IsRealmVerified()) {
+      return false;
+    }
+  }
+
+  if (GetTicks() < m_LastPlayerLeaveTicks + 2000) {
+    return false;
+  }
+
+  return true;
+}
+
+void CGame::StartCountDown(bool fromUser, bool force)
 {
   if (m_CountDownStarted)
     return;
@@ -5890,6 +5945,8 @@ void CGame::StartCountDown(bool force)
   // if the player sent "!start force" skip the checks and start the countdown
   // otherwise check that the game is ready to start
 
+  uint8_t sameTeam = m_Aura->m_MaxSlots;
+
   if (force) {
     for (const auto& player : m_Players) {
       bool shouldKick = !player->GetMapReady();
@@ -5908,6 +5965,7 @@ void CGame::StartCountDown(bool force)
     }
   } else {
     bool ChecksPassed = true;
+    bool enoughTeams = false;
 
     // check if the HCL command string is short enough
     if (m_HCLCommandString.size() > GetSlotsOccupied()) {
@@ -5927,6 +5985,13 @@ void CGame::StartCountDown(bool force)
             StillDownloading += ", " + Player->GetName();
         }
       }
+      if (slot.GetTeam() != m_Aura->m_MaxSlots) {
+        if (sameTeam == m_Aura->m_MaxSlots) {
+          sameTeam = slot.GetTeam();
+        } else if (sameTeam != slot.GetTeam()) {
+          enoughTeams = true;
+        }
+      }
     }
     if (!StillDownloading.empty()) {
       SendAllChat("Players still downloading the map: " + StillDownloading);
@@ -5936,6 +6001,9 @@ void CGame::StartCountDown(bool force)
       ChecksPassed = false;
     } else if (m_ControllersWithMap < 2 && !m_RestoredGame) {
       SendAllChat("Only " + to_string(m_ControllersWithMap) + " player has the map.");
+      ChecksPassed = false;
+    } else if (!enoughTeams) {
+      SendAllChat("Players are not arranged in teams.");
       ChecksPassed = false;
     }
 
@@ -5981,6 +6049,7 @@ void CGame::StartCountDown(bool force)
 
   m_Aura->m_CanReplaceLobby = false;
   m_CountDownStarted = true;
+  m_CountDownUserInitiated = fromUser;
   m_CountDownCounter = m_LobbyCountDownStartValue;
 
   if (!m_KickVotePlayer.empty()) {

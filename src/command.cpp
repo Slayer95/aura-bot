@@ -2361,7 +2361,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->StartCountDown(IsForce);
+      m_TargetGame->StartCountDown(true, IsForce);
       break;
     }
 
@@ -2384,7 +2384,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Someone left the game less than two seconds ago.");
         break;
       }
-      m_TargetGame->StartCountDown(true);
+      m_TargetGame->StartCountDown(true, true);
       if (m_TargetGame->GetCountDownStarted()) {
         // 500 ms countdown
         m_TargetGame->m_CountDownCounter = 1;
@@ -2428,8 +2428,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     //
     // !AUTOSTART
+    // !AS
     //
 
+    case HashCode("addas"):
+    case HashCode("as"):
     case HashCode("autostart"): {
       UseImplicitHostedGame();
 
@@ -2452,41 +2455,45 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint32_t MinSlots = Args[0];
+      uint8_t minReadyControllers = static_cast<uint8_t>(Args[0]);
       uint32_t MinMinutes = 0;
       if (Args.size() >= 2) {
         MinMinutes = Args[1];
       }
 
-      if (MinSlots > m_TargetGame->GetMap()->GetMapNumControllers()) {
-        ErrorReply("This map does not allow " + to_string(MinSlots) + " players.");
+      if (minReadyControllers > m_TargetGame->GetMap()->GetMapNumControllers()) {
+        ErrorReply("This map does not allow " + to_string(minReadyControllers) + " players.");
         break;
       }
 
-      if (MinSlots <= m_TargetGame->m_ControllersWithMap) {
+      if (minReadyControllers <= m_TargetGame->m_ControllersReadyCount) {
         // Misuse protection. Make sure the user understands AI players are added.
-        ErrorReply("There are already " + to_string(m_TargetGame->m_ControllersWithMap) + " players. Use " + cmdToken + "start instead.");
+        ErrorReply("There are already " + to_string(m_TargetGame->m_ControllersReadyCount) + " players ready. Use " + cmdToken + "start instead.");
         break;
       }
 
-      int64_t Time = GetTime();
-      m_TargetGame->m_AutoStartPlayers = static_cast<uint8_t>(MinSlots);
-      m_TargetGame->m_AutoStartMinTime = Time + static_cast<int64_t>(MinMinutes) * 60;
-      if (m_TargetGame->m_AutoStartMinTime <= Time)
-        m_TargetGame->m_AutoStartMinTime = 0;
-      if (m_TargetGame->m_AutoStartMaxTime <= m_TargetGame->m_AutoStartMinTime)
-        m_TargetGame->m_AutoStartMaxTime = 0;
-
+      int64_t time = GetTime();
+      int64_t dueTime = time + static_cast<int64_t>(MinMinutes) * 60;
+      if (dueTime < time) {
+        ErrorReply("Failed to set timed start after " + to_string(MinMinutes) + " minutes.");
+        break;
+      }
+      if (CommandHash != HashCode("addas")) {
+        m_TargetGame->m_AutoStartRequirements.clear();
+      }
+      m_TargetGame->m_AutoStartRequirements.push_back(make_pair(minReadyControllers, dueTime));
       m_TargetGame->SendAllAutoStart();
       break;
     }
 
     //
-    // !FORCEAUTOSTART
+    // !CLEARAUTOSTART
     //
 
+    case HashCode("clearas"):
+    case HashCode("clearautostart"): {
+      UseImplicitHostedGame();
 
-    case HashCode("forceautostart"): {
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
@@ -2495,29 +2502,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "forceautostart <minutes>");
+      if (m_TargetGame->m_AutoStartRequirements.empty()) {
+        ErrorReply("There are no active autostart conditions.");
         break;
       }
-
-      uint32_t MaxMinutes = 0;
-      stringstream SS;
-      SS << Payload;
-      SS >> MaxMinutes;
-
-      if (SS.fail() || MaxMinutes == 0) {
-        ErrorReply("Usage: " + cmdToken + "forceautostart <minutes>");
-        break;
-      }
-
-      int64_t Time = GetTime();
-      m_TargetGame->m_AutoStartMaxTime = Time + static_cast<int64_t>(MaxMinutes) * 60;
-      if (m_TargetGame->m_AutoStartMaxTime <= Time)
-        m_TargetGame->m_AutoStartMaxTime = 0;
-      if (m_TargetGame->m_AutoStartMinTime >= m_TargetGame->m_AutoStartMaxTime)
-        m_TargetGame->m_AutoStartMinTime = 0;
-
-      m_TargetGame->SendAllAutoStart();
+      m_TargetGame->m_AutoStartRequirements.clear();
+      SendReply("Autostart removed.");
       break;
     }
 
@@ -2864,12 +2854,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetCountDownStarted()) {
-        SendAll("Countdown stopped!");
         m_TargetGame->m_CountDownStarted = false;
+        if (m_TargetGame->GetIsAutoStartDue()) {
+          m_TargetGame->m_AutoStartRequirements.clear();
+          SendAll("Countdown stopped by " + m_FromName + ". Autostart removed.");
+        } else {
+          SendAll("Countdown stopped by " + m_FromName + ".");
+        }
       } else {
-        m_TargetGame->m_AutoStartMinTime = 0;
-        m_TargetGame->m_AutoStartMaxTime = 0;
-        m_TargetGame->m_AutoStartPlayers = 0;
+        m_TargetGame->m_AutoStartRequirements.clear();
+        SendAll("Autostart removed.");
       }
       break;
     }
@@ -5922,11 +5916,59 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
-    case HashCode("ready"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
-        return;
+    case HashCode("afk"):
+    case HashCode("unready"): {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || !m_Player)
+        break;
 
-      SendReply("You are always assumed to be ready. Please don't go AFK.");
+      if (m_TargetGame->GetCountDownStarted()/* && !m_TargetGame->GetCountDownUserInitiated()*/) {
+        // Stopping the countdown here MAY be sensible behavior,
+        // but only if it's not a manually initiated countdown, and if ...
+        break;
+      }
+
+      uint8_t readyMode = m_TargetGame->GetPlayersReadyMode();
+      bool isAlwaysReadyMode = readyMode == READY_MODE_FAST;
+      if (readyMode == READY_MODE_EXPECT_RACE) {
+        if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+          isAlwaysReadyMode = true;
+        } else if (m_TargetGame->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+          isAlwaysReadyMode = true;
+        }
+      }
+      if (isAlwaysReadyMode) {
+        ErrorReply("You are always assumed to be ready. Please don't go AFK.");
+        break;
+      }
+      m_Player->SetUserReady(false);
+      SendAll("Player [" + m_FromName + "] no longer ready to start the game. When you are, use " + cmdToken + "ready");
+      break;
+    }
+
+    case HashCode("ready"): {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || !m_Player) {
+        break;
+      }
+
+      if (m_TargetGame->GetCountDownStarted()) {
+        break;
+      }
+
+      uint8_t readyMode = m_TargetGame->GetPlayersReadyMode();
+      bool isAlwaysReadyMode = readyMode == READY_MODE_FAST;
+      if (readyMode == READY_MODE_EXPECT_RACE) {
+        if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+          isAlwaysReadyMode = true;
+        } else if (m_TargetGame->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+          isAlwaysReadyMode = true;
+        }
+      }
+      if (isAlwaysReadyMode) {
+        ErrorReply("You are always assumed to be ready. Please don't go AFK.");
+        break;
+      }
+      m_Player->SetUserReady(true);
+      SendAll("Player [" + m_FromName + "] ready to start the game. Please don't go AFK.");
       break;
     }
 
