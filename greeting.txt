@@ -8,5 +8,5 @@
 Start the game with {TRIGGER_PREFER_BROADCAST}start
 {URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]
 {SHORTDESC?}{SHORTDESC}
-{AUTOSTART?}The game will automatically start when conditions are met.
+{AUTOSTART?}The game will automatically start when players are ready.
 {AUTOSTART?}{AUTOSTART}.
