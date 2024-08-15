@@ -33,17 +33,17 @@
 #include <string>
 #include <map>
 
-#define ON_DESYNC_NONE 0
-#define ON_DESYNC_NOTIFY 1
-#define ON_DESYNC_DROP 2
+#define ON_DESYNC_NONE 0u
+#define ON_DESYNC_NOTIFY 1u
+#define ON_DESYNC_DROP 2u
 
-#define ON_IPFLOOD_NONE 0
-#define ON_IPFLOOD_NOTIFY 1
-#define ON_IPFLOOD_DENY 2
+#define ON_IPFLOOD_NONE 0u
+#define ON_IPFLOOD_NOTIFY 1u
+#define ON_IPFLOOD_DENY 2u
 
-#define READY_MODE_IMPLICIT 0
-#define READY_MODE_EXPLICIT 1
-#define READY_MODE_AUTO 2
+#define READY_MODE_FAST 0u
+#define READY_MODE_EXPECT_RACE 1u
+#define READY_MODE_EXPLICIT 2u
 
 //
 // CGameConfig
