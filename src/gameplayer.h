@@ -334,7 +334,7 @@ public:
   void ResetConnection();
 };
 
-inline std::string PlayersToNameListString(std::vector<CGamePlayer*> playerList) {
+inline std::string PlayersToNameListString(std::vector<const CGamePlayer*> playerList) {
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {

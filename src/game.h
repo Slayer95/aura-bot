@@ -197,6 +197,7 @@ protected:
   uint8_t                        m_MaxPlayersSameIP;
   uint8_t                        m_PlayersReadyMode;
   uint8_t                        m_ControllersReadyCount;
+  uint8_t                        m_ControllersNotReadyCount;
   uint8_t                        m_ControllersWithMap;
   uint8_t                        m_CustomLayout;
   std::pair<uint8_t, uint8_t>    m_CustomLayoutData;
@@ -323,10 +324,11 @@ public:
   std::vector<uint8_t>  GetAnnounceHeight() const;
 
   std::string           GetLogPrefix() const;
-  std::string           GetPlayers() const;
-  std::string           GetObservers() const;
+  std::vector<const CGamePlayer*> GetPlayers() const;
+  std::vector<const CGamePlayer*> GetObservers() const;
   bool                  GetIsAutoStartDue() const;
   std::string           GetAutoStartText() const;
+  std::string           GetReadyStatusText() const;
   std::string           GetCmdToken() const { return m_BroadcastCmdToken.empty() ? m_PrivateCmdToken : m_BroadcastCmdToken; }
   CTCPServer*           GetSocket() const { return m_Socket; };
 

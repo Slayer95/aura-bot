@@ -1326,8 +1326,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       }
-      string Players = m_TargetGame->GetPlayers();
-      string Observers = m_TargetGame->GetObservers();
+      string Players = PlayersToNameListString(m_TargetGame->GetPlayers());
+      string Observers = PlayersToNameListString(m_TargetGame->GetObservers());
       if (Players.empty() && Observers.empty()) {
         SendReply("Nobody is in the game.");
         break;
@@ -1572,6 +1572,71 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       std::uniform_int_distribution<> distribution(1, static_cast<int>(options.size()));
 
       string randomPick = options[distribution(gen) - 1];
+      SendReply("Randomly picked: " + randomPick, !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
+      break;
+    }
+
+    //
+    // !PICKRACE
+    //
+
+    case HashCode("pickrace"): {
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_int_distribution<> distribution(0, 3);
+      const uint8_t race = 1 << distribution(gen);
+      string randomPick;
+      switch (race) {
+        case SLOTRACE_HUMAN:
+          randomPick = "Human";
+          break;
+        case SLOTRACE_ORC:
+          randomPick = "Orc";
+          break;
+        case SLOTRACE_NIGHTELF:
+          randomPick = "Night Elf";
+          break;
+        case SLOTRACE_UNDEAD:
+          randomPick = "Undead";
+          break;
+      }
+      SendReply("Randomly picked: " + randomPick + " race", !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
+      break;
+    }
+
+    //
+    // !PICKPLAYER
+    //
+
+    case HashCode("pickplayer"): {
+      if (!m_TargetGame)
+        break;
+
+      vector<const CGamePlayer*> players = m_TargetGame->GetPlayers();
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_int_distribution<> distribution(1, static_cast<int>(players.size()));
+
+      string randomPick = players[distribution(gen) - 1]->GetName();
+      SendReply("Randomly picked: " + randomPick, !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
+      break;
+    }
+
+    //
+    // !PICKOBS
+    //
+
+    case HashCode("pickobserver"):
+    case HashCode("pickobs"): {
+      if (!m_TargetGame)
+        break;
+
+      vector<const CGamePlayer*> players = m_TargetGame->GetObservers();
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_int_distribution<> distribution(1, static_cast<int>(players.size()));
+
+      string randomPick = players[distribution(gen) - 1]->GetName();
       SendReply("Randomly picked: " + randomPick, !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
@@ -3812,27 +3877,33 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random" + HelpMissingComma(Payload));
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll" + HelpMissingComma(Payload));
         break;
       }
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
       }
 
-      const uint8_t Race = ParseRace(Args[1]);
+      uint8_t Race = ParseRace(Args[1]);
       if (Race == SLOTRACE_INVALID) {
-        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random");
+        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
+      }
+      if (Race == SLOTRACE_PICKRANDOM) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> distribution(0, 3);
+        Race = 1 << distribution(gen);
       }
 
       if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {

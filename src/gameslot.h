@@ -65,6 +65,7 @@
 #define SLOTRACE_UNDEAD 8u
 #define SLOTRACE_RANDOM 32u
 #define SLOTRACE_SELECTABLE 64u
+#define SLOTRACE_PICKRANDOM 128u
 #define SLOTRACE_INVALID 255u
 
 #define SLOTCOMP_EASY 0u
@@ -201,6 +202,9 @@ inline uint8_t ParseRace(const std::string& race)
     case HashCode("nightelf"):
     case HashCode("night elf"):
       return SLOTRACE_NIGHTELF;
+    case HashCode("roll"):
+    case HashCode("pickrandom"):
+      return SLOTRACE_PICKRANDOM;
     default:
       return SLOTRACE_INVALID;
   }

@@ -125,6 +125,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CountDownCounter(0),
     m_StartPlayers(0),
     m_ControllersReadyCount(0),
+    m_ControllersNotReadyCount(0),
     m_ControllersWithMap(0),
     m_CustomLayout(nGameSetup->m_CustomLayout.has_value() ? nGameSetup->m_CustomLayout.value() : MAPLAYOUT_ANY),
     m_CustomLayoutData(make_pair(nAura->m_MaxSlots, nAura->m_MaxSlots)),
@@ -790,41 +791,31 @@ string CGame::GetLogPrefix() const
   return "[" + GetCategory() + ": " + GetGameName() + "] ";
 }
 
-string CGame::GetPlayers() const
+vector<const CGamePlayer*> CGame::GetPlayers() const
 {
-  string Players;
+  vector<const CGamePlayer*> Players;
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
     if (!player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots) {
       // Check GetLeftMessage instead of GetDeleteMe for debugging purposes
-      Players += player->GetName() + ", ";
+      Players.push_back(player);
     }
   }
-
-  const size_t size = Players.size();
-
-  if (size > 2)
-    Players = Players.substr(0, size - 2);
 
   return Players;
 }
 
-string CGame::GetObservers() const
+vector<const CGamePlayer*> CGame::GetObservers() const
 {
-  string Observers;
+  vector<const CGamePlayer*> Observers;
 
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
     if (player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots) {
       // Check GetLeftMessage instead of GetDeleteMe for debugging purposes
-      Observers += player->GetName() + ", ";
+      Observers.push_back(player);
     }
   }
-
-  const size_t size = Observers.size();
-
-  if (size > 2)
-    Observers = Observers.substr(0, size - 2);
 
   return Observers;
 }
@@ -1454,6 +1445,7 @@ void CGame::UpdateReadyCounters()
 {
   m_ControllersWithMap = 0;
   m_ControllersReadyCount = 0;
+  m_ControllersNotReadyCount = 0;
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[i].GetTeam() != m_Aura->m_MaxSlots) {
       CGamePlayer* Player = GetPlayerFromSID(i);
@@ -1464,7 +1456,11 @@ void CGame::UpdateReadyCounters()
         ++m_ControllersWithMap;
         if (Player->UpdateReady()) {
           ++m_ControllersReadyCount;
+        } else {
+          ++m_ControllersNotReadyCount;
         }
+      } else {
+        ++m_ControllersNotReadyCount;
       }
     }
   }
@@ -2166,9 +2162,9 @@ string CGame::GetAutoStartText() const
     } else if (requirement.first == 0) {
       fragments.push_back("in " + DurationLeftToString(requirement.second - Time));
     } else if (requirement.second <= Time) {
-      fragments.push_back("at " + to_string(requirement.first) + "/" + ToDecString(m_Map->GetMapNumControllers()));
+      fragments.push_back("with " + to_string(requirement.first) + " players");
     } else {
-      fragments.push_back("at " + to_string(requirement.first) + "/" + ToDecString(m_Map->GetMapNumControllers()) + " after " + DurationLeftToString(requirement.second - Time));
+      fragments.push_back("with " + to_string(requirement.first) + "+ players after " + DurationLeftToString(requirement.second - Time));
     }
   }
 
@@ -2177,6 +2173,23 @@ string CGame::GetAutoStartText() const
   }
 
   return "Autostarts " + JoinVector(fragments, "or", false);
+}
+
+string CGame::GetReadyStatusText() const
+{
+  string notReadyFragment;
+  if (m_ControllersNotReadyCount > 0) {
+    notReadyFragment = " Use " + m_PrivateCmdToken + "ready when you are.";
+  }
+  if (m_ControllersReadyCount == 0) {
+    return "No players ready yet." + notReadyFragment;
+  }
+
+  if (m_ControllersReadyCount == 1) {
+    return "One player is ready." + notReadyFragment;
+  }
+
+  return to_string(m_ControllersReadyCount) + " players are ready." + notReadyFragment;
 }
 
 void CGame::SendAllAutoStart() const
@@ -2493,6 +2506,9 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
     }
     while ((matchIndex = Line.find("{AUTOSTART}")) != string::npos) {
       Line.replace(matchIndex, 11, GetAutoStartText());
+    }
+    while ((matchIndex = Line.find("{READYSTATUS}")) != string::npos) {
+      Line.replace(matchIndex, 13, GetReadyStatusText());
     }
     SendChat(player, Line, LOG_LEVEL_TRACE);
   }
@@ -4386,8 +4402,10 @@ void CGame::Remake()
   m_DownloadCounter = 0;
   m_CountDownCounter = 0;
   m_StartPlayers = 0;
-  m_AutoStartRequirements.clear();
+  m_ControllersReadyCount = 0;
+  m_ControllersNotReadyCount = 0;
   m_ControllersWithMap = 0;
+  m_AutoStartRequirements.clear();
   m_CustomLayout = 0;
 
   m_IsAutoVirtualPlayers = false;
