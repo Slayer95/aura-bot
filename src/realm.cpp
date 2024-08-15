@@ -744,6 +744,7 @@ bool CRealm::CheckWithinChatQuota(CQueuedChatMessage* message)
 
 bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 {
+  bool deleteMessage = true;
   uint8_t selectType;
   Send(message->SelectBytes(m_CurrentChannel, selectType));
   if (message->GetSendsEarlyFeedback()) {
@@ -768,14 +769,14 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
       Print(GetLogPrefix() + "warning - " + to_string(m_ChatSentWhispers.size()) + " sent whispers have not been confirmed by the server");
       Print(GetLogPrefix() + "warning - <" + m_Config->m_CFGKeyPrefix + "protocol.whisper.error_reply = " + m_Config->m_WhisperErrorReply + "> may not match the language of this realm's system messages.");
     }
-    // If whisper, return false, meaning that caller must not delete the message.
-    return false;
+    // Caller must not delete the message.
+    deleteMessage = false;
   }
   if (!m_Config->m_FloodImmune) {
     uint8_t extraQuota = message->GetVirtualSize(m_Config->m_VirtualLineLength, selectType);
     m_ChatQuotaInUse.push_back(make_pair(GetTicks(), extraQuota));
   }
-
+  
   switch (message->GetCallback()) {
     case CHAT_CALLBACK_REFRESH_GAME:
       m_ChatQueuedGameAnnouncement = false;
@@ -790,7 +791,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
       break;
   }
 
-  return true;
+  return deleteMessage;
 }
 
 bool CRealm::GetEnabled() const
