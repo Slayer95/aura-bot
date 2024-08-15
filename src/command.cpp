@@ -5972,6 +5972,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    case HashCode("checkready"):
+    case HashCode("askready"):
+    case HashCode("readystatus"): {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby()) {
+        break;
+      }
+      if (m_TargetGame->GetCountDownStarted()) {
+        break;
+      }
+      SendReply(m_TargetGame->GetReadyStatusText());
+      break;
+    }
+
     default: {
       bool hasLetter = false;
       for (const auto& c : command) {
