@@ -202,6 +202,8 @@ inline uint8_t ParseRace(const std::string& race)
     case HashCode("nightelf"):
     case HashCode("night elf"):
       return SLOTRACE_NIGHTELF;
+    case HashCode("random"):
+      return SLOTRACE_RANDOM;
     case HashCode("roll"):
     case HashCode("pickrandom"):
       return SLOTRACE_PICKRANDOM;
