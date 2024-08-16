@@ -359,8 +359,11 @@ bool CGame::ReleaseMap()
 
   m_HasMapLock = false;
 
-  // Release from memory
-  m_Map->ClearMapData();
+  if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > 0x100000) {
+    // Release from memory
+    // TODO: Ensure we back it up to disk, and keep the file locked?
+    m_Map->ClearMapData();
+  }
   return true;
 }
 
