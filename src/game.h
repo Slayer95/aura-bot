@@ -211,7 +211,8 @@ protected:
   bool                           m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
   uint8_t                        m_VirtualHostPID;                // host's PID
   uint8_t                        m_GProxyEmptyActions;            // empty actions used for gproxy protocol
-  bool                           m_Exiting;                       // set to true and this class will be deleted next update
+  bool                           m_Exiting;                       // set to true and this instance will be deleted next update
+  bool                           m_ExitingSoon;                   // set to true and this instance will be deleted when no players remain
   uint8_t                        m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
   bool                           m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                           m_Locked;                        // if the game owner is the only one allowed to run game commands or not

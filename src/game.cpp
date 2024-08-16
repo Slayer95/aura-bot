@@ -136,6 +136,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_IsAutoVirtualPlayers(false),
     m_VirtualHostPID(0xFF),
     m_Exiting(false),
+    m_ExitingSoon(false),
     m_SlotInfoChanged(0),
     m_PublicStart(false),
     m_Locked(false),
@@ -373,6 +374,7 @@ bool CGame::ReleaseMap()
 
 void CGame::StartGameOverTimer()
 {
+  m_ExitingSoon = true;
   m_GameOverTime = GetTime();
   Print(GetLogPrefix() + "gameover timer started (" + ToDecString(GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size())) + " player(s) left)");
   if (GetNumHumanPlayers() > 0) {
@@ -1087,7 +1089,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // end the game if there aren't any players left
 
-  if (m_Players.empty()) {
+  if (m_Players.empty() && (m_GameLoaded || m_GameLoading || m_ExitingSoon)) {
     Print(GetLogPrefix() + "is over (no players left)");
     m_Exiting = true;
     return m_Exiting;
