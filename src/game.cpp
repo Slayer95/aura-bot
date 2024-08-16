@@ -3287,6 +3287,11 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
     if (m_Aura->m_Net->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
       SendAllChat(player->GetName() + " joined the game over IPv6.");
     }
+    if (player->GetNumPings() > 0) {
+      SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false));
+    } else if (player->GetMapReady()) {
+      SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...");
+    }
     return;
   }
 
@@ -3304,6 +3309,11 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
     }
   } else {
     SendAllChat(player->GetName() + GProxyFragment + IPv6Fragment);
+  }
+  if (player->GetNumPings() > 0) {
+    SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false));
+  } else if (player->GetMapReady()) {
+    SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...");
   }
 }
 
