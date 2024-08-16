@@ -819,6 +819,21 @@ vector<const CGamePlayer*> CGame::GetObservers() const
   return Observers;
 }
 
+vector<const CGamePlayer*> CGame::GetUnreadyPlayers() const
+{
+  vector<const CGamePlayer*> Players;
+  for (const auto& player : m_Players) {
+    const uint8_t SID = GetSIDFromPID(player->GetPID());
+    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots) {
+      if (!player->GetIsReady()) {
+        Players.push_back(player);
+      }
+    }
+  }
+
+  return Players;
+}
+
 uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
   uint32_t NumFDs = 0;

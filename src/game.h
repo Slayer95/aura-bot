@@ -326,6 +326,7 @@ public:
   std::string           GetLogPrefix() const;
   std::vector<const CGamePlayer*> GetPlayers() const;
   std::vector<const CGamePlayer*> GetObservers() const;
+  std::vector<const CGamePlayer*> GetUnreadyPlayers() const;
   bool                  GetIsAutoStartDue() const;
   std::string           GetAutoStartText() const;
   std::string           GetReadyStatusText() const;
