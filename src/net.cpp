@@ -863,17 +863,13 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     }
     uint8_t connectionType = CONNECTION_TYPE_DEFAULT;
     uint16_t port = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : gamePort;
-    string NameSuffix;
     if (realm->GetIsVPN()) {
-      NameSuffix = " [VPN]";
       connectionType = connectionType | CONNECTION_TYPE_VPN;
     }
     if (realm->GetUsesCustomIPAddress()) {
-      if (NameSuffix.empty()) NameSuffix = " [Tunnel]";
       connectionType = connectionType | CONNECTION_TYPE_CUSTOM_IP_ADDRESS;
     }
     if (realm->GetUsesCustomPort()) {
-      if (NameSuffix.empty()) NameSuffix = " [Tunnel]";
       connectionType = connectionType | CONNECTION_TYPE_CUSTOM_PORT;
     }
 
