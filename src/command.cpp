@@ -1232,6 +1232,30 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !CHECKRACE
+    //
+
+    case HashCode("checkrace"): {
+      if (!m_TargetGame)
+        break;
+
+      vector<const CGamePlayer*> players = m_TargetGame->GetPlayers();
+      if (players.empty()) {
+        ErrorReply("No players found.");
+        break;
+      }
+
+      vector<string> races;
+      for (const auto& player: players) {
+        const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromPID(player->GetPID()));
+        uint8_t race = slot->GetRaceFixed();
+        races.push_back(player->GetName() + ": " + GetRaceName(race));
+      }
+      SendReply(JoinVector(races, false));
+      break;
+    }
+
+    //
     // !STATSDOTA
     // !STATS
     //
@@ -1601,6 +1625,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<const CGamePlayer*> players = m_TargetGame->GetPlayers();
       if (players.empty()) {
         ErrorReply("No players found.");
+        break;
       }
 
       std::random_device rd;
@@ -1624,6 +1649,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<const CGamePlayer*> players = m_TargetGame->GetObservers();
       if (players.empty()) {
         ErrorReply("No observers found.");
+        break;
       }
 
       std::random_device rd;

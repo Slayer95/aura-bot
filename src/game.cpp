@@ -808,7 +808,6 @@ vector<const CGamePlayer*> CGame::GetPlayers() const
 vector<const CGamePlayer*> CGame::GetObservers() const
 {
   vector<const CGamePlayer*> Observers;
-
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
     if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots) {
