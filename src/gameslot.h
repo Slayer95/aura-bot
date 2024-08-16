@@ -274,4 +274,19 @@ inline uint8_t ParseColor(const std::string& color)
   }
 }
 
+inline std::string GetRaceName(uint8_t race) {
+  switch (race) {
+  case SLOTRACE_HUMAN:
+    return "Human";
+  case SLOTRACE_ORC:
+    return "Orc";
+  case SLOTRACE_NIGHTELF:
+    return "Night Elf";
+  case SLOTRACE_UNDEAD:
+    return "Undead";
+  default:
+    return "Unknown";
+  }
+}
+
 #endif // AURA_GAMESLOT_H_

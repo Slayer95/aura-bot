@@ -796,7 +796,7 @@ vector<const CGamePlayer*> CGame::GetPlayers() const
   vector<const CGamePlayer*> Players;
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
-    if (!player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots) {
+    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots) {
       // Check GetLeftMessage instead of GetDeleteMe for debugging purposes
       Players.push_back(player);
     }
@@ -811,7 +811,7 @@ vector<const CGamePlayer*> CGame::GetObservers() const
 
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
-    if (player->GetLeftMessageSent() == false && m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots) {
+    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots) {
       // Check GetLeftMessage instead of GetDeleteMe for debugging purposes
       Observers.push_back(player);
     }

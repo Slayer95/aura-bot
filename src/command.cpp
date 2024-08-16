@@ -1585,21 +1585,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       std::mt19937 gen(rd());
       std::uniform_int_distribution<> distribution(0, 3);
       const uint8_t race = 1 << distribution(gen);
-      string randomPick;
-      switch (race) {
-        case SLOTRACE_HUMAN:
-          randomPick = "Human";
-          break;
-        case SLOTRACE_ORC:
-          randomPick = "Orc";
-          break;
-        case SLOTRACE_NIGHTELF:
-          randomPick = "Night Elf";
-          break;
-        case SLOTRACE_UNDEAD:
-          randomPick = "Undead";
-          break;
-      }
+      string randomPick = GetRaceName(race);
       SendReply("Randomly picked: " + randomPick + " race", !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
@@ -1613,11 +1599,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       vector<const CGamePlayer*> players = m_TargetGame->GetPlayers();
+      if (players.empty()) {
+        ErrorReply("No players found.");
+      }
+
       std::random_device rd;
       std::mt19937 gen(rd());
       std::uniform_int_distribution<> distribution(1, static_cast<int>(players.size()));
-
-      string randomPick = players[distribution(gen) - 1]->GetName();
+      const CGamePlayer* pickedPlayer = players[distribution(gen) - 1];
+      string randomPick = pickedPlayer->GetName();
       SendReply("Randomly picked: " + randomPick, !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
@@ -1632,11 +1622,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       vector<const CGamePlayer*> players = m_TargetGame->GetObservers();
+      if (players.empty()) {
+        ErrorReply("No observers found.");
+      }
+
       std::random_device rd;
       std::mt19937 gen(rd());
       std::uniform_int_distribution<> distribution(1, static_cast<int>(players.size()));
-
-      string randomPick = players[distribution(gen) - 1]->GetName();
+      const CGamePlayer* pickedPlayer = players[distribution(gen) - 1];
+      string randomPick = pickedPlayer->GetName();
       SendReply("Randomly picked: " + randomPick, !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
@@ -3922,13 +3916,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Race == (slot->GetRace() & Race)) {
-        ErrorReply("Slot " + ToDecString(SID + 1) + " is already [" + Args[1] + "] race.");
+        ErrorReply("Slot " + ToDecString(SID + 1) + " is already [" + GetRaceName(Race) + "] race.");
         break;
       }
       slot->SetRace(Race | SLOTRACE_SELECTABLE);
       m_TargetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       if (targetPlayer) {
-        SendReply("Player [" + targetPlayer->GetName() + "] race is now [" + Args[1] + "].");
+        SendReply("Player [" + targetPlayer->GetName() + "] race is now [" + GetRaceName(Race) + "].");
       } else {
         SendReply("Race updated.");
       }
