@@ -804,6 +804,9 @@ bool CGamePlayer::UpdateReady()
     m_Ready = m_UserReady.value();
     return m_Ready;
   }
+  if (!m_MapReady) {
+    return m_Ready;
+  }
   switch (m_Game->GetPlayersReadyMode()) {
     case READY_MODE_FAST:
       m_Ready = true;
