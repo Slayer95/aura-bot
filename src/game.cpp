@@ -3993,29 +3993,29 @@ void CGame::EventPlayerDropRequest(CGamePlayer* player)
 {
   // TODO: check that we've waited the full 45 seconds
 
-  if (m_Lagging)
-  {
+  if (m_Lagging) {
     Print(GetLogPrefix() + "player [" + player->GetName() + "] voted to drop laggers");
     SendAllChat("Player [" + player->GetName() + "] voted to drop laggers");
 
     // check if at least half the players voted to drop
-
-    int32_t Votes = 0;
-
+    uint8_t votesCount = 0;
     for (auto& eachPlayer : m_Players) {
-      if (eachPlayer->GetDropVote())
-        ++Votes;
+      if (eachPlayer->GetDropVote()) {
+        ++votesCount;
+      }
     }
 
-    if (static_cast<double>(Votes) / m_Players.size() > 0.50f)
+    if (static_cast<uint8_t>(m_Players.size) < 2 * votesCount) {
       StopLaggers("lagged out (dropped by vote)");
+    }
   }
 }
 
 void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
 {
-  if (m_GameLoading || m_GameLoaded)
+  if (m_GameLoading || m_GameLoaded) {
     return;
+  }
 
   int64_t Time = GetTime();
   uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);

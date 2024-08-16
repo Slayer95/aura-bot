@@ -508,6 +508,11 @@ bool CGamePlayer::Update(void* fd)
             break;
 
           case CGameProtocol::W3GS_MAPSIZE:
+            if (m_MapReady) {
+              // Protection against rogue clients
+              break;
+            }
+
             MapSize = m_Protocol->RECEIVE_W3GS_MAPSIZE(Data);
 
             if (MapSize)
