@@ -204,6 +204,7 @@ public:
   inline std::vector<uint8_t>  GetIPv4() const { return m_Socket->GetIPv4(); }
   inline std::string           GetIPString() const { return m_Socket->GetIPString(); }
   inline std::string           GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
+  inline bool                  GetIsReady() const { return m_Ready; }
   inline bool                  GetDeleteMe() const { return m_DeleteMe; }
   inline uint8_t               GetPID() const { return m_PID; }
   inline std::string           GetName() const { return m_Name; }

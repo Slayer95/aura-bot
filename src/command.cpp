@@ -6073,6 +6073,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       SendReply(m_TargetGame->GetReadyStatusText());
+
+      vector<string> pendingNames;
+      for (const auto& player : m_TargetGame->GetPlayers()) {
+        if (!player->GetIsReady()) {
+          pendingNames.push_back(player->GetName());
+        }
+      }
+      if (!pendingNames.empty()) {
+        SendReply("Waiting for: " + PlayersToNameListString(pendingNames));
+      }
       break;
     }
 
