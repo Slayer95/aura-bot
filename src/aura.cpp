@@ -1066,19 +1066,22 @@ void CAura::EventGameDeleted(CGame* game)
 {
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
-    realm->QueueChatChannel("Game ended: " + game->GetDescription());
-    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-      realm->QueueWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
+    if (game->GetGameLoaded()) {
+      realm->QueueChatChannel("Game ended: " + game->GetDescription());
+      if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+        realm->QueueWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
+      }
     }
   }
 }
 
 void CAura::EventGameRemake(CGame* game)
 {
-  for (auto& bnet : m_Realms) {
-    bnet->QueueChatChannel("Game remake: " + game->GetDescription());
+  for (auto& realm : m_Realms) {
+    if (!realm->GetAnnounceHostToChat()) continue;
+    realm->QueueChatChannel("Game remake: " + game->GetDescription());
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-      bnet->QueueWhisper("Game remake: " + game->GetDescription(), game->GetCreatorName());
+      realm->QueueWhisper("Game remake: " + game->GetDescription(), game->GetCreatorName());
     }
   }
 }
