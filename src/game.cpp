@@ -292,14 +292,17 @@ void CGame::Reset(const bool saveStats)
     m_Actions.pop();
   }
 
-  // store the CDBGamePlayers in the database
-  // add non-dota stats
-  for (auto& player : m_DBGamePlayers) {
-    m_Aura->m_DB->GamePlayerAdd(player->GetName(), player->GetLoadingTime(), m_GameTicks / 1000, player->GetLeft());
-  }
-  // store the dota stats in the database
-  if (saveStats && m_Stats) {
-    m_Stats->Save(m_Aura, m_Aura->m_DB);
+  if (m_GameLoading || m_GameLoaded) {
+    // store the CDBGamePlayers in the database
+    // add non-dota stats
+    Print(GetLogPrefix() + "saving game data to database");
+    for (auto& player : m_DBGamePlayers) {
+      m_Aura->m_DB->GamePlayerAdd(player->GetName(), player->GetLoadingTime(), m_GameTicks / 1000, player->GetLeft());
+    }
+    // store the dota stats in the database
+    if (saveStats && m_Stats) {
+      m_Stats->Save(m_Aura, m_Aura->m_DB);
+    }
   }
 
   for (auto& player : m_DBGamePlayers) {
@@ -1084,10 +1087,8 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // end the game if there aren't any players left
 
-  if (m_Players.empty() && (m_GameLoading || m_GameLoaded)) {
+  if (m_Players.empty()) {
     Print(GetLogPrefix() + "is over (no players left)");
-    Print(GetLogPrefix() + "saving game data to database");
-
     m_Exiting = true;
     return m_Exiting;
   }
@@ -4138,7 +4139,7 @@ void CGame::EventPlayerPongToHost(CGamePlayer* player)
       } else {
         SendAllChat("Player [" + player->GetName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
         player->SetPingKicked(true);
-        player->KickAtLatest(GetTime() + 15);
+        player->KickAtLatest(GetTime() + 10);
       }
     }
   } else {
