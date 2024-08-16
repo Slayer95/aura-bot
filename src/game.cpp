@@ -2178,7 +2178,11 @@ string CGame::GetReadyStatusText() const
 {
   string notReadyFragment;
   if (m_ControllersNotReadyCount > 0) {
-    notReadyFragment = " Use " + m_PrivateCmdToken + "ready when you are.";
+    if (m_BroadcastCmdToken.empty()) {
+      notReadyFragment = " Use " + m_PrivateCmdToken + "ready when you are.";
+    } else {
+      notReadyFragment = " Use " + m_BroadcastCmdToken + "ready when you are.";
+    }
   }
   if (m_ControllersReadyCount == 0) {
     return "No players ready yet." + notReadyFragment;
