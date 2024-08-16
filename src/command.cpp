@@ -6075,6 +6075,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       if (!m_Player->GetMapReady()) {
         ErrorReply("Map not downloaded yet.");
+        break;
       }
       m_Player->SetUserReady(true);
       SendAll("Player [" + m_FromName + "] ready to start the game. Please don't go AFK.");
