@@ -1660,6 +1660,120 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    case HashCode("eras"): {
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "eras <COLOR>");
+        ErrorReply("Usage: " + cmdToken + "eras <COUNTRY>");
+        break;
+      }
+      uint8_t color = ParseColor(Payload);
+      if (color == 0) {
+        SendReply("EU: Sweden, LAT: Peru");
+        break;
+      } else if (color == 1) {
+        SendReply("EU: England, LAT: Chile");
+        break;
+      } else if (color == 2) {
+        SendReply("EU: Russia, LAT: Bolivia");
+        break;
+      } else if (color == 3) {
+        SendReply("EU: Italy, LAT: Argentina");
+        break;
+      } else if (color == 4) {
+        SendReply("EU: France, LAT: Colombia");
+        break;
+      } else if (color == 5) {
+        SendReply("EU: Spain, LAT: Venezuela");
+        break;
+      } else if (color == 6) {
+        SendReply("EU: Turkey, LAT: Brasil");
+        break;
+      } else if (color == 7) {
+        SendReply("EU: Poland, LAT: Mexico");
+        break;
+      } else if (color == 8) {
+        SendReply("EU: Germany, LAT: Ecuador");
+        break;
+      } else if (color == 12) {
+        SendReply("EU: Ireland");
+        break;
+      } else if (color == 13) {
+        SendReply("EU: Norway");
+        break;
+      } else if (color == 14) {
+        SendReply("EU: Iceland");
+        break;
+      } else if (color == 15) {
+        SendReply("EU: Greece");
+        break;
+      } else if (color == 16) {
+        SendReply("EU: Holland");
+        break;
+      } else if (color == 17) {
+        SendReply("EU: Romania");
+        break;
+      } else if (color == 18) {
+        SendReply("EU: Egypt");
+        break;
+      } else if (color == 19) {
+        SendReply("EU: Morocco");
+        break;
+      } else if (color == 20) {
+        SendReply("EU: Congo");
+        break;
+      } else if (color == 21) {
+        SendReply("EU: Somalia");
+        break;
+      } else {
+        string countryName = Payload;
+        std::transform(std::begin(countryName), std::end(countryName), std::begin(countryName), [](unsigned char c) {
+          return static_cast<char>(std::tolower(c));
+        });
+        if (countryName == "sweden" || countryName == "peru") {
+          SendReply("Slot #1: " + GetColorName(0));
+        } else if (countryName == "england" || countryName == "chile") {
+          SendReply("Slot #2: " + GetColorName(1));
+        } else if (countryName == "russia" || countryName == "bolivia") {
+          SendReply("Slot #3: " + GetColorName(2));
+        } else if (countryName == "italy" || countryName == "argentina" || countryName == "argentine") {
+          SendReply("Slot #4: " + GetColorName(3));
+        } else if (countryName == "france" || countryName == "colombia") {
+          SendReply("Slot #5: " + GetColorName(4));
+        } else if (countryName == "spain" || countryName == "venezuela") {
+          SendReply("Slot #6: " + GetColorName(5));
+        } else if (countryName == "turkey" || countryName == "turkiye" || countryName == "brasil" || countryName == "brazil") {
+          SendReply("Slot #7: " + GetColorName(6));
+        } else if (countryName == "poland" || countryName == "mexico") {
+          SendReply("Slot #8: " + GetColorName(7));
+        } else if (countryName == "germany" || countryName == "ecuador") {
+          SendReply("Slot #9: " + GetColorName(8));
+        } else if (countryName == "ireland") {
+          SendReply("Slot #13: " + GetColorName(12));
+        } else if (countryName == "norway") {
+          SendReply("Slot #14: " + GetColorName(13));
+        } else if (countryName == "iceland") {
+          SendReply("Slot #15: " + GetColorName(14));
+        } else if (countryName == "greece") {
+          SendReply("Slot #16: " + GetColorName(15));
+        } else if (countryName == "holland" || countryName == "netherlands") {
+          SendReply("Slot #17: " + GetColorName(16));
+        } else if (countryName == "romania") {
+          SendReply("Slot #18: " + GetColorName(17));
+        } else if (countryName == "egypt") {
+          SendReply("Slot #19: " + GetColorName(18));
+        } else if (countryName == "morocco") {
+          SendReply("Slot #20: " + GetColorName(19));
+        } else if (countryName == "congo") {
+          SendReply("Slot #21: " + GetColorName(20));
+        } else if (countryName == "somalia") {
+          SendReply("Slot #22: " + GetColorName(21));
+        } else {
+          ErrorReply("Zombie Eras data entry not found.");
+        }
+      }
+      break;
+    }
+
     case HashCode("twrpg"): {
       if (Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "twrpg <NOMBRE>");
