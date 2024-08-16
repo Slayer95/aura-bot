@@ -4048,7 +4048,8 @@ bool CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     bool ShouldTransferMap = (
       IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER &&
       (player->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
-      (m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxGames)
+      (m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxGames) &&
+      (m_Aura->m_Games.empty() || !m_Aura->m_Net->m_Config->m_HasBufferBloat)
     );
     if (ShouldTransferMap) {
       if (!player->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
@@ -4066,9 +4067,11 @@ bool CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
       player->KickAtLatest(Time + m_LacksMapKickDelay);
       if (m_Remade) {
         player->SetLeftReason("autokicked - they don't have the map (remade game)");
-      } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
+      } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
         // Even if manual, claim they are disabled.
         player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
+      } else if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames || (m_Aura->m_Games.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
+        player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
       } else if (IsMapTooLarge) {
         player->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
       } else if (MapData->empty()) {
