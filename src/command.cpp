@@ -6046,7 +6046,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("You are always assumed to be ready. Please don't go AFK.");
         break;
       }
+      if (m_Player->GetIsObserver()) {
+        ErrorReply("Observers are always assumed to be ready.");
+        break;
+      }
+      if (!m_Player->GetIsReady()) {
+        ErrorReply("You are already flagged as not ready.");
+        break;
+      }
       m_Player->SetUserReady(false);
+      if (m_Player->UpdateReady()) {
+         // Should never happen
+        ErrorReply("Failed to set not ready.");
+        m_Player->ClearUserReady();
+        break;
+      }
+      --m_TargetGame->m_ControllersReadyCount;
+      ++m_TargetGame->m_ControllersNotReadyCount;
       SendAll("Player [" + m_FromName + "] no longer ready to start the game. When you are, use " + cmdToken + "ready");
       break;
     }
@@ -6073,11 +6089,27 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("You are always assumed to be ready. Please don't go AFK.");
         break;
       }
+      if (m_Player->GetIsObserver()) {
+        ErrorReply("Observers are always assumed to be ready.");
+        break;
+      }
+      if (m_Player->GetIsReady()) {
+        ErrorReply("You are already flagged as ready.");
+        break;
+      }
       if (!m_Player->GetMapReady()) {
         ErrorReply("Map not downloaded yet.");
         break;
       }
       m_Player->SetUserReady(true);
+      if (!m_Player->UpdateReady()) {
+         // Should never happen
+        ErrorReply("Failed to set ready.");
+        m_Player->ClearUserReady();
+        break;
+      }
+      ++m_TargetGame->m_ControllersReadyCount;
+      --m_TargetGame->m_ControllersNotReadyCount;
       SendAll("Player [" + m_FromName + "] ready to start the game. Please don't go AFK.");
       break;
     }

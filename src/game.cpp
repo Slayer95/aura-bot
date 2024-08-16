@@ -243,8 +243,9 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
     if (m_GProxyEmptyActions > 0) {
       m_GProxyEmptyActions = m_Aura->m_Net->m_Config->m_ReconnectWaitTimeLegacy - 1;
-      if (m_GProxyEmptyActions > 9)
+      if (m_GProxyEmptyActions > 9) {
         m_GProxyEmptyActions = 9;
+      }
     }
 
     // start listening for connections
@@ -4991,13 +4992,17 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
   CGamePlayer* PlayerTwo = GetPlayerFromSID(SID2);
   if (PlayerOne) {
     PlayerOne->SetObserver(Slot2.GetTeam() == m_Aura->m_MaxSlots);
-    if (PlayerOne->GetIsObserver())
+    if (PlayerOne->GetIsObserver()) {
       PlayerOne->SetPowerObserver(PlayerOne->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
+      PlayerOne->ClearUserReady();
+    }
   }
   if (PlayerTwo) {
     PlayerTwo->SetObserver(Slot1.GetTeam() == m_Aura->m_MaxSlots);
-    if (PlayerTwo->GetIsObserver())
+    if (PlayerTwo->GetIsObserver()) {
       PlayerTwo->SetPowerObserver(PlayerTwo->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
+      PlayerTwo->ClearUserReady();
+    }
   }
 
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -5191,6 +5196,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
         player->SetObserver(toObservers);
         if (toObservers) {
           player->SetPowerObserver(!m_UsesCustomReferees && m_Map->GetMapObservers() == MAPOBS_REFEREES);
+          player->ClearUserReady();
         } else {
           player->SetPowerObserver(false);
         }

@@ -307,6 +307,7 @@ public:
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
   inline void SetKickByTime(int64_t nKickByTime) { m_KickByTime = nKickByTime; }
   inline void SetUserReady(bool nReady) { m_UserReady = nReady; }
+  inline void ClearUserReady() { m_UserReady = std::nullopt; }
 
   inline std::string GetLastCommand() const { return m_LastCommand; }
   inline void ClearLastCommand() { m_LastCommand.clear(); }
