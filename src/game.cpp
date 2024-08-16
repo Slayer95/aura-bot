@@ -3378,13 +3378,15 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   SendAllSlotInfo();
   UpdateReadyCounters();
 
-  for (const auto& otherPlayer :  m_Players) {
-    if (otherPlayer == Player || otherPlayer->GetLeftMessageSent()) {
-      continue;
-    }
-    if (otherPlayer->GetHasPinnedMessage()) {
-      SendChat(otherPlayer->GetPID(), Player, otherPlayer->GetPinnedMessage(), LOG_LEVEL_INFO);
-    }
+  if (m_IPFloodHandler == ON_IPFLOOD_NOTIFY) {
+    CheckIPFlood(joinRequest->GetName(), &(Player->GetSocket()->m_RemoteHost));
+  }
+
+  // abort the countdown if there was one in progress
+
+  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded) {
+    SendAllChat("Countdown stopped!");
+    m_CountDownStarted = false;
   }
 
   // send a welcome message
@@ -3392,16 +3394,13 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   if (!m_RestoredGame)
     SendWelcomeMessage(Player);
 
-  if (m_IPFloodHandler == ON_IPFLOOD_NOTIFY) {
-    CheckIPFlood(joinRequest->GetName(), &(Player->GetSocket()->m_RemoteHost));
-  }
-
-  // abort the countdown if there was one in progress
-
-  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded)
-  {
-    SendAllChat("Countdown stopped!");
-    m_CountDownStarted = false;
+  for (const auto& otherPlayer :  m_Players) {
+    if (otherPlayer == Player || otherPlayer->GetLeftMessageSent()) {
+      continue;
+    }
+    if (otherPlayer->GetHasPinnedMessage()) {
+      SendChat(otherPlayer->GetPID(), Player, otherPlayer->GetPinnedMessage(), LOG_LEVEL_INFO);
+    }
   }
 
   string notifyString = "";
