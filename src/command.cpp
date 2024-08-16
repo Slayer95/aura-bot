@@ -1168,8 +1168,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      uint32_t KickedCount = 0;
-      optional<uint32_t> KickPing;
+      optional<uint32_t> kickPing;
       if (!Payload.empty()) {
         if (!m_TargetGame->GetIsLobby()) {
           ErrorReply("Maximum ping may only be set in a lobby.");
@@ -1185,15 +1184,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
             ErrorReply("Invalid maximum ping [" + Payload + "].");
             break;
           }
-          KickPing = static_cast<uint32_t>(Value);
+          kickPing = static_cast<uint32_t>(Value);
         } catch (...) {
           ErrorReply("Invalid maximum ping [" + Payload + "].");
           break;
         }
       }
 
-      if (KickPing.has_value())
-        m_TargetGame->m_AutoKickPing = KickPing.value();
+      if (kickPing.has_value())
+        m_TargetGame->m_AutoKickPing = kickPing.value();
 
       // copy the m_Players vector so we can sort by descending ping so it's easier to find players with high pings
 
@@ -1209,31 +1208,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       vector<string> pingsText;
       uint32_t maxPing = 0;
-
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
         pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText(false));
-        size_t numPings = (*i)->GetNumPings();
-        if (numPings == 0) continue;
         uint32_t ping = (*i)->GetPing();
+        if (ping == 0) continue; // also skips this iteration if there is no ping data
         if (ping > maxPing) maxPing = ping;
-        if (m_TargetGame->GetIsLobby() && !(*i)->GetIsReserved()) {
-          if (KickPing.has_value() && ping > m_TargetGame->m_AutoKickPing) {
-            (*i)->SetKickByTime(GetTime() + 5);
-            (*i)->SetLeftReason("was kicked for excessive ping " + to_string(ping) + " > " + to_string(m_TargetGame->m_AutoKickPing));
-            (*i)->SetLeftCode(PLAYERLEAVE_LOBBY);
-            ++KickedCount;
-          } else if ((*i)->GetKickQueued() && ((*i)->GetMapReady() || (*i)->GetDownloadStarted())) {
-            (*i)->SetKickByTime(0);
-            (*i)->SetLeftReason(emptyString);
-          }
-        }
+        m_TargetGame->EventPlayerPongToHost(*i);
       }
 
       SendReply(JoinVector(pingsText, false), !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
 
-      if (KickedCount > 0) {
-        SendAll("Kicking " + to_string(KickedCount) + " players with pings greater than " + to_string(m_TargetGame->m_AutoKickPing) + "...");
-      }
       if (0 < maxPing && maxPing < m_TargetGame->m_Latency && REFRESH_PERIOD_MIN < m_TargetGame->m_Latency) {
         SendAll("HINT: Using ping equalizer at " + to_string(m_TargetGame->m_Latency) + "ms. Decrease it with " + cmdToken + "latency [VALUE]");
       }
@@ -1243,8 +1227,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     //
     // !CHECKRACE
+    // !RACES
     //
 
+    case HashCode("races"):
     case HashCode("checkrace"): {
       if (!m_TargetGame)
         break;
@@ -1259,9 +1245,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (const auto& player: players) {
         const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromPID(player->GetPID()));
         uint8_t race = slot->GetRaceFixed();
-        races.push_back(player->GetName() + ": " + GetRaceName(race));
+        races.push_back("[" + player->GetName() + "] - " + GetRaceName(race));
       }
-      SendReply(JoinVector(races, false));
+      vector<string> replyLines = JoinReplyListCompact(races);
+      for (const auto& line : replyLines) {
+        SendReply(line);
+      }
       break;
     }
 
@@ -2818,7 +2807,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       targetPlayer->SetDownloadAllowed(true);
       targetPlayer->SetDownloadStarted(true);
       targetPlayer->SetStartedDownloadingTicks(GetTicks());
-      targetPlayer->SetKickByTime(0);
+      targetPlayer->SetMapKicked(false);
+      if (!targetPlayer->GetPingKicked() && targetPlayer->GetKickQueued()) {
+        targetPlayer->ClearKickByTime();
+      }
       break;
     }
 
@@ -3809,11 +3801,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!m_TargetGame->SetSlotColor(SID, color, true)) {
-        ErrorReply("Cannot change slot #" + Args[0] + " color to " + Args[1]);
+        ErrorReply("Cannot recolor slot #" + to_string(SID + 1) + " to " + GetColorName(color) + ".");
         break;
       }
 
-      SendReply("Color changed.");
+      SendReply("Color changed to " + GetColorName(color) + ".");
       break;
     }
 

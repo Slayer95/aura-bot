@@ -62,7 +62,8 @@ public:
   uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a player can fall out of sync before starting the lag screen (by default)
   bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
   uint32_t                 m_AutoKickPing;               // auto kick players with ping higher than this
-  uint32_t                 m_WarnHighPing;               // auto kick players with ping higher than this
+  uint32_t                 m_WarnHighPing;               // announce on chat when players have a ping higher than this value
+  uint32_t                 m_SafeHighPing;               // when players ping drops below this value, announce they no longer have high ping
   uint32_t                 m_LobbyTimeLimit;             // auto close the game lobby after this many minutes without any owner
   uint32_t                 m_LobbyNoOwnerTime;           // relinquish game ownership after this many minutes
   uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued

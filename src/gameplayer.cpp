@@ -277,6 +277,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_WhoisSent(false),
     m_MapReady(false),
     m_MapKicked(false),
+    m_PingKicked(false),
     m_Ready(false),
     m_HasHighPing(false),
     m_DownloadAllowed(false),

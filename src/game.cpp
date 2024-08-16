@@ -177,6 +177,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   m_SyncNormalize = m_Aura->m_GameDefaultConfig->m_SyncNormalize;
   m_AutoKickPing = m_Aura->m_GameDefaultConfig->m_AutoKickPing;
   m_WarnHighPing = m_Aura->m_GameDefaultConfig->m_WarnHighPing;
+  m_SafeHighPing = m_Aura->m_GameDefaultConfig->m_SafeHighPing;
 
   m_VoteKickPercentage = m_Aura->m_GameDefaultConfig->m_VoteKickPercentage;
   m_PrivateCmdToken = m_Aura->m_GameDefaultConfig->m_PrivateCmdToken;
@@ -3210,8 +3211,7 @@ void CGame::SendLeftMessage(CGamePlayer* player, const bool sendChat) const
 {
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which PIDs Aura considers available.
-  if (sendChat || player->GetKickQueued() && player->GetLeftCode() != PLAYERLEAVE_LOST) {
-    // player->GetKickQueued() is only true if this player was kicked due to missing map.
+  if (sendChat || player->GetPingKicked() || player->GetMapKicked()) {
     if (player->GetQuitGame()) {
       SendAllChat(player->GetPID(), player->GetLeftReason() + ".");
     } else {
@@ -3240,7 +3240,7 @@ void CGame::EventPlayerKickHandleQueued(CGamePlayer* player)
     return;
 
   if (m_CountDownStarted) {
-    player->SetKickByTime(0);
+    player->ClearKickByTime();
     return;
   }
 
@@ -4024,10 +4024,10 @@ void CGame::EventPlayerDropRequest(CGamePlayer* player)
   }
 }
 
-void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
+bool CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
 {
   if (m_GameLoading || m_GameLoaded) {
-    return;
+    return true;
   }
 
   int64_t Time = GetTime();
@@ -4062,9 +4062,7 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
       }
     } else if (!player->GetMapKicked()) {
       player->SetMapKicked(true);
-      if (!player->GetKickQueued()) {
-        player->SetKickByTime(Time + m_LacksMapKickDelay);
-      }
+      player->KickAtLatest(Time + m_LacksMapKickDelay);
       if (m_Remade) {
         player->SetLeftReason("autokicked - they don't have the map (remade game)");
       } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
@@ -4115,6 +4113,8 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
 
     m_SlotInfoChanged |= (SLOTS_DOWNLOAD_PROGRESS_CHANGED);
   }
+
+  return true;
 }
 
 void CGame::EventPlayerPongToHost(CGamePlayer* player)
@@ -4127,26 +4127,36 @@ void CGame::EventPlayerPongToHost(CGamePlayer* player)
 
   uint32_t LatencyMilliseconds = player->GetPing();
   if (LatencyMilliseconds >= m_AutoKickPing) {
-    // send a chat message because we don't normally do so when a player leaves the lobby
-
-    if (player->GetNumPings() == 2) {
-      SendAllChat("Autokicking player [" + player->GetName() + "] for excessive ping of " + to_string(LatencyMilliseconds) + "ms");
-    }
-    if (player->GetNumPings() >= 3) {
-      player->SetDeleteMe(true);
-      player->SetLeftReason("was autokicked for excessive ping of " + to_string(LatencyMilliseconds) + "ms");
+    player->SetHasHighPing(true);
+    if (player->GetNumPings() >= 2) {
+      player->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
       player->SetLeftCode(PLAYERLEAVE_LOBBY);
-      const uint8_t SID = GetSIDFromPID(player->GetPID());
-      OpenSlot(SID, false);
+      if (player->GetPingKicked()) {
+        player->SetDeleteMe(true);
+        const uint8_t SID = GetSIDFromPID(player->GetPID());
+        OpenSlot(SID, false);
+      } else {
+        SendAllChat("Player [" + player->GetName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
+        player->SetPingKicked(true);
+        player->KickAtLatest(GetTime() + 15);
+      }
     }
   } else {
-    bool HasHighPing = LatencyMilliseconds >= m_WarnHighPing;
-    if (HasHighPing != player->GetHasHighPing()) {
-      player->SetHasHighPing(HasHighPing);
-      if (HasHighPing) {
-        SendAllChat("Player [" + player->GetName() + "] has a high ping of " + to_string(LatencyMilliseconds) + "ms");
-      } else {
+    player->SetPingKicked(false);
+    if (!player->GetMapKicked() && player->GetKickQueued()) {
+      player->ClearKickByTime();
+    }
+    if (player->GetHasHighPing()) {
+      bool HasHighPing = LatencyMilliseconds >= m_SafeHighPing;
+      if (!HasHighPing) {
+        player->SetHasHighPing(HasHighPing);
         SendAllChat("Player [" + player->GetName() + "] ping went down to " + to_string(LatencyMilliseconds) + "ms");
+      }
+    } else {
+      bool HasHighPing = LatencyMilliseconds >= m_WarnHighPing;
+      if (HasHighPing) {
+        player->SetHasHighPing(HasHighPing);
+        SendAllChat("Player [" + player->GetName() + "] has a high ping of " + to_string(LatencyMilliseconds) + "ms");
       }
     }
   }
@@ -6122,8 +6132,10 @@ void CGame::StartCountDown(bool fromUser, bool force)
   }
 
   for (auto& player : m_Players) {
-    if (player->GetKickQueued())
-      player->SetKickByTime(0);
+    player->SetPingKicked(false);
+    if (player->GetKickQueued()) {
+      player->ClearKickByTime();
+    }
   }
 
   if (GetNumHumanOrFakeControllers() == 1 && (0 == GetSlotsOpen() || m_Map->GetMapObservers() != MAPOBS_REFEREES)) {

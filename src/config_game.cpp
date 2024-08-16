@@ -53,6 +53,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   }
   m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 300);
   m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 200);
+  m_SafeHighPing              = CFG.GetInt("hosting.high_ping.safe_ms", 150);
   m_LobbyTimeLimit            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
   m_LobbyNoOwnerTime          = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
   m_LobbyCountDownInterval    = CFG.GetInt("hosting.game_start.count_down_interval", 500);

@@ -156,7 +156,8 @@ private:
   bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
   bool                             m_WhoisSent;                    // if we've sent a battle.net /whois for this player yet (for spoof checking)
   bool                             m_MapReady;                     // if we're allowed to download the map or not (used with permission based map downloads)
-  bool                             m_MapKicked;
+  bool                             m_MapKicked;                    // if we're kicking this player because he has no map and we won't send it to him
+  bool                             m_PingKicked;                   // if we're kicking this player because his ping is excessively high
   std::optional<bool>              m_UserReady;
   bool                             m_Ready;
   bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
@@ -255,6 +256,7 @@ public:
   inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
   inline bool                  GetMapReady() const { return m_MapReady; }
   inline bool                  GetMapKicked() const { return m_MapKicked; }
+  inline bool                  GetPingKicked() const { return m_PingKicked; }
   inline bool                  GetHasHighPing() const { return m_HasHighPing; }
   inline int64_t               GetKickByTime() const { return m_KickByTime; }
   inline bool                  GetKickQueued() const { return m_KickByTime != 0; }
@@ -296,6 +298,7 @@ public:
   inline void SetDownloadFinished(bool nDownloadFinished) { m_DownloadFinished = nDownloadFinished; }
   inline void SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
   inline void SetMapKicked(bool nMapKicked) { m_MapKicked = nMapKicked; }
+  inline void SetPingKicked(bool nPingKicked) { m_PingKicked = nPingKicked; }
   inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
   inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
@@ -306,6 +309,12 @@ public:
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
   inline void SetKickByTime(int64_t nKickByTime) { m_KickByTime = nKickByTime; }
+  inline void ClearKickByTime() { m_KickByTime = 0; }
+  inline void KickAtLatest(int64_t nKickByTime) {
+    if (m_KickByTime == 0 || nKickByTime < m_KickByTime) {
+      m_KickByTime = nKickByTime;
+    }
+  }
   inline void SetUserReady(bool nReady) { m_UserReady = nReady; }
   inline void ClearUserReady() { m_UserReady = std::nullopt; }
 

@@ -274,7 +274,7 @@ inline uint8_t ParseColor(const std::string& color)
   }
 }
 
-inline std::string GetRaceName(uint8_t race) {
+inline std::string GetRaceName(const uint8_t race) {
   switch (race) {
   case SLOTRACE_HUMAN:
     return "Human";
@@ -284,8 +284,68 @@ inline std::string GetRaceName(uint8_t race) {
     return "Night Elf";
   case SLOTRACE_UNDEAD:
     return "Undead";
+  case SLOTRACE_RANDOM:
+    return "Random";
   default:
     return "Unknown";
+  }
+}
+
+inline std::string GetColorName(const uint8_t color)
+{
+  switch (color) {
+    case 0:
+      return "Red";
+    case 1:
+      return "Blue";
+    case 2:
+      return "Teal";
+    case 3:
+      return "Purple";
+    case 4:
+      return "Yellow";
+    case 5:
+      return "Orange";
+    case 6:
+      return "Green";
+    case 7:
+      return "Pink";
+    case 8:
+      return "Grey";
+    case 9:
+      return "Light Blue";
+    case 10:
+      return "Dark Green";
+    case 11:
+      return "Brown";
+    case 12:
+      return "Maroon";
+    case 13:
+      return "Navy";
+    case 14:
+      return "Turquoise";
+    case 15:
+      return "Violet";
+    case 16:
+      return "Wheat";
+    case 17:
+      return "Peach";
+    case 18:
+      return "Mint";
+    case 19:
+      return "Lavender";
+    case 20:
+      return "Coal";
+    case 21:
+      return "Snow";
+    case 22:
+      return "Emerald";
+    case 23:
+      return "Peanut";
+    case 24:
+      return "ObserverDoNotUse";
+    default:
+      return "Unknown";
   }
 }
 

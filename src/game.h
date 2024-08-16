@@ -171,7 +171,8 @@ protected:
   bool                           m_SyncNormalize;
   uint32_t                       m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
   uint32_t                       m_AutoKickPing;                  //
-  uint32_t                       m_WarnHighPing;                  //
+  uint32_t                       m_WarnHighPing;                  // announce on chat when players have a ping higher than this value
+  uint32_t                       m_SafeHighPing;                  // when players ping drops below this value, announce they no longer have high ping
 
   std::string                    m_PrivateCmdToken;
   std::string                    m_BroadcastCmdToken;
@@ -433,7 +434,7 @@ public:
   void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
   void EventPlayerChangeHandicap(CGamePlayer* player, uint8_t handicap);
   void EventPlayerDropRequest(CGamePlayer* player);
-  void EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize);
+  bool EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize);
   void EventPlayerPongToHost(CGamePlayer* player);
   void EventPlayerMapReady(CGamePlayer* player);
 
