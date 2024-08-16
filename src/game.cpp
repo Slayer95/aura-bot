@@ -4018,7 +4018,7 @@ void CGame::EventPlayerDropRequest(CGamePlayer* player)
       }
     }
 
-    if (static_cast<uint8_t>(m_Players.size) < 2 * votesCount) {
+    if (static_cast<uint8_t>(m_Players.size()) < 2 * votesCount) {
       StopLaggers("lagged out (dropped by vote)");
     }
   }
