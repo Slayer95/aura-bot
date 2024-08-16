@@ -4078,15 +4078,9 @@ void CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     SendAllChat("Player [" + player->GetName() + "] downloaded the map in " + ToFormattedString(Seconds) + " seconds (" + ToFormattedString(Rate) + " KB/sec)");
     player->SetDownloadFinished(true);
     player->SetFinishedDownloadingTime(GetTime());
-    if (!player->GetMapReady()) {
-      player->SetMapReady(true);
-      if (!player->GetIsObserver())
-        ++m_ControllersWithMap;
-    }
-  } else if (!player->GetMapReady()) {
-    player->SetMapReady(true);
-    if (!player->GetIsObserver())
-      ++m_ControllersWithMap;
+    EventPlayerMapReady(player);
+  } else {
+    EventPlayerMapReady(player);
   }
 
   uint8_t       NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / MapSize * 100.f);
@@ -4140,6 +4134,20 @@ void CGame::EventPlayerPongToHost(CGamePlayer* player)
       } else {
         SendAllChat("Player [" + player->GetName() + "] ping went down to " + to_string(LatencyMilliseconds) + "ms");
       }
+    }
+  }
+}
+
+void CGame::EventPlayerMapReady(CGamePlayer* player)
+{
+  if (player->GetMapReady()) {
+    return;
+  }
+  player->SetMapReady(true);
+  if (!player->GetIsObserver()) {
+    ++m_ControllersWithMap;
+    if (player->UpdateReady()) {
+      ++m_ControllersReadyCount;
     }
   }
 }

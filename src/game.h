@@ -435,6 +435,7 @@ public:
   void EventPlayerDropRequest(CGamePlayer* player);
   void EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize);
   void EventPlayerPongToHost(CGamePlayer* player);
+  void EventPlayerMapReady(CGamePlayer* player);
 
   // these events are called outside of any iterations
 
