@@ -93,6 +93,8 @@ public:
   uint8_t                                 m_PublicIPv6Algorithm;
   std::string                             m_PublicIPv6Value;
 
+  bool                                    m_EnableGeoLocalization;
+
   // == SECTION START: Cannot be reloaded ==
   bool                                    m_UDPMainServerEnabled;
   bool                                    m_SupportTCPOverIPv6;

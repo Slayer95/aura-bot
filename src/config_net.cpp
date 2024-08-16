@@ -191,6 +191,8 @@ CNetConfig::CNetConfig(CConfig& CFG)
     CFG.Accept("net.ipv6.public_address.value");
   }
 
+  m_EnableGeoLocalization        = CFG.GetBool("hosting.geolocalization.enabled", true);
+
   m_AllowDownloads               = CFG.GetBool("hosting.map_downloads.enabled", false);
 #ifdef DISABLE_CPR
   if (m_AllowDownloads) {

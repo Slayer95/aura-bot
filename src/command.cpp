@@ -1143,7 +1143,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         IPVersionFragment = ", IPv4";
       }
-      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + GProxyFragment + ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true)) + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
+      string FromFragment;
+      if (m_Aura->m_Net->m_Config->m_EnableGeoLocalization) {
+        FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true));
+      }
+      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + GProxyFragment + FromFragment + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
       if (IsOwner || IsAdmin || IsRootAdmin) {
         SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
@@ -1722,6 +1726,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("f"): {
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
+
+      if (!m_Aura->m_Net->m_Config->m_EnableGeoLocalization) {
+        ErrorReply("Geolocalization is disabled.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_CommonBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
         ErrorReply("Not allowed to check players geolocalization.");
