@@ -2168,10 +2168,10 @@ string CGame::GetAutoStartText() const
   }
 
   if (fragments.size() == 1) {
-    return "Autostarts " + fragments[0];
+    return "Autostarts " + fragments[0] + ".";
   }
 
-  return "Autostarts " + JoinVector(fragments, "or", false);
+  return "Autostarts " + JoinVector(fragments, "or", false) + ".";
 }
 
 string CGame::GetReadyStatusText() const
