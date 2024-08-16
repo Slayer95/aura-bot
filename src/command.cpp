@@ -1660,6 +1660,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    //
+    // !ERAS
+    //
+
     case HashCode("eras"): {
       string countryName = Payload;
       std::transform(std::begin(countryName), std::end(countryName), std::begin(countryName), [](unsigned char c) {
@@ -6219,6 +6223,43 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!unreadyPlayers.empty()) {
         SendReply("Waiting for: " + PlayersToNameListString(unreadyPlayers));
       }
+      break;
+    }
+
+    case HashCode("pin"): {
+      if (!m_Player || !m_TargetGame->GetIsLobby()) {
+        break;
+      }
+      if (m_TargetGame->GetCountDownStarted()) {
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "pin <MESSAGE>");
+        break;
+      }
+      if (Payload.size() > 140) {
+        ErrorReply("Message cannot exceed 140 characters.");
+        break;
+      }
+      m_Player->SetPinnedMessage(Payload);
+      SendReply("Message pinned. It will be shown to every player that joins the game.");
+      break;
+    }
+
+    case HashCode("unpin"): {
+      if (!m_Player || !m_TargetGame->GetIsLobby()) {
+        break;
+      }
+      if (m_TargetGame->GetCountDownStarted()) {
+        break;
+      }
+      
+      if (!m_Player->GetHasPinnedMessage()) {
+        ErrorReply("You don't have a pinned message.");
+        break;
+      }
+      m_Player->ClearPinnedMessage();
+      SendReply("Pinned message removed.");
       break;
     }
 

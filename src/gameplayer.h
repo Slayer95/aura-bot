@@ -188,6 +188,8 @@ private:
   std::string                      m_LastCommand;
   uint8_t                          m_TeamCaptain;
 
+  std::string                      m_PinnedMessage;
+
   // Actions
   bool                             m_Saved;
   uint8_t                          m_PauseCounter;
@@ -333,6 +335,11 @@ public:
     m_Pings.push_back(lastPing);
   }
   inline void ClearPings() { m_Pings.clear(); }
+
+  inline std::string GetPinnedMessage() { return  m_PinnedMessage; }
+  inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }
+  inline void SetPinnedMessage(const std::string nPinnedMessage) { m_PinnedMessage = nPinnedMessage; }
+  inline void ClearPinnedMessage() { m_PinnedMessage.clear(); }
 
   // processing functions
 

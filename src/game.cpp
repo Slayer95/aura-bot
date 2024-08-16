@@ -3378,6 +3378,15 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   SendAllSlotInfo();
   UpdateReadyCounters();
 
+  for (const auto& otherPlayer :  m_Players) {
+    if (otherPlayer == Player || otherPlayer->GetLeftMessageSent()) {
+      continue;
+    }
+    if (otherPlayer->GetHasPinnedMessage()) {
+      SendChat(otherPlayer->GetPID(), Player, otherPlayer->GetPinnedMessage(), LOG_LEVEL_INFO);
+    }
+  }
+
   // send a welcome message
 
   if (!m_RestoredGame)
@@ -4095,7 +4104,7 @@ bool CGame::EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize)
     Print(GetLogPrefix() + "map download finished for player [" + player->GetName() + "] in " + ToFormattedString(Seconds) + " seconds");
     SendAllChat("Player [" + player->GetName() + "] downloaded the map in " + ToFormattedString(Seconds) + " seconds (" + ToFormattedString(Rate) + " KB/sec)");
     player->SetDownloadFinished(true);
-    player->SetFinishedDownloadingTime(GetTime());
+    player->SetFinishedDownloadingTime(Time);
     EventPlayerMapReady(player);
   } else {
     EventPlayerMapReady(player);
