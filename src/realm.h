@@ -155,6 +155,7 @@ public:
   inline uint8_t       GetGameVersion() const { return m_GameVersion; }
   inline bool          GetExiting() const { return m_Exiting; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
+  bool                 GetShouldLogChatToConsole() const;
   inline bool          GetInChat() const { return !m_CurrentChannel.empty(); }
   inline std::string   GetCurrentChannel() const { return m_CurrentChannel; }
 
@@ -230,7 +231,7 @@ public:
   bool GetIsModerator(std::string name) const;
   bool GetIsAdmin(std::string name) const;
   bool GetIsSudoer(std::string name) const;
-  bool IsBannedName(std::string name) const;
+  bool IsBannedPlayer(std::string name, std::string hostName) const;
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
 

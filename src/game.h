@@ -126,6 +126,7 @@ protected:
   std::vector<uint16_t>          m_FakePlayers;                  // the fake player's PIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   CMap*                          m_Map;                           // map data
   std::string                    m_GameName;                      // game name
+  uint64_t                       m_GameHistoryId;
   std::string                    m_IndexVirtualHostName;          // host's name
   std::string                    m_LobbyVirtualHostName;          // host's name
   std::string                    m_LastOwner;                     // name of the player who was owner last time the owner was released
@@ -350,6 +351,7 @@ public:
   inline void           SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
 
   void UpdateReadyCounters();
+  void ResetDropVotes();
 
   inline uint32_t       GetUptime() const {
     int64_t time = GetTime();
@@ -458,7 +460,7 @@ public:
   bool         HasOwnerSet() const;
   bool         HasOwnerInGame() const;
   uint8_t      GetPlayerFromNamePartial(std::string name, CGamePlayer*& player) const;
-  std::string  GetDBPlayerNameFromColor(uint8_t colour) const;
+  CDBGamePlayer* GetDBPlayerFromColor(uint8_t colour) const;
   CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
   uint8_t              GetNewTeam() const;

@@ -316,7 +316,7 @@ bool CStats::ProcessAction(CIncomingAction* Action)
   return m_Winner != 0;
 }
 
-void CStats::Save(CAura* Aura, CAuraDB* DB)
+void CStats::Save(CAura* nAura, CAuraDB* DB)
 {
   if (DB->Begin())
   {
@@ -361,7 +361,9 @@ void CStats::Save(CAura* Aura, CAuraDB* DB)
       if (player)
       {
         const uint8_t  Color = player->GetNewColor();
-        const string   Name   = m_Game->GetDBPlayerNameFromColor(Color);
+        const CDBGamePlayer* DBPlayer = m_Game->GetDBPlayerFromColor(Color);
+        const string Name = DBPlayer->GetName();
+        const string Server = DBPlayer->GetServer();
 
         if (Name.empty())
           continue;
@@ -373,7 +375,7 @@ void CStats::Save(CAura* Aura, CAuraDB* DB)
         else if ((m_Winner == 2 && Color >= 1 && Color <= 5) || (m_Winner == 1 && Color >= 7 && Color <= 11))
           Win = 2;
 
-        Aura->m_DB->DotAPlayerAdd(Name, Win, player->GetKills(), player->GetDeaths(), player->GetCreepKills(), player->GetCreepDenies(), player->GetAssists(), player->GetNeutralKills(), player->GetTowerKills(), player->GetRaxKills(), player->GetCourierKills());
+        nAura->m_DB->UpdateDotAPlayerOnEnd(Name, Server, Win, player->GetKills(), player->GetDeaths(), player->GetCreepKills(), player->GetCreepDenies(), player->GetAssists(), player->GetNeutralKills(), player->GetTowerKills(), player->GetRaxKills(), player->GetCourierKills());
         ++Players;
       }
     }

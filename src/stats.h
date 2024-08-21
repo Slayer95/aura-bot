@@ -35,6 +35,7 @@
 
 class CGame;
 class CDBDotAPlayer;
+class CDBGamePlayer;
 class CIncomingAction;
 class CAura;
 class CAuraDB;
@@ -51,7 +52,7 @@ public:
   CStats(CStats&) = delete;
 
   bool ProcessAction(CIncomingAction* Action);
-  void Save(CAura* CAura, CAuraDB* DB);
+  void Save(CAura* nAura, CAuraDB* nDB);
 };
 
 #endif // AURA_STATS_H_

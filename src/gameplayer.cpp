@@ -456,10 +456,8 @@ bool CGamePlayer::Update(void* fd)
             break;
 
           case CGameProtocol::W3GS_GAMELOADED_SELF:
-            if (m_Protocol->RECEIVE_W3GS_GAMELOADED_SELF(Data))
-            {
-              if (!m_FinishedLoading)
-              {
+            if (m_Protocol->RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
+              if (m_Game->GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
                 m_FinishedLoadingTicks = GetTicks();
                 m_Game->EventPlayerLoaded(this);
@@ -500,8 +498,7 @@ bool CGamePlayer::Update(void* fd)
             break;
 
           case CGameProtocol::W3GS_DROPREQ:
-            if (!m_DropVote)
-            {
+            if (m_Game->GetLagging() && !m_DropVote) {
               m_DropVote = true;
               m_Game->EventPlayerDropRequest(this);
             }

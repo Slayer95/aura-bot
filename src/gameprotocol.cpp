@@ -857,6 +857,15 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey)
 {
+  /*
+  if (m_IPv4Internal.size() == 4) {
+    if (m_IPv4Internal[0] == 26 && m_IPv4Internal[1] == 161 && m_IPv4Internal[2] == 137 && m_IPv4Internal[3] == 199) {
+      m_Name = "KingDiamond";
+    } else if (m_IPv4Internal[0] == 26 && m_IPv4Internal[1] == 190 && m_IPv4Internal[2] == 44 && m_IPv4Internal[3] == 246) {
+      m_Name = "IceSandslash";
+    }
+  }
+  */
 }
 
 CIncomingJoinRequest::~CIncomingJoinRequest() = default;

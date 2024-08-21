@@ -39,6 +39,7 @@
 #include "command.h"
 #include "irc.h"
 #include "map.h"
+#include "game.h"
 #include "realm.h"
 #include "savegame.h"
 
@@ -69,9 +70,10 @@
 #endif
 
 #define GAMESETUP_ORIGIN_NONE 0
-#define GAMESETUP_ORIGIN_REALM 1
-#define GAMESETUP_ORIGIN_IRC 2
-#define GAMESETUP_ORIGIN_DISCORD 3
+#define GAMESETUP_ORIGIN_GAME 1
+#define GAMESETUP_ORIGIN_REALM 2
+#define GAMESETUP_ORIGIN_IRC 3
+#define GAMESETUP_ORIGIN_DISCORD 4
 #define GAMESETUP_ORIGIN_INVALID 255
 
 #define GAMESETUP_STEP_MAIN 0
@@ -89,6 +91,7 @@ class CCommandContext;
 class CIRC;
 class CDiscord;
 class CMap;
+class CGame;
 class CRealm;
 class CSaveGame;
 
@@ -278,6 +281,7 @@ public:
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
   void SetOwnerLess(const bool nValue) { m_OwnerLess = nValue; }
   void SetCreator(const std::string& nCreator);
+  void SetCreator(const std::string& nCreator, CGame* nGame);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CIRC* nIRC);
   void SetCreator(const std::string& nCreator, CDiscord* nDiscord);

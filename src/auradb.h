@@ -70,23 +70,32 @@
  **************
 
 CREATE TABLE moderators (
-    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    server TEXT NOT NULL DEFAULT ""
+    server TEXT NOT NULL DEFAULT "",
+    PRIMARY KEY ( name, server )
 )
 
 CREATE TABLE bans (
-    id INTEGER PRIMARY KEY,
-    server TEXT NOT NULL,
     name TEXT NOT NULL,
+    server TEXT NOT NULL,
+    authserver TEXT NOT NULL,
+    ip TEXT NOT NULL,
     date TEXT NOT NULL,
+    expiry TEXT NOT NULL,
+    permanent INTEGER DEFAULT 0,
     moderator TEXT NOT NULL,
-    reason TEXT
+    reason TEXT,
+    PRIMARY KEY ( name, server, authserver )
 )
 
 CREATE TABLE players (
-    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
+    server TEXT NOT NULL,
+    initialip TEXT NOT NULL,
+    latestip TEXT NOT NULL,
+    initialreport TEXT NOT NULL,
+    reports INTEGER,
+    latestgame INTEGER,
     games INTEGER,
     dotas INTEGER,
     loadingtime INTEGER,
@@ -102,7 +111,8 @@ CREATE TABLE players (
     neutralkills INTEGER,
     towerkills INTEGER,
     raxkills INTEGER,
-    courierkills INTEGER
+    courierkills INTEGER,
+    PRIMARY KEY ( name, server )
 )
 
 CREATE TABLE config (
@@ -110,17 +120,33 @@ CREATE TABLE config (
     value TEXT NOT NULL
 )
 
-CREATE TEMPORARY TABLE iptocountry (
+CREATE TABLE iptocountry (
     ip1 INTEGER NOT NULL,
     ip2 INTEGER NOT NULL,
     country TEXT NOT NULL,
     PRIMARY KEY ( ip1, ip2 )
 )
 
-CREATE TEMPORARY TABLE root_admins (
+CREATE TABLE aliases (
+    alias TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+)
+
+CREATE TABLE games (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    server TEXT NOT NULL DEFAULT ""
+    creator TEXT,
+    map TEXT NOT NULL,
+    crc32 TEXT NOT NULL,
+    replay TEXT,
+    players TEXT NOT NULL
+)
+
+CREATE TABLE commands (
+    command TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    type TEXT NOT NULL,
+    action TEXT NOT NULL,
+    PRIMARY KEY ( command, scope )
 )
 
  **************
@@ -189,7 +215,13 @@ class CDBGamePlayerSummary;
 class CConfig;
 class CDBBan;
 
-#define SCHEMA_NUMBER 2
+#define SCHEMA_NUMBER 3
+#define SCHEMA_CHECK_OK 0
+#define SCHEMA_CHECK_VOID 1
+#define SCHEMA_CHECK_ERROR 2
+#define SCHEMA_CHECK_INCOMPATIBLE 3
+#define SCHEMA_CHECK_LEGACY_INCOMPATIBLE 4
+#define SCHEMA_CHECK_LEGACY_UPGRADEABLE 5
 
 class CAuraDB
 {
@@ -200,6 +232,7 @@ private:
   bool                  m_FirstRun;
   bool                  m_HasError;
   std::string           m_Error;
+  uint64_t              m_LatestGameId;
 
   // we keep some prepared statements in memory rather than recreating them each function call
   // this is an optimization because preparing statements takes time
@@ -207,6 +240,7 @@ private:
 
   void* FromAddStmt;        // for faster startup time
   void* FromCheckStmt;      // frequently used
+  void* LatestGameStmt;     // very frequently used
   void* AliasAddStmt;
   void* AliasCheckStmt;     // very frequently used
   void* BanCheckStmt;       // frequently used
@@ -220,33 +254,48 @@ public:
   CAuraDB(CAuraDB&) = delete;
 
   inline bool        GetIsFirstRun() const { return m_FirstRun; }
+  uint8_t            GetSchemaStatus(int64_t& schemaNumber);
+  void               UpdateSchema(int64_t oldSchemaNumber);
+  void               Initialize();
   inline bool        HasError() const { return m_HasError; }
   inline std::string GetError() const { return m_Error; }
   inline std::filesystem::path GetFile() const { return m_File; }
+  uint64_t           GetLatestHistoryGameId();
+  void               UpdateLatestHistoryGameId(uint64_t gameId);
 
   inline bool Begin() const { return m_DB->Exec("BEGIN TRANSACTION") == SQLITE_OK; }
   inline bool Commit() const { return m_DB->Exec("COMMIT TRANSACTION") == SQLITE_OK; }
 
+  // Geolocalization
   std::string FromCheck(uint32_t ip);
   bool FromAdd(uint32_t ip1, uint32_t ip2, const std::string& country);
+
+  // Map aliases
   bool AliasAdd(const std::string& alias, const std::string& target);
   std::string AliasCheck(const std::string& alias);
+
+  // Server moderators
   uint32_t ModeratorCount(const std::string& server);
   bool ModeratorCheck(const std::string& server, std::string user);
-  bool ModeratorCheck(std::string user);
   bool ModeratorAdd(const std::string& server, std::string user);
   bool ModeratorRemove(const std::string& server, std::string user);
   std::vector<std::string> ListModerators(const std::string& server);
-  uint32_t BanCount(const std::string& server);
-  CDBBan* BanCheck(const std::string& server, std::string user);
-  bool BanAdd(const std::string& server, std::string user, const std::string& admin, const std::string& reason);
-  bool BanRemove(const std::string& server, std::string user);
-  bool BanRemove(std::string user);
-  std::vector<std::string> ListBans(const std::string& server);
-  void GamePlayerAdd(std::string name, uint64_t loadingtime, uint64_t duration, uint64_t left);
-  CDBGamePlayerSummary* GamePlayerSummaryCheck(std::string name);
-  void DotAPlayerAdd(std::string name, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
-  CDBDotAPlayerSummary* DotAPlayerSummaryCheck(std::string name);
+
+  // Bans
+  uint32_t BanCount(const std::string& authserver);
+  CDBBan* BanCheck(std::string user, const std::string& server, const std::string& authserver);
+  bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
+  bool BanAddPermanent(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  bool BanRemove(std::string user, const std::string& server, const std::string& authserver);
+  std::vector<std::string> ListBans(const std::string& authserver);
+
+  // Players
+  void UpdateGamePlayerOnStart(const std::string& name, const std::string& server, const std::string& ip, uint64_t gameId);
+  void UpdateGamePlayerOnEnd(const std::string& name, const std::string& server, uint64_t loadingtime, uint64_t duration, uint64_t left);
+  CDBGamePlayerSummary* GamePlayerSummaryCheck(std::string name, std::string& server);
+  void UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
+  CDBDotAPlayerSummary* DotAPlayerSummaryCheck(std::string name, std::string& server);
 
   void InitMapData();
   CSearchableMapData* GetMapData(uint8_t mapType) const;
@@ -261,21 +310,31 @@ public:
 class CDBBan
 {
 private:
-  std::string m_Server;
   std::string m_Name;
+  std::string m_Server;
+  std::string m_AuthServer;
+  std::string m_IP;
   std::string m_Date;
+  std::string m_Expiry;
+  bool m_Permanent;
   std::string m_Moderator;
   std::string m_Reason;
-
+  bool m_Potential;
+  
 public:
-  CDBBan(std::string nServer, std::string nName, std::string nDate, std::string nModerator, std::string nReason);
+  CDBBan(std::string nName, std::string nServer, std::string nAuthServer, std::string nIP, std::string nDate, std::string nExpiry, bool nPermanent, std::string nModerator, std::string nReason, bool nPotential = false);
   ~CDBBan();
 
-  inline std::string GetServer() const { return m_Server; }
   inline std::string GetName() const { return m_Name; }
+  inline std::string GetServer() const { return m_Server; }
+  inline std::string GetAuthServer() const { return m_AuthServer; }
+  inline std::string GetIP() const { return m_IP; }
   inline std::string GetDate() const { return m_Date; }
+  inline std::string GetExpiry() const { return m_Expiry; }
   inline std::string GetModerator() const { return m_Moderator; }
   inline std::string GetReason() const { return m_Reason; }
+  inline bool GetPotential() const { return m_Potential; }
+  inline void ClearPotential() { m_Potential = false; }
 };
 
 //
@@ -286,21 +345,25 @@ class CDBGamePlayer
 {
 private:
   std::string m_Name;
+  std::string m_Server;
+  std::string m_IP;
   uint64_t    m_LoadingTime;
-  uint64_t    m_Left;
+  uint64_t    m_LeftTime;
   uint8_t     m_Color;
 
 public:
-  CDBGamePlayer(std::string name, uint64_t nLoadingTime, uint64_t nLeft, uint32_t nColor);
+  CDBGamePlayer(std::string name, std::string server, std::string ip, uint32_t nColor);
   ~CDBGamePlayer();
 
   inline std::string GetName() const { return m_Name; }
+  inline std::string GetServer() const { return m_Server; }
+  inline std::string GetIP() const { return m_IP; }
   inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
-  inline uint64_t    GetLeft() const { return m_Left; }
+  inline uint64_t    GetLeftTime() const { return m_LeftTime; }
   inline uint8_t     GetColor() const { return m_Color; }
 
   inline void SetLoadingTime(uint64_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
-  inline void SetLeft(uint64_t nLeft) { m_Left = nLeft; }
+  inline void SetLeftTime(uint64_t nLeftTime) { m_LeftTime = nLeftTime; }
 };
 
 //
@@ -430,6 +493,18 @@ inline int32_t unsigned_to_signed_32(const uint32_t value)
 {
   // Subtract 128 to preserve ordering.
   return static_cast<int32_t>(static_cast<int64_t>(value) + static_cast<int64_t>(INT32_MIN));
+}
+
+inline uint64_t signed_to_unsigned_64(const int64_t value)
+{
+  // Add 128 to preserve ordering.
+  return static_cast<uint64_t>(static_cast<int64_t>(value) - static_cast<int64_t>(INT64_MIN));
+}
+
+inline int64_t unsigned_to_signed_64(const uint64_t value)
+{
+  // Subtract 128 to preserve ordering.
+  return static_cast<int64_t>(static_cast<int64_t>(value) + static_cast<int64_t>(INT64_MIN));
 }
 
 #endif // AURA_AURADB_H_

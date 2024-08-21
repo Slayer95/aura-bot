@@ -58,6 +58,13 @@
 #define CHAT_WRITE_TARGETS (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE)
 #define CHAT_RESPONSE_TYPES (CHAT_TYPE_INFO | CHAT_TYPE_DONE | CHAT_TYPE_ERROR)
 
+#define CHAT_ORIGIN_NONE 0
+#define CHAT_ORIGIN_GAME 1
+#define CHAT_ORIGIN_REALM 2
+#define CHAT_ORIGIN_IRC 3
+#define CHAT_ORIGIN_DISCORD 4
+#define CHAT_ORIGIN_INVALID 255
+
 #define USER_PERMISSIONS_GAME_PLAYER (1 << 0)
 #define USER_PERMISSIONS_GAME_OWNER (1 << 1)
 #define USER_PERMISSIONS_CHANNEL_VERIFIED (1 << 2)
@@ -145,6 +152,7 @@ public:
   inline std::string GetSender() const { return m_FromName; }
   inline std::string GetChannelName() const { return m_ChannelName; }
   inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
+  inline CGame* GetSourceGame() const { return m_SourceGame; }
   inline CIRC* GetSourceIRC() const { return m_IRC; }
 #ifndef DISABLE_DPP
   inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
@@ -180,6 +188,8 @@ public:
   bool ParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player);
   bool ParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   CRealm* GetTargetRealmOrCurrent(const std::string& target);
+  bool ParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm);
+  uint8_t ParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
   CGame* GetTargetGame(const std::string& target);
   void UseImplicitHostedGame();
   void Run(const std::string& token, const std::string& command, const std::string& payload);

@@ -896,6 +896,48 @@ CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
   return m_Aura->GetRealmByHostName(realmId);
 }
 
+bool CCommandContext::ParseTargetRealmUser(const string& target, string& nameFragment, string& realmFragment, CRealm*& realm)
+{
+  if (target.empty()) {
+    return false;
+  }
+
+  nameFragment = target;
+  string::size_type realmStart = nameFragment.find('@');
+  if (realmStart != string::npos) {
+    realmFragment = TrimString(nameFragment.substr(realmStart + 1));
+    nameFragment = TrimString(nameFragment.substr(0, realmStart));
+  }
+
+  if (nameFragment.empty() || nameFragment.size() > MAX_PLAYER_NAME_SIZE) {
+    return false;
+  }
+
+  if (realmFragment.empty()) {
+    return true;
+  } else {
+    realm = GetTargetRealmOrCurrent(realmFragment);
+    if (realm) {
+      realmFragment = realm->GetServer();
+    }
+    return realm != nullptr;
+  }
+}
+
+uint8_t CCommandContext::ParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location)
+{
+  bool isRealm = ParseTargetRealmUser(target, nameFragment, locationFragment, reinterpret_cast<CRealm*&>(location));
+  if (isRealm) return CHAT_ORIGIN_REALM;
+  CGame* matchingGame = GetTargetGame(locationFragment);
+  if (matchingGame) {
+    if (nameFragment.size() > MAX_PLAYER_NAME_SIZE) {
+      location = reinterpret_cast<CRealm*>(matchingGame);
+      return CHAT_ORIGIN_GAME;
+    }
+  }
+  return CHAT_ORIGIN_INVALID;
+}
+
 CGame* CCommandContext::GetTargetGame(const string& target)
 {
   if (target.empty()) {
@@ -1275,11 +1317,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       const bool isDota = CommandHash == HashCode("statsdota") || m_TargetGame->GetClientFileName().find("DotA") != string::npos;
       const bool isUnverified = targetPlayer->GetRealm(false) != nullptr && !targetPlayer->IsRealmVerified();
-      string targetIdentity = "[" + targetPlayer->GetName() + "]";
+      string targetIdentity = "[" + targetPlayer->GetExtendedName() + "]";
       if (isUnverified) targetIdentity += " (unverified)";
 
       if (isDota) {
-        CDBDotAPlayerSummary* DotAPlayerSummary = m_Aura->m_DB->DotAPlayerSummaryCheck(targetPlayer->GetName());
+        CDBDotAPlayerSummary* DotAPlayerSummary = m_Aura->m_DB->DotAPlayerSummaryCheck(targetPlayer->GetName(), targetPlayer->GetRealmHostName());
         if (!DotAPlayerSummary) {
           SendReply(targetIdentity + " has no registered DotA games.");
           break;
@@ -1307,7 +1349,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply(summaryText);
         delete DotAPlayerSummary;
       } else {
-        CDBGamePlayerSummary* GamePlayerSummary = m_Aura->m_DB->GamePlayerSummaryCheck(targetPlayer->GetName());
+        CDBGamePlayerSummary* GamePlayerSummary = m_Aura->m_DB->GamePlayerSummaryCheck(targetPlayer->GetName(), targetPlayer->GetRealmHostName());
         if (!GamePlayerSummary) {
           SendReply(targetIdentity + " has no registered games.");
           break;
@@ -1459,25 +1501,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       const string MapPath = m_TargetGame->GetMap()->GetClientPath();
       size_t LastSlash = MapPath.rfind('\\');
 
-      string inputName = Payload;
-      string inputRealm;
-      string::size_type RealmStart = inputName.find('@');
-      if (RealmStart != string::npos) {
-        inputRealm = TrimString(inputName.substr(RealmStart + 1));
-        inputName = TrimString(inputName.substr(0, RealmStart));
-      }
-
-      if (inputName.empty()) {
-        ErrorReply("Usage: " + cmdToken + "invite <PLAYERNAME>@<REALM>");
-        break;
-      }
-
-      CRealm* matchingRealm = GetTargetRealmOrCurrent(inputRealm);
-      if (!matchingRealm) {
-        if (inputRealm.empty()) {
-          ErrorReply("Usage: " + cmdToken + "invite <PLAYERNAME>@<REALM>");
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
-          ErrorReply(inputRealm + " is not a valid realm.");
+          ErrorReply("Usage: " + cmdToken + "invite <PLAYERNAME>@<REALM>");
         }
         break;
       }
@@ -1486,12 +1516,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
       if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
-        m_ActionMessage = inputName + ", " + m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
+        m_ActionMessage = targetName + ", " + m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
       } else {
-        m_ActionMessage = inputName + ", " + m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
+        m_ActionMessage = targetName + ", " + m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
       }
 
-      matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
+      targetRealm->QueueWhisper(m_ActionMessage, targetName, this, true);
       break;
     }
 
@@ -1868,8 +1898,34 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_Aura->m_DB->BanAdd(m_TargetGame->m_DBBanLast->GetServer(), m_TargetGame->m_DBBanLast->GetName(), m_FromName, Payload);
-      SendAll("Player [" + m_TargetGame->m_DBBanLast->GetName() + "] was banned by player [" + m_FromName + "] on server [" + m_TargetGame->m_DBBanLast->GetServer() + "]");
+      string lower = Payload;
+      transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
+      bool isConfirm = lower == "c" || lower == "confirm";
+
+      if (m_TargetGame->m_DBBanLast->GetPotential()) {
+        if (isConfirm) {
+          ErrorReply("Usage: " + cmdToken + "banlast");
+          break;
+        }
+        m_TargetGame->m_DBBanLast->ClearPotential();
+        SendReply("Player [" + m_TargetGame->m_DBBanLast->GetName() + "@" + m_TargetGame->m_DBBanLast->GetServer() + "] was the last leaver.");
+        SendReply("Use " + cmdToken + "banlast confirm to ban them.");        
+        break;
+      } else {
+        if (!isConfirm) {
+          ErrorReply("Usage: " + cmdToken + "banlast confirm");
+          break;
+        }
+        m_Aura->m_DB->BanAdd(
+          m_TargetGame->m_DBBanLast->GetName(),
+          m_TargetGame->m_DBBanLast->GetServer(),
+          m_ServerName,
+          m_TargetGame->m_DBBanLast->GetIP(),
+          m_FromName,
+          "Leaver"
+        );
+        SendAll("Player [" + m_TargetGame->m_DBBanLast->GetName() + "@" + m_TargetGame->m_DBBanLast->GetServer() + "] was banned by [" + m_FromName + "] on server [" + m_TargetGame->m_DBBanLast->GetAuthServer() + "]");
+      }
       break;
     }
 
@@ -2470,18 +2526,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool IsPrivate = CommandHash == HashCode("privby");
-      string ownerRealmName;
-      string ownerName = Args[0];
-      string::size_type realmStart = ownerName.find('@');
-      if (realmStart != string::npos) {
-        ownerRealmName = TrimString(ownerName.substr(realmStart + 1));
-        ownerName = TrimString(ownerName.substr(0, realmStart));
+
+      string inputName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!ParseTargetRealmUser(Args[0], inputName, targetHostName, targetRealm)) {
+        ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
+        break;
       }
       m_Aura->m_GameSetup->SetContext(this);
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
       m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
-      m_Aura->m_GameSetup->SetOwner(ownerName, ownerRealmName.empty() ? m_SourceRealm : m_Aura->GetRealmByInputId(ownerRealmName));
+      m_Aura->m_GameSetup->SetOwner(inputName, targetRealm ? targetRealm : m_SourceRealm);
       m_Aura->m_GameSetup->RunHost();
       break;
     }
@@ -3164,26 +3220,40 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "checkban <PLAYERNAME>");
+        ErrorReply("Usage: " + cmdToken + "checkban <PLAYERNAME>@<REALM>");
         break;
       }
 
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+        } else {
+          ErrorReply("Usage: " + cmdToken + "checkban <PLAYERNAME>@<REALM>");
+        }
+        break;
+      }
+      if (targetRealm) {
+        targetHostName = targetRealm->GetDataBaseID();
+      }
+
       vector<string> CheckResult;
-      for (auto& bnet : m_Aura->m_Realms) {
-        if (bnet->GetIsMirror())
+      for (auto& realm : m_Aura->m_Realms) {
+        if (realm->GetIsMirror())
           continue;
 
-        CDBBan* Ban = m_Aura->m_DB->BanCheck(bnet->GetDataBaseID(), Payload);
+        CDBBan* Ban = m_Aura->m_DB->BanCheck(targetName, targetHostName, realm->GetDataBaseID());
         if (Ban) {
-          CheckResult.push_back("[" + bnet->GetServer() + "] - banned by [" + Ban->GetModerator() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
+          CheckResult.push_back("[" + realm->GetServer() + "] - banned by [" + Ban->GetModerator() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
           delete Ban;
         }
       }
 
       if (CheckResult.empty()) {
-        SendAll("[" + Payload + "] is not banned from any server.");
+        SendAll("[" + targetName + "@" + targetHostName + "] is not banned from any server.");
       } else {
-        SendAll("[" + Payload + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinVector(CheckResult, false));
+        SendAll("[" + targetName + "@" + targetHostName + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinVector(CheckResult, false));
       }
       break;
     }
@@ -3289,9 +3359,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
         break;
       }
+      ErrorReply("!ban not implemented yet. Try !banlast instead");
 
       // extract the victim and the reason
       // e.g. "Varlock leaver after dying" -> victim: "Varlock", reason: "leaver after dying"
+      /*
 
       string       Victim, Reason;
       stringstream SS;
@@ -3378,6 +3450,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Realm unknown.");
         break;
       }
+      */
       break;
     }
 
@@ -3390,17 +3463,25 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to ban players.");
         break;
       }
-      if (m_Aura->m_Realms.empty()) {
-        ErrorReply("No realms joined.");
-        break;
-      }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>");
+        ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>@<REALM>");
         break;
       }
-
-      if (!m_Aura->m_DB->BanRemove(Payload)) {
-        ErrorReply("Unbanning user [" + Payload + "] on all realms.");
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+        } else {
+          ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>@<REALM>");
+        }
+        break;
+      }
+      if (targetRealm) {
+        targetHostName = targetRealm->GetDataBaseID();
+      }
+      if (!m_Aura->m_DB->BanRemove(targetName, targetHostName, m_ServerName)) {
+        ErrorReply("Failed to unban user [" + targetName + "@" + targetHostName + "] (they might not be banned).");
         break;
       }
 
@@ -4000,26 +4081,31 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
-        break;
-      }
-
       if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "race <RACE> - Race is human/orc/undead/elf/random/roll");
         ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
       }
 
-      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      vector<string> Args = SplitArgs(Payload, 1u, 2u);
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll" + HelpMissingComma(Payload));
         break;
+      }
+      if (Args.size() == 1) {
+        Args.push_back(Args[0]);
+        Args[0] = m_FromName;
       }
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
       if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
+        break;
+      }
+
+      if ((!m_Player || m_Player != targetPlayer) && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
 
@@ -5018,25 +5104,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string inputName = TrimString(Payload.substr(0, MessageStart));
       string subMessage = TrimString(Payload.substr(MessageStart + 1));
-      string inputLocation;
-      if (inputName.empty() || subMessage.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
-        break;
-      }
 
-      string::size_type RealmStart = inputName.find('@');
-      if (RealmStart != string::npos) {
-        inputLocation = TrimString(inputName.substr(RealmStart + 1));
-        inputName = TrimString(inputName.substr(0, RealmStart));
-      }
-
-      if (inputName.empty()) {
-        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
-        break;
-      }
-
-      CRealm* matchingRealm = GetTargetRealmOrCurrent(inputLocation);
-      if (matchingRealm) {
+      string nameFragment, locationFragment;
+      void* location = nullptr;
+      uint8_t targetType = ParseTargetServiceUser(inputName, nameFragment, locationFragment, location);
+      if (targetType == CHAT_ORIGIN_REALM) {
+        CRealm* matchingRealm = reinterpret_cast<CRealm*>(location);
         if (inputName == matchingRealm->GetLoginName()) {
           ErrorReply("Cannot PM myself.");
           break;
@@ -5050,41 +5123,32 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         } else {
           m_ActionMessage = inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>";
         }
-
         matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
+      } else if (targetType == CHAT_ORIGIN_GAME) {
+        CGame* matchingGame = reinterpret_cast<CGame*>(location);
+        if (matchingGame->GetGameLoaded() && !GetIsSudo()) {
+          ErrorReply("Cannot send messages to a game that has already started.");
+          break;
+        }
+        CGamePlayer* targetPlayer = nullptr;
+        if (matchingGame->GetPlayerFromNamePartial(inputName, targetPlayer) != 1) {
+          ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetGameName() + ">>.");
+          break;
+        }
+        if (m_ServerName.empty()) {
+          matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>");
+        } else {
+          matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>");
+        }
+        SendReply("Message sent to " + targetPlayer->GetName() + ".");
       } else {
-        CGame* matchingGame = GetTargetGame(inputLocation);
-        bool success = false;
-        if (matchingGame) {
-          if (matchingGame->GetGameLoaded() && !GetIsSudo()) {
-            ErrorReply("Cannot send messages to a game that has already started.");
-            break;
-          }
-          CGamePlayer* targetPlayer = nullptr;
-          if (matchingGame->GetPlayerFromNamePartial(inputName, targetPlayer) != 1) {
-            ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetGameName() + ">>.");
-            break;
-          }
-          if (targetPlayer) {
-            success = true;
-            if (m_ServerName.empty()) {
-              matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>");
-            } else {
-              matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>");
-            }
-            SendReply("Message sent to " + targetPlayer->GetName() + ".");
-          }
-        }
-        if (!success) {
-          if (inputLocation.empty()) {
-            ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
-          } else {
-            ErrorReply(inputLocation + " is not a valid location.");
-          }
-        }
+        ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
+        break;
       }
+
       break;
     }
+
     //
     // !WHOIS
     //
@@ -5098,32 +5162,63 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "whois <PLAYERNAME>");
+        ErrorReply("Usage: " + cmdToken + "whois <PLAYERNAME>@<REALM>");
         break;
       }
 
-      string Name = Payload;
-      string TargetRealm;
-
-      string::size_type RealmStart = Name.find('@');
-      if (RealmStart != string::npos) {
-        TargetRealm = TrimString(Name.substr(RealmStart + 1));
-        Name = TrimString(Name.substr(0, RealmStart));
-      }
-
-      if (Name.empty() || Name.length() > MAX_PLAYER_NAME_SIZE) {
-        ErrorReply("Usage: " + cmdToken + "whois <PLAYERNAME>");
+      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      if (!targetPlayer) {
+        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
 
-      bool ToAllRealms = TargetRealm.empty() || (TargetRealm.length() == 1 && TargetRealm[0] == '*');
-      const string Message = "/whois " + Name;
+      string targetName, targetHostName;
+      CRealm* targetRealm = targetPlayer->GetRealm(false);
+      if (!targetRealm) {
+        SendReply("Player [" + targetName + "] joined from LAN/VPN.");
+        break;
+      }
 
-      for (auto& bnet : m_Aura->m_Realms) {
-        if (bnet->GetIsMirror())
+      const string Message = "/whois " + targetName;
+      targetRealm->QueueCommand(Message);
+      SendReply("Verification requested for [" + targetName + "@" + targetRealm->GetServer() + "]");
+      break;
+    }
+
+    //
+    // !WHOARE
+    //
+
+    case HashCode("whoare"): {
+      UseImplicitHostedGame();
+
+      if (!CheckPermissions(m_Config->m_WhoarePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot ask for /whoare.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "whoare <PLAYERNAME>@<REALM>");
+        break;
+      }
+
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+        if (!targetHostName.empty() && targetHostName != "*") {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+          break;
+        }
+      }
+
+      bool queryAllRealms = targetHostName.empty() || targetHostName == "*";
+      const string Message = "/whois " + targetName;
+
+      for (auto& realm : m_Aura->m_Realms) {
+        if (realm->GetIsMirror())
           continue;
-        if (ToAllRealms || bnet->GetInputID() == TargetRealm) {
-          bnet->QueueCommand(Message);
+        if (queryAllRealms || realm->GetServer() == targetRealm->GetServer()) {
+          realm->QueueCommand(Message);
         }
       }
 

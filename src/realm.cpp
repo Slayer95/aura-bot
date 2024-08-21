@@ -594,22 +594,23 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     m_HadChatActivity = true;
   }
 
-  if (Event == CBNETProtocol::EID_TALK) {
-    // Bots on servers with realm_x_mirror = yes ignore commands at channels (but not whispers).
-    if (m_Config->m_IsMirror)
-      return;
-  }
-
   if (Event == CBNETProtocol::EID_WHISPER || Event == CBNETProtocol::EID_TALK) {
     if (User == GetLoginName()) {
       return;
     }
-    if (Whisper)
+    if (Whisper) {
       Print("[WHISPER: " + m_Config->m_UniqueName + "] [" + User + "] " + Message);
-    else
+    } else if (GetShouldLogChatToConsole()) {
       Print("[CHAT: " + m_Config->m_UniqueName + "] [" + User + "] " + Message);
+    }
 
     // handle bot commands
+
+    if (Event == CBNETProtocol::EID_TALK && m_Config->m_IsMirror) {
+      // Let bots on servers with <realm_x.mirror = yes> ignore commands at channels
+      // (but still accept commands through whispers).
+      return;
+    }
 
     if (Message.empty()) {
       return;
@@ -837,6 +838,11 @@ string CRealm::GetDataBaseID() const
 string CRealm::GetLogPrefix() const
 {
   return "[BNET: " + m_Config->m_UniqueName + "] ";
+}
+
+bool CRealm::GetShouldLogChatToConsole() const
+{
+  return m_Config->m_ConsoleLogChat;
 }
 
 string CRealm::GetLoginName() const
@@ -1300,10 +1306,10 @@ bool CRealm::GetIsSudoer(string name) const
   return m_Config->m_SudoUsers.find(name) != m_Config->m_SudoUsers.end();
 }
 
-bool CRealm::IsBannedName(string name) const
+bool CRealm::IsBannedPlayer(string name, string hostName) const
 {
   transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
-  CDBBan* Ban = m_Aura->m_DB->BanCheck(m_Config->m_DataBaseID, name);
+  CDBBan* Ban = m_Aura->m_DB->BanCheck(name, hostName, m_Config->m_DataBaseID);
   if (!Ban) return false;
   delete Ban;
   return true;

@@ -1105,9 +1105,12 @@ void CGameSetup::OnLoadMapSuccess()
       m_Aura->m_CurrentLobby->StartGameOverTimer();
     }
     SetBaseName(m_MapReadyCallbackData);
+    CGame* sourceGame = m_Ctx->GetSourceGame();
     CRealm* sourceRealm = m_Ctx->GetSourceRealm();
     SetOwner(m_Ctx->GetSender(), sourceRealm);
-    if (sourceRealm) {
+    if (sourceGame) {
+      SetCreator(m_Ctx->GetSender(), sourceGame);
+    } else if (sourceRealm) {
       SetCreator(m_Ctx->GetSender(), sourceRealm);
     } else if (m_Ctx->GetSourceIRC()) {
       SetCreator(m_Ctx->GetSender(), m_Ctx->GetSourceIRC());
@@ -1308,6 +1311,13 @@ void CGameSetup::SetCreator(const string& nCreator)
   m_CreatedBy = nCreator;
   m_CreatedFrom = nullptr;
   m_CreatedFromType = GAMESETUP_ORIGIN_NONE;
+}
+
+void CGameSetup::SetCreator(const string& nCreator, CGame* nGame)
+{
+  m_CreatedBy = nCreator;
+  m_CreatedFrom = reinterpret_cast<void*>(nGame);
+  m_CreatedFromType = GAMESETUP_ORIGIN_GAME;
 }
 
 void CGameSetup::SetCreator(const string& nCreator, CRealm* nRealm)

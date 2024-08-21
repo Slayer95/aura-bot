@@ -133,6 +133,7 @@ public:
 
   uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
+  uint64_t                                           m_HistoryGameID;
   uint32_t                                           m_LastServerID;
   size_t                                             m_MaxGameNameSize;
 
@@ -173,6 +174,7 @@ public:
   // identifier generators
 
   uint32_t NextHostCounter();
+  uint64_t NextHistoryGameID();
   uint32_t NextServerID();
 
   inline std::string GetSudoAuthPayload(const std::string& Payload) {

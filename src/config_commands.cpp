@@ -59,6 +59,7 @@ CCommandConfig::CCommandConfig()
    m_SayPermissions(COMMAND_PERMISSIONS_AUTO),
    m_TellPermissions(COMMAND_PERMISSIONS_AUTO),
    m_WhoisPermissions(COMMAND_PERMISSIONS_AUTO),
+   m_WhoarePermissions(COMMAND_PERMISSIONS_AUTO),
    m_StatsPermissions(COMMAND_PERMISSIONS_AUTO)
 {
 }
@@ -85,6 +86,7 @@ CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const boo
   m_SayPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_say.permissions", commandPermissions, moderatorPermissions);
   m_TellPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_tell.permissions", commandPermissions, moderatorPermissions);
   m_WhoisPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_whois.permissions", commandPermissions, moderatorPermissions);
+  m_WhoarePermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_whoare.permissions", commandPermissions, moderatorPermissions);
   m_StatsPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_stats.permissions", commandPermissions, moderatorPermissions);
 
   m_Enabled = CFG.GetBool(m_CFGKeyPrefix + "commands.enabled", true);

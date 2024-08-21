@@ -373,6 +373,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_IssuesURL(AURA_ISSUES_URL),
     m_MaxSlots(MAX_SLOTS_LEGACY),
     m_HostCounter(0),
+    m_HistoryGameID(0),
     m_LastServerID(0xF),
     m_MaxGameNameSize(31),
 
@@ -390,7 +391,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Ready = false;
     return;
   }
-
+  m_HistoryGameID = m_DB->GetLatestHistoryGameId();
   m_GameProtocol = new CGameProtocol(this);
   m_GPSProtocol = new CGPSProtocol(this);
   m_Net = new CNet(this);
@@ -1618,6 +1619,12 @@ uint32_t CAura::NextHostCounter()
     m_HostCounter = m_Config->m_MinHostCounter;
   }
   return m_HostCounter;
+}
+
+uint64_t CAura::NextHistoryGameID()
+{
+  m_HistoryGameID = (m_HistoryGameID + 1);
+  return m_HistoryGameID;
 }
 
 uint32_t CAura::NextServerID()

@@ -84,6 +84,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_Name),
+    m_GameHistoryId(nAura->NextHistoryGameID()),
     m_OwnerLess(nGameSetup->m_OwnerLess),
     m_OwnerName(nGameSetup->m_Owner.first),
     m_OwnerRealm(nGameSetup->m_Owner.second),
@@ -298,7 +299,13 @@ void CGame::Reset(const bool saveStats)
     // add non-dota stats
     Print(GetLogPrefix() + "saving game data to database");
     for (auto& player : m_DBGamePlayers) {
-      m_Aura->m_DB->GamePlayerAdd(player->GetName(), player->GetLoadingTime(), m_GameTicks / 1000, player->GetLeft());
+      m_Aura->m_DB->UpdateGamePlayerOnEnd(
+        player->GetName(),
+        player->GetServer(),
+        player->GetLoadingTime(),
+        m_GameTicks / 1000,
+        player->GetLeftTime()
+      );
     }
     // store the dota stats in the database
     if (saveStats && m_Stats) {
@@ -962,11 +969,7 @@ bool CGame::Update(void* fd, void* send_fd)
         if (!laggingPlayers.empty()) {
           // start the lag screen
           SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
-
-          // reset everyone's drop vote
-          for (auto& player : m_Players) {
-            player->SetDropVote(false);
-          }
+          ResetDropVotes();
 
           m_Lagging = true;
           m_StartedLaggingTime = Time;
@@ -975,7 +978,7 @@ bool CGame::Update(void* fd, void* send_fd)
           // print debug information
           double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_Latency) / static_cast<double>(1000.);
           Print(GetLogPrefix() + "started lagging on " + PlayersToNameListString(laggingPlayers) + ".");
-          Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + to_string(static_cast<float>(worstLaggerSeconds)) + " seconds behind)");
+          Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)");
         }
       }
     } else if (!m_Players.empty()) {
@@ -1054,7 +1057,7 @@ bool CGame::Update(void* fd, void* send_fd)
         m_LastActionSentTicks = Ticks - m_Latency;
         m_LastActionLateBy = 0;
         m_PingReportedSinceLagTimes = 0;
-        Print(GetLogPrefix() + "stopped lagging after " + to_string(Time - m_StartedLaggingTime) + " seconds");
+        Print(GetLogPrefix() + "stopped lagging after " + ToFormattedString(Time - m_StartedLaggingTime) + " seconds");
       }
     }
 
@@ -3011,17 +3014,21 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
   // we could have inserted an incomplete record on creation and updated it later but this makes for a cleaner int32_terface
 
   if (m_GameLoading || m_GameLoaded) {
-    // TODO: since we store players that crash during loading it's possible that the stats classes could have no information on them
+    // Update stats
+    const CGameSlot* slot = InspectSlot(GetSIDFromPID(player->GetPID()));
+    CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(slot->GetColor());
+    if (dbPlayer) {
+      dbPlayer->SetLeftTime(m_GameTicks / 1000);
+    }
 
-    uint8_t SID = GetSIDFromPID(player->GetPID());
-
-    m_DBGamePlayers.push_back(new CDBGamePlayer(player->GetName(), player->GetFinishedLoading() ? player->GetFinishedLoadingTicks() - m_StartedLoadingTicks : 0, m_GameTicks / 1000, m_Slots[SID].GetColor()));
-
-    // also keep track of the last player to leave for the !banlast command
-
-    for (auto& ban : m_DBBans) {
-      if (ban->GetName() == player->GetName())
-        m_DBBanLast = ban;
+    // keep track of the last player to leave for the !banlast command
+    // ignore the last player leaving, as well as the second-to-last (forfeit)
+    if (m_Players.size() > 2) {
+      for (auto& ban : m_DBBans) {
+        if (ban->GetName() == player->GetName()) {
+          m_DBBanLast = ban;
+        }
+      }
     }
   }
 
@@ -3064,12 +3071,18 @@ void CGame::ReportAllPings() const
   }
 }
 
+void CGame::ResetDropVotes()
+{
+  for (auto& eachPlayer : m_Players) {
+    eachPlayer->SetDropVote(false);
+  }
+}
+
 void CGame::ReportPlayerDisconnected(CGamePlayer* player)
 {
   int64_t Time = GetTime(), Ticks = GetTicks();
   if (!player->GetLagging()) {
-    for (auto& eachPlayer : m_Players)
-      eachPlayer->SetDropVote(false);
+    ResetDropVotes();
 
     if (!GetLagging()) {
       m_Lagging = true;
@@ -3215,10 +3228,13 @@ void CGame::SendLeftMessage(CGamePlayer* player, const bool sendChat) const
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which PIDs Aura considers available.
   if (sendChat || player->GetPingKicked() || player->GetMapKicked()) {
-    if (player->GetQuitGame()) {
-      SendAllChat(player->GetPID(), player->GetLeftReason() + ".");
+    if (!player->GetQuitGame()) {
+      SendAllChat(player->GetExtendedName() + " " + player->GetLeftReason() + ".");
+    } else if (player->GetRealm(false)) {
+      // Note: Not necessarily spoof-checked
+      SendAllChat(player->GetPID(), player->GetLeftReason() + " [" + player->GetExtendedName() + "].");
     } else {
-      SendAllChat(player->GetName() + " " + player->GetLeftReason() + ".");
+      SendAllChat(player->GetPID(), player->GetLeftReason());
     }
   }
   player->SetLeftMessageSent(true);
@@ -3291,9 +3307,9 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
       SendAllChat(player->GetName() + " joined the game over IPv6.");
     }
     if (player->GetNumPings() > 0) {
-      SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false));
+      SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false), LOG_LEVEL_DEBUG);
     } else if (player->GetMapReady()) {
-      SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...");
+      SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...", LOG_LEVEL_DEBUG);
     }
     return;
   }
@@ -3314,9 +3330,9 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
     SendAllChat(player->GetName() + GProxyFragment + IPv6Fragment);
   }
   if (player->GetNumPings() > 0) {
-    SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false));
+    SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false), LOG_LEVEL_DEBUG);
   } else if (player->GetMapReady()) {
-    SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...");
+    SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...", LOG_LEVEL_DEBUG);
   }
 }
 
@@ -3399,7 +3415,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
       continue;
     }
     if (otherPlayer->GetHasPinnedMessage()) {
-      SendChat(otherPlayer->GetPID(), Player, otherPlayer->GetPinnedMessage(), LOG_LEVEL_INFO);
+      SendChat(otherPlayer->GetPID(), Player, otherPlayer->GetPinnedMessage(), LOG_LEVEL_DEBUG);
     }
   }
 
@@ -3513,26 +3529,33 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   }
 
   // check if the new player's name is banned
-  // don't allow the player to spam the chat by attempting to join the game multiple times in a row
-
-  if (matchingRealm) {
-    if (matchingRealm->IsBannedName(joinRequest->GetName())){
-      Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "|" + connection->GetIPString() + "] is banned");
-
-      if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
-        SendAllChat("[" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join the game, but is banned");
-        m_ReportedJoinFailNames.insert(joinRequest->GetName());
-      }
-
-      // let banned players "join" the game with an arbitrary PID then immediately close the connection
-      // this causes them to be kicked back to the chat channel on battle.net
-
-      vector<CGameSlot> Slots = m_Map->GetSlots();
-      connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
-      return false;
-    }
-    matchingRealm = nullptr;
+  bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), JoinedRealm);
+  bool isBanned = isSelfServerBanned;
+  if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
+    isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedPlayer(joinRequest->GetName(), JoinedRealm);
   }
+  if (isBanned) {
+    string scopeFragment;
+    if (isSelfServerBanned) {
+      scopeFragment = "in its own realm";
+    } else {
+      scopeFragment = "in creator's realm";
+    }
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "|" + connection->GetIPString() + "] is banned " + scopeFragment);
+
+    // don't allow the player to spam the chat by attempting to join the game multiple times in a row
+    if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
+      SendAllChat("[" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join the game, but is banned");
+      m_ReportedJoinFailNames.insert(joinRequest->GetName());
+    }
+
+    // let banned players "join" the game with an arbitrary PID then immediately close the connection
+    // this causes them to be kicked back to the chat channel on battle.net
+    vector<CGameSlot> Slots = m_Map->GetSlots();
+    connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
+    return false;
+  }
+  matchingRealm = nullptr;
 
   // Check if the player is an admin or root admin on any connected realm for determining reserved status
   // Note: vulnerable to spoofing
@@ -3646,9 +3669,15 @@ void CGame::EventPlayerLeft(CGamePlayer* player)
 
 void CGame::EventPlayerLoaded(CGamePlayer* player)
 {
-  Print(GetLogPrefix() + "player [" + player->GetName() + "] finished loading in " + to_string(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
-
+  Print(GetLogPrefix() + "player [" + player->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
   SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(player->GetPID()));
+
+  // Update stats
+  const CGameSlot* slot = InspectSlot(GetSIDFromPID(player->GetPID()));
+  CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(slot->GetColor());
+  if (dbPlayer) {
+    dbPlayer->SetLoadingTime(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks);
+  }
 }
 
 bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
@@ -4332,6 +4361,16 @@ void CGame::EventGameStarted()
       m_Stats = new CStats(this);
   }
 
+  for (auto& player : m_Players) {
+    uint8_t SID = GetSIDFromPID(player->GetPID());
+    m_DBGamePlayers.push_back(new CDBGamePlayer(
+      player->GetName(),
+      player->GetRealmHostName(),
+      player->GetIPStringStrict(),
+      m_Slots[SID].GetColor()
+    ));
+  }
+
   for (auto& currentPlayer : m_Players) {
     std::vector<CGamePlayer*> otherPlayers;
     for (auto& otherPlayer : m_Players) {
@@ -4369,7 +4408,18 @@ void CGame::EventGameStarted()
   // so we create a "potential ban" for each player and only store it in the database if requested to by an admin
 
   for (auto& player : m_Players) {
-    m_DBBans.push_back(new CDBBan(player->GetRealmDataBaseID(false), player->GetName(), string(), string(), string()));
+    m_DBBans.push_back(new CDBBan(
+      player->GetName(),
+      player->GetRealmDataBaseID(false),
+      string(), // auth server
+      player->GetIPStringStrict(),
+      string(), // date
+      string(), // expiry
+      false, // temporary ban (permanent == false)
+      string(), // moderator
+      string(), // reason
+      true // potential
+    ));
   }
 }
 
@@ -4422,6 +4472,16 @@ void CGame::EventGameLoaded()
     SendAllChat("HINT: Single-player game detected. In-game commands will be DISABLED.");
     // FIXME? This creates a lag spike client-side.
     StopPlayers("single-player game untracked", true);
+  }
+
+  m_Aura->m_DB->UpdateLatestHistoryGameId(m_GameHistoryId);
+  for (auto& dbPlayer : m_DBGamePlayers) {
+    m_Aura->m_DB->UpdateGamePlayerOnStart(
+      dbPlayer->GetName(),
+      dbPlayer->GetServer(),
+      dbPlayer->GetIP(),
+      m_GameHistoryId
+    );
   }
 }
 
@@ -4609,15 +4669,13 @@ uint8_t CGame::GetPlayerFromNamePartial(string name, CGamePlayer*& player) const
   return Matches;
 }
 
-string CGame::GetDBPlayerNameFromColor(uint8_t colour) const
+CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
 {
-  for (const auto& player : m_DBGamePlayers)
-  {
+  for (const auto& player : m_DBGamePlayers) {
     if (player->GetColor() == colour)
-      return player->GetName();
+      return player;
   }
-
-  return string();
+  return nullptr;
 }
 
 CGamePlayer* CGame::GetPlayerFromColor(uint8_t colour) const
@@ -6191,6 +6249,7 @@ void CGame::StopLaggers(const string& reason)
       player->SetLeftReason(reason);
       player->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
+    player->SetDropVote(false);
   }
 }
 

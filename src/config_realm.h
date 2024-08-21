@@ -123,6 +123,7 @@ public:
   std::string m_GamePrefix;                      // string prepended to game names
   uint32_t m_MaxUploadSize;                      // in KB
 
+  bool m_ConsoleLogChat;                         // whether we should print public chat messages
   uint8_t m_FloodQuotaLines;                     // - PvPGN: corresponds to bnetd.conf: quota_lines (default 5)
   uint8_t m_FloodQuotaTime;                      // - PvPGN: corresponds to bnetd.conf: quota_time (default 5)
   uint16_t m_VirtualLineLength;                  // - PvPGN: corresponds to bnetd.conf: quota_wrapline (default 40)

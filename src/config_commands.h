@@ -81,6 +81,7 @@ public:
   uint8_t m_SayPermissions;
   uint8_t m_TellPermissions;
   uint8_t m_WhoisPermissions;
+  uint8_t m_WhoarePermissions;
 
   // Stats commands
   uint8_t m_StatsPermissions;

@@ -110,6 +110,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
 
+  m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", true);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5) - 1;
   m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", 5);
   m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", 40);

@@ -222,6 +222,13 @@ public:
   std::string                  GetRealmDataBaseID(bool mustVerify);
   inline uint32_t              GetRealmInternalID() const { return m_RealmInternalId; }
   inline std::string           GetRealmHostName() const { return m_RealmHostName; }
+  inline std::string           GetExtendedName() const {
+    if (m_RealmHostName.empty()) {
+      return m_Name + "@@@LAN/VPN";
+    } else {
+      return m_Name + "@" + m_RealmHostName;
+    }
+  }
   inline bool                  IsRealmVerified() const { return m_Verified; }
   inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
   inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
