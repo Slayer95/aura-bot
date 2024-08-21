@@ -117,6 +117,16 @@ Type: bool
 Default value: Empty
 Error handling: Use default value
 
+## \`global_realm.auth_custom\`
+Type: bool
+Default value: false
+Error handling: Use default value
+
+## \`global_realm.auth_custom\`
+Type: bool
+Default value: Empty
+Error handling: Use default value
+
 ## \`global_realm.auth_exe_info\`
 Type: string
 Default value: Empty
@@ -158,16 +168,6 @@ Error handling: Use default value
 
 ## \`global_realm.auth_password_hash_type\`
 Type: stringindex
-Default value: Empty
-Error handling: Use default value
-
-## \`global_realm.auth_custom\`
-Type: bool
-Default value: false
-Error handling: Use default value
-
-## \`global_realm.auth_custom\`
-Type: bool
 Default value: Empty
 Error handling: Use default value
 
@@ -591,6 +591,11 @@ Type: int
 Default value: 120
 Error handling: Use default value
 
+## \`hosting.allow_extra_lobby\`
+Type: bool
+Default value: false
+Error handling: Use default value
+
 ## \`hosting.commands.broadcast.enabled\`
 Type: bool
 Default value: false
@@ -606,19 +611,54 @@ Type: string
 Default value: !
 Error handling: Use default value
 
+## \`hosting.crossplay.versions\`
+Type: uint8set
+Default value: 
+Error handling: Use default value
+
+## \`hosting.desync.handler\`
+Type: stringindex
+Default value: ON_DESYNC_NOTIFY
+Error handling: Use default value
+
 ## \`hosting.enabled\`
 Type: bool
 Default value: true
 Error handling: Use default value
 
 ## \`hosting.game_over.player_count\`
-Type: int
+Type: uint8
 Default value: 1
+Error handling: Use default value
+
+## \`hosting.game_ready.mode\`
+Type: stringindex
+Default value: READY_MODE_EXPECT_RACE
+Error handling: Use default value
+
+## \`hosting.game_start.count_down_interval\`
+Type: int
+Default value: 500
+Error handling: Use default value
+
+## \`hosting.game_start.count_down_ticks\`
+Type: int
+Default value: 5
+Error handling: Use default value
+
+## \`hosting.geolocalization.enabled\`
+Type: bool
+Default value: true
 Error handling: Use default value
 
 ## \`hosting.high_ping.kick_ms\`
 Type: int
 Default value: 300
+Error handling: Use default value
+
+## \`hosting.high_ping.safe_ms\`
+Type: int
+Default value: 150
 Error handling: Use default value
 
 ## \`hosting.high_ping.warn_ms\`
@@ -630,6 +670,26 @@ Error handling: Use default value
 Type: string
 Constraints: Min length: 1. Max length: 15.
 Default value: Empty
+Error handling: Use default value
+
+## \`hosting.ip_filter.flood_handler\`
+Type: stringindex
+Default value: ON_IPFLOOD_DENY
+Error handling: Use default value
+
+## \`hosting.ip_filter.max_loopback\`
+Type: uint8
+Default value: 8
+Error handling: Use default value
+
+## \`hosting.ip_filter.max_same_ip\`
+Type: uint8
+Default value: 8
+Error handling: Use default value
+
+## \`hosting.log_words\`
+Type: setinsensitive
+Default value: 
 Error handling: Use default value
 
 ## \`hosting.map_downloads.enabled\`
@@ -970,12 +1030,17 @@ Error handling: Use default value
 
 ## \`net.start_lag.sync_limit\`
 Type: int
-Default value: 10
+Default value: 32
 Error handling: Use default value
 
 ## \`net.stop_lag.sync_limit\`
 Type: int
-Default value: 3
+Default value: 8
+Error handling: Use default value
+
+## \`net.sync_normalization.enabled\`
+Type: bool
+Default value: true
 Error handling: Use default value
 
 ## \`net.tcp_extensions.gproxy_legacy.reconnect_wait\`

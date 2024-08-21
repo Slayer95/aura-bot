@@ -10,50 +10,57 @@ Aliases: version
 ## \`alias\`
 
 ## \`announce\`
-Syntax: announce [REALM]
+Syntax: announce <REALM>
 
 ## \`autostart\`
-Syntax: autostart <slots>, <minutes>
+Aliases: addas, as
+Syntax: autostart <slots> , <minutes>
 
 ## \`ban\`
 Aliases: addban
-Syntax: ban [PLAYERNAME]
+Syntax: ban <PLAYERNAME>
 
 ## \`bl\`
 Aliases: banlast
 
 ## \`c\`
 Aliases: close
-Syntax: c [SLOTNUM]
+Syntax: c <SLOTNUM>
 
 ## \`cachemaps\`
 
 ## \`channel\`
-Syntax: channel [CHANNEL]
+Syntax: channel <CHANNEL>
 
 ## \`check\`
 Aliases: slot, checkme
 
 ## \`checkban\`
-Syntax: checkban [PLAYERNAME]
+Syntax: checkban <PLAYERNAME>
 
 ## \`checknetwork\`
 Syntax: checknetwork *
-Syntax: checknetwork [REALM]
+Syntax: checknetwork <REALM>
+
+## \`checkrace\`
+Aliases: races
 
 ## \`checkstaff\`
 Aliases: checkadmin
-Syntax: checkstaff [NAME]
+Syntax: checkstaff <NAME>
+
+## \`clearautostart\`
+Aliases: clearas
 
 ## \`clearhcl\`
 
 ## \`closeall\`
 
 ## \`color\`
-Syntax: color [PLAYER], [COLOR] - Color goes from 1 to 12
+Syntax: color <PLAYER> , <COLOR> - Color goes from 1 to 12
 
 ## \`comp\`
-Syntax: comp [SLOT], [SKILL] - Skill is any of: easy, normal, insane
+Syntax: comp <SLOT> , <SKILL> - Skill is any of: easy, normal, insane
 
 ## \`countcfgs\`
 Aliases: countmaps
@@ -67,12 +74,12 @@ Aliases: deletefake
 Aliases: deletecfg
 
 ## \`delstaff\`
-Syntax: delstaff [NAME]
+Syntax: delstaff <NAME>
 
 ## \`disable\`
 
 ## \`disablepub\`
-Syntax: disablepub [REALM]
+Syntax: disablepub <REALM>
 
 ## \`discord\`
 
@@ -80,48 +87,47 @@ Syntax: disablepub [REALM]
 Aliases: download
 
 ## \`draft\`
-Syntax: draft [enable|disable]
-Syntax: draft [CAPTAIN1], [CAPTAIN2]
+Syntax: draft <ON|OFF>
+Syntax: draft <CAPTAIN1> , <CAPTAIN2>
 
 ## \`drop\`
 
 ## \`enable\`
 
 ## \`enablepub\`
-Syntax: enablepub [REALM]
+Syntax: enablepub <REALM>
 
 ## \`end\`
 
+## \`eras\`
+
 ## \`f\`
-Aliases: from
+Aliases: where, from
 
 ## \`ffa\`
-Syntax: ffa [enable|disable]
+Syntax: ffa <ON|OFF>
 
 ## \`fill\`
 Aliases: compall
-Syntax: fill [SKILL] - Skill is any of: easy, normal, insane
+Syntax: fill <SKILL> - Skill is any of: easy, normal, insane
 
 ## \`fillfake\`
 
 ## \`flip\`
 Aliases: coin, coinflip
-Syntax: flip [CHANCE%]
+Syntax: flip <CHANCE%>
 
 ## \`flushdns\`
-
-## \`forceautostart\`
-Syntax: forceautostart <minutes>
 
 ## \`fp\`
 Aliases: fakeplayer
 Syntax: fp
-Syntax: fp [ENABLE|DISABLE]
+Syntax: fp <ON|OFF>
 
 ## \`freestart\`
 
 ## \`game\`
-Syntax: game [GAMEID], [COMMAND] - See game ids with !listgames
+Syntax: game <GAMEID> , <COMMAND> - See game ids with !listgames
 
 ## \`getclan\`
 
@@ -140,40 +146,45 @@ Aliases: start, vs
 Aliases: reconnect
 
 ## \`handicap\`
-Syntax: handicap [PLAYER], [HANDICAP] - Handicap is percent: 50/60/70/80/90/100
+Syntax: handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100
+
+## \`help\`
+Aliases: git
 
 ## \`hold\`
-Syntax: hold [PLAYER1], [PLAYER2], ...
+Syntax: hold <PLAYER1> , <PLAYER2>, ...
 
 ## \`host\`
 Aliases: map, load
-Syntax: host [MAP NAME], [GAME NAME]
-Syntax: host [MAP NAME], [OBSERVERS], [GAME NAME]
-Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [GAME NAME]
-Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [GAME NAME]
-Syntax: host [MAP NAME], [OBSERVERS], [VISIBILITY], [RANDOM RACES], [RANDOM HEROES], [GAME NAME]
+Syntax: host <MAP NAME> , <GAME NAME>
+Syntax: host <MAP NAME> , <OBSERVERS> , <GAME NAME>
+Syntax: host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <GAME NAME>
+Syntax: host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <RANDOM RACES> , <GAME NAME>
+Syntax: host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <RANDOM RACES> , <RANDOM HEROES> , <GAME NAME>
 
 ## \`import\`
 
 ## \`invite\`
-Syntax: invite [PLAYERNAME]@[REALM]
+Syntax: invite <PLAYERNAME>@<REALM>
 
 ## \`k\`
 Aliases: closekick, ckick, kick
-Syntax: kick [PLAYERNAME]
+Syntax: kick <PLAYERNAME>
 
 ## \`key\`
 
 ## \`latency\`
+Syntax: latency [REFRESH]
+Syntax: latency [REFRESH], [TOLERANCE]
 
 ## \`link\`
 Aliases: url
 
 ## \`listbans\`
-Syntax: listbans [REALM]
+Syntax: listbans <REALM>
 
 ## \`liststaff\`
-Syntax: liststaff [REALM]
+Syntax: liststaff <REALM>
 
 ## \`loadcfg\`
 
@@ -181,11 +192,11 @@ Syntax: liststaff [REALM]
 
 ## \`maptransfers\`
 Aliases: setdownloads
-Syntax: maptransfers [MODE]: Mode is 0/1/2.
+Syntax: maptransfers <MODE>: Mode is 0/1/2.
 
 ## \`mirror\`
-Syntax: mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID, GAMEKEY expected hex.
-Syntax: mirror [EXCLUDESERVER], [IP], [PORT], [GAMEID], [GAMEKEY], [GAMENAME] - GAMEID expected hex.
+Syntax: mirror <EXCLUDESERVER> , <IP> , <PORT> , <GAMEID> , <GAMEKEY> , <GAMENAME> - GAMEID, GAMEKEY expected hex.
+Syntax: mirror <EXCLUDESERVER> , <IP> , <PORT> , <GAMEID> , <GAMEKEY> , <GAMENAME> - GAMEID expected hex.
 
 ## \`mode\`
 Aliases: hcl
@@ -196,7 +207,7 @@ Syntax: mute [PLAYERNAME]
 ## \`muteall\`
 
 ## \`netinfo\`
-Syntax: netinfo [REALM]
+Syntax: netinfo <REALM>
 
 ## \`nick\`
 
@@ -204,50 +215,66 @@ Syntax: netinfo [REALM]
 
 ## \`o\`
 Aliases: open
-Syntax: o [SLOTNUM]
+Syntax: o <SLOTNUM>
 
 ## \`observer\`
 Aliases: obs
-Syntax: observer [PLAYER]
+Syntax: observer <PLAYER>
 
 ## \`openall\`
 
 ## \`owner\`
-Syntax: owner [PLAYERNAME]
+Syntax: owner <PLAYERNAME>
 
 ## \`p\`
-Aliases: ping
+Aliases: pingall, ping
 
 ## \`pause\`
 
 ## \`pick\`
-Syntax: pick [OPTION], [OPTION], [OPTION], ...
+Syntax: pick <OPTION> , <OPTION> , <OPTION>, ...
+
+## \`pickobs\`
+Aliases: pickobserver
+
+## \`pickplayer\`
+
+## \`pickrace\`
+
+## \`pin\`
+Syntax: pin <MESSAGE>
 
 ## \`portforward\`
-Syntax: portforward [EXTPORT], [INTPORT]
+Syntax: portforward <EXTPORT> , <INTPORT>
 
 ## \`printgames\`
-Syntax: printgames [REALM]
+Syntax: printgames <REALM>
 
 ## \`pub\`
 Aliases: priv
-Syntax: pub [GAMENAME]
+Syntax: pub <GAMENAME>
 
 ## \`pubby\`
 Aliases: privby
-Syntax: pubby [OWNER], [GAMENAME]
+Syntax: pubby <OWNER> , <GAMENAME>
 
 ## \`querygames\`
-Syntax: querygames [REALM]
+Syntax: querygames <REALM>
 
 ## \`quickstart\`
+Aliases: sn, startn
 
 ## \`quit\`
 Aliases: exit
 
 ## \`race\`
 Aliases: comprace
-Syntax: race [PLAYER], [RACE] - Race is human/orc/undead/elf/random
+Syntax: race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll
+
+## \`ready\`
+
+## \`readystatus\`
+Aliases: checkready, askready
 
 ## \`referee\`
 
@@ -262,20 +289,20 @@ Aliases: autosave, save
 Aliases: remake
 
 ## \`roll\`
-Syntax: roll [FACES]
+Syntax: roll <FACES>
 
 ## \`say\`
-Syntax: say [REALM], [MESSAGE]
+Syntax: say <REALM> , <MESSAGE>
 
 ## \`saygame\`
 Aliases: saygameraw
-Syntax: saygame [GAMEID], [MESSAGE]
+Syntax: saygame <GAMEID> , <MESSAGE>
 
 ## \`sc\`
 
 ## \`sendlan\`
 Syntax: sendlan ON/OFF
-Syntax: sendlan [IP]
+Syntax: sendlan <IP>
 
 ## \`sendlaninfo\`
 Syntax: sendlaninfo
@@ -285,58 +312,71 @@ Aliases: sp
 
 ## \`staff\`
 Aliases: admin
-Syntax: addstaff [NAME]
+Syntax: addstaff <NAME>
+
+## \`stats\`
+Aliases: statsdota
 
 ## \`status\`
 
 ## \`sw\`
 Aliases: swap
-Syntax: swap <PLAYER>, <PLAYER>
+Syntax: swap <PLAYER> , <PLAYER>
 
 ## \`team\`
 Aliases: compteam
-Syntax: team [PLAYER]
-Syntax: team [PLAYER], [TEAM]
+Syntax: team <PLAYER>
+Syntax: team <PLAYER> , <TEAM>
 
 ## \`teams\`
-Syntax: teams [enable|disable]
+Syntax: teams <ON|OFF>
 
 ## \`terminator\`
 Aliases: vsai
-Syntax: terminator [enable|disable]
-Syntax: terminator [NUMBER]
+Syntax: terminator <ON|OFF>
+Syntax: terminator <NUMBER>
+
+## \`twrpg\`
+Syntax: twrpg <NOMBRE>
 
 ## \`uh\`
 Aliases: unhost
 
 ## \`unban\`
-Syntax: unban [PLAYERNAME]
+Syntax: unban <PLAYERNAME>
 
 ## \`unhold\`
 
 ## \`unlock\`
 
 ## \`unmute\`
-Syntax: unmute [PLAYERNAME]
+Syntax: unmute <PLAYERNAME>
 
 ## \`unmuteall\`
 
+## \`unpin\`
+
+## \`unready\`
+Aliases: afk
+
+## \`v\`
+
 ## \`virtualhost\`
-Syntax: virtualhost [PLAYERNAME]
+Syntax: virtualhost <PLAYERNAME>
 
 ## \`votecancel\`
 
 ## \`votekick\`
-Syntax: votekick [PLAYERNAME]
+Syntax: votekick <PLAYERNAME>
 
 ## \`vsall\`
 Aliases: pro, lynch
 
 ## \`w\`
 Aliases: tell
-Syntax: w [PLAYERNAME]@[REALM], [MESSAGE]
+Syntax: w <PLAYERNAME>@<LOCATION> , <MESSAGE>
 
 ## \`whois\`
-Syntax: whois [PLAYERNAME]
+Syntax: whois <PLAYERNAME>
 
 ## \`yes\`
