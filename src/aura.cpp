@@ -387,7 +387,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   Print("[AURA] Aura version " + m_Version);
 
   if (m_DB->HasError()) {
-    Print("[CONFIG] Error: Critical errors found in " + PathToString(m_DB->GetFile()) + ".");
+    Print("[CONFIG] Error: Critical errors found in [" + PathToString(m_DB->GetFile()) + "]: " + m_DB->GetError());
     m_Ready = false;
     return;
   }

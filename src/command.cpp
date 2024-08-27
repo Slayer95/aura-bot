@@ -1419,17 +1419,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
-      if (!targetPlayer) {
-        break;
-      }
-
       if (!m_TargetGame->m_KickVotePlayer.empty()) {
         ErrorReply("Unable to start votekick. Another votekick is in progress");
         break;
       }
       if (m_TargetGame->m_Players.size() <= 2) {
         ErrorReply("Unable to start votekick. There aren't enough players in the game for a votekick");
+        break;
+      }
+
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "votekick <PLAYERNAME>");
+        break;
+      }
+      if (!targetPlayer) {
+        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a player.");
         break;
       }
       if (targetPlayer->GetIsReserved()) {
@@ -1547,8 +1553,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         chance = chancePercent / 100.;
       }
-
-      // Max 5pm
 
       std::random_device rd;
       std::mt19937 gen(rd());
@@ -2189,8 +2193,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
+      uint8_t SID = 0xFF;
+      CGamePlayer* targetPlayer = nullptr;
+      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "kick <PLAYERNAME>");
+        break;
+      }
       if (!targetPlayer) {
+        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a player.");
         break;
       }
 
@@ -4076,6 +4086,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
+      if (m_TargetGame->GetGameLoaded()) {
+        ErrorReply("Game already started. Did you mean to check " + cmdToken + "races instead?");
+        break;
+      }
+
       if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
@@ -5838,6 +5853,41 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     /*********************
      * ADMIN COMMANDS *
      *********************/
+
+    //
+    // !CHECKGAME (check info of a game stored in the database)
+    //
+
+    case HashCode("checkgame"): {
+      // TODO: Avoid conflict with !getplayers GAMEID
+      if (Payload.empty()) {
+        break;
+      }
+      if (!GetIsSudo()) {
+        ErrorReply("Requires sudo permissions");
+        break;
+      }
+
+      uint64_t gameID = 0;
+      try {
+        long long value = stoll(Payload);
+        gameID = static_cast<uint64_t>(value);
+      } catch (const exception& e) {
+        ErrorReply("Invalid game identifier.");
+        break;
+      }
+
+      CDBGameSummary* gameSummary = m_Aura->m_DB->GameCheck(gameID);
+      if (!gameSummary) {
+        ErrorReply("Game #" + to_string(gameID) + "] not found.");
+        break;
+      }
+      SendReply("Game players: " + JoinVector(gameSummary->GetPlayerNames(), false));
+      SendReply("Slot IDs: " + ByteArrayToDecString(gameSummary->GetSIDs()));
+      SendReply("Player IDs: " + ByteArrayToDecString(gameSummary->GetPIDs()));
+      SendReply("Colors: " + ByteArrayToDecString(gameSummary->GetColors()));
+      break;
+    }
 
     //
     // !LOADCFG (load config file)

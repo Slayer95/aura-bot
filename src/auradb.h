@@ -135,10 +135,13 @@ CREATE TABLE aliases (
 CREATE TABLE games (
     id INTEGER PRIMARY KEY,
     creator TEXT,
-    map TEXT NOT NULL,
+    mapcpath TEXT NOT NULL,
+    mapspath TEXT NOT NULL,
     crc32 TEXT NOT NULL,
     replay TEXT,
-    players TEXT NOT NULL
+    playernames TEXT NOT NULL, // comma-separated list of players-names; fake player is empty name
+    playerids TEXT NOT NULL, // space-separated bytelist (PIDs, then SIDs, then colors)
+    saveids TEXT // space-separated bytelist (PIDs at time of recentmost save)
 )
 
 CREATE TABLE commands (
@@ -178,6 +181,7 @@ public:
 
   inline int32_t Step(void* Statement) { return sqlite3_step(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Prepare(const std::string& query, void** Statement) { return sqlite3_prepare_v2(static_cast<sqlite3*>(m_DB), query.c_str(), -1, reinterpret_cast<sqlite3_stmt**>(Statement), nullptr); }
+  inline int32_t Prepare(const std::string& query, sqlite3_stmt** Statement) { return sqlite3_prepare_v2(static_cast<sqlite3*>(m_DB), query.c_str(), -1, Statement, nullptr); }
   inline int32_t Finalize(void* Statement) { return sqlite3_finalize(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Reset(void* Statement) { return sqlite3_reset(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Exec(const std::string& query) { return sqlite3_exec(static_cast<sqlite3*>(m_DB), query.c_str(), nullptr, nullptr, nullptr); }
@@ -212,6 +216,7 @@ public:
 
 class CDBDotAPlayerSummary;
 class CDBGamePlayerSummary;
+class CDBGameSummary;
 class CConfig;
 class CDBBan;
 
@@ -297,6 +302,10 @@ public:
   void UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
   CDBDotAPlayerSummary* DotAPlayerSummaryCheck(std::string name, std::string& server);
 
+  // Games
+  void GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::vector<uint8_t>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
+  CDBGameSummary* GameCheck(const uint64_t gameId);
+
   void InitMapData();
   CSearchableMapData* GetMapData(uint8_t mapType) const;
   uint8_t FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
@@ -349,10 +358,12 @@ private:
   std::string m_IP;
   uint64_t    m_LoadingTime;
   uint64_t    m_LeftTime;
+  /*uint8_t     m_PID;
+  uint8_t     m_SID;*/
   uint8_t     m_Color;
 
 public:
-  CDBGamePlayer(std::string name, std::string server, std::string ip, uint32_t nColor);
+  CDBGamePlayer(std::string name, std::string server, std::string ip, /*uint8_t nPID, uint8_t nSID,*/ uint8_t nColor);
   ~CDBGamePlayer();
 
   inline std::string GetName() const { return m_Name; }
@@ -360,10 +371,36 @@ public:
   inline std::string GetIP() const { return m_IP; }
   inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
   inline uint64_t    GetLeftTime() const { return m_LeftTime; }
+  /*inline uint8_t     GetPID() const { return m_PID; }
+  inline uint8_t     GetSID() const { return m_SID; }*/
   inline uint8_t     GetColor() const { return m_Color; }
 
   inline void SetLoadingTime(uint64_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
   inline void SetLeftTime(uint64_t nLeftTime) { m_LeftTime = nLeftTime; }
+};
+
+//
+// CDBGameSummary
+//
+
+class CDBGameSummary
+{
+private:
+  uint64_t m_ID;
+  std::vector<uint8_t> m_SIDs;
+  std::vector<uint8_t> m_PIDs;
+  std::vector<uint8_t> m_Colors;
+  std::vector<std::string> m_PlayerNames;
+
+public:
+  CDBGameSummary(uint64_t nID, std::string playerNames, std::string playerIDs);
+  ~CDBGameSummary();
+
+  inline uint64_t GetID() const { return m_ID; }
+  inline const std::vector<uint8_t>& GetSIDs() const { return m_SIDs; }
+  inline const std::vector<uint8_t>& GetPIDs() const { return m_PIDs; }
+  inline const std::vector<uint8_t>& GetColors() const { return m_Colors; }
+  inline const std::vector<std::string>& GetPlayerNames() const { return m_PlayerNames; }
 };
 
 //

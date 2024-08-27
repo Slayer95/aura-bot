@@ -110,7 +110,7 @@ uint8_t CSearchableMapData::Search(string& rwSearchName, const uint8_t searchDat
   vector<string> inclusionMatches;
 
   if (searchDataType == MAP_DATA_TYPE_ANY || searchDataType == MAP_DATA_TYPE_ITEM) {
-    for (const std::string& element : m_Items) {
+    for (const string& element : m_Items) {
       if (element == fuzzyPattern) {
         rwSearchName = element;
         return MAP_DATA_TYPE_ITEM;
@@ -126,7 +126,7 @@ uint8_t CSearchableMapData::Search(string& rwSearchName, const uint8_t searchDat
       rwSearchName = JoinVector(inclusionMatches, false);
       return MAP_DATA_TYPE_ANY;
     } else if (!exactMatch) {
-      for (const std::string& element : m_Items) {
+      for (const string& element : m_Items) {
         string::size_type distance = GetLevenshteinDistanceForSearch(element, fuzzyPattern, bestDistance);
         if (distance < bestDistance) {
           bestDistance = distance;
@@ -254,14 +254,15 @@ CAuraDB::~CAuraDB()
 
 uint8_t CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
 {
-  // find the schema number so we can determine whether we need to upgrade or not
-
   sqlite3_stmt* Statement = nullptr;
-  m_DB->Prepare(R"(SELECT value FROM config WHERE name="schema_number")", reinterpret_cast<void**>(&Statement));
+  m_DB->Prepare(R"(SELECT value FROM config WHERE name=?)", reinterpret_cast<void**>(&Statement));
 
   if (!Statement) {
-    return SCHEMA_CHECK_ERROR;
+    // no such table: config
+    return SCHEMA_CHECK_VOID;
   }
+
+  sqlite3_bind_text(Statement, 1, "schema_number", -1, SQLITE_TRANSIENT);
 
   int32_t RC = m_DB->Step(Statement);
 
@@ -309,7 +310,7 @@ void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
       Print("[SQLITE3] error widening players table - " + m_DB->GetError());
 
     // crc32 here is the true CRC32 hash of the map file (i.e. <map_info> in the map cfg, NOT <map_crc>)
-    if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, map TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, players TEXT NOT NULL)") != SQLITE_OK)
+    if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, players TEXT NOT NULL)") != SQLITE_OK)
       Print("[SQLITE3] error creating games table - " + m_DB->GetError());
 
     if (m_DB->Exec("CREATE TABLE commands ( command TEXT NOT NULL, scope TEXT NOT NULL, type TEXT NOT NULL, action TEXT NOT NULL, PRIMARY KEY ( command, scope ) )") != SQLITE_OK)
@@ -332,7 +333,7 @@ void CAuraDB::Initialize()
     Print("[SQLITE3] error creating players table - " + m_DB->GetError());
 
   // crc32 here is the true CRC32 hash of the map file (i.e. <map_info> in the map cfg, NOT <map_crc>)
-  if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, map TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, players TEXT NOT NULL)") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, map TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, playernames TEXT NOT NULL, playerids TEXT NOT NULL, saveids TEXT )") != SQLITE_OK)
     Print("[SQLITE3] error creating games table - " + m_DB->GetError());
 
   if (m_DB->Exec("CREATE TABLE config ( name TEXT NOT NULL PRIMARY KEY, value INTEGER )") != SQLITE_OK)
@@ -354,7 +355,7 @@ void CAuraDB::Initialize()
     sqlite3_bind_int64(Statement, 1, SCHEMA_NUMBER);
     const int32_t RC = m_DB->Step(Statement);
     if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error inserting schema number [1] - " + m_DB->GetError());
+      Print("[SQLITE3] error inserting schema number [" + ToDecString(static_cast<uint16_t>(SCHEMA_NUMBER)) + "] - " + m_DB->GetError());
     }
     m_DB->Finalize(Statement);
   }
@@ -363,12 +364,14 @@ void CAuraDB::Initialize()
 uint64_t CAuraDB::GetLatestHistoryGameId()
 {
   sqlite3_stmt* Statement = nullptr;
-  m_DB->Prepare(R"(SELECT value FROM config WHERE name="latest_game_id")", reinterpret_cast<void**>(&Statement));
+  m_DB->Prepare(R"(SELECT value FROM config WHERE name=?)", reinterpret_cast<void**>(&Statement));
 
   int64_t latestGameId = 0;
   if (!Statement) {
     return signed_to_unsigned_64(latestGameId);
   }
+
+  sqlite3_bind_text(Statement, 1, "latest_game_id", -1, SQLITE_TRANSIENT);
 
   int32_t RC = m_DB->Step(Statement);
   if (RC == SQLITE_ROW) {
@@ -1009,6 +1012,79 @@ CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(string name, string& serve
   return DotAPlayerSummary;
 }
 
+void CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const vector<uint8_t>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
+{
+  string storageCRC32 = ByteArrayToDecString(mapCRC32);
+  string storagePlayerNames = JoinVector(playerNames, false);
+
+  vector<uint8_t> storageIDs;
+  storageIDs.reserve(playerIDs.size() * 3);
+  storageIDs.insert(storageIDs.end(), playerIDs.begin(), playerIDs.end());
+  storageIDs.insert(storageIDs.end(), slotIDs.begin(), slotIDs.end());
+  storageIDs.insert(storageIDs.end(), colorIDs.begin(), colorIDs.end());
+  string storageIDsText = ByteArrayToDecString(storageIDs);
+
+  bool          Success = false;
+  sqlite3_stmt* Statement = nullptr;
+  m_DB->Prepare("INSERT OR REPLACE INTO games ( id, creator, mapcpath, mapspath, crc32, playernames, playerids ) VALUES ( ?, ?, ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&Statement));
+
+  if (Statement)
+  {
+    sqlite3_bind_int64(Statement, 1, gameId);
+    sqlite3_bind_text(Statement, 2, creator.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 3, mapClientPath.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 4, mapServerPath.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 5, storageCRC32.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 6, storagePlayerNames.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 7, storageIDsText.c_str(), -1, SQLITE_TRANSIENT);
+
+    const int32_t RC = m_DB->Step(Statement);
+
+    if (RC == SQLITE_DONE)
+      Success = true;
+    else if (RC == SQLITE_ERROR)
+      Print("[SQLITE3] error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
+
+    m_DB->Finalize(Statement);
+  }
+  else
+    Print("[SQLITE3] prepare error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
+}
+
+CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
+{
+  string playerNames = "";
+  string playerIDs = "";
+  bool success = false;
+
+  sqlite3_stmt* Statement = nullptr;
+  m_DB->Prepare(R"(SELECT playernames, playerids FROM games WHERE id=?)", reinterpret_cast<void**>(&Statement));
+  if (Statement) {
+    sqlite3_bind_int64(Statement, 1, unsigned_to_signed_64(gameId));
+    const int32_t RC = m_DB->Step(Statement);
+
+    if (RC == SQLITE_ROW) {
+      if (sqlite3_column_count(Statement) == 2) {
+        playerNames = string((char*)sqlite3_column_text(Statement, 0));
+        playerIDs = string((char*)sqlite3_column_text(Statement, 1));
+        success = true;
+      } else {
+        Print("[SQLITE3] error checking game [" + to_string(gameId) + "] - row doesn't have 2 columns");
+      }
+    } else if (RC == SQLITE_ERROR) {
+      Print("[SQLITE3] error checking game [" + to_string(gameId) + "] " + m_DB->GetError());
+    }
+
+    m_DB->Finalize(Statement);
+  }
+
+  if (success) {
+    return new CDBGameSummary(gameId, playerNames, playerIDs);
+  } else {
+    return nullptr;
+  }
+}
+
 string CAuraDB::FromCheck(uint32_t ip)
 {
   // a big thank you to tjado for help with the iptocountry feature
@@ -1162,14 +1238,14 @@ CSearchableMapData* CAuraDB::GetMapData(uint8_t mapType) const
   }
 }
 
-uint8_t CAuraDB::FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const
+uint8_t CAuraDB::FindData(const uint8_t mapType, const uint8_t searchDataType, string& objectName, const bool exactMatch) const
 {
   CSearchableMapData* index = GetMapData(mapType);
   if (index == nullptr) return MAP_DATA_TYPE_NONE;
   return index->Search(objectName, searchDataType, exactMatch);
 }
 
-vector<string> CAuraDB::GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string objectName) const
+vector<string> CAuraDB::GetDescription(const uint8_t mapType, const uint8_t searchDataType, const string objectName) const
 {
   CSearchableMapData* index = GetMapData(mapType);
   if (index == nullptr) return vector<string>();
@@ -1206,17 +1282,42 @@ CDBBan::~CDBBan() = default;
 // CDBGamePlayer
 //
 
-CDBGamePlayer::CDBGamePlayer(string nName, string nServer, string nIP, uint32_t nColor)
+CDBGamePlayer::CDBGamePlayer(string nName, string nServer, string nIP/*, uint8_t nPID, uint8_t nSID*/, uint8_t nColor)
   : m_Name(std::move(nName)),
     m_Server(std::move(nServer)),
     m_IP(std::move(nIP)),
     m_LoadingTime(0),
     m_LeftTime(0),
+    /*m_PID(nPID),
+    m_SID(nSID),*/
     m_Color(nColor)
 {
 }
 
 CDBGamePlayer::~CDBGamePlayer() = default;
+
+//
+// CDBGameSummary
+//
+
+CDBGameSummary::CDBGameSummary(uint64_t nID, string playerNames, string playerIDs)
+  : m_ID(nID),
+    m_PlayerNames(SplitArgs(playerNames, 1, 24))
+{
+  uint8_t playerCount = m_PlayerNames.size();
+  if (playerCount == 0) {
+    return;
+  }
+  vector<uint8_t> rawIDs = ExtractNumbers(playerIDs, 3 * playerCount);
+  if (rawIDs.size() % 3 != 0 || rawIDs.size() != playerCount * 3) {
+    return;
+  }
+  m_SIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + playerCount);
+  m_PIDs = vector<uint8_t>(rawIDs.begin() + playerCount, rawIDs.begin() + 2 * playerCount);
+  m_Colors = vector<uint8_t>(rawIDs.begin() + 2 * playerCount, rawIDs.end());
+}
+
+CDBGameSummary::~CDBGameSummary() = default;
 
 //
 // CDBGamePlayerSummary
