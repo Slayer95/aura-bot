@@ -188,9 +188,9 @@ public:
   inline std::string            GetConfigName() const { return m_CFGName; }
   inline std::string            GetClientPath() const { return m_ClientMapPath; }
   inline std::vector<uint8_t>   GetMapSize() const { return m_MapSize; }
-  inline std::vector<uint8_t>   GetMapCRC32() const { return m_MapCRC32; }
-  inline std::vector<uint8_t>   GetMapHash() const { return m_MapHash; }
-  inline std::vector<uint8_t>   GetMapSHA1() const { return m_MapSHA1; }
+  inline std::vector<uint8_t>   GetMapCRC32() const { return m_MapCRC32; } // true CRC32 (<map_info>)
+  inline std::vector<uint8_t>   GetMapHash() const { return m_MapHash; } // <map_crc>
+  inline std::vector<uint8_t>   GetMapSHA1() const { return m_MapSHA1; } // <map_sha1>
   std::string                   GetMapURL() const { return m_MapURL; }
   std::string                   GetMapSiteURL() const { return m_MapSiteURL; }
   std::string                   GetMapShortDesc() const { return m_MapShortDesc; }
