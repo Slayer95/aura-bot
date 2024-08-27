@@ -3800,7 +3800,10 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       // relay the chat message to other players
 
       bool Relay = !player->GetMuted();
-      bool OnlyToObservers = player->GetIsObserver() && (m_GameLoading || m_GameLoaded) && !player->GetIsPowerObserver();
+      bool RejectPrivateChat = player->GetIsObserver() && (m_GameLoading || m_GameLoaded);
+      bool OnlyToObservers = RejectPrivateChat && (
+        m_Map->GetMapObservers() != MAPOBS_REFEREES || (m_UsesCustomReferees && !player->GetIsPowerObserver())
+      );
       const vector<uint8_t> ExtraFlags = chatPlayer->GetExtraFlags();
       const bool isLobbyChat = ExtraFlags.empty();
 
@@ -3831,29 +3834,37 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
           chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
 
-        Print(GetLogPrefix() + chatTypeFragment + "[" + player->GetName() + "] " + chatPlayer->GetMessage());
+        Print(GetLogPrefix() + chatTypeFragment + "[" + player->GetName() + "] " + chatPlayer->GetMessage() + " | extraFlags: " + ByteArrayToDecString(ExtraFlags));
       }
 
       if (Relay) {
         if (OnlyToObservers) {
-          std::vector<uint8_t> TargetPIDs = chatPlayer->GetToPIDs();
-          std::vector<uint8_t> ObserversPIDs;
-          std::vector<string> ForbiddenNames;
-          for (uint8_t i = 0; i < TargetPIDs.size(); ++i) {
-            CGamePlayer* TargetPlayer = GetPlayerFromPID(TargetPIDs[i]);
-            if (!TargetPlayer) continue;
-            if (TargetPlayer->GetIsObserver()) {
-              ObserversPIDs.push_back(TargetPIDs[i]);
-            } else {
-              ForbiddenNames.push_back(TargetPlayer->GetName());
-            }
-          }
-          if (!ObserversPIDs.empty()) {
-            Send(ObserversPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), ObserversPIDs, chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
-          } else if (ForbiddenNames.empty()) {
+          Print(GetLogPrefix() + "[Debug] fromPID: [" + ToDecString(chatPlayer->GetFromPID()) + "] toPIDs: [" + ByteArrayToDecString(chatPlayer->GetToPIDs()) + "] extraFlags: [" + ByteArrayToDecString(ExtraFlags) + "]");
+          vector<uint8_t> overrideObserverPIDs = GetObserverPIDs(chatPlayer->GetFromPID()); // TODO: Exclude sender PID?
+          vector<uint8_t> overrideExtraFlags(chatPlayer->GetExtraFlags().size(), CHAT_RECV_OBS);
+          if (overrideObserverPIDs.empty()) {
             Print(GetLogPrefix() + "[Obs/Ref] --nobody listening--");
           } else {
-            Print(GetLogPrefix() + "[Private] [" + player->GetName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
+            Send(overrideObserverPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideObserverPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+          }
+          //Print(GetLogPrefix() + "[Private] [" + player->GetName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
+        } else if (RejectPrivateChat) {
+          if (m_Map->GetMapObservers() == MAPOBS_REFEREES && ExtraFlags[0] != CHAT_RECV_OBS) {
+            Relay = !m_MuteAll;
+            if (Relay) {
+              vector<uint8_t> overrideTargetPIDs = GetPIDs(chatPlayer->GetFromPID()); // TODO: Exclude sender PID?
+              vector<uint8_t> overrideExtraFlags(chatPlayer->GetExtraFlags().size(), CHAT_RECV_ALL);
+              Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+              Print(GetLogPrefix() + "[Obs/Ref] overriden into [All]");
+            } else {
+              Print(GetLogPrefix() + "[Obs/Ref] overriden into [All], but muteAll is active");
+            }
+          } else {
+            // enforce observer-only chat, just in case rogue clients are doing funny things
+            vector<uint8_t> overrideTargetPIDs = GetObserverPIDs(chatPlayer->GetFromPID()); // TODO: Exclude sender PID?
+            vector<uint8_t> overrideExtraFlags(chatPlayer->GetExtraFlags().size(), CHAT_RECV_OBS);
+            Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+            Print(GetLogPrefix() + "[Obs/Ref] enforced server-side");
           }
         } else {
           Send(chatPlayer->GetToPIDs(), GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), chatPlayer->GetToPIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
@@ -4474,7 +4485,50 @@ void CGame::EventGameLoaded()
     StopPlayers("single-player game untracked", true);
   }
 
+  HandleGameLoadedStats();
+}
+
+void CGame::HandleGameLoadedStats()
+{
+  vector<string> exportPlayerNames;
+  vector<uint8_t> exportPlayerIDs;
+  vector<uint8_t> exportSlotIDs;
+  vector<uint8_t> exportColorIDs;
+
+  for (uint8_t SID = 0; SID < static_cast<uint8_t>(m_Slots.size()); ++SID) {
+    const CGameSlot* slot = InspectSlot(SID);
+    if (!slot->GetIsPlayerOrFake()) {
+      continue;
+    }
+    const CGamePlayer* player = GetPlayerFromSID(SID);
+    exportSlotIDs.push_back(SID);
+    exportColorIDs.push_back(slot->GetColor());
+    if (player == nullptr) {
+      uint8_t fakePlayerIndex = FindFakePlayerFromSID(SID);
+      if (fakePlayerIndex != 0xFF) {
+        exportPlayerNames.push_back(string());
+        exportPlayerIDs.push_back(static_cast<uint8_t>(m_FakePlayers[fakePlayerIndex]));
+      }
+    } else {
+      exportPlayerNames.push_back(player->GetName());
+      exportPlayerIDs.push_back(player->GetPID());
+    }
+  }
+
   m_Aura->m_DB->UpdateLatestHistoryGameId(m_GameHistoryId);
+
+  m_Aura->m_DB->GameAdd(
+    m_GameHistoryId,
+    m_CreatorText,
+    m_Map->GetClientPath(),
+    m_Map->GetServerPath(),
+    m_Map->GetMapCRC32(),
+    exportPlayerNames,
+    exportPlayerIDs,
+    exportSlotIDs,
+    exportColorIDs
+  );
+
   for (auto& dbPlayer : m_DBGamePlayers) {
     m_Aura->m_DB->UpdateGamePlayerOnStart(
       dbPlayer->GetName(),
@@ -4865,6 +4919,32 @@ std::vector<uint8_t> CGame::GetPIDs(uint8_t excludePID) const
   for (auto& player : m_Players)
   {
     if (!player->GetLeftMessageSent() && player->GetPID() != excludePID)
+      result.push_back(player->GetPID());
+  }
+
+  return result;
+}
+
+std::vector<uint8_t> CGame::GetObserverPIDs() const
+{
+  std::vector<uint8_t> result;
+
+  for (auto& player : m_Players)
+  {
+    if (!player->GetLeftMessageSent() && player->GetIsObserver())
+      result.push_back(player->GetPID());
+  }
+
+  return result;
+}
+
+std::vector<uint8_t> CGame::GetObserverPIDs(uint8_t excludePID) const
+{
+  std::vector<uint8_t> result;
+
+  for (auto& player : m_Players)
+  {
+    if (!player->GetLeftMessageSent() && player->GetIsObserver() && player->GetPID() != excludePID)
       result.push_back(player->GetPID());
   }
 
@@ -6428,6 +6508,17 @@ bool CGame::DeleteVirtualHost()
   SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(m_VirtualHostPID, PLAYERLEAVE_LOBBY));
   m_VirtualHostPID = 0xFF;
   return true;
+}
+
+uint8_t CGame::FindFakePlayerFromSID(const uint8_t SID)
+{
+  uint8_t i = static_cast<uint8_t>(m_FakePlayers.size());
+  while (--i) {
+    if (SID == static_cast<uint8_t>(m_FakePlayers[i] >> 8)) {
+      return i;
+    }
+  }
+  return 0xFF;
 }
 
 void CGame::CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const string& name)

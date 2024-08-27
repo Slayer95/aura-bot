@@ -445,6 +445,7 @@ public:
 
   void EventGameStarted();
   void EventGameLoaded();
+  void HandleGameLoadedStats();
   bool ReleaseMap();
   void StartGameOverTimer();
   void Reset(const bool saveStats);
@@ -473,6 +474,8 @@ public:
   bool                 CheckIPFlood(const std::string joinName, const sockaddr_storage* sourceAddress) const;
   std::vector<uint8_t> GetPIDs() const;
   std::vector<uint8_t> GetPIDs(uint8_t excludePID) const;
+  std::vector<uint8_t> GetObserverPIDs() const;
+  std::vector<uint8_t> GetObserverPIDs(uint8_t excludePID) const;
   uint8_t GetHostPID() const;
   uint8_t GetEmptySID(bool reserved) const;
   uint8_t GetEmptySID(uint8_t team, uint8_t PID) const;
@@ -503,6 +506,7 @@ public:
 
   void OpenObserverSlots();
   void CloseObserverSlots();
+  uint8_t FindFakePlayerFromSID(const uint8_t SID);
   void CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const std::string& name);
   bool CreateFakePlayer(const bool useVirtualHostName);
   bool CreateFakeObserver(const bool useVirtualHostName);
