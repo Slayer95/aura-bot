@@ -836,10 +836,11 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   m_DB->Finalize(Statement);
 }
 
-CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(string& name, string& server)
+CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, const string& server)
 {
   sqlite3_stmt*         Statement;
   CDBGamePlayerSummary* GamePlayerSummary = nullptr;
+  string name = rawName;
   transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
 
@@ -966,10 +967,11 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
   m_DB->Finalize(Statement);
 }
 
-CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(string& name, string& server)
+CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(const string& rawName, const string& server)
 {
   sqlite3_stmt*         Statement;
   CDBDotAPlayerSummary* DotAPlayerSummary = nullptr;
+  string name = rawName;
   transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
   m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?", reinterpret_cast<void**>(&Statement));
 
