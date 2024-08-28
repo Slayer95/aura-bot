@@ -2071,6 +2071,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      /*if (m_TargetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+        ErrorReply("This map has Fixed Player Settings enabled.");
+        break;
+      }*/
+
       if (Payload.empty()) {
         SendReply("Game mode (HCL) is [" + m_TargetGame->m_HCLCommandString + "]");
         break;
