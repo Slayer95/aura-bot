@@ -3834,26 +3834,25 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
           chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
 
-        Print(GetLogPrefix() + chatTypeFragment + "[" + player->GetName() + "] " + chatPlayer->GetMessage() + " | extraFlags: " + ByteArrayToDecString(ExtraFlags));
+        Print(GetLogPrefix() + chatTypeFragment + "[" + player->GetName() + "] " + chatPlayer->GetMessage());
       }
 
       if (Relay) {
+        //Print(GetLogPrefix() + "[Private] [" + player->GetName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
         if (OnlyToObservers) {
-          Print(GetLogPrefix() + "[Debug] fromPID: [" + ToDecString(chatPlayer->GetFromPID()) + "] toPIDs: [" + ByteArrayToDecString(chatPlayer->GetToPIDs()) + "] extraFlags: [" + ByteArrayToDecString(ExtraFlags) + "]");
-          vector<uint8_t> overrideObserverPIDs = GetObserverPIDs(chatPlayer->GetFromPID()); // TODO: Exclude sender PID?
-          vector<uint8_t> overrideExtraFlags(chatPlayer->GetExtraFlags().size(), CHAT_RECV_OBS);
+          vector<uint8_t> overrideObserverPIDs = GetObserverPIDs(chatPlayer->GetFromPID());
+          vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
           if (overrideObserverPIDs.empty()) {
             Print(GetLogPrefix() + "[Obs/Ref] --nobody listening--");
           } else {
             Send(overrideObserverPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideObserverPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
           }
-          //Print(GetLogPrefix() + "[Private] [" + player->GetName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
         } else if (RejectPrivateChat) {
           if (m_Map->GetMapObservers() == MAPOBS_REFEREES && ExtraFlags[0] != CHAT_RECV_OBS) {
             Relay = !m_MuteAll;
             if (Relay) {
-              vector<uint8_t> overrideTargetPIDs = GetPIDs(chatPlayer->GetFromPID()); // TODO: Exclude sender PID?
-              vector<uint8_t> overrideExtraFlags(chatPlayer->GetExtraFlags().size(), CHAT_RECV_ALL);
+              vector<uint8_t> overrideTargetPIDs = GetPIDs(chatPlayer->GetFromPID());
+              vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
               Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
               Print(GetLogPrefix() + "[Obs/Ref] overriden into [All]");
             } else {
@@ -3861,8 +3860,8 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             }
           } else {
             // enforce observer-only chat, just in case rogue clients are doing funny things
-            vector<uint8_t> overrideTargetPIDs = GetObserverPIDs(chatPlayer->GetFromPID()); // TODO: Exclude sender PID?
-            vector<uint8_t> overrideExtraFlags(chatPlayer->GetExtraFlags().size(), CHAT_RECV_OBS);
+            vector<uint8_t> overrideTargetPIDs = GetObserverPIDs(chatPlayer->GetFromPID());
+            vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
             Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
             Print(GetLogPrefix() + "[Obs/Ref] enforced server-side");
           }
@@ -6131,7 +6130,7 @@ bool CGame::GetCanStartGracefulCountDown() const
   }
 
   for (const auto& player : m_Players) {
-    if (!player->GetIsReserved() && player->GetNumPings() < 3) {
+    if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
       return false;
     }
   }
@@ -6237,7 +6236,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
     // see function EventPlayerPongToHost for the autokicker code
     string NotPinged;
     for (const auto& player : m_Players) {
-      if (!player->GetIsReserved() && player->GetNumPings() < 3) {
+      if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
         if (NotPinged.empty())
           NotPinged = player->GetName();
         else
