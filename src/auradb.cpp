@@ -836,7 +836,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   m_DB->Finalize(Statement);
 }
 
-CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(string name, string& server)
+CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(string name&, string& server)
 {
   sqlite3_stmt*         Statement;
   CDBGamePlayerSummary* GamePlayerSummary = nullptr;
@@ -966,7 +966,7 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
   m_DB->Finalize(Statement);
 }
 
-CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(string name, string& server)
+CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(string name&, string& server)
 {
   sqlite3_stmt*         Statement;
   CDBDotAPlayerSummary* DotAPlayerSummary = nullptr;
