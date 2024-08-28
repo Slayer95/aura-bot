@@ -194,7 +194,6 @@ public:
   std::string                   GetMapURL() const { return m_MapURL; }
   std::string                   GetMapSiteURL() const { return m_MapSiteURL; }
   std::string                   GetMapShortDesc() const { return m_MapShortDesc; }
-  inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
   inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapObservers() const { return m_MapObservers; }
