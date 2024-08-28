@@ -121,7 +121,7 @@ class CGameExtraOptions
 {
 public:
   CGameExtraOptions();
-  CGameExtraOptions(const std::optional<bool>& nRandomRaces, const std::optional<bool>& nRandomHeroes, const std::optional<uint8_t>& nVisibility, const std::optional<uint8_t>& nObservers);
+  CGameExtraOptions(const std::optional<bool>& nRandomRaces, const std::optional<bool>& nRandomHeroes, const std::optional<uint8_t>& nVisibility, const std::optional<uint8_t>& nSpeed, const std::optional<uint8_t>& nObservers);
   ~CGameExtraOptions();
 
   std::optional<bool>         m_TeamsLocked;
@@ -130,10 +130,12 @@ public:
   std::optional<bool>         m_RandomRaces;
   std::optional<bool>         m_RandomHeroes;
   std::optional<uint8_t>      m_Visibility;
+  std::optional<uint8_t>      m_Speed;
   std::optional<uint8_t>      m_Observers;
 
   bool ParseMapObservers(const std::string& s);
   bool ParseMapVisibility(const std::string& s);
+  bool ParseMapSpeed(const std::string& s);
   bool ParseMapRandomRaces(const std::string& s);
   bool ParseMapRandomHeroes(const std::string& s);
 

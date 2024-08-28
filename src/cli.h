@@ -89,6 +89,7 @@ public:
   std::optional<bool>                   m_GameRandomHeroes;
   std::optional<std::string>            m_GameObservers;
   std::optional<std::string>            m_GameVisibility;
+  std::optional<std::string>            m_GameSpeed;
   std::optional<std::string>            m_GameOwner;
   std::optional<bool>                   m_GameOwnerLess;
   std::vector<std::string>              m_ExcludedRealms;

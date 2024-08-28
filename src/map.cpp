@@ -304,6 +304,12 @@ bool CMap::SetMapVisibility(const uint8_t nMapVisibility)
   return true;
 }
 
+bool CMap::SetMapSpeed(const uint8_t nMapSpeed)
+{
+  m_MapSpeed = nMapSpeed;
+  return true;
+}
+
 bool CMap::SetTeamsLocked(const bool nEnable)
 {
   if (nEnable) {

@@ -41,12 +41,13 @@ CGameExtraOptions::CGameExtraOptions()
 {
 }
 
-CGameExtraOptions::CGameExtraOptions(const optional<bool>& nRandomRaces, const optional<bool>& nRandomHeroes, const optional<uint8_t>& nVisibility, const optional<uint8_t>& nObservers)
+CGameExtraOptions::CGameExtraOptions(const optional<bool>& nRandomRaces, const optional<bool>& nRandomHeroes, const optional<uint8_t>& nVisibility, const optional<uint8_t>& nSpeed, const optional<uint8_t>& nObservers)
   : m_TeamsLocked(false),
     m_TeamsTogether(false),
     m_RandomRaces(nRandomRaces),
     m_RandomHeroes(nRandomHeroes),
     m_Visibility(nVisibility),
+    m_Speed(nSpeed),
     m_Observers(nObservers)
 {
 }
@@ -89,6 +90,23 @@ bool CGameExtraOptions::ParseMapVisibility(const string& s) {
   return true;
 }
 
+bool CGameExtraOptions::ParseMapSpeed(const string& s) {
+  std::string lower = s;
+  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  if (lower == "slow") {
+    m_Speed = MAPSPEED_SLOW;
+  } else if (lower == "normal") {
+    m_Speed = MAPSPEED_NORMAL;
+  } else if (lower == "fast") {
+    m_Speed = MAPSPEED_FAST;
+  } else {
+    return false;
+  }
+  return true;
+}
+
 bool CGameExtraOptions::ParseMapRandomRaces(const string& s) {
   std::string lower = s;
   std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
@@ -122,6 +140,7 @@ bool CGameExtraOptions::ParseMapRandomHeroes(const string& s) {
 void CGameExtraOptions::AcquireCLI(const CCLI* nCLI) {
   if (nCLI->m_GameObservers.has_value()) ParseMapObservers(nCLI->m_GameObservers.value());
   if (nCLI->m_GameVisibility.has_value()) ParseMapVisibility(nCLI->m_GameVisibility.value());
+  if (nCLI->m_GameSpeed.has_value()) ParseMapSpeed(nCLI->m_GameSpeed.value());
   if (nCLI->m_GameTeamsLocked.has_value()) m_TeamsLocked = nCLI->m_GameTeamsLocked.value();
   if (nCLI->m_GameTeamsTogether.has_value()) m_TeamsTogether = nCLI->m_GameTeamsTogether.value();
   if (nCLI->m_GameAdvancedSharedUnitControl.has_value()) m_AdvancedSharedUnitControl = nCLI->m_GameAdvancedSharedUnitControl.value();
@@ -722,6 +741,10 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
   }
   if (extraOptions->m_Visibility.has_value()) {
     if (!m_Map->SetMapVisibility(extraOptions->m_Visibility.value()))
+      failed = true;
+  }
+  if (extraOptions->m_Speed.has_value()) {
+    if (!m_Map->SetMapSpeed(extraOptions->m_Speed.value()))
       failed = true;
   }
   if (extraOptions->m_Observers.has_value()) {

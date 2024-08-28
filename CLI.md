@@ -516,6 +516,17 @@ to players and observers.
 - map explored: Reveals the entire map to players, allowing them to see all terrain but not enemy units or structures unless they have vision of them.
 - always visible: Grants players and observers full visibility of the entire map, including enemy units and structures, without the need for vision.
 
+## \`--speed <SPEED>\`
+
+This parameter sets the speed for the hosted game, determining how often the game updates.
+Slower settings make the gameplay more accessible, but are uncommon in competitive environments.
+
+**Options:**
+
+- slow: This is the most accesible setting for new players.
+- normal: This is the recommended setting for players new to real-time strategy games.
+- fast: This is the most competitive setting. It's also the default game speed.
+
 ## \`--owner <USER@SERVER>\`
 
 This parameter specifies the owner of the hosted game. The owner is typically the user who has 

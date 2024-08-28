@@ -196,6 +196,7 @@ public:
   std::string                   GetMapShortDesc() const { return m_MapShortDesc; }
   inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
+  inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
   inline uint8_t                GetMapObservers() const { return m_MapObservers; }
   inline uint8_t                GetMapFlags() const { return m_MapFlags; }
   uint32_t                      GetMapGameFlags() const;
@@ -225,6 +226,7 @@ public:
   bool                          SetRandomRaces(const bool nEnable);
   bool                          SetRandomHeroes(const bool nEnable);
   bool                          SetMapVisibility(const uint8_t nMapVisibility);
+  bool                          SetMapSpeed(const uint8_t nMapSpeed);
   bool                          SetMapObservers(const uint8_t nMapObservers);
   void                          SetUseStandardPaths(const bool nValue) { m_UseStandardPaths = nValue; }
   bool                          IsObserverSlot(const CGameSlot* slot) const;

@@ -115,6 +115,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag("--random-heroes,--no-random-heroes{false}", m_GameRandomHeroes, "Toggles 'Random Heroes' when hosting from the CLI.");
   app.add_option("--observers", m_GameObservers, "Customizes observers when hosting from the CLI. Values: no, referees, defeat, full")->check(CLI::IsMember({"no", "referees", "defeat", "full"}));
   app.add_option("--visibility", m_GameVisibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
+  app.add_option("--speed", m_GameSpeed, "Customizes game speed when hosting from the CLI. Values: slow, normal, fast")->check(CLI::IsMember({"slow", "normal", "fast"}));
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
   app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
