@@ -298,9 +298,9 @@ public:
   // Players
   void UpdateGamePlayerOnStart(const std::string& name, const std::string& server, const std::string& ip, uint64_t gameId);
   void UpdateGamePlayerOnEnd(const std::string& name, const std::string& server, uint64_t loadingtime, uint64_t duration, uint64_t left);
-  CDBGamePlayerSummary* GamePlayerSummaryCheck(std::string name&, std::string server);
+  CDBGamePlayerSummary* GamePlayerSummaryCheck(std::string& name, std::string& server);
   void UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
-  CDBDotAPlayerSummary* DotAPlayerSummaryCheck(std::string name&, std::string& server);
+  CDBDotAPlayerSummary* DotAPlayerSummaryCheck(std::string& name, std::string& server);
 
   // Games
   void GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::vector<uint8_t>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
