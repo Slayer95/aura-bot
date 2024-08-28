@@ -329,11 +329,11 @@ void CAuraDB::Initialize()
   if (m_DB->Exec("CREATE TABLE bans ( name TEXT NOT NULL, server TEXT NOT NULL, authserver TEXT NOT NULL, ip TEXT NOT NULL, date TEXT NOT NULL, expiry TEXT NOT NULL, permanent INTEGER DEFAULT 0, moderator TEXT NOT NULL, reason TEXT, PRIMARY KEY ( name, server, authserver ) )") != SQLITE_OK)
     Print("[SQLITE3] error creating bans table - " + m_DB->GetError());
 
-  if (m_DB->Exec("CREATE TABLE players ( name TEXT NOT NULL, server TEXT not NULL, initialip TEXT NOT NULL, latestip TEXT NOT NULL, initialreport TEXT NOT NULL, reports INTEGER DEFAULT 0, latestgame INTEGER DEFAULT 0, games INTEGER DEFAULT 0, dotas INTEGER DEFAULT 0, loadingtime INTEGER DEFAULT 0, duration INTEGER DEFAULT 0, left INTEGER DEFAULT 0, wins INTEGER DEFAULT 0, losses INTEGER DEFAULT 0, kills INTEGER DEFAULT 0, deaths INTEGER DEFAULT 0, creepkills INTEGER DEFAULT 0, creepdenies INTEGER DEFAULT 0, assists INTEGER DEFAULT 0, neutralkills INTEGER DEFAULT 0, towerkills INTEGER DEFAULT 0, raxkills INTEGER DEFAULT 0, courierkills INTEGER DEFAULT 0, PRIMARY KEY ( name, server ) )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE players ( name TEXT NOT NULL, server TEXT not NULL, initialip TEXT NOT NULL, latestip TEXT NOT NULL, initialreport TEXT, reports INTEGER DEFAULT 0, latestgame INTEGER DEFAULT 0, games INTEGER DEFAULT 0, dotas INTEGER DEFAULT 0, loadingtime INTEGER DEFAULT 0, duration INTEGER DEFAULT 0, left INTEGER DEFAULT 0, wins INTEGER DEFAULT 0, losses INTEGER DEFAULT 0, kills INTEGER DEFAULT 0, deaths INTEGER DEFAULT 0, creepkills INTEGER DEFAULT 0, creepdenies INTEGER DEFAULT 0, assists INTEGER DEFAULT 0, neutralkills INTEGER DEFAULT 0, towerkills INTEGER DEFAULT 0, raxkills INTEGER DEFAULT 0, courierkills INTEGER DEFAULT 0, PRIMARY KEY ( name, server ) )") != SQLITE_OK)
     Print("[SQLITE3] error creating players table - " + m_DB->GetError());
 
   // crc32 here is the true CRC32 hash of the map file (i.e. <map_info> in the map cfg, NOT <map_crc>)
-  if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, map TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, playernames TEXT NOT NULL, playerids TEXT NOT NULL, saveids TEXT )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, playernames TEXT NOT NULL, playerids TEXT NOT NULL, saveids TEXT )") != SQLITE_OK)
     Print("[SQLITE3] error creating games table - " + m_DB->GetError());
 
   if (m_DB->Exec("CREATE TABLE config ( name TEXT NOT NULL PRIMARY KEY, value INTEGER )") != SQLITE_OK)
@@ -724,9 +724,11 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   string lowerName = name;
   transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
 
+  // Footgun warning:
+  // Ensure that all NON NULL columns are initialized here.
   m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&Statement));
   if (Statement == nullptr) {
-    Print("[SQLITE3] prepare error adding gameplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error adding gameplayer on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
@@ -734,7 +736,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(Statement, 3, ip.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(Statement, 4, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(Statement, 5, gameId);
+  sqlite3_bind_int64(Statement, 5, unsigned_to_signed_64(gameId));
 
   int32_t RC = m_DB->Step(Statement);
   if (RC != SQLITE_DONE) {
@@ -751,14 +753,14 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   }
 
   sqlite3_bind_text(Statement, 1, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(Statement, 2, gameId);
+  sqlite3_bind_int64(Statement, 2, unsigned_to_signed_64(gameId));
   sqlite3_bind_text(Statement, 3, lowerName.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(Statement, 4, server.c_str(), -1, SQLITE_TRANSIENT);
 
   RC = m_DB->Step(Statement);
 
   if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error adding gameplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] error adding gameplayer on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
 
   m_DB->Finalize(Statement);
 }
@@ -779,7 +781,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
 
   if (Statement == nullptr)
   {
-    Print("[SQLITE3] prepare error adding gameplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error adding gameplayer on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
@@ -804,7 +806,8 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
 
   if (!PlayerExisting)
   {
-    Print("[SQLITE3] error adding gameplayer [" + lowerName + "@" + server + "] - no existing row");
+    // Something went wrong in CAuraDB::UpdateGamePlayerOnStart
+    Print("[SQLITE3] error adding gameplayer on end [" + lowerName + "@" + server + "] - no existing row");
     return;
   }
 
@@ -828,7 +831,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   RC = m_DB->Step(Statement);
 
   if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error adding gameplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] error adding gameplayer on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
 
   m_DB->Finalize(Statement);
 }
@@ -1030,7 +1033,7 @@ void CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
 
   if (Statement)
   {
-    sqlite3_bind_int64(Statement, 1, gameId);
+    sqlite3_bind_int64(Statement, 1, unsigned_to_signed_64(gameId));
     sqlite3_bind_text(Statement, 2, creator.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(Statement, 3, mapClientPath.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(Statement, 4, mapServerPath.c_str(), -1, SQLITE_TRANSIENT);

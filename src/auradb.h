@@ -93,7 +93,7 @@ CREATE TABLE players (
     server TEXT NOT NULL,
     initialip TEXT NOT NULL,
     latestip TEXT NOT NULL,
-    initialreport TEXT NOT NULL,
+    initialreport TEXT,
     reports INTEGER,
     latestgame INTEGER,
     games INTEGER,
