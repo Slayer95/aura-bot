@@ -3368,6 +3368,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
     m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), Player->GetPID(), SLOTPROG_RST, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
     SetSlotTeamAndColorAuto(SID);
   }
+  Player->SetObserver(m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots);
 
   // send slot info to the new player
   // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful
