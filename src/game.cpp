@@ -6145,7 +6145,7 @@ bool CGame::GetCanStartGracefulCountDown() const
 
   for (const auto& player : m_Players) {
     // Skip observers
-    if (!player->GetIsOwner() && player->GetIsObserver()) {
+    if (!player->GetIsOwner(nullopt) && player->GetIsObserver()) {
       if (m_UsesCustomReferees) {
         if (!player->GetIsPowerObserver()) continue;
       } else {
@@ -6264,7 +6264,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
     string NotVerified;
     for (const auto& player : m_Players) {
       // Skip observers
-      if (!player->GetIsOwner() && player->GetIsObserver()) {
+      if (!player->GetIsOwner(nullopt) && player->GetIsObserver()) {
         if (m_UsesCustomReferees) {
           if (!player->GetIsPowerObserver()) continue;
         } else {
