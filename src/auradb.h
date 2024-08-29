@@ -248,7 +248,7 @@ private:
   void* LatestGameStmt;     // very frequently used
   void* AliasAddStmt;
   void* AliasCheckStmt;     // very frequently used
-  void* BanCheckStmt;       // frequently used
+  void* UserBanCheckStmt;   // frequently used
   void* ModeratorCheckStmt; // frequently used
 
   std::map<uint8_t, CSearchableMapData*> m_SearchableMapData;
@@ -288,7 +288,8 @@ public:
 
   // Bans
   uint32_t BanCount(const std::string& authserver);
-  CDBBan* BanCheck(std::string user, const std::string& server, const std::string& authserver);
+  CDBBan* UserBanCheck(std::string user, const std::string& server, const std::string& authserver);
+  CDBBan* IPBanCheck(std::string ip, const std::string& authserver);
   bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
   bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
   bool BanAddPermanent(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);

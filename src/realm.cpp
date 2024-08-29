@@ -1309,7 +1309,7 @@ bool CRealm::GetIsSudoer(string name) const
 bool CRealm::IsBannedPlayer(string name, string hostName) const
 {
   transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
-  CDBBan* Ban = m_Aura->m_DB->BanCheck(name, hostName, m_Config->m_DataBaseID);
+  CDBBan* Ban = m_Aura->m_DB->UserBanCheck(name, hostName, m_Config->m_DataBaseID);
   if (!Ban) return false;
   delete Ban;
   return true;

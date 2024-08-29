@@ -3261,7 +3261,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (realm->GetIsMirror())
           continue;
 
-        CDBBan* Ban = m_Aura->m_DB->BanCheck(targetName, targetHostName, realm->GetDataBaseID());
+        CDBBan* Ban = m_Aura->m_DB->UserBanCheck(targetName, targetHostName, realm->GetDataBaseID());
         if (Ban) {
           CheckResult.push_back("[" + realm->GetServer() + "] - banned by [" + Ban->GetModerator() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
           delete Ban;

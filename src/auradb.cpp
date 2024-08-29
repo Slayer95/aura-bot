@@ -180,7 +180,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
     LatestGameStmt(nullptr),
     AliasAddStmt(nullptr),
     AliasCheckStmt(nullptr),
-    BanCheckStmt(nullptr),
+    UserBanCheckStmt(nullptr),
     ModeratorCheckStmt(nullptr)
 {
   m_TWRPGFile = CFG.GetPath("game_data.twrpg_path", CFG.GetHomeDir() / filesystem::path("twrpg.json"));
@@ -241,8 +241,8 @@ CAuraDB::~CAuraDB()
   if (AliasCheckStmt)
     m_DB->Finalize(AliasCheckStmt);
 
-  if (BanCheckStmt)
-    m_DB->Finalize(BanCheckStmt);
+  if (UserBanCheckStmt)
+    m_DB->Finalize(UserBanCheckStmt);
 
   if (ModeratorCheckStmt)
     m_DB->Finalize(ModeratorCheckStmt);
@@ -576,35 +576,35 @@ uint32_t CAuraDB::BanCount(const string& authserver)
   return Count;
 }
 
-CDBBan* CAuraDB::BanCheck(string user, const string& server, const string& authserver)
+CDBBan* CAuraDB::UserBanCheck(string user, const string& server, const string& authserver)
 {
   CDBBan* Ban = nullptr;
   transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
-  if (!BanCheckStmt)
-    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &BanCheckStmt);
+  if (!UserBanCheckStmt)
+    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &UserBanCheckStmt);
 
-  if (BanCheckStmt)
+  if (UserBanCheckStmt)
   {
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 1, user.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 2, server.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 3, authserver.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 1, user.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 2, server.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 3, authserver.c_str(), -1, SQLITE_TRANSIENT);
 
-    const int32_t RC = m_DB->Step(BanCheckStmt);
+    const int32_t RC = m_DB->Step(UserBanCheckStmt);
 
     if (RC == SQLITE_ROW)
     {
-      if (sqlite3_column_count(static_cast<sqlite3_stmt*>(BanCheckStmt)) == 9)
+      if (sqlite3_column_count(static_cast<sqlite3_stmt*>(UserBanCheckStmt)) == 9)
       {
-        string Name       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 0));
-        string Server     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 1));
-        string AuthServer = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 2));
-        string IP         = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 3));
-        string Date       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 4));
-        string Expiry     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 5));
-        int64_t Permanent = sqlite3_column_int(static_cast<sqlite3_stmt*>(BanCheckStmt), 6);
-        string Moderator  = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 7));
-        string Reason     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(BanCheckStmt), 8));
+        string Name       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 0));
+        string Server     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 1));
+        string AuthServer = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 2));
+        string IP         = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 3));
+        string Date       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 4));
+        string Expiry     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 5));
+        int64_t Permanent = sqlite3_column_int(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 6);
+        string Moderator  = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 7));
+        string Reason     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 8));
 
         Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason, false);
       }
@@ -614,11 +614,17 @@ CDBBan* CAuraDB::BanCheck(string user, const string& server, const string& auths
     else if (RC == SQLITE_ERROR)
       Print("[SQLITE3] error checking ban [" + server + " : " + user + "] - " + m_DB->GetError());
 
-    m_DB->Reset(BanCheckStmt);
+    m_DB->Reset(UserBanCheckStmt);
   }
   else
     Print("[SQLITE3] prepare error checking ban [" + server + " : " + user + "] - " + m_DB->GetError());
 
+  return Ban;
+}
+
+CDBBan* CAuraDB::IPBanCheck(string ip)
+{
+  CDBBan* Ban = nullptr;
   return Ban;
 }
 
