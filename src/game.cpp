@@ -298,6 +298,9 @@ void CGame::Reset(const bool saveStats)
     // add non-dota stats
     Print(GetLogPrefix() + "saving game data to database");
     for (auto& player : m_DBGamePlayers) {
+      if (dbPlayer->GetColor() == m_Aura->m_MaxSlots) {
+        continue;
+      }
       m_Aura->m_DB->UpdateGamePlayerOnEnd(
         player->GetName(),
         player->GetServer(),
@@ -4531,6 +4534,9 @@ void CGame::HandleGameLoadedStats()
   );
 
   for (auto& dbPlayer : m_DBGamePlayers) {
+    if (dbPlayer->GetColor() == m_Aura->m_MaxSlots) {
+      continue;
+    }
     m_Aura->m_DB->UpdateGamePlayerOnStart(
       dbPlayer->GetName(),
       dbPlayer->GetServer(),
