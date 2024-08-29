@@ -89,16 +89,14 @@ CIncomingJoinRequest* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint
   // 2 bytes                    -> InternalPort (???)
   // 4 bytes                    -> InternalIP
 
-  if (ValidateLength(data) && data.size() >= 20)
-  {
+  if (ValidateLength(data) && data.size() >= 20) {
     const uint32_t             HostCounter = ByteArrayToUInt32(data, false, 4);
     const uint32_t             EntryKey    = ByteArrayToUInt32(data, false, 8);
-    const std::vector<uint8_t> Name        = ExtractCString(data, 19);
+    const std::vector<uint8_t> RawName     = ExtractCString(data, 19);
 
-    if (!Name.empty() && data.size() >= Name.size() + 30)
-    {
-      const std::vector<uint8_t> InternalIP = std::vector<uint8_t>(begin(data) + Name.size() + 26, begin(data) + Name.size() + 30);
-      return new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(Name), end(Name)), InternalIP);
+    if (!RawName.empty() && data.size() >= RawName.size() + 30) {
+      const std::vector<uint8_t> InternalIP = std::vector<uint8_t>(begin(data) + RawName.size() + 26, begin(data) + RawName.size() + 30);
+      return new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP);
     }
   }
 
@@ -857,15 +855,53 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey)
 {
-  /*
-  if (m_IPv4Internal.size() == 4) {
-    if (m_IPv4Internal[0] == 26 && m_IPv4Internal[1] == 161 && m_IPv4Internal[2] == 137 && m_IPv4Internal[3] == 199) {
-      m_Name = "KingDiamond";
-    } else if (m_IPv4Internal[0] == 26 && m_IPv4Internal[1] == 190 && m_IPv4Internal[2] == 44 && m_IPv4Internal[3] == 246) {
-      m_Name = "IceSandslash";
-    }
+  unordered_set<char> charsToRemoveAnyWhere = {
+    ',', '[', ']',
+
+    // TAB, LF, CR, FF
+    '\t', '\n', '\r', '\f',
+
+    // NULL, beep, BS, ESC, DEL, 
+    '\x00', '\x07', '\x08', '\x1B', '\x7F'
+  };
+  unordered_set<char> charsToRemoveStart = {'#', '@', ' '};
+  unordered_set<char> charsToRemoveEnd = {' ', '.'};
+
+  m_Name.erase(
+    std::remove_if(
+      m_Name.begin(), m_Name.end(), 
+      [&charsToRemoveAnyWhere](const char& c) {
+         return charsToRemoveAnyWhere.find(c) != charsToRemoveAnyWhere.end();
+      }
+    ),
+    m_Name.end()
+  );
+
+  // Remove bad leading characters (operators, and whitespace)
+  {
+    auto it = std::find_if(
+      m_Name.begin(), m_Name.end(), 
+     [&charsToRemoveStart](const char& c) {
+         return charsToRemoveStart.find(c) == charsToRemoveStart.end();
+     }
+    );
+    m_Name.erase(m_Name.begin(), it);
   }
-  */
+
+  // Remove bad trailing characters (mainly whitespace)
+  {
+    auto it = std::find_if(
+      m_Name.rbegin(), m_Name.rend(), 
+      [&charsToRemoveEnd](const char& c) {
+        return charsToRemoveEnd.find(c) == charsToRemoveEnd.end();
+      }
+    );
+    m_Name.erase(it.base(), m_Name.end());
+  }
+
+  if (m_Name == "Open" || m_Name == "Closed" || m_Name == "Abrir" || m_Name == "Cerrado") {
+    m_Name.clear();
+  }
 }
 
 CIncomingJoinRequest::~CIncomingJoinRequest() = default;
