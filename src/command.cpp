@@ -5906,9 +5906,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
       bool targetValue = false;
-      if (inputLower.empty() || inputLower == "on") {
+      if (inputLower.empty() || inputLower == "on" || inputLower == "start") {
         targetValue = true;
-      } else if (inputLower != "off") {
+      } else if (inputLower == "off" || inputLower == "end") {
         targetValue = false;
       } else {
         ErrorReply("Usage: " + cmdToken + "sumode <ON|OFF>");
