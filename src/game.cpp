@@ -6138,6 +6138,15 @@ bool CGame::GetCanStartGracefulCountDown() const
   }
 
   for (const auto& player : m_Players) {
+    // Skip observers
+    if (!player->GetIsOwner() && player->GetIsObserver()) {
+      if (m_UsesCustomReferees) {
+        if (!player->GetIsPowerObserver()) continue;
+      } else {
+        if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
+      }
+    }
+
     CRealm* realm = player->GetRealm(false);
     if (realm && realm->GetUnverifiedCannotStartGame() && !player->IsRealmVerified()) {
       return false;
@@ -6248,6 +6257,14 @@ void CGame::StartCountDown(bool fromUser, bool force)
 
     string NotVerified;
     for (const auto& player : m_Players) {
+      // Skip observers
+      if (!player->GetIsOwner() && player->GetIsObserver()) {
+        if (m_UsesCustomReferees) {
+          if (!player->GetIsPowerObserver()) continue;
+        } else {
+          if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
+        }
+      }
       CRealm* realm = player->GetRealm(false);
       if (realm && realm->GetUnverifiedCannotStartGame() && !player->IsRealmVerified()) {
         if (NotVerified.empty())
