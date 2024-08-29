@@ -297,16 +297,16 @@ void CGame::Reset(const bool saveStats)
     // store the CDBGamePlayers in the database
     // add non-dota stats
     Print(GetLogPrefix() + "saving game data to database");
-    for (auto& player : m_DBGamePlayers) {
+    for (auto& dbPlayer : m_DBGamePlayers) {
       if (dbPlayer->GetColor() == m_Aura->m_MaxSlots) {
         continue;
       }
       m_Aura->m_DB->UpdateGamePlayerOnEnd(
-        player->GetName(),
-        player->GetServer(),
-        player->GetLoadingTime(),
+        dbPlayer->GetName(),
+        dbPlayer->GetServer(),
+        dbPlayer->GetLoadingTime(),
         m_GameTicks / 1000,
-        player->GetLeftTime()
+        dbPlayer->GetLeftTime()
       );
     }
     // store the dota stats in the database
