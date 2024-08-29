@@ -151,6 +151,7 @@ private:
   bool                             m_Verified;                     // if the player has spoof checked or not
   bool                             m_Owner;                        // if the player has spoof checked or not
   bool                             m_Reserved;                     // if the player is reserved (VIP) or not
+  std::optional<int64_t>           m_SudoMode;                     // if the player has enabled sudo mode, its expiration time
   bool                             m_Observer;                     // if the player is an observer
   bool                             m_PowerObserver;                // if the player is a referee - referees can be demoted to full observers
   bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
@@ -254,6 +255,10 @@ public:
   std::string                  GetSyncText() const;
   
   inline bool                  GetIsReserved() const { return m_Reserved; }
+  bool                         GetIsSudoMode() const;
+  bool                         CheckSudoMode();
+  void                         SudoModeStart();
+  void                         SudoModeEnd();
   inline bool                  GetIsObserver() const { return m_Observer; }
   inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
   bool                         GetCanUsePublicChat() const;

@@ -447,6 +447,9 @@ void CCommandContext::UpdatePermissions()
 
   // Sudo is a permission system separate from channels.
   if (IsSudoSpoofable) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
+  if (m_Player && m_Player->CheckSudoMode()) {
+    m_Permissions = 0xFFFF;
+  }
 }
 
 optional<bool> CCommandContext::CheckPermissions(const uint8_t requiredPermissions) const
@@ -3580,7 +3583,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       optional<bool> TargetValue;
       if (Payload.empty() || Payload == "on" || Payload == "ON") {
         TargetValue = true;
-      } else if (Payload == "off" || payload == "OFF") {
+      } else if (Payload == "off" || Payload == "OFF") {
         TargetValue = false;
       }
 
@@ -5891,6 +5894,61 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SendReply("Slot IDs: " + ByteArrayToDecString(gameSummary->GetSIDs()));
       SendReply("Player IDs: " + ByteArrayToDecString(gameSummary->GetPIDs()));
       SendReply("Colors: " + ByteArrayToDecString(gameSummary->GetColors()));
+      break;
+    }
+
+    //
+    // !SUMODE (enable a su mode session for 10 minutes)
+    //
+
+    case HashCode("sumode"): {
+      string inputLower = Payload;
+      transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+
+      bool targetValue = false;
+      if (inputLower.empty() || inputLower == "on") {
+        targetValue = true;
+      } else if (inputLower != "off") {
+        targetValue = false;
+      } else {
+        ErrorReply("Usage: " + cmdToken + "sumode <ON|OFF>");
+        break;
+      }
+
+      if (targetValue == m_Player->CheckSudoMode()) {
+        if (targetValue) {
+          ErrorReply("SU mode is already ENABLED.");
+        } else {
+          ErrorReply("SU mode is already DISABLED.");
+        }
+        break;
+      }
+
+      if (targetValue && !GetIsSudo()) {
+        if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
+          ErrorReply("Requires sudo permissions.");
+        } else if (!m_Player) {
+          ErrorReply("Requires sudo permissions. Please join a game, and use " + cmdToken + " su sumode to start a superuser session");
+        } else {
+          ErrorReply("Requires sudo permissions. Please use " + cmdToken + " su sumode to start a superuser session");
+        }
+        break;
+      }
+
+      if (!m_Player) {
+        ErrorReply("SU mode can only be toggled in a game.");
+        break;
+      }
+
+      if (targetValue) {
+        m_Player->SudoModeStart();
+        SendReply("Sudo session started. You will have unrestricted access to all commands for 10 minutes.");
+        SendReply("Your session will be over as soon as you leave the game.");
+        SendReply("WARN: Make sure NOT to enable sudo session over a wireless Internet connection (use per-command sudo to avoid getting hacked.)");
+      } else {
+        m_Player->SudoModeEnd();
+        SendReply("Sudo session ended.");
+      }
       break;
     }
 

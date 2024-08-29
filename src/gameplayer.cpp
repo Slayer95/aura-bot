@@ -781,6 +781,29 @@ string CGamePlayer::GetSyncText() const
   return behindTimeText;
 }
 
+bool CGamePlayer::GetIsSudoMode() const
+{
+  if (!m_SudoMode.has_value()) return false;
+  return m_SudoMode.value() < GetTime();
+}
+
+bool CGamePlayer::CheckSudoMode()
+{
+  if (GetIsSudoMode()) return true;
+  m_SudoMode = nullopt;
+  return false;
+}
+
+void CGamePlayer::SudoModeStart()
+{
+  m_SudoMode = GetTime() + 600;
+}
+
+void CGamePlayer::SudoModeEnd()
+{
+  m_SudoMode = nullopt;
+}
+
 bool CGamePlayer::GetCanUsePublicChat() const
 {
   if (!m_Observer || m_PowerObserver) return true;
