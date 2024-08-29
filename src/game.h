@@ -159,7 +159,7 @@ protected:
   int64_t                        m_LastOwnerSeen;                 // GetTime when the last reserved player was seen in the lobby
   int64_t                        m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                        m_GameOverTime;                  // GetTime when the game was over
-  int64_t                        m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
+  std::optional<int64_t>         m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
   uint8_t                        m_PauseCounter;                  // Counter of all fake player pauses.
   uint8_t                        m_SaveCounter;                   // Counter of all fake player saves.

@@ -113,7 +113,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_LastOwnerSeen(GetTime()),
     m_StartedKickVoteTime(0),
     m_GameOverTime(0),
-    m_LastPlayerLeaveTicks(0),
     m_LastLagScreenResetTime(0),
     m_PauseCounter(0),
     m_SaveCounter(0),
@@ -2966,7 +2965,9 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
     Print(GetLogPrefix() + "deleting player [" + player->GetName() + "]: " + player->GetLeftReason());
   }
 
-  m_LastPlayerLeaveTicks = GetTicks();
+  if (!player->GetIsObserver()) {
+    m_LastPlayerLeaveTicks = GetTicks();
+  }
 
   if (m_GameLoading || m_GameLoaded) {
     for (auto& otherPlayer : m_SyncPlayers[player]) {
@@ -4571,7 +4572,7 @@ void CGame::Remake()
   m_LastOwnerSeen = Time;
   m_StartedKickVoteTime = 0;
   m_GameOverTime = 0;
-  m_LastPlayerLeaveTicks = 0;
+  m_LastPlayerLeaveTicks = nullopt;
   m_LastLagScreenResetTime = 0;
   m_PauseCounter = 0;
   m_SaveCounter = 0;
@@ -6143,7 +6144,7 @@ bool CGame::GetCanStartGracefulCountDown() const
     }
   }
 
-  if (GetTicks() < m_LastPlayerLeaveTicks + 2000) {
+  if (m_LastPlayerLeaveTicks.has_value() && GetTicks() < m_LastPlayerLeaveTicks.value() + 2000) {
     return false;
   }
 
@@ -6264,7 +6265,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
       SendAllChat("Players NOT verified (whisper sc): " + NotVerified);
       ChecksPassed = false;
     }
-    if (GetTicks() < m_LastPlayerLeaveTicks + 2000) {
+    if (m_LastPlayerLeaveTicks.has_value() && GetTicks() < m_LastPlayerLeaveTicks.value() + 2000) {
       SendAllChat("Someone left the game less than two seconds ago!");
       ChecksPassed = false;
     }

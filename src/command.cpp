@@ -2645,7 +2645,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (GetTicks() - m_TargetGame->m_LastPlayerLeaveTicks < 2000) {
+      if (m_LastPlayerLeaveTicks.has_value() && GetTicks() < m_LastPlayerLeaveTicks.value() + 2000) {
         ErrorReply("Someone left the game less than two seconds ago.");
         break;
       }
