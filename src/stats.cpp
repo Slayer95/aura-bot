@@ -63,16 +63,16 @@ CStats::CStats(CGame* nGame)
 {
   Print("[STATS] using dota stats");
 
-  for (auto& player : m_Players)
-    player = nullptr;
+  for (auto& dotaPlayer : m_Players)
+    dotaPlayer = nullptr;
 }
 
 CStats::~CStats()
 {
-  for (auto& player : m_Players)
+  for (auto& dotaPlayer : m_Players)
   {
-    if (player)
-      delete player;
+    if (dotaPlayer)
+      delete dotaPlayer;
   }
 }
 
@@ -338,7 +338,7 @@ void CStats::Save(CAura* nAura, CAuraDB* DB)
 
         if (!((Color >= 1 && Color <= 5) || (Color >= 7 && Color <= 11)))
         {
-          Print("[STATS: " + m_Game->GetGameName() + "] discarding player data, invalid colour found");
+          Print("[STATS: " + m_Game->GetGameName() + "] discarding dotaPlayer data, invalid colour found");
           delete m_Players[i];
           m_Players[i] = nullptr;
           continue;
@@ -348,7 +348,7 @@ void CStats::Save(CAura* nAura, CAuraDB* DB)
         {
           if (m_Players[j] && Color == m_Players[j]->GetNewColor())
           {
-            Print("[STATS: " + m_Game->GetGameName() + "] discarding player data, duplicate colour found");
+            Print("[STATS: " + m_Game->GetGameName() + "] discarding dotaPlayer data, duplicate colour found");
             delete m_Players[j];
             m_Players[j] = nullptr;
           }
@@ -356,11 +356,11 @@ void CStats::Save(CAura* nAura, CAuraDB* DB)
       }
     }
 
-    for (auto& player : m_Players)
+    for (auto& dotaPlayer : m_Players)
     {
-      if (player)
+      if (dotaPlayer)
       {
-        const uint8_t  Color = player->GetNewColor();
+        const uint8_t  Color = dotaPlayer->GetNewColor();
         const CDBGamePlayer* DBPlayer = m_Game->GetDBPlayerFromColor(Color);
         const string Name = DBPlayer->GetName();
         const string Server = DBPlayer->GetServer();
@@ -375,7 +375,7 @@ void CStats::Save(CAura* nAura, CAuraDB* DB)
         else if ((m_Winner == 2 && Color >= 1 && Color <= 5) || (m_Winner == 1 && Color >= 7 && Color <= 11))
           Win = 2;
 
-        nAura->m_DB->UpdateDotAPlayerOnEnd(Name, Server, Win, player->GetKills(), player->GetDeaths(), player->GetCreepKills(), player->GetCreepDenies(), player->GetAssists(), player->GetNeutralKills(), player->GetTowerKills(), player->GetRaxKills(), player->GetCourierKills());
+        nAura->m_DB->UpdateDotAPlayerOnEnd(Name, Server, Win, dotaPlayer->GetKills(), dotaPlayer->GetDeaths(), dotaPlayer->GetCreepKills(), dotaPlayer->GetCreepDenies(), dotaPlayer->GetAssists(), dotaPlayer->GetNeutralKills(), dotaPlayer->GetTowerKills(), dotaPlayer->GetRaxKills(), dotaPlayer->GetCourierKills());
         ++Players;
       }
     }
