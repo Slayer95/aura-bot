@@ -3533,8 +3533,8 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     return false;
   }
 
-  if (!CheckUserBanned(connection, joinRequest, matchingRealm, JoinedRealm) ||
-    !CheckIPBanned(connection, joinRequest, matchingRealm, JoinedRealm)) {
+  if (CheckUserBanned(connection, joinRequest, matchingRealm, JoinedRealm) ||
+    CheckIPBanned(connection, joinRequest, matchingRealm, JoinedRealm)) {
     // let banned players "join" the game with an arbitrary PID then immediately close the connection
     // this causes them to be kicked back to the chat channel on battle.net
     vector<CGameSlot> Slots = m_Map->GetSlots();
@@ -3661,14 +3661,16 @@ bool CGame::CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* j
       SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is banned");
       m_ReportedJoinFailNames.insert(joinRequest->GetName());
     }
-    return false;
   }
-  return true;
+  return isBanned;
 }
 
 bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
 {
-  // check if the new player's name is banned
+  if (isLoopbackAddress(connection->GetRemoteAddress())) {
+    return false;
+  }
+  // check if the new player's IP is banned
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedIP(connection->GetIPStringStrict());
   bool isBanned = isSelfServerBanned;
   if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
@@ -3688,9 +3690,8 @@ bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joi
       SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is IP-banned");
       m_ReportedJoinFailNames.insert(joinRequest->GetName());
     }
-    return false;
   }
-  return true;
+  return isBanned;
 }
 
 void CGame::EventPlayerLeft(CGamePlayer* player)
