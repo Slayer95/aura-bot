@@ -232,6 +232,7 @@ public:
   bool GetIsAdmin(std::string name) const;
   bool GetIsSudoer(std::string name) const;
   bool IsBannedPlayer(std::string name, std::string hostName) const;
+  bool IsBannedIP(std::string ip) const;
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
 

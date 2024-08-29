@@ -249,6 +249,7 @@ private:
   void* AliasAddStmt;
   void* AliasCheckStmt;     // very frequently used
   void* UserBanCheckStmt;   // frequently used
+  void* IPBanCheckStmt;     // frequently used
   void* ModeratorCheckStmt; // frequently used
 
   std::map<uint8_t, CSearchableMapData*> m_SearchableMapData;

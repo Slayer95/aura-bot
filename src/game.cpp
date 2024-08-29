@@ -3533,33 +3533,15 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     return false;
   }
 
-  // check if the new player's name is banned
-  bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), JoinedRealm);
-  bool isBanned = isSelfServerBanned;
-  if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
-    isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedPlayer(joinRequest->GetName(), JoinedRealm);
-  }
-  if (isBanned) {
-    string scopeFragment;
-    if (isSelfServerBanned) {
-      scopeFragment = "in its own realm";
-    } else {
-      scopeFragment = "in creator's realm";
-    }
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "|" + connection->GetIPString() + "] is banned " + scopeFragment);
-
-    // don't allow the player to spam the chat by attempting to join the game multiple times in a row
-    if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
-      SendAllChat("[" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join the game, but is banned");
-      m_ReportedJoinFailNames.insert(joinRequest->GetName());
-    }
-
+  if (!CheckUserBanned(connection, joinRequest, matchingRealm, JoinedRealm) ||
+    !CheckIPBanned(connection, joinRequest, matchingRealm, JoinedRealm)) {
     // let banned players "join" the game with an arbitrary PID then immediately close the connection
     // this causes them to be kicked back to the chat channel on battle.net
     vector<CGameSlot> Slots = m_Map->GetSlots();
     connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
     return false;
   }
+
   matchingRealm = nullptr;
 
   // Check if the player is an admin or root admin on any connected realm for determining reserved status
@@ -3654,6 +3636,60 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     DeleteVirtualHost();
 
   JoinPlayer(connection, joinRequest, SID, PID, HostCounterID, JoinedRealm, isReserved, IsUnverifiedAdmin);
+  return true;
+}
+
+bool CGame::CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
+{
+  // check if the new player's name is banned
+  bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), hostName);
+  bool isBanned = isSelfServerBanned;
+  if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
+    isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedPlayer(joinRequest->GetName(), hostName);
+  }
+  if (isBanned) {
+    string scopeFragment;
+    if (isSelfServerBanned) {
+      scopeFragment = "in its own realm";
+    } else {
+      scopeFragment = "in creator's realm";
+    }
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] is banned " + scopeFragment);
+
+    // don't allow the player to spam the chat by attempting to join the game multiple times in a row
+    if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
+      SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is banned");
+      m_ReportedJoinFailNames.insert(joinRequest->GetName());
+    }
+    return false;
+  }
+  return true;
+}
+
+bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
+{
+  // check if the new player's name is banned
+  bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedIP(connection->GetIPStringStrict());
+  bool isBanned = isSelfServerBanned;
+  if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
+    isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedIP(connection->GetIPStringStrict());
+  }
+  if (isBanned) {
+    string scopeFragment;
+    if (isSelfServerBanned) {
+      scopeFragment = "in its own realm";
+    } else {
+      scopeFragment = "in creator's realm";
+    }
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] is IP-banned " + scopeFragment);
+
+    // don't allow the player to spam the chat by attempting to join the game multiple times in a row
+    if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
+      SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is IP-banned");
+      m_ReportedJoinFailNames.insert(joinRequest->GetName());
+    }
+    return false;
+  }
   return true;
 }
 

@@ -420,6 +420,8 @@ public:
   void EventLobbyLastPlayerLeaves();
   void ReportAllPings() const;
   void ReportPlayerDisconnected(CGamePlayer* player);
+  bool CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
+  bool CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   void EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);

@@ -181,6 +181,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
     AliasAddStmt(nullptr),
     AliasCheckStmt(nullptr),
     UserBanCheckStmt(nullptr),
+    IPBanCheckStmt(nullptr),
     ModeratorCheckStmt(nullptr)
 {
   m_TWRPGFile = CFG.GetPath("game_data.twrpg_path", CFG.GetHomeDir() / filesystem::path("twrpg.json"));
@@ -243,6 +244,9 @@ CAuraDB::~CAuraDB()
 
   if (UserBanCheckStmt)
     m_DB->Finalize(UserBanCheckStmt);
+
+  if (IPBanCheckStmt)
+    m_DB->Finalize(IPBanCheckStmt);
 
   if (ModeratorCheckStmt)
     m_DB->Finalize(ModeratorCheckStmt);
@@ -622,9 +626,47 @@ CDBBan* CAuraDB::UserBanCheck(string user, const string& server, const string& a
   return Ban;
 }
 
-CDBBan* CAuraDB::IPBanCheck(string ip)
+CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
 {
   CDBBan* Ban = nullptr;
+
+  if (!IPBanCheckStmt)
+    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, moderator, reason FROM bans WHERE ip=? AND authserver=?", &IPBanCheckStmt);
+
+  if (IPBanCheckStmt)
+  {
+    sqlite3_bind_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 1, ip.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 2, authserver.c_str(), -1, SQLITE_TRANSIENT);
+
+    const int32_t RC = m_DB->Step(IPBanCheckStmt);
+
+    if (RC == SQLITE_ROW)
+    {
+      if (sqlite3_column_count(static_cast<sqlite3_stmt*>(IPBanCheckStmt)) == 9)
+      {
+        string Name       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 0));
+        string Server     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 1));
+        string AuthServer = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 2));
+        string IP         = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 3));
+        string Date       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 4));
+        string Expiry     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 5));
+        int64_t Permanent = sqlite3_column_int(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 6);
+        string Moderator  = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 7));
+        string Reason     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 8));
+
+        Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason, false);
+      }
+      else
+        Print("[SQLITE3] error checking ban [" + ip + "] - row doesn't have 8 columns");
+    }
+    else if (RC == SQLITE_ERROR)
+      Print("[SQLITE3] error checking ban [" + ip + "] - " + m_DB->GetError());
+
+    m_DB->Reset(IPBanCheckStmt);
+  }
+  else
+    Print("[SQLITE3] prepare error checking ban [" + ip + "] - " + m_DB->GetError());
+
   return Ban;
 }
 

@@ -1315,6 +1315,14 @@ bool CRealm::IsBannedPlayer(string name, string hostName) const
   return true;
 }
 
+bool CRealm::IsBannedIP(string ip) const
+{
+  CDBBan* Ban = m_Aura->m_DB->IPBanCheck(ip, m_Config->m_DataBaseID);
+  if (!Ban) return false;
+  delete Ban;
+  return true;
+}
+
 void CRealm::HoldFriends(CGame* game)
 {
   for (auto& friend_ : m_Friends)
