@@ -5892,15 +5892,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint64_t gameID = 0;
-      try {
-        long long value = stoll(Payload);
-        gameID = static_cast<uint64_t>(value);
-      } catch (const exception& e) {
-        ErrorReply("Invalid game identifier.");
-        break;
+      CGame* targetGame = GetTargetGame(Payload);
+      if (!targetGame) {
+        targetGame = GetTargetGame("game#" + Payload);
       }
-      CGame* targetGame = GetTargetGame("game#" + to_string(gameID));
       if (targetGame) {
         string Players = PlayersToNameListString(targetGame->GetPlayers());
         string Observers = PlayersToNameListString(targetGame->GetObservers());
@@ -5914,6 +5909,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      uint64_t gameID = 0;
+      try {
+        long long value = stoll(Payload);
+        gameID = static_cast<uint64_t>(value);
+      } catch (const exception& e) {
+        ErrorReply("Invalid game identifier.");
+        break;
+      }
       CDBGameSummary* gameSummary = m_Aura->m_DB->GameCheck(gameID);
       if (!gameSummary) {
         ErrorReply("Game #" + to_string(gameID) + " not found in database.");
