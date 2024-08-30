@@ -370,21 +370,29 @@ uint64_t CAuraDB::GetLatestHistoryGameId()
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare(R"(SELECT value FROM config WHERE name=?)", reinterpret_cast<void**>(&Statement));
 
-  int64_t latestGameId = 0;
+  bool success = false;
   if (!Statement) {
-    return signed_to_unsigned_64(latestGameId);
+    Print("[SQLITE3] prepare errors GetLatestHistoryGameId()");
+    return 0;
   }
 
   sqlite3_bind_text(Statement, 1, "latest_game_id", -1, SQLITE_TRANSIENT);
 
+  int64_t latestGameId = 0;
   int32_t RC = m_DB->Step(Statement);
   if (RC == SQLITE_ROW) {
     if (sqlite3_column_count(Statement) == 1) {
       latestGameId = sqlite3_column_int64(Statement, 0);
+      success = true;
     }
   }
   m_DB->Finalize(Statement);
-  return signed_to_unsigned_64(latestGameId);
+
+  if (success) {
+    return signed_to_unsigned_64(latestGameId);
+  } else {
+    return 0;
+  }
 }
 
 void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
@@ -402,7 +410,6 @@ void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
   }
 
   bool Success = false;
-
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(LatestGameStmt), 1, "latest_game_id", -1, SQLITE_TRANSIENT);
   sqlite3_bind_int64(static_cast<sqlite3_stmt*>(LatestGameStmt), 2, unsigned_to_signed_64(gameId));
 
@@ -1126,6 +1133,8 @@ CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
       }
     } else if (RC == SQLITE_ERROR) {
       Print("[SQLITE3] error checking game [" + to_string(gameId) + "] " + m_DB->GetError());
+    } else {
+      Print("[SQLITE3] error checking game return code " + to_string(RC));
     }
 
     m_DB->Finalize(Statement);
@@ -1365,8 +1374,8 @@ CDBGameSummary::CDBGameSummary(uint64_t nID, string playerNames, string playerID
   if (rawIDs.size() % 3 != 0 || rawIDs.size() != playerCount * 3) {
     return;
   }
-  m_SIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + playerCount);
-  m_PIDs = vector<uint8_t>(rawIDs.begin() + playerCount, rawIDs.begin() + 2 * playerCount);
+  m_PIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + playerCount);
+  m_SIDs = vector<uint8_t>(rawIDs.begin() + playerCount, rawIDs.begin() + 2 * playerCount);
   m_Colors = vector<uint8_t>(rawIDs.begin() + 2 * playerCount, rawIDs.end());
 }
 

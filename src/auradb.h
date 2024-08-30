@@ -389,8 +389,8 @@ class CDBGameSummary
 {
 private:
   uint64_t m_ID;
-  std::vector<uint8_t> m_SIDs;
   std::vector<uint8_t> m_PIDs;
+  std::vector<uint8_t> m_SIDs;
   std::vector<uint8_t> m_Colors;
   std::vector<std::string> m_PlayerNames;
 
@@ -399,8 +399,8 @@ public:
   ~CDBGameSummary();
 
   inline uint64_t GetID() const { return m_ID; }
-  inline const std::vector<uint8_t>& GetSIDs() const { return m_SIDs; }
   inline const std::vector<uint8_t>& GetPIDs() const { return m_PIDs; }
+  inline const std::vector<uint8_t>& GetSIDs() const { return m_SIDs; }
   inline const std::vector<uint8_t>& GetColors() const { return m_Colors; }
   inline const std::vector<std::string>& GetPlayerNames() const { return m_PlayerNames; }
 };

@@ -1124,7 +1124,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame)
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -6119,7 +6119,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       vector<string> CurrentGames;
       if (m_Aura->m_CurrentLobby) {
-        CurrentGames.push_back(string("Lobby: ") + m_Aura->m_CurrentLobby->GetDescription());
+        CurrentGames.push_back(string("Lobby#")+ to_string(m_Aura->m_CurrentLobby->GetGameID()) + ": " + m_Aura->m_CurrentLobby->GetDescription());
       }
       for (size_t i = 0; i < m_Aura->m_Games.size(); ++i) {
         CGame* game = m_Aura->m_Games[i];
