@@ -806,7 +806,7 @@ void CGamePlayer::SudoModeEnd()
 
 bool CGamePlayer::GetCanUsePublicChat() const
 {
-  if (!m_Observer || m_PowerObserver) return true;
+  if (!m_Observer || m_PowerObserver || (!m_Game->GetGameLoading() && !m_Game->GetGameLoaded())) return true;
   return !m_Game->GetUsesCustomReferees() && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
 }
 
