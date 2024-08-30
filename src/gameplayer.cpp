@@ -790,17 +790,28 @@ bool CGamePlayer::GetIsSudoMode() const
 bool CGamePlayer::CheckSudoMode()
 {
   if (GetIsSudoMode()) return true;
-  m_SudoMode = nullopt;
+  if (m_SudoMode.has_value()) {
+    m_SudoMode = nullopt;
+    if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print(m_Game->GetLogPrefix() + "sudo session expired for [" + m_Name + "]");
+    }
+  }
   return false;
 }
 
 void CGamePlayer::SudoModeStart()
 {
+  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    Print(m_Game->GetLogPrefix() + "sudo session started by [" + m_Name + "]");
+  }
   m_SudoMode = GetTime() + 600;
 }
 
 void CGamePlayer::SudoModeEnd()
 {
+  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    Print(m_Game->GetLogPrefix() + "sudo session ended by [" + m_Name + "]");
+  }
   m_SudoMode = nullopt;
 }
 
