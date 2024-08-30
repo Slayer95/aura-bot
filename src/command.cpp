@@ -5880,11 +5880,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
      *********************/
 
     //
-    // !CHECKGAME (check info of a game stored in the database)
+    // !CHECKGAME (check info of a game, either currently hosted, or stored in the database)
     //
   
     case HashCode("checkgame"): {
-      // TODO: Avoid conflict with !getplayers GAMEID
       if (Payload.empty()) {
         break;
       }
@@ -5901,10 +5900,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Invalid game identifier.");
         break;
       }
+      CGame* targetGame = GetTargetGame("game#" + to_string(gameID));
+      if (targetGame) {
+        string Players = PlayersToNameListString(targetGame->GetPlayers());
+        string Observers = PlayersToNameListString(targetGame->GetObservers());
+        if (Players.empty() && Observers.empty()) {
+          SendReply("Game#" + to_string(gameID) + ". Nobody is in the game.");
+          break;
+        }
+        string PlayersFragment = Players.empty() ? "No players. " : "Players: " + Players + ". ";
+        string ObserversFragment = Observers.empty() ? "No observers" : "Observers: " + Observers + ".";
+        SendReply("Game#" + to_string(gameID) + ". " + PlayersFragment + ObserversFragment);
+        break;
+      }
 
       CDBGameSummary* gameSummary = m_Aura->m_DB->GameCheck(gameID);
       if (!gameSummary) {
-        ErrorReply("Game #" + to_string(gameID) + " not found.");
+        ErrorReply("Game #" + to_string(gameID) + " not found in database.");
         break;
       }
       SendReply("Game players: " + JoinVector(gameSummary->GetPlayerNames(), false));
