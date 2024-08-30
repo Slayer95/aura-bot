@@ -941,28 +941,45 @@ uint8_t CCommandContext::ParseTargetServiceUser(const std::string& target, std::
   return CHAT_ORIGIN_INVALID;
 }
 
-CGame* CCommandContext::GetTargetGame(const string& target)
+CGame* CCommandContext::GetTargetGame(const string& rawInput)
 {
-  if (target.empty()) {
+  if (rawInput.empty()) {
     return nullptr;
   }
-  string gameId = target;
-  transform(begin(gameId), end(gameId), begin(gameId), [](char c) { return static_cast<char>(std::tolower(c)); });
-  if (gameId == "lobby") {
+  string inputGame = rawInput;
+  transform(begin(inputGame), end(inputGame), begin(inputGame), [](char c) { return static_cast<char>(std::tolower(c)); });
+  if (inputGame == "lobby") {
     return m_Aura->m_CurrentLobby;
   }
-  if (gameId.substr(0, 5) == "game#") {
-    gameId = gameId.substr(5);
+  if (inputGame == "oldest") {
+    if (m_Aura->m_Games.empty()) return nullptr;
+    return m_Aura->m_Games[0];
   }
-  uint32_t GameNumber = 0;
+  if (inputGame == "newest" || inputGame == "latest") {
+    if (m_Aura->m_Games.empty()) return nullptr;
+    return m_Aura->m_Games[m_Aura->m_Games.size() - 1];
+  }
+  if (inputGame.substr(0, 5) == "game#") {
+    inputGame = inputGame.substr(5);
+  }
+
+  uint64_t gameID = 0;
   try {
-    GameNumber = stoul(gameId);
-  } catch (...) {
-  }
-  if (GameNumber == 0 || GameNumber > m_Aura->m_Games.size()) {
+    long long value = stoll(inputGame);
+    gameID = static_cast<uint64_t>(value);
+  } catch (const exception& e) {
     return nullptr;
   }
-  return m_Aura->m_Games[GameNumber - 1];
+
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetGameID() == gameID) {
+    return m_Aura->m_CurrentLobby;
+  }
+  for (const auto& game : m_Aura->m_Games) {
+    if (game->GetGameID() == gameID) {
+      return game;
+    }
+  }
+  return nullptr;
 }
 
 void CCommandContext::UseImplicitHostedGame()
@@ -5865,7 +5882,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
     // !CHECKGAME (check info of a game stored in the database)
     //
-
+  
     case HashCode("checkgame"): {
       // TODO: Avoid conflict with !getplayers GAMEID
       if (Payload.empty()) {
@@ -6106,7 +6123,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       for (size_t i = 0; i < m_Aura->m_Games.size(); ++i) {
         CGame* game = m_Aura->m_Games[i];
-        CurrentGames.push_back(string("Game#") + to_string(i) + ": " + game->GetDescription());
+        CurrentGames.push_back(string("Game#") + to_string(game->GetGameID()) + ": " + game->GetDescription());
       }
       if (CurrentGames.empty()) {
         SendReply("No games are active.");
