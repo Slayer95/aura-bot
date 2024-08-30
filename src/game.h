@@ -269,6 +269,7 @@ public:
   inline uint8_t        GetDisplayMode() const { return m_DisplayMode; }
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
+  inline uint64_t       GetGameID() const { return m_GameHistoryId; }
   inline std::string    GetIndexVirtualHostName() const { return m_IndexVirtualHostName; }
   inline std::string    GetLobbyVirtualHostName() const { return m_LobbyVirtualHostName; }
   std::string           GetPrefixedGameName(const CRealm* realm = nullptr) const;
