@@ -784,7 +784,7 @@ string CGamePlayer::GetSyncText() const
 bool CGamePlayer::GetIsSudoMode() const
 {
   if (!m_SudoMode.has_value()) return false;
-  return m_SudoMode.value() < GetTime();
+  return GetTime() < m_SudoMode.value();
 }
 
 bool CGamePlayer::CheckSudoMode()
