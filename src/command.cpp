@@ -5887,7 +5887,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CDBGameSummary* gameSummary = m_Aura->m_DB->GameCheck(gameID);
       if (!gameSummary) {
-        ErrorReply("Game #" + to_string(gameID) + "] not found.");
+        ErrorReply("Game #" + to_string(gameID) + " not found.");
         break;
       }
       SendReply("Game players: " + JoinVector(gameSummary->GetPlayerNames(), false));
