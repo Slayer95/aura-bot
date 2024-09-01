@@ -1377,8 +1377,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         const string summaryText = (
           targetIdentity + " has played " +
           to_string(GamePlayerSummary->GetTotalGames()) + " games with this bot. Average loading time: " +
-          to_string(GamePlayerSummary->GetAvgLoadingTime()) + " seconds. Average stay: " +
-          to_string(GamePlayerSummary->GetAvgLeftPercent()) + " percent"
+          ToFormattedString(static_cast<double>(GamePlayerSummary->GetAvgLoadingTime())) + " seconds. Average stay: " +
+          to_string(GamePlayerSummary->GetAvgLeftPercent()) + "%"
         );
         SendReply(summaryText);
         delete GamePlayerSummary;
