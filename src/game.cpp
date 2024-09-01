@@ -112,7 +112,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_PingReportedSinceLagTimes(0),
     m_LastOwnerSeen(GetTime()),
     m_StartedKickVoteTime(0),
-    m_GameOverTime(0),
     m_LastLagScreenResetTime(0),
     m_PauseCounter(0),
     m_SaveCounter(0),
@@ -1134,14 +1133,14 @@ bool CGame::Update(void* fd, void* send_fd)
   // start the gameover timer if there's only a configured number of players left
   // do not count observers, but fake players are counted regardless
   uint8_t RemainingPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
-  if (RemainingPlayers != m_StartPlayers && m_GameOverTime == 0 && (m_GameLoading || m_GameLoaded)) {
+  if (RemainingPlayers != m_StartPlayers && !GetIsGameOver() && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0 || RemainingPlayers <= m_NumPlayersToStartGameOver || (RemainingPlayers == 1 && GetNumComputers() == 0)) {
       StartGameOverTimer();
     }
   }
 
   // finish the gameover timer
-  if (m_GameOverTime != 0 && Time - m_GameOverTime >= 60) {
+  if (GetIsGameOver() && m_GameOverTime.value() + 60 < Time) {
     // Disconnect the player socket, destroy it, but do not send W3GS_PLAYERLEAVE
     // Sending it would force them to actually quit the game, and go to the scorescreen.
     if (StopPlayers("was disconnected (gameover timer finished)", m_GameLoading || m_GameLoaded)) {
@@ -3724,6 +3723,14 @@ void CGame::EventPlayerLoaded(CGamePlayer* player)
 
 bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
 {
+  if (!m_GameLoading && !m_GameLoaded) {
+    return false;
+  }
+
+  if (action->GetLength() > 1027) {
+    return false;
+  }
+
   m_Actions.push(action);
 
   // check for players saving the game and notify everyone
@@ -3753,7 +3760,7 @@ bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
 
   // give the stats class a chance to process the action
 
-  if (m_Stats && action->GetAction()->size() >= 6 && m_Stats->ProcessAction(action) && m_GameOverTime == 0)
+  if (m_Stats && action->GetAction()->size() >= 6 && m_Stats->ProcessAction(action) && !GetIsGameOver())
   {
     Print(GetLogPrefix() + "gameover timer started (stats class reported game over)");
     m_GameOverTime = GetTime();
@@ -4614,7 +4621,7 @@ void CGame::Remake()
   m_PingReportedSinceLagTimes = 0;
   m_LastOwnerSeen = Time;
   m_StartedKickVoteTime = 0;
-  m_GameOverTime = 0;
+  m_GameOverTime = nullopt;
   m_LastPlayerLeaveTicks = nullopt;
   m_LastLagScreenResetTime = 0;
   m_PauseCounter = 0;

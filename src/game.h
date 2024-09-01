@@ -158,7 +158,7 @@ protected:
   uint32_t                       m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
   int64_t                        m_LastOwnerSeen;                 // GetTime when the last reserved player was seen in the lobby
   int64_t                        m_StartedKickVoteTime;           // GetTime when the kick vote was started
-  int64_t                        m_GameOverTime;                  // GetTime when the game was over
+  std::optional<int64_t>         m_GameOverTime;                  // GetTime when the game was over
   std::optional<int64_t>         m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
   uint8_t                        m_PauseCounter;                  // Counter of all fake player pauses.
@@ -297,7 +297,7 @@ public:
   inline uint16_t       GetLatency() const { return m_Latency; }
   inline bool           GetLagging() const { return m_Lagging; }
   inline bool           GetPaused() const { return m_Paused; }
-  inline bool           GetIsGameOver() const { return m_GameOverTime != 0; }
+  inline bool           GetIsGameOver() const { return m_GameOverTime.has_value(); }
   uint8_t               GetLayout() const;
   uint8_t               GetCustomLayout() const { return m_CustomLayout; }
   bool                  GetIsCustomForces() const;
