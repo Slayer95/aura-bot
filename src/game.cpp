@@ -1383,19 +1383,19 @@ void CGame::SendChat(uint8_t fromPID, CGamePlayer* player, const string& message
     else
       Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 16, std::vector<uint8_t>(), message));
   } else {
-    uint8_t ExtraFlags[] = {3, 0, 0, 0};
+    uint8_t extraFlags[] = {3, 0, 0, 0};
 
     // based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
 
     uint8_t SID = GetSIDFromPID(player->GetPID());
 
     if (SID < m_Slots.size())
-      ExtraFlags[0] = 3 + m_Slots[SID].GetColor();
+      extraFlags[0] = 3 + m_Slots[SID].GetColor();
 
     if (message.size() > 127)
-      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(ExtraFlags, 4), message.substr(0, 127)));
+      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
     else
-      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(ExtraFlags, 4), message));
+      Send(player, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromPID, CreateByteArray(player->GetPID()), 32, CreateByteArray(extraFlags, 4), message));
   }
 }
 
@@ -3853,19 +3853,23 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       bool OnlyToObservers = RejectPrivateChat && (
         m_Map->GetMapObservers() != MAPOBS_REFEREES || (m_UsesCustomReferees && !player->GetIsPowerObserver())
       );
-      const vector<uint8_t> ExtraFlags = chatPlayer->GetExtraFlags();
-      const bool isLobbyChat = ExtraFlags.empty();
+      const vector<uint8_t> extraFlags = chatPlayer->GetExtraFlags();
+      const bool isLobbyChat = extraFlags.empty();
+      if (isLobbyChat == (m_GameLoading || m_GameLoaded)) {
+        // Racing condition
+        return;
+      }
 
       // calculate timestamp
 
       string chatTypeFragment;
       if (isLobbyChat) {
         Print(GetLogPrefix() + "[" + player->GetName() + "] " + chatPlayer->GetMessage());
-
-        if (m_MuteLobby)
+        if (m_MuteLobby) {
           Relay = false;
+        }
       } else {
-        if (ExtraFlags[0] == CHAT_RECV_ALL) {
+        if (extraFlags[0] == CHAT_RECV_ALL) {
           chatTypeFragment = "[All] ";
 
           if (m_MuteAll) {
@@ -3873,13 +3877,13 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             // note that any commands will still be processed
             Relay = false;
           }
-        } else if (ExtraFlags[0] == CHAT_RECV_ALLY) {
+        } else if (extraFlags[0] == CHAT_RECV_ALLY) {
           chatTypeFragment = "[Allies] ";
-        } else if (ExtraFlags[0] == CHAT_RECV_OBS) {
+        } else if (extraFlags[0] == CHAT_RECV_OBS) {
           // [Observer] or [Referees]
           chatTypeFragment = "[Observer] ";
         } else {
-          uint8_t privateTarget = ExtraFlags[0] - 2;
+          uint8_t privateTarget = extraFlags[0] - 2;
           chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
 
@@ -3897,7 +3901,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
             Send(overrideObserverPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideObserverPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
           }
         } else if (RejectPrivateChat) {
-          if (m_Map->GetMapObservers() == MAPOBS_REFEREES && ExtraFlags[0] != CHAT_RECV_OBS) {
+          if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
             Relay = !m_MuteAll;
             if (Relay) {
               vector<uint8_t> overrideTargetPIDs = GetPIDs(chatPlayer->GetFromPID());
