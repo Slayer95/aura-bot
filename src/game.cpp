@@ -4776,7 +4776,10 @@ CGamePlayer* CGame::GetPlayerFromName(string name, bool sensitive) const
 uint8_t CGame::GetPlayerFromNamePartial(string name, CGamePlayer*& player) const
 {
   uint8_t Matches = 0;
-  if (name.empty()) return Matches;
+  if (name.empty()) {
+    player = nullptr;
+    return Matches;
+  }
 
   transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
 
@@ -4796,8 +4799,7 @@ uint8_t CGame::GetPlayerFromNamePartial(string name, CGamePlayer*& player) const
 
         // if the name matches exactly stop any further matching
 
-        if (TestName == name)
-        {
+        if (TestName == name) {
           Matches = 1;
           break;
         }
@@ -4805,6 +4807,9 @@ uint8_t CGame::GetPlayerFromNamePartial(string name, CGamePlayer*& player) const
     }
   }
 
+  if (Matches != 1) {
+    player = nullptr;
+  }
   return Matches;
 }
 
