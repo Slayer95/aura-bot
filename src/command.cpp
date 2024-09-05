@@ -53,7 +53,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ga
     m_TargetRealm(nullptr),
     m_SourceGame(game),
     m_TargetGame(game),
-    m_Player(player),
+    m_Player(player), // m_Player is always bound to m_SourceGame
     m_IRC(nullptr),
     m_DiscordAPI(nullptr),
 
@@ -780,7 +780,26 @@ void CCommandContext::ErrorAll(const string& message)
   ErrorReply(message, CHAT_SEND_TARGET_ALL);
 }
 
+void CCommandContext::SendAllUnlessHidden(const string& message)
+{
+  if (!m_TargetGame) {
+    SendAll(message);
+  } else {
+    SendReply(message, m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers() ? CHAT_SEND_TARGET_ALL : 0);
+  }
+}
+
 CGamePlayer* CCommandContext::GetTargetPlayer(const string& target)
+{
+  CGamePlayer* TargetPlayer = nullptr;
+  if (!m_TargetGame) {
+    return TargetPlayer;
+  }
+  m_TargetGame->GetPlayerFromNamePartial(target, TargetPlayer);
+  return TargetPlayer;
+}
+
+CGamePlayer* CCommandContext::RunTargetPlayer(const string& target)
 {
   CGamePlayer* TargetPlayer = nullptr;
   if (!m_TargetGame) {
@@ -804,14 +823,70 @@ CGamePlayer* CCommandContext::GetTargetPlayerOrSelf(const string& target)
 
   CGamePlayer* targetPlayer = nullptr;
   if (!m_TargetGame) return targetPlayer;
-  uint8_t Matches = m_TargetGame->GetPlayerFromNamePartial(target, targetPlayer);
-  if (Matches > 1) {
-    targetPlayer = nullptr;
+  m_TargetGame->GetPlayerFromNamePartial(target, targetPlayer);
+  return targetPlayer;
+}
+
+CGamePlayer* CCommandContext::RunTargetPlayerOrSelf(const string& target)
+{
+  if (target.empty()) {
+    return m_Player;
+  }
+
+  CGamePlayer* targetPlayer = nullptr;
+  if (!m_TargetGame) {
+    ErrorReply("Please specify target player.");
+    return targetPlayer;
+  }
+  m_TargetGame->GetPlayerFromNamePartial(target, targetPlayer);
+  if (!targetPlayer) {
+    ErrorReply("Player [" + target + "] not found.");
   }
   return targetPlayer;
 }
 
-bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player)
+bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player)
+{
+  if (!m_TargetGame || target.empty()) {
+    return false;
+  }
+  switch (target[0]) {
+    case '#': {
+      uint8_t testSID = ParseSID(target.substr(1));
+      const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
+      if (!slot) {
+        return false;
+      }
+      SID = testSID;
+      player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+      return true;
+    }
+
+    case '@': {
+      player = GetTargetPlayer(target.substr(1));
+      return player != nullptr;
+    }
+
+    default: {
+      uint8_t testSID = ParseSID(target);
+      const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
+      CGamePlayer* testPlayer = GetTargetPlayer(target.substr(1));
+      if ((slot == nullptr) == (testPlayer == nullptr)) {
+        return false;
+      }
+      if (testPlayer == nullptr) {
+        SID = testSID;
+        player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+      } else {
+        SID = m_TargetGame->GetSIDFromPID(testPlayer->GetPID());
+        player = testPlayer;
+      }
+      return true;
+    }
+  }
+}
+
+bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player)
 {
   if (!m_TargetGame || target.empty()) {
     ErrorReply("Please provide a player @name or #slot.");
@@ -831,24 +906,19 @@ bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID,
     }
 
     case '@': {
-      player = GetTargetPlayer(target.substr(1));
+      player = RunTargetPlayer(target.substr(1));
       return player != nullptr;
     }
 
     default: {
       uint8_t testSID = ParseSID(target);
       const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
-      CGamePlayer* testPlayer = nullptr;
-      uint8_t matches = m_TargetGame->GetPlayerFromNamePartial(target.substr(1), testPlayer);
-      if ((slot && matches > 0) || (!slot && matches == 0)) {
+      CGamePlayer* testPlayer = GetTargetPlayer(target.substr(1));
+      if ((slot == nullptr) == (testPlayer == nullptr)) {
         ErrorReply("Please provide a player @name or #slot.");
         return false;
       }
-      if (matches > 1) {
-        ErrorReply("Player [" + target + "] ambiguous.");
-        return false;
-      }
-      if (matches == 0) {
+      if (testPlayer == nullptr) {
         SID = testSID;
         player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
       } else {
@@ -860,7 +930,31 @@ bool CCommandContext::ParsePlayerOrSlot(const std::string& target, uint8_t& SID,
   }
 }
 
-bool CCommandContext::ParseNonPlayerSlot(const std::string& target, uint8_t& SID)
+bool CCommandContext::GetParseNonPlayerSlot(const std::string& target, uint8_t& SID)
+{
+  if (!m_TargetGame || target.empty()) {
+    return false;
+  }
+
+  uint8_t testSID = 0xFF;
+  if (target[0] == '#') {
+    testSID = ParseSID(target.substr(1));
+  } else {
+    testSID = ParseSID(target);
+  }
+
+  const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
+  if (!slot) {
+    return false;
+  }
+  if (m_TargetGame->GetIsPlayerSlot(testSID)) {
+    return false;
+  }
+  SID = testSID;
+  return true;
+}
+
+bool CCommandContext::RunParseNonPlayerSlot(const std::string& target, uint8_t& SID)
 {
   if (!m_TargetGame || target.empty()) {
     ErrorReply("Please provide a player #slot.");
@@ -892,24 +986,43 @@ CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
   if (target.empty()) {
     return m_SourceRealm;
   }
-  string realmId = target;
+  string realmId = TrimString(target);
   transform(begin(realmId), end(realmId), begin(realmId), [](char c) { return static_cast<char>(std::tolower(c)); });
   CRealm* exactMatch = m_Aura->GetRealmByInputId(realmId);
   if (exactMatch) return exactMatch;
   return m_Aura->GetRealmByHostName(realmId);
 }
 
-bool CCommandContext::ParseTargetRealmUser(const string& target, string& nameFragment, string& realmFragment, CRealm*& realm)
+bool CCommandContext::GetParseTargetRealmUser(const string& target, string& nameFragment, string& realmFragment, CRealm*& realm, bool searchHistory)
 {
   if (target.empty()) {
     return false;
   }
 
-  nameFragment = target;
-  string::size_type realmStart = nameFragment.find('@');
-  if (realmStart != string::npos) {
-    realmFragment = TrimString(nameFragment.substr(realmStart + 1));
-    nameFragment = TrimString(nameFragment.substr(0, realmStart));
+  string::size_type realmStart = target.find('@');
+  const bool isFullyQualified = realmStart != string::npos;
+  if (isFullyQualified) {
+    realmFragment = TrimString(target.substr(realmStart + 1));
+    nameFragment = TrimString(target.substr(0, realmStart));
+  } else if (m_Player && searchHistory) {
+    CDBBan* targetPlayer = nullptr;
+    if (m_SourceGame->GetBannableFromNamePartial(target, targetPlayer) != 1) {
+      return false;
+    }
+    realmFragment = targetPlayer->GetServer();
+    nameFragment = targetPlayer->GetName();
+  } else if (m_Player) {
+    CGamePlayer* targetPlayer = GetTargetPlayer(target);
+    if (!targetPlayer) {
+      return false;
+    }
+    realmFragment = targetPlayer->GetRealmHostName();
+    nameFragment = targetPlayer->GetName();
+  } else if (m_SourceRealm) {
+    realmFragment = m_ServerName;
+    nameFragment = TrimString(target);
+  } else {
+    return false;
   }
 
   if (nameFragment.empty() || nameFragment.size() > MAX_PLAYER_NAME_SIZE) {
@@ -927,9 +1040,9 @@ bool CCommandContext::ParseTargetRealmUser(const string& target, string& nameFra
   }
 }
 
-uint8_t CCommandContext::ParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location)
+uint8_t CCommandContext::GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location)
 {
-  bool isRealm = ParseTargetRealmUser(target, nameFragment, locationFragment, reinterpret_cast<CRealm*&>(location));
+  bool isRealm = GetParseTargetRealmUser(target, nameFragment, locationFragment, reinterpret_cast<CRealm*&>(location));
   if (isRealm) return CHAT_ORIGIN_REALM;
   CGame* matchingGame = GetTargetGame(locationFragment);
   if (matchingGame) {
@@ -948,14 +1061,14 @@ CGame* CCommandContext::GetTargetGame(const string& rawInput)
   }
   string inputGame = rawInput;
   transform(begin(inputGame), end(inputGame), begin(inputGame), [](char c) { return static_cast<char>(std::tolower(c)); });
-  if (inputGame == "lobby") {
+  if (inputGame == "lobby" || inputGame == "game#lobby") {
     return m_Aura->m_CurrentLobby;
   }
-  if (inputGame == "oldest") {
+  if (inputGame == "oldest" || inputGame == "game#oldest") {
     if (m_Aura->m_Games.empty()) return nullptr;
     return m_Aura->m_Games[0];
   }
-  if (inputGame == "newest" || inputGame == "latest") {
+  if (inputGame == "newest" || inputGame == "latest" || inputGame == "game#newest" || inputGame == "game#latest") {
     if (m_Aura->m_Games.empty()) return nullptr;
     return m_Aura->m_Games[m_Aura->m_Games.size() - 1];
   }
@@ -1134,7 +1247,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "slot <PLAYER>");
         break;
       }
@@ -1157,9 +1270,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || m_TargetGame->GetIsMirror()) {
         break;
       }
-      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      CGamePlayer* targetPlayer = RunTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
+        break;
+      }
+      if (m_TargetGame->GetIsHiddenPlayers()) {
+        ErrorReply("This command is disabled in FFA games.");
         break;
       }
       CRealm* targetPlayerRealm = targetPlayer->GetRealm(true);
@@ -1271,7 +1387,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<string> pingsText;
       uint32_t maxPing = 0;
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
-        pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText(false));
+        pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));
         uint32_t ping = (*i)->GetPing();
         if (ping == 0) continue; // also skips this iteration if there is no ping data
         if (ping > maxPing) maxPing = ping;
@@ -1290,8 +1406,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
     // !CHECKRACE
     // !RACES
+    // !GAME
     //
 
+    case HashCode("game"):
     case HashCode("races"):
     case HashCode("checkrace"): {
       if (!m_TargetGame)
@@ -1330,9 +1448,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to look up stats.");
         break;
       }
-      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayers()) {
+        ErrorReply("Usage: " + cmdToken + "stats <PLAYER>");
+        ErrorReply("Usage: " + cmdToken + "statsdota <PLAYER>");
+        break;
+      }
+      CGamePlayer* targetPlayer = RunTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
       const bool isDota = CommandHash == HashCode("statsdota") || m_TargetGame->GetClientFileName().find("DotA") != string::npos;
@@ -1450,7 +1572,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "votekick <PLAYERNAME>");
         break;
       }
@@ -1472,7 +1594,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SendReply("Votekick against player [" + m_TargetGame->m_KickVotePlayer + "] started by player [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       if (m_Player && m_Player != targetPlayer) {
         m_Player->SetKickVote(true);
-        SendAll("Player [" + m_Player->GetName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
+        SendAll("Player [" + m_Player->GetDisplayName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
       }
       SendAll("Type " + cmdToken + "yes or " + cmdToken + "no to vote.");
 
@@ -1489,7 +1611,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint32_t VotesNeeded = static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100));
       m_Player->SetKickVote(true);
-      m_TargetGame->SendAllChat("Player [" + m_Player->GetName() + "] voted for kicking player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
+      m_TargetGame->SendAllChat("Player [" + m_Player->GetDisplayName() + "] voted for kicking player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
       m_TargetGame->CountKickVotes();
       break;
     }
@@ -1503,7 +1625,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       m_Player->SetKickVote(false);
-      m_TargetGame->SendAllChat("Player [" + m_Player->GetName() + "] voted against kicking player [" + m_TargetGame->m_KickVotePlayer + "].");
+      m_TargetGame->SendAllChat("Player [" + m_Player->GetDisplayName() + "] voted against kicking player [" + m_TargetGame->m_KickVotePlayer + "].");
       break;
     }
 
@@ -1529,7 +1651,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -1719,6 +1841,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("eras"): {
+      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayers()) {
+        ErrorReply("Usage: " + cmdToken + "eras <PLAYER|COUNTRY|COLOR>");
+        break;
+      }
+
       string countryName = Payload;
       std::transform(std::begin(countryName), std::end(countryName), std::begin(countryName), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
@@ -1762,7 +1889,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else if (countryName == "somalia") {
         SendReply("Slot #22: " + GetColorName(21));
       } else {
-        uint8_t color = ParseSID(Payload);
+        uint8_t color = ParseColor(Payload);
         if (color == 0xFF && m_TargetGame) {
           CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
           if (targetPlayer) {
@@ -1887,7 +2014,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (auto i = begin(m_TargetGame->m_Players); i != end(m_TargetGame->m_Players); ++i) {
         // we reverse the byte order on the IP because it's stored in network byte order
 
-        Froms += (*i)->GetName();
+        Froms += (*i)->GetDisplayName();
         Froms += ": (";
         Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32((*i)->GetIPv4(), true));
         Froms += ")";
@@ -2046,7 +2173,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (TargetUrl.empty()) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
-          SendAll("Download URL unknown");
+          SendAll("Download URL unknown.");
         } else {
           SendAll("Visit  <" + m_TargetGame->GetMapSiteURL() + "> to download [" + m_TargetGame->GetClientFileName() + "]");
         }
@@ -2062,7 +2189,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->SetMapSiteURL(TargetUrl);
-      SendAll("Download URL set to [" + TargetUrl + "]");
+      SendReply("Download URL set to [" + TargetUrl + "]", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -2220,7 +2347,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "kick <PLAYERNAME>");
         break;
       }
@@ -2273,7 +2400,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (lower == "default" || lower == "reset") {
         m_TargetGame->ResetLatency();
-        SendAll("Latency settings reset to default.");
+        SendReply("Latency settings reset to default.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
         break;
       } else if (lower == "ignore" || lower == "bypass" || lower == "normal") {
         if (!m_TargetGame->GetGameLoaded()) {
@@ -2281,7 +2408,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         m_TargetGame->NormalizeSyncCounters();
-        SendAll("Ignoring lagging players. (They may not be able to control their units.)");
+        SendReply("Ignoring lagging players. (They may not be able to control their units.)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
         break;
       }
 
@@ -2344,13 +2471,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       );
 
       if (refreshTime == REFRESH_PERIOD_MIN) {
-        SendAll("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)");
+        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       } else if (refreshTime == REFRESH_PERIOD_MAX) {
-        SendAll("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)");
+        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendAll("Game will be updated with a delay of " + to_string(m_TargetGame->m_Latency) + "ms.");
+        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->m_Latency) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       }
-      SendAll("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.");
+      SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -2564,7 +2691,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string inputName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!ParseTargetRealmUser(Args[0], inputName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Args[0], inputName, targetHostName, targetRealm)) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
@@ -2837,7 +2964,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CGamePlayer* playerTwo = nullptr;
       uint8_t slotNumOne = 0xFF;
       uint8_t slotNumTwo = 0xFF;
-      if (!ParsePlayerOrSlot(Args[0], slotNumOne, playerOne) || !ParsePlayerOrSlot(Args[1], slotNumTwo, playerTwo)) {
+      if (!RunParsePlayerOrSlot(Args[0], slotNumOne, playerOne) || !RunParsePlayerOrSlot(Args[1], slotNumTwo, playerTwo)) {
         break;
       }
       if (slotNumOne == slotNumTwo) {
@@ -2978,9 +3105,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      CGamePlayer* targetPlayer = RunTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
 
@@ -3031,12 +3157,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("referee"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || m_TargetGame->GetIsMirror() || (m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded()))
+      // Don't allow during countdown for transparency purposes.
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() ||
+        (m_TargetGame->GetCountDownStarted() && !m_TargetGame->GetGameLoaded()))
         break;
 
-      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      CGamePlayer* targetPlayer = RunTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
       if (!targetPlayer->GetIsObserver()) {
@@ -3050,7 +3177,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           otherPlayer->SetPowerObserver(false);
       }
       targetPlayer->SetPowerObserver(true);
-      SendAll("Player [" + targetPlayer->GetName() + "] was promoted to referee by [" + m_FromName + "] (Other observers may only use observer chat)");
+      SendAll("Player [" + targetPlayer->GetName() + "] was promoted to referee (Other observers may only use observer chat)");
       break;
     }
 
@@ -3067,12 +3194,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->GetIsHiddenPlayers()) {
+        ErrorReply("This command is disabled in FFA games. Use " + cmdToken + "muteall from the game lobby next time.");
+        break;
+      }
+
       if (Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "mute [PLAYERNAME]");
         break;
       }
 
-      CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
+      CGamePlayer* targetPlayer = RunTargetPlayer(Payload);
       if (!targetPlayer) {
         break;
       }
@@ -3114,11 +3246,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->m_MuteAll) {
-        ErrorReply("Global chat is already muted.");
+        ErrorReply("Global and private chats are already muted.");
         break;
       }
 
-      SendAll("Global chat muted (allied and private chat is unaffected)");
+      if (m_TargetGame->GetIsHiddenPlayers() && m_TargetGame->GetGameLoaded()) {
+        ErrorReply("Chat can only be toggled from the game lobby for FFA games.");
+        break;
+      }
+
+      SendAll("Global and private chats muted (allied chat is unaffected)");
       m_TargetGame->m_MuteAll = true;
       break;
     }
@@ -3130,7 +3267,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("abort"):
     case HashCode("a"): {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror() || m_TargetGame->GetGameLoading() || m_TargetGame->GetGameLoaded())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -3261,7 +3398,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3286,9 +3423,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (CheckResult.empty()) {
-        SendAll("[" + targetName + "@" + targetHostName + "] is not banned from any server.");
+        SendReply("[" + targetName + "@" + targetHostName + "] is not banned from any server.");
       } else {
-        SendAll("[" + targetName + "@" + targetHostName + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinVector(CheckResult, false));
+        SendReply("[" + targetName + "@" + targetHostName + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinVector(CheckResult, false));
       }
       break;
     }
@@ -3392,100 +3529,54 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       if (Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
         break;
       }
-      ErrorReply("!ban not implemented yet. Try !banlast instead");
 
-      // extract the victim and the reason
-      // e.g. "Varlock leaver after dying" -> victim: "Varlock", reason: "leaver after dying"
-      /*
-
-      string       Victim, Reason;
-      stringstream SS;
-      SS << Payload;
-      SS >> Victim;
-
-      if (!SS.eof())
-      {
-        getline(SS, Reason);
-        string::size_type Start = Reason.find_first_not_of(' ');
-
-        if (Start != string::npos)
-          Reason = Reason.substr(Start);
-      }
-
-      if (m_TargetGame && m_TargetGame->GetGameLoaded()) {
-        string VictimLower = Victim;
-        transform(begin(VictimLower), end(VictimLower), begin(VictimLower), [](char c) { return static_cast<char>(std::tolower(c)); });
-        uint32_t Matches   = 0;
-        CDBBan*  LastMatch = nullptr;
-
-        // try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
-        // we use the m_DBBans vector for this in case the player already left and thus isn't in the m_Players vector anymore
-
-        for (auto& ban : m_TargetGame->m_DBBans) {
-          string TestName = ban->GetName();
-          transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
-
-          if (TestName.find(VictimLower) != string::npos) {
-            ++Matches;
-            LastMatch = ban;
-
-            // if the name matches exactly stop any further matching
-
-            if (TestName == VictimLower) {
-              Matches = 1;
-              break;
-            }
-          }
-        }
-
-        if (Matches == 0) {
-          ErrorReply("Unable to ban player [" + Victim + "]. No matches found");
-        } else if (Matches > 1) {
-          ErrorReply("Unable to ban player [" + Victim + "]. Found more than one match");
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
-          m_Aura->m_DB->BanAdd(LastMatch->GetServer(), LastMatch->GetName(), m_FromName, Reason);
-          SendAll("Player [" + LastMatch->GetName() + "] was banned by player [" + m_FromName + "] on server [" + LastMatch->GetServer() + "]");
+          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
+          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
         }
         break;
-      } else if (m_TargetGame) {
-        CGamePlayer* targetPlayer = GetTargetPlayer(Victim);
-        if (!targetPlayer) {
-          break;
-        }
-        m_Aura->m_DB->BanAdd(targetPlayer->GetRealmDataBaseID(false), targetPlayer->GetName(), m_FromName, Reason);
-        SendAll("Player [" + targetPlayer->GetName() + "] was banned by player [" + m_FromName + "] on server [" + targetPlayer->GetRealmHostName() + "]");
+      }
+
+      string authServer = m_ServerName;
+      if (m_SourceRealm) {
+        authServer = m_SourceRealm->GetDataBaseID();
+      }
+      if (targetRealm) {
+        targetHostName = targetRealm->GetDataBaseID();
+      }
+
+      CDBBan* Ban = m_Aura->m_DB->UserBanCheck(targetName, targetHostName, authServer);
+      if (Ban != nullptr) {
+        ErrorReply("[" + Ban->GetName() + "@" + Ban->GetServer() + "] was already banned by [" + Ban->GetModerator() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
+        delete Ban;
         break;
-      } else if (m_SourceRealm) {
-        if (m_SourceRealm->GetIsAdmin(Victim) || (m_SourceRealm->GetIsModerator(Victim) &&
+      }
+
+      string reason = "whatever";
+      string ip = m_Aura->m_DB->GetLatestIP(targetName, targetHostName);
+
+      if (m_SourceRealm && authServer == targetHostName) {
+        if (m_SourceRealm->GetIsAdmin(targetName) || (m_SourceRealm->GetIsModerator(targetName) &&
           !CheckPermissions(m_Config->m_AdminBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN))
         ) {
-          ErrorReply("User [" + Victim + "] is an admin on server [" + m_ServerName + "]");
+          ErrorReply("User [" + targetName + "] is an admin on server [" + m_ServerName + "]");
           break;
         }
+      }
 
-        if (m_SourceRealm->IsBannedName(Victim)) {
-          ErrorReply("User [" + Victim + "] is already banned on server [" + m_ServerName + "]");
-          break;
-        }
-        if (m_SourceRealm->GetIsModerator(Victim)) {
-          if (!m_Aura->m_DB->ModeratorRemove(m_SourceRealm->GetDataBaseID(), Victim)) {
-            ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_ServerName + "]");
-            break;
-          }
-        }
-        if (!m_Aura->m_DB->BanAdd(m_SourceRealm->GetDataBaseID(), Victim, m_FromName, Reason)) {
-          ErrorReply("Failed to ban user [" + Victim + "] on server [" + m_ServerName + "]");
-          break;
-        }
-        SendAll("User [" + Victim + "] banned on server [" + m_ServerName + "]");
-        break;
-      } else {
-        ErrorReply("Realm unknown.");
+      if (!m_Aura->m_DB->BanAdd(targetName, targetHostName, authServer,ip, m_FromName, reason)) {
+        ErrorReply("Failed to execute ban.");
         break;
       }
-      */
+      SendReply("[" + targetName + "@" + targetHostName + "] banned.");
       break;
     }
 
@@ -3504,7 +3595,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3726,7 +3817,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
-        SendAll(TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game.");
+        SendAll(
+          TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game."
+        );
       } else {
         m_TargetGame->SetOwner(TargetName, TargetRealm);
         SendReply("Setting game owner to [" + TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
@@ -3925,7 +4018,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       uint8_t SID = 0xFF;
-      if (!ParseNonPlayerSlot(Args[0], SID)) {
+      if (!RunParseNonPlayerSlot(Args[0], SID)) {
         ErrorReply("Usage: " + cmdToken + "comp <SLOT> , <SKILL> - Skill is any of: easy, normal, insane");
         break;
       }
@@ -4003,7 +4096,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
         break;
       }
@@ -4060,7 +4153,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
@@ -4139,7 +4232,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
       }
@@ -4234,7 +4327,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
         if (m_Player) ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
@@ -4332,7 +4425,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t SID = 0xFF;
       CGamePlayer* targetPlayer = nullptr;
-      if (!ParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
         ErrorReply("Usage: " + cmdToken + "observer <PLAYER>");
         break;
       }
@@ -4571,9 +4664,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      CGamePlayer* targetPlayer = RunTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
 
@@ -4977,8 +5069,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->GetLocked()) {
+        ErrorReply("Game already locked.");
+        break;
+      }
+
+      if (m_TargetGame->GetIsHiddenPlayers()) {
+        ErrorReply("Game can only be locked from the lobby in FFA games.");
+        break;
+      }
+
       string Warning = m_TargetGame->m_OwnerRealm.empty() ? " (Owner joined over LAN - will get removed if they leave.)" : "";
-      SendAll("Game locked. Only the game owner and root admins may run game commands." + Warning);
+      SendReply("Game locked. Only the game owner and root admins may run game commands." + Warning);
       m_TargetGame->m_Locked = true;
       break;
     }
@@ -5022,6 +5124,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (!m_TargetGame->GetLocked()) {
+        ErrorReply("Game is not locked.");
+        break;
+      }
+
+      if (m_TargetGame->GetIsHiddenPlayers()) {
+        ErrorReply("Game can only be unlocked from the lobby in FFA games.");
+        break;
+      }
+
       SendAll("Game unlocked. All admins may now run game commands");
       m_TargetGame->m_Locked = false;
       break;
@@ -5042,11 +5154,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->GetIsHiddenPlayers()) {
+        ErrorReply("This command is disabled in FFA games. Use " + cmdToken + "unmuteall from the game lobby next time.");
+        break;
+      }
+
       if (Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "unmute <PLAYERNAME>");
         break;
       }
-      CGamePlayer* targetPlayer = GetTargetPlayer(Payload);
+      CGamePlayer* targetPlayer = RunTargetPlayer(Payload);
       if (!targetPlayer) {
         break;
       }
@@ -5083,6 +5200,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (m_TargetGame->m_MuteAll) {
         ErrorReply("Global chat is not muted.");
+        break;
+      }
+
+      if (m_TargetGame->GetIsHiddenPlayers() && m_TargetGame->GetGameLoaded()) {
+        ErrorReply("Chat can only be toggled from the game lobby for FFA games.");
         break;
       }
 
@@ -5147,7 +5269,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string nameFragment, locationFragment;
       void* location = nullptr;
-      uint8_t targetType = ParseTargetServiceUser(inputName, nameFragment, locationFragment, location);
+      uint8_t targetType = GetParseTargetServiceUser(inputName, nameFragment, locationFragment, location);
       if (targetType == CHAT_ORIGIN_REALM) {
         CRealm* matchingRealm = reinterpret_cast<CRealm*>(location);
         if (inputName == matchingRealm->GetLoginName()) {
@@ -5206,9 +5328,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGamePlayer* targetPlayer = GetTargetPlayerOrSelf(Payload);
+      CGamePlayer* targetPlayer = RunTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
-        ErrorReply("Player [" + Payload + "] not found.");
         break;
       }
 
@@ -5244,7 +5365,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!ParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
         if (!targetHostName.empty() && targetHostName != "*") {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
           break;
@@ -5330,7 +5451,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
-    case HashCode("game"): {
+    case HashCode("egame"):
+    case HashCode("eg"): {
       if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
@@ -5338,13 +5460,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       size_t CommandStart = Payload.find(',');
       if (CommandStart == string::npos) {
-        ErrorReply("Usage: " + cmdToken + "game <GAMEID> , <COMMAND> - See game ids with !listgames");
+        ErrorReply("Usage: " + cmdToken + "eg <GAMEID> , <COMMAND> - See game ids with !listgames");
         break;
       }
       string GameId = TrimString(Payload.substr(0, CommandStart));
       string ExecString = TrimString(Payload.substr(CommandStart + 1));
       if (GameId.empty() || ExecString.empty()) {
-        ErrorReply("Usage: " + cmdToken + "game <GAMEID> , <COMMAND> - See game ids with !listgames");
+        ErrorReply("Usage: " + cmdToken + "eg <GAMEID> , <COMMAND> - See game ids with !listgames");
         break;
       }
       CGame* targetGame = GetTargetGame(GameId);
@@ -6036,61 +6158,56 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !NETINFO
+    // !QUERY
     //
 
-    case HashCode("netinfo"): {
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
-      if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "netinfo <REALM>");
-        break;
-      }
+    case HashCode("query"): {
       if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Requires sudo permissions."); // But not really
         break;
       }
 
-      targetRealm->QueueCommand("/netinfo");
-      break;
-    }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "query <QUERY>");
+        ErrorReply("Usage: " + cmdToken + "query <REALM>, <QUERY>");
+        ErrorReply("Valid queries are: listgames, printgames, netinfo, quota");
+        break;
+      }
 
-    //
-    // !PRINTGAMES
-    //
+      vector<string> Args = SplitArgs(Payload, 1u, 2u);
+      if (Args.empty() || (Args.size() < 2 && !m_SourceRealm)) {
+        ErrorReply("Usage: " + cmdToken + "query <QUERY>");
+        ErrorReply("Usage: " + cmdToken + "query <REALM>, <QUERY>");
+        ErrorReply("Valid queries are: listgames, printgames, netinfo, quota");
+        break;
+      }
 
-    case HashCode("printgames"): {
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+      CRealm* targetRealm = m_SourceRealm;
+      if (Args.size() > 1) {
+        targetRealm = GetTargetRealmOrCurrent(Args[0]);
+      }
       if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "printgames <REALM>");
-        break;
-      }
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
-        ErrorReply("Requires sudo permissions."); // But not really
+        ErrorReply("Realm not found.");
         break;
       }
 
-      targetRealm->QueueCommand("/games");
-      break;
-    }
+      string lowerQuery = Args[Args.size() - 1];
+      transform(begin(lowerQuery), end(lowerQuery), begin(lowerQuery), [](char c) { return static_cast<char>(std::tolower(c)); });
 
-    //
-    // !QUERYGAMES
-    //
-
-    case HashCode("querygames"): {
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
-      if (!targetRealm) {
-        ErrorReply("Usage: " + cmdToken + "querygames <REALM>");
-        break;
-      }
-      if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
-        ErrorReply("Requires sudo permissions."); // But not really
-        break;
-      }
-
-      int64_t Time = GetTime();
-      if (Time - targetRealm->m_LastGameListTime >= 30) {
-        targetRealm->SendGetGamesList();
+      if (lowerQuery == "netinfo" || lowerQuery == "quota" || lowerQuery == "games") {
+        targetRealm->QueueCommand("/" + lowerQuery);
+        SendReply("Query sent.");
+      } else if (lowerQuery == "printgames") {
+        targetRealm->QueueCommand("/games");
+        SendReply("Query sent.");
+      } else if (lowerQuery == "listgames" || lowerQuery == "gamelist" || lowerQuery == "gameslist") {
+        int64_t Time = GetTime();
+        if (Time - targetRealm->m_LastGameListTime >= 30) {
+          targetRealm->SendGetGamesList();
+          SendReply("Query sent.");
+        } else {
+          ErrorReply("Query ignored (antiflood.)");
+        }
       }
       break;
     }
