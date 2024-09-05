@@ -212,6 +212,7 @@ public:
   inline bool                  GetDeleteMe() const { return m_DeleteMe; }
   inline uint8_t               GetPID() const { return m_PID; }
   inline std::string           GetName() const { return m_Name; }
+  std::string                  GetDisplayName() const;
   inline std::vector<uint8_t>  GetIPv4Internal() const { return m_IPv4Internal; }
   inline size_t                GetNumPings() const { return m_Pings.size(); }
   inline size_t                GetNumCheckSums() const { return m_CheckSums.size(); }
@@ -364,19 +365,27 @@ public:
   void ResetConnection();
 };
 
-inline std::string PlayersToNameListString(std::vector<const CGamePlayer*> playerList) {
+inline std::string PlayersToNameListString(std::vector<const CGamePlayer*> playerList, bool useRealNames = false) {
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {
-    playerNames.push_back("[" + player->GetName() + "]");
+    if (useRealNames) {
+      playerNames.push_back("[" + player->GetName() + "]");
+    } else {
+      playerNames.push_back("[" + player->GetDisplayName() + "]");
+    }
   }
   return JoinVector(playerNames, ", ", false);
 }
-inline std::string PlayersToNameListString(std::vector<CGamePlayer*> playerList) {
+inline std::string PlayersToNameListString(std::vector<CGamePlayer*> playerList, bool useRealNames = false) {
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {
-    playerNames.push_back("[" + player->GetName() + "]");
+    if (useRealNames) {
+      playerNames.push_back("[" + player->GetName() + "]");
+    } else {
+      playerNames.push_back("[" + player->GetDisplayName() + "]");
+    }
   }
   return JoinVector(playerNames, ", ", false);
 }

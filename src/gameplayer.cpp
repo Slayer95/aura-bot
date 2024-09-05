@@ -344,6 +344,12 @@ uint32_t CGamePlayer::GetPing() const
   return AvgPing;
 }
 
+string CGamePlayer::GetDisplayName() const
+{
+  if (m_Game->GetIsHiddenPlayers()) return "Player ?";
+  return m_Name;
+}
+
 CRealm* CGamePlayer::GetRealm(bool mustVerify)
 {
   if (m_RealmInternalId < 0x10)
@@ -712,7 +718,7 @@ void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_
   if (m_LastDisconnectTime > 0)
     m_TotalDisconnectTime += GetTime() - m_LastDisconnectTime;
 
-  m_Game->SendAllChat("Player [" + m_Name + "] reconnected with GProxy++!");
+  m_Game->SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
 }
 
 int64_t CGamePlayer::GetTotalDisconnectTime() const
