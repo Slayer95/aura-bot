@@ -323,6 +323,7 @@ void CGame::Reset(const bool saveStats)
     delete ban;
   }
   m_DBBans.clear();
+  m_DBBanLast = nullptr;
 
   delete m_Stats;
   m_Stats = nullptr;
