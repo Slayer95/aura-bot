@@ -231,6 +231,7 @@ protected:
   bool                           m_Paused;                        // if the game is paused or not
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
+  bool                           m_IsHiddenPlayers;
   bool                           m_HadLeaver;                     // if the game had a leaver after it started
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
   bool                           m_CheckReservation;
@@ -288,6 +289,7 @@ public:
   inline bool           GetCountDownUserInitiated() const { return m_CountDownUserInitiated; }
   inline bool           GetIsMirror() const { return m_IsMirror; }
   inline bool           GetIsDraftMode() const { return m_IsDraftMode; }
+  inline bool           GetIsHiddenPlayers() const { return m_IsHiddenPlayers; }
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
   inline bool           GetLobbyLoading() const { return m_LobbyLoading; }
@@ -454,6 +456,7 @@ public:
   void Reset(const bool saveStats);
   bool GetIsRemakeable();
   void Remake();
+  void CheckPlayerObfuscation();
 
   // other functions
 
@@ -598,6 +601,8 @@ public:
       m_CustomLayout &= ~CUSTOM_LAYOUT_DRAFT;
     }
   }
+
+  inline void SetHiddenPlayers(const bool nIsHiddenPlayers) { m_IsHiddenPlayers = nIsHiddenPlayers; }
 
   void ResetLayout(const bool quiet);
   void ResetLayoutIfNotMatching();

@@ -153,6 +153,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Paused(false),
     m_Desynced(false),
     m_IsDraftMode(false),
+    m_IsHiddenPlayers(false),
     m_HadLeaver(false),
     m_HasMapLock(false),
     m_CheckReservation(nGameSetup->m_ChecksReservation.has_value() ? nGameSetup->m_ChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
@@ -979,7 +980,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
           // print debug information
           double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_Latency) / static_cast<double>(1000.);
-          Print(GetLogPrefix() + "started lagging on " + PlayersToNameListString(laggingPlayers) + ".");
+          Print(GetLogPrefix() + "started lagging on " + PlayersToNameListString(laggingPlayers, true) + ".");
           Print(GetLogPrefix() + "worst lagger is [" + m_Players[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)");
         }
       }
@@ -2741,6 +2742,7 @@ uint8_t CGame::GetActiveReconnectProtocols() const
 
 string CGame::GetActiveReconnectProtocolsDetails() const
 {
+  // Must only be used to print to console, because GetName() is used instead of GetDisplayName()
   vector<string> protocols;
   for (const auto& player : m_Players) {
     if (!player->GetGProxyAny()) {
@@ -3061,7 +3063,7 @@ void CGame::ReportAllPings() const
   }
   vector<string> pingsText;
   for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
-    pingsText.push_back((*i)->GetName() + ": " + (*i)->GetDelayText(false));
+    pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));
   }
   
   SendAllChat(JoinVector(pingsText, false));
@@ -3070,7 +3072,7 @@ void CGame::ReportAllPings() const
     CGamePlayer* worstLagger = SortedPlayers[0];
     string syncDelayText = worstLagger->GetSyncText();
     if (!syncDelayText.empty()) {
-      SendAllChat("[" + worstLagger->GetName() + "] is " + syncDelayText);
+      SendAllChat("[" + worstLagger->GetDisplayName() + "] is " + syncDelayText);
     }
   }
 }
@@ -3127,9 +3129,9 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
   if (player->GetGProxyAny() && m_GameLoaded) {
     if (!player->GetGProxyDisconnectNoticeSent()) {
       if (player->GetGProxyExtended()) {
-        SendAllChat(player->GetName() + " " + "has disconnected, but is using GProxyDLL and may reconnect while others keep playing");
+        SendAllChat(player->GetDisplayName() + " " + "has disconnected, but is using GProxyDLL and may reconnect while others keep playing");
       } else {
-        SendAllChat(player->GetName() + " " + "has disconnected, but is using GProxy++ and may reconnect");
+        SendAllChat(player->GetDisplayName() + " " + "has disconnected, but is using GProxy++ and may reconnect");
       }
       player->SetGProxyDisconnectNoticeSent(true);
     }
@@ -3158,7 +3160,7 @@ void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
 {
   if (player->GetGProxyAny() && m_GameLoaded) {
     if (!player->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(player->GetName() + " " + "has disconnected (connection error - " + player->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
+      SendAllChat(player->GetDisplayName() + " " + "has disconnected (connection error - " + player->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
@@ -3181,7 +3183,7 @@ void CGame::EventPlayerDisconnectConnectionClosed(CGamePlayer* player)
 {
   if (player->GetGProxyAny() && m_GameLoaded) {
     if (!player->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(player->GetName() + " " + "has terminated the connection, but is using GProxy++ and may reconnect");
+      SendAllChat(player->GetDisplayName() + " " + "has terminated the connection, but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
@@ -3204,7 +3206,7 @@ void CGame::EventPlayerDisconnectGameProtocolError(CGamePlayer* player, bool can
 {
   if (canRecover && player->GetGProxyAny() && m_GameLoaded) {
     if (!player->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(player->GetName() + " " + "has disconnected (protocol error) but is using GProxy++ and may reconnect");
+      SendAllChat(player->GetDisplayName() + " " + "has disconnected (protocol error) but is using GProxy++ and may reconnect");
       player->SetGProxyDisconnectNoticeSent(true);
     }
 
@@ -3743,7 +3745,7 @@ bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
     switch((*action->GetAction())[0]) {
       case ACTION_SAVE:
         Print(GetLogPrefix() + "player [" + player->GetName() + "] is saving the game");
-        SendAllChat("Player [" + player->GetName() + "] is saving the game");
+        SendAllChat("Player [" + player->GetDisplayName() + "] is saving the game");
         player->SetSaved(true);
         break;
       case ACTION_PAUSE:
@@ -3850,6 +3852,8 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
       // relay the chat message to other players
 
       bool Relay = !player->GetMuted();
+      // Never allow observers/referees to send private messages to players.
+      // Referee rulings/warnings are expected to be public.
       bool RejectPrivateChat = player->GetIsObserver() && (m_GameLoading || m_GameLoaded);
       bool OnlyToObservers = RejectPrivateChat && (
         m_Map->GetMapObservers() != MAPOBS_REFEREES || (m_UsesCustomReferees && !player->GetIsPowerObserver())
@@ -3883,7 +3887,8 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
         } else if (extraFlags[0] == CHAT_RECV_OBS) {
           // [Observer] or [Referees]
           chatTypeFragment = "[Observer] ";
-        } else {
+        } else if (!m_MuteAll) {
+          // also don't relay in-game private messages if we're currently muting all
           uint8_t privateTarget = extraFlags[0] - 2;
           chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
@@ -3910,7 +3915,7 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
               Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
               Print(GetLogPrefix() + "[Obs/Ref] overriden into [All]");
             } else {
-              Print(GetLogPrefix() + "[Obs/Ref] overriden into [All], but muteAll is active");
+              Print(GetLogPrefix() + "[Obs/Ref] overriden into [All], but muteAll is active (message discarded)");
             }
           } else {
             // enforce observer-only chat, just in case rogue clients are doing funny things
@@ -3939,7 +3944,8 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
           isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
           if (isCommand) {
             player->SetUsedAnyCommands(true);
-            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, !m_MuteAll && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+            // If we want players identities hidden, we must keep bot responses private.
+            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, player, !m_MuteAll && !m_IsHiddenPlayers && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (payload == "?trigger") {
@@ -4487,8 +4493,30 @@ void CGame::EventGameStarted()
   }
 }
 
+void CGame::CheckPlayerObfuscation()
+{
+  if (m_ControllersWithMap < 3) {
+    return;
+  }
+
+  unordered_set<uint8_t> activeTeams = {};
+  for (const auto& slot : m_Slots) {
+    if (slot.GetTeam() == m_Aura->m_MaxSlots) {
+      continue;
+    }
+    if (activeTeams.find(slot.GetTeam()) != activeTeams.end()) {
+      return;
+    }
+    activeTeams.insert(slot.GetTeam());
+  }
+
+  m_IsHiddenPlayers = true;
+}
+
 void CGame::EventGameLoaded()
 {
+  CheckPlayerObfuscation();
+
   uint8_t finishedLoadingPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
   Print(GetLogPrefix() + "finished loading with " + ToDecString(finishedLoadingPlayers) + " players");
 
@@ -4513,8 +4541,8 @@ void CGame::EventGameLoaded()
 
   if (Shortest && Longest)
   {
-    SendAllChat("Shortest load by player [" + Shortest->GetName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
-    SendAllChat("Longest load by player [" + Longest->GetName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+    SendAllChat("Shortest load by player [" + Shortest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+    SendAllChat("Longest load by player [" + Longest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
 
     if (finishedLoadingPlayers < m_StartPlayers) {
       SendAllChat(ToDecString(m_StartPlayers - finishedLoadingPlayers) + " player(s) disconnected during game load.");
@@ -4656,6 +4684,7 @@ void CGame::Remake()
   m_Lagging = false;
   m_Desynced = false;
   m_IsDraftMode = false;
+  m_IsHiddenPlayers = false;
   m_HadLeaver = false;
   m_HasMapLock = false;
   m_UsesCustomReferees = false;
@@ -5845,6 +5874,7 @@ void CGame::ReportSpoofed(const string& server, CGamePlayer* player)
 
 void CGame::AddToRealmVerified(const string& server, CGamePlayer* Player, bool sendMessage)
 {
+  // Must only be called on a lobby, for many reasons (e.g. GetName() used instead of GetDisplayName())
   Player->SetRealmVerified(true);
   if (sendMessage) {
     if (MatchOwnerName(Player->GetName()) && m_OwnerRealm == Player->GetRealmHostName()) {
@@ -6520,6 +6550,7 @@ bool CGame::TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary)
 
   if (Save(player, true)) {
     Pause(player, true);
+    // In FFA games, it's okay to show the real name (instead of GetDisplayName()) when disconnected.
     SendAllChat("Game saved on " + player->GetName() + "'s disconnection.");
     SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
     return true;
