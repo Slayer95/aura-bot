@@ -855,8 +855,10 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey)
 {
+  // Note: Do NOT ban |, since it's used for so-called barcode names in Battle.net
   unordered_set<char> charsToRemoveAnyWhere = {
-    ',', '[', ']',
+    // Characters used in commands
+    ',', '[', ']', '@',
 
     // TAB, LF, CR, FF
     '\t', '\n', '\r', '\f',
@@ -864,7 +866,10 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
     // NULL, beep, BS, ESC, DEL, 
     '\x00', '\x07', '\x08', '\x1B', '\x7F'
   };
-  unordered_set<char> charsToRemoveStart = {'#', '@', ' '};
+
+  // # only needs to be banned from names' start
+  // In particular, it must NOT be banned in trailing #\d+ patterns.
+  unordered_set<char> charsToRemoveStart = {'#', ' '};
   unordered_set<char> charsToRemoveEnd = {' ', '.'};
 
   m_Name.erase(
