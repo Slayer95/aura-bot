@@ -4822,6 +4822,41 @@ CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
   return nullptr;
 }
 
+uint8_t CGame::GetBannableFromNamePartial(string name, CDBBan*& banPlayer) const
+{
+  uint8_t Matches = 0;
+  if (name.empty()) {
+    banPlayer = nullptr;
+    return Matches;
+  }
+
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+
+  // try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
+
+  for (auto& ban : m_DBBans) {
+    string TestName = ban->GetName();
+    transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
+
+    if (TestName.find(name) != string::npos) {
+      ++Matches;
+      banPlayer = ban;
+
+      // if the name matches exactly stop any further matching
+
+      if (TestName == name) {
+        Matches = 1;
+        break;
+      }
+    }
+  }
+
+  if (Matches != 1) {
+    banPlayer = nullptr;
+  }
+  return Matches;
+}
+
 CGamePlayer* CGame::GetPlayerFromColor(uint8_t colour) const
 {
   for (uint8_t i = 0; i < m_Slots.size(); ++i)
