@@ -303,6 +303,7 @@ public:
   CDBGamePlayerSummary* GamePlayerSummaryCheck(const std::string& name, const std::string& server);
   void UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
   CDBDotAPlayerSummary* DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
+  std::string GetLatestIP(const std::string& name, const std::string& server);
 
   // Games
   void GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::vector<uint8_t>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);

@@ -695,15 +695,17 @@ bool CAuraDB::BanAdd(string user, const string& server, const string& authserver
 
     const int32_t RC = m_DB->Step(Statement);
 
-    if (RC == SQLITE_DONE)
+    if (RC == SQLITE_DONE) {
       Success = true;
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error adding ban [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + "] - " + m_DB->GetError());
+      Print("[SQLITE3] new ban added [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + " : " + ip + "]");
+    } else if (RC == SQLITE_ERROR) {
+      Print("[SQLITE3] error adding ban [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + " : " + ip + "] - " + m_DB->GetError());
+    }
 
     m_DB->Finalize(Statement);
+  } else {
+    Print("[SQLITE3] prepare error adding ban [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + " : " + ip + "] - " + m_DB->GetError());
   }
-  else
-    Print("[SQLITE3] prepare error adding ban [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + "] - " + m_DB->GetError());
 
   return Success;
 }
@@ -1070,6 +1072,38 @@ CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(const string& rawName, con
     Print("[SQLITE3] prepare error checking dotaplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
 
   return DotAPlayerSummary;
+}
+
+string CAuraDB::GetLatestIP(const string& rawName, const string& server)
+{
+  sqlite3_stmt*         Statement;
+  string latestIP;
+  string name = rawName;
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  m_DB->Prepare("SELECT latestip FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
+
+  if (Statement)
+  {
+    sqlite3_bind_text(Statement, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
+
+    const int32_t RC = m_DB->Step(Statement);
+
+    if (RC == SQLITE_ROW) {
+      if (sqlite3_column_count(Statement) == 1) {
+        latestIP  = string((char*)sqlite3_column_text(Statement, 0));
+      } else {
+        Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - row doesn't have 1 column");
+      }
+    } else if (RC == SQLITE_ERROR) {
+      Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+    }
+    m_DB->Finalize(Statement);
+  } else {
+    Print("[SQLITE3] prepare error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+  }
+
+  return latestIP;
 }
 
 void CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const vector<uint8_t>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
