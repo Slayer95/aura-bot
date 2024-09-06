@@ -3528,14 +3528,24 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
-        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>, <REASON>");
         break;
       }
 
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>, <REASON>");
+        break;
+      }
+
+      string inputTarget = Args[0];
+      string reason = Args[1];
+
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3560,7 +3570,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      string reason = "whatever";
       string ip = m_Aura->m_DB->GetLatestIP(targetName, targetHostName);
 
       if (m_SourceRealm && authServer == targetHostName) {
