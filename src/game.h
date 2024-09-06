@@ -78,6 +78,7 @@
 #define REFRESH_PERIOD_MAX 500
 #define LAG_TOLERANCE_MIN_TIME 100
 #define LAG_TOLERANCE_MAX_TIME 2000
+#define GAME_BANNABLE_MAX_HISTORY_SIZE 32
 
 //
 // CGame
@@ -456,6 +457,9 @@ public:
   void Reset(const bool saveStats);
   bool GetIsRemakeable();
   void Remake();
+  void AddProvisionalBannableUser(const CGamePlayer* player);
+  void ClearBannableUsers();
+  void UpdateBannableUsers();
   void CheckPlayerObfuscation();
 
   // other functions

@@ -220,8 +220,8 @@ public:
   inline std::string           GetLeftReason() const { return m_LeftReason; }
   inline uint32_t              GetLeftCode() const { return m_LeftCode; }
   inline bool                  GetQuitGame() const { return m_QuitGame; }
-  CRealm*                      GetRealm(bool mustVerify);
-  std::string                  GetRealmDataBaseID(bool mustVerify);
+  CRealm*                      GetRealm(bool mustVerify) const;
+  std::string                  GetRealmDataBaseID(bool mustVerify) const;
   inline uint32_t              GetRealmInternalID() const { return m_RealmInternalId; }
   inline std::string           GetRealmHostName() const { return m_RealmHostName; }
   inline std::string           GetExtendedName() const {

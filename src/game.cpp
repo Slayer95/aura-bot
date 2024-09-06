@@ -320,11 +320,7 @@ void CGame::Reset(const bool saveStats)
   }
   m_DBGamePlayers.clear();
 
-  for (auto& ban : m_DBBans) {
-    delete ban;
-  }
-  m_DBBans.clear();
-  m_DBBanLast = nullptr;
+  ClearBannableUsers();
 
   delete m_Stats;
   m_Stats = nullptr;
@@ -3414,8 +3410,9 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
 
   // send a welcome message
 
-  if (!m_RestoredGame)
+  if (!m_RestoredGame) {
     SendWelcomeMessage(Player);
+  }
 
   for (const auto& otherPlayer :  m_Players) {
     if (otherPlayer == Player || otherPlayer->GetLeftMessageSent()) {
@@ -3425,6 +3422,8 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
       SendChat(otherPlayer->GetPID(), Player, otherPlayer->GetPinnedMessage(), LOG_LEVEL_DEBUG);
     }
   }
+
+  AddProvisionalBannableUser(Player);
 
   string notifyString = "";
   if (m_NotifyJoins && m_IgnoredNotifyJoinPlayers.find(joinRequest->GetName()) == m_IgnoredNotifyJoinPlayers.end()) {
@@ -4472,6 +4471,67 @@ void CGame::EventGameStarted()
   // and finally reenter battle.net chat
   AnnounceDecreateToRealms();
 
+  ClearBannableUsers();
+  UpdateBannableUsers();
+}
+
+void CGame::AddProvisionalBannableUser(const CGamePlayer* player)
+{
+  const bool isOversized = m_DBBans.size() > GAME_BANNABLE_MAX_HISTORY_SIZE;
+  bool matchedSameName = false, matchedShrink = false;
+  size_t matchIndex = 0, shrinkIndex = 0;
+  while (matchIndex < m_DBBans.size()) {
+    if (player->GetName() == m_DBBans[matchIndex]->GetName()) {
+      matchedSameName = true;
+      break;
+    }
+    if (isOversized && !matchedShrink && GetPlayerFromName(m_DBBans[matchIndex]->GetName(), true) == nullptr) {
+      shrinkIndex = matchIndex;
+      matchedShrink = true;
+    }
+    matchIndex++;
+  }
+
+  if (matchedSameName) {
+    delete m_DBBans[matchIndex];
+  } else if (matchedShrink) {
+    delete m_DBBans[shrinkIndex];
+    m_DBBans.erase(m_DBBans.begin() + shrinkIndex);
+  }
+
+  CDBBan* ban = new CDBBan(
+    player->GetName(),
+    player->GetRealmDataBaseID(false),
+    string(), // auth server
+    player->GetIPStringStrict(),
+    string(), // date
+    string(), // expiry
+    false, // temporary ban (permanent == false)
+    string(), // moderator
+    string(), // reason
+    true // potential
+  );
+
+  if (matchedSameName) {
+    m_DBBans[matchIndex] = ban;
+  } else {
+    m_DBBans.push_back(ban);
+  }
+
+  m_DBBanLast = ban;
+}
+
+void CGame::ClearBannableUsers()
+{
+  for (auto& ban : m_DBBans) {
+    delete ban;
+  }
+  m_DBBans.clear();
+  m_DBBanLast = nullptr;
+}
+
+void CGame::UpdateBannableUsers()
+{
   // record everything we need to ban each player in case we decide to do so later
   // this is because when a player leaves the game an admin might want to ban that player
   // but since the player has already left the game we don't have access to their information anymore

@@ -350,7 +350,7 @@ string CGamePlayer::GetDisplayName() const
   return m_Name;
 }
 
-CRealm* CGamePlayer::GetRealm(bool mustVerify)
+CRealm* CGamePlayer::GetRealm(bool mustVerify) const
 {
   if (m_RealmInternalId < 0x10)
     return nullptr;
@@ -362,7 +362,7 @@ CRealm* CGamePlayer::GetRealm(bool mustVerify)
   return m_Game->m_Aura->GetRealmByInputId(m_Game->m_Aura->m_RealmsIdentifiers[m_RealmInternalId]);
 }
 
-string CGamePlayer::GetRealmDataBaseID(bool mustVerify)
+string CGamePlayer::GetRealmDataBaseID(bool mustVerify) const
 {
   CRealm* Realm = GetRealm(mustVerify);
   if (Realm) return Realm->GetDataBaseID();
