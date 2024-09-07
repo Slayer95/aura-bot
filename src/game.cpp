@@ -4622,8 +4622,9 @@ void CGame::EventGameLoaded()
 
   if (GetIsSinglePlayerMode()) {
     SendAllChat("HINT: Single-player game detected. In-game commands will be DISABLED.");
-    // FIXME? This creates a lag spike client-side.
-    StopPlayers("single-player game untracked", true);
+    // FIXME? This used to create a large lag spike client-side.
+    // Nowadays, it's worse: it causes the WC3 client to straight up quit the game.
+    //StopPlayers("single-player game untracked", true);
   }
 
   HandleGameLoadedStats();
