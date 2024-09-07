@@ -346,7 +346,7 @@ uint32_t CGamePlayer::GetPing() const
 
 string CGamePlayer::GetDisplayName() const
 {
-  if (m_Game->GetIsHiddenPlayers()) return "Player ?";
+  if (!m_Observer && m_Game->GetIsHiddenPlayers()) return "Player ?";
   return m_Name;
 }
 
