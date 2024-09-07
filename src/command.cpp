@@ -3171,6 +3171,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->GetMap()->GetMapObservers() != MAPOBS_REFEREES) {
+        ErrorReply("This game does not allow referees.");
+        break;
+      }
+
       m_TargetGame->SetUsesCustomReferees(true);
       for (auto& otherPlayer: m_TargetGame->m_Players) {
         if (otherPlayer->GetIsObserver())
