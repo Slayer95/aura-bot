@@ -5136,26 +5136,37 @@ std::vector<uint8_t> CGame::GetObserverPIDs(uint8_t excludePID) const
   return result;
 }
 
-uint8_t CGame::GetHostPID() const
+uint8_t CGame::GetPublicHostPID() const
 {
-  // return the player to be considered the host (it can be any player) - mainly used for sending text messages from the bot
   // try to find the virtual host player first
 
-  if (m_VirtualHostPID != 0xFF)
+  if (m_VirtualHostPID != 0xFF) {
     return m_VirtualHostPID;
+  }
 
   // try to find the fakeplayer next
 
-  if (!m_FakePlayers.empty())
-    return static_cast<uint8_t>(m_FakePlayers[m_FakePlayers.size() - 1]);
+  if (!m_FakePlayers.empty()) {
+    if (!m_GameLoading && !m_GameLoaded) {
+      return static_cast<uint8_t>(m_FakePlayers[m_FakePlayers.size() - 1]);
+    }
+    for (auto& fakePlayer : m_FakePlayers) {
+      if (GetIsFakeObserver(fakePlayer) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+        continue;
+      }
+      return static_cast<uint8_t>(fakePlayer);
+    }
+  }
 
   // try to find the owner player next
 
-  for (auto& player : m_Players)
-  {
-    if (player->GetLeftMessageSent())
+  for (auto& player : m_Players) {
+    if (player->GetLeftMessageSent()) {
       continue;
-
+    }
+    if (player->GetIsObserver() && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+      continue;
+    }
     if (MatchOwnerName(player->GetName())) {
       if (player->IsRealmVerified() && player->GetRealmHostName() == m_OwnerRealm) {
         return player->GetPID();
@@ -5168,14 +5179,81 @@ uint8_t CGame::GetHostPID() const
   }
 
   // okay then, just use the first available player
+  uint8_t fallbackPID = 0xFF;
 
-  for (auto& player : m_Players)
-  {
-    if (!player->GetLeftMessageSent())
+  for (auto& player : m_Players) {
+    if (player->GetLeftMessageSent()) {
+      continue;
+    }
+    if (player->GetCanUsePublicChat()) {
       return player->GetPID();
+    } else if (fallbackPID == 0xFF) {
+      fallbackPID = player->GetPID();
+    }
   }
 
-  return 0xFF;
+  return fallbackPID;
+}
+
+uint8_t CGame::GetHiddenHostPID() const
+{
+  // try to find the virtual host player first
+
+  if (m_VirtualHostPID != 0xFF) {
+    return m_VirtualHostPID;
+  }
+
+  vector<uint8_t> availablePIDs;
+  //vector<uint8_t> availableRefereePIDs;
+  for (auto& fakePlayer : m_FakePlayers) {
+    if (GetIsFakeObserver(fakePlayer) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+      continue;
+    }
+    if (GetIsFakeObserver(fakePlayer)) {
+      //availableRefereePIDs.push_back(static_cast<uint8_t>(fakePlayer));
+      return static_cast<uint8_t>(fakePlayer);
+    } else {
+      availablePIDs.push_back(static_cast<uint8_t>(fakePlayer));
+    }
+  }
+
+  uint8_t fallbackPID = 0xFF;
+  for (auto& player : m_Players) {
+    if (player->GetLeftMessageSent()) {
+      continue;
+    }
+    if (player->GetCanUsePublicChat()) {
+      if (player->GetIsObserver()) {
+        //availableRefereePIDs.push_back(player->GetPID());
+        return player->GetPID();
+      } else {
+        availablePIDs.push_back(player->GetPID());
+      }
+    } else if (fallbackPID == 0xFF) {
+      fallbackPID = player->GetPID();
+    }
+  }
+
+  if (!availablePIDs.empty()) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distribution(1, static_cast<int>(availablePIDs.size()));
+    return availablePIDs[distribution(gen) - 1];
+  }
+
+  return fallbackPID;
+}
+
+uint8_t CGame::GetHostPID() const
+{
+  // return the player to be considered the host (it can be any player)
+  // mainly used for sending text messages from the bot
+
+  if (m_IsHiddenPlayers) {
+    return GetHiddenHostPID();
+  } else {
+    return GetPublicHostPID();
+  }
 }
 
 CGameSlot* CGame::GetSlot(const uint8_t SID)
@@ -6323,13 +6401,10 @@ bool CGame::GetCanStartGracefulCountDown() const
   }
 
   for (const auto& player : m_Players) {
-    // Skip observers
+    // Skip non-referee observers
     if (!player->GetIsOwner(nullopt) && player->GetIsObserver()) {
-      if (m_UsesCustomReferees) {
-        if (!player->GetIsPowerObserver()) continue;
-      } else {
-        if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
-      }
+      if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
+      if (m_UsesCustomReferees && !player->GetIsPowerObserver()) continue;
     }
 
     CRealm* realm = player->GetRealm(false);
@@ -6442,13 +6517,10 @@ void CGame::StartCountDown(bool fromUser, bool force)
 
     string NotVerified;
     for (const auto& player : m_Players) {
-      // Skip observers
+      // Skip non-referee observers
       if (!player->GetIsOwner(nullopt) && player->GetIsObserver()) {
-        if (m_UsesCustomReferees) {
-          if (!player->GetIsPowerObserver()) continue;
-        } else {
-          if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
-        }
+        if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
+        if (m_UsesCustomReferees && !player->GetIsPowerObserver()) continue;
       }
       CRealm* realm = player->GetRealm(false);
       if (realm && realm->GetUnverifiedCannotStartGame() && !player->IsRealmVerified()) {
@@ -6803,6 +6875,12 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
     }
   }
   return false;
+}
+
+bool CGame::GetIsFakeObserver(const uint16_t fakePlayer) const
+{
+  const CGameSlot* slot = InspectSlot(fakePlayer >> 8);
+  return slot != nullptr && slot->GetTeam() == m_Aura->m_MaxSlots;
 }
 
 uint8_t CGame::FakeAllSlots()

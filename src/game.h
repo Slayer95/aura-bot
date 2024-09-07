@@ -487,6 +487,8 @@ public:
   std::vector<uint8_t> GetPIDs(uint8_t excludePID) const;
   std::vector<uint8_t> GetObserverPIDs() const;
   std::vector<uint8_t> GetObserverPIDs(uint8_t excludePID) const;
+  uint8_t GetPublicHostPID() const;
+  uint8_t GetHiddenHostPID() const;
   uint8_t GetHostPID() const;
   uint8_t GetEmptySID(bool reserved) const;
   uint8_t GetEmptySID(uint8_t team, uint8_t PID) const;
@@ -522,6 +524,7 @@ public:
   bool CreateFakePlayer(const bool useVirtualHostName);
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);
+  bool GetIsFakeObserver(const uint16_t fakePlayer) const;
 
   uint8_t FakeAllSlots();
   void DeleteFakePlayers();
