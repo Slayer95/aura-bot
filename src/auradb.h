@@ -291,6 +291,8 @@ public:
   uint32_t BanCount(const std::string& authserver);
   CDBBan* UserBanCheck(std::string user, const std::string& server, const std::string& authserver);
   CDBBan* IPBanCheck(std::string ip, const std::string& authserver);
+  bool GetIsUserBanned(std::string user, const std::string& server, const std::string& authserver);
+  bool GetIsIPBanned(std::string ip, const std::string& authserver);
   bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
   bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
   bool BanAddPermanent(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
@@ -332,6 +334,7 @@ private:
   std::string m_Moderator;
   std::string m_Reason;
   bool m_Potential;
+  bool m_Suspect;
   
 public:
   CDBBan(std::string nName, std::string nServer, std::string nAuthServer, std::string nIP, std::string nDate, std::string nExpiry, bool nPermanent, std::string nModerator, std::string nReason, bool nPotential = false);
@@ -346,7 +349,9 @@ public:
   inline std::string GetModerator() const { return m_Moderator; }
   inline std::string GetReason() const { return m_Reason; }
   inline bool GetPotential() const { return m_Potential; }
+  inline bool GetSuspect() const { return m_Suspect; }
   inline void ClearPotential() { m_Potential = false; }
+  inline void SetSuspect(bool nSuspect) { m_Suspect = nSuspect; }
 };
 
 //

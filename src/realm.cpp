@@ -1308,19 +1308,12 @@ bool CRealm::GetIsSudoer(string name) const
 
 bool CRealm::IsBannedPlayer(string name, string hostName) const
 {
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
-  CDBBan* Ban = m_Aura->m_DB->UserBanCheck(name, hostName, m_Config->m_DataBaseID);
-  if (!Ban) return false;
-  delete Ban;
-  return true;
+  return m_Aura->m_DB->GetIsUserBanned(name, hostName, m_Config->m_DataBaseID);
 }
 
 bool CRealm::IsBannedIP(string ip) const
 {
-  CDBBan* Ban = m_Aura->m_DB->IPBanCheck(ip, m_Config->m_DataBaseID);
-  if (!Ban) return false;
-  delete Ban;
-  return true;
+  return m_Aura->m_DB->GetIsIPBanned(ip, m_Config->m_DataBaseID);
 }
 
 void CRealm::HoldFriends(CGame* game)

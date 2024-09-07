@@ -544,6 +544,12 @@ public:
   void RemoveAllReserved();
   bool MatchOwnerName(const std::string& name) const;
   uint8_t GetReservedIndex(const std::string& name) const;
+
+  bool GetIsGameScopeBanned(const std::string& name, const std::string& hostName) const;
+  std::string GetBannableIP(const std::string& name, const std::string& hostName) const;
+  bool AddGameScopeBan(const std::string& name, const std::string& hostName, const std::string& ip);
+  bool RemoveGameScopeBan(const std::string& name, const std::string& hostName);
+
   std::vector<uint32_t> GetPlayersFramesBehind() const;
   std::vector<CGamePlayer*> GetLaggingPlayers() const;
   std::vector<CGamePlayer*> CalculateNewLaggingPlayers() const;

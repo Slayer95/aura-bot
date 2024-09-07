@@ -593,7 +593,7 @@ CDBBan* CAuraDB::UserBanCheck(string user, const string& server, const string& a
   transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   if (!UserBanCheckStmt)
-    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &UserBanCheckStmt);
+    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &UserBanCheckStmt);
 
   if (UserBanCheckStmt)
   {
@@ -620,7 +620,7 @@ CDBBan* CAuraDB::UserBanCheck(string user, const string& server, const string& a
         Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason, false);
       }
       else
-        Print("[SQLITE3] error checking ban [" + server + " : " + user + "] - row doesn't have 8 columns");
+        Print("[SQLITE3] error checking ban [" + server + " : " + user + "] - row doesn't have 9 columns");
     }
     else if (RC == SQLITE_ERROR)
       Print("[SQLITE3] error checking ban [" + server + " : " + user + "] - " + m_DB->GetError());
@@ -638,7 +638,7 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
   CDBBan* Ban = nullptr;
 
   if (!IPBanCheckStmt)
-    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, moderator, reason FROM bans WHERE ip=? AND authserver=?", &IPBanCheckStmt);
+    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE ip=? AND authserver=?", &IPBanCheckStmt);
 
   if (IPBanCheckStmt)
   {
@@ -664,7 +664,7 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
         Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason, false);
       }
       else
-        Print("[SQLITE3] error checking ban [" + ip + "] - row doesn't have 8 columns");
+        Print("[SQLITE3] error checking ban [" + ip + "] - row doesn't have 9 columns");
     }
     else if (RC == SQLITE_ERROR)
       Print("[SQLITE3] error checking ban [" + ip + "] - " + m_DB->GetError());
@@ -677,12 +677,32 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
   return Ban;
 }
 
+bool CAuraDB::GetIsUserBanned(string user, const string& server, const string& authserver)
+{
+  CDBBan* ban = UserBanCheck(user, server, authserver);
+  if (ban) {
+    delete ban;
+    return true;
+  }
+  return false;
+}
+
+bool CAuraDB::GetIsIPBanned(string ip, const string& authserver)
+{
+  CDBBan* ban = IPBanCheck(ip, authserver);
+  if (ban) {
+    delete ban;
+    return true;
+  }
+  return false;
+}
+
 bool CAuraDB::BanAdd(string user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason)
 {
   bool          Success = false;
   sqlite3_stmt* Statement = nullptr;
   transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
-  m_DB->Prepare("INSERT INTO bans ( name, server, authserver, ip, date, expiry, permanent, moderator, reason ) VALUES ( ?, ?, ?, ?, data('now'), date('now', '+10 days'), 0, ?, ? )", reinterpret_cast<void**>(&Statement));
+  m_DB->Prepare("INSERT INTO bans ( name, server, authserver, ip, date, expiry, permanent, moderator, reason ) VALUES ( ?, ?, ?, ?, date('now'), date('now', '+10 days'), 0, ?, ? )", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
   {
@@ -1368,7 +1388,8 @@ CDBBan::CDBBan(string nName, string nServer, string nAuthServer, string nIP, str
     m_Permanent(nPermanent),
     m_Moderator(std::move(nModerator)),
     m_Reason(std::move(nReason)),
-    m_Potential(nPotential)
+    m_Potential(nPotential),
+    m_Suspect(false)
 {
 }
 

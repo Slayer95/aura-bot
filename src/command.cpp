@@ -2028,10 +2028,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !BANLAST
+    // !PBANLAST
     //
 
-    case HashCode("banlast"):
+    case HashCode("pbanlast"):
+    case HashCode("pbl"):
     case HashCode("bl"): {
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
@@ -2044,21 +2045,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("No ban candidates stored.");
         break;
       }
-      if (m_Aura->m_Realms.empty()) {
-        ErrorReply("No realms joined.");
-        break;
-      }
 
       string lower = Payload;
       transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
       bool isConfirm = lower == "c" || lower == "confirm";
 
-      if (m_TargetGame->m_DBBanLast->GetPotential()) {
+      if (!m_TargetGame->m_DBBanLast->GetSuspect()) {
         if (isConfirm) {
           ErrorReply("Usage: " + cmdToken + "banlast");
           break;
         }
-        m_TargetGame->m_DBBanLast->ClearPotential();
+        m_TargetGame->m_DBBanLast->SetSuspect(true);
         SendReply("Player [" + m_TargetGame->m_DBBanLast->GetName() + "@" + m_TargetGame->m_DBBanLast->GetServer() + "] was the last leaver.");
         SendReply("Use " + cmdToken + "banlast confirm to ban them.");        
         break;
@@ -2067,10 +2064,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Usage: " + cmdToken + "banlast confirm");
           break;
         }
+        string authServer = m_ServerName;
+        if (m_SourceRealm) {
+          authServer = m_SourceRealm->GetDataBaseID();
+        }
         m_Aura->m_DB->BanAdd(
           m_TargetGame->m_DBBanLast->GetName(),
           m_TargetGame->m_DBBanLast->GetServer(),
-          m_ServerName,
+          authServer,
           m_TargetGame->m_DBBanLast->GetIP(),
           m_FromName,
           "Leaver"
@@ -3388,9 +3389,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("checkban"): {
-      if (m_Aura->m_Realms.empty())
-        break;
-
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("Not allowed to check ban status.");
         break;
@@ -3417,12 +3415,21 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> CheckResult;
       for (auto& realm : m_Aura->m_Realms) {
-        if (realm->GetIsMirror())
+        if (realm->GetIsMirror()) {
           continue;
+        }
 
         CDBBan* Ban = m_Aura->m_DB->UserBanCheck(targetName, targetHostName, realm->GetDataBaseID());
         if (Ban) {
           CheckResult.push_back("[" + realm->GetServer() + "] - banned by [" + Ban->GetModerator() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
+          delete Ban;
+        }
+      }
+
+      {
+        CDBBan* Ban = m_Aura->m_DB->UserBanCheck(targetName, targetHostName, string());
+        if (Ban) {
+          CheckResult.push_back("[LAN/VPN] - banned by [" + Ban->GetModerator() + "] because [" + Ban->GetReason() + "] (" + Ban->GetDate() + ")");
           delete Ban;
         }
       }
@@ -3516,20 +3523,112 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       break;
     }
-    
-    //
-    // !ADDBAN
-    // !BAN
-    //
 
-    case HashCode("addban"):
     case HashCode("ban"): {
-      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
-        ErrorReply("Not allowed to ban players.");
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby()) {
+        ErrorReply("This command may only be used in a game lobby, and will only affect it. For persistent bans, use " + cmdToken + "pban .");
         break;
       }
-      if (m_Aura->m_Realms.empty()) {
-        ErrorReply("No realms joined.");
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot ban users.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>, <REASON>");
+        break;
+      }
+
+      // Demand a reason to ensure transparency.
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>, <REASON>");
+        break;
+      }
+
+      string inputTarget = Args[0];
+      string reason = Args[1];
+
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+        } else {
+          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
+          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
+        }
+        break;
+      }
+
+      if (m_TargetGame->GetIsGameScopeBanned(targetName, targetHostName)) {
+        ErrorReply("[" + targetName + "@" + targetHostName + "] was already banned from this game.");
+        break;
+      }
+
+      string targetIP = m_TargetGame->GetBannableIP(targetName, targetHostName);
+      if (targetIP.empty()) {
+        targetIP = m_Aura->m_DB->GetLatestIP(targetName, targetHostName);
+      }
+
+      if (!m_TargetGame->AddGameScopeBan(targetName, targetHostName, targetIP)) {
+        ErrorReply("Failed to ban [" + targetName + "@" + targetHostName + "] from joining this game.");
+        break;
+      }
+
+      SendReply("[" + targetName + "@" + targetHostName + "] banned from joining this game.");
+      break;
+    }
+
+    case HashCode("unban"): {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobby()) {
+        ErrorReply("This command may only be used in a game lobby, and will only affect it. For persistent bans, use " + cmdToken + "punban .");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot unban users.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>@<REALM>");
+        break;
+      }
+
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+        } else {
+          ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>@<REALM>");
+        }
+        break;
+      }
+      if (!m_TargetGame->GetIsGameScopeBanned(targetName, targetHostName)) {
+        ErrorReply("[" + targetName + "@" + targetHostName + "] was not banned from this game.");
+        break;
+      }
+
+      if (!m_TargetGame->RemoveGameScopeBan(targetName, targetHostName)) {
+        ErrorReply("Failed to unban user [" + targetName + "@" + targetHostName + "].");
+        break;
+      }
+
+      SendReply("User [" + targetName + "@" + targetHostName + "] will now be allowed to join this game.");
+    }
+
+    //
+    // !PBAN
+    //
+
+    case HashCode("pban"): {
+      if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
+        ErrorReply("Not allowed to persistently ban players.");
         break;
       }
       if (Payload.empty()) {
@@ -3586,7 +3685,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
-      if (!m_Aura->m_DB->BanAdd(targetName, targetHostName, authServer,ip, m_FromName, reason)) {
+      if (!m_Aura->m_DB->BanAdd(targetName, targetHostName, authServer, ip, m_FromName, reason)) {
         ErrorReply("Failed to execute ban.");
         break;
       }
@@ -3595,16 +3694,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !UNBAN
+    // !UNPBAN
     //
 
-    case HashCode("unban"): {
+    case HashCode("unpban"):
+    case HashCode("punban"): {
       if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
-        ErrorReply("Not allowed to ban players.");
+        ErrorReply("Not allowed to remove persistent bans.");
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>@<REALM>");
+        ErrorReply("Usage: " + cmdToken + "punban <PLAYERNAME>@<REALM>");
         break;
       }
       string targetName, targetHostName;
@@ -3613,19 +3713,38 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
-          ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>@<REALM>");
+          ErrorReply("Usage: " + cmdToken + "punban <PLAYERNAME>@<REALM>");
         }
         break;
       }
       if (targetRealm) {
         targetHostName = targetRealm->GetDataBaseID();
       }
-      if (!m_Aura->m_DB->BanRemove(targetName, targetHostName, m_ServerName)) {
-        ErrorReply("Failed to unban user [" + targetName + "@" + targetHostName + "] (they might not be banned).");
+      string authServer = m_ServerName;
+      if (m_SourceRealm) {
+        authServer = m_SourceRealm->GetDataBaseID();
+      }
+      CDBBan* Ban = m_Aura->m_DB->UserBanCheck(targetName, targetHostName, authServer);
+      if (Ban) {
+        delete Ban;
+      } else if (m_ServerName.empty()) {
+        ErrorReply("User [" + targetName + "@" + targetHostName + "] is not banned on [LAN/VPN].");
+        break;
+      } else {
+        ErrorReply("User [" + targetName + "@" + targetHostName + "] is not banned on " + m_ServerName + ".");
         break;
       }
 
-      SendReply("Unbanned user [" + Payload + "] on all realms.");
+      if (!m_Aura->m_DB->BanRemove(targetName, targetHostName, authServer)) {
+        ErrorReply("Failed to unban user [" + targetName + "@" + targetHostName + "].");
+        break;
+      }
+
+      if (m_ServerName.empty()) {
+        SendReply("Unbanned user [" + targetName + "@" + targetHostName + "] on [LAN/VPN].");
+      } else {
+        SendReply("Unbanned user [" + targetName + "@" + targetHostName + "] on [" + m_ServerName + "].");
+      }
       break;
     }
 

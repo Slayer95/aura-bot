@@ -3648,6 +3648,9 @@ bool CGame::CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* j
   if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
     isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedPlayer(joinRequest->GetName(), hostName);
   }
+  if (!isBanned && m_CreatedFromType != GAMESETUP_ORIGIN_REALM) {
+    isBanned = m_Aura->m_DB->GetIsUserBanned(joinRequest->GetName(), hostName, string());
+  }
   if (isBanned) {
     string scopeFragment;
     if (isSelfServerBanned) {
@@ -3676,6 +3679,9 @@ bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joi
   bool isBanned = isSelfServerBanned;
   if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
     isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedIP(connection->GetIPStringStrict());
+  }
+  if (!isBanned && m_CreatedFromType != GAMESETUP_ORIGIN_REALM) {
+    isBanned = m_Aura->m_DB->GetIsIPBanned(connection->GetIPStringStrict(), string());
   }
   if (isBanned) {
     string scopeFragment;
@@ -6152,6 +6158,28 @@ uint8_t CGame::GetReservedIndex(const string& name) const
   }
 
   return index;
+}
+
+bool CGame::GetIsGameScopeBanned(const string& name, const string& hostName) const
+{
+  return false;
+}
+
+string CGame::GetBannableIP(const string& name, const string& hostName) const
+{
+  return string();
+}
+
+bool CGame::AddGameScopeBan(const string& name, const string& hostName, const string& ip)
+{
+  // TODO: Unimplemented
+  return false;
+}
+
+bool CGame::RemoveGameScopeBan(const string& name, const string& hostName)
+{
+  // TODO: Unimplemented
+  return false;
 }
 
 vector<uint32_t> CGame::GetPlayersFramesBehind() const
