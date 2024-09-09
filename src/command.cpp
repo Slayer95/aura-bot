@@ -2586,8 +2586,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Payload.length() >= 31) {
-        ErrorReply("Unable to create game [" + Payload + "]. The game name is too long (the maximum is 31 characters)");
+      if (Payload.length() > m_Aura->m_MaxGameNameSize) {
+        ErrorReply("Unable to create game [" + Payload + "]. The game name is too long (the maximum is " + to_string(m_Aura->m_MaxGameNameSize) + " characters)");
         break;
       }
 
@@ -4140,17 +4140,35 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      bool ToAllRealms = Payload == "*";
+      string renameTarget;
+      vector<string> Args = SplitArgs(Payload, 1u, 2u);
+      if (Args.size() >= 2) {
+        renameTarget = TrimString(Args[1]);
+        if (renameTarget.length() > m_Aura->m_MaxGameNameSize) {
+          ErrorReply("Unable to rename to [" + renameTarget + "]. The game name is too long (the maximum is " + to_string(m_Aura->m_MaxGameNameSize) + " characters)");
+          break;
+        }
+      } else if (m_TargetGame->GetHasPvPGNPlayers()) {
+        // PvGPN servers keep references to all games to which any PvPGN users have joined.
+        // Therefore, the bot leaving the game isn't enough for it to be considered unhosted.
+        // QueueGameUncreate doesn't seem to work, either.
+        ErrorReply("Usage: " + cmdToken + "announce <REALM>, <GAME NAME>");
+        break;
+      }
+
+      
+
+      bool toAllRealms = Args[0] == "*";
       CRealm* targetRealm = nullptr;
-      if (ToAllRealms) {
+      if (toAllRealms) {
         if (0 != (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
           ErrorReply("Announcing on all realms requires sudo permissions."); // But not really
           break;
         }
       } else {
-        targetRealm = GetTargetRealmOrCurrent(Payload);
+        targetRealm = GetTargetRealmOrCurrent(Args[0]);
         if (!targetRealm) {
-          ErrorReply("Usage: " + cmdToken + "announce <REALM>");
+          ErrorReply("Usage: " + cmdToken + "announce <REALM>, <GAME NAME>");
           break;
         }
         if (!m_TargetGame->GetIsSupportedGameVersion(targetRealm->GetGameVersion())) {
@@ -4160,6 +4178,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->m_DisplayMode = GAME_PUBLIC;
+      if (Args.size() >= 2) {
+        m_TargetGame->m_GameName = renameTarget;
+      }
+      m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
       m_TargetGame->m_RealmRefreshError = false;
       string earlyFeedback = "Announcement sent.";
       if (ToAllRealms) {
