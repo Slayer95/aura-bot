@@ -82,6 +82,17 @@ inline std::string ToFormattedString(const double d, const uint8_t precision = 2
   return out.str();
 }
 
+inline std::string ToFormattedRealm()
+{
+  return "@@LAN/VPN";
+}
+
+inline std::string ToFormattedRealm(const std::string& hostName)
+{
+  if (hostName.empty()) return "@@LAN/VPN";
+  return hostName;
+}
+
 inline void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const uint32_t offset, bool bigEndian = false)
 {
   if (!bigEndian) {
@@ -928,6 +939,20 @@ inline bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> co
     --element;
   } while (counters[element] != 0 && element > 0);
   return counters[element] == 0;
+}
+
+inline std::string ToLowerCase(const std::string& input)
+{
+  std::string output = input;
+  std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::tolower(c)); });
+  return output;
+}
+
+inline std::string ToUpperCase(const std::string& input)
+{
+  std::string output = input;
+  std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::toupper(c)); });
+  return output;
 }
 
 #endif // AURA_UTIL_H_
