@@ -4026,6 +4026,38 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !UNOWNER (removes a game owner)
+    //
+
+    case HashCode("unowner"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame) {
+        ErrorReply("No game found.");
+        break;
+      }
+
+      if ((!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess) && !GetIsSudo()) {
+        ErrorReply("Cannot take ownership of this game.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not allowed to change the owner of this game.");
+        break;
+      }
+
+      if (!m_TargetGame->HasOwnerSet()) {
+        ErrorReply("This game has no owner.");
+        break;
+      }
+
+      m_TargetGame->ReleaseOwner();
+      SendReply("Owner removed.");
+      break;
+    }
+
+    //
     // !SAY
     //
 
