@@ -458,6 +458,7 @@ public:
   void Reset(const bool saveStats);
   bool GetIsRemakeable();
   void Remake();
+
   void AddProvisionalBannableUser(const CGamePlayer* player);
   void ClearBannableUsers();
   void UpdateBannableUsers();
@@ -498,6 +499,7 @@ public:
   CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool CreateVirtualHost();
   bool DeleteVirtualHost();
+  bool GetHasPvPGNPlayers() const;
 
   // Slot manipulation
 

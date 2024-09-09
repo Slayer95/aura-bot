@@ -6838,6 +6838,16 @@ bool CGame::DeleteVirtualHost()
   return true;
 }
 
+bool CGame::GetHasPvPGNPlayers()
+{
+  for (const auto& player : m_Players) {
+    if (player->GetRealm(false)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 uint8_t CGame::FindFakePlayerFromSID(const uint8_t SID)
 {
   uint8_t i = static_cast<uint8_t>(m_FakePlayers.size());
