@@ -199,13 +199,13 @@ uint8_t CConfig::CheckRealmKey(const string& key) const
     value = stoi(realmNum);
   } catch (...) {
   }
-  if (1 <= value && value <= 240)
+  if (1 <= value && value <= 120)
     return static_cast<uint8_t>(value - 1);
 
   return 0xFF;
 }
 
-vector<string> CConfig::GetInvalidKeys(const bitset<240> definedRealms) const
+vector<string> CConfig::GetInvalidKeys(const bitset<120> definedRealms) const
 {
   vector<string> invalidKeys;
   for (const auto& entry : m_CFG) {

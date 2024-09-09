@@ -81,7 +81,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_HostName(nRealmConfig->m_HostName),
     m_ServerIndex(nRealmConfig->m_ServerIndex),
     m_InternalServerID(nAura->NextServerID()),
-    m_PublicServerID(nRealmConfig->m_ServerIndex + 15),
+    m_PublicServerID(14 + 2 * nRealmConfig->m_ServerIndex), // First is 16
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
     m_LastGameListTime(0),
@@ -1223,11 +1223,12 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
     game->GetSourceFileSHA1(),
 
   // construct a fixed host counter which will be used to identify players from this realm
-  // the fixed host counter's highest-order byte will contain a 8 bit ID (0-255)
+  // the fixed host counter's highest-order byte will contain a 7 bit ID (0-127), plus a trailing bit to discriminate join from info requests
   // the rest of the fixed host counter will contain the 24 least significant bits of the actual host counter
   // since we're destroying 8 bits of information here the actual host counter should not be greater than 2^24 which is a reasonable assumption
   // when a player joins a game we can obtain the ID from the received host counter
-  // note: LAN broadcasts use an ID of 0, battle.net refreshes use IDs of 16-255, the rest are reserved
+  // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
+  // battle.net refreshes use IDs of 16-255
 
     game->GetHostCounter() | (game->GetIsMirror() ? 0 : (m_PublicServerID << 24)),
     m_Aura->m_MaxSlots

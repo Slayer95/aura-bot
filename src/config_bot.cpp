@@ -60,7 +60,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   m_RTTPings                     = CFG.GetBool("metrics.rtt_pings", false);
 
-  m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100);
+  m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
   m_MaxGames                     = CFG.GetInt("hosting.max_games", 20);
   m_AllowExtraLobby              = CFG.GetBool("hosting.allow_extra_lobby", false);
   m_EnableDeleteOversizedMaps    = CFG.GetBool("bot.persistence.delete_huge_maps.enabled", false);

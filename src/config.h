@@ -81,7 +81,7 @@ public:
   bool Exists(const std::string& key);
   void Accept(const std::string& key);
   void Delete(const std::string& key);
-  std::vector<std::string> GetInvalidKeys(const std::bitset<240> definedRealms) const;
+  std::vector<std::string> GetInvalidKeys(const std::bitset<120> definedRealms) const;
   inline std::filesystem::path GetFile() const { return m_File; };
   inline bool GetErrorLast() const { return m_ErrorLast; };
   inline bool GetSuccess() const { return !m_CriticalError; };

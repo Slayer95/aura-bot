@@ -214,7 +214,7 @@ public:
   bool ReloadConfigs();
   bool LoadConfigs(CConfig& CFG);
   void OnLoadConfigs();
-  bool LoadBNETs(CConfig& CFG, std::bitset<240>& definedConfigs);
+  bool LoadBNETs(CConfig& CFG, std::bitset<120>& definedConfigs);
 
   uint8_t ExtractScripts();
   bool CopyScripts();

@@ -444,7 +444,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
       Print("[AURA] all realms forcibly set to DISABLED <bot.toggle_every_realm = off>");
     }
   }
-  bitset<240> definedRealms;
+  bitset<120> definedRealms;
   if (m_Config->m_EnableBNET.value_or(true)) {
     LoadBNETs(CFG, definedRealms);
   }
@@ -514,7 +514,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
 }
 
-bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
+bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
 {
   // load the battle.net connections
   // we're just loading the config data and creating the CRealm classes here, the connections are established later (in the Update function)
@@ -522,9 +522,9 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<240>& definedRealms)
   bool isInvalidConfig = false;
   map<string, uint8_t> uniqueInputIds;
   map<string, uint8_t> uniqueNames;
-  vector<CRealmConfig*> realmConfigs(240, nullptr);
+  vector<CRealmConfig*> realmConfigs(120, nullptr);
   const bool hasGlobalHostName = CFG.Exists("realm_global.host_name");
-  for (uint8_t i = 1; i <= 240; ++i) {
+  for (uint8_t i = 1; i <= 120; ++i) {
     if (!hasGlobalHostName && !CFG.Exists("realm_" + to_string(i) + ".host_name")) {
       continue;
     }
@@ -1103,7 +1103,7 @@ bool CAura::ReloadConfigs()
     success = false;
   }
   OnLoadConfigs();
-  bitset<240> definedRealms;
+  bitset<120> definedRealms;
   if (!LoadBNETs(CFG, definedRealms)) {
     Print("[CONFIG] error - realms misconfigured: not reloaded");
     success = false;

@@ -3497,16 +3497,16 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     return false;
   }
 
+  // Odd host counters are information requests
+  if (HostCounterID & 0x1) {
+    connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+    SendVirtualHostPlayerInfo(connection);
+    SendFakePlayersInfo(connection);
+    SendJoinedPlayersInfo(connection);
+    return false;
+  }
+
   if (HostCounterID < 0x10 && HostCounterID != 0) {
-    // 0x1: Information
-    // others: undefined
-    if (HostCounterID == 0x1) {
-      connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewPID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
-      SendVirtualHostPlayerInfo(connection);
-      SendFakePlayersInfo(connection);
-      SendJoinedPlayersInfo(connection);
-      return false;
-    }
     Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     if (HostCounterID > 0x2) {
       connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));

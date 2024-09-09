@@ -103,7 +103,7 @@ private:
   std::string                      m_CurrentChannel;            // the current chat channel
   std::string                      m_AnchorChannel;             // channel to rejoin automatically
   std::string                      m_HostName;                  // 
-  uint8_t                          m_ServerIndex;               // 
+  uint8_t                          m_ServerIndex;               // one-based
   uint32_t                         m_InternalServerID;          // internal server ID, maps 1:1 to CRealmConfig::m_InputID
   uint8_t                          m_PublicServerID;            // for building host counters, which allows matching game join requests to a realm (or none)
   int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
