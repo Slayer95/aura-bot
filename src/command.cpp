@@ -1651,7 +1651,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3649,7 +3649,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3758,7 +3758,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3981,7 +3981,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           targetRealm = m_SourceRealm;
           targetHostName = m_ServerName;
         }
-      } else if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      } else if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
           break;
