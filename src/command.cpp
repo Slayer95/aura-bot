@@ -2690,9 +2690,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       bool IsPrivate = CommandHash == HashCode("privby");
 
-      string inputName, targetHostName;
+      string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Args[0], inputName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Args[0], targetName, targetHostName, targetRealm)) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
@@ -2700,7 +2700,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
       m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
-      m_Aura->m_GameSetup->SetOwner(inputName, targetRealm ? targetRealm : m_SourceRealm);
+      m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : m_SourceRealm);
       m_Aura->m_GameSetup->RunHost();
       break;
     }
@@ -3972,36 +3972,55 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGamePlayer* TargetPlayer = GetTargetPlayerOrSelf(Payload);
-      string TargetName = TargetPlayer ? TargetPlayer->GetName() : Payload;
-      if (TargetName.empty()) {
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (Payload.empty()) {
+        targetName = m_FromName;
+        if (m_SourceRealm) {
+          targetRealm = m_SourceRealm;
+          targetHostName = m_ServerName;
+        }
+      } else if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+          break;
+        }
         ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>");
+        ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>@<REALM>");
         break;
       }
-      string TargetRealm = TargetPlayer ? TargetPlayer->GetRealmHostName() : m_ServerName;
-      if (!TargetPlayer && TargetRealm.empty()) {
-        ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>");
+
+      CGamePlayer* targetPlayer = m_TargetGame->GetPlayerFromName(targetName, false);
+      if (targetPlayer && targetPlayer->GetRealmHostName() != targetHostName) {
+        ErrorReply("[" + targetPlayer->GetExtendedName() + "] is not connected from " + targetHostName);
         break;
       }
-      if (!TargetPlayer && !CheckConfirmation(cmdToken, command, payload, "Player [" + TargetName + "] is not in this game lobby. ")) {
+
+      if (!targetPlayer && !targetRealm) {
+        // Prevent arbitrary LAN players from getting ownership before joining.
+        ErrorReply("[" + targetName + "@" + ToFormattedRealm() + "] must join the game first.");
         break;
       }
-      if ((TargetPlayer && TargetPlayer != m_Player && !TargetRealm.empty() && !TargetPlayer->IsRealmVerified()) &&
-        !CheckConfirmation(cmdToken, command, payload, "Player [" + TargetName + "] has not been verified by " + TargetRealm + ". ")) {
+      if (!targetPlayer && !CheckConfirmation(cmdToken, command, payload, "Player [" + targetName + "] is not in this game lobby. ")) {
         break;
       }
-      if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
-        SendAll(
-          TargetName + "@" + ToFormattedRealm(TargetRealm) + " is already the owner of this game."
-        );
+      if ((targetPlayer && targetPlayer != m_Player && !targetRealm && !targetPlayer->IsRealmVerified()) &&
+        !CheckConfirmation(cmdToken, command, payload, "Player [" + targetName + "] has not been verified by " + targetHostName + ". ")) {
+        break;
+      }
+      const bool alreadyOwner = m_TargetGame->m_OwnerName == targetName && m_TargetGame->m_OwnerRealm == targetHostName;
+
+      if (targetPlayer) {
+        targetPlayer->SetWhoisShouldBeSent(true);
+        targetPlayer->SetOwner(true);
+        m_TargetGame->SendOwnerCommandsHelp(cmdToken, targetPlayer);
+      }
+
+      if (alreadyOwner) {
+        SendAll("[" + targetName + "@" + ToFormattedRealm(targetHostName) + "] is already the owner of this game.");
       } else {
-        m_TargetGame->SetOwner(TargetName, TargetRealm);
-        SendReply("Setting game owner to [" + TargetName + "@" + ToFormattedRealm(TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
-      }
-      if (TargetPlayer) {
-        TargetPlayer->SetWhoisShouldBeSent(true);
-        TargetPlayer->SetOwner(true);
-        m_TargetGame->SendOwnerCommandsHelp(cmdToken, TargetPlayer);
+        m_TargetGame->SetOwner(targetName, targetHostName);
+        SendReply("Setting game owner to [" + targetName + "@" + ToFormattedRealm(targetHostName) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       }
       break;
     }
