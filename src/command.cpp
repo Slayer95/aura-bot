@@ -331,7 +331,7 @@ bool CCommandContext::SetIdentity(const string& userName)
 string CCommandContext::GetUserAttribution()
 {
   if (m_Player) {
-    return m_FromName + "@" + (m_ServerName.empty() ? "@@LAN/VPN" : m_ServerName);
+    return m_FromName + "@" + ToFormattedRealm(m_ServerName);
   } else if (m_SourceRealm) {
     return m_FromName + "@" + m_SourceRealm->GetServer();
   } else if (m_IRC) {
@@ -348,7 +348,7 @@ string CCommandContext::GetUserAttribution()
 string CCommandContext::GetUserAttributionPreffix()
 {
   if (m_Player) {
-    return m_TargetGame->GetLogPrefix() + "Player [" + m_FromName + "@" + (m_ServerName.empty() ? "@@LAN/VPN" : m_ServerName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
+    return m_TargetGame->GetLogPrefix() + "Player [" + m_FromName + "@" + ToFormattedRealm(m_ServerName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (m_SourceRealm) {
     return m_SourceRealm->GetLogPrefix() + "User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (m_IRC) {
@@ -2041,7 +2041,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to ban players.");
         break;
       }
-      if (!m_TargetGame->m_DBBanLast) {
+      if (!m_TargetGame->m_LastLeaverBannable) {
         ErrorReply("No ban candidates stored.");
         break;
       }
@@ -2050,13 +2050,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
       bool isConfirm = lower == "c" || lower == "confirm";
 
-      if (!m_TargetGame->m_DBBanLast->GetSuspect()) {
+      if (!m_TargetGame->m_LastLeaverBannable->GetSuspect()) {
         if (isConfirm) {
           ErrorReply("Usage: " + cmdToken + "banlast");
           break;
         }
-        m_TargetGame->m_DBBanLast->SetSuspect(true);
-        SendReply("Player [" + m_TargetGame->m_DBBanLast->GetName() + "@" + m_TargetGame->m_DBBanLast->GetServer() + "] was the last leaver.");
+        m_TargetGame->m_LastLeaverBannable->SetSuspect(true);
+        SendReply("Player [" + m_TargetGame->m_LastLeaverBannable->GetName() + "@" + m_TargetGame->m_LastLeaverBannable->GetServer() + "] was the last leaver.");
         SendReply("Use " + cmdToken + "banlast confirm to ban them.");        
         break;
       } else {
@@ -2069,14 +2069,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           authServer = m_SourceRealm->GetDataBaseID();
         }
         m_Aura->m_DB->BanAdd(
-          m_TargetGame->m_DBBanLast->GetName(),
-          m_TargetGame->m_DBBanLast->GetServer(),
+          m_TargetGame->m_LastLeaverBannable->GetName(),
+          m_TargetGame->m_LastLeaverBannable->GetServer(),
           authServer,
-          m_TargetGame->m_DBBanLast->GetIP(),
+          m_TargetGame->m_LastLeaverBannable->GetIP(),
           m_FromName,
           "Leaver"
         );
-        SendAll("Player [" + m_TargetGame->m_DBBanLast->GetName() + "@" + m_TargetGame->m_DBBanLast->GetServer() + "] was banned by [" + m_FromName + "] on server [" + m_TargetGame->m_DBBanLast->GetAuthServer() + "]");
+        SendAll("Player [" + m_TargetGame->m_LastLeaverBannable->GetName() + "@" + m_TargetGame->m_LastLeaverBannable->GetServer() + "] was banned by [" + m_FromName + "] on server [" + m_TargetGame->m_LastLeaverBannable->GetAuthServer() + "]");
       }
       break;
     }
@@ -3524,6 +3524,50 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+    //
+    // !ALTS
+    //
+
+    case HashCode("alts"): {
+      if (!CheckPermissions(m_Config->m_AliasPermissions, COMMAND_PERMISSIONS_SUDO)) {
+        ErrorReply("Not allowed to check alternate accounts.");
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "alts <PLAYERNAME>");
+        ErrorReply("Usage: " + cmdToken + "alts <PLAYERNAME>@<REALM>");
+        break;
+      }
+      string targetName, targetHostName;
+      CRealm* targetRealm = nullptr;
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+        if (!targetHostName.empty()) {
+          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+        } else {
+          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
+          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
+        }
+        break;
+      }
+      string targetIP;
+      if (m_TargetGame) {
+        targetIP = m_TargetGame->GetBannableIP(targetName, targetHostName);
+      }
+      if (targetIP.empty()) {
+        targetIP = m_Aura->m_DB->GetLatestIP(
+          targetName,
+          targetRealm ? targetRealm->GetDataBaseID() : targetHostName
+        );
+      }
+      vector<string> altAccounts = m_Aura->m_DB->GetAlts(targetIP);
+      if (altAccounts.empty()) {
+        SendReply("No alternate accounts found.");
+      } else {
+        SendReply("Alternate accounts: " + JoinVector(altAccounts, false));
+      }
+      break;
+    }
+
     case HashCode("ban"): {
       if (!m_TargetGame || !m_TargetGame->GetIsLobby()) {
         ErrorReply("This command may only be used in a game lobby, and will only affect it. For persistent bans, use " + cmdToken + "pban .");
@@ -3564,22 +3608,25 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsGameScopeBanned(targetName, targetHostName)) {
+      string targetIP = m_TargetGame->GetBannableIP(targetName, targetHostName);
+      if (targetIP.empty()) {
+        string databaseHostName = targetHostName;
+        if (targetRealm) databaseHostName = targetRealm->GetDataBaseID();
+        targetIP = m_Aura->m_DB->GetLatestIP(targetName, databaseHostName);
+      }
+
+      if (m_TargetGame->GetIsScopeBanned(targetName, targetHostName, targetIP)) {
         ErrorReply("[" + targetName + "@" + targetHostName + "] was already banned from this game.");
         break;
       }
 
-      string targetIP = m_TargetGame->GetBannableIP(targetName, targetHostName);
-      if (targetIP.empty()) {
-        targetIP = m_Aura->m_DB->GetLatestIP(targetName, targetHostName);
-      }
-
-      if (!m_TargetGame->AddGameScopeBan(targetName, targetHostName, targetIP)) {
+      if (!m_TargetGame->AddScopeBan(targetName, targetHostName, targetIP)) {
         ErrorReply("Failed to ban [" + targetName + "@" + targetHostName + "] from joining this game.");
         break;
       }
 
       SendReply("[" + targetName + "@" + targetHostName + "] banned from joining this game.");
+      Print(m_TargetGame->GetLogPrefix() + "[" + targetName + "@" + targetHostName + "|" + targetIP  + "] banned from joining game.");
       break;
     }
 
@@ -3609,12 +3656,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         break;
       }
-      if (!m_TargetGame->GetIsGameScopeBanned(targetName, targetHostName)) {
+      string emptyAddress = string();
+      if (!m_TargetGame->GetIsScopeBanned(targetName, targetHostName, emptyAddress)) {
         ErrorReply("[" + targetName + "@" + targetHostName + "] was not banned from this game.");
         break;
       }
 
-      if (!m_TargetGame->RemoveGameScopeBan(targetName, targetHostName)) {
+      if (!m_TargetGame->RemoveScopeBan(targetName, targetHostName)) {
         ErrorReply("Failed to unban user [" + targetName + "@" + targetHostName + "].");
         break;
       }
@@ -3727,11 +3775,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CDBBan* Ban = m_Aura->m_DB->UserBanCheck(targetName, targetHostName, authServer);
       if (Ban) {
         delete Ban;
-      } else if (m_ServerName.empty()) {
-        ErrorReply("User [" + targetName + "@" + targetHostName + "] is not banned on [LAN/VPN].");
-        break;
       } else {
-        ErrorReply("User [" + targetName + "@" + targetHostName + "] is not banned on " + m_ServerName + ".");
+        ErrorReply("User [" + targetName + "@" + targetHostName + "] is not banned @" + ToFormattedRealm(m_ServerName) + ".");
         break;
       }
 
@@ -3740,11 +3785,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_ServerName.empty()) {
-        SendReply("Unbanned user [" + targetName + "@" + targetHostName + "] on [LAN/VPN].");
-      } else {
-        SendReply("Unbanned user [" + targetName + "@" + targetHostName + "] on [" + m_ServerName + "].");
-      }
+      SendReply("Unbanned user [" + targetName + "@" + targetHostName + "] on @" + ToFormattedRealm(m_ServerName) + ".");
       break;
     }
 
@@ -3925,7 +3966,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
         if (Payload.empty() && m_TargetGame->HasOwnerSet()) {
-          SendReply("The owner is [" + m_TargetGame->m_OwnerName + "@" + (m_TargetGame->m_OwnerRealm.empty() ? "@@LAN/VPN" : m_TargetGame->m_OwnerRealm) + "]");
+          SendReply("The owner is [" + m_TargetGame->m_OwnerName + "@" + ToFormattedRealm(m_TargetGame->m_OwnerRealm) + "]");
         }
         ErrorReply("You are not allowed to change the owner of this game.");
         break;
@@ -3951,11 +3992,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       if (m_TargetGame->m_OwnerName == TargetName && m_TargetGame->m_OwnerRealm == TargetRealm) {
         SendAll(
-          TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + " is already the owner of this game."
+          TargetName + "@" + ToFormattedRealm(TargetRealm) + " is already the owner of this game."
         );
       } else {
         m_TargetGame->SetOwner(TargetName, TargetRealm);
-        SendReply("Setting game owner to [" + TargetName + "@" + (TargetRealm.empty() ? "@@LAN/VPN" : TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+        SendReply("Setting game owner to [" + TargetName + "@" + ToFormattedRealm(TargetRealm) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       }
       if (TargetPlayer) {
         TargetPlayer->SetWhoisShouldBeSent(true);

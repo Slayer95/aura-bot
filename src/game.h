@@ -114,8 +114,9 @@ private:
 protected:
   bool                           m_Verbose;
   CTCPServer*                    m_Socket;                        // listening socket
-  CDBBan*                        m_DBBanLast;                     // last ban for the !banlast command - this is a pointer to one of the items in m_DBBans
-  std::vector<CDBBan*>           m_DBBans;                        // std::vector of potential ban data for the database
+  CDBBan*                        m_LastLeaverBannable;                     // last ban for the !banlast command - this is a pointer to one of the items in m_Bannables
+  std::vector<CDBBan*>           m_Bannables;                     // std::vector of potential ban data for the database
+  std::vector<CDBBan*>           m_ScopeBans;                    // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
   CStats*                        m_Stats;                         // class to keep track of game stats such as kills/deaths/assists in dota
   CSaveGame*                     m_RestoredGame;
   std::vector<CGameSlot>         m_Slots;                         // std::vector of slots
@@ -470,8 +471,8 @@ public:
   CGamePlayer* GetPlayerFromName(std::string name, bool sensitive) const;
   bool         HasOwnerSet() const;
   bool         HasOwnerInGame() const;
-  uint8_t      GetPlayerFromNamePartial(std::string name, CGamePlayer*& player) const;
-  uint8_t      GetBannableFromNamePartial(std::string name, CDBBan*& player) const;
+  uint8_t      GetPlayerFromNamePartial(const std::string& name, CGamePlayer*& matchPlayer) const;
+  uint8_t      GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
   CDBGamePlayer* GetDBPlayerFromColor(uint8_t colour) const;
   CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
@@ -545,10 +546,11 @@ public:
   bool MatchOwnerName(const std::string& name) const;
   uint8_t GetReservedIndex(const std::string& name) const;
 
-  bool GetIsGameScopeBanned(const std::string& name, const std::string& hostName) const;
   std::string GetBannableIP(const std::string& name, const std::string& hostName) const;
-  bool AddGameScopeBan(const std::string& name, const std::string& hostName, const std::string& ip);
-  bool RemoveGameScopeBan(const std::string& name, const std::string& hostName);
+  bool GetIsScopeBanned(const std::string& name, const std::string& hostName, const std::string& addressLiteral) const;
+  bool CheckScopeBanned(const std::string& name, const std::string& hostName, const std::string& addressLiteral) const;
+  bool AddScopeBan(const std::string& name, const std::string& hostName, const std::string& addressLiteral);
+  bool RemoveScopeBan(const std::string& name, const std::string& hostName);
 
   std::vector<uint32_t> GetPlayersFramesBehind() const;
   std::vector<CGamePlayer*> GetLaggingPlayers() const;

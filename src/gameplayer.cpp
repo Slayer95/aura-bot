@@ -344,6 +344,11 @@ uint32_t CGamePlayer::GetPing() const
   return AvgPing;
 }
 
+string CGamePlayer::GetLowerName() const
+{
+  return ToLowerCase(m_Name);
+}
+
 string CGamePlayer::GetDisplayName() const
 {
   if (!m_Observer && m_Game->GetIsHiddenPlayers()) return "Player ?";

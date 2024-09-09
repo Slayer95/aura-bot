@@ -212,6 +212,7 @@ public:
   inline bool                  GetDeleteMe() const { return m_DeleteMe; }
   inline uint8_t               GetPID() const { return m_PID; }
   inline std::string           GetName() const { return m_Name; }
+  std::string                  GetLowerName() const;
   std::string                  GetDisplayName() const;
   inline std::vector<uint8_t>  GetIPv4Internal() const { return m_IPv4Internal; }
   inline size_t                GetNumPings() const { return m_Pings.size(); }

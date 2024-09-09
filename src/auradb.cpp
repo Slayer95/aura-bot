@@ -45,6 +45,7 @@
 
 #include "auradb.h"
 #include "aura.h"
+#include "net.h"
 #include "util.h"
 #include "config.h"
 #include "sqlite3.h"
@@ -617,7 +618,7 @@ CDBBan* CAuraDB::UserBanCheck(string user, const string& server, const string& a
         string Moderator  = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 7));
         string Reason     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(UserBanCheckStmt), 8));
 
-        Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason, false);
+        Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason);
       }
       else
         Print("[SQLITE3] error checking ban [" + server + " : " + user + "] - row doesn't have 9 columns");
@@ -661,7 +662,7 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
         string Moderator  = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 7));
         string Reason     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(IPBanCheckStmt), 8));
 
-        Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason, false);
+        Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason);
       }
       else
         Print("[SQLITE3] error checking ban [" + ip + "] - row doesn't have 9 columns");
@@ -732,12 +733,14 @@ bool CAuraDB::BanAdd(string user, const string& server, const string& authserver
 
 bool CAuraDB::BanAdd(string user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason, const string& expiry)
 {
+  // TODO: CAuraDB::BanAdd not implemented
   Print("[SQLITE3] Custom-expiry bans not implemented.");
   return false;
 }
 
 bool CAuraDB::BanAddPermanent(string user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason)
 {
+  // TODO: CAuraDB::BanAddPermanent not implemented
   Print("[SQLITE3] Permanent bans not implemented.");
   return false;
 }
@@ -1126,6 +1129,49 @@ string CAuraDB::GetLatestIP(const string& rawName, const string& server)
   return latestIP;
 }
 
+vector<string> CAuraDB::GetAlts(const string& addressLiteral)
+{
+  vector<string> altAccounts;
+  if (addressLiteral.empty()) {
+    return altAccounts;
+  }
+  optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(addressLiteral);
+  if (!maybeAddress.has_value() || isLoopbackAddress(&(maybeAddress.value()))) {
+    return altAccounts;
+  }
+
+  sqlite3_stmt*         Statement;
+  m_DB->Prepare("SELECT name, server FROM players WHERE initialip=? OR latestip=?", reinterpret_cast<void**>(&Statement));
+
+  if (Statement)
+  {
+    sqlite3_bind_text(Statement, 1, addressLiteral.c_str(), -1, SQLITE_TRANSIENT);
+
+    const int32_t RC = m_DB->Step(Statement);
+
+    if (RC == SQLITE_ROW) {
+      if (sqlite3_column_count(Statement) == 2) {
+        string altName  = string((char*)sqlite3_column_text(Statement, 0));
+        string altServer  = string((char*)sqlite3_column_text(Statement, 1));
+        if (altServer.empty()) {
+          altAccounts.push_back(altName + "@@@LAN/VPN");
+        } else {
+          altAccounts.push_back(altName + "@" + altServer);
+        }
+      } else {
+        Print("[SQLITE3] error checking alts [" + addressLiteral + "] - row doesn't have 2 columns");
+      }
+    } else if (RC == SQLITE_ERROR) {
+      Print("[SQLITE3] error checking alts [" + addressLiteral + "] - " + m_DB->GetError());
+    }
+    m_DB->Finalize(Statement);
+  } else {
+    Print("[SQLITE3] prepare error checking alts [" + addressLiteral + "] - " + m_DB->GetError());
+  }
+
+  return altAccounts;
+}
+
 void CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const vector<uint8_t>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
 {
   string storageCRC32 = ByteArrayToDecString(mapCRC32);
@@ -1379,7 +1425,7 @@ vector<string> CAuraDB::GetDescription(const uint8_t mapType, const uint8_t sear
 // CDBBan
 //
 
-CDBBan::CDBBan(string nName, string nServer, string nAuthServer, string nIP, string nDate, string nExpiry, bool nPermanent, string nModerator, string nReason, bool nPotential)
+CDBBan::CDBBan(string nName, string nServer, string nAuthServer, string nIP, string nDate, string nExpiry, bool nPermanent, string nModerator, string nReason)
   : m_Name(std::move(nName)),
     m_Server(std::move(nServer)),
     m_AuthServer(std::move(nAuthServer)),
@@ -1388,7 +1434,6 @@ CDBBan::CDBBan(string nName, string nServer, string nAuthServer, string nIP, str
     m_Permanent(nPermanent),
     m_Moderator(std::move(nModerator)),
     m_Reason(std::move(nReason)),
-    m_Potential(nPotential),
     m_Suspect(false)
 {
 }

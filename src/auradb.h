@@ -306,6 +306,7 @@ public:
   void UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
   CDBDotAPlayerSummary* DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
   std::string GetLatestIP(const std::string& name, const std::string& server);
+  std::vector<std::string> GetAlts(const std::string& addressLiteral);
 
   // Games
   void GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::vector<uint8_t>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
@@ -333,11 +334,10 @@ private:
   bool m_Permanent;
   std::string m_Moderator;
   std::string m_Reason;
-  bool m_Potential;
-  bool m_Suspect;
+  bool m_Suspect;           // When issuing bans with ambiguous commands, this flag is used to confirm ban target.
   
 public:
-  CDBBan(std::string nName, std::string nServer, std::string nAuthServer, std::string nIP, std::string nDate, std::string nExpiry, bool nPermanent, std::string nModerator, std::string nReason, bool nPotential = false);
+  CDBBan(std::string nName, std::string nServer, std::string nAuthServer, std::string nIP, std::string nDate, std::string nExpiry, bool nPermanent, std::string nModerator, std::string nReason);
   ~CDBBan();
 
   inline std::string GetName() const { return m_Name; }
@@ -348,9 +348,7 @@ public:
   inline std::string GetExpiry() const { return m_Expiry; }
   inline std::string GetModerator() const { return m_Moderator; }
   inline std::string GetReason() const { return m_Reason; }
-  inline bool GetPotential() const { return m_Potential; }
   inline bool GetSuspect() const { return m_Suspect; }
-  inline void ClearPotential() { m_Potential = false; }
   inline void SetSuspect(bool nSuspect) { m_Suspect = nSuspect; }
 };
 

@@ -79,7 +79,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   : m_Aura(nAura),
     m_Verbose(nGameSetup->m_Verbose),
     m_Socket(nullptr),
-    m_DBBanLast(nullptr),
+    m_LastLeaverBannable(nullptr),
     m_Stats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_Map(nGameSetup->m_Map),
@@ -2502,14 +2502,14 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       } else if (m_CreatedFromType == GAMESETUP_ORIGIN_DISCORD) {
         // TODO: {HOSTREALM} Discord
       } else {
-        Line.replace(matchIndex, 11, "@@@LAN/VPN");
+        Line.replace(matchIndex, 11, "@" + ToFormattedRealm());
       }
     }
     while ((matchIndex = Line.find("{OWNER}")) != string::npos) {
       Line.replace(matchIndex, 7, m_OwnerName);
     }
     while ((matchIndex = Line.find("{OWNERREALM}")) != string::npos) {
-      Line.replace(matchIndex, 12, m_OwnerRealm.empty() ? "@@@LAN/VPN" : ("@" + m_OwnerRealm));
+      Line.replace(matchIndex, 12, "@" + ToFormattedRealm(m_OwnerRealm));
     }
     while ((matchIndex = Line.find("{TRIGGER_PRIVATE}")) != string::npos) {
       Line.replace(matchIndex, 17, m_PrivateCmdToken);
@@ -3026,9 +3026,9 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
     // keep track of the last player to leave for the !banlast command
     // ignore the last player leaving, as well as the second-to-last (forfeit)
     if (m_Players.size() > 2) {
-      for (auto& ban : m_DBBans) {
-        if (ban->GetName() == player->GetName()) {
-          m_DBBanLast = ban;
+      for (auto& bannable : m_Bannables) {
+        if (bannable->GetName() == player->GetName()) {
+          m_LastLeaverBannable = bannable;
         }
       }
     }
@@ -3534,7 +3534,8 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     return false;
   }
 
-  if (CheckUserBanned(connection, joinRequest, matchingRealm, JoinedRealm) ||
+  if (CheckScopeBanned(joinRequest->GetName(), JoinedRealm, connection->GetIPStringStrict()) ||
+    CheckUserBanned(connection, joinRequest, matchingRealm, JoinedRealm) ||
     CheckIPBanned(connection, joinRequest, matchingRealm, JoinedRealm)) {
     // let banned players "join" the game with an arbitrary PID then immediately close the connection
     // this causes them to be kicked back to the chat channel on battle.net
@@ -3658,7 +3659,7 @@ bool CGame::CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* j
     } else {
       scopeFragment = "in creator's realm";
     }
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] is banned " + scopeFragment);
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - banned " + scopeFragment);
 
     // don't allow the player to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
@@ -3690,7 +3691,7 @@ bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joi
     } else {
       scopeFragment = "in creator's realm";
     }
-    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] is IP-banned " + scopeFragment);
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - IP-banned " + scopeFragment);
 
     // don't allow the player to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
@@ -4483,15 +4484,15 @@ void CGame::EventGameStarted()
 
 void CGame::AddProvisionalBannableUser(const CGamePlayer* player)
 {
-  const bool isOversized = m_DBBans.size() > GAME_BANNABLE_MAX_HISTORY_SIZE;
+  const bool isOversized = m_Bannables.size() > GAME_BANNABLE_MAX_HISTORY_SIZE;
   bool matchedSameName = false, matchedShrink = false;
   size_t matchIndex = 0, shrinkIndex = 0;
-  while (matchIndex < m_DBBans.size()) {
-    if (player->GetName() == m_DBBans[matchIndex]->GetName()) {
+  while (matchIndex < m_Bannables.size()) {
+    if (player->GetName() == m_Bannables[matchIndex]->GetName()) {
       matchedSameName = true;
       break;
     }
-    if (isOversized && !matchedShrink && GetPlayerFromName(m_DBBans[matchIndex]->GetName(), true) == nullptr) {
+    if (isOversized && !matchedShrink && GetPlayerFromName(m_Bannables[matchIndex]->GetName(), true) == nullptr) {
       shrinkIndex = matchIndex;
       matchedShrink = true;
     }
@@ -4499,13 +4500,13 @@ void CGame::AddProvisionalBannableUser(const CGamePlayer* player)
   }
 
   if (matchedSameName) {
-    delete m_DBBans[matchIndex];
+    delete m_Bannables[matchIndex];
   } else if (matchedShrink) {
-    delete m_DBBans[shrinkIndex];
-    m_DBBans.erase(m_DBBans.begin() + shrinkIndex);
+    delete m_Bannables[shrinkIndex];
+    m_Bannables.erase(m_Bannables.begin() + shrinkIndex);
   }
 
-  CDBBan* ban = new CDBBan(
+  CDBBan* bannable = new CDBBan(
     player->GetName(),
     player->GetRealmDataBaseID(false),
     string(), // auth server
@@ -4514,26 +4515,25 @@ void CGame::AddProvisionalBannableUser(const CGamePlayer* player)
     string(), // expiry
     false, // temporary ban (permanent == false)
     string(), // moderator
-    string(), // reason
-    true // potential
+    string() // reason
   );
 
   if (matchedSameName) {
-    m_DBBans[matchIndex] = ban;
+    m_Bannables[matchIndex] = bannable;
   } else {
-    m_DBBans.push_back(ban);
+    m_Bannables.push_back(bannable);
   }
 
-  m_DBBanLast = ban;
+  m_LastLeaverBannable = bannable;
 }
 
 void CGame::ClearBannableUsers()
 {
-  for (auto& ban : m_DBBans) {
-    delete ban;
+  for (auto& bannable : m_Bannables) {
+    delete bannable;
   }
-  m_DBBans.clear();
-  m_DBBanLast = nullptr;
+  m_Bannables.clear();
+  m_LastLeaverBannable = nullptr;
 }
 
 void CGame::UpdateBannableUsers()
@@ -4544,7 +4544,7 @@ void CGame::UpdateBannableUsers()
   // so we create a "potential ban" for each player and only store it in the database if requested to by an admin
 
   for (auto& player : m_Players) {
-    m_DBBans.push_back(new CDBBan(
+    m_Bannables.push_back(new CDBBan(
       player->GetName(),
       player->GetRealmDataBaseID(false),
       string(), // auth server
@@ -4553,8 +4553,7 @@ void CGame::UpdateBannableUsers()
       string(), // expiry
       false, // temporary ban (permanent == false)
       string(), // moderator
-      string(), // reason
-      true // potential
+      string() // reason
     ));
   }
 }
@@ -4820,64 +4819,55 @@ bool CGame::HasOwnerInGame() const
 
 CGamePlayer* CGame::GetPlayerFromName(string name, bool sensitive) const
 {
-  if (!sensitive)
+  if (!sensitive) {
     transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  }
 
-  for (auto& player : m_Players)
-  {
-    if (!player->GetDeleteMe())
-    {
-      string TestName = player->GetName();
-
-      if (!sensitive)
-        transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
-
-      if (TestName == name)
+  for (auto& player : m_Players) {
+    if (!player->GetDeleteMe()) {
+      string testName = sensitive ? player->GetName() : player->GetLowerName();
+      if (testName == name) {
         return player;
+      }
     }
   }
 
   return nullptr;
 }
 
-uint8_t CGame::GetPlayerFromNamePartial(string name, CGamePlayer*& player) const
+uint8_t CGame::GetPlayerFromNamePartial(const string& name, CGamePlayer*& matchPlayer) const
 {
-  uint8_t Matches = 0;
+  uint8_t matches = 0;
   if (name.empty()) {
-    player = nullptr;
-    return Matches;
+    matchPlayer = nullptr;
+    return matches;
   }
 
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string inputLower = ToLowerCase(name);
 
   // try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
 
-  for (auto& realplayer : m_Players)
-  {
-    if (!realplayer->GetDeleteMe())
-    {
-      string TestName = realplayer->GetName();
-      transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
-
-      if (TestName.find(name) != string::npos)
-      {
-        ++Matches;
-        player = realplayer;
+  for (auto& player : m_Players) {
+    if (!player->GetDeleteMe()) {
+      string testName = player->GetLowerName();
+      if (testName.find(inputLower) != string::npos) {
+        ++matches;
+        matchPlayer = player;
 
         // if the name matches exactly stop any further matching
 
-        if (TestName == name) {
-          Matches = 1;
+        if (testName == inputLower) {
+          matches = 1;
           break;
         }
       }
     }
   }
 
-  if (Matches != 1) {
-    player = nullptr;
+  if (matches != 1) {
+    matchPlayer = nullptr;
   }
-  return Matches;
+  return matches;
 }
 
 CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
@@ -4889,39 +4879,38 @@ CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
   return nullptr;
 }
 
-uint8_t CGame::GetBannableFromNamePartial(string name, CDBBan*& banPlayer) const
+uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanPlayer) const
 {
-  uint8_t Matches = 0;
+  uint8_t matches = 0;
   if (name.empty()) {
-    banPlayer = nullptr;
-    return Matches;
+    matchBanPlayer = nullptr;
+    return matches;
   }
 
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string inputLower = ToLowerCase(name);
 
   // try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
 
-  for (auto& ban : m_DBBans) {
-    string TestName = ban->GetName();
-    transform(begin(TestName), end(TestName), begin(TestName), [](char c) { return static_cast<char>(std::tolower(c)); });
+  for (auto& bannable : m_Bannables) {
+    string testName = ToLowerCase(bannable->GetName());
 
-    if (TestName.find(name) != string::npos) {
-      ++Matches;
-      banPlayer = ban;
+    if (testName.find(inputLower) != string::npos) {
+      ++matches;
+      matchBanPlayer = bannable;
 
       // if the name matches exactly stop any further matching
 
-      if (TestName == name) {
-        Matches = 1;
+      if (testName == inputLower) {
+        matches = 1;
         break;
       }
     }
   }
 
-  if (Matches != 1) {
-    banPlayer = nullptr;
+  if (matches != 1) {
+    matchBanPlayer = nullptr;
   }
-  return Matches;
+  return matches;
 }
 
 CGamePlayer* CGame::GetPlayerFromColor(uint8_t colour) const
@@ -6072,18 +6061,15 @@ void CGame::AddToRealmVerified(const string& server, CGamePlayer* Player, bool s
 
 void CGame::AddToReserved(const string& name)
 {
-  string inputLower = name;
   if (m_RestoredGame && m_Reserved.size() >= m_Aura->m_MaxSlots) {
     return;
   }
 
-  transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string inputLower = ToLowerCase(name);
 
   // check that the user is not already reserved
-
   for (const auto& element : m_Reserved) {
-    string matchLower = element;
-    transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+    string matchLower = ToLowerCase(element);
     if (matchLower == inputLower) {
       return;
     }
@@ -6094,8 +6080,7 @@ void CGame::AddToReserved(const string& name)
   // upgrade the user if they're already in the game
 
   for (auto& player : m_Players) {
-    string matchLower = player->GetName();
-    transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+    string matchLower = ToLowerCase(player->GetName());
 
     if (matchLower == inputLower) {
       player->SetReserved(true);
@@ -6131,22 +6116,18 @@ void CGame::RemoveAllReserved()
 
 bool CGame::MatchOwnerName(const string& name) const
 {
-  string matchLower = name;
-  string ownerLower = m_OwnerName;
-  transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
-  transform(begin(ownerLower), end(ownerLower), begin(ownerLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string matchLower = ToLowerCase(name);
+  string ownerLower = ToLowerCase(m_OwnerName);
   return matchLower == ownerLower;
 }
 
 uint8_t CGame::GetReservedIndex(const string& name) const
 {
-  string inputLower = name;
-  transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string inputLower = ToLowerCase(name);
 
   uint8_t index = 0;
   while (index < m_Reserved.size()) {
-    string matchLower = m_Reserved[index];
-    transform(begin(matchLower), end(matchLower), begin(matchLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+    string matchLower = ToLowerCase(m_Reserved[index]);
     if (matchLower == inputLower) {
       break;
     }
@@ -6160,25 +6141,73 @@ uint8_t CGame::GetReservedIndex(const string& name) const
   return index;
 }
 
-bool CGame::GetIsGameScopeBanned(const string& name, const string& hostName) const
-{
-  return false;
-}
-
 string CGame::GetBannableIP(const string& name, const string& hostName) const
 {
+  for (const CDBBan* bannable : m_Bannables) {
+    if (bannable->GetName() == name && bannable->GetServer() == hostName) {
+      return bannable->GetIP();
+    }
+  }
   return string();
 }
 
-bool CGame::AddGameScopeBan(const string& name, const string& hostName, const string& ip)
+bool CGame::GetIsScopeBanned(const string& rawName, const string& hostName, const string& addressLiteral) const
 {
-  // TODO: Unimplemented
+  string name = ToLowerCase(rawName);
+
+  bool checkIP = false;
+  if (!addressLiteral.empty()) {
+    optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(addressLiteral);
+    checkIP = maybeAddress.has_value() && !isLoopbackAddress(&(maybeAddress.value()));
+  }
+  for (const CDBBan* ban : m_ScopeBans) {
+    if (ban->GetName() == name && ban->GetServer() == hostName) {
+      return true;
+    }
+    if (checkIP && ban->GetIP() == addressLiteral) {
+      return true;
+    }
+  }
   return false;
 }
 
-bool CGame::RemoveGameScopeBan(const string& name, const string& hostName)
+bool CGame::CheckScopeBanned(const string& rawName, const string& hostName, const string& addressLiteral) const
 {
-  // TODO: Unimplemented
+  if (GetIsScopeBanned(rawName, hostName, addressLiteral)) {
+    Print(GetLogPrefix() + "player [" + rawName + "@" + hostName + "|" + addressLiteral + "] entry denied: game-scope banned");
+    return true;
+  }
+  return false;
+}
+
+bool CGame::AddScopeBan(const string& rawName, const string& hostName, const string& addressLiteral)
+{
+  string name = ToLowerCase(rawName);
+
+  m_ScopeBans.push_back(new CDBBan(
+    name,
+    hostName,
+    string(), // auth server
+    addressLiteral,
+    string(), // date
+    string(), // expiry
+    false, // temporary ban (permanent == false)
+    string(), // moderator
+    string() // reason
+  ));
+  return true;
+}
+
+bool CGame::RemoveScopeBan(const string& rawName, const string& hostName)
+{
+  string name = ToLowerCase(rawName);
+
+  for (auto it = begin(m_ScopeBans); it != end(m_ScopeBans); ++it) {
+    if ((*it)->GetName() == name && (*it)->GetServer() == hostName) {
+      m_ScopeBans.erase(it);
+      return true;
+    }
+  }
   return false;
 }
 
@@ -6301,7 +6330,7 @@ void CGame::ReleaseOwner()
   if (m_Exiting) {
     return;
   }
-  Print("[LOBBY: "  + m_GameName + "] Owner \"" + m_OwnerName + "@" + (m_OwnerRealm.empty() ? "@@LAN/VPN" : m_OwnerRealm) + "\" removed.");
+  Print("[LOBBY: "  + m_GameName + "] Owner \"" + m_OwnerName + "@" + ToFormattedRealm(m_OwnerRealm) + "\" removed.");
   m_LastOwner = m_OwnerName;
   m_OwnerName.clear();
   m_OwnerRealm.clear();
