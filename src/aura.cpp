@@ -1383,10 +1383,15 @@ void CAura::InitContextMenu()
   DeleteUserRegistryKey(L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.w3m");
   DeleteUserRegistryKey(L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.w3x");
 
+  wstring scenario = L"WorldEdit.Scenario";
+  wstring scenarioEx = L"WorldEdit.ScenarioEx";
+
   wstring openWithAuraCommand = L"\"";
   openWithAuraCommand += GetExePath().wstring();
   openWithAuraCommand += L"\" \"%1\" --stdpaths";
 
+  SetUserRegistryKey(L"Software\\Classes\\.w3m", L"", scenario.c_str());
+  SetUserRegistryKey(L"Software\\Classes\\.w3x", L"", scenarioEx.c_str());
   SetUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
   SetUserRegistryKey(L"Software\\Classes\\WorldEdit.ScenarioEx\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
   Print("[AURA] Installed to context menu.");
