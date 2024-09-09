@@ -3544,8 +3544,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
-          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
-          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
+          ErrorReply("Usage: " + cmdToken + "alts <PLAYERNAME>");
+          ErrorReply("Usage: " + cmdToken + "alts <PLAYERNAME>@<REALM>");
         }
         break;
       }
