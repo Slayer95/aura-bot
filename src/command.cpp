@@ -3615,7 +3615,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         targetIP = m_Aura->m_DB->GetLatestIP(targetName, databaseHostName);
       }
 
-      if (m_TargetGame->GetIsScopeBanned(targetName, targetHostName, targetIP)) {
+      string emptyAddress;
+      if (m_TargetGame->GetIsScopeBanned(targetName, targetHostName, emptyAddress)) {
         ErrorReply("[" + targetName + "@" + targetHostName + "] was already banned from this game.");
         break;
       }
@@ -3656,7 +3657,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         break;
       }
-      string emptyAddress = string();
+      string emptyAddress;
       if (!m_TargetGame->GetIsScopeBanned(targetName, targetHostName, emptyAddress)) {
         ErrorReply("[" + targetName + "@" + targetHostName + "] was not banned from this game.");
         break;
