@@ -6838,7 +6838,7 @@ bool CGame::DeleteVirtualHost()
   return true;
 }
 
-bool CGame::GetHasPvPGNPlayers()
+bool CGame::GetHasPvPGNPlayers() const
 {
   for (const auto& player : m_Players) {
     if (player->GetRealm(false)) {

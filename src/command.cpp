@@ -993,18 +993,32 @@ CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
   return m_Aura->GetRealmByHostName(realmId);
 }
 
-bool CCommandContext::GetParseTargetRealmUser(const string& target, string& nameFragment, string& realmFragment, CRealm*& realm, bool searchHistory)
+bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string& nameFragment, string& realmFragment, CRealm*& realm, bool searchHistory)
 {
-  if (target.empty()) {
+  if (inputTarget.empty()) {
     return false;
   }
 
-  string::size_type realmStart = target.find('@');
+  string target = inputTarget;
+  string::size_type realmStart = inputTarget.find('@');
   const bool isFullyQualified = realmStart != string::npos;
   if (isFullyQualified) {
-    realmFragment = TrimString(target.substr(realmStart + 1));
-    nameFragment = TrimString(target.substr(0, realmStart));
-  } else if (m_Player && searchHistory) {
+    realmFragment = TrimString(inputTarget.substr(realmStart + 1));
+    nameFragment = TrimString(inputTarget.substr(0, realmStart));
+    if (!nameFragment.empty() && nameFragment.size() <= MAX_PLAYER_NAME_SIZE) {
+      realm = GetTargetRealmOrCurrent(realmFragment);
+      if (realm) {
+        realmFragment = realm->GetServer();
+      }
+      return realm != nullptr;
+    }
+    target = nameFragment;
+    realmFragment.clear();
+    nameFragment.clear();
+    //isFullyQualified = false;
+  }
+
+  if (m_Player && searchHistory) {
     CDBBan* targetPlayer = nullptr;
     if (m_SourceGame->GetBannableFromNamePartial(target, targetPlayer) != 1) {
       return false;
@@ -4184,7 +4198,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
       m_TargetGame->m_RealmRefreshError = false;
       string earlyFeedback = "Announcement sent.";
-      if (ToAllRealms) {
+      if (toAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {
           if (!m_TargetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
           bnet->QueueGameUncreate(); //?
