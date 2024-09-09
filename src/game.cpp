@@ -2456,13 +2456,13 @@ void CGame::SendWelcomeMessage(CGamePlayer *player) const
       Line = Line.substr(8);
     }
     if (Line.substr(0, 17) == "{CHECKLASTOWNER?}") {
-      if (m_LastOwner != player->GetName()) {
+      if (m_LastOwner == player->GetName()) {
         continue;
       }
       Line = Line.substr(17);
     }
     if (Line.substr(0, 17) == "{CHECKLASTOWNER!}") {
-      if (m_LastOwner == player->GetName()) {
+      if (m_LastOwner != player->GetName()) {
         continue;
       }
       Line = Line.substr(17);
