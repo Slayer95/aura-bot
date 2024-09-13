@@ -269,7 +269,7 @@ void CGame::Reset(const bool saveStats)
     // add non-dota stats
     Print(GetLogPrefix() + "saving game data to database");
     for (auto& dbPlayer : m_DBGamePlayers) {
-      if (dbPlayer->GetColor() == m_Aura->m_MaxSlots) {
+      if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
         continue;
       }
       m_Aura->m_DB->UpdateGamePlayerOnEnd(
@@ -490,19 +490,19 @@ void CGame::InitSlots()
       // default user-customizable slot is always observer
       // only when players join do we assign them a team
       // (if they leave, the slots are reset to observers)
-      slot.SetTeam(m_Aura->m_MaxSlots);
+      slot.SetTeam(m_Map->GetVersionMaxSlots());
     }
 
     // Ensure colors are unique for each playable slot.
     // Observers must have color 12 or 24, according to game version.
-    if (slot.GetTeam() == m_Aura->m_MaxSlots) {
-      slot.SetColor(m_Aura->m_MaxSlots);
+    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) {
+      slot.SetColor(m_Map->GetVersionMaxSlots());
     } else {
       const uint8_t originalColor = slot.GetColor();
       if (usedColors.test(originalColor)) {
         uint8_t testColor = originalColor;
         do {
-          testColor = (testColor + 1) % m_Aura->m_MaxSlots;
+          testColor = (testColor + 1) % m_Map->GetVersionMaxSlots();
         } while (usedColors.test(testColor) && testColor != originalColor);
         slot.SetColor(testColor);
         usedColors.set(testColor);
@@ -704,7 +704,7 @@ uint8_t CGame::GetNumControllers() const
 {
   uint8_t count = 0;
   for (const auto& slot : m_Slots) {
-    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Aura->m_MaxSlots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
       ++count;
     }
   }
@@ -785,7 +785,7 @@ vector<const CGamePlayer*> CGame::GetPlayers() const
   vector<const CGamePlayer*> Players;
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
-    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots) {
+    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Map->GetVersionMaxSlots()) {
       // Check GetLeftMessage instead of GetDeleteMe for debugging purposes
       Players.push_back(player);
     }
@@ -799,7 +799,7 @@ vector<const CGamePlayer*> CGame::GetObservers() const
   vector<const CGamePlayer*> Observers;
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
-    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots) {
+    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots()) {
       // Check GetLeftMessage instead of GetDeleteMe for debugging purposes
       Observers.push_back(player);
     }
@@ -813,7 +813,7 @@ vector<const CGamePlayer*> CGame::GetUnreadyPlayers() const
   vector<const CGamePlayer*> Players;
   for (const auto& player : m_Players) {
     const uint8_t SID = GetSIDFromPID(player->GetPID());
-    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots) {
+    if (!player->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Map->GetVersionMaxSlots()) {
       if (!player->GetIsReady()) {
         Players.push_back(player);
       }
@@ -1441,7 +1441,7 @@ void CGame::UpdateReadyCounters()
   m_ControllersReadyCount = 0;
   m_ControllersNotReadyCount = 0;
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[i].GetTeam() != m_Aura->m_MaxSlots) {
+    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[i].GetTeam() != m_Map->GetVersionMaxSlots()) {
       CGamePlayer* Player = GetPlayerFromSID(i);
       if (!Player) {
         ++m_ControllersWithMap;
@@ -1487,7 +1487,7 @@ vector<uint8_t> CGame::GetNumFixedComputersByTeam() const
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> fixedComputers(numTeams, 0);
   for (const auto& slot : m_Slots) {
-    if (slot.GetTeam() == m_Aura->m_MaxSlots) continue;
+    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) continue;
     if (!slot.GetIsSelectable()) {
       ++fixedComputers[slot.GetTeam()];
     }
@@ -1500,7 +1500,7 @@ vector<uint8_t> CGame::GetPotentialTeamSizes() const
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes(numTeams, 0);
   for (const auto& slot : m_Slots) {
-    if (slot.GetTeam() == m_Aura->m_MaxSlots) continue;
+    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) continue;
     if (slot.GetSlotStatus() == SLOTSTATUS_CLOSED) continue;
     ++teamSizes[slot.GetTeam()];
   }
@@ -1513,7 +1513,7 @@ pair<uint8_t, uint8_t> CGame::GetLargestPotentialTeam() const
   // Only for Custom Forces
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes = GetPotentialTeamSizes();
-  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Aura->m_MaxSlots, 0u);
+  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
   for (uint8_t team = 0; team < numTeams; ++team) {
     if (teamSizes[team] > largestTeam.second) {
       largestTeam = make_pair(team, teamSizes[team]);
@@ -1527,7 +1527,7 @@ pair<uint8_t, uint8_t> CGame::GetSmallestPotentialTeam(const uint8_t minSize, co
   // Only for Custom Forces
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes = GetPotentialTeamSizes();
-  pair<uint8_t, uint8_t> smallestTeam = make_pair(m_Aura->m_MaxSlots, m_Aura->m_MaxSlots);
+  pair<uint8_t, uint8_t> smallestTeam = make_pair(m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots());
   for (uint8_t team = 0; team < numTeams; ++team) {
     if (team == exceptTeam || teamSizes[team] < minSize) continue;
     if (teamSizes[team] < smallestTeam.second) {
@@ -1542,7 +1542,7 @@ vector<uint8_t> CGame::GetActiveTeamSizes() const
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes(numTeams, 0);
   for (const auto& slot : m_Slots) {
-    if (slot.GetTeam() == m_Aura->m_MaxSlots) continue;
+    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) continue;
     if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
       ++teamSizes[slot.GetTeam()];
     }
@@ -1642,7 +1642,7 @@ bool CGame::FindHumanVsAITeams(const uint8_t humanCount, const uint8_t computerC
     // MAPOPT_CUSTOMFORCES
     pair<uint8_t, uint8_t> largestTeam = GetLargestPotentialTeam();
     pair<uint8_t, uint8_t> smallestTeam = GetSmallestPotentialTeam(humanCount < computerCount ? humanCount : computerCount, largestTeam.first);
-    if (largestTeam.second == 0 || smallestTeam.second == m_Aura->m_MaxSlots) {
+    if (largestTeam.second == 0 || smallestTeam.second == m_Map->GetVersionMaxSlots()) {
       return false;
     }
     pair<uint8_t, uint8_t>& computerTeam = (computerCount > humanCount ? largestTeam : smallestTeam);
@@ -1678,8 +1678,8 @@ bool CGame::FindHumanVsAITeams(const uint8_t humanCount, const uint8_t computerC
   {
     const uint8_t numTeams = m_Map->GetMapNumTeams();
     vector<uint8_t> teamSizes = GetPotentialTeamSizes();
-    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Aura->m_MaxSlots, 0u);
-    pair<uint8_t, uint8_t> smallestTeam = make_pair(m_Aura->m_MaxSlots, m_Aura->m_MaxSlots);
+    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
+    pair<uint8_t, uint8_t> smallestTeam = make_pair(m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots());
     for (uint8_t team = 0; team < numTeams; ++team) {
       if (team == forcedComputerTeam) continue;
       if (teamSizes[team] > largestTeam.second) {
@@ -1784,7 +1784,7 @@ bool CGame::SetLayoutCompact()
 
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes = GetActiveTeamSizes();
-  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Aura->m_MaxSlots, 0u);
+  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
   for (uint8_t team = 0; team < numTeams; ++team) {
     if (largestTeam.second < teamSizes[team]) {
       largestTeam = make_pair(team, teamSizes[team]);
@@ -1805,7 +1805,7 @@ bool CGame::SetLayoutCompact()
     return false;
   }
   //const uint8_t expectedMaxTeam = expectedFullTeams - (extraPlayers == 0);
-  vector<uint8_t> premadeMappings(numTeams, m_Aura->m_MaxSlots);
+  vector<uint8_t> premadeMappings(numTeams, m_Map->GetVersionMaxSlots());
   bitset<MAX_SLOTS_MODERN> fullTeams;
   for (uint8_t team = 0; team < numTeams; ++team) {
     if (teamSizes[team] == largestTeam.second) {
@@ -1954,7 +1954,7 @@ bool CGame::SetLayoutFFA()
   bitset<MAX_SLOTS_MODERN> occupiedTeams;
   while (SID--) {
     CGameSlot* slot = GetSlot(SID);
-    if (slot->GetTeam() == m_Aura->m_MaxSlots) continue;
+    if (slot->GetTeam() == m_Map->GetVersionMaxSlots()) continue;
     if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
     if (slot->GetTeam() == nextTeam) {
       // Slot already has the right team. Skip both team and slot.
@@ -2016,7 +2016,7 @@ uint8_t CGame::GetOneVsAllTeamAll() const
 
   vector<uint8_t> teamSizes = GetPotentialTeamSizes();
   if (resultTeam == 0xFF) {
-    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Aura->m_MaxSlots, 0u);
+    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
     for (uint8_t team = 0; team < mapNumTeams; ++team) {
       if (teamSizes[team] > largestTeam.second) {
         largestTeam = make_pair(team, teamSizes[team]);
@@ -2039,7 +2039,7 @@ uint8_t CGame::GetOneVsAllTeamOne(const uint8_t teamAll) const
 
   const uint8_t mapNumTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes = GetPotentialTeamSizes();
-  pair<uint8_t, uint8_t> smallestTeam = make_pair(m_Aura->m_MaxSlots, m_Aura->m_MaxSlots);
+  pair<uint8_t, uint8_t> smallestTeam = make_pair(m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots());
   for (uint8_t team = 0; team < mapNumTeams; ++team) {
     if (team == teamAll) continue;
     if (teamSizes[team] < smallestTeam.second) {
@@ -2095,7 +2095,7 @@ bool CGame::SetLayoutOneVsAll(const CGamePlayer* targetPlayer)
         if (m_Slots[SID].GetIsComputer()) {
           return false;
         }
-        swapSID = GetSelectableTeamSlotBack(m_Aura->m_MaxSlots, SID, endObserverSID, true);
+        swapSID = GetSelectableTeamSlotBack(m_Map->GetVersionMaxSlots(), SID, endObserverSID, true);
         if (swapSID == 0xFF) {
           return false;
         }
@@ -3340,10 +3340,10 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   if (GetIsCustomForces()) {
     m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), Player->GetPID(), SLOTPROG_RST, SLOTSTATUS_OCCUPIED, 0, m_Slots[SID].GetTeam(), m_Slots[SID].GetColor(), m_Map->GetLobbyRace(&m_Slots[SID]));
   } else {
-    m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), Player->GetPID(), SLOTPROG_RST, SLOTSTATUS_OCCUPIED, 0, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(&m_Slots[SID]));
+    m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), Player->GetPID(), SLOTPROG_RST, SLOTSTATUS_OCCUPIED, 0, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), m_Map->GetLobbyRace(&m_Slots[SID]));
     SetSlotTeamAndColorAuto(SID);
   }
-  Player->SetObserver(m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots);
+  Player->SetObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
 
   // send slot info to the new player
   // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful
@@ -3982,11 +3982,11 @@ void CGame::EventPlayerChangeTeam(CGamePlayer* player, uint8_t team)
 {
   // player is requesting a team change
 
-  if (team > m_Aura->m_MaxSlots) {
+  if (team > m_Map->GetVersionMaxSlots()) {
     return;
   }
 
-  if (team == m_Aura->m_MaxSlots) {
+  if (team == m_Map->GetVersionMaxSlots()) {
     if (m_Map->GetMapObservers() != MAPOBS_ALLOWED && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
       return;
     }
@@ -4035,7 +4035,7 @@ void CGame::EventPlayerChangeColor(CGamePlayer* player, uint8_t colour)
     return;
   }
 
-  if (colour >= m_Aura->m_MaxSlots) {
+  if (colour >= m_Map->GetVersionMaxSlots()) {
     return;
   }
 
@@ -4044,7 +4044,7 @@ void CGame::EventPlayerChangeColor(CGamePlayer* player, uint8_t colour)
   if (SID < m_Slots.size()) {
     // make sure the player isn't an observer
 
-    if (m_Slots[SID].GetTeam() == m_Aura->m_MaxSlots) {
+    if (m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots()) {
       return;
     }
 
@@ -4539,7 +4539,7 @@ void CGame::CheckPlayerObfuscation()
 
   unordered_set<uint8_t> activeTeams = {};
   for (const auto& slot : m_Slots) {
-    if (slot.GetTeam() == m_Aura->m_MaxSlots) {
+    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) {
       continue;
     }
     if (activeTeams.find(slot.GetTeam()) != activeTeams.end()) {
@@ -4650,7 +4650,7 @@ void CGame::HandleGameLoadedStats()
   );
 
   for (auto& dbPlayer : m_DBGamePlayers) {
-    if (dbPlayer->GetColor() == m_Aura->m_MaxSlots) {
+    if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
       continue;
     }
     m_Aura->m_DB->UpdateGamePlayerOnStart(
@@ -4940,7 +4940,7 @@ uint8_t CGame::GetNewTeam() const
 {
   bitset<MAX_SLOTS_MODERN> usedTeams;
   for (auto& slot : m_Slots) {
-    if (slot.GetColor() == m_Aura->m_MaxSlots) continue;
+    if (slot.GetColor() == m_Map->GetVersionMaxSlots()) continue;
     if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
     usedTeams.set(slot.GetTeam());
   }
@@ -4950,22 +4950,22 @@ uint8_t CGame::GetNewTeam() const
       return team;
     }
   }
-  return m_Aura->m_MaxSlots;
+  return m_Map->GetVersionMaxSlots();
 }
 
 uint8_t CGame::GetNewColor() const
 {
   bitset<MAX_SLOTS_MODERN> usedColors;
   for (auto& slot : m_Slots) {
-    if (slot.GetColor() == m_Aura->m_MaxSlots) continue;
+    if (slot.GetColor() == m_Map->GetVersionMaxSlots()) continue;
     usedColors.set(slot.GetColor());
   }
-  for (uint8_t color = 0; color < m_Aura->m_MaxSlots; ++color) {
+  for (uint8_t color = 0; color < m_Map->GetVersionMaxSlots(); ++color) {
     if (!usedColors.test(color)) {
       return color;
     }
   }
-  return m_Aura->m_MaxSlots; // should never happen
+  return m_Map->GetVersionMaxSlots(); // should never happen
 }
 
 uint8_t CGame::SimulateActionPID(const uint8_t actionType, CGamePlayer* player, const bool isDisconnect)
@@ -5009,7 +5009,7 @@ bool CGame::GetHasAnyActiveTeam() const
   bitset<MAX_SLOTS_MODERN> usedTeams;
   for (const auto& slot : m_Slots) {
     const uint8_t team = slot.GetTeam();
-    if (team == m_Aura->m_MaxSlots) continue;
+    if (team == m_Map->GetVersionMaxSlots()) continue;
     if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
       if (usedTeams.test(team)) {
         return true;
@@ -5339,7 +5339,7 @@ uint8_t CGame::GetEmptyObserverSID() const
     return 0xFF;
 
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
+    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == m_Map->GetVersionMaxSlots()) {
       return i;
     }
   }
@@ -5398,14 +5398,14 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
   CGamePlayer* PlayerOne = GetPlayerFromSID(SID1);
   CGamePlayer* PlayerTwo = GetPlayerFromSID(SID2);
   if (PlayerOne) {
-    PlayerOne->SetObserver(Slot2.GetTeam() == m_Aura->m_MaxSlots);
+    PlayerOne->SetObserver(Slot2.GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerOne->GetIsObserver()) {
       PlayerOne->SetPowerObserver(PlayerOne->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       PlayerOne->ClearUserReady();
     }
   }
   if (PlayerTwo) {
-    PlayerTwo->SetObserver(Slot1.GetTeam() == m_Aura->m_MaxSlots);
+    PlayerTwo->SetObserver(Slot1.GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerTwo->GetIsObserver()) {
       PlayerTwo->SetPowerObserver(PlayerTwo->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       PlayerTwo->ClearUserReady();
@@ -5441,7 +5441,7 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   if (GetIsCustomForces()) {
     m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), m_Map->GetLobbyRace(slot));
   } else {
-    m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
   }
   if (player && !GetHasAnotherPlayer(SID)) {
     EventLobbyLastPlayerLeaves();
@@ -5509,7 +5509,7 @@ bool CGame::CloseSlot(const uint8_t SID, const bool kick)
   if (GetIsCustomForces()) {
     m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_CLOSED, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), m_Map->GetLobbyRace(slot));
   } else {
-    m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_CLOSED, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_CLOSED, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
   }
   
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -5541,7 +5541,7 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
   if (Slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED && GetNumControllers() == m_Map->GetMapNumControllers()) {
     return false;
   }
-  if (Slot.GetTeam() == m_Aura->m_MaxSlots) {
+  if (Slot.GetTeam() == m_Map->GetVersionMaxSlots()) {
     if (GetIsCustomForces()) {
       return false;
     }
@@ -5576,8 +5576,8 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
     if (newSID == 0xFF) return false;
     return SwapSlots(SID, newSID);
   } else {
-    const bool fromObservers = slot->GetTeam() == m_Aura->m_MaxSlots;
-    const bool toObservers = team == m_Aura->m_MaxSlots;
+    const bool fromObservers = slot->GetTeam() == m_Map->GetVersionMaxSlots();
+    const bool toObservers = team == m_Map->GetVersionMaxSlots();
     if (toObservers && !slot->GetIsPlayerOrFake()) return false;
     if (fromObservers && !toObservers && GetNumControllers() >= m_Map->GetMapNumControllers()) {
       // Observer cannot become controller if the map's controller limit has been reached.
@@ -5587,7 +5587,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
     slot->SetTeam(team);
     if (toObservers || fromObservers) {
       if (toObservers) {
-        slot->SetColor(m_Aura->m_MaxSlots);
+        slot->SetColor(m_Map->GetVersionMaxSlots());
         slot->SetRace(SLOTRACE_RANDOM);
       } else {
         slot->SetColor(GetNewColor());
@@ -5622,7 +5622,7 @@ bool CGame::SetSlotColor(const uint8_t SID, const uint8_t colour, const bool for
     return false;
   }
 
-  if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == m_Aura->m_MaxSlots) {
+  if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == m_Map->GetVersionMaxSlots()) {
     // Only allow active players to choose their colors.
     //
     // Open/closed slots do actually have a color when Fixed Player Settings is enabled,
@@ -5843,7 +5843,7 @@ bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool
     }
   }
   if (GetIsCustomForces()) {
-    if (slot->GetTeam() == m_Aura->m_MaxSlots) {
+    if (slot->GetTeam() == m_Map->GetVersionMaxSlots()) {
       return false;
     }
     if (slot->GetIsPlayerOrFake()) DeleteFakePlayer(SID);
@@ -5851,7 +5851,7 @@ bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool
     if (resetLayout) ResetLayout(false);
   } else {
     if (slot->GetIsPlayerOrFake()) DeleteFakePlayer(SID);
-    m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RDY, SLOTSTATUS_OCCUPIED, SLOTCOMP_YES, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, m_Map->GetLobbyRace(slot), skill);
+    m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RDY, SLOTSTATUS_OCCUPIED, SLOTCOMP_YES, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), m_Map->GetLobbyRace(slot), skill);
     SetSlotTeamAndColorAuto(SID);
   }
   return true;
@@ -5945,7 +5945,7 @@ void CGame::ShuffleSlots()
   vector<CGameSlot> PlayerSlots;
 
   for (auto& slot : m_Slots) {
-    if (slot.GetIsPlayerOrFake() && slot.GetTeam() != m_Aura->m_MaxSlots) {
+    if (slot.GetIsPlayerOrFake() && slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
       PlayerSlots.push_back(slot);
     }
   }
@@ -5995,7 +5995,7 @@ void CGame::ShuffleSlots()
   vector<CGameSlot> Slots;
 
   for (auto& slot : m_Slots) {
-    if (slot.GetIsPlayerOrFake() && slot.GetTeam() != m_Aura->m_MaxSlots) {
+    if (slot.GetIsPlayerOrFake() && slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
       Slots.push_back(*CurrentPlayer);
       ++CurrentPlayer;
     } else {
@@ -6034,7 +6034,7 @@ void CGame::AddToRealmVerified(const string& server, CGamePlayer* Player, bool s
 
 void CGame::AddToReserved(const string& name)
 {
-  if (m_RestoredGame && m_Reserved.size() >= m_Aura->m_MaxSlots) {
+  if (m_RestoredGame && m_Reserved.size() >= m_Map->GetVersionMaxSlots()) {
     return;
   }
 
@@ -6329,13 +6329,13 @@ void CGame::ResetTeams(const bool alsoCaptains)
   uint8_t SID = static_cast<uint8_t>(m_Slots.size());
   while (SID--) {
     CGameSlot* slot = GetSlot(SID);
-    if (slot->GetTeam() == m_Aura->m_MaxSlots) continue;
+    if (slot->GetTeam() == m_Map->GetVersionMaxSlots()) continue;
     if (!slot->GetIsPlayerOrFake()) continue;
     if (!alsoCaptains) {
       CGamePlayer* player = GetPlayerFromSID(SID);
       if (player && player->GetIsDraftCaptain()) continue;
     }
-    if (!SetSlotTeam(SID, m_Aura->m_MaxSlots, false)) {
+    if (!SetSlotTeam(SID, m_Map->GetVersionMaxSlots(), false)) {
       break;
     }
   }
@@ -6400,7 +6400,7 @@ bool CGame::GetCanStartGracefulCountDown() const
   }
 
   bool enoughTeams = false;
-  uint8_t sameTeam = m_Aura->m_MaxSlots;
+  uint8_t sameTeam = m_Map->GetVersionMaxSlots();
   for (const auto& slot : m_Slots) {
     if (slot.GetIsPlayerOrFake() && slot.GetDownloadStatus() != 100) {
       CGamePlayer* Player = GetPlayerFromPID(slot.GetPID());
@@ -6408,8 +6408,8 @@ bool CGame::GetCanStartGracefulCountDown() const
         return false;
       }
     }
-    if (slot.GetTeam() != m_Aura->m_MaxSlots) {
-      if (sameTeam == m_Aura->m_MaxSlots) {
+    if (slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
+      if (sameTeam == m_Map->GetVersionMaxSlots()) {
         sameTeam = slot.GetTeam();
       } else if (sameTeam != slot.GetTeam()) {
         enoughTeams = true;
@@ -6472,7 +6472,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   // if the player sent "!start force" skip the checks and start the countdown
   // otherwise check that the game is ready to start
 
-  uint8_t sameTeam = m_Aura->m_MaxSlots;
+  uint8_t sameTeam = m_Map->GetVersionMaxSlots();
 
   if (force) {
     for (const auto& player : m_Players) {
@@ -6512,8 +6512,8 @@ void CGame::StartCountDown(bool fromUser, bool force)
             StillDownloading += ", " + Player->GetName();
         }
       }
-      if (slot.GetTeam() != m_Aura->m_MaxSlots) {
-        if (sameTeam == m_Aura->m_MaxSlots) {
+      if (slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
+        if (sameTeam == m_Map->GetVersionMaxSlots()) {
           sameTeam = slot.GetTeam();
         } else if (sameTeam != slot.GetTeam()) {
           enoughTeams = true;
@@ -6598,7 +6598,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
 
   if (GetNumHumanOrFakeControllers() == 1 && (0 == GetSlotsOpen() || m_Map->GetMapObservers() != MAPOBS_REFEREES)) {
     SendAllChat("HINT: Single-player game detected. In-game commands will be DISABLED.");
-    if (GetNumOccupiedSlots() != m_Aura->m_MaxSlots) {
+    if (GetNumOccupiedSlots() != m_Map->GetVersionMaxSlots()) {
       SendAllChat("HINT: To avoid this, you may enable map referees, or add a fake player [" + GetCmdToken() + "fp]");
     }
   }
@@ -6782,11 +6782,11 @@ void CGame::SetSupportedGameVersion(uint8_t nVersion) {
 
 void CGame::OpenObserverSlots()
 {
-  const uint8_t enabledCount = m_Aura->m_MaxSlots - GetMap()->GetMapNumDisabled();
+  const uint8_t enabledCount = m_Map->GetVersionMaxSlots() - GetMap()->GetMapNumDisabled();
   if (m_Slots.size() >= enabledCount) return;
   Print(GetLogPrefix() + "adding " + to_string(enabledCount - m_Slots.size()) + " observer slots");
   while (m_Slots.size() < enabledCount) {
-    m_Slots.emplace_back(GetIsCustomForces() ? SLOTTYPE_NONE : SLOTTYPE_USER, 0u, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+    m_Slots.emplace_back(GetIsCustomForces() ? SLOTTYPE_NONE : SLOTTYPE_USER, 0u, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
   }
 }
 
@@ -6795,7 +6795,7 @@ void CGame::CloseObserverSlots()
   uint8_t count = 0;
   uint8_t i = static_cast<uint8_t>(m_Slots.size());
   while (i--) {
-    if (m_Slots[i].GetTeam() == m_Aura->m_MaxSlots) {
+    if (m_Slots[i].GetTeam() == m_Map->GetVersionMaxSlots()) {
       m_Slots.erase(m_Slots.begin() + i);
       ++count;
     }
@@ -6867,8 +6867,8 @@ void CGame::CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const st
     SLOTPROG_RDY,
     SLOTSTATUS_OCCUPIED,
     SLOTCOMP_NO,
-    isCustomForces ? m_Slots[SID].GetTeam() : m_Aura->m_MaxSlots,
-    isCustomForces ? m_Slots[SID].GetColor() : m_Aura->m_MaxSlots,
+    isCustomForces ? m_Slots[SID].GetTeam() : m_Map->GetVersionMaxSlots(),
+    isCustomForces ? m_Slots[SID].GetColor() : m_Map->GetVersionMaxSlots(),
     m_Map->GetLobbyRace(&m_Slots[SID])
   );
   if (!isCustomForces) SetSlotTeamAndColorAuto(SID);
@@ -6901,7 +6901,7 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
   uint8_t SID = isCustomForces ? GetEmptyObserverSID() : GetEmptySID(false);
   if (SID >= static_cast<uint8_t>(m_Slots.size())) return false;
 
-  if (isCustomForces && (m_Slots[SID].GetTeam() != m_Aura->m_MaxSlots)) {
+  if (isCustomForces && (m_Slots[SID].GetTeam() != m_Map->GetVersionMaxSlots())) {
     return false;
   }
   if (!CanLockSlotForJoins(SID)) {
@@ -6923,7 +6923,7 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
       if (GetIsCustomForces()) {
         m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
       } else {
-        m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+        m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
       }
       // Ensure this is sent before virtual host rejoins
       SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(*it), PLAYERLEAVE_LOBBY));
@@ -6939,7 +6939,7 @@ bool CGame::DeleteFakePlayer(uint8_t SID)
 bool CGame::GetIsFakeObserver(const uint16_t fakePlayer) const
 {
   const CGameSlot* slot = InspectSlot(fakePlayer >> 8);
-  return slot != nullptr && slot->GetTeam() == m_Aura->m_MaxSlots;
+  return slot != nullptr && slot->GetTeam() == m_Map->GetVersionMaxSlots();
 }
 
 uint8_t CGame::FakeAllSlots()
@@ -6995,7 +6995,7 @@ void CGame::DeleteFakePlayers()
       if (GetIsCustomForces()) {
         slot = CGameSlot(slot.GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, slot.GetTeam(), slot.GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(&slot));
       } else {
-        slot = CGameSlot(slot.GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Aura->m_MaxSlots, m_Aura->m_MaxSlots, SLOTRACE_RANDOM);
+        slot = CGameSlot(slot.GetType(), 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
       }
       // Ensure this is sent before virtual host rejoins
       SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), PLAYERLEAVE_LOBBY));

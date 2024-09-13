@@ -1125,33 +1125,11 @@ void CMap::Load(CConfig* CFG)
 
   m_MapNumTeams = static_cast<uint8_t>(MapNumTeams);
 
-  if (CFG->Exists("map_slot1")) {
-    Slots.clear();
-
-    for (uint32_t Slot = 1; Slot <= m_Aura->m_MaxSlots; ++Slot) {
-      string SlotString = CFG->GetString("map_slot" + to_string(Slot), emptyString);
-
-      if (SlotString.empty())
-        break;
-
-      std::vector<uint8_t> SlotData = ExtractNumbers(SlotString, 10);
-      Slots.emplace_back(SlotData);
-    }
-  } else if (!Slots.empty()) {
-    uint32_t SlotNum = 0;
-    for (auto& Slot : Slots) {
-      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetByteArray());
-    }
-  }
-
-  m_Slots = Slots;
-
   if (CFG->Exists("map_gameversion_min")) {
     MapMinGameVersion = CFG->GetUint8("map_gameversion_min", 0);
   } else {
     MapMinGameVersion = 0;
-    // TODO: Even when m_SkipVersionCheck may ignore MapEditorVersion, do not ignore Slots.size() > 12, etc.
-    if (6060 <= MapEditorVersion  || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
+    if (6060 <= MapEditorVersion || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
       MapMinGameVersion = 29;
     } else if (6059 <= MapEditorVersion) {
       MapMinGameVersion = 24;
@@ -1180,6 +1158,38 @@ void CMap::Load(CConfig* CFG)
   }
   m_MapMinGameVersion = MapMinGameVersion;
 
+  if (MapMinGameVersion >= 29) {
+    m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_MODERN);
+  } else {
+    // TODO: Verify. Allegedly, old maps are limited to 12 slots even when hosted in Reforged.
+    m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_LEGACY);
+  }
+  if (m_Aura->m_MaxSlots < m_MapVersionMaxSlots) {
+    Print("[MAP] " + ToDecString(m_Aura->m_MaxSlots) + " player limit enforced in modern map (editor version " + to_string(MapEditorVersion) + ")");
+    m_MapVersionMaxSlots = m_Aura->m_MaxSlots;
+  }
+
+  if (CFG->Exists("map_slot1")) {
+    Slots.clear();
+
+    for (uint32_t Slot = 1; Slot <= m_MapVersionMaxSlots; ++Slot) {
+      string SlotString = CFG->GetString("map_slot" + to_string(Slot), emptyString);
+
+      if (SlotString.empty())
+        break;
+
+      std::vector<uint8_t> SlotData = ExtractNumbers(SlotString, 10);
+      Slots.emplace_back(SlotData);
+    }
+  } else if (!Slots.empty()) {
+    uint32_t SlotNum = 0;
+    for (auto& Slot : Slots) {
+      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetByteArray());
+    }
+  }
+
+  m_Slots = Slots;
+
   if (CFG->Exists("map_proxy_reconnect")) {
     m_ProxyReconnect = CFG->GetUint8("map_proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
   }
@@ -1195,15 +1205,21 @@ void CMap::Load(CConfig* CFG)
 
   // force melee maps to have observer slots enabled by default
 
-  if (m_MapFilterType & MAPFILTER_TYPE_MELEE && m_MapObservers == MAPOBS_NONE)
+  if (m_MapFilterType & MAPFILTER_TYPE_MELEE && m_MapObservers == MAPOBS_NONE) {
     m_MapObservers = MAPOBS_ALLOWED;
+  }
 
-  string ErrorMessage = CheckProblems();
-
-  if (!ErrorMessage.empty()) {
-    Print("[MAP] " + ErrorMessage);
-  } else if (isPartial) {
-    CFG->Delete("cfg_partial");
+  if (!CFG->GetSuccess()) {
+    m_Valid = false;
+    m_ErrorMessage = "invalid map config file";
+    Print("[MAP] " + m_ErrorMessage);
+  } else {
+    string ErrorMessage = CheckProblems();
+    if (!ErrorMessage.empty()) {
+      Print("[MAP] " + ErrorMessage);
+    } else if (isPartial) {
+      CFG->Delete("cfg_partial");
+    }
   }
 }
 
@@ -1223,13 +1239,15 @@ string CMap::CheckProblems()
   if (m_ClientMapPath.empty())
   {
     m_Valid = false;
-    return "map_path not found";
+    m_ErrorMessage = "map_path not found";
+    return m_ErrorMessage;
   }
 
   if (m_ClientMapPath.length() > 53)
   {
     m_Valid = false;
-    return "map_path too long";
+    m_ErrorMessage = "map_path too long";
+    return m_ErrorMessage;
   }
 
   if (m_ClientMapPath.find('/') != string::npos)
@@ -1238,135 +1256,167 @@ string CMap::CheckProblems()
   if (m_MapSize.size() != 4)
   {
     m_Valid = false;
-    return "invalid map_size detected";
+    m_ErrorMessage = "invalid map_size detected";
+    return m_ErrorMessage;
   }
   else if (!m_MapData.empty() && m_MapData.size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
-    return "nonmatching map_size detected";
+    m_ErrorMessage = "nonmatching map_size detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapCRC32.size() != 4)
   {
     m_Valid = false;
     if (m_MapCRC32.empty() && m_MapData.empty()) {
-      return "map file not found";
+      m_ErrorMessage = "map file not found";
     } else {
-      return "invalid map_info detected";
+      m_ErrorMessage = "invalid map_info detected";
     }
+    return m_ErrorMessage;
   }
 
   if (m_MapHash.size() != 4)
   {
     m_Valid = false;
     if (m_MapHash.empty() && m_MapMPQErrored) {
-      return "cannot load map file as MPQ archive";
+      m_ErrorMessage = "cannot load map file as MPQ archive";
     } else {
-      return "invalid map_crc detected";
+      m_ErrorMessage = "invalid map_crc detected";
     }
+    return m_ErrorMessage;
   }
 
   if (m_MapSHA1.size() != 20)
   {
     m_Valid = false;
     if (m_MapSHA1.empty() && m_MapMPQErrored) {
-      return "cannot load map file as MPQ archive";
+      m_ErrorMessage = "cannot load map file as MPQ archive";
     } else {
-      return "invalid map_sha1 detected";
+      m_ErrorMessage = "invalid map_sha1 detected";
     }
+    return m_ErrorMessage;
   }
 
   if (m_MapSpeed != MAPSPEED_SLOW && m_MapSpeed != MAPSPEED_NORMAL && m_MapSpeed != MAPSPEED_FAST)
   {
     m_Valid = false;
-    return "invalid map_speed detected";
+    m_ErrorMessage = "invalid map_speed detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapVisibility != MAPVIS_HIDETERRAIN && m_MapVisibility != MAPVIS_EXPLORED && m_MapVisibility != MAPVIS_ALWAYSVISIBLE && m_MapVisibility != MAPVIS_DEFAULT)
   {
     m_Valid = false;
-    return "invalid map_visibility detected";
+    m_ErrorMessage = "invalid map_visibility detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapObservers != MAPOBS_NONE && m_MapObservers != MAPOBS_ONDEFEAT && m_MapObservers != MAPOBS_ALLOWED && m_MapObservers != MAPOBS_REFEREES)
   {
     m_Valid = false;
-    return "invalid map_observers detected";
+    m_ErrorMessage = "invalid map_observers detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    return "invalid map_numdisabled detected";
+    m_ErrorMessage = "invalid map_numdisabled detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapNumControllers < 2 || m_MapNumControllers > MAX_SLOTS_MODERN || m_MapNumControllers + m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    return "invalid map_numplayers detected";
+    m_ErrorMessage = "invalid map_numplayers detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapNumTeams < 2 || m_MapNumTeams > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    return "invalid map_numteams detected";
+    m_ErrorMessage = "invalid map_numteams detected";
+    return m_ErrorMessage;
   }
 
   if (m_Slots.size() < 2 || m_Slots.size() > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    return "invalid map_slot<x> detected";
+    m_ErrorMessage = "invalid map_slot<x> detected";
+    return m_ErrorMessage;
   }
 
   if (
-    m_MapNumControllers + m_MapNumDisabled > m_Aura->m_MaxSlots ||
-    m_MapNumTeams > m_Aura->m_MaxSlots ||
-    m_Slots.size() > m_Aura->m_MaxSlots
+    m_MapNumControllers + m_MapNumDisabled > m_MapVersionMaxSlots ||
+    m_MapNumTeams > m_MapVersionMaxSlots ||
+    m_Slots.size() > m_MapVersionMaxSlots
   ) {
     m_Valid = false;
-    return "map uses more than " + to_string(m_Aura->m_MaxSlots) + " players - v1.29+ required";
+    if (m_MapVersionMaxSlots == MAX_SLOTS_LEGACY) {
+      m_ErrorMessage = "map uses too many slots - v1.29+ required";
+    } else {
+      m_ErrorMessage = "map uses an invalid amount of slots";
+    }
+    return m_ErrorMessage;
   }
 
   bitset<MAX_SLOTS_MODERN> usedTeams;
   uint8_t controllerSlotCount = 0;
   for (const auto& slot : m_Slots) {
-    if (slot.GetTeam() > m_Aura->m_MaxSlots || slot.GetColor() > m_Aura->m_MaxSlots) {
+    if (slot.GetTeam() > m_MapVersionMaxSlots || slot.GetColor() > m_MapVersionMaxSlots) {
       m_Valid = false;
-      return "map uses more than " + to_string(m_Aura->m_MaxSlots) + " players - v1.29+ required";
+      if (m_MapVersionMaxSlots == MAX_SLOTS_LEGACY) {
+        m_ErrorMessage = "map uses too many players - v1.29+ required";
+      } else {
+        m_ErrorMessage = "map uses an invalid amount of players";
+      }
+      return m_ErrorMessage;
     }
-    if (slot.GetTeam() == m_Aura->m_MaxSlots) {
+    if (slot.GetTeam() == m_MapVersionMaxSlots) {
       continue;
     }
     if (slot.GetTeam() > m_MapNumTeams) {
       // TODO: Or just enforce usedTeams.count() <= m_MapNumTeams?
       m_Valid = false;
-      return "invalid map_slot<x> detected";
+      m_ErrorMessage = "invalid map_slot<x> detected";
+      return m_ErrorMessage;
     }
     usedTeams.set(slot.GetTeam());
     ++controllerSlotCount;
   }
   if (controllerSlotCount != m_MapNumControllers) {
     m_Valid = false;
-    return "invalid map_slot<x> detected"; 
+    m_ErrorMessage = "invalid map_slot<x> detected"; 
+    return m_ErrorMessage;
   }
   if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && usedTeams.count() <= 1) {
     m_Valid = false;
-    return "invalid map_slot<x> detected";
+    m_ErrorMessage = "invalid map_slot<x> detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapWidth.size() != 2) {
     m_Valid = false;
-    return "invalid map_width detected";
+    m_ErrorMessage = "invalid map_width detected";
+    return m_ErrorMessage;
   }
 
   if (m_MapHeight.size() != 2) {
     m_Valid = false;
-    return "invalid map_height detected";
+    m_ErrorMessage = "invalid map_height detected";
+    return m_ErrorMessage;
   }
 
   if (!m_SkipVersionCheck && m_Aura->m_GameVersion < m_MapMinGameVersion) {
     m_Valid = false;
-    return "map requires v1." + to_string(m_MapMinGameVersion) + " (using v1." + to_string(m_Aura->m_GameVersion) + ")";
+    m_ErrorMessage = "map requires v1." + to_string(m_MapMinGameVersion) + " (using v1." + to_string(m_Aura->m_GameVersion) + ")";
+    return m_ErrorMessage;
+  }
+
+  if (!m_Valid) {
+    return m_ErrorMessage;
   }
 
   return string();

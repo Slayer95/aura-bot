@@ -1231,7 +1231,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
   // battle.net refreshes use IDs of 16-255
 
     game->GetHostCounter() | (game->GetIsMirror() ? 0 : (m_PublicServerID << 24)),
-    m_Aura->m_MaxSlots
+    game->GetMap()->GetVersionMaxSlots()
   ));
 
   if (!m_CurrentChannel.empty()) {

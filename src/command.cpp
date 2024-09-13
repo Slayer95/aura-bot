@@ -2125,7 +2125,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_Aura->m_MaxSlots);
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_TargetGame->GetMap()->GetVersionMaxSlots());
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "c <SLOTNUM>");
         break;
@@ -2133,7 +2133,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> failedSlots;
       for (auto& elem : Args) {
-        if (elem == 0 || elem > m_Aura->m_MaxSlots) {
+        if (elem == 0 || elem > m_TargetGame->GetMap()->GetVersionMaxSlots()) {
           ErrorReply("Usage: " + cmdToken + "c <SLOTNUM>");
           break;
         }
@@ -2285,7 +2285,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<string> Args = SplitArgs(Payload, 1u, m_Aura->m_MaxSlots);
+      vector<string> Args = SplitArgs(Payload, 1u, m_TargetGame->GetMap()->GetVersionMaxSlots());
 
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "hold <PLAYER1> , <PLAYER2>, ...");
@@ -2321,7 +2321,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<string> Args = SplitArgs(Payload, 1u, m_Aura->m_MaxSlots);
+      vector<string> Args = SplitArgs(Payload, 1u, m_TargetGame->GetMap()->GetVersionMaxSlots());
 
       if (Args.empty()) {
         m_TargetGame->RemoveAllReserved();
@@ -2526,7 +2526,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_Aura->m_MaxSlots);
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, m_TargetGame->GetMap()->GetVersionMaxSlots());
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "o <SLOTNUM>");
         break;
@@ -2534,7 +2534,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<string> failedSlots;
       for (auto& elem : Args) {
-        if (elem == 0 || elem > m_Aura->m_MaxSlots) {
+        if (elem == 0 || elem > m_TargetGame->GetMap()->GetVersionMaxSlots()) {
           ErrorReply("Usage: " + cmdToken + "o <SLOTNUM>");
           break;
         }
@@ -4362,10 +4362,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       uint8_t color = ParseColor(Args[1]);
-      if (color >= m_Aura->m_MaxSlots) {
+      if (color >= m_TargetGame->GetMap()->GetVersionMaxSlots()) {
         color = ParseSID(Args[1]);
 
-        if (color >= m_Aura->m_MaxSlots) {
+        if (color >= m_TargetGame->GetMap()->GetVersionMaxSlots()) {
           ErrorReply("Color identifier \"" + Args[1] + "\" is not valid.");
           break;
         }
@@ -4525,7 +4525,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       CGameSlot* slot = m_TargetGame->GetSlot(SID);
-      if (!slot || slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == m_Aura->m_MaxSlots) {
+      if (!slot || slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == m_TargetGame->GetMap()->GetVersionMaxSlots()) {
         ErrorReply("Slot " + ToDecString(SID + 1) + " is not playable.");
         break;
       }
@@ -4611,7 +4611,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         // let them directly pick their team members with e.g. !team Arthas
         targetTeam = slot->GetTeam();
       }
-      if (targetTeam > m_Aura->m_MaxSlots + 1) { // accept 13/25 as observer
+      if (targetTeam > m_TargetGame->GetMap()->GetVersionMaxSlots() + 1) { // accept 13/25 as observer
         ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
@@ -4626,7 +4626,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (targetTeam == m_Aura->m_MaxSlots) {
+      if (targetTeam == m_TargetGame->GetMap()->GetVersionMaxSlots()) {
         if (m_TargetGame->GetMap()->GetMapObservers() != MAPOBS_ALLOWED && m_TargetGame->GetMap()->GetMapObservers() != MAPOBS_REFEREES) {
           ErrorReply("This game does not have observers enabled.");
           break;
@@ -4703,7 +4703,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->SetSlotTeam(SID, m_Aura->m_MaxSlots, true)) {
+      if (!m_TargetGame->SetSlotTeam(SID, m_TargetGame->GetMap()->GetVersionMaxSlots(), true)) {
         if (targetPlayer) {
           ErrorReply("Cannot turn [" + targetPlayer->GetName() + "] into an observer.");
         } else {
@@ -4971,14 +4971,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!ParseBoolean(Payload, targetValue)) {
         vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
         // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
-        if (Args.empty() || Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_Aura->m_MaxSlots)) {
+        if (Args.empty() || Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_TargetGame->GetMap()->GetVersionMaxSlots())) {
           ErrorReply("Usage: " + cmdToken + "terminator <ON|OFF>");
           ErrorReply("Usage: " + cmdToken + "terminator <NUMBER>");
           break;
         }
         m_TargetGame->ResetLayout(false);
         uint8_t computerCount = static_cast<uint8_t>(Args[0]);
-        if (computerCount == m_Aura->m_MaxSlots) --computerCount; // Fix 1v12 into 1v11
+        if (computerCount == m_TargetGame->GetMap()->GetVersionMaxSlots()) --computerCount; // Fix 1v12 into 1v11
         // ignore layout, don't override computers
         if (!m_TargetGame->ComputerNSlots(SLOTCOMP_HARD, computerCount, true, false)) {
           ErrorReply("Not enough open slots for " + ToDecString(computerCount) + " computers.");

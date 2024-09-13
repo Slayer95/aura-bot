@@ -182,6 +182,7 @@ private:
   uint8_t                m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
   uint8_t                m_MapNumControllers; // config value: max map number of players
   uint8_t                m_MapNumTeams;   // config value: max map number of teams
+  uint8_t                m_MapVersionMaxSlots;
   uint8_t                m_MapSpeed;
   uint8_t                m_MapVisibility;
   uint8_t                m_MapObservers;
@@ -197,6 +198,7 @@ private:
   bool                   m_UseStandardPaths;
   bool                   m_SkipVersionCheck;
   bool                   m_Valid;
+  std::string            m_ErrorMessage;
 
 public:
   CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck = false);
@@ -233,6 +235,7 @@ public:
   inline uint8_t                GetMapNumDisabled() const { return m_MapNumDisabled; }
   inline uint8_t                GetMapNumControllers() const { return m_MapNumControllers; }
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
+  inline uint8_t                GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
   uint8_t                       GetLobbyRace(const CGameSlot* slot) const;
   uint8_t                       GetProxyReconnect() const { return m_ProxyReconnect; }
