@@ -29,7 +29,7 @@
 #include <utility>
 #include <algorithm>
 
-#define INHERIT(gameConfigKey) gameConfigKey = nRootConfig->##gameConfigKey;
+#define INHERIT(gameConfigKey) gameConfigKey = nRootConfig->gameConfigKey;
 
 #define INHERIT_MAP(gameConfigKey, mapDataKey) \
   if ((nMap->mapDataKey).has_value()) { \
