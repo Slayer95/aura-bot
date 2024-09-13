@@ -61,7 +61,7 @@ Afterwards, C++ Requests
   cd cpr-src
   mkdir build
   cd build
-  cmake .. -DCPR_USE_SYSTEM_CURL=ON
+  cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=1
   cmake --build . --parallel
   cmake --install .
 
