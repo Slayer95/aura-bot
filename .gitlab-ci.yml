@@ -61,7 +61,7 @@ Assemble:
   # CPR (shared, .so)
   - git clone https://github.com/libcpr/cpr.git cpr-src
   - cd cpr-src && mkdir build && cd build
-  - cmake .. -DCPR_USE_SYSTEM_CURL=ON
+  - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=1
   - cmake --build . --parallel
   - cmake --install .
   - cd $CI_PROJECT_DIR
