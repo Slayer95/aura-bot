@@ -203,6 +203,7 @@ public:
   bool                                            m_LobbyAutoRehosted;
   uint16_t                                        m_CreationCounter;
   std::optional<uint32_t>                         m_LobbyTimeout;
+  std::optional<uint32_t>                         m_LobbyOwnerTimeout;
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_IPFloodHandler;
@@ -212,6 +213,13 @@ public:
   std::optional<std::string>                      m_HCL;
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
+
+  std::optional<uint8_t>  m_NumPlayersToStartGameOver;
+  std::optional<uint8_t>  m_PlayersReadyMode;
+  std::optional<uint32_t> m_AutoKickPing;
+  std::optional<uint32_t> m_WarnHighPing;
+  std::optional<uint32_t> m_SafeHighPing;
+  std::optional<bool>     m_SyncNormalize;
 
   std::string                                     m_CreatedBy;
   void*                                           m_CreatedFrom;
@@ -298,6 +306,7 @@ public:
     m_Owner = std::make_pair(ownerName, ownerRealm);
   }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
+  void SetLobbyOwnerTimeout(const uint32_t nTimeout) { m_LobbyOwnerTimeout = nTimeout; }
   void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
   void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
@@ -321,6 +330,14 @@ public:
   void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }
   void SetHCL(const std::string& nHCL) { m_HCL = nHCL; }
   void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
+
+  void SetNumPlayersToStartGameOver(const uint8_t nNumPlayersToStartGameOver) { m_NumPlayersToStartGameOver = nNumPlayersToStartGameOver; }
+  void SetAutoKickPing(const uint8_t nAutoKickPing) { m_AutoKickPing = nAutoKickPing; }
+  void SetWarnKickPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
+  void SetSafeKickPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
+  void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
+
+  void AcquireCLISimple(const CCLI* nCLI);
   void ResetExtraOptions();
 
   void OnGameCreate();

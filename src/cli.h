@@ -34,6 +34,7 @@
 #include <filesystem>
 
 #include "aura.h"
+#include "gamesetup.h"
 
 #define CLI_OK 0
 #define CLI_ERROR 1
@@ -47,6 +48,7 @@
 //
 
 class CAura;
+class CGameSetup;
 
 class CCLI
 {
@@ -95,6 +97,7 @@ public:
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameLobbyTimeout;
+  std::optional<uint32_t>               m_GameLobbyOwnerTimeout;
   std::optional<uint8_t>                m_GameAutoStartPlayers;
   std::optional<int64_t>                m_GameAutoStartSeconds;
   std::optional<uint16_t>               m_GameLatencyAverage;
@@ -107,6 +110,12 @@ public:
   std::optional<bool>                   m_GameCheckReservation;
   std::optional<std::string>            m_GameHCL;
   std::optional<bool>                   m_GameFreeForAll;
+  std::optional<uint8_t>                m_GameNumPlayersToStartGameOver;
+  std::optional<uint8_t>                m_GamePlayersReadyMode;
+  std::optional<uint32_t>               m_GameAutoKickPing;
+  std::optional<uint32_t>               m_GameWarnHighPing;
+  std::optional<uint32_t>               m_GameSafeHighPing;
+  std::optional<bool>                   m_GameSyncNormalize;
   std::vector<std::string>              m_GameReservations;
   std::vector<uint8_t>                  m_GameCrossplayVersions;
   std::optional<bool>                   m_CheckMapVersion;
@@ -130,7 +139,14 @@ public:
   CCLI();
   ~CCLI();
 
+  // Parsing stuff
   uint8_t Parse(const int argc, char** argv);
+  uint8_t GetGameSearchType() const;
+  uint8_t GetGameDisplayType() const;
+  uint8_t GetGameIPFloodHandler() const;
+  bool CheckGameParameters() const;
+  bool CheckGameLoadParameters(CGameSetup* nGameSetup) const;
+
   void RunEarlyOptions() const;
   void OverrideConfig(CAura* nAura) const;
   bool QueueActions(CAura* nAura) const;

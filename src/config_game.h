@@ -27,6 +27,8 @@
 #define AURA_CONFIG_GAME_H_
 
 #include "config.h"
+#include "gamesetup.h"
+#include "map.h"
 
 #include <vector>
 #include <set>
@@ -49,6 +51,14 @@
 // CGameConfig
 //
 
+// Override order
+// Default game config
+// Default map config (*) map_flags_locked = yes/no
+// Game setup
+
+class CGameSetup;
+class CMap;
+
 class CGameConfig
 {
 public:
@@ -64,8 +74,8 @@ public:
   uint32_t                 m_AutoKickPing;               // auto kick players with ping higher than this
   uint32_t                 m_WarnHighPing;               // announce on chat when players have a ping higher than this value
   uint32_t                 m_SafeHighPing;               // when players ping drops below this value, announce they no longer have high ping
-  uint32_t                 m_LobbyTimeLimit;             // auto close the game lobby after this many minutes without any owner
-  uint32_t                 m_LobbyNoOwnerTime;           // relinquish game ownership after this many minutes
+  uint32_t                 m_LobbyTimeout;             // auto close the game lobby after this many minutes without any owner
+  uint32_t                 m_LobbyOwnerTimeout;           // relinquish game ownership after this many minutes
   uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
   uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
   uint16_t                 m_Latency;                    // the latency (by default)
@@ -87,10 +97,11 @@ public:
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
 
-  bool                     m_UDPEnabled;
+  bool                     m_UDPEnabled;                 // whether this game should be listed in "Local Area Network"
   std::vector<uint8_t>     m_SupportedGameVersions;
 
   explicit CGameConfig(CConfig& CFG);
+  explicit CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGameSetup);
   ~CGameConfig();
 };
 

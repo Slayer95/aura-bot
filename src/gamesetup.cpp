@@ -1453,6 +1453,35 @@ void CGameSetup::ResetExtraOptions()
   }
 }
 
+void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
+{
+  if (nCLI->m_GameLobbyTimeout.has_value()) SetLobbyTimeout(nCLI->m_GameLobbyTimeout.value());
+  if (nCLI->m_GameLobbyOwnerTimeout.has_value()) SetLobbyOwnerTimeout(nCLI->m_GameLobbyOwnerTimeout.value());
+  if (nCLI->m_GameCheckJoinable.has_value()) SetIsCheckJoinable(nCLI->m_GameCheckJoinable.value());
+  if (nCLI->m_GameCheckReservation.has_value()) SetCheckReservation(nCLI->m_GameCheckReservation.value());
+  if (nCLI->m_GameLobbyReplaceable.has_value()) SetLobbyReplaceable(nCLI->m_GameLobbyReplaceable.value());
+  if (nCLI->m_GameLobbyAutoRehosted.has_value()) SetLobbyAutoRehosted(nCLI->m_GameLobbyAutoRehosted.value());
+  if (nCLI->m_GameAutoStartPlayers.has_value()) SetAutoStartPlayers(nCLI->m_GameAutoStartPlayers.value());
+  if (nCLI->m_GameAutoStartSeconds.has_value()) SetAutoStartSeconds(nCLI->m_GameAutoStartSeconds.value());
+  if (nCLI->m_GameLatencyAverage.has_value()) SetLatencyAverage(nCLI->m_GameLatencyAverage.value());
+  if (nCLI->m_GameLatencyMaxFrames.has_value()) SetLatencyMaxFrames(nCLI->m_GameLatencyMaxFrames.value());
+  if (nCLI->m_GameLatencySafeFrames.has_value()) SetLatencySafeFrames(nCLI->m_GameLatencySafeFrames.value());
+  if (nCLI->m_GameHCL.has_value()) SetHCL(nCLI->m_GameHCL.value());
+  if (nCLI->m_GameFreeForAll.value_or(false)) SetCustomLayout(CUSTOM_LAYOUT_FFA);
+
+  if (nCLI->m_GameNumPlayersToStartGameOver.has_value()) SetNumPlayersToStartGameOver(nCLI->m_GameNumPlayersToStartGameOver.value());
+  if (nCLI->m_GameAutoKickPing.has_value()) SetAutoKickPing(nCLI->m_GameAutoKickPing.value());
+  if (nCLI->m_GameWarnHighPing.has_value()) SetWarnKickPing(nCLI->m_GameWarnHighPing.value());
+  if (nCLI->m_GameSafeHighPing.has_value()) SetSafeKickPing(nCLI->m_GameSafeHighPing.value());
+  if (nCLI->m_GameSyncNormalize.has_value()) SetSyncNormalize(nCLI->m_GameSyncNormalize.value());
+
+  SetReservations(nCLI->m_GameReservations);
+  SetSupportedGameVersions(nCLI->m_GameCrossplayVersions);
+  SetVerbose(nCLI->m_Verbose);
+  SetDisplayMode(nCLI->GetGameDisplayType());
+  SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
+}
+
 CGameSetup::~CGameSetup()
 {
   ResetExtraOptions();

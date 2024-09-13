@@ -51,6 +51,7 @@
 #include "sha1.h"
 #include "config.h"
 #include "config_bot.h"
+#include "config_game.h"
 #include "gameslot.h"
 
 #define __STORMLIB_SELF__
@@ -1013,6 +1014,56 @@ void CMap::Load(CConfig* CFG)
   m_MapFilterSize  = CFG->GetUint8("map_filter_size", MAPFILTER_SIZE_LARGE);
   m_MapFilterObs   = CFG->GetUint8("map_filter_obs", MAPFILTER_OBS_NONE);
 
+  // CGameConfig overrides
+  if (CFG->Exists("map.hosting.game_over.player_count")) {
+    m_NumPlayersToStartGameOver = CFG->GetUint8("map.hosting.game_over.player_count", 1);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.game_ready.mode")) {
+    m_PlayersReadyMode = CFG->GetStringIndex("map.hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.net.start_lag.sync_limit")) {
+    m_LatencyMaxFrames = CFG->GetUint32("map.net.start_lag.sync_limit", 32);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.net.stop_lag.sync_limit")) {
+    m_LatencySafeFrames = CFG->GetUint32("map.net.stop_lag.sync_limit", 8);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.high_ping.kick_ms")) {
+    m_AutoKickPing = CFG->GetUint32("map.hosting.high_ping.kick_ms", 300);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.high_ping.warn_ms")) {
+    m_WarnHighPing = CFG->GetUint32("map.hosting.high_ping.warn_ms", 200);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.high_ping.safe_ms")) {
+    m_SafeHighPing = CFG->GetUint32("map.hosting.high_ping.safe_ms", 150);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.abandoned_lobby.game_expiry_time")) {
+    m_LobbyTimeout = CFG->GetUint32("map.hosting.abandoned_lobby.game_expiry_time", 600);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.abandoned_lobby.owner_expiry_time")) {
+    m_LobbyOwnerTimeout = CFG->GetUint32("map.hosting.abandoned_lobby.owner_expiry_time", 120);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.bot.latency")) {
+    m_Latency = CFG->GetUint16("map.bot.latency", 100);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.auto_start.seconds")) {
+    m_AutoStartSeconds = CFG->GetInt64("map.auto_start.seconds", 180);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.auto_start.players")) {
+    m_AutoStartPlayers = CFG->GetUint8("map.auto_start.players", 2);
+    CFG->FailIfErrorLast();
+  }
+
   if (CFG->Exists("map_options")) {
     MapOptions = CFG->GetUint32("map_options", 0);
     if (MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) MapOptions |= MAPOPT_CUSTOMFORCES;
@@ -1099,6 +1150,7 @@ void CMap::Load(CConfig* CFG)
     MapMinGameVersion = CFG->GetUint8("map_gameversion_min", 0);
   } else {
     MapMinGameVersion = 0;
+    // TODO: Even when m_SkipVersionCheck may ignore MapEditorVersion, do not ignore Slots.size() > 12, etc.
     if (6060 <= MapEditorVersion  || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
       MapMinGameVersion = 29;
     } else if (6059 <= MapEditorVersion) {

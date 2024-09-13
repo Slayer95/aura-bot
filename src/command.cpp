@@ -1384,7 +1384,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (kickPing.has_value())
-        m_TargetGame->m_AutoKickPing = kickPing.value();
+        m_TargetGame->m_Config->m_AutoKickPing = kickPing.value();
 
       // copy the m_Players vector so we can sort by descending ping so it's easier to find players with high pings
 
@@ -1410,8 +1410,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       SendReply(JoinVector(pingsText, false), !m_Player || m_Player->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
 
-      if (0 < maxPing && maxPing < m_TargetGame->m_Latency && REFRESH_PERIOD_MIN < m_TargetGame->m_Latency) {
-        SendAll("HINT: Using ping equalizer at " + to_string(m_TargetGame->m_Latency) + "ms. Decrease it with " + cmdToken + "latency [VALUE]");
+      if (0 < maxPing && maxPing < m_TargetGame->GetLatency() && REFRESH_PERIOD_MIN < m_TargetGame->GetLatency()) {
+        SendAll("HINT: Using ping equalizer at " + to_string(m_TargetGame->GetLatency()) + "ms. Decrease it with " + cmdToken + "latency [VALUE]");
       }
 
       break;
@@ -1608,7 +1608,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SendReply("Votekick against player [" + m_TargetGame->m_KickVotePlayer + "] started by player [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       if (m_Player && m_Player != targetPlayer) {
         m_Player->SetKickVote(true);
-        SendAll("Player [" + m_Player->GetDisplayName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
+        SendAll("Player [" + m_Player->GetDisplayName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
       }
       SendAll("Type " + cmdToken + "yes or " + cmdToken + "no to vote.");
 
@@ -1623,7 +1623,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_Player || m_TargetGame->m_KickVotePlayer.empty() || m_Player->GetKickVote().value_or(false))
         break;
 
-      uint32_t VotesNeeded = static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_VoteKickPercentage) / 100));
+      uint32_t VotesNeeded = static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumHumanPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config->m_VoteKickPercentage) / 100));
       m_Player->SetKickVote(true);
       m_TargetGame->SendAllChat("Player [" + m_Player->GetDisplayName() + "] voted for kicking player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
       m_TargetGame->CountKickVotes();
@@ -2401,7 +2401,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       if (Payload.empty()) {
-        SendReply("The game latency is " + to_string(m_TargetGame->m_Latency) + " ms");
+        SendReply("The game latency is " + to_string(m_TargetGame->GetLatency()) + " ms");
         break;
       }
 
@@ -2460,9 +2460,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         refreshTime = REFRESH_PERIOD_MAX;
       }
 
-      const double oldRefresh = m_TargetGame->m_Latency;
-      const double oldSyncLimit = m_TargetGame->m_SyncLimit;
-      const double oldSyncLimitSafe = m_TargetGame->m_SyncLimitSafe;
+      const double oldRefresh = m_TargetGame->GetLatency();
+      const double oldSyncLimit = m_TargetGame->GetSyncLimit();
+      const double oldSyncLimitSafe = m_TargetGame->GetSyncLimitSafe();
 
       double syncLimit, syncLimitSafe;
       double resolvedTolerance = (
@@ -2476,21 +2476,21 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (syncLimitSafe < syncLimit / 2) syncLimitSafe = syncLimit / 2;
       if (syncLimitSafe < 1) syncLimitSafe = 1;
 
-      m_TargetGame->m_Latency = static_cast<uint16_t>(refreshTime);
-      m_TargetGame->m_SyncLimit = static_cast<uint16_t>(syncLimit);
-      m_TargetGame->m_SyncLimitSafe = static_cast<uint16_t>(syncLimitSafe);
+      m_TargetGame->m_Config->m_Latency = static_cast<uint16_t>(refreshTime);
+      m_TargetGame->m_Config->m_SyncLimit = static_cast<uint16_t>(syncLimit);
+      m_TargetGame->m_Config->m_SyncLimitSafe = static_cast<uint16_t>(syncLimitSafe);
 
       const uint32_t finalToleranceMilliseconds = (
-        static_cast<uint32_t>(m_TargetGame->m_Latency) *
-        static_cast<uint32_t>(m_TargetGame->m_SyncLimit)
+        static_cast<uint32_t>(m_TargetGame->GetLatency()) *
+        static_cast<uint32_t>(m_TargetGame->GetSyncLimit())
       );
 
       if (refreshTime == REFRESH_PERIOD_MIN) {
-        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       } else if (refreshTime == REFRESH_PERIOD_MAX) {
-        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->m_Latency) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->m_Latency) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->GetLatency()) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       }
       SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
       break;
@@ -3901,26 +3901,26 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> if you are sure about this.");
           break;
         }
-        if (m_TargetGame->m_ExtraDiscoveryAddresses.find(Payload) != m_TargetGame->m_ExtraDiscoveryAddresses.end()) {
+        if (m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.find(Payload) != m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.end()) {
           ErrorReply("Already sending game info to " + Payload);
           break;
         }
-        if (!m_TargetGame->m_UDPEnabled)
+        if (!m_TargetGame->GetUDPEnabled())
           SendReply("This lobby will now be displayed in the Local Area Network game list");
-        m_TargetGame->m_UDPEnabled = true;
-        m_TargetGame->m_ExtraDiscoveryAddresses.insert(Payload);
+        m_TargetGame->SetUDPEnabled(true);
+        m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.insert(Payload);
         SendReply("This lobby will be displayed in the Local Area Network game list for IP " + Payload + ". Make sure your peer has done UDP hole-punching.");
         break;
       }
 
-      m_TargetGame->m_UDPEnabled = TargetValue.value();
+      m_TargetGame->SetUDPEnabled(TargetValue.value());
       if (TargetValue) {
         m_TargetGame->SendGameDiscoveryCreate();
         m_TargetGame->SendGameDiscoveryRefresh();
         if (!m_Aura->m_Net->m_UDPMainServerEnabled)
           m_TargetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
       }
-      if (m_TargetGame->m_UDPEnabled) {
+      if (m_TargetGame->GetUDPEnabled()) {
         SendReply("This lobby will now be displayed in the Local Area Network game list");
       } else {
         SendReply("This lobby will no longer be displayed in the Local Area Network game list");
@@ -3956,7 +3956,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->m_UDPEnabled = true;
+      m_TargetGame->SetUDPEnabled(true);
       m_TargetGame->SendGameDiscoveryInfo();
       SendReply("Sent game info to peers.");
       break;
@@ -4169,8 +4169,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "announce <REALM>, <GAME NAME>");
         break;
       }
-
-      
 
       bool toAllRealms = Args[0] == "*";
       CRealm* targetRealm = nullptr;
@@ -5663,16 +5661,26 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Payload.empty() || Payload.length() > 15) {
+      if (Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "virtualhost <PLAYERNAME>");
         break;
       }
-      if (m_TargetGame->m_LobbyVirtualHostName == Payload) {
-        ErrorReply("Virtual host "+ Payload + " is already in the game.");
+
+      string targetName = TrimString(Payload);      
+      if (targetName.empty() || targetName.length() > 15) {
+        ErrorReply("Usage: " + cmdToken + "virtualhost <PLAYERNAME>");
+        break;
+      }
+      if (m_TargetGame->m_Config->m_LobbyVirtualHostName == targetName) {
+        ErrorReply("Virtual host [" + targetName + "] is already in the game.");
+        break;
+      }
+      if (m_TargetGame->GetPlayerFromName(targetName, false)) {
+        ErrorReply("Name [" + targetName + "] is in use by an actual player.");
         break;
       }
 
-      m_TargetGame->m_LobbyVirtualHostName = Payload;
+      m_TargetGame->m_Config->m_LobbyVirtualHostName = targetName;
       if (m_TargetGame->DeleteVirtualHost()) {
         m_TargetGame->CreateVirtualHost();
       }

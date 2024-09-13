@@ -371,7 +371,7 @@ string CGamePlayer::GetRealmDataBaseID(bool mustVerify) const
 {
   CRealm* Realm = GetRealm(mustVerify);
   if (Realm) return Realm->GetDataBaseID();
-  return "@@LAN/VPN";
+  return string();
 }
 
 void CGamePlayer::ResetConnection()

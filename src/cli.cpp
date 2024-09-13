@@ -122,12 +122,19 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
+  app.add_option("--lobby-owner-timeout", m_GameLobbyOwnerTimeout, "Sets the time limit for an absent game owner to keep their power (seconds.)");
+  app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
+  app.add_option("--players-ready", m_GamePlayersReadyMode, "Customizes when Aura will consider a player to be ready to start the game. Values: fast, race, explicit.")->check(CLI::IsMember({"fast", "race", "explicit"}));
   app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");
   app.add_option("--auto-start-time", m_GameAutoStartSeconds, "Sets a time that should pass before automatically starting the game (seconds.)");
+  app.add_option("--auto-end-players", m_GameNumPlayersToStartGameOver, "Sets a low amount of players required for Aura to stop hosting a game.");
+  app.add_option("--lobby-auto-kick-ping", m_GameAutoKickPing, "Customizes the maximum allowed ping in a game lobby.");
+  app.add_option("--lobby-high-ping", m_GameWarnHighPing, "Customizes the ping at which Aura will issue high-ping warnings.");
+  app.add_option("--lobby-safe-ping", m_GameSafeHighPing, "Customizes the ping required for Aura to consider a high-ping player as acceptable again.");
   app.add_option("--latency", m_GameLatencyAverage, "Sets the refresh period for the game as a ping equalizer, in milliseconds.");
   app.add_option("--latency-max-frames", m_GameLatencyMaxFrames, "Sets a maximum amount of frames clients may fall behind. When exceeded, the lag screen shows up.");
   app.add_option("--latency-safe-frames", m_GameLatencySafeFrames, "Sets a frame difference clients must catch up to in order for the lag screen to go away.");
-  app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
+  app.add_flag(  "--latency-normalize,--no-latency-normalize{false}", m_GameSyncNormalize, "Whether Aura tries to automatically fix some game-start lag issues.");
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_option("--crossplay", m_GameCrossplayVersions, "Adds support for game clients on the given version to crossplay. Repeatable.");
@@ -135,6 +142,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
+
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
   app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
   app.add_flag(  "--auto-rehost,--no-auto-rehost{false}", m_GameLobbyAutoRehosted, "Registers the provided game setup, and rehosts it whenever there is no active lobby.");
@@ -215,6 +223,82 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   }
 
   return CLI_OK;
+}
+
+uint8_t CCLI::GetGameSearchType() const
+{
+  uint8_t searchType = SEARCH_TYPE_ANY;
+  if (m_SearchType.has_value()) {
+    if (m_SearchType.value() == "map") {
+      searchType = SEARCH_TYPE_ONLY_MAP;
+    } else if (m_SearchType.value() == "config") {
+      searchType = SEARCH_TYPE_ONLY_CONFIG;
+    } else if (m_SearchType.value() == "local") {
+      searchType = SEARCH_TYPE_ONLY_FILE;
+    } else {
+      searchType = SEARCH_TYPE_ANY;
+    }
+  } else if (m_UseStandardPaths) {
+    searchType = SEARCH_TYPE_ONLY_FILE;
+  }
+  return searchType;
+}
+
+uint8_t CCLI::GetGameDisplayType() const
+{
+  uint8_t displayMode = GAME_PUBLIC;
+  if (m_GameDisplayMode.has_value()) {
+    if (m_GameDisplayMode.value() == "public") {
+      displayMode = GAME_PUBLIC;
+    } else if (m_GameDisplayMode.value() == "private") {
+      displayMode = GAME_PRIVATE;
+    } else {
+      displayMode = GAME_NONE;
+    }
+  }
+  return displayMode;
+}
+
+uint8_t CCLI::GetGameIPFloodHandler() const
+{
+  uint8_t floodHandler = ON_IPFLOOD_NONE;
+  if (m_GameIPFloodHandler.has_value()) {
+    if (m_GameIPFloodHandler.value() == "none") {
+      floodHandler = ON_IPFLOOD_NONE;
+    } else if (m_GameIPFloodHandler.value() == "notify") {
+      floodHandler = ON_IPFLOOD_NOTIFY;
+    } else if (m_GameIPFloodHandler.value() == "deny") {
+      floodHandler = ON_IPFLOOD_DENY;
+    }
+  }
+  return floodHandler;
+}
+
+bool CCLI::CheckGameParameters() const
+{
+  if (m_GameOwnerLess.value_or(false) && m_GameOwner.has_value()) {
+    Print("[AURA] Conflicting --owner and --no-owner flags.");
+    return false;
+  }
+  return true;
+}
+
+bool CCLI::CheckGameLoadParameters(CGameSetup* gameSetup) const
+{
+  if (!gameSetup->RestoreFromSaveFile()) {
+    Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
+    return false;
+  } else if (m_GameCheckReservation.has_value() && !m_GameCheckReservation.value()) {
+    Print("[AURA] Resuming a loaded game must always check reservations.");
+    return false;
+  } else if (m_GameLobbyAutoRehosted.value_or(false)) {
+    // Do not allow automatically rehosting loads of the same savefile,
+    // Because that would mean keeping the CSaveGame around.
+    // Also, what's this? The Battle for Wesnoth?
+    Print("[AURA] A loaded game cannot be auto rehosted.");
+    return false;
+  }
+  return true;
 }
 
 void CCLI::RunEarlyOptions() const
@@ -326,35 +410,11 @@ bool CCLI::QueueActions(CAura* nAura) const
   if (m_SearchTarget.has_value()) {
     CGameExtraOptions options;
     options.AcquireCLI(this);
+    if (!CheckGameParameters()) {
+      return false;
+    }
 
-    uint8_t searchType;
-    if (m_SearchType.has_value()) {
-      if (m_SearchType.value() == "map") {
-        searchType = SEARCH_TYPE_ONLY_MAP;
-      } else if (m_SearchType.value() == "config") {
-        searchType = SEARCH_TYPE_ONLY_CONFIG;
-      } else if (m_SearchType.value() == "local") {
-        searchType = SEARCH_TYPE_ONLY_FILE;
-      } else {
-        searchType = SEARCH_TYPE_ANY;
-      }
-    } else if (m_UseStandardPaths) {
-      searchType = SEARCH_TYPE_ONLY_FILE;
-    } else {
-      searchType = SEARCH_TYPE_ANY;
-    }
-    uint8_t displayMode;
-    if (m_GameDisplayMode.has_value()) {
-      if (m_GameDisplayMode.value() == "public") {
-        displayMode = GAME_PUBLIC;
-      } else if (m_GameDisplayMode.value() == "private") {
-        displayMode = GAME_PRIVATE;
-      } else {
-        displayMode = GAME_NONE;
-      }
-    } else {
-      displayMode = GAME_PUBLIC;
-    }
+    const uint8_t searchType = GetGameSearchType();
     CCommandContext* ctx = new CCommandContext(nAura, false, &cout);
     optional<string> userName = GetUserMultiPlayerName();
     if (userName.has_value()) {
@@ -364,130 +424,87 @@ bool CCLI::QueueActions(CAura* nAura) const
     if (gameSetup) {
       if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
       if (m_GameMapDownloadTimeout.has_value()) gameSetup->SetDownloadTimeout(m_GameMapDownloadTimeout.value());
-      if (gameSetup->LoadMapSync()) {
-        if (gameSetup->ApplyMapModifiers(&options)) {
-          if (!gameSetup->m_SaveFile.empty()) {
-            bool loadFailure = false;
-            if (!gameSetup->RestoreFromSaveFile()) {
-              Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
-              loadFailure = true;
-            } else if (m_GameCheckReservation.has_value() && !m_GameCheckReservation.value()) {
-              Print("[AURA] Resuming a loaded game must always check reservations.");
-              loadFailure = true;
-            } else if (m_GameLobbyAutoRehosted.value_or(false)) {
-              // Do not allow automatically rehosting loads of the same savefile,
-              // Because that would mean keeping the CSaveGame around.
-              // Also, what's this? The Battle for Wesnoth?
-              Print("[AURA] A loaded game cannot be auto rehosted.");
-              loadFailure = true;
-            } else if (m_GameOwnerLess.value_or(false) && m_GameOwner.has_value()) {
-              Print("[AURA] Conflicting --owner and --no-owner flags.");
-              loadFailure = true;
-            }
-            if (loadFailure) {
-              delete gameSetup;
-              nAura->UnholdContext(ctx);
-              return false;
-            }
-          }
-          for (const auto& id : m_ExcludedRealms) {
-            CRealm* excludedRealm = nAura->GetRealmByInputId(id);
-            if (excludedRealm) {
-              gameSetup->AddIgnoredRealm(excludedRealm);
-            } else {
-              Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
-            }
-          }
-          if (m_GameMapAlias.has_value()) {
-            string normalizedAlias = GetNormalizedAlias(m_GameMapAlias.value());
-            string mapFileName = gameSetup->GetMap()->GetServerFileName();
-            if (nAura->m_DB->AliasAdd(normalizedAlias, mapFileName)) {
-              Print("[AURA] Alias <<" + m_GameMapAlias.value() + ">> added for [" + mapFileName + "]");
-            } else {
-              Print("Failed to add alias.");
-            }
-          }
-          if (m_MirrorSource.has_value()) {
-            if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
-              Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-              delete gameSetup;
-              nAura->UnholdContext(ctx);
-              return false;
-            }
-          }
-          if (m_GameName.has_value()) {
-            gameSetup->SetBaseName(m_GameName.value());
-          } else {
-            if (userName.has_value()) {
-              gameSetup->SetBaseName(userName.value() + "'s game");
-            } else {
-              gameSetup->SetBaseName("Join and play");
-            }
-          }
-          if (userName.has_value()) {
-            gameSetup->SetCreator(userName.value());
-          }
-          if (m_GameOwner.has_value()) {
-            string::size_type realmStart = m_GameOwner.value().find('@');
-            string ownerName, ownerRealm;
-            if (realmStart != string::npos) {
-              ownerName = TrimString(m_GameOwner.value().substr(0, realmStart));
-              ownerRealm = TrimString(m_GameOwner.value().substr(realmStart + 1));
-            } else {
-              ownerName = m_GameOwner.value();
-            }
-            gameSetup->SetOwner(ownerName, ownerRealm);
-          } else if (m_GameOwnerLess.value_or(false)) {
-            gameSetup->SetOwnerLess(true);
-          }
-          if (m_GameLobbyTimeout.has_value()) gameSetup->SetLobbyTimeout(m_GameLobbyTimeout.value());
-          if (m_GameCheckJoinable.has_value()) gameSetup->SetIsCheckJoinable(m_GameCheckJoinable.value());
-          if (m_GameCheckReservation.has_value()) gameSetup->SetCheckReservation(m_GameCheckReservation.value());
-          if (m_GameLobbyReplaceable.has_value()) gameSetup->SetLobbyReplaceable(m_GameLobbyReplaceable.value());
-          if (m_GameLobbyAutoRehosted.has_value()) gameSetup->SetLobbyAutoRehosted(m_GameLobbyAutoRehosted.value());
-          if (m_GameAutoStartPlayers.has_value()) gameSetup->SetAutoStartPlayers(m_GameAutoStartPlayers.value());
-          if (m_GameAutoStartSeconds.has_value()) gameSetup->SetAutoStartSeconds(m_GameAutoStartSeconds.value());
-          if (m_GameLatencyAverage.has_value()) gameSetup->SetLatencyAverage(m_GameLatencyAverage.value());
-          if (m_GameLatencyMaxFrames.has_value()) gameSetup->SetLatencyMaxFrames(m_GameLatencyMaxFrames.value());
-          if (m_GameLatencySafeFrames.has_value()) gameSetup->SetLatencySafeFrames(m_GameLatencySafeFrames.value());
-          if (m_GameHCL.has_value()) gameSetup->SetHCL(m_GameHCL.value());
-          if (m_GameFreeForAll.value_or(false)) gameSetup->SetCustomLayout(CUSTOM_LAYOUT_FFA);
-          gameSetup->SetReservations(m_GameReservations);
-          gameSetup->SetSupportedGameVersions(m_GameCrossplayVersions);
-          gameSetup->SetVerbose(m_Verbose);
-          gameSetup->SetDisplayMode(displayMode);
-          if (m_GameIPFloodHandler.has_value()) {
-            if (m_GameIPFloodHandler.value() == "none") {
-              gameSetup->SetIPFloodHandler(ON_IPFLOOD_NONE);
-            } else if (m_GameIPFloodHandler.value() == "notify") {
-              gameSetup->SetIPFloodHandler(ON_IPFLOOD_NOTIFY);
-            } else if (m_GameIPFloodHandler.value() == "deny") {
-              gameSetup->SetIPFloodHandler(ON_IPFLOOD_DENY);
-            }
-          }
-          gameSetup->SetActive();
-          vector<string> hostAction{"host"};
-          nAura->m_PendingActions.push(hostAction);
-        } else {
-          ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
+      if (!gameSetup->LoadMapSync()) {
+        if (searchType == SEARCH_TYPE_ANY) {
+          ctx->ErrorReply("Input does not refer to a valid map, config, or URL.");
+        } else if (searchType == SEARCH_TYPE_ONLY_FILE) {
+          ctx->ErrorReply("Input does not refer to a valid file");
+        } else if (searchType == SEARCH_TYPE_ONLY_MAP) {
+          ctx->ErrorReply("Input does not refer to a valid map (.w3x, .w3m)");
+        } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
+          ctx->ErrorReply("Input does not refer to a valid map config file (.cfg)");
+        }
+        delete gameSetup;
+        nAura->UnholdContext(ctx);
+        return false;
+      }
+      if (!gameSetup->ApplyMapModifiers(&options)) {
+        ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
+        delete gameSetup;
+        nAura->UnholdContext(ctx);
+        return false;
+      }
+      if (!gameSetup->m_SaveFile.empty()) {
+        if (!CheckGameLoadParameters(gameSetup)) {
           delete gameSetup;
           nAura->UnholdContext(ctx);
           return false;
         }
       }
-    } else {
-      if (searchType == SEARCH_TYPE_ANY) {
-        ctx->ErrorReply("Input does not refer to a valid map, config, or URL.");
-      } else if (searchType == SEARCH_TYPE_ONLY_FILE) {
-        ctx->ErrorReply("Input does not refer to a valid file");
-      } else if (searchType == SEARCH_TYPE_ONLY_MAP) {
-        ctx->ErrorReply("Input does not refer to a valid map (.w3x, .w3m)");
-      } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
-        ctx->ErrorReply("Input does not refer to a valid map config file (.cfg)");
+      for (const auto& id : m_ExcludedRealms) {
+        CRealm* excludedRealm = nAura->GetRealmByInputId(id);
+        if (excludedRealm) {
+          gameSetup->AddIgnoredRealm(excludedRealm);
+        } else {
+          Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
+        }
       }
-      delete gameSetup;
-      nAura->UnholdContext(ctx);
-      return false;
+      if (m_GameMapAlias.has_value()) {
+        string normalizedAlias = GetNormalizedAlias(m_GameMapAlias.value());
+        string mapFileName = gameSetup->GetMap()->GetServerFileName();
+        if (nAura->m_DB->AliasAdd(normalizedAlias, mapFileName)) {
+          Print("[AURA] Alias <<" + m_GameMapAlias.value() + ">> added for [" + mapFileName + "]");
+        } else {
+          Print("Failed to add alias.");
+        }
+      }
+      if (m_MirrorSource.has_value()) {
+        if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
+          Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
+          delete gameSetup;
+          nAura->UnholdContext(ctx);
+          return false;
+        }
+      }
+      if (m_GameName.has_value()) {
+        gameSetup->SetBaseName(m_GameName.value());
+      } else {
+        if (userName.has_value()) {
+          gameSetup->SetBaseName(userName.value() + "'s game");
+        } else {
+          gameSetup->SetBaseName("Join and play");
+        }
+      }
+      if (userName.has_value()) {
+        gameSetup->SetCreator(userName.value());
+      }
+      if (m_GameOwner.has_value()) {
+        string::size_type realmStart = m_GameOwner.value().find('@');
+        string ownerName, ownerRealm;
+        if (realmStart != string::npos) {
+          ownerName = TrimString(m_GameOwner.value().substr(0, realmStart));
+          ownerRealm = TrimString(m_GameOwner.value().substr(realmStart + 1));
+        } else {
+          ownerName = m_GameOwner.value();
+        }
+        gameSetup->SetOwner(ownerName, ownerRealm);
+      } else if (m_GameOwnerLess.value_or(false)) {
+        gameSetup->SetOwnerLess(true);
+      }
+      gameSetup->AcquireCLISimple(this);
+      gameSetup->SetActive();
+      vector<string> hostAction{"host"};
+      nAura->m_PendingActions.push(hostAction);
     }
   }
 

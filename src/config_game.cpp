@@ -29,6 +29,31 @@
 #include <utility>
 #include <algorithm>
 
+#define INHERIT(gameConfigKey) gameConfigKey = nRootConfig->##gameConfigKey;
+
+#define INHERIT_MAP(gameConfigKey, mapDataKey) \
+  if ((nMap->mapDataKey).has_value()) { \
+    this->gameConfigKey = (nMap->mapDataKey).value(); \
+  } else { \
+    this->gameConfigKey = nRootConfig->gameConfigKey; \
+  }
+
+#define INHERIT_CUSTOM(gameConfigKey, gameSetupKey) \
+  if ((nGameSetup->gameSetupKey).has_value()) { \
+    this->gameConfigKey = (nGameSetup->gameSetupKey).value(); \
+  } else { \
+    this->gameConfigKey = nRootConfig->gameConfigKey; \
+  }
+
+#define INHERIT_MAP_OR_CUSTOM(gameConfigKey, mapDataKey, gameSetupKey) \
+  if ((nGameSetup->gameSetupKey).has_value()) { \
+    this->gameConfigKey = (nGameSetup->gameSetupKey).value(); \
+  } else if ((nMap->mapDataKey).has_value()) { \
+    this->gameConfigKey = (nMap->mapDataKey).value(); \
+  } else { \
+    this->gameConfigKey = nRootConfig->gameConfigKey; \
+  }
+
 using namespace std;
 
 //
@@ -54,8 +79,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 300);
   m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 200);
   m_SafeHighPing              = CFG.GetInt("hosting.high_ping.safe_ms", 150);
-  m_LobbyTimeLimit            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
-  m_LobbyNoOwnerTime          = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
+  m_LobbyTimeout            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
+  m_LobbyOwnerTimeout          = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
   m_LobbyCountDownInterval    = CFG.GetInt("hosting.game_start.count_down_interval", 500);
   m_LobbyCountDownStartValue  = CFG.GetInt("hosting.game_start.count_down_ticks", 5);
   m_Latency                   = CFG.GetUint16("bot.latency", 100);
@@ -88,6 +113,50 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   if (m_VoteKickPercentage > 100)
     m_VoteKickPercentage = 100;
+}
+
+CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGameSetup)
+{
+  INHERIT(m_VoteKickPercentage)
+  INHERIT_MAP_OR_CUSTOM(m_NumPlayersToStartGameOver, m_NumPlayersToStartGameOver, m_NumPlayersToStartGameOver)
+  INHERIT(m_MaxPlayersLoopback)
+  INHERIT(m_MaxPlayersSameIP)
+  INHERIT_MAP_OR_CUSTOM(m_PlayersReadyMode, m_PlayersReadyMode, m_PlayersReadyMode)
+  INHERIT_MAP_OR_CUSTOM(m_SyncLimit, m_LatencyMaxFrames, m_LatencyMaxFrames)
+  INHERIT_MAP_OR_CUSTOM(m_SyncLimitSafe, m_LatencySafeFrames, m_LatencySafeFrames)
+  INHERIT_CUSTOM(m_SyncNormalize, m_SyncNormalize)
+  INHERIT_MAP_OR_CUSTOM(m_AutoKickPing, m_AutoKickPing, m_AutoKickPing)
+  INHERIT_MAP_OR_CUSTOM(m_WarnHighPing, m_WarnHighPing, m_WarnHighPing)
+  INHERIT_MAP_OR_CUSTOM(m_SafeHighPing, m_SafeHighPing, m_SafeHighPing)
+  INHERIT_MAP_OR_CUSTOM(m_LobbyTimeout, m_LobbyTimeout, m_LobbyTimeout)
+  INHERIT_MAP_OR_CUSTOM(m_LobbyOwnerTimeout, m_LobbyOwnerTimeout, m_LobbyOwnerTimeout)
+  INHERIT(m_LobbyCountDownInterval)
+  INHERIT(m_LobbyCountDownStartValue)
+  INHERIT_MAP_OR_CUSTOM(m_Latency, m_Latency, m_LatencyAverage)
+  INHERIT(m_PerfThreshold)
+  INHERIT(m_LacksMapKickDelay)
+
+  INHERIT_CUSTOM(m_CheckJoinable, m_CheckJoinable)
+  INHERIT(m_ExtraDiscoveryAddresses)
+  // TODO: Implement m_ExtraDiscoveryStrict
+  INHERIT(m_ExtraDiscoveryStrict)
+
+  INHERIT(m_PrivateCmdToken)
+  INHERIT(m_BroadcastCmdToken)
+  INHERIT(m_EnableBroadcast)
+
+  INHERIT(m_IndexVirtualHostName)
+  INHERIT(m_LobbyVirtualHostName)
+
+  INHERIT(m_NotifyJoins)
+  INHERIT(m_IgnoredNotifyJoinPlayers)
+  INHERIT(m_LoggedWords)
+  INHERIT(m_DesyncHandler)
+  INHERIT_CUSTOM(m_IPFloodHandler, m_IPFloodHandler)
+  INHERIT(m_UDPEnabled)
+
+  INHERIT(m_SupportedGameVersions)
+  INHERIT(m_VoteKickPercentage)
 }
 
 CGameConfig::~CGameConfig() = default;

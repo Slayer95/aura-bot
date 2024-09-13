@@ -459,6 +459,20 @@ This flag prevents players from taking ownership of the hosted game.
 
 This flag is disabled by default.
 
+## \`--latency-normalize\`
+
+This flag automatically synchronizes the network state of players in the hosted game, in such a game that some 
+apparent lag issues at the game start get automatically fixed over time.
+
+This flag is enabled by default.
+
+## \`--no-latency-normalize\`
+
+This flag prevents the automatic network synchronization mechanism. When this flag is used, lag screens with a 
+long or even permanent duration may show up when some games start, rendering it unplayable.
+
+This flag is disabled by default.
+
 # Parameters for CLI games
 
 ## \`-s <TYPE>, --search-type <TYPE>\`
@@ -542,6 +556,19 @@ without a game owner. After this time passes, the lobby is unhosted.
 
 - TIME: Provided in seconds.
 
+This option is equivalent to ``<hosting.abandoned_lobby.game_expiry_time>`` in `config.ini`
+This option is equivalent to ``<map.hosting.abandoned_lobby.game_expiry_time>`` in map configuration
+
+## \`--lobby-owner-timeout <TIME>\`
+
+This parameter specifies the maximum time a game owner is allowed to remain outside 
+the game lobby. After this time passes, the game owner authority is removed.
+
+- TIME: Provided in seconds.
+
+This option is equivalent to ``<hosting.abandoned_lobby.owner_expiry_time>`` in `config.ini`
+This option is equivalent to ``<map.hosting.abandoned_lobby.owner_expiry_time>`` in map configuration
+
 ## \`--download-timeout <TIME>\`
 
 This parameter specifies the maximum time a map download is allowed to take. Once this time is
@@ -557,12 +584,90 @@ have downloaded the map.
 
 If \`--auto-start-time\` is also supplied, the game will start only when both conditions are met simultaneously.
 
+This option is equivalent to ``<map.auto_start.players>`` in map configuration
+
 ## \`--auto-start-time <SECONDS>\`
 
 This parameter specifies that the game will automatically start when the provided ``SECONDS`` have passed since 
 the game was created.
 
 If \`--auto-start-players\` is also supplied, the game will start only when both conditions are met simultaneously.
+
+This option is equivalent to ``<map.auto_start.time>`` in map configuration
+
+## \`--players-ready <MODE>\`
+
+This parameter specifies when players will be considered ready for automatic start purposes.
+
+**Options:**
+
+- fast: All players who have already download the map and are in a non-observer team are treated as ready.
+- race: In addition to the above, players must have chosen a race in order to be treated as ready.
+- explicit: Players must use the command !ready in order to be treated as such.
+
+This option is equivalent to ``<hosting.game_ready.mode>`` in `config.ini`
+This option is equivalent to ``<map.hosting.game_ready.mode>`` in map configuration
+
+## \`--auto-end-players <COUNT>\`
+
+This parameter specifies that after one or more players left, and only ``COUNT`` players remain in a game,
+the game should be ended, and players should be disconnected.
+
+This option is equivalent to ``<hosting.game_over.player_count>`` in `config.ini`
+This option is equivalent to ``<map.hosting.game_over.player_count>`` in map configuration
+
+## \`--lobby-auto-kick-ping <VALUE>\`
+
+This parameter specifies that players should be automatically kicked from the hosted game lobby, if their 
+latency is found to exceed the provided value, in milliseconds.
+
+This option is equivalent to ``<hosting.high_ping.kick_ms>`` in `config.ini`
+This option is equivalent to ``<map.hosting.high_ping.kick_ms>`` in map configuration
+
+## \`--lobby-high-ping <VALUE>\`
+
+This parameter specifies that warnings should be issued in the hosted game lobby, if a player's latency is
+found to exceed the provided value, in milliseconds.
+
+This option is equivalent to ``<hosting.high_ping.warn_ms>`` in `config.ini`
+This option is equivalent to ``<map.hosting.high_ping.warn_ms>`` in map configuration
+
+## \`--lobby-safe-ping <VALUE>\`
+
+This parameter specifies that an announcement should be displayed in the hosted game lobby, whenever the 
+latency of a player whose latency has previously been found to be high, decreases down to the provided value, 
+in milliseconds.
+
+This option is equivalent to ``<hosting.high_ping.safe_ms>`` in `config.ini`
+This option is equivalent to ``<map.hosting.high_ping.safe_ms>`` in map configuration
+
+## \`--latency <VALUE>\`
+
+This parameter specifies the time, in milliseconds, that should pass between each game tick. All data sent by 
+players is forwarded to each other at a rate limited by the provided value.
+
+The lower this value, the more fluid the gameplay will be.
+
+This option is restricted to a minimum of 10 ms, and a maximum of 500 ms. The default value is 100 ms.
+
+This option is equivalent to ``<bot.latency>`` in `config.ini`
+This option is equivalent to ``<map.bot.latency>`` in map configuration
+
+## \`--latency-max-frames <VALUE>\`
+
+This parameter specifies that, whenever a player fails to timely send the provided amount of updates, one per game tick, 
+the lag screen should be shown, so that everyone waits for them.
+
+This option is equivalent to ``<net.start_lag.sync_limit>`` in `config.ini`
+This option is equivalent to ``<map.net.start_lag.sync_limit>`` in map configuration
+
+## \`--latency-safe-frames <VALUE>\`
+
+This parameter specifies that, whenever the lag screen is shown, it will end as soon as everyone is missing no more than
+the provided amount of updates, one per game tick.
+
+This option is equivalent to ``<net.stop_lag.sync_limit>`` in `config.ini`
+This option is equivalent to ``<map.net.stop_lag.sync_limit>`` in map configuration
 
 ## \`--hcl\`
 
@@ -571,6 +676,8 @@ For instance, ``--hcl ap`` sets 'All Pick' mode in DotA games.
 
 This flag should never be used for maps that aren't known to support HCL. Otherwise, it will corrupt 
 player handicaps.
+
+This option is equivalent to ``<map.hcl>`` in map configuration
 
 ## \`--load <FILE>\`
 

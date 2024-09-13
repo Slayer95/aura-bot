@@ -581,20 +581,24 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(const uint8_t war3Version
 
   // make the rest of the packet
 
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_GAMEINFO, 0, 0, 80, 88, 51, 87, war3Version, 0, 0, 0};
-  AppendByteArray(packet, hostCounter, false); // Host Counter
-  AppendByteArray(packet, entryKey, false);    // Entry Key
-  AppendByteArrayFast(packet, gameName);       // Game Name
-  packet.push_back(0);                         // ??? (maybe game password)
-  AppendByteArrayFast(packet, StatString);     // Stat String
-  packet.push_back(0);                         // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
-  AppendByteArray(packet, slotsTotal, false);  // Slots Total
-  AppendByteArray(packet, mapGameType, false);    // Game Type
-  AppendByteArray(packet, Unknown2, 4);        // ???
-  //AppendByteArray(packet, slotsTaken, false); // Slots Taken again??
-  AppendByteArray(packet, slotsAvailableOff, false);   // Slots Available off-by-one
-  AppendByteArray(packet, upTime, false);      // time since creation
-  AppendByteArray(packet, port, false);        // port
+  std::vector<uint8_t> packet = {
+    W3GS_HEADER_CONSTANT, W3GS_GAMEINFO, 0, 0,
+    80, 88, 51, 87,
+    war3Version, 0, 0, 0
+  };
+  AppendByteArray(packet, hostCounter, false);             // Host Counter
+  AppendByteArray(packet, entryKey, false);                // Entry Key
+  AppendByteArrayFast(packet, gameName);                   // Game Name
+  packet.push_back(0);                                     // ??? (maybe game password)
+  AppendByteArrayFast(packet, StatString);                 // Stat String
+  packet.push_back(0);                                     // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
+  AppendByteArray(packet, slotsTotal, false);              // Slots Total
+  AppendByteArray(packet, mapGameType, false);             // Game Type
+  AppendByteArray(packet, Unknown2, 4);                    // ???
+  //AppendByteArray(packet, slotsTaken, false);            // Slots Taken again??
+  AppendByteArray(packet, slotsAvailableOff, false);       // Slots Available off-by-one
+  AppendByteArray(packet, upTime, false);                  // time since creation
+  AppendByteArray(packet, port, false);                    // port
   AssignLength(packet);
   return packet;
 }
@@ -632,21 +636,24 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVe
 
   // make the rest of the packet
 
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_GAMEINFO, 0, 0, 80, 88, 51, 87};
-  *gameVersionOffset = packet.size();          // Game version
+  std::vector<uint8_t> packet = {
+    W3GS_HEADER_CONSTANT, W3GS_GAMEINFO, 0, 0,
+    80, 88, 51, 87
+  };
+  *gameVersionOffset = static_cast<uint16_t>(packet.size());       // Game version
   AppendByteArray(packet, Zeros, 4);
-  AppendByteArray(packet, hostCounter, false); // Host Counter
-  AppendByteArray(packet, entryKey, false);    // Entry Key
-  AppendByteArrayFast(packet, gameName);       // Game Name
-  packet.push_back(0);                         // ??? (maybe game password)
-  AppendByteArrayFast(packet, StatString);     // Stat String
-  packet.push_back(0);                         // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
-  AppendByteArray(packet, slotsTotal, false);  // Slots Total
-  AppendByteArray(packet, mapGameType, false);    // Game Type
-  AppendByteArray(packet, Unknown2, 4);        // ???
-  *dynamicInfoOffset = packet.size();          // TCP port
-  AppendByteArray(packet, Zeros, 4);          // Slots Available off-by-one
-  AppendByteArray(packet, Zeros, 4);          // time since creation
+  AppendByteArray(packet, hostCounter, false);                     // Host Counter
+  AppendByteArray(packet, entryKey, false);                        // Entry Key
+  AppendByteArrayFast(packet, gameName);                           // Game Name
+  packet.push_back(0);                                             // ??? (maybe game password)
+  AppendByteArrayFast(packet, StatString);                         // Stat String
+  packet.push_back(0);                                             // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
+  AppendByteArray(packet, slotsTotal, false);                      // Slots Total
+  AppendByteArray(packet, mapGameType, false);                     // Game Type
+  AppendByteArray(packet, Unknown2, 4);                            // ???
+  *dynamicInfoOffset = static_cast<uint16_t>(packet.size());       // TCP port
+  AppendByteArray(packet, Zeros, 4);                               // Slots Available off-by-one
+  AppendByteArray(packet, Zeros, 4);                               // time since creation
   packet.push_back(0);
   packet.push_back(0);
   AssignLength(packet);

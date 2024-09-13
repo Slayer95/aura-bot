@@ -1466,7 +1466,7 @@ CDBGameSummary::CDBGameSummary(uint64_t nID, string playerNames, string playerID
   : m_ID(nID),
     m_PlayerNames(SplitArgs(playerNames, 1, 24))
 {
-  uint8_t playerCount = m_PlayerNames.size();
+  uint8_t playerCount = static_cast<uint8_t>(m_PlayerNames.size());
   if (playerCount == 0) {
     return;
   }
