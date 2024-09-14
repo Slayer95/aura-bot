@@ -377,7 +377,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputStandard()
   if (targetExt == ".w3m" || targetExt == ".w3x") {
     return SEARCH_RESULT(MATCH_TYPE_MAP, targetPath);
   }
-  if (targetExt == ".cfg") {
+  if (targetExt == ".ini") {
     return SEARCH_RESULT(MATCH_TYPE_CONFIG, targetPath);
   }
   return SEARCH_RESULT(MATCH_TYPE_INVALID, targetPath);
@@ -400,7 +400,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
     if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
       return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
-    if ((fileExtension == ".cfg") && FileExists(testPath)) {
+    if ((fileExtension == ".ini") && FileExists(testPath)) {
       return SEARCH_RESULT(MATCH_TYPE_CONFIG, testPath);
     }
   }
@@ -410,7 +410,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
 pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
 {
   string fileExtension = ParseFileExtension(m_SearchTarget.second);
-  bool hasExtension = fileExtension == ".w3x" || fileExtension == ".w3m" || fileExtension == ".cfg";
+  bool hasExtension = fileExtension == ".w3x" || fileExtension == ".w3m" || fileExtension == ".ini";
   if (hasExtension) {
     return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
   }
@@ -428,7 +428,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second + ".cfg")).lexically_normal();
+    filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second + ".ini")).lexically_normal();
     if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
       return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
@@ -509,7 +509,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocal(vector<string>& fuz
   if (exactResult.first == MATCH_TYPE_MAP || exactResult.first == MATCH_TYPE_CONFIG) {
     return exactResult;
   }
-  // 2. If no extension, try adding extensions: w3x, w3m, cfg
+  // 2. If no extension, try adding extensions: w3x, w3m, ini
   pair<uint8_t, filesystem::path> plusExtensionResult = SearchInputLocalTryExtensions();
   if (plusExtensionResult.first == MATCH_TYPE_MAP || plusExtensionResult.first == MATCH_TYPE_CONFIG) {
     return plusExtensionResult;
@@ -572,7 +572,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
 
   // Input corresponds to a namespace, such as epicwar.
   // Gotta find a matching config file.
-  string resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg";
+  string resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini";
   filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(resolvedCFGName)).lexically_normal();
   if (PathHasNullBytes(resolvedCFGPath) || resolvedCFGPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
     return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
@@ -666,9 +666,9 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   if (m_Aura->m_Config->m_EnableCFGCache && isInMapsFolder && !m_StandardPaths) {
     string resolvedCFGName;
     if (m_SearchTarget.first == "local") {
-      resolvedCFGName = m_SearchTarget.first + "-" + fileName + ".cfg";
+      resolvedCFGName = m_SearchTarget.first + "-" + fileName + ".ini";
     } else {
-      resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg";
+      resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini";
     }
     filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCachePath / filesystem::path(resolvedCFGName)).lexically_normal();
 
@@ -1056,7 +1056,7 @@ void CGameSetup::LoadMap()
       return;
     }
     if (m_Aura->m_Config->m_EnableCFGCache) {
-      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg");
+      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini");
       m_Map = GetBaseMapFromConfigFile(cachePath, true, true);
       if (m_Map) {
         OnLoadMapSuccess();
@@ -1199,7 +1199,7 @@ bool CGameSetup::LoadMapSync()
       return false;
     }
     if (m_Aura->m_Config->m_EnableCFGCache) {
-      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".cfg");
+      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini");
       m_Map = GetBaseMapFromConfigFile(cachePath, true, true);
       if (m_Map) return true;
     }

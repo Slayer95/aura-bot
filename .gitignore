@@ -66,7 +66,7 @@ jass/
 mapcache/
 mapcfgs/
 mapcfgs_old/
-!mapcfgs/wormwar.cfg
+!mapcfgs/wormwar.ini
 dist/**/*
 Share/
 Share*

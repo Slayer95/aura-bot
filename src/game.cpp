@@ -331,7 +331,7 @@ bool CGame::ReleaseMap()
       (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024)
     );
     if (deleteTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
-      // Ensure the mapcache cfg file has been created before trying to delete from disk
+      // Ensure the mapcache ini file has been created before trying to delete from disk
       if (m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
         // Release from disk
         m_Map->UnlinkFile();

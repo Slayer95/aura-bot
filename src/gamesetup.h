@@ -63,10 +63,10 @@
 
 #ifdef _WIN32
 #define FILE_EXTENSIONS_MAP {L".w3x", L".w3m"}
-#define FILE_EXTENSIONS_CONFIG {L".cfg"}
+#define FILE_EXTENSIONS_CONFIG {L".ini"}
 #else
 #define FILE_EXTENSIONS_MAP {".w3x", ".w3m"}
-#define FILE_EXTENSIONS_CONFIG {".cfg"}
+#define FILE_EXTENSIONS_CONFIG {".ini"}
 #endif
 
 #define GAMESETUP_ORIGIN_NONE 0

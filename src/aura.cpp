@@ -203,7 +203,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
     Print("[AURA] config.ini, config-example.ini not found within home dir [" + PathToString(homeDir) + "].");
     Print("[AURA] using automatic configuration");
   } else {
-    Print("[AURA] copying config-example.cfg to config.ini...");
+    Print("[AURA] copying config-example.ini to config.ini...");
     FileWrite(configPath, reinterpret_cast<const uint8_t*>(exampleContents.c_str()), exampleContents.size());
     if (!CFG.Read(configPath)) {
       Print("[AURA] error initializing config.ini");

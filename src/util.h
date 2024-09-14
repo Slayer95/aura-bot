@@ -682,7 +682,7 @@ inline bool IsValidCFGName(const std::string& s) {
   if (!s.length()) return false;
   if (s[0] == '.') return false;
   std::regex invalidChars("[^a-zA-Z0-9_ ().~-]");
-  std::regex validExtensions("\\.cfg$");
+  std::regex validExtensions("\\.ini$");
   return !std::regex_search(s, invalidChars) && std::regex_search(s, validExtensions);
 }
 
@@ -847,7 +847,7 @@ inline std::string PrepareMapPatternForFuzzySearch(const std::string& rawPattern
     return static_cast<char>(std::tolower(c));
   });
   std::string extension = ParseFileExtension(pattern);
-  if (extension == ".w3x" || extension == ".w3m" || extension == ".cfg") {
+  if (extension == ".w3x" || extension == ".w3m" || extension == ".ini") {
     pattern = pattern.substr(0, pattern.length() - extension.length());
   }
   return RemoveNonAlphanumeric(pattern);

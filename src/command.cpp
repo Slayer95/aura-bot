@@ -5810,7 +5810,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           continue;
         }
 
-        string CFGName = "local-" + nameString + ".cfg";
+        string CFGName = "local-" + nameString + ".ini";
         filesystem::path CFGPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(CFGName);
 
         vector<uint8_t> OutputBytes = MapCFG.Export();
@@ -5855,10 +5855,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (Payload.empty())
         return;
 
-      string DeletionType = CommandHash == HashCode("deletecfg") ? "cfg" : "map";
-      filesystem::path Folder = DeletionType == "cfg" ? m_Aura->m_Config->m_MapCFGPath : m_Aura->m_Config->m_MapPath;
+      string DeletionType = CommandHash == HashCode("deletecfg") ? "ini" : "map";
+      filesystem::path Folder = DeletionType == "ini" ? m_Aura->m_Config->m_MapCFGPath : m_Aura->m_Config->m_MapPath;
 
-      if ((DeletionType == "cfg" && !IsValidCFGName(Payload)) || (DeletionType == "map" &&!IsValidMapName(Payload))) {
+      if ((DeletionType == "ini" && !IsValidCFGName(Payload)) || (DeletionType == "map" &&!IsValidMapName(Payload))) {
         ErrorReply("Removal failed");
         break;
       }

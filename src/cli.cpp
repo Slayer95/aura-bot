@@ -432,7 +432,7 @@ bool CCLI::QueueActions(CAura* nAura) const
         } else if (searchType == SEARCH_TYPE_ONLY_MAP) {
           ctx->ErrorReply("Input does not refer to a valid map (.w3x, .w3m)");
         } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
-          ctx->ErrorReply("Input does not refer to a valid map config file (.cfg)");
+          ctx->ErrorReply("Input does not refer to a valid map config file (.ini)");
         }
         delete gameSetup;
         nAura->UnholdContext(ctx);
