@@ -993,7 +993,7 @@ CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
   return m_Aura->GetRealmByHostName(realmId);
 }
 
-bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string& nameFragment, string& realmFragment, CRealm*& realm, bool searchHistory)
+bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string& nameFragment, string& realmFragment, CRealm*& realm, bool allowNoRealm, bool searchHistory)
 {
   if (inputTarget.empty()) {
     return false;
@@ -1006,6 +1006,9 @@ bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string&
     realmFragment = TrimString(inputTarget.substr(realmStart + 1));
     nameFragment = TrimString(inputTarget.substr(0, realmStart));
     if (!nameFragment.empty() && nameFragment.size() <= MAX_PLAYER_NAME_SIZE) {
+      if (allowNoRealm && realmFragment.empty()) {
+        return true;
+      }
       realm = GetTargetRealmOrCurrent(realmFragment);
       if (realm) {
         realmFragment = realm->GetServer();
@@ -1665,7 +1668,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, false, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -2706,7 +2709,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Args[0], targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Args[0], targetName, targetHostName, targetRealm, true)) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
@@ -3415,7 +3418,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3554,7 +3557,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3612,7 +3615,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3663,7 +3666,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3712,7 +3715,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3772,7 +3775,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
@@ -3995,7 +3998,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           targetRealm = m_SourceRealm;
           targetHostName = m_ServerName;
         }
-      } else if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
+      } else if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
           break;
@@ -5635,12 +5638,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool queryAllRealms = targetHostName.empty() || targetHostName == "*";
       const string Message = "/whois " + targetName;
 
+      bool success = false;
       for (auto& realm : m_Aura->m_Realms) {
         if (realm->GetIsMirror())
           continue;
         if (queryAllRealms || realm->GetServer() == targetRealm->GetServer()) {
           realm->QueueCommand(Message);
+          success = true;
         }
+      }
+
+      if (success) {
+        SendReply("Query sent.");
+      } else {
+        ErrorReply("No such realm found.");
       }
 
       break;

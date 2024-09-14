@@ -193,7 +193,7 @@ public:
   bool GetParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   bool RunParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   CRealm* GetTargetRealmOrCurrent(const std::string& target);
-  bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool searchHistory = false);
+  bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool allowNoRealm = false, bool searchHistory = false);
   uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
   CGame* GetTargetGame(const std::string& target);
   void UseImplicitHostedGame();
