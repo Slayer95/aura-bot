@@ -49,8 +49,8 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_Warcraft3Path                = CFG.GetMaybeDirectory("game.install_path");
 
   m_MapPath                      = CFG.GetDirectory("bot.maps_path", CFG.GetHomeDir() / filesystem::path("maps"));
-  m_MapCFGPath                   = CFG.GetDirectory("bot.map.configs_path", CFG.GetHomeDir() / filesystem::path("mapcfgs"));
-  m_MapCachePath                 = CFG.GetDirectory("bot.map.cache_path", CFG.GetHomeDir() / filesystem::path("mapcache"));
+  m_MapCFGPath                   = CFG.GetDirectory("bot.map_configs_path", CFG.GetHomeDir() / filesystem::path("mapcfgs"));
+  m_MapCachePath                 = CFG.GetDirectory("bot.map_cache_path", CFG.GetHomeDir() / filesystem::path("mapcache"));
   m_JASSPath                     = CFG.GetDirectory("bot.jass_path", CFG.GetHomeDir() / filesystem::path("jass"));
   m_GameSavePath                 = CFG.GetDirectory("bot.save_path", CFG.GetHomeDir() / filesystem::path("saves"));
 
