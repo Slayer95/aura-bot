@@ -632,23 +632,23 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
 
   CConfig MapCFG;
   MapCFG.SetBool("cfg_partial", true);
-  if (m_StandardPaths) MapCFG.SetBool("map_stdpaths", true);
-  MapCFG.Set("map_path", R"(Maps\Download\)" + baseFileName);
+  if (m_StandardPaths) MapCFG.SetBool("map.stdpaths", true);
+  MapCFG.Set("map.path", R"(Maps\Download\)" + baseFileName);
   string localPath = isInMapsFolder && !m_StandardPaths ? fileName : PathToString(filePath);
-  MapCFG.Set("map_localpath", localPath);
+  MapCFG.Set("map.localpath", localPath);
 
   if (m_IsMapDownloaded) {
-    MapCFG.Set("map_site", m_MapSiteUri);
-    MapCFG.Set("map_url", m_MapDownloadUri);
+    MapCFG.Set("map.site", m_MapSiteUri);
+    MapCFG.Set("map.url", m_MapDownloadUri);
     MapCFG.Set("downloaded_by", m_Attribution);
   }
   if (baseFileName.find("_evrgrn3") != string::npos) {
-    if (m_MapSiteUri.empty()) MapCFG.Set("map_site", "https://www.hiveworkshop.com/threads/351924/");
-    MapCFG.Set("map_shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
+    if (m_MapSiteUri.empty()) MapCFG.Set("map.site", "https://www.hiveworkshop.com/threads/351924/");
+    MapCFG.Set("map.shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
   }
 
   if (baseFileName.find("DotA") != string::npos) {
-    MapCFG.Set("map_type", "dota");
+    MapCFG.Set("map.type", "dota");
   }
 
   CMap* baseMap = new CMap(m_Aura, &MapCFG, m_SkipVersionCheck);

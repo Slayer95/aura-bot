@@ -160,10 +160,10 @@ public:
   std::optional<uint8_t>  m_AutoStartPlayers;
 
 private:
-  std::vector<uint8_t>   m_MapSHA1;   // config value: map sha1 (20 bytes)
+  std::vector<uint8_t>   m_MapScriptsSHA1;   // config value: map sha1 (20 bytes)
   std::vector<uint8_t>   m_MapSize;   // config value: map size (4 bytes)
   std::vector<uint8_t>   m_MapCRC32;   // config value: map info (4 bytes) -> this is the real CRC
-  std::vector<uint8_t>   m_MapHash;    // config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
+  std::vector<uint8_t>   m_MapScriptsWeakHash;    // config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
   std::vector<uint8_t>   m_MapWidth;  // config value: map width (2 bytes)
   std::vector<uint8_t>   m_MapHeight; // config value: map height (2 bytes)
   std::vector<CGameSlot> m_Slots;
@@ -209,9 +209,9 @@ public:
   inline std::string            GetConfigName() const { return m_CFGName; }
   inline std::string            GetClientPath() const { return m_ClientMapPath; }
   inline std::vector<uint8_t>   GetMapSize() const { return m_MapSize; }
-  inline std::vector<uint8_t>   GetMapCRC32() const { return m_MapCRC32; } // true CRC32 (<map_info>)
-  inline std::vector<uint8_t>   GetMapHash() const { return m_MapHash; } // <map_crc>
-  inline std::vector<uint8_t>   GetMapSHA1() const { return m_MapSHA1; } // <map_sha1>
+  inline std::vector<uint8_t>   GetMapCRC32() const { return m_MapCRC32; } // <map.crc32>, but also legacy <map_hash>
+  inline std::vector<uint8_t>   GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.weak_hash>, but also legacy <map_crc>
+  inline std::vector<uint8_t>   GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.sha1>
   std::string                   GetMapURL() const { return m_MapURL; }
   std::string                   GetMapSiteURL() const { return m_MapSiteURL; }
   std::string                   GetMapShortDesc() const { return m_MapShortDesc; }

@@ -314,7 +314,7 @@ void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
     if (m_DB->Exec(R"(ALTER TABLE players ADD COLUMN server TEXT NOT NULL DEFAULT ""; ALTER TABLE players ADD COLUMN initialip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN latestip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN initialreport TEXT NOT NULL DEFAULT ""; ALTER TABLE players ADD COLUMN reports INTEGER DEFAULT 0; ALTER TABLE players ADD COLUMN latestgame INTEGER DEFAULT 0))") != SQLITE_OK)
       Print("[SQLITE3] error widening players table - " + m_DB->GetError());
 
-    // crc32 here is the true CRC32 hash of the map file (i.e. <map_info> in the map cfg, NOT <map_crc>)
+    // crc32 here is the true CRC32 hash of the map file (i.e. <map.crc32> in the map cfg, NOT <map.weak_hash>, NOR legacy <map_crc>)
     if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, players TEXT NOT NULL)") != SQLITE_OK)
       Print("[SQLITE3] error creating games table - " + m_DB->GetError());
 
@@ -337,7 +337,7 @@ void CAuraDB::Initialize()
   if (m_DB->Exec("CREATE TABLE players ( name TEXT NOT NULL, server TEXT not NULL, initialip TEXT NOT NULL, latestip TEXT NOT NULL, initialreport TEXT, reports INTEGER DEFAULT 0, latestgame INTEGER DEFAULT 0, games INTEGER DEFAULT 0, dotas INTEGER DEFAULT 0, loadingtime INTEGER DEFAULT 0, duration INTEGER DEFAULT 0, left INTEGER DEFAULT 0, wins INTEGER DEFAULT 0, losses INTEGER DEFAULT 0, kills INTEGER DEFAULT 0, deaths INTEGER DEFAULT 0, creepkills INTEGER DEFAULT 0, creepdenies INTEGER DEFAULT 0, assists INTEGER DEFAULT 0, neutralkills INTEGER DEFAULT 0, towerkills INTEGER DEFAULT 0, raxkills INTEGER DEFAULT 0, courierkills INTEGER DEFAULT 0, PRIMARY KEY ( name, server ) )") != SQLITE_OK)
     Print("[SQLITE3] error creating players table - " + m_DB->GetError());
 
-  // crc32 here is the true CRC32 hash of the map file (i.e. <map_info> in the map cfg, NOT <map_crc>)
+  // crc32 here is the true CRC32 hash of the map file (i.e. <map.crc32> in the map cfg, NOT <map.crc>, NOR legacy <map_crc>)
   if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, playernames TEXT NOT NULL, playerids TEXT NOT NULL, saveids TEXT )") != SQLITE_OK)
     Print("[SQLITE3] error creating games table - " + m_DB->GetError());
 

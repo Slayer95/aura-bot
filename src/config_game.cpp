@@ -85,7 +85,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownStartValue  = CFG.GetInt("hosting.game_start.count_down_ticks", 5);
   m_Latency                   = CFG.GetUint16("bot.latency", 100);
   m_PerfThreshold             = CFG.GetInt("bot.perf_limit", 150);
-  m_LacksMapKickDelay         = CFG.GetInt("hosting.map_missing.kick_delay", 60); // default: 1 minute
+  m_LacksMapKickDelay         = CFG.GetInt("hosting.map.missing.kick_delay", 60); // default: 1 minute
 
   m_CheckJoinable             = CFG.GetBool("monitor.hosting.on_start.check_connectivity", false);
   m_ExtraDiscoveryAddresses   = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});

@@ -193,21 +193,21 @@ CNetConfig::CNetConfig(CConfig& CFG)
 
   m_EnableGeoLocalization        = CFG.GetBool("hosting.geolocalization.enabled", true);
 
-  m_AllowDownloads               = CFG.GetBool("hosting.map_downloads.enabled", false);
+  m_AllowDownloads               = CFG.GetBool("hosting.map.downloads.enabled", false);
 #ifdef DISABLE_CPR
   if (m_AllowDownloads) {
-    Print("[CONFIG] warning - <hosting.map_downloads.enabled = yes> unsupported in this Aura distribution");
-    Print("[CONFIG] warning - <hosting.map_downloads.enabled = yes> requires compilation without #define DISABLE_CPR");
+    Print("[CONFIG] warning - <hosting.map.downloads.enabled = yes> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <hosting.map.downloads.enabled = yes> requires compilation without #define DISABLE_CPR");
     m_AllowDownloads = false;
   }
 #endif
-  m_DownloadTimeout              = CFG.GetInt32("hosting.map_downloads.timeout", 15000);
-  m_MapRepositories              = CFG.GetSetInsensitive("hosting.map_downloads.repositories", ',', {"epicwar", "wc3maps"});
-  m_AllowTransfers               = CFG.GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
-  m_MaxDownloaders               = CFG.GetInt("hosting.map_transfers.max_players", 3);
-  m_MaxUploadSize                = CFG.GetInt("hosting.map_transfers.max_size", 8192);
-  m_MaxUploadSpeed               = CFG.GetInt("hosting.map_transfers.max_speed", 1024);
-  m_MaxParallelMapPackets        = CFG.GetInt("hosting.map_transfers.max_parallel_packets", 1000);
+  m_DownloadTimeout              = CFG.GetInt32("hosting.map.downloads.timeout", 15000);
+  m_MapRepositories              = CFG.GetSetInsensitive("hosting.map.downloads.repositories", ',', {"epicwar", "wc3maps"});
+  m_AllowTransfers               = CFG.GetStringIndex("hosting.map.transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
+  m_MaxDownloaders               = CFG.GetInt("hosting.map.transfers.max_players", 3);
+  m_MaxUploadSize                = CFG.GetInt("hosting.map.transfers.max_size", 8192);
+  m_MaxUploadSpeed               = CFG.GetInt("hosting.map.transfers.max_speed", 1024);
+  m_MaxParallelMapPackets        = CFG.GetInt("hosting.map.transfers.max_parallel_packets", 1000);
   m_HasBufferBloat               = CFG.GetBool("net.has_buffer_bloat", false);
 
   m_AnnounceGProxy               = CFG.GetBool("net.tcp_extensions.gproxy.announce_chat", true);

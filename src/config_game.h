@@ -53,7 +53,7 @@
 
 // Override order
 // Default game config
-// Default map config (*) map_flags_locked = yes/no
+// Default map config (*) map.flags_locked = yes/no
 // Game setup
 
 class CGameSetup;

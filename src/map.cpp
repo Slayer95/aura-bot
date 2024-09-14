@@ -372,8 +372,8 @@ void CMap::Load(CConfig* CFG)
 
   // load the map data
 
-  m_UseStandardPaths = CFG->GetBool("map_stdpaths", false);
-  m_MapServerPath = CFG->GetString("map_localpath", emptyString);
+  m_UseStandardPaths = CFG->GetBool("map.stdpaths", false);
+  m_MapServerPath = CFG->GetString("map.localpath", emptyString);
   m_MapData.clear();
 
   bool isPartial = CFG->GetBool("cfg_partial", false);
@@ -404,7 +404,7 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map_localmtime");
+  optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map.localmtime");
   optional<int64_t> FileModifiedTime;
   filesystem::path MapMPQFilePath(m_MapServerPath);
 
@@ -426,12 +426,12 @@ void CMap::Load(CConfig* CFG)
   }
   if (FileModifiedTime.has_value()) {
     if (!CachedModifiedTime.has_value() || FileModifiedTime.value() != CachedModifiedTime.value()) {
-      CFG->SetInt64("map_localmtime", FileModifiedTime.value());
+      CFG->SetInt64("map.localmtime", FileModifiedTime.value());
       CFG->SetIsModified();
     }
   }
 
-  uint32_t mapLocale = CFG->GetUint32("map_locale", 0);
+  uint32_t mapLocale = CFG->GetUint32("map.locale", 0);
   SFileSetLocale(mapLocale);
 
   void* MapMPQ;
@@ -458,35 +458,35 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  // try to calculate map_size, map_info, map_crc, map_sha1
+  // try to calculate <map.size>, <map.crc32>, <map.weak_hash>, <map.sha1>
 
-  std::vector<uint8_t> MapSize, MapCRC32, MapHash, MapSHA1;
+  std::vector<uint8_t> MapSize, MapCRC32, MapScriptsWeakHash, MapScriptsSHA1;
 
   if (!m_MapData.empty()) {
     m_Aura->m_SHA->Reset();
 
-    // calculate map_info (this is actually the CRC32)
+    // calculate <map.crc32>
 
     MapCRC32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
     if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-      Print("[MAP] calculated <map_info = " + ByteArrayToDecString(MapCRC32) + "> (CRC32)");
+      Print("[MAP] calculated <map.crc32 = " + ByteArrayToDecString(MapCRC32) + ">");
     }
 
-    // calculate map_crc (this is a misnomer) and map_sha1
-    // a big thank you to Strilanc for figuring the map_crc algorithm out
+    // calculate <map.weak_hash>, and <map.sha1>
+    // a big thank you to Strilanc for figuring the <map.weak_hash> algorithm out
 
     filesystem::path commonPath = m_Aura->m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
     string CommonJ = FileRead(commonPath, nullptr);
 
     if (CommonJ.empty())
-      Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + PathToString(commonPath) + "]");
+      Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(commonPath) + "]");
     else
     {
       filesystem::path blizzardPath = m_Aura->m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
       string BlizzardJ = FileRead(blizzardPath, nullptr);
 
       if (BlizzardJ.empty())
-        Print("[MAP] unable to calculate map_crc/sha1 - unable to read file [" + PathToString(blizzardPath) + "]");
+        Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(blizzardPath) + "]");
       else
       {
         uint32_t Val = 0;
@@ -518,7 +518,7 @@ void CMap::Load(CConfig* CFG)
 
               if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
               {
-                Print("[MAP] overriding default common.j with map copy while calculating map_crc/sha1");
+                Print("[MAP] overriding default common.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
                 OverrodeCommonJ = true;
                 Val             = Val ^ XORRotateLeft(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
                 m_Aura->m_SHA->Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
@@ -558,7 +558,7 @@ void CMap::Load(CConfig* CFG)
 
               if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr))
               {
-                Print("[MAP] overriding default blizzard.j with map copy while calculating map_crc/sha1");
+                Print("[MAP] overriding default blizzard.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
                 OverrodeBlizzardJ = true;
                 Val               = Val ^ XORRotateLeft(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
                 m_Aura->m_SHA->Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
@@ -635,31 +635,31 @@ void CMap::Load(CConfig* CFG)
           }
 
           if (!FoundScript)
-            Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ file, calculated map_crc/sha1 is probably wrong)");
+            Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ file, calculated <map.weak_hash>, and <map.sha1> is probably wrong)");
 
-          MapHash = CreateByteArray(Val, false);
+          MapScriptsWeakHash = CreateByteArray(Val, false);
           if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-            Print("[MAP] calculated <map_crc = " + ByteArrayToDecString(MapHash) + ">");
+            Print("[MAP] calculated <map.weak_hash = " + ByteArrayToDecString(MapScriptsWeakHash) + ">");
           }
 
           m_Aura->m_SHA->Final();
           uint8_t SHA1[20];
           memset(SHA1, 0, sizeof(uint8_t) * 20);
           m_Aura->m_SHA->GetHash(SHA1);
-          MapSHA1 = CreateByteArray(SHA1, 20);
+          MapScriptsSHA1 = CreateByteArray(SHA1, 20);
           if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-            Print("[MAP] calculated <map_sha1 = " + ByteArrayToDecString(MapSHA1) + ">");
+            Print("[MAP] calculated <map.sha1 = " + ByteArrayToDecString(MapScriptsSHA1) + ">");
           }
         }
         else
-          Print("[MAP] skipping map_crc/sha1 calculation - map not decompressed");
+          Print("[MAP] skipping <map.weak_hash>, and <map.sha1> calculation - map not decompressed");
       }
     }
   }
   else
-    Print("[MAP] no map data available, using config file for <map_size>, <map_info>, <map_crc>, <map_sha1>");
+    Print("[MAP] no map data available, using config file for <map.size>, <map.crc32>, <map.weak_hash>, <map.sha1>");
 
-  // try to calculate map_width, map_height, map_slot<x>, map_numplayers, map_numteams, map_filtertype
+  // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams>, <map.filtertype>
 
   std::vector<uint8_t> MapWidth;
   std::vector<uint8_t> MapHeight;
@@ -835,7 +835,7 @@ void CMap::Load(CConfig* CFG)
               if (MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) MapOptions |= MAPOPT_CUSTOMFORCES;
 
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                Print("[MAP] calculated <map_options = " + to_string(MapOptions) + ">");
+                Print("[MAP] calculated <map.options = " + to_string(MapOptions) + ">");
               }
 
               if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
@@ -887,42 +887,42 @@ void CMap::Load(CConfig* CFG)
               uint32_t SlotNum = 1;
 
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                Print("[MAP] calculated <map_width = " + ByteArrayToDecString(MapWidth) + ">");
-                Print("[MAP] calculated <map_height = " + ByteArrayToDecString(MapHeight) + ">");
-                Print("[MAP] calculated <map_numdisabled = " + ToDecString(MapNumDisabled) + ">");
-                Print("[MAP] calculated <map_numplayers = " + ToDecString(MapNumPlayers) + ">");
-                Print("[MAP] calculated <map_numteams = " + ToDecString(MapNumTeams) + ">");
+                Print("[MAP] calculated <map.width = " + ByteArrayToDecString(MapWidth) + ">");
+                Print("[MAP] calculated <map.height = " + ByteArrayToDecString(MapHeight) + ">");
+                Print("[MAP] calculated <map.numdisabled = " + ToDecString(MapNumDisabled) + ">");
+                Print("[MAP] calculated <map.numplayers = " + ToDecString(MapNumPlayers) + ">");
+                Print("[MAP] calculated <map.numteams = " + ToDecString(MapNumTeams) + ">");
               }
 
               for (auto& Slot : Slots) {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                  Print("[MAP] calculated <map_slot" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetProtocolArray()) + ">");
+                  Print("[MAP] calculated <map.slot_" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetProtocolArray()) + ">");
                 }
                 ++SlotNum;
               }
             } else {
-              Print("[MAP] unable to calculate <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from map file");
+              Print("[MAP] unable to calculate <map.slot_N>, <map.numplayers>, <map.numteams> - unable to extract war3map.w3i from map file");
             }
           }
         }
         else
-          Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - unable to extract war3map.w3i from map file");
+          Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams> - unable to extract war3map.w3i from map file");
 
         delete[] SubFileData;
       }
 
       SFileCloseFile(SubFile);
     } else {
-      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - couldn't find war3map.w3i in map file");
+      Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams> - couldn't find war3map.w3i in map file");
     }
   } else {
     if (!isPartial) {
       //This is debug log
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-        Print("[MAP] using mapcfg for <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams>");
+        Print("[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams>");
       }
     } else if (!m_MapMPQLoaded) {
-      Print("[MAP] unable to calculate <map_options>, <map_width>, <map_height>, <map_slotN>, <map_numplayers>, <map_numteams> - map archive not loaded");
+      Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams> - map archive not loaded");
     }
   }
 
@@ -931,11 +931,11 @@ void CMap::Load(CConfig* CFG)
   if (m_MapMPQLoaded)
     SFileCloseArchive(MapMPQ);
 
-  m_ClientMapPath = CFG->GetString("map_path", emptyString);
+  m_ClientMapPath = CFG->GetString("map.path", emptyString);
   vector<uint8_t> MapContentMismatch = vector<uint8_t>(4, 0);
 
-  if (CFG->Exists("map_size")) {
-    string CFGValue = CFG->GetString("map_size", emptyString);
+  if (CFG->Exists("map.size")) {
+    string CFGValue = CFG->GetString("map.size", emptyString);
     if (RawMapSize != 0) {
       string MapValue = ByteArrayToDecString(CreateByteArray(static_cast<uint32_t>(RawMapSize), false));
       MapContentMismatch[0] = CFGValue != MapValue;
@@ -943,49 +943,49 @@ void CMap::Load(CConfig* CFG)
     MapSize = ExtractNumbers(CFGValue, 4);
   } else if (RawMapSize != 0) {
     MapSize = CreateByteArray(static_cast<uint32_t>(RawMapSize), false);
-    CFG->SetUint8Vector("map_size", MapSize);
+    CFG->SetUint8Vector("map.size", MapSize);
   }
 
   m_MapSize = MapSize;
 
-  if (CFG->Exists("map_info")) {
-    string CFGValue = CFG->GetString("map_info", emptyString);
+  if (CFG->Exists("map.crc32")) {
+    string CFGValue = CFG->GetString("map.crc32", emptyString);
     if (!MapCRC32.empty()) {
       string MapValue = ByteArrayToDecString(MapCRC32);
       MapContentMismatch[1] = CFGValue != MapValue;
     }
     MapCRC32 = ExtractNumbers(CFGValue, 4);
   } else if (!MapCRC32.empty()) {
-    CFG->SetUint8Vector("map_info", MapCRC32);
+    CFG->SetUint8Vector("map.crc32", MapCRC32);
   }
 
   m_MapCRC32 = MapCRC32;
 
-  if (CFG->Exists("map_crc")) {
-    string CFGValue = CFG->GetString("map_crc", emptyString);
-    if (!MapHash.empty()) {
-      string MapValue = ByteArrayToDecString(MapHash);
+  if (CFG->Exists("map.weak_hash")) {
+    string CFGValue = CFG->GetString("map.weak_hash", emptyString);
+    if (!MapScriptsWeakHash.empty()) {
+      string MapValue = ByteArrayToDecString(MapScriptsWeakHash);
       MapContentMismatch[2] = CFGValue != MapValue;
     }
-    MapHash = ExtractNumbers(CFGValue, 4);
-  } else if (!MapHash.empty()) {
-    CFG->SetUint8Vector("map_crc", MapHash);
+    MapScriptsWeakHash = ExtractNumbers(CFGValue, 4);
+  } else if (!MapScriptsWeakHash.empty()) {
+    CFG->SetUint8Vector("map.weak_hash", MapScriptsWeakHash);
   }
 
-  m_MapHash = MapHash;
+  m_MapScriptsWeakHash = MapScriptsWeakHash;
 
-  if (CFG->Exists("map_sha1")) {
-    string CFGValue = CFG->GetString("map_sha1", emptyString);
-    if (!MapSHA1.empty()) {
-      string MapValue = ByteArrayToDecString(MapSHA1);
+  if (CFG->Exists("map.sha1")) {
+    string CFGValue = CFG->GetString("map.sha1", emptyString);
+    if (!MapScriptsSHA1.empty()) {
+      string MapValue = ByteArrayToDecString(MapScriptsSHA1);
       MapContentMismatch[3] = CFGValue != MapValue;
     }
-    MapSHA1 = ExtractNumbers(CFGValue, 20);
-  } else if (!MapSHA1.empty()) {
-    CFG->SetUint8Vector("map_sha1", MapSHA1);
+    MapScriptsSHA1 = ExtractNumbers(CFGValue, 20);
+  } else if (!MapScriptsSHA1.empty()) {
+    CFG->SetUint8Vector("map.sha1", MapScriptsSHA1);
   }
 
-  m_MapSHA1 = MapSHA1;
+  m_MapScriptsSHA1 = MapScriptsSHA1;
 
   if (!m_MapData.empty()) {
     m_MapContentMismatch = MapContentMismatch;
@@ -994,25 +994,25 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  m_MapSiteURL   = CFG->GetString("map_site", emptyString);
-  m_MapShortDesc = CFG->GetString("map_shortdesc", emptyString);
-  m_MapURL       = CFG->GetString("map_url", emptyString);
+  m_MapSiteURL   = CFG->GetString("map.site", emptyString);
+  m_MapShortDesc = CFG->GetString("map.shortdesc", emptyString);
+  m_MapURL       = CFG->GetString("map.url", emptyString);
 
-  if (CFG->Exists("map_filter_type")) {
-    MapFilterType = CFG->GetUint8("map_filter_type", MAPFILTER_TYPE_SCENARIO);
+  if (CFG->Exists("map.filter_type")) {
+    MapFilterType = CFG->GetUint8("map.filter_type", MAPFILTER_TYPE_SCENARIO);
   } else {
-    CFG->SetUint8("map_filter_type", MapFilterType);
+    CFG->SetUint8("map.filter_type", MapFilterType);
   }
 
   m_MapFilterType = MapFilterType;
 
   // These are per-game flags. Don't automatically set them in the map config.
-  m_MapSpeed       = CFG->GetUint8("map_speed", MAPSPEED_FAST);
-  m_MapVisibility  = CFG->GetUint8("map_visibility", MAPVIS_DEFAULT);
-  m_MapObservers   = CFG->GetUint8("map_observers", MAPOBS_ALLOWED);
-  m_MapFilterMaker = CFG->GetUint8("map_filter_maker", MAPFILTER_MAKER_USER);
-  m_MapFilterSize  = CFG->GetUint8("map_filter_size", MAPFILTER_SIZE_LARGE);
-  m_MapFilterObs   = CFG->GetUint8("map_filter_obs", MAPFILTER_OBS_NONE);
+  m_MapSpeed       = CFG->GetUint8("map.speed", MAPSPEED_FAST);
+  m_MapVisibility  = CFG->GetUint8("map.visibility", MAPVIS_DEFAULT);
+  m_MapObservers   = CFG->GetUint8("map.observers", MAPOBS_ALLOWED);
+  m_MapFilterMaker = CFG->GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
+  m_MapFilterSize  = CFG->GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
+  m_MapFilterObs   = CFG->GetUint8("map.filter_obs", MAPFILTER_OBS_NONE);
 
   // CGameConfig overrides
   if (CFG->Exists("map.hosting.game_over.player_count")) {
@@ -1064,69 +1064,69 @@ void CMap::Load(CConfig* CFG)
     CFG->FailIfErrorLast();
   }
 
-  if (CFG->Exists("map_options")) {
-    MapOptions = CFG->GetUint32("map_options", 0);
+  if (CFG->Exists("map.options")) {
+    MapOptions = CFG->GetUint32("map.options", 0);
     if (MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) MapOptions |= MAPOPT_CUSTOMFORCES;
   } else {
-    CFG->SetUint32("map_options", MapOptions);
+    CFG->SetUint32("map.options", MapOptions);
   }
 
   m_MapOptions = MapOptions;
-  m_MapFlags = CFG->GetUint8("map_flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS);
-  if (!CFG->Exists("map_flags")) {
-    CFG->SetUint8("map_flags", m_MapFlags);
+  m_MapFlags = CFG->GetUint8("map.flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS);
+  if (!CFG->Exists("map.flags")) {
+    CFG->SetUint8("map.flags", m_MapFlags);
   }
 
-  if (CFG->Exists("map_width")) {
-    MapWidth = ExtractNumbers(CFG->GetString("map_width", emptyString), 2);
+  if (CFG->Exists("map.width")) {
+    MapWidth = ExtractNumbers(CFG->GetString("map.width", emptyString), 2);
   } else {
-    CFG->SetUint8Vector("map_width", MapWidth);
+    CFG->SetUint8Vector("map.width", MapWidth);
   }
 
-  if (CFG->Exists("map_height")) {
-    MapHeight = ExtractNumbers(CFG->GetString("map_height", emptyString), 2);
+  if (CFG->Exists("map.height")) {
+    MapHeight = ExtractNumbers(CFG->GetString("map.height", emptyString), 2);
   } else {
-    CFG->SetUint8Vector("map_height", MapHeight);
+    CFG->SetUint8Vector("map.height", MapHeight);
   }
 
-  if (CFG->Exists("map_editorversion")) {
-    MapEditorVersion = CFG->GetUint32("map_editorversion", 0);
+  if (CFG->Exists("map.editorversion")) {
+    MapEditorVersion = CFG->GetUint32("map.editorversion", 0);
   } else {
-    CFG->SetUint32("map_editorversion", MapEditorVersion);
+    CFG->SetUint32("map.editorversion", MapEditorVersion);
   }
 
   m_MapWidth = MapWidth;
   m_MapHeight = MapHeight;
   m_MapEditorVersion = MapEditorVersion;
-  m_MapType = CFG->GetString("map_type", emptyString);
-  m_MapDefaultHCL = CFG->GetString("map_defaulthcl", emptyString);
+  m_MapType = CFG->GetString("map.type", emptyString);
+  m_MapDefaultHCL = CFG->GetString("map.defaulthcl", emptyString);
 
-  if (CFG->Exists("map_numdisabled")) {
-    MapNumDisabled = CFG->GetUint8("map_numdisabled", 0);
+  if (CFG->Exists("map.numdisabled")) {
+    MapNumDisabled = CFG->GetUint8("map.numdisabled", 0);
   } else {
-    CFG->SetUint8("map_numdisabled", MapNumDisabled);
+    CFG->SetUint8("map.numdisabled", MapNumDisabled);
   }
 
   m_MapNumDisabled = MapNumDisabled;
 
-  if (CFG->Exists("map_numplayers")) {
-    MapNumPlayers = CFG->GetUint8("map_numplayers", 0);
+  if (CFG->Exists("map.numplayers")) {
+    MapNumPlayers = CFG->GetUint8("map.numplayers", 0);
   } else {
-    CFG->SetUint8("map_numplayers", MapNumPlayers);
+    CFG->SetUint8("map.numplayers", MapNumPlayers);
   }
 
   m_MapNumControllers = MapNumPlayers;
 
-  if (CFG->Exists("map_numteams")) {
-    MapNumTeams = CFG->GetUint8("map_numteams", 0);
+  if (CFG->Exists("map.numteams")) {
+    MapNumTeams = CFG->GetUint8("map.numteams", 0);
   } else {
-    CFG->SetUint8("map_numteams", MapNumTeams);
+    CFG->SetUint8("map.numteams", MapNumTeams);
   }
 
   m_MapNumTeams = static_cast<uint8_t>(MapNumTeams);
 
-  if (CFG->Exists("map_gameversion_min")) {
-    MapMinGameVersion = CFG->GetUint8("map_gameversion_min", 0);
+  if (CFG->Exists("map.gameversion_min")) {
+    MapMinGameVersion = CFG->GetUint8("map.gameversion_min", 0);
   } else {
     MapMinGameVersion = 0;
     if (6060 <= MapEditorVersion || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
@@ -1154,7 +1154,7 @@ void CMap::Load(CConfig* CFG)
     } else if (6031 <= MapEditorVersion) {
       MapMinGameVersion = 7;
     }
-    CFG->SetUint32("map_gameversion_min", MapMinGameVersion);
+    CFG->SetUint32("map.gameversion_min", MapMinGameVersion);
   }
   m_MapMinGameVersion = MapMinGameVersion;
 
@@ -1169,11 +1169,11 @@ void CMap::Load(CConfig* CFG)
     m_MapVersionMaxSlots = m_Aura->m_MaxSlots;
   }
 
-  if (CFG->Exists("map_slot1")) {
+  if (CFG->Exists("map.slot_1")) {
     Slots.clear();
 
     for (uint32_t Slot = 1; Slot <= m_MapVersionMaxSlots; ++Slot) {
-      string SlotString = CFG->GetString("map_slot" + to_string(Slot), emptyString);
+      string SlotString = CFG->GetString("map.slot_" + to_string(Slot), emptyString);
 
       if (SlotString.empty())
         break;
@@ -1184,14 +1184,14 @@ void CMap::Load(CConfig* CFG)
   } else if (!Slots.empty()) {
     uint32_t SlotNum = 0;
     for (auto& Slot : Slots) {
-      CFG->SetUint8Vector("map_slot" + to_string(++SlotNum), Slot.GetByteArray());
+      CFG->SetUint8Vector("map.slot_" + to_string(++SlotNum), Slot.GetByteArray());
     }
   }
 
   m_Slots = Slots;
 
-  if (CFG->Exists("map_proxy_reconnect")) {
-    m_ProxyReconnect = CFG->GetUint8("map_proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
+  if (CFG->Exists("map.proxy_reconnect")) {
+    m_ProxyReconnect = CFG->GetUint8("map.proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
   }
 
   // if random races is set force every slot's race to random
@@ -1239,30 +1239,30 @@ string CMap::CheckProblems()
   if (m_ClientMapPath.empty())
   {
     m_Valid = false;
-    m_ErrorMessage = "map_path not found";
+    m_ErrorMessage = "map.path not found";
     return m_ErrorMessage;
   }
 
   if (m_ClientMapPath.length() > 53)
   {
     m_Valid = false;
-    m_ErrorMessage = "map_path too long";
+    m_ErrorMessage = "map.path too long";
     return m_ErrorMessage;
   }
 
   if (m_ClientMapPath.find('/') != string::npos)
-    Print(R"(warning - map_path contains forward slashes '/' but it must use Windows style back slashes '\')");
+    Print(R"(warning - map.path contains forward slashes '/' but it must use Windows style back slashes '\')");
 
   if (m_MapSize.size() != 4)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_size detected";
+    m_ErrorMessage = "invalid <map.size> detected";
     return m_ErrorMessage;
   }
   else if (!m_MapData.empty() && m_MapData.size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
-    m_ErrorMessage = "nonmatching map_size detected";
+    m_ErrorMessage = "nonmatching <map.size> detected";
     return m_ErrorMessage;
   }
 
@@ -1272,29 +1272,29 @@ string CMap::CheckProblems()
     if (m_MapCRC32.empty() && m_MapData.empty()) {
       m_ErrorMessage = "map file not found";
     } else {
-      m_ErrorMessage = "invalid map_info detected";
+      m_ErrorMessage = "invalid <map.crc32> detected";
     }
     return m_ErrorMessage;
   }
 
-  if (m_MapHash.size() != 4)
+  if (m_MapScriptsWeakHash.size() != 4)
   {
     m_Valid = false;
-    if (m_MapHash.empty() && m_MapMPQErrored) {
+    if (m_MapScriptsWeakHash.empty() && m_MapMPQErrored) {
       m_ErrorMessage = "cannot load map file as MPQ archive";
     } else {
-      m_ErrorMessage = "invalid map_crc detected";
+      m_ErrorMessage = "invalid <map.weak_hash> detected";
     }
     return m_ErrorMessage;
   }
 
-  if (m_MapSHA1.size() != 20)
+  if (m_MapScriptsSHA1.size() != 20)
   {
     m_Valid = false;
-    if (m_MapSHA1.empty() && m_MapMPQErrored) {
+    if (m_MapScriptsSHA1.empty() && m_MapMPQErrored) {
       m_ErrorMessage = "cannot load map file as MPQ archive";
     } else {
-      m_ErrorMessage = "invalid map_sha1 detected";
+      m_ErrorMessage = "invalid <map.sha1> detected";
     }
     return m_ErrorMessage;
   }
@@ -1302,49 +1302,49 @@ string CMap::CheckProblems()
   if (m_MapSpeed != MAPSPEED_SLOW && m_MapSpeed != MAPSPEED_NORMAL && m_MapSpeed != MAPSPEED_FAST)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_speed detected";
+    m_ErrorMessage = "invalid <map.speed> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapVisibility != MAPVIS_HIDETERRAIN && m_MapVisibility != MAPVIS_EXPLORED && m_MapVisibility != MAPVIS_ALWAYSVISIBLE && m_MapVisibility != MAPVIS_DEFAULT)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_visibility detected";
+    m_ErrorMessage = "invalid <map.visibility> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapObservers != MAPOBS_NONE && m_MapObservers != MAPOBS_ONDEFEAT && m_MapObservers != MAPOBS_ALLOWED && m_MapObservers != MAPOBS_REFEREES)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_observers detected";
+    m_ErrorMessage = "invalid <map.observers> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_numdisabled detected";
+    m_ErrorMessage = "invalid <map.numdisabled> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapNumControllers < 2 || m_MapNumControllers > MAX_SLOTS_MODERN || m_MapNumControllers + m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_numplayers detected";
+    m_ErrorMessage = "invalid <map.numplayers> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapNumTeams < 2 || m_MapNumTeams > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_numteams detected";
+    m_ErrorMessage = "invalid <map.numteams> detected";
     return m_ErrorMessage;
   }
 
   if (m_Slots.size() < 2 || m_Slots.size() > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_slot<x> detected";
+    m_ErrorMessage = "invalid <map.slot_N> detected";
     return m_ErrorMessage;
   }
 
@@ -1380,7 +1380,7 @@ string CMap::CheckProblems()
     if (slot.GetTeam() > m_MapNumTeams) {
       // TODO: Or just enforce usedTeams.count() <= m_MapNumTeams?
       m_Valid = false;
-      m_ErrorMessage = "invalid map_slot<x> detected";
+      m_ErrorMessage = "invalid <map.slot_N> detected";
       return m_ErrorMessage;
     }
     usedTeams.set(slot.GetTeam());
@@ -1388,24 +1388,24 @@ string CMap::CheckProblems()
   }
   if (controllerSlotCount != m_MapNumControllers) {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_slot<x> detected"; 
+    m_ErrorMessage = "invalid <map.slot_N> detected"; 
     return m_ErrorMessage;
   }
   if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && usedTeams.count() <= 1) {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_slot<x> detected";
+    m_ErrorMessage = "invalid <map.slot_N> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapWidth.size() != 2) {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_width detected";
+    m_ErrorMessage = "invalid <map.width> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapHeight.size() != 2) {
     m_Valid = false;
-    m_ErrorMessage = "invalid map_height detected";
+    m_ErrorMessage = "invalid <map.height> detected";
     return m_ErrorMessage;
   }
 

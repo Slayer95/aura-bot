@@ -1063,7 +1063,7 @@ struct sqlite3_io_methods {
 ** pointer is overwritten with the old value.  The limit is not changed if
 ** the value originally pointed to is negative, and so the current limit
 ** can be queried by passing in a pointer to a negative number.  This
-** file-control is used internally to implement [PRAGMA mmap_size].
+** file-control is used internally to implement [PRAGMA mmap.size].
 **
 ** <li>[[SQLITE_FCNTL_TRACE]]
 ** The [SQLITE_FCNTL_TRACE] file control provides advisory information
@@ -2067,9 +2067,9 @@ struct sqlite3_mem_methods {
 ** <dt>SQLITE_CONFIG_MMAP_SIZE
 ** <dd>^SQLITE_CONFIG_MMAP_SIZE takes two 64-bit integer (sqlite3_int64) values
 ** that are the default mmap size limit (the default setting for
-** [PRAGMA mmap_size]) and the maximum allowed mmap size limit.
+** [PRAGMA mmap.size]) and the maximum allowed mmap size limit.
 ** ^The default setting can be overridden by each database connection using
-** either the [PRAGMA mmap_size] command, or by using the
+** either the [PRAGMA mmap.size] command, or by using the
 ** [SQLITE_FCNTL_MMAP_SIZE] file control.  ^(The maximum allowed mmap size
 ** will be silently truncated if necessary so that it does not exceed the
 ** compile-time maximum mmap size set by the

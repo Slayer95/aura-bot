@@ -5783,23 +5783,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         CConfig MapCFG;
         MapCFG.Set("cfg_partial", "1");
-        MapCFG.Set("map_path", R"(Maps\Download\)" + nameString);
-        MapCFG.Set("map_localpath", nameString);
+        MapCFG.Set("map.path", R"(Maps\Download\)" + nameString);
+        MapCFG.Set("map.localpath", nameString);
         if (nameString.find("_evrgrn3") != string::npos) {
-          MapCFG.Set("map_site", "https://www.hiveworkshop.com/threads/351924/");
+          MapCFG.Set("map.site", "https://www.hiveworkshop.com/threads/351924/");
         } else {
-          MapCFG.Set("map_site", "");
+          MapCFG.Set("map.site", "");
         }
-        MapCFG.Set("map_url", "");
+        MapCFG.Set("map.url", "");
         if (nameString.find("_evrgrn3") != string::npos) {
-          MapCFG.Set("map_shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
+          MapCFG.Set("map.shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
         } else {
-          MapCFG.Set("map_shortdesc", "");
+          MapCFG.Set("map.shortdesc", "");
         }
         MapCFG.Set("downloaded_by", m_FromName);
 
         if (nameString.find("DotA") != string::npos)
-          MapCFG.Set("map_type", "dota");
+          MapCFG.Set("map.type", "dota");
 
         CMap* ParsedMap = new CMap(m_Aura, &MapCFG, true);
         const bool isValid = ParsedMap->GetValid();

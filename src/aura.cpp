@@ -458,13 +458,13 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   try {
     filesystem::create_directory(m_Config->m_MapCFGPath);
   } catch (...) {
-    Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
+    Print("[AURA] warning - <bot.map.configs_path> is not a valid directory");
   }
 
   try {
     filesystem::create_directory(m_Config->m_MapCachePath);
   } catch (...) {
-    Print("[AURA] warning - <bot.map_cache_path> is not a valid directory");
+    Print("[AURA] warning - <bot.map.cache_path> is not a valid directory");
   }
 
   try {
@@ -475,7 +475,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   if (m_Config->m_ExtractJASS) {
     // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
-    // these two files are necessary for calculating "map_crc" when loading maps so we make sure they are available
+    // these two files are necessary for calculating <map.weak_hash>, and <map.sha1> when loading maps so we make sure they are available
     // see CMap :: Load for more information
     m_ScriptsExtracted = ExtractScripts() == 2;
     if (!m_ScriptsExtracted) {
@@ -611,7 +611,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
 
 bool CAura::CopyScripts()
 {
-  // Try to use manually extracted files already available in bot.map_configs_path
+  // Try to use manually extracted files already available in bot.map.configs_path
   filesystem::path autoExtractedCommonPath = m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j");
   filesystem::path autoExtractedBlizzardPath = m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j");
   bool commonExists = FileExists(autoExtractedCommonPath);
@@ -1139,7 +1139,7 @@ bool CAura::ReloadConfigs()
     try {
       filesystem::create_directory(m_Config->m_MapCachePath);
     } catch (...) {
-      Print("[AURA] warning - <bot.map_cache_path> is not a valid directory");
+      Print("[AURA] warning - <bot.map.cache_path> is not a valid directory");
     }
     reCachePresets = true;
   }
@@ -1147,7 +1147,7 @@ bool CAura::ReloadConfigs()
     try {
       filesystem::create_directory(m_Config->m_MapCFGPath);
     } catch (...) {
-      Print("[AURA] warning - <bot.map_configs_path> is not a valid directory");
+      Print("[AURA] warning - <bot.map.configs_path> is not a valid directory");
     }
   }
   if (WasJASSPath != m_Config->m_JASSPath) {
@@ -1418,10 +1418,10 @@ void CAura::CacheMapPresets()
 {
   m_CachedMaps.clear();
 
-  // Preload map_Localpath -> mapcache entries
+  // Preload map.Localpath -> mapcache entries
   const vector<filesystem::path> cacheFiles = FilesMatch(m_Config->m_MapCachePath, FILE_EXTENSIONS_CONFIG);
   for (const auto& cfgName : cacheFiles) {
-    string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map_localpath");
+    string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map.localpath");
     filesystem::path localPath = localPathString;
     localPath = localPath.lexically_normal();
     try {

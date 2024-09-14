@@ -442,7 +442,7 @@ void CGame::InitSlots()
         // Treat every other value as SLOTTYPE_AUTO
         // CMap should never set SLOTTYPE_NONE
         // I bet that we don't need to set SLOTTYPE_NEUTRAL nor SLOTTYPE_RESCUEABLE either,
-        // since we already got <map_numdisabled>
+        // since we already got <map.numdisabled>
         if (slot.GetIsComputer()) {
           slot.SetType(SLOTTYPE_COMP);
         } else {
@@ -2232,13 +2232,13 @@ vector<uint8_t> CGame::GetSourceFileHash() const
   if (m_RestoredGame) {
     return m_RestoredGame->GetSaveHash();
   } else {
-    return m_Map->GetMapHash();
+    return m_Map->GetMapScriptsWeakHash();
   }
 }
 
 vector<uint8_t> CGame::GetSourceFileSHA1() const
 {
-  return m_Map->GetMapSHA1();
+  return m_Map->GetMapScriptsSHA1();
 }
 
 vector<uint8_t> CGame::GetAnnounceWidth() const
@@ -3361,9 +3361,9 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   // send a map check packet to the new player
 
   if (m_Aura->m_GameVersion >= 23) {
-    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapHash(), m_Map->GetMapSHA1()));
+    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
   } else {
-    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapHash()));
+    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
   }
 
   // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
