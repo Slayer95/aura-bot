@@ -446,6 +446,11 @@ Type: string
 Default value: Empty
 Error handling: Use default value
 
+## \`global_realm.logs.console.chat\`
+Type: bool
+Default value: true
+Error handling: Use default value
+
 ## \`global_realm.map_transfers.max_size\`
 Type: int
 Default value: Empty
@@ -707,11 +712,6 @@ Type: int32
 Default value: 15000
 Error handling: Use default value
 
-## \`hosting.map_missing.kick_delay\`
-Type: int
-Default value: 60
-Error handling: Use default value
-
 ## \`hosting.map_transfers.max_parallel_packets\`
 Type: int
 Default value: 1000
@@ -735,6 +735,11 @@ Error handling: Use default value
 ## \`hosting.map_transfers.mode\`
 Type: stringindex
 Default value: auto
+Error handling: Use default value
+
+## \`hosting.map.missing.kick_delay\`
+Type: int
+Default value: 60
 Error handling: Use default value
 
 ## \`hosting.max_games\`

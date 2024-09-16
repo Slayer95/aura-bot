@@ -442,7 +442,7 @@ void CGame::InitSlots()
         // Treat every other value as SLOTTYPE_AUTO
         // CMap should never set SLOTTYPE_NONE
         // I bet that we don't need to set SLOTTYPE_NEUTRAL nor SLOTTYPE_RESCUEABLE either,
-        // since we already got <map.numdisabled>
+        // since we already got <map.num_disabled>
         if (slot.GetIsComputer()) {
           slot.SetType(SLOTTYPE_COMP);
         } else {
@@ -7075,10 +7075,10 @@ bool CGame::GetHasExpiryTime() const {
 
 bool CGame::GetIsReleaseOwnerDue() const
 {
-  return m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTime();
+  return m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyOwnerTimeout) < GetTime();
 }
 
 bool CGame::GetIsDeleteOrphanLobbyDue() const
 {
-  return m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyOwnerTimeout) < GetTime();
+  return m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTime();
 }

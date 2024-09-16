@@ -1421,7 +1421,7 @@ void CAura::CacheMapPresets()
   // Preload map.Localpath -> mapcache entries
   const vector<filesystem::path> cacheFiles = FilesMatch(m_Config->m_MapCachePath, FILE_EXTENSIONS_CONFIG);
   for (const auto& cfgName : cacheFiles) {
-    string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map.localpath");
+    string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map.local_path");
     filesystem::path localPath = localPathString;
     localPath = localPath.lexically_normal();
     try {

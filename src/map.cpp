@@ -372,11 +372,11 @@ void CMap::Load(CConfig* CFG)
 
   // load the map data
 
-  m_UseStandardPaths = CFG->GetBool("map.stdpaths", false);
-  m_MapServerPath = CFG->GetString("map.localpath", emptyString);
+  m_UseStandardPaths = CFG->GetBool("map.standard_path", false);
+  m_MapServerPath = CFG->GetString("map.local_path", emptyString);
   m_MapData.clear();
 
-  bool isPartial = CFG->GetBool("cfg_partial", false);
+  bool isPartial = CFG->GetBool("map.cfg.partial", false);
   bool ignoreMPQ = m_MapServerPath.empty() || (!isPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   size_t RawMapSize = 0;
@@ -404,7 +404,7 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map.localmtime");
+  optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map.local_mod_time");
   optional<int64_t> FileModifiedTime;
   filesystem::path MapMPQFilePath(m_MapServerPath);
 
@@ -426,7 +426,7 @@ void CMap::Load(CConfig* CFG)
   }
   if (FileModifiedTime.has_value()) {
     if (!CachedModifiedTime.has_value() || FileModifiedTime.value() != CachedModifiedTime.value()) {
-      CFG->SetInt64("map.localmtime", FileModifiedTime.value());
+      CFG->SetInt64("map.local_mod_time", FileModifiedTime.value());
       CFG->SetIsModified();
     }
   }
@@ -659,7 +659,7 @@ void CMap::Load(CConfig* CFG)
   else
     Print("[MAP] no map data available, using config file for <map.size>, <map.crc32>, <map.weak_hash>, <map.sha1>");
 
-  // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams>, <map.filtertype>
+  // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>, <map.filter_type>
 
   std::vector<uint8_t> MapWidth;
   std::vector<uint8_t> MapHeight;
@@ -889,9 +889,9 @@ void CMap::Load(CConfig* CFG)
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
                 Print("[MAP] calculated <map.width = " + ByteArrayToDecString(MapWidth) + ">");
                 Print("[MAP] calculated <map.height = " + ByteArrayToDecString(MapHeight) + ">");
-                Print("[MAP] calculated <map.numdisabled = " + ToDecString(MapNumDisabled) + ">");
-                Print("[MAP] calculated <map.numplayers = " + ToDecString(MapNumPlayers) + ">");
-                Print("[MAP] calculated <map.numteams = " + ToDecString(MapNumTeams) + ">");
+                Print("[MAP] calculated <map.num_disabled = " + ToDecString(MapNumDisabled) + ">");
+                Print("[MAP] calculated <map.num_players = " + ToDecString(MapNumPlayers) + ">");
+                Print("[MAP] calculated <map.num_teams = " + ToDecString(MapNumTeams) + ">");
               }
 
               for (auto& Slot : Slots) {
@@ -901,28 +901,28 @@ void CMap::Load(CConfig* CFG)
                 ++SlotNum;
               }
             } else {
-              Print("[MAP] unable to calculate <map.slot_N>, <map.numplayers>, <map.numteams> - unable to extract war3map.w3i from map file");
+              Print("[MAP] unable to calculate <map.slot_N>, <map.num_players>, <map.num_teams> - unable to extract war3map.w3i from map file");
             }
           }
         }
         else
-          Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams> - unable to extract war3map.w3i from map file");
+          Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams> - unable to extract war3map.w3i from map file");
 
         delete[] SubFileData;
       }
 
       SFileCloseFile(SubFile);
     } else {
-      Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams> - couldn't find war3map.w3i in map file");
+      Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams> - couldn't find war3map.w3i in map file");
     }
   } else {
     if (!isPartial) {
       //This is debug log
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-        Print("[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams>");
+        Print("[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>");
       }
     } else if (!m_MapMPQLoaded) {
-      Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.numplayers>, <map.numteams> - map archive not loaded");
+      Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams> - map archive not loaded");
     }
   }
 
@@ -995,7 +995,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   m_MapSiteURL   = CFG->GetString("map.site", emptyString);
-  m_MapShortDesc = CFG->GetString("map.shortdesc", emptyString);
+  m_MapShortDesc = CFG->GetString("map.short_desc", emptyString);
   m_MapURL       = CFG->GetString("map.url", emptyString);
 
   if (CFG->Exists("map.filter_type")) {
@@ -1089,44 +1089,44 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map.height", MapHeight);
   }
 
-  if (CFG->Exists("map.editorversion")) {
-    MapEditorVersion = CFG->GetUint32("map.editorversion", 0);
+  if (CFG->Exists("map.editor_version")) {
+    MapEditorVersion = CFG->GetUint32("map.editor_version", 0);
   } else {
-    CFG->SetUint32("map.editorversion", MapEditorVersion);
+    CFG->SetUint32("map.editor_version", MapEditorVersion);
   }
 
   m_MapWidth = MapWidth;
   m_MapHeight = MapHeight;
   m_MapEditorVersion = MapEditorVersion;
   m_MapType = CFG->GetString("map.type", emptyString);
-  m_MapDefaultHCL = CFG->GetString("map.defaulthcl", emptyString);
+  m_MapDefaultHCL = CFG->GetString("map.default_hcl", emptyString);
 
-  if (CFG->Exists("map.numdisabled")) {
-    MapNumDisabled = CFG->GetUint8("map.numdisabled", 0);
+  if (CFG->Exists("map.num_disabled")) {
+    MapNumDisabled = CFG->GetUint8("map.num_disabled", 0);
   } else {
-    CFG->SetUint8("map.numdisabled", MapNumDisabled);
+    CFG->SetUint8("map.num_disabled", MapNumDisabled);
   }
 
   m_MapNumDisabled = MapNumDisabled;
 
-  if (CFG->Exists("map.numplayers")) {
-    MapNumPlayers = CFG->GetUint8("map.numplayers", 0);
+  if (CFG->Exists("map.num_players")) {
+    MapNumPlayers = CFG->GetUint8("map.num_players", 0);
   } else {
-    CFG->SetUint8("map.numplayers", MapNumPlayers);
+    CFG->SetUint8("map.num_players", MapNumPlayers);
   }
 
   m_MapNumControllers = MapNumPlayers;
 
-  if (CFG->Exists("map.numteams")) {
-    MapNumTeams = CFG->GetUint8("map.numteams", 0);
+  if (CFG->Exists("map.num_teams")) {
+    MapNumTeams = CFG->GetUint8("map.num_teams", 0);
   } else {
-    CFG->SetUint8("map.numteams", MapNumTeams);
+    CFG->SetUint8("map.num_teams", MapNumTeams);
   }
 
   m_MapNumTeams = static_cast<uint8_t>(MapNumTeams);
 
-  if (CFG->Exists("map.gameversion_min")) {
-    MapMinGameVersion = CFG->GetUint8("map.gameversion_min", 0);
+  if (CFG->Exists("map.game_version.min")) {
+    MapMinGameVersion = CFG->GetUint8("map.game_version.min", 0);
   } else {
     MapMinGameVersion = 0;
     if (6060 <= MapEditorVersion || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
@@ -1138,7 +1138,7 @@ void CMap::Load(CConfig* CFG)
     } else if (6057 <= MapEditorVersion) {
       MapMinGameVersion = 22;
     } else if (6053 <= MapEditorVersion && MapEditorVersion <= 6056) {
-      MapMinGameVersion = 22; // Not released
+      MapMinGameVersion = 22; // not released
     } else if (6050 <= MapEditorVersion && MapEditorVersion <= 6052) {
       MapMinGameVersion = 17 + static_cast<uint8_t>(MapEditorVersion - 6050);
     } else if (6046 <= MapEditorVersion) {
@@ -1148,13 +1148,13 @@ void CMap::Load(CConfig* CFG)
     } else if (6039 <= MapEditorVersion) {
       MapMinGameVersion = 14;
     } else if (6038 <= MapEditorVersion) {
-      MapMinGameVersion = 14; // Not released
+      MapMinGameVersion = 14; // not released
     } else if (6034 <= MapEditorVersion && MapEditorVersion <= 6037) {
       MapMinGameVersion = 10 + static_cast<uint8_t>(MapEditorVersion - 6034);
     } else if (6031 <= MapEditorVersion) {
       MapMinGameVersion = 7;
     }
-    CFG->SetUint32("map.gameversion_min", MapMinGameVersion);
+    CFG->SetUint32("map.game_version.min", MapMinGameVersion);
   }
   m_MapMinGameVersion = MapMinGameVersion;
 
@@ -1218,7 +1218,7 @@ void CMap::Load(CConfig* CFG)
     if (!ErrorMessage.empty()) {
       Print("[MAP] " + ErrorMessage);
     } else if (isPartial) {
-      CFG->Delete("cfg_partial");
+      CFG->Delete("map.cfg.partial");
     }
   }
 }
@@ -1239,14 +1239,14 @@ string CMap::CheckProblems()
   if (m_ClientMapPath.empty())
   {
     m_Valid = false;
-    m_ErrorMessage = "map.path not found";
+    m_ErrorMessage = "<map.path> not found";
     return m_ErrorMessage;
   }
 
   if (m_ClientMapPath.length() > 53)
   {
     m_Valid = false;
-    m_ErrorMessage = "map.path too long";
+    m_ErrorMessage = "<map.path> too long";
     return m_ErrorMessage;
   }
 
@@ -1323,21 +1323,21 @@ string CMap::CheckProblems()
   if (m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid <map.numdisabled> detected";
+    m_ErrorMessage = "invalid <map.num_disabled> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapNumControllers < 2 || m_MapNumControllers > MAX_SLOTS_MODERN || m_MapNumControllers + m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid <map.numplayers> detected";
+    m_ErrorMessage = "invalid <map.num_players> detected";
     return m_ErrorMessage;
   }
 
   if (m_MapNumTeams < 2 || m_MapNumTeams > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
-    m_ErrorMessage = "invalid <map.numteams> detected";
+    m_ErrorMessage = "invalid <map.num_teams> detected";
     return m_ErrorMessage;
   }
 

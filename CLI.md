@@ -217,7 +217,7 @@ to obtain and manage these files as you see fit.
 flag allows you to bypass automatic extraction.
 
 **Note**: Even if JASS files are unavailable, you can still host games using map config 
-files (``.cfg``). These flags simply determine how files necessary for hosting from map files 
+files (``.ini``). These flags simply determine how files necessary for hosting from map files 
 (``.w3x``, ``.w3m``) are obtained and managed.
 
 # Parameters

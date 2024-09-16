@@ -631,11 +631,11 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   }
 
   CConfig MapCFG;
-  MapCFG.SetBool("cfg_partial", true);
-  if (m_StandardPaths) MapCFG.SetBool("map.stdpaths", true);
+  MapCFG.SetBool("map.cfg.partial", true);
+  if (m_StandardPaths) MapCFG.SetBool("map.standard_path", true);
   MapCFG.Set("map.path", R"(Maps\Download\)" + baseFileName);
   string localPath = isInMapsFolder && !m_StandardPaths ? fileName : PathToString(filePath);
-  MapCFG.Set("map.localpath", localPath);
+  MapCFG.Set("map.local_path", localPath);
 
   if (m_IsMapDownloaded) {
     MapCFG.Set("map.site", m_MapSiteUri);
@@ -644,7 +644,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   }
   if (baseFileName.find("_evrgrn3") != string::npos) {
     if (m_MapSiteUri.empty()) MapCFG.Set("map.site", "https://www.hiveworkshop.com/threads/351924/");
-    MapCFG.Set("map.shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
+    MapCFG.Set("map.short_desc", "This map uses Warcraft 3: Reforged game mechanics.");
   }
 
   if (baseFileName.find("DotA") != string::npos) {

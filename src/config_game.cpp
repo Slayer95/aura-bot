@@ -79,8 +79,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 300);
   m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 200);
   m_SafeHighPing              = CFG.GetInt("hosting.high_ping.safe_ms", 150);
-  m_LobbyTimeout            = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
-  m_LobbyOwnerTimeout          = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
+  m_LobbyTimeout              = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
+  m_LobbyOwnerTimeout         = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
   m_LobbyCountDownInterval    = CFG.GetInt("hosting.game_start.count_down_interval", 500);
   m_LobbyCountDownStartValue  = CFG.GetInt("hosting.game_start.count_down_ticks", 5);
   m_Latency                   = CFG.GetUint16("bot.latency", 100);

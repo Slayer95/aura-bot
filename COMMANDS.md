@@ -9,19 +9,22 @@ Aliases: version
 
 ## \`alias\`
 
+## \`alts\`
+Syntax: alts <PLAYERNAME>
+Syntax: alts <PLAYERNAME>@<REALM>
+
 ## \`announce\`
-Syntax: announce <REALM>
+Syntax: announce <REALM>, <GAME NAME>
 
 ## \`autostart\`
 Aliases: addas, as
 Syntax: autostart <slots> , <minutes>
 
 ## \`ban\`
-Aliases: addban
+Syntax: ban <PLAYERNAME>, <REASON>
+Syntax: ban <PLAYERNAME>@<REALM>, <REASON>
 Syntax: ban <PLAYERNAME>
-
-## \`bl\`
-Aliases: banlast
+Syntax: ban <PLAYERNAME>@<REALM>
 
 ## \`c\`
 Aliases: close
@@ -36,14 +39,16 @@ Syntax: channel <CHANNEL>
 Aliases: slot, checkme
 
 ## \`checkban\`
-Syntax: checkban <PLAYERNAME>
+Syntax: checkban <PLAYERNAME>@<REALM>
+
+## \`checkgame\`
 
 ## \`checknetwork\`
 Syntax: checknetwork *
 Syntax: checknetwork <REALM>
 
 ## \`checkrace\`
-Aliases: races
+Aliases: game, races
 
 ## \`checkstaff\`
 Aliases: checkadmin
@@ -92,6 +97,10 @@ Syntax: draft <CAPTAIN1> , <CAPTAIN2>
 
 ## \`drop\`
 
+## \`eg\`
+Aliases: egame
+Syntax: eg <GAMEID> , <COMMAND> - See game ids with !listgames
+
 ## \`enable\`
 
 ## \`enablepub\`
@@ -100,6 +109,7 @@ Syntax: enablepub <REALM>
 ## \`end\`
 
 ## \`eras\`
+Syntax: eras <PLAYER|COUNTRY|COLOR>
 
 ## \`f\`
 Aliases: where, from
@@ -125,9 +135,6 @@ Syntax: fp
 Syntax: fp <ON|OFF>
 
 ## \`freestart\`
-
-## \`game\`
-Syntax: game <GAMEID> , <COMMAND> - See game ids with !listgames
 
 ## \`getclan\`
 
@@ -206,9 +213,6 @@ Syntax: mute [PLAYERNAME]
 
 ## \`muteall\`
 
-## \`netinfo\`
-Syntax: netinfo <REALM>
-
 ## \`nick\`
 
 ## \`no\`
@@ -225,11 +229,23 @@ Syntax: observer <PLAYER>
 
 ## \`owner\`
 Syntax: owner <PLAYERNAME>
+Syntax: owner <PLAYERNAME>@<REALM>
 
 ## \`p\`
 Aliases: pingall, ping
 
 ## \`pause\`
+
+## \`pban\`
+Syntax: pban <PLAYERNAME>, <REASON>
+Syntax: pban <PLAYERNAME>@<REALM>, <REASON>
+Syntax: pban <PLAYERNAME>
+Syntax: pban <PLAYERNAME>@<REALM>
+
+## \`pbanlast\`
+Aliases: bl, pbl
+Syntax: pbanlast
+Syntax: pbanlast confirm
 
 ## \`pick\`
 Syntax: pick <OPTION> , <OPTION> , <OPTION>, ...
@@ -247,9 +263,6 @@ Syntax: pin <MESSAGE>
 ## \`portforward\`
 Syntax: portforward <EXTPORT> , <INTPORT>
 
-## \`printgames\`
-Syntax: printgames <REALM>
-
 ## \`pub\`
 Aliases: priv
 Syntax: pub <GAMENAME>
@@ -257,9 +270,15 @@ Syntax: pub <GAMENAME>
 ## \`pubby\`
 Aliases: privby
 Syntax: pubby <OWNER> , <GAMENAME>
+Syntax: pubby <PLAYERNAME>@<REALM>
 
-## \`querygames\`
-Syntax: querygames <REALM>
+## \`punban\`
+Aliases: unpban
+Syntax: punban <PLAYERNAME>@<REALM>
+
+## \`query\`
+Syntax: query <QUERY>
+Syntax: query <REALM>, <QUERY>
 
 ## \`quickstart\`
 Aliases: sn, startn
@@ -269,6 +288,7 @@ Aliases: exit
 
 ## \`race\`
 Aliases: comprace
+Syntax: race <RACE> - Race is human/orc/undead/elf/random/roll
 Syntax: race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll
 
 ## \`ready\`
@@ -316,8 +336,13 @@ Syntax: addstaff <NAME>
 
 ## \`stats\`
 Aliases: statsdota
+Syntax: stats <PLAYER>
+Syntax: statsdota <PLAYER>
 
 ## \`status\`
+
+## \`sumode\`
+Syntax: sumode <ON|OFF>
 
 ## \`sw\`
 Aliases: swap
@@ -343,7 +368,7 @@ Syntax: twrpg <NOMBRE>
 Aliases: unhost
 
 ## \`unban\`
-Syntax: unban <PLAYERNAME>
+Syntax: unban <PLAYERNAME>@<REALM>
 
 ## \`unhold\`
 
@@ -353,6 +378,8 @@ Syntax: unban <PLAYERNAME>
 Syntax: unmute <PLAYERNAME>
 
 ## \`unmuteall\`
+
+## \`unowner\`
 
 ## \`unpin\`
 
@@ -376,7 +403,10 @@ Aliases: pro, lynch
 Aliases: tell
 Syntax: w <PLAYERNAME>@<LOCATION> , <MESSAGE>
 
+## \`whoare\`
+Syntax: whoare <PLAYERNAME>@<REALM>
+
 ## \`whois\`
-Syntax: whois <PLAYERNAME>
+Syntax: whois <PLAYERNAME>@<REALM>
 
 ## \`yes\`

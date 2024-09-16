@@ -2048,9 +2048,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !PBANLAST
     //
 
-    case HashCode("pbanlast"):
+    case HashCode("bl"):
     case HashCode("pbl"):
-    case HashCode("bl"): {
+    case HashCode("pbanlast"): {
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
@@ -2069,16 +2069,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!m_TargetGame->m_LastLeaverBannable->GetSuspect()) {
         if (isConfirm) {
-          ErrorReply("Usage: " + cmdToken + "banlast");
+          ErrorReply("Usage: " + cmdToken + "pbanlast");
           break;
         }
         m_TargetGame->m_LastLeaverBannable->SetSuspect(true);
         SendReply("Player [" + m_TargetGame->m_LastLeaverBannable->GetName() + "@" + m_TargetGame->m_LastLeaverBannable->GetServer() + "] was the last leaver.");
-        SendReply("Use " + cmdToken + "banlast confirm to ban them.");        
+        SendReply("Use " + cmdToken + "pbanlast confirm to ban them.");        
         break;
       } else {
         if (!isConfirm) {
-          ErrorReply("Usage: " + cmdToken + "banlast confirm");
+          ErrorReply("Usage: " + cmdToken + "pbanlast confirm");
           break;
         }
         string authServer = m_ServerName;
@@ -3698,15 +3698,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>, <REASON>");
-        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>@<REALM>, <REASON>");
         break;
       }
 
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>, <REASON>");
-        ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>, <REASON>");
+        ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>@<REALM>, <REASON>");
         break;
       }
 
@@ -3719,8 +3719,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
         } else {
-          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
-          ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
+          ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>");
+          ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>@<REALM>");
         }
         break;
       }
@@ -5596,16 +5596,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      string targetName, targetHostName;
       CRealm* targetRealm = targetPlayer->GetRealm(false);
       if (!targetRealm) {
-        SendReply("Player [" + targetName + "] joined from LAN/VPN.");
+        SendReply("Player [" + targetPlayer->GetName() + "] joined from LAN/VPN.");
         break;
       }
 
-      const string Message = "/whois " + targetName;
+      const string Message = "/whois " + targetPlayer->GetName();
       targetRealm->QueueCommand(Message);
-      SendReply("Verification requested for [" + targetName + "@" + targetRealm->GetServer() + "]");
+      SendReply("Verification requested for [" + targetPlayer->GetName() + "@" + targetRealm->GetServer() + "]");
       break;
     }
 
@@ -5628,7 +5627,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm)) {
+      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, false, true)) {
         if (!targetHostName.empty() && targetHostName != "*") {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
           break;
@@ -5793,9 +5792,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
 
         CConfig MapCFG;
-        MapCFG.Set("cfg_partial", "1");
+        MapCFG.Set("map.cfg.partial", "1");
         MapCFG.Set("map.path", R"(Maps\Download\)" + nameString);
-        MapCFG.Set("map.localpath", nameString);
+        MapCFG.Set("map.local_path", nameString);
         if (nameString.find("_evrgrn3") != string::npos) {
           MapCFG.Set("map.site", "https://www.hiveworkshop.com/threads/351924/");
         } else {
@@ -5803,9 +5802,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         MapCFG.Set("map.url", "");
         if (nameString.find("_evrgrn3") != string::npos) {
-          MapCFG.Set("map.shortdesc", "This map uses Warcraft 3: Reforged game mechanics.");
+          MapCFG.Set("map.short_desc", "This map uses Warcraft 3: Reforged game mechanics.");
         } else {
-          MapCFG.Set("map.shortdesc", "");
+          MapCFG.Set("map.short_desc", "");
         }
         MapCFG.Set("downloaded_by", m_FromName);
 
