@@ -96,7 +96,7 @@ CConfig::CConfig()
 
 CConfig::~CConfig() = default;
 
-bool CConfig::Read(const filesystem::path& file, const CConfig* adapterConfig)
+bool CConfig::Read(const filesystem::path& file, CConfig* adapterConfig)
 {
   m_File = file;
 

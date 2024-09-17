@@ -77,7 +77,7 @@ public:
   CConfig();
   ~CConfig();
 
-  bool Read(const std::filesystem::path& file, const CConfig* adapterConfig = nullptr);
+  bool Read(const std::filesystem::path& file, CConfig* adapterConfig = nullptr);
   bool Exists(const std::string& key);
   void Accept(const std::string& key);
   void Delete(const std::string& key);
