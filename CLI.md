@@ -246,8 +246,9 @@ Defaults to ``config.ini`` in the home dir.
 
 Specifies the location of a file to be used to migrate legacy Ghost++ configuration files (e.g. `default.cfg`) into modern Aura configuration files.
 
-When this option is specified, Aura will read the configuration file at the location specified by `--config` (or at the default location). Then, the 
-config adapter will be used in order to convert the former, creating a modern Aura configuration file with the name `config-migrated.ini`.
+When this option is specified, Aura will read the configuration file at the location specified by `--config` (or at the default location). 
+Then, the file specified by `--config-adapter` will be used in order to convert the former, creating a modern Aura configuration file with 
+the name `config-migrated.ini`.
 
 It's recommended that users check that the contents of a generated config file matches both their expectation and Aura's expectations, by 
 contrasting key-value pairs with those documented as allowed in `CONFIG.md`.
