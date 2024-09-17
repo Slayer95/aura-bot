@@ -116,18 +116,18 @@ in Aura's console.
 # Removed features from [GHost++][2]:
 - CASC:
   Bots owners are encouraged to extract the good old MPQ files (i.e., `.w3x`.) and place
-  them in the <bot.maps_path> folder.
+  them in the `<bot.maps_path>` folder.
 
   Much of the same applies for necessary `Blizzard.j` and `common.j`, which should be placed 
-  in the <bot.jass_path> folder.
+  in the `<bot.jass_path>` folder.
 
-- Localization
+- Localization:
   I like localization, but it's quite a bit of work. PRs are welcome.
 
-- Replays
+- Replays:
   Please open an issue if this is important to you.
 
-- W3MMD
+- W3MMD:
   Please open an issue if this is important to you.
 
 [1]: https://gitlab.com/ivojulca/aura-bot
