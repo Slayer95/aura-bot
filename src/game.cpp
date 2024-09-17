@@ -6848,7 +6848,7 @@ bool CGame::GetHasPvPGNPlayers() const
 uint8_t CGame::FindFakePlayerFromSID(const uint8_t SID)
 {
   uint8_t i = static_cast<uint8_t>(m_FakePlayers.size());
-  while (--i) {
+  while (i--) {
     if (SID == static_cast<uint8_t>(m_FakePlayers[i] >> 8)) {
       return i;
     }
