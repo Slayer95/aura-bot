@@ -168,7 +168,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
       } catch (...) {}
       NormalizeDirectory(cwd);
 
-      Print("[AURA] required config adapter file not found [" + PathToAbsoluteString(configAdapterPath) + "]");
+      Print("[AURA] required config adapter file not found [" + PathToString(configAdapterPath) + "]");
       if (!cliApp.m_UseStandardPaths && configAdapterPath.parent_path() == homeDir.parent_path() && (cwd.empty() || homeDir.parent_path() != cwd.parent_path())) {
         Print("[HINT] --config-adapter was resolved relative to [" + PathToAbsoluteString(homeDir) + "]");
         Print("[HINT] use --stdpaths to read [" + PathToString(cwd / configAdapterPath.filename()) + "]");
