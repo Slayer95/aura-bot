@@ -96,7 +96,7 @@ CConfig::CConfig()
 
 CConfig::~CConfig() = default;
 
-bool CConfig::Read(const filesystem::path& file)
+bool CConfig::Read(const filesystem::path& file, const CConfig* adapterConfig)
 {
   m_File = file;
 
@@ -157,7 +157,11 @@ bool CConfig::Read(const filesystem::path& file)
       continue;
     }
 
-    m_CFG[Line.substr(KeyStart, KeyEnd - KeyStart)] = Line.substr(ValueStart, ValueEnd - ValueStart);
+    string Key = Line.substr(KeyStart, KeyEnd - KeyStart);
+    if (adapterConfig) {
+      Key = adapterConfig->GetString(Key, Key);
+    }
+    m_CFG[Key] = Line.substr(ValueStart, ValueEnd - ValueStart);
   }
 
   in.close();
