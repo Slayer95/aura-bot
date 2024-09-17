@@ -255,7 +255,7 @@ After manually fixing any remaining issues, a generated config file should be re
 
 **Note**: Paths in any configuration file are resolved relative to Aura's home directory.
 
-## \`--w3version <NUMBER>\\`
+## \`--w3version <NUMBER>\`
 
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
 compatibility. This parameter allows Aura to switch versions on the spot.
