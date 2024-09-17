@@ -56,27 +56,27 @@ Continue building miniupnpc
 
 Afterwards, C++ Requests
 
-  cd ..
-  git clone https://github.com/libcpr/cpr.git cpr-src
-  cd cpr-src
-  mkdir build
-  cd build
-  cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=1
-  cmake --build . --parallel
-  cmake --install .
+	cd ..
+	git clone https://github.com/libcpr/cpr.git cpr-src
+	cd cpr-src
+	mkdir build
+	cd build
+	cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=1
+	cmake --build . --parallel
+	cmake --install .
 
   (Or disable it by setting an environment variable: ``export AURALINKCPR=0``)
 
 Optionally, D++ for Discord integration. Note that this step can take around half an hour.
 
-  cd ../../
-  git clone https://github.com/brainboxdotcc/DPP.git dpp-src
-  cd dpp-src
-  mkdir build
-  cd build
-  cmake .. -DCPR_USE_SYSTEM_CURL=ON
-  cmake --build . -j4
-  make install
+	cd ../../
+	git clone https://github.com/brainboxdotcc/DPP.git dpp-src
+	cd dpp-src
+	mkdir build
+	cd build
+	cmake .. -DCPR_USE_SYSTEM_CURL=ON
+	cmake --build . -j4
+	make install
 
   (Or disable it by setting an environment variable: ``export AURALINKDPP=0``)
 
