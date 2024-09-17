@@ -106,19 +106,19 @@ in Aura's console.
   There is no specific setting to host a game that grants unlimited permissions to
   anyone who knows or guesses the password transmitted through insecure TCP.
 
-  Instead, the CLI flag \`--replaceable\` can be provided when hosting a game. 
-  This allows players that join the game to use the \`!host\` command inside to create 
+  Instead, the CLI flag `--replaceable` can be provided when hosting a game. 
+  This allows players that join the game to use the `!host` command inside to create 
   another game lobby, thereafter replacing the original lobby.
 
-  When the new game lobby starts, if the CLI flag \`--auto-rehost\` was provided,
+  When the new game lobby starts, if the CLI flag `--auto-rehost` was provided,
   the replaceable lobby will be created again.
 
 # Removed features from [GHost++][2]:
 - CASC:
-  Bots owners are encouraged to extract the good old MPQ files (i.e., \`.w3x\`.) and place
+  Bots owners are encouraged to extract the good old MPQ files (i.e., `.w3x`.) and place
   them in the <bot.maps_path> folder.
 
-  Much of the same applies for necessary \`Blizzard.j\` and \`common.j\`, which should be placed 
+  Much of the same applies for necessary `Blizzard.j` and `common.j`, which should be placed 
   in the <bot.jass_path> folder.
 
 - Localization
