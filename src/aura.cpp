@@ -140,11 +140,48 @@ inline filesystem::path GetConfigPath(const CCLI& cliApp, const filesystem::path
   }
 }
 
+inline filesystem::path GetConfigAdapterPath(const CCLI& cliApp, const filesystem::path& homeDir)
+{
+  if (!cliApp.m_CFGAdapterPath.has_value()) return homeDir / "legacy-config-adapter.ini";
+  if (!cliApp.m_UseStandardPaths && (cliApp.m_CFGAdapterPath.value() == cliApp.m_CFGAdapterPath.value().filename())) {
+    return homeDir / cliApp.m_CFGAdapterPath.value();
+  } else {
+    return cliApp.m_CFGAdapterPath.value();
+  }
+}
+
 inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeDir)
 {
   const filesystem::path configPath = GetConfigPath(cliApp, homeDir);
   const bool isCustomConfigFile = cliApp.m_CFGPath.has_value();
-  const bool isDirectSuccess = CFG.Read(configPath);
+
+  // Config adapter is a back-compat mechanism
+  CConfig* configAdapter = nullptr;
+  if (cliApp.m_CFGAdapterPath.has_value()) {
+    configAdapter = new CConfig();
+    const filesystem::path configAdapterPath = GetConfigAdapterPath(cliApp, homeDir);
+    const bool adapterSuccess = configAdapter->Read(configAdapterPath);
+    if (!adapterSuccess) {
+      filesystem::path cwd;
+      try {
+        cwd = filesystem::current_path();
+      } catch (...) {}
+      NormalizeDirectory(cwd);
+
+      Print("[AURA] required config adapter file not found [" + PathToAbsoluteString(configAdapterPath) + "]");
+      if (!cliApp.m_UseStandardPaths && configAdapterPath.parent_path() == homeDir.parent_path() && (cwd.empty() || homeDir.parent_path() != cwd.parent_path())) {
+        Print("[HINT] --config-adapter was resolved relative to [" + PathToAbsoluteString(homeDir) + "]");
+        Print("[HINT] use --stdpaths to read [" + PathToString(cwd / configAdapterPath.filename()) + "]");
+      }
+      delete configAdapter;
+      return false;
+    }
+  }
+
+  const bool isDirectSuccess = CFG.Read(configPath, configAdapter);
+  delete configAdapter;
+  //configAdapter = nullptr;
+
   if (!isDirectSuccess && isCustomConfigFile) {
     filesystem::path cwd;
     try {
@@ -153,7 +190,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
     NormalizeDirectory(cwd);
     Print("[AURA] required config file not found [" + PathToString(configPath) + "]");
     if (!cliApp.m_UseStandardPaths && configPath.parent_path() == homeDir.parent_path() && (cwd.empty() || homeDir.parent_path() != cwd.parent_path())) {
-      Print("[HINT] --config was resolved relative to [" + PathToString(homeDir) + "]");
+      Print("[HINT] --config was resolved relative to [" + PathToAbsoluteString(homeDir) + "]");
       Print("[HINT] use --stdpaths to read [" + PathToString(cwd / configPath.filename()) + "]");
     }
 #ifdef _WIN32
@@ -191,6 +228,38 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
 
   if (isDirectSuccess) {
     CFG.SetHomeDir(move(homeDir));
+
+    if (cliApp.m_CFGAdapterPath.has_value()) {
+      const string baseMigratedFileName = "config-migrated";
+      const vector<uint8_t> migratedBytes = CFG.Export();
+      filesystem::path migratedPath;
+      uint32_t loopCounter = 0;
+      do {
+        if ((0 < loopCounter) && (loopCounter % 100 == 0)) {
+          // Just so it doesn't look like Aura hung up.
+          Print("[AURA] destination file [" + PathToString(migratedPath) + "] already exists");
+        }
+        string migratedFileName;
+        if (loopCounter > 0) {
+          migratedFileName = migratedFileName + "." + to_string(loopCounter) + ".ini";
+        } else {
+          migratedFileName = baseMigratedFileName + ".ini";
+        }
+        migratedPath = configPath.parent_path() / filesystem::path(migratedFileName);
+        ++loopCounter;
+      } while (migratedPath == configPath || FileExists(migratedPath));
+
+      Print("[AURA] exporting updated configuration to [" + PathToString(migratedPath) + "]...");
+      if (!FileWrite(migratedPath, migratedBytes.data(), migratedBytes.size())) {
+        Print("[AURA] error exporting configuration file");
+      } else {
+        Print("[AURA] configuration exported OK");
+        Print("[AURA] before starting Aura again, please check the contents of the exported file, and rename it");
+        Print("[AURA] see the CONFIG.md file for up-to-date documentation on supported config keys, and their accepted values");
+      }
+      return false;
+    }
+
     return true;
   }
 
@@ -300,7 +369,11 @@ int main(const int argc, char** argv)
           Print("[AURA] initialization failure");
         }
       } else {
-        Print("[AURA] error loading configuration");
+        if (!cliApp.m_CFGAdapterPath.has_value()) {
+          // TODO: In fact, --config-adapter should be treated as CLI_EARLY_RETURN, or CLI_SPECIAL_CASE_WHATEVER
+          // It should also be possible for it to return a variable exit code.
+          Print("[AURA] error loading configuration");
+        }
         exitCode = 1;
       }
     }

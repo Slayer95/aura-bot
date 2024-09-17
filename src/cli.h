@@ -53,6 +53,7 @@ class CGameSetup;
 class CCLI
 {
 public:
+  std::optional<std::filesystem::path>  m_CFGAdapterPath;
   std::optional<std::filesystem::path>  m_CFGPath;
   std::optional<std::filesystem::path>  m_HomePath;
   bool                                  m_UseStandardPaths;

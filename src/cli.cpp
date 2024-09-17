@@ -93,6 +93,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--homedir", m_HomePath, "Customizes Aura home dir ($AURA_HOME).");
 #endif
   app.add_option("--config", m_CFGPath, "Customizes the main Aura config file. File names resolve from home dir, unless --stdpaths.");
+  app.add_option("--config-adapter", m_CFGAdapterPath, "Customizes an adapter file for migrating legacy Aura config files. File names resolve from home dir, unless --stdpaths.");
   app.add_option("--w3version", m_War3Version, "Customizes the game version.");
   app.add_option("--w3dir", m_War3Path, "Customizes the game install directory.");
   app.add_option("--mapdir", m_MapPath, "Customizes the maps directory.");

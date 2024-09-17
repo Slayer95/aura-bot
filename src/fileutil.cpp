@@ -107,6 +107,18 @@ string PathToString(const filesystem::path& inputPath) {
 #endif
 }
 
+string PathToAbsoluteString(const filesystem::path& inputPath) {
+  filesystem::path displayPath = inputPath;
+  if (displayPath.empty()) {
+    displayPath = filesystem::path(".");
+  }
+  try {
+    displayPath = filesystem::absolute(displayPath);
+  } catch (...) {
+  }
+  return PathToString(displayPath);
+}
+
 vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<PLATFORM_STRING_TYPE>& extensionList)
 {
   set<PLATFORM_STRING_TYPE> extensions(extensionList.begin(), extensionList.end());

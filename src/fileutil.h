@@ -87,6 +87,7 @@ bool FileExists(const std::filesystem::path& file);
 PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
 PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
 std::string PathToString(const std::filesystem::path& file);
+std::string PathToAbsoluteString(const std::filesystem::path& file);
 std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
 std::string FileRead(const std::filesystem::path& file, size_t start, size_t length, size_t* byteSize);
 std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
