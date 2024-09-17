@@ -242,6 +242,19 @@ Specifies the location of Aura's main configuration file.
 
 Defaults to ``config.ini`` in the home dir.
 
+## \`--config-adapter <FILE>\`
+
+Specifies the location of a file to be used to migrate legacy Ghost++ configuration files (e.g. `default.cfg`) into modern Aura configuration files.
+
+When this option is specified, an Aura configuration file will be created, named as `config-migrated.ini`.
+
+It's recommended that users check that the contents of a generated config file matches both their expectation and Aura's expectations, by 
+contrasting key-value pairs with those documented as allowed in `CONFIG.md`.
+
+After manually fixing any remaining issues, a generated config file should be renamed to `config.ini`, so that Aura automatically uses it.
+
+**Note**: Paths in any configuration file are resolved relative to Aura's home directory.
+
 ## \`--w3version <NUMBER>\\`
 
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
