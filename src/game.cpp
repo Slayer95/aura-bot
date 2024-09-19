@@ -160,7 +160,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_SentPriorityWhois(false),
     m_Remaking(false),
     m_Remade(false),
-    m_SaveOnLeave(SAVE_ON_LEAVE_NEVER),
+    m_SaveOnLeave(SAVE_ON_LEAVE_AUTO),
     m_HMCEnabled(false),
     m_SupportedGameVersionsMin(nAura->m_GameVersion),
     m_SupportedGameVersionsMax(nAura->m_GameVersion),
