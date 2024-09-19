@@ -2618,6 +2618,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_TargetGame->m_GameName     = Payload;
         m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
         m_TargetGame->m_RealmRefreshError = false;
+        m_TargetGame->UpdateGameDiscovery();
 
         for (auto& realm : m_Aura->m_Realms) {
           if (m_TargetGame->m_IsMirror && realm->GetIsMirror()) {
@@ -4198,6 +4199,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
       m_TargetGame->m_RealmRefreshError = false;
+      m_TargetGame->UpdateGameDiscovery();
       string earlyFeedback = "Announcement sent.";
       if (toAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {

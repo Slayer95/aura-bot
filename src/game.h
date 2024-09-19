@@ -342,6 +342,7 @@ public:
   bool                  GetAllowsIPFlood() const;
   void                  UpdateReadyCounters();
   void                  ResetDropVotes();
+  void                  UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = true; }
 
   inline uint32_t       GetUptime() const {
     int64_t time = GetTime();
