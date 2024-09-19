@@ -256,6 +256,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
 void CGame::Reset(const bool saveStats)
 {
+  m_FakePlayers.clear();
+
   for (auto& entry : m_SyncPlayers) {
     entry.second.clear();
   }
