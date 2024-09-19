@@ -129,15 +129,15 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
           delete m_IncomingJoinPlayer;
           m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
           if (!m_IncomingJoinPlayer) {
-            // Invalid request
+            // Invalid request.
             Abort = true;
           } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x00FFFFFF)) {
-            // Trying to join the wrong game
+            // Trying to join the wrong game.
             Abort = true;
           } else if (m_Aura->m_CurrentLobby->EventRequestJoin(this, m_IncomingJoinPlayer)) {
             IsPromotedToPlayer = true;
           } else {
-            // Join failed
+            // Join failed.
             Abort = true;
           }
         } else if (m_IsUDPTunnel && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {

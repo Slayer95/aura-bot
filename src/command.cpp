@@ -2744,7 +2744,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_Aura->m_CurrentLobby) {
-        ErrorReply("There is already a lobby hosted.");
+        ErrorReply("There is already a lobby being hosted.");
         break;
       }
 

@@ -214,6 +214,7 @@ protected:
   bool                           m_CheckReservation;
   bool                           m_UsesCustomReferees;
   bool                           m_SentPriorityWhois;
+  bool                           m_Remaking;
   bool                           m_Remade;
   uint8_t                        m_SaveOnLeave;
   bool                           m_HMCEnabled;

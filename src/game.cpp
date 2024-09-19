@@ -158,6 +158,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CheckReservation(nGameSetup->m_ChecksReservation.has_value() ? nGameSetup->m_ChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false),
+    m_Remaking(false),
     m_Remade(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_NEVER),
     m_HMCEnabled(false),
@@ -882,17 +883,26 @@ bool CGame::Update(void* fd, void* send_fd)
     }
   }
 
-  if (m_LobbyLoading) {
-    if (m_Players.empty()) {
-      // This is a remake.
-      // All players left the original game, and they can rejoin now.
-      m_LobbyLoading = false;
-      CreateVirtualHost();
+  if (m_Remaking) {
+    m_Remaking = false;
+    if (m_Aura->m_CurrentLobby == nullptr) {
+      m_Remade = true;
+      m_Aura->m_CurrentLobby = this;
     } else {
-      // Just remove reference from m_Aura->m_Games
-      // Do not actually destroy the game nor set m_Exiting
-      return true;
+      m_Exiting = true;
     }
+    return true;
+  }
+
+  if (m_LobbyLoading) {
+    if (!m_Players.empty()) {
+      return false;
+    }
+    // This is a remake.
+    // All players left the original game, and they can rejoin now.
+    m_LobbyLoading = false;
+    Print(GetLogPrefix() + "finished loading after remake");
+    CreateVirtualHost();
   }
 
   // keep track of the largest sync counter (the number of keepalive packets received by each player)
@@ -3351,19 +3361,19 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
   Player->SetObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
 
   // send slot info to the new player
-  // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful
+  // the SLOTINFOJOIN packet also tells the client their assigned PID and that the join was successful.
 
   Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetPID(), Player->GetSocket()->GetPortLE(), Player->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   SendIncomingPlayerInfo(Player);
 
-  // send virtual host info and fake players info (if present) to the new player
+  // send virtual host info and fake players info (if present) to the new player.
 
   SendVirtualHostPlayerInfo(Player);
   SendFakePlayersInfo(Player);
   SendJoinedPlayersInfo(Player);
 
-  // send a map check packet to the new player
+  // send a map check packet to the new player.
 
   if (m_Aura->m_GameVersion >= 23) {
     Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
@@ -3371,7 +3381,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
     Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
   }
 
-  // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
+  // send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout.
   SendAllSlotInfo();
   UpdateReadyCounters();
 
@@ -3379,7 +3389,7 @@ CGamePlayer* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest
     CheckIPFlood(joinRequest->GetName(), &(Player->GetSocket()->m_RemoteHost));
   }
 
-  // abort the countdown if there was one in progress
+  // abort the countdown if there was one in progress.
 
   if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded) {
     SendAllChat("Countdown stopped!");
@@ -3739,6 +3749,9 @@ bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
         Print(GetLogPrefix() + "player [" + player->GetName() + "] is saving the game");
         SendAllChat("Player [" + player->GetDisplayName() + "] is saving the game");
         player->SetSaved(true);
+        break;
+      case ACTION_SAVE_ENDED:
+        Print(GetLogPrefix() + "player [" + player->GetName() + "] finished saving the game");
         break;
       case ACTION_PAUSE:
         Print(GetLogPrefix() + "player [" + player->GetName() + "] paused the game");
@@ -4760,7 +4773,9 @@ void CGame::Remake()
   m_HasMapLock = false;
   m_UsesCustomReferees = false;
   m_SentPriorityWhois = false;
-  m_Remade = true;
+  m_Remaking = true;
+  m_Remade = false;
+  m_GameDiscoveryInfoChanged = true;
   m_HMCEnabled = false;
 
   m_HostCounter = m_Aura->NextHostCounter();
@@ -4768,8 +4783,6 @@ void CGame::Remake()
   InitSlots();
 
   m_KickVotePlayer.clear();
-
-  m_Aura->m_CurrentLobby = this;
 }
 
 uint8_t CGame::GetSIDFromPID(uint8_t PID) const
@@ -6772,10 +6785,20 @@ bool CGame::Save(CGamePlayer* player, const bool isDisconnect)
   if (PID == 0xFF) return false;
   string fileName = GetSaveFileName(PID);
   Print(GetLogPrefix() + "saving as " + fileName);
-  vector<uint8_t> CRC, Action;
-  Action.push_back(ACTION_SAVE);
-  AppendByteArray(Action, fileName);
-  m_Actions.push(new CIncomingAction(PID, CRC, Action));
+
+  {
+    vector<uint8_t> CRC, Action;
+    Action.push_back(ACTION_SAVE);
+    AppendByteArray(Action, fileName);
+    m_Actions.push(new CIncomingAction(PID, CRC, Action));
+  }
+
+  for (const auto& fakePlayer : m_FakePlayers) {
+    vector<uint8_t> CRC, Action;
+    Action.push_back(ACTION_SAVE_ENDED);
+    m_Actions.push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
+  }
+
   return true;
 }
 
@@ -6829,6 +6852,7 @@ bool CGame::TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary)
 
   if (Save(player, true)) {
     Pause(player, true);
+    SendAllActions();
     // In FFA games, it's okay to show the real name (instead of GetDisplayName()) when disconnected.
     SendAllChat("Game saved on " + player->GetName() + "'s disconnection.");
     SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
