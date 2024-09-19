@@ -306,7 +306,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
 
     m_TeamCaptain(0),
     m_Saved(false),
-    m_PauseCounter(0),
+    m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
     m_DeleteMe(false)
 {
 }

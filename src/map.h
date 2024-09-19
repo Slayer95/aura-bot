@@ -121,6 +121,10 @@
 #define CACHE_REVALIDATION_ALWAYS 1
 #define CACHE_REVALIDATION_MODIFIED 2
 
+#define W3HMC_MODE_DISABLED 0
+#define W3HMC_MODE_OPTIONAL 1
+#define W3HMC_MODE_REQUIRED 2
+
 //
 // CMap
 //
@@ -199,6 +203,11 @@ private:
   bool                   m_SkipVersionCheck;
   bool                   m_Valid;
   std::string            m_ErrorMessage;
+  uint8_t                m_HMCMode;
+  uint8_t                m_HMCTrigger1;
+  uint8_t                m_HMCTrigger2;
+  uint8_t                m_HMCSlot;
+  std::string            m_HMCPlayerName;
 
 public:
   CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck = false);
@@ -237,6 +246,13 @@ public:
   inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
   inline uint8_t                GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
   inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
+  bool                          GetHMCEnabled() const { return m_HMCMode != W3HMC_MODE_DISABLED; }
+  bool                          GetHMCRequired() const { return m_HMCMode == W3HMC_MODE_REQUIRED; }
+  uint8_t                       GetHMCMode() const { return m_HMCMode; }
+  uint8_t                       GetHMCTrigger1() const { return m_HMCTrigger1; }
+  uint8_t                       GetHMCTrigger2() const { return m_HMCTrigger2; }
+  uint8_t                       GetHMCSlot() const { return m_HMCSlot; }
+  std::string                   GetHMCPlayerName() const { return m_HMCPlayerName; }
   uint8_t                       GetLobbyRace(const CGameSlot* slot) const;
   uint8_t                       GetProxyReconnect() const { return m_ProxyReconnect; }
   bool                          GetUseStandardPaths() const { return m_UseStandardPaths; }

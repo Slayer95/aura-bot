@@ -72,7 +72,8 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
     m_MapMPQErrored(false),
     m_ProxyReconnect(RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED),
     m_UseStandardPaths(false),
-    m_SkipVersionCheck(skipVersionCheck)
+    m_SkipVersionCheck(skipVersionCheck),
+    m_HMCMode(W3HMC_MODE_DISABLED)
 {
   Load(CFG);
 }
@@ -1013,6 +1014,13 @@ void CMap::Load(CConfig* CFG)
   m_MapFilterMaker = CFG->GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize  = CFG->GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
   m_MapFilterObs   = CFG->GetUint8("map.filter_obs", MAPFILTER_OBS_NONE);
+
+  // Host to bot map communication (W3HMC)
+  m_HMCMode = CFG->GetStringIndex("map.w3hmc.mode", {"disabled", "optional", "required"}, W3HMC_MODE_DISABLED);
+  m_HMCTrigger1 = CFG->GetUint8("map.w3hmc.trigger_1", 0);
+  m_HMCTrigger2 = CFG->GetUint8("map.w3hmc.trigger_2", 0);
+  m_HMCSlot = CFG->GetUint8("map.w3hmc.slot", 1);
+  m_HMCPlayerName = CFG->GetString("map.w3hmc.player_name", 1, 15, "[HMC]Aura");
 
   // CGameConfig overrides
   if (CFG->Exists("map.hosting.game_over.player_count")) {

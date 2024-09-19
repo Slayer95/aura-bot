@@ -115,7 +115,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_StartedKickVoteTime(0),
     m_LastLagScreenResetTime(0),
     m_PauseCounter(0),
-    m_SaveCounter(0),
+    m_NextSaveFakePlayer(0),
     m_RandomSeed(0),
     m_HostCounter(nGameSetup->m_Identifier.has_value() ? nGameSetup->m_Identifier.value() : nAura->NextHostCounter()),
     m_EntryKey(0),
@@ -160,6 +160,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_SentPriorityWhois(false),
     m_Remade(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_NEVER),
+    m_HMCEnabled(false),
     m_SupportedGameVersionsMin(nAura->m_GameVersion),
     m_SupportedGameVersionsMax(nAura->m_GameVersion),
     m_GameDiscoveryInfoChanged(false),
@@ -553,6 +554,10 @@ void CGame::InitSlots()
 
   if (useObservers) {
     OpenObserverSlots();
+  }
+
+  if (m_Map->GetHMCEnabled()) {
+    CreateHMCPlayer();
   }
 }
 
@@ -3495,8 +3500,16 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
-  } else if (joinRequest->GetName() == GetLobbyVirtualHostName() || (joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[")) {
+  } else if (joinRequest->GetName() == GetLobbyVirtualHostName()) {
     Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    return false;
+  } else if (joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[") {
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches fake players) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    return false;
+  } else if (GetHMCEnabled() && joinRequest->GetName() == m_Map->GetHMCPlayerName()) {
+    Print(GetLogPrefix() + "player [" + joinRequest->GetName() + "] spoofer (matches HMC name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
@@ -3729,7 +3742,7 @@ bool CGame::EventPlayerAction(CGamePlayer* player, CIncomingAction* action)
         break;
       case ACTION_PAUSE:
         Print(GetLogPrefix() + "player [" + player->GetName() + "] paused the game");
-        player->AddPauseCounter();
+        player->DropRemainingPauses();
         m_Paused = true;
         break;
       case ACTION_RESUME:
@@ -4420,14 +4433,22 @@ void CGame::EventGameStarted()
     ));
   }
 
-  for (auto& currentPlayer : m_Players) {
+  for (auto& player : m_Players) {
     std::vector<CGamePlayer*> otherPlayers;
     for (auto& otherPlayer : m_Players) {
-      if (otherPlayer != currentPlayer) {
+      if (otherPlayer != player) {
         otherPlayers.push_back(otherPlayer);
       }
     }
-    m_SyncPlayers[currentPlayer] = otherPlayers;
+    m_SyncPlayers[player] = otherPlayers;
+  }
+
+  if (m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+    for (auto& player : m_Players) {
+      if (player->GetIsObserver()) {
+        player->SetCannotPause();
+      }
+    }
   }
 
   // delete any potential players that are still hanging around
@@ -4438,6 +4459,17 @@ void CGame::EventGameStarted()
       delete connection;
 
     pair.second.clear();
+  }
+
+  if (m_Map->GetHMCEnabled()) {
+    const uint8_t SID = m_Map->GetHMCSlot() - 1;
+    const CGameSlot* slot = InspectSlot(SID);
+    if (slot && slot->GetIsPlayerOrFake() && !GetPlayerFromSID(SID)) {
+      const uint8_t fakePlayerIndex = FindFakePlayerFromSID(SID);
+      if (fakePlayerIndex < m_FakePlayers.size() && !GetIsFakeObserver(m_FakePlayers[fakePlayerIndex])) {
+        m_HMCEnabled = true;
+      }
+    }
   }
 
   // delete the map data
@@ -4577,8 +4609,7 @@ void CGame::EventGameLoaded()
     }
   }
 
-  if (Shortest && Longest)
-  {
+  if (Shortest && Longest) {
     SendAllChat("Shortest load by player [" + Shortest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
     SendAllChat("Longest load by player [" + Longest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
 
@@ -4595,8 +4626,9 @@ void CGame::EventGameLoaded()
     }
   }
 
-  for (auto& player : m_Players)
+  for (auto& player : m_Players) {
     SendChat(player, "Your load time was " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+  }
 
   if (GetIsSinglePlayerMode()) {
     SendAllChat("HINT: Single-player game detected. In-game commands will be DISABLED.");
@@ -4697,7 +4729,7 @@ void CGame::Remake()
   m_LastPlayerLeaveTicks = nullopt;
   m_LastLagScreenResetTime = 0;
   m_PauseCounter = 0;
-  m_SaveCounter = 0;
+  m_NextSaveFakePlayer = 0;
   m_SyncCounter = 0;
 
   m_DownloadCounter = 0;
@@ -4729,6 +4761,7 @@ void CGame::Remake()
   m_UsesCustomReferees = false;
   m_SentPriorityWhois = false;
   m_Remade = true;
+  m_HMCEnabled = false;
 
   m_HostCounter = m_Aura->NextHostCounter();
   InitPRNG();
@@ -4970,30 +5003,45 @@ uint8_t CGame::GetNewColor() const
 
 uint8_t CGame::SimulateActionPID(const uint8_t actionType, CGamePlayer* player, const bool isDisconnect)
 {
+  const bool isFullObservers = m_Map->GetMapObservers() != MAPOBS_REFEREES;
   // Note that the game client desyncs if the PID of an actual player is used.
   switch (actionType) {
     case ACTION_PAUSE: {
+      // Referees can pause the game, but full observers cannot.
       if (player && isDisconnect && !player->GetLeftMessageSent() && player->GetCanPause()) {
         return player->GetPID();
       }
-      if (m_PauseCounter < m_FakePlayers.size() * 3) {
+      while (m_PauseCounter < m_FakePlayers.size() * 3) {
+        if (isFullObservers && GetIsFakeObserver(m_FakePlayers[m_PauseCounter % m_FakePlayers.size()])) {
+          m_PauseCounter++;
+          continue;
+        }
         return static_cast<uint8_t>(m_FakePlayers[m_PauseCounter++ % m_FakePlayers.size()]);
       }
       return 0xFF;
     }
     case ACTION_RESUME: {
-      if (!m_FakePlayers.empty()) {
-        return static_cast<uint8_t>(m_FakePlayers[m_FakePlayers.size() - 1]);
+      // Referees can unpause the game, but full observers cannot.
+      uint8_t fakePlayerIndex = m_FakePlayers.size();
+      while (fakePlayerIndex--) {
+        if (!isFullObservers && GetIsFakeObserver(m_FakePlayers[fakePlayerIndex])) {
+          return static_cast<uint8_t>(m_FakePlayers[fakePlayerIndex]);
+        }
       }
       return 0xFF;
     }
 
     case ACTION_SAVE: {
-      if (player && isDisconnect && !player->GetLeftMessageSent() && !player->GetSaved()) {
+      // Referees can save the game, but full observers cannot.
+      if (player && isDisconnect && !(isFullObservers && player->GetIsObserver()) && !player->GetLeftMessageSent() && !player->GetSaved()) {
         return player->GetPID();
       }
-      if (m_SaveCounter < m_FakePlayers.size()) {
-        return static_cast<uint8_t>(m_FakePlayers[m_SaveCounter++]);
+      while (m_NextSaveFakePlayer < m_FakePlayers.size()) {
+        if (isFullObservers && GetIsFakeObserver(m_FakePlayers[m_NextSaveFakePlayer])) {
+          m_NextSaveFakePlayer++;
+          continue;
+        }
+        return static_cast<uint8_t>(m_FakePlayers[m_NextSaveFakePlayer++]);
       }
       return 0xFF;
     }
@@ -5002,6 +5050,16 @@ uint8_t CGame::SimulateActionPID(const uint8_t actionType, CGamePlayer* player, 
       return 0xFF;
     }
   }
+}
+
+uint8_t CGame::HostToMapCommunicationPID() const
+{
+  if (!GetHMCEnabled()) return 0xFF;
+  const uint8_t SID = m_Map->GetHMCSlot() - 1;
+  const CGameSlot* slot = InspectSlot(SID);
+  const uint8_t fakePlayerIndex = FindFakePlayerFromSID(SID);
+  if (fakePlayerIndex >= m_FakePlayers.size()) return 0xFF; 
+  return static_cast<uint8_t>(m_FakePlayers[fakePlayerIndex]);
 }
 
 bool CGame::GetHasAnyActiveTeam() const
@@ -6469,6 +6527,24 @@ void CGame::StartCountDown(bool fromUser, bool force)
     return;
   }
 
+  if (m_Map->GetHMCEnabled()) {
+    const uint8_t SID = m_Map->GetHMCSlot() - 1;
+    const CGameSlot* slot = InspectSlot(SID);
+    if (!slot || !slot->GetIsPlayerOrFake() || GetPlayerFromSID(SID)) {
+      SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
+      return;
+    }
+    const uint8_t fakePlayerIndex = FindFakePlayerFromSID(SID);
+    if (fakePlayerIndex < m_FakePlayers.size() && GetIsFakeObserver(m_FakePlayers[fakePlayerIndex])) {
+      SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
+      return;
+    }
+    if (fakePlayerIndex >= m_FakePlayers.size() && m_Map->GetHMCRequired()) {
+      SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
+      return;
+    }
+  }
+
   // if the player sent "!start force" skip the checks and start the countdown
   // otherwise check that the game is ready to start
 
@@ -6762,6 +6838,24 @@ bool CGame::TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary)
   return false;
 }
 
+bool CGame::SendChatTrigger(const uint8_t PID, const string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier)
+{
+  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER, firstIdentifier, secondIdentifier, 0u, 0u, firstIdentifier, secondIdentifier, 0u, 0u};
+  vector<uint8_t> CRC, Action;
+  AppendByteArray(Action, packet);
+  AppendByteArrayFast(packet, message);
+  m_Actions.push(new CIncomingAction(PID, CRC, Action));
+}
+
+bool CGame::SendHMC(const string& message)
+{
+  if (!GetHMCEnabled()) return false;
+  const uint8_t triggerID1 = m_Map->GetHMCTrigger1();
+  const uint8_t triggerID2 = m_Map->GetHMCTrigger2();
+  const uint8_t PID = HostToMapCommunicationPID();
+  return SendChatTrigger(PID, message, triggerID1, triggerID2);
+}
+
 bool CGame::GetIsCheckJoinable() const
 {
   return m_Config->m_CheckJoinable;
@@ -6845,7 +6939,7 @@ bool CGame::GetHasPvPGNPlayers() const
   return false;
 }
 
-uint8_t CGame::FindFakePlayerFromSID(const uint8_t SID)
+uint8_t CGame::FindFakePlayerFromSID(const uint8_t SID) const
 {
   uint8_t i = static_cast<uint8_t>(m_FakePlayers.size());
   while (i--) {
@@ -6911,6 +7005,20 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
     DeleteVirtualHost();
 
   CreateFakePlayerInner(SID, GetNewPID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"));
+  return true;
+}
+
+bool CGame::CreateHMCPlayer()
+{
+  // Fake players need not be explicitly restricted in any layout, so let's just use an empty slot.
+  uint8_t SID = m_Map->GetHMCSlot() - 1;
+  if (SID >= static_cast<uint8_t>(m_Slots.size())) return false;
+  if (!CanLockSlotForJoins(SID)) return false;
+
+  if (GetSlotsOpen() == 1)
+    DeleteVirtualHost();
+
+  CreateFakePlayerInner(SID, GetNewPID(), m_Map->GetHMCPlayerName());
   return true;
 }
 

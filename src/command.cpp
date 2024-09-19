@@ -5281,12 +5281,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->m_FakePlayers.empty()) {
+      if (m_TargetGame->m_FakePlayers.empty() || !m_TargetGame->Resume()) {
         ErrorReply("This game does not support the " + cmdToken + "resume command. Use the game menu instead.");
         break;
       }
 
-      m_TargetGame->Resume();
       SendReply("Resuming game...");
       break;
     }

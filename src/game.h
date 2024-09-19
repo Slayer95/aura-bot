@@ -80,6 +80,8 @@
 #define LAG_TOLERANCE_MAX_TIME 2000
 #define GAME_BANNABLE_MAX_HISTORY_SIZE 32
 
+#define GAME_PAUSES_PER_PLAYER 3u
+
 //
 // CGame
 //
@@ -164,7 +166,7 @@ protected:
   std::optional<int64_t>         m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
   uint8_t                        m_PauseCounter;                  // Counter of all fake player pauses.
-  uint8_t                        m_SaveCounter;                   // Counter of all fake player saves.
+  uint8_t                        m_NextSaveFakePlayer;            // Counter of all fake player saves.
   uint32_t                       m_RandomSeed;                    // the random seed sent to the Warcraft III clients
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
@@ -214,6 +216,7 @@ protected:
   bool                           m_SentPriorityWhois;
   bool                           m_Remade;
   uint8_t                        m_SaveOnLeave;
+  bool                           m_HMCEnabled;
 
   std::bitset<64>                m_SupportedGameVersions;
   uint8_t                        m_SupportedGameVersionsMin;
@@ -461,6 +464,7 @@ public:
   uint8_t              GetNewTeam() const;
   uint8_t              GetNewColor() const;
   uint8_t              SimulateActionPID(const uint8_t actionType, CGamePlayer* player, const bool isDisconnect);
+  uint8_t              HostToMapCommunicationPID() const;
   bool                 GetHasAnyActiveTeam() const;
   bool                 GetHasAnyPlayer() const;
   bool                 GetIsPlayerSlot(const uint8_t SID) const;
@@ -476,6 +480,7 @@ public:
   uint8_t GetEmptySID(bool reserved) const;
   uint8_t GetEmptySID(uint8_t team, uint8_t PID) const;
   uint8_t GetEmptyObserverSID() const;
+  inline bool GetHMCEnabled() const { return m_HMCEnabled; }
   void SendIncomingPlayerInfo(CGamePlayer* player) const;
   CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool CreateVirtualHost();
@@ -503,9 +508,10 @@ public:
 
   void OpenObserverSlots();
   void CloseObserverSlots();
-  uint8_t FindFakePlayerFromSID(const uint8_t SID);
+  uint8_t FindFakePlayerFromSID(const uint8_t SID) const;
   void CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const std::string& name);
   bool CreateFakePlayer(const bool useVirtualHostName);
+  bool CreateHMCPlayer();
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakePlayer(uint8_t SID);
   bool GetIsFakeObserver(const uint16_t fakePlayer) const;
@@ -562,6 +568,8 @@ public:
   bool Save(CGamePlayer* player, const bool isDisconnect);
   bool TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary);
   inline bool GetIsVerbose() { return m_Verbose; }
+  bool SendChatTrigger(const uint8_t PID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);
+  bool SendHMC(const std::string& message);
   bool GetIsCheckJoinable() const;
   void SetIsCheckJoinable(const bool nCheckIsJoinable) const;
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }

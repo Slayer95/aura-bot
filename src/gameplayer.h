@@ -193,7 +193,7 @@ private:
 
   // Actions
   bool                             m_Saved;
-  uint8_t                          m_PauseCounter;
+  uint8_t                          m_RemainingPauses;
 
 protected:
   bool m_DeleteMe;
@@ -288,7 +288,7 @@ public:
   bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
   inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
-  inline bool                  GetCanPause() { return m_PauseCounter < 3; }
+  inline bool                  GetCanPause() { return m_RemainingPauses > 0; }
   inline bool                  GetSaved() { return m_Saved; }
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
@@ -341,7 +341,8 @@ public:
   inline void SetSaved(const bool nValue) { m_Saved = nValue; }
   inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
   inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
-  inline void AddPauseCounter() { ++m_PauseCounter; }
+  inline void DropRemainingPauses() { --m_RemainingPauses; }
+  inline void SetCannotPause() { m_RemainingPauses = 0; }
   inline void ClearStalePings() {
     if (m_Pings.empty()) return;
     uint32_t lastPing = m_Pings[m_Pings.size() - 1];
