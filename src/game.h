@@ -342,6 +342,7 @@ public:
   bool                  GetAllowsIPFlood() const;
   void                  UpdateReadyCounters();
   void                  ResetDropVotes();
+  void                  ResetOwnerSeen();
   void                  UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = true; }
 
   inline uint32_t       GetUptime() const {
@@ -413,7 +414,7 @@ public:
   void ReportPlayerDisconnected(CGamePlayer* player);
   bool CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   bool CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
-  void EventPlayerDisconnectTimedOut(CGamePlayer* player);
+  bool EventPlayerDisconnectTimedOut(CGamePlayer* player);
   void EventPlayerDisconnectSocketError(CGamePlayer* player);
   void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
   void EventPlayerDisconnectGameProtocolError(CGamePlayer* player, bool canRecover);

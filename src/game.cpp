@@ -3030,7 +3030,9 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
 
 void CGame::EventLobbyLastPlayerLeaves()
 {
-  ResetLayout(false);
+  if (m_CustomLayout != CUSTOM_LAYOUT_FFA) {
+    ResetLayout(false);
+  }
 }
 
 void CGame::ReportAllPings() const
@@ -3068,6 +3070,11 @@ void CGame::ResetDropVotes()
   for (auto& eachPlayer : m_Players) {
     eachPlayer->SetDropVote(false);
   }
+}
+
+void CGame::ResetOwnerSeen()
+{
+  m_LastOwnerSeen = GetTime();
 }
 
 void CGame::ReportPlayerDisconnected(CGamePlayer* player)
@@ -3110,7 +3117,7 @@ void CGame::ReportPlayerDisconnected(CGamePlayer* player)
   }
 }
 
-void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
+bool CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
 {
   if (player->GetGProxyAny() && m_GameLoaded) {
     if (!player->GetGProxyDisconnectNoticeSent()) {
@@ -3122,7 +3129,7 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
       player->SetGProxyDisconnectNoticeSent(true);
     }
     ReportPlayerDisconnected(player);
-    return;
+    return true;
   }
 
   // not only do we not do any timeouts if the game is lagging, we allow for an additional grace period of 10 seconds
@@ -3139,7 +3146,9 @@ void CGame::EventPlayerDisconnectTimedOut(CGamePlayer* player)
       const uint8_t SID = GetSIDFromPID(player->GetPID());
       OpenSlot(SID, false);
     }
+    return true;
   }
+  return false;
 }
 
 void CGame::EventPlayerDisconnectSocketError(CGamePlayer* player)
@@ -4426,7 +4435,7 @@ void CGame::EventGameStarted()
     SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
 
   // record the number of starting players
-
+  // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumHumanPlayers() + static_cast<uint8_t>(m_FakePlayers.size());
 
   // enable stats
@@ -4612,31 +4621,32 @@ void CGame::EventGameLoaded()
 
   uint8_t majorityThreshold = static_cast<uint8_t>(m_Players.size() / 2);
   vector<CGamePlayer*> DesyncedPlayers;
-  for (const auto& player : m_Players) {
-    if (!Shortest || player->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks())
-      Shortest = player;
+  if (m_Players.size() >= 2) {
+    for (const auto& player : m_Players) {
+      if (!Shortest || player->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks()) {
+        Shortest = player;
+      } else if (Shortest && (!Longest || player->GetFinishedLoadingTicks() > Longest->GetFinishedLoadingTicks())) {
+        Longest = player;
+      }
 
-    if (!Longest || player->GetFinishedLoadingTicks() > Longest->GetFinishedLoadingTicks())
-      Longest = player;
-
-    if (m_SyncPlayers[player].size() < majorityThreshold) {
-      DesyncedPlayers.push_back(player);
+      if (m_SyncPlayers[player].size() < majorityThreshold) {
+        DesyncedPlayers.push_back(player);
+      }
     }
   }
 
   if (Shortest && Longest) {
     SendAllChat("Shortest load by player [" + Shortest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
     SendAllChat("Longest load by player [" + Longest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
-
-    if (finishedLoadingPlayers < m_StartPlayers) {
-      SendAllChat(ToDecString(m_StartPlayers - finishedLoadingPlayers) + " player(s) disconnected during game load.");
-    }
-    if (!DesyncedPlayers.empty()) {
-      if (GetHasDesyncHandler()) {
-        SendAllChat("Some players desynchronized during game load: " + PlayersToNameListString(DesyncedPlayers));
-        if (!GetAllowsDesync()) {
-          StopDesynchronized("was automatically dropped after desync");
-        }
+  }
+  if (finishedLoadingPlayers < m_StartPlayers) {
+    SendAllChat(ToDecString(m_StartPlayers - finishedLoadingPlayers) + " player(s) disconnected during game load.");
+  }
+  if (!DesyncedPlayers.empty()) {
+    if (GetHasDesyncHandler()) {
+      SendAllChat("Some players desynchronized during game load: " + PlayersToNameListString(DesyncedPlayers));
+      if (!GetAllowsDesync()) {
+        StopDesynchronized("was automatically dropped after desync");
       }
     }
   }
@@ -6498,9 +6508,11 @@ bool CGame::GetCanStartGracefulCountDown() const
     return false;
   }
 
-  for (const auto& player : m_Players) {
-    if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
-      return false;
+  if (m_Players.size() >= 2) {
+    for (const auto& player : m_Players) {
+      if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
+        return false;
+      }
     }
   }
 
@@ -6628,12 +6640,14 @@ void CGame::StartCountDown(bool fromUser, bool force)
     // check if everyone has been pinged enough (3 times) that the autokicker would have kicked them by now
     // see function EventPlayerPongToHost for the autokicker code
     string NotPinged;
-    for (const auto& player : m_Players) {
-      if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
-        if (NotPinged.empty())
-          NotPinged = player->GetName();
-        else
-          NotPinged += ", " + player->GetName();
+    if (m_Players.size() >= 2) {
+      for (const auto& player : m_Players) {
+        if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
+          if (NotPinged.empty())
+            NotPinged = player->GetName();
+          else
+            NotPinged += ", " + player->GetName();
+        }
       }
     }
 
