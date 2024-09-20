@@ -4031,7 +4031,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (targetPlayer) {
         targetPlayer->SetWhoisShouldBeSent(true);
-        targetPlayer->SetOwner(true);
         m_TargetGame->SendOwnerCommandsHelp(cmdToken, targetPlayer);
       }
 
@@ -4039,7 +4038,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendAll("[" + targetName + "@" + ToFormattedRealm(targetHostName) + "] is already the owner of this game.");
       } else {
         m_TargetGame->SetOwner(targetName, targetHostName);
-        m_TargetGame->ResetOwnerSeen();
         SendReply("Setting game owner to [" + targetName + "@" + ToFormattedRealm(targetHostName) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       }
       break;

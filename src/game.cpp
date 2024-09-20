@@ -6379,6 +6379,11 @@ void CGame::SetOwner(const string& name, const string& realm)
   m_OwnerName = name;
   m_OwnerRealm = realm;
   UncacheOwner();
+
+  CGamePlayer* player = GetPlayerFromName(name, false);
+  if (player && player->GetRealmHostName() == realm) {
+    player->SetOwner(true);
+  }
 }
 
 void CGame::ReleaseOwner()
