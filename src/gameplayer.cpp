@@ -81,6 +81,11 @@ CGameConnection::~CGameConnection()
   delete m_IncomingJoinPlayer;
 }
 
+void CGameConnection::ResetConnection()
+{
+  m_Socket->Reset();
+}
+
 uint8_t CGameConnection::Update(void* fd, void* send_fd)
 {
   if (m_DeleteMe)
@@ -115,8 +120,12 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
       const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
       if (Bytes[0] == W3GS_HEADER_CONSTANT || (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0)) {
-        if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN &&
-          m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror() && !m_Aura->m_CurrentLobby->GetLobbyLoading()) {
+        if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN) {
+          if (!m_Aura->m_CurrentLobby || m_Aura->m_CurrentLobby->GetIsMirror() || m_Aura->m_CurrentLobby->GetLobbyLoading()) {
+            // Game already started
+            Abort = true;
+            break;
+          }
           if (m_IsUDPTunnel) {
             m_IsUDPTunnel = false;
             vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};
@@ -309,6 +318,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
     m_DeleteMe(false)
 {
+  m_Socket->SetLogErrors(true);
 }
 
 CGamePlayer::~CGamePlayer()
@@ -414,8 +424,11 @@ bool CGamePlayer::Update(void* fd)
   // and in the game the Warcraft 3 client sends keepalives frequently (at least once per second it looks like)
 
   if (m_Socket && Time - m_Socket->GetLastRecv() >= 30) {
-    m_Game->EventPlayerDisconnectTimedOut(this);
-    ResetConnection();
+    if (m_Game->EventPlayerDisconnectTimedOut(this)) {
+      ResetConnection();
+      m_DeleteMe = true;
+      return m_DeleteMe;
+    }
   }
 
   // GProxy++ acks
@@ -641,17 +654,17 @@ bool CGamePlayer::Update(void* fd)
     CRealm* Realm = GetRealm(false);
     if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
       m_DeleteMe = true;
-      m_LeftReason = GetName() + " has been kicked because he is not verified by their realm";
+      m_LeftReason = GetName() + "  been kicked because they are not verified by their realm";
       m_LeftCode = PLAYERLEAVE_DISCONNECT;
-      m_Game->SendAllChat(GetName() + " has been kicked because he is not verified by " + m_RealmHostName);
+      m_Game->SendAllChat(GetName() + " has been kicked because they are not verified by " + m_RealmHostName);
     }
   }
 
   if (m_Disconnected && m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60) {
     m_DeleteMe = true;
-    m_LeftReason = GetName() + " has been kicked because he didn't reconnect in time";
+    m_LeftReason = GetName() + " has been kicked because they didn't reconnect in time";
     m_LeftCode = PLAYERLEAVE_DISCONNECT;
-    m_Game->SendAllChat(GetName() + " has been kicked because he didn't reconnect in time." );
+    m_Game->SendAllChat(GetName() + " has been kicked because they didn't reconnect in time." );
   }
 
   if (m_GProxy && m_Game->GetGameLoaded()) {

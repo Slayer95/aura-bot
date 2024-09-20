@@ -241,7 +241,8 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
     m_LastRecv(GetTime()),
     m_Connected(false),
     m_Server(nullptr),
-    m_Counter(0)
+    m_Counter(0),
+    m_LogErrors(false)
 {
   memset(&m_RemoteHost, 0, sizeof(sockaddr_storage));
 
@@ -265,7 +266,8 @@ CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTC
     m_Connected(true),
     m_RemoteHost(move(nAddress)),
     m_Server(nServer),
-    m_Counter(nCounter)
+    m_Counter(nCounter),
+    m_LogErrors(false)
 {
   // make socket non blocking
 #ifdef _WIN32
@@ -369,13 +371,16 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     // receive error
     m_HasError = true;
     m_Error    = GetLastOSError();
-    Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
+    if (m_LogErrors) {
+      Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
+    }
   } else if (c == 0) {
     // the other end closed the connection
-    if (!m_HasFin) {
+    if (m_LogErrors) {
       Print("[TCPSOCKET] (" + GetName() +") remote terminated the connection");
     }
     m_HasFin = true;
+    m_LogErrors = false;
   }
   return false;
 }

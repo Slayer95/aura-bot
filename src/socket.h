@@ -422,6 +422,7 @@ public:
   sockaddr_storage           m_RemoteHost;
   CTCPServer*                m_Server;
   uint16_t                   m_Counter;
+  bool                       m_LogErrors;
 
   CStreamIOSocket(uint8_t nFamily, std::string nName);
   CStreamIOSocket(SOCKET nSocket, sockaddr_storage& remoteAddress, CTCPServer* nServer, const uint16_t nCounter);
@@ -440,6 +441,7 @@ public:
   inline uint16_t GetRemotePort() const { return GetAddressPort(&m_RemoteHost); }
 
   inline bool                       GetConnected() const { return m_Connected; }
+  inline bool                       GetLogErrors() const { return m_LogErrors; }
   void Disconnect();
 
   inline std::string*               GetBytes() { return &m_RecvBuffer; }
@@ -463,6 +465,7 @@ public:
   void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override;
   void SetNoDelay(const bool noDelay);
   void SetKeepAlive(const bool keepAlive, const uint32_t seconds);
+  inline void SetLogErrors(const bool nLogErrors) { m_LogErrors = nLogErrors; }
 };
 
 //

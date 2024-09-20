@@ -101,6 +101,7 @@ public:
 
   // processing functions
 
+  void ResetConnection();
   uint8_t Update(void* fd, void* send_fd);
 
   // other functions
