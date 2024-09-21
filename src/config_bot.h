@@ -57,7 +57,7 @@ public:
   std::filesystem::path                   m_GreetingPath;                // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
-  bool                                    m_RTTPings;                    // use LC style pings (divide actual pings by two
+  bool                                    m_LiteralRTT;                    // use LC style pings (divide actual pings by two
 
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
   uint32_t                                m_MaxGames;                    // maximum number of games in progress

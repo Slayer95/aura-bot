@@ -59,9 +59,11 @@ class CIncomingJoinRequest;
 class CRealm;
 class CAura;
 
-#define PREPLAYER_CONNECTION_OK 0
-#define PREPLAYER_CONNECTION_DESTROY 1
-#define PREPLAYER_CONNECTION_PROMOTED 2
+#define PREPLAYER_CONNECTION_OK 0u
+#define PREPLAYER_CONNECTION_DESTROY 1u
+#define PREPLAYER_CONNECTION_PROMOTED 2u
+
+#define CONSISTENT_PINGS_COUNT 3u
 
 //
 // CGameConnection
@@ -124,7 +126,7 @@ protected:
 
 private:
   std::vector<uint8_t>             m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
-  std::vector<uint32_t>            m_Pings;                        // store the last few (10) pings received so we can take an average
+  std::vector<uint32_t>            m_RTTValues;                        // store the last few (10) pings received so we can take an average
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
   std::queue<std::vector<uint8_t>> m_GProxyBuffer;                 // buffer with data used with GProxy++
   std::string                      m_LeftReason;                   // the reason the player left the game
@@ -135,6 +137,7 @@ private:
   uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
   uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
   bool                             m_QuitGame;
+  uint32_t                         m_PongCounter;
   uint32_t                         m_SyncCounterOffset;              // missed keepalive packets we are gonna ignore
   uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
   int64_t                          m_JoinTime;                     // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
@@ -162,6 +165,7 @@ private:
   bool                             m_PingKicked;                   // if we're kicking this player because his ping is excessively high
   std::optional<bool>              m_UserReady;
   bool                             m_Ready;
+  int64_t                          m_ReadyReminderLastTime;
   bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
   bool                             m_DownloadAllowed;              // if we're allowed to download the map or not (used with permission based map downloads)
   bool                             m_DownloadStarted;              // if we've started downloading the map or not
@@ -203,8 +207,10 @@ public:
   CGamePlayer(CGame* game, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
   ~CGamePlayer();
 
-  uint32_t GetPing() const;
-  inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
+  uint32_t GetOperationalRTT() const;
+  uint32_t GetDisplayRTT() const;
+  uint32_t GetRTT() const;
+  inline CStreamIOSocket*      GetSocket() const { return m_Socket; }
   inline bool                  GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
   inline std::vector<uint8_t>  GetIPv4() const { return m_Socket->GetIPv4(); }
   inline std::string           GetIPString() const { return m_Socket->GetIPString(); }
@@ -216,7 +222,8 @@ public:
   std::string                  GetLowerName() const;
   std::string                  GetDisplayName() const;
   inline std::vector<uint8_t>  GetIPv4Internal() const { return m_IPv4Internal; }
-  inline size_t                GetNumPings() const { return m_Pings.size(); }
+  inline size_t                GetStoredRTTCount() const { return m_RTTValues.size(); }
+  inline uint32_t              GetPongCounter() const { return m_PongCounter; }
   inline size_t                GetNumCheckSums() const { return m_CheckSums.size(); }
   inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }
   inline std::string           GetLeftReason() const { return m_LeftReason; }
@@ -335,6 +342,9 @@ public:
   inline void SetUserReady(bool nReady) { m_UserReady = nReady; }
   inline void ClearUserReady() { m_UserReady = std::nullopt; }
 
+  bool GetReadyReminderIsDue() const;
+  void SetReadyReminded();
+
   inline std::string GetLastCommand() const { return m_LastCommand; }
   inline void ClearLastCommand() { m_LastCommand.clear(); }
   inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
@@ -345,12 +355,12 @@ public:
   inline void DropRemainingPauses() { --m_RemainingPauses; }
   inline void SetCannotPause() { m_RemainingPauses = 0; }
   inline void ClearStalePings() {
-    if (m_Pings.empty()) return;
-    uint32_t lastPing = m_Pings[m_Pings.size() - 1];
-    m_Pings.clear();
-    m_Pings.push_back(lastPing);
+    if (m_RTTValues.empty()) return;
+    uint32_t lastPing = m_RTTValues[m_RTTValues.size() - 1];
+    m_RTTValues.clear();
+    m_RTTValues.push_back(lastPing);
   }
-  inline void ClearPings() { m_Pings.clear(); }
+  inline void ClearPings() { m_RTTValues.clear(); }
 
   inline std::string GetPinnedMessage() { return  m_PinnedMessage; }
   inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }

@@ -263,6 +263,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_TotalPacketsReceived(1),
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_QuitGame(false),
+    m_PongCounter(0),
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
     m_JoinTime(GetTime()),
@@ -288,6 +289,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
     m_MapKicked(false),
     m_PingKicked(false),
     m_Ready(false),
+    m_ReadyReminderLastTime(0),
     m_HasHighPing(false),
     m_DownloadAllowed(false),
     m_DownloadStarted(false),
@@ -337,21 +339,36 @@ CGamePlayer::~CGamePlayer()
   }
 }
 
-uint32_t CGamePlayer::GetPing() const
+uint32_t CGamePlayer::GetOperationalRTT() const
 {
-  // just average all the pings in the vector, nothing fancy
+  // just average all the pings in the vector
+  // note that this vector may have the bias of LC-style pings incorporated
+  // this means that the output "operational RTT" may sometimes be half the actual RTT.
 
-  if (m_Pings.empty())
+  if (m_RTTValues.empty())
     return 0;
 
   uint32_t AvgPing = 0;
 
-  for (const auto& ping : m_Pings)
+  for (const auto& ping : m_RTTValues)
     AvgPing += ping;
 
-  AvgPing /= static_cast<uint32_t>(m_Pings.size());
+  AvgPing /= static_cast<uint32_t>(m_RTTValues.size());
 
   return AvgPing;
+}
+
+uint32_t CGamePlayer::GetDisplayRTT() const
+{
+  return GetOperationalRTT();
+}
+
+uint32_t CGamePlayer::GetRTT() const
+{
+  if (m_Game->m_Aura->m_Config->m_LiteralRTT) {
+    return GetOperationalRTT();
+  }
+  return GetOperationalRTT() * 2;
 }
 
 string CGamePlayer::GetLowerName() const
@@ -543,29 +560,33 @@ bool CGamePlayer::Update(void* fd)
             delete MapSize;
             break;
 
-          case CGameProtocol::W3GS_PONG_TO_HOST:
+          case CGameProtocol::W3GS_PONG_TO_HOST: {
             Pong = m_Protocol->RECEIVE_W3GS_PONG_TO_HOST(Data);
 
             // we discard pong values of 1
             // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
 
-            if (Pong != 1) {
-              // we also discard pong values when we're downloading because they're almost certainly inaccurate
-              // this statement also gives the player a 5 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
+            // we also discard pong values when anyone else is downloading if we're configured to
+            const bool bufferBloatForbidden = m_Game->m_Aura->m_Net->m_Config->m_HasBufferBloat && m_Game->IsDownloading();
 
-              if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 5)) {
-                // we also discard pong values when anyone else is downloading if we're configured to
-                if (!(m_Game->m_Aura->m_Net->m_Config->m_HasBufferBloat && m_Game->IsDownloading())) {
-                  m_Pings.push_back(m_Game->m_Aura->m_Config->m_RTTPings ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
-                  if (m_Pings.size() > 10) {
-                    m_Pings.erase(begin(m_Pings));
-                  }
+            if (Pong != 1 && !bufferBloatForbidden) {
+              // we also discard pong values when we're downloading because they're almost certainly inaccurate
+              // this statement also gives the player a 10 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
+              if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 8)) {
+                m_RTTValues.push_back(m_Game->m_Aura->m_Config->m_LiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
+                if (m_RTTValues.size() > 10) {
+                  m_RTTValues.erase(begin(m_RTTValues));
                 }
+                m_Game->EventPlayerPongToHost(this);
               }
             }
-
-            m_Game->EventPlayerPongToHost(this);
+            if (!bufferBloatForbidden && m_RTTValues.size() < CONSISTENT_PINGS_COUNT) {
+              // Measure player's ping as fast as possible, by chaining new pings to pongs received.
+              Send(m_Game->GetProtocol()->SEND_W3GS_PING_FROM_HOST());
+            }
+            ++m_PongCounter;
             break;
+          }
         }
       }
       else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->GetIsProxyReconnectable()) {
@@ -752,13 +773,13 @@ string CGamePlayer::GetDelayText(bool displaySync) const
 {
   string pingText, syncText;
   // Note: When someone is lagging, we actually clear their ping data.
-  const bool anyPings = GetNumPings() > 0;
+  const bool anyPings = GetStoredRTTCount() > 0;
   if (!anyPings) {
     pingText = "?";
-  } else if (GetNumPings() < 3) {
-    pingText = "*" + to_string(GetPing());
+  } else if (GetStoredRTTCount() < 3) {
+    pingText = "*" + to_string(GetOperationalRTT());
   } else {
-    pingText = to_string(GetPing());
+    pingText = to_string(GetOperationalRTT());
   }
   if (!displaySync || !m_Game->GetGameLoaded() || GetNormalSyncCounter() >= m_Game->GetSyncCounter()) {
     if (anyPings) return pingText + "ms";
@@ -769,9 +790,7 @@ string CGamePlayer::GetDelayText(bool displaySync) const
   if (m_SyncCounterOffset == 0) {
     // Expect clients to always be at least one RTT behind.
     // The "sync delay" is defined as the additional delay they got.
-    float rtt = static_cast<float>(GetPing());
-    if (!m_Game->m_Aura->m_Config->m_RTTPings) rtt *= 2;
-    syncDelay -= rtt;
+    syncDelay -= static_cast<float>(GetRTT());
   }
 
   if (!anyPings) {
@@ -892,4 +911,14 @@ bool CGamePlayer::UpdateReady()
     }
   }
   return m_Ready;
+}
+
+bool CGamePlayer::GetReadyReminderIsDue() const
+{
+  return m_ReadyReminderLastTime + 20 < GetTime();
+}
+
+void CGamePlayer::SetReadyReminded()
+{
+  m_ReadyReminderLastTime = GetTime();
 }

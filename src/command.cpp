@@ -1398,14 +1398,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         });
       } else {
         sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
-          return a->GetPing() > b->GetPing();
+          return a->GetOperationalRTT() > b->GetOperationalRTT();
         });
       }
       vector<string> pingsText;
       uint32_t maxPing = 0;
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
         pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));
-        uint32_t ping = (*i)->GetPing();
+        uint32_t ping = (*i)->GetOperationalRTT();
         if (ping == 0) continue; // also skips this iteration if there is no ping data
         if (ping > maxPing) maxPing = ping;
         m_TargetGame->EventPlayerPongToHost(*i);

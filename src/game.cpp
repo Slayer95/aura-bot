@@ -848,7 +848,7 @@ bool CGame::Update(void* fd, void* send_fd)
 {
   const int64_t Time = GetTime(), Ticks = GetTicks();
 
-  // ping every 5 seconds
+  // ping every 8 seconds
   // changed this to ping during game loading as well to hopefully fix some problems with people disconnecting during loading
   // changed this to ping during the game as well
 
@@ -861,8 +861,7 @@ bool CGame::Update(void* fd, void* send_fd)
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
     // however we only want to broadcast if the countdown hasn't started
 
-    if (!m_CountDownStarted && GetUDPEnabled())
-    {
+    if (!m_CountDownStarted && GetUDPEnabled()) {
       if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Net->m_Config->m_UDPBroadcastStrictMode) {
         SendGameDiscoveryRefresh();
       } else {
@@ -3046,7 +3045,7 @@ void CGame::ReportAllPings() const
     });
   } else {
     sort(begin(SortedPlayers), end(SortedPlayers), [](const CGamePlayer* a, const CGamePlayer* b) {
-      return a->GetPing() > b->GetPing();
+      return a->GetOperationalRTT() > b->GetOperationalRTT();
     });
   }
   vector<string> pingsText;
@@ -3307,9 +3306,7 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
     if (m_Aura->m_Net->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
       SendAllChat(player->GetName() + " joined the game over IPv6.");
     }
-    if (player->GetNumPings() > 0) {
-      SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false), LOG_LEVEL_DEBUG);
-    } else if (player->GetMapReady()) {
+    if (player->GetStoredRTTCount() == 0) {
       SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...", LOG_LEVEL_DEBUG);
     }
     return;
@@ -3330,9 +3327,7 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
   } else {
     SendAllChat(player->GetName() + GProxyFragment + IPv6Fragment);
   }
-  if (player->GetNumPings() > 0) {
-    SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false), LOG_LEVEL_DEBUG);
-  } else if (player->GetMapReady()) {
+  if (player->GetStoredRTTCount() == 0) {
     SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...", LOG_LEVEL_DEBUG);
   }
 }
@@ -3726,7 +3721,8 @@ void CGame::EventPlayerLeft(CGamePlayer* player)
 
 void CGame::EventPlayerLoaded(CGamePlayer* player)
 {
-  Print(GetLogPrefix() + "player [" + player->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+  string role = player->GetIsObserver() ? "observer" : "player";
+  Print(GetLogPrefix() + role + " [" + player->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(player->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
   SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(player->GetPID()));
 
   // Update stats
@@ -4251,13 +4247,36 @@ void CGame::EventPlayerPongToHost(CGamePlayer* player)
   if (m_GameLoading || m_GameLoaded || player->GetDeleteMe() || player->GetIsReserved()) {
     return;
   }
+
+  if (player->GetStoredRTTCount() == CONSISTENT_PINGS_COUNT) {
+    SendChat(player, player->GetName() + ", your latency is " + player->GetDelayText(false), LOG_LEVEL_DEBUG);
+  }
+
+  if ((!player->GetIsReady() && player->GetMapReady() && !player->GetIsObserver()) &&
+    (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxGames) &&
+    (player->GetReadyReminderIsDue() && (player->GetStoredRTTCount() >= CONSISTENT_PINGS_COUNT || GetNumHumanPlayers() < 2))) {
+    if (!m_AutoStartRequirements.empty()) {
+      switch (GetPlayersReadyMode()) {
+        case READY_MODE_EXPECT_RACE: {
+          SendChat(player, "Choose your race for the match to automatically start (or type " + GetCmdToken() + "ready)");
+          break;
+        }
+        case READY_MODE_EXPLICIT: {
+          SendChat(player, "Type " + GetCmdToken() + "ready for the match to automatically start.");
+          break;
+        }
+      }
+      player->SetReadyReminded();
+    }
+  }
+
   // autokick players with excessive pings but only if they're not reserved and we've received at least 3 pings from them
   // see the Update function for where we send pings
 
-  uint32_t LatencyMilliseconds = player->GetPing();
+  uint32_t LatencyMilliseconds = player->GetOperationalRTT();
   if (LatencyMilliseconds >= m_Config->m_AutoKickPing) {
     player->SetHasHighPing(true);
-    if (player->GetNumPings() >= 2) {
+    if (player->GetStoredRTTCount() >= 2) {
       player->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
       player->SetLeftCode(PLAYERLEAVE_LOBBY);
       if (player->GetPingKicked()) {
@@ -4280,6 +4299,10 @@ void CGame::EventPlayerPongToHost(CGamePlayer* player)
       if (!HasHighPing) {
         player->SetHasHighPing(HasHighPing);
         SendAllChat("Player [" + player->GetName() + "] ping went down to " + to_string(LatencyMilliseconds) + "ms");
+      } else if (player->GetPongCounter() % 4 == 0) {
+        // Still high ping. We need to keep sending these intermittently (roughly every 20-25 seconds), so that
+        // players don't assume that lack of news is good news.
+        SendChat(player, player->GetName() + ", you have a high ping of " + to_string(LatencyMilliseconds) + "ms");
       }
     } else {
       bool HasHighPing = LatencyMilliseconds >= m_Config->m_WarnHighPing;
@@ -6513,9 +6536,9 @@ bool CGame::GetCanStartGracefulCountDown() const
     return false;
   }
 
-  if (m_Players.size() >= 2) {
+  if (GetNumHumanPlayers() >= 2) {
     for (const auto& player : m_Players) {
-      if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
+      if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetStoredRTTCount() < 3) {
         return false;
       }
     }
@@ -6645,9 +6668,9 @@ void CGame::StartCountDown(bool fromUser, bool force)
     // check if everyone has been pinged enough (3 times) that the autokicker would have kicked them by now
     // see function EventPlayerPongToHost for the autokicker code
     string NotPinged;
-    if (m_Players.size() >= 2) {
+    if (GetNumHumanPlayers() >= 2) {
       for (const auto& player : m_Players) {
-        if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetNumPings() < 3) {
+        if (!player->GetIsReserved() && !player->GetIsObserver() && player->GetStoredRTTCount() < 3) {
           if (NotPinged.empty())
             NotPinged = player->GetName();
           else
