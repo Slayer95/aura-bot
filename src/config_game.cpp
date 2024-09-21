@@ -76,9 +76,9 @@ CGameConfig::CGameConfig(CConfig& CFG)
     Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
     CFG.SetFailed();
   }
-  m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 300);
-  m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 200);
-  m_SafeHighPing              = CFG.GetInt("hosting.high_ping.safe_ms", 150);
+  m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 250);
+  m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 175);
+  m_SafeHighPing              = CFG.GetInt("hosting.high_ping.safe_ms", 130);
   m_LobbyTimeout              = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
   m_LobbyOwnerTimeout         = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
   m_LobbyCountDownInterval    = CFG.GetInt("hosting.game_start.count_down_interval", 500);
