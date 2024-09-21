@@ -3306,9 +3306,6 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
     if (m_Aura->m_Net->m_Config->m_AnnounceIPv6 && player->GetUsingIPv6()) {
       SendAllChat(player->GetName() + " joined the game over IPv6.");
     }
-    if (player->GetStoredRTTCount() == 0) {
-      SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...", LOG_LEVEL_DEBUG);
-    }
     return;
   }
 
@@ -3326,9 +3323,6 @@ void CGame::EventPlayerCheckStatus(CGamePlayer* player)
     }
   } else {
     SendAllChat(player->GetName() + GProxyFragment + IPv6Fragment);
-  }
-  if (player->GetStoredRTTCount() == 0) {
-    SendChat(player, player->GetName() + ", please wait for your latency measurement (ping)...", LOG_LEVEL_DEBUG);
   }
 }
 
@@ -3925,8 +3919,10 @@ void CGame::EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chat
               vector<uint8_t> overrideTargetPIDs = GetPIDs(chatPlayer->GetFromPID());
               vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
               Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-              Print(GetLogPrefix() + "[Obs/Ref] overriden into [All]");
-            } else {
+              if (extraFlags[0] != CHAT_RECV_ALL) {
+                Print(GetLogPrefix() + "[Obs/Ref] overriden into [All]");
+              }
+            } else if (extraFlags[0] != CHAT_RECV_ALL) { 
               Print(GetLogPrefix() + "[Obs/Ref] overriden into [All], but muteAll is active (message discarded)");
             }
           } else {

@@ -341,21 +341,28 @@ CGamePlayer::~CGamePlayer()
 
 uint32_t CGamePlayer::GetOperationalRTT() const
 {
-  // just average all the pings in the vector
+  // weighted average of stored pings (max 6 stored = 25-30 seconds)
+  // 4:3:2:1:1:1 (more recent = more weight)
+  //
   // note that this vector may have the bias of LC-style pings incorporated
   // this means that the output "operational RTT" may sometimes be half the actual RTT.
 
-  if (m_RTTValues.empty())
+  uint32_t weightedSum = 0;
+  uint8_t backDelta = 0;
+  uint8_t i = static_cast<uint8_t>(m_RTTValues.size());
+  uint32_t totalWeight = 0;
+  while (i--) {
+    const uint32_t weight = (backDelta >= MAX_PING_WEIGHT ? 1 : MAX_PING_WEIGHT - backDelta);
+    weightedSum += m_RTTValues[i] * weight;
+    totalWeight += weight;
+    backDelta++;
+  }
+
+  if (totalWeight == 0) {
     return 0;
+  }
 
-  uint32_t AvgPing = 0;
-
-  for (const auto& ping : m_RTTValues)
-    AvgPing += ping;
-
-  AvgPing /= static_cast<uint32_t>(m_RTTValues.size());
-
-  return AvgPing;
+  return weightedSum / totalWeight;
 }
 
 uint32_t CGamePlayer::GetDisplayRTT() const
@@ -574,7 +581,7 @@ bool CGamePlayer::Update(void* fd)
               // this statement also gives the player a 10 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
               if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 8)) {
                 m_RTTValues.push_back(m_Game->m_Aura->m_Config->m_LiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
-                if (m_RTTValues.size() > 10) {
+                if (m_RTTValues.size() > MAXIMUM_PINGS_COUNT) {
                   m_RTTValues.erase(begin(m_RTTValues));
                 }
                 m_Game->EventPlayerPongToHost(this);

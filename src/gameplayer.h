@@ -64,6 +64,8 @@ class CAura;
 #define PREPLAYER_CONNECTION_PROMOTED 2u
 
 #define CONSISTENT_PINGS_COUNT 3u
+#define MAXIMUM_PINGS_COUNT 6u
+#define MAX_PING_WEIGHT 4u
 
 //
 // CGameConnection
