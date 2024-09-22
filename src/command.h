@@ -36,6 +36,7 @@
 #include "map.h"
 #include "net.h"
 
+#include <set>
 #include <optional>
 #include <ostream>
 #include <utility>

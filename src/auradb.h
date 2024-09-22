@@ -305,7 +305,9 @@ public:
   CDBGamePlayerSummary* GamePlayerSummaryCheck(const std::string& name, const std::string& server);
   void UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
   CDBDotAPlayerSummary* DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
+  std::string GetInitialIP(const std::string& name, const std::string& server);
   std::string GetLatestIP(const std::string& name, const std::string& server);
+  std::vector<std::string> GetIPs(const std::string& name, const std::string& server);
   std::vector<std::string> GetAlts(const std::string& addressLiteral);
 
   // Games

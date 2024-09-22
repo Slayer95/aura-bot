@@ -3567,17 +3567,26 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (m_TargetGame) {
         targetIP = m_TargetGame->GetBannableIP(targetName, targetHostName);
       }
-      if (targetIP.empty()) {
-        targetIP = m_Aura->m_DB->GetLatestIP(
-          targetName,
-          targetRealm ? targetRealm->GetDataBaseID() : targetHostName
-        );
+      vector<string> targetIPs = m_Aura->m_DB->GetIPs(
+        targetName,
+        targetRealm ? targetRealm->GetDataBaseID() : targetHostName
+      );
+      if (!targetIP.empty() && std::find(targetIPs.begin(), targetIPs.end(), targetIP) == targetIPs.end()) {
+        targetIPs.push_back(targetIP);
       }
-      vector<string> altAccounts = m_Aura->m_DB->GetAlts(targetIP);
-      if (altAccounts.empty()) {
+
+      set<string> allAlts;
+      for (const auto& ip : targetIPs) {
+        vector<string> alts = m_Aura->m_DB->GetAlts(ip);
+        for (const auto& alt : alts) {
+          allAlts.insert(alt);
+        }
+      }
+      if (allAlts.empty()) {
         SendReply("No alternate accounts found.");
       } else {
-        SendReply("Alternate accounts: " + JoinVector(altAccounts, false));
+        vector<string> allAltsVector = vector<string>(allAlts.begin(), allAlts.end());
+        SendReply("Alternate accounts: " + JoinVector(allAltsVector, false));
       }
       break;
     }
