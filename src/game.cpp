@@ -838,7 +838,7 @@ string CGame::GetLogPrefix() const
   return "[" + GetCategory() + ": " + GetGameName() + "] ";
 }
 
-vector<const CGameUser*> CGame::GetUsers() const
+vector<const CGameUser*> CGame::GetPlayers() const
 {
   vector<const CGameUser*> Players;
   for (const auto& player : m_Users) {

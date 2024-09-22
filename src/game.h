@@ -322,7 +322,7 @@ public:
   std::vector<uint8_t>  GetAnnounceHeight() const;
 
   std::string           GetLogPrefix() const;
-  std::vector<const CGameUser*> GetUsers() const;
+  std::vector<const CGameUser*> GetPlayers() const;
   std::vector<const CGameUser*> GetObservers() const;
   std::vector<const CGameUser*> GetUnreadyPlayers() const;
   bool                  GetIsAutoStartDue() const;

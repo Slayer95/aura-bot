@@ -1432,7 +1432,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      vector<const CGameUser*> players = m_TargetGame->GetUsers();
+      vector<const CGameUser*> players = m_TargetGame->GetPlayers();
       if (players.empty()) {
         ErrorReply("No players found.");
         break;
@@ -1550,7 +1550,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       }
-      string Players = PlayersToNameListString(m_TargetGame->GetUsers());
+      string Players = PlayersToNameListString(m_TargetGame->GetPlayers());
       string Observers = PlayersToNameListString(m_TargetGame->GetObservers());
       if (Players.empty() && Observers.empty()) {
         SendReply("Nobody is in the game.");
@@ -1814,7 +1814,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      vector<const CGameUser*> players = m_TargetGame->GetUsers();
+      vector<const CGameUser*> players = m_TargetGame->GetPlayers();
       if (players.empty()) {
         ErrorReply("No players found.");
         break;
@@ -6318,7 +6318,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         targetGame = GetTargetGame("game#" + Payload);
       }
       if (targetGame) {
-        string Players = PlayersToNameListString(targetGame->GetUsers());
+        string Players = PlayersToNameListString(targetGame->GetPlayers());
         string Observers = PlayersToNameListString(targetGame->GetObservers());
         if (Players.empty() && Observers.empty()) {
           SendReply("Game#" + to_string(targetGame->GetGameID()) + ". Nobody is in the game.");
