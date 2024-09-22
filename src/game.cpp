@@ -3995,7 +3995,9 @@ void CGame::EventPlayerChatToHost(CGameUser* player, CIncomingChatPlayer* chatPl
             vector<uint8_t> overrideTargetPIDs = GetObserverPIDs(chatPlayer->GetFromPID());
             vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
             Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-            Print(GetLogPrefix() + "[Obs/Ref] enforced server-side");
+            if (extraFlags[] != CHAT_RECV_OBS) {
+              Print(GetLogPrefix() + "[Obs/Ref] enforced server-side");
+            }
           }
         } else {
           Send(chatPlayer->GetToPIDs(), GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), chatPlayer->GetToPIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
@@ -4360,7 +4362,7 @@ void CGame::EventPlayerPongToHost(CGameUser* player)
       if (!HasHighPing) {
         player->SetHasHighPing(HasHighPing);
         SendAllChat("Player [" + player->GetName() + "] ping went down to " + to_string(LatencyMilliseconds) + "ms");
-      } else if (player->GetPongCounter() % 4 == 0) {
+      } else if (LatencyMilliseconds >= m_Config->m_WarnHighPing && player->GetPongCounter() % 4 == 0) {
         // Still high ping. We need to keep sending these intermittently (roughly every 20-25 seconds), so that
         // players don't assume that lack of news is good news.
         SendChat(player, player->GetName() + ", you have a high ping of " + to_string(LatencyMilliseconds) + "ms");
