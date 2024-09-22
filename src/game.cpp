@@ -3083,6 +3083,8 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
 
   if (m_GameLoading || m_GameLoaded || m_ExitingSoon) {
     // end the game if there aren't any players left
+    // but only if the user who left isn't an observer
+    // this allows parties of 2+ observers to watch AI vs AI
     if (!user->GetIsObserver() && GetNumJoinedPlayers() == 0) {
       Print(GetLogPrefix() + "is over (no players left)");
       m_Exiting = true;
