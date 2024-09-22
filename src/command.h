@@ -162,7 +162,7 @@ public:
 
   bool SetIdentity(const std::string& userName);
   void SetAuthenticated(const bool& nAuthenticated);
-  void SetPermissions(const uint8_t nPermissions);
+  void SetPermissions(const uint16_t nPermissions);
   void UpdatePermissions();
   void ClearActionMessage() { m_ActionMessage.clear(); }
 

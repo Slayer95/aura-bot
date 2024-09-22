@@ -367,7 +367,7 @@ void CCommandContext::SetAuthenticated(const bool& nAuthenticated)
   m_OverrideVerified = nAuthenticated;
 }
 
-void CCommandContext::SetPermissions(const uint8_t nPermissions)
+void CCommandContext::SetPermissions(const uint16_t nPermissions)
 {
   m_OverridePermissions = nPermissions;
 }
