@@ -1108,6 +1108,10 @@ void CMap::Load(CConfig* CFG)
   m_MapEditorVersion = MapEditorVersion;
   m_MapType = CFG->GetString("map.type", emptyString);
   m_MapDefaultHCL = CFG->GetString("map.default_hcl", emptyString);
+  if (!CheckIsValidHCL(m_MapDefaultHCL).empty()) {
+    Print("[MAP] HCL string [" + m_MapDefaultHCL + "] is not valid.");
+    CFG->SetFailed();
+  }
 
   if (CFG->Exists("map.num_disabled")) {
     MapNumDisabled = CFG->GetUint8("map.num_disabled", 0);

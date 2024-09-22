@@ -310,6 +310,7 @@ public:
   uint8_t               GetNumTeamControllersOrOpen(const uint8_t team) const;
   std::string           GetClientFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
+  inline int64_t        GetGameTicks() const { return m_GameTicks; }
   inline bool           GetChatOnly() const { return m_ChatOnly; }
   std::string           GetDescription() const;
   std::string           GetCategory() const;

@@ -2256,11 +2256,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const string HCLChars = "abcdefghijklmnopqrstuvwxyz0123456789 -=,.";
-      size_t IllegalIndex = Payload.find_first_not_of(HCLChars);
-
-      if (IllegalIndex != string::npos) {
-        ErrorReply("Unable to set mode (HCL) because it contains invalid character [" + cmdToken + "]");
+      const string checkResult = CheckIsValidHCL(Payload);
+      if (!checkResult.empty()) {
+        ErrorReply(checkResult);
         break;
       }
 

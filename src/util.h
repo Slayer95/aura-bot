@@ -646,6 +646,14 @@ inline std::string::size_type GetLevenshteinDistanceForSearch(const std::string&
   return dp[m][n];
 }
 
+inline std::string CheckIsValidHCL(const std::string& s) {
+  std::string HCLChars = "abcdefghijklmnopqrstuvwxyz0123456789 -=,.";
+  if (s.find_first_not_of(HCLChars) != std::string::npos) {
+    return "[" + s + "] is not a valid HCL string.";
+  }
+  return std::string();
+}
+
 inline std::string DurationLeftToString(int64_t remainingSeconds) {
   if (remainingSeconds < 0)
     remainingSeconds = 0;

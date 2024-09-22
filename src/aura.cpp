@@ -1138,6 +1138,10 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
 
 void CAura::EventGameDeleted(CGame* game)
 {
+  if ((game->GetGameTicks() / 1000) < 180) {
+    // Do not announce game ended if game lasted less than 3 minutes.
+    return;
+  }
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     if (game->GetGameLoaded()) {
