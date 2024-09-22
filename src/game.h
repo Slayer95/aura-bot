@@ -422,7 +422,7 @@ public:
   // note: these are only called while iterating through the m_Potentials or m_Users std::vectors
   // therefore you can't modify those std::vectors and must use the player's m_DeleteMe member to flag for deletion
 
-  void EventPlayerDeleted(CGameUser* player, void* fd, void* send_fd);
+  void EventUserDeleted(CGameUser* player, void* fd, void* send_fd);
   void EventLobbyLastPlayerLeaves();
   void ReportAllPings() const;
   void ReportPlayerDisconnected(CGameUser* player);

@@ -1226,7 +1226,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
   // the fixed host counter's highest-order byte will contain a 7 bit ID (0-127), plus a trailing bit to discriminate join from info requests
   // the rest of the fixed host counter will contain the 24 least significant bits of the actual host counter
   // since we're destroying 8 bits of information here the actual host counter should not be greater than 2^24 which is a reasonable assumption
-  // when a player joins a game we can obtain the ID from the received host counter
+  // when a user joins a game we can obtain the ID from the received host counter
   // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
   // battle.net refreshes use IDs of 16-255
 

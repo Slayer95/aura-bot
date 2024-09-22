@@ -45,19 +45,19 @@ using namespace std;
 //
 
 /* In-game command */
-CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGameUser* player, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGameUser* user, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
-    m_SourceRealm(player->GetRealm(false)),
+    m_SourceRealm(user->GetRealm(false)),
     m_TargetRealm(nullptr),
     m_SourceGame(game),
     m_TargetGame(game),
-    m_Player(player), // m_Player is always bound to m_SourceGame
+    m_Player(user), // m_Player is always bound to m_SourceGame
     m_IRC(nullptr),
     m_DiscordAPI(nullptr),
 
-    m_FromName(player->GetName()),
+    m_FromName(user->GetName()),
     m_FromIdentifier(0),
     m_FromWhisper(false),
     m_FromType(FROM_GAME),
@@ -65,7 +65,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ga
 
     m_Permissions(0),
 
-    m_ServerName(player->GetRealmHostName()),
+    m_ServerName(user->GetRealmHostName()),
 
     m_ChannelName(string()),
 
@@ -416,7 +416,7 @@ void CCommandContext::UpdatePermissions()
     IsRealmVerified = m_Player ? m_Player->IsRealmVerified() : m_SourceRealm != nullptr;
   }
 
-  // Trust PvPGN servers on player identities for admin powers. Their impersonation is not a threat we worry about.
+  // Trust PvPGN servers on users identities for admin powers. Their impersonation is not a threat we worry about.
   // However, do NOT trust them regarding sudo access, since those commands may cause data deletion or worse.
   // Note also that sudo permissions must be ephemeral, since neither WC3 nor PvPGN TCP connections are secure.
   bool IsOwner = false;
@@ -835,7 +835,7 @@ CGameUser* CCommandContext::RunTargetPlayerOrSelf(const string& target)
 
   CGameUser* targetPlayer = nullptr;
   if (!m_TargetGame) {
-    ErrorReply("Please specify target player.");
+    ErrorReply("Please specify target user.");
     return targetPlayer;
   }
   m_TargetGame->GetPlayerFromNamePartial(target, targetPlayer);
@@ -845,7 +845,7 @@ CGameUser* CCommandContext::RunTargetPlayerOrSelf(const string& target)
   return targetPlayer;
 }
 
-bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& player)
+bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user)
 {
   if (!m_TargetGame || target.empty()) {
     return false;
@@ -858,13 +858,13 @@ bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& S
         return false;
       }
       SID = testSID;
-      player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+      user = m_TargetGame->GetPlayerFromPID(slot->GetPID());
       return true;
     }
 
     case '@': {
-      player = GetTargetPlayer(target.substr(1));
-      return player != nullptr;
+      user = GetTargetPlayer(target.substr(1));
+      return user != nullptr;
     }
 
     default: {
@@ -876,20 +876,20 @@ bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& S
       }
       if (testPlayer == nullptr) {
         SID = testSID;
-        player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+        user = m_TargetGame->GetPlayerFromPID(slot->GetPID());
       } else {
         SID = m_TargetGame->GetSIDFromPID(testPlayer->GetPID());
-        player = testPlayer;
+        user = testPlayer;
       }
       return true;
     }
   }
 }
 
-bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& player)
+bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user)
 {
   if (!m_TargetGame || target.empty()) {
-    ErrorReply("Please provide a player @name or #slot.");
+    ErrorReply("Please provide a user @name or #slot.");
     return false;
   }
   switch (target[0]) {
@@ -901,13 +901,13 @@ bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& S
         return false;
       }
       SID = testSID;
-      player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+      user = m_TargetGame->GetPlayerFromPID(slot->GetPID());
       return true;
     }
 
     case '@': {
-      player = RunTargetPlayer(target.substr(1));
-      return player != nullptr;
+      user = RunTargetPlayer(target.substr(1));
+      return user != nullptr;
     }
 
     default: {
@@ -915,15 +915,15 @@ bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& S
       const CGameSlot* slot = m_TargetGame->InspectSlot(testSID);
       CGameUser* testPlayer = GetTargetPlayer(target.substr(1));
       if ((slot == nullptr) == (testPlayer == nullptr)) {
-        ErrorReply("Please provide a player @name or #slot.");
+        ErrorReply("Please provide a user @name or #slot.");
         return false;
       }
       if (testPlayer == nullptr) {
         SID = testSID;
-        player = m_TargetGame->GetPlayerFromPID(slot->GetPID());
+        user = m_TargetGame->GetPlayerFromPID(slot->GetPID());
       } else {
         SID = m_TargetGame->GetSIDFromPID(testPlayer->GetPID());
-        player = testPlayer;
+        user = testPlayer;
       }
       return true;
     }
@@ -957,7 +957,7 @@ bool CCommandContext::GetParseNonPlayerSlot(const std::string& target, uint8_t& 
 bool CCommandContext::RunParseNonPlayerSlot(const std::string& target, uint8_t& SID)
 {
   if (!m_TargetGame || target.empty()) {
-    ErrorReply("Please provide a player #slot.");
+    ErrorReply("Please provide a user #slot.");
     return false;
   }
 
@@ -1433,16 +1433,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       vector<const CGameUser*> players = m_TargetGame->GetPlayers();
-      if (players.empty()) {
-        ErrorReply("No players found.");
-        break;
-      }
-
       vector<string> races;
-      for (const auto& player: players) {
+      for (const auto& player : players) {
         const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromPID(player->GetPID()));
         uint8_t race = slot->GetRaceFixed();
         races.push_back("[" + player->GetName() + "] - " + GetRaceName(race));
+      }
+      if (races.empty()) {
+        ErrorReply("No players found.");
+        break;
       }
       vector<string> replyLines = JoinReplyListCompact(races);
       for (const auto& line : replyLines) {
@@ -1594,11 +1593,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (!targetPlayer) {
-        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a player.");
+        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a user.");
         break;
       }
       if (targetPlayer->GetIsReserved()) {
-        ErrorAll("Unable to votekick player [" + targetPlayer->GetName() + "]. That player is reserved and cannot be votekicked");
+        ErrorAll("Unable to votekick user [" + targetPlayer->GetName() + "]. That user is reserved and cannot be votekicked");
         break;
       }
 
@@ -1608,10 +1607,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (auto& it : m_TargetGame->m_Users)
         it->SetKickVote(false);
 
-      SendReply("Votekick against player [" + m_TargetGame->m_KickVotePlayer + "] started by player [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      SendReply("Votekick against [" + m_TargetGame->m_KickVotePlayer + "] started by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       if (m_Player && m_Player != targetPlayer) {
         m_Player->SetKickVote(true);
-        SendAll("Player [" + m_Player->GetDisplayName() + "] voted to kick player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
+        SendAll("[" + m_Player->GetDisplayName() + "] voted to kick [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
       }
       SendAll("Type " + cmdToken + "yes or " + cmdToken + "no to vote.");
 
@@ -1628,7 +1627,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint32_t VotesNeeded = static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config->m_VoteKickPercentage) / 100));
       m_Player->SetKickVote(true);
-      m_TargetGame->SendAllChat("Player [" + m_Player->GetDisplayName() + "] voted for kicking player [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
+      m_TargetGame->SendAllChat("[" + m_Player->GetDisplayName() + "] voted for kicking [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
       m_TargetGame->CountKickVotes();
       break;
     }
@@ -1642,7 +1641,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       m_Player->SetKickVote(false);
-      m_TargetGame->SendAllChat("Player [" + m_Player->GetDisplayName() + "] voted against kicking player [" + m_TargetGame->m_KickVotePlayer + "].");
+      m_TargetGame->SendAllChat("[" + m_Player->GetDisplayName() + "] voted against kicking [" + m_TargetGame->m_KickVotePlayer + "].");
       break;
     }
 
@@ -2299,7 +2298,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_TargetGame->AddToReserved(PlayerName);
       }
 
-      SendAll("Added player(s) to the hold list: " + JoinVector(Args, false));
+      SendAll("Added user(s) to the hold list: " + JoinVector(Args, false));
       break;
     }
 
@@ -2335,12 +2334,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           continue;
         m_TargetGame->RemoveFromReserved(PlayerName);
       }
-      SendAll("Removed player(s) from the reservations list: " + JoinVector(Args, false));
+      SendAll("Removed user(s) from the reservations list: " + JoinVector(Args, false));
       break;
     }
 
     //
-    // !KICK (kick a player)
+    // !KICK (kick a user)
     //
 
     case HashCode("closekick"):
@@ -2368,12 +2367,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (!targetPlayer) {
-        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a player.");
+        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a user.");
         break;
       }
 
       targetPlayer->SetDeleteMe(true);
-      targetPlayer->SetLeftReason("was kicked by player [" + m_FromName + "]");
+      targetPlayer->SetLeftReason("was kicked by [" + m_FromName + "]");
 
       if (m_TargetGame->GetIsLobby())
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
@@ -2669,8 +2668,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
-    // !PUBBY (create public game by other player)
-    // !PRIVBY (create private game by other player)
+    // !PUBBY (create public game by other user)
+    // !PRIVBY (create private game by other user)
     //
 
     case HashCode("privby"):
@@ -2997,7 +2996,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         // 1. Both slots belong to own authorized team.
         // 2. The following conditions hold simultaneously:
         //     i. One slot belongs to own authorized team, and the other slot is on a different team.
-        //    ii. One slot is controlled by an actual player, and the other slot is empty. 
+        //    ii. One slot is controlled by a user, and the other slot is empty. 
         //
 
         const CGameSlot* slotOne = m_TargetGame->GetSlot(slotNumOne);
@@ -3032,15 +3031,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
             break;
           }
           if (playerOne == nullptr) {
-            // slotOne is guaranteed to be occupied by a non-player
-            // slotTwo is guaranteed to be occupied by a player
+            // slotOne is guaranteed to be occupied by a non-user
+            // slotTwo is guaranteed to be occupied by a user
             if (slotOne->GetSlotStatus() != SLOTSTATUS_OPEN) {
               ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
               break;
             }
           } else {
-            // slotTwo is guaranteed to be occupied by a non-player
-            // slotOne is guaranteed to be occupied by a player
+            // slotTwo is guaranteed to be occupied by a non-user
+            // slotOne is guaranteed to be occupied by a user
             if (slotTwo->GetSlotStatus() != SLOTSTATUS_OPEN) {
               ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
               break;
@@ -3066,9 +3065,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else if (!playerOne && !playerTwo) {
         SendReply("Swapped slots " + ToDecString(slotNumOne + 1) + " and " + ToDecString(slotNumTwo + 1) + ".");
       } else if (playerOne) {
-        SendReply("Swapped player [" + playerOne->GetName() + "] to slot " + ToDecString(slotNumTwo + 1) + ".");
+        SendReply("Swapped user [" + playerOne->GetName() + "] to slot " + ToDecString(slotNumTwo + 1) + ".");
       } else {
-        SendReply("Swapped player [" + playerTwo->GetName() + "] to slot " + ToDecString(slotNumOne + 1) + ".");
+        SendReply("Swapped user [" + playerTwo->GetName() + "] to slot " + ToDecString(slotNumOne + 1) + ".");
       }
       break;
     }
@@ -3139,7 +3138,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      SendReply("Map download started for player [" + targetPlayer->GetName() + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      SendReply("Map download started for [" + targetPlayer->GetName() + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       m_TargetGame->Send(targetPlayer, m_TargetGame->GetProtocol()->SEND_W3GS_STARTDOWNLOAD(m_TargetGame->GetHostPID()));
       targetPlayer->SetDownloadAllowed(true);
       targetPlayer->SetDownloadStarted(true);
@@ -3160,7 +3159,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       if (!m_TargetGame->GetLagging()) {
-        ErrorReply("No player is currently lagging.");
+        ErrorReply("Nobody is currently lagging.");
         break;
       }
 
@@ -3247,11 +3246,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
       if (targetPlayer->GetMuted()) {
-        ErrorReply("Player [" + targetPlayer->GetName() + "] is already muted.");
+        ErrorReply("User [" + targetPlayer->GetName() + "] is already muted.");
         break;
       }
       targetPlayer->SetMuted(true);
-      SendAll("Player [" + targetPlayer->GetName() + "] was muted by player [" + m_FromName + "]");
+      SendAll("[" + targetPlayer->GetName() + "] was muted by [" + m_FromName + "]");
       break;
     }
 
@@ -3646,7 +3645,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CGameUser* targetPlayer = m_TargetGame->GetPlayerFromName(targetName, false);
       if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
         targetPlayer->SetDeleteMe(true);
-        targetPlayer->SetLeftReason("was banned by player [" + m_FromName + "]");
+        targetPlayer->SetLeftReason("was banned by [" + m_FromName + "]");
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
         m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
       }
@@ -3768,7 +3767,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CGameUser* targetPlayer = m_TargetGame->GetPlayerFromName(targetName, false);
       if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
         targetPlayer->SetDeleteMe(true);
-        targetPlayer->SetLeftReason("was persistently banned by player [" + m_FromName + "]");
+        targetPlayer->SetLeftReason("was persistently banned by [" + m_FromName + "]");
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
         m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
       }
@@ -4253,7 +4252,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->CloseAllSlots()) {
-        // Also sent if there was no player, and so all slots except one were closed.
+        // Also sent if there was nobody in the game, and so all slots except one were closed.
         SendReply("Closed all slots.");
       } else {
         ErrorReply("There are no open slots.");
@@ -4728,7 +4727,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (targetPlayer) {
           ErrorReply("Cannot turn [" + targetPlayer->GetName() + "] into an observer.");
         } else {
-          ErrorReply("Cannot turn the player into an observer.");
+          ErrorReply("Cannot turn slot #" + to_string(SID + 1) + " into an observer slot.");
         }
       } else {
         m_TargetGame->ResetLayoutIfNotMatching();
@@ -4846,14 +4845,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       uint8_t team = static_cast<uint8_t>(Args.size());
       while (team--) {
-        CGameUser* player = GetTargetPlayer(Args[team]);
-        if (player) {
-          const uint8_t SID = m_TargetGame->GetSIDFromPID(player->GetPID());
+        CGameUser* user = GetTargetPlayer(Args[team]);
+        if (user) {
+          const uint8_t SID = m_TargetGame->GetSIDFromPID(user->GetPID());
           if (m_TargetGame->SetSlotTeam(SID, team, true) ||
             m_TargetGame->InspectSlot(SID)->GetTeam() == team) {
-            player->SetDraftCaptain(team + 1);
+            user->SetDraftCaptain(team + 1);
           } else {
-            failPlayers.push_back(player->GetName());
+            failPlayers.push_back(user->GetName());
           }
         } else {
           failPlayers.push_back(Args[team]);
@@ -5127,7 +5126,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       m_TargetGame->SetAutoVirtualPlayers(!isToggle || inputLower != "disable");
       if (!isToggle && !m_TargetGame->CreateFakeUser(false)) {
-        ErrorReply("Cannot add another virtual player");
+        ErrorReply("Cannot add another virtual user");
       } else if (isToggle) {
         if (m_TargetGame->GetIsAutoVirtualPlayers()) {
           SendReply("Automatic virtual players enabled.");
@@ -5193,7 +5192,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!Success) {
-        ErrorReply("Cannot add another virtual player");
+        ErrorReply("Cannot add another virtual user");
       }
       break;
     }
@@ -5459,7 +5458,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       targetPlayer->SetMuted(false);
-      SendAll("Player [" + targetPlayer->GetName() + "] was unmuted by player [" + m_FromName + "]");
+      SendAll("[" + targetPlayer->GetName() + "] was unmuted by [" + m_FromName + "]");
       break;
     }
 
@@ -5513,7 +5512,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      SendReply("A votekick against player [" + m_TargetGame->m_KickVotePlayer + "] has been cancelled by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      SendReply("A votekick against [" + m_TargetGame->m_KickVotePlayer + "] has been cancelled by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       m_TargetGame->m_KickVotePlayer.clear();
       m_TargetGame->m_StartedKickVoteTime = 0;
       break;
@@ -5703,7 +5702,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_TargetGame->GetPlayerFromName(targetName, false)) {
-        ErrorReply("Name [" + targetName + "] is in use by an actual player.");
+        ErrorReply("Someone is already using the name [" + targetName + "].");
         break;
       }
 
@@ -6904,7 +6903,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       m_Player->SetPinnedMessage(Payload);
-      SendReply("Message pinned. It will be shown to every player that joins the game.");
+      SendReply("Message pinned. It will be shown to every user that joins the game.");
       break;
     }
 

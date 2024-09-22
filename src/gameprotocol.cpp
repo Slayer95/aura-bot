@@ -525,15 +525,15 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_CHAT_FROM_HOST(uint8_t fromPID, co
   return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGameUser*> players)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGameUser*> users)
 {
-  if (players.empty()) {
+  if (users.empty()) {
     Print("[GAMEPROTO] no laggers passed to SEND_W3GS_START_LAG");
     return std::vector<uint8_t>();
   }
 
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_START_LAG, 0u, 0u, static_cast<uint8_t>(players.size())};
-  for (auto& player : players) {
+  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_START_LAG, 0u, 0u, static_cast<uint8_t>(users.size())};
+  for (auto& player : users) {
     packet.push_back((player)->GetPID());
     AppendByteArray(packet, GetTicks() - player->GetStartedLaggingTicks(), false);
   }
@@ -542,10 +542,10 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGameUser*> playe
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_STOP_LAG(CGameUser* player)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_STOP_LAG(CGameUser* user)
 {
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_STOP_LAG, 9, 0, player->GetPID()};
-  AppendByteArray(packet, GetTicks() - player->GetStartedLaggingTicks(), false);
+  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_STOP_LAG, 9, 0, user->GetPID()};
+  AppendByteArray(packet, GetTicks() - user->GetStartedLaggingTicks(), false);
   return packet;
 }
 

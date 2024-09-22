@@ -124,7 +124,7 @@ protected:
 
 public:
   // Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGameUser* player, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
@@ -190,8 +190,8 @@ public:
   CGameUser* RunTargetPlayer(const std::string& target);
   CGameUser* GetTargetPlayerOrSelf(const std::string& target);
   CGameUser* RunTargetPlayerOrSelf(const std::string& target);
-  bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& player);
-  bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& player);
+  bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
+  bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
   bool GetParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   bool RunParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   CRealm* GetTargetRealmOrCurrent(const std::string& target);

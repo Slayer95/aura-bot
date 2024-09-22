@@ -926,7 +926,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
   for (auto i = begin(m_Users); i != end(m_Users);) {
     if ((*i)->Update(fd)) {
-      EventPlayerDeleted(*i, fd, send_fd);
+      EventUserDeleted(*i, fd, send_fd);
       delete *i;
       i = m_Users.erase(i);
     } else {
@@ -1128,10 +1128,9 @@ bool CGame::Update(void* fd, void* send_fd)
   if (m_GameLoaded && !m_Lagging && Ticks - m_LastActionSentTicks >= GetLatency() - m_LastActionLateBy)
     SendAllActions();
 
-  // end the game if there aren't any players left
-
-  if (m_Users.empty() && (m_GameLoaded || m_GameLoading || m_ExitingSoon)) {
-    Print(GetLogPrefix() + "is over (no players left)");
+  // end the game if there aren't any users left
+  if (m_Users.empty()) {
+    Print(GetLogPrefix() + "is over (no users left)");
     m_Exiting = true;
     return m_Exiting;
   }
@@ -1350,7 +1349,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // try to create the virtual host player, if there are slots available
   //
   // ensures that all pending players' leave messages have already been sent
-  // either at CGame::EventPlayerDeleted or at CGame::EventRequestJoin (reserve system kicks)
+  // either at CGame::EventUserDeleted or at CGame::EventRequestJoin (reserve system kicks)
   if (!m_GameLoading && !m_GameLoaded && GetSlotsOpen() > 0) {
     CreateVirtualHost();
   }
@@ -3000,7 +2999,7 @@ void CGame::SendGameDiscoveryInfo()
   }
 }
 
-void CGame::EventPlayerDeleted(CGameUser* player, void* fd, void* send_fd)
+void CGame::EventUserDeleted(CGameUser* player, void* fd, void* send_fd)
 {
   if (!m_Exiting) {
     Print(GetLogPrefix() + "deleting player [" + player->GetName() + "]: " + player->GetLeftReason());
@@ -3076,12 +3075,20 @@ void CGame::EventPlayerDeleted(CGameUser* player, void* fd, void* send_fd)
 
     // keep track of the last player to leave for the !banlast command
     // ignore the last player leaving, as well as the second-to-last (forfeit)
-    if (m_Users.size() > 2) {
+    if (m_Users.size() > 2 && !m_ExitingSoon) {
       for (auto& bannable : m_Bannables) {
         if (bannable->GetName() == player->GetName()) {
           m_LastLeaverBannable = bannable;
         }
       }
+    }
+  }
+
+  if (m_GameLoading || m_GameLoaded || m_ExitingSoon) {
+    // end the game if there aren't any players left
+    if (!player->GetIsObserver() && GetNumJoinedPlayers() == 0) {
+      Print(GetLogPrefix() + "is over (no players left)");
+      m_Exiting = true;
     }
   }
 
@@ -3995,7 +4002,7 @@ void CGame::EventPlayerChatToHost(CGameUser* player, CIncomingChatPlayer* chatPl
             vector<uint8_t> overrideTargetPIDs = GetObserverPIDs(chatPlayer->GetFromPID());
             vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
             Send(overrideTargetPIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromPID(), overrideTargetPIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-            if (extraFlags[] != CHAT_RECV_OBS) {
+            if (extraFlags[0] != CHAT_RECV_OBS) {
               Print(GetLogPrefix() + "[Obs/Ref] enforced server-side");
             }
           }

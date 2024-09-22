@@ -661,7 +661,7 @@ bool CGameUser::Update(void* fd)
 
   // EventPlayerLeft sets the game in a state where this player is still in m_Users, but it has no associated slot.
   // It's therefore crucial to check the Abort flag that it sets to avoid modifying it further.
-  // As soon as the CGameUser::Update() call returns, EventPlayerDeleted takes care of erasing from the m_Users vector.
+  // As soon as the CGameUser::Update() call returns, EventUserDeleted takes care of erasing from the m_Users vector.
   if (!Abort) {
     // try to find out why we're requesting deletion
     // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
@@ -704,7 +704,8 @@ bool CGameUser::Update(void* fd)
   }
 
   if (m_Socket) {
-    return m_Socket->HasError() || m_Socket->HasFin() || !m_Socket->GetConnected();
+    m_DeleteMe = m_Socket->HasError() || m_Socket->HasFin() || !m_Socket->GetConnected();
+    return m_DeleteMe;
   }
 
   return false;
