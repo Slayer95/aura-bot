@@ -46,7 +46,7 @@
 #include <utility>
 
 #include "config_bot.h"
-#include "gameplayer.h"
+#include "gameuser.h"
 #include "aura.h"
 #include "realm.h"
 #include "map.h"
@@ -164,11 +164,11 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
           // look for a matching player in a running game
 
-          CGamePlayer* Match = nullptr;
+          CGameUser* Match = nullptr;
 
           for (auto& game : m_Aura->m_Games) {
             if (game->GetGameLoaded() && game->GetIsProxyReconnectable()) {
-              CGamePlayer* Player = game->GetPlayerFromPID(Bytes[4]);
+              CGameUser* Player = game->GetPlayerFromPID(Bytes[4]);
               if (Player && Player->GetGProxyAny() && Player->GetGProxyReconnectKey() == ReconnectKey) {
                 Match = Player;
                 break;
@@ -228,7 +228,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
   if (Abort)
     m_DeleteMe = true;
 
-  // At this point, m_Socket may have been transferred to CGamePlayer
+  // At this point, m_Socket may have been transferred to CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
     return PREPLAYER_CONNECTION_DESTROY;
   }
@@ -248,10 +248,10 @@ void CGameConnection::Send(const std::vector<uint8_t>& data) const
 }
 
 //
-// CGamePlayer
+// CGameUser
 //
 
-CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
+CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
   : m_Protocol(connection->m_Protocol),
     m_Game(nGame),
     m_Socket(connection->GetSocket()),
@@ -323,7 +323,7 @@ CGamePlayer::CGamePlayer(CGame* nGame, CGameConnection* connection, uint8_t nPID
   m_Socket->SetLogErrors(true);
 }
 
-CGamePlayer::~CGamePlayer()
+CGameUser::~CGameUser()
 {
   if (!m_LeftMessageSent) {
     Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetPID(), GetLeftCode()));
@@ -339,7 +339,7 @@ CGamePlayer::~CGamePlayer()
   }
 }
 
-uint32_t CGamePlayer::GetOperationalRTT() const
+uint32_t CGameUser::GetOperationalRTT() const
 {
   // weighted average of stored pings (max 6 stored = 25-30 seconds)
   // 4:3:2:1:1:1 (more recent = more weight)
@@ -365,12 +365,12 @@ uint32_t CGamePlayer::GetOperationalRTT() const
   return weightedSum / totalWeight;
 }
 
-uint32_t CGamePlayer::GetDisplayRTT() const
+uint32_t CGameUser::GetDisplayRTT() const
 {
   return GetOperationalRTT();
 }
 
-uint32_t CGamePlayer::GetRTT() const
+uint32_t CGameUser::GetRTT() const
 {
   if (m_Game->m_Aura->m_Config->m_LiteralRTT) {
     return GetOperationalRTT();
@@ -378,18 +378,18 @@ uint32_t CGamePlayer::GetRTT() const
   return GetOperationalRTT() * 2;
 }
 
-string CGamePlayer::GetLowerName() const
+string CGameUser::GetLowerName() const
 {
   return ToLowerCase(m_Name);
 }
 
-string CGamePlayer::GetDisplayName() const
+string CGameUser::GetDisplayName() const
 {
   if (!m_Observer && m_Game->GetIsHiddenPlayers()) return "Player ?";
   return m_Name;
 }
 
-CRealm* CGamePlayer::GetRealm(bool mustVerify) const
+CRealm* CGameUser::GetRealm(bool mustVerify) const
 {
   if (m_RealmInternalId < 0x10)
     return nullptr;
@@ -401,14 +401,14 @@ CRealm* CGamePlayer::GetRealm(bool mustVerify) const
   return m_Game->m_Aura->GetRealmByInputId(m_Game->m_Aura->m_RealmsIdentifiers[m_RealmInternalId]);
 }
 
-string CGamePlayer::GetRealmDataBaseID(bool mustVerify) const
+string CGameUser::GetRealmDataBaseID(bool mustVerify) const
 {
   CRealm* Realm = GetRealm(mustVerify);
   if (Realm) return Realm->GetDataBaseID();
   return string();
 }
 
-void CGamePlayer::ResetConnection()
+void CGameUser::ResetConnection()
 {
   if (!m_Disconnected) {
     m_LastDisconnectTime = GetTime();
@@ -417,7 +417,7 @@ void CGamePlayer::ResetConnection()
   m_Socket->Reset();
 }
 
-bool CGamePlayer::Update(void* fd)
+bool CGameUser::Update(void* fd)
 {
   const int64_t Time = GetTime();
 
@@ -659,9 +659,9 @@ bool CGamePlayer::Update(void* fd)
     }
   }
 
-  // EventPlayerLeft sets the game in a state where this player is still in m_Players, but it has no associated slot.
+  // EventPlayerLeft sets the game in a state where this player is still in m_Users, but it has no associated slot.
   // It's therefore crucial to check the Abort flag that it sets to avoid modifying it further.
-  // As soon as the CGamePlayer::Update() call returns, EventPlayerDeleted takes care of erasing from the m_Players vector.
+  // As soon as the CGameUser::Update() call returns, EventPlayerDeleted takes care of erasing from the m_Users vector.
   if (!Abort) {
     // try to find out why we're requesting deletion
     // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
@@ -710,7 +710,7 @@ bool CGamePlayer::Update(void* fd)
   return false;
 }
 
-void CGamePlayer::Send(const std::vector<uint8_t>& data)
+void CGameUser::Send(const std::vector<uint8_t>& data)
 {
   // must start counting packet total from beginning of connection
   // but we can avoid buffering packets until we know the client is using GProxy++ since that'll be determined before the game starts
@@ -725,7 +725,7 @@ void CGamePlayer::Send(const std::vector<uint8_t>& data)
     m_Socket->PutBytes(data);
 }
 
-void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket)
+void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket)
 {
   // prevent potential session hijackers from stealing sudo access
   SudoModeEnd();
@@ -770,7 +770,7 @@ void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_
   m_Game->SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
 }
 
-int64_t CGamePlayer::GetTotalDisconnectTime() const
+int64_t CGameUser::GetTotalDisconnectTime() const
 {
   if (!m_Disconnected || !m_LastDisconnectTime) {
     return m_TotalDisconnectTime;
@@ -779,7 +779,7 @@ int64_t CGamePlayer::GetTotalDisconnectTime() const
   }
 }
 
-string CGamePlayer::GetDelayText(bool displaySync) const
+string CGameUser::GetDelayText(bool displaySync) const
 {
   string pingText, syncText;
   // Note: When someone is lagging, we actually clear their ping data.
@@ -812,7 +812,7 @@ string CGamePlayer::GetDelayText(bool displaySync) const
   }
 }
 
-string CGamePlayer::GetSyncText() const
+string CGameUser::GetSyncText() const
 {
   if (!m_Game->GetGameLoaded() || GetSyncCounter() >= m_Game->GetSyncCounter()) {
     return string();
@@ -834,13 +834,13 @@ string CGamePlayer::GetSyncText() const
   return behindTimeText;
 }
 
-bool CGamePlayer::GetIsSudoMode() const
+bool CGameUser::GetIsSudoMode() const
 {
   if (!m_SudoMode.has_value()) return false;
   return GetTime() < m_SudoMode.value();
 }
 
-bool CGamePlayer::CheckSudoMode()
+bool CGameUser::CheckSudoMode()
 {
   if (GetIsSudoMode()) return true;
   if (m_SudoMode.has_value()) {
@@ -852,7 +852,7 @@ bool CGamePlayer::CheckSudoMode()
   return false;
 }
 
-void CGamePlayer::SudoModeStart()
+void CGameUser::SudoModeStart()
 {
   if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
     Print(m_Game->GetLogPrefix() + "sudo session started by [" + m_Name + "]");
@@ -860,7 +860,7 @@ void CGamePlayer::SudoModeStart()
   m_SudoMode = GetTime() + 600;
 }
 
-void CGamePlayer::SudoModeEnd()
+void CGameUser::SudoModeEnd()
 {
   if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
     Print(m_Game->GetLogPrefix() + "sudo session ended by [" + m_Name + "]");
@@ -868,13 +868,13 @@ void CGamePlayer::SudoModeEnd()
   m_SudoMode = nullopt;
 }
 
-bool CGamePlayer::GetCanUsePublicChat() const
+bool CGameUser::GetCanUsePublicChat() const
 {
   if (!m_Observer || m_PowerObserver || (!m_Game->GetGameLoading() && !m_Game->GetGameLoaded())) return true;
   return !m_Game->GetUsesCustomReferees() && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
 }
 
-bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const
+bool CGameUser::GetIsOwner(optional<bool> assumeVerified) const
 {
   if (m_Owner) return true;
   bool isVerified = false;
@@ -888,7 +888,7 @@ bool CGamePlayer::GetIsOwner(optional<bool> assumeVerified) const
   );
 }
 
-bool CGamePlayer::UpdateReady()
+bool CGameUser::UpdateReady()
 {
   if (m_UserReady.has_value()) {
     m_Ready = m_UserReady.value();
@@ -923,12 +923,12 @@ bool CGamePlayer::UpdateReady()
   return m_Ready;
 }
 
-bool CGamePlayer::GetReadyReminderIsDue() const
+bool CGameUser::GetReadyReminderIsDue() const
 {
   return m_ReadyReminderLastTime + 20 < GetTime();
 }
 
-void CGamePlayer::SetReadyReminded()
+void CGameUser::SetReadyReminded()
 {
   m_ReadyReminderLastTime = GetTime();
 }

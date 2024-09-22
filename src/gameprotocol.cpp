@@ -49,7 +49,7 @@
 #include "aura.h"
 #include "util.h"
 #include "crc32.h"
-#include "gameplayer.h"
+#include "gameuser.h"
 #include "gameslot.h"
 #include "game.h"
 
@@ -525,7 +525,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_CHAT_FROM_HOST(uint8_t fromPID, co
   return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGamePlayer*> players)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGameUser*> players)
 {
   if (players.empty()) {
     Print("[GAMEPROTO] no laggers passed to SEND_W3GS_START_LAG");
@@ -542,7 +542,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGamePlayer*> pla
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_STOP_LAG(CGamePlayer* player)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_STOP_LAG(CGameUser* player)
 {
   std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_STOP_LAG, 9, 0, player->GetPID()};
   AppendByteArray(packet, GetTicks() - player->GetStartedLaggingTicks(), false);
@@ -865,7 +865,7 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
   // Note: Do NOT ban |, since it's used for so-called barcode names in Battle.net
   unordered_set<char> charsToRemoveAnyWhere = {
     // Characters used in commands
-    ',', '[', ']', '@',
+    ',', '@',
 
     // TAB, LF, CR, FF
     '\t', '\n', '\r', '\f',
@@ -873,9 +873,13 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
     // NULL, beep, BS, ESC, DEL, 
     '\x00', '\x07', '\x08', '\x1B', '\x7F'
   };
+  unordered_set<char> charsToRemoveConditional = {
+    '[', ']'
+  };
 
   // # only needs to be banned from names' start
-  // In particular, it must NOT be banned in trailing #\d+ patterns.
+  // In particular, it must NOT be banned in trailing #\d+ patterns,
+  // because they represent Battle Tags
   unordered_set<char> charsToRemoveStart = {'#', ' '};
   unordered_set<char> charsToRemoveEnd = {' ', '.'};
 
@@ -889,10 +893,40 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
     m_Name.end()
   );
 
+  // Ensure brackets are balanced
+  // I'd rather blanket ban them, but they may be in use as clan markers
+  {
+    bool balancedBrackets = true;
+    uint8_t bracketDepth = 0;
+    for (char ch : m_Name) {
+      if (ch == '[') {
+        ++bracketDepth;
+      } else if (ch == ']') {
+        if (bracketDepth <= 0) {
+          balancedBrackets = false;
+          break;
+        } else {
+          --bracketDepth;
+        }
+      }
+    }
+    if (!balancedBrackets) {
+      m_Name.erase(
+        std::remove_if(
+          m_Name.begin(), m_Name.end(), 
+          [&charsToRemoveConditional](const char& c) {
+             return charsToRemoveConditional.find(c) != charsToRemoveConditional.end();
+          }
+        ),
+        m_Name.end()
+      );
+    }
+  }
+
   // Remove bad leading characters (operators, and whitespace)
   {
     auto it = std::find_if(
-      m_Name.begin(), m_Name.end(), 
+     m_Name.begin(), m_Name.end(), 
      [&charsToRemoveStart](const char& c) {
          return charsToRemoveStart.find(c) == charsToRemoveStart.end();
      }

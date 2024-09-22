@@ -28,7 +28,7 @@
 
 #include "includes.h"
 #include "socket.h"
-#include "gameplayer.h"
+#include "gameuser.h"
 #include "config_net.h"
 #include "aura.h"
 #include "command.h"

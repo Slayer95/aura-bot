@@ -57,7 +57,7 @@
 #include "auradb.h"
 #include "realm.h"
 #include "map.h"
-#include "gameplayer.h"
+#include "gameuser.h"
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
 #include "game.h"
@@ -1103,7 +1103,7 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
     // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
     // Otherwise whisper the game creator that the (re)host failed.
 
-    if (m_CurrentLobby->GetNumHumanPlayers() != 0) {
+    if (m_CurrentLobby->GetNumJoinedPlayers() != 0) {
       m_CurrentLobby->SendAllChat("Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
     } else {
       switch (m_CurrentLobby->GetCreatedFromType()) {
@@ -1129,7 +1129,7 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
     // it's possible at least one refresh succeeded and therefore the game is still joinable on at least one battle.net (plus on the local network) but we don't keep track of that
     // we only close the game if it has no players since we support game rehosting (via !priv and !pub in the lobby)
 
-    if (m_CurrentLobby->GetNumHumanPlayers() == 0)
+    if (m_CurrentLobby->GetNumJoinedPlayers() == 0)
       m_CurrentLobby->SetExiting(true);
 
     m_CurrentLobby->SetRefreshError(true);

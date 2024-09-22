@@ -808,7 +808,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   // Ensure that all NON NULL columns are initialized here.
   m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&Statement));
   if (Statement == nullptr) {
-    Print("[SQLITE3] prepare error adding gameplayer on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error adding gameuser on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
@@ -820,7 +820,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
 
   int32_t RC = m_DB->Step(Statement);
   if (RC != SQLITE_DONE) {
-    Print("[SQLITE3] error initializing gameplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] error initializing gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
   }
   m_DB->Finalize(Statement);
 
@@ -828,7 +828,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
 
   if (Statement == nullptr)
   {
-    Print("[SQLITE3] prepare error updating gameplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error updating gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
@@ -840,7 +840,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   RC = m_DB->Step(Statement);
 
   if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error adding gameplayer on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] error adding gameuser on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
 
   m_DB->Finalize(Statement);
 }
@@ -861,7 +861,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
 
   if (Statement == nullptr)
   {
-    Print("[SQLITE3] prepare error adding gameplayer on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error adding gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
@@ -887,7 +887,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   if (!PlayerExisting)
   {
     // Something went wrong in CAuraDB::UpdateGamePlayerOnStart
-    Print("[SQLITE3] error adding gameplayer on end [" + lowerName + "@" + server + "] - no existing row");
+    Print("[SQLITE3] error adding gameuser on end [" + lowerName + "@" + server + "] - no existing row");
     return;
   }
 
@@ -897,7 +897,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
 
   if (Statement == nullptr)
   {
-    Print("[SQLITE3] prepare error updating gameplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error updating gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
@@ -911,7 +911,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   RC = m_DB->Step(Statement);
 
   if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error adding gameplayer on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] error adding gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
 
   m_DB->Finalize(Statement);
 }

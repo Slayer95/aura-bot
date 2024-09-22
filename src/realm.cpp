@@ -55,7 +55,7 @@
 #include "bncsutilinterface.h"
 #include "bnetprotocol.h"
 #include "map.h"
-#include "gameplayer.h"
+#include "gameuser.h"
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
 #include "game.h"
@@ -584,7 +584,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
   if (Event == CBNETProtocol::EID_WHISPER && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
     if (Message == "s" || Message == "sc" || Message == "spoofcheck") {
-      CGamePlayer* Player = m_Aura->m_CurrentLobby->GetPlayerFromName(User, true);
+      CGameUser* Player = m_Aura->m_CurrentLobby->GetPlayerFromName(User, true);
       if (Player) m_Aura->m_CurrentLobby->AddToRealmVerified(m_Config->m_HostName, Player, true);
       return;
     }
@@ -663,7 +663,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       else
         UserName = Message;
 
-      CGamePlayer* AboutPlayer = m_Aura->m_CurrentLobby->GetPlayerFromName(UserName, true);
+      CGameUser* AboutPlayer = m_Aura->m_CurrentLobby->GetPlayerFromName(UserName, true);
       if (AboutPlayer && AboutPlayer->GetRealmInternalID() == m_InternalServerID) {
         // handle spoof checking for current game
         // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)

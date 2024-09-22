@@ -31,7 +31,7 @@
 #include "config_commands.h"
 #include "realm.h"
 #include "game.h"
-#include "gameplayer.h"
+#include "gameuser.h"
 #include "irc.h"
 #include "map.h"
 #include "net.h"
@@ -90,7 +90,7 @@ public:
   CRealm*                       m_TargetRealm;
   CGame*                        m_SourceGame;
   CGame*                        m_TargetGame;
-  CGamePlayer*                  m_Player;
+  CGameUser*                  m_Player;
   CIRC*                         m_IRC;
 #ifndef DISABLE_DPP
   dpp::slashcommand_t*          m_DiscordAPI;
@@ -122,7 +122,7 @@ protected:
 
 public:
   // Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGamePlayer* player, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGameUser* player, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
@@ -184,12 +184,12 @@ public:
   void DoneAll(const std::string& message);
   void ErrorAll(const std::string& message);
   void SendAllUnlessHidden(const std::string& message);
-  CGamePlayer* GetTargetPlayer(const std::string& target);
-  CGamePlayer* RunTargetPlayer(const std::string& target);
-  CGamePlayer* GetTargetPlayerOrSelf(const std::string& target);
-  CGamePlayer* RunTargetPlayerOrSelf(const std::string& target);
-  bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player);
-  bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGamePlayer*& player);
+  CGameUser* GetTargetPlayer(const std::string& target);
+  CGameUser* RunTargetPlayer(const std::string& target);
+  CGameUser* GetTargetPlayerOrSelf(const std::string& target);
+  CGameUser* RunTargetPlayerOrSelf(const std::string& target);
+  bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& player);
+  bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& player);
   bool GetParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   bool RunParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   CRealm* GetTargetRealmOrCurrent(const std::string& target);

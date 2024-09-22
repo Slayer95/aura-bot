@@ -93,7 +93,7 @@
 #define CHAT_RECV_OBS 2
 
 class CAura;
-class CGamePlayer;
+class CGameUser;
 class CIncomingJoinRequest;
 class CIncomingAction;
 class CIncomingChatPlayer;
@@ -180,8 +180,8 @@ public:
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(std::queue<CIncomingAction*> actions, uint16_t sendInterval);
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(std::queue<CIncomingAction*> actions);
   std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromPID, const std::vector<uint8_t>& toPIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const std::string& message);
-  std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<CGamePlayer*> players);
-  std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGamePlayer* player);
+  std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<CGameUser*> players);
+  std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGameUser* player);
   std::vector<uint8_t> SEND_W3GS_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
   std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey);
   std::vector<uint8_t> SEND_W3GR_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit);

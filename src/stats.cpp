@@ -47,7 +47,7 @@
 #include "aura.h"
 #include "auradb.h"
 #include "game.h"
-#include "gameplayer.h"
+#include "gameuser.h"
 #include "gameprotocol.h"
 #include "util.h"
 
@@ -135,8 +135,8 @@ bool CStats::ProcessAction(CIncomingAction* Action)
                   VictimColor = static_cast<uint8_t>(stoul(VictimName));
                 } catch (...) {
                 }
-                CGamePlayer*   Killer       = m_Game->GetPlayerFromColor(KillerColor);
-                CGamePlayer*   Victim       = m_Game->GetPlayerFromColor(VictimColor);
+                CGameUser*   Killer       = m_Game->GetPlayerFromColor(KillerColor);
+                CGameUser*   Victim       = m_Game->GetPlayerFromColor(VictimColor);
 
                 if (!m_Players[KillerColor])
                   m_Players[KillerColor] = new CDBDotAPlayer();

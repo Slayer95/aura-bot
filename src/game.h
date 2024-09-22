@@ -86,6 +86,16 @@
 // CGame
 //
 
+/*
+ Nomenclature notes:
+ User: CGameUser instance, representing a remote game client that successfully joined the game.
+ Fake user: (PID, SID) comboes that may occupy game slots. Stored as 16 bits. Higher = SID, Lower = PID.
+            WC3 game client cannot distinguish them from actual users.
+            Aura never treats them as "users".
+ Player: User that does not occupy an observer slot.
+ Controller: Any of user, fake user, or AI, that does not occupy an observer slot.
+ */
+
 class CAura;
 class CTCPServer;
 class CUDPServer;
@@ -93,7 +103,7 @@ class CCommandContext;
 class CGameProtocol;
 class CGameConfig;
 class CGameConnection;
-class CGamePlayer;
+class CGameUser;
 class CGameSetup;
 class CMap;
 class CIncomingJoinRequest;
@@ -120,16 +130,16 @@ protected:
   CTCPServer*                    m_Socket;                        // listening socket
   CDBBan*                        m_LastLeaverBannable;                     // last ban for the !banlast command - this is a pointer to one of the items in m_Bannables
   std::vector<CDBBan*>           m_Bannables;                     // std::vector of potential ban data for the database
-  std::vector<CDBBan*>           m_ScopeBans;                    // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
+  std::vector<CDBBan*>           m_ScopeBans;                     // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
   CStats*                        m_Stats;                         // class to keep track of game stats such as kills/deaths/assists in dota
   CSaveGame*                     m_RestoredGame;
   std::vector<CGameSlot>         m_Slots;                         // std::vector of slots
-  std::vector<CDBGamePlayer*>    m_DBGamePlayers;                 // std::vector of potential gameplayer data for the database
-  std::vector<CGamePlayer*>      m_Players;                       // std::vector of players
+  std::vector<CDBGamePlayer*>    m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
+  std::vector<CGameUser*>      m_Users;                         // std::vector of players
   std::queue<CIncomingAction*>   m_Actions;                       // queue of actions to be sent
   std::vector<std::string>       m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>          m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
-  std::vector<uint16_t>          m_FakePlayers;                  // the fake player's PIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
+  std::vector<uint16_t>          m_FakeUsers;                     // the fake player's PIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   CMap*                          m_Map;                           // map data
   std::string                    m_GameName;                      // game name
   uint64_t                       m_GameHistoryId;
@@ -166,7 +176,7 @@ protected:
   std::optional<int64_t>         m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
   uint8_t                        m_PauseCounter;                  // Counter of all fake player pauses.
-  uint8_t                        m_NextSaveFakePlayer;            // Counter of all fake player saves.
+  uint8_t                        m_NextSaveFakeUser;            // Counter of all fake player saves.
   uint32_t                       m_RandomSeed;                    // the random seed sent to the Warcraft III clients
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
@@ -227,7 +237,7 @@ protected:
   std::vector<uint8_t>           m_GameDiscoveryInfo;
   uint16_t                       m_GameDiscoveryInfoVersionOffset;
   uint16_t                       m_GameDiscoveryInfoDynamicOffset;
-  std::map<CGamePlayer*, std::vector<CGamePlayer*>>  m_SyncPlayers;     //
+  std::map<CGameUser*, std::vector<CGameUser*>>  m_SyncPlayers;     //
   
 
 public:
@@ -288,8 +298,10 @@ public:
   uint32_t              GetSlotsOpen() const;
   bool                  HasSlotsOpen() const;
   bool                  GetIsSinglePlayerMode() const;
-  uint32_t              GetNumHumanOrFakeControllers() const;
-  uint8_t               GetNumHumanPlayers() const;
+  uint32_t              GetNumJoinedUsers() const;
+  uint32_t              GetNumJoinedUsersOrFake() const;
+  uint8_t               GetNumJoinedPlayers() const;
+  uint8_t               GetNumJoinedPlayersOrFakeUsers() const;
   uint8_t               GetNumOccupiedSlots() const;
   uint8_t               GetNumPotentialControllers() const;
   uint8_t               GetNumControllers() const;
@@ -309,9 +321,9 @@ public:
   std::vector<uint8_t>  GetAnnounceHeight() const;
 
   std::string           GetLogPrefix() const;
-  std::vector<const CGamePlayer*> GetPlayers() const;
-  std::vector<const CGamePlayer*> GetObservers() const;
-  std::vector<const CGamePlayer*> GetUnreadyPlayers() const;
+  std::vector<const CGameUser*> GetUsers() const;
+  std::vector<const CGameUser*> GetObservers() const;
+  std::vector<const CGameUser*> GetUnreadyPlayers() const;
   bool                  GetIsAutoStartDue() const;
   std::string           GetAutoStartText() const;
   std::string           GetReadyStatusText() const;
@@ -360,7 +372,7 @@ public:
   // generic functions to send packets to players
 
   void Send(CGameConnection* player, const std::vector<uint8_t>& data) const;
-  void Send(CGamePlayer* player, const std::vector<uint8_t>& data) const;
+  void Send(CGameUser* player, const std::vector<uint8_t>& data) const;
   void Send(uint8_t PID, const std::vector<uint8_t>& data) const;
   void Send(const std::vector<uint8_t>& PIDs, const std::vector<uint8_t>& data) const;
   void SendAll(const std::vector<uint8_t>& data) const;
@@ -368,23 +380,23 @@ public:
 
   // functions to send packets to players
 
-  void SendChat(uint8_t fromPID, CGamePlayer* player, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void SendChat(uint8_t fromPID, CGameUser* player, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void SendChat(uint8_t fromPID, uint8_t toPID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
-  void SendChat(CGamePlayer* player, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void SendChat(CGameUser* player, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void SendChat(uint8_t toPID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void SendAllChat(uint8_t fromPID, const std::string& message) const;
   void SendAllChat(const std::string& message) const;
   void SendAllSlotInfo();
-  void SendVirtualHostPlayerInfo(CGamePlayer* player) const;
-  void SendFakePlayersInfo(CGamePlayer* player) const;
-  void SendJoinedPlayersInfo(CGamePlayer* player) const;
+  void SendVirtualHostPlayerInfo(CGameUser* player) const;
+  void SendFakeUsersInfo(CGameUser* player) const;
+  void SendJoinedPlayersInfo(CGameUser* player) const;
   void SendVirtualHostPlayerInfo(CGameConnection* player) const;
-  void SendFakePlayersInfo(CGameConnection* player) const;
+  void SendFakeUsersInfo(CGameConnection* player) const;
   void SendJoinedPlayersInfo(CGameConnection* player) const;
-  void SendWelcomeMessage(CGamePlayer* player) const;
-  void SendOwnerCommandsHelp(const std::string& cmdToken, CGamePlayer* player) const;
-  void SendCommandsHelp(const std::string& cmdToken, CGamePlayer* player, const bool isIntro) const;
-  void SendLeftMessage(CGamePlayer* player, const bool sendChat) const;
+  void SendWelcomeMessage(CGameUser* player) const;
+  void SendOwnerCommandsHelp(const std::string& cmdToken, CGameUser* player) const;
+  void SendCommandsHelp(const std::string& cmdToken, CGameUser* player, const bool isIntro) const;
+  void SendLeftMessage(CGameUser* player, const bool sendChat) const;
   void SendEveryoneElseLeft() const;
   void SendAllActions();
   void SendAllAutoStart() const;
@@ -405,35 +417,35 @@ public:
   void SendGameDiscoveryDecreate() const;
 
   // events
-  // note: these are only called while iterating through the m_Potentials or m_Players std::vectors
+  // note: these are only called while iterating through the m_Potentials or m_Users std::vectors
   // therefore you can't modify those std::vectors and must use the player's m_DeleteMe member to flag for deletion
 
-  void EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd);
+  void EventPlayerDeleted(CGameUser* player, void* fd, void* send_fd);
   void EventLobbyLastPlayerLeaves();
   void ReportAllPings() const;
-  void ReportPlayerDisconnected(CGamePlayer* player);
+  void ReportPlayerDisconnected(CGameUser* player);
   bool CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   bool CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
-  bool EventPlayerDisconnectTimedOut(CGamePlayer* player);
-  void EventPlayerDisconnectSocketError(CGamePlayer* player);
-  void EventPlayerDisconnectConnectionClosed(CGamePlayer* player);
-  void EventPlayerDisconnectGameProtocolError(CGamePlayer* player, bool canRecover);
-  void EventPlayerKickHandleQueued(CGamePlayer* player);
-  void EventPlayerCheckStatus(CGamePlayer* player);
+  bool EventPlayerDisconnectTimedOut(CGameUser* player);
+  void EventPlayerDisconnectSocketError(CGameUser* player);
+  void EventPlayerDisconnectConnectionClosed(CGameUser* player);
+  void EventPlayerDisconnectGameProtocolError(CGameUser* player, bool canRecover);
+  void EventPlayerKickHandleQueued(CGameUser* player);
+  void EventPlayerCheckStatus(CGameUser* player);
   bool EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest);
-  void EventPlayerLeft(CGamePlayer* player);
-  void EventPlayerLoaded(CGamePlayer* player);
-  bool EventPlayerAction(CGamePlayer* player, CIncomingAction* action);
-  void EventPlayerKeepAlive(CGamePlayer* player);
-  void EventPlayerChatToHost(CGamePlayer* player, CIncomingChatPlayer* chatPlayer);
-  void EventPlayerChangeTeam(CGamePlayer* player, uint8_t team);
-  void EventPlayerChangeColor(CGamePlayer* player, uint8_t colour);
-  void EventPlayerChangeRace(CGamePlayer* player, uint8_t race);
-  void EventPlayerChangeHandicap(CGamePlayer* player, uint8_t handicap);
-  void EventPlayerDropRequest(CGamePlayer* player);
-  bool EventPlayerMapSize(CGamePlayer* player, CIncomingMapSize* mapSize);
-  void EventPlayerPongToHost(CGamePlayer* player);
-  void EventPlayerMapReady(CGamePlayer* player);
+  void EventPlayerLeft(CGameUser* player);
+  void EventPlayerLoaded(CGameUser* player);
+  bool EventPlayerAction(CGameUser* player, CIncomingAction* action);
+  void EventPlayerKeepAlive(CGameUser* player);
+  void EventPlayerChatToHost(CGameUser* player, CIncomingChatPlayer* chatPlayer);
+  void EventPlayerChangeTeam(CGameUser* player, uint8_t team);
+  void EventPlayerChangeColor(CGameUser* player, uint8_t colour);
+  void EventPlayerChangeRace(CGameUser* player, uint8_t race);
+  void EventPlayerChangeHandicap(CGameUser* player, uint8_t handicap);
+  void EventPlayerDropRequest(CGameUser* player);
+  bool EventPlayerMapSize(CGameUser* player, CIncomingMapSize* mapSize);
+  void EventPlayerPongToHost(CGameUser* player);
+  void EventPlayerMapReady(CGameUser* player);
 
   // these events are called outside of any iterations
 
@@ -446,7 +458,7 @@ public:
   bool GetIsRemakeable();
   void Remake();
 
-  void AddProvisionalBannableUser(const CGamePlayer* player);
+  void AddProvisionalBannableUser(const CGameUser* player);
   void ClearBannableUsers();
   void UpdateBannableUsers();
   void CheckPlayerObfuscation();
@@ -454,19 +466,19 @@ public:
   // other functions
 
   uint8_t GetSIDFromPID(uint8_t PID) const;
-  CGamePlayer* GetPlayerFromPID(uint8_t PID) const;
-  CGamePlayer* GetPlayerFromSID(uint8_t SID) const;
-  CGamePlayer* GetPlayerFromName(std::string name, bool sensitive) const;
+  CGameUser* GetPlayerFromPID(uint8_t PID) const;
+  CGameUser* GetPlayerFromSID(uint8_t SID) const;
+  CGameUser* GetPlayerFromName(std::string name, bool sensitive) const;
   bool         HasOwnerSet() const;
   bool         HasOwnerInGame() const;
-  uint8_t      GetPlayerFromNamePartial(const std::string& name, CGamePlayer*& matchPlayer) const;
+  uint8_t      GetPlayerFromNamePartial(const std::string& name, CGameUser*& matchPlayer) const;
   uint8_t      GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
   CDBGamePlayer* GetDBPlayerFromColor(uint8_t colour) const;
-  CGamePlayer* GetPlayerFromColor(uint8_t colour) const;
+  CGameUser* GetPlayerFromColor(uint8_t colour) const;
   uint8_t              GetNewPID() const;
   uint8_t              GetNewTeam() const;
   uint8_t              GetNewColor() const;
-  uint8_t              SimulateActionPID(const uint8_t actionType, CGamePlayer* player, const bool isDisconnect);
+  uint8_t              SimulateActionPID(const uint8_t actionType, CGameUser* player, const bool isDisconnect);
   uint8_t              HostToMapCommunicationPID() const;
   bool                 GetHasAnyActiveTeam() const;
   bool                 GetHasAnyPlayer() const;
@@ -484,8 +496,8 @@ public:
   uint8_t GetEmptySID(uint8_t team, uint8_t PID) const;
   uint8_t GetEmptyObserverSID() const;
   inline bool GetHMCEnabled() const { return m_HMCEnabled; }
-  void SendIncomingPlayerInfo(CGamePlayer* player) const;
-  CGamePlayer* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  void SendIncomingPlayerInfo(CGameUser* player) const;
+  CGameUser* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t PID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool CreateVirtualHost();
   bool DeleteVirtualHost();
   bool GetHasPvPGNPlayers() const;
@@ -511,16 +523,16 @@ public:
 
   void OpenObserverSlots();
   void CloseObserverSlots();
-  uint8_t FindFakePlayerFromSID(const uint8_t SID) const;
-  void CreateFakePlayerInner(const uint8_t SID, const uint8_t PID, const std::string& name);
-  bool CreateFakePlayer(const bool useVirtualHostName);
+  uint8_t FindFakeUserFromSID(const uint8_t SID) const;
+  void CreateFakeUserInner(const uint8_t SID, const uint8_t PID, const std::string& name);
+  bool CreateFakeUser(const bool useVirtualHostName);
   bool CreateHMCPlayer();
   bool CreateFakeObserver(const bool useVirtualHostName);
-  bool DeleteFakePlayer(uint8_t SID);
+  bool DeleteFakeUser(uint8_t SID);
   bool GetIsFakeObserver(const uint16_t fakePlayer) const;
 
   uint8_t FakeAllSlots();
-  void DeleteFakePlayers();
+  void DeleteFakeUsers();
   void OpenAllSlots();
   uint8_t GetFirstCloseableSlot();
   bool CloseAllTeamSlots(const uint8_t team);
@@ -530,8 +542,8 @@ public:
   bool ComputerAllSlots(const uint8_t skill);
   void ShuffleSlots();
 
-  void ReportSpoofed(const std::string& server, CGamePlayer* player);
-  void AddToRealmVerified(const std::string& server, CGamePlayer* player, bool sendMessage);
+  void ReportSpoofed(const std::string& server, CGameUser* player);
+  void AddToRealmVerified(const std::string& server, CGameUser* player, bool sendMessage);
   void AddToReserved(const std::string& name);
   void RemoveFromReserved(const std::string& name);
   void RemoveAllReserved();
@@ -545,8 +557,8 @@ public:
   bool RemoveScopeBan(const std::string& name, const std::string& hostName);
 
   std::vector<uint32_t> GetPlayersFramesBehind() const;
-  std::vector<CGamePlayer*> GetLaggingPlayers() const;
-  std::vector<CGamePlayer*> CalculateNewLaggingPlayers() const;
+  std::vector<CGameUser*> GetLaggingPlayers() const;
+  std::vector<CGameUser*> CalculateNewLaggingPlayers() const;
   void ResetLatency();
   void NormalizeSyncCounters() const;
   bool GetIsReserved(const std::string& name) const;
@@ -565,11 +577,11 @@ public:
   bool StopPlayers(const std::string& reason, const bool allowLocal);
   void StopLaggers(const std::string& reason);
   void StopDesynchronized(const std::string& reason);
-  bool Pause(CGamePlayer* player, const bool isDisconnect);
+  bool Pause(CGameUser* player, const bool isDisconnect);
   bool Resume();
   std::string GetSaveFileName(const uint8_t PID) const;
-  bool Save(CGamePlayer* player, const bool isDisconnect);
-  bool TrySaveOnDisconnect(CGamePlayer* player, const bool isVoluntary);
+  bool Save(CGameUser* player, const bool isDisconnect);
+  bool TrySaveOnDisconnect(CGameUser* player, const bool isVoluntary);
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t PID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);
   bool SendHMC(const std::string& message);
@@ -617,7 +629,7 @@ public:
   void ResetLayout(const bool quiet);
   void ResetLayoutIfNotMatching();
   bool SetLayoutFFA();
-  bool SetLayoutOneVsAll(const CGamePlayer* player);
+  bool SetLayoutOneVsAll(const CGameUser* player);
   bool SetLayoutTwoTeams();
   bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
   bool SetLayoutCompact();

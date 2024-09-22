@@ -69,7 +69,7 @@
     <ClCompile Include="game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gameplayer.cpp">
+    <ClCompile Include="gameuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gameprotocol.cpp">
@@ -179,7 +179,7 @@
     <ClInclude Include="game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="gameplayer.h">
+    <ClInclude Include="gameuser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gameprotocol.h">

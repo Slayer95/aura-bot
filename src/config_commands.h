@@ -60,7 +60,7 @@ class CCommandConfig
 {
 public:
   bool m_Enabled;
-  bool m_RequireVerified;                          // whether commands are enabled or not, and whether they require verification if sent by a CGamePlayer
+  bool m_RequireVerified;                          // whether commands are enabled or not, and whether they require verification if sent by a CGameUser
 
   uint8_t m_CommonBasePermissions;
   uint8_t m_HostingBasePermissions;

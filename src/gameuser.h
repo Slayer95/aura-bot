@@ -114,10 +114,10 @@ public:
 };
 
 //
-// CGamePlayer
+// CGameUser
 //
 
-class CGamePlayer
+class CGameUser
 {
 public:
   CGameProtocol* m_Protocol;
@@ -206,8 +206,8 @@ protected:
   bool m_DeleteMe;
 
 public:
-  CGamePlayer(CGame* game, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
-  ~CGamePlayer();
+  CGameUser(CGame* game, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
+  ~CGameUser();
 
   uint32_t GetOperationalRTT() const;
   uint32_t GetDisplayRTT() const;
@@ -380,7 +380,7 @@ public:
   void ResetConnection();
 };
 
-inline std::string PlayersToNameListString(std::vector<const CGamePlayer*> playerList, bool useRealNames = false) {
+inline std::string PlayersToNameListString(std::vector<const CGameUser*> playerList, bool useRealNames = false) {
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {
@@ -392,7 +392,7 @@ inline std::string PlayersToNameListString(std::vector<const CGamePlayer*> playe
   }
   return JoinVector(playerNames, ", ", false);
 }
-inline std::string PlayersToNameListString(std::vector<CGamePlayer*> playerList, bool useRealNames = false) {
+inline std::string PlayersToNameListString(std::vector<CGameUser*> playerList, bool useRealNames = false) {
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {
