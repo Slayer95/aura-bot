@@ -109,7 +109,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    while (Bytes.size() >= 4) {
+    if (!m_DeleteMe) while (Bytes.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
       const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
@@ -477,7 +477,7 @@ bool CGamePlayer::Update(void* fd)
     CIncomingMapSize*    MapSize;
     uint32_t             Pong;
 
-    while (Bytes.size() >= 4)
+    if (!m_DeleteMe) while (Bytes.size() >= 4)
     {
       // bytes 2 and 3 contain the length of the packet
       const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
@@ -727,6 +727,9 @@ void CGamePlayer::Send(const std::vector<uint8_t>& data)
 
 void CGamePlayer::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket)
 {
+  // prevent potential session hijackers from stealing sudo access
+  SudoModeEnd();
+
   delete m_Socket;
   m_Socket = NewSocket;
   m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_RECONNECT(m_TotalPacketsReceived));

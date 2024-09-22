@@ -273,6 +273,7 @@ void CGame::Reset(const bool saveStats)
     // add non-dota stats
     Print(GetLogPrefix() + "saving game data to database");
     for (auto& dbPlayer : m_DBGamePlayers) {
+      // exclude observers
       if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
         continue;
       }
@@ -2985,10 +2986,19 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
     SendLeftMessage(player, m_GameLoaded);
   }
 
-  // abort the countdown if there was one in progress
+  // abort the countdown if there was one in progress, but only if the player who left is actually a controller, or otherwise relevant.
   if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded) {
-    SendAllChat("Countdown stopped because [" + player->GetName() + "] left!");
-    m_CountDownStarted = false;
+    if (!player->GetIsObserver() || GetSlotsOccupied() < m_HCLCommandString.size()) {
+      SendAllChat("Countdown stopped because [" + player->GetName() + "] left!");
+      m_CountDownStarted = false;
+    } else {
+      // Replace observers with fake observers, to ensure the integrity of game slots.
+      const uint8_t SID = GetSIDFromPID(player->GetPID());
+      CreateFakePlayerInner(SID, GetNewPID(), "User[" + ToDecString(SID + 1) + "]");
+      CGameSlot* slot = GetSlot(SID);
+      slot->SetTeam(m_Map->GetVersionMaxSlots());
+      slot->SetColor(m_Map->GetVersionMaxSlots());
+    }
   }
 
   // abort the votekick
@@ -3002,10 +3012,10 @@ void CGame::EventPlayerDeleted(CGamePlayer* player, void* fd, void* send_fd)
   // record everything we need to know about the player for storing in the database later
   // since we haven't stored the game yet (it's not over yet!) we can't link the gameplayer to the game
   // see the destructor for where these CDBGamePlayers are stored in the database
-  // we could have inserted an incomplete record on creation and updated it later but this makes for a cleaner int32_terface
+  // we could have inserted an incomplete record on creation and updated it later but this makes for a cleaner interface
 
   if (m_GameLoading || m_GameLoaded) {
-    // Update stats
+    // When a player leaves from an already loaded game, their slot remains unchanged
     const CGameSlot* slot = InspectSlot(GetSIDFromPID(player->GetPID()));
     CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(slot->GetColor());
     if (dbPlayer) {
@@ -3078,6 +3088,8 @@ void CGame::ResetOwnerSeen()
 
 void CGame::ReportPlayerDisconnected(CGamePlayer* player)
 {
+  player->SudoModeEnd();
+
   int64_t Time = GetTime(), Ticks = GetTicks();
   if (!player->GetLagging()) {
     ResetDropVotes();
@@ -4922,9 +4934,14 @@ uint8_t CGame::GetPlayerFromNamePartial(const string& name, CGamePlayer*& matchP
 
 CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
 {
+  if (colour == m_Map->GetVersionMaxSlots()) {
+    // Observers are not stored
+    return nullptr;
+  }
   for (const auto& player : m_DBGamePlayers) {
-    if (player->GetColor() == colour)
+    if (player->GetColor() == colour) {
       return player;
+    }
   }
   return nullptr;
 }

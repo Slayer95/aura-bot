@@ -3644,6 +3644,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      CGamePlayer* targetPlayer = m_TargetGame->GetPlayerFromName(targetName, false);
+      if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
+        targetPlayer->SetDeleteMe(true);
+        targetPlayer->SetLeftReason("was banned by player [" + m_FromName + "]");
+        targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
+        m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
+      }
+
       SendReply("[" + targetName + "@" + targetHostName + "] banned from joining this game.");
       Print(m_TargetGame->GetLogPrefix() + "[" + targetName + "@" + targetHostName + "|" + targetIP  + "] banned from joining game.");
       break;
@@ -3687,6 +3695,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       SendReply("User [" + targetName + "@" + targetHostName + "] will now be allowed to join this game.");
+      break;
     }
 
     //
@@ -3756,6 +3765,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Failed to execute ban.");
         break;
       }
+
+      CGamePlayer* targetPlayer = m_TargetGame->GetPlayerFromName(targetName, false);
+      if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
+        targetPlayer->SetDeleteMe(true);
+        targetPlayer->SetLeftReason("was persistently banned by player [" + m_FromName + "]");
+        targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
+        m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromPID(targetPlayer->GetPID()), false);
+      }
+
       SendReply("[" + targetName + "@" + targetHostName + "] banned.");
       break;
     }
@@ -6378,7 +6396,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_Player->SudoModeStart();
         SendReply("Sudo session started. You will have unrestricted access to all commands for 10 minutes.");
         SendReply("Your session will be over as soon as you leave the game.");
-        SendReply("WARN: Make sure NOT to enable sudo session over a wireless Internet connection (use per-command sudo to avoid getting hacked.)");
+        SendReply("WARN: Make sure NOT to enable sudo session over a wireless Internet connection.");
+        SendReply("(Prefer using per-command sudo to avoid getting hacked.)");
       } else {
         m_Player->SudoModeEnd();
         SendReply("Sudo session ended.");
