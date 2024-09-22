@@ -401,7 +401,7 @@ void CCommandContext::UpdatePermissions()
   if (m_DiscordAPI) {
 #ifndef DISABLE_DPP
     if (m_Aura->m_Discord->GetIsSudoer(m_FromIdentifier)) {
-      m_Permissions = 0xFFFF &~ (USER_PERMISSIONS_BOT_SUDO_OK);
+      m_Permissions = SET_USER_PERMISSIONS_ALL &~ (USER_PERMISSIONS_BOT_SUDO_OK);
     } else if (m_DiscordAPI->command.get_issuing_user().is_verified()) {
       m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
     }
@@ -448,7 +448,7 @@ void CCommandContext::UpdatePermissions()
   // Sudo is a permission system separate from channels.
   if (IsSudoSpoofable) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
   if (m_Player && m_Player->CheckSudoMode()) {
-    m_Permissions = 0xFFFF;
+    m_Permissions = SET_USER_PERMISSIONS_ALL;
   }
 }
 
@@ -566,7 +566,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     transform(begin(Command), end(Command), begin(Command), [](char c) { return static_cast<char>(std::tolower(c)); });
     Result = make_pair(Command, Payload);
     //m_Permissions |= USER_PERMISSIONS_BOT_SUDO_OK;
-    m_Permissions = 0xFFFF;
+    m_Permissions = SET_USER_PERMISSIONS_ALL;
   }
   m_Aura->UnholdContext(m_Aura->m_SudoContext);
   m_Aura->m_SudoContext = nullptr;
@@ -5786,6 +5786,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_IsBroadcast, &std::cout);
       }
+      // Without permission overrides, sudoer would need to type
+      // !eg GAMEID, su COMMAND
+      // !eg GAMEID, sudo TOKEN COMMAND
+      //
+      // Instead, we grant all permissions, since !eg requires sudo anyway.
+      ctx->SetPermissions(SET_USER_PERMISSIONS_ALL);
+      ctx->UpdatePermissions();
       ctx->Run(cmdToken, SubCmd, SubPayload);
       m_Aura->UnholdContext(ctx);
       break;
