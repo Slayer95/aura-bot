@@ -4518,7 +4518,7 @@ void CGame::EventGameStarted()
   // record the number of starting players
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers();
-  Print(GetLogPrefix() + "started loading. " + ToDecString(GetNumJoinedPlayers()) + " p |" + ToDecString(GetNumJoinedObservers()) + " obs |" + to_string(m_FakeUsers.size()) + " fake | " + ToDecString(m_ControllersWithMap) + " controllers");
+  Print(GetLogPrefix() + "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size()) + " fake | " + ToDecString(m_ControllersWithMap) + " controllers");
 
   // enable stats
 
@@ -4693,7 +4693,7 @@ void CGame::EventGameLoaded()
 {
   CheckPlayerObfuscation();
 
-  Print(GetLogPrefix() + "finished loading. " + ToDecString(GetNumJoinedPlayers()) + " p |" + ToDecString(GetNumJoinedObservers()) + " obs |" + to_string(m_FakeUsers.size()) + " fake");
+  Print(GetLogPrefix() + "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size()) + " fake");
 
   // send shortest, longest, and personal load times to each player
 
