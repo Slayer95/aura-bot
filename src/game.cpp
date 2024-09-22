@@ -3029,7 +3029,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     if (user->GetLagging()) {
       SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(user));
     }
-    SendLeftMessage(user, m_GameLoaded);
+    SendLeftMessage(user, m_GameLoaded && !user->GetIsObserver());
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
@@ -3785,7 +3785,7 @@ void CGame::EventUserLeft(CGameUser* user)
 
 void CGame::EventUserLoaded(CGameUser* user)
 {
-  string role = user->GetIsObserver() ? "observer" : "user";
+  string role = user->GetIsObserver() ? "observer" : "player";
   Print(GetLogPrefix() + role + " [" + user->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
   SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(user->GetUID()));
 
