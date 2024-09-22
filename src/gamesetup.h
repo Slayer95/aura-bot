@@ -213,6 +213,7 @@ public:
   std::optional<std::string>                      m_HCL;
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
+  std::optional<bool>                             m_NotifyJoins;
 
   std::optional<uint8_t>  m_NumPlayersToStartGameOver;
   std::optional<uint8_t>  m_PlayersReadyMode;
@@ -311,6 +312,7 @@ public:
   void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
+  void SetNotifyJoins(const bool nNotifyJoins) { m_NotifyJoins = nNotifyJoins; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
   void SetContext(CCommandContext* nCtx) { m_Ctx = nCtx; }
   void SetMapReadyCallback(const uint8_t action, const std::string& data) {

@@ -141,6 +141,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_option("--crossplay", m_GameCrossplayVersions, "Adds support for game clients on the given version to crossplay. Repeatable.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
+  app.add_flag(  "--notify-joins,--no-notify-joins}", m_GameNotifyJoins, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.")->check(CheckIsValidHCL);
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");

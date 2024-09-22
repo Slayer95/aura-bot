@@ -148,7 +148,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT(m_IndexVirtualHostName)
   INHERIT(m_LobbyVirtualHostName)
 
-  INHERIT(m_NotifyJoins)
+  INHERIT_CUSTOM(m_NotifyJoins, m_NotifyJoins)
   INHERIT(m_IgnoredNotifyJoinPlayers)
   INHERIT(m_LoggedWords)
   INHERIT(m_DesyncHandler)

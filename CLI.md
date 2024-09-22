@@ -420,6 +420,13 @@ This flag enables automatic rehosting of the same game setup so long as Aura is 
 
 This flag is disabled by default.
 
+## \`--notify-joins\`, \`--no-notify-joins\`
+
+This flag enables sound notifications when a player joins the hosted game.
+
+This flag is equivalent to to ``<ui.notify_joins.enabled>`` in `config.ini`.
+This flag is disabled by default.
+
 ## \`--ffa\`
 
 This flag forces players joining the game into different teams.
