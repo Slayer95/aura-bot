@@ -5872,22 +5872,28 @@ void CGame::SetSlotTeamAndColorAuto(const uint8_t SID)
       // Player remains as observer until someone picks them.
       break;
     default: {
-      if (m_Map->GetMapNumControllers() == 2) {
-        // Streamline team selection for 1v1 maps
-        uint8_t otherTeam = m_Map->GetVersionMaxSlots();
-        for (const auto& slot : m_Slots) {
-          if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
-            otherTeam = slot.GetTeam();
-            break;
-          }
+      bool otherTeamError = false;
+      uint8_t otherTeam = m_Map->GetVersionMaxSlots();
+      uint8_t numSkipped = 0;
+      for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+        const CGameSlot* slot = InspectSlot(i);
+        if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+          if (i < SID) ++numSkipped;
+          continue;
         }
-        if (otherTeam < 2) {
-          slot->SetTeam(1 - otherTeam);
+        if (slot->GetTeam() == m_Map->GetVersionMaxSlots()) {
+          if (i < SID) ++numSkipped;
+        } else if (otherTeam != m_Map->GetVersionMaxSlots()) {
+          otherTeamError = true;
         } else {
-          slot->SetTeam(SID % m_Map->GetMapNumTeams());
+          otherTeam = slot->GetTeam();
         }
+      }
+      if (m_Map->GetMapNumControllers() == 2 && !otherTeamError && otherTeam < 2) {
+        // Streamline team selection for 1v1 maps
+        slot->SetTeam(1 - otherTeam);
       } else {
-        slot->SetTeam(SID % m_Map->GetMapNumTeams());
+        slot->SetTeam((SID - numSkipped) % m_Map->GetMapNumTeams());
       }
       break;
     }
