@@ -3824,6 +3824,7 @@ bool CGame::EventPlayerAction(CGameUser* player, CIncomingAction* action)
         m_Paused = true;
         break;
       case ACTION_RESUME:
+        Print(GetLogPrefix() + "player [" + player->GetName() + "] resumed the game");
         m_Paused = false;
         break;
       default:
