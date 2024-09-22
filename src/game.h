@@ -301,6 +301,7 @@ public:
   uint32_t              GetNumJoinedUsers() const;
   uint32_t              GetNumJoinedUsersOrFake() const;
   uint8_t               GetNumJoinedPlayers() const;
+  uint8_t               GetNumJoinedObservers() const;
   uint8_t               GetNumJoinedPlayersOrFakeUsers() const;
   uint8_t               GetNumOccupiedSlots() const;
   uint8_t               GetNumPotentialControllers() const;

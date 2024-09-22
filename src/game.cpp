@@ -698,6 +698,22 @@ uint8_t CGame::GetNumJoinedPlayers() const
   return NumHumanPlayers;
 }
 
+uint8_t CGame::GetNumJoinedObservers() const
+{
+  uint8_t NumHumanPlayers = 0;
+
+  for (const auto& player : m_Users) {
+    if (player->GetDeleteMe())
+      continue;
+    if (!player->GetIsObserver())
+      continue;
+
+    ++NumHumanPlayers;
+  }
+
+  return NumHumanPlayers;
+}
+
 uint8_t CGame::GetNumJoinedPlayersOrFakeUsers() const
 {
   uint8_t NumHumanPlayers = static_cast<uint8_t>(m_FakeUsers.size());
@@ -4502,7 +4518,7 @@ void CGame::EventGameStarted()
   // record the number of starting players
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers();
-  Print(GetLogPrefix() + "started loading. Players: " + ToDecString(m_StartPlayers) + " (" + to_string(m_FakeUsers.size()) + "are fake.) Controllers: " + ToDecString(m_ControllersWithMap));
+  Print(GetLogPrefix() + "started loading. " + ToDecString(GetNumJoinedPlayers()) + " p |" + ToDecString(GetNumJoinedObservers()) + " obs |" + to_string(m_FakeUsers.size()) + " fake | " + ToDecString(m_ControllersWithMap) + " controllers");
 
   // enable stats
 
@@ -4677,8 +4693,7 @@ void CGame::EventGameLoaded()
 {
   CheckPlayerObfuscation();
 
-  const uint8_t finishedLoadingPlayers = GetNumJoinedPlayersOrFakeUsers();
-  Print(GetLogPrefix() + "finished loading. Players: " + ToDecString(finishedLoadingPlayers) + " (" + to_string(m_FakeUsers.size()) + "are fake.)");
+  Print(GetLogPrefix() + "finished loading. " + ToDecString(GetNumJoinedPlayers()) + " p |" + ToDecString(GetNumJoinedObservers()) + " obs |" + to_string(m_FakeUsers.size()) + " fake");
 
   // send shortest, longest, and personal load times to each player
 
@@ -4705,8 +4720,9 @@ void CGame::EventGameLoaded()
     SendAllChat("Shortest load by player [" + Shortest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
     SendAllChat("Longest load by player [" + Longest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
   }
-  if (finishedLoadingPlayers < m_StartPlayers) {
-    SendAllChat(ToDecString(m_StartPlayers - finishedLoadingPlayers) + " player(s) disconnected during game load.");
+  const uint8_t numDisconnectedPlayers = m_StartPlayers - GetNumJoinedPlayersOrFakeUsers();
+  if (0 < numDisconnectedPlayers) {
+    SendAllChat(ToDecString(numDisconnectedPlayers) + " player(s) disconnected during game load.");
   }
   if (!DesyncedPlayers.empty()) {
     if (GetHasDesyncHandler()) {
@@ -5856,7 +5872,23 @@ void CGame::SetSlotTeamAndColorAuto(const uint8_t SID)
       // Player remains as observer until someone picks them.
       break;
     default: {
-      slot->SetTeam(SID % m_Map->GetMapNumTeams());
+      if (m_Map->GetMapNumControllers() == 2) {
+        // Streamline team selection for 1v1 maps
+        uint8_t otherTeam = m_Map->GetVersionMaxSlots();
+        for (const auto& slot : m_Slots) {
+          if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
+            otherTeam = slot.GetTeam();
+            break;
+          }
+        }
+        if (otherTeam < 2) {
+          slot->SetTeam(1 - otherTeam);
+        } else {
+          slot->SetTeam(SID % m_Map->GetMapNumTeams());
+        }
+      } else {
+        slot->SetTeam(SID % m_Map->GetMapNumTeams());
+      }
       break;
     }
   }
