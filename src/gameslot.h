@@ -99,7 +99,7 @@ class CGameSlot
 {
 private:
   uint8_t m_Type;
-  uint8_t m_PID;            // player id
+  uint8_t m_UID;            // player id
   uint8_t m_DownloadStatus; // download status (0% to 100%)
   uint8_t m_SlotStatus;     // slot status (0 = open, 1 = closed, 2 = occupied)
   uint8_t m_Computer;       // computer (0 = no, 1 = yes, 2 = forced)
@@ -112,10 +112,10 @@ private:
 
 public:
   explicit CGameSlot(const std::vector<uint8_t>& n);
-  CGameSlot(const uint8_t nType, const uint8_t nPID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType = 1, const uint8_t nHandicap = 100);
+  CGameSlot(const uint8_t nType, const uint8_t nUID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType = 1, const uint8_t nHandicap = 100);
   ~CGameSlot();
 
-  inline uint8_t              GetPID() const { return m_PID; }
+  inline uint8_t              GetUID() const { return m_UID; }
   inline uint8_t              GetDownloadStatus() const { return m_DownloadStatus; }
   inline uint8_t              GetSlotStatus() const { return m_SlotStatus; }
   inline uint8_t              GetComputer() const { return m_Computer; } // computer bit
@@ -130,10 +130,10 @@ public:
   inline bool                 GetIsPlayerOrFake() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == SLOTCOMP_NO; }
   inline bool                 GetIsComputer() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == SLOTCOMP_YES; }
   inline bool                 GetIsSelectable() const { return m_Type <= SLOTTYPE_USER; }
-  inline std::vector<uint8_t> GetProtocolArray() const { return std::vector<uint8_t>{m_PID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap}; }
-  inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_PID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap, m_Type}; }
+  inline std::vector<uint8_t> GetProtocolArray() const { return std::vector<uint8_t>{m_UID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap}; }
+  inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_UID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap, m_Type}; }
 
-  inline void SetPID(uint8_t nPID) { m_PID = nPID; }
+  inline void SetUID(uint8_t nUID) { m_UID = nUID; }
   inline void SetDownloadStatus(uint8_t nDownloadStatus) { m_DownloadStatus = nDownloadStatus; }
   inline void SetSlotStatus(uint8_t nSlotStatus) { m_SlotStatus = nSlotStatus; }
   inline void SetComputer(uint8_t nComputer) { m_Computer = nComputer; }

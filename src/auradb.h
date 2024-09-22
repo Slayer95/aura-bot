@@ -140,8 +140,8 @@ CREATE TABLE games (
     crc32 TEXT NOT NULL,
     replay TEXT,
     playernames TEXT NOT NULL, // comma-separated list of players-names; fake player is empty name
-    playerids TEXT NOT NULL, // space-separated bytelist (PIDs, then SIDs, then colors)
-    saveids TEXT // space-separated bytelist (PIDs at time of recentmost save)
+    playerids TEXT NOT NULL, // space-separated bytelist (UIDs, then SIDs, then colors)
+    saveids TEXT // space-separated bytelist (UIDs at time of recentmost save)
 )
 
 CREATE TABLE commands (
@@ -364,12 +364,12 @@ private:
   std::string m_IP;
   uint64_t    m_LoadingTime;
   uint64_t    m_LeftTime;
-  /*uint8_t     m_PID;
+  /*uint8_t     m_UID;
   uint8_t     m_SID;*/
   uint8_t     m_Color;
 
 public:
-  CDBGamePlayer(std::string name, std::string server, std::string ip, /*uint8_t nPID, uint8_t nSID,*/ uint8_t nColor);
+  CDBGamePlayer(std::string name, std::string server, std::string ip, /*uint8_t nUID, uint8_t nSID,*/ uint8_t nColor);
   ~CDBGamePlayer();
 
   inline std::string GetName() const { return m_Name; }
@@ -377,7 +377,7 @@ public:
   inline std::string GetIP() const { return m_IP; }
   inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
   inline uint64_t    GetLeftTime() const { return m_LeftTime; }
-  /*inline uint8_t     GetPID() const { return m_PID; }
+  /*inline uint8_t     GetUID() const { return m_UID; }
   inline uint8_t     GetSID() const { return m_SID; }*/
   inline uint8_t     GetColor() const { return m_Color; }
 
@@ -393,7 +393,7 @@ class CDBGameSummary
 {
 private:
   uint64_t m_ID;
-  std::vector<uint8_t> m_PIDs;
+  std::vector<uint8_t> m_UIDs;
   std::vector<uint8_t> m_SIDs;
   std::vector<uint8_t> m_Colors;
   std::vector<std::string> m_PlayerNames;
@@ -403,7 +403,7 @@ public:
   ~CDBGameSummary();
 
   inline uint64_t GetID() const { return m_ID; }
-  inline const std::vector<uint8_t>& GetPIDs() const { return m_PIDs; }
+  inline const std::vector<uint8_t>& GetUIDs() const { return m_UIDs; }
   inline const std::vector<uint8_t>& GetSIDs() const { return m_SIDs; }
   inline const std::vector<uint8_t>& GetColors() const { return m_Colors; }
   inline const std::vector<std::string>& GetPlayerNames() const { return m_PlayerNames; }

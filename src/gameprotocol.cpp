@@ -133,7 +133,7 @@ bool CGameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& dat
   return false;
 }
 
-CIncomingAction* CGameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t PID)
+CIncomingAction* CGameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID)
 {
   // DEBUG_Print( "RECEIVED W3GS_OUTGOING_ACTION" );
   // DEBUG_Print( data );
@@ -143,11 +143,11 @@ CIncomingAction* CGameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<u
   // 4 bytes                -> CRC
   // remainder of packet		-> Action
 
-  if (PID != 255 && ValidateLength(data) && data.size() >= 8)
+  if (UID != 255 && ValidateLength(data) && data.size() >= 8)
   {
     const std::vector<uint8_t> CRC    = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
     const std::vector<uint8_t> Action = std::vector<uint8_t>(begin(data) + 8, end(data));
-    return new CIncomingAction(PID, CRC, Action);
+    return new CIncomingAction(UID, CRC, Action);
   }
 
   return nullptr;
@@ -178,8 +178,8 @@ CIncomingChatPlayer* CGameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<
   // 2 bytes              -> Length
   // 1 byte               -> Total
   // for( 1 .. Total )
-  //		1 byte            -> ToPID
-  // 1 byte               -> FromPID
+  //		1 byte            -> ToUID
+  // 1 byte               -> FromUID
   // 1 byte               -> Flag
   // if( Flag == 16 )
   //		null term string	-> Message
@@ -202,9 +202,9 @@ CIncomingChatPlayer* CGameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<
 
     if (Total > 0 && data.size() >= i + Total)
     {
-      const std::vector<uint8_t> ToPIDs = std::vector<uint8_t>(begin(data) + i, begin(data) + i + Total);
+      const std::vector<uint8_t> ToUIDs = std::vector<uint8_t>(begin(data) + i, begin(data) + i + Total);
       i += Total;
-      const uint8_t FromPID = data[i];
+      const uint8_t FromUID = data[i];
       const uint8_t Flag    = data[i + 1];
       i += 2;
 
@@ -213,14 +213,14 @@ CIncomingChatPlayer* CGameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<
         // chat message
 
         const std::vector<uint8_t> Message = ExtractCString(data, i);
-        return new CIncomingChatPlayer(FromPID, ToPIDs, Flag, string(begin(Message), end(Message)));
+        return new CIncomingChatPlayer(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)));
       }
       else if ((Flag >= 17 && Flag <= 20) && data.size() >= i + 1)
       {
         // team/colour/race/handicap change request
 
         const uint8_t Byte = data[i];
-        return new CIncomingChatPlayer(FromPID, ToPIDs, Flag, Byte);
+        return new CIncomingChatPlayer(FromUID, ToUIDs, Flag, Byte);
       }
       else if (Flag == 32 && data.size() >= i + 5)
       {
@@ -228,7 +228,7 @@ CIncomingChatPlayer* CGameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<
 
         const std::vector<uint8_t> ExtraFlags = std::vector<uint8_t>(begin(data) + i, begin(data) + i + 4);
         const std::vector<uint8_t> Message    = ExtractCString(data, i + 4);
-        return new CIncomingChatPlayer(FromPID, ToPIDs, Flag, string(begin(Message), end(Message)), ExtraFlags);
+        return new CIncomingChatPlayer(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)), ExtraFlags);
       }
     }
   }
@@ -306,7 +306,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REQJOIN(const uint32_t HostCounter
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_SLOTINFOJOIN(uint8_t PID, const std::vector<uint8_t>& port, const std::vector<uint8_t>& externalIP, const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::vector<uint8_t>& port, const std::vector<uint8_t>& externalIP, const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
 {
   std::vector<uint8_t> packet;
 
@@ -320,7 +320,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_SLOTINFOJOIN(uint8_t PID, const st
     packet.push_back(0);                                       // packet length will be assigned later
     AppendByteArray(packet, static_cast<uint16_t>(SlotInfo.size()), false); // SlotInfo length
     AppendByteArrayFast(packet, SlotInfo);                     // SlotInfo
-    packet.push_back(PID);                                     // PID
+    packet.push_back(UID);                                     // UID
     packet.push_back(2);                                       // AF_INET
     packet.push_back(0);                                       // AF_INET continued...
     AppendByteArray(packet, port);                             // port
@@ -342,7 +342,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REJECTJOIN(uint32_t reason)
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t PID, const string& name, const std::vector<uint8_t>& externalIP, const std::vector<uint8_t>& internalIP)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t UID, const string& name, const std::vector<uint8_t>& externalIP, const std::vector<uint8_t>& internalIP)
 {
   if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
     Print("[GAMEPROTO] Invalid player name");
@@ -364,7 +364,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t PID, const stri
   packet.push_back(0);                           // packet length will be assigned later
   packet.push_back(0);                           // packet length will be assigned later
   AppendByteArray(packet, PlayerJoinCounter, 4); // player join counter
-  packet.push_back(PID);                         // PID
+  packet.push_back(UID);                         // UID
   AppendByteArrayFast(packet, name);             // player name
   packet.push_back(1);                           // ???
   packet.push_back(0);                           // ???
@@ -387,7 +387,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t PID, const stri
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t PID, const string& name)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t UID, const string& name)
 {
   if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
     Print("[GAMEPROTO] Invalid player name");
@@ -404,7 +404,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t PID,
   packet.push_back(0);                           // packet length will be assigned later
   packet.push_back(0);                           // packet length will be assigned later
   AppendByteArray(packet, PlayerJoinCounter, 4); // player join counter
-  packet.push_back(PID);                         // PID
+  packet.push_back(UID);                         // UID
   AppendByteArrayFast(packet, name);             // player name
   packet.push_back(1);                           // ???
   packet.push_back(0);                           // ???
@@ -427,11 +427,11 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t PID,
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t PID, uint32_t leftCode)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t UID, uint32_t leftCode)
 {
-  if (PID != 255)
+  if (UID != 255)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_PLAYERLEAVE_OTHERS, 9, 0, PID};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_PLAYERLEAVE_OTHERS, 9, 0, UID};
     AppendByteArray(packet, leftCode, false); // left code (see PLAYERLEAVE_ constants in gameprotocol.h)
     return packet;
   }
@@ -440,10 +440,10 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t PID, ui
   return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMELOADED_OTHERS(uint8_t PID)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMELOADED_OTHERS(uint8_t UID)
 {
-  if (PID != 255)
-    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_GAMELOADED_OTHERS, 5, 0, PID};
+  if (UID != 255)
+    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_GAMELOADED_OTHERS, 5, 0, UID};
 
   Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_GAMELOADED_OTHERS");
 
@@ -487,7 +487,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_INCOMING_ACTION(queue<CIncomingAct
     {
       CIncomingAction* Action = actions.front();
       actions.pop();
-      subpacket.push_back(Action->GetPID());
+      subpacket.push_back(Action->GetUID());
       AppendByteArray(subpacket, static_cast<uint16_t>(Action->GetAction()->size()), false);
       AppendByteArrayFast(subpacket, *Action->GetAction());
     } while (!actions.empty());
@@ -507,13 +507,13 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_INCOMING_ACTION(queue<CIncomingAct
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_CHAT_FROM_HOST(uint8_t fromPID, const std::vector<uint8_t>& toPIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const string& message)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const string& message)
 {
-  if (!toPIDs.empty() && !message.empty() && message.size() < 255)
+  if (!toUIDs.empty() && !message.empty() && message.size() < 255)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_CHAT_FROM_HOST, 0, 0, static_cast<uint8_t>(toPIDs.size())};
-    AppendByteArrayFast(packet, toPIDs);    // receivers
-    packet.push_back(fromPID);              // sender
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_CHAT_FROM_HOST, 0, 0, static_cast<uint8_t>(toUIDs.size())};
+    AppendByteArrayFast(packet, toUIDs);    // receivers
+    packet.push_back(fromUID);              // sender
     packet.push_back(flag);                 // flag
     AppendByteArrayFast(packet, flagExtra); // extra flag
     AppendByteArrayFast(packet, message);   // message
@@ -534,7 +534,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGameUser*> users
 
   std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_START_LAG, 0u, 0u, static_cast<uint8_t>(users.size())};
   for (auto& player : users) {
-    packet.push_back((player)->GetPID());
+    packet.push_back((player)->GetUID());
     AppendByteArray(packet, GetTicks() - player->GetStartedLaggingTicks(), false);
   }
 
@@ -544,7 +544,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_START_LAG(vector<CGameUser*> users
 
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_STOP_LAG(CGameUser* user)
 {
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_STOP_LAG, 9, 0, user->GetPID()};
+  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_STOP_LAG, 9, 0, user->GetUID()};
   AppendByteArray(packet, GetTicks() - user->GetStartedLaggingTicks(), false);
   return packet;
 }
@@ -757,16 +757,16 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, co
   return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_STARTDOWNLOAD(uint8_t fromPID)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID)
 {
-  return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_STARTDOWNLOAD, 9, 0, 1, 0, 0, 0, fromPID};
+  return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_STARTDOWNLOAD, 9, 0, 1, 0, 0, 0, fromUID};
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPPART(uint8_t fromPID, uint8_t toPID, uint32_t start, const string* mapData)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, uint32_t start, const string* mapData)
 {
   if (start < mapData->size())
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPPART, 0, 0, toPID, fromPID, 1, 0, 0, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPPART, 0, 0, toUID, fromUID, 1, 0, 0, 0};
     AppendByteArray(packet, start, false); // start position
 
     // calculate end position (don't send more than 1442 map bytes in one packet)
@@ -807,7 +807,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_INCOMING_ACTION2(queue<CIncomingAc
     {
       CIncomingAction* Action = actions.front();
       actions.pop();
-      subpacket.push_back(Action->GetPID());
+      subpacket.push_back(Action->GetUID());
       AppendByteArray(subpacket, static_cast<uint16_t>(Action->GetAction()->size()), false);
       AppendByteArrayFast(subpacket, *Action->GetAction());
     }
@@ -956,10 +956,10 @@ CIncomingJoinRequest::~CIncomingJoinRequest() = default;
 // CIncomingAction
 //
 
-CIncomingAction::CIncomingAction(uint8_t nPID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction)
+CIncomingAction::CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction)
   : m_CRC(std::move(nCRC)),
     m_Action(std::move(nAction)),
-    m_PID(nPID)
+    m_UID(nUID)
 {
 }
 
@@ -969,33 +969,33 @@ CIncomingAction::~CIncomingAction() = default;
 // CIncomingChatPlayer
 //
 
-CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, string nMessage)
+CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage)
   : m_Message(std::move(nMessage)),
     m_Type(CTH_MESSAGE),
     m_Byte(255),
-    m_FromPID(nFromPID),
+    m_FromUID(nFromUID),
     m_Flag(nFlag),
-    m_ToPIDs(std::move(nToPIDs))
+    m_ToUIDs(std::move(nToUIDs))
 {
 }
 
-CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, string nMessage, std::vector<uint8_t> nExtraFlags)
+CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage, std::vector<uint8_t> nExtraFlags)
   : m_Message(std::move(nMessage)),
     m_Type(CTH_MESSAGE),
     m_Byte(255),
-    m_FromPID(nFromPID),
+    m_FromUID(nFromUID),
     m_Flag(nFlag),
-    m_ToPIDs(std::move(nToPIDs)),
+    m_ToUIDs(std::move(nToUIDs)),
     m_ExtraFlags(std::move(nExtraFlags))
 {
 }
 
-CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, uint8_t nByte)
+CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte)
   : m_Type(CTH_TEAMCHANGE),
     m_Byte(nByte),
-    m_FromPID(nFromPID),
+    m_FromUID(nFromUID),
     m_Flag(nFlag),
-    m_ToPIDs(std::move(nToPIDs))
+    m_ToUIDs(std::move(nToUIDs))
 {
   if (nFlag == 17)
     m_Type = CTH_TEAMCHANGE;

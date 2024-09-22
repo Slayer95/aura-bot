@@ -253,7 +253,7 @@ string CMap::GetClientFileName() const
 
 bool CMap::IsObserverSlot(const CGameSlot* slot) const
 {
-  if (slot->GetPID() != 0 || slot->GetDownloadStatus() != 255) {
+  if (slot->GetUID() != 0 || slot->GetDownloadStatus() != 255) {
     return false;
   }
   if (slot->GetSlotStatus() != SLOTSTATUS_OPEN || !slot->GetIsSelectable()) {

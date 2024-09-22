@@ -54,7 +54,7 @@ using namespace std;
 
 CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
   : m_Type(SLOTTYPE_AUTO),
-    m_PID(0),
+    m_UID(0),
     m_DownloadStatus(255),
     m_SlotStatus(SLOTSTATUS_OPEN),
     m_Computer(0),
@@ -78,7 +78,7 @@ CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
       m_ComputerType = n[7];
       // falls through
     default:
-      m_PID            = n[0];
+      m_UID            = n[0];
       m_DownloadStatus = n[1];
       m_SlotStatus     = n[2];
       m_Computer       = n[3];
@@ -88,9 +88,9 @@ CGameSlot::CGameSlot(const std::vector<uint8_t>& n)
   }
 }
 
-CGameSlot::CGameSlot(const uint8_t nType, const uint8_t nPID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType, const uint8_t nHandicap)
+CGameSlot::CGameSlot(const uint8_t nType, const uint8_t nUID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType, const uint8_t nHandicap)
   : m_Type(nType),
-    m_PID(nPID),
+    m_UID(nUID),
     m_DownloadStatus(nDownloadStatus),
     m_SlotStatus(nSlotStatus),
     m_Computer(nComputer),

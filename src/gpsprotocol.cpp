@@ -77,9 +77,9 @@ vector<uint8_t> CGPSProtocol::SEND_GPSC_INIT(const uint32_t version) const
   return packet;
 }
 
-vector<uint8_t> CGPSProtocol::SEND_GPSC_RECONNECT(const uint8_t PID, const uint32_t reconnectKey, const uint32_t lastPacket) const
+vector<uint8_t> CGPSProtocol::SEND_GPSC_RECONNECT(const uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket) const
 {
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 13, 0, PID};
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 13, 0, UID};
   AppendByteArray(packet, reconnectKey, false);
   AppendByteArray(packet, lastPacket, false);
   return packet;
@@ -92,11 +92,11 @@ vector<uint8_t> CGPSProtocol::SEND_GPSC_ACK(const uint32_t lastPacket) const
   return packet;
 }
 
-vector<uint8_t> CGPSProtocol::SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t PID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const
 {
   vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 12, 0};
   AppendByteArray(packet, reconnectPort, false);
-  packet.push_back(PID);
+  packet.push_back(UID);
   AppendByteArray(packet, reconnectKey, false);
   packet.push_back(numEmptyActions);
   return packet;

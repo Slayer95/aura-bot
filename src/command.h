@@ -92,7 +92,7 @@ public:
   CRealm*                       m_TargetRealm;
   CGame*                        m_SourceGame;
   CGame*                        m_TargetGame;
-  CGameUser*                  m_Player;
+  CGameUser*                    m_GameUser;
   CIRC*                         m_IRC;
 #ifndef DISABLE_DPP
   dpp::slashcommand_t*          m_DiscordAPI;
@@ -186,9 +186,9 @@ public:
   void DoneAll(const std::string& message);
   void ErrorAll(const std::string& message);
   void SendAllUnlessHidden(const std::string& message);
-  CGameUser* GetTargetPlayer(const std::string& target);
+  CGameUser* GetTargetUser(const std::string& target);
   CGameUser* RunTargetPlayer(const std::string& target);
-  CGameUser* GetTargetPlayerOrSelf(const std::string& target);
+  CGameUser* GetTargetUserOrSelf(const std::string& target);
   CGameUser* RunTargetPlayerOrSelf(const std::string& target);
   bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
   bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);

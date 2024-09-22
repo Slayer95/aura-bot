@@ -83,9 +83,9 @@ public:
   // send functions
 
   std::vector<uint8_t> SEND_GPSC_INIT(const uint32_t version) const;
-  std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t PID, const uint32_t reconnectKey, const uint32_t lastPacket) const;
+  std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket) const;
-  std::vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t PID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const;
+  std::vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const;
   std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason) const;

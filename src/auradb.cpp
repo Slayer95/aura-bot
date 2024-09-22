@@ -1444,13 +1444,13 @@ CDBBan::~CDBBan() = default;
 // CDBGamePlayer
 //
 
-CDBGamePlayer::CDBGamePlayer(string nName, string nServer, string nIP/*, uint8_t nPID, uint8_t nSID*/, uint8_t nColor)
+CDBGamePlayer::CDBGamePlayer(string nName, string nServer, string nIP/*, uint8_t nUID, uint8_t nSID*/, uint8_t nColor)
   : m_Name(std::move(nName)),
     m_Server(std::move(nServer)),
     m_IP(std::move(nIP)),
     m_LoadingTime(0),
     m_LeftTime(0),
-    /*m_PID(nPID),
+    /*m_UID(nUID),
     m_SID(nSID),*/
     m_Color(nColor)
 {
@@ -1474,7 +1474,7 @@ CDBGameSummary::CDBGameSummary(uint64_t nID, string playerNames, string playerID
   if (rawIDs.size() % 3 != 0 || rawIDs.size() != playerCount * 3) {
     return;
   }
-  m_PIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + playerCount);
+  m_UIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + playerCount);
   m_SIDs = vector<uint8_t>(rawIDs.begin() + playerCount, rawIDs.begin() + 2 * playerCount);
   m_Colors = vector<uint8_t>(rawIDs.begin() + 2 * playerCount, rawIDs.end());
 }

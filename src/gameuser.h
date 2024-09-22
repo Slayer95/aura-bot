@@ -153,7 +153,7 @@ private:
   uint32_t                         m_GProxyReconnectKey;           // the GProxy++ reconnect key
   int64_t                          m_KickByTime;
   int64_t                          m_LastGProxyAckTime;            // GetTime when we last acknowledged GProxy++ packet
-  uint8_t                          m_PID;                          // the player's PID
+  uint8_t                          m_UID;                          // the player's UID
   bool                             m_Verified;                     // if the player has spoof checked or not
   bool                             m_Owner;                        // if the player has spoof checked or not
   bool                             m_Reserved;                     // if the player is reserved (VIP) or not
@@ -206,7 +206,7 @@ protected:
   bool m_DeleteMe;
 
 public:
-  CGameUser(CGame* game, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
+  CGameUser(CGame* game, CGameConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
   ~CGameUser();
 
   uint32_t GetOperationalRTT() const;
@@ -219,7 +219,7 @@ public:
   inline std::string           GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
   inline bool                  GetIsReady() const { return m_Ready; }
   inline bool                  GetDeleteMe() const { return m_DeleteMe; }
-  inline uint8_t               GetPID() const { return m_PID; }
+  inline uint8_t               GetUID() const { return m_UID; }
   inline std::string           GetName() const { return m_Name; }
   std::string                  GetLowerName() const;
   std::string                  GetDisplayName() const;
@@ -273,6 +273,7 @@ public:
   void                         SudoModeEnd();
   inline bool                  GetIsObserver() const { return m_Observer; }
   inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
+  bool                         GetIsNativeReferee() const;
   bool                         GetCanUsePublicChat() const;
   inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
   inline bool                  GetWhoisSent() const { return m_WhoisSent; }

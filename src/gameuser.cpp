@@ -168,7 +168,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
           for (auto& game : m_Aura->m_Games) {
             if (game->GetGameLoaded() && game->GetIsProxyReconnectable()) {
-              CGameUser* Player = game->GetPlayerFromPID(Bytes[4]);
+              CGameUser* Player = game->GetUserFromUID(Bytes[4]);
               if (Player && Player->GetGProxyAny() && Player->GetGProxyReconnectKey() == ReconnectKey) {
                 Match = Player;
                 break;
@@ -251,7 +251,7 @@ void CGameConnection::Send(const std::vector<uint8_t>& data) const
 // CGameUser
 //
 
-CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nPID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
+CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
   : m_Protocol(connection->m_Protocol),
     m_Game(nGame),
     m_Socket(connection->GetSocket()),
@@ -277,7 +277,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nPID, ui
     m_GProxyReconnectKey(rand()),
     m_KickByTime(0),
     m_LastGProxyAckTime(0),
-    m_PID(nPID),
+    m_UID(nUID),
     m_Verified(false),
     m_Owner(false),
     m_Reserved(nReserved),
@@ -326,15 +326,15 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nPID, ui
 CGameUser::~CGameUser()
 {
   if (!m_LeftMessageSent) {
-    Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetPID(), GetLeftCode()));
+    Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), GetLeftCode()));
   }
   m_Socket->Flush();
   delete m_Socket;
 
   for (auto& ctx : m_Game->m_Aura->m_ActiveContexts) {
-    if (ctx->m_Player == this) {
+    if (ctx->m_GameUser == this) {
       ctx->SetPartiallyDestroyed();
-      ctx->m_Player = nullptr;
+      ctx->m_GameUser = nullptr;
     }
   }
 }
@@ -448,7 +448,7 @@ bool CGameUser::Update(void* fd)
   // and in the game the Warcraft 3 client sends keepalives frequently (at least once per second it looks like)
 
   if (m_Socket && Time - m_Socket->GetLastRecv() >= 30) {
-    if (m_Game->EventPlayerDisconnectTimedOut(this)) {
+    if (m_Game->EventUserDisconnectTimedOut(this)) {
       ResetConnection();
       m_DeleteMe = true;
       return m_DeleteMe;
@@ -482,7 +482,7 @@ bool CGameUser::Update(void* fd)
       // bytes 2 and 3 contain the length of the packet
       const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
-        m_Game->EventPlayerDisconnectGameProtocolError(this, true);
+        m_Game->EventUserDisconnectGameProtocolError(this, true);
         ResetConnection();
         Abort = true;
         break;
@@ -499,7 +499,7 @@ bool CGameUser::Update(void* fd)
         switch (Bytes[1])
         {
           case CGameProtocol::W3GS_LEAVEGAME:
-            m_Game->EventPlayerLeft(this);
+            m_Game->EventUserLeft(this);
             Abort = true;
             break;
 
@@ -508,18 +508,18 @@ bool CGameUser::Update(void* fd)
               if (m_Game->GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
                 m_FinishedLoadingTicks = GetTicks();
-                m_Game->EventPlayerLoaded(this);
+                m_Game->EventUserLoaded(this);
               }
             }
 
             break;
 
           case CGameProtocol::W3GS_OUTGOING_ACTION:
-            Action = m_Protocol->RECEIVE_W3GS_OUTGOING_ACTION(Data, m_PID);
+            Action = m_Protocol->RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
 
             if (Action) {
-              if (!m_Game->EventPlayerAction(this, Action)) {
-                m_Game->EventPlayerDisconnectGameProtocolError(this, false);
+              if (!m_Game->EventUserAction(this, Action)) {
+                m_Game->EventUserDisconnectGameProtocolError(this, false);
                 ResetConnection();
                 Abort = true;
               }
@@ -533,14 +533,14 @@ bool CGameUser::Update(void* fd)
             m_CheckSums.push(m_Protocol->RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
             if (!m_Game->GetLagging() || m_Lagging)
               ++m_SyncCounter;
-            m_Game->EventPlayerKeepAlive(this);
+            m_Game->EventUserKeepAlive(this);
             break;
 
           case CGameProtocol::W3GS_CHAT_TO_HOST:
             ChatPlayer = m_Protocol->RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
             if (ChatPlayer)
-              m_Game->EventPlayerChatToHost(this, ChatPlayer);
+              m_Game->EventUserChatToHost(this, ChatPlayer);
 
             delete ChatPlayer;
             break;
@@ -548,7 +548,7 @@ bool CGameUser::Update(void* fd)
           case CGameProtocol::W3GS_DROPREQ:
             if (m_Game->GetLagging() && !m_DropVote) {
               m_DropVote = true;
-              m_Game->EventPlayerDropRequest(this);
+              m_Game->EventUserDropRequest(this);
             }
 
             break;
@@ -562,7 +562,7 @@ bool CGameUser::Update(void* fd)
             MapSize = m_Protocol->RECEIVE_W3GS_MAPSIZE(Data);
 
             if (MapSize)
-              m_Game->EventPlayerMapSize(this, MapSize);
+              m_Game->EventUserMapSize(this, MapSize);
 
             delete MapSize;
             break;
@@ -584,7 +584,7 @@ bool CGameUser::Update(void* fd)
                 if (m_RTTValues.size() > MAXIMUM_PINGS_COUNT) {
                   m_RTTValues.erase(begin(m_RTTValues));
                 }
-                m_Game->EventPlayerPongToHost(this);
+                m_Game->EventUserPongToHost(this);
               }
             }
             if (!bufferBloatForbidden && m_RTTValues.size() < CONSISTENT_PINGS_COUNT) {
@@ -627,7 +627,7 @@ bool CGameUser::Update(void* fd)
           if (Length >= 8) {
             m_GProxyVersion = ByteArrayToUInt32(Bytes, false, 4);
           }
-          m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_PID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
+          m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
           if (m_GProxyVersion >= 2) {
             m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60));
           }
@@ -659,22 +659,22 @@ bool CGameUser::Update(void* fd)
     }
   }
 
-  // EventPlayerLeft sets the game in a state where this player is still in m_Users, but it has no associated slot.
+  // EventUserLeft sets the game in a state where this player is still in m_Users, but it has no associated slot.
   // It's therefore crucial to check the Abort flag that it sets to avoid modifying it further.
   // As soon as the CGameUser::Update() call returns, EventUserDeleted takes care of erasing from the m_Users vector.
   if (!Abort) {
     // try to find out why we're requesting deletion
     // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
     if (m_Socket->HasError()) {
-      m_Game->EventPlayerDisconnectSocketError(this);
+      m_Game->EventUserDisconnectSocketError(this);
       ResetConnection();
     } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
-      m_Game->EventPlayerDisconnectConnectionClosed(this);
+      m_Game->EventUserDisconnectConnectionClosed(this);
       ResetConnection();
     } else if (GetKickQueued() && m_KickByTime < Time) {
-      m_Game->EventPlayerKickHandleQueued(this);
+      m_Game->EventUserKickHandleQueued(this);
     } else if (!m_StatusMessageSent && m_CheckStatusByTime < Time) {
-      m_Game->EventPlayerCheckStatus(this);
+      m_Game->EventUserCheckStatus(this);
     }
   }
 
@@ -869,6 +869,11 @@ void CGameUser::SudoModeEnd()
   m_SudoMode = nullopt;
 }
 
+bool CGameUser::GetIsNativeReferee() const
+{
+  return m_Observer && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
+}
+
 bool CGameUser::GetCanUsePublicChat() const
 {
   if (!m_Observer || m_PowerObserver || (!m_Game->GetGameLoading() && !m_Game->GetGameLoaded())) return true;
@@ -908,7 +913,7 @@ bool CGameUser::UpdateReady()
       } else if (m_Game->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
         m_Ready = true;
       } else {
-        const CGameSlot* slot = m_Game->InspectSlot(m_Game->GetSIDFromPID(GetPID()));
+        const CGameSlot* slot = m_Game->InspectSlot(m_Game->GetSIDFromUID(GetUID()));
         if (slot) {
           m_Ready = slot->GetRaceFixed() != SLOTRACE_RANDOM;
         } else {

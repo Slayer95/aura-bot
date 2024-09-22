@@ -158,7 +158,7 @@ public:
   CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
   uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data);
   bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
-  CIncomingAction* RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t PID);
+  CIncomingAction* RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
   uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data);
   CIncomingChatPlayer* RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data);
   CIncomingMapSize* RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data);
@@ -168,18 +168,18 @@ public:
 
   std::vector<uint8_t> SEND_W3GS_PING_FROM_HOST();
   std::vector<uint8_t> SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, const std::string& Name);
-  std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t PID, const std::vector<uint8_t>& port, const std::vector<uint8_t>& externalIP, const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
+  std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::vector<uint8_t>& port, const std::vector<uint8_t>& externalIP, const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   std::vector<uint8_t> SEND_W3GS_REJECTJOIN(uint32_t reason);
-  std::vector<uint8_t> SEND_W3GS_PLAYERINFO(uint8_t PID, const std::string& name, const std::vector<uint8_t>& externalIP, const std::vector<uint8_t>& internalIP);
-  std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t PID, const std::string& name);
-  std::vector<uint8_t> SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t PID, uint32_t leftCode);
-  std::vector<uint8_t> SEND_W3GS_GAMELOADED_OTHERS(uint8_t PID);
+  std::vector<uint8_t> SEND_W3GS_PLAYERINFO(uint8_t UID, const std::string& name, const std::vector<uint8_t>& externalIP, const std::vector<uint8_t>& internalIP);
+  std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t UID, const std::string& name);
+  std::vector<uint8_t> SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t UID, uint32_t leftCode);
+  std::vector<uint8_t> SEND_W3GS_GAMELOADED_OTHERS(uint8_t UID);
   std::vector<uint8_t> SEND_W3GS_SLOTINFO(std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   std::vector<uint8_t> SEND_W3GS_COUNTDOWN_START();
   std::vector<uint8_t> SEND_W3GS_COUNTDOWN_END();
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(std::queue<CIncomingAction*> actions, uint16_t sendInterval);
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(std::queue<CIncomingAction*> actions);
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromPID, const std::vector<uint8_t>& toPIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const std::string& message);
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const std::string& message);
   std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<CGameUser*> users);
   std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGameUser* user);
   std::vector<uint8_t> SEND_W3GS_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
@@ -193,8 +193,8 @@ public:
   std::vector<uint8_t> SEND_W3GR_DECREATEGAME(const uint32_t hostCounter);
   std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash);
   std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash, const std::vector<uint8_t>& mapSHA1);
-  std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromPID);
-  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromPID, uint8_t toPID, uint32_t start, const std::string* mapData);
+  std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID);
+  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, uint32_t start, const std::string* mapData);
 
   // other functions
 
@@ -234,13 +234,13 @@ class CIncomingAction
 private:
   std::vector<uint8_t> m_CRC;
   std::vector<uint8_t> m_Action;
-  uint8_t              m_PID;
+  uint8_t              m_UID;
 
 public:
-  CIncomingAction(uint8_t nPID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction);
+  CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction);
   ~CIncomingAction();
 
-  inline uint8_t               GetPID() const { return m_PID; }
+  inline uint8_t               GetUID() const { return m_UID; }
   inline std::vector<uint8_t>  GetCRC() const { return m_CRC; }
   inline std::vector<uint8_t>* GetAction() { return &m_Action; }
   inline size_t                GetLength() const {
@@ -270,20 +270,20 @@ private:
   std::string          m_Message;
   ChatToHostType       m_Type;
   uint8_t              m_Byte;
-  uint8_t              m_FromPID;
+  uint8_t              m_FromUID;
   uint8_t              m_Flag;
-  std::vector<uint8_t> m_ToPIDs;
+  std::vector<uint8_t> m_ToUIDs;
   std::vector<uint8_t> m_ExtraFlags;
 
 public:
-  CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, std::string nMessage);
-  CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, std::string nMessage, std::vector<uint8_t> nExtraFlags);
-  CIncomingChatPlayer(uint8_t nFromPID, std::vector<uint8_t> nToPIDs, uint8_t nFlag, uint8_t nByte);
+  CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage);
+  CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage, std::vector<uint8_t> nExtraFlags);
+  CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
   ~CIncomingChatPlayer();
 
   inline ChatToHostType       GetType() const { return m_Type; }
-  inline uint8_t              GetFromPID() const { return m_FromPID; }
-  inline std::vector<uint8_t> GetToPIDs() const { return m_ToPIDs; }
+  inline uint8_t              GetFromUID() const { return m_FromUID; }
+  inline std::vector<uint8_t> GetToUIDs() const { return m_ToUIDs; }
   inline uint8_t              GetFlag() const { return m_Flag; }
   inline std::string          GetMessage() const { return m_Message; }
   inline uint8_t              GetByte() const { return m_Byte; }
