@@ -1432,13 +1432,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      vector<const CGameUser*> players = m_TargetGame->GetPlayers();
-      if (players.empty()) {
-        ErrorReply("No players found.");
-        break;
-      }
       vector<string> output;
       output.push_back("Game #" + to_string(m_TargetGame->GetGameID()));
+
+      vector<const CGameUser*> players = m_TargetGame->GetPlayers();
       for (const auto& player : players) {
         const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromUID(player->GetUID()));
         uint8_t race = slot->GetRaceFixed();
