@@ -1116,14 +1116,14 @@ string CAuraDB::GetInitialIP(const string& rawName, const string& server)
       if (sqlite3_column_count(Statement) == 1) {
         initialIP  = string((char*)sqlite3_column_text(Statement, 0));
       } else {
-        Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - row doesn't have 1 column");
+        Print("[SQLITE3] error checking initial ip [" + name + "@" + server + "] - row doesn't have 1 column");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error checking initial ip [" + name + "@" + server + "] - " + m_DB->GetError());
     }
     m_DB->Finalize(Statement);
   } else {
-    Print("[SQLITE3] prepare error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error checking initial ip [" + name + "@" + server + "] - " + m_DB->GetError());
   }
 
   return initialIP;
@@ -1148,14 +1148,14 @@ string CAuraDB::GetLatestIP(const string& rawName, const string& server)
       if (sqlite3_column_count(Statement) == 1) {
         latestIP  = string((char*)sqlite3_column_text(Statement, 0));
       } else {
-        Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - row doesn't have 1 column");
+        Print("[SQLITE3] error checking latest ip [" + name + "@" + server + "] - row doesn't have 1 column");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error checking latest ip [" + name + "@" + server + "] - " + m_DB->GetError());
     }
     m_DB->Finalize(Statement);
   } else {
-    Print("[SQLITE3] prepare error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error checking latest ip [" + name + "@" + server + "] - " + m_DB->GetError());
   }
 
   return latestIP;
@@ -1183,14 +1183,14 @@ vector<string> CAuraDB::GetIPs(const string& rawName, const string& server)
         initialIP  = string((char*)sqlite3_column_text(Statement, 1));
         latestIP  = string((char*)sqlite3_column_text(Statement, 1));
       } else {
-        Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - row doesn't have 1 column");
+        Print("[SQLITE3] error checking ips [" + name + "@" + server + "] - row doesn't have 1 column");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error checking ips [" + name + "@" + server + "] - " + m_DB->GetError());
     }
     m_DB->Finalize(Statement);
   } else {
-    Print("[SQLITE3] prepare error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] prepare error checking ips [" + name + "@" + server + "] - " + m_DB->GetError());
   }
 
   if (!initialIP.empty()) {
