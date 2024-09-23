@@ -303,6 +303,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_StatusMessageSent(false),
     m_UsedAnyCommands(false),
     m_SentAutoCommandsHelp(false),
+    m_SmartCommand(SMART_COMMAND_NONE),
     m_CheckStatusByTime(GetTime() + 5),
 
     m_GProxy(false),

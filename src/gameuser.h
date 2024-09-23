@@ -67,6 +67,9 @@ class CAura;
 #define MAXIMUM_PINGS_COUNT 6u
 #define MAX_PING_WEIGHT 4u
 
+#define SMART_COMMAND_NONE 0u
+#define SMART_COMMAND_GO 1u
+
 //
 // CGameConnection
 //
@@ -181,6 +184,7 @@ private:
   bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
   bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
   bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
+  uint8_t                          m_SmartCommand;
   int64_t                          m_CheckStatusByTime;
 
   bool                             m_GProxy;                       // if the player is using GProxy++
@@ -295,6 +299,7 @@ public:
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
   inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
+  inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
   bool                         UpdateReady();
   bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
   inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
@@ -355,6 +360,8 @@ public:
   inline void SetSaved(const bool nValue) { m_Saved = nValue; }
   inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
   inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
+  inline void SetSmartCommand(const uint8_t nValue) { m_SmartCommand = nValue; }
+  inline void ClearSmartCommand() { m_SmartCommand = SMART_COMMAND_NONE; }
   inline void DropRemainingPauses() { --m_RemainingPauses; }
   inline void SetCannotPause() { m_RemainingPauses = 0; }
   inline void ClearStalePings() {

@@ -1127,8 +1127,10 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // end the game if there aren't any users left
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
-    Print(GetLogPrefix() + "is over (no users left)");
-    m_Exiting = true;
+    if (!m_Exiting) {
+      Print(GetLogPrefix() + "is over (no users left)");
+      m_Exiting = true;
+    }
     return m_Exiting;
   }
 
@@ -4018,6 +4020,8 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
           !realm || !(commandCFG->m_RequireVerified && !user->IsRealmVerified())
         );
         bool isCommand = false;
+        uint8_t activeSmartCommand = user->GetSmartCommand();
+        user->ClearSmartCommand();
         if (commandsEnabled) {
           const string message = chatPlayer->GetMessage();
           string cmdToken, command, payload;
@@ -4031,13 +4035,28 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
             m_Aura->UnholdContext(ctx);
           } else if (payload == "?trigger") {
             SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, false);
-          } else if (isLobbyChat && !user->GetUsedAnyCommands() && !user->GetSentAutoCommandsHelp()) {
-            bool anySentCommands = false;
-            for (const auto& otherPlayer : m_Users) {
-              if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
+          } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
+            if (!user->GetSentAutoCommandsHelp()) {
+              bool anySentCommands = false;
+              for (const auto& otherPlayer : m_Users) {
+                if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
+              }
+              if (!anySentCommands) {
+                SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
+              }
             }
-            if (!anySentCommands) {
-              SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
+            if ((payload == "go" || payload == "GO" || payload == "gO" || payload == "Go") && !HasOwnerInGame()) {
+              if (activeSmartCommand == SMART_COMMAND_GO) {
+                CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
+                cmdToken = m_Config->m_PrivateCmdToken;
+                command = "start";
+                payload.clear();
+                ctx->Run(cmdToken, command, payload);
+                m_Aura->UnholdContext(ctx);
+              } else {
+                user->SetSmartCommand(SMART_COMMAND_GO);
+                SendChat(user, "You may type [" + payload + "] again to start the game.");
+              }
             }
           }
         }
@@ -4934,6 +4953,7 @@ bool CGame::HasOwnerSet() const
 
 bool CGame::HasOwnerInGame() const
 {
+  if (!HasOwnerSet()) return false;
   CGameUser* MaybeOwner = GetUserFromName(m_OwnerName, false);
   if (!MaybeOwner) return false;
   return MaybeOwner->GetIsOwner(nullopt);
