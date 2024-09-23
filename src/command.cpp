@@ -5214,7 +5214,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+      if ((!m_GameUser || m_TargetGame->GetNumJoinedPlayers() >= 2) && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot pause the game.");
         break;
       }
@@ -5250,7 +5250,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (!m_GameUser && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+      if ((!m_GameUser || m_TargetGame->GetNumJoinedPlayers() >= 2) && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot save the game.");
         break;
       }
@@ -5295,7 +5295,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+      if ((!m_GameUser || m_TargetGame->GetNumJoinedPlayers() >= 2) && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot resume the game.");
         break;
       }
