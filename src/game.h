@@ -505,6 +505,7 @@ public:
   uint8_t GetHostUID() const;
   uint8_t GetEmptySID(bool reserved) const;
   uint8_t GetEmptySID(uint8_t team, uint8_t UID) const;
+  uint8_t GetEmptyPlayerSID() const;
   uint8_t GetEmptyObserverSID() const;
   inline bool GetHMCEnabled() const { return m_HMCEnabled; }
   void SendIncomingPlayerInfo(CGameUser* user) const;
@@ -538,6 +539,7 @@ public:
   void CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const std::string& name);
   bool CreateFakeUser(const bool useVirtualHostName);
   bool CreateHMCPlayer();
+  bool CreateFakePlayer(const bool useVirtualHostName);
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakeUser(uint8_t SID);
   bool GetIsFakeObserver(const uint16_t fakePlayer) const;

@@ -4574,16 +4574,18 @@ void CGame::EventGameStarted()
     bool hadChatSendHost = GetHasChatSendHost();
     bool hadChatRecvHost = GetHasChatRecvHost();
     uint8_t fakeCount = static_cast<uint8_t>(m_FakeUsers.size());
-    bool success = false;
-    if (!success & m_IsAutoVirtualPlayers && GetNumFakePlayers() == 0) {
-      // If there are full observers, ignore fake users.
-      // We still need another fake observer, so that commands sent by observers work.
-      success = CreateFakeUser(true) && !(m_Map->GetMapObservers() != MAPOBS_REFEREES && GetNumJoinedObservers() > 0);
+
+    if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
+      CreateFakeObserver(true);
+    } else {
+      if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() > 0 && GetNumFakeObservers() == 0) {
+        CreateFakeObserver(true);
+      }
+      if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
+        CreateFakePlayer(true);
+      }
     }
-    if (!success && GetNumFakeObservers() == 0) {
-      // In this context, success means whether the created observer can send chat messages to everyone.
-      success = CreateFakeObserver(true) && m_Map->GetMapObservers() == MAPOBS_REFEREES;
-    }
+
     if (!hadChatSendHost) {
       Print(GetLogPrefix() + "Missing chat send host");
     }
@@ -4595,7 +4597,7 @@ void CGame::EventGameStarted()
       bool hasChatRecvHost = GetHasChatRecvHost();
       string addedPlayersLog = to_string(m_FakeUsers.size() - fakeCount) + " fake players automatically added: ";
       if (hasChatSendHost != hadChatSendHost) {
-        addedPlayersLog += "Chat sent host added. ";
+        addedPlayersLog += "Chat send host added. ";
       }
       if (hasChatRecvHost != hadChatRecvHost) {
         addedPlayersLog += "Chat recv host added. ";
@@ -5614,6 +5616,24 @@ uint8_t CGame::GetEmptySID(uint8_t team, uint8_t UID) const
       if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == team) {
         return i;
       }
+    }
+  }
+
+  return 0xFF;
+}
+
+uint8_t CGame::GetEmptyPlayerSID() const
+{
+  if (m_Slots.size() > 0xFF)
+    return 0xFF;
+
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OPEN) continue;
+    if (!GetIsCustomForces()) {
+      return i;
+    }
+    if (m_Slots[i].GetTeam() != m_Map->GetVersionMaxSlots()) {
+      return i;
     }
   }
 
@@ -7249,6 +7269,25 @@ bool CGame::CreateFakeUser(const bool useVirtualHostName)
   if (SID >= static_cast<uint8_t>(m_Slots.size())) return false;
   if (!CanLockSlotForJoins(SID)) return false;
 
+  if (GetSlotsOpen() == 1)
+    DeleteVirtualHost();
+
+  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"));
+  return true;
+}
+
+bool CGame::CreateFakePlayer(const bool useVirtualHostName)
+{
+  const bool isCustomForces = GetIsCustomForces();
+  uint8_t SID = isCustomForces ? GetEmptyPlayerSID() : GetEmptySID(false);
+  if (SID >= static_cast<uint8_t>(m_Slots.size())) return false;
+
+  if (isCustomForces && (m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots())) {
+    return false;
+  }
+  if (!CanLockSlotForJoins(SID)) {
+    return false;
+  }
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
