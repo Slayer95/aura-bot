@@ -2052,10 +2052,13 @@ bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerT
       for (auto& slot : m_Slots) {
         if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
         uint8_t targetTeam = slot.GetIsComputer() ? computerTeam : humanTeam;
-        if (slot.GetTeam() != targetTeam) {
+        uint8_t wasTeam = slot.GetTeam();
+        if (wasTeam != targetTeam) {
           slot.SetTeam(targetTeam);
           m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
-          if (--remainingSlots == 0) break;
+          if (wasTeam == m_Map->GetVersionMaxSlots()) {
+            if (--remainingSlots == 0) break;
+          }
         }
       }
     }
@@ -2248,11 +2251,18 @@ bool CGame::SetLayoutOneVsAll(const CGameUser* targetPlayer)
       --SID;
     }
   } else {
-    uint8_t SID = static_cast<uint8_t>(m_Slots.size());
-    while (SID--) {
-      if (SID == targetSID) continue;
-      m_Slots[SID].SetTeam(teamAll);
-      m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    uint8_t remainingSlots = m_Map->GetMapNumControllers() - GetNumControllers();
+    if (remainingSlots > 0) {
+      uint8_t SID = static_cast<uint8_t>(m_Slots.size());
+      while (SID--) {
+        if (SID == targetSID) continue;
+        uint8_t wasTeam = m_Slots[SID].GetTeam();
+        m_Slots[SID].SetTeam(teamAll);
+        m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+        if (wasTeam == m_Map->GetVersionMaxSlots()) {
+          if (--remainingSlots == 0) break;
+        }
+      }
     }
   }
   m_CustomLayout = CUSTOM_LAYOUT_ONE_VS_ALL;
