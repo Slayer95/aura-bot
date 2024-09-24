@@ -5131,7 +5131,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->SetAutoVirtualPlayers(!isToggle || inputLower != "disable");
+      m_TargetGame->SetAutoVirtualPlayers(inputLower == "enable");
       if (!isToggle && !m_TargetGame->CreateFakeUser(false)) {
         ErrorReply("Cannot add another virtual user");
       } else if (isToggle) {
