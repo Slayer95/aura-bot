@@ -5234,13 +5234,22 @@ uint8_t CGame::GetNewColor() const
 
 uint8_t CGame::SimulateActionUID(const uint8_t actionType, CGameUser* user, const bool isDisconnect)
 {
-  const bool isFullObservers = m_Map->GetMapObservers() != MAPOBS_REFEREES;
+  const bool isFullObservers = m_Map->GetMapObservers() == MAPOBS_ALLOWED;
   // Note that the game client desyncs if the UID of an actual user is used.
   switch (actionType) {
     case ACTION_PAUSE: {
-      // Referees can pause the game, but full observers cannot.
+      // Referees can pause the game without limit.
+      // Full observers can never pause the game.
       if (user && isDisconnect && !user->GetLeftMessageSent() && user->GetCanPause()) {
         return user->GetUID();
+      }
+      // Referees have unlimited pauses
+      if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
+        for (auto& fakeUser : m_FakeUsers) {
+          if (GetIsFakeObserver(fakeUser)) {
+            return static_cast<uint8_t>(fakeUser);
+          }
+        }
       }
       while (m_PauseCounter < m_FakeUsers.size() * 3) {
         if (isFullObservers && GetIsFakeObserver(m_FakeUsers[m_PauseCounter % m_FakeUsers.size()])) {
@@ -5534,6 +5543,7 @@ uint8_t CGame::GetEmptySID(bool reserved) const
   // look for an empty slot for a new user to occupy
   // if reserved is true then we're willing to use closed or occupied slots as long as it wouldn't displace a user with a reserved slot
 
+  uint8_t skipHMC = m_Map->GetHMCEnabled() ? m_Map->GetHMCSlot() - 1 : m_Slots.size();
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OPEN) {
       continue;
@@ -5546,7 +5556,7 @@ uint8_t CGame::GetEmptySID(bool reserved) const
     // no empty slots, but since user is reserved give them a closed slot
 
     for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-      if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_CLOSED) {
+      if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_CLOSED && i != skipHMC) {
         return i;
       }
     }
@@ -5558,8 +5568,8 @@ uint8_t CGame::GetEmptySID(bool reserved) const
     uint8_t LeastDownloaded = 100;
 
     for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+      if (!m_Slots[i].GetIsPlayerOrFake()) continue;
       CGameUser* Player = GetUserFromSID(i);
-
       if (Player && !Player->GetIsReserved() && m_Slots[i].GetDownloadStatus() < LeastDownloaded) {
         LeastSID = i;
         LeastDownloaded = m_Slots[i].GetDownloadStatus();
@@ -5573,8 +5583,8 @@ uint8_t CGame::GetEmptySID(bool reserved) const
     // nobody who isn't reserved is downloading the map, just choose the first user who isn't reserved
 
     for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+      if (!m_Slots[i].GetIsPlayerOrFake()) continue;
       CGameUser* Player = GetUserFromSID(i);
-
       if (Player && !Player->GetIsReserved()) {
         return i;
       }
@@ -5593,7 +5603,6 @@ uint8_t CGame::GetEmptySID(uint8_t team, uint8_t UID) const
   // find an empty slot based on user's current slot
 
   uint8_t StartSlot = GetSIDFromUID(UID);
-
   if (StartSlot < m_Slots.size()) {
     if (m_Slots[StartSlot].GetTeam() != team) {
       // user is trying to move to another team so start looking from the first slot on that team
@@ -5646,7 +5655,8 @@ uint8_t CGame::GetEmptyObserverSID() const
     return 0xFF;
 
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == m_Map->GetVersionMaxSlots()) {
+    if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OPEN) continue;
+    if (m_Slots[i].GetTeam() == m_Map->GetVersionMaxSlots()) {
       return i;
     }
   }
@@ -6809,16 +6819,16 @@ void CGame::StartCountDown(bool fromUser, bool force)
     const uint8_t SID = m_Map->GetHMCSlot() - 1;
     const CGameSlot* slot = InspectSlot(SID);
     if (!slot || !slot->GetIsPlayerOrFake() || GetUserFromSID(SID)) {
-      SendAllChat("This game requires a fake user on slot " + ToDecString(SID + 1));
+      SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
       return;
     }
     const uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
     if (fakePlayerIndex < m_FakeUsers.size() && GetIsFakeObserver(m_FakeUsers[fakePlayerIndex])) {
-      SendAllChat("This game requires a fake user on slot " + ToDecString(SID + 1));
+      SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
       return;
     }
     if (fakePlayerIndex >= m_FakeUsers.size() && m_Map->GetHMCRequired()) {
-      SendAllChat("This game requires a fake user on slot " + ToDecString(SID + 1));
+      SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
       return;
     }
   }

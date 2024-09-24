@@ -175,8 +175,8 @@ protected:
   std::optional<int64_t>         m_GameOverTime;                  // GetTime when the game was over
   std::optional<int64_t>         m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
-  uint8_t                        m_PauseCounter;                  // Counter of all fake player pauses.
-  uint8_t                        m_NextSaveFakeUser;            // Counter of all fake player saves.
+  uint8_t                        m_PauseCounter;                  // Counter of fake player/observers pauses. If there are fake referees, it's ignored and always 0.
+  uint8_t                        m_NextSaveFakeUser;              // Counter of all fake player saves.
   uint32_t                       m_RandomSeed;                    // the random seed sent to the Warcraft III clients
   uint32_t                       m_HostCounter;                   // a unique game number
   uint32_t                       m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
