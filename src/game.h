@@ -503,6 +503,7 @@ public:
   uint8_t GetPublicHostUID() const;
   uint8_t GetHiddenHostUID() const;
   uint8_t GetHostUID() const;
+  uint8_t GetHMCSID() const;
   uint8_t GetEmptySID(bool reserved) const;
   uint8_t GetEmptySID(uint8_t team, uint8_t UID) const;
   uint8_t GetEmptyPlayerSID() const;
