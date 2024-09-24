@@ -656,35 +656,35 @@ bool CGame::GetIsSinglePlayerMode() const
 
 uint32_t CGame::GetNumJoinedUsers() const
 {
-  uint32_t NumHumanPlayers = 0;
+  uint32_t counter = 0;
 
   for (const auto& user : m_Users) {
     if (user->GetDeleteMe())
       continue;
 
-    ++NumHumanPlayers;
+    ++counter;
   }
 
-  return NumHumanPlayers;
+  return counter;
 }
 
 uint32_t CGame::GetNumJoinedUsersOrFake() const
 {
-  uint32_t NumHumanPlayers = static_cast<uint8_t>(m_FakeUsers.size());
+  uint32_t counter = static_cast<uint8_t>(m_FakeUsers.size());
 
   for (const auto& user : m_Users) {
     if (user->GetDeleteMe())
       continue;
 
-    ++NumHumanPlayers;
+    ++counter;
   }
 
-  return NumHumanPlayers;
+  return counter;
 }
 
 uint8_t CGame::GetNumJoinedPlayers() const
 {
-  uint8_t NumHumanPlayers = 0;
+  uint8_t counter = 0;
 
   for (const auto& user : m_Users) {
     if (user->GetDeleteMe())
@@ -692,15 +692,15 @@ uint8_t CGame::GetNumJoinedPlayers() const
     if (user->GetIsObserver())
       continue;
 
-    ++NumHumanPlayers;
+    ++counter;
   }
 
-  return NumHumanPlayers;
+  return counter;
 }
 
 uint8_t CGame::GetNumJoinedObservers() const
 {
-  uint8_t NumHumanPlayers = 0;
+  uint8_t counter = 0;
 
   for (const auto& user : m_Users) {
     if (user->GetDeleteMe())
@@ -708,15 +708,46 @@ uint8_t CGame::GetNumJoinedObservers() const
     if (!user->GetIsObserver())
       continue;
 
-    ++NumHumanPlayers;
+    ++counter;
   }
 
-  return NumHumanPlayers;
+  return counter;
+}
+
+uint8_t CGame::GetNumFakePlayers() const
+{
+  for (const auto& fake : m_FakeUsers) {
+    if (!GetIsFakeObserver(fake)) {
+      ++counter;
+    }
+  }
+  return counter;
+}
+
+uint8_t CGame::GetNumFakeObservers() const
+{
+  uint8_t counter = 0;
+  for (const auto& fake : m_FakeUsers) {
+    if (GetIsFakeObserver(fake)) {
+      ++counter;
+    }
+  }
+  return counter;
+}
+
+uint8_t CGame::GetNumJoinedPlayersOrFake() const
+{
+  return GetNumJoinedPlayers() + GetNumFakePlayers();
+}
+
+uint8_t CGame::GetNumJoinedObserversOrFake() const
+{
+  return GetNumJoinedObservers() + GetNumFakeObservers();
 }
 
 uint8_t CGame::GetNumJoinedPlayersOrFakeUsers() const
 {
-  uint8_t NumHumanPlayers = static_cast<uint8_t>(m_FakeUsers.size());
+  uint8_t counter = static_cast<uint8_t>(m_FakeUsers.size());
 
   for (const auto& user : m_Users) {
     if (user->GetDeleteMe())
@@ -724,10 +755,10 @@ uint8_t CGame::GetNumJoinedPlayersOrFakeUsers() const
     if (user->GetIsObserver())
       continue;
 
-    ++NumHumanPlayers;
+    ++counter;
   }
 
-  return NumHumanPlayers;
+  return counter;
 }
 
 uint8_t CGame::GetNumOccupiedSlots() const
@@ -1982,12 +2013,16 @@ bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerT
     }
     CloseAllTeamSlots(computerTeam);
   } else {
-    for (auto& slot : m_Slots) {
-      if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
-      uint8_t targetTeam = slot.GetIsComputer() ? computerTeam : humanTeam;
-      if (slot.GetTeam() != targetTeam) {
-        slot.SetTeam(targetTeam);
-        m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    uint8_t remainingSlots = m_Map->GetMapNumControllers() - GetNumControllers();
+    if (remainingSlots > 0) {
+      for (auto& slot : m_Slots) {
+        if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
+        uint8_t targetTeam = slot.GetIsComputer() ? computerTeam : humanTeam;
+        if (slot.GetTeam() != targetTeam) {
+          slot.SetTeam(targetTeam);
+          m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+          if (--remainingSlots == 0) break;
+        }
       }
     }
   }
@@ -4499,27 +4534,22 @@ void CGame::EventGameStarted()
     }
   }
 
-  if (GetNumJoinedUsersOrFake() >= 2) {
-    /*
-    // This is an attempt to "rename" a fake user into our virtual host.
-    // Unfortunately, it makes game clients quit after the game loads.
-    if (m_FakeUsers.size()) {
-      DeleteFakeUser(GetSIDFromUID(m_FakeUsers[m_FakeUsers.size() - 1]));
-      CreateFakeUser(true);
-    }
-    */
-  } else if (!m_RestoredGame && GetSlotsOpen() > 0) {
+  if (!m_RestoredGame && GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake user.
-    if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-      CreateFakeObserver(true);
-    } else if (m_IsAutoVirtualPlayers) {
-      CreateFakeUser(true);
+    bool success = false;
+    if (!success && m_Map->GetMapObservers() != MAPOBS_NONE && GetNumFakeObservers() < 1) {
+      success = CreateFakeObserver(true);
     }
-  } else {
+    if (!success & m_IsAutoVirtualPlayers) {
+      success = CreateFakeUser(true);
+    }
+  }
+
+  //if (GetNumJoinedUsersOrFake() < 2) {
     // This is a single-user game. Neither chat events nor bot commands will work.
     // Keeping the virtual host does no good - The game client then refuses to remain in the game.
-  }
+  //}
 
   // send a final slot info update for HCL, or in case there are pending updates
   if (m_SlotInfoChanged != 0) {
