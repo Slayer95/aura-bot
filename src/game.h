@@ -298,6 +298,11 @@ public:
   uint32_t              GetSlotsOpen() const;
   bool                  HasSlotsOpen() const;
   bool                  GetIsSinglePlayerMode() const;
+  bool                  GetHasAnyFullObservers() const;
+  bool                  GetHasChatSendHost() const;
+  bool                  GetHasChatRecvHost() const;
+  bool                  GetHasChatSendPermaHost() const;
+  bool                  GetHasChatRecvPermaHost() const;
   uint32_t              GetNumJoinedUsers() const;
   uint32_t              GetNumJoinedUsersOrFake() const;
   uint8_t               GetNumJoinedPlayers() const;

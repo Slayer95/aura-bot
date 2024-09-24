@@ -654,6 +654,39 @@ bool CGame::GetIsSinglePlayerMode() const
   return GetNumJoinedUsersOrFake() < 2;
 }
 
+bool CGame::GetHasAnyFullObservers() const
+{
+  return m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() >= 1;
+}
+
+bool CGame::GetHasChatSendHost() const
+{
+  if (GetHasChatSendPermaHost()) return true;
+  if (GetHasAnyFullObservers()) {
+    return GetNumJoinedPlayersOrFake() >= 2;
+  } else {
+    return GetNumJoinedPlayersOrFakeUsers() >= 2;
+  }
+}
+
+bool CGame::GetHasChatRecvHost() const
+{
+  if (GetHasChatRecvPermaHost()) return true;
+  if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() == 1) return false;
+  return GetNumJoinedPlayersOrFakeUsers() >= 2;
+}
+
+bool CGame::GetHasChatSendPermaHost() const
+{
+  return GetNumFakePlayers() > 0 || m_Map->GetMapObservers() == MAPOBS_REFEREES && GetNumFakeObservers() > 0;
+}
+
+bool CGame::GetHasChatRecvPermaHost() const
+{
+  if (GetNumFakeObservers() > 0) return true;
+  return GetNumFakePlayers() > 0 && !GetHasAnyFullObservers();
+}
+
 uint32_t CGame::GetNumJoinedUsers() const
 {
   uint32_t counter = 0;
@@ -716,6 +749,7 @@ uint8_t CGame::GetNumJoinedObservers() const
 
 uint8_t CGame::GetNumFakePlayers() const
 {
+  uint8_t counter = 0;
   for (const auto& fake : m_FakeUsers) {
     if (!GetIsFakeObserver(fake)) {
       ++counter;
@@ -4537,12 +4571,36 @@ void CGame::EventGameStarted()
   if (!m_RestoredGame && GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake user.
+    bool hadChatSendHost = GetHasChatSendHost();
+    bool hadChatRecvHost = GetHasChatRecvHost();
+    uint8_t fakeCount = static_cast<uint8_t>(m_FakeUsers.size());
     bool success = false;
-    if (!success && m_Map->GetMapObservers() != MAPOBS_NONE && GetNumFakeObservers() < 1) {
-      success = CreateFakeObserver(true);
+    if (!success & m_IsAutoVirtualPlayers && GetNumFakePlayers() == 0) {
+      // If there are full observers, ignore fake users.
+      // We still need another fake observer, so that commands sent by observers work.
+      success = CreateFakeUser(true) && !(m_Map->GetMapObservers() != MAPOBS_REFEREES && GetNumJoinedObservers() > 0);
     }
-    if (!success & m_IsAutoVirtualPlayers) {
-      success = CreateFakeUser(true);
+    if (!success && GetNumFakeObservers() == 0) {
+      // In this context, success means whether the created observer can send chat messages to everyone.
+      success = CreateFakeObserver(true) && m_Map->GetMapObservers() == MAPOBS_REFEREES;
+    }
+    if (!hadChatSendHost) {
+      Print(GetLogPrefix() + "Missing chat send host");
+    }
+    if (!hadChatRecvHost) {
+      Print(GetLogPrefix() + "Missing chat recv host");
+    }
+    if (fakeCount < static_cast<uint8_t>(m_FakeUsers.size())) {
+      bool hasChatSendHost = GetHasChatSendHost();
+      bool hasChatRecvHost = GetHasChatRecvHost();
+      string addedPlayersLog = to_string(m_FakeUsers.size() - fakeCount) + " fake players automatically added: ";
+      if (hasChatSendHost != hadChatSendHost) {
+        addedPlayersLog += "Chat sent host added. ";
+      }
+      if (hasChatRecvHost != hadChatRecvHost) {
+        addedPlayersLog += "Chat recv host added. ";
+      }
+      Print(GetLogPrefix() + addedPlayersLog);
     }
   }
 
