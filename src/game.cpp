@@ -2272,7 +2272,7 @@ bool CGame::SetLayoutOneVsAll(const CGameUser* targetPlayer)
 
 bool CGame::GetIsAutoStartDue() const
 {
-  if (m_CountDownStarted || m_AutoStartRequirements.empty()) {
+  if (m_Users.empty() || m_CountDownStarted || m_AutoStartRequirements.empty()) {
     return false;
   }
 
@@ -4070,9 +4070,11 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
             if (Relay) {
               vector<uint8_t> overrideTargetUIDs = GetUIDs(chatPlayer->GetFromUID());
               vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
-              Send(overrideTargetUIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-              if (extraFlags[0] != CHAT_RECV_ALL) {
-                Print(GetLogPrefix() + "[Obs/Ref] overriden into [All]");
+              if (!overrideTargetUIDs.empty()) {
+                Send(overrideTargetUIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+                if (extraFlags[0] != CHAT_RECV_ALL) {
+                  Print(GetLogPrefix() + "[Obs/Ref] overriden into [All]");
+                }
               }
             } else if (extraFlags[0] != CHAT_RECV_ALL) { 
               Print(GetLogPrefix() + "[Obs/Ref] overriden into [All], but muteAll is active (message discarded)");
@@ -4081,9 +4083,11 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
             // enforce observer-only chat, just in case rogue clients are doing funny things
             vector<uint8_t> overrideTargetUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
             vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
-            Send(overrideTargetUIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-            if (extraFlags[0] != CHAT_RECV_OBS) {
-              Print(GetLogPrefix() + "[Obs/Ref] enforced server-side");
+            if (!overrideTargetUIDs.empty()) {
+              Send(overrideTargetUIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+              if (extraFlags[0] != CHAT_RECV_OBS) {
+                Print(GetLogPrefix() + "[Obs/Ref] enforced server-side");
+              }
             }
           }
         } else {

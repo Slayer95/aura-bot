@@ -159,6 +159,8 @@ public:
   std::optional<uint32_t> m_SafeHighPing;
   std::optional<uint32_t> m_LobbyTimeout;
   std::optional<uint32_t> m_LobbyOwnerTimeout;
+  std::optional<uint32_t> m_LobbyCountDownInterval;
+  std::optional<uint32_t> m_LobbyCountDownStartValue;
   std::optional<uint16_t> m_Latency;
   std::optional<int64_t>  m_AutoStartSeconds;
   std::optional<uint8_t>  m_AutoStartPlayers;

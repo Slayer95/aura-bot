@@ -1457,6 +1457,8 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 {
   if (nCLI->m_GameLobbyTimeout.has_value()) SetLobbyTimeout(nCLI->m_GameLobbyTimeout.value());
   if (nCLI->m_GameLobbyOwnerTimeout.has_value()) SetLobbyOwnerTimeout(nCLI->m_GameLobbyOwnerTimeout.value());
+  if (nCLI->m_GameLobbyCountDownInterval.has_value()) SetLobbyCountDownInterval(nCLI->m_GameLobbyCountDownInterval.value());
+  if (nCLI->m_GameLobbyCountDownStartValue.has_value()) SetLobbyCountDownStartValue(nCLI->m_GameLobbyCountDownStartValue.value());
   if (nCLI->m_GameCheckJoinable.has_value()) SetIsCheckJoinable(nCLI->m_GameCheckJoinable.value());
   if (nCLI->m_GameNotifyJoins.has_value()) SetNotifyJoins(nCLI->m_GameNotifyJoins.value());
   if (nCLI->m_GameCheckReservation.has_value()) SetCheckReservation(nCLI->m_GameCheckReservation.value());

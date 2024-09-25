@@ -1059,6 +1059,14 @@ void CMap::Load(CConfig* CFG)
     m_LobbyOwnerTimeout = CFG->GetUint32("map.hosting.abandoned_lobby.owner_expiry_time", 120);
     CFG->FailIfErrorLast();
   }
+  if (CFG->Exists("map.hosting.game_start.count_down_interval")) {
+    m_LobbyCountDownInterval = CFG->GetUint32("map.hosting.game_start.count_down_interval", 500);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.game_start.count_down_ticks")) {
+    m_LobbyCountDownStartValue = CFG->GetUint32("map.hosting.game_start.count_down_ticks", 5);
+    CFG->FailIfErrorLast();
+  }
   if (CFG->Exists("map.bot.latency")) {
     m_Latency = CFG->GetUint16("map.bot.latency", 100);
     CFG->FailIfErrorLast();

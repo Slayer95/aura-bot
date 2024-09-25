@@ -102,7 +102,7 @@ private:
   uint8_t m_UID;            // player id
   uint8_t m_DownloadStatus; // download status (0% to 100%)
   uint8_t m_SlotStatus;     // slot status (0 = open, 1 = closed, 2 = occupied)
-  uint8_t m_Computer;       // computer (0 = no, 1 = yes, 2 = forced)
+  uint8_t m_Computer;       // computer (0 = no, 1 = yes)
   uint8_t m_Team;           // team
   uint8_t m_Color;          // colour
   uint8_t m_Race;           // race (1 = human, 2 = orc, 4 = night elf, 8 = undead, 32 = random, 64 = selectable)

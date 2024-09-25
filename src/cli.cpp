@@ -125,6 +125,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
   app.add_option("--lobby-owner-timeout", m_GameLobbyOwnerTimeout, "Sets the time limit for an absent game owner to keep their power (seconds.)");
+  app.add_option("--start-countdown-interval", m_GameLobbyCountDownInterval, "Sets the interval for the game start countdown to tick down.");
+  app.add_option("--start-countdown-ticks", m_GameLobbyCountDownStartValue, "Sets the amount of ticks for the game start countdown.");
   app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
   app.add_option("--players-ready", m_GamePlayersReadyMode, "Customizes when Aura will consider a player to be ready to start the game. Values: fast, race, explicit.")->check(CLI::IsMember({"fast", "race", "explicit"}));
   app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");

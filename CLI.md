@@ -691,6 +691,20 @@ the provided amount of updates, one per game tick.
 This option is equivalent to ``<net.stop_lag.sync_limit>`` in `config.ini`
 This option is equivalent to ``<map.net.stop_lag.sync_limit>`` in map configuration
 
+## \`--start-countdown-interval <VALUE>\`
+
+This parameter specifies, in milliseconds, how long should Aura wait between each tick during the game start countdown.
+
+This option is equivalent to ``<hosting.game_start.count_down_interval>`` in `config.ini`
+This option is equivalent to ``<map.hosting.game_start.count_down_interval>`` in map configuration
+
+## \`--start-countdown-ticks <VALUE>\`
+
+This parameter specifies how many ticks should Aura wait for during game start countdown.
+
+This option is equivalent to ``<hosting.game_start.count_down_ticks>`` in `config.ini`
+This option is equivalent to ``<map.hosting.game_start.count_down_ticks>`` in map configuration
+
 ## \`--hcl\`
 
 This parameter specifies a custom game mode to be prepicked for maps that implement the HCL standard.

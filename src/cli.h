@@ -99,6 +99,8 @@ public:
   std::optional<std::string>            m_MirrorSource;
   std::optional<uint32_t>               m_GameLobbyTimeout;
   std::optional<uint32_t>               m_GameLobbyOwnerTimeout;
+  std::optional<uint32_t>               m_GameLobbyCountDownInterval;
+  std::optional<uint32_t>               m_GameLobbyCountDownStartValue;
   std::optional<uint8_t>                m_GameAutoStartPlayers;
   std::optional<int64_t>                m_GameAutoStartSeconds;
   std::optional<uint16_t>               m_GameLatencyAverage;

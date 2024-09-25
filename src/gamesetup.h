@@ -204,6 +204,8 @@ public:
   uint16_t                                        m_CreationCounter;
   std::optional<uint32_t>                         m_LobbyTimeout;
   std::optional<uint32_t>                         m_LobbyOwnerTimeout;
+  std::optional<uint32_t>                         m_LobbyCountDownInterval;
+  std::optional<uint32_t>                         m_LobbyCountDownStartValue;
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_IPFloodHandler;
@@ -308,6 +310,8 @@ public:
   }
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
   void SetLobbyOwnerTimeout(const uint32_t nTimeout) { m_LobbyOwnerTimeout = nTimeout; }
+  void SetLobbyCountDownInterval(const uint32_t nValue) { m_LobbyCountDownInterval = nValue; }
+  void SetLobbyCountDownStartValue(const uint32_t nValue) { m_LobbyCountDownStartValue = nValue; }
   void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
   void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
