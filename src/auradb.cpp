@@ -49,7 +49,9 @@
 #include "util.h"
 #include "config.h"
 #include "sqlite3.h"
+#ifndef DISABLE_DPP
 #include "json.hpp"
+#endif
 
 #include <fstream>
 #include <utility>
@@ -148,6 +150,7 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
 {
   m_Data[MAP_DATA_TYPE_ITEM] = map<string, vector<string>>();
 
+#ifndef DISABLE_DPP
   ifstream twrpgFile;
   twrpgFile.open(sourceFile.native().c_str(), ios::in);
   if (twrpgFile.fail()) {
@@ -166,6 +169,7 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
       Print("[AURA] error loading [" + PathToString(sourceFile) + "] - " + string(e.what()));
     }
   }
+#endif
 }
 
 //
