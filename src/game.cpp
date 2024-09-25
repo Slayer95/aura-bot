@@ -3421,6 +3421,9 @@ void CGame::SendEveryoneElseLeft() const
       }
       Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), p2->GetLeftCode()));
     }
+    for (auto& fake : m_FakeUsers) {
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), GetIsLobby ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT));
+    }
   }
 }
 
