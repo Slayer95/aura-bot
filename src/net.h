@@ -101,6 +101,7 @@ public:
   bool      Update(void* fd, void* send_fd);
   bool      QueryGameInfo();
   bool      GetIsRealmOnline();
+  uint32_t  GetHostCounter();
   uint16_t  GetPort();
 
   sockaddr_storage            m_TargetHost;

@@ -82,6 +82,22 @@ bool CGameTestConnection::GetIsRealmOnline()
   return realm->GetLoggedIn();
 }
 
+uint8_t CGameTestConnection::GetHostCounter()
+{
+  uint32_t hostCounter = m_Aura->m_CurrentLobby->GetHostCounter();
+  if (m_Aura->m_CurrentLobby->GetIsMirror()) {
+    return hostCounter;
+  }
+  hostCounter |= 0x01 << 24;
+  string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
+  CRealm* realm = m_Aura->GetRealmByInputId(realmId);
+  if (realm == nullptr) {
+    return hostCounter;
+  }
+  hostCounter |= m_PublicServerID << 24;
+  return hostCounter;
+}
+
 uint16_t CGameTestConnection::GetPort()
 {
   if (m_TargetHost.ss_family == AF_INET6) {
@@ -107,7 +123,7 @@ bool CGameTestConnection::QueryGameInfo()
 
   const static string Name = "AuraBot";
   const vector<uint8_t> joinRequest = m_Aura->m_GameProtocol->SEND_W3GS_REQJOIN(
-    m_Aura->m_CurrentLobby->GetIsMirror() ? m_Aura->m_CurrentLobby->GetHostCounter() : (m_Aura->m_CurrentLobby->GetHostCounter() | (0x01 << 24)),
+    GetHostCounter(),
     m_Aura->m_CurrentLobby->GetEntryKey(),
     Name
   );
