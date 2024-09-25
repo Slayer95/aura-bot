@@ -101,10 +101,10 @@ uint32_t CGameTestConnection::GetHostCounter() const
 uint16_t CGameTestConnection::GetPort() const
 {
   if (m_TargetHost.ss_family == AF_INET6) {
-    sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&m_TargetHost);
+    const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(&m_TargetHost);
     return ntohs(addr6->sin6_port);
   } else if (m_TargetHost.ss_family == AF_INET) {
-    sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&m_TargetHost);
+    const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(&m_TargetHost);
     return ntohs(addr4->sin_port);
   } else {
     return 0;
