@@ -364,6 +364,7 @@ void CAuraDB::PreCompileStatements()
   m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &(m_StmtCache[USER_BAN_CHECK_IDX]), true);
   m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE ip=? AND authserver=?", &(m_StmtCache[IP_BAN_CHECK_IDX]), true);
   m_DB->Prepare("SELECT * FROM moderators WHERE server=? AND name=?", &(m_StmtCache[MODERATOR_CHECK_IDX]), true);
+  m_DB->Prepare("INSERT OR REPLACE INTO games ( id, creator, mapcpath, mapspath, crc32, playernames, playerids ) VALUES ( ?, ?, ?, ?, ?, ?, ? )", &(m_StmtCache[GAME_ADD_IDX]));
   m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", &(m_StmtCache[PLAYER_SUMMARY_IDX]), true);
   m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", &(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), true);
   m_DB->Prepare("UPDATE players SET latestip=?, latestgame=? WHERE name=? AND server=?", &(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]), true);
@@ -1273,31 +1274,32 @@ void CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
   storageIDs.insert(storageIDs.end(), colorIDs.begin(), colorIDs.end());
   string storageIDsText = ByteArrayToDecString(storageIDs);
 
-  bool          Success = false;
-  sqlite3_stmt* Statement = nullptr;
-  m_DB->Prepare("INSERT OR REPLACE INTO games ( id, creator, mapcpath, mapspath, crc32, playernames, playerids ) VALUES ( ?, ?, ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&Statement));
-
-  if (Statement)
-  {
-    sqlite3_bind_int64(Statement, 1, unsigned_to_signed_64(gameId));
-    sqlite3_bind_text(Statement, 2, creator.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 3, mapClientPath.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 4, mapServerPath.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 5, storageCRC32.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 6, storagePlayerNames.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 7, storageIDsText.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(Statement);
-
-    if (RC == SQLITE_DONE)
-      Success = true;
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
-
-    m_DB->Finalize(Statement);
+  if (!m_StmtCache[GAME_ADD_IDX]) {
+    m_DB->Prepare("INSERT OR REPLACE INTO games ( id, creator, mapcpath, mapspath, crc32, playernames, playerids ) VALUES ( ?, ?, ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&(m_StmtCache[GAME_ADD_IDX])));
   }
-  else
+
+  if (!m_StmtCache[GAME_ADD_IDX]) {
     Print("[SQLITE3] prepare error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
+    return;
+  }
+
+  bool Success = false;
+  sqlite3_bind_int64(m_StmtCache[GAME_ADD_IDX], 1, unsigned_to_signed_64(gameId));
+  sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 2, creator.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 3, mapClientPath.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 4, mapServerPath.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 5, storageCRC32.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 6, storagePlayerNames.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 7, storageIDsText.c_str(), -1, SQLITE_TRANSIENT);
+
+  const int32_t RC = m_DB->Step(m_StmtCache[GAME_ADD_IDX]);
+
+  if (RC == SQLITE_DONE)
+    Success = true;
+  else if (RC == SQLITE_ERROR)
+    Print("[SQLITE3] error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
+
+  m_DB->Reset(m_StmtCache[GAME_ADD_IDX]);
 }
 
 CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
