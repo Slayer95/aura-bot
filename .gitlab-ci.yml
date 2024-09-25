@@ -19,7 +19,7 @@ Assemble:
   script:
   # Packages
   - cd $CI_PROJECT_DIR
-  - apt-get update && apt-get install -y build-essential git libssl-dev libgmp3-dev libbz2-dev zlib1g-dev libcurl4-openssl-dev_8.10.1 curl cmake
+  - apt-get update && apt-get install -y build-essential git libssl-dev libgmp3-dev libbz2-dev zlib1g-dev libcurl4-openssl-dev_8.6.* curl cmake
   - mkdir -p jass dist/bin-static dist/bin-shared
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "jass/blizzard.j"
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "jass/common.j"
