@@ -271,19 +271,28 @@ void CGame::Reset(const bool saveStats)
   if (m_GameLoading || m_GameLoaded) {
     // store the CDBGamePlayers in the database
     // add non-dota stats
-    Print(GetLogPrefix() + "saving game data to database");
-    for (auto& dbPlayer : m_DBGamePlayers) {
-      // exclude observers
-      if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
-        continue;
+    if (!m_DBGamePlayers.empty()) {
+      Print(GetLogPrefix() + "saving game end player data to database");
+      if (m_Aura->m_DB->Begin()) {
+        for (auto& dbPlayer : m_DBGamePlayers) {
+          // exclude observers
+          if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
+            continue;
+          }
+          m_Aura->m_DB->UpdateGamePlayerOnEnd(
+            dbPlayer->GetName(),
+            dbPlayer->GetServer(),
+            dbPlayer->GetLoadingTime(),
+            m_GameTicks / 1000,
+            dbPlayer->GetLeftTime()
+          );
+        }
+        if (!m_Aura->m_DB->Commit()) {
+          Print(GetLogPrefix() + "failed to commit game end player data");
+        }
+      } else {
+        Print(GetLogPrefix() + "failed to begin transaction game end player data");
       }
-      m_Aura->m_DB->UpdateGamePlayerOnEnd(
-        dbPlayer->GetName(),
-        dbPlayer->GetServer(),
-        dbPlayer->GetLoadingTime(),
-        m_GameTicks / 1000,
-        dbPlayer->GetLeftTime()
-      );
     }
     // store the dota stats in the database
     if (saveStats && m_Stats) {
@@ -4906,6 +4915,10 @@ void CGame::HandleGameLoadedStats()
     }
   }
 
+  if (!m_Aura->m_DB->Begin()) {
+    Print(GetLogPrefix() + "failed to begin transaction for game loaded stats");
+    return;
+  }
   m_Aura->m_DB->UpdateLatestHistoryGameId(m_GameHistoryId);
 
   m_Aura->m_DB->GameAdd(
@@ -4930,6 +4943,9 @@ void CGame::HandleGameLoadedStats()
       dbPlayer->GetIP(),
       m_GameHistoryId
     );
+  }
+  if (!m_Aura->m_DB->Commit()) {
+    Print(GetLogPrefix() + "failed to commit transaction for game loaded stats");
   }
 }
 
