@@ -168,6 +168,7 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
     } catch (nlohmann::json::exception e) {
       Print("[AURA] error loading [" + PathToString(sourceFile) + "] - " + string(e.what()));
     }
+    twrpgFile.close();
   }
 #endif
 }
