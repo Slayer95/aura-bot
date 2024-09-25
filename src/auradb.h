@@ -180,8 +180,20 @@ public:
   inline std::string GetError() const { return sqlite3_errmsg(static_cast<sqlite3*>(m_DB)); }
 
   inline int32_t Step(void* Statement) { return sqlite3_step(static_cast<sqlite3_stmt*>(Statement)); }
-  inline int32_t Prepare(const std::string& query, void** Statement) { return sqlite3_prepare_v2(static_cast<sqlite3*>(m_DB), query.c_str(), -1, reinterpret_cast<sqlite3_stmt**>(Statement), nullptr); }
-  inline int32_t Prepare(const std::string& query, sqlite3_stmt** Statement) { return sqlite3_prepare_v2(static_cast<sqlite3*>(m_DB), query.c_str(), -1, Statement, nullptr); }
+  inline int32_t Prepare(const std::string& query, void** Statement, bool forCache = false) {
+    if (forCache) {
+      return sqlite3_prepare_v3(static_cast<sqlite3*>(m_DB), query.c_str(), -1, SQLITE_PREPARE_PERSISTENT, reinterpret_cast<sqlite3_stmt**>(Statement), nullptr);
+    } else {
+      return sqlite3_prepare_v2(static_cast<sqlite3*>(m_DB), query.c_str(), -1, reinterpret_cast<sqlite3_stmt**>(Statement), nullptr);
+    }
+   }
+  inline int32_t Prepare(const std::string& query, sqlite3_stmt** Statement, bool forCache = false) {
+    if (forCache) {
+      return sqlite3_prepare_v3(static_cast<sqlite3*>(m_DB), query.c_str(), -1, SQLITE_PREPARE_PERSISTENT, Statement, nullptr);
+    } else {
+      return sqlite3_prepare_v2(static_cast<sqlite3*>(m_DB), query.c_str(), -1, Statement, nullptr);
+    }
+  }
   inline int32_t Finalize(void* Statement) { return sqlite3_finalize(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Reset(void* Statement) { return sqlite3_reset(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Exec(const std::string& query) { return sqlite3_exec(static_cast<sqlite3*>(m_DB), query.c_str(), nullptr, nullptr, nullptr); }

@@ -412,7 +412,7 @@ void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
     return;
   }
 
-  m_DB->Prepare("INSERT OR REPLACE INTO config VALUES ( ?, ? )", &LatestGameStmt);
+  m_DB->Prepare("INSERT OR REPLACE INTO config VALUES ( ?, ? )", &LatestGameStmt, true);
 
   if (!LatestGameStmt) {
     Print("[SQLITE3] prepare error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError());
@@ -468,7 +468,7 @@ bool CAuraDB::ModeratorCheck(const string& server, string user)
   transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   if (!ModeratorCheckStmt)
-    m_DB->Prepare("SELECT * FROM moderators WHERE server=? AND name=?", &ModeratorCheckStmt);
+    m_DB->Prepare("SELECT * FROM moderators WHERE server=? AND name=?", &ModeratorCheckStmt, true);
 
   if (ModeratorCheckStmt)
   {
@@ -603,7 +603,7 @@ CDBBan* CAuraDB::UserBanCheck(string user, const string& server, const string& a
   transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   if (!UserBanCheckStmt)
-    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &UserBanCheckStmt);
+    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &UserBanCheckStmt, true);
 
   if (UserBanCheckStmt)
   {
@@ -648,7 +648,7 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
   CDBBan* Ban = nullptr;
 
   if (!IPBanCheckStmt)
-    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE ip=? AND authserver=?", &IPBanCheckStmt);
+    m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE ip=? AND authserver=?", &IPBanCheckStmt, true);
 
   if (IPBanCheckStmt)
   {
@@ -814,7 +814,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   // Footgun warning:
   // Ensure that all NON NULL columns are initialized here.
   if (!UpdatePlayerOnStartInitStmt) {
-    m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&UpdatePlayerOnStartInitStmt));
+    m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&UpdatePlayerOnStartInitStmt), true);
   }
   if (UpdatePlayerOnStartInitStmt == nullptr) {
     Print("[SQLITE3] prepare error adding gameuser on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
@@ -834,7 +834,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   m_DB->Reset(UpdatePlayerOnStartInitStmt);
 
   if (!UpdatePlayerOnStartEachStmt) {
-    m_DB->Prepare("UPDATE players SET latestip=?, latestgame=? WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnStartEachStmt));
+    m_DB->Prepare("UPDATE players SET latestip=?, latestgame=? WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnStartEachStmt), true);
   }
 
   if (UpdatePlayerOnStartEachStmt == nullptr)
@@ -868,7 +868,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   bool PlayerExisting = false;
 
   if (!UpdatePlayerOnEndFetchStmt) {
-    m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnEndFetchStmt));
+    m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnEndFetchStmt), true);
   }
 
   if (UpdatePlayerOnEndFetchStmt == nullptr)
@@ -906,7 +906,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   // update existing entry
 
   if (!UpdatePlayerOnEndUpdateStmt) {
-    m_DB->Prepare("UPDATE players SET games=?, loadingtime=?, duration=?, left=? WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnEndUpdateStmt));
+    m_DB->Prepare("UPDATE players SET games=?, loadingtime=?, duration=?, left=? WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnEndUpdateStmt), true);
   }
 
   if (UpdatePlayerOnEndUpdateStmt == nullptr)
@@ -1341,7 +1341,7 @@ string CAuraDB::FromCheck(uint32_t ip)
   string From = "??";
 
   if (!FromCheckStmt)
-    m_DB->Prepare("SELECT country FROM iptocountry WHERE ip1<=? AND ip2>=?", &FromCheckStmt);
+    m_DB->Prepare("SELECT country FROM iptocountry WHERE ip1<=? AND ip2>=?", &FromCheckStmt, true);
 
   if (!FromCheckStmt) {
     Print("[SQLITE3] prepare error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError());
@@ -1375,7 +1375,7 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
   bool Success = false;
 
   if (!FromAddStmt)
-    m_DB->Prepare("INSERT INTO iptocountry VALUES ( ?, ?, ? )", &FromAddStmt);
+    m_DB->Prepare("INSERT INTO iptocountry VALUES ( ?, ?, ? )", &FromAddStmt, true);
 
   if (!FromAddStmt) {
     Print("[SQLITE3] prepare error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError());
@@ -1409,7 +1409,7 @@ bool CAuraDB::AliasAdd(const string& alias, const string& target)
   }
 
   if (!AliasAddStmt)
-    m_DB->Prepare("INSERT OR REPLACE INTO aliases VALUES ( ?, ? )", &AliasAddStmt);
+    m_DB->Prepare("INSERT OR REPLACE INTO aliases VALUES ( ?, ? )", &AliasAddStmt, true);
 
   if (!AliasAddStmt) {
     Print("[SQLITE3] prepare error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError());
@@ -1439,7 +1439,7 @@ string CAuraDB::AliasCheck(const string& alias)
   }
 
   if (!AliasCheckStmt)
-    m_DB->Prepare("SELECT value FROM aliases WHERE alias=?", &AliasCheckStmt);
+    m_DB->Prepare("SELECT value FROM aliases WHERE alias=?", &AliasCheckStmt, true);
 
   if (!AliasCheckStmt) {
     Print("[SQLITE3] prepare error checking alias [" + alias + "] - " + m_DB->GetError());
