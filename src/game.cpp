@@ -4896,7 +4896,7 @@ void CGame::EventGameLoaded()
     SendAllChat("HINT: Single-user game detected. In-game commands will be DISABLED.");
     // FIXME? This creates a large lag spike client-side.
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.
-    // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags)
+    // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags), correctly untracks lastrefugeamai.ini
     StopPlayers("single-user game untracked", true);
   }
 
