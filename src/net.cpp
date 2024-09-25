@@ -73,7 +73,7 @@ uint32_t CGameTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return 0;
 }
 
-bool CGameTestConnection::GetIsRealmOnline()
+bool CGameTestConnection::GetIsRealmOnline() const
 {
   if (m_RealmInternalId < 0x10) return true;
   string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
@@ -82,7 +82,7 @@ bool CGameTestConnection::GetIsRealmOnline()
   return realm->GetLoggedIn();
 }
 
-uint8_t CGameTestConnection::GetHostCounter()
+uint32_t CGameTestConnection::GetHostCounter() const
 {
   uint32_t hostCounter = m_Aura->m_CurrentLobby->GetHostCounter();
   if (m_Aura->m_CurrentLobby->GetIsMirror()) {
@@ -94,11 +94,11 @@ uint8_t CGameTestConnection::GetHostCounter()
   if (realm == nullptr) {
     return hostCounter;
   }
-  hostCounter |= m_PublicServerID << 24;
+  hostCounter |= static_cast<uint32_t>(realm->GetHostCounterID()) << 24;
   return hostCounter;
 }
 
-uint16_t CGameTestConnection::GetPort()
+uint16_t CGameTestConnection::GetPort() const
 {
   if (m_TargetHost.ss_family == AF_INET6) {
     sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&m_TargetHost);

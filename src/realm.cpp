@@ -1230,7 +1230,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
   // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
   // battle.net refreshes use IDs of 16-255
 
-    game->GetHostCounter() | (game->GetIsMirror() ? 0 : (m_PublicServerID << 24)),
+    game->GetHostCounter() | (game->GetIsMirror() ? 0 : (static_cast<uint32_t>(m_PublicServerID) << 24)),
     game->GetMap()->GetVersionMaxSlots()
   ));
 

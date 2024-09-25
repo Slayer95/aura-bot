@@ -100,9 +100,9 @@ public:
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool      Update(void* fd, void* send_fd);
   bool      QueryGameInfo();
-  bool      GetIsRealmOnline();
-  uint32_t  GetHostCounter();
-  uint16_t  GetPort();
+  bool      GetIsRealmOnline() const;
+  uint32_t  GetHostCounter() const;
+  uint16_t  GetPort() cont;
 
   sockaddr_storage            m_TargetHost;
   CAura*                      m_Aura;
