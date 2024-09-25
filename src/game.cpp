@@ -136,6 +136,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Exiting(false),
     m_ExitingSoon(false),
     m_SlotInfoChanged(0),
+    m_JoinedVirtualHosts(0),
     m_PublicStart(false),
     m_Locked(false),
     m_RealmRefreshError(false),
@@ -367,7 +368,7 @@ void CGame::StartGameOverTimer()
 {
   m_ExitingSoon = true;
   m_GameOverTime = GetTime();
-  Print(GetLogPrefix() + "gameover timer started (" + ToDecString(GetNumJoinedPlayersOrFakeUsers()) + " user(s) left)");
+  Print(GetLogPrefix() + "gameover timer started (" + ToDecString(GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts) + " user(s) left)");
   if (GetNumJoinedPlayers() > 0) {
     SendAllChat("Gameover timer started (disconnecting in 60 seconds...)");
   }
@@ -1241,9 +1242,13 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // start the gameover timer if there's only a configured number of players left
   // do not count observers, but fake users are counted regardless
-  uint8_t RemainingPlayers = GetNumJoinedPlayersOrFakeUsers();
+  uint8_t RemainingPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   if (RemainingPlayers != m_StartPlayers && !GetIsGameOver() && (m_GameLoading || m_GameLoaded)) {
-    if (RemainingPlayers == 0 || RemainingPlayers <= m_Config->m_NumPlayersToStartGameOver || (RemainingPlayers == 1 && GetNumComputers() == 0)) {
+    if (RemainingPlayers == 0) {
+      Print(GetLogPrefix() + "gameover timer started: 0 p | " + ToDecString(GetNumJoinedObservers()) + " | obs | 0 fake");
+      StartGameOverTimer();
+    } else if (RemainingPlayers <= m_Config->m_NumPlayersToStartGameOver) {
+      Print(GetLogPrefix() + "gameover timer started: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost");
       StartGameOverTimer();
     }
   }
@@ -3171,13 +3176,19 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     }
   }
 
-  if (m_GameLoading || m_GameLoaded || m_ExitingSoon) {
+  if ((m_GameLoading || m_GameLoaded || m_ExitingSoon) && !user->GetIsObserver()) {
     // end the game if there aren't any players left
     // but only if the user who left isn't an observer
     // this allows parties of 2+ observers to watch AI vs AI
-    if (!user->GetIsObserver() && GetNumJoinedPlayers() == 0) {
+    const uint8_t numJoinedPlayers = GetNumJoinedPlayers();
+    if (numJoinedPlayers == 0) {
       Print(GetLogPrefix() + "is over (no players left)");
       m_Exiting = true;
+    } else if (!GetIsGameOver()) {
+      if (numJoinedPlayers == 1 && GetNumComputers() == 0) {
+        Print(GetLogPrefix() + "gameover timer started: remaining 1 p | 0 comp | " + ToDecString(GetNumJoinedObservers()) + " obs");
+        StartGameOverTimer();
+      }
     }
   }
 
@@ -4599,13 +4610,13 @@ void CGame::EventGameStarted()
     uint8_t fakeCount = static_cast<uint8_t>(m_FakeUsers.size());
 
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-      CreateFakeObserver(true);
+      if (CreateFakeObserver(true)) ++m_JoinedVirtualHosts;
     } else {
       if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() > 0 && GetNumFakeObservers() == 0) {
-        CreateFakeObserver(true);
+        if (CreateFakeObserver(true)) ++m_JoinedVirtualHosts;
       }
       if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
-        CreateFakePlayer(true);
+        if (CreateFakePlayer(true)) ++m_JoinedVirtualHosts;
       }
     }
 
@@ -4658,8 +4669,8 @@ void CGame::EventGameStarted()
 
   // record the number of starting users
   // fake observers are counted, this is a feature to prevent premature game ending
-  m_StartPlayers = GetNumJoinedPlayersOrFakeUsers();
-  Print(GetLogPrefix() + "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size()) + " fake | " + ToDecString(m_ControllersWithMap) + " controllers");
+  m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
+  Print(GetLogPrefix() + "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers");
 
   // enable stats
 
@@ -4834,7 +4845,7 @@ void CGame::EventGameLoaded()
 {
   CheckPlayerObfuscation();
 
-  Print(GetLogPrefix() + "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size()) + " fake");
+  Print(GetLogPrefix() + "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost");
 
   // send shortest, longest, and personal load times to each user
 
@@ -4861,7 +4872,7 @@ void CGame::EventGameLoaded()
     SendAllChat("Shortest load by user [" + Shortest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
     SendAllChat("Longest load by user [" + Longest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
   }
-  const uint8_t numDisconnectedPlayers = m_StartPlayers - GetNumJoinedPlayersOrFakeUsers();
+  const uint8_t numDisconnectedPlayers = m_StartPlayers + m_JoinedVirtualHosts - GetNumJoinedPlayersOrFakeUsers();
   if (0 < numDisconnectedPlayers) {
     SendAllChat(ToDecString(numDisconnectedPlayers) + " user(s) disconnected during game load.");
   }
@@ -4999,6 +5010,7 @@ void CGame::Remake()
   m_IsAutoVirtualPlayers = false;
   m_VirtualHostUID = 0xFF;
   m_SlotInfoChanged = 0;
+  m_JoinedVirtualHosts = 0;
   m_PublicStart = false;
   m_Locked = false;
   m_RealmRefreshError = false;
