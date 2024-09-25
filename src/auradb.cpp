@@ -188,7 +188,11 @@ CAuraDB::CAuraDB(CConfig& CFG)
     AliasCheckStmt(nullptr),
     UserBanCheckStmt(nullptr),
     IPBanCheckStmt(nullptr),
-    ModeratorCheckStmt(nullptr)
+    ModeratorCheckStmt(nullptr),
+    UpdatePlayerOnStartInitStmt(nullptr),
+    UpdatePlayerOnStartEachStmt(nullptr),
+    UpdatePlayerOnEndFetchStmt(nullptr),
+    UpdatePlayerOnEndUpdateStmt(nullptr)
 {
   m_TWRPGFile = CFG.GetPath("game_data.twrpg_path", CFG.GetHomeDir() / filesystem::path("twrpg.json"));
   InitMapData();
@@ -560,7 +564,7 @@ vector<string> CAuraDB::ListModerators(const string& server)
       const string userWrap = string(reinterpret_cast<const char*>(user));
       admins.push_back(userWrap);
     }
-    m_DB->Reset(Statement);
+    m_DB->Finalize(Statement);
   }
   else
     Print("[SQLITE3] prepare error listing moderators [" + server + "] - " + m_DB->GetError());
@@ -794,7 +798,7 @@ vector<string> CAuraDB::ListBans(const string& authserver)
       const unsigned char* user = m_DB->Column(Statement, 1);
       bans.push_back(string(reinterpret_cast<const char*>(user)));
     }
-    m_DB->Reset(Statement);
+    m_DB->Finalize(Statement);
   }
   else
     Print("[SQLITE3] prepare error listing bans [" + authserver + "] - " + m_DB->GetError());
@@ -804,55 +808,56 @@ vector<string> CAuraDB::ListBans(const string& authserver)
 
 void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, const string& ip, uint64_t gameId)
 {
-  sqlite3_stmt* Statement = nullptr;
-
   string lowerName = name;
   transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
 
   // Footgun warning:
   // Ensure that all NON NULL columns are initialized here.
-  m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&Statement));
-  if (Statement == nullptr) {
+  if (!UpdatePlayerOnStartInitStmt) {
+    m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", reinterpret_cast<void**>(&UpdatePlayerOnStartInitStmt));
+  }
+  if (UpdatePlayerOnStartInitStmt == nullptr) {
     Print("[SQLITE3] prepare error adding gameuser on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
-  sqlite3_bind_text(Statement, 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 3, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 4, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(Statement, 5, unsigned_to_signed_64(gameId));
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartInitStmt), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartInitStmt), 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartInitStmt), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartInitStmt), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartInitStmt), 5, unsigned_to_signed_64(gameId));
 
-  int32_t RC = m_DB->Step(Statement);
+  int32_t RC = m_DB->Step(UpdatePlayerOnStartInitStmt);
   if (RC != SQLITE_DONE) {
     Print("[SQLITE3] error initializing gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
   }
-  m_DB->Finalize(Statement);
+  m_DB->Reset(UpdatePlayerOnStartInitStmt);
 
-  m_DB->Prepare("UPDATE players SET latestip=?, latestgame=? WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
+  if (!UpdatePlayerOnStartEachStmt) {
+    m_DB->Prepare("UPDATE players SET latestip=?, latestgame=? WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnStartEachStmt));
+  }
 
-  if (Statement == nullptr)
+  if (UpdatePlayerOnStartEachStmt == nullptr)
   {
     Print("[SQLITE3] prepare error updating gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
-  sqlite3_bind_text(Statement, 1, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(Statement, 2, unsigned_to_signed_64(gameId));
-  sqlite3_bind_text(Statement, 3, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 4, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartEachStmt), 1, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartEachStmt), 2, unsigned_to_signed_64(gameId));
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartEachStmt), 3, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnStartEachStmt), 4, server.c_str(), -1, SQLITE_TRANSIENT);
 
-  RC = m_DB->Step(Statement);
+  RC = m_DB->Step(UpdatePlayerOnStartEachStmt);
 
   if (RC != SQLITE_DONE)
     Print("[SQLITE3] error adding gameuser on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
 
-  m_DB->Finalize(Statement);
+  m_DB->Reset(UpdatePlayerOnStartEachStmt);
 }
 
 void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, uint64_t loadingtime, uint64_t duration, uint64_t left)
 {
-  sqlite3_stmt* Statement = nullptr;
   string lowerName = name;
   transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
 
@@ -862,30 +867,32 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
   uint32_t Games = 0;
   bool PlayerExisting = false;
 
-  m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
+  if (!UpdatePlayerOnEndFetchStmt) {
+    m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnEndFetchStmt));
+  }
 
-  if (Statement == nullptr)
+  if (UpdatePlayerOnEndFetchStmt == nullptr)
   {
     Print("[SQLITE3] prepare error adding gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
-  sqlite3_bind_text(Statement, 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndFetchStmt), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndFetchStmt), 2, server.c_str(), -1, SQLITE_TRANSIENT);
 
-  RC = m_DB->Step(Statement);
+  RC = m_DB->Step(UpdatePlayerOnEndFetchStmt);
 
   if (RC == SQLITE_ROW)
   {
-    Games += 1 + sqlite3_column_int(Statement, 0);
-    loadingtime += sqlite3_column_int64(Statement, 1);
-    duration += sqlite3_column_int64(Statement, 2);
-    left += sqlite3_column_int64(Statement, 3);
+    Games += 1 + sqlite3_column_int(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndFetchStmt), 0);
+    loadingtime += sqlite3_column_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndFetchStmt), 1);
+    duration += sqlite3_column_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndFetchStmt), 2);
+    left += sqlite3_column_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndFetchStmt), 3);
 
     PlayerExisting = true;
   }
 
-  m_DB->Finalize(Statement);
+  m_DB->Reset(UpdatePlayerOnEndFetchStmt);
 
   // there must be a row already because we add one, if not present, in UpdateGamePlayerOnStart( ) before the call to UpdateDotAPlayerOnEnd( )
 
@@ -898,27 +905,29 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
 
   // update existing entry
 
-  m_DB->Prepare("UPDATE players SET games=?, loadingtime=?, duration=?, left=? WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
+  if (!UpdatePlayerOnEndUpdateStmt) {
+    m_DB->Prepare("UPDATE players SET games=?, loadingtime=?, duration=?, left=? WHERE name=? AND server=?", reinterpret_cast<void**>(&UpdatePlayerOnEndUpdateStmt));
+  }
 
-  if (Statement == nullptr)
+  if (UpdatePlayerOnEndUpdateStmt == nullptr)
   {
     Print("[SQLITE3] prepare error updating gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
-  sqlite3_bind_int(Statement, 1, Games);
-  sqlite3_bind_int64(Statement, 2, loadingtime);
-  sqlite3_bind_int64(Statement, 3, duration);
-  sqlite3_bind_int64(Statement, 4, left);
-  sqlite3_bind_text(Statement, 5, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 6, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndUpdateStmt), 1, Games);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndUpdateStmt), 2, loadingtime);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndUpdateStmt), 3, duration);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndUpdateStmt), 4, left);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndUpdateStmt), 5, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(UpdatePlayerOnEndUpdateStmt), 6, server.c_str(), -1, SQLITE_TRANSIENT);
 
-  RC = m_DB->Step(Statement);
+  RC = m_DB->Step(UpdatePlayerOnEndUpdateStmt);
 
   if (RC != SQLITE_DONE)
     Print("[SQLITE3] error adding gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
 
-  m_DB->Finalize(Statement);
+  m_DB->Reset(UpdatePlayerOnEndUpdateStmt);
 }
 
 CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, const string& server)

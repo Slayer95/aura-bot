@@ -251,6 +251,10 @@ private:
   void* UserBanCheckStmt;   // frequently used
   void* IPBanCheckStmt;     // frequently used
   void* ModeratorCheckStmt; // frequently used
+  void* UpdatePlayerOnStartInitStmt; // frequently used
+  void* UpdatePlayerOnStartEachStmt; // frequently used
+  void* UpdatePlayerOnEndFetchStmt; // frequently used
+  void* UpdatePlayerOnEndUpdateStmt; // frequently used
 
   std::map<uint8_t, CSearchableMapData*> m_SearchableMapData;
 
