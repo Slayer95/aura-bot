@@ -1957,6 +1957,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+#ifndef DISABLE_DPP
     case HashCode("twrpg"): {
       if (Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "twrpg <NOMBRE>");
@@ -1998,6 +1999,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       break;
     }
+#endif
 
     /*****************
      * ADMIN COMMANDS *
