@@ -102,7 +102,7 @@ public:
   bool      QueryGameInfo();
   bool      GetIsRealmOnline() const;
   uint32_t  GetHostCounter() const;
-  uint16_t  GetPort() cont;
+  uint16_t  GetPort() const;
 
   sockaddr_storage            m_TargetHost;
   CAura*                      m_Aura;
