@@ -4896,7 +4896,7 @@ void CGame::EventGameLoaded()
     SendAllChat("HINT: Single-user game detected. In-game commands will be DISABLED.");
     // FIXME? This used to create a large lag spike client-side.
     // Nowadays, it's worse: it causes the WC3 client to straight up quit the game.
-    //StopPlayers("single-user game untracked", true);
+    StopPlayers("single-user game untracked", true);
   }
 
   HandleGameLoadedStats();
