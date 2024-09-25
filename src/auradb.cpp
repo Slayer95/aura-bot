@@ -412,7 +412,9 @@ void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
     return;
   }
 
-  m_DB->Prepare("INSERT OR REPLACE INTO config VALUES ( ?, ? )", &LatestGameStmt, true);
+  if (!LatestGameStmt) {
+    m_DB->Prepare("INSERT OR REPLACE INTO config VALUES ( ?, ? )", &LatestGameStmt, true);
+  }
 
   if (!LatestGameStmt) {
     Print("[SQLITE3] prepare error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError());
