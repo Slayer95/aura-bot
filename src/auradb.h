@@ -65,6 +65,20 @@
 // ... Others
 #define MAP_DATA_TYPE_ANY 255u
 
+#define FROM_ADD_IDX 0u
+#define FROM_CHECK_IDX 1u
+#define LATEST_GAME_IDX 2u
+#define ALIAS_ADD_IDX 3u
+#define ALIAS_CHECK_IDX 4u
+#define USER_BAN_CHECK_IDX 5u
+#define IP_BAN_CHECK_IDX 6u
+#define MODERATOR_CHECK_IDX 7u
+#define PLAYER_SUMMARY_IDX 8u
+#define UPDATE_PLAYER_START_INIT_IDX 9u
+#define UPDATE_PLAYER_START_EACH_IDX 10u
+#define UPDATE_PLAYER_END_UPDATE_IDX 11u
+#define STMT_CACHE_SIZE 12u
+
 /**************
  *** SCHEMA ***
  **************
@@ -243,30 +257,18 @@ class CDBBan;
 class CAuraDB
 {
 private:
-  CSQLITE3*             m_DB;
-  std::filesystem::path m_File;
-  std::filesystem::path m_TWRPGFile;
-  bool                  m_FirstRun;
-  bool                  m_HasError;
-  std::string           m_Error;
-  uint64_t              m_LatestGameId;
+  CSQLITE3*                  m_DB;
+  std::filesystem::path      m_File;
+  std::filesystem::path      m_TWRPGFile;
+  bool                       m_FirstRun;
+  bool                       m_HasError;
+  std::string                m_Error;
+  uint64_t                   m_LatestGameId;
 
   // we keep some prepared statements in memory rather than recreating them each function call
   // this is an optimization because preparing statements takes time
   // however it only pays off if you're going to be using the statement extremely often
-
-  void* FromAddStmt;        // for faster startup time
-  void* FromCheckStmt;      // frequently used
-  void* LatestGameStmt;     // very frequently used
-  void* AliasAddStmt;
-  void* AliasCheckStmt;     // very frequently used
-  void* UserBanCheckStmt;   // frequently used
-  void* IPBanCheckStmt;     // frequently used
-  void* ModeratorCheckStmt; // frequently used
-  void* UpdatePlayerOnStartInitStmt; // frequently used
-  void* UpdatePlayerOnStartEachStmt; // frequently used
-  void* UpdatePlayerOnEndFetchStmt; // frequently used
-  void* UpdatePlayerOnEndUpdateStmt; // frequently used
+  std::vector<sqlite3_stmt*> m_StmtCache;
 
   std::map<uint8_t, CSearchableMapData*> m_SearchableMapData;
 
@@ -279,6 +281,7 @@ public:
   uint8_t            GetSchemaStatus(int64_t& schemaNumber);
   void               UpdateSchema(int64_t oldSchemaNumber);
   void               Initialize();
+  void               PreCompileStatements();
   inline bool        HasError() const { return m_HasError; }
   inline std::string GetError() const { return m_Error; }
   inline std::filesystem::path GetFile() const { return m_File; }
