@@ -3136,7 +3136,8 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
       // Observers that leave during countdown are replaced by fake observers.
       // This ensures the integrity of many things related to game slots.
       // e.g. this allows m_ControllersWithMap to remain unchanged.
-      const uint8_t SID = GetSIDFromUID(user->GetUID());
+      uint8_t SID = GetSIDFromUID(user->GetUID());
+      if (SID >= m_Slots.size()) SID = GetEmptyObserverSID();
       CreateFakeUserInner(SID, GetNewUID(), "User[" + ToDecString(SID + 1) + "]");
       CGameSlot* slot = GetSlot(SID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
