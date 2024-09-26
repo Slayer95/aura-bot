@@ -4889,11 +4889,11 @@ void CGame::EventGameLoaded()
     }
   }
 
-  vector<CGameUser*> players = GetPlayers();
+  vector<const CGameUser*> players = GetPlayers();
   if (players.size() <= 2) {
     m_PlayedBy = PlayersToNameListString(players, true);
   } else {
-    m_PlayedBy = player[0]->GetName() + ", and others";
+    m_PlayedBy = players[0]->GetName() + ", and others";
   }
 
   if (Shortest && Longest) {
