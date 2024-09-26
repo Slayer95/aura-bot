@@ -4892,7 +4892,7 @@ void CGame::EventGameLoaded()
     SendChat(user, "Your load time was " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
   }
 
-  if (GetIsSinglePlayerMode()) {
+  if (GetIsSinglePlayerMode() && !GetAnyUsingGProxy()) {
     SendAllChat("HINT: Single-user game detected. In-game commands will be DISABLED.");
     // FIXME? This creates a large lag spike client-side.
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.
