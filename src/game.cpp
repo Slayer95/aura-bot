@@ -368,8 +368,7 @@ void CGame::StartGameOverTimer()
 {
   m_ExitingSoon = true;
   m_GameOverTime = GetTime();
-  Print(GetLogPrefix() + "gameover timer started (" + ToDecString(GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts) + " user(s) left)");
-  if (GetNumJoinedPlayers() > 0) {
+  if (GetNumJoinedUsers() > 0) {
     SendAllChat("Gameover timer started (disconnecting in 60 seconds...)");
   }
 
