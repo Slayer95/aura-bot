@@ -3091,7 +3091,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin cancelled game) [" + m_FromName + "]");
-      SendReply("Aborting " + m_TargetGame->GetDescription());
+      SendReply("Aborting " + m_TargetGame->GetStatusDescription());
       m_TargetGame->m_Exiting = true;
       m_TargetGame->StopPlayers("was disconnected (admin cancelled game)", false);
       break;
@@ -6564,11 +6564,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       vector<string> CurrentGames;
       if (m_Aura->m_CurrentLobby) {
-        CurrentGames.push_back(string("Lobby#")+ to_string(m_Aura->m_CurrentLobby->GetGameID()) + ": " + m_Aura->m_CurrentLobby->GetDescription());
+        CurrentGames.push_back(string("Lobby#")+ to_string(m_Aura->m_CurrentLobby->GetGameID()) + ": " + m_Aura->m_CurrentLobby->GetStatusDescription());
       }
       for (size_t i = 0; i < m_Aura->m_Games.size(); ++i) {
         CGame* game = m_Aura->m_Games[i];
-        CurrentGames.push_back(string("Game#") + to_string(game->GetGameID()) + ": " + game->GetDescription());
+        CurrentGames.push_back(string("Game#") + to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
       }
       if (CurrentGames.empty()) {
         SendReply("No games are active.");

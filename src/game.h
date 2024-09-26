@@ -152,6 +152,7 @@ protected:
   void*                          m_CreatedFrom;                   // battle.net or IRC server the player who created this game was on
   uint8_t                        m_CreatedFromType;               // type of server m_CreatedFrom is
   std::set<std::string>          m_RealmsExcluded;                // battle.net servers where the mirrored game is not to be broadcasted
+  std::string                    m_PlayedBy;
   std::string                    m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
   std::string                    m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
   std::string                    m_MapPath;                       // store the map path to save in the database on game end
@@ -322,7 +323,8 @@ public:
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
   inline int64_t        GetGameTicks() const { return m_GameTicks; }
   inline bool           GetChatOnly() const { return m_ChatOnly; }
-  std::string           GetDescription() const;
+  std::string           GetStatusDescription() const;
+  std::string           GetEndDescription() const;
   std::string           GetCategory() const;
   uint32_t              GetGameType() const;
   uint32_t              GetGameFlags() const;

@@ -873,7 +873,7 @@ string CGame::GetClientFileName() const
   return m_MapPath.substr(LastSlash + 1);
 }
 
-string CGame::GetDescription() const
+string CGame::GetStatusDescription() const
 {
   if (m_IsMirror)
      return "[" + GetClientFileName() + "] (Mirror) \"" + m_GameName + "\"";
@@ -881,6 +881,23 @@ string CGame::GetDescription() const
   string Description = (
     "[" + GetClientFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " +
     ToDecString(GetNumJoinedPlayersOrFakeUsers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size())
+  );
+
+  if (m_GameLoading || m_GameLoaded)
+    Description += " : " + to_string((m_GameTicks / 1000) / 60) + "min";
+  else
+    Description += " : " + to_string((GetTime() - m_CreationTime) / 60) + "min";
+
+  return Description;
+}
+
+string CGame::GetEndDescription() const
+{
+  if (m_IsMirror)
+     return "[" + GetClientFileName() + "] (Mirror) \"" + m_GameName + "\"";
+
+  string Description = (
+    "[" + GetClientFileName() + "] \"" + m_GameName + "\". Players: " + m_PlayedBy + ""
   );
 
   if (m_GameLoading || m_GameLoaded)
@@ -4873,6 +4890,13 @@ void CGame::EventGameLoaded()
     }
   }
 
+  vector<CGameUser*> players = GetPlayers();
+  if (players.size() <= 2) {
+    m_PlayedBy = PlayersToNameListString(players, true);
+  } else {
+    m_PlayedBy = player[0]->GetName() + ", and others";
+  }
+
   if (Shortest && Longest) {
     SendAllChat("Shortest load by user [" + Shortest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
     SendAllChat("Longest load by user [" + Longest->GetDisplayName() + "] was " + ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
@@ -6886,7 +6910,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   if (m_ChatOnly) {
     SendAllChat("This lobby is in chat-only mode. Please join another hosted game.");
     if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby != this) {
-      SendAllChat("Currently hosting: " + m_Aura->m_CurrentLobby->GetDescription());
+      SendAllChat("Currently hosting: " + m_Aura->m_CurrentLobby->GetStatusDescription());
     }
     return;
   }

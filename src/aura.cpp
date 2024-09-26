@@ -1145,9 +1145,9 @@ void CAura::EventGameDeleted(CGame* game)
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     if (game->GetGameLoaded()) {
-      realm->QueueChatChannel("Game ended: " + game->GetDescription());
+      realm->QueueChatChannel("Game ended: " + game->GetEndDescription());
       if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-        realm->QueueWhisper("Game ended: " + game->GetDescription(), game->GetCreatorName());
+        realm->QueueWhisper("Game ended: " + game->GetEndDescription(), game->GetCreatorName());
       }
     }
   }
@@ -1157,9 +1157,9 @@ void CAura::EventGameRemake(CGame* game)
 {
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
-    realm->QueueChatChannel("Game remake: " + game->GetDescription());
+    realm->QueueChatChannel("Game remake: " + ParseFileName(m_Map->GetServerPath()));
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-      realm->QueueWhisper("Game remake: " + game->GetDescription(), game->GetCreatorName());
+      realm->QueueWhisper("Game remake: " + ParseFileName(m_Map->GetServerPath()), game->GetCreatorName());
     }
   }
 }
@@ -1555,7 +1555,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   if (m_CurrentLobby) {
-    gameSetup->m_Ctx->ErrorReply("Another game lobby [" + m_CurrentLobby->GetDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Another game lobby [" + m_CurrentLobby->GetStatusDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 
