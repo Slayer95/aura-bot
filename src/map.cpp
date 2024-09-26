@@ -313,6 +313,7 @@ bool CMap::SetMapObservers(const uint8_t nMapObservers)
       m_MapFilterObs = MAPFILTER_OBS_ONDEATH;
       break;
     default:
+      m_MapObservers = nMapObservers;
       return false;
   }
   return true;
@@ -1246,9 +1247,11 @@ void CMap::Load(CConfig* CFG)
   }
   if (CFG->Exists("map.observers")) {
     SetMapObservers(CFG->GetUint8("map.observers", m_MapObservers));
+    CFG->FailIfErrorLast();
   }
   if (CFG->Exists("map.filter_obs")) {
     m_MapFilterObs = CFG->GetUint8("map.filter_obs", m_MapFilterObs);
+    CFG->FailIfErrorLast();
   }
 
   if (!CFG->GetSuccess()) {
