@@ -5759,6 +5759,15 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
     // don't swap the type, team, colour, race, or handicap
     m_Slots[SID1] = CGameSlot(Slot1.GetType(), Slot2.GetUID(), Slot2.GetDownloadStatus(), Slot2.GetSlotStatus(), Slot2.GetComputer(), Slot1.GetTeam(), Slot1.GetColor(), Slot1.GetRace(), Slot2.GetComputerType(), Slot1.GetHandicap());
     m_Slots[SID2] = CGameSlot(Slot2.GetType(), Slot1.GetUID(), Slot1.GetDownloadStatus(), Slot1.GetSlotStatus(), Slot1.GetComputer(), Slot2.GetTeam(), Slot2.GetColor(), Slot2.GetRace(), Slot1.GetComputerType(), Slot2.GetHandicap());
+    uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
+    while (i--) {
+      uint8_t fakeSID = static_cast<uint8_t>(m_FakeUsers[i]);
+      if (fakeSID == SID1) {
+        m_FakeUsers[i] &= (static_cast<uint16_t>(SID2) | 0xFF00);
+      } else if (fakeSID == SID2) {
+        m_FakeUsers[i] &= (static_cast<uint16_t>(SID1) | 0xFF00);
+      }
+    }
   } else {
     // swap everything
     if (GetIsCustomForces()) {
