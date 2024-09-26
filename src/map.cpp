@@ -68,6 +68,8 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
   : m_Aura(nAura),
+    m_MapObservers(MAPOBS_NONE),
+    m_MapFilterObs(MAPFILTER_OBS_NONE),
     m_MapMPQLoaded(false),
     m_MapMPQErrored(false),
     m_ProxyReconnect(RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED),
@@ -296,7 +298,6 @@ bool CMap::NormalizeSlots()
 
 bool CMap::SetMapObservers(const uint8_t nMapObservers)
 {
-
   switch (nMapObservers) {
     case MAPOBS_ALLOWED:
     case MAPOBS_REFEREES:
@@ -1022,25 +1023,6 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8("map.filter_type", MapFilterType);
   }
 
-  m_MapFilterType = MapFilterType;
-
-  // These are per-game flags. Don't automatically set them in the map config.
-  m_MapSpeed       = CFG->GetUint8("map.speed", MAPSPEED_FAST);
-  m_MapVisibility  = CFG->GetUint8("map.visibility", MAPVIS_DEFAULT);
-  m_MapFilterMaker = CFG->GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
-  m_MapFilterSize  = CFG->GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
-
-  // All maps have observer slots enabled by default.
-  m_MapObservers   = MAPOBS_ALLOWED;
-  m_MapFilterObs   = MAPFILTER_OBS_FULL;
-
-  if (CFG->Exists("map.observers")) {
-    SetMapObservers(CFG->GetUint8("map.observers", m_MapObservers));
-  }
-  if (CFG->Exists("map.filter_obs")) {
-    m_MapFilterObs = CFG->GetUint8("map.filter_obs", m_MapFilterObs);
-  }
-
   // Host to bot map communication (W3HMC)
   m_HMCMode = CFG->GetStringIndex("map.w3hmc.mode", {"disabled", "optional", "required"}, W3HMC_MODE_DISABLED);
   m_HMCTrigger1 = CFG->GetUint8("map.w3hmc.trigger_1", 0);
@@ -1095,6 +1077,10 @@ void CMap::Load(CConfig* CFG)
   }
   if (CFG->Exists("map.bot.latency")) {
     m_Latency = CFG->GetUint16("map.bot.latency", 100);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.proxy_reconnect")) {
+    m_ProxyReconnect = CFG->GetUint8("map.proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
     CFG->FailIfErrorLast();
   }
   if (CFG->Exists("map.auto_start.seconds")) {
@@ -1236,10 +1222,6 @@ void CMap::Load(CConfig* CFG)
 
   m_Slots = Slots;
 
-  if (CFG->Exists("map.proxy_reconnect")) {
-    m_ProxyReconnect = CFG->GetUint8("map.proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
-  }
-
   // if random races is set force every slot's race to random
 
   if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) && (m_MapFlags & MAPFLAG_RANDOMRACES)) {
@@ -1247,6 +1229,26 @@ void CMap::Load(CConfig* CFG)
 
     for (auto& slot : m_Slots)
       slot.SetRace(SLOTRACE_RANDOM);
+  }
+
+  m_MapFilterType = MapFilterType;
+
+  // These are per-game flags. Don't automatically set them in the map config.
+  m_MapSpeed       = CFG->GetUint8("map.speed", MAPSPEED_FAST);
+  m_MapVisibility  = CFG->GetUint8("map.visibility", MAPVIS_DEFAULT);
+  m_MapFilterMaker = CFG->GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
+  m_MapFilterSize  = CFG->GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
+
+  // Maps supporting observer slots enable them by default.
+  if (m_Slots.size() + m_MapNumDisabled < m_MapVersionMaxSlots) {
+    m_MapObservers = MAPOBS_ALLOWED;
+    m_MapFilterObs = MAPFILTER_OBS_FULL;
+  }
+  if (CFG->Exists("map.observers")) {
+    SetMapObservers(CFG->GetUint8("map.observers", m_MapObservers));
+  }
+  if (CFG->Exists("map.filter_obs")) {
+    m_MapFilterObs = CFG->GetUint8("map.filter_obs", m_MapFilterObs);
   }
 
   if (!CFG->GetSuccess()) {
