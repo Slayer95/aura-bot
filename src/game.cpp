@@ -3137,6 +3137,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
       // This ensures the integrity of many things related to game slots.
       // e.g. this allows m_ControllersWithMap to remain unchanged.
       uint8_t SID = GetSIDFromUID(user->GetUID());
+      // TODO: Investigate under which circumstances, EventUserDeleted() is called without releasing the SID.
       if (SID >= m_Slots.size()) SID = GetEmptyObserverSID();
       CreateFakeUserInner(SID, GetNewUID(), "User[" + ToDecString(SID + 1) + "]");
       CGameSlot* slot = GetSlot(SID);
