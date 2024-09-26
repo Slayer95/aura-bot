@@ -1029,8 +1029,11 @@ void CMap::Load(CConfig* CFG)
   m_MapVisibility  = CFG->GetUint8("map.visibility", MAPVIS_DEFAULT);
   m_MapFilterMaker = CFG->GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize  = CFG->GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
+
+  // All maps have observer slots enabled by default.
   m_MapObservers   = MAPOBS_ALLOWED;
   m_MapFilterObs   = MAPFILTER_OBS_FULL;
+
   if (CFG->Exists("map.observers")) {
     SetMapObservers(CFG->GetUint8("map.observers", m_MapObservers));
   }
@@ -1244,13 +1247,6 @@ void CMap::Load(CConfig* CFG)
 
     for (auto& slot : m_Slots)
       slot.SetRace(SLOTRACE_RANDOM);
-  }
-
-  // force melee maps to have observer slots enabled by default
-
-  if (m_MapFilterType & MAPFILTER_TYPE_MELEE && m_MapObservers == MAPOBS_NONE) {
-    m_MapObservers = MAPOBS_ALLOWED;
-    m_MapFilterObs = MAPFILTER_OBS_FULL;
   }
 
   if (!CFG->GetSuccess()) {
