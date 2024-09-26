@@ -1250,6 +1250,7 @@ void CMap::Load(CConfig* CFG)
 
   if (m_MapFilterType & MAPFILTER_TYPE_MELEE && m_MapObservers == MAPOBS_NONE) {
     m_MapObservers = MAPOBS_ALLOWED;
+    m_MapFilterObs = MAPFILTER_OBS_FULL;
   }
 
   if (!CFG->GetSuccess()) {
