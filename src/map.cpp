@@ -296,7 +296,24 @@ bool CMap::NormalizeSlots()
 
 bool CMap::SetMapObservers(const uint8_t nMapObservers)
 {
-  m_MapObservers = nMapObservers;
+
+  switch (nMapObservers) {
+    case MAPOBS_ALLOWED:
+    case MAPOBS_REFEREES:
+      m_MapObservers = nMapObservers;
+      m_MapFilterObs = MAPFILTER_OBS_FULL;
+      break;
+    case MAPOBS_NONE:
+      m_MapObservers = nMapObservers;
+      m_MapFilterObs = MAPFILTER_OBS_NONE;
+      break;
+    case MAPOBS_ONDEFEAT:
+      m_MapObservers = nMapObservers;
+      m_MapFilterObs = MAPFILTER_OBS_ONDEATH;
+      break;
+    default:
+      return false;
+  }
   return true;
 }
 
@@ -1010,10 +1027,16 @@ void CMap::Load(CConfig* CFG)
   // These are per-game flags. Don't automatically set them in the map config.
   m_MapSpeed       = CFG->GetUint8("map.speed", MAPSPEED_FAST);
   m_MapVisibility  = CFG->GetUint8("map.visibility", MAPVIS_DEFAULT);
-  m_MapObservers   = CFG->GetUint8("map.observers", MAPOBS_ALLOWED);
   m_MapFilterMaker = CFG->GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize  = CFG->GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
-  m_MapFilterObs   = CFG->GetUint8("map.filter_obs", MAPFILTER_OBS_NONE);
+  m_MapObservers   = MAPOBS_ALLOWED;
+  m_MapFilterObs   = MAPFILTER_OBS_FULL;
+  if (CFG->Exists("map.observers")) {
+    SetMapObservers(CFG->GetUint8("map.observers", m_MapObservers));
+  }
+  if (CFG->Exists("map.filter_obs")) {
+    m_MapFilterObs = CFG->GetUint8("map.filter_obs", m_MapFilterObs);
+  }
 
   // Host to bot map communication (W3HMC)
   m_HMCMode = CFG->GetStringIndex("map.w3hmc.mode", {"disabled", "optional", "required"}, W3HMC_MODE_DISABLED);
