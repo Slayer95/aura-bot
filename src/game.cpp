@@ -4897,7 +4897,7 @@ void CGame::EventGameLoaded()
     // FIXME? This creates a large lag spike client-side.
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.
     // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags), correctly untracks lastrefugeamai.ini --observers=no, GProxyDLL hangs
-    //StopPlayers("single-user game untracked", true);
+    StopPlayers("single-user game untracked", true);
   }
 
   HandleGameLoadedStats();
@@ -7057,7 +7057,7 @@ bool CGame::StopPlayers(const string& reason, const bool allowLocal)
     user->SetDeleteMe(true);
     user->SetLeftReason(reason);
     user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
-    if (allowLocal) user->SetLeftMessageSent(true);
+    if (allowLocal && !user->GetGProxyAny()) user->SetLeftMessageSent(true);
     anyStopped = true;
   }
   return anyStopped;
