@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project (miniupnpc
-         VERSION 2.2.6
+         VERSION 2.2.8
          DESCRIPTION "UPnP IGD client lightweight library"
          HOMEPAGE_URL https://miniupnp.tuxfamily.org/
          LANGUAGES C)
 
-set (MINIUPNPC_API_VERSION 17)
+set (MINIUPNPC_API_VERSION 18)
 
 option (UPNPC_BUILD_STATIC "Build static library" TRUE)
 option (UPNPC_BUILD_SHARED "Build shared library" TRUE)
@@ -31,6 +31,7 @@ endif ()
 if (NOT WIN32)
   target_compile_definitions(miniupnpc-private INTERFACE
     MINIUPNPC_SET_SOCKET_TIMEOUT
+    MINIUPNPC_GET_SRC_ADDR
     _BSD_SOURCE _DEFAULT_SOURCE)
   if (NOT APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES ".*BSD" AND NOT CMAKE_SYSTEM_NAME STREQUAL "SunOS")
     # add_definitions (-D_POSIX_C_SOURCE=200112L)
@@ -139,19 +140,16 @@ if (UPNPC_BUILD_STATIC)
     add_executable (upnpc-static src/upnpc.c)
     target_link_libraries (upnpc-static PRIVATE libminiupnpc-static)
     target_include_directories(upnpc-static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+    add_executable (upnp-listdevices-static src/listdevices.c)
+    target_link_libraries (upnp-listdevices-static PRIVATE libminiupnpc-static)
+    target_include_directories(upnp-listdevices-static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
     if (NOT UPNPC_NO_INSTALL)
-      install (TARGETS upnpc-static
+      install (TARGETS upnpc-static upnp-listdevices-static
                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif()
   endif ()
-
-  add_executable (upnp-listdevices-static src/listdevices.c)
-  target_link_libraries (upnp-listdevices-static PRIVATE libminiupnpc-static)
-  target_include_directories(upnp-listdevices-static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-  if (NOT UPNPC_NO_INSTALL)
-    install (TARGETS upnp-listdevices-static
-             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  endif()
 endif ()
 
 if (UPNPC_BUILD_SHARED)
@@ -188,19 +186,16 @@ if (UPNPC_BUILD_SHARED)
     add_executable (upnpc-shared src/upnpc.c)
     target_link_libraries (upnpc-shared PRIVATE libminiupnpc-shared)
     target_include_directories(upnpc-shared PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+    add_executable (upnp-listdevices-shared src/listdevices.c)
+    target_link_libraries (upnp-listdevices-shared PRIVATE libminiupnpc-shared)
+    target_include_directories(upnp-listdevices-shared PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
     if (NOT UPNPC_NO_INSTALL)
-      install (TARGETS upnpc-shared
+      install (TARGETS upnpc-shared upnp-listdevices-shared
                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif()
   endif ()
-
-  add_executable (upnp-listdevices-shared src/listdevices.c)
-  target_link_libraries (upnp-listdevices-shared PRIVATE libminiupnpc-shared)
-  target_include_directories(upnp-listdevices-shared PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-  if (NOT UPNPC_NO_INSTALL)
-    install (TARGETS upnp-listdevices-shared
-             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  endif()
 endif ()
 
 if (UPNPC_BUILD_TESTS)

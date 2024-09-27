@@ -1,9 +1,9 @@
-/* $Id: minissdpc.c,v 1.50 2024/01/04 00:35:53 nanard Exp $ */
+/* $Id: minissdpc.c,v 1.51 2024/05/16 00:12:05 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * Project : miniupnp
  * Web : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * Author : Thomas BERNARD
- * copyright (c) 2005-2021 Thomas Bernard
+ * copyright (c) 2005-2024 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENCE file. */
 #include <stdio.h>
@@ -16,9 +16,7 @@
 #endif
 #if defined(_WIN32) || defined(__amigaos__) || defined(__amigaos4__)
 #ifdef _WIN32
-#include <winerror.h>
 #include <winsock2.h>
-#include <windows.h>
 #include <ws2tcpip.h>
 #include <io.h>
 #include <iphlpapi.h>
@@ -550,7 +548,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 #ifdef _WIN32
 	unsigned long _ttl = (unsigned long)ttl;
 #endif
-	int linklocal = 1;
+	int linklocal = 0;	/* try first with site-local multicast */
 	int sentok;
 
 	if(error)
@@ -1009,9 +1007,10 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 			/* switch linklocal flag */
 			if(linklocal) {
 				linklocal = 0;
-				--deviceIndex;
 			} else {
+				/* try again with linklocal multicast */
 				linklocal = 1;
+				--deviceIndex;
 			}
 		}
 	}

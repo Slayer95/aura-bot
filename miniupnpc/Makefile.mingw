@@ -10,7 +10,7 @@
 SRCDIR = src
 INCDIR = include
 
-CC = gcc
+CC ?= gcc
 SETUP_COMPILER_FLAG?=
 DLLWRAP = dllwrap
 WINDRES = windres
@@ -23,10 +23,10 @@ RM = rm -f
 endif
 
 CFLAGS ?= -Os
-CFLAGS += -Wall -m32
+CFLAGS += -Wall
 CFLAGS += -W -Wstrict-prototypes
 
-CPPFLAGS += -DNDEBUG -D_WIN32_WINNT=0x0501
+CPPFLAGS += -DNDEBUG -D_WIN32_WINNT=0x501
 CPPFLAGS += -Iinclude
 CPPFLAGS += -I.
 
@@ -86,10 +86,11 @@ libminiupnpc.a:	$(OBJS)
 pythonmodule:	libminiupnpc.a
 	$(PYTHON) setupmingw32.py build $(SETUP_COMPILER_FLAG)
 	$(PYTHON) setupmingw32.py install --skip-build
+	$(PYTHON) setupmingw32.py sdist
 	$(PYTHON) setupmingw32.py bdist_wheel --skip-build
 
 miniupnpc.dll:	miniupnpc.def $(OBJSDLL)
-	$(DLLWRAP) -k --driver-name $(CC) $(CFLAGS) $(CPPFLAGS) \
+	$(DLLWRAP) -k --driver-name $(CC) \
 	--def miniupnpc.def \
 	--output-def miniupnpc.dll.def \
 	--implib miniupnpc.lib -o $@ \
@@ -108,16 +109,16 @@ dll-%.o:	$(SRCDIR)/%.c
 
 # --enable-stdcall-fixup
 %-static.exe:	%.o libminiupnpc.a
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DMINIUPNP_STATICLIB -static -o $@ $^ $(LDLIBS)
+	$(CC) -static -o $@ $^ $(LDLIBS)
 
 %-shared.exe:	%-shared.o miniupnpc.lib
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) -o $@ $^ $(LDLIBS)
 
 upnp-listdevices-static.exe:	listdevices.o libminiupnpc.a
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DMINIUPNP_STATICLIB -static -o $@ $^ $(LDLIBS)
+	$(CC) -static -o $@ $^ $(LDLIBS)
 
 upnp-listdevices-shared.exe:	listdevices-shared.o miniupnpc.lib
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) -o $@ $^ $(LDLIBS)
 
 # To make miniupnpcstrings.h from miniupnpcstrings.h.in we either
 # use a custom executable (if running make under windows) or use
@@ -160,7 +161,7 @@ winres.o:	miniupnpc.rc rc_version.h
 	$(WINDRES) -D INTERNAL_NAME=\\\"miniupnpc.dll\\0\\\" -i $< -o $@
 
 testminixml.exe:	testminixml.o minixml.o igd_desc_parse.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) -static -o $@ $^
+	$(CC) -static -o $@ $^
 
 minixml.o:	$(SRCDIR)/minixml.c $(SRCDIR)/minixml.h
 

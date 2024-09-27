@@ -1,4 +1,4 @@
-/* $Id: listdevices.c,v 1.8 2018/05/03 08:16:44 nanard Exp $ */
+/* $Id: listdevices.c,v 1.6 2015/07/23 20:40:08 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
  * Copyright (c) 2013-2015 Thomas Bernard
@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <winsock2.h>
-#include <windows.h>
-#include <winerror.h>
 #endif /* _WIN32 */
 #include "miniupnpc.h"
 
@@ -191,7 +189,8 @@ int main(int argc, char * * argv)
 			free_device(dev_array);
 		}
 	} else {
-		printf("no device found.\n");
+		fprintf(stderr,"No UPnP devices found\n");
+		return 1;
 	}
 
 	return 0;
