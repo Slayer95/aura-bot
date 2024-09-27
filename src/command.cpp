@@ -6440,6 +6440,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Another user is hosting a map.");
         break;
       }
+      if (m_Aura->m_ExitingSoon) {
+        ErrorReply("Aura is shutting down. No games may be hosted.");
+        break;
+      }
 
       if (!FileExists(m_Aura->m_Config->m_MapCFGPath)) {
         ErrorReply("Map config path doesn't exist", CHAT_LOG_CONSOLE);
@@ -6636,6 +6640,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         //|| (!m_SourceGame && m_Aura->m_CurrentLobby->GetHasAnyPlayer())
       )))) {
         ErrorReply("Another user is hosting a game.");
+        break;
+      }
+      if (m_Aura->m_ExitingSoon) {
+        ErrorReply("Aura is shutting down. No games may be hosted.");
         break;
       }
 

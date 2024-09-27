@@ -193,6 +193,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_MapExtraOptions(nullptr),
     m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
 
+    m_ExitingSoon(false),
     m_DeleteMe(false)
 {
   memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
@@ -992,6 +993,7 @@ uint32_t CGameSetup::DownloadMapTask()
 
 void CGameSetup::RunDownloadMap()
 {
+  if (m_ExitingSoon) return;
   m_IsStepDownloading = true;
   m_AsyncStep = GAMESETUP_STEP_DOWNLOAD;
   m_DownloadFuture = async(launch::async, &::CGameSetup::DownloadMapTask, this);
@@ -1087,7 +1089,7 @@ void CGameSetup::LoadMap()
 
 void CGameSetup::OnLoadMapSuccess()
 {
-  if (m_Ctx->GetPartiallyDestroyed()) {
+  if (m_ExitingSoon || m_Ctx->GetPartiallyDestroyed()) {
     m_DeleteMe = true;
     return;
   }
@@ -1150,7 +1152,7 @@ void CGameSetup::OnLoadMapSuccess()
 
 void CGameSetup::OnLoadMapError()
 {
-  if (m_Ctx->GetPartiallyDestroyed()) {
+  if (m_ExitingSoon || m_Ctx->GetPartiallyDestroyed()) {
     m_DeleteMe = true;
     return;
   }
@@ -1165,7 +1167,10 @@ void CGameSetup::OnLoadMapError()
 #ifndef DISABLE_CPR
 void CGameSetup::OnDownloadMapSuccess()
 {
-  if (!m_Aura) return;
+  if (m_ExitingSoon || !m_Aura) {
+    m_DeleteMe = true;
+    return;
+  }
   m_IsMapDownloaded = true;
   m_Map = GetBaseMapFromMapFileOrCache(m_DownloadFilePath, false);
   if (m_Map) {

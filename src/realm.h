@@ -114,7 +114,6 @@ private:
   int64_t                          m_ReconnectDelay;            // interval between two consecutive connect attempts
   uint32_t                         m_SessionID;                 // reconnection counter
   uint32_t                         m_NullPacketsSent;
-  bool                             m_Exiting;                   // set to true and this class will be deleted next update
   bool                             m_FirstConnect;              // if we haven't tried to connect to battle.net yet
   bool                             m_ReconnectNextTick;         // ignore reconnect delay
   bool                             m_WaitingToConnect;          // if we're waiting to reconnect to battle.net after being disconnected
@@ -153,7 +152,6 @@ public:
 
   CBNETProtocol*       GetProtocol() const { return m_Protocol; }
   inline uint8_t       GetGameVersion() const { return m_GameVersion; }
-  inline bool          GetExiting() const { return m_Exiting; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
   bool                 GetShouldLogChatToConsole() const;
   inline bool          GetInChat() const { return !m_CurrentChannel.empty(); }
@@ -192,7 +190,7 @@ public:
   // processing functions
 
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
-  bool Update(void* fd, void* send_fd);
+  void Update(void* fd, void* send_fd);
   void ProcessChatEvent(const CIncomingChatEvent* chatEvent);
   uint8_t CountChatQuota();
   bool CheckWithinChatQuota(CQueuedChatMessage* message);
@@ -235,6 +233,7 @@ public:
   bool IsBannedIP(std::string ip) const;
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
+  void Disable();
 
   inline void SetConfig(CRealmConfig* CFG) {
     delete m_Config;

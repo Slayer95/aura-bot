@@ -470,11 +470,15 @@ bool CNet::Update(void* fd, void* send_fd)
   }
 
   if (m_UDPMainServerEnabled) {
-    UDPPkt* pkt = m_UDPMainServer->Accept(static_cast<fd_set*>(fd));
-    if (pkt != nullptr) {
-      HandleUDP(pkt);
-      delete pkt->sender;
-      delete pkt;
+    if (m_Aura->m_ExitingSoon) {
+      m_UDPMainServer->Discard(static_cast<fd_set*>(fd));
+    } else {
+      UDPPkt* pkt = m_UDPMainServer->Accept(static_cast<fd_set*>(fd));
+      if (pkt != nullptr) {
+        HandleUDP(pkt);
+        delete pkt->sender;
+        delete pkt;
+      }
     }
   } else if (m_UDPDeafSocket) {
     m_UDPDeafSocket->Discard(static_cast<fd_set*>(fd));
@@ -602,7 +606,7 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
   if (m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_IncomingConnections) {
     for (auto& connection : pair.second) {
       if (connection->GetDeleteMe()) continue;
-      if (connection->m_IsUDPTunnel) {
+      if (connection->GetIsUDPTunnel()) {
         connection->Send(packet);
       }
     }
@@ -833,7 +837,7 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
 
 bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* targetRealm, const uint16_t gamePort)
 {
-  if (m_HealthCheckInProgress) {
+  if (m_Aura->m_ExitingSoon || m_HealthCheckInProgress) {
     return false;
   }
 
@@ -1358,6 +1362,31 @@ void CNet::OnConfigReload()
   SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
 }
 
+void CNet::OnUserKicked(CGameUser* user)
+{
+  uint16_t port = user->m_Game->GetHostPort();
+  CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, user->GetSocket());
+  connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
+  connection->SetTimeout(2);
+  connection->GetSocket()->ClearRecvBuffer();
+  m_IncomingConnections[port].push_back(connection);
+  user->SetSocket(nullptr);
+}
+
+void CNet::GracefulExit()
+{
+  ResetHealthCheck();
+  ResetIPAddressFetch();
+
+  for (auto& pair : m_IncomingConnections) {
+    for (auto& connection : pair.second) {
+      connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
+      connection->SetTimeout(2);
+      connection->GetSocket()->ClearRecvBuffer();
+    }
+  }
+}
+
 CNet::~CNet()
 {
   delete m_Config;
@@ -1368,6 +1397,8 @@ CNet::~CNet()
   delete m_ProxyBroadcastTarget;
   FlushDNSCache();
   FlushSelfIPCache();
+  ResetHealthCheck();
+  ResetIPAddressFetch();
   m_Aura->UnholdContext(m_HealthCheckContext);
   m_HealthCheckContext = nullptr;
 }

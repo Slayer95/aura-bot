@@ -1015,6 +1015,7 @@ bool CGame::Update(void* fd, void* send_fd)
   for (auto i = begin(m_Users); i != end(m_Users);) {
     if ((*i)->Update(fd)) {
       EventUserDeleted(*i, fd, send_fd);
+      m_Aura->m_Net->OnUserKicked(*i);
       delete *i;
       i = m_Users.erase(i);
     } else {
@@ -3089,7 +3090,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
   if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
     for (auto& connection : pair.second) {
       if (connection->GetDeleteMe()) continue;
-      if (connection->m_IsUDPTunnel) {
+      if (connection->GetIsUDPTunnel()) {
         connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
       }
     }
@@ -3154,7 +3155,12 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
       // e.g. this allows m_ControllersWithMap to remain unchanged.
       uint8_t SID = GetSIDFromUID(user->GetUID());
       // TODO: Investigate under which circumstances, EventUserDeleted() is called without releasing the SID.
-      if (SID >= m_Slots.size()) SID = GetEmptyObserverSID();
+      if (SID >= m_Slots.size()) {
+        SID = GetEmptyObserverSID();
+        Print(GetLogPrefix() + "tried to replace observer leaver during countdown, but SID was occupied; fallback to new: " + ToDecString(SID));
+      } else {
+        Print(GetLogPrefix() + "replaced observer leaver during countdown by fake observer");
+      }
       CreateFakeUserInner(SID, GetNewUID(), "User[" + ToDecString(SID + 1) + "]");
       CGameSlot* slot = GetSlot(SID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
@@ -4732,10 +4738,9 @@ void CGame::EventGameStarted()
   // only one lobby at a time is supported, so we can just do it from here
 
   for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
-    for (auto& connection : pair.second)
-      delete connection;
-
-    pair.second.clear();
+    for (auto& connection : pair.second) {
+      connection->SetDeleteMe(true);
+    }
   }
 
   if (m_Map->GetHMCEnabled()) {

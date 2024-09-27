@@ -135,7 +135,7 @@ protected:
   CSaveGame*                     m_RestoredGame;
   std::vector<CGameSlot>         m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>    m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
-  std::vector<CGameUser*>      m_Users;                         // std::vector of players
+  std::vector<CGameUser*>        m_Users;                         // std::vector of players
   std::queue<CIncomingAction*>   m_Actions;                       // queue of actions to be sent
   std::vector<std::string>       m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>          m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed

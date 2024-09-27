@@ -89,7 +89,6 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_LastBanRefreshTime(GetTime()),
     m_SessionID(0),
     m_NullPacketsSent(0),
-    m_Exiting(false),
     m_FirstConnect(true),
     m_ReconnectNextTick(true),
     m_WaitingToConnect(true),
@@ -149,7 +148,7 @@ uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return 0;
 }
 
-bool CRealm::Update(void* fd, void* send_fd)
+void CRealm::Update(void* fd, void* send_fd)
 {
   const int64_t Time = GetTime();
 
@@ -167,7 +166,7 @@ bool CRealm::Update(void* fd, void* send_fd)
     // the socket has an error, or the server terminated the connection
     ResetConnection(true);
     Print(GetLogPrefix() + "waiting " + to_string(m_ReconnectDelay) + " seconds to reconnect");
-    return m_Exiting;
+    return;
   }
 
   if (m_Socket->GetConnected())
@@ -415,7 +414,7 @@ bool CRealm::Update(void* fd, void* send_fd)
     }
 
     if (m_Socket->HasError() || m_Socket->HasFin()) {
-      return m_Exiting;
+      return;
     }
 
     if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
@@ -424,7 +423,7 @@ bool CRealm::Update(void* fd, void* send_fd)
       if (expectedNullsSent > REALM_APP_KEEPALIVE_MAX_MISSED) {
         Print(GetLogPrefix() + "socket inactivity timeout");
         ResetConnection(false);
-        return m_Exiting;
+        return;
       }
       if (m_NullPacketsSent < expectedNullsSent) {
         SendAuth(m_Protocol->SEND_SID_NULL());
@@ -490,14 +489,14 @@ bool CRealm::Update(void* fd, void* send_fd)
     }
 
     m_Socket->DoSend(static_cast<fd_set*>(send_fd));
-    return m_Exiting;
+    return;
   }
 
   if (m_Config->m_Enabled && !m_Socket->GetConnected() && !m_Socket->GetConnecting() && !m_WaitingToConnect)
   {
     // the socket was disconnected
     ResetConnection(false);
-    return m_Exiting;
+    return;
   }
 
   if (m_Config->m_Enabled && !m_Socket->GetConnecting() && !m_Socket->GetConnected() && (m_ReconnectNextTick || (Time - m_LastDisconnectedTime >= m_ReconnectDelay)))
@@ -547,7 +546,7 @@ bool CRealm::Update(void* fd, void* send_fd)
       SendAuth(m_Protocol->SEND_SID_AUTH_INFO(m_GameVersion, m_Config->m_LocaleID, m_Config->m_CountryShort, m_Config->m_Country));
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
       m_LastGameListTime       = Time;
-      return m_Exiting;
+      return;
     }
     else if (Time - m_LastConnectionAttemptTime >= 10)
     {
@@ -559,11 +558,9 @@ bool CRealm::Update(void* fd, void* send_fd)
       m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
       m_LastDisconnectedTime = Time;
       m_WaitingToConnect     = true;
-      return m_Exiting;
+      return;
     }
   }
-
-  return m_Exiting;
 }
 
 void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
@@ -1329,3 +1326,7 @@ void CRealm::HoldClan(CGame* game)
     game->AddToReserved(clanmate);
 }
 
+void CRealm::Disable()
+{
+  m_Config->m_Enabled = false;
+}

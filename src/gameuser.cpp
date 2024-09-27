@@ -66,7 +66,7 @@ CGameConnection::CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_
   : m_Aura(nAura),
     m_Protocol(nProtocol),
     m_Port(nPort),
-    m_Type(CONNECTION_TYPE_NONE),
+    m_Type(INCOMING_CONNECTION_TYPE_NONE),
     m_Socket(nSocket),
     m_IncomingJoinPlayer(nullptr),
     m_DeleteMe(false)
@@ -79,6 +79,11 @@ CGameConnection::~CGameConnection()
     delete m_Socket;
 
   delete m_IncomingJoinPlayer;
+}
+
+void CGameConnection::SetTimeout(const int64_t delta)
+{
+  m_Timeout = GetTime() + delta;
 }
 
 void CGameConnection::ResetConnection()
@@ -99,9 +104,16 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
     return PREPLAYER_CONNECTION_DESTROY;
   }
 
+  if (m_Timeout.has_value() && m_Timeout.value() < Time) {
+    return PREPLAYER_CONNECTION_DESTROY;
+  }
+
   bool IsPromotedToPlayer = false;
   bool Abort = false;
-  if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+
+  if (m_Type == INCOMING_CONNECTION_TYPE_KICKED_PLAYER) {
+    m_Socket->Discard(static_cast<fd_set*>(fd));
+  } else if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
     // extract as many packets as possible from the socket's receive buffer and process them
     string*              RecvBuffer         = m_Socket->GetBytes();
     std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
@@ -127,7 +139,6 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             break;
           }
           if (GetIsUDPTunnel()) {
-            m_Type = CONNECTION_TYPE_UDP_TUNNEL_UPGRADING;
             vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};
             m_Socket->PutBytes(packet);
           }
@@ -148,6 +159,9 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
           } else {
             // Join failed.
             Abort = true;
+          }
+          if (IsPromotedToPlayer) {
+            m_Type = INCOMING_CONNECTION_TYPE_PROMOTED_PLAYER;
           }
         } else if (GetIsUDPTunnel() && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
           if (Length <= 1024) {
@@ -201,7 +215,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
               vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
               m_Socket->PutBytes(packet);
-              m_Type = CONNECTION_TYPE_UDP_TUNNEL;
+              m_Type = INCOMING_CONNECTION_TYPE_UDP_TUNNEL;
             } else if (!anyExtensions) {
               Abort = true;
             }
@@ -225,8 +239,9 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
     }
   }
 
-  if (Abort)
+  if (Abort) {
     m_DeleteMe = true;
+  }
 
   // At this point, m_Socket may have been transferred to CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
@@ -238,6 +253,11 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
   }
 
   m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+
+  if (m_Type == INCOMING_CONNECTION_TYPE_KICKED_PLAYER && !m_Socket->GetIsSendPending()) {
+    return PREPLAYER_CONNECTION_DESTROY;
+  }
+
   return PREPLAYER_CONNECTION_OK;
 }
 
@@ -423,27 +443,6 @@ bool CGameUser::Update(void* fd)
 {
   const int64_t Time = GetTime();
 
-  // wait 5 seconds after joining before sending the /whois or /w
-  // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
-
-  if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Time - m_JoinTime >= 5) {
-    CRealm* Realm = GetRealm(false);
-    if (Realm) {
-      if (m_Game->GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
-        if (m_Game->GetSentPriorityWhois()) {
-          Realm->QueuePriorityWhois("/whois " + m_Name);
-          m_Game->SetSentPriorityWhois(true);
-        } else {
-          Realm->QueueCommand("/whois " + m_Name);
-        }
-      } else if (m_Game->GetDisplayMode() == GAME_PRIVATE) {
-        Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
-      }
-    }
-
-    m_WhoisSent = true;
-  }
-
   // check for socket timeouts
   // if we don't receive anything from a player for 30 seconds we can assume they've dropped
   // this works because in the lobby we send pings every 5 seconds and expect a response to each one
@@ -457,15 +456,11 @@ bool CGameUser::Update(void* fd)
     }
   }
 
-  // GProxy++ acks
-
-  if (m_GProxy && Time - m_LastGProxyAckTime >= 10) {
-    m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_ACK(m_TotalPacketsReceived));
-    m_LastGProxyAckTime = Time;
-  }
-
   bool Abort = false;
-  if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+  if (m_DeleteMe) {
+    m_Socket->ClearRecvBuffer(); // in case there are pending bytes from a previous recv
+    m_Socket->Discard(static_cast<fd_set*>(fd));
+  } else if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
     // extract as many packets as possible from the socket's receive buffer and process them
 
     string*              RecvBuffer         = m_Socket->GetBytes();
@@ -479,7 +474,7 @@ bool CGameUser::Update(void* fd)
     CIncomingMapSize*    MapSize;
     uint32_t             Pong;
 
-    if (!m_DeleteMe) while (Bytes.size() >= 4)
+    while (Bytes.size() >= 4)
     {
       // bytes 2 and 3 contain the length of the packet
       const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
@@ -686,6 +681,34 @@ bool CGameUser::Update(void* fd)
 
     if (!m_DeleteMe && !m_StatusMessageSent && m_CheckStatusByTime < Time) {
       m_Game->EventUserCheckStatus(this);
+    }
+  }
+
+  if (!m_DeleteMe) {
+    // GProxy++ acks
+    if (m_GProxy && Time - m_LastGProxyAckTime >= 10) {
+      m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_ACK(m_TotalPacketsReceived));
+      m_LastGProxyAckTime = Time;
+    }
+
+    // wait 5 seconds after joining before sending the /whois or /w
+    // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
+    if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Time - m_JoinTime >= 5) {
+      CRealm* Realm = GetRealm(false);
+      if (Realm) {
+        if (m_Game->GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
+          if (m_Game->GetSentPriorityWhois()) {
+            Realm->QueuePriorityWhois("/whois " + m_Name);
+            m_Game->SetSentPriorityWhois(true);
+          } else {
+            Realm->QueueCommand("/whois " + m_Name);
+          }
+        } else if (m_Game->GetDisplayMode() == GAME_PRIVATE) {
+          Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
+        }
+      }
+
+      m_WhoisSent = true;
     }
   }
 

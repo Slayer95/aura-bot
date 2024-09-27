@@ -68,7 +68,6 @@ public:
   int64_t                  m_LastConnectionAttemptTime;
   int64_t                  m_LastPacketTime;
   int64_t                  m_LastAntiIdleTime;
-  bool                     m_Exiting;
   bool                     m_WaitingToConnect;
 
   CIRC(CAura* nAura);
@@ -77,7 +76,7 @@ public:
 
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   void ResetConnection();
-  bool Update(void* fd, void* send_fd);
+  void Update(void* fd, void* send_fd);
   void ExtractPackets();
   void Send(const std::string& message);
   void SendUser(const std::string& message, const std::string& target);

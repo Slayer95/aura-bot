@@ -312,10 +312,13 @@ int main(const int argc, char** argv)
     Print("[!!!] caught signal SIGINT, exiting NOW");
 
     if (gAura) {
-      if (gAura->m_Exiting)
+      if (gAura->m_Exiting) {
         exit(1);
-      else
+      } else if (gAura->m_ExitingSoon) {
         gAura->m_Exiting = true;
+      } else {
+        gAura->m_ExitingSoon = true;
+      }
     } else {
       exit(1);
     }
@@ -453,6 +456,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_ScriptsExtracted(false),
     m_GameVersion(0),
     m_Exiting(false),
+    m_ExitingSoon(false),
     m_Ready(true),
 
     m_SudoContext(nullptr)
@@ -751,13 +755,15 @@ CAura::~CAura()
     }
   }
 
-  for (auto& bnet : m_Realms)
-    delete bnet;
+  for (auto& realm : m_Realms) {
+    delete realm;
+  }
 
   delete m_CurrentLobby;
 
-  for (auto& game : m_Games)
+  for (auto& game : m_Games) {
     delete game;
+  }
 
   delete m_DB;
   delete m_IRC;
@@ -859,7 +865,7 @@ bool CAura::Update()
   }
 
   if (!m_CurrentLobby && !(m_GameSetup && m_GameSetup->GetIsDownloading()) && (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby))) {
-    if (m_AutoRehostGameSetup) {
+    if (m_AutoRehostGameSetup && !m_ExitingSoon) {
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
       m_PendingActions.push(hostAction);
@@ -872,8 +878,24 @@ bool CAura::Update()
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     !m_AutoRehostGameSetup 
   );
-  if (isStandby && m_Config->m_ExitOnStandby) {
-    return true;
+  if (isStandby) {
+    if (m_Config->m_ExitOnStandby) {
+      Print("Standby exit!");
+      return true;
+    }
+    if (m_ExitingSoon) {
+      bool anyConnections = false;
+      for (auto& pair : m_Net->m_IncomingConnections) {
+        if (!pair.second.empty()) {
+          anyConnections = true;
+          break;
+        }
+      }
+      if (!anyConnections) {
+        Print("Graceful exit!");
+        return true;
+      }
+    }
   }
 
   uint32_t NumFDs = 0;
@@ -906,18 +928,21 @@ bool CAura::Update()
 
   // 4. the current lobby's player sockets
 
-  if (m_CurrentLobby)
+  if (m_CurrentLobby) {
     NumFDs += m_CurrentLobby->SetFD(&fd, &send_fd, &nfds);
+  }
 
   // 5. all running games' player sockets
 
-  for (auto& game : m_Games)
+  for (auto& game : m_Games) {
     NumFDs += game->SetFD(&fd, &send_fd, &nfds);
+  }
 
   // 6. all battle.net sockets
 
-  for (auto& bnet : m_Realms)
-    NumFDs += bnet->SetFD(&fd, &send_fd, &nfds);
+  for (auto& realm : m_Realms) {
+    NumFDs += realm->SetFD(&fd, &send_fd, &nfds);
+  }
 
   // 7. irc socket
   if (m_IRC)
@@ -965,8 +990,6 @@ bool CAura::Update()
     this_thread::sleep_for(chrono::milliseconds(200));
   }
 
-  bool Exit = false;
-
   // update map downloads
   if (m_GameSetup) {
     if (m_GameSetup->Update()) {
@@ -978,7 +1001,15 @@ bool CAura::Update()
   // if hosting a lobby, accept new connections to its game server
 
   for (auto& pair : m_Net->m_GameServers) {
+    if (m_ExitingSoon) {
+      pair.second->Discard(static_cast<fd_set*>(&fd));
+      continue;
+    }
     uint16_t localPort = pair.first;
+    if (m_Net->m_IncomingConnections[localPort].size() > MAX_INCOMING_CONNECTIONS) {
+      pair.second->Discard(static_cast<fd_set*>(&fd));
+      continue;
+    }
     CStreamIOSocket* socket = pair.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnect > 0) {
@@ -999,16 +1030,17 @@ bool CAura::Update()
         }
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       }
+      if (m_Net->m_IncomingConnections[localPort].size() > MAX_INCOMING_CONNECTIONS) {
+        Print("[AURA] " + to_string(m_Net->m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections");
+      }
     }
 
-    if (pair.second->HasError())
-      Exit = true;
+    if (pair.second->HasError()) {
+      m_Exiting = true;
+    }
   }
 
   // update unassigned incoming connections
-
-  uint16_t IncomingConnectionsMax = 255;
-  uint16_t IncomingConnectionsCount = 0;
   for (auto& pair : m_Net->m_IncomingConnections) {
     for (auto i = begin(pair.second); i != end(pair.second);) {
       // *i is a pointer to a CGameConnection
@@ -1018,37 +1050,29 @@ bool CAura::Update()
         continue;
       }
 
-      if (result == PREPLAYER_CONNECTION_DESTROY) {
-        // flush the socket (e.g. in case a rejection message is queued)
-        if ((*i)->GetSocket())
-          (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
-
-        delete *i;
+      // flush the socket (e.g. in case a rejection message is queued)
+      if ((*i)->GetSocket()) {
+        (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
       }
-
+      delete *i;
       i = pair.second.erase(i);
-    }
-    ++IncomingConnectionsCount;
-    if (IncomingConnectionsCount > IncomingConnectionsMax) {
-      Print("[AURA] " + to_string(IncomingConnectionsCount) + " connections established at port " + to_string(pair.first));
-      break;
     }
   }
 
   // update current lobby
 
-  if (m_CurrentLobby)
-  {
+  if (m_CurrentLobby) {
     if (m_CurrentLobby->Update(&fd, &send_fd)) {
       Print("[AURA] deleting current game [" + m_CurrentLobby->GetGameName() + "]");
-      if (m_CurrentLobby->GetUDPEnabled())
+      if (m_CurrentLobby->GetUDPEnabled()) {
         m_CurrentLobby->SendGameDiscoveryDecreate();
+      }
       delete m_CurrentLobby;
       m_CurrentLobby = nullptr;
 
-      for (auto& bnet : m_Realms) {
-        bnet->QueueGameUncreate();
-        bnet->SendEnterChat();
+      for (auto& realm : m_Realms) {
+        realm->QueueGameUncreate();
+        realm->SendEnterChat();
       }
     } else if (m_CurrentLobby) {
       m_CurrentLobby->UpdatePost(&send_fd);
@@ -1076,27 +1100,28 @@ bool CAura::Update()
 
   // update battle.net connections
 
-  for (auto& bnet : m_Realms) {
-    if (bnet->Update(&fd, &send_fd))
-      Exit = true;
+  for (auto& realm : m_Realms) {
+    realm->Update(&fd, &send_fd);
   }
 
   // update irc
 
-  if (m_IRC && m_IRC->Update(&fd, &send_fd))
-    Exit = true;
+  if (m_IRC) {
+    m_IRC->Update(&fd, &send_fd);
+  }
 
   // update discord
-  if (m_Discord && m_Discord->Update())
-    Exit = true;
+  if (m_Discord) {
+    m_Discord->Update();
+  }
 
   // update UDP sockets, outgoing test connections
   m_Net->Update(&fd, &send_fd);
 
-  return m_Exiting || Exit;
+  return m_Exiting;
 }
 
-void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
+void CAura::EventBNETGameRefreshFailed(CRealm* realm)
 {
   if (m_CurrentLobby)
   {
@@ -1104,26 +1129,26 @@ void CAura::EventBNETGameRefreshFailed(CRealm* bnet)
     // Otherwise whisper the game creator that the (re)host failed.
 
     if (m_CurrentLobby->GetNumJoinedPlayers() != 0) {
-      m_CurrentLobby->SendAllChat("Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
+      m_CurrentLobby->SendAllChat("Unable to create game on server [" + realm->GetServer() + "]. Try another name");
     } else {
       switch (m_CurrentLobby->GetCreatedFromType()) {
         case GAMESETUP_ORIGIN_REALM:
-          reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+          reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Unable to create game on server [" + realm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
           break;
         case GAMESETUP_ORIGIN_IRC:
-          reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+          reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + realm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
           break;
         /*
         // TODO: CAura::EventBNETGameRefreshFailed SendUser()
         case GAMESETUP_ORIGIN_DISCORD:
-          reinterpret_cast<CDiscord*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + bnet->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+          reinterpret_cast<CDiscord*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + realm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
           break;*/
         default:
           break;
       }
     }
 
-    Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + bnet->GetServer() + "]. Try another name");
+    Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + realm->GetServer() + "]. Try another name");
 
     // we take the easy route and simply close the lobby if a refresh fails
     // it's possible at least one refresh succeeded and therefore the game is still joinable on at least one battle.net (plus on the local network) but we don't keep track of that
@@ -1531,6 +1556,35 @@ void CAura::LogPersistent(const string& logText)
   
   LogStream(writeStream, logText);
   writeStream.close( );
+}
+
+void CAura::GracefulExit()
+{
+  m_ExitingSoon = true;
+  if (m_GameSetup) {
+    m_GameSetup->m_ExitingSoon = true;
+  }
+
+  for (auto& game : m_Games) {
+    game->StopPlayers("shutdown", true);
+  }
+
+  m_Net->GracefulExit();
+
+  if (m_CurrentLobby) {
+    m_CurrentLobby->StopPlayers("shutdown", true);
+  }
+
+  for (auto& realm : m_Realms) {
+    realm->Disable();
+  }
+
+  if (m_IRC) {
+    m_IRC->m_Config->m_Enabled = false;
+  }
+  if (m_Discord) {
+    m_Discord->m_Config->m_Enabled = false;
+  }
 }
 
 bool CAura::CreateGame(CGameSetup* gameSetup)

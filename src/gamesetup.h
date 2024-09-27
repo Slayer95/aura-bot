@@ -232,6 +232,7 @@ public:
   uint8_t                                         m_MapReadyCallbackAction;
   std::string                                     m_MapReadyCallbackData;
 
+  bool                                            m_ExitingSoon;
   bool                                            m_DeleteMe;
 
   CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* mapCFG);

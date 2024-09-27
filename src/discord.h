@@ -61,7 +61,6 @@ public:
   std::string                       m_NickName;
   int64_t                           m_LastPacketTime;
   int64_t                           m_LastAntiIdleTime;
-  bool                              m_Exiting;
   bool                              m_WaitingToConnect;
 #ifndef DISABLE_DPP
   std::queue<dpp::slashcommand_t*>  m_CommandQueue;
@@ -71,7 +70,7 @@ public:
   ~CDiscord();
   CDiscord(CDiscord&) = delete;
 
-  bool Update();
+  void Update();
 
 #ifndef DISABLE_DPP
   bool Init();

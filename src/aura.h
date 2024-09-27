@@ -140,6 +140,7 @@ public:
   bool                                               m_ScriptsExtracted;           // indicates if there's lacking configuration info so we can quit
   uint8_t                                            m_GameVersion;
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
+  bool                                               m_ExitingSoon;                // set to true to let aura gracefully stop all services and network traffic, and shutdown once done
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
 
   CCommandContext*                                   m_SudoContext;
@@ -229,6 +230,7 @@ public:
   
   bool MatchLogLevel(const uint8_t);
   void LogPersistent(const std::string& logText);
+  void GracefulExit();
 };
 
 #endif // AURA_AURA_H_

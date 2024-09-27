@@ -76,6 +76,8 @@
 #define RECONNECT_ENABLED_GPROXY_BASIC 1
 #define RECONNECT_ENABLED_GPROXY_EXTENDED 2
 
+#define MAX_INCOMING_CONNECTIONS 255
+
 //
 // CNet
 //
@@ -86,6 +88,7 @@ class CUDPServer;
 class CUDPSocket;
 class CStreamIOSocket;
 class CGameConnection;
+class CGameUser;
 class CNetConfig;
 
 struct sockaddr_storage;
@@ -227,6 +230,8 @@ public:
   void                                   PropagateBroadcastEnabled(const bool nEnable);
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);
   void                                   OnConfigReload();
+  void                                   OnUserKicked(CGameUser* user);
+  void                                   GracefulExit();
 
   bool                                   IsIgnoredDatagramSource(std::string sourceIp);
   bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }

@@ -72,7 +72,6 @@ CIRC::CIRC(CAura* nAura)
     m_LastConnectionAttemptTime(0),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
-    m_Exiting(false),
     m_WaitingToConnect(true)
 {
     m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
@@ -111,7 +110,7 @@ void CIRC::ResetConnection()
   m_WaitingToConnect = true;
 }
 
-bool CIRC::Update(void* fd, void* send_fd)
+void CIRC::Update(void* fd, void* send_fd)
 {
   const int64_t Time = GetTime();
 
@@ -120,7 +119,7 @@ bool CIRC::Update(void* fd, void* send_fd)
       ResetConnection();
       m_WaitingToConnect = false;
     }
-    return m_Exiting;
+    return;
   }
 
   if (m_Socket->HasError() || m_Socket->HasFin())
@@ -135,7 +134,7 @@ bool CIRC::Update(void* fd, void* send_fd)
     Print("[IRC: " + m_Config->m_HostName + "] waiting 60 seconds to reconnect");
     ResetConnection();
     m_LastConnectionAttemptTime = Time;
-    return m_Exiting;
+    return;
   }
 
   if (m_Socket->GetConnected())
@@ -146,7 +145,7 @@ bool CIRC::Update(void* fd, void* send_fd)
     {
       Print("[IRC: " + m_Config->m_HostName + "] ping timeout, reconnecting...");
       ResetConnection();
-      return m_Exiting;
+      return;
     }
 
     if (Time - m_LastAntiIdleTime > 60)
@@ -159,10 +158,10 @@ bool CIRC::Update(void* fd, void* send_fd)
       ExtractPackets();
     }
     if (m_Socket->HasError() || m_Socket->HasFin()) {
-      return m_Exiting;
+      return;
     }
     m_Socket->DoSend(static_cast<fd_set*>(send_fd));
-    return m_Exiting;
+    return;
   }
 
   if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && !m_WaitingToConnect)
@@ -172,7 +171,7 @@ bool CIRC::Update(void* fd, void* send_fd)
     Print("[IRC: " + m_Config->m_HostName + "] disconnected, waiting 60 seconds to reconnect");
     ResetConnection();
     m_LastConnectionAttemptTime = Time;
-    return m_Exiting;
+    return;
   }
 
   if (m_Socket->GetConnecting())
@@ -197,7 +196,7 @@ bool CIRC::Update(void* fd, void* send_fd)
 
       m_LastPacketTime = Time;
 
-      return m_Exiting;
+      return;
     }
     else if (Time - m_LastConnectionAttemptTime > 15)
     {
@@ -206,7 +205,7 @@ bool CIRC::Update(void* fd, void* send_fd)
       Print("[IRC: " + m_Config->m_HostName + "] connect timed out, waiting 60 seconds to reconnect");
       ResetConnection();
       m_LastConnectionAttemptTime = Time;
-      return m_Exiting;
+      return;
     }
   }
 
@@ -225,7 +224,7 @@ bool CIRC::Update(void* fd, void* send_fd)
     m_LastConnectionAttemptTime = Time;
   }
 
-  return m_Exiting;
+  return;
 }
 
 void CIRC::ExtractPackets()

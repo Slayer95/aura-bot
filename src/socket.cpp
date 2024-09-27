@@ -385,6 +385,18 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
   return false;
 }
 
+void CStreamIOSocket::Discard(fd_set* fd)
+{
+  if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected)
+    return;
+
+  if (!FD_ISSET(m_Socket, fd))
+    return;
+
+  char buffer[1024];
+  int32_t c = recv(m_Socket, buffer, 1024, 0);
+}
+
 void CStreamIOSocket::DoSend(fd_set* send_fd)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())
@@ -668,6 +680,25 @@ CStreamIOSocket* CTCPServer::Accept(fd_set* fd)
   }
 
   return nullptr;
+}
+
+void CTCPServer::Discard(fd_set* fd)
+{
+  if (m_Socket == INVALID_SOCKET || m_HasError)
+    return;
+
+  if (FD_ISSET(m_Socket, fd)) {
+    // a connection is waiting, accept it
+
+    sockaddr_storage         address;
+    ADDRESS_LENGTH_TYPE      addressLength = GetAddressLength();
+    SOCKET                   NewSocket;
+    memset(&address, 0, addressLength);
+
+    if ((NewSocket = accept(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength)) != INVALID_SOCKET) {
+      closesocket(NewSocket);
+    }
+  }
 }
 
 //

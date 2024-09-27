@@ -448,6 +448,7 @@ public:
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
   inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
   bool DoRecv(fd_set* fd);
+  void Discard(fd_set* fd);
 
   inline size_t                   PutBytes(const std::string& bytes) {
     m_SendBuffer += bytes;
@@ -457,7 +458,8 @@ public:
     m_SendBuffer += std::string(begin(bytes), end(bytes));
     return bytes.size();
   }
-  inline void                           ClearSendBuffer() { m_SendBuffer.clear(); }
+  inline void                     ClearSendBuffer() { m_SendBuffer.clear(); }
+  inline bool                     GetIsSendPending() { return !m_SendBuffer.empty(); }
   void DoSend(fd_set* send_fd);
   void Flush();
 
@@ -504,6 +506,7 @@ public:
   std::string                     GetName() const;
   bool                            Listen(sockaddr_storage& address, const uint16_t port, bool retry);
   CStreamIOSocket*                Accept(fd_set* fd);
+  void                            Discard(fd_set* fd);
 };
 
 //

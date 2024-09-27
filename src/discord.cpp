@@ -54,7 +54,6 @@ CDiscord::CDiscord(CAura* nAura)
     m_NickName(string()),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
-    m_Exiting(false),
     m_WaitingToConnect(true)
 {
 }
@@ -142,27 +141,27 @@ void CDiscord::RegisterCommands()
 }
 #endif
 
-bool CDiscord::Update()
+void CDiscord::Update()
 {
   if (m_Config->m_Enabled == (m_Client == nullptr)) {
     if (m_Config->m_Enabled) {
 #ifndef DISABLE_DPP
       if (!Init()){
-        return m_Exiting;
+        return;
       }
 #else
-      return m_Exiting;
+      return;
 #endif
     } else {
 #ifndef DISABLE_DPP
       delete m_Client;
 #endif
-      return m_Exiting;
+      return;
     }
   }
 
   if (!m_Config->m_Enabled) {
-    return m_Exiting;
+    return;
   }
 
 #ifndef DISABLE_DPP
@@ -194,7 +193,7 @@ bool CDiscord::Update()
     m_CommandQueue.pop();
   }
 #endif
-  return m_Exiting;
+  return;
 }
 
 #ifndef DISABLE_DPP
