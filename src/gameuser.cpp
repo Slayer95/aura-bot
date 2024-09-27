@@ -66,7 +66,7 @@ CGameConnection::CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_
   : m_Aura(nAura),
     m_Protocol(nProtocol),
     m_Port(nPort),
-    m_IsUDPTunnel(false),
+    m_Type(CONNECTION_TYPE_NONE),
     m_Socket(nSocket),
     m_IncomingJoinPlayer(nullptr),
     m_DeleteMe(false)
@@ -126,8 +126,8 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             Abort = true;
             break;
           }
-          if (m_IsUDPTunnel) {
-            m_IsUDPTunnel = false;
+          if (GetIsUDPTunnel()) {
+            m_Type = CONNECTION_TYPE_UDP_TUNNEL_UPGRADING;
             vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};
             m_Socket->PutBytes(packet);
           }
@@ -149,7 +149,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             // Join failed.
             Abort = true;
           }
-        } else if (m_IsUDPTunnel && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
+        } else if (GetIsUDPTunnel() && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
           if (Length <= 1024) {
             struct UDPPkt pkt;
             pkt.socket = m_Socket;
@@ -201,7 +201,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
               vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
               m_Socket->PutBytes(packet);
-              m_IsUDPTunnel = true;
+              m_Type = CONNECTION_TYPE_UDP_TUNNEL;
             } else if (!anyExtensions) {
               Abort = true;
             }
@@ -288,6 +288,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_MapReady(false),
     m_MapKicked(false),
     m_PingKicked(false),
+    m_SpoofKicked(false),
     m_Ready(false),
     m_ReadyReminderLastTime(0),
     m_HasHighPing(false),
@@ -674,26 +675,18 @@ bool CGameUser::Update(void* fd)
       ResetConnection();
     } else if (GetKickQueued() && m_KickByTime < Time) {
       m_Game->EventUserKickHandleQueued(this);
-    } else if (!m_StatusMessageSent && m_CheckStatusByTime < Time) {
+    } else if (m_Disconnected && m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60) {
+      m_Game->EventUserKickGProxyExtendedTimeout(this);
+    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Time - m_JoinTime >= 60 && m_Game->GetIsLobby()) {
+      CRealm* Realm = GetRealm(false);
+      if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
+        m_Game->EventUserKickUnverified(this);
+      }
+    }
+
+    if (!m_DeleteMe && !m_StatusMessageSent && m_CheckStatusByTime < Time) {
       m_Game->EventUserCheckStatus(this);
     }
-  }
-
-  if (!m_Verified && m_RealmInternalId >= 0x10 && Time - m_JoinTime >= 60 && m_Game->GetIsLobby()) {
-    CRealm* Realm = GetRealm(false);
-    if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
-      m_DeleteMe = true;
-      m_LeftReason = GetName() + "  been kicked because they are not verified by their realm";
-      m_LeftCode = PLAYERLEAVE_DISCONNECT;
-      m_Game->SendAllChat(GetName() + " has been kicked because they are not verified by " + m_RealmHostName);
-    }
-  }
-
-  if (m_Disconnected && m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60) {
-    m_DeleteMe = true;
-    m_LeftReason = GetName() + " has been kicked because they didn't reconnect in time";
-    m_LeftCode = PLAYERLEAVE_DISCONNECT;
-    m_Game->SendAllChat(GetName() + " has been kicked because they didn't reconnect in time." );
   }
 
   if (m_GProxy && m_Game->GetGameLoaded()) {
@@ -705,7 +698,13 @@ bool CGameUser::Update(void* fd)
   }
 
   if (m_Socket) {
-    m_DeleteMe = m_Socket->HasError() || m_Socket->HasFin() || !m_Socket->GetConnected();
+    if (m_Socket->HasError()) {
+      m_Game->EventUserDisconnectSocketError(this);
+      ResetConnection();
+    } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
+      m_Game->EventUserDisconnectConnectionClosed(this);
+      ResetConnection();
+    }
     return m_DeleteMe;
   }
 

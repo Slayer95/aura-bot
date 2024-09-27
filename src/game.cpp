@@ -3140,7 +3140,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     if (user->GetLagging()) {
       SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(user));
     }
-    SendLeftMessage(user, m_GameLoaded && !user->GetIsObserver());
+    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || user->GetPingKicked() || user->GetMapKicked() || user->GetSpoofKicked());
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
@@ -3328,7 +3328,7 @@ bool CGame::EventUserDisconnectTimedOut(CGameUser* user)
     TrySaveOnDisconnect(user, false);
     user->SetDeleteMe(true);
     user->SetLeftReason("has lost the connection (timed out)");
-    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 
     if (!m_GameLoading && !m_GameLoaded) {
       const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -3354,7 +3354,7 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
-  user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 
   if (!m_GameLoading && !m_GameLoaded) {
     const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -3377,7 +3377,7 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   user->SetLeftReason("has terminated the connection");
-  user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 
   if (!m_GameLoading && !m_GameLoaded) {
     const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -3404,7 +3404,7 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
   } else {
     user->SetLeftReason("has lost the connection (unrecoverable protocol error)");
   }
-  user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 
   if (!m_GameLoading && !m_GameLoaded) {
     const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -3412,11 +3412,30 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
   }
 }
 
+void CGame::EventUserKickUnverified(CGameUser* user)
+{
+  user->SetDeleteMe(true);
+  user->SetLeftReason("has been kicked because they are not verified by their realm");
+  user->SetLeftCode(PLAYERLEAVE_LOBBY);
+  user->SetSpoofKicked(true);
+
+  const uint8_t SID = GetSIDFromUID(user->GetUID());
+  OpenSlot(SID, false);
+}
+
+void CGame::EventUserKickGProxyExtendedTimeout(CGameUser* user)
+{
+  TrySaveOnDisconnect(user, false);
+  user->SetDeleteMe(true);
+  user->SetLeftReason("has been kicked because they didn't reconnect in time");
+  user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+}
+
 void CGame::SendLeftMessage(CGameUser* user, const bool sendChat) const
 {
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which UIDs Aura considers available.
-  if (sendChat || user->GetPingKicked() || user->GetMapKicked()) {
+  if (sendChat) {
     if (!user->GetQuitGame()) {
       SendAllChat(user->GetExtendedName() + " " + user->GetLeftReason() + ".");
     } else if (user->GetRealm(false)) {
@@ -3745,6 +3764,14 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     return false;
   }
 
+  if (!GetAllowsIPFlood()) {
+    if (!CheckIPFlood(joinRequest->GetName(), &(connection->GetSocket()->m_RemoteHost))) {
+      Print(GetLogPrefix() + "ipflood rejected from " + AddressToStringStrict(connection->GetSocket()->m_RemoteHost));
+      connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+      return false;
+    }
+  }
+
   uint8_t SID = 0xFF;
   uint8_t UID = 0xFF;
 
@@ -3782,7 +3809,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     }
 
     if (SID == 0xFF && MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm) {
-      // the owner user is trying to join the game but it's full and we couldn't even find a reserved slot, kick the user in the lowest numbered slot
+      // the owner is trying to join the game but it's full and we couldn't even find a reserved slot, kick the user in the lowest numbered slot
       // updated this to try to find a user slot so that we don't end up kicking a computer
 
       SID = 0;
@@ -3798,7 +3825,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
       if (kickedPlayer) {
         kickedPlayer->SetDeleteMe(true);
-        kickedPlayer->SetLeftReason("was kicked to make room for the owner user [" + joinRequest->GetName() + "]");
+        kickedPlayer->SetLeftReason("was kicked to make room for the owner [" + joinRequest->GetName() + "]");
         kickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
         // Ensure the userleave message is sent before the game owner' userjoin message.
         SendLeftMessage(kickedPlayer, true);
@@ -3809,14 +3836,6 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   if (SID >= static_cast<uint8_t>(m_Slots.size())) {
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
-  }
-
-  if (!GetAllowsIPFlood()) {
-    if (!CheckIPFlood(joinRequest->GetName(), &(connection->GetSocket()->m_RemoteHost))) {
-      Print(GetLogPrefix() + "ipflood rejected from " + AddressToStringStrict(connection->GetSocket()->m_RemoteHost));
-      connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-      return false;
-    }
   }
 
   // we have a slot for the new user
@@ -4626,8 +4645,6 @@ void CGame::EventGameStarted()
   if (!m_RestoredGame && GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake user.
-    bool hadChatSendHost = GetHasChatSendHost();
-    bool hadChatRecvHost = GetHasChatRecvHost();
     uint8_t fakeCount = static_cast<uint8_t>(m_FakeUsers.size());
 
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
@@ -4639,25 +4656,6 @@ void CGame::EventGameStarted()
       if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
         if (CreateFakePlayer(true)) ++m_JoinedVirtualHosts;
       }
-    }
-
-    if (!hadChatSendHost) {
-      Print(GetLogPrefix() + "Missing chat send host");
-    }
-    if (!hadChatRecvHost) {
-      Print(GetLogPrefix() + "Missing chat recv host");
-    }
-    if (fakeCount < static_cast<uint8_t>(m_FakeUsers.size())) {
-      bool hasChatSendHost = GetHasChatSendHost();
-      bool hasChatRecvHost = GetHasChatRecvHost();
-      string addedPlayersLog = to_string(m_FakeUsers.size() - fakeCount) + " fake players automatically added: ";
-      if (hasChatSendHost != hadChatSendHost) {
-        addedPlayersLog += "Chat send host added. ";
-      }
-      if (hasChatRecvHost != hadChatRecvHost) {
-        addedPlayersLog += "Chat recv host added. ";
-      }
-      Print(GetLogPrefix() + addedPlayersLog);
     }
   }
 
@@ -5496,7 +5494,7 @@ uint8_t CGame::GetPublicHostUID() const
     }
   }
 
-  // try to find the owner user next
+  // try to find the owner next
 
   for (auto& user : m_Users) {
     if (user->GetLeftMessageSent()) {

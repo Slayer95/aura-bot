@@ -444,6 +444,8 @@ public:
   void EventUserDisconnectSocketError(CGameUser* user);
   void EventUserDisconnectConnectionClosed(CGameUser* user);
   void EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover);
+  void EventUserKickUnverified(CGameUser* user);
+  void EventUserKickGProxyExtendedTimeout(CGameUser* user);
   void EventUserKickHandleQueued(CGameUser* user);
   void EventUserCheckStatus(CGameUser* user);
   bool EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest);

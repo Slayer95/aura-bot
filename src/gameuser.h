@@ -70,6 +70,12 @@ class CAura;
 #define SMART_COMMAND_NONE 0u
 #define SMART_COMMAND_GO 1u
 
+#define CONNECTION_TYPE_NONE 0u
+#define CONNECTION_TYPE_UDP_TUNNEL 1u
+#define CONNECTION_TYPE_UDP_TUNNEL_UPGRADING 2u
+#define CONNECTION_TYPE_KICKED_PLAYER 3u
+#define CONNECTION_TYPE_VLAN 4u
+
 //
 // CGameConnection
 //
@@ -80,7 +86,7 @@ public:
   CAura*         m_Aura;
   CGameProtocol* m_Protocol;
   uint16_t       m_Port;
-  bool           m_IsUDPTunnel;
+  uint8_t        m_Type;
 
 protected:
   // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
@@ -100,6 +106,7 @@ public:
   inline std::string          GetIPString() const { return m_Socket->GetIPString(); }
   inline std::string          GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
   inline sockaddr_storage*    GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
+  inline bool                 GetIsUDPTunnel() const { return m_Type == CONNECTION_TYPE_UDP_TUNNEL; }
   inline bool                 GetDeleteMe() const { return m_DeleteMe; }
   inline CIncomingJoinRequest* GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
@@ -168,6 +175,7 @@ private:
   bool                             m_MapReady;                     // if we're allowed to download the map or not (used with permission based map downloads)
   bool                             m_MapKicked;                    // if we're kicking this player because he has no map and we won't send it to him
   bool                             m_PingKicked;                   // if we're kicking this player because his ping is excessively high
+  bool                             m_SpoofKicked;
   std::optional<bool>              m_UserReady;
   bool                             m_Ready;
   int64_t                          m_ReadyReminderLastTime;
@@ -288,6 +296,7 @@ public:
   inline bool                  GetMapReady() const { return m_MapReady; }
   inline bool                  GetMapKicked() const { return m_MapKicked; }
   inline bool                  GetPingKicked() const { return m_PingKicked; }
+  inline bool                  GetSpoofKicked() const { return m_SpoofKicked; }
   inline bool                  GetHasHighPing() const { return m_HasHighPing; }
   inline int64_t               GetKickByTime() const { return m_KickByTime; }
   inline bool                  GetKickQueued() const { return m_KickByTime != 0; }
@@ -331,6 +340,7 @@ public:
   inline void SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
   inline void SetMapKicked(bool nMapKicked) { m_MapKicked = nMapKicked; }
   inline void SetPingKicked(bool nPingKicked) { m_PingKicked = nPingKicked; }
+  inline void SetSpoofKicked(bool nSpoofKicked) { m_SpoofKicked = nSpoofKicked; }
   inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
   inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
