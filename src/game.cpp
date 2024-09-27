@@ -7253,6 +7253,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
   m_Actions.push(new CIncomingAction(UID, CRC, Action));
+  return true;
 }
 
 bool CGame::SendHMC(const string& message)

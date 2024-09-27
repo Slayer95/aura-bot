@@ -317,7 +317,7 @@ int main(const int argc, char** argv)
       } else if (gAura->m_ExitingSoon) {
         gAura->m_Exiting = true;
       } else {
-        gAura->m_ExitingSoon = true;
+        gAura->GracefulExit();
       }
     } else {
       exit(1);
@@ -1573,6 +1573,7 @@ void CAura::GracefulExit()
 
   if (m_CurrentLobby) {
     m_CurrentLobby->StopPlayers("shutdown", true);
+    m_CurrentLobby->SetExiting(true);
   }
 
   for (auto& realm : m_Realms) {
