@@ -155,6 +155,7 @@ void CDiscord::Update()
     } else {
 #ifndef DISABLE_DPP
       delete m_Client;
+      m_Client = nullptr;
 #endif
       return;
     }
