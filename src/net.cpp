@@ -782,7 +782,8 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
   struct UPNPDev* device;
   struct UPNPUrls urls;
   struct IGDdatas data;
-  char lanaddr[64];
+  char lanaddr[64] = "unset";
+  char wanaddr[64] = "unset";
 
   devlist = upnpDiscover(2000, NULL, NULL, 0, 0, 2, 0);
   uint8_t success = 0;
@@ -793,24 +794,54 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
   // Iterate through the discovered devices
   for (device = devlist; device; device = device->pNext) {
     // Get the UPnP URLs and IGD data for this device
-    int checkIGD = UPNP_GetValidIGD(device, &urls, &data, lanaddr, sizeof(lanaddr));
-    if (checkIGD != 1 && checkIGD != 2) {
-      if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] unsupported device found: <" + string(device->descURL) + ">");
+    int type = UPNP_GetValidIGD(device, &urls, &data, lanaddr, sizeof(lanaddr), wanaddr, sizeof(wanaddr));
+    bool isSupported = false;
+    switch (type)
+    {
+      case UPNP_NO_IGD: // 0
+      case UPNP_DISCONNECTED_IGD: // 3
+      case UPNP_UNKNOWN_DEVICE: { // 4
+        if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] unsupported device found: <" + string(device->descURL) + ">");
+        break;
+      }
+      case UPNP_CONNECTED_IGD: { // 1
+        if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] connected gateway found: <" + string(urls.controlURL) + ">");
+        isSupported = true;
+        break;
+      }
+      case UPNP_PRIVATEIP_IGD: { // 2
+        if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] NAT3 found: <" + string(urls.controlURL) + ">");
+        isSupported = true;
+        break;
+      }
+    }
+    if (!isSupported) {
       continue;
     }
-    if (checkIGD == 2) {
-      if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] unconnected gateway found: <" + string(urls.controlURL) + ">");
-    } else {
-      if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] connected gateway found: <" + string(urls.controlURL) + ">");
-    }
+
     if (logLevel >= LOG_LEVEL_INFO) Print("[UPNP] trying to forward traffic to LAN address " + string(lanaddr) + "...");
 
-    int r = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), NULL, "86400");
-
-    if (r == UPNPCOMMAND_SUCCESS) {
-      success = success | (1 << (checkIGD - 1));
+    int result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), NULL, "86400");
+    if (result == UPNPCOMMAND_SUCCESS) {
+      success = success | (1 << (type - 1));
     } else if (logLevel >= LOG_LEVEL_INFO) {
-      Print("[UPNP] failed to add port mapping - error " + to_string(r));
+      switch (result) {
+        case UPNPCOMMAND_UNKNOWN_ERROR:
+          Print("[UPNP] failed to add port mapping - unknown error");
+          break;
+        case UPNPCOMMAND_INVALID_ARGS:
+          Print("[UPNP] failed to add port mapping - invalid args");
+          break;
+        case UPNPCOMMAND_HTTP_ERROR:
+          Print("[UPNP] failed to add port mapping - HTTP error");
+          break;
+        case UPNPCOMMAND_INVALID_RESPONSE:
+          Print("[UPNP] failed to add port mapping - invalid response");
+          break;
+        case UPNPCOMMAND_MEM_ALLOC_ERROR:
+          Print("[UPNP] failed to add port mapping - memory allocation error");
+          break;
+      }
     }
 
     // Free UPnP URLs and IGD data
