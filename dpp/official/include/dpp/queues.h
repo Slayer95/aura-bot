@@ -30,6 +30,7 @@
 #include <vector>
 #include <functional>
 #include <condition_variable>
+#include <atomic>
 
 namespace dpp {
 
@@ -294,6 +295,13 @@ public:
 	std::string protocol;
 
 	/**
+	 * @brief How many seconds before the connection is considered failed if not finished
+	 *
+	 * @deprecated Please now use dpp::cluster::request_timeout
+	 */
+	DPP_DEPRECATED("Please now use dpp::cluster::request_timeout") time_t request_timeout;
+
+	/**
 	 * @brief Constructor. When constructing one of these objects it should be passed to request_queue::post_request().
 	 * @param _endpoint The API endpoint, e.g. /api/guilds
 	 * @param _parameters Major and minor parameters for the endpoint e.g. a user id or guild id
@@ -332,8 +340,9 @@ public:
 	 * @param _mimetype POST data mime type
 	 * @param _headers HTTP headers to send
 	 * @param http_protocol HTTP protocol
+	 * @param _request_timeout How many seconds before the connection is considered failed if not finished
 	 */
-	http_request(const std::string &_url, http_completion_event completion, http_method method = m_get, const std::string &_postdata = "", const std::string &_mimetype = "text/plain", const std::multimap<std::string, std::string> &_headers = {}, const std::string &http_protocol = "1.1");
+	http_request(const std::string &_url, http_completion_event completion, http_method method = m_get, const std::string &_postdata = "", const std::string &_mimetype = "text/plain", const std::multimap<std::string, std::string> &_headers = {}, const std::string &http_protocol = "1.1", time_t _request_timeout = 5);
 
 	/**
 	 * @brief Destroy the http request object
@@ -401,7 +410,7 @@ private:
 	/**
 	 * @brief True if ending.
 	 */
-	bool terminating;
+	std::atomic<bool> terminating;
 
 	/**
 	 * @brief Request queue that owns this in_thread.
@@ -434,9 +443,9 @@ private:
 	std::map<std::string, bucket_t> buckets;
 
 	/**
-	 * @brief Queue of requests to be made.
+	 * @brief Queue of requests to be made. Sorted by http_request::endpoint.
 	 */
-	std::map<std::string, std::vector<http_request*>> requests_in;
+	std::vector<std::unique_ptr<http_request>> requests_in;
 
 	/**
 	 * @brief Inbound queue thread loop.
@@ -460,12 +469,18 @@ public:
 	~in_thread();
 
 	/**
+	 * @brief Terminates the thread
+	 * This will end the thread that is owned by this object, but will not join it.
+	 */
+	void terminate();
+
+	/**
 	 * @brief Post a http_request to this thread.
 	 * 
 	 * @param req http_request to post. The pointer will be freed when it has
 	 * been executed.
 	 */
-	void post_request(http_request* req);
+	void post_request(std::unique_ptr<http_request> req);
 };
 
 /**
@@ -517,9 +532,24 @@ protected:
 	std::condition_variable out_ready;
 
 	/**
+	 * @brief A completed request. Contains both the request and the response
+	 */
+	struct completed_request {
+		/**
+		 * @brief Request sent
+		 */
+		std::unique_ptr<http_request> request;
+
+		/**
+		 * @brief Response to the request
+		 */
+		std::unique_ptr<http_request_completion_t> response;
+	};
+
+	/**
 	 * @brief Completed requests queue
 	 */
-	std::queue<std::pair<http_request_completion_t*, http_request*>> responses_out;
+	std::queue<completed_request> responses_out;
 
 	/**
 	 * @brief A vector of inbound request threads forming a pool.
@@ -530,17 +560,46 @@ protected:
 	 * 2) Requests for different endpoints go into different buckets, so that they may be requested in parallel
 	 * A global ratelimit event pauses all threads in the pool. These are few and far between.
 	 */
-	std::vector<in_thread*> requests_in;
+	std::vector<std::unique_ptr<in_thread>> requests_in;
 
 	/**
-	 * @brief Completed requests to delete
+	 * @brief A request queued for deletion in the queue.
 	 */
-	std::multimap<time_t, std::pair<http_request_completion_t*, http_request*>> responses_to_delete;
+	struct queued_deleting_request {
+		/**
+		 * @brief Time to delete the request
+		 */
+		time_t time_to_delete;
+
+		/**
+		 * @brief The request to delete
+		 */
+		completed_request request;
+
+		/**
+		 * @brief Comparator for sorting purposes
+		 * @param other Other queued request to compare the deletion time with
+		 * @return bool Whether this request comes before another in strict ordering
+		 */
+		bool operator<(const queued_deleting_request& other) const noexcept;
+
+		/**
+		 * @brief Comparator for sorting purposes
+		 * @param time Time to compare with
+		 * @return bool Whether this request's deletion time is lower than the time given, for strict ordering
+		 */
+		bool operator<(time_t time) const noexcept;
+	};
+
+	/**
+	 * @brief Completed requests to delete. Sorted by deletion time
+	 */
+	std::vector<queued_deleting_request> responses_to_delete;
 
 	/**
 	 * @brief Set to true if the threads should terminate
 	 */
-	bool terminating;
+	std::atomic<bool> terminating;
 
 	/**
 	 * @brief True if globally rate limited - makes the entire request thread wait
@@ -597,14 +656,13 @@ public:
 	~request_queue();
 
 	/**
-	 * @brief Put a http_request into the request queue. You should ALWAYS "new" an object
-	 * to pass to here -- don't submit an object that's on the stack!
+	 * @brief Put a http_request into the request queue.
 	 * @note Will use a simple hash function to determine which of the 'in queues' to place
 	 * this request onto.
 	 * @param req request to add
 	 * @return reference to self
 	 */
-	request_queue& post_request(http_request *req);
+	request_queue& post_request(std::unique_ptr<http_request> req);
 
 	/**
 	 * @brief Returns true if the bot is currently globally rate limited

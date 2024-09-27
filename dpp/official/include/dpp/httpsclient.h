@@ -231,6 +231,11 @@ protected:
 
 public:
 	/**
+	 * @brief If true the response timed out while waiting
+	 */
+	bool timed_out;	
+	
+	/**
 	 * @brief Connect to a specific HTTP(S) server and complete a request.
 	 * 
 	 * The constructor will attempt the connection, and return the content.
@@ -249,7 +254,7 @@ public:
 	 * @param extra_headers Additional request headers, e.g. user-agent, authorization, etc
 	 * @param plaintext_connection Set to true to make the connection plaintext (turns off SSL)
 	 * @param request_timeout How many seconds before the connection is considered failed if not finished
-	 * @param http_protocol Request HTTP protocol
+	 * @param protocol Request HTTP protocol (default: 1.1)
 	 */
         https_client(const std::string &hostname, uint16_t port = 443, const std::string &urlpath = "/", const std::string &verb = "GET", const std::string &req_body = "", const http_headers& extra_headers = {}, bool plaintext_connection = false, uint16_t request_timeout = 5, const std::string &protocol = "1.1");
 
