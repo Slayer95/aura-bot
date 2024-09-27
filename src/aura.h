@@ -231,6 +231,7 @@ public:
   bool MatchLogLevel(const uint8_t);
   void LogPersistent(const std::string& logText);
   void GracefulExit();
+  bool CheckGracefulExit();
 };
 
 #endif // AURA_AURA_H_

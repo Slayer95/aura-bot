@@ -603,8 +603,8 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
       PropagateBroadcastEnabled(true);
   }
 
-  if (m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_IncomingConnections) {
-    for (auto& connection : pair.second) {
+  if (m_Config->m_EnableTCPWrapUDP) for (auto& serverConnections : m_IncomingConnections) {
+    for (auto& connection : serverConnections.second) {
       if (connection->GetDeleteMe()) continue;
       if (connection->GetIsUDPTunnel()) {
         connection->Send(packet);
@@ -1378,8 +1378,8 @@ void CNet::GracefulExit()
   ResetHealthCheck();
   ResetIPAddressFetch();
 
-  for (auto& pair : m_IncomingConnections) {
-    for (auto& connection : pair.second) {
+  for (auto& serverConnections : m_IncomingConnections) {
+    for (auto& connection : serverConnections.second) {
       connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
       connection->SetTimeout(2);
       connection->GetSocket()->ClearRecvBuffer();

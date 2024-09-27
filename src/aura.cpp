@@ -309,18 +309,15 @@ int main(const int argc, char** argv)
 #endif
 
   signal(SIGINT, [](int32_t) -> void {
-    Print("[!!!] caught signal SIGINT, exiting NOW");
-
-    if (gAura) {
-      if (gAura->m_Exiting) {
-        exit(1);
-      } else if (gAura->m_ExitingSoon) {
-        gAura->m_Exiting = true;
-      } else {
-        gAura->GracefulExit();
-      }
-    } else {
+    if (!gAura || gAura->m_Exiting) {
+      Print("[!!!] caught signal SIGINT, exiting NOW");
       exit(1);
+    } else if (gAura->m_ExitingSoon) {
+      Print("[!!!] caught signal SIGINT, skipping graceful exit");
+      gAura->m_Exiting = true;
+    } else {
+      Print("[!!!] caught signal SIGINT, exiting gracefully...");
+      gAura->GracefulExit();
     }
   });
 
@@ -864,8 +861,10 @@ bool CAura::Update()
     }
   }
 
-  if (!m_CurrentLobby && !(m_GameSetup && m_GameSetup->GetIsDownloading()) && (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby))) {
-    if (m_AutoRehostGameSetup && !m_ExitingSoon) {
+  if (m_AutoRehostGameSetup && !m_ExitingSoon) {
+    if (!m_CurrentLobby && !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
+      (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby))
+    ) {
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
       m_PendingActions.push(hostAction);
@@ -876,26 +875,11 @@ bool CAura::Update()
     !m_CurrentLobby && m_Games.empty() &&
     !m_Net->m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
-    !m_AutoRehostGameSetup 
+    m_PendingActions.empty()
   );
-  if (isStandby) {
-    if (m_Config->m_ExitOnStandby) {
-      Print("Standby exit!");
-      return true;
-    }
-    if (m_ExitingSoon) {
-      bool anyConnections = false;
-      for (auto& pair : m_Net->m_IncomingConnections) {
-        if (!pair.second.empty()) {
-          anyConnections = true;
-          break;
-        }
-      }
-      if (!anyConnections) {
-        Print("Graceful exit!");
-        return true;
-      }
-    }
+
+  if (isStandby && (m_Config->m_ExitOnStandby || (m_ExitingSoon && CheckGracefulExit()))) {
+    return true;
   }
 
   uint32_t NumFDs = 0;
@@ -909,16 +893,16 @@ bool CAura::Update()
 
   // 2. all running game servers
 
-  for (auto& pair : m_Net->m_GameServers) {
-    pair.second->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+  for (auto& server : m_Net->m_GameServers) {
+    server.second->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
     ++NumFDs;
   }
 
   // 3. all unassigned incoming TCP connections
 
-  for (auto& pair : m_Net->m_IncomingConnections) {
-    // pair<uint16_t, vector<CGameConnection*>>
-    for (auto& connection : pair.second) {
+  for (auto& serverConnections : m_Net->m_IncomingConnections) {
+    // std::pair<uint16_t, vector<CGameConnection*>>
+    for (auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
         connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
         ++NumFDs;
@@ -1000,17 +984,17 @@ bool CAura::Update()
 
   // if hosting a lobby, accept new connections to its game server
 
-  for (auto& pair : m_Net->m_GameServers) {
+  for (auto& server : m_Net->m_GameServers) {
     if (m_ExitingSoon) {
-      pair.second->Discard(static_cast<fd_set*>(&fd));
+      server.second->Discard(static_cast<fd_set*>(&fd));
       continue;
     }
-    uint16_t localPort = pair.first;
+    uint16_t localPort = server.first;
     if (m_Net->m_IncomingConnections[localPort].size() > MAX_INCOMING_CONNECTIONS) {
-      pair.second->Discard(static_cast<fd_set*>(&fd));
+      server.second->Discard(static_cast<fd_set*>(&fd));
       continue;
     }
-    CStreamIOSocket* socket = pair.second->Accept(static_cast<fd_set*>(&fd));
+    CStreamIOSocket* socket = server.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnect > 0) {
         CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
@@ -1035,14 +1019,14 @@ bool CAura::Update()
       }
     }
 
-    if (pair.second->HasError()) {
+    if (server.second->HasError()) {
       m_Exiting = true;
     }
   }
 
   // update unassigned incoming connections
-  for (auto& pair : m_Net->m_IncomingConnections) {
-    for (auto i = begin(pair.second); i != end(pair.second);) {
+  for (auto& serverConnections : m_Net->m_IncomingConnections) {
+    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CGameConnection
       uint8_t result = (*i)->Update(&fd, &send_fd);
       if (result == PREPLAYER_CONNECTION_OK) {
@@ -1055,7 +1039,7 @@ bool CAura::Update()
         (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
       }
       delete *i;
-      i = pair.second.erase(i);
+      i = serverConnections.second.erase(i);
     }
   }
 
@@ -1586,6 +1570,31 @@ void CAura::GracefulExit()
   if (m_Discord) {
     m_Discord->m_Config->m_Enabled = false;
   }
+}
+
+bool CAura::CheckGracefulExit()
+{
+  /* Already checked:
+    (!m_CurrentLobby && m_Games.empty() &&
+    !m_Net->m_HealthCheckInProgress &&
+    !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
+    m_PendingActions.empty())
+  */
+
+  if (m_IRC && m_IRC->GetSocket()->GetConnected()) {
+    return false;
+  }
+  for (auto& realm : m_Realms) {
+    if (realm->GetSocket()->GetConnected()) {
+      return false;
+    }
+  }
+  for (auto& serverConnections : m_Net->m_IncomingConnections) {
+    if (!serverConnections.second.empty()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool CAura::CreateGame(CGameSetup* gameSetup)

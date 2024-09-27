@@ -160,15 +160,16 @@ void CDiscord::Update()
     }
   }
 
-  if (!m_Config->m_Enabled) {
-    return;
-  }
-
 #ifndef DISABLE_DPP
   while (!m_CommandQueue.empty()) {
     string cmdToken, command, payload;
     cmdToken = "/" + m_Config->m_CommandCFG->m_NameSpace + " ";
     dpp::slashcommand_t* event = m_CommandQueue.front();
+    if (!m_Config->m_Enabled) {
+      delete event;
+      m_CommandQueue.pop();
+      continue;
+    }
     if (event->command.get_command_name() == m_Config->m_CommandCFG->m_NameSpace) {
       dpp::command_value maybePayload = event->get_parameter("payload");
       if (holds_alternative<string>(maybePayload)) {

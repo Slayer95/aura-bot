@@ -121,7 +121,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    if (!m_DeleteMe) while (Bytes.size() >= 4) {
+    while (Bytes.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
       const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
@@ -133,7 +133,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
       if (Bytes[0] == W3GS_HEADER_CONSTANT || (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0)) {
         if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN) {
-          if (!m_Aura->m_CurrentLobby || m_Aura->m_CurrentLobby->GetIsMirror() || m_Aura->m_CurrentLobby->GetLobbyLoading()) {
+          if (!m_Aura->m_CurrentLobby || m_Aura->m_CurrentLobby->GetIsMirror() || m_Aura->m_CurrentLobby->GetLobbyLoading() || m_Aura->m_CurrentLobby->GetExiting()) {
             // Game already started
             Abort = true;
             break;
@@ -350,8 +350,11 @@ CGameUser::~CGameUser()
   if (!m_LeftMessageSent) {
     Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), GetLeftCode()));
   }
-  m_Socket->Flush();
-  delete m_Socket;
+
+  if (m_Socket) {
+    m_Socket->Flush();
+    delete m_Socket;
+  }
 
   for (auto& ctx : m_Game->m_Aura->m_ActiveContexts) {
     if (ctx->m_GameUser == this) {

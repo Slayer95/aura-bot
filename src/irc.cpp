@@ -116,6 +116,7 @@ void CIRC::Update(void* fd, void* send_fd)
 
   if (!m_Config->m_Enabled) {
     if (m_Socket && m_Socket->GetConnected()) {
+      Print("[IRC: " + m_Config->m_HostName + "] disconnected");
       ResetConnection();
       m_WaitingToConnect = false;
     }

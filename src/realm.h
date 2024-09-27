@@ -153,6 +153,7 @@ public:
   CBNETProtocol*       GetProtocol() const { return m_Protocol; }
   inline uint8_t       GetGameVersion() const { return m_GameVersion; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
+  inline CTCPClient*   GetSocket() const { return m_Socket; }
   bool                 GetShouldLogChatToConsole() const;
   inline bool          GetInChat() const { return !m_CurrentChannel.empty(); }
   inline std::string   GetCurrentChannel() const { return m_CurrentChannel; }

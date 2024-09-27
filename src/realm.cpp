@@ -156,6 +156,13 @@ void CRealm::Update(void* fd, void* send_fd)
   // that means it might take a few ms longer to complete a task involving multiple steps (in this case, reconnecting) due to blocking or sleeping
   // but it's not a big deal at all, maybe 100ms in the worst possible case (based on a 50ms blocking time)
 
+  if (!m_Config->m_Enabled) {
+    if (m_Socket && m_Socket->GetConnected()) {
+      ResetConnection(false);
+    }
+    return;
+  }
+
   if (!m_Socket) {
     m_Socket = new CTCPClient(AF_INET, m_Config->m_HostName);
     m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
@@ -492,14 +499,14 @@ void CRealm::Update(void* fd, void* send_fd)
     return;
   }
 
-  if (m_Config->m_Enabled && !m_Socket->GetConnected() && !m_Socket->GetConnecting() && !m_WaitingToConnect)
+  if (!m_Socket->GetConnected() && !m_Socket->GetConnecting() && !m_WaitingToConnect)
   {
     // the socket was disconnected
     ResetConnection(false);
     return;
   }
 
-  if (m_Config->m_Enabled && !m_Socket->GetConnecting() && !m_Socket->GetConnected() && (m_ReconnectNextTick || (Time - m_LastDisconnectedTime >= m_ReconnectDelay)))
+  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && (m_ReconnectNextTick || (Time - m_LastDisconnectedTime >= m_ReconnectDelay)))
   {
     // attempt to connect to battle.net
 
@@ -1249,13 +1256,15 @@ void CRealm::ResetConnection(bool Errored)
   m_BNCSUtil->Reset(m_Config->m_UserName, m_Config->m_PassWord);
 
   if (m_Socket) {
+    if (m_Socket->GetConnected()) {
+      if (Errored) {
+        Print(GetLogPrefix() + "disconnected due to socket error");
+      } else {
+        Print(GetLogPrefix() + "disconnected");
+      }
+    }
     m_Socket->Reset();
     m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
-    if (Errored) {
-      Print(GetLogPrefix() + "disconnected due to socket error");
-    } else {
-      Print(GetLogPrefix() + "disconnected");
-    }
   }
 
   m_LoggedIn         = false;
