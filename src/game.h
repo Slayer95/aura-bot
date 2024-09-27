@@ -411,7 +411,7 @@ public:
   void SendOwnerCommandsHelp(const std::string& cmdToken, CGameUser* user) const;
   void SendCommandsHelp(const std::string& cmdToken, CGameUser* user, const bool isIntro) const;
   void SendLeftMessage(CGameUser* user, const bool sendChat) const;
-  void SendEveryoneElseLeft() const;
+  bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
   void SendAllActions();
   void SendAllAutoStart() const;
 
@@ -593,7 +593,7 @@ public:
   void CountKickVotes();
   bool GetCanStartGracefulCountDown() const;
   void StartCountDown(bool fromUser, bool force);
-  bool StopPlayers(const std::string& reason, const bool allowLocal);
+  bool StopPlayers(const std::string& reason);
   void StopLaggers(const std::string& reason);
   void StopDesynchronized(const std::string& reason);
   bool Pause(CGameUser* user, const bool isDisconnect);

@@ -1550,13 +1550,13 @@ void CAura::GracefulExit()
   }
 
   for (auto& game : m_Games) {
-    game->StopPlayers("shutdown", true);
+    game->SendEveryoneElseLeftAndDisconnect("shutdown");
   }
 
   m_Net->GracefulExit();
 
   if (m_CurrentLobby) {
-    m_CurrentLobby->StopPlayers("shutdown", true);
+    m_CurrentLobby->StopPlayers("shutdown");
     m_CurrentLobby->SetExiting(true);
   }
 

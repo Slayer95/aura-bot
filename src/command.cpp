@@ -2173,7 +2173,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin ended game) [" + m_FromName + "]");
       m_TargetGame->SendAllChat("Ending the game.");
-      m_TargetGame->StopPlayers("was disconnected (admin ended game)", false);
+      m_TargetGame->StopPlayers("was disconnected (admin ended game)");
       break;
     }
 
@@ -2751,8 +2751,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       m_TargetGame->SendAllChat("Please rejoin the remade game <<" + m_TargetGame->GetGameName() + ">>.");
-      m_TargetGame->StopPlayers("was disconnected (admin remade game)", true);
-      m_TargetGame->SendEveryoneElseLeft();
+      m_TargetGame->SendEveryoneElseLeftAndDisconnect("was disconnected (admin remade game)");
       m_TargetGame->Remake();
       break;
     }
@@ -3093,7 +3092,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "is over (admin cancelled game) [" + m_FromName + "]");
       SendReply("Aborting " + m_TargetGame->GetStatusDescription());
       m_TargetGame->m_Exiting = true;
-      m_TargetGame->StopPlayers("was disconnected (admin cancelled game)", false);
+      m_TargetGame->StopPlayers("was disconnected (admin cancelled game)");
       break;
     }
 

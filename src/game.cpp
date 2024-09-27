@@ -1274,9 +1274,10 @@ bool CGame::Update(void* fd, void* send_fd)
   if (GetIsGameOver() && m_GameOverTime.value() + 60 < Time) {
     // Disconnect the user socket, destroy it, but do not send W3GS_PLAYERLEAVE
     // Sending it would force them to actually quit the game, and go to the scorescreen.
-    if (StopPlayers("was disconnected (gameover timer finished)", m_GameLoading || m_GameLoaded)) {
-      Print(GetLogPrefix() + "is over (gameover timer finished)");
-      SendEveryoneElseLeft();
+    if (m_GameLoading || m_GameLoaded) {
+      SendEveryoneElseLeftAndDisconnect("was disconnected (gameover timer finished)");
+    } else {
+      StopPlayers("was disconnected (gameover timer finished)");
     }
   }
 
@@ -3455,19 +3456,30 @@ void CGame::SendLeftMessage(CGameUser* user, const bool sendChat) const
   SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), user->GetLeftCode()));
 }
 
-void CGame::SendEveryoneElseLeft() const
+bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
 {
+  bool anyStopped = false;
   for (auto& p1 : m_Users) {
     for (auto& p2 : m_Users) {
       if (p1 == p2 || p2->GetLeftMessageSent()) {
         continue;
       }
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), p2->GetLeftCode()));
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
     for (auto& fake : m_FakeUsers) {
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT));
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT);
     }
+    if (p1->GetDeleteMe()) continue;
+    p1->SetDeleteMe(true);
+    p1->SetLeftReason(reason);
+    p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    p1->SetLeftMessageSent(true);
+    if (!p1->GetGProxyAny()) {
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT);
+    }
+    anyStopped = true;
   }
+  return anyStopped;
 }
 
 void CGame::EventUserKickHandleQueued(CGameUser* user)
@@ -4925,7 +4937,7 @@ void CGame::EventGameLoaded()
     // FIXME? This creates a large lag spike client-side.
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.
     // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags), correctly untracks lastrefugeamai.ini --observers=no, GProxyDLL hangs
-    StopPlayers("single-user game untracked", true);
+    SendEveryoneElseLeftAndDisconnect("single-player game untracked");
   }
 
   HandleGameLoadedStats();
@@ -7081,7 +7093,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   }
 }
 
-bool CGame::StopPlayers(const string& reason, const bool allowLocal)
+bool CGame::StopPlayers(const string& reason)
 {
   // disconnect every user and set their left reason to the passed string
   // we use this function when we want the code in the Update function to run before the destructor (e.g. saving users to the database)
@@ -7094,7 +7106,6 @@ bool CGame::StopPlayers(const string& reason, const bool allowLocal)
     user->SetDeleteMe(true);
     user->SetLeftReason(reason);
     user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
-    if (allowLocal && !user->GetGProxyAny()) user->SetLeftMessageSent(true);
     anyStopped = true;
   }
   return anyStopped;
