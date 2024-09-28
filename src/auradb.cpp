@@ -1279,7 +1279,7 @@ bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
 
   if (!m_StmtCache[GAME_ADD_IDX]) {
     Print("[SQLITE3] prepare error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
-    return;
+    return false;
   }
 
   bool Success = false;
