@@ -1108,7 +1108,7 @@ bool CGame::Update(void* fd, void* send_fd)
           Print(GetLogPrefix() + "worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)");
         }
       }
-    } else if (!m_Users.empty()) {
+    } else if (!m_Users.empty()) { // m_Lagging == true
       const bool anyUsingLegacyGProxy = GetAnyUsingGProxyLegacy();
 
       int64_t WaitTime = 60;
@@ -1141,10 +1141,13 @@ bool CGame::Update(void* fd, void* send_fd)
             // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
             // empty actions are used to extend the time a user can use when reconnecting
 
-            for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j)
+            (_i)->AddSyncCounterOffset(m_GProxyEmptyActions);
+            for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
               Send(_i, GetProtocol()->GetEmptyAction());
+            }
           }
 
+          (_i)->AddSyncCounterOffset(1);
           Send(_i, GetProtocol()->GetEmptyAction());
         }
 
@@ -1201,9 +1204,9 @@ bool CGame::Update(void* fd, void* send_fd)
         ++m_PingReportedSinceLagTimes;
       }
       if (m_Config->m_SyncNormalize) {
-        if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks > 60000) {
+        if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 60000) {
           NormalizeSyncCounters();
-        } else if (m_PingReportedSinceLagTimes == 5 && Ticks - m_FinishedLoadingTicks > 180000) {
+        } else if (m_PingReportedSinceLagTimes == 5 && Ticks - m_FinishedLoadingTicks < 180000) {
           NormalizeSyncCounters();
         }
       }
@@ -2722,15 +2725,17 @@ void CGame::SendAllActions()
 {
   m_GameTicks += GetLatency();
 
-  if (GetAnyUsingGProxy()) {
+  if (GetAnyUsingGProxyLegacy()) {
     // we must send empty actions to non-GProxy++ users
     // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
     // empty actions are used to extend the time a user can use when reconnecting
 
     for (auto& user : m_Users) {
       if (!user->GetGProxyAny()) {
-        for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j)
+        user->AddSyncCounterOffset(m_GProxyEmptyActions);
+        for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
           Send(user, GetProtocol()->GetEmptyAction());
+        }
       }
     }
   }
