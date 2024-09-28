@@ -660,31 +660,10 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVe
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GR_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit)
-{
-  std::vector<uint8_t> packet = SEND_W3GS_GAMEINFO(war3Version, mapGameType, mapFlags, mapWidth, mapHeight, gameName, hostName, upTime, mapPath, mapHash, slotsTotal, slotsAvailableOff, port, hostCounter, entryKey);
-  AppendByteArrayFast(packet, remoteIP);     // internal IP
-  AppendByteArray(packet, remotePort, true); // internal port
-  //AppendByteArray(packet, static_cast<uint16_t>(6112), true);         // port
-  if (extraBit != 0xFF) {
-    packet.push_back(extraBit);
-  }
-  return packet;
-}
-
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter)
 {
   std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version, 0, 0, 0};
   AppendByteArray(packet, hostCounter, false); // Host Counter
-  return packet;
-}
-
-std::vector<uint8_t> CGameProtocol::SEND_W3GR_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter)
-{
-  std::vector<uint8_t> packet = SEND_W3GS_CREATEGAME(war3Version, hostCounter);
-  const uint8_t BroadcastAll[] = {255, 255, 255, 255};
-  AppendByteArray(packet, BroadcastAll, 4);
-  AppendByteArray(packet, static_cast<uint16_t>(6112), true);
   return packet;
 }
 
@@ -697,28 +676,10 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REFRESHGAME(const uint32_t hostCou
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GR_REFRESHGAME(const uint32_t hostCounter, const uint32_t players, const uint32_t playerSlots)
-{
-  std::vector<uint8_t> packet = SEND_W3GS_REFRESHGAME(hostCounter, players, playerSlots);
-  const uint8_t BroadcastAll[] = {255, 255, 255, 255};
-  AppendByteArray(packet, BroadcastAll, 4);
-  AppendByteArray(packet, static_cast<uint16_t>(6112), true);         // Player Slots
-  return packet;
-}
-
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_DECREATEGAME(const uint32_t hostCounter)
 {
   std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_DECREATEGAME, 8, 0};
   AppendByteArray(packet, hostCounter, false); // Host Counter
-  return packet;
-}
-
-std::vector<uint8_t> CGameProtocol::SEND_W3GR_DECREATEGAME(const uint32_t hostCounter)
-{
-  std::vector<uint8_t> packet = SEND_W3GS_DECREATEGAME(hostCounter);
-  const uint8_t BroadcastAll[] = {255, 255, 255, 255};
-  AppendByteArray(packet, BroadcastAll, 4);
-  AppendByteArray(packet, static_cast<uint16_t>(6112), true);
   return packet;
 }
 

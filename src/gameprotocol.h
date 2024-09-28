@@ -184,13 +184,9 @@ public:
   std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGameUser* user);
   std::vector<uint8_t> SEND_W3GS_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
   std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey);
-  std::vector<uint8_t> SEND_W3GR_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey, const std::vector<uint8_t>& remoteIP, const uint16_t remotePort, const uint8_t extraBit);
   std::vector<uint8_t> SEND_W3GS_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter);
-  std::vector<uint8_t> SEND_W3GR_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter);
   std::vector<uint8_t> SEND_W3GS_REFRESHGAME(const uint32_t hostCounter, const uint32_t players, const uint32_t playerSlots);
-  std::vector<uint8_t> SEND_W3GR_REFRESHGAME(const uint32_t hostCounter, const uint32_t players, const uint32_t playerSlots);
   std::vector<uint8_t> SEND_W3GS_DECREATEGAME(const uint32_t hostCounter);
-  std::vector<uint8_t> SEND_W3GR_DECREATEGAME(const uint32_t hostCounter);
   std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash);
   std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash, const std::vector<uint8_t>& mapSHA1);
   std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID);
