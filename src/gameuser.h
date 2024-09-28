@@ -245,6 +245,7 @@ public:
   inline uint32_t              GetPongCounter() const { return m_PongCounter; }
   inline size_t                GetNumCheckSums() const { return m_CheckSums.size(); }
   inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }
+  inline bool                  HasCheckSums() const { return !m_CheckSums.empty(); }
   inline std::string           GetLeftReason() const { return m_LeftReason; }
   inline uint32_t              GetLeftCode() const { return m_LeftCode; }
   inline bool                  GetQuitGame() const { return m_QuitGame; }

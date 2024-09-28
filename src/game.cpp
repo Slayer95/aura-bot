@@ -3467,7 +3467,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
     for (auto& fake : m_FakeUsers) {
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT);
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT));
     }
     if (p1->GetDeleteMe()) continue;
     p1->SetDeleteMe(true);
@@ -3475,7 +3475,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     p1->SetLeftMessageSent(true);
     if (!p1->GetGProxyAny()) {
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT);
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
     anyStopped = true;
   }
@@ -4013,18 +4013,18 @@ void CGame::EventUserKeepAlive(CGameUser* user)
   if (!m_GameLoading && !m_GameLoaded)
     return;
 
-  if (user->GetCheckSums()->empty())
+  if (!user->HasCheckSums())
     return;
 
   bool CanConsumeFrame = true;
-  std::vector<CGameUser*>& OtherPlayers = m_SyncPlayers[user];
-  for (auto& otherPlayer: OtherPlayers) {
+  std::vector<CGameUser*>& otherPlayers = m_SyncPlayers[user];
+  for (auto& otherPlayer: otherPlayers) {
     if (otherPlayer == user) {
       CanConsumeFrame = false;;
       break;
     }
 
-    if (otherPlayer->GetCheckSums()->empty()) {
+    if (!otherPlayer->HasCheckSums()) {
       CanConsumeFrame = false;
       break;
     }
@@ -4038,8 +4038,8 @@ void CGame::EventUserKeepAlive(CGameUser* user)
 
   bool DesyncDetected = false;
   vector<CGameUser*> DesyncedPlayers;
-  typename std::vector<CGameUser*>::iterator it = OtherPlayers.begin();
-  while (it != OtherPlayers.end()) {
+  typename std::vector<CGameUser*>::iterator it = otherPlayers.begin();
+  while (it != otherPlayers.end()) {
     if ((*it)->GetCheckSums()->front() == MyCheckSum) {
       (*it)->GetCheckSums()->pop();
       ++it;
@@ -4054,8 +4054,8 @@ void CGame::EventUserKeepAlive(CGameUser* user)
       }
 
       DesyncedPlayers.push_back(*it);
-      std::iter_swap(it, OtherPlayers.end() - 1);
-      OtherPlayers.pop_back();
+      std::iter_swap(it, otherPlayers.end() - 1);
+      otherPlayers.pop_back();
     }
   }
   if (DesyncDetected) {
@@ -4889,7 +4889,7 @@ void CGame::EventGameLoaded()
   const CGameUser* Longest  = nullptr;
 
   uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
-  vector<CGameUser*> DesyncedPlayers;
+  vector<const CGameUser*> DesyncedPlayers;
   if (m_Users.size() >= 2) {
     for (const auto& user : m_Users) {
       if (!Shortest || user->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks()) {
@@ -7093,7 +7093,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   }
 }
 
-bool CGame::StopPlayers(const string& reason)
+bool CGame::StopPlayers(const string& reason) const
 {
   // disconnect every user and set their left reason to the passed string
   // we use this function when we want the code in the Update function to run before the destructor (e.g. saving users to the database)
@@ -7111,7 +7111,7 @@ bool CGame::StopPlayers(const string& reason)
   return anyStopped;
 }
 
-void CGame::StopLaggers(const string& reason)
+void CGame::StopLaggers(const string& reason) const
 {
   for (auto& user : m_Users) {
     if (user->GetLagging()) {
@@ -7123,11 +7123,15 @@ void CGame::StopLaggers(const string& reason)
   }
 }
 
-void CGame::StopDesynchronized(const string& reason)
+void CGame::StopDesynchronized(const string& reason) const
 {
   uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
-  for (auto& user : m_Users) {
-    if (m_SyncPlayers[user].size() < majorityThreshold) {
+  for (CGameUser* user : m_Users) {
+    auto it = m_SyncPlayers.find(static_cast<const CGameUser*>(user));
+    if (it == m_SyncPlayers.end()) {
+      continue;
+    }
+    if ((it->second).size() < majorityThreshold) {
       user->SetDeleteMe(true);
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);

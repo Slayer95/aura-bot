@@ -239,7 +239,7 @@ protected:
   std::vector<uint8_t>           m_GameDiscoveryInfo;
   uint16_t                       m_GameDiscoveryInfoVersionOffset;
   uint16_t                       m_GameDiscoveryInfoDynamicOffset;
-  std::map<CGameUser*, std::vector<CGameUser*>>  m_SyncPlayers;     //
+  std::map<const CGameUser*, std::vector<CGameUser*>>  m_SyncPlayers;     //
   
 
 public:
@@ -411,7 +411,6 @@ public:
   void SendOwnerCommandsHelp(const std::string& cmdToken, CGameUser* user) const;
   void SendCommandsHelp(const std::string& cmdToken, CGameUser* user, const bool isIntro) const;
   void SendLeftMessage(CGameUser* user, const bool sendChat) const;
-  bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
   void SendAllActions();
   void SendAllAutoStart() const;
 
@@ -593,9 +592,10 @@ public:
   void CountKickVotes();
   bool GetCanStartGracefulCountDown() const;
   void StartCountDown(bool fromUser, bool force);
-  bool StopPlayers(const std::string& reason);
-  void StopLaggers(const std::string& reason);
-  void StopDesynchronized(const std::string& reason);
+  bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
+  bool StopPlayers(const std::string& reason) const;
+  void StopLaggers(const std::string& reason) const;
+  void StopDesynchronized(const std::string& reason) const;
   bool Pause(CGameUser* user, const bool isDisconnect);
   bool Resume();
   std::string GetSaveFileName(const uint8_t UID) const;
