@@ -1201,9 +1201,9 @@ bool CGame::Update(void* fd, void* send_fd)
         ++m_PingReportedSinceLagTimes;
       }
       if (m_Config->m_SyncNormalize) {
-        if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 60000) {
+        if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks > 60000) {
           NormalizeSyncCounters();
-        } else if (m_PingReportedSinceLagTimes == 5 && Ticks - m_FinishedLoadingTicks < 180000) {
+        } else if (m_PingReportedSinceLagTimes == 5 && Ticks - m_FinishedLoadingTicks > 180000) {
           NormalizeSyncCounters();
         }
       }
