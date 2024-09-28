@@ -3479,7 +3479,8 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     p1->SetLeftReason(reason);
     p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     p1->SetLeftMessageSent(true);
-    if (!p1->GetGProxyAny()) {
+    if (p1->GetGProxyAny()) {
+      // Let GProxy know that it should give up at reconnecting.
       Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
     anyStopped = true;
@@ -4935,11 +4936,12 @@ void CGame::EventGameLoaded()
     SendChat(user, "Your load time was " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
   }
 
+  // GProxy hangs trying to reconnect
   if (GetIsSinglePlayerMode() && !GetAnyUsingGProxy()) {
     SendAllChat("HINT: Single-user game detected. In-game commands will be DISABLED.");
     // FIXME? This creates a large lag spike client-side.
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.
-    // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags), correctly untracks lastrefugeamai.ini --observers=no, GProxyDLL hangs
+    // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags), correctly untracks lastrefugeamai.ini --observers=no
     SendEveryoneElseLeftAndDisconnect("single-player game untracked");
   }
 
