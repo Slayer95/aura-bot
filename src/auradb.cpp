@@ -106,7 +106,6 @@ uint8_t CSearchableMapData::Search(string& rwSearchName, const uint8_t searchDat
   }
 
   bool allowInclusion = !exactMatch && fuzzyPattern.size() >= 5;
-  bool gotExactMatch = false;
   uint8_t bestMatchType = MAP_DATA_TYPE_NONE;
   string::size_type bestDistance = maxDistance + 1;
   string bestMatch;
@@ -165,7 +164,7 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
       for (const auto& element : data["aliases"].items()) {
         m_Aliases[string(element.key())] = make_pair((uint8_t)(element.value()[0]), string(element.value()[1]));
       }
-    } catch (nlohmann::json::exception e) {
+    } catch (nlohmann::json::exception& e) {
       Print("[AURA] error loading [" + PathToString(sourceFile) + "] - " + string(e.what()));
     }
     twrpgFile.close();
@@ -1262,7 +1261,7 @@ vector<string> CAuraDB::GetAlts(const string& addressLiteral)
   return altAccounts;
 }
 
-void CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const vector<uint8_t>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
+bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const vector<uint8_t>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
 {
   string storageCRC32 = ByteArrayToDecString(mapCRC32);
   string storagePlayerNames = JoinVector(playerNames, false);
@@ -1300,6 +1299,7 @@ void CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
     Print("[SQLITE3] error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
 
   m_DB->Reset(m_StmtCache[GAME_ADD_IDX]);
+  return Success;
 }
 
 CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
@@ -1524,6 +1524,7 @@ CDBBan::CDBBan(string nName, string nServer, string nAuthServer, string nIP, str
   : m_Name(std::move(nName)),
     m_Server(std::move(nServer)),
     m_AuthServer(std::move(nAuthServer)),
+    m_IP(std::move(nIP)),
     m_Date(std::move(nDate)),
     m_Expiry(std::move(nExpiry)),
     m_Permanent(nPermanent),

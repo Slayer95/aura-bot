@@ -394,7 +394,7 @@ void CStreamIOSocket::Discard(fd_set* fd)
     return;
 
   char buffer[1024];
-  int32_t c = recv(m_Socket, buffer, 1024, 0);
+  recv(m_Socket, buffer, 1024, 0);
 }
 
 void CStreamIOSocket::DoSend(fd_set* send_fd)
@@ -431,7 +431,7 @@ void CStreamIOSocket::Flush()
   if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())
     return;
 
-  int32_t s = send(m_Socket, m_SendBuffer.c_str(), static_cast<int32_t>(m_SendBuffer.size()), MSG_NOSIGNAL);
+  send(m_Socket, m_SendBuffer.c_str(), static_cast<int32_t>(m_SendBuffer.size()), MSG_NOSIGNAL);
   m_SendBuffer.clear();
 }
 

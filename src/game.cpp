@@ -687,7 +687,7 @@ bool CGame::GetHasChatRecvHost() const
 
 bool CGame::GetHasChatSendPermaHost() const
 {
-  return GetNumFakePlayers() > 0 || m_Map->GetMapObservers() == MAPOBS_REFEREES && GetNumFakeObservers() > 0;
+  return GetNumFakePlayers() > 0 || (m_Map->GetMapObservers() == MAPOBS_REFEREES && GetNumFakeObservers() > 0);
 }
 
 bool CGame::GetHasChatRecvPermaHost() const
@@ -4663,8 +4663,6 @@ void CGame::EventGameStarted()
   if (!m_RestoredGame && GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake user.
-    uint8_t fakeCount = static_cast<uint8_t>(m_FakeUsers.size());
-
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
       if (CreateFakeObserver(true)) ++m_JoinedVirtualHosts;
     } else {
@@ -5382,7 +5380,6 @@ uint8_t CGame::HostToMapCommunicationUID() const
 {
   if (!GetHMCEnabled()) return 0xFF;
   const uint8_t SID = m_Map->GetHMCSlot() - 1;
-  const CGameSlot* slot = InspectSlot(SID);
   const uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
   if (fakePlayerIndex >= m_FakeUsers.size()) return 0xFF; 
   return static_cast<uint8_t>(m_FakeUsers[fakePlayerIndex]);
