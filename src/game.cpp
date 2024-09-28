@@ -7258,6 +7258,8 @@ bool CGame::TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary)
     SendAllChat("Game saved on " + user->GetName() + "'s disconnection.");
     SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
     return true;
+  } else {
+    Print(GetLogPrefix() + "Failed to automatically save game on leave");
   }
 
   return false;
