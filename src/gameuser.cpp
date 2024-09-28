@@ -531,8 +531,7 @@ bool CGameUser::Update(void* fd)
 
           case CGameProtocol::W3GS_OUTGOING_KEEPALIVE:
             m_CheckSums.push(m_Protocol->RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
-            if (!m_Game->GetLagging() || m_Lagging)
-              ++m_SyncCounter;
+            ++m_SyncCounter;
             m_Game->EventUserKeepAlive(this);
             break;
 
