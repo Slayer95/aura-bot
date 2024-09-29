@@ -127,9 +127,6 @@ in Aura's console.
 - Replays:
   Please open an issue if this is important to you.
 
-- W3MMD:
-  Please open an issue if this is important to you.
-
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/uakfdotb/ghostpp
 [3]: https://gitlab.com/ivojulca/aura-bot/COMMANDS.md

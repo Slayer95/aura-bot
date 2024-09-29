@@ -1128,6 +1128,7 @@ void CMap::Load(CConfig* CFG)
   m_MapHeight = MapHeight;
   m_MapEditorVersion = MapEditorVersion;
   m_MapType = CFG->GetString("map.type", emptyString);
+  m_MapMetaDataEnabled = CFG->GetBool("map.meta_data.enabled", m_MapType == "dota" || m_MapType == "evergreen");
   m_MapDefaultHCL = CFG->GetString("map.default_hcl", emptyString);
   if (!CheckIsValidHCL(m_MapDefaultHCL).empty()) {
     Print("[MAP] HCL string [" + m_MapDefaultHCL + "] is not valid.");

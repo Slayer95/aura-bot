@@ -646,9 +646,8 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   if (baseFileName.find("_evrgrn3") != string::npos) {
     if (m_MapSiteUri.empty()) MapCFG.Set("map.site", "https://www.hiveworkshop.com/threads/351924/");
     MapCFG.Set("map.short_desc", "This map uses Warcraft 3: Reforged game mechanics.");
-  }
-
-  if (baseFileName.find("DotA") != string::npos) {
+    MapCFG.Set("map.type", "evergreen");
+  } else if (baseFileName.find("DotA") != string::npos) {
     MapCFG.Set("map.type", "dota");
   }
 

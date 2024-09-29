@@ -465,6 +465,7 @@
     <ClCompile Include="auradb.cpp" />
     <ClCompile Include="sqlite3.c" />
     <ClCompile Include="stats.cpp" />
+    <ClCompile Include="w3mmd.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util.h" />
@@ -509,6 +510,7 @@
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="sqlite3ext.h" />
     <ClInclude Include="stats.h" />
+    <ClInclude Include="w3mmd.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

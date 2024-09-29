@@ -53,9 +53,14 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <map>
+#include <optional>
 #include <regex>
 #include <filesystem>
+#include <functional>
+
 #include "../utf8/utf8.h"
+#include "hash.h"
 
 #undef min
 
@@ -961,6 +966,94 @@ inline std::string ToUpperCase(const std::string& input)
   std::string output = input;
   std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::toupper(c)); });
   return output;
+}
+
+inline std::optional<uint32_t> ToUint32(const std::string& input)
+{
+  std::optional<uint32_t> container = std::nullopt;
+
+  try {
+    int64_t Value = std::stol(input);
+    if (Value < 0 || 0xFFFFFFFF < Value) {
+      return container;
+    }
+    container = static_cast<uint32_t>(Value);
+  } catch (...) {}
+
+  return container;
+}
+
+inline std::optional<int32_t> ToInt32(const std::string& input)
+{
+  std::optional<int32_t> container = std::nullopt;
+
+  try {
+    long Value = std::stol(input);
+    if (Value > 0xFFFFFF) {
+      return container;
+    }
+    container = static_cast<int32_t>(Value);
+  } catch (...) {}
+
+  return container;
+}
+
+inline std::optional<double> ToDouble(const std::string& input)
+{
+  std::optional<double> container = std::nullopt;
+
+  try {
+    double Value = std::stod(input);
+    container = static_cast<double>(Value);
+  } catch (...) {}
+
+  return container;
+}
+
+inline bool ReplaceText(std::string& input, const std::string& fragment, const std::string& replacement)
+{
+  std::string::size_type matchIndex = input.find(fragment);
+  if (matchIndex == std::string::npos) return false;
+  input.replace(matchIndex, fragment.size(), replacement);
+  return true;
+}
+
+inline std::string ReplaceTemplate(const std::string& input, const std::map<int64_t, std::function<std::string()>>& funcMap) {
+  std::string result;
+  size_t pos = 0;
+  size_t start = 0;
+
+  while ((start = input.find('{', pos)) != std::string::npos) {
+    // Append the part before the token
+    result.append(input, pos, start - pos);
+
+    // Find the closing brace
+    size_t end = input.find('}', start);
+    if (end == std::string::npos) {
+      // Unmatched opening brace, fail
+      return false;
+    }
+
+    // Extract the token inside the braces
+    std::string token = input.substr(start + 1, end - start - 1);
+
+    // Check if the hash exists in the funcMap
+    auto it = funcMap.find(HashCode(token));
+    if (it != funcMap.end()) {
+      // Replace the token with the output of the corresponding function
+      result.append(it->second());
+    } else {
+      // If no match is found, keep the original token (or you can choose to return false)
+      result.append("{").append(token).append("}");
+    }
+
+    // Move the position forward
+    pos = end + 1;
+  }
+
+  // Append the rest of the string after the last token
+  result.append(input, pos, std::string::npos);
+  return result;
 }
 
 #endif // AURA_UTIL_H_

@@ -61,6 +61,7 @@
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
 #include "stats.h"
+#include "w3mmd.h"
 #include "irc.h"
 #include "fileutil.h"
 
@@ -81,7 +82,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Verbose(nGameSetup->m_Verbose),
     m_Socket(nullptr),
     m_LastLeaverBannable(nullptr),
-    m_Stats(nullptr),
+    m_CustomStats(nullptr),
+    m_DotaStats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_Name),
@@ -113,6 +115,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_PingReportedSinceLagTimes(0),
     m_LastOwnerSeen(GetTime()),
     m_StartedKickVoteTime(0),
+    m_GameOver(GAME_ONGOING),
     m_LastLagScreenResetTime(0),
     m_PauseCounter(0),
     m_NextSaveFakeUser(0),
@@ -295,9 +298,12 @@ void CGame::Reset(const bool saveStats)
         Print(GetLogPrefix() + "failed to begin transaction game end player data");
       }
     }
-    // store the dota stats in the database
-    if (saveStats && m_Stats) {
-      m_Stats->Save(m_Aura, m_Aura->m_DB);
+    // store the stats in the database
+    if (saveStats) {
+      if (m_CustomStats) {
+        Print(GetLogPrefix() + "MMD detected winners: " + JoinVector(m_CustomStats->GetWinners(), false));
+      }
+      if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
     }
   }
 
@@ -308,8 +314,11 @@ void CGame::Reset(const bool saveStats)
 
   ClearBannableUsers();
 
-  delete m_Stats;
-  m_Stats = nullptr;
+  delete m_CustomStats;
+  m_CustomStats = nullptr;
+
+  delete m_DotaStats;
+  m_DotaStats = nullptr;
 
   for (auto& ctx : m_Aura->m_ActiveContexts) {
     if (ctx->m_SourceGame == this) {
@@ -364,12 +373,19 @@ bool CGame::ReleaseMap()
   return true;
 }
 
-void CGame::StartGameOverTimer()
+void CGame::StartGameOverTimer(bool isMMD)
 {
   m_ExitingSoon = true;
+  m_GameOver = isMMD ? GAME_OVER_MMD : GAME_OVER_TRUSTED;
   m_GameOverTime = GetTime();
+  if (isMMD) {
+    m_GameOverTolerance = 300;
+  } else {
+    m_GameOverTolerance = 60;
+  }
+
   if (GetNumJoinedUsers() > 0) {
-    SendAllChat("Gameover timer started (disconnecting in 60 seconds...)");
+    SendAllChat("Gameover timer started (disconnecting in " + to_string(m_GameOverTolerance.value_or(60)) + " seconds...)");
   }
 
   if (this == m_Aura->m_CurrentLobby) {
@@ -1263,7 +1279,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // start the gameover timer if there's only a configured number of players left
   // do not count observers, but fake users are counted regardless
   uint8_t RemainingPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
-  if (RemainingPlayers != m_StartPlayers && !GetIsGameOver() && (m_GameLoading || m_GameLoaded)) {
+  if (RemainingPlayers != m_StartPlayers && !GetIsGameOverTrusted() && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0) {
       Print(GetLogPrefix() + "gameover timer started: 0 p | " + ToDecString(GetNumJoinedObservers()) + " | obs | 0 fake");
       StartGameOverTimer();
@@ -1274,7 +1290,7 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // finish the gameover timer
-  if (GetIsGameOver() && m_GameOverTime.value() + 60 < Time) {
+  if (GetIsGameOver() && m_GameOverTime.value() + m_GameOverTolerance.value_or(60) < Time) {
     // Disconnect the user socket, destroy it, but do not send W3GS_PLAYERLEAVE
     // Sending it would force them to actually quit the game, and go to the scorescreen.
     if (m_GameLoading || m_GameLoaded) {
@@ -3214,7 +3230,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     if (numJoinedPlayers == 0) {
       Print(GetLogPrefix() + "is over (no players left)");
       m_Exiting = true;
-    } else if (!GetIsGameOver()) {
+    } else if (!GetIsGameOverTrusted()) {
       if (numJoinedPlayers == 1 && GetNumComputers() == 0) {
         Print(GetLogPrefix() + "gameover timer started: remaining 1 p | 0 comp | " + ToDecString(GetNumJoinedObservers()) + " obs");
         StartGameOverTimer();
@@ -4005,12 +4021,18 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
 
   // give the stats class a chance to process the action
 
-  if (m_Stats && action->GetAction()->size() >= 6 && m_Stats->ProcessAction(action) && !GetIsGameOver())
-  {
-    Print(GetLogPrefix() + "gameover timer started (stats class reported game over)");
-    m_GameOverTime = GetTime();
+  if (m_CustomStats && action->GetAction()->size() >= 6) {
+    if (m_CustomStats->ProcessAction(action) && !GetIsGameOver()) {
+      Print(GetLogPrefix() + "gameover timer started (w3mmd reported game over)");
+      StartGameOverTimer(true);
+    }
   }
-
+  if (m_DotaStats && action->GetAction()->size() >= 6) {
+    if (m_DotaStats->ProcessAction(action) && !GetIsGameOver()) {
+      Print(GetLogPrefix() + "gameover timer started (dota stats class reported game over)");
+      StartGameOverTimer(true);
+    }
+  }
   return true;
 }
 
@@ -4715,11 +4737,16 @@ void CGame::EventGameStarted()
 
   // enable stats
 
-  if (!m_RestoredGame && m_Map->GetMapType() == "dota") {
-    if (m_StartPlayers < 6 || !m_FakeUsers.empty())
-      Print("[STATS] not using dotastats due to too few users");
-    else
-      m_Stats = new CStats(this);
+  if (!m_RestoredGame && m_Map->GetMapMetaDataEnabled()) {
+    if (m_Map->GetMapType() == "dota") {
+      if (m_StartPlayers < 6 || !m_FakeUsers.empty()) {
+        Print("[STATS] not using dotastats due to too few users");
+      } else {
+        m_DotaStats = new CDotaStats(this);
+      }
+    } else {
+      m_CustomStats = new CW3MMD(this);
+    }
   }
 
   for (auto& user : m_Users) {

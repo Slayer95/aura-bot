@@ -82,6 +82,10 @@
 
 #define GAME_PAUSES_PER_PLAYER 3u
 
+#define GAME_ONGOING 0u
+#define GAME_OVER_TRUSTED 1u
+#define GAME_OVER_MMD 2u
+
 //
 // CGame
 //
@@ -112,7 +116,8 @@ class CIncomingChatPlayer;
 class CIncomingMapSize;
 class CDBBan;
 class CDBGamePlayer;
-class CStats;
+class CDotaStats;
+class CW3MMD;
 class CRealm;
 class CSaveGame;
 
@@ -131,7 +136,8 @@ protected:
   CDBBan*                        m_LastLeaverBannable;                     // last ban for the !banlast command - this is a pointer to one of the items in m_Bannables
   std::vector<CDBBan*>           m_Bannables;                     // std::vector of potential ban data for the database
   std::vector<CDBBan*>           m_ScopeBans;                     // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
-  CStats*                        m_Stats;                         // class to keep track of game stats such as kills/deaths/assists in dota
+  CW3MMD*                        m_CustomStats;
+  CDotaStats*                    m_DotaStats;                         // class to keep track of game stats such as kills/deaths/assists in dota
   CSaveGame*                     m_RestoredGame;
   std::vector<CGameSlot>         m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>    m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
@@ -173,7 +179,9 @@ protected:
   uint32_t                       m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
   int64_t                        m_LastOwnerSeen;                 // GetTime when the last reserved player was seen in the lobby
   int64_t                        m_StartedKickVoteTime;           // GetTime when the kick vote was started
+  uint8_t                        m_GameOver;
   std::optional<int64_t>         m_GameOverTime;                  // GetTime when the game was over
+  std::optional<int64_t>         m_GameOverTolerance;
   std::optional<int64_t>         m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
   int64_t                        m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
   uint8_t                        m_PauseCounter;                  // Counter of fake player/observers pauses. If there are fake referees, it's ignored and always 0.
@@ -290,7 +298,8 @@ public:
   uint32_t              GetSyncLimitSafe() const;
   inline bool           GetLagging() const { return m_Lagging; }
   inline bool           GetPaused() const { return m_Paused; }
-  inline bool           GetIsGameOver() const { return m_GameOverTime.has_value(); }
+  inline bool           GetIsGameOver() const { return m_GameOver != GAME_ONGOING; }
+  inline bool           GetIsGameOverTrusted() const { return m_GameOver == GAME_OVER_TRUSTED; }
   uint8_t               GetLayout() const;
   uint8_t               GetCustomLayout() const { return m_CustomLayout; }
   bool                  GetIsCustomForces() const;
@@ -468,7 +477,7 @@ public:
   void EventGameLoaded();
   void HandleGameLoadedStats();
   bool ReleaseMap();
-  void StartGameOverTimer();
+  void StartGameOverTimer(bool isMMD = false);
   void Reset(const bool saveStats);
   bool GetIsRemakeable();
   void Remake();

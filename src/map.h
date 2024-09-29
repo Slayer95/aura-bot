@@ -176,6 +176,7 @@ private:
   std::string            m_CFGName;
   std::string            m_ClientMapPath;       // config value: map path
   std::string            m_MapType;       // config value: map type (for stats class)
+  bool                   m_MapMetaDataEnabled;
   std::string            m_MapDefaultHCL; // config value: map default HCL to use
   std::string            m_MapServerPath;  // config value: map local path
   std::string            m_MapURL;
@@ -238,6 +239,7 @@ public:
   inline std::vector<uint8_t>   GetMapWidth() const { return m_MapWidth; }
   inline std::vector<uint8_t>   GetMapHeight() const { return m_MapHeight; }
   inline std::string            GetMapType() const { return m_MapType; }
+  inline bool                   GetMapMetaDataEnabled() const { return m_MapMetaDataEnabled; }
   inline std::string            GetMapDefaultHCL() const { return m_MapDefaultHCL; }
   inline std::string            GetServerPath() const { return m_MapServerPath; }
   std::string                   GetServerFileName() const;

@@ -112,7 +112,8 @@ OBJS = src/fileutil.o \
 			 src/command.o \
 			 src/aura.o \
 			 src/auradb.o \
-			 src/stats.o
+			 src/stats.o \
+			 src/w3mmd.o \
 
 COBJS = src/sqlite3.o
 

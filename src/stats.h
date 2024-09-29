@@ -24,7 +24,7 @@
 #include "includes.h"
 
 //
-// CStats
+// CDotaStats
 //
 
 // the stats class is passed a copy of every player action in ProcessAction when it's received
@@ -39,7 +39,7 @@ class CDBGamePlayer;
 class CIncomingAction;
 class CAura;
 class CAuraDB;
-class CStats
+class CDotaStats
 {
 protected:
   CGame*         m_Game;
@@ -47,9 +47,9 @@ protected:
   uint8_t        m_Winner;
 
 public:
-  explicit CStats(CGame* nGame);
-  ~CStats();
-  CStats(CStats&) = delete;
+  explicit CDotaStats(CGame* nGame);
+  ~CDotaStats();
+  CDotaStats(CDotaStats&) = delete;
 
   bool ProcessAction(CIncomingAction* Action);
   void Save(CAura* nAura, CAuraDB* nDB);

@@ -54,10 +54,10 @@
 using namespace std;
 
 //
-// CStats
+// CDotaStats
 //
 
-CStats::CStats(CGame* nGame)
+CDotaStats::CDotaStats(CGame* nGame)
   : m_Game(nGame),
     m_Winner(0)
 {
@@ -67,7 +67,7 @@ CStats::CStats(CGame* nGame)
     dotaPlayer = nullptr;
 }
 
-CStats::~CStats()
+CDotaStats::~CDotaStats()
 {
   for (auto& dotaPlayer : m_Players)
   {
@@ -76,7 +76,7 @@ CStats::~CStats()
   }
 }
 
-bool CStats::ProcessAction(CIncomingAction* Action)
+bool CDotaStats::ProcessAction(CIncomingAction* Action)
 {
   size_t                      i          = 0;
   const std::vector<uint8_t>* ActionData = Action->GetAction();
@@ -316,7 +316,7 @@ bool CStats::ProcessAction(CIncomingAction* Action)
   return m_Winner != 0;
 }
 
-void CStats::Save(CAura* nAura, CAuraDB* DB)
+void CDotaStats::Save(CAura* nAura, CAuraDB* DB)
 {
   if (DB->Begin())
   {
