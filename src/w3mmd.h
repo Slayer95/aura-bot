@@ -100,6 +100,7 @@ public:
   bool HandleTokens(std::vector<std::string> tokens);
   bool ProcessAction(CIncomingAction *Action);
   std::vector<std::string> TokenizeKey(std::string key) const;
+  std::string GetPlayerName(uint32_t PID) const;
   std::vector<std::string> GetWinners() const;
   std::string GetLogPrefix() const;
 };

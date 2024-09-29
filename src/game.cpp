@@ -911,8 +911,20 @@ string CGame::GetEndDescription() const
   if (m_IsMirror)
      return "[" + GetClientFileName() + "] (Mirror) \"" + m_GameName + "\"";
 
+  string winnersFragment;
+  if (m_CustomStats) {
+    vector<string> winners = m_CustomStats->GetWinners();
+    if (winners.size() > 2) {
+      winnersFragment = "Winners: [" + winners[0] + "], and others";
+    } else if (winners.size() == 2) {
+      winnersFragment = "Winners: [" + winners[0] + "] and [" + winners[1] + "]";
+    } else if (winners.size() == 1) {
+      winnersFragment = "Winner: [" + winners[0] + "]";
+    }
+  }
+
   string Description = (
-    "[" + GetClientFileName() + "] \"" + m_GameName + "\". Players: " + m_PlayedBy + ""
+    "[" + GetClientFileName() + "] \"" + m_GameName + "\". " + (winnersFragment.empty() ? ("Players: " + m_PlayedBy) : winnersFragment)
   );
 
   if (m_GameLoading || m_GameLoaded)
@@ -5380,7 +5392,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, CGameUser* user, cons
     }
     case ACTION_RESUME: {
       // Referees can unpause the game, but full observers cannot.
-      uint8_t fakePlayerIndex = m_FakeUsers.size();
+      uint8_t fakePlayerIndex = static_cast<uint8_t>(m_FakeUsers.size());
       while (fakePlayerIndex--) {
         if (!isFullObservers && GetIsFakeObserver(m_FakeUsers[fakePlayerIndex])) {
           return static_cast<uint8_t>(m_FakeUsers[fakePlayerIndex]);
@@ -5415,7 +5427,7 @@ uint8_t CGame::HostToMapCommunicationUID() const
   if (!GetHMCEnabled()) return 0xFF;
   const uint8_t SID = m_Map->GetHMCSlot() - 1;
   const uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
-  if (fakePlayerIndex >= m_FakeUsers.size()) return 0xFF; 
+  if (fakePlayerIndex >= static_cast<uint8_t>(m_FakeUsers.size())) return 0xFF; 
   return static_cast<uint8_t>(m_FakeUsers[fakePlayerIndex]);
 }
 
@@ -6977,7 +6989,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
       SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
       return;
     }
-    if (fakePlayerIndex >= m_FakeUsers.size() && m_Map->GetHMCRequired()) {
+    if (fakePlayerIndex >= static_cast<uint8_t>(m_FakeUsers.size()) && m_Map->GetHMCRequired()) {
       SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
       return;
     }

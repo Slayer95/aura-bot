@@ -228,6 +228,7 @@ bool CW3MMD::HandleTokens(vector<string> Tokens)
       if (result == MMD_RESULT_WINNER) {
         m_GameOver = true;
       }
+      Print(GetLogPrefix() + "FlagP [" + GetPlayerName(*PID) + "] set to " + Tokens[2]);
     }
   } else if (actionType == "DefEvent" && Tokens.size() >= 4) {
     // Tokens[1] = name
@@ -263,7 +264,7 @@ bool CW3MMD::HandleTokens(vector<string> Tokens)
       return false;
     }
     if (DefEvent.empty()) {
-      Print(GetLogPrefix() + "Event [" + Tokens[1] + "] triggered");
+      Print(GetLogPrefix() + "Event [" + Tokens[1] + "]");
       return true;
     }
 
@@ -288,7 +289,7 @@ bool CW3MMD::HandleTokens(vector<string> Tokens)
         ReplaceText(Format, "{" + to_string(i) + "}", Tokens[i + 2]);
       }
     }
-    Print(GetLogPrefix() + "Event [" + Tokens[1] + "] triggered: " + Format);
+    Print(GetLogPrefix() + "Event [" + Tokens[1] + "]: " + Format);
 
     // Print(GetLogPrefix() + "event [" + Tokens[1] + "]");
   } else if (actionType == "Blank") {
@@ -413,14 +414,22 @@ vector<string> CW3MMD::TokenizeKey(string key) const
   return tokens;
 }
 
+string CW3MMD::GetPlayerName(uint32_t PID) const
+{
+  auto nameIterator = m_PIDToName.find(PID);
+  if (nameIterator == m_PIDToName.end()) {
+    return "PID " + to_string(PID);
+  } else {
+    return nameIterator->second;
+  }
+}
+
 vector<string> CW3MMD::GetWinners() const
 {
   vector<string> winners;
   for (const auto& flagEntry : m_Flags) {
     if (flagEntry.second != MMD_RESULT_WINNER) continue;
-    auto nameIterator = m_PIDToName.find(flagEntry.first);
-    if (nameIterator == m_PIDToName.end()) continue;
-    winners.push_back(nameIterator->second);
+    winners.push_back(GetPlayerName(flagEntry.first));
   }
   return winners;
 }
