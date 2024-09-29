@@ -3240,8 +3240,8 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     // this allows parties of 2+ observers to watch AI vs AI
     const uint8_t numJoinedPlayers = GetNumJoinedPlayers();
     if (numJoinedPlayers == 0) {
-      Print(GetLogPrefix() + "is over (no players left)");
-      m_Exiting = true;
+      Print(GetLogPrefix() + "gameover timer started: no players left");
+      StartGameOverTimer();
     } else if (!GetIsGameOverTrusted()) {
       if (numJoinedPlayers == 1 && GetNumComputers() == 0) {
         Print(GetLogPrefix() + "gameover timer started: remaining 1 p | 0 comp | " + ToDecString(GetNumJoinedObservers()) + " obs");
