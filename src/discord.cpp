@@ -108,7 +108,11 @@ bool CDiscord::Init()
     }
   });
 
-  m_Client->start(dpp::st_return);  
+  try {
+    m_Client->start(dpp::st_return);  
+  } catch (...) {
+    return false;
+  }
 
   return true;
 }
@@ -147,6 +151,8 @@ void CDiscord::Update()
     if (m_Config->m_Enabled) {
 #ifndef DISABLE_DPP
       if (!Init()){
+        // For example, we ran out of logins today (Discord limits to 1000 logins daily.)
+        m_Config->m_Enabled = false;
         return;
       }
 #else
