@@ -5156,7 +5156,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
-        if (!GetIsSudo() && !m_TargetGame->GetGameLoaded()) {
+        if (!GetIsSudo() || !m_TargetGame->GetGameLoaded()) {
           ErrorReply("Cannot edit this game's slots.");
           break;
         }
