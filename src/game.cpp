@@ -7608,7 +7608,6 @@ void CGame::DeleteFakeUsersLoaded()
   if (m_FakeUsers.empty())
     return;
 
-  uint8_t hmcSID = GetHMCSID();
   for (auto& fakePlayer : m_FakeUsers) {
     SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), PLAYERLEAVE_DISCONNECT));
   }
