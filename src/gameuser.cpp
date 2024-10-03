@@ -888,6 +888,9 @@ void CGameUser::SudoModeStart()
 
 void CGameUser::SudoModeEnd()
 {
+  if (!GetIsSudoMode()) {
+    return;
+  }
   if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
     Print(m_Game->GetLogPrefix() + "sudo session ended by [" + m_Name + "]");
   }
