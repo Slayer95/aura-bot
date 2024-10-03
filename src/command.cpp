@@ -5156,8 +5156,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
-        ErrorReply("Cannot edit this game's slots.");
-        break;
+        if (!GetIsSudo() && !m_TargetGame->GetGameLoaded()) {
+          ErrorReply("Cannot edit this game's slots.");
+          break;
+        }
       }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -5170,7 +5172,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->DeleteFakeUsers();
+      if (m_TargetGame->GetIsLobby()) {
+        m_TargetGame->DeleteFakeUsersLobby();
+      } else {
+        m_TargetGame->DeleteFakeUsersLoaded();
+      }
       break;
     }
 

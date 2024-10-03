@@ -559,7 +559,8 @@ public:
   bool GetIsFakeObserver(const uint16_t fakePlayer) const;
 
   uint8_t FakeAllSlots();
-  void DeleteFakeUsers();
+  void DeleteFakeUsersLobby();
+  void DeleteFakeUsersLoaded();
   void OpenAllSlots();
   uint8_t GetFirstCloseableSlot();
   bool CloseAllTeamSlots(const uint8_t team);

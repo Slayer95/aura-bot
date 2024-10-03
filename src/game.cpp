@@ -7581,7 +7581,7 @@ uint8_t CGame::FakeAllSlots()
   return addedCounter;
 }
 
-void CGame::DeleteFakeUsers()
+void CGame::DeleteFakeUsersLobby()
 {
   if (m_FakeUsers.empty())
     return;
@@ -7595,12 +7595,25 @@ void CGame::DeleteFakeUsers()
       m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, SID == hmcSID ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
     }
     // Ensure this is sent before virtual host rejoins
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), PLAYERLEAVE_LOBBY));
+    SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), GetIsLobby() ? PLAYERLEAVE_DISCONNECT : PLAYERLEAVE_LOBBY));
   }
 
   m_FakeUsers.clear();
   CreateVirtualHost();
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+}
+
+void CGame::DeleteFakeUsersLoaded()
+{
+  if (m_FakeUsers.empty())
+    return;
+
+  uint8_t hmcSID = GetHMCSID();
+  for (auto& fakePlayer : m_FakeUsers) {
+    SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), PLAYERLEAVE_DISCONNECT);
+  }
+
+  m_FakeUsers.clear();
 }
 
 void CGame::RemoveCreator()
