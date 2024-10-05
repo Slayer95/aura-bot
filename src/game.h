@@ -174,11 +174,14 @@ protected:
   int64_t                        m_FinishedLoadingTicks;          // GetTicks when the game finished loading
   int64_t                        m_LastActionSentTicks;           // GetTicks when the last action packet was sent
   int64_t                        m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
+  int64_t                        m_LastPausedTicks;               // GetTicks when the game was last paused
+  int64_t                        m_PausedTicksDeltaSum;           // Sum of GetTicks deltas for every game pause
   int64_t                        m_StartedLaggingTime;            // GetTime when the last lag screen started
   int64_t                        m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
   uint32_t                       m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
   int64_t                        m_LastOwnerSeen;                 // GetTime when the last reserved player was seen in the lobby
   int64_t                        m_StartedKickVoteTime;           // GetTime when the kick vote was started
+  int64_t                        m_LastCustomStatsUpdateTime;
   uint8_t                        m_GameOver;
   std::optional<int64_t>         m_GameOverTime;                  // GetTime when the game was over
   std::optional<int64_t>         m_GameOverTolerance;
@@ -268,6 +271,7 @@ public:
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string    GetGameName() const { return m_GameName; }
   inline uint64_t       GetGameID() const { return m_GameHistoryId; }
+  inline uint8_t        GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string           GetIndexVirtualHostName() const;
   std::string           GetLobbyVirtualHostName() const;
   std::string           GetPrefixedGameName(const CRealm* realm = nullptr) const;
@@ -331,6 +335,9 @@ public:
   std::string           GetClientFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
   inline int64_t        GetGameTicks() const { return m_GameTicks; }
+  int64_t               GetEffectiveGameTicks() const;
+  inline int64_t        GetLastPausedTicks() const { return m_LastPausedTicks; }
+  inline int64_t        GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
   inline bool           GetChatOnly() const { return m_ChatOnly; }
   std::string           GetStatusDescription() const;
   std::string           GetEndDescription() const;

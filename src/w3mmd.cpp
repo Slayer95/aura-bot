@@ -49,6 +49,42 @@
 using namespace std;
 
 //
+// CW3MMDAction
+//
+
+CW3MMDAction::CW3MMDAction(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
+  : m_Ticks(nGame->GetEffectiveGameTicks()),
+    m_UpdateID(nID),
+    m_Type(nType),
+    m_SubType(nSubType),
+    m_FromUID(nFromUID),
+    m_SID(nSID)
+{
+}
+
+CW3MMDAction::~CW3MMDAction()
+{
+}
+
+//
+// CW3MMDDefinition
+//
+
+CW3MMDDefinition::CW3MMDDefinition(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
+  : m_Ticks(nGame->GetEffectiveGameTicks()),
+    m_UpdateID(nID),
+    m_Type(nType),
+    m_SubType(nSubType),
+    m_FromUID(nFromUID),
+    m_SID(nSID)
+{
+}
+
+CW3MMDDefinition::~CW3MMDDefinition()
+{
+}
+
+//
 // CW3MMD
 //
 
@@ -56,17 +92,17 @@ CW3MMD::CW3MMD(CGame *nGame)
   : m_Game(nGame),
     m_GameOver(false),
     m_Error(false),
+    m_Version(0),
     m_NextValueID(0),
     m_NextCheckID(0)
 {
-  Print("[W3MMD] using Warcraft 3 Map Meta Data stats parser version 1");
 }
 
 CW3MMD::~CW3MMD()
 {
 }
 
-bool CW3MMD::HandleTokens(vector<string> Tokens)
+bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Tokens)
 {
   if (Tokens.empty()) {
     return false;
@@ -77,22 +113,26 @@ bool CW3MMD::HandleTokens(vector<string> Tokens)
       // Tokens[2] = minimum
       // Tokens[3] = current
 
-      Print(GetLogPrefix() + "map is using Warcraft 3 Map Meta Data library version [" + Tokens[3] + "]");
       optional<uint32_t> version = ToUint32(Tokens[2]);
       if (!version.has_value()) return false;
+      optional<uint32_t> minVersion = ToUint32(Tokens[3]);
+      if (!minVersion.has_value()) return false;
       if (version.value() > 1) {
-        Print(GetLogPrefix() + "warning - parser version 1 is not compatible with this map, minimum version [" + Tokens[2] + "]");
+        Print(GetLogPrefix() + "error - map requires MMD parser version " + Tokens[2] + " or higher (using version 1)");
         m_Error = true;
+      } else {
+        Print(GetLogPrefix() + "map is using Warcraft 3 Map Meta Data library version [" + Tokens[3] + "]");
+        m_Version = *version;
       }
     } else if (Tokens[1] == "pid" && Tokens.size() == 4) {
       // Tokens[2] = pid
       // Tokens[3] = name
-      optional<uint32_t> PID = ToUint32(Tokens[2]);
-      if (!PID.has_value()) return false;
-      if (m_PIDToName.find(*PID) != m_PIDToName.end()) {
-        Print(GetLogPrefix() + "overwriting previous name [" + m_PIDToName[*PID] + "] with new name [" + Tokens[3] + "] for PID [" + Tokens[2] + "]");
-      }
-      m_PIDToName[*PID] = Tokens[3];
+      optional<uint32_t> SID = ToUint32(Tokens[2]);
+      if (!SID.has_value()) return false;
+
+      CW3MMDDefinition* def = new CW3MMDDefinition(fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, *SID);
+      def->SetName(Tokens[3]);
+      m_DefQueue.push_back(def);
     }
   } else if (actionType == "DefVarP" && Tokens.size() == 5) {
     // Tokens[1] = name
@@ -100,198 +140,111 @@ bool CW3MMD::HandleTokens(vector<string> Tokens)
     // Tokens[3] = goal type (ignored here)
     // Tokens[4] = suggestion (ignored here)
 
-    if (m_DefVarPs.find(Tokens[1]) != m_DefVarPs.end()) {
-      Print(GetLogPrefix() + "duplicate DefVarP [" + Tokens[1] + "] found, ignoring");
-      return false;
-    }
+    uint8_t subType;
     if (Tokens[2] == "int") {
-      m_DefVarPs[Tokens[1]] = MMD_VALUE_TYPE_INT;
+      subType = MMD_VALUE_TYPE_INT;
     } else if (Tokens[2] == "real") {
-      m_DefVarPs[Tokens[1]] = MMD_VALUE_TYPE_REAL;
+      subType = MMD_VALUE_TYPE_REAL;
     } else if (Tokens[2] == "string") {
-      m_DefVarPs[Tokens[1]] = MMD_VALUE_TYPE_STRING;
+      subType = MMD_VALUE_TYPE_STRING;
     } else {
       Print(GetLogPrefix() + "invalid DefVarP type [" + Tokens[2] + "] found, ignoring");
       return false;
     }
+    CW3MMDDefinition* def = new CW3MMDDefinition(fromUID, valueID, MMD_DEFINITION_TYPE_VAR, subType);
+    def->SetName(Tokens[1]);
+    m_DefQueue.push_back(def);
   } else if (actionType == "VarP" && Tokens.size() == 5) {
     // Tokens[1] = pid
     // Tokens[2] = name
     // Tokens[3] = operation
     // Tokens[4] = value
 
-    if (m_DefVarPs.find(Tokens[2]) == m_DefVarPs.end()) {
-      Print(GetLogPrefix() + "VarP [" + Tokens[2] + "] found without a corresponding DefVarP, ignoring");
+    optional<uint32_t> SID = ToUint32(Tokens[1]);
+    if (!SID.has_value()) {
+      Print(GetLogPrefix() + "VarP [" + Tokens[2] + "] has invalid SID [" + Tokens[1] + "], ignoring");
       return false;
     }
-    uint8_t ValueType = m_DefVarPs[Tokens[2]];
-    optional<uint32_t> PID = ToUint32(Tokens[1]);
-    if (!PID.has_value()) {
-      Print(GetLogPrefix() + "VarP [" + Tokens[2] + "] has invalid PID [" + Tokens[1] + "], ignoring");
+    uint8_t subType = 0xFFu;
+    if (Tokens[3] == "=") {
+      subType = MMD_OPERATOR_SET;
+    } else if (Tokens[3] == "+=") {
+      subType = MMD_OPERATOR_ADD;
+    } else if (Tokens[3] == "-=") {
+      subType = MMD_OPERATOR_SUBTRACT;
+    } else {
+      Print(GetLogPrefix() + "unknown VarP operation [" + Tokens[3] + "] found, ignoring");
       return false;
     }
-
-    if (ValueType == MMD_VALUE_TYPE_INT) {
-      VarP VP = VarP(*PID, Tokens[2]);
-      optional<int32_t> intValue = ToInt32(Tokens[4]);
-      if (!intValue.has_value()) {
-        Print(GetLogPrefix() + "invalid int VarP [" + Tokens[2] + "] value [" + Tokens[3] + "] found, ignoring");
-        return false;
-      }
-      if (Tokens[3] == "=") {
-        m_VarPInts[VP] = *intValue;
-      } else if (Tokens[3] == "+=") {
-        if (m_VarPInts.find(VP) != m_VarPInts.end()) {
-          m_VarPInts[VP] += *intValue;
-        } else {
-          m_VarPInts[VP] = *intValue;
-        }
-      } else if (Tokens[3] == "-=") {
-        if (m_VarPInts.find(VP) != m_VarPInts.end()) {
-          m_VarPInts[VP] -= *intValue;
-        } else {
-          m_VarPInts[VP] = -(*intValue);
-        }
-      } else {
-        Print(GetLogPrefix() + "unknown int VarP operation [" + Tokens[3] + "] found, ignoring");
-        return false;
-      }
-    } else if (ValueType == MMD_VALUE_TYPE_REAL) {
-      VarP VP = VarP(*PID, Tokens[2]);
-      optional<double> realValue = ToDouble(Tokens[4]);
-      if (!realValue.has_value()) {
-        Print(GetLogPrefix() + "invalid real VarP [" + Tokens[2] + "] value [" + Tokens[4] + "] found, ignoring");
-        return false;
-      }
-      if (Tokens[3] == "=") {
-        m_VarPReals[VP] = *realValue;
-      } else if (Tokens[3] == "+=") {
-        if (m_VarPReals.find(VP) != m_VarPReals.end()) {
-          m_VarPReals[VP] += *realValue;
-        } else {
-          m_VarPReals[VP] = *realValue;
-        }
-      } else if (Tokens[3] == "-=") {
-        if (m_VarPReals.find(VP) != m_VarPReals.end()) {
-          m_VarPReals[VP] -= *realValue;
-        } else {
-          m_VarPReals[VP] = -(*realValue);
-        }
-      } else {
-        Print(GetLogPrefix() + "unknown real VarP operation [" + Tokens[3] + "] found, ignoring");
-        return false;
-      }
-    } else { // MMD_VALUE_TYPE_STRING
-      VarP VP = VarP(*PID, Tokens[2]);
-      if (Tokens[3] == "=") {
-        m_VarPStrings[VP] = Tokens[4];
-      } else {
-        Print(GetLogPrefix() + "unknown string VarP [" + Tokens[2] + "] operation [" + Tokens[3] + "] found, ignoring");
-        return false;
-      }
-    }
+    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, *SID);
+    action->SetName(Tokens[2]);
+    action->AddValue(Tokens[4]);
+    m_ActionQueue.push_back(action);
   } else if (actionType == "FlagP" && Tokens.size() == 3) {
     // Tokens[1] = pid
     // Tokens[2] = flag
 
-    optional<uint32_t> PID = ToUint32(Tokens[1]);
-    if (!PID.has_value()) {
-      Print(GetLogPrefix() + "FlagP [" + Tokens[2] + "] has invalid PID [" + Tokens[1] + "], ignoring");
+    optional<uint32_t> SID = ToUint32(Tokens[1]);
+    if (!SID.has_value()) {
+      Print(GetLogPrefix() + "FlagP [" + Tokens[2] + "] has invalid SID [" + Tokens[1] + "], ignoring");
       return false;
     }
 
+    uint8_t subType = 0xFFu;
     if (Tokens[2] == "leaver") {
-      m_FlagsLeaver[*PID] = true;
+      //m_FlagsLeaver[*SID] = true;
+      subType = MMD_FLAG_LEAVER;
     } else if (Tokens[2] == "practicing") {
-      m_FlagsPracticing[*PID] = true;
+      //m_FlagsPracticing[*SID] = true;
+      subType = MMD_FLAG_PRACTICE;
+    } else if (Tokens[2] == "drawer") {
+      //m_FlagsPracticing[*SID] = true;
+      subType = MMD_FLAG_DRAWER;
+    } else if (Tokens[2] == "winner") {
+      //m_FlagsPracticing[*SID] = true;
+      subType = MMD_FLAG_WINNER;
+    } else if (Tokens[2] == "loser") {
+      //m_FlagsPracticing[*SID] = true;
+      subType = MMD_FLAG_LOSER;
     } else {
-      uint8_t result;
-      if (Tokens[2] == "drawer") {
-        result = MMD_RESULT_DRAWER;
-      } else if (Tokens[2] == "winner") {
-        result = MMD_RESULT_WINNER;
-      } else if (Tokens[2] == "loser") {
-        result = MMD_RESULT_LOSER;
-      } else {
-        Print(GetLogPrefix() + "unknown flag [" + Tokens[2] + "] found, ignoring");
-        return false;
-      }
-      auto previousResultIt = m_Flags.find(*PID);
-      if (previousResultIt != m_Flags.end()) {
-        if (previousResultIt->second == result) {
-          return true;
-        }
-        Print(GetLogPrefix() + "previous flag [" + to_string(previousResultIt->second) + "] would be overriden with new flag [" + Tokens[2] + "] for PID [" + Tokens[1] + "] - ignoring");
-        return false;
-      }
-      m_Flags[*PID] = result;
-      if (result == MMD_RESULT_WINNER) {
-        m_GameOver = true;
-      }
-      Print(GetLogPrefix() + "FlagP [" + GetPlayerName(*PID) + "] set to " + Tokens[2]);
+      Print(GetLogPrefix() + "unknown flag [" + Tokens[2] + "] found, ignoring");
+      return false;
     }
+
+    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_FLAG, subType, *SID);
+    m_ActionQueue.push_back(action);
   } else if (actionType == "DefEvent" && Tokens.size() >= 4) {
     // Tokens[1] = name
     // Tokens[2] = # of arguments (n)
     // Tokens[3..n+3] = arguments
     // Tokens[n+3] = format
 
-    if (m_DefEvents.find(Tokens[1]) != m_DefEvents.end()) {
-      Print(GetLogPrefix() + "duplicate DefEvent [" + Tokens[1] + "] found, ignoring");
-      return false;
-    }
     optional<uint32_t> arity = ToUint32(Tokens[2]);
     if (!arity.has_value()) {
-      Print(GetLogPrefix() + "DefEventP invalid arity [" + Tokens[2] + "] found, ignoring");
+      Print(GetLogPrefix() + "DefEvent invalid arity [" + Tokens[2] + "] found, ignoring");
       return false;
     }
     if (Tokens.size() != arity.value() + 4) {
-      Print(GetLogPrefix() + "DefEventP [" + Tokens[2] + "] tokens missing, ignoring");
+      Print(GetLogPrefix() + "DefEvent [" + Tokens[2] + "] tokens missing, ignoring");
       return false;
     }
-    m_DefEvents[Tokens[1]] = vector<string>(Tokens.begin() + 3, Tokens.end());
+    def CW3MMDDefinition* = new CW3MMDDefinition(fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, arity.value());
+    uint8_t i = 1;
+    def->SetName(Tokens[i]);    
+    while (++i < Tokens.size()) {
+      def->AddValue(Tokens[i]);
+    }
+    m_DefQueue.push_back(def);
   } else if (actionType == "Event" && Tokens.size() >= 2) {
     // Tokens[1] = name
     // Tokens[2..n+2] = arguments (where n is the # of arguments in the corresponding DefEvent)
-    auto defEventIt = m_DefEvents.find(Tokens[1]);
-    if (defEventIt == m_DefEvents.end()) {
-      Print(GetLogPrefix() + "Event [" + Tokens[1] + "] found without a corresponding DefEvent, ignoring");
-      return false;
+    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_EVENT, 0);
+    uint8_t i = 1;
+    action->SetName(Tokens[i]);    
+    while (++i < Tokens.size() - 1) {
+      action->AddValue(Tokens[i]);
     }
-    const vector<string>& DefEvent = defEventIt->second;
-    if (Tokens.size() - 2 != DefEvent.size() - 1) {
-      Print(GetLogPrefix() + "Event [" + Tokens[1] + "] found with " + to_string(Tokens.size() - 2) + " arguments but expected " + to_string(DefEvent.size() - 1) + " arguments, ignoring");
-      return false;
-    }
-    if (DefEvent.empty()) {
-      Print(GetLogPrefix() + "Event [" + Tokens[1] + "]");
-      return true;
-    }
-
-    string Format = DefEvent[DefEvent.size() - 1];
-
-    // replace the markers in the format string with the arguments
-    for (uint32_t i = 0; i < Tokens.size() - 2; ++i) {
-      // check if the marker is a PID marker
-
-      if (DefEvent[i].substr(0, 4) == "pid:") {
-        // replace it with the player's name rather than their PID
-        optional<uint32_t> PID = ToUint32(Tokens[i + 2]);
-        if (PID.has_value()) {
-          auto it = m_PIDToName.find(*PID);
-          if (it == m_PIDToName.end()) {
-            ReplaceText(Format, "{" + to_string(i) + "}", "PID:" + Tokens[i + 2]);
-          } else {
-            ReplaceText(Format, "{" + to_string(i) + "}", it->second);
-          }
-        }
-      } else {
-        ReplaceText(Format, "{" + to_string(i) + "}", Tokens[i + 2]);
-      }
-    }
-    Print(GetLogPrefix() + "Event [" + Tokens[1] + "]: " + Format);
-
-    // Print(GetLogPrefix() + "event [" + Tokens[1] + "]");
+    m_ActionQueue.push_back(action);
   } else if (actionType == "Blank") {
     // ignore
   } else if (actionType == "Custom") {
@@ -302,8 +255,12 @@ bool CW3MMD::HandleTokens(vector<string> Tokens)
   return true;
 }
 
-bool CW3MMD::ProcessAction(CIncomingAction *Action)
+bool CW3MMD::RecvAction(uint8_t fromUID, CIncomingAction *Action)
 {
+  if (m_Error) {
+    return false;
+  }
+
   unsigned int i = 0;
   vector<uint8_t> *ActionData = Action->GetAction();
   vector<uint8_t> MissionKey;
@@ -339,7 +296,7 @@ bool CW3MMD::ProcessAction(CIncomingAction *Action)
               string ValueIDString = MissionKeyString.substr(4);
               optional<uint32_t> ValueID = ToUint32(ValueIDString);
               vector<string> Tokens = TokenizeKey(KeyString);
-              if (!HandleTokens(Tokens)) {
+              if (!ValueID.has_value() || !HandleTokens(fromUID, ValueID.value(), Tokens)) {
                 Print(GetLogPrefix() + "error parsing [" + KeyString + "]");
               }
               ++m_NextValueID;
@@ -369,7 +326,244 @@ bool CW3MMD::ProcessAction(CIncomingAction *Action)
     }
   }
 
-  return m_GameOver;
+  return m_Error;
+}
+
+bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
+{
+  if (definition->GetType() == MMD_DEFINITION_TYPE_INIT) {
+    if (definition->GetSubType() == MMD_INIT_TYPE_PLAYER) {
+      if (definition->GetSID() >= m_Game->GetNumSlots()) {
+        Print(GetLogPrefix() + "cannot initialize player slot " + ToDecString(definition->GetSID()));
+        return false;
+      }
+      const bool found = m_SIDToName.find(definition->GetSID()) != m_SIDToName.end();
+      if (found) {
+        Print(
+          GetLogPrefix() + "overwriting previous name [" + m_SIDToName[definition->GetSID()] +
+          "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(definition->GetSID()) + "]"
+        );
+      }
+      if (!found && m_SIDToName.size() >= m_Game->GetNumControllers()) {
+        Print(GetLogPrefix() + "too many players initialized");
+        return false;
+      }
+      m_SIDToName[definition->GetSID()] = definition->GetName();
+    }
+  } else if (definition->GetType() == MMD_DEFINITION_TYPE_VAR) {
+    if (m_DefVarPs.find(definition->GetName()) != m_DefVarPs.end()) {
+      Print(GetLogPrefix() + "duplicate DefVarP [" + definition->GetName() + "] found, ignoring");
+      return false;
+    }
+    if (definition->GetSubType() == MMD_VALUE_TYPE_INT) {
+      m_DefVarPs[definition->GetName()] = MMD_VALUE_TYPE_INT;
+    } else if (definition->GetSubType() == MMD_VALUE_TYPE_REAL) {
+      m_DefVarPs[definition->GetName()] = MMD_VALUE_TYPE_REAL;
+    } else if (definition->GetSubType() == MMD_VALUE_TYPE_STRING) {
+      m_DefVarPs[definition->GetName()] = MMD_VALUE_TYPE_STRING;
+    }
+  } else if (definition->GetType() == MMD_DEFINITION_TYPE_EVENT) {
+    if (m_DefEvents.find(definition->GetName()) != m_DefEvents.end()) {
+      Print(GetLogPrefix() + "duplicate DefEvent [" + definition->GetName() + "] found, ignoring");
+      return false;
+    }
+    m_DefEvents[definition->GetName()] = definition->CopyValues();
+  }
+}
+
+bool CW3MMD::ProcessAction(CW3MMDAction* action)
+{
+  if (action->GetType() == MMD_ACTION_TYPE_FLAG) {
+    if (m_SIDToName.find(action->GetSID()) == m_SIDToName.end()) {
+      Print(GetLogPrefix() + "FlagP [" + Tokens[2] + "] has undefined SID [" + ToDecString(action->GetSID()) + "], ignoring");
+      return false;
+    }
+    uint8_t result = 0xFFu;
+    switch (action->GetSubType()) {
+      case MMD_FLAG_LEAVER: {
+        m_FlagsLeaver[action->GetSID()] = true;
+        break;
+      }
+      case MMD_FLAG_PRACTICE: {
+        m_FlagsPracticing[action->GetSID()] = true;
+        break;
+      }
+      case MMD_FLAG_DRAWER: {
+        result = MMD_RESULT_DRAWER;
+        break;
+      }
+      case MMD_FLAG_WINNER: {
+        result = MMD_RESULT_WINNER;
+        break;
+      }
+      default: {
+        result = MMD_RESULT_LOSER;
+        break;
+      }
+    }
+    if (result == 0xFFu) {
+      return true;
+    }
+    auto previousResultIt = m_Flags.find(action->GetSID());
+    if (previousResultIt != m_Flags.end()) {
+      if (previousResultIt->second == result) {
+        return true;
+      }
+      Print(
+        GetLogPrefix() + "previous flag [" + to_string(previousResultIt->second) + "] would be overriden with new flag [" +
+        ToDecString(result) + "] for SID [" + ToDecString(action->GetSID()) + "] - ignoring"
+      );
+      return false;
+    }
+    m_Flags[action->GetSID()] = result;
+    if (result == MMD_RESULT_WINNER) {
+      m_GameOver = true;
+    }
+    LogMetaData(action->GetRecvTicks(), "FlagP [" + GetPlayerName(action->GetSID()) + "] set to " + ToDecString(result));
+    return true;
+  } else if (action->GetType() == MMD_ACTION_TYPE_VAR) {
+    if (m_DefVarPs.find(action->GetName()) == m_DefVarPs.end()) {
+      Print(GetLogPrefix() + "VarP [" + action->GetName() + "] found without a corresponding DefVarP, ignoring");
+      return false;
+    }
+    uint8_t valueType = m_DefVarPs[action->GetName()];
+    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, *SID);
+    action->SetName(Tokens[2]);
+    action->AddValue(Tokens[4]);
+
+    if (action->GetSubType() == MMD_OPERATOR_SET) {
+      std::string operand = action->GetFirstValue();
+      if (valueType == MMD_VALUE_TYPE_REAL) {
+        optional<double> realValue = ToDouble(operand);
+        if (!realValue.has_value()) {
+          Print(GetLogPrefix() + "invalid real VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          return false;
+        }
+        VarP VP = VarP(action->GetSID(), action->GetName());
+        m_VarPReals[VP] = *realValue;
+        return true;
+      } else if (valueType == MMD_VALUE_TYPE_INT) {
+        optional<uint32_t> intValue = ToUint32(operand);
+        if (!intValue.has_value()) {
+          Print(GetLogPrefix() + "invalid int VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          return false;
+        }
+        VarP VP = VarP(action->GetSID(), action->GetName());
+        m_VarPInts[VP] = *intValue;
+        return true;
+      } else { // MMD_VALUE_TYPE_STRING
+        VarP VP = VarP(action->GetSID(), action->GetName());
+        m_VarPStrings[VP] = operand;
+        return true;
+      }
+    } else {
+      if (valueType == MMD_VALUE_TYPE_STRING) {
+        Print(GetLogPrefix() + "VarP [" + action->GetName() + "] of type string cannot accept +=, -= operators, ignoring");
+        return false;
+      }
+      std::string operand = action->GetFirstValue();
+      if (valueType == MMD_VALUE_TYPE_REAL) {
+        optional<double> realValue = ToDouble(operand);
+        if (!realValue.has_value()) {
+          Print(GetLogPrefix() + "invalid real VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          return false;
+        }
+        VarP VP = VarP(action->GetSID(), action->GetName());
+        if (action->GetSubType() == MMD_OPERATOR_ADD) {
+          m_VarPReals[VP] += *realValue;
+        } else { // MMD_OPERATOR_SUBTRACT
+          m_VarPReals[VP] -= *realValue;
+        }
+      } else { // MMD_VALUE_TYPE_INT
+        optional<uint32_t> intValue = ToUint32(operand);
+        if (!intValue.has_value()) {
+          Print(GetLogPrefix() + "invalid int VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          return false;
+        }
+        VarP VP = VarP(action->GetSID(), action->GetName());
+        if (action->GetSubType() == MMD_OPERATOR_ADD) {
+          m_VarPInts[VP] += *intValue;
+        } else { // MMD_OPERATOR_SUBTRACT
+          m_VarPInts[VP] -= *intValue;
+        }
+      }
+      return true;
+    } 
+  } else { // if (action->GetType() == MMD_ACTION_TYPE_EVENT) 
+    auto defEventIt = m_DefEvents.find(action->GetName());
+    if (defEventIt == m_DefEvents.end()) {
+      Print(GetLogPrefix() + "Event [" + action->GetName() + "] found without a corresponding DefEvent, ignoring");
+      return false;
+    }
+    const std::vector<std::string>& values = action->RefValues();
+    const vector<string>& DefEvent = defEventIt->second;
+    if (values.size() != DefEvent.size() - 1) {
+      Print(GetLogPrefix() + "Event [" + action->GetName() + "] found with " + to_string(values.size()) + " arguments but expected " + to_string(DefEvent.size() - 1) + " arguments, ignoring");
+      return false;
+    }
+    if (DefEvent.empty()) {
+      LogMetaData(action->GetRecvTicks(), "Event [" + action->GetName() + "]");
+      return true;
+    }
+
+    string Format = DefEvent[DefEvent.size() - 1];
+
+    // replace the markers in the format string with the arguments
+    for (uint32_t i = 0; i < values.size(); ++i) {
+      // check if the marker is a SID marker
+
+      if (DefEvent[i].substr(0, 4) == "pid:") {
+        // replace it with the player's name rather than their SID
+        optional<uint32_t> SID = ToUint32(values[i]);
+        if (!SID.has_value()) {
+          Print(GetLogPrefix() + "Event [" + action->GetName() + "] passed invalid PID " + values[i]);
+          return false;
+        }
+        auto it = m_SIDToName.find(*SID);
+        if (it == m_SIDToName.end()) {
+          Print(GetLogPrefix() + "Event [" + action->GetName() + "] passed undefined PID " + values[i]);
+          ReplaceText(Format, "{" + to_string(i) + "}", "SID:" + values[i]);
+        } else {
+          ReplaceText(Format, "{" + to_string(i) + "}", it->second);
+        }
+      } else {
+        ReplaceText(Format, "{" + to_string(i) + "}", values[i]);
+      }
+    }
+    LogMetaData(action->GetRecvTicks(), "Event [" + action->GetName() + "]: " + Format);
+    return true;
+  }
+}
+
+bool CW3MMD::ProcessQueue(bool flushAll)
+{
+  const int64_t gameTicks = m_Game->GetEffectiveGameTicks();
+  if (!flushAll) {
+    if (m_Game->GetPaused()) return true;
+    if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
+  }
+  while (!m_DefQueue.empty()) {
+    CW3MMDDefinition* def = m_DefQueue.front();
+    if (!flushAll && gameTicks - def->GetRecvTicks() < MMD_PROCESSING_STREAM_DELAY) {
+      break;
+    }
+    ProcessDefinition(def);
+    delete def;
+    m_DefQueue.pop();
+  }
+  if (!flushAll && !m_DefQueue.empty()) {
+    return true;
+  }
+  while (!m_ActionQueue.empty()) {
+    CW3MMDAction* action = m_ActionQueue.front();
+    if (!flushAll && gameTicks - action->GetRecvTicks() < MMD_PROCESSING_STREAM_DELAY) {
+      break;
+    }
+    ProcessAction(action);
+    delete action;
+    m_ActionQueue.pop();
+  }
+  return !m_GameOver;
 }
 
 vector<string> CW3MMD::TokenizeKey(string key) const
@@ -414,11 +608,11 @@ vector<string> CW3MMD::TokenizeKey(string key) const
   return tokens;
 }
 
-string CW3MMD::GetPlayerName(uint32_t PID) const
+string CW3MMD::GetPlayerName(uint32_t SID) const
 {
-  auto nameIterator = m_PIDToName.find(PID);
-  if (nameIterator == m_PIDToName.end()) {
-    return "PID " + to_string(PID);
+  auto nameIterator = m_SIDToName.find(SID);
+  if (nameIterator == m_SIDToName.end()) {
+    return "SID " + to_string(SID);
   } else {
     return nameIterator->second;
   }
@@ -437,4 +631,20 @@ vector<string> CW3MMD::GetWinners() const
 string CW3MMD::GetLogPrefix() const
 {
   return "[W3MMD: " + m_Game->GetGameName() + "] ";
+}
+
+void CW3MMD::LogMetaData(int64_t gameTicks, string& text)
+{
+  int64_t hours = gameTicks / 3600000;
+  gameTicks -= hours * 3600000;
+  int64_t mins = gameTicks / 60000;
+  gameTicks -= mins * 60000;
+  int64_t seconds = gameTicks / 1000;
+  string hh = to_string(hours);
+  string mm = to_string(mins);
+  string ss = to_string(seconds);
+  if (hours < 10) hh = "0" + hh;
+  if (mins < 10) mm = "0" + mm;
+  if (seconds < 10) ss = "0" + ss;
+  Print(GetLogPrefix() + "[" + hh + ":" + mm + ":" + ss + "] " + text);
 }

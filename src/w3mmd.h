@@ -43,6 +43,9 @@
 
 */
 
+#ifndef W3MMD_H
+#define W3MMD_H
+
 #include "includes.h"
 #include "aura.h"
 #include "game.h"
@@ -50,18 +53,42 @@
 
 #include <map>
 #include <utility>
+#include <queue>
 #include <vector>
 
-#ifndef W3MMD_H
-#define W3MMD_H
+#define MMD_ACTION_TYPE_VAR 0u
+#define MMD_ACTION_TYPE_FLAG 1u
+#define MMD_ACTION_TYPE_EVENT 2u
+#define MMD_ACTION_TYPE_BLANK 3u
+#define MMD_ACTION_TYPE_CUSTOM 4u
 
-#define MMD_VALUE_TYPE_INT 0
-#define MMD_VALUE_TYPE_REAL 1
-#define MMD_VALUE_TYPE_STRING 2
+#define MMD_DEFINITION_TYPE_INIT 0u
+#define MMD_DEFINITION_TYPE_VAR 1u
+#define MMD_DEFINITION_TYPE_EVENT 2u
 
-#define MMD_RESULT_LOSER 0
-#define MMD_RESULT_DRAWER 1
-#define MMD_RESULT_WINNER 2
+#define MMD_INIT_TYPE_VERSION 0u
+#define MMD_INIT_TYPE_PLAYER 1u
+
+#define MMD_VALUE_TYPE_INT 0u
+#define MMD_VALUE_TYPE_REAL 1u
+#define MMD_VALUE_TYPE_STRING 2u
+
+#define MMD_OPERATOR_SET 0u
+#define MMD_OPERATOR_ADD 1u
+#define MMD_OPERATOR_SUBTRACT 2u
+
+#define MMD_FLAG_LOSER 0u
+#define MMD_FLAG_DRAWER 1u
+#define MMD_FLAG_WINNER 2u
+#define MMD_FLAG_LEAVER 3u
+#define MMD_FLAG_PRACTICE 4u
+
+#define MMD_RESULT_LOSER 0u
+#define MMD_RESULT_DRAWER 1u
+#define MMD_RESULT_WINNER 2u
+
+#define MMD_PROCESSING_INITIAL_DELAY 60000
+#define MMD_PROCESSING_STREAM_DELAY 60000
 
 class CAura;
 class CGame;
@@ -73,23 +100,90 @@ class CIncomingAction;
 
 typedef std::pair<uint32_t, std::string> VarP;
 
+class CW3MMDAction
+{
+public:
+  int64_t                                                       m_Ticks;              // m_Game->GetEffectiveGameTicks()when this definition was received
+  uint32_t                                                      m_UpdateID;
+  uint8_t                                                       m_Type;               // FlagP, VarP, Event, Blank, Custom,
+  uint8_t                                                       m_SubType;            // (winner, loser, drawer, leaver, practice), (set, add, subtract), (NO), (NO), (NO)
+  uint8_t                                                       m_FromUID;
+  uint8_t                                                       m_SID;                // (OK), (OK), (NO), (NO), (NO)
+  std::string                                                   m_Name;               // (NO), (OK), (OK), (NO), (NO)
+  std::vector<std::string>                                      m_Values;             // (NO), (1), (n), (NO), (?)
+
+  CW3MMDAction(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType = 0, uint8_t nSID = 0);
+  ~CW3MMDAction();
+
+  inline int64_t GetRecvTicks() { return m_Ticks; }
+
+  inline uint8_t GetType() { return m_Type; }
+  inline uint8_t GetSubType() { return m_SubType; }
+
+  inline uint8_t GetFromUID() { return m_FromUID; }
+  inline uint8_t GetSID() { return m_SID; }
+
+  inline const std::string& GetName() { return m_Name; }
+  void SetName(std::string& name) { m_Name = name; }
+
+  std::vector<std::string> CopyValues() { return m_Values; }
+  const std::vector<std::string>& RefValues() { return m_Values; }
+  void AddValue(std::string& value) { m_Values.push_back(value); }
+  std::string GetFirstValue() { return m_Values[0]; }
+}
+
+class CW3MMDDefinition
+{
+public:
+  int64_t                                                       m_Ticks;              // m_Game->GetEffectiveGameTicks() when this definition was received
+  uint32_t                                                      m_UpdateID;
+  uint8_t                                                       m_Type;               // init, DefVarP, DefEvent
+  uint8_t                                                       m_SubType;            // (pid, version), (int, real, string), (0-ary, 1-ary, 2-ary, etc.)
+  uint8_t                                                       m_FromUID;
+  uint8_t                                                       m_SID;                // (SID OK, version NO), (NO), (NO)
+  std::string                                                   m_Name;               // (pid OK, version NO), (OK, OK, OK), (OK+)
+  std::vector<std::string>                                      m_Values;             // (pid NO, version 2), (NO), (n)
+
+  CW3MMDDefinition(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType = 0, uint8_t nSID = 0);
+  ~CW3MMDDefinition();
+
+  inline int64_t GetRecvTicks() { return m_Ticks; }
+
+  inline uint8_t GetType() { return m_Type; }
+  inline uint8_t GetSubType() { return m_SubType; }
+
+  inline uint8_t GetFromUID() { return m_FromUID; }
+  inline uint8_t GetSID() { return m_SID; }
+
+  inline const std::string& GetName() { return m_Name; }
+  void SetName(std::string& name) { m_Name = name; }
+
+  std::vector<std::string> CopyValues() { return m_Values; }
+  const std::vector<std::string>& RefValues() { return m_Values; }
+  void AddValue(std::string& value) { m_Values.push_back(value); }
+}
+
 class CW3MMD
 {
 private:
   CGame*                                          m_Game;
   bool                                            m_GameOver;
   bool                                            m_Error;
+  uint32_t                                        m_Version;
   uint32_t                                        m_NextValueID;
   uint32_t                                        m_NextCheckID;
-  std::map<uint32_t, std::string>                 m_PIDToName;           // pid -> player name (e.g. 0 -> "Varlock") --- note: will not be automatically converted to lower case
-  std::map<uint32_t, uint8_t>                     m_Flags;               // pid -> flag (e.g. 0 -> MMD_RESULT_WINNER)
-  std::map<uint32_t, bool>                        m_FlagsLeaver;         // pid -> leaver flag (e.g. 0 -> true) --- note: will only be present if true
-  std::map<uint32_t, bool>                        m_FlagsPracticing;     // pid -> practice flag (e.g. 0 -> true) --- note: will only be present if true
+  std::map<uint8_t, std::string>                  m_SIDToName;           // pid -> player name (e.g. 0 -> "Varlock") --- note: will not be automatically converted to lower case
+  std::map<uint8_t, uint8_t>                      m_Flags;               // pid -> flag (e.g. 0 -> MMD_RESULT_WINNER)
+  std::map<uint8_t, bool>                         m_FlagsLeaver;         // pid -> leaver flag (e.g. 0 -> true) --- note: will only be present if true
+  std::map<uint8_t, bool>                         m_FlagsPracticing;     // pid -> practice flag (e.g. 0 -> true) --- note: will only be present if true
   std::map<std::string, uint8_t>                  m_DefVarPs;            // varname -> value type (e.g. "kills" -> MMD_VALUE_TYPE_INT)
   std::map<VarP, int32_t>                         m_VarPInts;            // pid,varname -> value (e.g. 0,"kills" -> 5)
   std::map<VarP, double>                          m_VarPReals;           // pid,varname -> value (e.g. 0,"x" -> 0.8)
   std::map<VarP, std::string>                     m_VarPStrings;         // pid,varname -> value (e.g. 0,"hero" -> "heroname")
-  std::map<std::string, std::vector<std::string>> m_DefEvents;           // event -> vector of arguments + format
+  std::map<std::string, std::vector<std::string>> m_DefEvents;           // event -> vector of format + arguments
+
+  std::queue<CW3MMDDefinition*>                   m_DefQueue;
+  std::queue<CW3MMDAction*>                       m_ActionQueue;
 
 public:
   CW3MMD(CGame* nGame);
@@ -97,12 +191,16 @@ public:
 
   inline bool GetIsGameOver() { return m_GameOver; }
 
-  bool HandleTokens(std::vector<std::string> tokens);
-  bool ProcessAction(CIncomingAction *Action);
+  bool HandleTokens(uint8_t fromUID, uint32_t valueID, std::vector<std::string> tokens);
+  bool RecvAction(uint8_t fromUID, CIncomingAction *Action);
+  bool ProcessDefinition(CW3MMDDefinition* nDef);
+  bool ProcessAction(CW3MMDAction* nAction);
+  bool ProcessQueue(bool flushAll = false);
   std::vector<std::string> TokenizeKey(std::string key) const;
-  std::string GetPlayerName(uint32_t PID) const;
+  std::string GetPlayerName(uint32_t SID) const;
   std::vector<std::string> GetWinners() const;
   std::string GetLogPrefix() const;
+  void LogMetaData(int64_t recvTicks, std::string& text) const;
 };
 
 #endif

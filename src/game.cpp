@@ -110,11 +110,14 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_FinishedLoadingTicks(0),
     m_LastActionSentTicks(0),
     m_LastActionLateBy(0),
+    m_LastPausedTicks(0),
+    m_PausedTicksDeltaSum(0),
     m_StartedLaggingTime(0),
     m_LastLagScreenTime(0),
     m_PingReportedSinceLagTimes(0),
     m_LastOwnerSeen(GetTime()),
     m_StartedKickVoteTime(0),
+    m_LastCustomStatsUpdateTime(0),
     m_GameOver(GAME_ONGOING),
     m_LastLagScreenResetTime(0),
     m_PauseCounter(0),
@@ -301,6 +304,7 @@ void CGame::Reset(const bool saveStats)
     // store the stats in the database
     if (saveStats) {
       if (m_CustomStats) {
+        m_CustomStats->ProcessQueue(true);
         Print(GetLogPrefix() + "MMD detected winners: " + JoinVector(m_CustomStats->GetWinners(), false));
       }
       if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
@@ -888,6 +892,15 @@ string CGame::GetClientFileName() const
   return m_MapPath.substr(LastSlash + 1);
 }
 
+int64_t CGame::GetEffectiveGameTicks() const
+{
+  int64_t effectiveTicks = m_GameTicks - m_PausedTicksDeltaSum;
+  if (m_Paused) {
+    effectiveTicks -= (GetTicks() - m_LastPausedTicks);
+  }
+  return effectiveTicks;
+}
+
 string CGame::GetStatusDescription() const
 {
   if (m_IsMirror)
@@ -1318,6 +1331,14 @@ bool CGame::Update(void* fd, void* send_fd)
     SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has expired");
     m_KickVotePlayer.clear();
     m_StartedKickVoteTime = 0;
+  }
+
+  if (m_CustomStats && Time - m_LastCustomStatsUpdateTime >= 30) {
+    if (!m_CustomStats->ProcessQueue(false) && !GetIsGameOver()) {
+      Print(GetLogPrefix() + "gameover timer started (w3mmd reported game over)");
+      StartGameOverTimer(true);
+    }
+    m_LastCustomStatsUpdateTime = Time;
   }
 
   if (m_GameLoaded) {
@@ -4021,10 +4042,12 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
           user->DropRemainingPauses();
         }
         m_Paused = true;
+        m_LastPausedTicks = GetTicks();
         break;
       case ACTION_RESUME:
         Print(GetLogPrefix() + "[" + user->GetName() + "] resumed the game");
         m_Paused = false;
+        m_PausedTicksDeltaSum += (GetTicks() - m_LastPausedTicks);
         break;
       default:
         break;
@@ -4034,13 +4057,13 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
   // give the stats class a chance to process the action
 
   if (m_CustomStats && action->GetAction()->size() >= 6) {
-    if (m_CustomStats->ProcessAction(action) && !GetIsGameOver()) {
-      Print(GetLogPrefix() + "gameover timer started (w3mmd reported game over)");
-      StartGameOverTimer(true);
+    if (!m_CustomStats->RecvAction(user->GetUID(), action)) {
+      delete m_CustomStats;
+      m_CustomStats = nullptr;
     }
   }
   if (m_DotaStats && action->GetAction()->size() >= 6) {
-    if (m_DotaStats->ProcessAction(action) && !GetIsGameOver()) {
+    if (m_DotaStats->ProcessAction(user->GetUID(), action) && !GetIsGameOver()) {
       Print(GetLogPrefix() + "gameover timer started (dota stats class reported game over)");
       StartGameOverTimer(true);
     }
@@ -5074,11 +5097,14 @@ void CGame::Remake()
   m_FinishedLoadingTicks = 0;
   m_LastActionSentTicks = 0;
   m_LastActionLateBy = 0;
+  m_LastPausedTicks = 0;
+  m_PausedTicksDeltaSum = 0;
   m_StartedLaggingTime = 0;
   m_LastLagScreenTime = 0;
   m_PingReportedSinceLagTimes = 0;
   m_LastOwnerSeen = Time;
   m_StartedKickVoteTime = 0;
+  m_LastCustomStatsUpdateTime = 0;
   m_GameOverTime = nullopt;
   m_LastPlayerLeaveTicks = nullopt;
   m_LastLagScreenResetTime = 0;
@@ -7191,6 +7217,7 @@ bool CGame::Pause(CGameUser* user, const bool isDisconnect)
   Action.push_back(ACTION_PAUSE);
   m_Actions.push(new CIncomingAction(UID, CRC, Action));
   m_Paused = true;
+  m_LastPausedTicks = GetTicks();
   return true;
 }
 
@@ -7203,6 +7230,7 @@ bool CGame::Resume()
   Action.push_back(ACTION_RESUME);
   m_Actions.push(new CIncomingAction(UID, CRC, Action));
   m_Paused = false;
+  m_PausedTicksDeltaSum += (GetTicks() - m_LastPausedTicks);
   return true;
 }
 
