@@ -1030,8 +1030,9 @@ inline std::string ReplaceTemplate(const std::string& input, const std::map<int6
     // Find the closing brace
     size_t end = input.find('}', start);
     if (end == std::string::npos) {
-      // Unmatched opening brace, fail
-      return false;
+      // Unmatched opening brace
+      result.append(input, start, input.size() - start);
+      return result;
     }
 
     // Extract the token inside the braces
