@@ -76,7 +76,7 @@ CDotaStats::~CDotaStats()
   }
 }
 
-bool CDotaStats::ProcessAction(CIncomingAction* Action)
+bool CDotaStats::ProcessAction(uint8_t UID, CIncomingAction* Action)
 {
   size_t                      i          = 0;
   const std::vector<uint8_t>* ActionData = Action->GetAction();

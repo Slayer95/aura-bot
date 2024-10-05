@@ -130,9 +130,9 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       optional<uint32_t> SID = ToUint32(Tokens[2]);
       if (!SID.has_value()) return false;
 
-      CW3MMDDefinition* def = new CW3MMDDefinition(fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, *SID);
+      CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, *SID);
       def->SetName(Tokens[3]);
-      m_DefQueue.push_back(def);
+      m_DefQueue.push(def);
     }
   } else if (actionType == "DefVarP" && Tokens.size() == 5) {
     // Tokens[1] = name
@@ -151,9 +151,9 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "invalid DefVarP type [" + Tokens[2] + "] found, ignoring");
       return false;
     }
-    CW3MMDDefinition* def = new CW3MMDDefinition(fromUID, valueID, MMD_DEFINITION_TYPE_VAR, subType);
+    CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_VAR, subType);
     def->SetName(Tokens[1]);
-    m_DefQueue.push_back(def);
+    m_DefQueue.push(def);
   } else if (actionType == "VarP" && Tokens.size() == 5) {
     // Tokens[1] = pid
     // Tokens[2] = name
@@ -176,10 +176,10 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "unknown VarP operation [" + Tokens[3] + "] found, ignoring");
       return false;
     }
-    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, *SID);
+    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, *SID);
     action->SetName(Tokens[2]);
     action->AddValue(Tokens[4]);
-    m_ActionQueue.push_back(action);
+    m_ActionQueue.push(action);
   } else if (actionType == "FlagP" && Tokens.size() == 3) {
     // Tokens[1] = pid
     // Tokens[2] = flag
@@ -211,8 +211,8 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       return false;
     }
 
-    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_FLAG, subType, *SID);
-    m_ActionQueue.push_back(action);
+    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_FLAG, subType, *SID);
+    m_ActionQueue.push(action);
   } else if (actionType == "DefEvent" && Tokens.size() >= 4) {
     // Tokens[1] = name
     // Tokens[2] = # of arguments (n)
@@ -228,29 +228,29 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "DefEvent [" + Tokens[2] + "] tokens missing, ignoring");
       return false;
     }
-    def CW3MMDDefinition* = new CW3MMDDefinition(fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, arity.value());
-    uint8_t i = 1;
-    def->SetName(Tokens[i]);    
+    CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, arity.value());
+    def->SetName(Tokens[1]);
+    uint8_t i = 2;
     while (++i < Tokens.size()) {
       def->AddValue(Tokens[i]);
     }
-    m_DefQueue.push_back(def);
+    m_DefQueue.push(def);
   } else if (actionType == "Event" && Tokens.size() >= 2) {
     // Tokens[1] = name
     // Tokens[2..n+2] = arguments (where n is the # of arguments in the corresponding DefEvent)
-    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_EVENT, 0);
+    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_EVENT, 0);
     uint8_t i = 1;
     action->SetName(Tokens[i]);    
-    while (++i < Tokens.size() - 1) {
+    while (++i < Tokens.size()) {
       action->AddValue(Tokens[i]);
     }
-    m_ActionQueue.push_back(action);
+    m_ActionQueue.push(action);
   } else if (actionType == "Blank") {
     // ignore
   } else if (actionType == "Custom") {
-    Print(GetLogPrefix() + "custom: " + JoinVector(Tokens, false));
+    LogMetaData(m_Game->GetEffectiveGameTicks(), "custom: " + JoinVector(Tokens, false));
   } else {
-    Print(GetLogPrefix() + "unknown action type [" + actionType + "] found, ignoring");
+    LogMetaData(m_Game->GetEffectiveGameTicks(), "unknown action type [" + actionType + "] found, ignoring");
   }
   return true;
 }
@@ -326,7 +326,7 @@ bool CW3MMD::RecvAction(uint8_t fromUID, CIncomingAction *Action)
     }
   }
 
-  return m_Error;
+  return !m_Error;
 }
 
 bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
@@ -350,6 +350,7 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
       }
       m_SIDToName[definition->GetSID()] = definition->GetName();
     }
+    return true;
   } else if (definition->GetType() == MMD_DEFINITION_TYPE_VAR) {
     if (m_DefVarPs.find(definition->GetName()) != m_DefVarPs.end()) {
       Print(GetLogPrefix() + "duplicate DefVarP [" + definition->GetName() + "] found, ignoring");
@@ -359,15 +360,17 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
       m_DefVarPs[definition->GetName()] = MMD_VALUE_TYPE_INT;
     } else if (definition->GetSubType() == MMD_VALUE_TYPE_REAL) {
       m_DefVarPs[definition->GetName()] = MMD_VALUE_TYPE_REAL;
-    } else if (definition->GetSubType() == MMD_VALUE_TYPE_STRING) {
+    } else { // if (definition->GetSubType() == MMD_VALUE_TYPE_STRING)
       m_DefVarPs[definition->GetName()] = MMD_VALUE_TYPE_STRING;
     }
-  } else if (definition->GetType() == MMD_DEFINITION_TYPE_EVENT) {
+    return true;
+  } else { // if (definition->GetType() == MMD_DEFINITION_TYPE_EVENT)
     if (m_DefEvents.find(definition->GetName()) != m_DefEvents.end()) {
       Print(GetLogPrefix() + "duplicate DefEvent [" + definition->GetName() + "] found, ignoring");
       return false;
     }
     m_DefEvents[definition->GetName()] = definition->CopyValues();
+    return true;
   }
 }
 
@@ -375,7 +378,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
 {
   if (action->GetType() == MMD_ACTION_TYPE_FLAG) {
     if (m_SIDToName.find(action->GetSID()) == m_SIDToName.end()) {
-      Print(GetLogPrefix() + "FlagP [" + Tokens[2] + "] has undefined SID [" + ToDecString(action->GetSID()) + "], ignoring");
+      Print(GetLogPrefix() + "FlagP [" + action->GetName() + "] has undefined SID [" + ToDecString(action->GetSID()) + "], ignoring");
       return false;
     }
     uint8_t result = 0xFFu;
@@ -427,10 +430,6 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       return false;
     }
     uint8_t valueType = m_DefVarPs[action->GetName()];
-    CW3MMDAction* action = new CW3MMDAction(fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, *SID);
-    action->SetName(Tokens[2]);
-    action->AddValue(Tokens[4]);
-
     if (action->GetSubType() == MMD_OPERATOR_SET) {
       std::string operand = action->GetFirstValue();
       if (valueType == MMD_VALUE_TYPE_REAL) {
@@ -488,7 +487,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
         }
       }
       return true;
-    } 
+    }
   } else { // if (action->GetType() == MMD_ACTION_TYPE_EVENT) 
     auto defEventIt = m_DefEvents.find(action->GetName());
     if (defEventIt == m_DefEvents.end()) {
@@ -544,7 +543,7 @@ bool CW3MMD::ProcessQueue(bool flushAll)
   }
   while (!m_DefQueue.empty()) {
     CW3MMDDefinition* def = m_DefQueue.front();
-    if (!flushAll && gameTicks - def->GetRecvTicks() < MMD_PROCESSING_STREAM_DELAY) {
+    if (!flushAll && gameTicks < def->GetRecvTicks() + MMD_PROCESSING_STREAM_DELAY) {
       break;
     }
     ProcessDefinition(def);
@@ -556,7 +555,7 @@ bool CW3MMD::ProcessQueue(bool flushAll)
   }
   while (!m_ActionQueue.empty()) {
     CW3MMDAction* action = m_ActionQueue.front();
-    if (!flushAll && gameTicks - action->GetRecvTicks() < MMD_PROCESSING_STREAM_DELAY) {
+    if (!flushAll && gameTicks < action->GetRecvTicks() + MMD_PROCESSING_STREAM_DELAY) {
       break;
     }
     ProcessAction(action);
@@ -633,7 +632,7 @@ string CW3MMD::GetLogPrefix() const
   return "[W3MMD: " + m_Game->GetGameName() + "] ";
 }
 
-void CW3MMD::LogMetaData(int64_t gameTicks, string& text)
+void CW3MMD::LogMetaData(int64_t gameTicks, string& text) const
 {
   int64_t hours = gameTicks / 3600000;
   gameTicks -= hours * 3600000;

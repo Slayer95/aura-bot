@@ -90,15 +90,15 @@
 #define MMD_PROCESSING_INITIAL_DELAY 180000
 #define MMD_PROCESSING_STREAM_DELAY 180000
 
-class CAura;
-class CGame;
-class CIncomingAction;
-
 //
 // CW3MMD
 //
 
 typedef std::pair<uint32_t, std::string> VarP;
+
+class CAura;
+class CGame;
+class CIncomingAction;
 
 class CW3MMDAction
 {
@@ -130,7 +130,7 @@ public:
   const std::vector<std::string>& RefValues() { return m_Values; }
   void AddValue(std::string& value) { m_Values.push_back(value); }
   std::string GetFirstValue() { return m_Values[0]; }
-}
+};
 
 class CW3MMDDefinition
 {
@@ -161,7 +161,7 @@ public:
   std::vector<std::string> CopyValues() { return m_Values; }
   const std::vector<std::string>& RefValues() { return m_Values; }
   void AddValue(std::string& value) { m_Values.push_back(value); }
-}
+};
 
 class CW3MMD
 {
