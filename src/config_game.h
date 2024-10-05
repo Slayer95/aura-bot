@@ -67,6 +67,7 @@ public:
   uint8_t                  m_MaxPlayersLoopback;
   uint8_t                  m_MaxPlayersSameIP;
   uint8_t                  m_PlayersReadyMode;
+  bool                     m_SaveStats;
   
   uint32_t                 m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
   uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)

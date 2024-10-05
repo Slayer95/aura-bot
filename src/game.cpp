@@ -261,7 +261,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   InitSlots();
 }
 
-void CGame::Reset(const bool saveStats)
+void CGame::Reset()
 {
   m_FakeUsers.clear();
 
@@ -275,7 +275,7 @@ void CGame::Reset(const bool saveStats)
     m_Actions.pop();
   }
 
-  if (m_GameLoaded) {
+  if (m_GameLoaded && m_Config->m_SaveStats) {
     // store the CDBGamePlayers in the database
     // add non-dota stats
     if (!m_DBGamePlayers.empty()) {
@@ -302,13 +302,11 @@ void CGame::Reset(const bool saveStats)
       }
     }
     // store the stats in the database
-    if (saveStats) {
-      if (m_CustomStats) {
-        m_CustomStats->ProcessQueue(true);
-        Print(GetLogPrefix() + "MMD detected winners: " + JoinVector(m_CustomStats->GetWinners(), false));
-      }
-      if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
+    if (m_CustomStats) {
+      m_CustomStats->ProcessQueue(true);
+      Print(GetLogPrefix() + "MMD detected winners: " + JoinVector(m_CustomStats->GetWinners(), false));
     }
+    if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
   }
 
   for (auto& user : m_DBGamePlayers) {
@@ -411,7 +409,7 @@ CGame::~CGame()
 {
   delete m_Config;
 
-  Reset(true);
+  Reset();
   if (ReleaseMap()) {
     delete m_Map;
     m_Map = nullptr;
@@ -5012,6 +5010,9 @@ void CGame::EventGameLoaded()
 
 void CGame::HandleGameLoadedStats()
 {
+  if (!m_Config->m_SaveStats) {
+    return;
+  }
   vector<string> exportPlayerNames;
   vector<uint8_t> exportPlayerIDs;
   vector<uint8_t> exportSlotIDs;
@@ -5081,7 +5082,9 @@ bool CGame::GetIsRemakeable()
 
 void CGame::Remake()
 {
-  Reset(false);
+  m_Config->m_SaveStats = false;
+
+  Reset();
 
   int64_t Time = GetTime();
   int64_t Ticks = GetTicks();

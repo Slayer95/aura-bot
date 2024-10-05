@@ -485,7 +485,7 @@ public:
   void HandleGameLoadedStats();
   bool ReleaseMap();
   void StartGameOverTimer(bool isMMD = false);
-  void Reset(const bool saveStats);
+  void Reset();
   bool GetIsRemakeable();
   void Remake();
 
