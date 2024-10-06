@@ -51,6 +51,7 @@
 #include "game.h"
 #include "gameprotocol.h"
 
+#include <array>
 #include <map>
 #include <utility>
 #include <queue>
@@ -181,6 +182,7 @@ private:
   std::map<VarP, double>                          m_VarPReals;           // pid,varname -> value (e.g. 0,"x" -> 0.8)
   std::map<VarP, std::string>                     m_VarPStrings;         // pid,varname -> value (e.g. 0,"hero" -> "heroname")
   std::map<std::string, std::vector<std::string>> m_DefEvents;           // event -> vector of format + arguments
+  std::array<std::string, 3>                      m_ResultVerbs;
 
   std::queue<CW3MMDDefinition*>                   m_DefQueue;
   std::queue<CW3MMDAction*>                       m_ActionQueue;

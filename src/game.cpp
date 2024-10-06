@@ -924,6 +924,7 @@ string CGame::GetEndDescription() const
 
   string winnersFragment;
   if (m_CustomStats) {
+    m_CustomStats->ProcessQueue(true);
     vector<string> winners = m_CustomStats->GetWinners();
     if (winners.size() > 2) {
       winnersFragment = "Winners: [" + winners[0] + "], and others";

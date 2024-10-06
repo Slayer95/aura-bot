@@ -96,6 +96,9 @@ CW3MMD::CW3MMD(CGame *nGame)
     m_NextValueID(0),
     m_NextCheckID(0)
 {
+  m_ResultVerbs[MMD_RESULT_LOSER] = "lost";
+  m_ResultVerbs[MMD_RESULT_DRAWER] = "drew";
+  m_ResultVerbs[MMD_RESULT_WINNER] = "won";
 }
 
 CW3MMD::~CW3MMD()
@@ -422,7 +425,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
     if (result == MMD_RESULT_WINNER) {
       m_GameOver = true;
     }
-    LogMetaData(action->GetRecvTicks(), "FlagP [" + GetPlayerName(action->GetSID()) + "] set to " + ToDecString(result));
+    LogMetaData(action->GetRecvTicks(), GetPlayerName(action->GetSID()) + " " + m_ResultVerbs[result] + " the game.");
     return true;
   } else if (action->GetType() == MMD_ACTION_TYPE_VAR) {
     if (m_DefVarPs.find(action->GetName()) == m_DefVarPs.end()) {
