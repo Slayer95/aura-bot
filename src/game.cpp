@@ -2407,14 +2407,14 @@ string CGame::GetReadyStatusText() const
     }
   }
   if (m_ControllersReadyCount == 0) {
-    return "No users ready yet." + notReadyFragment;
+    return "No players ready yet." + notReadyFragment;
   }
 
   if (m_ControllersReadyCount == 1) {
-    return "One user is ready." + notReadyFragment;
+    return "One player is ready." + notReadyFragment;
   }
 
-  return to_string(m_ControllersReadyCount) + " users are ready." + notReadyFragment;
+  return to_string(m_ControllersReadyCount) + " players are ready." + notReadyFragment;
 }
 
 string CGame::GetCmdToken() const
