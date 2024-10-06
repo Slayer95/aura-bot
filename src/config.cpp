@@ -770,7 +770,7 @@ optional<uint16_t> CConfig::GetMaybeUint16(const string& key)
 
   try {
     int64_t Value = stol(it->second);
-    if (Value < 0 || 0xFF < Value) {
+    if (Value < 0 || 0xFFFF < Value) {
       CONFIG_ERROR(key, result)
     }
     result = static_cast<uint16_t>(Value);

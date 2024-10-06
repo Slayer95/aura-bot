@@ -83,7 +83,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
     m_MaxHostPort                 = onlyHostPort.value();
   } else {
     m_MinHostPort                 = CFG.GetUint16("net.host_port.min", 6112);
-    m_MaxHostPort                   = CFG.GetUint16("net.host_port.max", m_MinHostPort);
+    m_MaxHostPort                 = CFG.GetUint16("net.host_port.max", m_MinHostPort);
   }
 
   m_UDPBlockedIPs                = CFG.GetIPStringSet("net.udp_server.block_list", ',', {});
