@@ -53,7 +53,7 @@ using namespace std;
 //
 
 CW3MMDAction::CW3MMDAction(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
-  : m_Ticks(nGame->GetEffectiveGameTicks()),
+  : m_Ticks(nGame->GetGameTicks()),
     m_UpdateID(nID),
     m_Type(nType),
     m_SubType(nSubType),
@@ -71,7 +71,7 @@ CW3MMDAction::~CW3MMDAction()
 //
 
 CW3MMDDefinition::CW3MMDDefinition(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
-  : m_Ticks(nGame->GetEffectiveGameTicks()),
+  : m_Ticks(nGame->GetGameTicks()),
     m_UpdateID(nID),
     m_Type(nType),
     m_SubType(nSubType),
@@ -251,9 +251,9 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   } else if (actionType == "Blank") {
     // ignore
   } else if (actionType == "Custom") {
-    LogMetaData(m_Game->GetEffectiveGameTicks(), "custom: " + JoinVector(Tokens, false));
+    LogMetaData(m_Game->GetGameTicks(), "custom: " + JoinVector(Tokens, false));
   } else {
-    LogMetaData(m_Game->GetEffectiveGameTicks(), "unknown action type [" + actionType + "] found, ignoring");
+    LogMetaData(m_Game->GetGameTicks(), "unknown action type [" + actionType + "] found, ignoring");
   }
   return true;
 }
@@ -539,7 +539,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
 
 bool CW3MMD::ProcessQueue(bool flushAll)
 {
-  const int64_t gameTicks = m_Game->GetEffectiveGameTicks();
+  const int64_t gameTicks = m_Game->GetGameTicks();
   if (!flushAll) {
     if (m_Game->GetPaused()) return true;
     if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;

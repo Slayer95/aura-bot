@@ -890,18 +890,6 @@ string CGame::GetClientFileName() const
   return m_MapPath.substr(LastSlash + 1);
 }
 
-int64_t CGame::GetEffectiveGameTicks() const
-{
-  return m_GameTicks;
-  /*
-  int64_t effectiveTicks = m_GameTicks - m_PausedTicksDeltaSum;
-  if (m_Paused) {
-    effectiveTicks -= (GetTicks() - m_LastPausedTicks);
-  }
-  return effectiveTicks;
-  */
-}
-
 string CGame::GetStatusDescription() const
 {
   if (m_IsMirror)
@@ -2776,6 +2764,8 @@ void CGame::SendAllActions()
 {
   if (!m_Paused) {
     m_GameTicks += GetLatency();
+  } else {
+    m_PausedTicksDeltaSum = GetLatency();
   }
 
   if (GetAnyUsingGProxy()) {
@@ -4051,7 +4041,6 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
       case ACTION_RESUME:
         Print(GetLogPrefix() + "[" + user->GetName() + "] resumed the game");
         m_Paused = false;
-        m_PausedTicksDeltaSum += (GetTicks() - m_LastPausedTicks);
         break;
       default:
         break;
@@ -7239,7 +7228,6 @@ bool CGame::Resume()
   Action.push_back(ACTION_RESUME);
   m_Actions.push(new CIncomingAction(UID, CRC, Action));
   m_Paused = false;
-  m_PausedTicksDeltaSum += (GetTicks() - m_LastPausedTicks);
   return true;
 }
 

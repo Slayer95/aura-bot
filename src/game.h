@@ -335,7 +335,6 @@ public:
   std::string           GetClientFileName() const;
   std::string           GetMapSiteURL() const { return m_MapSiteURL; }
   inline int64_t        GetGameTicks() const { return m_GameTicks; }
-  int64_t               GetEffectiveGameTicks() const;
   inline int64_t        GetLastPausedTicks() const { return m_LastPausedTicks; }
   inline int64_t        GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
   inline bool           GetChatOnly() const { return m_ChatOnly; }

@@ -104,7 +104,7 @@ class CIncomingAction;
 class CW3MMDAction
 {
 public:
-  int64_t                                                       m_Ticks;              // m_Game->GetEffectiveGameTicks()when this definition was received
+  int64_t                                                       m_Ticks;              // m_Game->GetGameTicks()when this definition was received
   uint32_t                                                      m_UpdateID;
   uint8_t                                                       m_Type;               // FlagP, VarP, Event, Blank, Custom,
   uint8_t                                                       m_SubType;            // (winner, loser, drawer, leaver, practice), (set, add, subtract), (NO), (NO), (NO)
@@ -136,7 +136,7 @@ public:
 class CW3MMDDefinition
 {
 public:
-  int64_t                                                       m_Ticks;              // m_Game->GetEffectiveGameTicks() when this definition was received
+  int64_t                                                       m_Ticks;              // m_Game->GetGameTicks() when this definition was received
   uint32_t                                                      m_UpdateID;
   uint8_t                                                       m_Type;               // init, DefVarP, DefEvent
   uint8_t                                                       m_SubType;            // (pid, version), (int, real, string), (0-ary, 1-ary, 2-ary, etc.)
