@@ -234,7 +234,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     // start listening for connections
 
     uint16_t hostPort = nAura->m_Net->NextHostPort();
-    m_Socket = m_Aura->GetGameServer(hostPort, m_GameName);
+    m_Socket = m_Aura->m_Net->GetOrCreateTCPServer(hostPort, "Game <<" + m_GameName + ">>");
 
     if (m_Socket) {
       m_HostPort = m_Socket->GetPort();
@@ -3112,7 +3112,6 @@ void CGame::SendGameDiscoveryRefresh() const
 
 void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
 {
-  // TODO: VLAN
   // See CNet::SendGameDiscovery()
 
   if (!m_Aura->m_Net->SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(AF_INET)))) {
@@ -3136,11 +3135,16 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
   }
 
   // Send to active UDP in TCP tunnels
-  if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
-    for (auto& connection : pair.second) {
-      if (connection->GetDeleteMe()) continue;
-      if (connection->GetIsUDPTunnel()) {
-        connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
+  if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled) {
+    for (auto& serverConnections : m_Aura->m_Net->m_IncomingConnections) {
+      for (auto& connection : serverConnections.second) {
+        if (connection->GetDeleteMe()) continue;
+        if (connection->GetIsUDPTunnel()) {
+          connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
+        }
+        if (connection->GetIsVLAN()) {
+          // TODO: VLAN
+        }
       }
     }
   }

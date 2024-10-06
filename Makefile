@@ -87,6 +87,7 @@ OBJS = src/fileutil.o \
 			 src/bnetprotocol.o \
 			 src/gameprotocol.o \
 			 src/gpsprotocol.o \
+			 src/vlanprotocol.o \
 			 src/config.o \
 			 src/config_bot.o \
 			 src/config_realm.o \

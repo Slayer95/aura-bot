@@ -108,6 +108,7 @@ public:
   inline std::string          GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
   inline sockaddr_storage*    GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
   inline bool                 GetIsUDPTunnel() const { return m_Type == INCOMING_CONNECTION_TYPE_UDP_TUNNEL; }
+  inline bool                 GetIsVLAN() const { return m_Type == INCOMING_CONNECTION_TYPE_VLAN; }
   inline uint8_t              GetType() const { return m_Type; }
   inline uint16_t             GetPort() const { return m_Port; }
   inline bool                 GetDeleteMe() const { return m_DeleteMe; }

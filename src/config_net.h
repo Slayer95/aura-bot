@@ -58,6 +58,8 @@ public:
 
   bool                                    m_EnableTCPWrapUDP;
   bool                                    m_EnableTCPScanUDP;
+  bool                                    m_VLANEnabled;
+  uint16_t                                m_VLANPort;
 
   uint16_t                                m_UDP6TargetPort;             // the remote UDP port to which we send unicast game discovery messages over IPv6
 

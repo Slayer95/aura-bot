@@ -791,27 +791,6 @@ CRealm* CAura::GetRealmByHostName(const string& hostName) const
   return nullptr;
 }
 
-CTCPServer* CAura::GetGameServer(uint16_t inputPort, string& name)
-{
-  auto it = m_Net->m_GameServers.find(inputPort);
-  if (it != m_Net->m_GameServers.end()) {
-    Print("[GAME] " + name + " Assigned to port " + to_string(inputPort));
-    return it->second;
-  }
-  CTCPServer* gameServer = new CTCPServer(m_Net->m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
-  if (!gameServer->Listen(m_Net->m_SupportTCPOverIPv6 ? m_Net->m_Config->m_BindAddress6 : m_Net->m_Config->m_BindAddress4, inputPort, false)) {
-    Print("[GAME] " + name + " Error listening on port " + to_string(inputPort));
-    return nullptr;
-  }
-  uint16_t assignedPort = gameServer->GetPort();
-  m_Net->m_GameServers[assignedPort] = gameServer;
-  vector<CGameConnection*> IncomingConnections;
-  m_Net->m_IncomingConnections[assignedPort] = IncomingConnections;
-
-  Print("[GAME] " + name + " Listening on port " + to_string(assignedPort));
-  return gameServer;
-}
-
 bool CAura::HandleAction(vector<string> action)
 {
   if (action[0] == "exec") {

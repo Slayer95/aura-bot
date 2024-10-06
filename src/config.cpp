@@ -758,6 +758,29 @@ optional<uint8_t> CConfig::GetMaybeUint8(const string& key)
   SUCCESS(result)
 }
 
+optional<uint16_t> CConfig::GetMaybeUint16(const string& key)
+{
+  m_ValidKeys.insert(key);
+  optional<uint16_t> result;
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
+
+  try {
+    int64_t Value = stol(it->second);
+    if (Value < 0 || 0xFF < Value) {
+      CONFIG_ERROR(key, result)
+    }
+    result = static_cast<uint16_t>(Value);
+  } catch (...) {
+    CONFIG_ERROR(key, result)
+  }
+
+  SUCCESS(result)
+}
+
 optional<int64_t> CConfig::GetMaybeInt64(const string& key)
 {
   m_ValidKeys.insert(key);

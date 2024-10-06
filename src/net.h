@@ -155,14 +155,17 @@ public:
   // Implements non-reloadable config entries.
   bool                                                        m_SupportUDPOverIPv6;
   bool                                                        m_SupportTCPOverIPv6;
+  bool                                                        m_VLANEnabled;
   bool                                                        m_UDPMainServerEnabled;      // (IPv4) whether the bot should listen to UDP traffic in port 6112)
   uint16_t                                                    m_UDPFallbackPort;
   uint16_t                                                    m_UDPIPv6Port;
+  uint16_t                                                    m_VLANPort;
   // == SECTION END ==
 
   CUDPServer*                                                 m_UDPMainServer;             // (IPv4) UDP I/O at port 6112. Supports broadcasts. May also act as reverse-proxy for UDP traffic.
   CUDPServer*                                                 m_UDPDeafSocket;             // (IPv4) UDP outbound traffic. Uses <net.udp_fallback.outbound_port> (should NOT be 6112). Supports broadcasts.
   CUDPServer*                                                 m_UDPIPv6Server;
+  CTCPServer*                                                 m_VLANServer;
 
   uint16_t                                                    m_UDP4TargetPort;
   uint16_t                                                    m_UDP4TargetProxyPort;
@@ -208,6 +211,7 @@ public:
 
   bool                            ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
   bool                            ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<std::string, sockaddr_storage*>&);
+  CTCPServer*                     GetOrCreateTCPServer(uint16_t, const std::string& name);
   void                            FlushDNSCache();
   void                            FlushSelfIPCache();
 

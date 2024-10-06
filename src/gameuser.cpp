@@ -52,6 +52,7 @@
 #include "map.h"
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
+#include "vlanprotocol.h"
 #include "game.h"
 #include "socket.h"
 #include "net.h"
@@ -131,10 +132,18 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
       if (Bytes.size() < Length) break;
       const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-      if (Bytes[0] == W3GS_HEADER_CONSTANT || (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0)) {
+      if (Bytes[0] == W3GS_HEADER_CONSTANT ||
+        (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) ||
+        Bytes[0] == VLAN_HEADER_CONSTANT
+        ) {
         if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN) {
           if (!m_Aura->m_CurrentLobby || m_Aura->m_CurrentLobby->GetIsMirror() || m_Aura->m_CurrentLobby->GetLobbyLoading() || m_Aura->m_CurrentLobby->GetExiting()) {
             // Game already started
+            Abort = true;
+            break;
+          }
+          if (GetIsVLAN()) {
+            // VLAN uses separate TCP connections for game discovery than for joining games.
             Abort = true;
             break;
           }
@@ -172,7 +181,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             pkt.length = Length;
             m_Aura->m_Net->HandleUDP(&pkt);
           } 
-        } else if (Length == 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT) {
+        } else if (Length == 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT && m_Type == INCOMING_CONNECTION_TYPE_NONE) {
           const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
           const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
 
@@ -199,7 +208,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             IsPromotedToPlayer = true;
           }
         } else {
-          bool anyExtensions = m_Aura->m_Net->m_Config->m_EnableTCPScanUDP || m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP;
+          bool anyExtensions = m_Aura->m_Net->m_Config->m_EnableTCPScanUDP || m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled;
           if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
             if (m_Aura->m_Net->m_Config->m_EnableTCPScanUDP) {
               if (m_Aura->m_CurrentLobby->GetIsLobby() && m_Aura->m_CurrentLobby->GetUDPEnabled()) {
@@ -211,11 +220,17 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             } else if (!anyExtensions) {
               Abort = true;
             }
-          } else if (Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
+          } else if (m_Type == INCOMING_CONNECTION_TYPE_NONE && Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
             if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
               vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
               m_Socket->PutBytes(packet);
               m_Type = INCOMING_CONNECTION_TYPE_UDP_TUNNEL;
+            } else if (!anyExtensions) {
+              Abort = true;
+            }
+          } else if (m_Type == INCOMING_CONNECTION_TYPE_NONE && Length == 4 && Bytes[0] == VLAN_HEADER_CONSTANT && Bytes[1] == 0xFF) { // TODO: VLAN
+            if (m_Aura->m_Net->m_Config->m_VLANEnabled) {
+              m_Type = INCOMING_CONNECTION_TYPE_VLAN;
             } else if (!anyExtensions) {
               Abort = true;
             }
@@ -632,12 +647,12 @@ bool CGameUser::Update(void* fd)
           }
           // the port to which the client directly connects
           // (proxy port if it uses a proxy; the hosted game port otherwise)
-          Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
+          Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
         } else if (Bytes[1] == CGPSProtocol::GPS_SUPPORT_EXTENDED && Length >= 8) {
           //uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
           if (m_GProxy && m_Game->GetIsProxyReconnectableLong()) {
             m_GProxyExtended = true;
-            Print("[GAME: " + m_Game->GetGameName() + "] player [" + m_Name + "] is using GProxy Extended");
+            Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
           }
         }
       }

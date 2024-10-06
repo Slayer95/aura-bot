@@ -77,9 +77,14 @@ CNetConfig::CNetConfig(CConfig& CFG)
   m_BindAddress6                 = CFG.GetAddressIPv6("net.bind_address6", "::");
   CFG.FailIfErrorLast();
 
-  uint16_t onlyHostPort          = CFG.GetUint16("net.host_port.only", 6112);
-  m_MinHostPort                  = CFG.GetUint16("net.host_port.min", onlyHostPort);
-  m_MaxHostPort                  = CFG.GetUint16("net.host_port.max", m_MinHostPort);
+  optional<uint16_t> onlyHostPort = CFG.GetMaybeUint16("net.host_port.only");
+  if (onlyHostPort.has_value()) {
+    m_MinHostPort                 = onlyHostPort.value();
+    m_MaxHostPort                 = onlyHostPort.value();
+  } else {
+    m_MinHostPort                 = CFG.GetUint16("net.host_port.min", 6112);
+    m_MaxHostPort                   = CFG.GetUint16("net.host_port.max", m_MinHostPort);
+  }
 
   m_UDPBlockedIPs                = CFG.GetIPStringSet("net.udp_server.block_list", ',', {});
   m_UDPEnableCustomPortTCP4      = CFG.GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
@@ -125,6 +130,8 @@ CNetConfig::CNetConfig(CConfig& CFG)
 
   m_EnableTCPWrapUDP             = CFG.GetBool("net.tcp_extensions.udp_tunnel.enabled", true);
   m_EnableTCPScanUDP             = CFG.GetBool("net.tcp_extensions.udp_scan.enabled", true);
+  m_VLANEnabled                   = CFG.GetBool("net.tcp_extensions.gproxy.vlan.enabled", true);
+  m_VLANPort                     = CFG.GetUint16("net.tcp_extensions.gproxy.vlan.port", onlyHostPort.value_or(6112u));
 
   m_ReconnectWaitTime            = CFG.GetUint8("net.tcp_extensions.gproxy.reconnect_wait", 5);
   m_ReconnectWaitTimeLegacy      = CFG.GetUint8("net.tcp_extensions.gproxy_legacy.reconnect_wait", 3);

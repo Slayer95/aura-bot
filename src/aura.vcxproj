@@ -446,6 +446,7 @@
     <ClCompile Include="bnetprotocol.cpp" />
     <ClCompile Include="gameprotocol.cpp" />
     <ClCompile Include="gpsprotocol.cpp" />
+    <ClCompile Include="vlanprotocol.cpp" />
     <ClCompile Include="bncsutilinterface.cpp" />
     <ClCompile Include="crc32.cpp" />
     <ClCompile Include="sha1.cpp" />
@@ -487,6 +488,7 @@
     <ClInclude Include="bnetprotocol.h" />
     <ClInclude Include="gameprotocol.h" />
     <ClInclude Include="gpsprotocol.h" />
+    <ClInclude Include="vlanprotocol.h" />
     <ClInclude Include="bncsutilinterface.h" />
     <ClInclude Include="crc32.h" />
     <ClInclude Include="sha1.h" />

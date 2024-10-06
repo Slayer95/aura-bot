@@ -308,6 +308,7 @@ CNet::CNet(CAura* nAura)
     m_UDPMainServer(nullptr),
     m_UDPDeafSocket(nullptr),
     m_UDPIPv6Server(nullptr),
+    m_VLANServer(nullptr),
     m_UDP4TargetPort(6112), // Constant
 
     // GProxy's port is actually configurable client-side (lan_port),
@@ -340,6 +341,8 @@ void CNet::InitPersistentConfig()
   m_SupportUDPOverIPv6 = m_Config->m_SupportUDPOverIPv6;
   m_UDPFallbackPort = m_Config->m_UDPFallbackPort;
   m_UDPIPv6Port = m_Config->m_UDPIPv6Port;
+  m_VLANEnabled = m_Config->m_VLANEnabled;
+  m_VLANPort = m_Config->m_VLANPort;
 }
 
 bool CNet::Init()
@@ -415,6 +418,10 @@ bool CNet::Init()
   if (m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
   if (m_Config->m_UDPDoNotRouteEnabled) PropagateDoNotRouteEnabled(true);
   SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
+
+  if (m_VLANEnabled) {
+    m_VLANServer = GetOrCreateTCPServer(m_VLANPort, "VLAN Server");
+  }
 
 #ifdef DISABLE_CPR
   QueryIPAddress();
@@ -603,11 +610,16 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
       PropagateBroadcastEnabled(true);
   }
 
-  if (m_Config->m_EnableTCPWrapUDP) for (auto& serverConnections : m_IncomingConnections) {
-    for (auto& connection : serverConnections.second) {
-      if (connection->GetDeleteMe()) continue;
-      if (connection->GetIsUDPTunnel()) {
-        connection->Send(packet);
+  if (m_Config->m_EnableTCPWrapUDP || m_Config->m_VLANEnabled) {
+    for (auto& serverConnections : m_IncomingConnections) {
+      for (auto& connection : serverConnections.second) {
+        if (connection->GetDeleteMe()) continue;
+        if (connection->GetIsUDPTunnel()) {
+          connection->Send(packet);
+        }
+        if (connection->GetIsVLAN()) {
+          // TODO: VLAN
+        }
       }
     }
   }
@@ -1333,6 +1345,27 @@ bool CNet::ResolveHostName(sockaddr_storage& address, const uint8_t acceptFamily
   return false;
 }
 
+CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
+{
+  auto it = m_GameServers.find(inputPort);
+  if (it != m_GameServers.end()) {
+    Print("[TCP] " + name + " Assigned to port " + to_string(inputPort));
+    return it->second;
+  }
+  CTCPServer* gameServer = new CTCPServer(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
+  if (!gameServer->Listen(m_SupportTCPOverIPv6 ? m_Config->m_BindAddress6 : m_Config->m_BindAddress4, inputPort, false)) {
+    Print("[TCP] " + name + " Error listening on port " + to_string(inputPort));
+    return nullptr;
+  }
+  uint16_t assignedPort = gameServer->GetPort();
+  m_GameServers[assignedPort] = gameServer;
+  vector<CGameConnection*> IncomingConnections;
+  m_IncomingConnections[assignedPort] = IncomingConnections;
+
+  Print("[TCP] " + name + " Listening on port " + to_string(assignedPort));
+  return gameServer;
+}
+
 void CNet::FlushDNSCache()
 {
   for (auto& entry : m_IPv4DNSCache) {
@@ -1426,6 +1459,16 @@ CNet::~CNet()
   delete m_UDPIPv6Server;
   delete m_MainBroadcastTarget;
   delete m_ProxyBroadcastTarget;
+
+  for (auto it = m_GameServers.begin(); it != m_GameServers.end(); ++it) {
+    if (it->second != m_VLANServer) {
+      delete it->second;
+    }
+    it = m_GameServers.erase(it);
+  }
+  delete m_VLANServer;
+  m_VLANServer = nullptr;
+
   FlushDNSCache();
   FlushSelfIPCache();
   ResetHealthCheck();
