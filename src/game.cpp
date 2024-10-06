@@ -2778,7 +2778,7 @@ void CGame::SendAllActions()
     m_GameTicks += GetLatency();
   }
 
-  if (GetAnyUsingGProxyLegacy()) {
+  if (GetAnyUsingGProxy()) {
     // we must send empty actions to non-GProxy++ users
     // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
     // empty actions are used to extend the time a user can use when reconnecting
