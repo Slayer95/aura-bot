@@ -892,11 +892,14 @@ string CGame::GetClientFileName() const
 
 int64_t CGame::GetEffectiveGameTicks() const
 {
+  return m_GameTicks;
+  /*
   int64_t effectiveTicks = m_GameTicks - m_PausedTicksDeltaSum;
   if (m_Paused) {
     effectiveTicks -= (GetTicks() - m_LastPausedTicks);
   }
   return effectiveTicks;
+  */
 }
 
 string CGame::GetStatusDescription() const
@@ -2771,7 +2774,9 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGameUser* user, const bool
 
 void CGame::SendAllActions()
 {
-  m_GameTicks += GetLatency();
+  if (!m_Paused) {
+    m_GameTicks += GetLatency();
+  }
 
   if (GetAnyUsingGProxyLegacy()) {
     // we must send empty actions to non-GProxy++ users
