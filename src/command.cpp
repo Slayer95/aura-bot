@@ -5663,6 +5663,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       }
+      if (targetHostName.empty()) {
+        targetName = Payload;
+      }
 
       bool queryAllRealms = targetHostName.empty() || targetHostName == "*";
       const string Message = "/whois " + targetName;
