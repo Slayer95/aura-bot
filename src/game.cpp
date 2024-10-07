@@ -1254,7 +1254,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // end the game if there aren't any users left
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
     if (!m_Exiting) {
-      m_CustomStats->ProcessQueue(true);
+      if (m_CustomStats) m_CustomStats->ProcessQueue(true);
       Print(GetLogPrefix() + "is over (no users left)");
       m_Exiting = true;
     }
