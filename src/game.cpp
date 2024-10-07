@@ -3208,12 +3208,12 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
       // This ensures the integrity of many things related to game slots.
       // e.g. this allows m_ControllersWithMap to remain unchanged.
       uint8_t SID = GetSIDFromUID(user->GetUID());
-      // TODO: Investigate under which circumstances, EventUserDeleted() is called without releasing the SID.
       if (SID >= m_Slots.size()) {
         SID = GetEmptyObserverSID();
-        Print(GetLogPrefix() + "tried to replace observer leaver during countdown, but SID was occupied; fallback to new: " + ToDecString(SID));
+        Print(GetLogPrefix() + "tried to replace observer leaver during countdown, but SID was not found; fallback to new: " + ToDecString(SID));
       } else {
-        Print(GetLogPrefix() + "replaced observer leaver during countdown by fake observer");
+        // TODO: Investigate under which circumstances, EventUserDeleted() is called without releasing the SID.
+        Print(GetLogPrefix() + "replaced observer leaver during countdown by fake observer (SID was NOT released)");
       }
       CreateFakeUserInner(SID, GetNewUID(), "User[" + ToDecString(SID + 1) + "]");
       CGameSlot* slot = GetSlot(SID);

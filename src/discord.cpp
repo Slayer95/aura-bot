@@ -108,6 +108,7 @@ bool CDiscord::Init()
     }
   });
 
+  m_Client->set_websocket_protocol(dpp::websocket_protocol_t::ws_etf);
   try {
     m_Client->start(dpp::st_return);  
   } catch (...) {
@@ -270,4 +271,18 @@ void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool
 bool CDiscord::GetIsSudoer(const uint64_t nIdentifier)
 {
   return m_Config->m_SudoUsers.find(nIdentifier) != m_Config->m_SudoUsers.end();
+}
+
+bool CDiscord::GetIsConnected() const
+{
+#ifndef DISABLE_DPP
+  if (!m_Client) return false;
+  const auto& shards = m_Client->get_shards();
+  for (const auto& shardEntry : shards) {
+    if ((shardEntry.second)->is_connected()) {
+      return true;
+    }
+  }
+#endif
+  return false;
 }

@@ -3875,8 +3875,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_Aura->m_Discord) {
-        //TODO: Support Discord in !status
-        //message += m_Aura->m_DiscordAPI->m_Config->m_ServerName + (m_Aura->m_DiscordAPI->GetConnected() ? " [online]" : " [offline]");
+        message += m_Aura->m_Discord->m_Config->m_HostName + (m_Aura->m_Discord->GetIsConnected() ? " [online]" : " [offline]");
       }
 
       SendReply(message);

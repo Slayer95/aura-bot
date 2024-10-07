@@ -81,8 +81,9 @@ public:
 
   bool GetIsServerAllowed(const uint64_t target) const;
   bool GetIsUserAllowed(const uint64_t target) const;
-  bool GetIsActive() const { return m_Client != nullptr; }
+  bool GetIsEnabled() const { return m_Client != nullptr; }
   bool GetIsSudoer(const uint64_t nIdentifier);
+  bool GetIsConnected() const;
 };
 
 #endif // AURA_DISCORD_H_
