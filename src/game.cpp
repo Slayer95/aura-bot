@@ -4584,7 +4584,7 @@ void CGame::EventUserPongToHost(CGameUser* user)
   // see the Update function for where we send pings
 
   uint32_t LatencyMilliseconds = user->GetOperationalRTT();
-  if (LatencyMilliseconds >= m_Config->m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner()) {
+  if (LatencyMilliseconds >= m_Config->m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner(nullopt)) {
     user->SetHasHighPing(true);
     if (user->GetStoredRTTCount() >= 2) {
       user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
