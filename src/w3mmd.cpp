@@ -546,7 +546,7 @@ bool CW3MMD::ProcessQueue(bool flushAll)
   }
   while (!m_DefQueue.empty()) {
     CW3MMDDefinition* def = m_DefQueue.front();
-    if (!flushAll && gameTicks < def->GetRecvTicks() + MMD_PROCESSING_STREAM_DELAY) {
+    if (!flushAll && gameTicks < def->GetRecvTicks() + MMD_PROCESSING_STREAM_DEF_DELAY) {
       break;
     }
     ProcessDefinition(def);
@@ -558,7 +558,7 @@ bool CW3MMD::ProcessQueue(bool flushAll)
   }
   while (!m_ActionQueue.empty()) {
     CW3MMDAction* action = m_ActionQueue.front();
-    if (!flushAll && gameTicks < action->GetRecvTicks() + MMD_PROCESSING_STREAM_DELAY) {
+    if (!flushAll && gameTicks < action->GetRecvTicks() + MMD_PROCESSING_STREAM_ACTION_DELAY) {
       break;
     }
     ProcessAction(action);
