@@ -4584,7 +4584,7 @@ void CGame::EventUserPongToHost(CGameUser* user)
   // see the Update function for where we send pings
 
   uint32_t LatencyMilliseconds = user->GetOperationalRTT();
-  if (LatencyMilliseconds >= m_Config->m_AutoKickPing) {
+  if (LatencyMilliseconds >= m_Config->m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner()) {
     user->SetHasHighPing(true);
     if (user->GetStoredRTTCount() >= 2) {
       user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
@@ -4601,7 +4601,7 @@ void CGame::EventUserPongToHost(CGameUser* user)
     }
   } else {
     user->SetPingKicked(false);
-    if (!user->GetMapKicked() && user->GetKickQueued()) {
+    if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
       user->ClearKickByTime();
     }
     if (user->GetHasHighPing()) {
@@ -6589,6 +6589,12 @@ void CGame::AddToReserved(const string& name)
       user->SetReserved(true);
       break;
     }
+
+    // Reserved users are never kicked for latency reasons.
+    user->SetPingKicked(false);
+    if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
+      user->ClearKickByTime();
+    }
   }
 }
 
@@ -6830,6 +6836,12 @@ void CGame::SetOwner(const string& name, const string& realm)
   CGameUser* user = GetUserFromName(name, false);
   if (user && user->GetRealmHostName() == realm) {
     user->SetOwner(true);
+
+    // Owner is never kicked for latency reasons.
+    user->SetPingKicked(false);
+    if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
+      user->ClearKickByTime();
+    }
   }
 }
 
