@@ -200,7 +200,7 @@ public:
   bool ProcessAction(CW3MMDAction* nAction);
   bool ProcessQueue(bool flushAll = false);
   std::vector<std::string> TokenizeKey(std::string key) const;
-  std::string GetPlayerName(uint32_t SID) const;
+  std::string GetPlayerName(uint8_t SID) const;
   std::vector<std::string> GetWinners() const;
   std::string GetLogPrefix() const;
   void LogMetaData(int64_t recvTicks, std::string& text) const;

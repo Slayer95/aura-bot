@@ -610,7 +610,7 @@ vector<string> CW3MMD::TokenizeKey(string key) const
   return tokens;
 }
 
-string CW3MMD::GetPlayerName(uint32_t SID) const
+string CW3MMD::GetPlayerName(uint8_t SID) const
 {
   auto nameIterator = m_SIDToName.find(SID);
   if (nameIterator == m_SIDToName.end()) {
