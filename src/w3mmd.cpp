@@ -635,7 +635,7 @@ string CW3MMD::GetLogPrefix() const
   return "[W3MMD: " + m_Game->GetGameName() + "] ";
 }
 
-void CW3MMD::LogMetaData(int64_t gameTicks, string& text) const
+void CW3MMD::LogMetaData(int64_t gameTicks, const string& text) const
 {
   int64_t hours = gameTicks / 3600000;
   gameTicks -= hours * 3600000;

@@ -203,7 +203,7 @@ public:
   std::string GetPlayerName(uint8_t SID) const;
   std::vector<std::string> GetWinners() const;
   std::string GetLogPrefix() const;
-  void LogMetaData(int64_t recvTicks, std::string& text) const;
+  void LogMetaData(int64_t recvTicks, const std::string& text) const;
 };
 
 #endif
