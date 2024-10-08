@@ -4724,6 +4724,13 @@ void CGame::EventGameStarted()
   if (!m_RestoredGame && GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake user.
+
+    // This is an AWFUL hack to please WC3Stats.com parser
+    // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
+    if (m_Map->GetMapType() == "evergreen" && GetNumComputers() > 0) {
+      m_Config->m_LobbyVirtualHostName = "AMAI Insane";
+    }
+
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
       if (CreateFakeObserver(true)) ++m_JoinedVirtualHosts;
     } else {
