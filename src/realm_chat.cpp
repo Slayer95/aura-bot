@@ -61,7 +61,8 @@ CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, co
   }
   if (isProxy) {
     m_ProxySenderCtx = nCtx;
-    m_ProxySenderName = vector<uint8_t>(nCtx->GetSender().begin(), nCtx->GetSender().end());
+    const string& fromName = nCtx->GetSender();
+    m_ProxySenderName = vector<uint8_t>(fromName.begin(), fromName.end());
     m_Realm->m_Aura->HoldContext(nCtx);
   }
 }

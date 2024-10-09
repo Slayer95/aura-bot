@@ -152,7 +152,7 @@ public:
   std::ostream* GetOutputStream() { return m_Output; }
 
   inline bool GetIsWhisper() const { return m_FromWhisper; }
-  inline std::string GetSender() const { return m_FromName; }
+  inline const std::string& GetSender() const { return m_FromName; }
   inline std::string GetChannelName() const { return m_ChannelName; }
   inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
   inline CGame* GetSourceGame() const { return m_SourceGame; }
