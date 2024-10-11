@@ -1503,12 +1503,6 @@ void CAura::CacheMapPresets()
   }
 }
 
-bool CAura::MatchLogLevel(const uint8_t logLevel)
-{
-  // 1: emergency ... 9: trace
-  return logLevel <= m_LogLevel;
-}
-
 void CAura::LogPersistent(const string& logText)
 {
   ofstream writeStream;
