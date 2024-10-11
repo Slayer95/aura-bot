@@ -198,7 +198,8 @@ public:
   bool RecvAction(uint8_t fromUID, CIncomingAction *Action);
   bool ProcessDefinition(CW3MMDDefinition* nDef);
   bool ProcessAction(CW3MMDAction* nAction);
-  bool ProcessQueue(bool flushAll = false);
+  bool UpdateQueue();
+  bool FlushQueue();
   std::vector<std::string> TokenizeKey(std::string key) const;
   std::string GetPlayerName(uint8_t SID) const;
   std::vector<std::string> GetWinners() const;

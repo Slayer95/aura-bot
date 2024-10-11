@@ -60,17 +60,19 @@ CDiscord::CDiscord(CAura* nAura)
 
 CDiscord::~CDiscord()
 {
-  delete m_Config;
-
-#ifndef DISABLE_DPP
-  delete m_Client;
-#endif
   for (auto& ctx : m_Aura->m_ActiveContexts) {
     if (ctx->m_DiscordAPI) {
       ctx->m_DiscordAPI = nullptr;
       ctx->SetPartiallyDestroyed();
     }
   }
+
+  delete m_Config;
+
+#ifndef DISABLE_DPP
+  // NOTE: dpp has a tendency to crash on shutdown
+  delete m_Client;
+#endif
 }
 
 #ifndef DISABLE_DPP

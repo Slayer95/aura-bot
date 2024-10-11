@@ -343,8 +343,13 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
       const bool found = m_SIDToName.find(definition->GetSID()) != m_SIDToName.end();
       if (found) {
         Print(
-          GetLogPrefix() + "overwriting previous name [" + m_SIDToName[definition->GetSID()] +
+          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] " + + " overrode previous name [" + m_SIDToName[definition->GetSID()] +
           "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(definition->GetSID()) + "]"
+        );
+      } else {
+        Print(
+          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] " + + " initialized player ID [" + ToDecString(definition->GetSID()) +
+          "] as [" + definition->GetName() + "]"
         );
       }
       if (!found && m_SIDToName.size() >= m_Game->GetNumControllers()) {
@@ -537,30 +542,46 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
   }
 }
 
-bool CW3MMD::ProcessQueue(bool flushAll)
+bool CW3MMD::UpdateQueue()
 {
   const int64_t gameTicks = m_Game->GetGameTicks();
-  if (!flushAll) {
-    if (m_Game->GetPaused()) return true;
-    if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
-  }
+if (m_Game->GetPaused()) return true;
+if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
   while (!m_DefQueue.empty()) {
     CW3MMDDefinition* def = m_DefQueue.front();
-    if (!flushAll && gameTicks < def->GetRecvTicks() + MMD_PROCESSING_STREAM_DEF_DELAY) {
+    if (gameTicks < def->GetRecvTicks() + MMD_PROCESSING_STREAM_DEF_DELAY) {
       break;
     }
     ProcessDefinition(def);
     delete def;
     m_DefQueue.pop();
   }
-  if (!flushAll && !m_DefQueue.empty()) {
+  if (!m_DefQueue.empty()) {
     return true;
   }
   while (!m_ActionQueue.empty()) {
     CW3MMDAction* action = m_ActionQueue.front();
-    if (!flushAll && gameTicks < action->GetRecvTicks() + MMD_PROCESSING_STREAM_ACTION_DELAY) {
+    if (gameTicks < action->GetRecvTicks() + MMD_PROCESSING_STREAM_ACTION_DELAY) {
       break;
     }
+    ProcessAction(action);
+    delete action;
+    m_ActionQueue.pop();
+  }
+  return !m_GameOver;
+}
+
+bool CW3MMD::FlushQueue()
+{
+  const int64_t gameTicks = m_Game->GetGameTicks();
+  while (!m_DefQueue.empty()) {
+    CW3MMDDefinition* def = m_DefQueue.front();
+    ProcessDefinition(def);
+    delete def;
+    m_DefQueue.pop();
+  }
+  while (!m_ActionQueue.empty()) {
+    CW3MMDAction* action = m_ActionQueue.front();
     ProcessAction(action);
     delete action;
     m_ActionQueue.pop();
@@ -637,16 +658,5 @@ string CW3MMD::GetLogPrefix() const
 
 void CW3MMD::LogMetaData(int64_t gameTicks, const string& text) const
 {
-  int64_t hours = gameTicks / 3600000;
-  gameTicks -= hours * 3600000;
-  int64_t mins = gameTicks / 60000;
-  gameTicks -= mins * 60000;
-  int64_t seconds = gameTicks / 1000;
-  string hh = to_string(hours);
-  string mm = to_string(mins);
-  string ss = to_string(seconds);
-  if (hours < 10) hh = "0" + hh;
-  if (mins < 10) mm = "0" + mm;
-  if (seconds < 10) ss = "0" + ss;
-  Print(GetLogPrefix() + "[" + hh + ":" + mm + ":" + ss + "] " + text);
+  m_Game->Log(text, gameTicks);
 }

@@ -893,7 +893,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&loopBackAddress);
     addr4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr4->sin_port = htons(gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback]"));
+    m_HealthCheckClients.emplace_back(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback]");
   }
 
   if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV6)) {
@@ -903,7 +903,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&loopBackAddress);
     memcpy(&(addr6->sin6_addr), &in6addr_loopback, sizeof(in6_addr));
     addr6->sin6_port = htons(gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback IPv6]"));
+    m_HealthCheckClients.emplace_back(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback IPv6]");
   }
 
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
@@ -939,7 +939,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, selfIPInThisRealm, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, port);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, realm, targetHost, connectionType, realm->GetUniqueDisplayName()));
+    m_HealthCheckClients.emplace_back(m_Aura, realm, targetHost, connectionType, realm->GetUniqueDisplayName());
 
     if (reinterpret_cast<sockaddr_in*>(selfIPInThisRealm)->sin_addr.s_addr == reinterpret_cast<sockaddr_in*>(publicIPv4)->sin_addr.s_addr) {
       anySendsPublicIp = true;
@@ -951,7 +951,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, 0, "[Public IPv4]"));
+    m_HealthCheckClients.emplace_back(m_Aura, nullptr, targetHost, 0, "[Public IPv4]");
   }
   if (publicIPv6 != nullptr && !IN6_IS_ADDR_UNSPECIFIED(&(reinterpret_cast<sockaddr_in6*>(publicIPv6)->sin6_addr)) && (
     (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6))
@@ -959,7 +959,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv6, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, CONNECTION_TYPE_IPV6, "[Public IPv6]"));
+    m_HealthCheckClients.emplace_back(m_Aura, nullptr, targetHost, CONNECTION_TYPE_IPV6, "[Public IPv6]");
   }
 
   if (m_HealthCheckClients.empty()) {

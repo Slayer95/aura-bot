@@ -64,29 +64,30 @@ CGameConfig::CGameConfig(CConfig& CFG)
 {
   const static string emptyString;
 
-  m_VoteKickPercentage        = CFG.GetInt("hosting.vote_kick.min_percent", 70);
+  m_VoteKickPercentage        = CFG.GetUint8("hosting.vote_kick.min_percent", 70);
   m_NumPlayersToStartGameOver = CFG.GetUint8("hosting.game_over.player_count", 1);
   m_MaxPlayersLoopback        = CFG.GetUint8("hosting.ip_filter.max_loopback", 8);
   m_MaxPlayersSameIP          = CFG.GetUint8("hosting.ip_filter.max_same_ip", 8);
   m_PlayersReadyMode          = CFG.GetStringIndex("hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
   m_SaveStats                 = CFG.GetBool("db.game_stats.enabled", true);
-  m_SyncLimit                 = CFG.GetInt("net.start_lag.sync_limit", 32);
-  m_SyncLimitSafe             = CFG.GetInt("net.stop_lag.sync_limit", 8);
+  m_SyncLimit                 = CFG.GetUint32("net.start_lag.sync_limit", 32);
+  m_SyncLimitSafe             = CFG.GetUint32("net.stop_lag.sync_limit", 8);
   m_SyncNormalize             = CFG.GetBool("net.sync_normalization.enabled", true);
   if (m_SyncLimit <= m_SyncLimitSafe) {
     Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
     CFG.SetFailed();
   }
-  m_AutoKickPing              = CFG.GetInt("hosting.high_ping.kick_ms", 250);
-  m_WarnHighPing              = CFG.GetInt("hosting.high_ping.warn_ms", 175);
-  m_SafeHighPing              = CFG.GetInt("hosting.high_ping.safe_ms", 130);
-  m_LobbyTimeout              = CFG.GetInt("hosting.abandoned_lobby.game_expiry_time", 600);
-  m_LobbyOwnerTimeout         = CFG.GetInt("hosting.abandoned_lobby.owner_expiry_time", 120);
-  m_LobbyCountDownInterval    = CFG.GetInt("hosting.game_start.count_down_interval", 500);
-  m_LobbyCountDownStartValue  = CFG.GetInt("hosting.game_start.count_down_ticks", 5);
+  m_AutoKickPing              = CFG.GetUint32("hosting.high_ping.kick_ms", 250);
+  m_WarnHighPing              = CFG.GetUint32("hosting.high_ping.warn_ms", 175);
+  m_SafeHighPing              = CFG.GetUint32("hosting.high_ping.safe_ms", 130);
+  m_LobbyTimeout              = CFG.GetUint32("hosting.abandoned_lobby.game_expiry_time", 600);
+  m_LobbyOwnerTimeout         = CFG.GetUint32("hosting.abandoned_lobby.owner_expiry_time", 120);
+  m_LobbyCountDownInterval    = CFG.GetUint32("hosting.game_start.count_down_interval", 500);
+  m_LobbyCountDownStartValue  = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
   m_Latency                   = CFG.GetUint16("bot.latency", 100);
-  m_PerfThreshold             = CFG.GetInt("bot.perf_limit", 150);
-  m_LacksMapKickDelay         = CFG.GetInt("hosting.map.missing.kick_delay", 60); // default: 1 minute
+  m_PerfThreshold             = CFG.GetUint32("bot.perf_limit", 150);
+  m_LacksMapKickDelay         = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
+  m_LogDelay                  = 1000 * CFG.GetUint32("hosting.log_delay", 180); // default: 3 minutes
 
   m_CheckJoinable             = CFG.GetBool("monitor.hosting.on_start.check_connectivity", false);
   m_ExtraDiscoveryAddresses   = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
@@ -137,6 +138,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT_MAP_OR_CUSTOM(m_Latency, m_Latency, m_LatencyAverage)
   INHERIT(m_PerfThreshold)
   INHERIT(m_LacksMapKickDelay)
+  INHERIT(m_LogDelay)
 
   INHERIT_CUSTOM(m_CheckJoinable, m_CheckJoinable)
   INHERIT(m_ExtraDiscoveryAddresses)

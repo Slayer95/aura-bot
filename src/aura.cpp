@@ -1046,6 +1046,7 @@ bool CAura::Update()
 
   for (auto it = begin(m_Games); it != end(m_Games);) {
     if ((*it)->Update(&fd, &send_fd)) {
+      (*it)->FlushLogs();
       if ((*it)->GetExiting()) {
         Print("[AURA] deleting game [" + (*it)->GetGameName() + "]");
         EventGameDeleted(*it);

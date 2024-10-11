@@ -62,7 +62,7 @@ class CMap;
 class CGameConfig
 {
 public:
-  uint32_t                 m_VoteKickPercentage;         // percentage of players required to vote yes for a votekick to pass
+  uint8_t                  m_VoteKickPercentage;         // percentage of players required to vote yes for a votekick to pass
   uint8_t                  m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
   uint8_t                  m_MaxPlayersLoopback;
   uint8_t                  m_MaxPlayersSameIP;
@@ -75,13 +75,14 @@ public:
   uint32_t                 m_AutoKickPing;               // auto kick players with ping higher than this
   uint32_t                 m_WarnHighPing;               // announce on chat when players have a ping higher than this value
   uint32_t                 m_SafeHighPing;               // when players ping drops below this value, announce they no longer have high ping
-  uint32_t                 m_LobbyTimeout;             // auto close the game lobby after this many minutes without any owner
-  uint32_t                 m_LobbyOwnerTimeout;           // relinquish game ownership after this many minutes
+  uint32_t                 m_LobbyTimeout;               // auto close the game lobby after this many minutes without any owner
+  uint32_t                 m_LobbyOwnerTimeout;          // relinquish game ownership after this many minutes
   uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
   uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
   uint16_t                 m_Latency;                    // the latency (by default)
   uint32_t                 m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;
+  uint32_t                 m_LogDelay;
 
   bool                     m_CheckJoinable;
   std::set<std::string>    m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.

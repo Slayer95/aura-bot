@@ -121,6 +121,20 @@ class CW3MMD;
 class CRealm;
 class CSaveGame;
 
+class CGameLogRecord
+{
+public:
+  int64_t                        m_Ticks;
+  std::string                    m_Text;
+
+  inline int64_t                 GetTicks() const { return m_Ticks; }
+  inline const std::string&      GetText() const { return m_Text; }
+  std::string                    ToString() const;
+
+  CGameLogRecord(int64_t gameTicks, std::string& text);
+  ~CGameLogRecord();
+};
+
 class CGame
 {
 public:
@@ -251,6 +265,8 @@ protected:
   uint16_t                       m_GameDiscoveryInfoVersionOffset;
   uint16_t                       m_GameDiscoveryInfoDynamicOffset;
   std::map<const CGameUser*, std::vector<CGameUser*>>  m_SyncPlayers;     //
+
+  std::queue<CGameLogRecord*>    m_PendingLogs;
   
 
 public:
@@ -398,6 +414,13 @@ public:
   bool Update(void* fd, void* send_fd);
   void UpdatePost(void* send_fd);
 
+  // logging
+  void LogApp(const std::string& logText) const;
+  void Log(const std::string& logText);
+  void Log(const std::string& logText, int64_t gameTicks);
+  void UpdateLogs();
+  void FlushLogs();
+
   // generic functions to send packets to players
 
   void Send(CGameConnection* player, const std::vector<uint8_t>& data) const;
@@ -498,6 +521,7 @@ public:
   uint8_t GetSIDFromUID(uint8_t UID) const;
   CGameUser* GetUserFromUID(uint8_t UID) const;
   CGameUser* GetUserFromSID(uint8_t SID) const;
+  std::string GetUserNameFromUID(uint8_t UID) const;
   CGameUser* GetUserFromName(std::string name, bool sensitive) const;
   bool         HasOwnerSet() const;
   bool         HasOwnerInGame() const;
@@ -586,7 +610,7 @@ public:
 
   std::string GetBannableIP(const std::string& name, const std::string& hostName) const;
   bool GetIsScopeBanned(const std::string& name, const std::string& hostName, const std::string& addressLiteral) const;
-  bool CheckScopeBanned(const std::string& name, const std::string& hostName, const std::string& addressLiteral) const;
+  bool CheckScopeBanned(const std::string& name, const std::string& hostName, const std::string& addressLiteral);
   bool AddScopeBan(const std::string& name, const std::string& hostName, const std::string& addressLiteral);
   bool RemoveScopeBan(const std::string& name, const std::string& hostName);
 
