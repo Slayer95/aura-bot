@@ -90,7 +90,7 @@ public:
   std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason) const;
   std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const uint32_t seconds) const;
-  std::vector<uint8_t> SEND_GPSS_DIMENSIONS() const;
+  std::array<uint8_t, 2> SEND_GPSS_DIMENSIONS() const;
 };
 
 #endif // AURA_GPSPROTOCOL_H_

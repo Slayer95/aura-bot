@@ -952,7 +952,7 @@ void CMap::Load(CConfig* CFG)
     SFileCloseArchive(MapMPQ);
 
   m_ClientMapPath = CFG->GetString("map.path", emptyString);
-  vector<uint8_t> MapContentMismatch = vector<uint8_t>(4, 0);
+  array<uint8_t, 4> MapContentMismatch = {0, 0, 0, 0};
 
   if (CFG->Exists("map.size")) {
     string CFGValue = CFG->GetString("map.size", emptyString);
@@ -966,7 +966,12 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map.size", MapSize);
   }
 
-  m_MapSize = MapSize;
+  if (MapSize.size() != 4) {
+    CFG->SetFailed();
+    m_ErrorMessage = "invalid <map.size> detected";
+  } else {
+    memcpy(m_MapSize.data(), MapSize.data(), 4);
+  }
 
   if (CFG->Exists("map.crc32")) {
     string CFGValue = CFG->GetString("map.crc32", emptyString);
@@ -979,7 +984,12 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map.crc32", MapCRC32);
   }
 
-  m_MapCRC32 = MapCRC32;
+  if (MapCRC32.size() != 4) {
+    CFG->SetFailed();
+    m_ErrorMessage = "invalid <map.crc32> detected";
+  } else {
+    memcpy(m_MapCRC32.data(), MapCRC32.data(), 4);
+  }
 
   if (CFG->Exists("map.weak_hash")) {
     string CFGValue = CFG->GetString("map.weak_hash", emptyString);
@@ -992,7 +1002,12 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map.weak_hash", MapScriptsWeakHash);
   }
 
-  m_MapScriptsWeakHash = MapScriptsWeakHash;
+  if (MapScriptsWeakHash.size() != 4) {
+    CFG->SetFailed();
+    m_ErrorMessage = "invalid <map.weak_hash> detected";
+  } else {
+    memcpy(m_MapScriptsWeakHash.data(), MapScriptsWeakHash.data(), 4);
+  }
 
   if (CFG->Exists("map.sha1")) {
     string CFGValue = CFG->GetString("map.sha1", emptyString);
@@ -1005,13 +1020,16 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map.sha1", MapScriptsSHA1);
   }
 
-  m_MapScriptsSHA1 = MapScriptsSHA1;
+  if (MapScriptsSHA1.size() != 20) {
+    CFG->SetFailed();
+    m_ErrorMessage = "invalid <map.sha1> detected";
+  } else {
+    memcpy(m_MapScriptsSHA1.data(), MapScriptsSHA1.data(), 20);
+  }
 
-  if (!m_MapData.empty()) {
-    m_MapContentMismatch = MapContentMismatch;
-    if (HasMismatch()) {
-      Print("[CACHE] error - map content mismatch");
-    }
+  m_MapContentMismatch = MapContentMismatch;
+  if (!m_MapData.empty() && HasMismatch()) {
+    Print("[CACHE] error - map content mismatch");
   }
 
   m_MapSiteURL   = CFG->GetString("map.site", emptyString);
@@ -1112,10 +1130,24 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Vector("map.width", MapWidth);
   }
 
+  if (MapWidth.size() != 2) {
+    CFG->SetFailed();
+    m_ErrorMessage = "invalid <map.width> detected";
+  } else {
+    memcpy(m_MapWidth.data(), MapWidth.data(), 2);
+  }
+
   if (CFG->Exists("map.height")) {
     MapHeight = ExtractNumbers(CFG->GetString("map.height", emptyString), 2);
   } else {
     CFG->SetUint8Vector("map.height", MapHeight);
+  }
+
+  if (MapHeight.size() != 2) {
+    CFG->SetFailed();
+    m_ErrorMessage = "invalid <map.height> detected";
+  } else {
+    memcpy(m_MapHeight.data(), MapHeight.data(), 2);
   }
 
   if (CFG->Exists("map.editor_version")) {
@@ -1124,8 +1156,6 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint32("map.editor_version", MapEditorVersion);
   }
 
-  m_MapWidth = MapWidth;
-  m_MapHeight = MapHeight;
   m_MapEditorVersion = MapEditorVersion;
   m_MapType = CFG->GetString("map.type", emptyString);
   m_MapMetaDataEnabled = CFG->GetBool("map.meta_data.enabled", m_MapType == "dota" || m_MapType == "evergreen");
@@ -1257,7 +1287,7 @@ void CMap::Load(CConfig* CFG)
 
   if (!CFG->GetSuccess()) {
     m_Valid = false;
-    m_ErrorMessage = "invalid map config file";
+    if (m_ErrorMessage.empty()) m_ErrorMessage = "invalid map config file";
     Print("[MAP] " + m_ErrorMessage);
   } else {
     string ErrorMessage = CheckProblems();
@@ -1282,6 +1312,10 @@ bool CMap::UnlinkFile()
 
 string CMap::CheckProblems()
 {
+  if (!m_Valid) {
+    return m_ErrorMessage;
+  }
+
   if (m_ClientMapPath.empty())
   {
     m_Valid = false;
@@ -1440,18 +1474,6 @@ string CMap::CheckProblems()
   if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && usedTeams.count() <= 1) {
     m_Valid = false;
     m_ErrorMessage = "invalid <map.slot_N> detected";
-    return m_ErrorMessage;
-  }
-
-  if (m_MapWidth.size() != 2) {
-    m_Valid = false;
-    m_ErrorMessage = "invalid <map.width> detected";
-    return m_ErrorMessage;
-  }
-
-  if (m_MapHeight.size() != 2) {
-    m_Valid = false;
-    m_ErrorMessage = "invalid <map.height> detected";
     return m_ErrorMessage;
   }
 

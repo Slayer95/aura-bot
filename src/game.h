@@ -219,7 +219,7 @@ protected:
   std::pair<uint8_t, uint8_t>    m_CustomLayoutData;
   uint16_t                       m_HostPort;                      // the port to host games on
   bool                           m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
-  std::vector<uint8_t>           m_PublicHostAddress;
+  std::array<uint8_t, 4>         m_PublicHostAddress;
   uint16_t                       m_PublicHostPort;
   uint8_t                        m_DisplayMode;                   // game state, public or private
   bool                           m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
@@ -281,7 +281,7 @@ public:
   uint16_t              GetDiscoveryPort(const uint8_t protocol) const;
   bool                  GetUDPEnabled() const;
   inline bool           GetPublicHostOverride() const { return m_PublicHostOverride; }
-  inline std::vector<uint8_t>    GetPublicHostAddress() const { return m_PublicHostAddress; }
+  inline std::array<uint8_t, 4>    GetPublicHostAddress() const { return m_PublicHostAddress; }
   inline uint16_t       GetPublicHostPort() const { return m_PublicHostPort; }
   inline uint8_t        GetDisplayMode() const { return m_DisplayMode; }
   inline uint8_t        GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
@@ -360,10 +360,10 @@ public:
   uint32_t              GetGameType() const;
   uint32_t              GetGameFlags() const;
   std::string           GetSourceFilePath() const;
-  std::vector<uint8_t>  GetSourceFileHash() const;
-  std::vector<uint8_t>  GetSourceFileSHA1() const;
-  std::vector<uint8_t>  GetAnnounceWidth() const;
-  std::vector<uint8_t>  GetAnnounceHeight() const;
+  std::array<uint8_t, 4>  GetSourceFileHash() const;
+  std::array<uint8_t, 20>  GetSourceFileSHA1() const;
+  std::array<uint8_t, 2>  GetAnnounceWidth() const;
+  std::array<uint8_t, 2>  GetAnnounceHeight() const;
 
   std::string           GetLogPrefix() const;
   std::vector<const CGameUser*> GetPlayers() const;

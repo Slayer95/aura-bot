@@ -331,7 +331,7 @@ public:
   std::vector<std::string> GetAlts(const std::string& addressLiteral);
 
   // Games
-  bool GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::vector<uint8_t>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
+  bool GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::array<uint8_t, 4>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
   CDBGameSummary* GameCheck(const uint64_t gameId);
 
   void InitMapData();

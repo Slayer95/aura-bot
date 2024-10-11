@@ -283,7 +283,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     }
   } else {
     SetIsCheckJoinable(false);
-    m_PublicHostAddress = AddressToIPv4Vector(&(nGameSetup->m_RealmsAddress));
+    m_PublicHostAddress = AddressToIPv4Array(&(nGameSetup->m_RealmsAddress));
     m_PublicHostPort = GetAddressPort(&(nGameSetup->m_RealmsAddress));
   }
 
@@ -2542,7 +2542,7 @@ string CGame::GetSourceFilePath() const {
   }
 }
 
-vector<uint8_t> CGame::GetSourceFileHash() const
+array<uint8_t, 4> CGame::GetSourceFileHash() const
 {
   if (m_RestoredGame) {
     return m_RestoredGame->GetSaveHash();
@@ -2551,12 +2551,12 @@ vector<uint8_t> CGame::GetSourceFileHash() const
   }
 }
 
-vector<uint8_t> CGame::GetSourceFileSHA1() const
+array<uint8_t, 20> CGame::GetSourceFileSHA1() const
 {
   return m_Map->GetMapScriptsSHA1();
 }
 
-vector<uint8_t> CGame::GetAnnounceWidth() const
+array<uint8_t, 2> CGame::GetAnnounceWidth() const
 {
   if (GetIsProxyReconnectable()) {
     // use an invalid map width/height to indicate reconnectable games
@@ -2565,7 +2565,7 @@ vector<uint8_t> CGame::GetAnnounceWidth() const
   if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapWidth();
 }
-vector<uint8_t> CGame::GetAnnounceHeight() const
+array<uint8_t, 2> CGame::GetAnnounceHeight() const
 {
   if (GetIsProxyReconnectable()) {
     // use an invalid map width/height to indicate reconnectable games
@@ -2580,7 +2580,7 @@ void CGame::SendVirtualHostPlayerInfo(CGameConnection* user) const
   if (m_VirtualHostUID == 0xFF)
     return;
 
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
   Send(user, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
@@ -2590,7 +2590,7 @@ void CGame::SendVirtualHostPlayerInfo(CGameUser* user) const
   if (m_VirtualHostUID == 0xFF)
     return;
 
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
   Send(user, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
@@ -2600,7 +2600,7 @@ void CGame::SendFakeUsersInfo(CGameConnection* user) const
   if (m_FakeUsers.empty())
     return;
 
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
   for (const uint16_t fakePlayer : m_FakeUsers) {
     // The higher 8 bytes are the original SID the user was created at.
@@ -2614,7 +2614,7 @@ void CGame::SendFakeUsersInfo(CGameUser* user) const
   if (m_FakeUsers.empty())
     return;
 
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
   for (const uint16_t fakePlayer : m_FakeUsers) {
     // The higher 8 bytes are the original SID the user was created at.
@@ -6378,17 +6378,17 @@ void CGame::SetSlotTeamAndColorAuto(const uint8_t SID)
       uint8_t otherTeam = m_Map->GetVersionMaxSlots();
       uint8_t numSkipped = 0;
       for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-        const CGameSlot* slot = InspectSlot(i);
-        if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+        const CGameSlot* otherSlot = InspectSlot(i);
+        if (otherSlot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
           if (i < SID) ++numSkipped;
           continue;
         }
-        if (slot->GetTeam() == m_Map->GetVersionMaxSlots()) {
+        if (otherSlot->GetTeam() == m_Map->GetVersionMaxSlots()) {
           if (i < SID) ++numSkipped;
         } else if (otherTeam != m_Map->GetVersionMaxSlots()) {
           otherTeamError = true;
         } else {
-          otherTeam = slot->GetTeam();
+          otherTeam = otherSlot->GetTeam();
         }
       }
       if (m_Map->GetMapNumControllers() == 2 && !otherTeamError && otherTeam < 2) {
@@ -7600,7 +7600,7 @@ bool CGame::CreateVirtualHost()
 
   m_VirtualHostUID = GetNewUID();
 
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
   // When this message is sent because an slot is made available by a leaving user,
   // we gotta ensure that the virtual host join message is sent after the user's leave message.
@@ -7645,7 +7645,7 @@ uint8_t CGame::FindFakeUserFromSID(const uint8_t SID) const
 void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const string& name)
 {
   const bool isCustomForces = GetIsCustomForces();
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
+  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
   SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(UID, name, IP, IP));
   m_Slots[SID] = CGameSlot(
     m_Slots[SID].GetType(),

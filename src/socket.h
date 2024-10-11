@@ -345,16 +345,16 @@ inline bool GetSameAddresses(const sockaddr_storage* reference, const sockaddr_s
   }
 }
 
-inline std::vector<uint8_t> AddressToIPv4Vector(const sockaddr_storage* address) {
+inline std::array<uint8_t, 4> AddressToIPv4Array(const sockaddr_storage* address) {
   if (address->ss_family == AF_INET) {
-    std::vector<uint8_t> ipBytes(4);
+    std::array<uint8_t, 4> ipBytes;
     const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(address);
     memcpy(ipBytes.data(), &(addr4->sin_addr.s_addr), 4);
     return ipBytes;
   } else if (address->ss_family == AF_INET6) {
     const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(address);
     if (isIPv4MappedAddress(addr6)) {
-      std::vector<uint8_t> ipBytes(4);
+      std::array<uint8_t, 4> ipBytes;
       const in_addr* addr4 = reinterpret_cast<const in_addr*>(addr6->sin6_addr.s6_addr + 12);
       memcpy(ipBytes.data(), &(addr4->s_addr), 4);
       return ipBytes;
@@ -384,14 +384,14 @@ public:
   CSocket(const uint8_t nFamily, std::string nName);
   ~CSocket();
 
-  std::string                 GetErrorString() const;
-  std::string                 GetName() const;
-  inline uint16_t             GetPort() const { return m_Port; }
-  inline std::vector<uint8_t> GetPortLE() const { return CreateByteArray(m_Port, false); }
-  inline std::vector<uint8_t> GetPortBE() const { return CreateByteArray(m_Port, true); } // Network-byte-order
-  inline int32_t              GetError() const { return m_Error; }
-  inline bool                 HasError() const { return m_HasError; }
-  inline bool                 HasFin() const { return m_HasFin; }
+  std::string                     GetErrorString() const;
+  std::string                     GetName() const;
+  inline uint16_t                 GetPort() const { return m_Port; }
+  inline std::array<uint8_t, 2>   GetPortLE() const { return CreateFixedByteArray(m_Port, false); }
+  inline std::array<uint8_t, 2>   GetPortBE() const { return CreateFixedByteArray(m_Port, true); } // Network-byte-order
+  inline int32_t                  GetError() const { return m_Error; }
+  inline bool                     HasError() const { return m_HasError; }
+  inline bool                     HasFin() const { return m_HasFin; }
 
   inline ADDRESS_LENGTH_TYPE  GetAddressLength() const {
     if (m_Family == AF_INET6)
@@ -434,7 +434,7 @@ public:
   inline bool                       GetIsInnerIPv4() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET; }
   inline bool                       GetIsInnerIPv6() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET6; }
 
-  inline std::vector<uint8_t>       GetIPv4() const { return AddressToIPv4Vector(&m_RemoteHost); }
+  inline std::array<uint8_t, 4>     GetIPv4() const { return AddressToIPv4Array(&m_RemoteHost); }
   inline std::string                GetIPString() const { return AddressToString(m_RemoteHost); }
   inline std::string                GetIPStringStrict() const { return AddressToStringStrict(m_RemoteHost); }
   inline bool GetIsLoopback() const { return isLoopbackAddress(&m_RemoteHost); }
