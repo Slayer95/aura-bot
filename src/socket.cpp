@@ -97,6 +97,7 @@ CSocket::~CSocket()
   if (m_Socket != INVALID_SOCKET) {
     Print("Closing socket " + m_Name + "...");
     closesocket(m_Socket);
+    m_Socket = INVALID_SOCKET;
     Print("Closed socket " + m_Name + ".");
   }
 }
@@ -220,8 +221,9 @@ void CSocket::Allocate(const uint8_t family, int type)
 
 void CSocket::Reset()
 {
-  if (m_Socket != INVALID_SOCKET)
+  if (m_Socket != INVALID_SOCKET) {
     closesocket(m_Socket);
+  }
 
   m_Socket = INVALID_SOCKET;
   m_HasError = false;
