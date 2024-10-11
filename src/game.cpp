@@ -76,7 +76,7 @@ using namespace std;
 // CGameLogRecord
 //
 
-CGameLogRecord::CGameLogRecord(int64_t gameTicks, string& text)
+CGameLogRecord::CGameLogRecord(int64_t gameTicks, string text)
   : m_Ticks(gameTicks),
     m_Text(move(text))
 {
@@ -1575,7 +1575,7 @@ void CGame::Log(const string& logText)
 
 void CGame::Log(const string& logText, int64_t gameTicks)
 {
-  m_PendingLogs.emplace(gameTicks, logText);
+  m_PendingLogs.push(new CGameLogRecord(gameTicks, logText));
 }
 
 void CGame::UpdateLogs()
@@ -4937,12 +4937,12 @@ void CGame::EventGameStarted()
 
   for (auto& user : m_Users) {
     uint8_t SID = GetSIDFromUID(user->GetUID());
-    m_DBGamePlayers.emplace_back(
+    m_DBGamePlayers.push_back(new CDBGamePlayer(
       user->GetName(),
       user->GetRealmHostName(),
       user->GetIPStringStrict(),
       m_Slots[SID].GetColor()
-    );
+    ));
   }
 
   for (auto& user : m_Users) {
@@ -5060,7 +5060,7 @@ void CGame::UpdateBannableUsers()
   // so we create a "potential ban" for each user and only store it in the database if requested to by an admin
 
   for (auto& user : m_Users) {
-    m_Bannables.emplace_back(
+    m_Bannables.push_back(new CDBBan(
       user->GetName(),
       user->GetRealmDataBaseID(false),
       string(), // auth server
@@ -5070,7 +5070,7 @@ void CGame::UpdateBannableUsers()
       false, // temporary ban (permanent == false)
       string(), // moderator
       string() // reason
-    );
+    ));
   }
 }
 
@@ -6870,7 +6870,7 @@ bool CGame::AddScopeBan(const string& rawName, const string& hostName, const str
 {
   string name = ToLowerCase(rawName);
 
-  m_ScopeBans.emplace_back(
+  m_ScopeBans.push_back(new CDBBan(
     name,
     hostName,
     string(), // auth server
@@ -6880,7 +6880,7 @@ bool CGame::AddScopeBan(const string& rawName, const string& hostName, const str
     false, // temporary ban (permanent == false)
     string(), // moderator
     string() // reason
-  );
+  ));
   return true;
 }
 
@@ -7407,7 +7407,7 @@ bool CGame::Pause(CGameUser* user, const bool isDisconnect)
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_PAUSE);
-  m_Actions.emplace(UID, CRC, Action);
+  m_Actions.push(new CIncomingAction(UID, CRC, Action));
   m_Paused = true;
   m_LastPausedTicks = GetTicks();
   return true;
@@ -7420,7 +7420,7 @@ bool CGame::Resume()
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_RESUME);
-  m_Actions.emplace(UID, CRC, Action);
+  m_Actions.push(new CIncomingAction(UID, CRC, Action));
   m_Paused = false;
   return true;
 }
@@ -7453,13 +7453,13 @@ bool CGame::Save(CGameUser* user, const bool isDisconnect)
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE);
     AppendByteArray(Action, fileName);
-    m_Actions.emplace(UID, CRC, Action);
+    m_Actions.push(new CIncomingAction(UID, CRC, Action));
   }
 
   for (const auto& fakePlayer : m_FakeUsers) {
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    m_Actions.emplace(static_cast<uint8_t>(fakePlayer), CRC, Action);
+    m_Actions.push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
   }
 
   return true;
@@ -7533,7 +7533,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> CRC, Action;
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
-  m_Actions.emplace(UID, CRC, Action);
+  m_Actions.push(new CIncomingAction(UID, CRC, Action));
   return true;
 }
 

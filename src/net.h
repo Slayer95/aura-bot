@@ -97,7 +97,7 @@ struct UDPPkt;
 class CGameTestConnection
 {
 public:
-  CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const std::string nName);
+  CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const std::string& nName);
   ~CGameTestConnection();
 
   uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);

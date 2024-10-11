@@ -118,6 +118,7 @@ public:
   ~CW3MMDAction();
 
   inline int64_t GetRecvTicks() { return m_Ticks; }
+  inline uint32_t GetUpdateID() { return m_UpdateID; }
 
   inline uint8_t GetType() { return m_Type; }
   inline uint8_t GetSubType() { return m_SubType; }
@@ -150,6 +151,7 @@ public:
   ~CW3MMDDefinition();
 
   inline int64_t GetRecvTicks() { return m_Ticks; }
+  inline uint32_t GetUpdateID() { return m_UpdateID; }
 
   inline uint8_t GetType() { return m_Type; }
   inline uint8_t GetSubType() { return m_SubType; }
@@ -172,8 +174,8 @@ private:
   bool                                            m_GameOver;
   bool                                            m_Error;
   uint32_t                                        m_Version;
-  uint32_t                                        m_NextValueID;
-  uint32_t                                        m_NextCheckID;
+  uint32_t                                        m_LastValueID;
+  //uint32_t                                      m_NextCheckID;
   std::map<uint8_t, std::string>                  m_SIDToName;           // pid -> player name (e.g. 0 -> "Varlock") --- note: will not be automatically converted to lower case
   std::map<uint8_t, uint8_t>                      m_Flags;               // pid -> flag (e.g. 0 -> MMD_RESULT_WINNER)
   std::map<uint8_t, bool>                         m_FlagsLeaver;         // pid -> leaver flag (e.g. 0 -> true) --- note: will only be present if true

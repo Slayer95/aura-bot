@@ -93,8 +93,8 @@ CW3MMD::CW3MMD(CGame *nGame)
     m_GameOver(false),
     m_Error(false),
     m_Version(0),
-    m_NextValueID(0),
-    m_NextCheckID(0)
+    m_LastValueID(0)
+    //m_NextCheckID(0)
 {
   m_ResultVerbs[MMD_RESULT_LOSER] = "lost";
   m_ResultVerbs[MMD_RESULT_DRAWER] = "drew";
@@ -302,14 +302,15 @@ bool CW3MMD::RecvAction(uint8_t fromUID, CIncomingAction *Action)
               if (!ValueID.has_value() || !HandleTokens(fromUID, ValueID.value(), Tokens)) {
                 Print(GetLogPrefix() + "error parsing [" + KeyString + "]");
               }
-              ++m_NextValueID;
             } else if (MissionKeyString.size() > 4 && MissionKeyString.substr(0, 4) == "chk:") {
+              /*
               string CheckIDString = MissionKeyString.substr(4);
               optional<uint32_t> CheckID = ToUint32(CheckIDString);
 
               // todotodo: cheat detection
 
                ++m_NextCheckID;
+               */
             } else {
               Print(GetLogPrefix() + "unknown mission key [" + MissionKeyString + "] found, ignoring");
             }
@@ -545,14 +546,17 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
 bool CW3MMD::UpdateQueue()
 {
   const int64_t gameTicks = m_Game->GetGameTicks();
-if (m_Game->GetPaused()) return true;
-if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
+  if (m_Game->GetPaused()) return true;
+  if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
   while (!m_DefQueue.empty()) {
     CW3MMDDefinition* def = m_DefQueue.front();
     if (gameTicks < def->GetRecvTicks() + MMD_PROCESSING_STREAM_DEF_DELAY) {
       break;
     }
     ProcessDefinition(def);
+    if (def->GetUpdateID() > m_LastValueID) {
+      m_LastValueID = def->GetUpdateID();
+    }
     delete def;
     m_DefQueue.pop();
   }
@@ -565,6 +569,9 @@ if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
       break;
     }
     ProcessAction(action);
+    if (action->GetUpdateID() > m_LastValueID) {
+      m_LastValueID = action->GetUpdateID();
+    }
     delete action;
     m_ActionQueue.pop();
   }

@@ -131,7 +131,7 @@ public:
   inline const std::string&      GetText() const { return m_Text; }
   std::string                    ToString() const;
 
-  CGameLogRecord(int64_t gameTicks, std::string& text);
+  CGameLogRecord(int64_t gameTicks, std::string text);
   ~CGameLogRecord();
 };
 
