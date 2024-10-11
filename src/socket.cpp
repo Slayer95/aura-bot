@@ -94,8 +94,11 @@ CSocket::CSocket(const uint8_t nFamily, string nName)
 
 CSocket::~CSocket()
 {
-  if (m_Socket != INVALID_SOCKET)
+  if (m_Socket != INVALID_SOCKET) {
+    Print("Closing socket " + m_Name + "...");
     closesocket(m_Socket);
+    Print("Closed socket " + m_Name + ".");
+  }
 }
 
 string CSocket::GetName() const
