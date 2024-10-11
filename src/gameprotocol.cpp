@@ -95,8 +95,7 @@ CIncomingJoinRequest* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint
     const std::vector<uint8_t> RawName     = ExtractCString(data, 19);
 
     if (!RawName.empty() && data.size() >= RawName.size() + 30) {
-      std::array<uint8_t, 4> InternalIP;
-      memcpy(InternalIP.data(), data.data() + RawName.size() + 26, 4);
+      const std::vector<uint8_t> InternalIP = std::vector<uint8_t>(begin(data) + RawName.size() + 26, begin(data) + RawName.size() + 30);
       return new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP);
     }
   }
@@ -307,26 +306,31 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REQJOIN(const uint32_t HostCounter
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::array<uint8_t, 2>& port, const std::array<uint8_t, 4>& externalIP, const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::vector<uint8_t>& port, const std::vector<uint8_t>& externalIP, const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
 {
   std::vector<uint8_t> packet;
 
-  const uint8_t              Zeros[]  = {0, 0, 0, 0};
-  const std::vector<uint8_t> SlotInfo = EncodeSlotInfo(slots, randomSeed, layoutStyle, playerSlots);
-  packet.push_back(W3GS_HEADER_CONSTANT);                    // W3GS header constant
-  packet.push_back(W3GS_SLOTINFOJOIN);                       // W3GS_SLOTINFOJOIN
-  packet.push_back(0);                                       // packet length will be assigned later
-  packet.push_back(0);                                       // packet length will be assigned later
-  AppendByteArray(packet, static_cast<uint16_t>(SlotInfo.size()), false); // SlotInfo length
-  AppendByteArrayFast(packet, SlotInfo);                     // SlotInfo
-  packet.push_back(UID);                                     // UID
-  packet.push_back(2);                                       // AF_INET
-  packet.push_back(0);                                       // AF_INET continued...
-  AppendByteArray(packet, port);                             // port
-  AppendByteArrayFast(packet, externalIP);                   // external IP
-  AppendByteArray(packet, Zeros, 4);                         // ???
-  AppendByteArray(packet, Zeros, 4);                         // ???
-  AssignLength(packet);
+  if (port.size() == 2 && externalIP.size() == 4)
+  {
+    const uint8_t              Zeros[]  = {0, 0, 0, 0};
+    const std::vector<uint8_t> SlotInfo = EncodeSlotInfo(slots, randomSeed, layoutStyle, playerSlots);
+    packet.push_back(W3GS_HEADER_CONSTANT);                    // W3GS header constant
+    packet.push_back(W3GS_SLOTINFOJOIN);                       // W3GS_SLOTINFOJOIN
+    packet.push_back(0);                                       // packet length will be assigned later
+    packet.push_back(0);                                       // packet length will be assigned later
+    AppendByteArray(packet, static_cast<uint16_t>(SlotInfo.size()), false); // SlotInfo length
+    AppendByteArrayFast(packet, SlotInfo);                     // SlotInfo
+    packet.push_back(UID);                                     // UID
+    packet.push_back(2);                                       // AF_INET
+    packet.push_back(0);                                       // AF_INET continued...
+    AppendByteArray(packet, port);                             // port
+    AppendByteArrayFast(packet, externalIP);                   // external IP
+    AppendByteArray(packet, Zeros, 4);                         // ???
+    AppendByteArray(packet, Zeros, 4);                         // ???
+    AssignLength(packet);
+  }
+  else
+    Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_SLOTINFOJOIN");
 
   return packet;
 }
@@ -338,10 +342,15 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_REJECTJOIN(uint32_t reason)
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t UID, const string& name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_PLAYERINFO(uint8_t UID, const string& name, const std::vector<uint8_t>& externalIP, const std::vector<uint8_t>& internalIP)
 {
   if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
     Print("[GAMEPROTO] Invalid player name");
+    return std::vector<uint8_t>();
+  }
+
+  if (externalIP.size() != 4 || internalIP.size() != 4) {
+    Print("[GAMEPROTO] Invalid IPv4");
     return std::vector<uint8_t>();
   }
 
@@ -594,10 +603,18 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO(const uint8_t war3Version
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
 {
+  if (mapWidth.size() != 2 || mapHeight.size() != 2) {
+    Print("[GAMEPROTO] invalid dimensions passed to SEND_W3GS_GAMEINFO");
+    return std::vector<uint8_t>();
+  }
   if (gameName.empty() || hostName.empty() || mapPath.empty()) {
     Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
+    return std::vector<uint8_t>();
+  }
+  if (mapHash.size() != 4) {
+    Print("[GAMEPROTO] invalid map hash passed to SEND_W3GS_GAMEINFO: " + ByteArrayToDecString(mapHash));
     return std::vector<uint8_t>();
   }
 
@@ -666,37 +683,39 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_DECREATEGAME(const uint32_t hostCo
   return packet;
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapHash)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash)
 {
-  if (mapPath.empty()) {
-    Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
-    return std::vector<uint8_t>();  
+  if (!mapPath.empty() && mapSize.size() == 4 && mapCRC32.size() == 4 && mapHash.size() == 4)
+  {
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
+    AppendByteArrayFast(packet, mapPath); // map path
+    AppendByteArrayFast(packet, mapSize); // map size
+    AppendByteArrayFast(packet, mapCRC32); // map info
+    AppendByteArrayFast(packet, mapHash);  // map crc
+    AssignLength(packet);
+    return packet;
   }
 
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
-  AppendByteArrayFast(packet, mapPath); // map path
-  AppendByteArrayFast(packet, mapSize); // map size
-  AppendByteArrayFast(packet, mapCRC32); // map info
-  AppendByteArrayFast(packet, mapHash);  // map crc
-  AssignLength(packet);
-  return packet;
+  Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
+  return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapHash, const std::array<uint8_t, 20>& mapSHA1)
+std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPCHECK(const string& mapPath, const std::vector<uint8_t>& mapSize, const std::vector<uint8_t>& mapCRC32, const std::vector<uint8_t>& mapHash, const std::vector<uint8_t>& mapSHA1)
 {
-  if (mapPath.empty()) {
-    Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
-    return std::vector<uint8_t>();  
+  if (!mapPath.empty() && mapSize.size() == 4 && mapCRC32.size() == 4 && mapHash.size() == 4 && mapSHA1.size() == 20)
+  {
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
+    AppendByteArrayFast(packet, mapPath); // map path
+    AppendByteArrayFast(packet, mapSize); // map size
+    AppendByteArrayFast(packet, mapCRC32); // map info
+    AppendByteArrayFast(packet, mapHash);  // map crc
+    AppendByteArrayFast(packet, mapSHA1); // map sha1
+    AssignLength(packet);
+    return packet;
   }
 
-  std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
-  AppendByteArrayFast(packet, mapPath); // map path
-  AppendByteArrayFast(packet, mapSize); // map size
-  AppendByteArrayFast(packet, mapCRC32); // map info
-  AppendByteArrayFast(packet, mapHash);  // map crc
-  AppendByteArrayFast(packet, mapSHA1); // map sha1
-  AssignLength(packet);
-  return packet;
+  Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
+  return std::vector<uint8_t>();
 }
 
 std::vector<uint8_t> CGameProtocol::SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID)
@@ -798,7 +817,7 @@ std::vector<uint8_t> CGameProtocol::EncodeSlotInfo(const vector<CGameSlot>& slot
 // CIncomingJoinRequest
 //
 
-CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::array<uint8_t, 4> nIPv4Internal)
+CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::vector<uint8_t> nIPv4Internal)
   : m_Name(std::move(nName)),
     m_IPv4Internal(std::move(nIPv4Internal)),
     m_HostCounter(nHostCounter),

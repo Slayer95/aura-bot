@@ -48,7 +48,7 @@ private:
 	std::string m_ClientPath;
 	std::filesystem::path m_ServerPath;
 	std::vector<CGameSlot> m_Slots;
-	std::array<uint8_t, 4> m_SaveHash;
+	std::vector<uint8_t> m_SaveHash;
 
 public:
 	CSaveGame(CAura* nAura, const std::filesystem::path& fromPath);
@@ -62,7 +62,7 @@ public:
   uint8_t GetNumHumanSlots() const;
 	const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
 	uint32_t GetRandomSeed() const { return m_RandomSeed; }
-	const std::array<uint8_t, 4>& GetSaveHash()	const { return m_SaveHash; }
+	const std::vector<uint8_t>& GetSaveHash()	const { return m_SaveHash; }
   const CGameSlot* InspectSlot(const uint8_t SID) const;
   bool Load();
   void Unload();

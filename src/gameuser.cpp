@@ -286,7 +286,7 @@ void CGameConnection::Send(const std::vector<uint8_t>& data) const
 // CGameUser
 //
 
-CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
+CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::vector<uint8_t> nInternalIP, bool nReserved)
   : m_Protocol(connection->m_Protocol),
     m_Game(nGame),
     m_Socket(connection->GetSocket()),

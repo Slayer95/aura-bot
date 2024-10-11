@@ -117,7 +117,7 @@ public:
 
   std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
   std::set<uint8_t> GetUint8Set(const std::string& key, char separator, const std::set<uint8_t> x);
-  std::vector<uint8_t> GetIPv4(const std::string& key, const std::array<uint8_t, 4>& x);
+  std::vector<uint8_t> GetIPv4(const std::string& key, const std::vector<uint8_t>& x);
   std::set<std::string> GetIPStringSet(const std::string& key, char separator, const std::set<std::string> x);
 
   std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);

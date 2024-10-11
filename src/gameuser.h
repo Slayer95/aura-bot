@@ -101,18 +101,18 @@ public:
   CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
   ~CGameConnection();
 
-  inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
-  inline bool                       GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
-  inline std::array<uint8_t, 4>     GetIPv4() const { return m_Socket->GetIPv4(); }
-  inline std::string                GetIPString() const { return m_Socket->GetIPString(); }
-  inline std::string                GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
-  inline sockaddr_storage*          GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
-  inline bool                       GetIsUDPTunnel() const { return m_Type == INCOMING_CONNECTION_TYPE_UDP_TUNNEL; }
-  inline bool                       GetIsVLAN() const { return m_Type == INCOMING_CONNECTION_TYPE_VLAN; }
-  inline uint8_t                    GetType() const { return m_Type; }
-  inline uint16_t                   GetPort() const { return m_Port; }
-  inline bool                       GetDeleteMe() const { return m_DeleteMe; }
-  inline CIncomingJoinRequest*      GetJoinPlayer() const { return m_IncomingJoinPlayer; }
+  inline CStreamIOSocket*          GetSocket() const { return m_Socket; }
+  inline bool                 GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
+  inline std::vector<uint8_t> GetIPv4() const { return m_Socket->GetIPv4(); }
+  inline std::string          GetIPString() const { return m_Socket->GetIPString(); }
+  inline std::string          GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
+  inline sockaddr_storage*    GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
+  inline bool                 GetIsUDPTunnel() const { return m_Type == INCOMING_CONNECTION_TYPE_UDP_TUNNEL; }
+  inline bool                 GetIsVLAN() const { return m_Type == INCOMING_CONNECTION_TYPE_VLAN; }
+  inline uint8_t              GetType() const { return m_Type; }
+  inline uint16_t             GetPort() const { return m_Port; }
+  inline bool                 GetDeleteMe() const { return m_DeleteMe; }
+  inline CIncomingJoinRequest* GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetType(const uint8_t nType) { m_Type = nType; }
@@ -143,7 +143,7 @@ protected:
   CStreamIOSocket* m_Socket; // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
 
 private:
-  std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
+  std::vector<uint8_t>             m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
   std::vector<uint32_t>            m_RTTValues;                        // store the last few (10) pings received so we can take an average
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
   std::queue<std::vector<uint8_t>> m_GProxyBuffer;                 // buffer with data used with GProxy++
@@ -224,37 +224,37 @@ protected:
   bool m_DeleteMe;
 
 public:
-  CGameUser(CGame* game, CGameConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
+  CGameUser(CGame* game, CGameConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::vector<uint8_t> nInternalIP, bool nReserved);
   ~CGameUser();
 
   uint32_t GetOperationalRTT() const;
   uint32_t GetDisplayRTT() const;
   uint32_t GetRTT() const;
-  inline CStreamIOSocket*         GetSocket() const { return m_Socket; }
-  inline bool                     GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
-  inline std::array<uint8_t, 4>   GetIPv4() const { return m_Socket->GetIPv4(); }
-  inline std::string              GetIPString() const { return m_Socket->GetIPString(); }
-  inline std::string              GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
-  inline bool                     GetIsReady() const { return m_Ready; }
-  inline bool                     GetDeleteMe() const { return m_DeleteMe; }
-  inline uint8_t                  GetUID() const { return m_UID; }
-  inline std::string              GetName() const { return m_Name; }
-  std::string                     GetLowerName() const;
-  std::string                     GetDisplayName() const;
-  inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
-  inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
-  inline uint32_t                 GetPongCounter() const { return m_PongCounter; }
-  inline size_t                   GetNumCheckSums() const { return m_CheckSums.size(); }
-  inline std::queue<uint32_t>*    GetCheckSums() { return &m_CheckSums; }
-  inline bool                     HasCheckSums() const { return !m_CheckSums.empty(); }
-  inline std::string              GetLeftReason() const { return m_LeftReason; }
-  inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
-  inline bool                     GetQuitGame() const { return m_QuitGame; }
-  CRealm*                         GetRealm(bool mustVerify) const;
-  std::string                     GetRealmDataBaseID(bool mustVerify) const;
-  inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
-  inline std::string              GetRealmHostName() const { return m_RealmHostName; }
-  inline std::string              GetExtendedName() const {
+  inline CStreamIOSocket*      GetSocket() const { return m_Socket; }
+  inline bool                  GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
+  inline std::vector<uint8_t>  GetIPv4() const { return m_Socket->GetIPv4(); }
+  inline std::string           GetIPString() const { return m_Socket->GetIPString(); }
+  inline std::string           GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
+  inline bool                  GetIsReady() const { return m_Ready; }
+  inline bool                  GetDeleteMe() const { return m_DeleteMe; }
+  inline uint8_t               GetUID() const { return m_UID; }
+  inline std::string           GetName() const { return m_Name; }
+  std::string                  GetLowerName() const;
+  std::string                  GetDisplayName() const;
+  inline std::vector<uint8_t>  GetIPv4Internal() const { return m_IPv4Internal; }
+  inline size_t                GetStoredRTTCount() const { return m_RTTValues.size(); }
+  inline uint32_t              GetPongCounter() const { return m_PongCounter; }
+  inline size_t                GetNumCheckSums() const { return m_CheckSums.size(); }
+  inline std::queue<uint32_t>* GetCheckSums() { return &m_CheckSums; }
+  inline bool                  HasCheckSums() const { return !m_CheckSums.empty(); }
+  inline std::string           GetLeftReason() const { return m_LeftReason; }
+  inline uint32_t              GetLeftCode() const { return m_LeftCode; }
+  inline bool                  GetQuitGame() const { return m_QuitGame; }
+  CRealm*                      GetRealm(bool mustVerify) const;
+  std::string                  GetRealmDataBaseID(bool mustVerify) const;
+  inline uint32_t              GetRealmInternalID() const { return m_RealmInternalId; }
+  inline std::string           GetRealmHostName() const { return m_RealmHostName; }
+  inline std::string           GetExtendedName() const {
     if (m_RealmHostName.empty()) {
       return m_Name + "@@@LAN/VPN";
     } else {

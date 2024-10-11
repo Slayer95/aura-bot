@@ -566,17 +566,17 @@ set<uint8_t> CConfig::GetUint8Set(const string& key, char separator, const std::
   END(Output)
 }
 
-vector<uint8_t> CConfig::GetIPv4(const string& key, const array<uint8_t, 4> &x)
+vector<uint8_t> CConfig::GetIPv4(const string& key, const vector<uint8_t> &x)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
-    SUCCESS(vector<uint8_t>(x.begin(), x.end()))
+    SUCCESS(x)
   }
 
   vector<uint8_t> Output = ExtractIPv4(it->second);
   if (Output.empty()) {
-    CONFIG_ERROR(key, vector<uint8_t>(x.begin(), x.end()))
+    CONFIG_ERROR(key, x)
   }
 
   SUCCESS(Output)

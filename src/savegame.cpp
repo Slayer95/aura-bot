@@ -121,7 +121,7 @@ bool CSaveGame::Parse()
 		return false;
 	}
 
-	m_SaveHash = CreateFixedByteArray(SaveHash, false);
+	m_SaveHash = CreateByteArray(SaveHash, false);
   m_Valid = true;
   return m_Valid;
 }

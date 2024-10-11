@@ -973,7 +973,7 @@ void CRealm::SendNetworkConfig()
     } else if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
       port = m_Aura->m_CurrentLobby->GetHostPort();
     }
-    SendAuth(m_Protocol->SEND_SID_PUBLICHOST(AddressToIPv4Array(&(m_Config->m_PublicHostAddress)), port));
+    SendAuth(m_Protocol->SEND_SID_PUBLICHOST(AddressToIPv4Vector(&(m_Config->m_PublicHostAddress)), port));
     m_GamePort = port;
   } else if (m_Config->m_EnableCustomPort) {
     SendAuth(m_Protocol->SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort));
