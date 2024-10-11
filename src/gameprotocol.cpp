@@ -818,7 +818,7 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
 
 CIncomingJoinRequest::~CIncomingJoinRequest() = default;
 
-CIncomingJoinRequest::CensorName(const std::string& originalName)
+string CIncomingJoinRequest::CensorName(std::string& originalName)
 {
   string name = originalName;
 
