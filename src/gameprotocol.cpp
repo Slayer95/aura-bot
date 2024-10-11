@@ -43,6 +43,7 @@
 
  */
 
+#include <algorithm>
 #include <utility>
 
 #include "gameprotocol.h"
@@ -95,8 +96,8 @@ CIncomingJoinRequest* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint
     const std::vector<uint8_t> RawName     = ExtractCString(data, 19);
 
     if (!RawName.empty() && data.size() >= RawName.size() + 30) {
-      std::array<uint8_t, 4> InternalIP;
-      memcpy(InternalIP.data(), data.data() + RawName.size() + 26, 4);
+      std::array<uint8_t, 4> InternalIP = {0, 0, 0, 0};
+      copy_n(data.begin() + RawName.size() + 26, 4, InternalIP.begin());
       return new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP);
     }
   }

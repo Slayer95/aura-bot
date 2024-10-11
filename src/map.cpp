@@ -77,6 +77,14 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
     m_SkipVersionCheck(skipVersionCheck),
     m_HMCMode(W3HMC_MODE_DISABLED)
 {
+  m_MapScriptsSHA1.fill(0);
+  m_MapSize.fill(0);
+  m_MapCRC32.fill(0);
+  m_MapScriptsWeakHash.fill(0);
+  m_MapWidth.fill(0);
+  m_MapHeight.fill(0);
+  m_MapContentMismatch.fill(0);
+
   Load(CFG);
 }
 
@@ -970,7 +978,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetFailed();
     m_ErrorMessage = "invalid <map.size> detected";
   } else {
-    memcpy(m_MapSize.data(), MapSize.data(), 4);
+    copy_n(MapSize.begin(), 4, m_MapSize.begin());
   }
 
   if (CFG->Exists("map.crc32")) {
@@ -988,7 +996,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetFailed();
     m_ErrorMessage = "invalid <map.crc32> detected";
   } else {
-    memcpy(m_MapCRC32.data(), MapCRC32.data(), 4);
+    copy_n(MapCRC32.begin(), 4, m_MapCRC32.begin());
   }
 
   if (CFG->Exists("map.weak_hash")) {
@@ -1006,7 +1014,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetFailed();
     m_ErrorMessage = "invalid <map.weak_hash> detected";
   } else {
-    memcpy(m_MapScriptsWeakHash.data(), MapScriptsWeakHash.data(), 4);
+    copy_n(MapScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
   }
 
   if (CFG->Exists("map.sha1")) {
@@ -1024,11 +1032,11 @@ void CMap::Load(CConfig* CFG)
     CFG->SetFailed();
     m_ErrorMessage = "invalid <map.sha1> detected";
   } else {
-    memcpy(m_MapScriptsSHA1.data(), MapScriptsSHA1.data(), 20);
+    copy_n(MapScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
   }
 
-  m_MapContentMismatch = MapContentMismatch;
   if (!m_MapData.empty() && HasMismatch()) {
+    m_MapContentMismatch = MapContentMismatch;
     Print("[CACHE] error - map content mismatch");
   }
 
@@ -1134,7 +1142,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetFailed();
     m_ErrorMessage = "invalid <map.width> detected";
   } else {
-    memcpy(m_MapWidth.data(), MapWidth.data(), 2);
+    copy_n(MapWidth.begin(), 2, m_MapWidth.begin());
   }
 
   if (CFG->Exists("map.height")) {
@@ -1147,7 +1155,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetFailed();
     m_ErrorMessage = "invalid <map.height> detected";
   } else {
-    memcpy(m_MapHeight.data(), MapHeight.data(), 2);
+    copy_n(MapHeight.begin(), 2, m_MapHeight.begin());
   }
 
   if (CFG->Exists("map.editor_version")) {
