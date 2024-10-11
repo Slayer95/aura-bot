@@ -1766,7 +1766,9 @@ void CGame::SendAllSlotInfo()
   if (m_GameLoading || m_GameLoaded)
     return;
 
-  SendAll(GetProtocol()->SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+  if (!m_Users.empty()) {
+    SendAll(GetProtocol()->SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+  }
   m_SlotInfoChanged = 0;
 }
 
@@ -7604,11 +7606,12 @@ bool CGame::CreateVirtualHost()
 
   m_VirtualHostUID = GetNewUID();
 
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
-
   // When this message is sent because an slot is made available by a leaving user,
   // we gotta ensure that the virtual host join message is sent after the user's leave message.
-  SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+  if (!m_Users.empty()) {
+    const std::vector<uint8_t> IP = {0, 0, 0, 0};
+    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+  }
   return true;
 }
 
@@ -7620,7 +7623,9 @@ bool CGame::DeleteVirtualHost()
 
   // When this message is sent because the last slot is filled by an incoming user,
   // we gotta ensure that the virtual host leave message is sent before the user's join message.
-  SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(m_VirtualHostUID, PLAYERLEAVE_LOBBY));
+  if (!m_Users.empty()) {
+    SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(m_VirtualHostUID, PLAYERLEAVE_LOBBY));
+  }
   m_VirtualHostUID = 0xFF;
   return true;
 }
@@ -7649,8 +7654,10 @@ uint8_t CGame::FindFakeUserFromSID(const uint8_t SID) const
 void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const string& name)
 {
   const bool isCustomForces = GetIsCustomForces();
-  const std::vector<uint8_t> IP = {0, 0, 0, 0};
-  SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(UID, name, IP, IP));
+  if (!m_Users.empty()) {
+    const std::vector<uint8_t> IP = {0, 0, 0, 0};
+    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(UID, name, IP, IP));
+  }
   m_Slots[SID] = CGameSlot(
     m_Slots[SID].GetType(),
     UID,
