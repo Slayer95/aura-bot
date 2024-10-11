@@ -6382,17 +6382,17 @@ void CGame::SetSlotTeamAndColorAuto(const uint8_t SID)
       uint8_t otherTeam = m_Map->GetVersionMaxSlots();
       uint8_t numSkipped = 0;
       for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-        const CGameSlot* slot = InspectSlot(i);
-        if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+        const CGameSlot* otherSlot = InspectSlot(i);
+        if (otherSlot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
           if (i < SID) ++numSkipped;
           continue;
         }
-        if (slot->GetTeam() == m_Map->GetVersionMaxSlots()) {
+        if (otherSlot->GetTeam() == m_Map->GetVersionMaxSlots()) {
           if (i < SID) ++numSkipped;
         } else if (otherTeam != m_Map->GetVersionMaxSlots()) {
           otherTeamError = true;
         } else {
-          otherTeam = slot->GetTeam();
+          otherTeam = otherSlot->GetTeam();
         }
       }
       if (m_Map->GetMapNumControllers() == 2 && !otherTeamError && otherTeam < 2) {
