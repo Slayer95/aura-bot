@@ -289,9 +289,6 @@ string CStreamIOSocket::GetName() const
 
 CStreamIOSocket::~CStreamIOSocket()
 {
-  if (m_Socket != INVALID_SOCKET)
-    closesocket(m_Socket);
-
   m_Server = nullptr;
 }
 
@@ -461,8 +458,6 @@ CTCPClient::CTCPClient(uint8_t nFamily, string nName)
 
 CTCPClient::~CTCPClient()
 {
-  if (m_Socket != INVALID_SOCKET)
-    closesocket(m_Socket);
 }
 
 void CTCPClient::Reset()
@@ -595,8 +590,6 @@ CTCPServer::CTCPServer(uint8_t nFamily)
 
 CTCPServer::~CTCPServer()
 {
-  if (m_Socket != INVALID_SOCKET)
-    closesocket(m_Socket);
 }
 
 string CTCPServer::GetName() const
@@ -722,8 +715,6 @@ CUDPSocket::CUDPSocket(uint8_t nFamily)
 
 CUDPSocket::~CUDPSocket()
 {
-  if (m_Socket != INVALID_SOCKET)
-    closesocket(m_Socket);
 }
 
 bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& message)
@@ -828,8 +819,6 @@ CUDPServer::CUDPServer(uint8_t nFamily)
 
 CUDPServer::~CUDPServer()
 {
-  if (m_Socket != INVALID_SOCKET)
-    closesocket(m_Socket);
 }
 
 string CUDPServer::GetName() const

@@ -382,7 +382,7 @@ public:
   CSocket(const uint8_t nFamily);
   CSocket(const uint8_t nFamily, SOCKET nSocket);
   CSocket(const uint8_t nFamily, std::string nName);
-  ~CSocket();
+  virtual ~CSocket();
 
   std::string                     GetErrorString() const;
   std::string                     GetName() const;
