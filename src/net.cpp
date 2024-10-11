@@ -1453,6 +1453,10 @@ void CNet::GracefulExit()
 
 CNet::~CNet()
 {
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[NET] shutting down");
+  }
+
   delete m_Config;
   delete m_UDPMainServer;
   delete m_UDPDeafSocket;
@@ -1475,4 +1479,8 @@ CNet::~CNet()
   ResetIPAddressFetch();
   m_Aura->UnholdContext(m_HealthCheckContext);
   m_HealthCheckContext = nullptr;
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[NET] shutdown ok");
+  }
 }

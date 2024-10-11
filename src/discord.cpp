@@ -78,12 +78,11 @@ CDiscord::~CDiscord()
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
     Print("[DISCORD] shutdown ok");
   }
-#else
+#endif
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
     // CDiscord deallocation is the last step of CAura deallocation
     Print("[AURA] shutdown finished");
   }
-#endif
 }
 
 #ifndef DISABLE_DPP
