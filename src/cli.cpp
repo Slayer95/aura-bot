@@ -287,7 +287,7 @@ uint8_t CCLI::GetGameUnsafeNameHandler() const
     if (m_GameUnsafeNameHandler.value() == "none") {
       nameHandler = ON_UNSAFE_NAME_NONE;
     } else if (m_GameUnsafeNameHandler.value() == "censor") {
-      nameHandler = ON_UNSAFE_NAME_CENSOR;
+      nameHandler = ON_UNSAFE_NAME_CENSOR_MAY_DESYNC;
     } else if (m_GameUnsafeNameHandler.value() == "deny") {
       nameHandler = ON_UNSAFE_NAME_DENY;
     }

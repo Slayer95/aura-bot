@@ -223,6 +223,8 @@ public:
   inline std::string            GetName() const { return m_Name; }
   inline std::string            GetOriginalName() const { return m_OriginalName; }
   inline std::array<uint8_t, 4> GetIPv4Internal() const { return m_IPv4Internal; }
+
+  static std::string            CensorName() const;
 };
 
 //

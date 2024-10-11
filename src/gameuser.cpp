@@ -156,7 +156,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             Print("[AURA] Got REQJOIN " + ByteArrayToDecString(Bytes));
           }
           delete m_IncomingJoinPlayer;
-          m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data, m_Game->m_Config->m_UnsafeNameHandler);
+          m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data, m_Aura->m_CurrentLobby->m_Config->m_UnsafeNameHandler);
           if (!m_IncomingJoinPlayer) {
             // Invalid request.
             Abort = true;

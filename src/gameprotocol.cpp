@@ -812,6 +812,16 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
     return;
   }
 
+  m_Name = CIncomingJoinRequest::CensorName(m_Name);
+  m_Censored = m_Name.size() != m_OriginalName.size();
+}
+
+CIncomingJoinRequest::~CIncomingJoinRequest() = default;
+
+CIncomingJoinRequest::CensorName(const std::string& originalName)
+{
+  string name = originalName;
+
   // Note: Do NOT ban |, since it's used for so-called barcode names in Battle.net
   unordered_set<char> charsToRemoveAnyWhere = {
     // Characters used in commands
@@ -833,14 +843,14 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
   unordered_set<char> charsToRemoveStart = {'#', ' '};
   unordered_set<char> charsToRemoveEnd = {' ', '.'};
 
-  m_Name.erase(
+  name.erase(
     std::remove_if(
-      m_Name.begin(), m_Name.end(), 
+      name.begin(), name.end(), 
       [&charsToRemoveAnyWhere](const char& c) {
          return charsToRemoveAnyWhere.find(c) != charsToRemoveAnyWhere.end();
       }
     ),
-    m_Name.end()
+    name.end()
   );
 
   // Ensure brackets are balanced
@@ -848,7 +858,7 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
   {
     bool balancedBrackets = true;
     uint8_t bracketDepth = 0;
-    for (char ch : m_Name) {
+    for (char ch : name) {
       if (ch == '[') {
         ++bracketDepth;
       } else if (ch == ']') {
@@ -861,14 +871,14 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
       }
     }
     if (!balancedBrackets) {
-      m_Name.erase(
+      name.erase(
         std::remove_if(
-          m_Name.begin(), m_Name.end(), 
+          name.begin(), name.end(), 
           [&charsToRemoveConditional](const char& c) {
              return charsToRemoveConditional.find(c) != charsToRemoveConditional.end();
           }
         ),
-        m_Name.end()
+        name.end()
       );
     }
   }
@@ -876,33 +886,31 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
   // Remove bad leading characters (operators, and whitespace)
   {
     auto it = std::find_if(
-     m_Name.begin(), m_Name.end(), 
+     name.begin(), name.end(), 
      [&charsToRemoveStart](const char& c) {
          return charsToRemoveStart.find(c) == charsToRemoveStart.end();
      }
     );
-    m_Name.erase(m_Name.begin(), it);
+    name.erase(name.begin(), it);
   }
 
   // Remove bad trailing characters (mainly whitespace)
   {
     auto it = std::find_if(
-      m_Name.rbegin(), m_Name.rend(), 
+      name.rbegin(), name.rend(), 
       [&charsToRemoveEnd](const char& c) {
         return charsToRemoveEnd.find(c) == charsToRemoveEnd.end();
       }
     );
-    m_Name.erase(it.base(), m_Name.end());
+    name.erase(it.base(), name.end());
   }
 
-  if (m_Name == "Open" || m_Name == "Closed" || m_Name == "Abrir" || m_Name == "Cerrado") {
-    m_Name.clear();
+  if (name == "Open" || name == "Closed" || name == "Abrir" || name == "Cerrado") {
+    name.clear();
   }
 
-  m_Censored = m_Name.size() != m_OriginalName.size();
+  return name;
 }
-
-CIncomingJoinRequest::~CIncomingJoinRequest() = default;
 
 //
 // CIncomingAction
