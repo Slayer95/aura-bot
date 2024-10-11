@@ -1464,7 +1464,6 @@ CNet::~CNet()
   delete m_MainBroadcastTarget;
   delete m_ProxyBroadcastTarget;
 
-  /*
   for (auto it = m_GameServers.begin(); it != m_GameServers.end(); ++it) {
     if (it->second != m_VLANServer) {
       delete it->second;
@@ -1473,7 +1472,6 @@ CNet::~CNet()
   }
   delete m_VLANServer;
   m_VLANServer = nullptr;
-  */
 
   FlushDNSCache();
   FlushSelfIPCache();
