@@ -95,10 +95,8 @@ CSocket::CSocket(const uint8_t nFamily, string nName)
 CSocket::~CSocket()
 {
   if (m_Socket != INVALID_SOCKET) {
-    Print("Closing socket " + m_Name + "...");
     closesocket(m_Socket);
     m_Socket = INVALID_SOCKET;
-    Print("Closed socket " + m_Name + ".");
   }
 }
 
@@ -595,6 +593,7 @@ CTCPServer::CTCPServer(uint8_t nFamily)
 
 CTCPServer::~CTCPServer()
 {
+  Print("[TCP] Closed " + GetName());
 }
 
 string CTCPServer::GetName() const
@@ -824,6 +823,7 @@ CUDPServer::CUDPServer(uint8_t nFamily)
 
 CUDPServer::~CUDPServer()
 {
+  Print("[UDP] Closed " + GetName());
 }
 
 string CUDPServer::GetName() const
