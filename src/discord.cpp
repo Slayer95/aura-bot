@@ -79,6 +79,10 @@ CDiscord::~CDiscord()
 bool CDiscord::Init()
 {
   m_Client = new dpp::cluster(m_Config->m_Token);
+  if (!m_Client) {
+    return false;
+  }
+
   m_Client->on_log([](const dpp::log_t& event) {
 		if (event.severity > dpp::ll_info) {
       Print("[DISCORD] " + dpp::utility::loglevel(event.severity) + " - " + event.message);
