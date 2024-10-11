@@ -344,12 +344,12 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
       const bool found = m_SIDToName.find(definition->GetSID()) != m_SIDToName.end();
       if (found) {
         Print(
-          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] " + + " overrode previous name [" + m_SIDToName[definition->GetSID()] +
+          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] overrode previous name [" + m_SIDToName[definition->GetSID()] +
           "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(definition->GetSID()) + "]"
         );
       } else {
         Print(
-          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] " + + " initialized player ID [" + ToDecString(definition->GetSID()) +
+          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] initialized player ID [" + ToDecString(definition->GetSID()) +
           "] as [" + definition->GetName() + "]"
         );
       }
