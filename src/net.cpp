@@ -978,6 +978,10 @@ void CNet::ResetHealthCheck()
   if (!m_HealthCheckInProgress)
     return;
 
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[NET] Reset health check");
+  }
+
   for (auto& testConnection : m_HealthCheckClients) {
     delete testConnection;
   }
@@ -1142,6 +1146,10 @@ void CNet::ResetIPAddressFetch()
 {
   if (!m_IPAddressFetchInProgress)
     return;
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[NET] Reset IP address fetch");
+  }
 
   for (auto& apiClient : m_IPAddressFetchClients) {
     delete apiClient;
@@ -1368,6 +1376,9 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
 
 void CNet::FlushDNSCache()
 {
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[NET] Flushing DNS cache");
+  }
   for (auto& entry : m_IPv4DNSCache) {
     if (entry.second != nullptr) {
       delete entry.second;
@@ -1386,6 +1397,9 @@ void CNet::FlushDNSCache()
 
 void CNet::FlushSelfIPCache()
 {
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[NET] Flushing self IP cache");
+  }
   if (m_IPv4SelfCacheV.second != nullptr)
     delete m_IPv4SelfCacheV.second;
   if (m_IPv6SelfCacheV.second != nullptr)
