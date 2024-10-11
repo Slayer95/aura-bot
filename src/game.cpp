@@ -1569,7 +1569,7 @@ void CGame::Log(const string& logText)
   if (m_GameLoaded) {
     Log(logText, m_GameTicks);
   } else {
-    Log(logText);
+    Print(GetLogPrefix() + logText);
   }
 }
 
