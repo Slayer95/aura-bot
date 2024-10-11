@@ -4926,7 +4926,9 @@ void CGame::EventGameStarted()
   if (!m_RestoredGame && m_Map->GetMapMetaDataEnabled()) {
     if (m_Map->GetMapType() == "dota") {
       if (m_StartPlayers < 6 || !m_FakeUsers.empty()) {
-        Print("[STATS] not using dotastats due to too few users");
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          LogApp("[STATS] not using dotastats due to too few users");
+        }
       } else {
         m_DotaStats = new CDotaStats(this);
       }
@@ -7027,7 +7029,9 @@ void CGame::ReleaseOwner()
   if (m_Exiting) {
     return;
   }
-  Print("[LOBBY: "  + m_GameName + "] Owner \"" + m_OwnerName + "@" + ToFormattedRealm(m_OwnerRealm) + "\" removed.");
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+    LogApp("[LOBBY: "  + m_GameName + "] Owner \"" + m_OwnerName + "@" + ToFormattedRealm(m_OwnerRealm) + "\" removed.");
+  }
   m_LastOwner = m_OwnerName;
   m_OwnerName.clear();
   m_OwnerRealm.clear();
