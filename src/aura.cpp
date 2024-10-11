@@ -764,7 +764,14 @@ CAura::~CAura()
 
   delete m_DB;
   delete m_IRC;
+
+  if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[DISCORD] shutting down");
+  }
   delete m_Discord;
+  if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[DISCORD] shutdown ok");
+  }
 }
 
 CRealm* CAura::GetRealmByInputId(const string& inputId) const
