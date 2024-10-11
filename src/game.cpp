@@ -7921,5 +7921,6 @@ bool CGame::GetIsReleaseOwnerDue() const
 
 bool CGame::GetIsDeleteOrphanLobbyDue() const
 {
+  if (m_Aura->m_Net->m_HealthCheckInProgress) return false;
   return m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTime();
 }
