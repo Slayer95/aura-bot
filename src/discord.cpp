@@ -70,8 +70,19 @@ CDiscord::~CDiscord()
   delete m_Config;
 
 #ifndef DISABLE_DPP
-  // NOTE: dpp has a tendency to crash on shutdown
+  // dpp has a tendency to crash on shutdown
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[DISCORD] shutting down");
+  }
   delete m_Client;
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print("[DISCORD] shutdown ok");
+  }
+#else
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    // CDiscord deallocation is the last step of CAura deallocation
+    Print("[AURA] shutdown finished");
+  }
 #endif
 }
 
