@@ -124,7 +124,7 @@ bool CDiscord::Init()
     }
   });
 
-  //m_Client->set_websocket_protocol(dpp::websocket_protocol_t::ws_etf);
+  m_Client->set_websocket_protocol(dpp::websocket_protocol_t::ws_etf);
   try {
     m_Client->start(dpp::st_return);  
   } catch (...) {
