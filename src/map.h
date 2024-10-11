@@ -166,112 +166,112 @@ public:
   std::optional<uint8_t>  m_AutoStartPlayers;
 
 private:
-  std::vector<uint8_t>   m_MapScriptsSHA1;   // config value: map sha1 (20 bytes)
-  std::vector<uint8_t>   m_MapSize;   // config value: map size (4 bytes)
-  std::vector<uint8_t>   m_MapCRC32;   // config value: map info (4 bytes) -> this is the real CRC
-  std::vector<uint8_t>   m_MapScriptsWeakHash;    // config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
-  std::vector<uint8_t>   m_MapWidth;  // config value: map width (2 bytes)
-  std::vector<uint8_t>   m_MapHeight; // config value: map height (2 bytes)
+  std::array<uint8_t, 20>   m_MapScriptsSHA1;   // config value: map sha1 (20 bytes)
+  std::array<uint8_t, 4>    m_MapSize;   // config value: map size (4 bytes)
+  std::array<uint8_t, 4>    m_MapCRC32;   // config value: map info (4 bytes) -> this is the real CRC
+  std::array<uint8_t, 4>    m_MapScriptsWeakHash;    // config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
+  std::array<uint8_t, 2>    m_MapWidth;  // config value: map width (2 bytes)
+  std::array<uint8_t, 2>    m_MapHeight; // config value: map height (2 bytes)
   std::vector<CGameSlot> m_Slots;
-  std::string            m_CFGName;
-  std::string            m_ClientMapPath;       // config value: map path
-  std::string            m_MapType;       // config value: map type (for stats class)
-  bool                   m_MapMetaDataEnabled;
-  std::string            m_MapDefaultHCL; // config value: map default HCL to use
-  std::string            m_MapServerPath;  // config value: map local path
-  std::string            m_MapURL;
-  std::string            m_MapSiteURL;
-  std::string            m_MapShortDesc;
-  std::string            m_MapData;       // the map data itself, for sending the map to players
-  uint32_t               m_MapOptions;
-  uint32_t               m_MapEditorVersion;
-  uint8_t                m_MapMinGameVersion;
-  uint8_t                m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
-  uint8_t                m_MapNumControllers; // config value: max map number of players
-  uint8_t                m_MapNumTeams;   // config value: max map number of teams
-  uint8_t                m_MapVersionMaxSlots;
-  uint8_t                m_MapSpeed;
-  uint8_t                m_MapVisibility;
-  uint8_t                m_MapObservers;
-  uint8_t                m_MapFlags;
-  uint8_t                m_MapFilterMaker;
-  uint8_t                m_MapFilterType;
-  uint8_t                m_MapFilterSize;
-  uint8_t                m_MapFilterObs;
-  std::vector<uint8_t>   m_MapContentMismatch;
-  bool                   m_MapMPQLoaded;
-  bool                   m_MapMPQErrored;
-  uint8_t                m_ProxyReconnect;
-  bool                   m_UseStandardPaths;
-  bool                   m_SkipVersionCheck;
-  bool                   m_Valid;
-  std::string            m_ErrorMessage;
-  uint8_t                m_HMCMode;
-  uint8_t                m_HMCTrigger1;
-  uint8_t                m_HMCTrigger2;
-  uint8_t                m_HMCSlot;
-  std::string            m_HMCPlayerName;
+  std::string                     m_CFGName;
+  std::string                     m_ClientMapPath;       // config value: map path
+  std::string                     m_MapType;       // config value: map type (for stats class)
+  bool                            m_MapMetaDataEnabled;
+  std::string                     m_MapDefaultHCL; // config value: map default HCL to use
+  std::string                     m_MapServerPath;  // config value: map local path
+  std::string                     m_MapURL;
+  std::string                     m_MapSiteURL;
+  std::string                     m_MapShortDesc;
+  std::string                     m_MapData;       // the map data itself, for sending the map to players
+  uint32_t                        m_MapOptions;
+  uint32_t                        m_MapEditorVersion;
+  uint8_t                         m_MapMinGameVersion;
+  uint8_t                         m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
+  uint8_t                         m_MapNumControllers; // config value: max map number of players
+  uint8_t                         m_MapNumTeams;   // config value: max map number of teams
+  uint8_t                         m_MapVersionMaxSlots;
+  uint8_t                         m_MapSpeed;
+  uint8_t                         m_MapVisibility;
+  uint8_t                         m_MapObservers;
+  uint8_t                         m_MapFlags;
+  uint8_t                         m_MapFilterMaker;
+  uint8_t                         m_MapFilterType;
+  uint8_t                         m_MapFilterSize;
+  uint8_t                         m_MapFilterObs;
+  std::array<uint8_t, 4>          m_MapContentMismatch;
+  bool                            m_MapMPQLoaded;
+  bool                            m_MapMPQErrored;
+  uint8_t                         m_ProxyReconnect;
+  bool                            m_UseStandardPaths;
+  bool                            m_SkipVersionCheck;
+  bool                            m_Valid;
+  std::string                     m_ErrorMessage;
+  uint8_t                         m_HMCMode;
+  uint8_t                         m_HMCTrigger1;
+  uint8_t                         m_HMCTrigger2;
+  uint8_t                         m_HMCSlot;
+  std::string                     m_HMCPlayerName;
 
 public:
   CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck = false);
   ~CMap();
 
-  inline bool                   GetValid() const { return m_Valid; }
-  inline bool                   HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0; }
-  inline std::string            GetConfigName() const { return m_CFGName; }
-  inline std::string            GetClientPath() const { return m_ClientMapPath; }
-  inline std::vector<uint8_t>   GetMapSize() const { return m_MapSize; }
-  inline std::vector<uint8_t>   GetMapCRC32() const { return m_MapCRC32; } // <map.crc32>, but also legacy <map_hash>
-  inline std::vector<uint8_t>   GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.weak_hash>, but also legacy <map_crc>
-  inline std::vector<uint8_t>   GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.sha1>
-  std::string                   GetMapURL() const { return m_MapURL; }
-  std::string                   GetMapSiteURL() const { return m_MapSiteURL; }
-  std::string                   GetMapShortDesc() const { return m_MapShortDesc; }
-  inline uint8_t                GetMapVisibility() const { return m_MapVisibility; }
-  inline uint8_t                GetMapSpeed() const { return m_MapSpeed; }
-  inline uint8_t                GetMapObservers() const { return m_MapObservers; }
-  inline uint8_t                GetMapFlags() const { return m_MapFlags; }
-  uint32_t                      GetMapGameFlags() const;
-  uint32_t                      GetMapGameType() const;
-  inline uint32_t               GetMapOptions() const { return m_MapOptions; }
-  inline uint8_t                GetMapMinGameVersion() const { return m_MapMinGameVersion; }
-  uint8_t                       GetMapLayoutStyle() const;
-  inline std::vector<uint8_t>   GetMapWidth() const { return m_MapWidth; }
-  inline std::vector<uint8_t>   GetMapHeight() const { return m_MapHeight; }
-  inline std::string            GetMapType() const { return m_MapType; }
-  inline bool                   GetMapMetaDataEnabled() const { return m_MapMetaDataEnabled; }
-  inline std::string            GetMapDefaultHCL() const { return m_MapDefaultHCL; }
-  inline std::string            GetServerPath() const { return m_MapServerPath; }
-  std::string                   GetServerFileName() const;
-  std::string                   GetClientFileName() const;
-  inline std::string*           GetMapData() { return &m_MapData; }
-  inline uint8_t                GetMapNumDisabled() const { return m_MapNumDisabled; }
-  inline uint8_t                GetMapNumControllers() const { return m_MapNumControllers; }
-  inline uint8_t                GetMapNumTeams() const { return m_MapNumTeams; }
-  inline uint8_t                GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
-  inline std::vector<CGameSlot> GetSlots() const { return m_Slots; }
-  bool                          GetHMCEnabled() const { return m_HMCMode != W3HMC_MODE_DISABLED; }
-  bool                          GetHMCRequired() const { return m_HMCMode == W3HMC_MODE_REQUIRED; }
-  uint8_t                       GetHMCMode() const { return m_HMCMode; }
-  uint8_t                       GetHMCTrigger1() const { return m_HMCTrigger1; }
-  uint8_t                       GetHMCTrigger2() const { return m_HMCTrigger2; }
-  uint8_t                       GetHMCSlot() const { return m_HMCSlot; }
-  std::string                   GetHMCPlayerName() const { return m_HMCPlayerName; }
-  uint8_t                       GetLobbyRace(const CGameSlot* slot) const;
-  uint8_t                       GetProxyReconnect() const { return m_ProxyReconnect; }
-  bool                          GetUseStandardPaths() const { return m_UseStandardPaths; }
-  void                          ClearMapData() { m_MapData.clear(); }
-  bool                          SetTeamsLocked(const bool nEnable);
-  bool                          SetTeamsTogether(const bool nEnable);
-  bool                          SetAdvancedSharedUnitControl(const bool nEnable);
-  bool                          SetRandomRaces(const bool nEnable);
-  bool                          SetRandomHeroes(const bool nEnable);
-  bool                          SetMapVisibility(const uint8_t nMapVisibility);
-  bool                          SetMapSpeed(const uint8_t nMapSpeed);
-  bool                          SetMapObservers(const uint8_t nMapObservers);
-  void                          SetUseStandardPaths(const bool nValue) { m_UseStandardPaths = nValue; }
-  bool                          IsObserverSlot(const CGameSlot* slot) const;
-  bool                          NormalizeSlots();
+  inline bool                       GetValid() const { return m_Valid; }
+  inline bool                       HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0; }
+  inline std::string                GetConfigName() const { return m_CFGName; }
+  inline std::string                GetClientPath() const { return m_ClientMapPath; }
+  inline std::array<uint8_t, 4>     GetMapSize() const { return m_MapSize; }
+  inline std::array<uint8_t, 4>     GetMapCRC32() const { return m_MapCRC32; } // <map.crc32>, but also legacy <map_hash>
+  inline std::array<uint8_t, 4>     GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.weak_hash>, but also legacy <map_crc>
+  inline std::array<uint8_t, 20>    GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.sha1>
+  std::string                       GetMapURL() const { return m_MapURL; }
+  std::string                       GetMapSiteURL() const { return m_MapSiteURL; }
+  std::string                       GetMapShortDesc() const { return m_MapShortDesc; }
+  inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
+  inline uint8_t                    GetMapSpeed() const { return m_MapSpeed; }
+  inline uint8_t                    GetMapObservers() const { return m_MapObservers; }
+  inline uint8_t                    GetMapFlags() const { return m_MapFlags; }
+  uint32_t                          GetMapGameFlags() const;
+  uint32_t                          GetMapGameType() const;
+  inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
+  inline uint8_t                    GetMapMinGameVersion() const { return m_MapMinGameVersion; }
+  uint8_t                           GetMapLayoutStyle() const;
+  inline std::array<uint8_t, 2>     GetMapWidth() const { return m_MapWidth; }
+  inline std::array<uint8_t, 2>     GetMapHeight() const { return m_MapHeight; }
+  inline std::string                GetMapType() const { return m_MapType; }
+  inline bool                       GetMapMetaDataEnabled() const { return m_MapMetaDataEnabled; }
+  inline std::string                GetMapDefaultHCL() const { return m_MapDefaultHCL; }
+  inline std::string                GetServerPath() const { return m_MapServerPath; }
+  std::string                       GetServerFileName() const;
+  std::string                       GetClientFileName() const;
+  inline std::string*               GetMapData() { return &m_MapData; }
+  inline uint8_t                    GetMapNumDisabled() const { return m_MapNumDisabled; }
+  inline uint8_t                    GetMapNumControllers() const { return m_MapNumControllers; }
+  inline uint8_t                    GetMapNumTeams() const { return m_MapNumTeams; }
+  inline uint8_t                    GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
+  inline std::vector<CGameSlot>     GetSlots() const { return m_Slots; }
+  bool                              GetHMCEnabled() const { return m_HMCMode != W3HMC_MODE_DISABLED; }
+  bool                              GetHMCRequired() const { return m_HMCMode == W3HMC_MODE_REQUIRED; }
+  uint8_t                           GetHMCMode() const { return m_HMCMode; }
+  uint8_t                           GetHMCTrigger1() const { return m_HMCTrigger1; }
+  uint8_t                           GetHMCTrigger2() const { return m_HMCTrigger2; }
+  uint8_t                           GetHMCSlot() const { return m_HMCSlot; }
+  std::string                       GetHMCPlayerName() const { return m_HMCPlayerName; }
+  uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
+  uint8_t                           GetProxyReconnect() const { return m_ProxyReconnect; }
+  bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
+  void                              ClearMapData() { m_MapData.clear(); }
+  bool                              SetTeamsLocked(const bool nEnable);
+  bool                              SetTeamsTogether(const bool nEnable);
+  bool                              SetAdvancedSharedUnitControl(const bool nEnable);
+  bool                              SetRandomRaces(const bool nEnable);
+  bool                              SetRandomHeroes(const bool nEnable);
+  bool                              SetMapVisibility(const uint8_t nMapVisibility);
+  bool                              SetMapSpeed(const uint8_t nMapSpeed);
+  bool                              SetMapObservers(const uint8_t nMapObservers);
+  void                              SetUseStandardPaths(const bool nValue) { m_UseStandardPaths = nValue; }
+  bool                              IsObserverSlot(const CGameSlot* slot) const;
+  bool                              NormalizeSlots();
 
   void Load(CConfig* CFG);
   bool UnlinkFile();

@@ -46,6 +46,7 @@
 #ifndef AURA_UTIL_H_
 #define AURA_UTIL_H_
 
+#include <array>
 #include <string>
 #include <cstdint>
 #include <vector>
@@ -153,9 +154,50 @@ inline std::vector<uint8_t> CreateByteArray(const uint32_t i, bool bigEndian)
 inline std::vector<uint8_t> CreateByteArray(const int64_t i, bool bigEndian)
 {
   if (!bigEndian)
-    return std::vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
+    return std::vector<uint8_t>{
+      static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24),
+      static_cast<uint8_t>(i >> 32), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 56)
+    };
   else
-    return std::vector<uint8_t>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
+    return std::vector<uint8_t>{
+      static_cast<uint8_t>(i >> 56), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(32),
+      static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)
+    };
+}
+
+inline std::array<uint8_t, 1> CreateFixedByteArray(const uint8_t c)
+{
+  return std::array<uint8_t, 1>{c};
+}
+
+inline std::array<uint8_t, 2> CreateFixedByteArray(const uint16_t i, bool bigEndian)
+{
+  if (!bigEndian)
+    return std::array<uint8_t, 2>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8)};
+  else
+    return std::array<uint8_t, 2>{static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
+}
+
+inline std::array<uint8_t, 4> CreateFixedByteArray(const uint32_t i, bool bigEndian)
+{
+  if (!bigEndian)
+    return std::array<uint8_t, 4>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
+  else
+    return std::array<uint8_t, 4>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
+}
+
+inline std::array<uint8_t, 8> CreateFixedByteArray(const int64_t i, bool bigEndian)
+{
+  if (!bigEndian)
+    return std::array<uint8_t, 8>{
+      static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24),
+      static_cast<uint8_t>(i >> 32), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 56)
+    };
+  else
+    return std::array<uint8_t, 8>{
+      static_cast<uint8_t>(i >> 56), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(32),
+      static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)
+    };
 }
 
 inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
@@ -180,11 +222,30 @@ inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian,
     return static_cast<uint32_t>(b[start] << 24 | b[start + 1] << 16 | b[start + 2] << 8 | b[start + 3]);
 }
 
+inline uint32_t ByteArrayToUInt32(const std::array<uint8_t, 4>& b, bool bigEndian)
+{
+  if (!bigEndian)
+    return static_cast<uint32_t>(b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
+  else
+    return static_cast<uint32_t>(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
+}
+
 inline std::string ByteArrayToDecString(const std::vector<uint8_t>& b)
 {
   if (b.empty())
     return std::string();
 
+  std::string result = std::to_string(b[0]);
+
+  for (auto i = cbegin(b) + 1; i != cend(b); ++i)
+    result += " " + std::to_string(*i);
+
+  return result;
+}
+
+template <size_t SIZE>
+inline std::string ByteArrayToDecString(const std::array<uint8_t, SIZE>& b)
+{
   std::string result = std::to_string(b[0]);
 
   for (auto i = cbegin(b) + 1; i != cend(b); ++i)
@@ -211,12 +272,40 @@ inline std::string ByteArrayToHexString(const std::vector<uint8_t>& b)
   return result;
 }
 
+template <size_t SIZE>
+inline std::string ByteArrayToHexString(const std::array<uint8_t, SIZE>& b)
+{
+  std::string result = ToHexString(b[0]);
+
+  for (auto i = cbegin(b) + 1; i != cend(b); ++i)
+  {
+    if (*i < 0x10)
+      result += " 0" + ToHexString(*i);
+    else
+      result += " " + ToHexString(*i);
+  }
+
+  return result;
+}
+
 inline void AppendByteArray(std::vector<uint8_t>& b, const std::vector<uint8_t>& append)
 {
   b.insert(end(b), begin(append), end(append));
 }
 
+template <size_t SIZE>
+inline void AppendByteArray(std::vector<uint8_t>& b, const std::array<uint8_t, SIZE>& append)
+{
+  b.insert(end(b), begin(append), end(append));
+}
+
 inline void AppendByteArrayFast(std::vector<uint8_t>& b, const std::vector<uint8_t>& append)
+{
+  b.insert(end(b), begin(append), end(append));
+}
+
+template <size_t SIZE>
+inline void AppendByteArrayFast(std::vector<uint8_t>& b, const std::array<uint8_t, SIZE>& append)
 {
   b.insert(end(b), begin(append), end(append));
 }

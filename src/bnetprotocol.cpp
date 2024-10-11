@@ -511,7 +511,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_CHECKAD()
   return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_CHECKAD, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const std::vector<uint8_t> address, uint16_t port)
+std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port)
 {
   std::vector<uint8_t> packet;
 
@@ -533,7 +533,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const std::vector<uint8_
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapCRC, const std::vector<uint8_t>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapCRC, const std::array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
 {
   string HostCounterString = ToHexString(hostCounter);
 
@@ -558,7 +558,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const ui
   AppendByteArrayFast(StatString, mapSHA1);
   StatString = EncodeStatString(StatString);
 
-  if (mapWidth.size() == 2 && mapHeight.size() == 2 && !gameName.empty() && !hostName.empty() && !mapPath.empty() && mapCRC.size() == 4 && mapSHA1.size() == 20 && StatString.size() < 128 && HostCounterString.size() == 8)
+  if (!gameName.empty() && !hostName.empty() && !mapPath.empty() && StatString.size() < 128 && HostCounterString.size() == 8)
   {
     // make the rest of the packet
 

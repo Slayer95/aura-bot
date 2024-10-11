@@ -130,8 +130,7 @@ vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const uint32_t seconds)
   return packet;
 }
 
-vector<uint8_t> CGPSProtocol::SEND_GPSS_DIMENSIONS() const
+array<uint8_t, 2> CGPSProtocol::SEND_GPSS_DIMENSIONS() const
 {
-  vector<uint8_t> packet = {192, 7};
-  return packet;
+  return {192, 7};
 }

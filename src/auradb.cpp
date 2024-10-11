@@ -1261,7 +1261,7 @@ vector<string> CAuraDB::GetAlts(const string& addressLiteral)
   return altAccounts;
 }
 
-bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const vector<uint8_t>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
+bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const array<uint8_t, 4>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
 {
   string storageCRC32 = ByteArrayToDecString(mapCRC32);
   string storagePlayerNames = JoinVector(playerNames, false);
