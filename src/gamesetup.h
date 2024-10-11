@@ -209,6 +209,7 @@ public:
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_IPFloodHandler;
+  std::optional<uint8_t>                          m_UnsafeNameHandler;
   std::optional<uint16_t>                         m_LatencyAverage;
   std::optional<uint16_t>                         m_LatencyMaxFrames;
   std::optional<uint16_t>                         m_LatencySafeFrames;
@@ -332,6 +333,7 @@ public:
   void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
   void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
   void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
+  void SetUnsafeNameHandler(const uint8_t nValue) { m_UnsafeNameHandler = nValue;}
   void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
   void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
   void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }

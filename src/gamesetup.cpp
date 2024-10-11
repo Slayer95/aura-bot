@@ -1486,7 +1486,8 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   SetSupportedGameVersions(nCLI->m_GameCrossplayVersions);
   SetVerbose(nCLI->m_Verbose);
   SetDisplayMode(nCLI->GetGameDisplayType());
-  SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
+  if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
+  if (nCLI->m_GameUnsafeNameHandler.has_value()) SetUnsafeNameHandler(nCLI->GetGameUnsafeNameHandler());
 }
 
 CGameSetup::~CGameSetup()

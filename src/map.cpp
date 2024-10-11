@@ -1110,6 +1110,14 @@ void CMap::Load(CConfig* CFG)
     m_ProxyReconnect = CFG->GetUint8("map.proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
     CFG->FailIfErrorLast();
   }
+  if (CFG->Exists("map.hosting.ip_filter.flood_handler")) {
+    m_UnsafeNameHandler = CFG->GetUint8("map.hosting.ip_filter.flood_handler", ON_IPFLOOD_DENY);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.name_filter.unsafe_handler")) {
+    m_UnsafeNameHandler = CFG->GetUint8("map.hosting.name_filter.unsafe_handler", ON_UNSAFE_NAME_DENY);
+    CFG->FailIfErrorLast();
+  }
   if (CFG->Exists("map.auto_start.seconds")) {
     m_AutoStartSeconds = CFG->GetInt64("map.auto_start.seconds", 180);
     CFG->FailIfErrorLast();

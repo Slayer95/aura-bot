@@ -202,6 +202,8 @@ private:
   bool                            m_MapMPQLoaded;
   bool                            m_MapMPQErrored;
   uint8_t                         m_ProxyReconnect;
+  std::optional<uint8_t>          m_IPFloodHandler;
+  std::optional<uint8_t>          m_UnsafeNameHandler;
   bool                            m_UseStandardPaths;
   bool                            m_SkipVersionCheck;
   bool                            m_Valid;

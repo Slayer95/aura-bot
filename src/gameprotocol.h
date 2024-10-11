@@ -155,7 +155,7 @@ public:
 
   // receive functions
 
-  CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
+  CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data, uint8_t unsafeNameHandler);
   uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data);
   bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
   CIncomingAction* RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
@@ -206,18 +206,22 @@ private:
 class CIncomingJoinRequest
 {
 private:
+  bool                      m_Censored;
   std::string               m_Name;
+  std::string               m_OriginalName;
   std::array<uint8_t, 4>    m_IPv4Internal;
   uint32_t                  m_HostCounter;
   uint32_t                  m_EntryKey;
 
 public:
-  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::array<uint8_t, 4> nIPv4Internal);
+  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::array<uint8_t, 4> nIPv4Internal, uint8_t unsafeNameHandler);
   ~CIncomingJoinRequest();
 
+  inline bool                   GetIsCensored() const { return m_Censored; }
   inline uint32_t               GetHostCounter() const { return m_HostCounter; }
   inline uint32_t               GetEntryKey() const { return m_EntryKey; }
   inline std::string            GetName() const { return m_Name; }
+  inline std::string            GetOriginalName() const { return m_OriginalName; }
   inline std::array<uint8_t, 4> GetIPv4Internal() const { return m_IPv4Internal; }
 };
 

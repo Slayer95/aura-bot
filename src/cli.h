@@ -127,6 +127,7 @@ public:
   std::optional<std::string>            m_GameMapAlias;
   std::optional<std::string>            m_GameDisplayMode;
   std::optional<std::string>            m_GameIPFloodHandler;
+  std::optional<std::string>            m_GameUnsafeNameHandler;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;
@@ -148,6 +149,7 @@ public:
   uint8_t GetGameSearchType() const;
   uint8_t GetGameDisplayType() const;
   uint8_t GetGameIPFloodHandler() const;
+  uint8_t GetGameUnsafeNameHandler() const;
   bool CheckGameParameters() const;
   bool CheckGameLoadParameters(CGameSetup* nGameSetup) const;
 

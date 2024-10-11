@@ -3838,7 +3838,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 {
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      LogApp("user [" + joinRequest->GetName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
+      LogApp("user [" + joinRequest->GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")");
     }
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;

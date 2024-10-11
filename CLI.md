@@ -742,9 +742,25 @@ This parameter customizes behavior when an excessive amount of players join the 
 
 **Options:**
 
-- none: Accepts any amount of players joinig from the same IP address.
+- none: Accepts any amount of players joining from the same IP address.
 - notify: Sends a message to the game chat.
 - deny: Prevents new players from joining the game.
+
+This option is equivalent to ``<hosting.ip_filter.flood_handler>`` in `config.ini`
+This option is equivalent to ``<map.hosting.ip_filter.flood_handler>`` in map configuration
+
+## \`--on-unsafe-name <ACTION>\`
+
+This parameter customizes behavior when a player tries to join a game using an unsafe or otherwise problematic name.
+
+**Options:**
+
+- none: Allow them to join.
+- censor: Removes unsafe characters from their name. In some maps, usage of this option may cause desynchronization between players.
+- deny: Prevents them from joining the game.
+
+This option is equivalent to ``<hosting.name_filter.unsafe_handler>`` in `config.ini`
+This option is equivalent to ``<map.hosting.name_filter.unsafe_handler>`` in map configuration
 
 # Flags for CLI commands
 

@@ -120,6 +120,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--speed", m_GameSpeed, "Customizes game speed when hosting from the CLI. Values: slow, normal, fast")->check(CLI::IsMember({"slow", "normal", "fast"}));
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
   app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
+  app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")->check(CLI::IsMember({"none", "censor", "deny"}));
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
@@ -277,6 +278,21 @@ uint8_t CCLI::GetGameIPFloodHandler() const
     }
   }
   return floodHandler;
+}
+
+uint8_t CCLI::GetGameUnsafeNameHandler() const
+{
+  uint8_t nameHandler = ON_UNSAFE_NAME_NONE;
+  if (m_GameUnsafeNameHandler.has_value()) {
+    if (m_GameUnsafeNameHandler.value() == "none") {
+      nameHandler = ON_UNSAFE_NAME_NONE;
+    } else if (m_GameUnsafeNameHandler.value() == "censor") {
+      nameHandler = ON_UNSAFE_NAME_CENSOR;
+    } else if (m_GameUnsafeNameHandler.value() == "deny") {
+      nameHandler = ON_UNSAFE_NAME_DENY;
+    }
+  }
+  return nameHandler;
 }
 
 bool CCLI::CheckGameParameters() const

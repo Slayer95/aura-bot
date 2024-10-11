@@ -108,6 +108,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LoggedWords               = CFG.GetSetInsensitive("hosting.log_words", ',', {});
   m_DesyncHandler             = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_IPFloodHandler            = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
+  m_UnsafeNameHandler         = CFG.GetStringIndex("hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);
   m_UDPEnabled                = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
   set<uint8_t> supportedGameVersions = CFG.GetUint8Set("hosting.crossplay.versions", ',', {});
@@ -156,7 +157,8 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT(m_IgnoredNotifyJoinPlayers)
   INHERIT(m_LoggedWords)
   INHERIT(m_DesyncHandler)
-  INHERIT_CUSTOM(m_IPFloodHandler, m_IPFloodHandler)
+  INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)
+  INHERIT_MAP_OR_CUSTOM(m_UnsafeNameHandler, m_UnsafeNameHandler, m_UnsafeNameHandler)
   INHERIT(m_UDPEnabled)
 
   INHERIT(m_SupportedGameVersions)

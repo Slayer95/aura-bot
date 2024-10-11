@@ -73,7 +73,7 @@ CGameProtocol::~CGameProtocol() = default;
 // RECEIVE FUNCTIONS //
 ///////////////////////
 
-CIncomingJoinRequest* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data)
+CIncomingJoinRequest* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data, uint8_t unsafeNameHandler)
 {
   // DEBUG_Print( "RECEIVED W3GS_REQJOIN" );
   // DEBUG_Print( data );
@@ -98,7 +98,8 @@ CIncomingJoinRequest* CGameProtocol::RECEIVE_W3GS_REQJOIN(const std::vector<uint
     if (!RawName.empty() && data.size() >= RawName.size() + 30) {
       std::array<uint8_t, 4> InternalIP = {0, 0, 0, 0};
       copy_n(data.begin() + RawName.size() + 26, 4, InternalIP.begin());
-      return new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP);
+      CIncomingJoinRequest* joinRequest = new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP, unsafeNameHandler);
+      return joinRequest;
     }
   }
 
@@ -799,12 +800,18 @@ std::vector<uint8_t> CGameProtocol::EncodeSlotInfo(const vector<CGameSlot>& slot
 // CIncomingJoinRequest
 //
 
-CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::array<uint8_t, 4> nIPv4Internal)
-  : m_Name(std::move(nName)),
+CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::array<uint8_t, 4> nIPv4Internal, uint8_t unsafeNameHandler)
+  : m_Censored(false),
+    m_OriginalName(std::move(nName)),
     m_IPv4Internal(std::move(nIPv4Internal)),
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey)
 {
+  m_Name = m_OriginalName;
+  if (unsafeNameHandler == ON_UNSAFE_NAME_NONE) {
+    return;
+  }
+
   // Note: Do NOT ban |, since it's used for so-called barcode names in Battle.net
   unordered_set<char> charsToRemoveAnyWhere = {
     // Characters used in commands
@@ -891,6 +898,8 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
   if (m_Name == "Open" || m_Name == "Closed" || m_Name == "Abrir" || m_Name == "Cerrado") {
     m_Name.clear();
   }
+
+  m_Censored = m_Name.size() != m_OriginalName.size();
 }
 
 CIncomingJoinRequest::~CIncomingJoinRequest() = default;

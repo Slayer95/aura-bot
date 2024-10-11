@@ -43,6 +43,10 @@
 #define ON_IPFLOOD_NOTIFY 1u
 #define ON_IPFLOOD_DENY 2u
 
+#define ON_UNSAFE_NAME_NONE 0u
+#define ON_UNSAFE_NAME_CENSOR_MAY_DESYNC 1u
+#define ON_UNSAFE_NAME_DENY 2u
+
 #define READY_MODE_FAST 0u
 #define READY_MODE_EXPECT_RACE 1u
 #define READY_MODE_EXPLICIT 2u
@@ -98,6 +102,7 @@ public:
   std::set<std::string>    m_LoggedWords;
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
+  uint8_t                  m_UnsafeNameHandler;         // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care
 
   bool                     m_UDPEnabled;                 // whether this game should be listed in "Local Area Network"
   std::vector<uint8_t>     m_SupportedGameVersions;
