@@ -1481,7 +1481,7 @@ CNet::~CNet()
   for (auto it = m_GameServers.begin(); it != m_GameServers.end(); ++it) {
     if (it->second != m_VLANServer) {
       if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-        Print("[NET] shutting down game server at port " + to_string(*(it->first)));
+        Print("[NET] shutting down game server at port " + to_string(it->first));
       }
       delete it->second;
     }
