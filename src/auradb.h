@@ -254,10 +254,18 @@ class CDBBan;
 #define SCHEMA_CHECK_LEGACY_INCOMPATIBLE 4
 #define SCHEMA_CHECK_LEGACY_UPGRADEABLE 5
 
+#define JOURNAL_MODE_DELETE 0
+#define JOURNAL_MODE_TRUNCATE 1
+#define JOURNAL_MODE_PERSIST 2
+#define JOURNAL_MODE_MEMORY 3
+#define JOURNAL_MODE_WAL 4
+#define JOURNAL_MODE_OFF 5
+
 class CAuraDB
 {
 private:
   CSQLITE3*                  m_DB;
+  uint8_t                    m_JournalMode;
   std::filesystem::path      m_File;
   std::filesystem::path      m_TWRPGFile;
   bool                       m_FirstRun;

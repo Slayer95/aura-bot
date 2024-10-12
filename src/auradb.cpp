@@ -189,6 +189,13 @@ CAuraDB::CAuraDB(CConfig& CFG)
   InitMapData();
 
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
+  m_JournalMode = CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, JOURNAL_MODE_DELETE);
+
+  if (CFG.GetErrorLast()) {
+    m_JournalMode = 0xFF;
+    Print("[SQLITE3] invalid <db.journal_mode> (delete, truncate, persist, memory, wal, off are allowed - case sensitive)");
+  }
+
   Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");
   m_DB = new CSQLITE3(m_File);
 
@@ -227,6 +234,29 @@ CAuraDB::CAuraDB(CConfig& CFG)
   }
 
   if (!m_HasError) {
+    switch (m_JournalMode) {
+      case JOURNAL_MODE_DELETE:
+        m_DB->Exec("PRAGMA journal_mode = DELETE");
+        break;
+      case JOURNAL_MODE_TRUNCATE:
+        m_DB->Exec("PRAGMA journal_mode = TRUNCATE");
+        break;
+      case JOURNAL_MODE_PERSIST:
+        m_DB->Exec("PRAGMA journal_mode = PERSIST");
+        break;
+      case JOURNAL_MODE_MEMORY:
+        m_DB->Exec("PRAGMA journal_mode = MEMORY");
+        break;
+      case JOURNAL_MODE_WAL:
+        m_DB->Exec("PRAGMA journal_mode = WAL");
+        break;
+      case JOURNAL_MODE_OFF:
+        m_DB->Exec("PRAGMA journal_mode = OFF");
+        break;
+      default:
+        break;
+    }
+
     PreCompileStatements();
   }
 }
