@@ -75,10 +75,9 @@
 #define MODERATOR_CHECK_IDX 7u
 #define GAME_ADD_IDX 8u
 #define PLAYER_SUMMARY_IDX 9u
-#define UPDATE_PLAYER_START_INIT_IDX 10u
-#define UPDATE_PLAYER_START_EACH_IDX 11u
-#define UPDATE_PLAYER_END_UPDATE_IDX 12u
-#define STMT_CACHE_SIZE 13u
+#define UPDATE_PLAYER_START_IDX 10u
+#define UPDATE_PLAYER_END_IDX 11u
+#define STMT_CACHE_SIZE 12u
 
 /**************
  *** SCHEMA ***
@@ -302,21 +301,21 @@ public:
 
   // Server moderators
   uint32_t ModeratorCount(const std::string& server);
-  bool ModeratorCheck(const std::string& server, std::string user);
-  bool ModeratorAdd(const std::string& server, std::string user);
-  bool ModeratorRemove(const std::string& server, std::string user);
+  bool ModeratorCheck(const std::string& server, const std::string& user);
+  bool ModeratorAdd(const std::string& server, const std::string& user);
+  bool ModeratorRemove(const std::string& server, const std::string& user);
   std::vector<std::string> ListModerators(const std::string& server);
 
   // Bans
   uint32_t BanCount(const std::string& authserver);
-  CDBBan* UserBanCheck(std::string user, const std::string& server, const std::string& authserver);
+  CDBBan* UserBanCheck(const std::string& user, const std::string& server, const std::string& authserver);
   CDBBan* IPBanCheck(std::string ip, const std::string& authserver);
-  bool GetIsUserBanned(std::string user, const std::string& server, const std::string& authserver);
+  bool GetIsUserBanned(const std::string& user, const std::string& server, const std::string& authserver);
   bool GetIsIPBanned(std::string ip, const std::string& authserver);
-  bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
-  bool BanAdd(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
-  bool BanAddPermanent(std::string user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
-  bool BanRemove(std::string user, const std::string& server, const std::string& authserver);
+  bool BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  bool BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
+  bool BanAddPermanent(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  bool BanRemove(const std::string& user, const std::string& server, const std::string& authserver);
   std::vector<std::string> ListBans(const std::string& authserver);
 
   // Players
@@ -337,7 +336,7 @@ public:
   void InitMapData();
   CSearchableMapData* GetMapData(uint8_t mapType) const;
   uint8_t FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
-  std::vector<std::string> GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string objectName) const;
+  std::vector<std::string> GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;
 };
 
 //

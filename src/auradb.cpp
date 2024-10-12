@@ -365,9 +365,26 @@ void CAuraDB::PreCompileStatements()
   m_DB->Prepare("SELECT * FROM moderators WHERE server=? AND name=?", &(m_StmtCache[MODERATOR_CHECK_IDX]), true);
   m_DB->Prepare("INSERT OR REPLACE INTO games ( id, creator, mapcpath, mapspath, crc32, playernames, playerids ) VALUES ( ?, ?, ?, ?, ?, ?, ? )", &(m_StmtCache[GAME_ADD_IDX]));
   m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", &(m_StmtCache[PLAYER_SUMMARY_IDX]), true);
-  m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", &(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), true);
-  m_DB->Prepare("UPDATE players SET latestip=?, latestgame=? WHERE name=? AND server=?", &(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]), true);
-  m_DB->Prepare("UPDATE players SET games=?, loadingtime=?, duration=?, left=? WHERE name=? AND server=?", &(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), true);
+  m_DB->Prepare(
+    "INSERT INTO players (name, server, initialip, latestip, latestgame) "
+    "VALUES (?, ?, ?, ?, ?) "
+    "ON CONFLICT(name, server) "
+    "DO UPDATE SET "
+    "latestip = excluded.latestip, "
+    "latestgame = excluded.latestgame;",
+    &(m_StmtCache[UPDATE_PLAYER_START_IDX]), true
+  );
+  m_DB->Prepare(
+    "INSERT INTO players (name, server, games, loadingtime, duration, left) "
+    "VALUES (?, ?, 1, ?, ?, ?) "
+    "ON CONFLICT(name, server) "
+    "DO UPDATE SET "
+    "games = games + 1, "
+    "loadingtime = loadingtime + excluded.loadingtime, "
+    "duration = duration + excluded.duration, "
+    "left = left + excluded.left;",
+    &(m_StmtCache[UPDATE_PLAYER_END_IDX]), true
+  );
 }
 
 uint64_t CAuraDB::GetLatestHistoryGameId()
@@ -459,10 +476,10 @@ uint32_t CAuraDB::ModeratorCount(const string& server)
   return Count;
 }
 
-bool CAuraDB::ModeratorCheck(const string& server, string user)
+bool CAuraDB::ModeratorCheck(const string& server, const string& rawName)
 {
   bool IsAdmin = false;
-  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string user = ToLowerCase(rawName);
 
   if (!m_StmtCache[MODERATOR_CHECK_IDX]) {
     m_DB->Prepare("SELECT * FROM moderators WHERE server=? AND name=?", &(m_StmtCache[MODERATOR_CHECK_IDX]), true);
@@ -490,10 +507,10 @@ bool CAuraDB::ModeratorCheck(const string& server, string user)
   return IsAdmin;
 }
 
-bool CAuraDB::ModeratorAdd(const string& server, string user)
+bool CAuraDB::ModeratorAdd(const string& server, const string& rawName)
 {
   bool Success = false;
-  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string user = ToLowerCase(rawName);
 
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare("INSERT INTO moderators ( server, name ) VALUES ( ?, ? )", reinterpret_cast<void**>(&Statement));
@@ -518,11 +535,11 @@ bool CAuraDB::ModeratorAdd(const string& server, string user)
   return Success;
 }
 
-bool CAuraDB::ModeratorRemove(const string& server, string user)
+bool CAuraDB::ModeratorRemove(const string& server, const string& rawName)
 {
   bool          Success = false;
   sqlite3_stmt* Statement = nullptr;
-  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string user = ToLowerCase(rawName);
   m_DB->Prepare("DELETE FROM moderators WHERE server=? AND name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -595,10 +612,10 @@ uint32_t CAuraDB::BanCount(const string& authserver)
   return Count;
 }
 
-CDBBan* CAuraDB::UserBanCheck(string user, const string& server, const string& authserver)
+CDBBan* CAuraDB::UserBanCheck(const string& rawName, const string& server, const string& authserver)
 {
   CDBBan* Ban = nullptr;
-  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
+  const string user = ToLowerCase(rawName);
 
   if (!m_StmtCache[USER_BAN_CHECK_IDX]) {
     m_DB->Prepare("SELECT name, server, authserver, ip, date, expiry, permanent, moderator, reason FROM bans WHERE name=? AND server=? AND authserver=?", &(m_StmtCache[USER_BAN_CHECK_IDX]), true);
@@ -707,11 +724,11 @@ bool CAuraDB::GetIsIPBanned(string ip, const string& authserver)
   return false;
 }
 
-bool CAuraDB::BanAdd(string user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason)
+bool CAuraDB::BanAdd(const string& rawName, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason)
 {
   bool          Success = false;
   sqlite3_stmt* Statement = nullptr;
-  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
+  const string user = ToLowerCase(rawName);
   m_DB->Prepare("INSERT INTO bans ( name, server, authserver, ip, date, expiry, permanent, moderator, reason ) VALUES ( ?, ?, ?, ?, date('now'), date('now', '+10 days'), 0, ?, ? )", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -754,11 +771,11 @@ bool CAuraDB::BanAddPermanent(string user, const string& server, const string& a
   return false;
 }
 
-bool CAuraDB::BanRemove(string user, const string& server, const string& authserver)
+bool CAuraDB::BanRemove(const string& rawName, const string& server, const string& authserver)
 {
   bool          Success = false;
   sqlite3_stmt* Statement = nullptr;
-  transform(begin(user), end(user), begin(user), [](char c) { return static_cast<char>(std::tolower(c)); });
+  const string user = ToLowerCase(rawName);
   m_DB->Prepare("DELETE FROM bans WHERE name=? AND server=? AND authserver=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -808,133 +825,84 @@ vector<string> CAuraDB::ListBans(const string& authserver)
 
 void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, const string& ip, uint64_t gameId)
 {
-  string lowerName = name;
-  transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
+  const string lowerName = ToLowerCase(name);
 
-  // Footgun warning:
-  // Ensure that all NON NULL columns are initialized here.
-  if (!m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]) {
-    m_DB->Prepare("INSERT OR IGNORE INTO players ( name, server, initialip, latestip, latestgame ) VALUES ( ?, ?, ?, ?, ? )", &(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), true);
+  if (!m_StmtCache[UPDATE_PLAYER_START_IDX]) {
+    // Prepare single SQL statement to insert if absent or update if present
+    m_DB->Prepare(
+      "INSERT INTO players (name, server, initialip, latestip, latestgame) "
+      "VALUES (?, ?, ?, ?, ?) "
+      "ON CONFLICT(name, server) "
+      "DO UPDATE SET "
+      "latestip = excluded.latestip, "
+      "latestgame = excluded.latestgame;",
+      &(m_StmtCache[UPDATE_PLAYER_START_IDX]), true
+    );
   }
-  if (m_StmtCache[UPDATE_PLAYER_START_INIT_IDX] == nullptr) {
+
+  if (m_StmtCache[UPDATE_PLAYER_START_IDX] == nullptr) {
     Print("[SQLITE3] prepare error adding gameuser on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]), 5, unsigned_to_signed_64(gameId));
+  // Bind values for both INSERT and UPDATE cases
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 5, unsigned_to_signed_64(gameId));
 
-  int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]);
+  const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_START_IDX]);
+
   if (RC != SQLITE_DONE) {
     Print("[SQLITE3] error initializing gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
   }
-  m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_INIT_IDX]);
 
-  if (!m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]) {
-    m_DB->Prepare("UPDATE players SET latestip=?, latestgame=? WHERE name=? AND server=?", &(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]), true);
-  }
-
-  if (m_StmtCache[UPDATE_PLAYER_START_EACH_IDX] == nullptr)
-  {
-    Print("[SQLITE3] prepare error updating gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
-    return;
-  }
-
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]), 1, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]), 2, unsigned_to_signed_64(gameId));
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]), 3, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]), 4, server.c_str(), -1, SQLITE_TRANSIENT);
-
-  RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]);
-
-  if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error adding gameuser on start [" + lowerName + "@" + server + "] - " + m_DB->GetError());
-
-  m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_EACH_IDX]);
+  m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 }
 
 void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, uint64_t loadingtime, uint64_t duration, uint64_t left)
 {
-  string lowerName = name;
-  transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
+  const string lowerName = ToLowerCase(name);
 
-  // check if entry exists
-
-  int32_t  RC;
-  uint32_t Games = 0;
-  bool PlayerExisting = false;
-
-  if (!m_StmtCache[PLAYER_SUMMARY_IDX]) {
-    m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", &(m_StmtCache[PLAYER_SUMMARY_IDX]), true);
+  if (!m_StmtCache[UPDATE_PLAYER_END_IDX]) {
+    m_DB->Prepare(
+      "INSERT INTO players (name, server, games, loadingtime, duration, left) "
+      "VALUES (?, ?, 1, ?, ?, ?) "
+      "ON CONFLICT(name, server) "
+      "DO UPDATE SET "
+      "games = games + 1, "
+      "loadingtime = loadingtime + excluded.loadingtime, "
+      "duration = duration + excluded.duration, "
+      "left = left + excluded.left;",
+      &(m_StmtCache[UPDATE_PLAYER_END_IDX]), true
+    );
   }
 
-  if (m_StmtCache[PLAYER_SUMMARY_IDX] == nullptr)
-  {
-    Print("[SQLITE3] prepare error adding gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
-    return;
-  }
-
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[PLAYER_SUMMARY_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[PLAYER_SUMMARY_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
-
-  RC = m_DB->Step(m_StmtCache[PLAYER_SUMMARY_IDX]);
-
-  if (RC == SQLITE_ROW)
-  {
-    Games += 1 + sqlite3_column_int(static_cast<sqlite3_stmt*>(m_StmtCache[PLAYER_SUMMARY_IDX]), 0);
-    loadingtime += sqlite3_column_int64(static_cast<sqlite3_stmt*>(m_StmtCache[PLAYER_SUMMARY_IDX]), 1);
-    duration += sqlite3_column_int64(static_cast<sqlite3_stmt*>(m_StmtCache[PLAYER_SUMMARY_IDX]), 2);
-    left += sqlite3_column_int64(static_cast<sqlite3_stmt*>(m_StmtCache[PLAYER_SUMMARY_IDX]), 3);
-
-    PlayerExisting = true;
-  }
-
-  m_DB->Reset(m_StmtCache[PLAYER_SUMMARY_IDX]);
-
-  // there must be a row already because we add one, if not present, in UpdateGamePlayerOnStart( ) before the call to UpdateDotAPlayerOnEnd( )
-
-  if (!PlayerExisting)
-  {
-    // Something went wrong in CAuraDB::UpdateGamePlayerOnStart
-    Print("[SQLITE3] error adding gameuser on end [" + lowerName + "@" + server + "] - no existing row");
-    return;
-  }
-
-  // update existing entry
-
-  if (!m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]) {
-    m_DB->Prepare("UPDATE players SET games=?, loadingtime=?, duration=?, left=? WHERE name=? AND server=?", &(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), true);
-  }
-
-  if (m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX] == nullptr)
+  if (m_StmtCache[UPDATE_PLAYER_END_IDX] == nullptr)
   {
     Print("[SQLITE3] prepare error updating gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
     return;
   }
 
-  sqlite3_bind_int(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), 1, Games);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), 2, loadingtime);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), 3, duration);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), 4, left);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), 5, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]), 6, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 3, loadingtime);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 4, duration);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 5, left);
 
-  RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]);
+  const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 
   if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error adding gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    Print("[SQLITE3] error updating gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
 
-  m_DB->Reset(m_StmtCache[UPDATE_PLAYER_END_UPDATE_IDX]);
+  m_DB->Reset(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 }
 
 CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, const string& server)
 {
   CDBGamePlayerSummary* GamePlayerSummary = nullptr;
-  string name = rawName;
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  const string name = ToLowerCase(rawName);
 
   if (!m_StmtCache[PLAYER_SUMMARY_IDX]) {
     m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", &(m_StmtCache[PLAYER_SUMMARY_IDX]), true);
@@ -979,8 +947,7 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
 {
   bool          Success = false;
   sqlite3_stmt* Statement = nullptr;
-  string lowerName = name;
-  transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string lowerName = ToLowerCase(name);
   m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
 
   int32_t  RC;
@@ -1067,8 +1034,7 @@ CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(const string& rawName, con
 {
   sqlite3_stmt*         Statement;
   CDBDotAPlayerSummary* DotAPlayerSummary = nullptr;
-  string name = rawName;
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string name = ToLowerCase(rawName);
   m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -1117,8 +1083,7 @@ string CAuraDB::GetInitialIP(const string& rawName, const string& server)
 {
   sqlite3_stmt*         Statement;
   string initialIP;
-  string name = rawName;
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string name = ToLowerCase(rawName);
   m_DB->Prepare("SELECT initialip FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -1149,8 +1114,7 @@ string CAuraDB::GetLatestIP(const string& rawName, const string& server)
 {
   sqlite3_stmt*         Statement;
   string latestIP;
-  string name = rawName;
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string name = ToLowerCase(rawName);
   m_DB->Prepare("SELECT latestip FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -1183,8 +1147,7 @@ vector<string> CAuraDB::GetIPs(const string& rawName, const string& server)
 
   sqlite3_stmt*         Statement;
   string initialIP, latestIP;
-  string name = rawName;
-  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string name = ToLowerCase(rawName);
   m_DB->Prepare("SELECT initialip, latestip FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
 
   if (Statement)
@@ -1502,7 +1465,7 @@ uint8_t CAuraDB::FindData(const uint8_t mapType, const uint8_t searchDataType, s
   return index->Search(objectName, searchDataType, exactMatch);
 }
 
-vector<string> CAuraDB::GetDescription(const uint8_t mapType, const uint8_t searchDataType, const string objectName) const
+vector<string> CAuraDB::GetDescription(const uint8_t mapType, const uint8_t searchDataType, const string& objectName) const
 {
   CSearchableMapData* index = GetMapData(mapType);
   if (index == nullptr) return vector<string>();
