@@ -129,11 +129,11 @@ public:
   inline uint8_t GetSID() const { return m_SID; }
 
   inline const std::string& GetName() const { return m_Name; }
-  void SetName(std::string& name) { m_Name = name; }
+  void SetName(const std::string& name) { m_Name = name; }
 
   std::vector<std::string> CopyValues() { return m_Values; }
   const std::vector<std::string>& RefValues() const { return m_Values; }
-  void AddValue(std::string& value) { m_Values.push_back(value); }
+  void AddValue(const std::string& value) { m_Values.push_back(value); }
   std::string GetFirstValue() const { return m_Values[0]; }
 };
 
@@ -164,11 +164,11 @@ public:
   inline uint8_t GetSID() const { return m_SID; }
 
   inline const std::string& GetName() const { return m_Name; }
-  void SetName(std::string& name) { m_Name = name; }
+  void SetName(const std::string& name) { m_Name = name; }
 
   std::vector<std::string> CopyValues() { return m_Values; }
   const std::vector<std::string>& RefValues() const { return m_Values; }
-  void AddValue(std::string& value) { m_Values.push_back(value); }
+  void AddValue(const std::string& value) { m_Values.push_back(value); }
 };
 
 class CW3MMD

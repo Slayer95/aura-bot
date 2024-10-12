@@ -297,7 +297,7 @@ bool CW3MMD::RecvAction(uint8_t fromUID, CIncomingAction *Action)
             Value = vector<uint8_t>(ActionData->begin() + i + 11 + MissionKey.size() + Key.size(), ActionData->begin() + i + 15 + MissionKey.size() + Key.size());
             string MissionKeyString = string(MissionKey.begin(), MissionKey.end());
             string KeyString = string(Key.begin(), Key.end());
-            uint32_t ValueInt = ByteArrayToUInt32(Value, false);
+            //uint32_t ValueInt = ByteArrayToUInt32(Value, false);
 
             // Print("[W3MMD] DEBUG: mkey [" + MissionKeyString + "], key [" + KeyString + "], value [" + to_string(ValueInt) + "]");
 
@@ -586,7 +586,6 @@ bool CW3MMD::UpdateQueue()
 
 bool CW3MMD::FlushQueue()
 {
-  const int64_t gameTicks = m_Game->GetGameTicks();
   while (!m_DefQueue.empty()) {
     CW3MMDDefinition* def = m_DefQueue.front();
     ProcessDefinition(def);
