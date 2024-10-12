@@ -329,6 +329,8 @@ void CGame::Reset()
           if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
             LogApp("failed to commit game end player data");
           }
+        } else if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          LogApp("commited game end player data");
         }
       } else if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
         LogApp("failed to begin transaction game end player data");
