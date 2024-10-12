@@ -320,6 +320,7 @@ void CGame::Reset()
           m_Aura->m_DB->UpdateGamePlayerOnEnd(
             dbPlayer->GetName(),
             dbPlayer->GetServer(),
+            dbPlayer->GetIP(),
             dbPlayer->GetLoadingTime(),
             m_GameTicks / 1000,
             dbPlayer->GetLeftTime()

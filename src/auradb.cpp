@@ -374,11 +374,13 @@ void CAuraDB::PreCompileStatements()
     "latestgame = excluded.latestgame;",
     &(m_StmtCache[UPDATE_PLAYER_START_IDX]), true
   );
+  // gotta insert initialip, latestip here too, because those columns are NOT NULL
   m_DB->Prepare(
-    "INSERT INTO players (name, server, games, loadingtime, duration, left) "
-    "VALUES (?, ?, 1, ?, ?, ?) "
+    "INSERT INTO players (name, server, initialip, latestip, games, loadingtime, duration, left) "
+    "VALUES (?, ?, ?, ?, 1, ?, ?, ?) "
     "ON CONFLICT(name, server) "
     "DO UPDATE SET "
+    "latestip = excluded.latestip, "
     "games = games + 1, "
     "loadingtime = loadingtime + excluded.loadingtime, "
     "duration = duration + excluded.duration, "
@@ -828,7 +830,6 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   const string lowerName = ToLowerCase(name);
 
   if (!m_StmtCache[UPDATE_PLAYER_START_IDX]) {
-    // Prepare single SQL statement to insert if absent or update if present
     m_DB->Prepare(
       "INSERT INTO players (name, server, initialip, latestip, latestgame) "
       "VALUES (?, ?, ?, ?, ?) "
@@ -845,7 +846,6 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
     return;
   }
 
-  // Bind values for both INSERT and UPDATE cases
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
@@ -861,16 +861,17 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 }
 
-void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, uint64_t loadingtime, uint64_t duration, uint64_t left)
+void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, const string& ip, uint64_t loadingtime, uint64_t duration, uint64_t left)
 {
   const string lowerName = ToLowerCase(name);
 
   if (!m_StmtCache[UPDATE_PLAYER_END_IDX]) {
     m_DB->Prepare(
-      "INSERT INTO players (name, server, games, loadingtime, duration, left) "
-      "VALUES (?, ?, 1, ?, ?, ?) "
+      "INSERT INTO players (name, server, initialip, latestip, games, loadingtime, duration, left) "
+      "VALUES (?, ?, ?, ?, 1, ?, ?, ?) "
       "ON CONFLICT(name, server) "
       "DO UPDATE SET "
+      "latestip = excluded.latestip, "
       "games = games + 1, "
       "loadingtime = loadingtime + excluded.loadingtime, "
       "duration = duration + excluded.duration, "
@@ -887,9 +888,11 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, ui
 
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 3, loadingtime);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 4, duration);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 5, left);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 5, loadingtime);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 6, duration);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 7, left);
 
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 
