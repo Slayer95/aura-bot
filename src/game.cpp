@@ -308,8 +308,9 @@ void CGame::Reset()
     // store the CDBGamePlayers in the database
     // add non-dota stats
     if (!m_DBGamePlayers.empty()) {
+      int64_t Ticks = GetTicks();
       if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-        LogApp("saving game end player data to database");
+        LogApp("[STATS] saving game end player data to database");
       }
       if (m_Aura->m_DB->Begin()) {
         for (auto& dbPlayer : m_DBGamePlayers) {
@@ -328,19 +329,19 @@ void CGame::Reset()
         }
         if (!m_Aura->m_DB->Commit()) {
           if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-            LogApp("failed to commit game end player data");
+            LogApp("[STATS] failed to commit game end player data");
           }
         } else if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-          LogApp("commited game end player data");
+          LogApp("[STATS] commited game end player data in " + to_string(GetTicks() - Ticks) + " ms");
         }
       } else if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-        LogApp("failed to begin transaction game end player data");
+        LogApp("[STATS] failed to begin transaction game end player data");
       }
     }
     // store the stats in the database
     if (m_CustomStats) {
       m_CustomStats->FlushQueue();
-      LogApp("MMD detected winners: " + JoinVector(m_CustomStats->GetWinners(), false));
+      LogApp("[STATS] MMD detected winners: " + JoinVector(m_CustomStats->GetWinners(), false));
     }
     if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
   }
@@ -5200,9 +5201,10 @@ void CGame::HandleGameLoadedStats()
     }
   }
 
+  int64_t Ticks = GetTicks();
   if (!m_Aura->m_DB->Begin()) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      LogApp("failed to begin transaction for game loaded stats");
+      LogApp("[STATS] failed to begin transaction for game loaded data");
     }
     return;
   }
@@ -5233,8 +5235,10 @@ void CGame::HandleGameLoadedStats()
   }
   if (!m_Aura->m_DB->Commit()) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      LogApp("failed to commit transaction for game loaded stats");
+      LogApp("[STATS] failed to commit transaction for game loaded data");
     }
+  } else if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    LogApp("[STATS] commited game loaded data in " + to_string(GetTicks() - Ticks) + " ms");
   }
 }
 
