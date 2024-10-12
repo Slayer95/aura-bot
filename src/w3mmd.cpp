@@ -58,6 +58,7 @@ CW3MMDAction::CW3MMDAction(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t
     m_Type(nType),
     m_SubType(nSubType),
     m_FromUID(nFromUID),
+    m_FromColor(nGame->GetColorFromUID(nFromUID)),
     m_SID(nSID)
 {
 }
@@ -76,6 +77,7 @@ CW3MMDDefinition::CW3MMDDefinition(CGame* nGame, uint8_t nFromUID, uint32_t nID,
     m_Type(nType),
     m_SubType(nSubType),
     m_FromUID(nFromUID),
+    m_FromColor(nGame->GetColorFromUID(nFromUID)),
     m_SID(nSID)
 {
 }
@@ -346,14 +348,21 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
         return false;
       }
       const bool found = m_SIDToName.find(definition->GetSID()) != m_SIDToName.end();
+      CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(definition->GetFromColor());
+      string playerName;
+      if (dbPlayer) {
+        playerName = dbPlayer->GetName();
+      } else {
+        playerName = "UID#" + ToDecString(definition->GetFromUID());
+      }
       if (found) {
         Print(
-          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] overrode previous name [" + m_SIDToName[definition->GetSID()] +
+          GetLogPrefix() + "Player [" + playerName + "] overrode previous name [" + m_SIDToName[definition->GetSID()] +
           "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(definition->GetSID()) + "]"
         );
       } else {
         Print(
-          GetLogPrefix() + "Player [" + m_Game->GetUserNameFromUID(definition->GetFromUID()) + "] initialized player ID [" + ToDecString(definition->GetSID()) +
+          GetLogPrefix() + "Player [" + playerName + "] initialized player ID [" + ToDecString(definition->GetSID()) +
           "] as [" + definition->GetName() + "]"
         );
       }

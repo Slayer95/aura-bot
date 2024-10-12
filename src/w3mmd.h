@@ -110,6 +110,7 @@ public:
   uint8_t                                                       m_Type;               // FlagP, VarP, Event, Blank, Custom,
   uint8_t                                                       m_SubType;            // (winner, loser, drawer, leaver, practice), (set, add, subtract), (NO), (NO), (NO)
   uint8_t                                                       m_FromUID;
+  uint8_t                                                       m_FromColor;
   uint8_t                                                       m_SID;                // (OK), (OK), (NO), (NO), (NO)
   std::string                                                   m_Name;               // (NO), (OK), (OK), (NO), (NO)
   std::vector<std::string>                                      m_Values;             // (NO), (1), (n), (NO), (?)
@@ -124,6 +125,7 @@ public:
   inline uint8_t GetSubType() { return m_SubType; }
 
   inline uint8_t GetFromUID() { return m_FromUID; }
+  inline uint8_t GetFromColor() { return m_FromColor; }
   inline uint8_t GetSID() { return m_SID; }
 
   inline const std::string& GetName() { return m_Name; }
@@ -143,6 +145,7 @@ public:
   uint8_t                                                       m_Type;               // init, DefVarP, DefEvent
   uint8_t                                                       m_SubType;            // (pid, version), (int, real, string), (0-ary, 1-ary, 2-ary, etc.)
   uint8_t                                                       m_FromUID;
+  uint8_t                                                       m_FromColor;
   uint8_t                                                       m_SID;                // (SID OK, version NO), (NO), (NO)
   std::string                                                   m_Name;               // (pid OK, version NO), (OK, OK, OK), (OK+)
   std::vector<std::string>                                      m_Values;             // (pid NO, version 2), (NO), (n)
@@ -157,6 +160,7 @@ public:
   inline uint8_t GetSubType() { return m_SubType; }
 
   inline uint8_t GetFromUID() { return m_FromUID; }
+  inline uint8_t GetFromColor() { return m_FromColor; }
   inline uint8_t GetSID() { return m_SID; }
 
   inline const std::string& GetName() { return m_Name; }

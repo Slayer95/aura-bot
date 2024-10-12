@@ -529,6 +529,7 @@ public:
   uint8_t      GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
   CDBGamePlayer* GetDBPlayerFromColor(uint8_t colour) const;
   CGameUser* GetPlayerFromColor(uint8_t colour) const;
+  uint8_t              GetColorFromUID(uint8_t UID) const;
   uint8_t              GetNewUID() const;
   uint8_t              GetNewTeam() const;
   uint8_t              GetNewColor() const;

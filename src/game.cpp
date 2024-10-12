@@ -5493,6 +5493,13 @@ CGameUser* CGame::GetPlayerFromColor(uint8_t colour) const
   return nullptr;
 }
 
+uint8_t CGame::GetColorFromUID(uint8_t UID) const
+{
+  const CGameSlot* slot = InspectSlot(GetSIDFromUID(UID));
+  if (!slot) return 0xFF;
+  return slot->GetColor();
+}
+
 uint8_t CGame::GetNewUID() const
 {
   // find an unused UID for a new user to use
