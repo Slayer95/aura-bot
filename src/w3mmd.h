@@ -210,7 +210,7 @@ public:
   std::string GetStoredPlayerName(uint8_t SID) const;
   std::string GetTrustedPlayerNameFromColor(uint8_t color) const;
   std::string GetSenderName(CW3MMDAction* action) const;
-  std::string GetSenderName(CW3MMDDefinition* action) const;
+  std::string GetSenderName(CW3MMDDefinition* definition) const;
   std::vector<std::string> GetWinners() const;
   std::string GetLogPrefix() const;
   void LogMetaData(int64_t recvTicks, const std::string& text) const;
