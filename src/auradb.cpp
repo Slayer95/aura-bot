@@ -190,6 +190,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
 
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
   m_JournalMode = CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, JOURNAL_MODE_DELETE);
+  uint16_t journalWALInterval = CFG.GetUint16("db.wal_autocheckpoint", 1000);
 
   if (CFG.GetErrorLast()) {
     m_JournalMode = 0xFF;
@@ -249,6 +250,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
         break;
       case JOURNAL_MODE_WAL:
         m_DB->Exec("PRAGMA journal_mode = WAL");
+        m_DB->Exec("PRAGMA wal_autocheckpoint = " + to_string(journalWALInterval));
         break;
       case JOURNAL_MODE_OFF:
         m_DB->Exec("PRAGMA journal_mode = OFF");
