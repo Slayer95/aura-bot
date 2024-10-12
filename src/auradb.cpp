@@ -704,7 +704,7 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
   return Ban;
 }
 
-bool CAuraDB::GetIsUserBanned(string user, const string& server, const string& authserver)
+bool CAuraDB::GetIsUserBanned(const string& user, const string& server, const string& authserver)
 {
   CDBBan* ban = UserBanCheck(user, server, authserver);
   if (ban) {
@@ -757,14 +757,14 @@ bool CAuraDB::BanAdd(const string& rawName, const string& server, const string& 
   return Success;
 }
 
-bool CAuraDB::BanAdd(string user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason, const string& expiry)
+bool CAuraDB::BanAdd(const string& user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason, const string& expiry)
 {
   // TODO: CAuraDB::BanAdd not implemented
   Print("[SQLITE3] Custom-expiry bans not implemented.");
   return false;
 }
 
-bool CAuraDB::BanAddPermanent(string user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason)
+bool CAuraDB::BanAddPermanent(const string& user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason)
 {
   // TODO: CAuraDB::BanAddPermanent not implemented
   Print("[SQLITE3] Permanent bans not implemented.");
