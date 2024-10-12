@@ -261,11 +261,17 @@ class CDBBan;
 #define JOURNAL_MODE_WAL 4
 #define JOURNAL_MODE_OFF 5
 
+#define SYNCHRONOUS_OFF 0
+#define SYNCHRONOUS_NORMAL 1
+#define SYNCHRONOUS_FULL 2
+#define SYNCHRONOUS_EXTRA 3
+
 class CAuraDB
 {
 private:
   CSQLITE3*                  m_DB;
   uint8_t                    m_JournalMode;
+  uint8_t                    m_Synchronous;
   std::filesystem::path      m_File;
   std::filesystem::path      m_TWRPGFile;
   bool                       m_FirstRun;

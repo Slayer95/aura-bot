@@ -189,13 +189,20 @@ CAuraDB::CAuraDB(CConfig& CFG)
   InitMapData();
 
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
-  m_JournalMode = CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, JOURNAL_MODE_DELETE);
-  uint16_t journalWALInterval = CFG.GetUint16("db.wal_autocheckpoint", 1000);
 
+  m_JournalMode = CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, JOURNAL_MODE_DELETE);
   if (CFG.GetErrorLast()) {
     m_JournalMode = 0xFF;
     Print("[SQLITE3] invalid <db.journal_mode> (delete, truncate, persist, memory, wal, off are allowed - case sensitive)");
   }
+
+  m_Synchronous = CFG.GetStringIndex("db.synchronous", {"off", "normal", "full", "extra"}, SYNCHRONOUS_FULL);
+  if (CFG.GetErrorLast()) {
+    m_Synchronous = 0xFF;
+    Print("[SQLITE3] invalid <db.synchronous> (off, normal, full, extra are allowed - case sensitive)");
+  }
+
+  uint16_t journalWALInterval = CFG.GetUint16("db.wal_autocheckpoint", 1000);
 
   Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");
   m_DB = new CSQLITE3(m_File);
@@ -254,6 +261,23 @@ CAuraDB::CAuraDB(CConfig& CFG)
         break;
       case JOURNAL_MODE_OFF:
         m_DB->Exec("PRAGMA journal_mode = OFF");
+        break;
+      default:
+        break;
+    }
+
+    switch (m_Synchronous) {
+      case SYNCHRONOUS_OFF:
+        m_DB->Exec("PRAGMA synchronous = OFF");
+        break;
+      case SYNCHRONOUS_NORMAL:
+        m_DB->Exec("PRAGMA synchronous = NORMAL");
+        break;
+      case SYNCHRONOUS_FULL:
+        m_DB->Exec("PRAGMA synchronous = FULL");
+        break;
+      case SYNCHRONOUS_EXTRA:
+        m_DB->Exec("PRAGMA synchronous = EXTRA");
         break;
       default:
         break;
