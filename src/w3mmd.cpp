@@ -348,21 +348,14 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
         return false;
       }
       const bool found = m_SIDToName.find(definition->GetSID()) != m_SIDToName.end();
-      CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(definition->GetFromColor());
-      string playerName;
-      if (dbPlayer) {
-        playerName = dbPlayer->GetName();
-      } else {
-        playerName = "UID#" + ToDecString(definition->GetFromUID());
-      }
       if (found) {
         Print(
-          GetLogPrefix() + "Player [" + playerName + "] overrode previous name [" + m_SIDToName[definition->GetSID()] +
+          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] overrode previous name [" + m_SIDToName[definition->GetSID()] +
           "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(definition->GetSID()) + "]"
         );
       } else {
         Print(
-          GetLogPrefix() + "Player [" + playerName + "] initialized player ID [" + ToDecString(definition->GetSID()) +
+          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] initialized player ID [" + ToDecString(definition->GetSID()) +
           "] as [" + definition->GetName() + "]"
         );
       }
@@ -444,7 +437,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
     if (result == MMD_RESULT_WINNER) {
       m_GameOver = true;
     }
-    LogMetaData(action->GetRecvTicks(), GetPlayerName(action->GetSID()) + " " + m_ResultVerbs[result] + " the game.");
+    LogMetaData(action->GetRecvTicks(), GetStoredPlayerName(action->GetSID()) + " " + m_ResultVerbs[result] + " the game.");
     return true;
   } else if (action->GetType() == MMD_ACTION_TYPE_VAR) {
     if (m_DefVarPs.find(action->GetName()) == m_DefVarPs.end()) {
@@ -651,7 +644,7 @@ vector<string> CW3MMD::TokenizeKey(string key) const
   return tokens;
 }
 
-string CW3MMD::GetPlayerName(uint8_t SID) const
+string CW3MMD::GetStoredPlayerName(uint8_t SID) const
 {
   auto nameIterator = m_SIDToName.find(SID);
   if (nameIterator == m_SIDToName.end()) {
@@ -661,12 +654,32 @@ string CW3MMD::GetPlayerName(uint8_t SID) const
   }
 }
 
+string CW3MMD::GetTrustedPlayerNameFromColor(uint8_t color) const
+{
+  string playerName;
+  CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(color);
+  if (dbPlayer) {
+    playerName = dbPlayer->GetName();
+  }
+  return playerName;
+}
+
+string CW3MMD::GetSenderName(CW3MMDDefinition* definition) const
+{
+  return GetTrustedPlayerNameFromColor(definition->GetFromColor());
+}
+
+string CW3MMD::GetSenderName(CW3MMDAction* action) const
+{
+  return GetTrustedPlayerNameFromColor(action->GetFromColor());
+}
+
 vector<string> CW3MMD::GetWinners() const
 {
   vector<string> winners;
   for (const auto& flagEntry : m_Flags) {
     if (flagEntry.second != MMD_RESULT_WINNER) continue;
-    winners.push_back(GetPlayerName(flagEntry.first));
+    winners.push_back(GetStoredPlayerName(flagEntry.first));
   }
   return winners;
 }

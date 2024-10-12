@@ -121,20 +121,20 @@ public:
   inline int64_t GetRecvTicks() { return m_Ticks; }
   inline uint32_t GetUpdateID() { return m_UpdateID; }
 
-  inline uint8_t GetType() { return m_Type; }
-  inline uint8_t GetSubType() { return m_SubType; }
+  inline uint8_t GetType() const { return m_Type; }
+  inline uint8_t GetSubType() const { return m_SubType; }
 
-  inline uint8_t GetFromUID() { return m_FromUID; }
-  inline uint8_t GetFromColor() { return m_FromColor; }
-  inline uint8_t GetSID() { return m_SID; }
+  inline uint8_t GetFromUID() const { return m_FromUID; }
+  inline uint8_t GetFromColor() const { return m_FromColor; }
+  inline uint8_t GetSID() const { return m_SID; }
 
-  inline const std::string& GetName() { return m_Name; }
+  inline const std::string& GetName() const { return m_Name; }
   void SetName(std::string& name) { m_Name = name; }
 
   std::vector<std::string> CopyValues() { return m_Values; }
-  const std::vector<std::string>& RefValues() { return m_Values; }
+  const std::vector<std::string>& RefValues() const { return m_Values; }
   void AddValue(std::string& value) { m_Values.push_back(value); }
-  std::string GetFirstValue() { return m_Values[0]; }
+  std::string GetFirstValue() const { return m_Values[0]; }
 };
 
 class CW3MMDDefinition
@@ -153,21 +153,21 @@ public:
   CW3MMDDefinition(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType = 0, uint8_t nSID = 0);
   ~CW3MMDDefinition();
 
-  inline int64_t GetRecvTicks() { return m_Ticks; }
-  inline uint32_t GetUpdateID() { return m_UpdateID; }
+  inline int64_t GetRecvTicks() const { return m_Ticks; }
+  inline uint32_t GetUpdateID() const { return m_UpdateID; }
 
-  inline uint8_t GetType() { return m_Type; }
-  inline uint8_t GetSubType() { return m_SubType; }
+  inline uint8_t GetType() const { return m_Type; }
+  inline uint8_t GetSubType() const { return m_SubType; }
 
-  inline uint8_t GetFromUID() { return m_FromUID; }
-  inline uint8_t GetFromColor() { return m_FromColor; }
-  inline uint8_t GetSID() { return m_SID; }
+  inline uint8_t GetFromUID() const { return m_FromUID; }
+  inline uint8_t GetFromColor() const { return m_FromColor; }
+  inline uint8_t GetSID() const { return m_SID; }
 
-  inline const std::string& GetName() { return m_Name; }
+  inline const std::string& GetName() const { return m_Name; }
   void SetName(std::string& name) { m_Name = name; }
 
   std::vector<std::string> CopyValues() { return m_Values; }
-  const std::vector<std::string>& RefValues() { return m_Values; }
+  const std::vector<std::string>& RefValues() const { return m_Values; }
   void AddValue(std::string& value) { m_Values.push_back(value); }
 };
 
@@ -207,7 +207,10 @@ public:
   bool UpdateQueue();
   bool FlushQueue();
   std::vector<std::string> TokenizeKey(std::string key) const;
-  std::string GetPlayerName(uint8_t SID) const;
+  std::string GetStoredPlayerName(uint8_t SID) const;
+  std::string GetTrustedPlayerNameFromColor(uint8_t color) const;
+  std::string GetSenderName(CW3MMDAction* action) const;
+  std::string GetSenderName(CW3MMDDefinition* action) const;
   std::vector<std::string> GetWinners() const;
   std::string GetLogPrefix() const;
   void LogMetaData(int64_t recvTicks, const std::string& text) const;
