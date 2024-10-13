@@ -118,6 +118,8 @@ private:
   bool                             m_ReconnectNextTick;         // ignore reconnect delay
   bool                             m_WaitingToConnect;          // if we're waiting to reconnect to battle.net after being disconnected
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
+  bool                             m_FailedLogin;               // if we tried to login but failed
+  bool                             m_FailedSignup;              // if we tried to sign up but failed
   uint16_t                         m_GamePort;                  // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
   bool                             m_AnyWhisperRejected;        // whether the realm rejected any whisper because the receiver was not offline.
@@ -201,7 +203,10 @@ public:
 
   void Send(const std::vector<uint8_t>& packet);
   void SendAuth(const std::vector<uint8_t>& packet);
+  bool Signup();
+  bool Login();
   void OnLoginOkay();
+  void OnSignupOkay();
   void SendGetFriendsList();
   void SendGetClanList();
   void SendGetGamesList();
@@ -235,6 +240,7 @@ public:
   void HoldFriends(CGame* game);
   void HoldClan(CGame* game);
   void Disable();
+  void ResetLogin();
 
   inline void SetConfig(CRealmConfig* CFG) {
     delete m_Config;

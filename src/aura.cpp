@@ -663,10 +663,12 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
         matchingRealm->GetServer() != realmConfig->m_HostName ||
         matchingRealm->GetServerPort() != realmConfig->m_ServerPort ||
         matchingRealm->GetLoginName() != realmConfig->m_UserName ||
-        (matchingRealm->GetEnabled() && !realmConfig->m_Enabled)
+        (matchingRealm->GetEnabled() && !realmConfig->m_Enabled) ||
+        !matchingRealm->GetLoggedIn()
       );
       matchingRealm->SetConfig(realmConfig);
       matchingRealm->SetHostCounter(realmConfig->m_ServerIndex + 15);
+      matchingRealm->ResetLogin();
       if (DoResetConnection) matchingRealm->ResetConnection(false);
       if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
         Print("[AURA] server reloaded: " + matchingRealm->GetUniqueDisplayName());

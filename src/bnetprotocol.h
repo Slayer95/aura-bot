@@ -83,6 +83,8 @@ public:
     SID_NOTIFYJOIN             = 34,  // 0x22
     SID_PING                   = 37,  // 0x25
     SID_LOGONRESPONSE          = 41,  // 0x29
+    SID_AUTH_ACCOUNTSIGNUP    = 42,  // 0x2A
+    SID_AUTH_ACCOUNTSIGNUP2   = 61,  // 0x3D
     SID_NETGAMEPORT            = 69,  // 0x45
     SID_AUTH_INFO              = 80,  // 0x50
     SID_AUTH_CHECK             = 81,  // 0x51
@@ -170,6 +172,7 @@ public:
   bool RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& data);
+  bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);
   std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);
   std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
 
@@ -196,6 +199,7 @@ public:
   std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& exeVersion, const std::vector<uint8_t>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const std::string& exeInfo, const std::string& keyOwnerName);
   std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& clientPublicKey, const std::string& accountName);
   std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& clientPasswordProof);
+  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::vector<uint8_t>& clientPasswordProof);
   std::vector<uint8_t> SEND_SID_FRIENDLIST();
   std::vector<uint8_t> SEND_SID_CLANMEMBERLIST();
 

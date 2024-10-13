@@ -93,6 +93,8 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_ReconnectNextTick(true),
     m_WaitingToConnect(true),
     m_LoggedIn(false),
+    m_FailedLogin(false),
+    m_FailedSignup(false),
     m_GamePort(6112),
     m_HadChatActivity(false),
     m_AnyWhisperRejected(false),
@@ -355,37 +357,24 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case CBNETProtocol::SID_AUTH_ACCOUNTLOGON:
-              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data))
-              {
+              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data)) {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
                   Print(GetLogPrefix() + "username [" + m_Config->m_UserName + "] OK");
                 }
-
-                if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN)
-                {
-                  // pvpgn logon
-
-                  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                    Print(GetLogPrefix() + "using pvpgn logon type");
-                  }
-                  m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
-                  SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()));
+                Login();
+              } else {
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                  Print(GetLogPrefix() + "username [" + m_Config->m_UserName + "] invalid");
                 }
-                else
-                {
-                  // battle.net logon
-
-                  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-                    Print(GetLogPrefix() + "using battle.net logon type");
-                  }
-                  m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(m_Protocol->GetSalt(), m_Protocol->GetServerPublicKey());
-                  SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()));
+                if (m_FailedSignup) {
+                  Print(GetLogPrefix() + "logon failed - invalid username, disconnecting");
+                  m_Socket->Disconnect();
+                  break;
                 }
-              }
-              else
-              {
-                Print(GetLogPrefix() + "logon failed - invalid username, disconnecting");
-                m_Socket->Disconnect();
+                if (!Signup()) {
+                  Print(GetLogPrefix() + "logon failed - invalid username, disconnecting");
+                  m_Socket->Disconnect();
+                }
               }
 
               break;
@@ -394,7 +383,18 @@ void CRealm::Update(void* fd, void* send_fd)
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
                 OnLoginOkay();
               } else {
+                m_FailedLogin = true;
                 Print(GetLogPrefix() + "logon failed - invalid password, disconnecting");
+                m_Socket->Disconnect();
+              }
+              break;
+
+            case CBNETProtocol::SID_AUTH_ACCOUNTSIGNUP:
+              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
+                OnSignupOkay();
+              } else {
+                m_FailedSignup = true;
+                Print(GetLogPrefix() + "sign up failed, disconnecting");
                 m_Socket->Disconnect();
               }
               break;
@@ -1022,6 +1022,40 @@ void CRealm::SendAuth(const vector<uint8_t>& packet)
   m_Socket->PutBytes(packet);
 }
 
+bool CRealm::Signup()
+{
+  if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
+    // pvpgn logon
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+      Print(GetLogPrefix() + "using pvpgn signup type");
+    }
+    m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
+    SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTSIGNUP(m_Config->m_UserName, m_BNCSUtil->GetPvPGNPasswordHash()));
+    return true;
+  }
+  return false;
+}
+
+bool CRealm::Login()
+{
+  if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
+    // pvpgn logon
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+      Print(GetLogPrefix() + "using pvpgn logon type");
+    }
+    m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
+    SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()));
+  } else {
+    // battle.net logon
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+      Print(GetLogPrefix() + "using battle.net logon type");
+    }
+    m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(m_Protocol->GetSalt(), m_Protocol->GetServerPublicKey());
+    SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()));
+  }
+  return true;
+}
+
 void CRealm::OnLoginOkay()
 {
   m_LoggedIn = true;
@@ -1033,6 +1067,13 @@ void CRealm::OnLoginOkay()
 
   TrySendEnterChat();
   TryQueueGameChatAnnouncement(m_Aura->m_CurrentLobby);
+}
+
+void CRealm::OnSignupOkay()
+{
+  Print(GetLogPrefix() + "signed up as [" + m_Config->m_UserName + "]");
+  SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
+  //Login();
 }
 
 CQueuedChatMessage* CRealm::QueueCommand(const string& message, CCommandContext* fromCtx, const bool isProxy)
@@ -1339,3 +1380,10 @@ void CRealm::Disable()
 {
   m_Config->m_Enabled = false;
 }
+
+void CRealm::ResetLogin()
+{
+  m_FailedLogin = false;
+  m_FailedSignup = false;
+}
+

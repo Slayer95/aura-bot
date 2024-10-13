@@ -304,8 +304,31 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t
   {
     uint32_t Status = ByteArrayToUInt32(std::vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
 
-    if (Status == 0 || Status == 0xE)
+    if (Status == 0 || Status == 0xE) {
+      // OK: 0x0, EMAIL: 0xE
       return true;
+    }
+  }
+
+  return false;
+}
+
+bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data)
+{
+  // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTSIGNUP" );
+  // DEBUG_Print( data );
+
+  // 2 bytes					-> Header
+  // 2 bytes					-> Length
+  // 4 bytes					-> Status
+
+  if (ValidateLength(data) && data.size() >= 8)
+  {
+    uint32_t Status = ByteArrayToUInt32(std::vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
+
+    if (Status == 0x1) {
+      return true;
+    }
   }
 
   return false;
@@ -735,6 +758,26 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::v
     packet.push_back(0);                              // packet length will be assigned later
     packet.push_back(0);                              // packet length will be assigned later
     AppendByteArrayFast(packet, clientPasswordProof); // Client Password Proof
+    AssignLength(packet);
+  }
+  else
+    Print("[BNETPROTO] invalid parameters passed to SEND_SID_AUTH_ACCOUNTLOGON");
+
+  return packet;
+}
+
+std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userName, const std::vector<uint8_t>& clientPasswordProof)
+{
+  std::vector<uint8_t> packet;
+
+  if (clientPasswordProof.size() == 20)
+  {
+    packet.push_back(BNET_HEADER_CONSTANT);           // BNET header constant
+    packet.push_back(SID_AUTH_ACCOUNTSIGNUP);         // SID_AUTH_ACCOUNTSIGNUP
+    packet.push_back(0);                              // packet length will be assigned later
+    packet.push_back(0);                              // packet length will be assigned later
+    AppendByteArrayFast(packet, clientPasswordProof); // Client Password Proof
+    AppendByteArrayFast(packet, userName);
     AssignLength(packet);
   }
   else

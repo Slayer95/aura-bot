@@ -15,6 +15,7 @@
 - Connects to and can be controlled from Discord, or IRC
 - Automatically performs port-forwarding (UPnP)
 - Automatically checks network connectivity
+- Can automatically sign up accounts in PvPGN realms if unregistered
 - Can configure TCP tunneling to host games in PvPGN realms
 - Supports Warcraft III versions 1.21 to 1.29.2
 - Automatically detects Warcraft III location and version
