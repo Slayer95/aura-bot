@@ -73,6 +73,11 @@
 #define ANTI_SPOOF_EXTENDED 2
 #define ANTI_SPOOF_FULL 3
 
+#define PRINT_IF(T, U) \
+    if (m_Aura->MatchLogLevel(T)) {\
+        Print(U); \
+    }
+
 // time
 
 inline int64_t GetTime()
