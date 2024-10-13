@@ -44,6 +44,7 @@
 */
 
 #include "util.h"
+#include "gameslot.h"
 #include "w3mmd.h"
 
 using namespace std;
@@ -659,6 +660,8 @@ string CW3MMD::GetTrustedPlayerNameFromColor(uint8_t color) const
   CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(color);
   if (dbPlayer) {
     playerName = dbPlayer->GetName();
+  } else {
+    Print(GetLogPrefix() + "error retrieving name of player color [" + ToDecString(color) + "] (" + GetColorName(color) + ")");
   }
   return playerName;
 }
