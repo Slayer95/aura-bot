@@ -477,7 +477,7 @@ public:
   void ReportPlayerDisconnected(CGameUser* user);
   bool CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   bool CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
-  bool EventUserDisconnectTimedOut(CGameUser* user);
+  void EventUserDisconnectTimedOut(CGameUser* user);
   void EventUserDisconnectSocketError(CGameUser* user);
   void EventUserDisconnectConnectionClosed(CGameUser* user);
   void EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover);

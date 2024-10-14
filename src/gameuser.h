@@ -122,6 +122,7 @@ public:
 
   void SetTimeout(const int64_t nTime);
   void ResetConnection();
+  void UnrefConnection();
   uint8_t Update(void* fd, void* send_fd);
 
   // other functions
@@ -404,6 +405,7 @@ public:
   void Send(const std::vector<uint8_t>& data);
   void EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket);
   void ResetConnection();
+  void UnrefConnection();
 };
 
 inline std::string PlayersToNameListString(std::vector<const CGameUser*> playerList, bool useRealNames = false) {

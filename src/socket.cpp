@@ -97,6 +97,9 @@ CSocket::~CSocket()
   if (m_Socket != INVALID_SOCKET) {
     closesocket(m_Socket);
     m_Socket = INVALID_SOCKET;
+    Print("CSocket destructor called on valid socket: " + m_Name);
+  } else {
+    Print("CSocket destructor called on invalid socket: " + m_Name);
   }
 }
 
@@ -270,7 +273,7 @@ CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTC
     m_RemoteHost(move(nAddress)),
     m_Server(nServer),
     m_Counter(nCounter),
-    m_LogErrors(false)
+    m_LogErrors(true)
 {
   // make socket non blocking
 #ifdef _WIN32
@@ -292,6 +295,11 @@ string CStreamIOSocket::GetName() const
 
 CStreamIOSocket::~CStreamIOSocket()
 {
+  if (m_Server) {
+    Print("CStreamIOSocket destructor called on " + m_Server->GetName() + "-C" + to_string(m_Counter));
+  } else {
+    Print("CStreamIOSocket destructor called");
+  }
   m_Server = nullptr;
 }
 
@@ -380,7 +388,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
       Print("[TCPSOCKET] (" + GetName() +") remote terminated the connection");
     }
     m_HasFin = true;
-    m_LogErrors = false;
+    //m_LogErrors = false;
   }
   return false;
 }

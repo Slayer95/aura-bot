@@ -76,9 +76,8 @@ CGameConnection::CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_
 
 CGameConnection::~CGameConnection()
 {
-  if (m_Socket)
-    delete m_Socket;
-
+  Print("CGameConnection destructor");
+  UnrefConnection();
   delete m_IncomingJoinPlayer;
 }
 
@@ -92,13 +91,21 @@ void CGameConnection::ResetConnection()
   m_Socket->Reset();
 }
 
+void CGameConnection::UnrefConnection()
+{
+  if (!m_Socket) return;
+  delete m_Socket;
+  m_Socket = nullptr;
+}
+
 uint8_t CGameConnection::Update(void* fd, void* send_fd)
 {
   if (m_DeleteMe)
     return PREPLAYER_CONNECTION_DESTROY;
 
-  if (!m_Socket)
-    return PREPLAYER_CONNECTION_OK;
+  if (!m_Socket || m_Socket->HasError()) {
+    return PREPLAYER_CONNECTION_DESTROY;
+  }
 
   const int64_t Time = GetTime();
   if (Time - m_Socket->GetLastRecv() >= 5) {
@@ -199,7 +206,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
             }
           }
 
-          if (!Match || Match->m_Game->GetIsGameOver()) {
+          if (!Match || Match->GetDeleteMe() || Match->m_Game->GetIsGameOver()) {
             m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
             Abort = true;
           } else {
@@ -278,8 +285,9 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
 
 void CGameConnection::Send(const std::vector<uint8_t>& data) const
 {
-  if (m_Socket)
+  if (m_Socket && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);
+  }
 }
 
 //
@@ -362,12 +370,13 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
 
 CGameUser::~CGameUser()
 {
-  if (!m_LeftMessageSent) {
-    Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), GetLeftCode()));
-  }
-
   if (m_Socket) {
+    if (!m_LeftMessageSent) {
+      Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), GetLeftCode()));
+    }
     m_Socket->Flush();
+    Print("CGameUser destructor");
+    UnrefConnection();
     delete m_Socket;
   }
 
@@ -462,15 +471,46 @@ string CGameUser::GetRealmDataBaseID(bool mustVerify) const
 
 void CGameUser::ResetConnection()
 {
-  if (!m_Disconnected) {
-    m_LastDisconnectTime = GetTime();
-  }
+  if (m_Disconnected) return;
+  m_LastDisconnectTime = GetTime();
   m_Disconnected = true;
   m_Socket->Reset();
 }
 
+void CGameUser::UnrefConnection()
+{
+  ResetConnection();
+  /*
+  Print("CGameUser::UnrefConnection()");
+  if (!m_Disconnected) {
+    Print("(Disconnecting...)");
+    m_LastDisconnectTime = GetTime();
+    m_Disconnected = true;
+  } else {
+    Print("(Already disconnected.)");
+  }
+  if (!m_Socket) return;
+  Print("Unrefed: " + m_Socket->GetName());
+  delete m_Socket;
+  m_Socket = nullptr;
+  */
+}
+
 bool CGameUser::Update(void* fd)
 {
+  if (m_Disconnected) {
+    if (m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60) {
+      m_Game->EventUserKickGProxyExtendedTimeout(this);
+    }
+    return m_DeleteMe;
+  }
+
+  if (m_Socket->HasError()) {
+    Print("EventUserDisconnectSocketError(1)");
+    m_Game->EventUserDisconnectSocketError(this);
+    return m_DeleteMe;
+  }
+
   const int64_t Time = GetTime();
 
   // check for socket timeouts
@@ -478,10 +518,9 @@ bool CGameUser::Update(void* fd)
   // this works because in the lobby we send pings every 5 seconds and expect a response to each one
   // and in the game the Warcraft 3 client sends keepalives frequently (at least once per second it looks like)
 
-  if (m_Socket && Time - m_Socket->GetLastRecv() >= 30) {
-    if (m_Game->EventUserDisconnectTimedOut(this)) {
-      ResetConnection();
-      m_DeleteMe = true;
+  if (Time - m_Socket->GetLastRecv() >= 30) {
+    m_Game->EventUserDisconnectTimedOut(this);
+    if (m_DeleteMe) {
       return m_DeleteMe;
     }
   }
@@ -510,7 +549,6 @@ bool CGameUser::Update(void* fd)
       const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
         m_Game->EventUserDisconnectGameProtocolError(this, true);
-        ResetConnection();
         Abort = true;
         break;
       }
@@ -547,7 +585,6 @@ bool CGameUser::Update(void* fd)
             if (Action) {
               if (!m_Game->EventUserAction(this, Action)) {
                 m_Game->EventUserDisconnectGameProtocolError(this, false);
-                ResetConnection();
                 Abort = true;
               }
             }
@@ -692,15 +729,12 @@ bool CGameUser::Update(void* fd)
     // try to find out why we're requesting deletion
     // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
     if (m_Socket->HasError()) {
+      Print("EventUserDisconnectSocketError(2)");
       m_Game->EventUserDisconnectSocketError(this);
-      ResetConnection();
     } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
       m_Game->EventUserDisconnectConnectionClosed(this);
-      ResetConnection();
     } else if (GetKickQueued() && m_KickByTime < Time) {
       m_Game->EventUserKickHandleQueued(this);
-    } else if (m_Disconnected && m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60) {
-      m_Game->EventUserKickGProxyExtendedTimeout(this);
     } else if (!m_Verified && m_RealmInternalId >= 0x10 && Time - m_JoinTime >= 60 && m_Game->GetIsLobby()) {
       CRealm* Realm = GetRealm(false);
       if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
@@ -708,7 +742,7 @@ bool CGameUser::Update(void* fd)
       }
     }
 
-    if (!m_DeleteMe && !m_StatusMessageSent && m_CheckStatusByTime < Time) {
+    if (!m_StatusMessageSent && m_CheckStatusByTime < Time) {
       m_Game->EventUserCheckStatus(this);
     }
   }
@@ -751,11 +785,10 @@ bool CGameUser::Update(void* fd)
 
   if (m_Socket) {
     if (m_Socket->HasError()) {
+      Print("EventUserDisconnectSocketError(3)");
       m_Game->EventUserDisconnectSocketError(this);
-      ResetConnection();
     } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
       m_Game->EventUserDisconnectConnectionClosed(this);
-      ResetConnection();
     }
     return m_DeleteMe;
   }
@@ -774,16 +807,53 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
   if (m_GProxy && m_Game->GetGameLoaded())
     m_GProxyBuffer.push(data);
 
-  if (!m_Disconnected)
+  if (!m_Disconnected && !m_Socket->HasError()) {
+    if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+      if (!m_Socket) {
+        Print(m_Game->GetLogPrefix() + " trying to put bytes into nullptr socket");
+      } else if (m_Socket->HasError()) {
+        Print(m_Game->GetLogPrefix() + " trying to put bytes into errored socket [" + m_Socket->GetName() + "] (" + to_string(m_Socket->GetError()) + ")");
+      } else if (m_Socket->m_Socket == INVALID_SOCKET) {
+        Print(m_Game->GetLogPrefix() + " trying to put bytes into invalid socket [" + m_Socket->GetName() + "]");
+      } else {
+        Print(m_Game->GetLogPrefix() + " trying to put " + to_string(data.size())  + " bytes into socket");
+      }
+    }
     m_Socket->PutBytes(data);
+    if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+      if (!m_Socket) {
+        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into nullptr socket");
+      } else if (m_Socket->HasError()) {
+        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into errored socket [" + m_Socket->GetName() + "] (" + to_string(m_Socket->GetError()) + ")");
+      } else if (m_Socket->m_Socket == INVALID_SOCKET) {
+        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into invalid socket [" + m_Socket->GetName() + "]");
+      } else {
+        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into socket [" + m_Socket->GetName() + "]");
+      }
+    }
+  }
 }
 
 void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket)
 {
+  Print("EventGProxyReconnect()");
   // prevent potential session hijackers from stealing sudo access
   SudoModeEnd();
 
-  delete m_Socket;
+  if (m_Socket == NewSocket) {
+    Print("Error: Reconnected with same socket");
+  } else if (NewSocket->HasError()) {
+    Print("Error: Reconnected with errored socket");
+  }
+
+  m_Disconnected = false;
+  if (m_Socket) {
+    // Runs from the CGameConnection iterator, so appending to m_Aura->m_Net->m_IncomingConnections needs to wait
+    // OnUserKickedDeferred creates a new CGameConnection for the old CStreamIOSocket
+    m_Game->m_Aura->m_Net->OnUserKickedDeferred(this);
+  }
+
+  //UnrefConnection();
   m_Socket = NewSocket;
   m_Socket->SetLogErrors(true);
   m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
@@ -815,9 +885,8 @@ void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t 
     m_GProxyBuffer.pop();
   }
 
-  m_GProxyBuffer               = TempBuffer;
+  m_GProxyBuffer = TempBuffer;
   m_GProxyDisconnectNoticeSent = false;
-  m_Disconnected = false;
   if (m_LastDisconnectTime > 0)
     m_TotalDisconnectTime += GetTime() - m_LastDisconnectTime;
 

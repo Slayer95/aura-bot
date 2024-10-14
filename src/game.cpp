@@ -1042,8 +1042,8 @@ uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds)
 {
   uint32_t NumFDs = 0;
 
-  for (auto& user : m_Users)
-  {
+  for (auto& user : m_Users) {
+    if (user->GetDisconnected()) continue;
     user->GetSocket()->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
     ++NumFDs;
   }
@@ -1544,8 +1544,10 @@ void CGame::UpdatePost(void* send_fd)
   // this is in case user 2 generates a packet for user 1 during the update but it doesn't get sent because user 1 already finished updating
   // in reality since we're queueing actions it might not make a big difference but oh well
 
-  for (auto& user : m_Users)
+  for (auto& user : m_Users) {
+    if (user->GetDisconnected()) continue;
     user->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
+  }
 }
 
 void CGame::LogApp(const string& logText) const
@@ -3348,7 +3350,9 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
   }
 
   // Flush queued data before the socket is destroyed.
-  user->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
+  if (!user->GetDisconnected()) {
+    user->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
+  }
 }
 
 void CGame::EventLobbyLastPlayerLeaves()
@@ -3442,19 +3446,21 @@ void CGame::ReportPlayerDisconnected(CGameUser* user)
   }
 }
 
-bool CGame::EventUserDisconnectTimedOut(CGameUser* user)
+void CGame::EventUserDisconnectTimedOut(CGameUser* user)
 {
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
+      Print(GetLogPrefix() + "EventUserDisconnectTimedOut()");
+      user->UnrefConnection();
+      user->SetGProxyDisconnectNoticeSent(true);
       if (user->GetGProxyExtended()) {
         SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxyDLL and may reconnect while others keep playing");
       } else {
         SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxy++ and may reconnect");
       }
-      user->SetGProxyDisconnectNoticeSent(true);
     }
     ReportPlayerDisconnected(user);
-    return true;
+    return;
   }
 
   // not only do we not do any timeouts if the game is lagging, we allow for an additional grace period of 10 seconds
@@ -3462,6 +3468,7 @@ bool CGame::EventUserDisconnectTimedOut(CGameUser* user)
   // so when the lag screen finishes we would immediately disconnect everyone if we didn't give them some extra time
 
   if (GetTime() - m_LastLagScreenTime >= 10 && !user->GetGProxyExtended()) {
+    user->ResetConnection();
     TrySaveOnDisconnect(user, false);
     user->SetDeleteMe(true);
     user->SetLeftReason("has lost the connection (timed out)");
@@ -3471,23 +3478,25 @@ bool CGame::EventUserDisconnectTimedOut(CGameUser* user)
       const uint8_t SID = GetSIDFromUID(user->GetUID());
       OpenSlot(SID, false);
     }
-    return true;
   }
-  return false;
 }
 
 void CGame::EventUserDisconnectSocketError(CGameUser* user)
 {
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(user->GetDisplayName() + " has disconnected (connection error - " + user->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
+      Print(GetLogPrefix() + "EventUserDisconnectSocketError()");
+      string errorString = user->GetConnectionErrorString();
+      user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
+      SendAllChat(user->GetDisplayName() + " has disconnected (connection error - " + errorString + ") but is using GProxy++ and may reconnect");
     }
 
     ReportPlayerDisconnected(user);
     return;
   }
 
+  user->ResetConnection();
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
@@ -3503,14 +3512,17 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
 {
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(user->GetDisplayName() + " has terminated the connection, but is using GProxy++ and may reconnect");
+      Print(GetLogPrefix() + "EventUserDisconnectConnectionClosed()");
+      user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
+      SendAllChat(user->GetDisplayName() + " has terminated the connection, but is using GProxy++ and may reconnect");
     }
 
     ReportPlayerDisconnected(user);
     return;
   }
 
+  user->ResetConnection();
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   user->SetLeftReason("has terminated the connection");
@@ -3526,14 +3538,17 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
 {
   if (canRecover && user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(user->GetDisplayName() + " has disconnected (protocol error) but is using GProxy++ and may reconnect");
+      Print(GetLogPrefix() + "EventUserDisconnectGameProtocolError()");
+      user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
+      SendAllChat(user->GetDisplayName() + " has disconnected (protocol error) but is using GProxy++ and may reconnect");
     }
 
     ReportPlayerDisconnected(user);
     return;
   }
 
+  user->ResetConnection();
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   if (canRecover) {
@@ -3555,6 +3570,7 @@ void CGame::EventUserKickUnverified(CGameUser* user)
   user->SetLeftReason("has been kicked because they are not verified by their realm");
   user->SetLeftCode(PLAYERLEAVE_LOBBY);
   user->SetSpoofKicked(true);
+  user->ResetConnection();
 
   const uint8_t SID = GetSIDFromUID(user->GetUID());
   OpenSlot(SID, false);
@@ -3624,6 +3640,7 @@ void CGame::EventUserKickHandleQueued(CGameUser* user)
   }
 
   user->SetDeleteMe(true);
+  user->ResetConnection();
   // left reason, left code already assigned when queued
 
   const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -3790,6 +3807,8 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
     if (joinName == otherPlayer->GetName()) {
       continue;
     }
+    // In a lobby, all users are always connected, but
+    // this is still a safety measure in case we check GProxy or whatever.
     if (GetSameAddresses(sourceAddress, &(otherPlayer->GetSocket()->m_RemoteHost))) {
       usersSameIP.push_back(otherPlayer);
     }
@@ -4872,6 +4891,7 @@ void CGame::EventGameStarted()
 
   for (auto& user : m_Users) {
     uint8_t SID = GetSIDFromUID(user->GetUID());
+    // Do not exclude observers yet, so they can be searched in commands.
     m_DBGamePlayers.push_back(new CDBGamePlayer(
       user->GetName(),
       user->GetRealmHostName(),
