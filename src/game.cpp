@@ -4878,6 +4878,7 @@ void CGame::EventGameStarted()
       user->GetIPStringStrict(),
       m_Slots[SID].GetColor()
     ));
+    user->SetWhoisShouldBeSent(false);
   }
 
   for (auto& user : m_Users) {
