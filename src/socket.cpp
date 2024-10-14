@@ -541,6 +541,7 @@ bool CTCPClient::CheckConnect()
   {
     m_HasError = true;
     m_Error = GetLastOSError();
+    Print("[TCPCLIENT] (" + GetName() +") error (connect) - " + GetErrorString());
     return false;
   }
 
