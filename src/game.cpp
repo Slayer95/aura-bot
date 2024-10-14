@@ -5989,14 +5989,23 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
     }
   } else {
     // swap everything
-    if (GetIsCustomForces()) {
-      // except if custom forces is set, then we don't swap teams...
-      Slot1.SetTeam(m_Slots[SID2].GetTeam());
-      Slot2.SetTeam(m_Slots[SID1].GetTeam());
-    }
-
     m_Slots[SID1] = Slot2;
     m_Slots[SID2] = Slot1;
+
+    if (GetIsCustomForces()) {
+      // except if custom forces is set, then we must rollback teams...
+      const uint8_t teamOne = m_Slots[SID2].GetTeam();
+      const uint8_t teamTwo = m_Slots[SID1].GetTeam();
+
+      Slot1.SetTeam(teamOne);
+      Slot2.SetTeam(teamTwo);
+
+      // additionally, if custom forces is set, and exactly 1 of the slots is observer, then we must also rollback colors
+      if (teamOne != teamTwo && (teamOne == m_Map->GetVersionMaxSlots() || teamTwo == m_Map->GetVersionMaxSlots())) {
+        Slot1.SetColor(m_Slots[SID2].GetColor());
+        Slot2.SetColor(m_Slots[SID1].GetColor());
+      }
+    }
   }
 
   CGameUser* PlayerOne = GetUserFromSID(SID1);
