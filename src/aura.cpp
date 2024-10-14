@@ -1024,6 +1024,8 @@ bool CAura::Update()
     }
   }
 
+  m_Net->MergeStaleConnections();
+
   // update current lobby
 
   if (m_CurrentLobby) {
