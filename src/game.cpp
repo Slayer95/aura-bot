@@ -3447,9 +3447,9 @@ bool CGame::EventUserDisconnectTimedOut(CGameUser* user)
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       if (user->GetGProxyExtended()) {
-        SendAllChat(user->GetDisplayName() + " " + "has disconnected, but is using GProxyDLL and may reconnect while others keep playing");
+        SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxyDLL and may reconnect while others keep playing");
       } else {
-        SendAllChat(user->GetDisplayName() + " " + "has disconnected, but is using GProxy++ and may reconnect");
+        SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxy++ and may reconnect");
       }
       user->SetGProxyDisconnectNoticeSent(true);
     }
@@ -3480,7 +3480,7 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
 {
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(user->GetDisplayName() + " " + "has disconnected (connection error - " + user->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
+      SendAllChat(user->GetDisplayName() + " has disconnected (connection error - " + user->GetSocket()->GetErrorString() + ") but is using GProxy++ and may reconnect");
       user->SetGProxyDisconnectNoticeSent(true);
     }
 
@@ -3503,7 +3503,7 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
 {
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(user->GetDisplayName() + " " + "has terminated the connection, but is using GProxy++ and may reconnect");
+      SendAllChat(user->GetDisplayName() + " has terminated the connection, but is using GProxy++ and may reconnect");
       user->SetGProxyDisconnectNoticeSent(true);
     }
 
@@ -3526,7 +3526,7 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
 {
   if (canRecover && user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      SendAllChat(user->GetDisplayName() + " " + "has disconnected (protocol error) but is using GProxy++ and may reconnect");
+      SendAllChat(user->GetDisplayName() + " has disconnected (protocol error) but is using GProxy++ and may reconnect");
       user->SetGProxyDisconnectNoticeSent(true);
     }
 
