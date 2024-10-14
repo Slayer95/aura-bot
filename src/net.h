@@ -38,6 +38,7 @@
 #include <optional>
 #include <utility>
 #include <tuple>
+#include <queue>
 
 #pragma once
 
@@ -175,6 +176,7 @@ public:
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CGameConnection*>>           m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
+  std::queue<std::pair<uint16_t, CGameConnection*>>           m_StaleConnections;
   std::map<std::string, sockaddr_storage*>                    m_IPv4DNSCache;
   std::map<std::string, sockaddr_storage*>                    m_IPv6DNSCache;
   std::pair<std::string, sockaddr_storage*>                   m_IPv4SelfCacheV;
@@ -227,6 +229,7 @@ public:
   void HandleIPAddressFetchDone();
 
   uint16_t NextHostPort();
+  void     MergeStaleConnections();
 
   static std::optional<std::tuple<std::string, std::string, uint16_t, std::string>> ParseURL(const std::string& address);
   static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
@@ -235,6 +238,7 @@ public:
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);
   void                                   OnConfigReload();
   void                                   OnUserKicked(CGameUser* user);
+  void                                   OnUserKickedDeferred(CGameUser* user);
   void                                   GracefulExit();
 
   bool                                   IsIgnoredDatagramSource(std::string sourceIp);

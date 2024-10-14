@@ -1211,6 +1211,15 @@ uint16_t CNet::NextHostPort()
   return m_LastHostPort;
 }
 
+void CNet::MergeStaleConnections()
+{
+  while (!m_StaleConnections.empty()) {
+    const auto& entry = m_StaleConnections.front();
+    m_IncomingConnections[entry.first].push_back(entry.second);
+    m_StaleConnections.pop();
+  }
+}
+
 vector<uint16_t> CNet::GetPotentialGamePorts() const
 {
   vector<uint16_t> result;
@@ -1442,12 +1451,25 @@ void CNet::OnConfigReload()
 
 void CNet::OnUserKicked(CGameUser* user)
 {
+  if (user->GetDisconnected()) return;
   uint16_t port = user->m_Game->GetHostPort();
   CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, user->GetSocket());
   connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
   connection->SetTimeout(2);
   connection->GetSocket()->ClearRecvBuffer();
   m_IncomingConnections[port].push_back(connection);
+  user->SetSocket(nullptr);
+}
+
+void CNet::OnUserKickedDeferred(CGameUser* user)
+{
+  if (user->GetDisconnected()) return;
+  uint16_t port = user->m_Game->GetHostPort();
+  CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, user->GetSocket());
+  connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
+  connection->SetTimeout(2);
+  connection->GetSocket()->ClearRecvBuffer();
+  m_StaleConnections.push(make_pair(port, connection));
   user->SetSocket(nullptr);
 }
 
