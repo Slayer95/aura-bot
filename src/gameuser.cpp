@@ -418,6 +418,18 @@ uint32_t CGameUser::GetRTT() const
   return GetOperationalRTT() * 2;
 }
 
+string CGameUser::GetConnectionErrorString() const
+{
+  string errorString;
+  if (m_Socket) {
+    errorString = m_Socket->GetErrorString();
+  }
+  if (errorString.empty()) {
+    errorString = "EUNKNOWN";
+  }
+  return errorString;
+}
+
 string CGameUser::GetLowerName() const
 {
   return ToLowerCase(m_Name);

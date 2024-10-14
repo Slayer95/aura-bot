@@ -230,6 +230,7 @@ public:
   uint32_t GetOperationalRTT() const;
   uint32_t GetDisplayRTT() const;
   uint32_t GetRTT() const;
+  std::string GetConnectionErrorString() const;
   inline CStreamIOSocket*         GetSocket() const { return m_Socket; }
   inline bool                     GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
   inline std::array<uint8_t, 4>   GetIPv4() const { return m_Socket->GetIPv4(); }
