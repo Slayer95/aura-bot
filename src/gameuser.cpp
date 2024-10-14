@@ -785,6 +785,7 @@ void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t 
 
   delete m_Socket;
   m_Socket = NewSocket;
+  m_Socket->SetLogErrors(true);
   m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
 
   const size_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
@@ -821,6 +822,9 @@ void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t 
     m_TotalDisconnectTime += GetTime() - m_LastDisconnectTime;
 
   m_Game->SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
+  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
+    Print("user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
+  }
 }
 
 int64_t CGameUser::GetTotalDisconnectTime() const
