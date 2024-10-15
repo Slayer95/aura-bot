@@ -62,6 +62,7 @@ class CAura;
 #define PREPLAYER_CONNECTION_OK 0u
 #define PREPLAYER_CONNECTION_DESTROY 1u
 #define PREPLAYER_CONNECTION_PROMOTED 2u
+#define PREPLAYER_CONNECTION_RECONNECTED 3u
 
 #define CONSISTENT_PINGS_COUNT 3u
 #define MAXIMUM_PINGS_COUNT 6u
@@ -121,8 +122,7 @@ public:
   // processing functions
 
   void SetTimeout(const int64_t nTime);
-  void ResetConnection();
-  void UnrefConnection();
+  void CloseConnection();
   uint8_t Update(void* fd, void* send_fd);
 
   // other functions
@@ -404,8 +404,8 @@ public:
 
   void Send(const std::vector<uint8_t>& data);
   void EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket);
-  void ResetConnection();
-  void UnrefConnection();
+  void CloseConnection();
+  void UnrefConnection(bool deferred = false);
 };
 
 inline std::string PlayersToNameListString(std::vector<const CGameUser*> playerList, bool useRealNames = false) {

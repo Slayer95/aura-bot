@@ -3448,6 +3448,7 @@ void CGame::ReportPlayerDisconnected(CGameUser* user)
 
 void CGame::EventUserDisconnectTimedOut(CGameUser* user)
 {
+  if (user->GetDeleteMe()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       Print(GetLogPrefix() + "EventUserDisconnectTimedOut()");
@@ -3468,7 +3469,7 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
   // so when the lag screen finishes we would immediately disconnect everyone if we didn't give them some extra time
 
   if (GetTime() - m_LastLagScreenTime >= 10 && !user->GetGProxyExtended()) {
-    user->ResetConnection();
+    user->CloseConnection();
     TrySaveOnDisconnect(user, false);
     user->SetDeleteMe(true);
     user->SetLeftReason("has lost the connection (timed out)");
@@ -3483,6 +3484,7 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
 
 void CGame::EventUserDisconnectSocketError(CGameUser* user)
 {
+  if (user->GetDeleteMe()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       Print(GetLogPrefix() + "EventUserDisconnectSocketError()");
@@ -3496,7 +3498,7 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
     return;
   }
 
-  user->ResetConnection();
+  user->CloseConnection();
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
@@ -3510,6 +3512,7 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
 
 void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
 {
+  if (user->GetDeleteMe()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       Print(GetLogPrefix() + "EventUserDisconnectConnectionClosed()");
@@ -3522,7 +3525,7 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
     return;
   }
 
-  user->ResetConnection();
+  user->CloseConnection();
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   user->SetLeftReason("has terminated the connection");
@@ -3536,6 +3539,7 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
 
 void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover)
 {
+  if (user->GetDeleteMe()) return;
   if (canRecover && user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       Print(GetLogPrefix() + "EventUserDisconnectGameProtocolError()");
@@ -3548,7 +3552,7 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
     return;
   }
 
-  user->ResetConnection();
+  user->CloseConnection();
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   if (canRecover) {
@@ -3566,11 +3570,12 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
 
 void CGame::EventUserKickUnverified(CGameUser* user)
 {
+  if (user->GetDeleteMe()) return;
   user->SetDeleteMe(true);
   user->SetLeftReason("has been kicked because they are not verified by their realm");
   user->SetLeftCode(PLAYERLEAVE_LOBBY);
   user->SetSpoofKicked(true);
-  user->ResetConnection();
+  user->CloseConnection();
 
   const uint8_t SID = GetSIDFromUID(user->GetUID());
   OpenSlot(SID, false);
@@ -3578,6 +3583,7 @@ void CGame::EventUserKickUnverified(CGameUser* user)
 
 void CGame::EventUserKickGProxyExtendedTimeout(CGameUser* user)
 {
+  if (user->GetDeleteMe()) return;
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
   user->SetLeftReason("has been kicked because they didn't reconnect in time");
@@ -3640,7 +3646,7 @@ void CGame::EventUserKickHandleQueued(CGameUser* user)
   }
 
   user->SetDeleteMe(true);
-  user->ResetConnection();
+  user->CloseConnection();
   // left reason, left code already assigned when queued
 
   const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -4083,6 +4089,7 @@ bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joi
 
 void CGame::EventUserLeft(CGameUser* user)
 {
+  if (user->GetDeleteMe()) return;
   // this function is only called when a user leave packet is received, not when there's a socket error, kick, etc...
   TrySaveOnDisconnect(user, true);
   user->SetDeleteMe(true);
