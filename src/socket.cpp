@@ -270,7 +270,7 @@ CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTC
     m_RemoteHost(move(nAddress)),
     m_Server(nServer),
     m_Counter(nCounter),
-    m_LogErrors(true)
+    m_LogErrors(false)
 {
   // make socket non blocking
 #ifdef _WIN32
