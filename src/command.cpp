@@ -1414,7 +1414,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SendReply(JoinVector(pingsText, false), !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
 
       if (0 < maxPing && maxPing < m_TargetGame->GetLatency() && REFRESH_PERIOD_MIN < m_TargetGame->GetLatency()) {
-        SendAll("HINT: Using ping equalizer at " + to_string(m_TargetGame->GetLatency()) + "ms. Decrease it with " + cmdToken + "latency [VALUE]");
+        SendReply(
+          "HINT: Using ping equalizer at " + to_string(m_TargetGame->GetLatency()) + "ms. Decrease it with " + cmdToken + "latency [VALUE]",
+          !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0
+        );
       }
 
       break;
