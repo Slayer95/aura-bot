@@ -402,7 +402,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
       Print("[TCPSOCKET] (" + GetName() +") remote terminated the connection");
     }
     m_HasFin = true;
-    //m_LogErrors = false;
+    m_LogErrors = false;
   }
   return false;
 }
