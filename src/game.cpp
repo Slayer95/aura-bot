@@ -5995,58 +5995,66 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
     return false;
   }
 
-  CGameSlot Slot1 = m_Slots[SID1];
-  CGameSlot Slot2 = m_Slots[SID2];
+  {
+    // Slot1, Slot2 are implementation details
+    // Depending on the branch, they may not necessarily match the actual slots after the swap.
+    CGameSlot Slot1 = m_Slots[SID1];
+    CGameSlot Slot2 = m_Slots[SID2];
 
-  if (!Slot1.GetIsSelectable() || !Slot2.GetIsSelectable()) {
-    return false;
-  }
-
-  if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
-    // don't swap the type, team, colour, race, or handicap
-    m_Slots[SID1] = CGameSlot(Slot1.GetType(), Slot2.GetUID(), Slot2.GetDownloadStatus(), Slot2.GetSlotStatus(), Slot2.GetComputer(), Slot1.GetTeam(), Slot1.GetColor(), Slot1.GetRace(), Slot2.GetComputerType(), Slot1.GetHandicap());
-    m_Slots[SID2] = CGameSlot(Slot2.GetType(), Slot1.GetUID(), Slot1.GetDownloadStatus(), Slot1.GetSlotStatus(), Slot1.GetComputer(), Slot2.GetTeam(), Slot2.GetColor(), Slot2.GetRace(), Slot1.GetComputerType(), Slot2.GetHandicap());
-    uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
-    while (i--) {
-      uint8_t fakeSID = static_cast<uint8_t>(m_FakeUsers[i]);
-      if (fakeSID == SID1) {
-        m_FakeUsers[i] &= (static_cast<uint16_t>(SID2) | 0xFF00);
-      } else if (fakeSID == SID2) {
-        m_FakeUsers[i] &= (static_cast<uint16_t>(SID1) | 0xFF00);
-      }
+    if (!Slot1.GetIsSelectable() || !Slot2.GetIsSelectable()) {
+      return false;
     }
-  } else {
-    // swap everything
-    m_Slots[SID1] = Slot2;
-    m_Slots[SID2] = Slot1;
 
-    if (GetIsCustomForces()) {
-      // except if custom forces is set, then we must rollback teams...
-      const uint8_t teamOne = m_Slots[SID2].GetTeam();
-      const uint8_t teamTwo = m_Slots[SID1].GetTeam();
+    if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      // don't swap the type, team, colour, race, or handicap
+      m_Slots[SID1] = CGameSlot(Slot1.GetType(), Slot2.GetUID(), Slot2.GetDownloadStatus(), Slot2.GetSlotStatus(), Slot2.GetComputer(), Slot1.GetTeam(), Slot1.GetColor(), Slot1.GetRace(), Slot2.GetComputerType(), Slot1.GetHandicap());
+      m_Slots[SID2] = CGameSlot(Slot2.GetType(), Slot1.GetUID(), Slot1.GetDownloadStatus(), Slot1.GetSlotStatus(), Slot1.GetComputer(), Slot2.GetTeam(), Slot2.GetColor(), Slot2.GetRace(), Slot1.GetComputerType(), Slot2.GetHandicap());
+    } else {
+      if (GetIsCustomForces()) {
+        // except if custom forces is set, then we must preserve teams...
+        const uint8_t teamOne = Slot1.GetTeam();
+        const uint8_t teamTwo = Slot2.GetTeam();
 
-      Slot1.SetTeam(teamOne);
-      Slot2.SetTeam(teamTwo);
+        Slot1.SetTeam(teamTwo);
+        Slot2.SetTeam(teamOne);
 
-      // additionally, if custom forces is set, and exactly 1 of the slots is observer, then we must also rollback colors
-      if (teamOne != teamTwo && (teamOne == m_Map->GetVersionMaxSlots() || teamTwo == m_Map->GetVersionMaxSlots())) {
-        Slot1.SetColor(m_Slots[SID2].GetColor());
-        Slot2.SetColor(m_Slots[SID1].GetColor());
+        // additionally, if custom forces is set, and exactly 1 of the slots is observer, then we must also preserve colors
+        const uint8_t colorOne = Slot1.GetColor();
+        const uint8_t colorTwo = Slot2.GetColor();
+        if (teamOne != teamTwo && (teamOne == m_Map->GetVersionMaxSlots() || teamTwo == m_Map->GetVersionMaxSlots())) {
+          Slot1.SetColor(colorTwo);
+          Slot2.SetColor(colorOne);
+        }
       }
+
+      // swap everything (what we swapped already is reverted)
+      m_Slots[SID1] = Slot2;
+      m_Slots[SID2] = Slot1;
     }
   }
 
+  uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
+  while (i--) {
+    uint8_t fakeSID = static_cast<uint8_t>(m_FakeUsers[i]);
+    if (fakeSID == SID1) {
+      m_FakeUsers[i] &= (static_cast<uint16_t>(SID2) | 0xFF00);
+    } else if (fakeSID == SID2) {
+      m_FakeUsers[i] &= (static_cast<uint16_t>(SID1) | 0xFF00);
+    }
+  }
+
+  // Players that are at given slots afterwards.
   CGameUser* PlayerOne = GetUserFromSID(SID1);
   CGameUser* PlayerTwo = GetUserFromSID(SID2);
   if (PlayerOne) {
-    PlayerOne->SetObserver(Slot2.GetTeam() == m_Map->GetVersionMaxSlots());
+    PlayerOne->SetObserver(m_Slots[SID1].GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerOne->GetIsObserver()) {
       PlayerOne->SetPowerObserver(PlayerOne->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       PlayerOne->ClearUserReady();
     }
   }
   if (PlayerTwo) {
-    PlayerTwo->SetObserver(Slot1.GetTeam() == m_Map->GetVersionMaxSlots());
+    PlayerTwo->SetObserver(m_Slots[SID2].GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerTwo->GetIsObserver()) {
       PlayerTwo->SetPowerObserver(PlayerTwo->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       PlayerTwo->ClearUserReady();
