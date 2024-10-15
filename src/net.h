@@ -237,8 +237,7 @@ public:
   void                                   PropagateBroadcastEnabled(const bool nEnable);
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);
   void                                   OnConfigReload();
-  void                                   OnUserKicked(CGameUser* user);
-  void                                   OnUserKickedDeferred(CGameUser* user);
+  void                                   OnUserKicked(CGameUser* user, bool deferred = false);
   void                                   GracefulExit();
 
   bool                                   IsIgnoredDatagramSource(std::string sourceIp);

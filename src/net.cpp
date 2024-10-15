@@ -1449,27 +1449,20 @@ void CNet::OnConfigReload()
   SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
 }
 
-void CNet::OnUserKicked(CGameUser* user)
+void CNet::OnUserKicked(CGameUser* user, bool deferred)
 {
-  if (user->GetDisconnected()) return;
+  CStreamIOSocket* socket = user->GetSocket();
+  if (!socket) return;
+  socket->ClearRecvBuffer();
   uint16_t port = user->m_Game->GetHostPort();
-  CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, user->GetSocket());
+  CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, socket);
   connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
   connection->SetTimeout(2);
-  connection->GetSocket()->ClearRecvBuffer();
-  m_IncomingConnections[port].push_back(connection);
-  user->SetSocket(nullptr);
-}
-
-void CNet::OnUserKickedDeferred(CGameUser* user)
-{
-  if (user->GetDisconnected()) return;
-  uint16_t port = user->m_Game->GetHostPort();
-  CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, user->GetSocket());
-  connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
-  connection->SetTimeout(2);
-  connection->GetSocket()->ClearRecvBuffer();
-  m_StaleConnections.push(make_pair(port, connection));
+  if (deferred) {
+    m_StaleConnections.push(make_pair(port, connection));
+  } else {
+    m_IncomingConnections[port].push_back(connection);
+  }
   user->SetSocket(nullptr);
 }
 
