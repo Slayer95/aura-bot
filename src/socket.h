@@ -463,6 +463,7 @@ public:
   void DoSend(fd_set* send_fd);
   void Flush();
 
+  void Close();
   void Reset();
   void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override;
   void SetNoDelay(const bool noDelay);

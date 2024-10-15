@@ -333,6 +333,20 @@ void CStreamIOSocket::SetKeepAlive(const bool keepAlive, const uint32_t seconds)
 #endif
 }
 
+void CStreamIOSocket::Close()
+{
+  if (m_Socket != INVALID_SOCKET) {
+    closesocket(m_Socket);
+  }
+
+  m_Socket = INVALID_SOCKET;
+  m_Connected = false;
+  m_RecvBuffer.clear();
+  m_SendBuffer.clear();
+
+  memset(&m_RemoteHost, 0, sizeof(sockaddr_storage));
+}
+
 void CStreamIOSocket::Reset()
 {
   CSocket::Reset();
