@@ -97,9 +97,6 @@ CSocket::~CSocket()
   if (m_Socket != INVALID_SOCKET) {
     closesocket(m_Socket);
     m_Socket = INVALID_SOCKET;
-    Print("CSocket destructor called on valid socket: " + m_Name);
-  } else {
-    Print("CSocket destructor called on invalid socket: " + m_Name);
   }
 }
 
@@ -295,11 +292,6 @@ string CStreamIOSocket::GetName() const
 
 CStreamIOSocket::~CStreamIOSocket()
 {
-  if (m_Server) {
-    Print("CStreamIOSocket destructor called on " + m_Server->GetName() + "-C" + to_string(m_Counter));
-  } else {
-    Print("CStreamIOSocket destructor called");
-  }
   m_Server = nullptr;
 }
 
