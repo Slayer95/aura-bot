@@ -745,13 +745,7 @@ CAura::~CAura()
   }
 
   if (m_GameSetup) {
-    if (m_GameSetup->GetIsDownloading()) {
-      // Downloading off-thread. Nullify pointer to CAura.
-      m_GameSetup->m_Aura = nullptr;
-    } else {
-      // Ctrl+C while downloading a map. Prevent crashes.
-      delete m_GameSetup;
-    }
+    m_GameSetup->m_ExitingSoon = true;
   }
 
   for (auto& realm : m_Realms) {

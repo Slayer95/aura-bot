@@ -770,7 +770,20 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
     case HashCode("epicwar"): {
       m_MapSiteUri = "https://www.epicwar.com/maps/" + m_SearchTarget.second;
       Print("[NET] GET <" + m_MapSiteUri + ">");
-      auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_DownloadTimeout});
+      auto response = cpr::Get(
+        cpr::Url{m_MapSiteUri},
+        cpr::Timeout{m_DownloadTimeout},
+        cpr::ProgressCallback(
+          [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+          {
+            return !this->m_ExitingSoon;
+          }
+        )
+      );
+      if (m_ExitingSoon) {
+        m_ErrorMessage = "Shutting down.";
+        return RESOLUTION_ERR;
+      }
       if (response.status_code == 0) {
         m_ErrorMessage = "Failed to access " + m_SearchTarget.first + " repository (connectivity error).";
         return RESOLUTION_ERR;
@@ -802,7 +815,21 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
     case HashCode("wc3maps"): {
       m_MapSiteUri = "https://www.wc3maps.com/api/download/" + m_SearchTarget.second;
       Print("[NET] GET <" + m_MapSiteUri + ">");
-      auto response = cpr::Get(cpr::Url{m_MapSiteUri}, cpr::Timeout{m_DownloadTimeout}, cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL});
+      auto response = cpr::Get(
+        cpr::Url{m_MapSiteUri},
+        cpr::Timeout{m_DownloadTimeout},
+        cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL},
+        cpr::ProgressCallback(
+          [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+          {
+            return !this->m_ExitingSoon;
+          }
+        )
+      );
+      if (m_ExitingSoon) {
+        m_ErrorMessage = "Shutting down.";
+        return RESOLUTION_ERR;
+      }
       if (response.status_code == 0) {
         m_ErrorMessage = "Remote host unavailable (status code " + to_string(response.status_code) + ").";
         return RESOLUTION_ERR;
@@ -962,11 +989,22 @@ uint32_t CGameSetup::DownloadMapTask()
     *m_DownloadFileStream,
     cpr::Url{m_MapDownloadUri},
     cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}},
-    cpr::Timeout{m_DownloadTimeout}
+    cpr::Timeout{m_DownloadTimeout},
+    cpr::ProgressCallback(
+      [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+      {
+        return !this->m_ExitingSoon;
+      }
+    )
   );
   m_DownloadFileStream->close();
   delete m_DownloadFileStream;
   m_DownloadFileStream = nullptr;
+  if (m_ExitingSoon) {
+    m_ErrorMessage = "Shutting down.";
+    FileDelete(m_DownloadFilePath);
+    return RESOLUTION_ERR;
+  }
   if (response.status_code == 0) {
     m_ErrorMessage = "Failed to access " + m_SearchTarget.first + " repository (connectivity error).";
     FileDelete(m_DownloadFilePath);
@@ -1018,8 +1056,16 @@ vector<pair<string, string>> CGameSetup::GetMapRepositorySuggestions(const strin
   string searchUri = "https://www.epicwar.com/maps/search/?go=1&n=" + EncodeURIComponent(pattern) + "&a=&c=0&p=0&pf=0&roc=0&tft=0&order=desc&sort=downloads&page=1";
   Print("[AURA] Looking up suggestions...");
   Print("[AURA] GET <" + searchUri + ">");
-  auto response = cpr::Get(cpr::Url{searchUri});
-  if (response.status_code != 200) {
+  auto response = cpr::Get(
+    cpr::Url{searchUri},
+    cpr::ProgressCallback(
+      [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+      {
+        return !this->m_ExitingSoon;
+      }
+    )
+  );
+  if (m_ExitingSoon || response.status_code != 200) {
     return suggestions;
   }
 
