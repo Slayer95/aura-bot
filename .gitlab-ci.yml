@@ -61,7 +61,7 @@ Assemble:
   # CPR (shared, .so)
   - git clone https://github.com/libcpr/cpr.git cpr-src
   - cd cpr-src && git checkout 3fbe802 && mkdir build && cd build
-  - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=1
+  - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=ON
   - cmake --build . --parallel
   - cmake --install .
   - cd $CI_PROJECT_DIR
@@ -70,7 +70,7 @@ Assemble:
   # DPP (shared, .so)
   - git clone https://github.com/brainboxdotcc/DPP.git dpp-src
   - cd dpp-src && mkdir build && cd build
-  - cmake .. -DCPR_USE_SYSTEM_CURL=ON
+  - cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
   - cmake --build . -j4
   - make install
   - cd $CI_PROJECT_DIR
