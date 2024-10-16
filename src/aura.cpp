@@ -93,8 +93,9 @@ using namespace std;
 #undef FD_SETSIZE
 #define FD_SETSIZE 512
 
-static CAura* gAura    = nullptr;
-bool          gRestart = false;
+static CAura*         gAura        = nullptr;
+bool                  gRestart     = false;
+volatile sig_atomic_t gGracefulExit = 0;
 
 #ifdef _WIN32
 static wchar_t* auraHome = nullptr;
@@ -309,15 +310,12 @@ int main(const int argc, char** argv)
 #endif
 
   signal(SIGINT, [](int32_t) -> void {
-    if (!gAura || gAura->m_Exiting) {
+    if (gGracefulExit == 1) {
       Print("[!!!] caught signal SIGINT, exiting NOW");
       exit(1);
-    } else if (gAura->m_ExitingSoon) {
-      Print("[!!!] caught signal SIGINT, skipping graceful exit");
-      gAura->m_Exiting = true;
     } else {
       Print("[!!!] caught signal SIGINT, exiting gracefully...");
-      gAura->GracefulExit();
+      gGracefulExit = 1;
     }
   });
 
@@ -826,6 +824,11 @@ bool CAura::HandleAction(vector<string> action)
 
 bool CAura::Update()
 {
+  if (gGracefulExit == 1) {
+    // Intentionally execute on every loop turn after graceful exit is flagged.
+    GracefulExit();
+  }
+
   // 1. pending actions
   bool skipActions = false;
   while (!m_PendingActions.empty()) {

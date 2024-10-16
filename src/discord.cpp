@@ -74,9 +74,18 @@ CDiscord::~CDiscord()
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
     Print("[DISCORD] shutting down");
   }
-  delete m_Client;
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-    Print("[DISCORD] shutdown ok");
+  if (m_Client) {
+    m_Client->shutdown();
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+      Print("[DISCORD] shutdown ok");
+    }
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+      Print("[DISCORD] deallocating");
+    }
+    delete m_Client;
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+      Print("[DISCORD] deallocated ok");
+    }
   }
 #endif
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
@@ -177,8 +186,23 @@ void CDiscord::Update()
 #endif
     } else {
 #ifndef DISABLE_DPP
-      delete m_Client;
-      m_Client = nullptr;
+      if (m_Client) {
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          Print("[DISCORD] shutting down");
+        }
+        m_Client->shutdown();
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          Print("[DISCORD] shutdown ok");
+        }
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          Print("[DISCORD] deallocating");
+        }
+        delete m_Client;
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          Print("[DISCORD] deallocated");
+        }
+        m_Client = nullptr;
+      }
 #endif
       return;
     }
