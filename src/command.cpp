@@ -791,28 +791,28 @@ void CCommandContext::SendAllUnlessHidden(const string& message)
 
 CGameUser* CCommandContext::GetTargetUser(const string& target)
 {
-  CGameUser* TargetPlayer = nullptr;
+  CGameUser* targetUser = nullptr;
   if (!m_TargetGame) {
-    return TargetPlayer;
+    return targetUser;
   }
-  m_TargetGame->GetUserFromNamePartial(target, TargetPlayer);
-  return TargetPlayer;
+  m_TargetGame->GetUserFromNamePartial(target, targetUser);
+  return targetUser;
 }
 
 CGameUser* CCommandContext::RunTargetUser(const string& target)
 {
-  CGameUser* TargetPlayer = nullptr;
+  CGameUser* targetUser = nullptr;
   if (!m_TargetGame) {
-    return TargetPlayer;
+    return targetUser;
   }
 
-  uint8_t Matches = m_TargetGame->GetUserFromNamePartial(target, TargetPlayer);
+  uint8_t Matches = m_TargetGame->GetUserFromNamePartial(target, targetUser);
   if (Matches > 1) {
     ErrorReply("Player [" + target + "] ambiguous.");
   } else if (Matches == 0) {
     ErrorReply("Player [" + target + "] not found.");
   }
-  return TargetPlayer;
+  return targetUser;
 }
 
 CGameUser* CCommandContext::GetTargetUserOrSelf(const string& target)
