@@ -3654,18 +3654,6 @@ void CGame::ShowPlayerNamesGameStart() {
       Send(p1, GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(p2->GetUID(), p2->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/));
     }
   }
-  //for (auto& user : m_Users) {
-    /*user->RefreshUID();
-    uint8_t i = static_cast<uint8_t>(m_Slots.size());
-    while (i--) {
-      if (m_Slots[i].GetUID() == user->GetOldUID()) {
-        m_Slots[i].SetUID(user->GetUID());
-        break;
-      }
-    }*/
-    //SendIncomingPlayerInfo(user);
-  //}
-  //SendAllSlotInfo();
 }
 
 void CGame::ShowPlayerNamesInGame() {
