@@ -1292,7 +1292,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (m_TargetGame->GetIsHiddenPlayerNames()) {
-        ErrorReply("This command is disabled in FFA games.");
+        ErrorReply("This command is disabled in incognito mode games.");
         break;
       }
       CRealm* targetPlayerRealm = targetPlayer->GetRealm(true);
@@ -3219,7 +3219,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetIsHiddenPlayerNames()) {
-        ErrorReply("This command is disabled in FFA games. Use " + cmdToken + "muteall from the game lobby next time.");
+        ErrorReply("This command is disabled in incognito mode games. Use " + cmdToken + "muteall from the game lobby next time.");
         break;
       }
 
@@ -3275,7 +3275,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetIsHiddenPlayerNames() && m_TargetGame->GetGameLoaded()) {
-        ErrorReply("Chat can only be toggled from the game lobby for FFA games.");
+        ErrorReply("Chat can only be toggled from the game lobby for incognito mode games.");
         break;
       }
 
@@ -5370,7 +5370,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetIsHiddenPlayerNames()) {
-        ErrorReply("Game can only be locked from the lobby in FFA games.");
+        ErrorReply("Game can only be locked from the lobby in incognito mode games.");
         break;
       }
 
@@ -5425,7 +5425,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetIsHiddenPlayerNames()) {
-        ErrorReply("Game can only be unlocked from the lobby in FFA games.");
+        ErrorReply("Game can only be unlocked from the lobby in incognito mode games.");
         break;
       }
 
@@ -5450,7 +5450,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetIsHiddenPlayerNames()) {
-        ErrorReply("This command is disabled in FFA games. Use " + cmdToken + "unmuteall from the game lobby next time.");
+        ErrorReply("This command is disabled in incognito mode games. Use " + cmdToken + "unmuteall from the game lobby next time.");
         break;
       }
 
@@ -5499,7 +5499,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetIsHiddenPlayerNames() && m_TargetGame->GetGameLoaded()) {
-        ErrorReply("Chat can only be toggled from the game lobby for FFA games.");
+        ErrorReply("Chat can only be toggled from the game lobby for incognito mode games.");
         break;
       }
 
@@ -5585,6 +5585,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         CGame* matchingGame = reinterpret_cast<CGame*>(location);
         if (matchingGame->GetGameLoaded() && !GetIsSudo()) {
           ErrorReply("Cannot send messages to a game that has already started.");
+          break;
+        }
+        if (matchingGame->GetIsHiddenPlayerNames() && !GetIsSudo()) {
+          ErrorReply("Cannot send messages to an incognito mode game.");
           break;
         }
         CGameUser* targetPlayer = nullptr;
