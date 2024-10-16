@@ -193,7 +193,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Paused(false),
     m_Desynced(false),
     m_IsDraftMode(false),
-    m_IsHiddenPlayers(false),
+    m_IsHiddenPlayerNames(false),
     m_HadLeaver(false),
     m_HasMapLock(false),
     m_CheckReservation(nGameSetup->m_ChecksReservation.has_value() ? nGameSetup->m_ChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
@@ -214,7 +214,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   if (m_Config->m_IndexVirtualHostName.empty()) {
     m_Config->m_IndexVirtualHostName = m_CreatedBy.empty() ? "Aura Bot" : m_CreatedBy;
   }
-
+  m_IsHiddenPlayerNames = m_Config->m_HideLobbyNames;
   m_SupportedGameVersionsMin = m_Aura->m_GameVersion;
   m_SupportedGameVersionsMax = m_Aura->m_GameVersion;
   m_SupportedGameVersions.set(m_Aura->m_GameVersion);
@@ -1002,8 +1002,7 @@ vector<const CGameUser*> CGame::GetPlayers() const
 {
   vector<const CGameUser*> players;
   for (const auto& user : m_Users) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    if (!user->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Map->GetVersionMaxSlots()) {
+    if (!user->GetLeftMessageSent() && !user->GetIsObserver()) {
       // Check GetLeftMessageSent instead of GetDeleteMe for debugging purposes
       players.push_back(user);
     }
@@ -1016,7 +1015,7 @@ vector<const CGameUser*> CGame::GetObservers() const
   vector<const CGameUser*> observers;
   for (const auto& user : m_Users) {
     const uint8_t SID = GetSIDFromUID(user->GetUID());
-    if (!user->GetLeftMessageSent() && m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots()) {
+    if (!user->GetLeftMessageSent() && user->GetIsObserver()) {
       // Check GetLeftMessageSent instead of GetDeleteMe for debugging purposes
       observers.push_back(user);
     }
@@ -2460,9 +2459,9 @@ string CGame::GetAutoStartText() const
     } else if (requirement.first == 0) {
       fragments.push_back("in " + DurationLeftToString(requirement.second - Time));
     } else if (requirement.second <= Time) {
-      fragments.push_back("with " + to_string(requirement.first) + " users");
+      fragments.push_back("with " + to_string(requirement.first) + " players");
     } else {
-      fragments.push_back("with " + to_string(requirement.first) + "+ users after " + DurationLeftToString(requirement.second - Time));
+      fragments.push_back("with " + to_string(requirement.first) + "+ players after " + DurationLeftToString(requirement.second - Time));
     }
   }
 
@@ -2618,7 +2617,7 @@ void CGame::SendJoinedPlayersInfo(CGameConnection* connection) const
     if (otherPlayer->GetDeleteMe())
       continue;
     Send(connection,
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
+      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
 }
@@ -2631,7 +2630,7 @@ void CGame::SendJoinedPlayersInfo(CGameUser* user) const
     if (otherPlayer->GetDeleteMe())
       continue;
     Send(user,
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
+      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
 }
@@ -2644,7 +2643,7 @@ void CGame::SendIncomingPlayerInfo(CGameUser* user) const
     if (otherPlayer->GetDeleteMe())
       break;
     otherPlayer->Send(
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(user->GetUID(), user->GetName()/*, user->GetIPv4(), user->GetIPv4Internal()*/)
+      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(user->GetUID(), user->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/)
     );
   }
 }
@@ -3280,6 +3279,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
   if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded) {
     if (!user->GetIsObserver() || GetSlotsOccupied() < m_HCLCommandString.size()) {
+      // Intentionally reveal the name of the lobby leaver (may be trolling.)
       SendAllChat("Countdown stopped because [" + user->GetName() + "] left!");
       m_CountDownStarted = false;
     } else {
@@ -3635,13 +3635,50 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
   return anyStopped;
 }
 
+bool CGame::GetIsHiddenPlayerNames() const
+{
+  return m_IsHiddenPlayerNames;
+}
+
+void CGame::ShowPlayerNamesGameStart() {
+  if (!m_IsHiddenPlayerNames) return;
+
+  m_IsHiddenPlayerNames = false;
+
+  for (auto& p1 : m_Users) {
+    for (auto& p2 : m_Users) {
+      if (p1 == p2 || p2->GetLeftMessageSent()) {
+        continue;
+      }
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_LOBBY));
+      Send(p1, GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(p2->GetUID(), p2->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/));
+    }
+  }
+  //for (auto& user : m_Users) {
+    /*user->RefreshUID();
+    uint8_t i = static_cast<uint8_t>(m_Slots.size());
+    while (i--) {
+      if (m_Slots[i].GetUID() == user->GetOldUID()) {
+        m_Slots[i].SetUID(user->GetUID());
+        break;
+      }
+    }*/
+    //SendIncomingPlayerInfo(user);
+  //}
+  //SendAllSlotInfo();
+}
+
+void CGame::ShowPlayerNamesInGame() {
+  m_IsHiddenPlayerNames = false;
+}
+
 void CGame::EventUserKickHandleQueued(CGameUser* user)
 {
   if (user->GetDeleteMe())
     return;
 
   if (m_CountDownStarted) {
-    user->ClearKickByTime();
+    user->ClearKickByTicks();
     return;
   }
 
@@ -3687,7 +3724,7 @@ void CGame::EventUserCheckStatus(CGameUser* user)
   user->SetStatusMessageSent(true);
   if (OwnerFragment.empty() && GProxyFragment.empty()) {
     if (m_Aura->m_Net->m_Config->m_AnnounceIPv6 && user->GetUsingIPv6()) {
-      SendAllChat(user->GetName() + " joined the game over IPv6.");
+      SendAllChat(user->GetDisplayName() + " joined the game over IPv6.");
     }
     return;
   }
@@ -3697,15 +3734,15 @@ void CGame::EventUserCheckStatus(CGameUser* user)
     IPv6Fragment = ". (Joined over IPv6).";
   }
   if (!OwnerFragment.empty() && !GProxyFragment.empty()) {
-    SendAllChat(user->GetName() + OwnerFragment + GProxyFragment + IPv6Fragment);
+    SendAllChat(user->GetDisplayName() + OwnerFragment + GProxyFragment + IPv6Fragment);
   } else if (!OwnerFragment.empty()) {
     if (user->GetUsingIPv6()) {
-      SendAllChat(user->GetName() + OwnerFragment + " joined the game over IPv6.");
+      SendAllChat(user->GetDisplayName() + OwnerFragment + " joined the game over IPv6.");
     } else {
-      SendAllChat(user->GetName() + OwnerFragment + " joined the game.");
+      SendAllChat(user->GetDisplayName() + OwnerFragment + " joined the game.");
     }
   } else {
-    SendAllChat(user->GetName() + GProxyFragment + IPv6Fragment);
+    SendAllChat(user->GetDisplayName() + GProxyFragment + IPv6Fragment);
   }
 }
 
@@ -3887,9 +3924,13 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
     }
   }
 
-  if (GetUserFromName(joinRequest->GetName(), false)) {
+  if (GetUserFromName(joinRequest->GetName(), false)/* && !m_IsHiddenPlayerNames*/) {
     if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
-      SendAllChat("Entry denied for another user with the same name: [" + joinRequest->GetName() + "@" + JoinedRealm + "]");
+      if (!m_IsHiddenPlayerNames) {
+        // Note: Someone can probably figure out whether a given player has joined a lobby by trying to impersonate them, and failing to.
+        // An alternative would be no longer preventing joins and, potentially, disambiguating their names at CGame::ShowPlayerNamesGameStart.
+        SendAllChat("Entry denied for another user with the same name: [" + joinRequest->GetName() + "@" + JoinedRealm + "]");
+      }
       m_ReportedJoinFailNames.insert(joinRequest->GetName());
     }
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
@@ -3973,7 +4014,11 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
         if (kickedPlayer) {
           kickedPlayer->SetDeleteMe(true);
-          kickedPlayer->SetLeftReason("was kicked to make room for a reserved user [" + joinRequest->GetName() + "]");
+          if (m_IsHiddenPlayerNames) {
+            kickedPlayer->SetLeftReason("was kicked to make room for a reserved user");
+          } else {
+            kickedPlayer->SetLeftReason("was kicked to make room for a reserved user [" + joinRequest->GetName() + "]");
+          }
           kickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
 
           // Ensure the userleave message is sent before the reserved userjoin message.
@@ -3999,7 +4044,11 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
       if (kickedPlayer) {
         kickedPlayer->SetDeleteMe(true);
-        kickedPlayer->SetLeftReason("was kicked to make room for the owner [" + joinRequest->GetName() + "]");
+        if (m_IsHiddenPlayerNames) {
+          kickedPlayer->SetLeftReason("was kicked to make room for the owner");
+        } else {
+          kickedPlayer->SetLeftReason("was kicked to make room for the owner [" + joinRequest->GetName() + "]");
+        }
         kickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
         // Ensure the userleave message is sent before the game owner' userjoin message.
         SendLeftMessage(kickedPlayer, true);
@@ -4044,7 +4093,9 @@ bool CGame::CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* j
     // don't allow the user to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
       LOG_APP_IF(LOG_LEVEL_INFO, "user [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - banned " + scopeFragment)
-      SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is banned");
+      if (!m_IsHiddenPlayerNames) {
+        SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is banned");
+      }
       m_ReportedJoinFailNames.insert(joinRequest->GetName());
     } else {
       LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - banned " + scopeFragment)
@@ -4078,7 +4129,9 @@ bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joi
     // don't allow the user to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
       LOG_APP_IF(LOG_LEVEL_INFO, "user [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - IP-banned " + scopeFragment)
-      SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is IP-banned");
+      if (!m_IsHiddenPlayerNames) {
+        SendAllChat("[" + joinRequest->GetName() + "@" + hostName + "] is trying to join the game, but is IP-banned");
+      }
       m_ReportedJoinFailNames.insert(joinRequest->GetName());
     } else {
       LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - IP-banned " + scopeFragment)
@@ -4238,7 +4291,7 @@ void CGame::EventUserKeepAlive(CGameUser* user)
     }
     if (m_GameLoaded) {
       if (GetHasDesyncHandler()) {
-        SendAllChat("Warning! Desync detected (" + user->GetName() + " (" + user->GetDelayText(true) + ") may not be in the same game as " + desyncListText);
+        SendAllChat("Warning! Desync detected (" + user->GetDisplayName() + " (" + user->GetDelayText(true) + ") may not be in the same game as " + desyncListText);
         if (!GetAllowsDesync()) {
           StopDesynchronized("was automatically dropped after desync");
         }
@@ -4273,7 +4326,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
 
       string chatTypeFragment;
       if (isLobbyChat) {
-        Log("[" + user->GetName() + "] " + chatPlayer->GetMessage());
+        Log("[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
         if (m_MuteLobby) {
           Relay = false;
         }
@@ -4297,11 +4350,11 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
           chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
 
-        Log(chatTypeFragment + "[" + user->GetName() + "] " + chatPlayer->GetMessage());
+        Log(chatTypeFragment + "[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
       }
 
       if (Relay) {
-        //Log("[Private] [" + user->GetName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
+        //Log("[Private] [" + user->GetDisplayName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
         if (OnlyToObservers) {
           vector<uint8_t> overrideObserverUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
           vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
@@ -4359,11 +4412,18 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
           if (isCommand) {
             user->SetUsedAnyCommands(true);
             // If we want users identities hidden, we must keep bot responses private.
-            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, !m_MuteAll && !m_IsHiddenPlayers && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (payload == "?trigger") {
             SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, false);
+          } else if (payload == "/p" || payload == "/game") {
+            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
+            cmdToken = m_Config->m_PrivateCmdToken;
+            command = payload.substr(1);
+            payload.clear();
+            ctx->Run(cmdToken, command, payload);
+            m_Aura->UnholdContext(ctx);
           } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
             if (!user->GetSentAutoCommandsHelp()) {
               bool anySentCommands = false;
@@ -4547,7 +4607,7 @@ void CGame::EventUserDropRequest(CGameUser* user)
 
   if (m_Lagging) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] voted to drop laggers")
-    SendAllChat("Player [" + user->GetName() + "] voted to drop laggers");
+    SendAllChat("Player [" + user->GetDisplayName() + "] voted to drop laggers");
 
     // check if at least half the users voted to drop
     uint8_t votesCount = 0;
@@ -4602,7 +4662,7 @@ bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
       }
     } else if (!user->GetMapKicked()) {
       user->SetMapKicked(true);
-      user->KickAtLatest(Time + m_Config->m_LacksMapKickDelay);
+      user->KickAtLatest(GetTicks() + m_Config->m_LacksMapKickDelay);
       if (m_Remade) {
         user->SetLeftReason("autokicked - they don't have the map (remade game)");
       } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
@@ -4619,17 +4679,17 @@ bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
       }
       user->SetLeftCode(PLAYERLEAVE_LOBBY);
       if (GetMapSiteURL().empty()) {
-        SendChat(user, "" + user->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Config->m_LacksMapKickDelay) + " seconds...)");
+        SendChat(user, "" + user->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Config->m_LacksMapKickDelay / 1000) + " seconds...)");
       } else {
-        SendChat(user, "" + user->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Config->m_LacksMapKickDelay) + " seconds...)");
+        SendChat(user, "" + user->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Config->m_LacksMapKickDelay / 1000) + " seconds...)");
       }
     }
   } else if (user->GetDownloadStarted()) {
     // calculate download rate
     const double Seconds = static_cast<double>(GetTicks() - user->GetStartedDownloadingTicks()) / 1000.f;
-    const double Rate    = static_cast<double>(MapSize) / 1024.f / Seconds;
+    //const double Rate    = static_cast<double>(MapSize) / 1024.f / Seconds;
     LOG_APP_IF(LOG_LEVEL_DEBUG, "map download finished for user [" + user->GetName() + "] in " + ToFormattedString(Seconds) + " seconds")
-    SendAllChat("Player [" + user->GetName() + "] downloaded the map in " + ToFormattedString(Seconds) + " seconds (" + ToFormattedString(Rate) + " KB/sec)");
+    SendAllChat("Player [" + user->GetDisplayName() + "] downloaded the map in " + ToFormattedString(Seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
     user->SetDownloadFinished(true);
     user->SetFinishedDownloadingTime(Time);
     EventUserMapReady(user);
@@ -4701,21 +4761,21 @@ void CGame::EventUserPongToHost(CGameUser* user)
         const uint8_t SID = GetSIDFromUID(user->GetUID());
         OpenSlot(SID, false);
       } else {
-        SendAllChat("Player [" + user->GetName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
+        SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
         user->SetPingKicked(true);
-        user->KickAtLatest(GetTime() + 10);
+        user->KickAtLatest(GetTicks() + HIGH_PING_KICK_DELAY);
       }
     }
   } else {
     user->SetPingKicked(false);
     if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
-      user->ClearKickByTime();
+      user->ClearKickByTicks();
     }
     if (user->GetHasHighPing()) {
       bool HasHighPing = LatencyMilliseconds >= m_Config->m_SafeHighPing;
       if (!HasHighPing) {
         user->SetHasHighPing(HasHighPing);
-        SendAllChat("Player [" + user->GetName() + "] ping went down to " + to_string(LatencyMilliseconds) + "ms");
+        SendAllChat("Player [" + user->GetDisplayName() + "] ping went down to " + to_string(LatencyMilliseconds) + "ms");
       } else if (LatencyMilliseconds >= m_Config->m_WarnHighPing && user->GetPongCounter() % 4 == 0) {
         // Still high ping. We need to keep sending these intermittently (roughly every 20-25 seconds), so that
         // users don't assume that lack of news is good news.
@@ -4725,7 +4785,7 @@ void CGame::EventUserPongToHost(CGameUser* user)
       bool HasHighPing = LatencyMilliseconds >= m_Config->m_WarnHighPing;
       if (HasHighPing) {
         user->SetHasHighPing(HasHighPing);
-        SendAllChat("Player [" + user->GetName() + "] has a high ping of " + to_string(LatencyMilliseconds) + "ms");
+        SendAllChat("Player [" + user->GetDisplayName() + "] has a high ping of " + to_string(LatencyMilliseconds) + "ms");
       }
     }
   }
@@ -4826,6 +4886,10 @@ void CGame::EventGameStarted()
         LOG_APP_IF(LOG_LEVEL_INFO, "resuming " + to_string(expectedPlayers) + "-user game. " + ToDecString(expectedPlayers - activePlayers) + " missing.")
       }
     }
+  }
+
+  if (m_IsHiddenPlayerNames && !ResolvePlayerObfuscation()) {
+    ShowPlayerNamesGameStart();
   }
 
   if (!m_RestoredGame && GetSlotsOpen() > 0) {
@@ -5037,10 +5101,17 @@ void CGame::UpdateBannableUsers()
   }
 }
 
-void CGame::CheckPlayerObfuscation()
+bool CGame::ResolvePlayerObfuscation() const
 {
+  if (m_Config->m_HideInGameNames == HIDE_IGN_ALWAYS) {
+    return true;
+  }
+  if (m_Config->m_HideInGameNames == HIDE_IGN_NEVER) {
+    return false;
+  }
+
   if (m_ControllersWithMap < 3) {
-    return;
+    return false;
   }
 
   unordered_set<uint8_t> activeTeams = {};
@@ -5049,17 +5120,41 @@ void CGame::CheckPlayerObfuscation()
       continue;
     }
     if (activeTeams.find(slot.GetTeam()) != activeTeams.end()) {
-      return;
+      return false;
     }
     activeTeams.insert(slot.GetTeam());
   }
 
-  m_IsHiddenPlayers = true;
+  return true;
+}
+
+void CGame::RunPlayerObfuscation()
+{
+  m_IsHiddenPlayerNames = ResolvePlayerObfuscation();
+
+  if (m_IsHiddenPlayerNames) {
+    vector<uint8_t> pseudonymUIDs = vector<uint8_t>(GetPlayers().size());
+    uint8_t i = static_cast<uint8_t>(pseudonymUIDs.size());
+    while (i--) {
+      pseudonymUIDs[i] = i;
+    }
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::shuffle(begin(pseudonymUIDs), end(pseudonymUIDs), gen);
+
+    i = 0;
+    for (auto& player : m_Users) {
+      if (player->GetIsObserver() || player->GetLeftMessageSent()) {
+        continue;
+      }
+      player->SetPseudonymUID(pseudonymUIDs[i++]);
+    }
+  }
 }
 
 void CGame::EventGameLoaded()
 {
-  CheckPlayerObfuscation();
+  RunPlayerObfuscation();
 
   LOG_APP_IF(LOG_LEVEL_INFO, "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
 
@@ -5258,7 +5353,7 @@ void CGame::Remake()
   m_Lagging = false;
   m_Desynced = false;
   m_IsDraftMode = false;
-  m_IsHiddenPlayers = false;
+  m_IsHiddenPlayerNames = false;
   m_HadLeaver = false;
   m_HasMapLock = false;
   m_UsesCustomReferees = false;
@@ -5465,29 +5560,47 @@ uint8_t CGame::GetNewUID() const
     if (TestUID == m_VirtualHostUID)
       continue;
 
-    bool InUse = false;
-
+    bool inUse = false;
     for (const uint16_t fakePlayer : m_FakeUsers) {
       if (static_cast<uint8_t>(fakePlayer) == TestUID) {
-        InUse = true;
+        inUse = true;
         break;
       }
     }
-
-    if (InUse)
+    if (inUse) {
       continue;
-
-    for (auto& user : m_Users)
-    {
-      if (!user->GetLeftMessageSent() && user->GetUID() == TestUID)
-      {
-        InUse = true;
+    }
+    for (auto& user : m_Users) {
+      if (!user->GetLeftMessageSent() && (user->GetUID() == TestUID || user->GetOldUID() == TestUID)) {
+        inUse = true;
         break;
       }
     }
-
-    if (!InUse)
+    if (!inUse) {
       return TestUID;
+    }
+  }
+
+  // this should never happen
+
+  return 0xFF;
+}
+
+uint8_t CGame::GetNewPseudonymUID() const
+{
+  // find an unused Pseudonym UID
+
+  bool inUse = false;
+  for (uint8_t TestUID = 1; TestUID < 0xFF; ++TestUID) {
+    for (auto& user : m_Users) {
+      if (!user->GetLeftMessageSent() && user->GetPseudonymUID() == TestUID) {
+        inUse = true;
+        break;
+      }
+    }
+    if (!inUse) {
+      return TestUID;
+    }
   }
 
   // this should never happen
@@ -5699,12 +5812,6 @@ std::vector<uint8_t> CGame::GetObserverUIDs(uint8_t excludeUID) const
 
 uint8_t CGame::GetPublicHostUID() const
 {
-  // try to find the virtual host user first
-
-  if (m_VirtualHostUID != 0xFF) {
-    return m_VirtualHostUID;
-  }
-
   // try to find the fakeuser next
 
   if (!m_FakeUsers.empty()) {
@@ -5760,10 +5867,6 @@ uint8_t CGame::GetHiddenHostUID() const
 {
   // try to find the virtual host user first
 
-  if (m_VirtualHostUID != 0xFF) {
-    return m_VirtualHostUID;
-  }
-
   vector<uint8_t> availableUIDs;
   //vector<uint8_t> availableRefereeUIDs;
   for (auto& fakePlayer : m_FakeUsers) {
@@ -5810,7 +5913,11 @@ uint8_t CGame::GetHostUID() const
   // return the user to be considered the host (it can be any user)
   // mainly used for sending text messages from the bot
 
-  if (m_IsHiddenPlayers) {
+  if (m_VirtualHostUID != 0xFF) {
+    return m_VirtualHostUID;
+  }
+
+  if (GetIsHiddenPlayerNames()) {
     return GetHiddenHostUID();
   } else {
     return GetPublicHostUID();
@@ -6692,7 +6799,9 @@ void CGame::ShuffleSlots()
 
 void CGame::ReportSpoofed(const string& server, CGameUser* user)
 {
-  SendAllChat("Name spoof detected. The real [" + user->GetName() + "@" + server + "] is not in this game.");
+  if (!m_IsHiddenPlayerNames) {
+    SendAllChat("Name spoof detected. The real [" + user->GetName() + "@" + server + "] is not in this game.");
+  }
   if (GetIsLobby() && MatchOwnerName(user->GetName())) {
     user->SetDeleteMe(true);
     user->SetLeftReason("was autokicked for spoofing the game owner");
@@ -6707,7 +6816,7 @@ void CGame::AddToRealmVerified(const string& server, CGameUser* Player, bool sen
   // Must only be called on a lobby, for many reasons (e.g. GetName() used instead of GetDisplayName())
   Player->SetRealmVerified(true);
   if (sendMessage) {
-    if (MatchOwnerName(Player->GetName()) && m_OwnerRealm == Player->GetRealmHostName()) {
+    if (!m_IsHiddenPlayerNames && MatchOwnerName(Player->GetName()) && m_OwnerRealm == Player->GetRealmHostName()) {
       SendAllChat("Identity accepted for game owner [" + Player->GetName() + "@" + server + "]");
     } else {
       SendChat(Player, "Identity accepted for [" + Player->GetName() + "@" + server + "]");
@@ -6746,7 +6855,7 @@ void CGame::AddToReserved(const string& name)
     // Reserved users are never kicked for latency reasons.
     user->SetPingKicked(false);
     if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
-      user->ClearKickByTime();
+      user->ClearKickByTicks();
     }
   }
 }
@@ -6999,7 +7108,7 @@ void CGame::SetOwner(const string& name, const string& realm)
     // Owner is never kicked for latency reasons.
     user->SetPingKicked(false);
     if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
-      user->ClearKickByTime();
+      user->ClearKickByTicks();
     }
   }
 }
@@ -7233,9 +7342,9 @@ void CGame::StartCountDown(bool fromUser, bool force)
         CGameUser* Player = GetUserFromUID(slot.GetUID());
         if (Player) {
           if (StillDownloading.empty())
-            StillDownloading = Player->GetName();
+            StillDownloading = Player->GetDisplayName();
           else
-            StillDownloading += ", " + Player->GetName();
+            StillDownloading += ", " + Player->GetDisplayName();
         }
       }
       if (slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
@@ -7267,9 +7376,9 @@ void CGame::StartCountDown(bool fromUser, bool force)
       for (const auto& user : m_Users) {
         if (!user->GetIsReserved() && !user->GetIsObserver() && user->GetStoredRTTCount() < 3) {
           if (NotPinged.empty())
-            NotPinged = user->GetName();
+            NotPinged = user->GetDisplayName();
           else
-            NotPinged += ", " + user->GetName();
+            NotPinged += ", " + user->GetDisplayName();
         }
       }
     }
@@ -7284,9 +7393,9 @@ void CGame::StartCountDown(bool fromUser, bool force)
       CRealm* realm = user->GetRealm(false);
       if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
         if (NotVerified.empty())
-          NotVerified = user->GetName();
+          NotVerified = user->GetDisplayName();
         else
-          NotVerified += ", " + user->GetName();
+          NotVerified += ", " + user->GetDisplayName();
       }
     }
 
@@ -7320,7 +7429,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   for (auto& user : m_Users) {
     user->SetPingKicked(false);
     if (user->GetKickQueued()) {
-      user->ClearKickByTime();
+      user->ClearKickByTicks();
     }
   }
 

@@ -176,6 +176,8 @@ private:
   std::optional<int64_t>           m_KickByTicks;
   std::optional<int64_t>           m_LastGProxyAckTicks;           // GetTime when we last acknowledged GProxy++ packet
   uint8_t                          m_UID;                          // the player's UID
+  uint8_t                          m_OldUID;
+  uint8_t                          m_PseudonymUID;
   bool                             m_Verified;                     // if the player has spoof checked or not
   bool                             m_Owner;                        // if the player has spoof checked or not
   bool                             m_Reserved;                     // if the player is reserved (VIP) or not
@@ -245,6 +247,8 @@ public:
   inline bool                     GetIsReady() const { return m_Ready; }
   inline bool                     GetDeleteMe() const { return m_DeleteMe; }
   inline uint8_t                  GetUID() const { return m_UID; }
+  inline uint8_t                  GetOldUID() const { return m_OldUID; }
+  inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
   inline std::string              GetName() const { return m_Name; }
   std::string                     GetLowerName() const;
   std::string                     GetDisplayName() const;
@@ -344,6 +348,7 @@ public:
   inline void SetOwner(bool nOwner) { m_Owner = nOwner; }
   inline void SetReserved(bool nReserved) { m_Reserved = nReserved; }
   inline void SetObserver(bool nObserver) { m_Observer = nObserver; }
+  inline void SetPseudonymUID(uint8_t nUID) { m_PseudonymUID = nUID; }
   inline void SetPowerObserver(bool nPowerObserver) { m_PowerObserver = nPowerObserver; }
   inline void SetWhoisShouldBeSent(bool nWhoisShouldBeSent) { m_WhoisShouldBeSent = nWhoisShouldBeSent; }
   inline void SetDownloadAllowed(bool nDownloadAllowed) { m_DownloadAllowed = nDownloadAllowed; }
@@ -362,8 +367,8 @@ public:
   inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
-  inline void SetKickByTime(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }
-  inline void ClearKickByTime() { m_KickByTicks = std::nullopt; }
+  inline void SetKickByTicks(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }
+  inline void ClearKickByTicks() { m_KickByTicks = std::nullopt; }
   inline void KickAtLatest(int64_t nKickByTicks) {
     if (!m_KickByTicks.has_value() || nKickByTicks < m_KickByTicks.value()) {
       m_KickByTicks = nKickByTicks;
@@ -398,6 +403,8 @@ public:
   inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }
   inline void SetPinnedMessage(const std::string nPinnedMessage) { m_PinnedMessage = nPinnedMessage; }
   inline void ClearPinnedMessage() { m_PinnedMessage.clear(); }
+
+  void RefreshUID();
 
   // processing functions
 

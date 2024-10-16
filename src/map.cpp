@@ -1126,6 +1126,14 @@ void CMap::Load(CConfig* CFG)
     m_AutoStartPlayers = CFG->GetUint8("map.auto_start.players", 2);
     CFG->FailIfErrorLast();
   }
+  if (CFG->Exists("map.hosting.nicknames.hide_lobby")) {
+    m_HideLobbyNames = CFG->GetBool("map.hosting.nicknames.hide_lobby", false);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.hosting.nicknames.hide_in_game")) {
+    m_HideInGameNames = CFG->GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "always", "auto"}, HIDE_IGN_AUTO);
+    CFG->FailIfErrorLast();
+  }
 
   if (CFG->Exists("map.options")) {
     MapOptions = CFG->GetUint32("map.options", 0);

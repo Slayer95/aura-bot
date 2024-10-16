@@ -279,10 +279,10 @@ bool CConfig::GetBool(const string& key, bool x)
     SUCCESS(x)
   }
 
-  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off") {
+  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off" || it->second == "never" || it->second == "none") {
     SUCCESS(false);
   }
-  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on") {
+  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on" || it->second == "always") {
     SUCCESS(true);
   }
 
@@ -723,11 +723,11 @@ optional<bool> CConfig::GetMaybeBool(const string& key)
     SUCCESS(result)
   }
 
-  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off") {
+  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off" || it->second == "never" || it->second == "none") {
     result = false;
     SUCCESS(result)
   }
-  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on") {
+  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on" || it->second == "always") {
     result = true;
     SUCCESS(result)
   }

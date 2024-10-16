@@ -148,6 +148,8 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.")->check(CheckIsValidHCL);
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
+  app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: always, never, auto")->check(CLI::IsMember({"always", "never", "auto"}));
+  app.add_flag(  "--hide-ign,--no-hide-ign{false}", m_GameHideLobbyNames, "Whether to hide player names in a hosted game lobby.");
 
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
   app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
@@ -293,6 +295,21 @@ uint8_t CCLI::GetGameUnsafeNameHandler() const
     }
   }
   return nameHandler;
+}
+
+uint8_t CCLI::GetGameHideLoadedNames() const
+{
+  uint8_t hideNamesMode = HIDE_IGN_AUTO;
+  if (m_GameUnsafeNameHandler.has_value()) {
+    if (m_GameUnsafeNameHandler.value() == "never") {
+      hideNamesMode = HIDE_IGN_NEVER;
+    } else if (m_GameUnsafeNameHandler.value() == "always") {
+      hideNamesMode = HIDE_IGN_ALWAYS;
+    } else if (m_GameUnsafeNameHandler.value() == "auto") {
+      hideNamesMode = HIDE_IGN_AUTO;
+    }
+  }
+  return hideNamesMode;
 }
 
 bool CCLI::CheckGameParameters() const

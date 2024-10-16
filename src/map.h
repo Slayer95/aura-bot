@@ -164,6 +164,8 @@ public:
   std::optional<uint16_t>         m_Latency;
   std::optional<int64_t>          m_AutoStartSeconds;
   std::optional<uint8_t>          m_AutoStartPlayers;
+  std::optional<bool>             m_HideLobbyNames;
+  std::optional<uint8_t>          m_HideInGameNames;
   std::optional<uint8_t>          m_IPFloodHandler;
   std::optional<uint8_t>          m_UnsafeNameHandler;
 

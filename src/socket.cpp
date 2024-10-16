@@ -434,7 +434,9 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
 
       m_HasError = true;
       m_Error = GetLastOSError();
-      Print("[TCPSOCKET] (" + GetName() +") error (send) - " + GetErrorString());
+      if (m_LogErrors) {
+        Print("[TCPSOCKET] (" + GetName() +") error (send) - " + GetErrorString());
+      }
       return;
     }
   }

@@ -217,13 +217,14 @@ public:
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
   std::optional<bool>                             m_NotifyJoins;
-
-  std::optional<uint8_t>  m_NumPlayersToStartGameOver;
-  std::optional<uint8_t>  m_PlayersReadyMode;
-  std::optional<uint32_t> m_AutoKickPing;
-  std::optional<uint32_t> m_WarnHighPing;
-  std::optional<uint32_t> m_SafeHighPing;
-  std::optional<bool>     m_SyncNormalize;
+  std::optional<bool>                             m_HideLobbyNames;
+  std::optional<uint8_t>                          m_HideInGameNames;
+  std::optional<uint8_t>                          m_NumPlayersToStartGameOver;
+  std::optional<uint8_t>                          m_PlayersReadyMode;
+  std::optional<uint32_t>                         m_AutoKickPing;
+  std::optional<uint32_t>                         m_WarnHighPing;
+  std::optional<uint32_t>                         m_SafeHighPing;
+  std::optional<bool>                             m_SyncNormalize;
 
   std::string                                     m_CreatedBy;
   void*                                           m_CreatedFrom;
@@ -345,6 +346,8 @@ public:
   void SetWarnKickPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
   void SetSafeKickPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
   void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
+  void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
+  void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
 
   void AcquireCLISimple(const CCLI* nCLI);
   void ResetExtraOptions();

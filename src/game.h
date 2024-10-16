@@ -86,6 +86,13 @@
 #define GAME_OVER_TRUSTED 1u
 #define GAME_OVER_MMD 2u
 
+#define HIDDEN_PLAYERS_NONE 0u
+#define HIDDEN_PLAYERS_LOBBY 1u
+#define HIDDEN_PLAYERS_GAME 2u
+#define HIDDEN_PLAYERS_ALL 3u
+
+#define HIGH_PING_KICK_DELAY 10000u
+
 //
 // CGame
 //
@@ -245,7 +252,7 @@ protected:
   bool                           m_Paused;                        // if the game is paused or not
   bool                           m_Desynced;                      // if the game has desynced or not
   bool                           m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
-  bool                           m_IsHiddenPlayers;
+  bool                           m_IsHiddenPlayerNames;           // if players names are to be obfuscated in most circumstances
   bool                           m_HadLeaver;                     // if the game had a leaver after it started
   bool                           m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
   bool                           m_CheckReservation;
@@ -306,7 +313,7 @@ public:
   inline bool           GetCountDownUserInitiated() const { return m_CountDownUserInitiated; }
   inline bool           GetIsMirror() const { return m_IsMirror; }
   inline bool           GetIsDraftMode() const { return m_IsDraftMode; }
-  inline bool           GetIsHiddenPlayers() const { return m_IsHiddenPlayers; }
+  bool                  GetIsHiddenPlayerNames() const;
   inline bool           GetGameLoading() const { return m_GameLoading; }
   inline bool           GetGameLoaded() const { return m_GameLoaded; }
   inline bool           GetLobbyLoading() const { return m_LobbyLoading; }
@@ -514,7 +521,8 @@ public:
   void AddProvisionalBannableUser(const CGameUser* user);
   void ClearBannableUsers();
   void UpdateBannableUsers();
-  void CheckPlayerObfuscation();
+  bool ResolvePlayerObfuscation() const;
+  void RunPlayerObfuscation();
 
   // other functions
 
@@ -533,6 +541,7 @@ public:
   uint8_t              GetNewUID() const;
   uint8_t              GetNewTeam() const;
   uint8_t              GetNewColor() const;
+  uint8_t              GetNewPseudonymUID() const;
   uint8_t              SimulateActionUID(const uint8_t actionType, CGameUser* user, const bool isDisconnect);
   uint8_t              HostToMapCommunicationUID() const;
   bool                 GetHasAnyActiveTeam() const;
@@ -634,6 +643,8 @@ public:
   bool GetCanStartGracefulCountDown() const;
   void StartCountDown(bool fromUser, bool force);
   bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
+  void ShowPlayerNamesGameStart();
+  void ShowPlayerNamesInGame();
   bool StopPlayers(const std::string& reason) const;
   void StopLaggers(const std::string& reason) const;
   void StopDesynchronized(const std::string& reason) const;
@@ -683,8 +694,6 @@ public:
       m_CustomLayout &= ~CUSTOM_LAYOUT_DRAFT;
     }
   }
-
-  inline void SetHiddenPlayers(const bool nIsHiddenPlayers) { m_IsHiddenPlayers = nIsHiddenPlayers; }
 
   void ResetLayout(const bool quiet);
   void ResetLayoutIfNotMatching();

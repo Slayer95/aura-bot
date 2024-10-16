@@ -87,7 +87,10 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_Latency                   = CFG.GetUint16("bot.latency", 100);
   m_PerfThreshold             = CFG.GetUint32("bot.perf_limit", 150);
   m_LacksMapKickDelay         = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
-  m_LogDelay                  = 1000 * CFG.GetUint32("hosting.log_delay", 180); // default: 3 minutes
+  m_LogDelay                  = CFG.GetUint32("hosting.log_delay", 180); // default: 3 minutes
+
+  m_LacksMapKickDelay = 1000 * m_LacksMapKickDelay;
+  m_LogDelay = 1000 * m_LogDelay;
 
   m_CheckJoinable             = CFG.GetBool("monitor.hosting.on_start.check_connectivity", false);
   m_ExtraDiscoveryAddresses   = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
@@ -105,6 +108,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_NotifyJoins               = CFG.GetBool("ui.notify_joins.enabled", false);
   m_IgnoredNotifyJoinPlayers  = CFG.GetSet("ui.notify_joins.exceptions", ',', {});
+  m_HideLobbyNames            = CFG.GetBool("hosting.nicknames.hide_lobby", false);
+  m_HideInGameNames           = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoggedWords               = CFG.GetSetInsensitive("hosting.log_words", ',', {});
   m_DesyncHandler             = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_IPFloodHandler            = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
@@ -155,6 +160,8 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
 
   INHERIT_CUSTOM(m_NotifyJoins, m_NotifyJoins)
   INHERIT(m_IgnoredNotifyJoinPlayers)
+  INHERIT_MAP_OR_CUSTOM(m_HideLobbyNames, m_HideLobbyNames, m_HideLobbyNames)
+  INHERIT_MAP_OR_CUSTOM(m_HideInGameNames, m_HideInGameNames, m_HideInGameNames)
   INHERIT(m_LoggedWords)
   INHERIT(m_DesyncHandler)
   INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)

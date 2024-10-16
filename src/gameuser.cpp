@@ -311,6 +311,8 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_LastGProxyWaitNoticeSentTime(0),
     m_GProxyReconnectKey(rand()),
     m_UID(nUID),
+    m_OldUID(0xFF),
+    m_PseudonymUID(0xFF),
     m_Verified(false),
     m_Owner(false),
     m_Reserved(nReserved),
@@ -433,7 +435,14 @@ string CGameUser::GetLowerName() const
 
 string CGameUser::GetDisplayName() const
 {
-  if (!m_Observer && m_Game->GetIsHiddenPlayers()) return "Player ?";
+  if (m_Game->GetIsHiddenPlayerNames() && !(m_Observer && m_Game->GetGameLoaded())) {
+    if (m_PseudonymUID == 0xFF) {
+      return "Player " + ToDecString(m_UID);
+    } else {
+      // After CGame::RunPlayerObfuscation()
+      return "Player " + ToDecString(m_PseudonymUID) + "?";
+    }
+  }
   return m_Name;
 }
 
@@ -472,6 +481,12 @@ void CGameUser::UnrefConnection(bool deferred)
     m_LastDisconnectTicks = GetTicks();
     m_Disconnected = true;
   }
+}
+
+void CGameUser::RefreshUID()
+{
+  m_OldUID = m_UID;
+  m_UID = m_Game->GetNewUID();
 }
 
 bool CGameUser::Update(void* fd, int64_t timeout)
@@ -1034,5 +1049,5 @@ bool CGameUser::GetReadyReminderIsDue() const
 
 void CGameUser::SetReadyReminded()
 {
-  m_ReadyReminderLastTicks.value() = GetTicks();
+  m_ReadyReminderLastTicks = GetTicks();
 }

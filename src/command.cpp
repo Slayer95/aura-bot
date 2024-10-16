@@ -785,7 +785,7 @@ void CCommandContext::SendAllUnlessHidden(const string& message)
   if (!m_TargetGame) {
     SendAll(message);
   } else {
-    SendReply(message, m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers() ? CHAT_SEND_TARGET_ALL : 0);
+    SendReply(message, m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
   }
 }
 
@@ -1291,7 +1291,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!targetPlayer) {
         break;
       }
-      if (m_TargetGame->GetIsHiddenPlayers()) {
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("This command is disabled in FFA games.");
         break;
       }
@@ -1465,7 +1465,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to look up stats.");
         break;
       }
-      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayers()) {
+      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("Usage: " + cmdToken + "stats <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "statsdota <PLAYER>");
         break;
@@ -1858,7 +1858,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("eras"): {
-      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayers()) {
+      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("Usage: " + cmdToken + "eras <PLAYER|COUNTRY|COLOR>");
         break;
       }
@@ -2209,7 +2209,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->SetMapSiteURL(TargetUrl);
-      SendReply("Download URL set to [" + TargetUrl + "]", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers() ? CHAT_SEND_TARGET_ALL : 0);
+      SendReply("Download URL set to [" + TargetUrl + "]", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -2418,7 +2418,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (lower == "default" || lower == "reset") {
         m_TargetGame->ResetLatency();
-        SendReply("Latency settings reset to default.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Latency settings reset to default.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
         break;
       } else if (lower == "ignore" || lower == "bypass" || lower == "normal") {
         if (!m_TargetGame->GetGameLoaded()) {
@@ -2426,7 +2426,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         m_TargetGame->NormalizeSyncCounters();
-        SendReply("Ignoring lagging players. (They may not be able to control their units.)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Ignoring lagging players. (They may not be able to control their units.)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
         break;
       }
 
@@ -2489,13 +2489,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       );
 
       if (refreshTime == REFRESH_PERIOD_MIN) {
-        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       } else if (refreshTime == REFRESH_PERIOD_MAX) {
-        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->GetLatency()) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->GetLatency()) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       }
-      SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayers()  ? CHAT_SEND_TARGET_ALL : 0);
+      SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -3147,7 +3147,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       targetPlayer->SetStartedDownloadingTicks(GetTicks());
       targetPlayer->SetMapKicked(false);
       if (!targetPlayer->GetPingKicked() && targetPlayer->GetKickQueued()) {
-        targetPlayer->ClearKickByTime();
+        targetPlayer->ClearKickByTicks();
       }
       break;
     }
@@ -3218,7 +3218,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsHiddenPlayers()) {
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("This command is disabled in FFA games. Use " + cmdToken + "muteall from the game lobby next time.");
         break;
       }
@@ -3274,7 +3274,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsHiddenPlayers() && m_TargetGame->GetGameLoaded()) {
+      if (m_TargetGame->GetIsHiddenPlayerNames() && m_TargetGame->GetGameLoaded()) {
         ErrorReply("Chat can only be toggled from the game lobby for FFA games.");
         break;
       }
@@ -5369,7 +5369,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsHiddenPlayers()) {
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("Game can only be locked from the lobby in FFA games.");
         break;
       }
@@ -5424,7 +5424,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsHiddenPlayers()) {
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("Game can only be unlocked from the lobby in FFA games.");
         break;
       }
@@ -5449,7 +5449,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsHiddenPlayers()) {
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("This command is disabled in FFA games. Use " + cmdToken + "unmuteall from the game lobby next time.");
         break;
       }
@@ -5498,7 +5498,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsHiddenPlayers() && m_TargetGame->GetGameLoaded()) {
+      if (m_TargetGame->GetIsHiddenPlayerNames() && m_TargetGame->GetGameLoaded()) {
         ErrorReply("Chat can only be toggled from the game lobby for FFA games.");
         break;
       }
