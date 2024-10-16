@@ -259,7 +259,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     // wait time of 2 minutes = 1 empty action required...
 
     if (m_GProxyEmptyActions > 0) {
-      m_GProxyEmptyActions = m_Aura->m_Net->m_Config->m_ReconnectWaitTimeLegacy - 1;
+      m_GProxyEmptyActions = m_Aura->m_Net->m_Config->m_ReconnectWaitTicksLegacy / 60000 - 1;
       if (m_GProxyEmptyActions > 9) {
         m_GProxyEmptyActions = 9;
       }
@@ -1082,7 +1082,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // update users
 
   for (auto i = begin(m_Users); i != end(m_Users);) {
-    if ((*i)->Update(fd)) {
+    if ((*i)->Update(fd, GAME_USER_TIMEOUT)) {
       EventUserDeleted(*i, fd, send_fd);
       m_Aura->m_Net->OnUserKicked(*i);
       delete *i;

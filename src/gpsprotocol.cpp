@@ -123,9 +123,10 @@ vector<uint8_t> CGPSProtocol::SEND_GPSS_REJECT(const uint32_t reason) const
   return packet;
 }
 
-vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const uint32_t seconds) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks) const
 {
   vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_SUPPORT_EXTENDED, 8, 0};
+  const uint32_t seconds = ticks / 1000;
   AppendByteArray(packet, seconds, false);
   return packet;
 }

@@ -241,7 +241,7 @@ void CSocket::SendReply(const sockaddr_storage* address, const vector<uint8_t>& 
 
 CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
   : CSocket(nFamily, nName),
-    m_LastRecv(GetTime()),
+    m_LastRecv(GetTicks()),
     m_Connected(false),
     m_Server(nullptr),
     m_Counter(0),
@@ -265,7 +265,7 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
 
 CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTCPServer* nServer, const uint16_t nCounter)
   : CSocket(static_cast<uint8_t>(nAddress.ss_family), nSocket),
-    m_LastRecv(GetTime()),
+    m_LastRecv(GetTicks()),
     m_Connected(true),
     m_RemoteHost(move(nAddress)),
     m_Server(nServer),
@@ -348,7 +348,7 @@ void CStreamIOSocket::Reset()
   m_Connected = false;
   m_RecvBuffer.clear();
   m_SendBuffer.clear();
-  m_LastRecv = GetTime();
+  m_LastRecv = GetTicks();
 
   memset(&m_RemoteHost, 0, sizeof(sockaddr_storage));
 
@@ -377,7 +377,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
   if (c > 0) {
     // success! add the received data to the buffer
     m_RecvBuffer += string(buffer, c);
-    m_LastRecv = GetTime();
+    m_LastRecv = GetTicks();
     return true;
   }
 

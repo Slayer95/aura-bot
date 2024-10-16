@@ -1009,7 +1009,7 @@ bool CAura::Update()
   for (auto& serverConnections : m_Net->m_IncomingConnections) {
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CGameConnection
-      uint8_t result = (*i)->Update(&fd, &send_fd);
+      uint8_t result = (*i)->Update(&fd, &send_fd, GAME_USER_CONNECTION_MAX_TIMEOUT);
       if (result == PREPLAYER_CONNECTION_OK) {
         ++i;
         continue;

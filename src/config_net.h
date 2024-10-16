@@ -74,7 +74,7 @@ public:
 
   bool                                    m_AllowDownloads;             // allow map downloads or not
   int32_t                                 m_DownloadTimeout;
-  std::set<std::string>                   m_MapRepositories;             // enabled map repositories
+  std::set<std::string>                   m_MapRepositories;            // enabled map repositories
   uint8_t                                 m_AllowTransfers;             // map transfers mode
   uint32_t                                m_MaxDownloaders;             // maximum number of map downloaders at the same time
   uint32_t                                m_MaxUploadSize;              // maximum total map size that we may transfer to players in lobbies
@@ -82,8 +82,8 @@ public:
   uint32_t                                m_MaxParallelMapPackets;      // map pieces sent in parallel to downloading users
   bool                                    m_HasBufferBloat;
 
-  uint8_t                                 m_ReconnectWaitTime;          // the maximum number of minutes to wait for a GProxyDLL reconnect
-  uint8_t                                 m_ReconnectWaitTimeLegacy;    // the maximum number of minutes to wait for a GProxy++ reconnect
+  int64_t                                 m_ReconnectWaitTicks;         // the maximum number of minutes to wait for a GProxyDLL reconnect
+  int64_t                                 m_ReconnectWaitTicksLegacy;   // the maximum number of minutes to wait for a GProxy++ reconnect
 
   bool                                    m_AnnounceGProxy;
   std::string                             m_AnnounceGProxySite;

@@ -77,6 +77,11 @@ class CAura;
 #define INCOMING_CONNECTION_TYPE_KICKED_PLAYER 3u
 #define INCOMING_CONNECTION_TYPE_VLAN 4u
 
+#define GAME_USER_UNVERIFIED_KICK_TICKS 60000u
+#define AUTO_REALM_VERIFY_LATENCY 5000u
+#define CHECK_STATUS_LATENCY 5000u
+#define READY_REMINDER_PERIOD 20000u
+
 //
 // CGameConnection
 //
@@ -88,15 +93,15 @@ public:
   CGameProtocol*          m_Protocol;
   uint16_t                m_Port;
   uint8_t                 m_Type;
-  std::optional<int64_t>  m_Timeout;
+  std::optional<int64_t>  m_TimeoutTicks;
 
 protected:
   // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
   // it also allows us to convert CGameConnections to CGamePlayers without the CGameConnection's destructor closing the socket
 
   CStreamIOSocket*          m_Socket;
-  CIncomingJoinRequest* m_IncomingJoinPlayer;
-  bool                 m_DeleteMe;
+  CIncomingJoinRequest*     m_IncomingJoinPlayer;
+  bool                      m_DeleteMe;
 
 public:
   CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
@@ -121,9 +126,9 @@ public:
 
   // processing functions
 
-  void SetTimeout(const int64_t nTime);
+  void SetTimeout(const int64_t nTicks);
   void CloseConnection();
-  uint8_t Update(void* fd, void* send_fd);
+  uint8_t Update(void* fd, void* send_fd, int64_t timeout);
 
   // other functions
 
@@ -159,7 +164,7 @@ private:
   uint32_t                         m_PongCounter;
   uint32_t                         m_SyncCounterOffset;              // missed keepalive packets we are gonna ignore
   uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
-  int64_t                          m_JoinTime;                     // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
+  int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
   uint32_t                         m_LastMapPartSent;              // the last mappart sent to the player (for sending more than one part at a time)
   uint32_t                         m_LastMapPartAcked;             // the last mappart acknowledged by the player
   int64_t                          m_StartedDownloadingTicks;      // GetTicks when the player started downloading the map
@@ -168,8 +173,8 @@ private:
   int64_t                          m_StartedLaggingTicks;          // GetTicks when the player started laggin
   int64_t                          m_LastGProxyWaitNoticeSentTime; // GetTime when the last disconnection notice has been sent when using GProxy++
   uint32_t                         m_GProxyReconnectKey;           // the GProxy++ reconnect key
-  int64_t                          m_KickByTime;
-  int64_t                          m_LastGProxyAckTime;            // GetTime when we last acknowledged GProxy++ packet
+  std::optional<int64_t>           m_KickByTicks;
+  std::optional<int64_t>           m_LastGProxyAckTicks;           // GetTime when we last acknowledged GProxy++ packet
   uint8_t                          m_UID;                          // the player's UID
   bool                             m_Verified;                     // if the player has spoof checked or not
   bool                             m_Owner;                        // if the player has spoof checked or not
@@ -185,7 +190,7 @@ private:
   bool                             m_SpoofKicked;
   std::optional<bool>              m_UserReady;
   bool                             m_Ready;
-  int64_t                          m_ReadyReminderLastTime;
+  std::optional<int64_t>           m_ReadyReminderLastTicks;
   bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
   bool                             m_DownloadAllowed;              // if we're allowed to download the map or not (used with permission based map downloads)
   bool                             m_DownloadStarted;              // if we've started downloading the map or not
@@ -200,7 +205,7 @@ private:
   bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
   bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
   uint8_t                          m_SmartCommand;
-  int64_t                          m_CheckStatusByTime;
+  int64_t                          m_CheckStatusByTicks;
 
   bool                             m_GProxy;                       // if the player is using GProxy++
   uint16_t                         m_GProxyPort;                   // port where GProxy will try to reconnect
@@ -209,8 +214,8 @@ private:
   bool                             m_GProxyExtended;               // if the player is using GProxyDLL
   uint32_t                         m_GProxyVersion;
   bool                             m_Disconnected;
-  int64_t                          m_TotalDisconnectTime;
-  int64_t                          m_LastDisconnectTime;
+  int64_t                          m_TotalDisconnectTicks;
+  std::optional<int64_t>           m_LastDisconnectTicks;
 
   std::string                      m_LastCommand;
   uint8_t                          m_TeamCaptain;
@@ -266,7 +271,7 @@ public:
   inline bool                  IsRealmVerified() const { return m_Verified; }
   inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
   inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
-  inline int64_t               GetJoinTime() const { return m_JoinTime; }
+  inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
   inline uint32_t              GetLastMapPartSent() const { return m_LastMapPartSent; }
   inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
   inline int64_t               GetStartedDownloadingTicks() const { return m_StartedDownloadingTicks; }
@@ -282,8 +287,7 @@ public:
   inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
   
 	inline bool                  GetDisconnected() const { return m_Disconnected; }
-	inline int64_t               GetLastDisconnectTime() const { return m_LastDisconnectTime; }
-	int64_t                      GetTotalDisconnectTime() const;
+	int64_t                      GetTotalDisconnectTicks() const;
   std::string                  GetDelayText(bool displaySync) const;
   std::string                  GetSyncText() const;
   
@@ -307,8 +311,7 @@ public:
   inline bool                  GetPingKicked() const { return m_PingKicked; }
   inline bool                  GetSpoofKicked() const { return m_SpoofKicked; }
   inline bool                  GetHasHighPing() const { return m_HasHighPing; }
-  inline int64_t               GetKickByTime() const { return m_KickByTime; }
-  inline bool                  GetKickQueued() const { return m_KickByTime != 0; }
+  inline bool                  GetKickQueued() const { return m_KickByTicks.has_value(); }
   inline bool                  GetLagging() const { return m_Lagging; }
   inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
   inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
@@ -359,11 +362,11 @@ public:
   inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
-  inline void SetKickByTime(int64_t nKickByTime) { m_KickByTime = nKickByTime; }
-  inline void ClearKickByTime() { m_KickByTime = 0; }
-  inline void KickAtLatest(int64_t nKickByTime) {
-    if (m_KickByTime == 0 || nKickByTime < m_KickByTime) {
-      m_KickByTime = nKickByTime;
+  inline void SetKickByTime(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }
+  inline void ClearKickByTime() { m_KickByTicks = std::nullopt; }
+  inline void KickAtLatest(int64_t nKickByTicks) {
+    if (!m_KickByTicks.has_value() || nKickByTicks < m_KickByTicks.value()) {
+      m_KickByTicks = nKickByTicks;
     }
   }
   inline void SetUserReady(bool nReady) { m_UserReady = nReady; }
@@ -398,7 +401,7 @@ public:
 
   // processing functions
 
-  bool Update(void* fd);
+  bool Update(void* fd, int64_t timeout);
 
   // other functions
 

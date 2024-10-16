@@ -55,6 +55,8 @@
 #define REJECTGPS_INVALID 1
 #define REJECTGPS_NOTFOUND 2
 
+#define GPS_ACK_PERIOD 10000u
+
 class CAura;
 
 class CGPSProtocol
@@ -89,7 +91,7 @@ public:
   std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason) const;
-  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const uint32_t seconds) const;
+  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks) const;
   std::array<uint8_t, 2> SEND_GPSS_DIMENSIONS() const;
 };
 

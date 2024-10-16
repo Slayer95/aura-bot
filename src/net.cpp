@@ -1457,7 +1457,7 @@ void CNet::OnUserKicked(CGameUser* user, bool deferred)
   uint16_t port = user->m_Game->GetHostPort();
   CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, socket);
   connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
-  connection->SetTimeout(2);
+  connection->SetTimeout(2000);
   if (deferred) {
     m_StaleConnections.push(make_pair(port, connection));
   } else {
@@ -1474,7 +1474,7 @@ void CNet::GracefulExit()
   for (auto& serverConnections : m_IncomingConnections) {
     for (auto& connection : serverConnections.second) {
       connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
-      connection->SetTimeout(2);
+      connection->SetTimeout(2000);
       connection->GetSocket()->ClearRecvBuffer();
     }
   }

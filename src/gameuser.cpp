@@ -83,7 +83,7 @@ CGameConnection::~CGameConnection()
 
 void CGameConnection::SetTimeout(const int64_t delta)
 {
-  m_Timeout = GetTime() + delta;
+  m_TimeoutTicks = GetTicks() + delta;
 }
 
 void CGameConnection::CloseConnection()
@@ -91,15 +91,15 @@ void CGameConnection::CloseConnection()
   m_Socket->Close();
 }
 
-uint8_t CGameConnection::Update(void* fd, void* send_fd)
+uint8_t CGameConnection::Update(void* fd, void* send_fd, int64_t timeout)
 {
   if (m_DeleteMe || !m_Socket || m_Socket->HasError()) {
     return PREPLAYER_CONNECTION_DESTROY;
   }
 
-  const int64_t Time = GetTime();
+  const int64_t Ticks = GetTicks();
 
-  if (m_Timeout.has_value() && m_Timeout.value() < Time) {
+  if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
     return PREPLAYER_CONNECTION_DESTROY;
   }
 
@@ -247,7 +247,7 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd)
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
-  } else if (Time - m_Socket->GetLastRecv() >= 5) {
+  } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
     return PREPLAYER_CONNECTION_DESTROY;
   }
 
@@ -301,7 +301,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_PongCounter(0),
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
-    m_JoinTime(GetTime()),
+    m_JoinTicks(GetTicks()),
     m_LastMapPartSent(0),
     m_LastMapPartAcked(0),
     m_StartedDownloadingTicks(0),
@@ -310,8 +310,6 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_StartedLaggingTicks(0),
     m_LastGProxyWaitNoticeSentTime(0),
     m_GProxyReconnectKey(rand()),
-    m_KickByTime(0),
-    m_LastGProxyAckTime(0),
     m_UID(nUID),
     m_Verified(false),
     m_Owner(false),
@@ -325,7 +323,6 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_PingKicked(false),
     m_SpoofKicked(false),
     m_Ready(false),
-    m_ReadyReminderLastTime(0),
     m_HasHighPing(false),
     m_DownloadAllowed(false),
     m_DownloadStarted(false),
@@ -340,7 +337,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_UsedAnyCommands(false),
     m_SentAutoCommandsHelp(false),
     m_SmartCommand(SMART_COMMAND_NONE),
-    m_CheckStatusByTime(GetTime() + 5),
+    m_CheckStatusByTicks(GetTicks() + CHECK_STATUS_LATENCY),
 
     m_GProxy(false),
     m_GProxyPort(0),
@@ -349,8 +346,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_GProxyExtended(false),
     m_GProxyVersion(0),
     m_Disconnected(false),
-    m_TotalDisconnectTime(0),
-    m_LastDisconnectTime(0),
+    m_TotalDisconnectTicks(0),
 
     m_TeamCaptain(0),
     m_Saved(false),
@@ -463,7 +459,7 @@ string CGameUser::GetRealmDataBaseID(bool mustVerify) const
 void CGameUser::CloseConnection()
 {
   if (m_Disconnected) return;
-  m_LastDisconnectTime = GetTime();
+  m_LastDisconnectTicks = GetTicks();
   m_Disconnected = true;
   m_Socket->Close();
 }
@@ -473,15 +469,15 @@ void CGameUser::UnrefConnection(bool deferred)
   m_Game->m_Aura->m_Net->OnUserKicked(this, deferred);
 
   if (!m_Disconnected) {
-    m_LastDisconnectTime = GetTime();
+    m_LastDisconnectTicks = GetTicks();
     m_Disconnected = true;
   }
 }
 
-bool CGameUser::Update(void* fd)
+bool CGameUser::Update(void* fd, int64_t timeout)
 {
   if (m_Disconnected) {
-    if (m_GProxyExtended && GetTotalDisconnectTime() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60) {
+    if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks) {
       m_Game->EventUserKickGProxyExtendedTimeout(this);
     }
     return m_DeleteMe;
@@ -498,7 +494,7 @@ bool CGameUser::Update(void* fd)
     return m_DeleteMe;
   }
 
-  const int64_t Time = GetTime();
+  const int64_t Ticks = GetTicks();
 
   bool Abort = false;
   if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
@@ -613,7 +609,7 @@ bool CGameUser::Update(void* fd)
 
             if (Pong != 1 && !bufferBloatForbidden) {
               // we also discard pong values when we're downloading because they're almost certainly inaccurate
-              // this statement also gives the player a 10 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
+              // this statement also gives the player a 8 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
               if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 8)) {
                 m_RTTValues.push_back(m_Game->m_Aura->m_Config->m_LiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
                 if (m_RTTValues.size() > MAXIMUM_PINGS_COUNT) {
@@ -664,7 +660,7 @@ bool CGameUser::Update(void* fd)
           }
           m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
           if (m_GProxyVersion >= 2) {
-            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTime * 60));
+            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks));
           }
           // the port to which the client directly connects
           // (proxy port if it uses a proxy; the hosted game port otherwise)
@@ -692,7 +688,7 @@ bool CGameUser::Update(void* fd)
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
-  } else if (Time - m_Socket->GetLastRecv() >= 30) {
+  } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
     // check for socket timeouts
     // if we don't receive anything from a player for 30 seconds we can assume they've dropped
     // this works because in the lobby we send pings every 5 seconds and expect a response to each one
@@ -716,30 +712,30 @@ bool CGameUser::Update(void* fd)
       m_Game->EventUserDisconnectSocketError(this);
     } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
       m_Game->EventUserDisconnectConnectionClosed(this);
-    } else if (GetKickQueued() && m_KickByTime < Time) {
+    } else if (m_KickByTicks.has_value() && m_KickByTicks.value() < Ticks) {
       m_Game->EventUserKickHandleQueued(this);
-    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Time - m_JoinTime >= 60 && m_Game->GetIsLobby()) {
+    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Ticks - m_JoinTicks >= GAME_USER_UNVERIFIED_KICK_TICKS && m_Game->GetIsLobby()) {
       CRealm* Realm = GetRealm(false);
       if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
         m_Game->EventUserKickUnverified(this);
       }
     }
 
-    if (!m_StatusMessageSent && m_CheckStatusByTime < Time) {
+    if (!m_StatusMessageSent && m_CheckStatusByTicks < Ticks) {
       m_Game->EventUserCheckStatus(this);
     }
   }
 
   if (!m_DeleteMe) {
     // GProxy++ acks
-    if (m_GProxy && Time - m_LastGProxyAckTime >= 10) {
+    if (m_GProxy && (!m_LastGProxyAckTicks.has_value() || Ticks - m_LastGProxyAckTicks.value() >= GPS_ACK_PERIOD)) {
       m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_ACK(m_TotalPacketsReceived));
-      m_LastGProxyAckTime = Time;
+      m_LastGProxyAckTicks = Ticks;
     }
 
     // wait 5 seconds after joining before sending the /whois or /w
     // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
-    if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Time - m_JoinTime >= 5) {
+    if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Ticks - m_JoinTicks >= AUTO_REALM_VERIFY_LATENCY) {
       CRealm* Realm = GetRealm(false);
       if (Realm) {
         if (m_Game->GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
@@ -861,21 +857,21 @@ void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t 
   m_Disconnected = false;
   m_GProxyBuffer = TempBuffer;
   m_GProxyDisconnectNoticeSent = false;
-  if (m_LastDisconnectTime > 0)
-    m_TotalDisconnectTime += GetTime() - m_LastDisconnectTime;
-
+  if (m_LastDisconnectTicks.has_value()) {
+    m_TotalDisconnectTicks += GetTicks() - m_LastDisconnectTicks.value();
+  }
   m_Game->SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
   if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
     Print("user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
   }
 }
 
-int64_t CGameUser::GetTotalDisconnectTime() const
+int64_t CGameUser::GetTotalDisconnectTicks() const
 {
-  if (!m_Disconnected || !m_LastDisconnectTime) {
-    return m_TotalDisconnectTime;
+  if (!m_Disconnected || !m_LastDisconnectTicks.has_value()) {
+    return m_TotalDisconnectTicks;
   } else {
-    return m_TotalDisconnectTime + GetTime() - m_LastDisconnectTime;
+    return m_TotalDisconnectTicks + GetTicks() - m_LastDisconnectTicks.value();
   }
 }
 
@@ -1033,10 +1029,10 @@ bool CGameUser::UpdateReady()
 
 bool CGameUser::GetReadyReminderIsDue() const
 {
-  return m_ReadyReminderLastTime + 20 < GetTime();
+  return !m_ReadyReminderLastTicks.has_value() || m_ReadyReminderLastTicks.value() + READY_REMINDER_PERIOD < GetTicks();
 }
 
 void CGameUser::SetReadyReminded()
 {
-  m_ReadyReminderLastTime = GetTime();
+  m_ReadyReminderLastTicks.value() = GetTicks();
 }
