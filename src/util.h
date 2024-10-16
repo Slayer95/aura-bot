@@ -1146,4 +1146,24 @@ inline std::string ReplaceTemplate(const std::string& input, const std::map<int6
   return result;
 }
 
+inline float LinearInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
+{
+  float y = y1 + (x - x1) * (y2 - y1) / (x2 - x1);
+  return y;
+}
+
+/*
+inline float HyperbolicInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
+{
+  float y = y1 + (x - x1) * (y2 - y1) / (x2 - x1);
+  return y;
+}
+
+inline float ExponentialInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
+{
+  float y = y1 + (x - x1) * (y2 - y1) / (x2 - x1);
+  return y;
+}
+*/
+
 #endif // AURA_UTIL_H_

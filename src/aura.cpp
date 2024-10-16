@@ -1007,9 +1007,10 @@ bool CAura::Update()
 
   // update unassigned incoming connections
   for (auto& serverConnections : m_Net->m_IncomingConnections) {
+    int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CGameConnection
-      uint8_t result = (*i)->Update(&fd, &send_fd, GAME_USER_CONNECTION_MAX_TIMEOUT);
+      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
       if (result == PREPLAYER_CONNECTION_OK) {
         ++i;
         continue;
