@@ -799,7 +799,7 @@ CGameUser* CCommandContext::GetTargetUser(const string& target)
   return TargetPlayer;
 }
 
-CGameUser* CCommandContext::RunTargetPlayer(const string& target)
+CGameUser* CCommandContext::RunTargetUser(const string& target)
 {
   CGameUser* TargetPlayer = nullptr;
   if (!m_TargetGame) {
@@ -906,7 +906,7 @@ bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& S
     }
 
     case '@': {
-      user = RunTargetPlayer(target.substr(1));
+      user = RunTargetUser(target.substr(1));
       return user != nullptr;
     }
 
@@ -3228,7 +3228,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGameUser* targetPlayer = RunTargetPlayer(Payload);
+      CGameUser* targetPlayer = RunTargetUser(Payload);
       if (!targetPlayer) {
         break;
       }
@@ -5458,7 +5458,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "unmute <PLAYERNAME>");
         break;
       }
-      CGameUser* targetPlayer = RunTargetPlayer(Payload);
+      CGameUser* targetPlayer = RunTargetUser(Payload);
       if (!targetPlayer) {
         break;
       }

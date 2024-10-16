@@ -188,7 +188,7 @@ public:
   void ErrorAll(const std::string& message);
   void SendAllUnlessHidden(const std::string& message);
   CGameUser* GetTargetUser(const std::string& target);
-  CGameUser* RunTargetPlayer(const std::string& target);
+  CGameUser* RunTargetUser(const std::string& target);
   CGameUser* GetTargetUserOrSelf(const std::string& target);
   CGameUser* RunTargetPlayerOrSelf(const std::string& target);
   bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
