@@ -495,6 +495,24 @@ long or even permanent duration may show up when some games start, rendering it 
 
 This flag is disabled by default.
 
+## \`--hide-ign\`
+
+This flag prevents users joining a hosted game from knowing the nicknames of other players before the game starts.
+
+This option is equivalent to ``<hosting.nicknames.hide_lobby>`` in `config.ini`
+This option is equivalent to ``<map.hosting.nicknames.hide_lobby>`` in map configuration
+
+This flag is disabled by default.
+
+## \`--no-hide-ign\`
+
+This flag allows users joining a hosted game to know the nicknames of other players before the game starts.
+
+This option corresponds to ``<hosting.nicknames.hide_lobby>`` in `config.ini`
+This option corresponds to ``<map.hosting.nicknames.hide_lobby>`` in map configuration
+
+This flag is enabled by default.
+
 # Parameters for CLI games
 
 ## \`-s <TYPE>, --search-type <TYPE>\`
@@ -761,6 +779,22 @@ This parameter customizes behavior when a player tries to join a game using an u
 
 This option is equivalent to ``<hosting.name_filter.unsafe_handler>`` in `config.ini`
 This option is equivalent to ``<map.hosting.name_filter.unsafe_handler>`` in map configuration
+
+## \`--hide-ign-started\`
+
+This parameter customizes whether Aura will obfuscate players names after the game starts.
+By customizing this parameter, players names may effectively be hidden or revealed in the output of many commands and status reports.
+
+**Options:**
+
+- always: Players names are hidden.
+- never: Players names are revealed.
+- auto: This is the default. Players names are obfuscated in FFA games where there are 3 or more players.
+
+This option is equivalent to ``<hosting.nicknames.hide_in_game>`` in `config.ini`
+This option is equivalent to ``<map.hosting.nicknames.hide_in_game>`` in map configuration
+
+This flag is disabled by default.
 
 # Flags for CLI commands
 
