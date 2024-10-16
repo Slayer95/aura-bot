@@ -769,12 +769,6 @@ bool CGameUser::Update(void* fd, int64_t timeout)
     }
   }
 
-  /*
-  if (m_GProxy && m_Game->GetGameLoaded()) {
-    return m_DeleteMe;
-  }
-  */
-
   if (m_DeleteMe) {
     return m_DeleteMe;
   }
