@@ -795,7 +795,11 @@ CGameUser* CCommandContext::GetTargetUser(const string& target)
   if (!m_TargetGame) {
     return targetUser;
   }
-  m_TargetGame->GetUserFromNamePartial(target, targetUser);
+  if (m_TargetGame->GetIsHiddenPlayerNames()) {
+    m_TargetGame->GetUserFromDisplayNamePartial(target, targetUser);
+  } else {
+    m_TargetGame->GetUserFromNamePartial(target, targetUser);
+  }
   return targetUser;
 }
 
@@ -806,7 +810,12 @@ CGameUser* CCommandContext::RunTargetUser(const string& target)
     return targetUser;
   }
 
-  uint8_t Matches = m_TargetGame->GetUserFromNamePartial(target, targetUser);
+  uint8_t Matches;
+  if (m_TargetGame->GetIsHiddenPlayerNames()) {
+    Matches = m_TargetGame->GetUserFromDisplayNamePartial(target, targetUser);
+  } else {
+    Matches = m_TargetGame->GetUserFromNamePartial(target, targetUser);
+  }
   if (Matches > 1) {
     ErrorReply("Player [" + target + "] ambiguous.");
   } else if (Matches == 0) {
@@ -821,10 +830,14 @@ CGameUser* CCommandContext::GetTargetUserOrSelf(const string& target)
     return m_GameUser;
   }
 
-  CGameUser* targetPlayer = nullptr;
-  if (!m_TargetGame) return targetPlayer;
-  m_TargetGame->GetUserFromNamePartial(target, targetPlayer);
-  return targetPlayer;
+  CGameUser* targetUser = nullptr;
+  if (!m_TargetGame) return targetUser;
+  if (m_TargetGame->GetIsHiddenPlayerNames()) {
+    m_TargetGame->GetUserFromDisplayNamePartial(target, targetUser);
+  } else {
+    m_TargetGame->GetUserFromNamePartial(target, targetUser);
+  }
+  return targetUser;
 }
 
 CGameUser* CCommandContext::RunTargetPlayerOrSelf(const string& target)
@@ -833,16 +846,20 @@ CGameUser* CCommandContext::RunTargetPlayerOrSelf(const string& target)
     return m_GameUser;
   }
 
-  CGameUser* targetPlayer = nullptr;
+  CGameUser* targetUser = nullptr;
   if (!m_TargetGame) {
     ErrorReply("Please specify target user.");
-    return targetPlayer;
+    return targetUser;
   }
-  m_TargetGame->GetUserFromNamePartial(target, targetPlayer);
-  if (!targetPlayer) {
+  if (m_TargetGame->GetIsHiddenPlayerNames()) {
+    m_TargetGame->GetUserFromDisplayNamePartial(target, targetUser);
+  } else {
+    m_TargetGame->GetUserFromNamePartial(target, targetUser);
+  }
+  if (!targetUser) {
     ErrorReply("Player [" + target + "] not found.");
   }
-  return targetPlayer;
+  return targetUser;
 }
 
 bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user)
@@ -1015,10 +1032,15 @@ bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string&
       }
       return realm != nullptr;
     }
-    target = nameFragment;
+    // Handle @PLAYER
+    target = realmFragment;
     realmFragment.clear();
     nameFragment.clear();
     //isFullyQualified = false;
+  }
+
+  if (/*!isFullyQualified && */m_GameUser && m_SourceGame->GetIsHiddenPlayerNames()) {
+    return false;
   }
 
   if (m_GameUser && searchHistory) {

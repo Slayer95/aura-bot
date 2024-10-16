@@ -534,6 +534,7 @@ public:
   bool         HasOwnerSet() const;
   bool         HasOwnerInGame() const;
   uint8_t      GetUserFromNamePartial(const std::string& name, CGameUser*& matchPlayer) const;
+  uint8_t      GetUserFromDisplayNamePartial(const std::string& name, CGameUser*& matchPlayer) const;
   uint8_t      GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
   CDBGamePlayer* GetDBPlayerFromColor(uint8_t colour) const;
   CGameUser* GetPlayerFromColor(uint8_t colour) const;

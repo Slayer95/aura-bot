@@ -4405,7 +4405,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
             m_Aura->UnholdContext(ctx);
           } else if (payload == "?trigger") {
             SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, false);
-          } else if (payload == "/p" || payload == "/game") {
+          } else if (payload == "/p" || payload == "/ping" || payload == "/game") {
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
             cmdToken = m_Config->m_PrivateCmdToken;
             command = payload.substr(1);
@@ -5453,6 +5453,41 @@ uint8_t CGame::GetUserFromNamePartial(const string& name, CGameUser*& matchPlaye
   for (auto& user : m_Users) {
     if (!user->GetDeleteMe()) {
       string testName = user->GetLowerName();
+      if (testName.find(inputLower) != string::npos) {
+        ++matches;
+        matchPlayer = user;
+
+        // if the name matches exactly stop any further matching
+
+        if (testName == inputLower) {
+          matches = 1;
+          break;
+        }
+      }
+    }
+  }
+
+  if (matches != 1) {
+    matchPlayer = nullptr;
+  }
+  return matches;
+}
+
+uint8_t CGame::GetUserFromDisplayNamePartial(const string& name, CGameUser*& matchPlayer) const
+{
+  uint8_t matches = 0;
+  if (name.empty()) {
+    matchPlayer = nullptr;
+    return matches;
+  }
+
+  string inputLower = ToLowerCase(name);
+
+  // try to match each user with the passed string (e.g. "Varlock" would be matched with "lock")
+
+  for (auto& user : m_Users) {
+    if (!user->GetDeleteMe()) {
+      string testName = ToLowerCase(user->GetDisplayName());
       if (testName.find(inputLower) != string::npos) {
         ++matches;
         matchPlayer = user;
