@@ -294,6 +294,7 @@ public:
 
   inline bool GetIsMirror() const { return m_IsMirror; }
   inline bool GetIsDownloading() const { return m_IsStepDownloading; }
+  inline bool GetHasBeenHosted() const { return m_CreationCounter > 0; }
 
   bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
   bool SetMirrorSource(const std::string& nInput);
