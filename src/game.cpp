@@ -4876,7 +4876,7 @@ void CGame::EventGameStarted()
     }
   }
 
-  if (m_IsHiddenPlayerNames && !ResolvePlayerObfuscation()) {
+  if (m_IsHiddenPlayerNames && m_Config->m_HideInGameNames != HIDE_IGN_ALWAYS) {
     ShowPlayerNamesGameStart();
   }
 
@@ -5091,7 +5091,7 @@ void CGame::UpdateBannableUsers()
 
 bool CGame::ResolvePlayerObfuscation() const
 {
-  if (m_Config->m_HideInGameNames == HIDE_IGN_ALWAYS) {
+  if (m_Config->m_HideInGameNames == HIDE_IGN_ALWAYS || m_Config->m_HideInGameNames == HIDE_IGN_HOST) {
     return true;
   }
   if (m_Config->m_HideInGameNames == HIDE_IGN_NEVER) {

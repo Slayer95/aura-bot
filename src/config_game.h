@@ -52,8 +52,9 @@
 #define READY_MODE_EXPLICIT 2u
 
 #define HIDE_IGN_NEVER 0u
-#define HIDE_IGN_ALWAYS 1u
-#define HIDE_IGN_AUTO 2u
+#define HIDE_IGN_HOST 1u
+#define HIDE_IGN_ALWAYS 2u
+#define HIDE_IGN_AUTO 3u
 
 //
 // CGameConfig

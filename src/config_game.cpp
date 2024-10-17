@@ -109,7 +109,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_NotifyJoins               = CFG.GetBool("ui.notify_joins.enabled", false);
   m_IgnoredNotifyJoinPlayers  = CFG.GetSet("ui.notify_joins.exceptions", ',', {});
   m_HideLobbyNames            = CFG.GetBool("hosting.nicknames.hide_lobby", false);
-  m_HideInGameNames           = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "always", "auto"}, HIDE_IGN_AUTO);
+  m_HideInGameNames           = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoggedWords               = CFG.GetSetInsensitive("hosting.log_words", ',', {});
   m_DesyncHandler             = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_IPFloodHandler            = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);

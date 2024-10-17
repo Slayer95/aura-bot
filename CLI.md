@@ -783,18 +783,19 @@ This option is equivalent to ``<map.hosting.name_filter.unsafe_handler>`` in map
 ## \`--hide-ign-started\`
 
 This parameter customizes whether Aura will obfuscate players names after the game starts.
-By customizing this parameter, players names may effectively be hidden or revealed in the output of many commands and status reports.
+By customizing this parameter, players names may effectively be hidden or revealed in some contexts.
 
 **Options:**
 
-- always: Players names are hidden.
 - never: Players names are revealed.
+- host: Players names are hidden in the output of many commands and status reports.
+- always: Players names are hidden  in the output of many commands and status reports. Additionally, 
+when used together with --hide-ign, any hosted map will also be unaware of the identities of non-local 
+players. When used this way, games running certain maps may desync.
 - auto: This is the default. Players names are obfuscated in FFA games where there are 3 or more players.
 
 This option is equivalent to ``<hosting.nicknames.hide_in_game>`` in `config.ini`
 This option is equivalent to ``<map.hosting.nicknames.hide_in_game>`` in map configuration
-
-This flag is disabled by default.
 
 # Flags for CLI commands
 

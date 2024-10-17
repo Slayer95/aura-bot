@@ -1131,7 +1131,7 @@ void CMap::Load(CConfig* CFG)
     CFG->FailIfErrorLast();
   }
   if (CFG->Exists("map.hosting.nicknames.hide_in_game")) {
-    m_HideInGameNames = CFG->GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "always", "auto"}, HIDE_IGN_AUTO);
+    m_HideInGameNames = CFG->GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
     CFG->FailIfErrorLast();
   }
 
