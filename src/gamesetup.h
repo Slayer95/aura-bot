@@ -180,6 +180,7 @@ public:
 #endif
   int32_t                                         m_DownloadTimeout;
   int32_t                                         m_SuggestionsTimeout;
+  std::optional<int64_t>                          m_ActiveTicks;
   std::string                                     m_ErrorMessage;
   uint8_t                                         m_AsyncStep;
 

@@ -1290,6 +1290,7 @@ bool CGameSetup::SetActive()
     delete m_Aura->m_GameSetup;
   }
   m_Aura->m_GameSetup = this;
+  m_ActiveTicks = GetTicks();
   return true;
 }
 
