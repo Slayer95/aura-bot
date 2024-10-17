@@ -1532,6 +1532,7 @@ void CAura::LogPersistent(const string& logText)
 void CAura::GracefulExit()
 {
   m_ExitingSoon = true;
+  m_Config->m_Enabled = false;
 
   ClearAutoRehost();
 
