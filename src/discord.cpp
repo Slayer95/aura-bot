@@ -93,8 +93,11 @@ CDiscord::~CDiscord()
       }
       Print("[DISCORD] deallocating");
     }*/
+
+    // Crashes in Debug build only.
     delete m_Client;
     m_Client = nullptr;
+
     /*
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
       Print("[DISCORD] deallocated ok");
@@ -225,8 +228,10 @@ void CDiscord::Update()
         }
         Print("[DISCORD] deallocating");
         */
+
         delete m_Client;
         m_Client = nullptr;
+
         /*
         if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
           Print("[DISCORD] deallocated ok");
