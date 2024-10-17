@@ -1193,7 +1193,7 @@ void CGameSetup::OnLoadMapSuccess()
         m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
         return;
       }
-      m_Aura->m_CurrentLobby->SendAllChat("Another lobby is being created. <<" + m_Aura->m_CurrentLobby->GetGameName() + ">> will be closed soon.");
+      m_Aura->m_CurrentLobby->SendAllChat("Another lobby is being created. This lobby will be closed soon.");
       m_Aura->m_CurrentLobby->StartGameOverTimer();
     }
     SetBaseName(m_MapReadyCallbackData);
