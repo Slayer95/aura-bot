@@ -3956,8 +3956,6 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
 
   matchingRealm = nullptr;
 
-  // Check if the user is an admin or root admin on any connected realm for determining reserved status
-  // Note: vulnerable to spoofing
   const uint8_t reservedIndex = GetReservedIndex(joinRequest->GetName());
   const bool isReserved = reservedIndex < m_Reserved.size() || (!m_RestoredGame && MatchOwnerName(joinRequest->GetName()) && JoinedRealm == m_OwnerRealm);
 

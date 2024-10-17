@@ -4035,7 +4035,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (Payload.empty() && m_TargetGame->HasOwnerSet()) {
           SendReply("The owner is [" + m_TargetGame->m_OwnerName + "@" + ToFormattedRealm(m_TargetGame->m_OwnerRealm) + "]");
         }
-        ErrorReply("You are not allowed to change the owner of this game.");
+        // These checks help with troubleshooting.
+        if (!m_TargetGame->MatchOwnerName(m_FromName) || !m_GameUser) {
+          ErrorReply("You are not allowed to change the owner of this game.");
+        } else if (m_ServerName.empty() != m_TargetGame->m_OwnerRealm.empty()) {
+          if (m_TargetGame->m_OwnerRealm.empty()) {
+            ErrorReply("You must join from LAN/VPN to use your owner permissions.");
+          } else {
+            ErrorReply("You must join from [" + m_TargetGame->m_OwnerRealm + "] to use your owner permissions.");
+          }
+        } else if (!m_TargetGame->m_OwnerRealm.empty() && m_GameUser->GetRealm(true) == nullptr) {
+          ErrorReply("You have not verified your identity yet.");
+        } else {
+          ErrorReply("Permissions not granted.");
+        }
         break;
       }
 
@@ -6625,6 +6638,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("map"):
     case HashCode("load"):
+    case HashCode("hostpriv"):
     case HashCode("host"): {
       if (!CheckPermissions(m_Config->m_HostPermissions, (
         m_SourceGame == m_Aura->m_CurrentLobby && m_Aura->m_CanReplaceLobby ?
@@ -6634,7 +6648,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to host games.");
         break;
       }
-      bool isHostCommand = CommandHash == HashCode("host");
+      bool isHostPublic = CommandHash == HashCode("host");
+      bool isHostPrivate = CommandHash == HashCode("hostpriv");
+      bool isHostCommand = isHostPublic || isHostPrivate;
       vector<string> Args = isHostCommand ? SplitArgs(Payload, 1, 6) : SplitArgs(Payload, 1, 5);
 
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
@@ -6712,6 +6728,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (isHostCommand) {
+        gameSetup->SetDisplayMode(isHostPrivate ? GAME_PRIVATE : GAME_PUBLIC);
         gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, gameName);
       }
       gameSetup->SetMapExtraOptions(options);

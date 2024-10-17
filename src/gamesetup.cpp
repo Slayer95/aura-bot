@@ -175,6 +175,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
     m_DownloadTimeout(m_Aura->m_Net->m_Config->m_DownloadTimeout),
+    m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
     m_SkipVersionCheck(false),
@@ -1058,6 +1059,7 @@ vector<pair<string, string>> CGameSetup::GetMapRepositorySuggestions(const strin
   Print("[AURA] GET <" + searchUri + ">");
   auto response = cpr::Get(
     cpr::Url{searchUri},
+    cpr::Timeout(m_SuggestionsTimeout},
     cpr::ProgressCallback(
       [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
       {

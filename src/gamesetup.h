@@ -85,6 +85,8 @@
 #define MAP_ONREADY_HOST 2
 #define MAP_ONREADY_ALIAS 3
 
+#define SUGGESTIONS_TIMEOUT 3000u
+
 class CAura;
 class CCLI;
 class CCommandContext;
@@ -176,7 +178,8 @@ public:
 #ifndef DISABLE_CPR
   std::future<uint32_t>                           m_DownloadFuture;
 #endif
-  int32_t                                         m_DownloadTimeout;
+  uint32_t                                        m_DownloadTimeout;
+  uint32_t                                        m_SuggestionsTimeout;
   std::string                                     m_ErrorMessage;
   uint8_t                                         m_AsyncStep;
 
