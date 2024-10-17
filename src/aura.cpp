@@ -845,8 +845,8 @@ bool CAura::Update()
     }
   }
 
-  if (m_AutoRehostGameSetup && !m_ExitingSoon) {
-    if (!m_CurrentLobby && !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
+  if (m_AutoRehostGameSetup && !m_CurrentLobby) {
+    if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
       (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby))
     ) {
       m_AutoRehostGameSetup->SetActive();
@@ -859,7 +859,8 @@ bool CAura::Update()
     !m_CurrentLobby && m_Games.empty() &&
     !m_Net->m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
-    m_PendingActions.empty()
+    m_PendingActions.empty() &&
+    !m_AutoRehostGameSetup
   );
 
   if (isStandby && (m_Config->m_ExitOnStandby || (m_ExitingSoon && CheckGracefulExit()))) {
