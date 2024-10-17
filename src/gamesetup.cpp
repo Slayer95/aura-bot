@@ -1059,7 +1059,7 @@ vector<pair<string, string>> CGameSetup::GetMapRepositorySuggestions(const strin
   Print("[AURA] GET <" + searchUri + ">");
   auto response = cpr::Get(
     cpr::Url{searchUri},
-    cpr::Timeout(m_SuggestionsTimeout},
+    cpr::Timeout{m_SuggestionsTimeout},
     cpr::ProgressCallback(
       [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
       {
