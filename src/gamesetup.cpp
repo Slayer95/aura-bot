@@ -223,6 +223,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
     m_DownloadTimeout(m_Aura->m_Net->m_Config->m_DownloadTimeout),
+    m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
     m_SkipVersionCheck(nSkipVersionCheck),
@@ -241,6 +242,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_MapExtraOptions(nullptr),
     m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
 
+    m_ExitingSoon(false),
     m_DeleteMe(false)
     
 {
