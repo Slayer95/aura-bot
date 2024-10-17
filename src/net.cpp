@@ -1364,7 +1364,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
 {
   auto it = m_GameServers.find(inputPort);
   if (it != m_GameServers.end()) {
-    Print("[TCP] " + name + " Assigned to port " + to_string(inputPort));
+    Print("[TCP] " + name + " assigned to port " + to_string(inputPort));
     return it->second;
   }
   CTCPServer* gameServer = new CTCPServer(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
@@ -1377,7 +1377,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
   vector<CGameConnection*> IncomingConnections;
   m_IncomingConnections[assignedPort] = IncomingConnections;
 
-  Print("[TCP] " + name + " Listening on port " + to_string(assignedPort));
+  Print("[TCP] " + name + " listening on port " + to_string(assignedPort));
   return gameServer;
 }
 
