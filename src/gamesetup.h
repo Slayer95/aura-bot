@@ -86,6 +86,7 @@
 #define MAP_ONREADY_ALIAS 3
 
 #define SUGGESTIONS_TIMEOUT 3000u
+#define GAMESETUP_STALE_TICKS 180000u
 
 class CAura;
 class CCLI;
@@ -247,6 +248,7 @@ public:
 
   std::string GetInspectName() const;
   bool GetDeleteMe() const { return m_DeleteMe; }
+  bool GetIsStale() const;
 
   void ParseInputLocal();
   void ParseInput();

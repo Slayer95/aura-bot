@@ -253,6 +253,12 @@ std::string CGameSetup::GetInspectName() const
   return m_Map->GetConfigName();
 }
 
+bool CGameSetup::GetIsStale() const
+{
+  if (m_ActiveTicks.has_value()) return false;
+  return m_ActiveTicks.value() + GAMESETUP_STALE_TICKS < GetTicks();
+}
+
 void CGameSetup::ParseInputLocal()
 {
   m_SearchTarget = make_pair("local", m_SearchRawTarget);
