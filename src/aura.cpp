@@ -824,7 +824,7 @@ bool CAura::HandleAction(vector<string> action)
 
 bool CAura::Update()
 {
-  if (gGracefulExit == 1) {
+  if (gGracefulExit == 1 || m_ExitingSoon) {
     // Intentionally execute on every loop turn after graceful exit is flagged.
     GracefulExit();
   }
@@ -957,6 +957,10 @@ bool CAura::Update()
     if (m_GameSetup->Update()) {
       delete m_GameSetup;
       m_GameSetup = nullptr;
+
+      if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
+        Print("[AURA] Setup game released");
+      }
     }
   }
 

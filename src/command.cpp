@@ -6196,7 +6196,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       }
-      m_Aura->m_Exiting = true;
+      m_Aura->GracefulExit();
       break;
     }
 
