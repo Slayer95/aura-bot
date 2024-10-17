@@ -796,29 +796,7 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
     m_GProxyBuffer.push(data);
 
   if (!m_Disconnected && !m_Socket->HasError()) {
-    if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-      if (!m_Socket) {
-        Print(m_Game->GetLogPrefix() + " trying to put bytes into nullptr socket");
-      } else if (m_Socket->HasError()) {
-        Print(m_Game->GetLogPrefix() + " trying to put bytes into errored socket [" + m_Socket->GetName() + "] (" + to_string(m_Socket->GetError()) + ")");
-      } else if (m_Socket->m_Socket == INVALID_SOCKET) {
-        Print(m_Game->GetLogPrefix() + " trying to put bytes into invalid socket [" + m_Socket->GetName() + "]");
-      } else {
-        Print(m_Game->GetLogPrefix() + " trying to put " + to_string(data.size())  + " bytes into socket");
-      }
-    }
     m_Socket->PutBytes(data);
-    if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-      if (!m_Socket) {
-        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into nullptr socket");
-      } else if (m_Socket->HasError()) {
-        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into errored socket [" + m_Socket->GetName() + "] (" + to_string(m_Socket->GetError()) + ")");
-      } else if (m_Socket->m_Socket == INVALID_SOCKET) {
-        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into invalid socket [" + m_Socket->GetName() + "]");
-      } else {
-        Print(m_Game->GetLogPrefix() + " successfully put " + to_string(data.size()) + " bytes into socket [" + m_Socket->GetName() + "]");
-      }
-    }
   }
 }
 
