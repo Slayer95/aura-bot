@@ -715,6 +715,22 @@ bool CAura::CopyScripts()
   return true;
 }
 
+void CAura::ClearAutoRehost()
+{
+  if (!m_AutoRehostGameSetup) {
+    return;
+  }
+  if (m_GameSetup == m_AutoRehostGameSetup) {
+    m_GameSetup = nullptr;
+  }
+  delete m_AutoRehostGameSetup->m_Map;
+  m_AutoRehostGameSetup->m_Map = nullptr;
+  UnholdContext(m_AutoRehostGameSetup->m_Ctx);
+  m_AutoRehostGameSetup->m_Ctx = nullptr;
+  delete m_AutoRehostGameSetup;
+  m_AutoRehostGameSetup = nullptr;
+}
+
 CAura::~CAura()
 {
   UnholdContext(m_SudoContext);
@@ -730,17 +746,7 @@ CAura::~CAura()
   delete m_CRC;
   delete m_SHA;
 
-  if (m_AutoRehostGameSetup) {
-    if (m_GameSetup == m_AutoRehostGameSetup) {
-      m_GameSetup = nullptr;
-    }
-    delete m_AutoRehostGameSetup->m_Map;
-    m_AutoRehostGameSetup->m_Map = nullptr;
-    UnholdContext(m_AutoRehostGameSetup->m_Ctx);
-    m_AutoRehostGameSetup->m_Ctx = nullptr;
-    delete m_AutoRehostGameSetup;
-    m_AutoRehostGameSetup = nullptr;
-  }
+  ClearAutoRehost();
 
   if (m_GameSetup) {
     m_GameSetup->m_ExitingSoon = true;

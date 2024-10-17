@@ -218,6 +218,7 @@ public:
 
   uint8_t ExtractScripts();
   bool CopyScripts();
+  void ClearAutoRehost();
 
   void LoadMapAliases();
   void LoadIPToCountryData(const CConfig& CFG);
