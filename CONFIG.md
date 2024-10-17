@@ -61,7 +61,7 @@ Default value: Aura home directory
 Error handling: Use default value
 
 ## \`bot.perf_limit\`
-Type: int
+Type: uint32
 Default value: 150
 Error handling: Use default value
 
@@ -82,6 +82,11 @@ Error handling: Use default value
 
 ## \`bot.toggle_every_realm\`
 Type: bool
+Error handling: Use default value
+
+## \`db.game_stats.enabled\`
+Type: bool
+Default value: true
 Error handling: Use default value
 
 ## \`game.extract_jass.enabled\`
@@ -587,12 +592,12 @@ Default value: Empty
 Error handling: Use default value
 
 ## \`hosting.abandoned_lobby.game_expiry_time\`
-Type: int
+Type: uint32
 Default value: 600
 Error handling: Use default value
 
 ## \`hosting.abandoned_lobby.owner_expiry_time\`
-Type: int
+Type: uint32
 Default value: 120
 Error handling: Use default value
 
@@ -642,12 +647,12 @@ Default value: READY_MODE_EXPECT_RACE
 Error handling: Use default value
 
 ## \`hosting.game_start.count_down_interval\`
-Type: int
+Type: uint32
 Default value: 500
 Error handling: Use default value
 
 ## \`hosting.game_start.count_down_ticks\`
-Type: int
+Type: uint32
 Default value: 5
 Error handling: Use default value
 
@@ -657,18 +662,18 @@ Default value: true
 Error handling: Use default value
 
 ## \`hosting.high_ping.kick_ms\`
-Type: int
-Default value: 300
+Type: uint32
+Default value: 250
 Error handling: Use default value
 
 ## \`hosting.high_ping.safe_ms\`
-Type: int
-Default value: 150
+Type: uint32
+Default value: 130
 Error handling: Use default value
 
 ## \`hosting.high_ping.warn_ms\`
-Type: int
-Default value: 200
+Type: uint32
+Default value: 175
 Error handling: Use default value
 
 ## \`hosting.index.creator_name\`
@@ -692,6 +697,11 @@ Type: uint8
 Default value: 8
 Error handling: Use default value
 
+## \`hosting.log_delay\`
+Type: uint32
+Default value: 180
+Error handling: Use default value
+
 ## \`hosting.log_words\`
 Type: setinsensitive
 Default value: 
@@ -708,7 +718,7 @@ Default value: "epicwar" "wc3maps"
 Error handling: Use default value
 
 ## \`hosting.map_downloads.timeout\`
-Type: int32
+Type: uint32
 Default value: 15000
 Error handling: Use default value
 
@@ -738,7 +748,7 @@ Default value: auto
 Error handling: Use default value
 
 ## \`hosting.map.missing.kick_delay\`
-Type: int
+Type: uint32
 Default value: 60
 Error handling: Use default value
 
@@ -747,9 +757,24 @@ Type: int
 Default value: 20
 Error handling: Use default value
 
+## \`hosting.name_filter.unsafe_handler\`
+Type: stringindex
+Default value: ON_UNSAFE_NAME_DENY
+Error handling: Use default value
+
 ## \`hosting.namepace.first_game_id\`
 Type: int
 Default value: 100
+Error handling: Use default value
+
+## \`hosting.nicknames.hide_in_game\`
+Type: stringindex
+Default value: HIDE_IGN_AUTO
+Error handling: Use default value
+
+## \`hosting.nicknames.hide_lobby\`
+Type: bool
+Default value: false
 Error handling: Use default value
 
 ## \`hosting.self.virtual_player.name\`
@@ -759,7 +784,7 @@ Default value: |cFF4080C0Aura
 Error handling: Use default value
 
 ## \`hosting.vote_kick.min_percent\`
-Type: int
+Type: uint8
 Default value: 70
 Error handling: Use default value
 
@@ -980,7 +1005,6 @@ Error handling: Use default value
 
 ## \`net.host_port.only\`
 Type: uint16
-Default value: 6112
 Error handling: Use default value
 
 ## \`net.ipv4.public_address.algorithm\`
@@ -1034,12 +1058,12 @@ Default value: true
 Error handling: Use default value
 
 ## \`net.start_lag.sync_limit\`
-Type: int
+Type: uint32
 Default value: 32
 Error handling: Use default value
 
 ## \`net.stop_lag.sync_limit\`
-Type: int
+Type: uint32
 Default value: 8
 Error handling: Use default value
 
@@ -1049,7 +1073,7 @@ Default value: true
 Error handling: Use default value
 
 ## \`net.tcp_extensions.gproxy_legacy.reconnect_wait\`
-Type: uint8
+Type: uint16
 Default value: 3
 Error handling: Use default value
 
@@ -1069,13 +1093,23 @@ Default value: true
 Error handling: Use default value
 
 ## \`net.tcp_extensions.gproxy.reconnect_wait\`
-Type: uint8
+Type: uint16
 Default value: 5
 Error handling: Use default value
 
 ## \`net.tcp_extensions.gproxy.site\`
 Type: string
 Default value: https://www.mymgn.com/gproxy/
+Error handling: Use default value
+
+## \`net.tcp_extensions.gproxy.vlan.enabled\`
+Type: bool
+Default value: true
+Error handling: Use default value
+
+## \`net.tcp_extensions.gproxy.vlan.port\`
+Type: uint16
+Default value: onlyHostPort.value_or(6112u
 Error handling: Use default value
 
 ## \`net.tcp_extensions.udp_scan.enabled\`

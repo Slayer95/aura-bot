@@ -136,6 +136,9 @@ Syntax: fp <ON|OFF>
 
 ## \`freestart\`
 
+## \`g\`
+Aliases: start, vs, go
+
 ## \`getclan\`
 
 ## \`getfriends\`
@@ -145,9 +148,6 @@ Aliases: listgames
 
 ## \`getobservers\`
 Aliases: getplayers
-
-## \`go\`
-Aliases: start, vs
 
 ## \`gproxy\`
 Aliases: reconnect
@@ -162,7 +162,7 @@ Aliases: git
 Syntax: hold <PLAYER1> , <PLAYER2>, ...
 
 ## \`host\`
-Aliases: map, load
+Aliases: map, load, hostpriv
 Syntax: host <MAP NAME> , <GAME NAME>
 Syntax: host <MAP NAME> , <OBSERVERS> , <GAME NAME>
 Syntax: host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <GAME NAME>
