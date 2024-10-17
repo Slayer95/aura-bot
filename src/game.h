@@ -653,6 +653,7 @@ public:
   bool Resume();
   std::string GetSaveFileName(const uint8_t UID) const;
   bool Save(CGameUser* user, const bool isDisconnect);
+  void SaveEnded(const uint8_t exceptUID);
   bool TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary);
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);

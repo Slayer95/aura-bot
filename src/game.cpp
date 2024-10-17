@@ -4175,6 +4175,7 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
         SendAllChat("[" + user->GetDisplayName() + "] is saving the game");
         user->SetSaved(true);
+        SaveEnded(0xFF);
         break;
       case ACTION_SAVE_ENDED:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] finished saving the game")
@@ -7560,19 +7561,28 @@ bool CGame::Save(CGameUser* user, const bool isDisconnect)
   LOG_APP_IF(LOG_LEVEL_INFO, "saving as " + fileName)
 
   {
-    vector<uint8_t> CRC, Action;
-    Action.push_back(ACTION_SAVE);
-    AppendByteArray(Action, fileName);
-    m_Actions.push(new CIncomingAction(UID, CRC, Action));
+    vector<uint8_t> CRC, ActionStart, ActionEnd;
+    ActionStart.push_back(ACTION_SAVE);
+    ActionEnd.push_back(ACTION_SAVE_ENDED);
+    AppendByteArray(ActionStart, fileName);
+    m_Actions.push(new CIncomingAction(UID, CRC, ActionStart));
+    m_Actions.push(new CIncomingAction(UID, CRC, ActionEnd));
   }
 
+  SaveEnded(UID);
+  return true;
+}
+
+void CGame::SaveEnded(const uint8_t exceptUID)
+{
   for (const auto& fakePlayer : m_FakeUsers) {
+    if (static_cast<uint8_t>(fakePlayer) == exceptUID) {
+      continue;
+    }
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE_ENDED);
     m_Actions.push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
   }
-
-  return true;
 }
 
 bool CGame::TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary)
