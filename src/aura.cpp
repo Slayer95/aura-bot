@@ -1531,6 +1531,9 @@ void CAura::LogPersistent(const string& logText)
 void CAura::GracefulExit()
 {
   m_ExitingSoon = true;
+
+  ClearAutoRehost();
+
   if (m_GameSetup) {
     m_GameSetup->m_ExitingSoon = true;
   }
