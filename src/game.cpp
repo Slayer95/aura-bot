@@ -4131,6 +4131,7 @@ void CGame::EventUserLeft(CGameUser* user)
   if (user->GetDeleteMe()) return;
   // this function is only called when a user leave packet is received, not when there's a socket error, kick, etc...
   TrySaveOnDisconnect(user, true);
+  user->CloseConnection();
   user->SetDeleteMe(true);
   user->SetLeftReason("Leaving the game voluntarily");
   user->SetLeftCode(PLAYERLEAVE_LOST);

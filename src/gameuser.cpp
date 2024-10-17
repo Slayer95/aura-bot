@@ -548,6 +548,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
         {
           case CGameProtocol::W3GS_LEAVEGAME:
             m_Game->EventUserLeft(this);
+            m_Socket->SetLogErrors(false);
             Abort = true;
             break;
 
