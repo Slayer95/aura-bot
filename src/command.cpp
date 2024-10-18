@@ -6306,7 +6306,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "addstaff <NAME>");
+        ErrorReply("Usage: " + cmdToken + "staff <NAME>");
         break;
       }
       if (!m_SourceRealm) {

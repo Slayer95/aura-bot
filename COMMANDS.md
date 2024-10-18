@@ -332,7 +332,7 @@ Aliases: sp
 
 ## \`staff\`
 Aliases: admin
-Syntax: addstaff <NAME>
+Syntax: staff <NAME>
 
 ## \`stats\`
 Aliases: statsdota
