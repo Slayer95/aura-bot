@@ -2594,6 +2594,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("priv"):
     case HashCode("pub"): {
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "pub <GAMENAME>");
+        ErrorReply("Usage: " + cmdToken + "priv <GAMENAME>");
+        break;
+      }
+
       if (m_TargetGame) {
         if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
           break;
@@ -2609,11 +2615,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
           ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
-          break;
-        }
-        if (Payload.empty()) {
-          ErrorReply("Usage: " + cmdToken + "pub <GAMENAME>");
-          ErrorReply("Usage: " + cmdToken + "priv <GAMENAME>");
           break;
         }
       }
