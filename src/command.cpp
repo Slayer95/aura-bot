@@ -2678,8 +2678,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_Aura->m_GameSetup->SetContext(this);
         m_Aura->m_GameSetup->SetBaseName(Payload);
         m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
-
-        m_Aura->m_GameSetup->SetOwner(m_FromName, m_SourceRealm);
+        if (m_Aura->m_Config->m_AutomaticallySetGameOwner) {
+          m_Aura->m_GameSetup->SetOwner(m_FromName, m_SourceRealm);
+        }
         if (m_SourceRealm) {
           m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
         } else if (m_IRC) {
@@ -2741,7 +2742,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
       m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
-      m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : m_SourceRealm);
+      if (m_Aura->m_Config->m_AutomaticallySetGameOwner) {
+        m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : m_SourceRealm);
+      }
       m_Aura->m_GameSetup->RunHost();
       break;
     }

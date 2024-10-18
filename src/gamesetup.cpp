@@ -1201,7 +1201,9 @@ void CGameSetup::OnLoadMapSuccess()
     SetBaseName(m_MapReadyCallbackData);
     CGame* sourceGame = m_Ctx->GetSourceGame();
     CRealm* sourceRealm = m_Ctx->GetSourceRealm();
-    SetOwner(m_Ctx->GetSender(), sourceRealm);
+    if (m_Aura->m_Config->m_AutomaticallySetGameOwner) {
+      SetOwner(m_Ctx->GetSender(), sourceRealm);
+    }
     if (sourceGame) {
       SetCreator(m_Ctx->GetSender(), sourceGame);
     } else if (sourceRealm) {
