@@ -3273,7 +3273,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     if (user->GetLagging()) {
       SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(user));
     }
-    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || user->GetPingKicked() || user->GetMapKicked() || user->GetSpoofKicked());
+    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetQuitGame() && (user->GetPingKicked() || user->GetMapKicked() || user->GetSpoofKicked())));
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
@@ -4134,7 +4134,7 @@ void CGame::EventUserLeft(CGameUser* user)
   user->CloseConnection();
   user->SetDeleteMe(true);
   user->SetLeftReason("Leaving the game voluntarily");
-  user->SetLeftCode(PLAYERLEAVE_LOST);
+  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_LOST);
   user->SetQuitGame(true);
 
   if (!m_GameLoading && !m_GameLoaded) {
