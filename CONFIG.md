@@ -641,6 +641,11 @@ Type: uint8
 Default value: 1
 Error handling: Use default value
 
+## \`hosting.game_owner.from_creator\`
+Type: bool
+Default value: true
+Error handling: Use default value
+
 ## \`hosting.game_ready.mode\`
 Type: stringindex
 Default value: READY_MODE_EXPECT_RACE
