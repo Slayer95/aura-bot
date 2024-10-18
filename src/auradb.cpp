@@ -633,7 +633,7 @@ vector<string> CAuraDB::ListModerators(const string& server)
 
     int32_t RC;
     while ((RC = m_DB->Step(Statement)) == SQLITE_ROW) {
-      const unsigned char* user = m_DB->Column(Statement, 1);
+      const unsigned char* user = m_DB->Column(Statement, 0);
       const string userWrap = string(reinterpret_cast<const char*>(user));
       admins.push_back(userWrap);
     }
@@ -870,7 +870,7 @@ vector<string> CAuraDB::ListBans(const string& authserver)
 
     int32_t RC;
     while ((RC = m_DB->Step(Statement)) == SQLITE_ROW) {
-      const unsigned char* user = m_DB->Column(Statement, 1);
+      const unsigned char* user = m_DB->Column(Statement, 0);
       bans.push_back(string(reinterpret_cast<const char*>(user)));
     }
     m_DB->Finalize(Statement);
