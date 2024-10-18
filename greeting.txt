@@ -2,8 +2,8 @@
 {CREATOR!}Lobby created {HOSTREALM}, using AuraBot. Issue commands with < {TRIGGER_PREFER_BROADCAST} >
 {URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]
 {READYSTATUS}
-{CHECKLASTOWNER?}{LAN!}YOU are no longer game owner because you left the LAN game.
-{CHECKLASTOWNER?}{LAN?}YOU are no longer game owner because you left the game for too long.
+{CHECKLASTOWNER?}{LAN?}YOU are no longer game owner because you left the LAN game.
+{CHECKLASTOWNER?}{LAN!}YOU are no longer game owner because you left the game for too long.
 {OWNER?}Current owner: {OWNER}{OWNERREALM}
 {OWNERLESS!}{OWNER!}YOU can take over this lobby with {TRIGGER_PREFER_BROADCAST}owner.
 {REPLACEABLE?}YOU can switch maps with {TRIGGER_PREFER_BROADCAST}host <MAP NAME> , <GAME NAME>.

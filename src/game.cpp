@@ -2752,13 +2752,13 @@ void CGame::SendWelcomeMessage(CGameUser *user) const
       Line = Line.substr(14);
     }
     if (Line.substr(0, 6) == "{LAN?}") {
-      if (!user->GetRealm(false)) {
+      if (user->GetRealm(false)) {
         continue;
       }
       Line = Line.substr(6);
     }
     if (Line.substr(0, 6) == "{LAN!}") {
-      if (user->GetRealm(false)) {
+      if (!user->GetRealm(false)) {
         continue;
       }
       Line = Line.substr(6);
