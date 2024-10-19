@@ -62,17 +62,17 @@ async function main() {
   for (const mainCmd of commandList) {
     outContents.push('## \\`' + mainCmd + '\\`');
     if (aliases.get(mainCmd)?.length) {
-      outContents.push(`Aliases: ${aliases.get(mainCmd).join(', ')}`);
+      outContents.push(`- Aliases: ${aliases.get(mainCmd).join(', ')}`);
     }
     if (commandUsages.has(mainCmd)) for (const usage of commandUsages.get(mainCmd)) {
-      outContents.push(`Syntax: ${usage}`);
+      outContents.push(`- Syntax: ${usage}`);
     }
     outContents.push(``);
   }
 
   await fs.writeFile(
     path.resolve(__dirname, OUTPUT_PATH),
-    outContents.join(`\n`),
+    outContents.join(`\n`).replace(/([<>])/g, '\\$1'),
   );
 }
 

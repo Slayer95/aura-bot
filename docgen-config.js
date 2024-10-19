@@ -131,40 +131,40 @@ async function main() {
     if (configEntry.keyName.endsWith(`--but_its_hardcoded`)) continue;
     if (configEntry.keyName.includes(`.gameranger.`)) continue;
     outContents.push('## \\`' + configEntry.keyName + '\\`');
-    outContents.push(`Type: ${getKeyType(configEntry.fnName)}`);
+    outContents.push(`- Type: ${getKeyType(configEntry.fnName)}`);
     if (configEntry.restArgs) {
       let constraints = getValueConstraints(configEntry.fnName, configEntry.keyName,configEntry.restArgs);
       if (constraints.length) {
-        outContents.push(`Constraints: ${constraints.join('. ')}.`);
+        outContents.push(`- Constraints: ${constraints.join('. ')}.`);
       }
     }
     if (configEntry.fnName.startsWith(`getMaybe`)) {
-      outContents.push(`Optional key: Yes`);
+      outContents.push(`- Optional key: Yes`);
     } else {
       const failIfError = optionsMeta.get(configEntry.keyName)?.failIfError;
       if (configEntry.restArgs) {
         if (configEntry.keyName.startsWith(`realm_N.`)) {
-          outContents.push(`Default value: ${configEntry.keyName.replace(/^realm_N\./, '<global_realm.')}>`);
+          outContents.push(`- Default value: ${configEntry.keyName.replace(/^realm_N\./, '<global_realm.')}>`);
         } else {
-          outContents.push(`Default value: ${getDefaultValue(configEntry.restArgs, configEntry.keyName)}`);
+          outContents.push(`- Default value: ${getDefaultValue(configEntry.restArgs, configEntry.keyName)}`);
         }
       }
-      outContents.push(`Error handling: ${failIfError ? 'Abort operation' : 'Use default value'}`);
+      outContents.push(`- Error handling: ${failIfError ? 'Abort operation' : 'Use default value'}`);
     }
     const reloadMode = optionsMeta.get(configEntry.keyName)?.reloadMode;
     if (reloadMode === ReloadModes.NEXT) {
-      outContents.push(`Reloadable: Yes, but it doesn't affect currently hosted games.`);
+      outContents.push(`- Reloadable: Yes, but it doesn't affect currently hosted games.`);
     } else if (reloadMode === ReloadModes.INSTANT) {
-      outContents.push(`Reloadable: Yes.`);
+      outContents.push(`- Reloadable: Yes.`);
     } else if (reloadMode === ReloadModes.NONE) {
-      outContents.push(`Reloadable: Cannot be reloaded.`);
+      outContents.push(`- Reloadable: Cannot be reloaded.`);
     }
     outContents.push(``);
   }
 
   await fs.writeFile(
     path.resolve(__dirname, OUTPUT_PATH),
-    outContents.join(`\n`),
+    outContents.join(`\n`).replace(/([<>])/g, '\\$1'),
   );
 }
 
