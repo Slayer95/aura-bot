@@ -21,6 +21,9 @@ function getKeyType(keyName) {
   } else {
     console.error(`Unhandled key name ${keyName}`);
   }
+  if (subName == `StringIndex`) {
+    return `enum`;
+  }
   return subName.toLowerCase();
 }
 
@@ -108,7 +111,7 @@ async function main() {
         }
         continue;
       }
-      if (trimmed.endsWith(`CFG->FailIfErrorLast();`)) {
+      if (trimmed.endsWith(`CFG.FailIfErrorLast();`)) {
         if (!optionsMeta.has(lastConfigName)) console.error({fileName, lineNum, lastConfigName});
         optionsMeta.get(lastConfigName).failIfError = true;
       }
