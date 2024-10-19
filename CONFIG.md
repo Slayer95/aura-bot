@@ -89,6 +89,31 @@ Config
 - Default value: true
 - Error handling: Use default value
 
+## \`db.journal_mode\`
+- Type: enum
+- Default value: JOURNAL_MODE_DELETE
+- Error handling: Use default value
+
+## \`db.storage_file\`
+- Type: path
+- Default value: Aura home directory
+- Error handling: Use default value
+
+## \`db.synchronous\`
+- Type: enum
+- Default value: SYNCHRONOUS_FULL
+- Error handling: Use default value
+
+## \`db.wal_autocheckpoint\`
+- Type: uint16
+- Default value: 1000
+- Error handling: Use default value
+
+## \`game_data.twrpg_path\`
+- Type: path
+- Default value: Aura home directory
+- Error handling: Use default value
+
 ## \`game.extract_jass.enabled\`
 - Type: bool
 - Default value: true
