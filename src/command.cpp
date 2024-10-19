@@ -2734,7 +2734,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Args[0], targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUserArgs([0], targetName, targetHostName, targetRealm, true)) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
@@ -2742,9 +2742,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
       m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
-      if (m_Aura->m_Config->m_AutomaticallySetGameOwner) {
-        m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : m_SourceRealm);
-      }
+      m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : m_SourceRealm);
       m_Aura->m_GameSetup->RunHost();
       break;
     }
