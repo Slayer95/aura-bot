@@ -26,7 +26,7 @@ Config
 - Error handling: Use default value
 
 ## \`bot.load_maps.cache.revalidation.algorithm\`
-- Type: stringindex
+- Type: enum
 - Default value: CACHE_REVALIDATION_MODIFIED
 - Error handling: Use default value
 
@@ -41,7 +41,7 @@ Config
 - Error handling: Use default value
 
 ## \`bot.log_level\`
-- Type: stringindex
+- Type: enum
 - Default value: LOG_LEVEL_INFO - 1
 - Error handling: Use default value
 
@@ -100,7 +100,7 @@ Config
 
 ## \`game.version\`
 - Type: uint8
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.admins\`
 - Type: setinsensitive
@@ -167,12 +167,12 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.auth_password_hash_type\`
-- Type: stringindex
+- Type: enum
 - Default value: pvpgn
 - Error handling: Use default value
 
 ## \`global_realm.auth_password_hash_type\`
-- Type: stringindex
+- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 
@@ -202,22 +202,22 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.commands.admin.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`global_realm.commands.admin.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.commands.bot_owner.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`global_realm.commands.bot_owner.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 
@@ -242,32 +242,32 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.commands.common.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`global_realm.commands.common.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.commands.hosting.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`global_realm.commands.hosting.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.commands.moderator.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`global_realm.commands.moderator.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 
@@ -314,11 +314,11 @@ Config
 ## \`global_realm.custom_ip_address.value\`
 - Type: addressipv4
 - Default value: 0.0.0.0
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.custom_ip_address.value\`
 - Type: addressipv4
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.custom_port.enabled\`
 - Type: bool
@@ -333,12 +333,12 @@ Config
 ## \`global_realm.custom_port.value\`
 - Type: uint16
 - Default value: 6112
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.custom_port.value\`
 - Type: uint16
 - Default value: Empty
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.db_id\`
 - Type: string
@@ -627,7 +627,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.desync.handler\`
-- Type: stringindex
+- Type: enum
 - Default value: ON_DESYNC_NOTIFY
 - Error handling: Use default value
 
@@ -647,7 +647,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.game_ready.mode\`
-- Type: stringindex
+- Type: enum
 - Default value: READY_MODE_EXPECT_RACE
 - Error handling: Use default value
 
@@ -688,7 +688,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.ip_filter.flood_handler\`
-- Type: stringindex
+- Type: enum
 - Default value: ON_IPFLOOD_DENY
 - Error handling: Use default value
 
@@ -748,7 +748,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.map_transfers.mode\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
@@ -763,7 +763,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.name_filter.unsafe_handler\`
-- Type: stringindex
+- Type: enum
 - Default value: ON_UNSAFE_NAME_DENY
 - Error handling: Use default value
 
@@ -773,7 +773,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.nicknames.hide_in_game\`
-- Type: stringindex
+- Type: enum
 - Default value: HIDE_IGN_AUTO
 - Error handling: Use default value
 
@@ -804,12 +804,12 @@ Config
 - Error handling: Use default value
 
 ## \`irc.commands.admin.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`irc.commands.bot_owner.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
@@ -824,17 +824,17 @@ Config
 - Error handling: Use default value
 
 ## \`irc.commands.common.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`irc.commands.hosting.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`irc.commands.moderator.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
@@ -889,27 +889,27 @@ Config
 - Error handling: Use default value
 
 ## \`lan_realm.commands.admin.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`lan_realm.commands.bot_owner.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`lan_realm.commands.common.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`lan_realm.commands.hosting.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`lan_realm.commands.moderator.permissions\`
-- Type: stringindex
+- Type: enum
 - Default value: auto
 - Error handling: Use default value
 
@@ -926,17 +926,17 @@ Config
 ## \`net.bind_address\`
 - Type: addressipv4
 - Default value: 0.0.0.0
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.bind_address6\`
 - Type: addressipv6
 - Default value: ::
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.game_discovery.udp.broadcast.address\`
 - Type: addressipv4
 - Default value: 255.255.255.255
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.game_discovery.udp.broadcast.enabled\`
 - Type: bool
@@ -1020,12 +1020,12 @@ Config
 ## \`net.ipv4.public_address.value\`
 - Type: addressipv4
 - Default value: 0.0.0.0
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.ipv4.public_address.value\`
 - Type: string
 - Default value: http://api.ipify.org
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.ipv6.public_address.algorithm\`
 - Type: string
@@ -1035,12 +1035,12 @@ Config
 ## \`net.ipv6.public_address.value\`
 - Type: addressipv6
 - Default value: ::
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.ipv6.public_address.value\`
 - Type: string
 - Default value: http://api6.ipify.org
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.ipv6.tcp.announce_chat\`
 - Type: bool
@@ -1150,17 +1150,17 @@ Config
 ## \`net.udp_redirect.ip_address\`
 - Type: address
 - Default value: 127.0.0.1
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.udp_redirect.ip_address\`
 - Type: addressipv4
 - Default value: 127.0.0.1
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.udp_redirect.port\`
 - Type: uint16
 - Default value: 6110
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`net.udp_redirect.realm_game_lists.enabled\`
 - Type: bool
