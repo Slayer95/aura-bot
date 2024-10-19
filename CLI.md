@@ -10,7 +10,7 @@ Below is a detailed explanation of each flag and parameter along with usage exam
 
 # Positional arguments
 
-## \`<MAP> <NAME>\`
+## \`\<MAP\> \<NAME\>\`
 Hosts a game with the given name, using a given map file.
 
 - `<MAP>`: The name or identifier of the map to be hosted.
@@ -19,7 +19,7 @@ Hosts a game with the given name, using a given map file.
 If ``MAP`` has no slashes, it's resolved relative to Aura's map dir by default.
 When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the current working directory (CWD).
 
-## \`<CONFIG> <NAME>\`
+## \`\<CONFIG\> \<NAME\>\`
 Hosts a game with the given name, using a given map config/metadata file.
 
 - `<CONFIG>`: The configuration settings for the game.
@@ -222,7 +222,7 @@ files (``.ini``). These flags simply determine how files necessary for hosting f
 
 # Parameters
 
-## \`--homedir <DIRECTORY>\`
+## \`--homedir \<DIRECTORY\>\`
 
 Specifies the directory to be used as Aura's home directory. Paths in the config file are resolved relative to the home directory.
 
@@ -230,7 +230,7 @@ Specifies the directory to be used as Aura's home directory. Paths in the config
 - If `--homedir` is not provided, the environment variable `AURA_HOME` is used to determine the home directory.
 - If neither `--homedir` nor the `AURA_HOME` environment variable are set, the home directory defaults to the directory where Aura's executable is located.
 
-## \`--config <FILE>\`
+## \`--config \<FILE\>\`
 
 Specifies the location of Aura's main configuration file.
 
@@ -242,7 +242,7 @@ Specifies the location of Aura's main configuration file.
 
 Defaults to ``config.ini`` in the home dir.
 
-## \`--config-adapter <FILE>\`
+## \`--config-adapter \<FILE\>\`
 
 Specifies the location of a file to be used to migrate legacy Ghost++ configuration files (e.g. `default.cfg`) into modern Aura configuration files.
 
@@ -257,28 +257,28 @@ After manually fixing any remaining issues, a generated config file should be re
 
 **Note**: Paths in any configuration file are resolved relative to Aura's home directory.
 
-## \`--w3version <NUMBER>\`
+## \`--w3version \<NUMBER\>\`
 
 Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
 compatibility. This parameter allows Aura to switch versions on the spot.
 
 This option is equivalent to ``<game.version>`` in `config.ini`
 
-## \`--w3dir <DIRECTORY>\` 
+## \`--w3dir \<DIRECTORY\>\` 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows Aura 
 to identify and fetch files from alternative Warcraft 3 game installations on the spot.
 
 This option is equivalent to ``<game.install_path>`` in `config.ini`
 
-## \`--mapdir <DIRECTORY>\`
+## \`--mapdir \<DIRECTORY\>\`
 
 Specifies the directory where Warcraft 3 maps are stored. This parameter allows Aura to locate  
 and load maps for hosting games.
 
 This option is equivalent to ``<bot.maps_path>`` in `config.ini`
 
-## \`--cfgdir <DIRECTORY>\`
+## \`--cfgdir \<DIRECTORY\>\`
 
 Specifies the directory path where Aura reads metadata files for Warcraft 3 maps. 
 These metadata files, also known as "map config" files or mapcfg, are essential 
@@ -291,7 +291,7 @@ separately from other application data.
 
 This option is equivalent to ``<bot.map_configs_path>`` in `config.ini`
 
-## \`--cachedir <DIRECTORY>\`
+## \`--cachedir \<DIRECTORY\>\`
 
 Specifies the directory path where Aura automatically generates and stores cache files 
 for Warcraft 3 maps. These cache files serve the same purpose as user-created metadata 
@@ -302,14 +302,14 @@ maintenance of map metadata.
 
 This option is equivalent to ``<bot.map_cache_path>`` in `config.ini`
 
-## \`--jassdir <DIRECTORY>\`
+## \`--jassdir \<DIRECTORY\>\`
 
 Specifies the directory where Warcraft 3 script files are stored. These files are needed in order 
 to host games from map files (``.w3x``, ``.w3m``).
 
 This option is equivalent to ``<bot.jass_path>`` in `config.ini`
 
-## \`--savedir <DIRECTORY>\`
+## \`--savedir \<DIRECTORY\>\`
 
 Specifies the directory where Warcraft 3 save files (``.w3z``) are stored.
 
@@ -325,7 +325,7 @@ The most interesting value is \`127.0.0.1\`, which will only allow connections f
 
 This option is equivalent to ``<net.bind_address>`` in `config.ini`
 
-## \`--lan-mode <MODE>\`
+## \`--lan-mode \<MODE\>\`
 
 Specifies how hosted games available for "Local Area Network" should be made known to potential players.
 
@@ -350,7 +350,7 @@ machine to connect to the Local Area Network.
 
 This option is equivalent to ``<net.udp_server.enabled = no>`` in `config.ini`
 
-## \`--log-level <LEVEL>\`
+## \`--log-level \<LEVEL\>\`
 
 Specifies the level of detail for logging output.
 
@@ -366,7 +366,7 @@ Values:
 
 By default, the logging level is set to info.
 
-## \`--port-forward-tcp <PORT>\`, \`--port-forward-udp <PORT>\`
+## \`--port-forward-tcp \<PORT\>\`, \`--port-forward-udp \<PORT\>\`
 
 The --port-forward-tcp <PORT> and --port-forward-udp <PORT> flags are used to trigger 
 Universal Plug and Play (UPnP) requests from the command line interface (CLI) for TCP and UDP 
@@ -515,7 +515,7 @@ This flag is enabled by default.
 
 # Parameters for CLI games
 
-## \`-s <TYPE>, --search-type <TYPE>\`
+## \`-s <TYPE>, --search-type \<TYPE\>\`
 
 Specifies the type of hostable being referenced. This parameter helps Aura determine how to resolve 
 the input when hosting maps from the CLI, whether they are maps, configuration files, or remote resources.
@@ -527,18 +527,18 @@ the input when hosting maps from the CLI, whether they are maps, configuration f
 - local: Indicates that both maps and config files are allowed, but only in the local machine.
 - any: Indicates that the specified file may be found in the cloud.
 
-## \`--exclude <SERVER>\`
+## \`--exclude \<SERVER\>\`
 
 This makes hosted games invisible in the specified server. The server is to be specified through their 
 unique `Input ID`, which corresponds to ``realm_N.input_id`` in `config.ini`. Note that this value may be 
 missing, and thus defaults to ``realm_N.unique_name`` (which itself defaults to \`realm_N.host_name\`).
 
-## \`--alias <ALIAS>\`
+## \`--alias \<ALIAS\>\`
 
 This option lets Aura automatically register an alias for the map hosted. Aliases are case-insensitive, and 
 normalized according to the rules listed in \`aliases.ini\`.
 
-## \`--mirror <IP:PORT#ID>\`
+## \`--mirror \<IP:PORT\#ID\>\`
 
 This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 
 instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms. The actual host is identified 
@@ -546,7 +546,7 @@ by their IPv4 address and PORT. The game ID, also known as "host counter", must 
 
 Aura will remain in game mirroring mode until the process finishes.
 
-## \`--observers <OBSERVER>\`
+## \`--observers \<OBSERVER\>\`
 
 This parameter sets the observer mode for the hosted game. Observer mode determines how spectators are 
 allowed to observe the game.
@@ -558,7 +558,7 @@ allowed to observe the game.
 - referees: Allows spectators to observe the game, and communicate with the players, either in public chat, or private chat.
 - defeat: Players that lose the game are allowed to remain in the game, as spectators.
 
-## \`--visibility <VISIBILITY>\`
+## \`--visibility \<VISIBILITY\>\`
 
 This parameter sets the visibility mode for the hosted game, determining how much of the map is visible 
 to players and observers.
@@ -570,7 +570,7 @@ to players and observers.
 - map explored: Reveals the entire map to players, allowing them to see all terrain but not enemy units or structures unless they have vision of them.
 - always visible: Grants players and observers full visibility of the entire map, including enemy units and structures, without the need for vision.
 
-## \`--speed <SPEED>\`
+## \`--speed \<SPEED\>\`
 
 This parameter sets the speed for the hosted game, determining how often the game updates.
 Slower settings make the gameplay more accessible, but are uncommon in competitive environments.
@@ -589,7 +589,7 @@ administrative control over the game session. Here's the format for specifying t
 - USER: The username of the owner.
 - SERVER: The server the user is registered in.
 
-## \`--lobby-timeout <TIME>\`
+## \`--lobby-timeout \<TIME\>\`
 
 This parameter specifies the maximum time a game lobby is allowed to be unattended, that is,
 without a game owner. After this time passes, the lobby is unhosted.
@@ -599,7 +599,7 @@ without a game owner. After this time passes, the lobby is unhosted.
 This option is equivalent to ``<hosting.abandoned_lobby.game_expiry_time>`` in `config.ini`
 This option is equivalent to ``<map.hosting.abandoned_lobby.game_expiry_time>`` in map configuration
 
-## \`--lobby-owner-timeout <TIME>\`
+## \`--lobby-owner-timeout \<TIME\>\`
 
 This parameter specifies the maximum time a game owner is allowed to remain outside 
 the game lobby. After this time passes, the game owner authority is removed.
@@ -609,14 +609,14 @@ the game lobby. After this time passes, the game owner authority is removed.
 This option is equivalent to ``<hosting.abandoned_lobby.owner_expiry_time>`` in `config.ini`
 This option is equivalent to ``<map.hosting.abandoned_lobby.owner_expiry_time>`` in map configuration
 
-## \`--download-timeout <TIME>\`
+## \`--download-timeout \<TIME\>\`
 
 This parameter specifies the maximum time a map download is allowed to take. Once this time is
 exceeded, the map download and game hosting are cancelled.
 
 - TIME: Provided in seconds.
 
-## \`--auto-start-players <COUNT>\`
+## \`--auto-start-players \<COUNT\>\`
 
 This parameter specifies that the game may automatically start when the provided ``COUNT`` of slots 
 have been occupied in the game. This includes computer slots, virtual player slots, and actual players that 
@@ -626,7 +626,7 @@ If \`--auto-start-time\` is also supplied, the game will start only when both co
 
 This option is equivalent to ``<map.auto_start.players>`` in map configuration
 
-## \`--auto-start-time <SECONDS>\`
+## \`--auto-start-time \<SECONDS\>\`
 
 This parameter specifies that the game will automatically start when the provided ``SECONDS`` have passed since 
 the game was created.
@@ -635,7 +635,7 @@ If \`--auto-start-players\` is also supplied, the game will start only when both
 
 This option is equivalent to ``<map.auto_start.time>`` in map configuration
 
-## \`--players-ready <MODE>\`
+## \`--players-ready \<MODE\>\`
 
 This parameter specifies when players will be considered ready for automatic start purposes.
 
@@ -648,7 +648,7 @@ This parameter specifies when players will be considered ready for automatic sta
 This option is equivalent to ``<hosting.game_ready.mode>`` in `config.ini`
 This option is equivalent to ``<map.hosting.game_ready.mode>`` in map configuration
 
-## \`--auto-end-players <COUNT>\`
+## \`--auto-end-players \<COUNT\>\`
 
 This parameter specifies that after one or more players left, and only ``COUNT`` players remain in a game,
 the game should be ended, and players should be disconnected.
@@ -656,7 +656,7 @@ the game should be ended, and players should be disconnected.
 This option is equivalent to ``<hosting.game_over.player_count>`` in `config.ini`
 This option is equivalent to ``<map.hosting.game_over.player_count>`` in map configuration
 
-## \`--lobby-auto-kick-ping <VALUE>\`
+## \`--lobby-auto-kick-ping \<VALUE\>\`
 
 This parameter specifies that players should be automatically kicked from the hosted game lobby, if their 
 latency is found to exceed the provided value, in milliseconds.
@@ -664,7 +664,7 @@ latency is found to exceed the provided value, in milliseconds.
 This option is equivalent to ``<hosting.high_ping.kick_ms>`` in `config.ini`
 This option is equivalent to ``<map.hosting.high_ping.kick_ms>`` in map configuration
 
-## \`--lobby-high-ping <VALUE>\`
+## \`--lobby-high-ping \<VALUE\>\`
 
 This parameter specifies that warnings should be issued in the hosted game lobby, if a player's latency is
 found to exceed the provided value, in milliseconds.
@@ -672,7 +672,7 @@ found to exceed the provided value, in milliseconds.
 This option is equivalent to ``<hosting.high_ping.warn_ms>`` in `config.ini`
 This option is equivalent to ``<map.hosting.high_ping.warn_ms>`` in map configuration
 
-## \`--lobby-safe-ping <VALUE>\`
+## \`--lobby-safe-ping \<VALUE\>\`
 
 This parameter specifies that an announcement should be displayed in the hosted game lobby, whenever the 
 latency of a player whose latency has previously been found to be high, decreases down to the provided value, 
@@ -681,7 +681,7 @@ in milliseconds.
 This option is equivalent to ``<hosting.high_ping.safe_ms>`` in `config.ini`
 This option is equivalent to ``<map.hosting.high_ping.safe_ms>`` in map configuration
 
-## \`--latency <VALUE>\`
+## \`--latency \<VALUE\>\`
 
 This parameter specifies the time, in milliseconds, that should pass between each game tick. All data sent by 
 players is forwarded to each other at a rate limited by the provided value.
@@ -693,7 +693,7 @@ This option is restricted to a minimum of 10 ms, and a maximum of 500 ms. The de
 This option is equivalent to ``<bot.latency>`` in `config.ini`
 This option is equivalent to ``<map.bot.latency>`` in map configuration
 
-## \`--latency-max-frames <VALUE>\`
+## \`--latency-max-frames \<VALUE\>\`
 
 This parameter specifies that, whenever a player fails to timely send the provided amount of updates, one per game tick, 
 the lag screen should be shown, so that everyone waits for them.
@@ -701,7 +701,7 @@ the lag screen should be shown, so that everyone waits for them.
 This option is equivalent to ``<net.start_lag.sync_limit>`` in `config.ini`
 This option is equivalent to ``<map.net.start_lag.sync_limit>`` in map configuration
 
-## \`--latency-safe-frames <VALUE>\`
+## \`--latency-safe-frames \<VALUE\>\`
 
 This parameter specifies that, whenever the lag screen is shown, it will end as soon as everyone is missing no more than
 the provided amount of updates, one per game tick.
@@ -709,14 +709,14 @@ the provided amount of updates, one per game tick.
 This option is equivalent to ``<net.stop_lag.sync_limit>`` in `config.ini`
 This option is equivalent to ``<map.net.stop_lag.sync_limit>`` in map configuration
 
-## \`--start-countdown-interval <VALUE>\`
+## \`--start-countdown-interval \<VALUE\>\`
 
 This parameter specifies, in milliseconds, how long should Aura wait between each tick during the game start countdown.
 
 This option is equivalent to ``<hosting.game_start.count_down_interval>`` in `config.ini`
 This option is equivalent to ``<map.hosting.game_start.count_down_interval>`` in map configuration
 
-## \`--start-countdown-ticks <VALUE>\`
+## \`--start-countdown-ticks \<VALUE\>\`
 
 This parameter specifies how many ticks should Aura wait for during game start countdown.
 
@@ -733,18 +733,18 @@ player handicaps.
 
 This option is equivalent to ``<map.hcl>`` in map configuration
 
-## \`--load <FILE>\`
+## \`--load \<FILE\>\`
 
 Specifies the location of a saved game a game lobby will resume.
 
 - If `<FILE>` does not contain any slashes, it is resolved relative to the saved games directory by default, unless overridden by the `--stdpaths` flag.
 - The presence of any slashes causes `<FILE>` to be resolved relative to the current working directory (CWD).
 
-## \`--reserve <PLAYER>\`
+## \`--reserve \<PLAYER\>\`
 
 Makes a reservation for a player to join the game lobby. This is required for loaded games to properly work.
 
-## \`--crossplay <VERSION>\`
+## \`--crossplay \<VERSION\>\`
 
 Adds support for clients running the given game version to join the game lobby. Note that crossplay has an 
 inherent risk of desynchronization between game clients. Usage of this feature is only recommended when hosting 
@@ -754,7 +754,7 @@ Avoid using crossplay for melee or altered melee maps, in order to minimize pote
 
 Note also that versions 1.29, and 1.23 are not compatible with earlier game versions.
 
-## \`--on-ipflood <ACTION>\`
+## \`--on-ipflood \<ACTION\>\`
 
 This parameter customizes behavior when an excessive amount of players join the game from the same IP address.
 
@@ -767,7 +767,7 @@ This parameter customizes behavior when an excessive amount of players join the 
 This option is equivalent to ``<hosting.ip_filter.flood_handler>`` in `config.ini`
 This option is equivalent to ``<map.hosting.ip_filter.flood_handler>`` in map configuration
 
-## \`--on-unsafe-name <ACTION>\`
+## \`--on-unsafe-name \<ACTION\>\`
 
 This parameter customizes behavior when a player tries to join a game using an unsafe or otherwise problematic name.
 
@@ -810,7 +810,7 @@ a collaborative and informed environment during the game session.
 
 # Parameters for CLI commands
 
-## \`--exec <COMMAND>\`
+## \`--exec \<COMMAND\>\`
 
 This parameter allows the execution of a specific command after the bot start up, and the CLI game (if any) 
 has been created. Here's how it works:
@@ -825,7 +825,7 @@ It allows the execution of commands as a specific user on a particular server. H
 - USER: The username to whom the command is attributed.
 - SERVER: The server the user is registered in.
 
-## \`--exec-auth <AUTH>\`
+## \`--exec-auth \<AUTH\>\`
 
 This parameter sets the authentication mode for executing commands specified by --exec.
 
@@ -837,7 +837,7 @@ This parameter sets the authentication mode for executing commands specified by 
 - rootadmin: Treats the user as a root admin of their server.
 - sudo: Treats the user as a bot sudoer. These are the highest privileges.
 
-## \`--exec-scope <SCOPE>\`
+## \`--exec-scope \<SCOPE\>\`
 
 This parameter determines where the command specified by --exec will be run.
 
