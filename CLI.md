@@ -10,7 +10,7 @@ Below is a detailed explanation of each flag and parameter along with usage exam
 
 # Positional arguments
 
-## \`<MAP> <NAME>`
+## \`<MAP> <NAME>\`
 Hosts a game with the given name, using a given map file.
 
 - `<MAP>`: The name or identifier of the map to be hosted.
@@ -19,7 +19,7 @@ Hosts a game with the given name, using a given map file.
 If ``MAP`` has no slashes, it's resolved relative to Aura's map dir by default.
 When it has slashes, or ``--stdpaths`` is used, it's resolved relative to the current working directory (CWD).
 
-## \`<CONFIG> <NAME>`
+## \`<CONFIG> <NAME>\`
 Hosts a game with the given name, using a given map config/metadata file.
 
 - `<CONFIG>`: The configuration settings for the game.

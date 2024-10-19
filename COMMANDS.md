@@ -1,6 +1,7 @@
 Commands
 ==========
 # Available commands
+
 ## \`a\`
 Aliases: abort
 

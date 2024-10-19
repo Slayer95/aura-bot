@@ -1,6 +1,7 @@
 Config
 ==========
 # Supported config keys
+
 ## \`bot.exit_on_standby\`
 Type: bool
 Default value: false
