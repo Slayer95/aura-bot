@@ -2734,7 +2734,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName, targetHostName;
       CRealm* targetRealm = nullptr;
-      if (!GetParseTargetRealmUserArgs([0], targetName, targetHostName, targetRealm, true)) {
+      if (!GetParseTargetRealmUser(Args[0], targetName, targetHostName, targetRealm, true)) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
