@@ -766,7 +766,8 @@ Adds support for clients running the given game version to join the game lobby. 
 inherent risk of desynchronization between game clients. Usage of this feature is only recommended when hosting 
 well-tested maps with custom game data.
 
-Avoid using crossplay for melee or altered melee maps, in order to minimize potential issues.
+Avoid using crossplay for melee or altered melee maps, in order to minimize potential issues. Note, however, that 
+maps using SLK optimization, such as those optimized with [W3x2Lni][5], are likely immune against desynchronizations.
 
 Note also that versions 1.29, and 1.23 are not compatible with earlier game versions.
 
@@ -874,3 +875,4 @@ Choose the appropriate scope based on where you want the command to be executed.
 [2]: https://gitlab.com/ivojulca/aura-bot/NETWORKING.md
 [3]: https://owasp.org/www-community/attacks/Path_Traversal
 [4]: https://en.wikipedia.org/wiki/Localhost
+[5]: https://www.hiveworkshop.com/threads/w3x2lni-v2-7-2.305201/
