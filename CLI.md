@@ -259,8 +259,11 @@ After manually fixing any remaining issues, a generated config file should be re
 
 ## \`--w3version \<NUMBER\>\`
 
-Specifies the version that is to be used when hosting Warcraft 3 games. There is no cross-version 
-compatibility. This parameter allows Aura to switch versions on the spot.
+Specifies the version that is to be used when hosting Warcraft 3 games. This parameter allows Aura to switch 
+versions on the spot.
+
+Note that, while Aura supports some degree of cross-version compatibility, the version specified by this parameter is assumed in 
+case Aura cannot figure out the version used by a game client.
 
 This option is equivalent to ``<game.version>`` in `config.ini`
 
@@ -386,7 +389,7 @@ by allowing incoming connections on specific ports.
 **Note:**
 - Ensure that the specified ports are not blocked by firewalls and are available for use.
 - UPnP support must be enabled on the router for these requests to be successful.
-- Some routers may require user authentication for UPnP requests.
+- Some routers may require user authentication for UPnP requests. Aura does not support this.
 
 # Flags for CLI games
 
@@ -500,6 +503,7 @@ This flag is disabled by default.
 This flag prevents users joining a hosted game from knowing the nicknames of other players before the game starts.
 
 This option is equivalent to ``<hosting.nicknames.hide_lobby>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.nicknames.hide_lobby>`` in map configuration
 
 This flag is disabled by default.
@@ -597,6 +601,7 @@ without a game owner. After this time passes, the lobby is unhosted.
 - TIME: Provided in seconds.
 
 This option is equivalent to ``<hosting.abandoned_lobby.game_expiry_time>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.abandoned_lobby.game_expiry_time>`` in map configuration
 
 ## \`--lobby-owner-timeout \<TIME\>\`
@@ -607,6 +612,7 @@ the game lobby. After this time passes, the game owner authority is removed.
 - TIME: Provided in seconds.
 
 This option is equivalent to ``<hosting.abandoned_lobby.owner_expiry_time>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.abandoned_lobby.owner_expiry_time>`` in map configuration
 
 ## \`--download-timeout \<TIME\>\`
@@ -646,6 +652,7 @@ This parameter specifies when players will be considered ready for automatic sta
 - explicit: Players must use the command !ready in order to be treated as such.
 
 This option is equivalent to ``<hosting.game_ready.mode>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.game_ready.mode>`` in map configuration
 
 ## \`--auto-end-players \<COUNT\>\`
@@ -654,6 +661,7 @@ This parameter specifies that after one or more players left, and only ``COUNT``
 the game should be ended, and players should be disconnected.
 
 This option is equivalent to ``<hosting.game_over.player_count>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.game_over.player_count>`` in map configuration
 
 ## \`--lobby-auto-kick-ping \<VALUE\>\`
@@ -662,6 +670,7 @@ This parameter specifies that players should be automatically kicked from the ho
 latency is found to exceed the provided value, in milliseconds.
 
 This option is equivalent to ``<hosting.high_ping.kick_ms>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.high_ping.kick_ms>`` in map configuration
 
 ## \`--lobby-high-ping \<VALUE\>\`
@@ -670,6 +679,7 @@ This parameter specifies that warnings should be issued in the hosted game lobby
 found to exceed the provided value, in milliseconds.
 
 This option is equivalent to ``<hosting.high_ping.warn_ms>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.high_ping.warn_ms>`` in map configuration
 
 ## \`--lobby-safe-ping \<VALUE\>\`
@@ -679,6 +689,7 @@ latency of a player whose latency has previously been found to be high, decrease
 in milliseconds.
 
 This option is equivalent to ``<hosting.high_ping.safe_ms>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.high_ping.safe_ms>`` in map configuration
 
 ## \`--latency \<VALUE\>\`
@@ -691,6 +702,7 @@ The lower this value, the more fluid the gameplay will be.
 This option is restricted to a minimum of 10 ms, and a maximum of 500 ms. The default value is 100 ms.
 
 This option is equivalent to ``<bot.latency>`` in `config.ini`
+
 This option is equivalent to ``<map.bot.latency>`` in map configuration
 
 ## \`--latency-max-frames \<VALUE\>\`
@@ -699,6 +711,7 @@ This parameter specifies that, whenever a player fails to timely send the provid
 the lag screen should be shown, so that everyone waits for them.
 
 This option is equivalent to ``<net.start_lag.sync_limit>`` in `config.ini`
+
 This option is equivalent to ``<map.net.start_lag.sync_limit>`` in map configuration
 
 ## \`--latency-safe-frames \<VALUE\>\`
@@ -707,6 +720,7 @@ This parameter specifies that, whenever the lag screen is shown, it will end as 
 the provided amount of updates, one per game tick.
 
 This option is equivalent to ``<net.stop_lag.sync_limit>`` in `config.ini`
+
 This option is equivalent to ``<map.net.stop_lag.sync_limit>`` in map configuration
 
 ## \`--start-countdown-interval \<VALUE\>\`
@@ -714,6 +728,7 @@ This option is equivalent to ``<map.net.stop_lag.sync_limit>`` in map configurat
 This parameter specifies, in milliseconds, how long should Aura wait between each tick during the game start countdown.
 
 This option is equivalent to ``<hosting.game_start.count_down_interval>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.game_start.count_down_interval>`` in map configuration
 
 ## \`--start-countdown-ticks \<VALUE\>\`
@@ -721,6 +736,7 @@ This option is equivalent to ``<map.hosting.game_start.count_down_interval>`` in
 This parameter specifies how many ticks should Aura wait for during game start countdown.
 
 This option is equivalent to ``<hosting.game_start.count_down_ticks>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.game_start.count_down_ticks>`` in map configuration
 
 ## \`--hcl\`
@@ -765,6 +781,7 @@ This parameter customizes behavior when an excessive amount of players join the 
 - deny: Prevents new players from joining the game.
 
 This option is equivalent to ``<hosting.ip_filter.flood_handler>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.ip_filter.flood_handler>`` in map configuration
 
 ## \`--on-unsafe-name \<ACTION\>\`
@@ -778,6 +795,7 @@ This parameter customizes behavior when a player tries to join a game using an u
 - deny: Prevents them from joining the game.
 
 This option is equivalent to ``<hosting.name_filter.unsafe_handler>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.name_filter.unsafe_handler>`` in map configuration
 
 ## \`--hide-ign-started\`
@@ -795,6 +813,7 @@ players. When used this way, games running certain maps may desync.
 - auto: This is the default. Players names are obfuscated in FFA games where there are 3 or more players.
 
 This option is equivalent to ``<hosting.nicknames.hide_in_game>`` in `config.ini`
+
 This option is equivalent to ``<map.hosting.nicknames.hide_in_game>`` in map configuration
 
 # Flags for CLI commands
