@@ -108,6 +108,7 @@ public:
   uint16_t    m_ServerPort;
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
+  bool m_AutoRegister;
 
   bool m_AuthUseCustomVersion;
   uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net

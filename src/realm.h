@@ -203,7 +203,8 @@ public:
 
   void Send(const std::vector<uint8_t>& packet);
   void SendAuth(const std::vector<uint8_t>& packet);
-  bool Signup();
+  bool TrySignup();
+  void Signup();
   bool Login();
   void OnLoginOkay();
   void OnSignupOkay();

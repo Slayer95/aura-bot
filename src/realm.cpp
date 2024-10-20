@@ -360,12 +360,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 Login();
               } else {
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] invalid")
-                if (m_FailedSignup) {
-                  PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "logon failed - invalid username, disconnecting")
-                  m_Socket->Disconnect();
-                  break;
-                }
-                if (!Signup()) {
+                if (!TrySignup()) {
                   PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "logon failed - invalid username, disconnecting")
                   m_Socket->Disconnect();
                 }
@@ -1007,16 +1002,26 @@ void CRealm::SendAuth(const vector<uint8_t>& packet)
   m_Socket->PutBytes(packet);
 }
 
-bool CRealm::Signup()
+bool CRealm::TrySignup()
 {
-  if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
-    // pvpgn logon
-    PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "registering new account in PvPGN realm")
-    m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
-    SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTSIGNUP(m_Config->m_UserName, m_BNCSUtil->GetPvPGNPasswordHash()));
-    return true;
+  if (m_FailedSignup || !m_Config->m_AutoRegister) {
+    return false;
   }
-  return false;
+  if (m_Config->m_AuthPasswordHashType != REALM_AUTH_PVPGN) {
+    return false;
+  }
+  Signup();
+  return true;
+}
+
+void CRealm::Signup()
+{
+  //if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
+  // exclusive to pvpgn logon
+  PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "registering new account in PvPGN realm")
+  m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
+  SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTSIGNUP(m_Config->m_UserName, m_BNCSUtil->GetPvPGNPasswordHash()));
+  //}
 }
 
 bool CRealm::Login()

@@ -47,6 +47,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_Enabled(true),
     m_UserName(string()),
     m_PassWord(string()),
+    m_AutoRegister(false),
 
     m_Admins({}),
     m_GamePrefix(string()),
@@ -95,6 +96,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", 6112);
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
+  m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
 
   m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
@@ -202,7 +204,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_HostName(nRootConfig->m_HostName),
     m_ServerPort(nRootConfig->m_ServerPort),
     m_UserName(nRootConfig->m_UserName),
-    m_PassWord(nRootConfig->m_PassWord),    
+    m_PassWord(nRootConfig->m_PassWord),
+    m_AutoRegister(nRootConfig->m_AutoRegister),
 
     m_AuthUseCustomVersion(nRootConfig->m_AuthUseCustomVersion),
     m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
@@ -287,6 +290,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
+  m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
 
   m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", m_AuthUseCustomVersion);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
