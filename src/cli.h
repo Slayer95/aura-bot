@@ -130,6 +130,7 @@ public:
   std::optional<std::string>            m_GameUnsafeNameHandler;
   std::optional<bool>                   m_GameHideLobbyNames;
   std::optional<std::string>            m_GameHideLoadedNames;
+  std::optional<bool>                   m_GameLogCommands;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;

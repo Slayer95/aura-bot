@@ -4193,6 +4193,18 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
         m_Paused = false;
         break;
+      case ACTION_CHAT_TRIGGER: {
+        const vector<uint8_t>& actionBytes = *action->GetAction();
+        if ((m_Config->m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) && actionBytes.size() > 9) {
+          vector<uint8_t> chatBytes = ExtractCString(actionBytes, 9);
+          string chatMessage = string(chatBytes.begin(), chatBytes.end());
+          if (m_Config->m_LogCommands) {
+            m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
+          }
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "[" + user->GetName() + "] sent chat message with trigger [" + to_string(ByteArrayToUInt32(actionBytes, false, 1)) + " | " + to_string(ByteArrayToUInt32(actionBytes, false, 5)) + "]: " + chatMessage)
+        }
+        break;
+      }
       default:
         break;
     }
@@ -4448,7 +4460,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
           }
         }
         if (logMessage) {
-          m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetName() + "] " + chatPlayer->GetMessage());
+          m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
         }
       }
     }
@@ -7648,14 +7660,21 @@ bool CGame::TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary)
   return false;
 }
 
-bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier)
+bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstByte, const uint32_t secondByte)
 {
-  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER, firstIdentifier, secondIdentifier, 0u, 0u, firstIdentifier, secondIdentifier, 0u, 0u};
+  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
+  AppendByteArray(packet, firstByte, false);
+  AppendByteArray(packet, secondByte, false);
   vector<uint8_t> CRC, Action;
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
   m_Actions.push(new CIncomingAction(UID, CRC, Action));
   return true;
+}
+
+bool CGame::SendChatTriggerSymmetric(const uint8_t UID, const string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier)
+{
+  return SendChatTrigger(UID, message, (secondIdentifier << 8) | firstIdentifier, (secondIdentifier << 8) | firstIdentifier);
 }
 
 bool CGame::SendHMC(const string& message)
@@ -7664,7 +7683,7 @@ bool CGame::SendHMC(const string& message)
   const uint8_t triggerID1 = m_Map->GetHMCTrigger1();
   const uint8_t triggerID2 = m_Map->GetHMCTrigger2();
   const uint8_t UID = HostToMapCommunicationUID();
-  return SendChatTrigger(UID, message, triggerID1, triggerID2);
+  return SendChatTriggerSymmetric(UID, message, triggerID1, triggerID2);
 }
 
 bool CGame::GetIsCheckJoinable() const

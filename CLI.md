@@ -513,9 +513,32 @@ This flag is disabled by default.
 This flag allows users joining a hosted game to know the nicknames of other players before the game starts.
 
 This option corresponds to ``<hosting.nicknames.hide_lobby>`` in `config.ini`
+
 This option corresponds to ``<map.hosting.nicknames.hide_lobby>`` in map configuration
 
 This flag is enabled by default.
+
+## \`--log-game-commands\`
+
+This flag causes all usage of game commands to be logged persistently.
+
+Note that persistent logs are written to the `aura.log` file.
+
+This option is equivalent to ``<hosting.log_commands>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.log_commands>`` in map configuration
+
+This flag is disabled by default.
+
+## \`--no-log-game-commands\`
+
+This flag prevents persistent logging of usage of game commands.
+
+This option is equivalent to ``<hosting.log_commands>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.log_commands>`` in map configuration
+
+This flag is disabled by default.
 
 # Parameters for CLI games
 

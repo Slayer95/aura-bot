@@ -656,7 +656,8 @@ public:
   void SaveEnded(const uint8_t exceptUID);
   bool TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary);
   inline bool GetIsVerbose() { return m_Verbose; }
-  bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);
+  bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstByte, const uint32_t secondByte);
+  bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);
   bool SendHMC(const std::string& message);
   bool GetIsCheckJoinable() const;
   void SetIsCheckJoinable(const bool nCheckIsJoinable) const;

@@ -107,6 +107,7 @@ public:
   bool                     m_HideLobbyNames;
   uint8_t                  m_HideInGameNames;
   std::set<std::string>    m_LoggedWords;
+  bool                     m_LogCommands;
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
   uint8_t                  m_UnsafeNameHandler;         // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care

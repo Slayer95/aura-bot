@@ -1134,6 +1134,10 @@ void CMap::Load(CConfig* CFG)
     m_HideInGameNames = CFG->GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
     CFG->FailIfErrorLast();
   }
+  if (CFG->Exists("map.hosting.log_commands")) {
+    m_LogCommands = CFG->GetBool("map.hosting.log_commands", false);
+    CFG->FailIfErrorLast();
+  }
 
   if (CFG->Exists("map.options")) {
     MapOptions = CFG->GetUint32("map.options", 0);

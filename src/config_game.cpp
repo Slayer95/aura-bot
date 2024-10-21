@@ -111,6 +111,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_HideLobbyNames            = CFG.GetBool("hosting.nicknames.hide_lobby", false);
   m_HideInGameNames           = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoggedWords               = CFG.GetSetInsensitive("hosting.log_words", ',', {});
+  m_LogCommands               = CFG.GetBool("hosting.log_commands", false);
   m_DesyncHandler             = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_IPFloodHandler            = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
   m_UnsafeNameHandler         = CFG.GetStringIndex("hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);
@@ -163,6 +164,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT_MAP_OR_CUSTOM(m_HideLobbyNames, m_HideLobbyNames, m_HideLobbyNames)
   INHERIT_MAP_OR_CUSTOM(m_HideInGameNames, m_HideInGameNames, m_HideInGameNames)
   INHERIT(m_LoggedWords)
+  INHERIT_MAP_OR_CUSTOM(m_LogCommands, m_LogCommands, m_LogCommands)
   INHERIT(m_DesyncHandler)
   INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)
   INHERIT_MAP_OR_CUSTOM(m_UnsafeNameHandler, m_UnsafeNameHandler, m_UnsafeNameHandler)

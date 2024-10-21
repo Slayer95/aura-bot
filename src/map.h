@@ -137,6 +137,7 @@
 #include <iterator>
 #include <cctype>
 #include <vector>
+#include <set>
 #include <optional>
 
 #pragma once
@@ -150,24 +151,25 @@ class CMap
 public:
   CAura* m_Aura;
 
-  std::optional<uint8_t>          m_NumPlayersToStartGameOver;
-  std::optional<uint8_t>          m_PlayersReadyMode;
-  std::optional<uint32_t>         m_LatencyMaxFrames;
-  std::optional<uint32_t>         m_LatencySafeFrames;
-  std::optional<uint32_t>         m_AutoKickPing;
-  std::optional<uint32_t>         m_WarnHighPing;
-  std::optional<uint32_t>         m_SafeHighPing;
-  std::optional<uint32_t>         m_LobbyTimeout;
-  std::optional<uint32_t>         m_LobbyOwnerTimeout;
-  std::optional<uint32_t>         m_LobbyCountDownInterval;
-  std::optional<uint32_t>         m_LobbyCountDownStartValue;
-  std::optional<uint16_t>         m_Latency;
-  std::optional<int64_t>          m_AutoStartSeconds;
-  std::optional<uint8_t>          m_AutoStartPlayers;
-  std::optional<bool>             m_HideLobbyNames;
-  std::optional<uint8_t>          m_HideInGameNames;
-  std::optional<uint8_t>          m_IPFloodHandler;
-  std::optional<uint8_t>          m_UnsafeNameHandler;
+  std::optional<uint8_t>                m_NumPlayersToStartGameOver;
+  std::optional<uint8_t>                m_PlayersReadyMode;
+  std::optional<uint32_t>               m_LatencyMaxFrames;
+  std::optional<uint32_t>               m_LatencySafeFrames;
+  std::optional<uint32_t>               m_AutoKickPing;
+  std::optional<uint32_t>               m_WarnHighPing;
+  std::optional<uint32_t>               m_SafeHighPing;
+  std::optional<uint32_t>               m_LobbyTimeout;
+  std::optional<uint32_t>               m_LobbyOwnerTimeout;
+  std::optional<uint32_t>               m_LobbyCountDownInterval;
+  std::optional<uint32_t>               m_LobbyCountDownStartValue;
+  std::optional<uint16_t>               m_Latency;
+  std::optional<int64_t>                m_AutoStartSeconds;
+  std::optional<uint8_t>                m_AutoStartPlayers;
+  std::optional<bool>                   m_HideLobbyNames;
+  std::optional<uint8_t>                m_HideInGameNames;
+  std::optional<bool>                   m_LogCommands;
+  std::optional<uint8_t>                m_IPFloodHandler;
+  std::optional<uint8_t>                m_UnsafeNameHandler;
 
 private:
   std::array<uint8_t, 20>   m_MapScriptsSHA1;   // config value: map sha1 (20 bytes)

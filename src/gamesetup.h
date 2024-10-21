@@ -224,6 +224,7 @@ public:
   std::optional<bool>                             m_NotifyJoins;
   std::optional<bool>                             m_HideLobbyNames;
   std::optional<uint8_t>                          m_HideInGameNames;
+  std::optional<bool>                             m_LogCommands;
   std::optional<uint8_t>                          m_NumPlayersToStartGameOver;
   std::optional<uint8_t>                          m_PlayersReadyMode;
   std::optional<uint32_t>                         m_AutoKickPing;
@@ -355,6 +356,7 @@ public:
   void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
   void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
   void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
+  void SetLogCommands(const bool nLogCommands) { m_LogCommands = nLogCommands; }
 
   void AcquireCLISimple(const CCLI* nCLI);
   void ResetExtraOptions();
