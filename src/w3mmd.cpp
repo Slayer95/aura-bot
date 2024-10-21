@@ -44,6 +44,7 @@
 */
 
 #include "util.h"
+#include "gameprotocol.h"
 #include "gameslot.h"
 #include "w3mmd.h"
 
@@ -278,7 +279,7 @@ bool CW3MMD::RecvAction(uint8_t fromUID, CIncomingAction *Action)
   vector<uint8_t> Value;
 
   while (ActionData->size() >= i + 9) {
-    if ((*ActionData)[i] == 'k' &&
+    if ((*ActionData)[i] == ACTION_SYNC_INT &&
       (*ActionData)[i + 1] == 'M' &&
       (*ActionData)[i + 2] == 'M' &&
       (*ActionData)[i + 3] == 'D' &&
