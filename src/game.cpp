@@ -4171,6 +4171,7 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
 
   if (!action->GetAction()->empty()) {
     LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
+
     switch((*action->GetAction())[0]) {
       case ACTION_SAVE:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
@@ -4205,12 +4206,15 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
         }
         break;
       }
+      case ACTION_SYNC_INT: {
+        // FIXME: more than one action can be sent in a single packet, but the length of each action isn't explicitly represented in the packet
+        // so we ought to parse all the actions and calculate their lengths based on their types
+        break;
+      }
       default:
         break;
     }
   }
-
-  // give the stats class a chance to process the action
 
   if (m_CustomStats && action->GetAction()->size() >= 6) {
     if (!m_CustomStats->RecvAction(user->GetUID(), action)) {
