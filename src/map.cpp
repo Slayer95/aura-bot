@@ -1111,7 +1111,7 @@ void CMap::Load(CConfig* CFG)
     CFG->FailIfErrorLast();
   }
   if (CFG->Exists("map.hosting.ip_filter.flood_handler")) {
-    m_UnsafeNameHandler = CFG->GetUint8("map.hosting.ip_filter.flood_handler", ON_IPFLOOD_DENY);
+    m_IPFloodHandler = CFG->GetUint8("map.hosting.ip_filter.flood_handler", ON_IPFLOOD_DENY);
     CFG->FailIfErrorLast();
   }
   if (CFG->Exists("map.hosting.name_filter.unsafe_handler")) {
