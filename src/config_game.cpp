@@ -98,7 +98,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_PrivateCmdToken           = CFG.GetString("hosting.commands.trigger", "!");
   if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
-    Print("[CONFIG] Error - invalid value provided for <"hosting.commands.trigger> - slash (/) is reserved by Battle.net");
+    Print("[CONFIG] Error - invalid value provided for <hosting.commands.trigger> - slash (/) is reserved by Battle.net");
     CFG.SetFailed();
   }
   m_BroadcastCmdToken         = CFG.GetString("hosting.commands.broadcast.trigger", emptyString);
