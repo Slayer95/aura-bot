@@ -4437,7 +4437,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
                 SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
               }
             }
-            if (message.length() == 2 && ToLowerCase(message) == "go" && !HasOwnerInGame()) {
+            if (message.length() >= 2 && ToLowerCase(message.substr(0, 2)) == "go" && message.find_first_not_of('goGO') == string::npos && !HasOwnerInGame()) {
               if (activeSmartCommand == SMART_COMMAND_GO) {
                 CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
                 cmdToken = m_Config->m_PrivateCmdToken;
