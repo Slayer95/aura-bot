@@ -136,9 +136,6 @@ Commands
 
 ## \`freestart\`
 
-## \`g\`
-- Aliases: start, vs, go
-
 ## \`getclan\`
 
 ## \`getfriends\`
@@ -310,6 +307,9 @@ Commands
 
 ## \`roll\`
 - Syntax: roll \<FACES\>
+
+## \`s\`
+- Aliases: start, vs, go, g
 
 ## \`say\`
 - Syntax: say \<REALM\> , \<MESSAGE\>
