@@ -1367,7 +1367,12 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   if (rawPort.empty()) return false;
   string rawId = nInput.substr(idStart + 1);
   if (rawId.empty()) return false;
-  optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(rawAddress, ACCEPT_IPV4);
+  optional<sockaddr_storage> maybeAddress;
+  if (rawAddress[0] == '[' && rawAddress[rawAddress.length() - 1] == ']') {
+    maybeAddress = CNet::ParseAddress(rawAddress.substr(1, rawAddress.length() - 2), ACCEPT_IPV4);
+  } else {
+    maybeAddress = CNet::ParseAddress(rawAddress, ACCEPT_IPV4);
+  }
   if (!maybeAddress.has_value()) return false;
   uint16_t gamePort = 0;
   uint32_t gameId = 0;
