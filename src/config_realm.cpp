@@ -75,7 +75,15 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   }
 
   m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", "!");
+  if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
+    Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "commands.trigger> - slash (/) is reserved by Battle.net");
+    CFG.SetFailed();
+  }
   m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", emptyString);
+  if (!m_BroadcastCmdToken.empty() && m_BroadcastCmdToken[0] == '/') {
+    Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "commands.broadcast.trigger> - slash (/) is reserved by Battle.net");
+    CFG.SetFailed();
+  }
   m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", false);
 
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", true);
@@ -265,7 +273,13 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
 
   m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", m_PrivateCmdToken);
+  if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
+    CFG.SetFailed();
+  }
   m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", m_BroadcastCmdToken);
+  if (!m_BroadcastCmdToken.empty() && m_BroadcastCmdToken[0] == '/') {
+    CFG.SetFailed();
+  }
   m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", m_EnableBroadcast);
 
   if (!m_EnableBroadcast)

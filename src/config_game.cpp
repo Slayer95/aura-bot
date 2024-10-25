@@ -97,7 +97,15 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_ExtraDiscoveryStrict      = CFG.GetBool("net.game_discovery.udp.extra_clients.strict", false);
 
   m_PrivateCmdToken           = CFG.GetString("hosting.commands.trigger", "!");
+  if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
+    Print("[CONFIG] Error - invalid value provided for <"hosting.commands.trigger> - slash (/) is reserved by Battle.net");
+    CFG.SetFailed();
+  }
   m_BroadcastCmdToken         = CFG.GetString("hosting.commands.broadcast.trigger", emptyString);
+  if (!m_BroadcastCmdToken.empty() && m_BroadcastCmdToken[0] == '/') {
+    Print("[CONFIG] Error - invalid value provided for <hosting.commands.broadcast.trigger> - slash (/) is reserved by Battle.net");
+    CFG.SetFailed();
+  }
   m_EnableBroadcast           = CFG.GetBool("hosting.commands.broadcast.enabled", false);
 
   if (!m_EnableBroadcast)
