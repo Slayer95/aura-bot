@@ -2835,7 +2835,7 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGameUser* user, const bool
   }
   if (!isIntro) return;
   SendChat(user, cmdToken + "ping - view your latency", LOG_LEVEL_TRACE);
-  SendChat(user, cmdToken + "start - starts the game", LOG_LEVEL_TRACE);
+  SendChat(user, cmdToken + "go - starts the game", LOG_LEVEL_TRACE);
   if (!m_OwnerLess && m_OwnerName.empty()) {
     SendChat(user, cmdToken + "owner - acquire permissions over this game", LOG_LEVEL_TRACE);
   }
@@ -7368,7 +7368,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
 
     // check if the HCL command string is short enough
     if (m_HCLCommandString.size() > GetSlotsOccupied()) {
-      SendAllChat("The HCL command string is too long. Use [" + GetCmdToken() + "start force] to start anyway");
+      SendAllChat("The HCL command string is too long. Use [" + GetCmdToken() + "go force] to start anyway");
       ChecksPassed = false;
     }
 

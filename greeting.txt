@@ -7,7 +7,7 @@
 {OWNER?}Current owner: {OWNER}{OWNERREALM}
 {OWNERLESS!}{OWNER!}YOU can take over this lobby with {TRIGGER_PREFER_BROADCAST}owner.
 {REPLACEABLE?}YOU can switch maps with {TRIGGER_PREFER_BROADCAST}host <MAP NAME> , <GAME NAME>.
-Start the game with {TRIGGER_PREFER_BROADCAST}start
+Start the game with {TRIGGER_PREFER_BROADCAST}go
 {AUTOSTART?}{AUTOSTART}
 {SHORTDESC?}{SHORTDESC}
 {URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]
