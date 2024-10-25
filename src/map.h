@@ -170,6 +170,7 @@ public:
   std::optional<bool>                   m_LogCommands;
   std::optional<uint8_t>                m_IPFloodHandler;
   std::optional<uint8_t>                m_UnsafeNameHandler;
+  std::optional<bool>                   m_PipeConsideredHarmful;
 
 private:
   std::array<uint8_t, 20>   m_MapScriptsSHA1;   // config value: map sha1 (20 bytes)

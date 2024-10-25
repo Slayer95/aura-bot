@@ -111,6 +111,7 @@ public:
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
   uint8_t                  m_UnsafeNameHandler;         // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care
+  bool                     m_PipeConsideredHarmful;
 
   bool                     m_UDPEnabled;                 // whether this game should be listed in "Local Area Network"
   std::vector<uint8_t>     m_SupportedGameVersions;

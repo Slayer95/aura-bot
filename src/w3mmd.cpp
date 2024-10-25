@@ -139,7 +139,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
 
       CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, *SID);
       if (m_Game->m_Config->m_UnsafeNameHandler == ON_UNSAFE_NAME_CENSOR_MAY_DESYNC) {
-        def->SetName(CIncomingJoinRequest::CensorName(Tokens[3]));
+        def->SetName(CIncomingJoinRequest::CensorName(Tokens[3], m_Game->m_Config->m_PipeConsideredHarmful));
       } else {
         def->SetName(Tokens[3]);
       }

@@ -149,7 +149,11 @@ uint8_t CGameConnection::Update(void* fd, void* send_fd, int64_t timeout)
             Print("[AURA] Got REQJOIN " + ByteArrayToDecString(Bytes));
           }
           delete m_IncomingJoinPlayer;
-          m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(Data, m_Aura->m_CurrentLobby->m_Config->m_UnsafeNameHandler);
+          m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(
+            Data,
+            m_Aura->m_CurrentLobby->m_Config->m_UnsafeNameHandler,
+            m_Aura->m_CurrentLobby->m_Config->m_PipeConsideredHarmful
+          );
           if (!m_IncomingJoinPlayer) {
             // Invalid request.
           } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x00FFFFFF)) {
