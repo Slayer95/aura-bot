@@ -2790,7 +2790,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("start"):
     case HashCode("vs"):
     case HashCode("go"):
-    case HashCode("g"): {
+    case HashCode("g"):
+    case HashCode("s"): {
       UseImplicitHostedGame();
 
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
