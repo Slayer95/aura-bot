@@ -4419,13 +4419,12 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
-          } else if (payload == "?trigger") {
+          } else if (message == "?trigger") {
             SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, false);
-          } else if (payload == "/p" || payload == "/ping" || payload == "/game") {
+          } else if (message == "/p" || message == "/ping" || message == "/game") {
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
             cmdToken = m_Config->m_PrivateCmdToken;
-            command = payload.substr(1);
-            payload.clear();
+            command = message.substr(1);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
@@ -4438,17 +4437,16 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
                 SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
               }
             }
-            if ((payload == "go" || payload == "GO" || payload == "gO" || payload == "Go") && !HasOwnerInGame()) {
+            if (message.length() == 2 && ToLowerCase(message) == "go" && !HasOwnerInGame()) {
               if (activeSmartCommand == SMART_COMMAND_GO) {
                 CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
                 cmdToken = m_Config->m_PrivateCmdToken;
                 command = "start";
-                payload.clear();
                 ctx->Run(cmdToken, command, payload);
                 m_Aura->UnholdContext(ctx);
               } else {
                 user->SetSmartCommand(SMART_COMMAND_GO);
-                SendChat(user, "You may type [" + payload + "] again to start the game.");
+                SendChat(user, "You may type [" + message + "] again to start the game.");
               }
             }
           }
