@@ -1357,15 +1357,21 @@ bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const u
 
 bool CGameSetup::SetMirrorSource(const string& nInput)
 {
-  size_t portStart = nInput.find(":", 0);
+  string::size_type portStart = nInput.find(":", 0);
   if (portStart == string::npos) return false;
-  size_t idStart = nInput.find("#", portStart);
+  string::size_type idStart = nInput.find("#", portStart);
   if (idStart == string::npos) return false;
   string rawAddress = nInput.substr(0, portStart);
   if (rawAddress.length() < 7) return false;
   string rawPort = nInput.substr(portStart + 1, idStart - (portStart + 1));
   if (rawPort.empty()) return false;
-  string rawId = nInput.substr(idStart + 1);
+  string::size_type idEnd = nInput.find(":", idStart);
+  string rawId;
+  if (idEnd == string::npos) {
+    rawId = nInput.substr(idStart + 1);
+  } else {
+    rawId = nInput.substr(idStart + 1, idEnd - (idStart + 1));
+  }
   if (rawId.empty()) return false;
   optional<sockaddr_storage> maybeAddress;
   if (rawAddress[0] == '[' && rawAddress[rawAddress.length() - 1] == ']') {
