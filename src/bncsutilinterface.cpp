@@ -160,10 +160,10 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
 
   if (realmConfig->m_AuthUseCustomVersion) {
     if (realmConfig->m_AuthExeVersion.has_value()) {
-      copy_n(realmConfig->m_AuthExeVersion.value().begin(), 4, m_EXEVersion);
+      copy_n(realmConfig->m_AuthExeVersion.value().begin(), 4, m_EXEVersion.begin());
     }
     if (realmConfig->m_AuthExeVersionHash.has_value()) {
-      copy_n(realmConfig->m_AuthExeVersionHash.value().begin(), 4, m_EXEVersionHash);
+      copy_n(realmConfig->m_AuthExeVersionHash.value().begin(), 4, m_EXEVersionHash.begin());
     }
     if (!realmConfig->m_AuthExeInfo.empty()) {
       SetEXEInfo(realmConfig->m_AuthExeInfo);
@@ -238,7 +238,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_ACCOUNTLOGON()
 
   char buf[32];
   (static_cast<NLS*>(m_NLS))->getPublicKey(buf);
-  copy_n(buf, 32, m_ClientKey);
+  copy_n(buf, 32, m_ClientKey.begin());
   return true;
 }
 

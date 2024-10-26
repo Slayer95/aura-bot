@@ -127,38 +127,38 @@ public:
   };
 
 private:
-  std::array<uint8_t, 4> m_ClientToken;         // set in constructor
-  std::array<uint8_t, 4> m_LogonType;           // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 4> m_ServerToken;         // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 8> m_MPQFileTime;         // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t> m_IX86VerFileName;     // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t> m_ValueStringFormula;  // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t> m_KeyState;            // set in RECEIVE_SID_AUTH_CHECK
-  std::vector<uint8_t> m_KeyStateDescription; // set in RECEIVE_SID_AUTH_CHECK
-  std::array<uint8_t, 32> m_Salt;             // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::array<uint8_t, 32> m_ServerPublicKey;  // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::vector<uint8_t> m_UniqueName;          // set in RECEIVE_SID_ENTERCHAT
+  std::array<uint8_t, 4>   m_ClientToken;         // set in constructor
+  std::array<uint8_t, 4>   m_LogonType;           // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 4>   m_ServerToken;         // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 8>   m_MPQFileTime;         // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>     m_IX86VerFileName;     // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>     m_ValueStringFormula;  // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 4>   m_KeyState;            // set in RECEIVE_SID_AUTH_CHECK
+  std::vector<uint8_t>     m_KeyStateDescription; // set in RECEIVE_SID_AUTH_CHECK
+  std::array<uint8_t, 32>  m_Salt;             // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 32>  m_ServerPublicKey;  // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::vector<uint8_t>     m_UniqueName;          // set in RECEIVE_SID_ENTERCHAT
 
 public:
   CBNETProtocol();
   ~CBNETProtocol();
 
-  inline const std::array<uint8_t, 4>&  GetClientToken() const { return m_ClientToken; }
-  inline const std::array<uint8_t, 4>&  GetLogonType() const { return m_LogonType; }
-  inline const std::array<uint8_t, 4>&  GetServerToken() const { return m_ServerToken; }
-  inline const std::array<uint8_t, 8>&  GetMPQFileTime() const { return m_MPQFileTime; }
-  inline const std::vector<uint8_t>     GetIX86VerFileName() const { return m_IX86VerFileName; }
-  inline const std::string&             GetIX86VerFileNameString() const { return std::string(begin(m_IX86VerFileName), end(m_IX86VerFileName)); }
-  inline const std::vector<uint8_t>&    GetValueStringFormula() const { return m_ValueStringFormula; }
-  inline const std::string&             GetValueStringFormulaString() const { return std::string(begin(m_ValueStringFormula), end(m_ValueStringFormula)); }
-  inline const std::vector<uint8_t>&    GetKeyState() const { return m_KeyState; }
-  inline const std::string&             GetKeyStateDescription() const { return std::string(begin(m_KeyStateDescription), end(m_KeyStateDescription)); }
-  inline const std::array<uint8_t, 32>& GetSalt() const { return m_Salt; }
-  inline const std::array<uint8_t, 32>& GetServerPublicKey() const { return m_ServerPublicKey; }
-  inline const std::vector<uint8_t>&    GetUniqueName() const { return m_UniqueName; }
+  inline const std::array<uint8_t, 4>&    GetClientToken() const { return m_ClientToken; }
+  inline const std::array<uint8_t, 4>&    GetLogonType() const { return m_LogonType; }
+  inline const std::array<uint8_t, 4>&    GetServerToken() const { return m_ServerToken; }
+  inline const std::array<uint8_t, 8>&    GetMPQFileTime() const { return m_MPQFileTime; }
+  inline const std::vector<uint8_t>       GetIX86VerFileName() const { return m_IX86VerFileName; }
+  inline std::string                      GetIX86VerFileNameString() const { return std::string(begin(m_IX86VerFileName), end(m_IX86VerFileName)); }
+  inline const std::vector<uint8_t>&      GetValueStringFormula() const { return m_ValueStringFormula; }
+  inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_ValueStringFormula), end(m_ValueStringFormula)); }
+  inline const std::array<uint8_t, 4>&    GetKeyState() const { return m_KeyState; }
+  inline std::string                      GetKeyStateDescription() const { return std::string(begin(m_KeyStateDescription), end(m_KeyStateDescription)); }
+  inline const std::array<uint8_t, 32>&   GetSalt() const { return m_Salt; }
+  inline const std::array<uint8_t, 32>&   GetServerPublicKey() const { return m_ServerPublicKey; }
+  inline const std::vector<uint8_t>&      GetUniqueName() const { return m_UniqueName; }
 
-  inline size_t                         GetMessageSize(const std::vector<uint8_t> message) const { return message.size(); }
-  inline size_t                         GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) const { return message.size() + name.size(); }
+  inline size_t                           GetMessageSize(const std::vector<uint8_t> message) const { return message.size(); }
+  inline size_t                           GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) const { return message.size() + name.size(); }
       
   // receive functions
 

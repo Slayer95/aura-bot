@@ -92,14 +92,12 @@ CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>
 
   if (ValidateLength(data) && data.size() >= 8)
   {
-    const vector<uint8_t> GamesFound = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-
-    if (ByteArrayToUInt32(GamesFound, false) > 0 && data.size() >= 25)
+    if (ByteArrayToUInt32(data, false, 4) > 0 && data.size() >= 25)
     {
       uint16_t Port = ByteArrayToUInt16(data, false, 18);
 
       array<uint8_t, 4> IP;
-      copy_n(begin(data) + 20, 4, IP);
+      copy_n(data.begin() + 20, 4, IP.begin());
 
       const vector<uint8_t> GameName = ExtractCString(data, 24);
       if (GameName.size() > 0xFF) return nullptr;
@@ -233,9 +231,9 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 25)
   {
-    copy_n(begin(data) + 4, 4, m_LogonType);
-    copy_n(begin(data) + 8, 4, m_ServerToken);
-    copy_n(begin(data) + 16, 8, m_MPQFileTime);
+    copy_n(data.begin() + 4, 4, m_LogonType.begin());
+    copy_n(data.begin() + 8, 4, m_ServerToken.begin());
+    copy_n(data.begin() + 16, 8, m_MPQFileTime.begin());
     m_IX86VerFileName    = ExtractCString(data, 24);
     if (m_IX86VerFileName.size() > 0xFFFFFF00) return false; // WTF
     m_ValueStringFormula = ExtractCString(data, static_cast<uint32_t>(m_IX86VerFileName.size()) + 25);
@@ -257,7 +255,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 9)
   {
-    m_KeyState            = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+    copy_n(data.begin() + 4, 4, m_KeyState.begin());
     m_KeyStateDescription = ExtractCString(data, 8);
 
     if (ByteArrayToUInt32(m_KeyState, false) == KR_GOOD)
