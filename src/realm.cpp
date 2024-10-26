@@ -304,6 +304,7 @@ void CRealm::Update(void* fd, void* send_fd)
                   }
                   Print(GetLogPrefix() + "bncsutil key hash failed, disconnecting...");
                 }
+                Disable();
                 m_Socket->Disconnect();
               }
 
@@ -358,6 +359,7 @@ void CRealm::Update(void* fd, void* send_fd)
               } else {
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] invalid")
                 if (!TrySignup()) {
+                  Disable();
                   PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "logon failed - invalid username, disconnecting")
                   m_Socket->Disconnect();
                 }
