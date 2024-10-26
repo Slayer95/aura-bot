@@ -351,15 +351,15 @@ inline bool GetSameAddressesAndPorts(const sockaddr_storage* reference, const so
     return false;
   }
   if (subject->ss_family == AF_INET6) {
-    if ( memcmp(&(reinterpret_cast<const sockaddr_in6*>(reference)->sin6_addr), &(reinterpret_cast<const sockaddr_in6*>(subject)->sin6_addr), sizeof(in6_addr)) != 0 )
+    if (memcmp(&(reinterpret_cast<const sockaddr_in6*>(reference)->sin6_addr), &(reinterpret_cast<const sockaddr_in6*>(subject)->sin6_addr), sizeof(in6_addr)) != 0)
       return false;
-    if ( reinterpret_cast<const sockaddr_in6*>(reference)->sin6_port != reinterpret_cast<const sockaddr_in6*>(subject)->sin6_port )
+    if (reinterpret_cast<const sockaddr_in6*>(reference)->sin6_port != reinterpret_cast<const sockaddr_in6*>(subject)->sin6_port)
       return false;
       
   } else {
-    if ( memcmp(&(reinterpret_cast<const sockaddr_in*>(reference)->sin_addr), &(reinterpret_cast<const sockaddr_in*>(subject)->sin_addr), sizeof(in_addr)) != 0 )
+    if (memcmp(&(reinterpret_cast<const sockaddr_in*>(reference)->sin_addr), &(reinterpret_cast<const sockaddr_in*>(subject)->sin_addr), sizeof(in_addr)) != 0)
       return false;
-    if ( reinterpret_cast<const sockaddr_in*>(reference)->sin_port != reinterpret_cast<const sockaddr_in*>(subject)->sin_port )
+    if (reinterpret_cast<const sockaddr_in*>(reference)->sin_port != reinterpret_cast<const sockaddr_in*>(subject)->sin_port)
       return false;
   }
   return true;
