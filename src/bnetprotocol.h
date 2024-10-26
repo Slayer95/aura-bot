@@ -84,8 +84,8 @@ public:
     SID_NOTIFYJOIN             = 34,  // 0x22
     SID_PING                   = 37,  // 0x25
     SID_LOGONRESPONSE          = 41,  // 0x29
-    SID_AUTH_ACCOUNTSIGNUP    = 42,  // 0x2A
-    SID_AUTH_ACCOUNTSIGNUP2   = 61,  // 0x3D
+    SID_AUTH_ACCOUNTSIGNUP     = 42,  // 0x2A
+    SID_AUTH_ACCOUNTSIGNUP2    = 61,  // 0x3D
     SID_NETGAMEPORT            = 69,  // 0x45
     SID_AUTH_INFO              = 80,  // 0x50
     SID_AUTH_CHECK             = 81,  // 0x51
@@ -101,6 +101,7 @@ public:
   enum KeyResult
   {
     KR_GOOD             = 0,
+    KR_BAD              = 1,
     KR_OLD_GAME_VERSION = 256,
     KR_INVALID_VERSION  = 257,
     KR_ROC_KEY_IN_USE   = 513,
@@ -133,7 +134,6 @@ private:
   std::array<uint8_t, 8>   m_MPQFileTime;         // set in RECEIVE_SID_AUTH_INFO
   std::vector<uint8_t>     m_IX86VerFileName;     // set in RECEIVE_SID_AUTH_INFO
   std::vector<uint8_t>     m_ValueStringFormula;  // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 4>   m_KeyState;            // set in RECEIVE_SID_AUTH_CHECK
   std::vector<uint8_t>     m_KeyStateDescription; // set in RECEIVE_SID_AUTH_CHECK
   std::array<uint8_t, 32>  m_Salt;             // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
   std::array<uint8_t, 32>  m_ServerPublicKey;  // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
@@ -151,7 +151,6 @@ public:
   inline std::string                      GetIX86VerFileNameString() const { return std::string(begin(m_IX86VerFileName), end(m_IX86VerFileName)); }
   inline const std::vector<uint8_t>&      GetValueStringFormula() const { return m_ValueStringFormula; }
   inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_ValueStringFormula), end(m_ValueStringFormula)); }
-  inline const std::array<uint8_t, 4>&    GetKeyState() const { return m_KeyState; }
   inline std::string                      GetKeyStateDescription() const { return std::string(begin(m_KeyStateDescription), end(m_KeyStateDescription)); }
   inline const std::array<uint8_t, 32>&   GetSalt() const { return m_Salt; }
   inline const std::array<uint8_t, 32>&   GetServerPublicKey() const { return m_ServerPublicKey; }
@@ -170,7 +169,7 @@ public:
   bool RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data);
   std::array<uint8_t, 4> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
+  uint32_t RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);

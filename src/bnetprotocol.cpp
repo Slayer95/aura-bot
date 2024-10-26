@@ -53,7 +53,12 @@
 using namespace std;
 
 CBNETProtocol::CBNETProtocol()
-  : m_ClientToken(array<uint8_t, 4>{220, 1, 203, 7})
+  : m_ClientToken(array<uint8_t, 4>{220, 1, 203, 7}),
+    m_LogonType({}),
+    m_ServerToken({}),
+    m_MPQFileTime({}),
+    m_Salt({}),
+    m_ServerPublicKey({})
 {
 }
 
@@ -243,7 +248,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const vector<uint8_t>& data)
   return false;
 }
 
-bool CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& data)
+uint32_t CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_AUTH_CHECK" );
   // DEBUG_Print( data );
@@ -253,16 +258,11 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& data)
   // 4 bytes					-> KeyState
   // null terminated string	    -> KeyStateDescription
 
-  if (ValidateLength(data) && data.size() >= 9)
-  {
-    copy_n(data.begin() + 4, 4, m_KeyState.begin());
+  if (ValidateLength(data) && data.size() >= 9) {
     m_KeyStateDescription = ExtractCString(data, 8);
-
-    if (ByteArrayToUInt32(m_KeyState, false) == KR_GOOD)
-      return true;
+    return ByteArrayToUInt32(data, false, 4);
   }
-
-  return false;
+  return KR_BAD;
 }
 
 bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& data)

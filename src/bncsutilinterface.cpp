@@ -59,7 +59,12 @@ using namespace std;
 //
 
 CBNCSUtilInterface::CBNCSUtilInterface(const string& userName, const string& userPassword)
- : m_DefaultEXEVersion({173, 1, 27, 1}),
+ : m_ClientKey({}),
+   m_M1({}),
+   m_PvPGNPasswordHash({}),
+   m_EXEVersion({}),
+   m_EXEVersionHash({}),
+   m_DefaultEXEVersion({173, 1, 27, 1}),
    m_DefaultEXEVersionHash({72, 160, 171, 170}),
    m_DefaultEXEInfo("war3.exe 15/03/16 00:00:00 515048")
 {

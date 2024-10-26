@@ -310,8 +310,9 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
             }
 
-            case CBNETProtocol::SID_AUTH_CHECK:
-              if (m_Protocol->RECEIVE_SID_AUTH_CHECK(Data))
+            case CBNETProtocol::SID_AUTH_CHECK: {
+              const uint32_t checkResult = m_Protocol->RECEIVE_SID_AUTH_CHECK(Data);
+              if (checkResult == CBNETProtocol::KR_GOOD)
               {
                 // cd keys accepted
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
@@ -321,8 +322,7 @@ void CRealm::Update(void* fd, void* send_fd)
               else
               {
                 // cd keys not accepted
-
-                switch (ByteArrayToUInt32(m_Protocol->GetKeyState(), false))
+                switch (checkResult)
                 {
                   case CBNETProtocol::KR_ROC_KEY_IN_USE:
                     PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...")
@@ -344,10 +344,12 @@ void CRealm::Update(void* fd, void* send_fd)
                     break;
                 }
 
+                Disable();
                 m_Socket->Disconnect();
               }
 
               break;
+            }
 
             case CBNETProtocol::SID_AUTH_ACCOUNTLOGON:
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data)) {
@@ -1061,6 +1063,7 @@ void CRealm::OnLoginOkay()
 void CRealm::OnSignupOkay()
 {
   PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "signed up as [" + m_Config->m_UserName + "]")
+  m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
   SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
   //Login();
 }
