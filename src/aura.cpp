@@ -1047,6 +1047,7 @@ bool CAura::Update()
       m_CurrentLobby = nullptr;
 
       for (auto& realm : m_Realms) {
+        realm->ResetGameBroadcastStatus();
         realm->QueueGameUncreate();
         realm->SendEnterChat();
       }
@@ -1098,43 +1099,91 @@ bool CAura::Update()
   return m_Exiting;
 }
 
-void CAura::EventBNETGameRefreshFailed(CRealm* realm)
+void CAura::EventBNETGameRefreshSuccess(CRealm* successRealm)
 {
-  if (m_CurrentLobby)
-  {
-    // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
-    // Otherwise whisper the game creator that the (re)host failed.
+  successRealm->ResolveGameBroadcastStatus(true);
+}
 
-    if (m_CurrentLobby->GetNumJoinedPlayers() != 0) {
-      m_CurrentLobby->SendAllChat("Unable to create game on server [" + realm->GetServer() + "]. Try another name");
-    } else {
-      switch (m_CurrentLobby->GetCreatedFromType()) {
-        case GAMESETUP_ORIGIN_REALM:
-          reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Unable to create game on server [" + realm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
-          break;
-        case GAMESETUP_ORIGIN_IRC:
-          reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + realm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
-          break;
-        /*
-        // TODO: CAura::EventBNETGameRefreshFailed SendUser()
-        case GAMESETUP_ORIGIN_DISCORD:
-          reinterpret_cast<CDiscord*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + realm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
-          break;*/
-        default:
-          break;
+void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
+{
+  if (errorRealm->GetIsGameBroadcastErrored()) {
+    return;
+  }
+
+  // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
+  // Otherwise whisper the game creator that the (re)host failed.
+
+  if (m_CurrentLobby->GetHasAnyUser()) {
+    m_CurrentLobby->SendAllChat("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name");
+  } else {
+    switch (m_CurrentLobby->GetCreatedFromType()) {
+      case GAMESETUP_ORIGIN_REALM:
+        reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        break;
+      case GAMESETUP_ORIGIN_IRC:
+        reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        break;
+      /*
+      // TODO: CAura::EventBNETGameRefreshError SendUser()
+      case GAMESETUP_ORIGIN_DISCORD:
+        reinterpret_cast<CDiscord*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        break;*/
+      default:
+        break;
+    }
+  }
+
+  Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name");
+
+  bool earlyExit = false;
+  switch (m_CurrentLobby->m_Config->m_BroadcastErrorHandler) {
+    case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR:
+      if (!errorRealm->GetIsMain()) break;
+    case ON_ADV_ERROR_EXIT_ON_ANY_ERROR:
+      earlyExit = true;
+      break;
+    case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY:
+      if (!errorRealm->GetIsMain()) break;
+    case ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY:
+      if (!m_CurrentLobby->GetHasAnyUser()) {
+        // we only close the game if it has no players since we support game rehosting (via !priv and !pub in the lobby)
+        earlyExit = true;
+      }
+      break;
+  }
+  if (earlyExit) {
+    m_CurrentLobby->StopPlayers("failed to broadcast game");
+    m_CurrentLobby->SetExiting(true);
+    return;
+  }
+
+  if (m_CurrentLobby->m_Config->m_BroadcastErrorHandler == ON_ADV_ERROR_EXIT_ON_MAX_ERRORS) {
+    bool anyPending = false;
+    bool anySuccess = false;
+
+    for (auto& realm : m_Realms) {
+      if (!realm->GetEnabled()) {
+        continue;
+      }
+      if (m_CurrentLobby->GetIsMirror() && realm->GetIsMirror()) {
+      // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+      // Do not display external games in those realms.
+        continue;
+      }
+      if (realm->GetGameVersion() > 0 && !m_CurrentLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
+        continue;
+      }
+      if (m_CurrentLobby->GetIsRealmExcluded(realm->GetServer())) {
+        continue;
+      }
+      if (!realm->GetIsGameBroadcastErrored()) {
+        return;
       }
     }
 
-    Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + realm->GetServer() + "]. Try another name");
-
-    // we take the easy route and simply close the lobby if a refresh fails
-    // it's possible at least one refresh succeeded and therefore the game is still joinable on at least one battle.net (plus on the local network) but we don't keep track of that
-    // we only close the game if it has no players since we support game rehosting (via !priv and !pub in the lobby)
-
-    if (m_CurrentLobby->GetNumJoinedPlayers() == 0)
-      m_CurrentLobby->SetExiting(true);
-
-    m_CurrentLobby->SetRefreshError(true);
+    m_CurrentLobby->StopPlayers("failed to broadcast game");
+    m_CurrentLobby->SetExiting(true);
+    return;
   }
 }
 

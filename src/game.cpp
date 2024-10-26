@@ -179,7 +179,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_JoinedVirtualHosts(0),
     m_PublicStart(false),
     m_Locked(false),
-    m_RealmRefreshError(false),
     m_ChatOnly(false),
     m_MuteAll(false),
     m_MuteLobby(false),
@@ -1375,7 +1374,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
   // refresh every 3 seconds
 
-  if (!m_RealmRefreshError && !m_CountDownStarted && m_DisplayMode == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
+  if (!m_CountDownStarted && m_DisplayMode == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
     // send a game refresh packet to each battle.net connection
 
     for (auto& realm : m_Aura->m_Realms) {
@@ -3118,6 +3117,7 @@ void CGame::AnnounceDecreateToRealms()
     if (m_IsMirror && realm->GetIsMirror())
       continue;
 
+    realm->ResetGameBroadcastStatus();
     realm->ResetGameAnnouncement();
     realm->QueueGameUncreate();
     realm->SendEnterChat();
@@ -5342,7 +5342,6 @@ void CGame::Remake()
   m_JoinedVirtualHosts = 0;
   m_PublicStart = false;
   m_Locked = false;
-  m_RealmRefreshError = false;
   m_CountDownStarted = false;
   m_CountDownUserInitiated = false;
   m_GameLoading = false;

@@ -128,6 +128,7 @@ public:
   std::optional<std::string>            m_GameDisplayMode;
   std::optional<std::string>            m_GameIPFloodHandler;
   std::optional<std::string>            m_GameUnsafeNameHandler;
+  std::optional<std::string>            m_GameBroadcastErrorHandler;
   std::optional<bool>                   m_GameHideLobbyNames;
   std::optional<std::string>            m_GameHideLoadedNames;
   std::optional<bool>                   m_GameLogCommands;
@@ -153,6 +154,7 @@ public:
   uint8_t GetGameDisplayType() const;
   uint8_t GetGameIPFloodHandler() const;
   uint8_t GetGameUnsafeNameHandler() const;
+  uint8_t GetGameBroadcastErrorHandler() const;
   uint8_t GetGameHideLoadedNames() const;
   bool CheckGameParameters() const;
   bool CheckGameLoadParameters(CGameSetup* nGameSetup) const;

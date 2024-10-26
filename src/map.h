@@ -170,6 +170,7 @@ public:
   std::optional<bool>                   m_LogCommands;
   std::optional<uint8_t>                m_IPFloodHandler;
   std::optional<uint8_t>                m_UnsafeNameHandler;
+  std::optional<uint8_t>                m_BroadcastErrorHandler;
   std::optional<bool>                   m_PipeConsideredHarmful;
 
 private:

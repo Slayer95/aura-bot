@@ -2640,7 +2640,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_TargetGame->m_DisplayMode  = IsPrivate ? GAME_PRIVATE : GAME_PUBLIC;
         m_TargetGame->m_GameName     = Payload;
         m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
-        m_TargetGame->m_RealmRefreshError = false;
         m_TargetGame->UpdateGameDiscovery();
 
         for (auto& realm : m_Aura->m_Realms) {
@@ -2658,6 +2657,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           // this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
           // we assume this won't happen very often since the only downside is a potential false positive
 
+          realm->ResetGameBroadcastStatus();
           realm->QueueGameUncreate();
           realm->SendEnterChat();
 
@@ -4261,17 +4261,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_TargetGame->m_GameName = renameTarget;
       }
       m_TargetGame->m_HostCounter  = m_Aura->NextHostCounter();
-      m_TargetGame->m_RealmRefreshError = false;
       m_TargetGame->UpdateGameDiscovery();
       string earlyFeedback = "Announcement sent.";
       if (toAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {
           if (!m_TargetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
+          bnet->ResetGameBroadcastStatus();
           bnet->QueueGameUncreate(); //?
           bnet->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
           bnet->SendEnterChat();
         }
       } else {
+        targetRealm->ResetGameBroadcastStatus();
         targetRealm->QueueGameUncreate();
         targetRealm->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
         targetRealm->SendEnterChat();

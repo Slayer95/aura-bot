@@ -87,6 +87,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", false);
 
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", true);
+  m_IsMain                 = CFG.GetBool(m_CFGKeyPrefix + "main", false);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", false);
   m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", false);
 
@@ -200,6 +201,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_PrivateCmdToken(nRootConfig->m_PrivateCmdToken),
     m_BroadcastCmdToken(nRootConfig->m_BroadcastCmdToken),
     m_AnnounceHostToChat(nRootConfig->m_AnnounceHostToChat),
+    m_IsMain(nRootConfig->m_IsMain),
     m_IsMirror(nRootConfig->m_IsMirror),
     m_IsVPN(nRootConfig->m_IsVPN),
 
@@ -286,6 +288,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_BroadcastCmdToken.clear();
 
   m_AnnounceHostToChat     = CFG.GetBool(m_CFGKeyPrefix + "announce_chat", m_AnnounceHostToChat);
+  m_IsMain                 = CFG.GetBool(m_CFGKeyPrefix + "main", m_IsMirror);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
   m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
 

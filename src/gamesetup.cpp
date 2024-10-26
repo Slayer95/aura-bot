@@ -1578,6 +1578,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   SetDisplayMode(nCLI->GetGameDisplayType());
   if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
   if (nCLI->m_GameUnsafeNameHandler.has_value()) SetUnsafeNameHandler(nCLI->GetGameUnsafeNameHandler());
+  if (nCLI->m_GameBroadcastErrorHandler.has_value()) SetBroadcastErrorHandler(nCLI->GetGameBroadcastErrorHandler());
 }
 
 CGameSetup::~CGameSetup()

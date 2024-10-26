@@ -121,6 +121,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
   app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
   app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")->check(CLI::IsMember({"none", "censor", "deny"}));
+  app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")->check(CLI::IsMember({"ignore", "exit-main-error", "exit-empty-main-error", "exit-any-error", "exit-empty-any-error", "exit-max-errors"}));
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
@@ -296,6 +297,27 @@ uint8_t CCLI::GetGameUnsafeNameHandler() const
     }
   }
   return nameHandler;
+}
+
+uint8_t CCLI::GetGameBroadcastErrorHandler() const
+{
+  uint8_t errorHandler = ON_ADV_ERROR_IGNORE_ERRORS;
+  if (m_GameBroadcastErrorHandler.has_value()) {
+    if (m_GameBroadcastErrorHandler.value() == "ignore") {
+      errorHandler = ON_ADV_ERROR_IGNORE_ERRORS;
+    } else if (m_GameBroadcastErrorHandler.value() == "exit-main-error") {
+      errorHandler = ON_ADV_ERROR_EXIT_ON_MAIN_ERROR;
+    } else if (m_GameBroadcastErrorHandler.value() == "exit-empty-main-error") {
+      errorHandler = ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY;
+    } else if (m_GameBroadcastErrorHandler.value() == "exit-any-error") {
+      errorHandler = ON_ADV_ERROR_EXIT_ON_ANY_ERROR;
+    } else if (m_GameBroadcastErrorHandler.value() == "exit-empty-any-error") {
+      errorHandler = ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY;
+    } else if (m_GameBroadcastErrorHandler.value() == "exit-max-errors") {
+      errorHandler = ON_ADV_ERROR_EXIT_ON_MAX_ERRORS;
+    }
+  }
+  return errorHandler;
 }
 
 uint8_t CCLI::GetGameHideLoadedNames() const

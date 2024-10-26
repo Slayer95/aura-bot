@@ -238,7 +238,6 @@ protected:
   uint8_t                        m_JoinedVirtualHosts;
   bool                           m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                           m_Locked;                        // if the game owner is the only one allowed to run game commands or not
-  bool                           m_RealmRefreshError;             // if the game had a refresh error
   bool                           m_ChatOnly;                      // if we should ignore game start commands
   bool                           m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
   bool                           m_MuteLobby;                     // if we should stop forwarding lobby chat messages
@@ -383,7 +382,6 @@ public:
   CTCPServer*           GetSocket() const { return m_Socket; };
 
   uint16_t              GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
-  inline bool           GetIsRealmRefreshError() { return m_RealmRefreshError; }
   inline bool           GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
   uint8_t               GetActiveReconnectProtocols() const;
   std::string           GetActiveReconnectProtocolsDetails() const;
@@ -396,7 +394,6 @@ public:
   bool                  GetIsDeleteOrphanLobbyDue() const;
 
   inline void           SetExiting(bool nExiting) { m_Exiting = nExiting; }
-  inline void           SetRefreshError(bool nRefreshError) { m_RealmRefreshError = nRefreshError; }
   inline void           SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
   inline void           SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
   void                  SetUDPEnabled(bool nEnabled);

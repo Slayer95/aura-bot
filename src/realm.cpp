@@ -256,11 +256,14 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case CBNETProtocol::SID_STARTADVEX3:
-              if (!m_Protocol->RECEIVE_SID_STARTADVEX3(Data)) {
-                PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish hosted game")
-                m_Aura->EventBNETGameRefreshFailed(this);
+              if (m_Aura->m_CurrentLobby) {
+                if (m_Protocol->RECEIVE_SID_STARTADVEX3(Data)) {
+                  m_Aura->EventBNETGameRefreshSuccess(this);
+                } else {
+                  PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish hosted game")
+                  m_Aura->EventBNETGameRefreshError(this);
+                }
               }
-
               break;
 
             case CBNETProtocol::SID_PING:
@@ -373,6 +376,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 OnLoginOkay();
               } else {
                 m_FailedLogin = true;
+                Disable();
                 PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - invalid password, disconnecting")
                 m_Socket->Disconnect();
               }
@@ -383,6 +387,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 OnSignupOkay();
               } else {
                 m_FailedSignup = true;
+                Disable();
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "sign up failed, disconnecting")
                 m_Socket->Disconnect();
               }
@@ -836,6 +841,11 @@ bool CRealm::GetShouldLogChatToConsole() const
 string CRealm::GetLoginName() const
 {
   return m_Config->m_UserName;
+}
+
+bool CRealm::GetIsMain() const
+{
+  return m_Config->m_IsMain;
 }
 
 bool CRealm::GetIsMirror() const

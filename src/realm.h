@@ -121,6 +121,7 @@ private:
   bool                             m_FailedLogin;               // if we tried to login but failed
   bool                             m_FailedSignup;              // if we tried to sign up but failed
   uint16_t                         m_GamePort;                  // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
+  std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted or not, or it is pending
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
   bool                             m_AnyWhisperRejected;        // whether the realm rejected any whisper because the receiver was not offline.
   bool                             m_ChatQueuedGameAnnouncement;// for !host, !announce
@@ -155,6 +156,8 @@ public:
   CBNETProtocol*       GetProtocol() const { return m_Protocol; }
   inline uint8_t       GetGameVersion() const { return m_GameVersion; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
+  inline bool          GetFailedLogin() const { return m_FailedLogin; }
+  inline bool          GetFailedSignup() const { return m_FailedSignup; }
   inline CTCPClient*   GetSocket() const { return m_Socket; }
   bool                 GetShouldLogChatToConsole() const;
   inline bool          GetInChat() const { return !m_CurrentChannel.empty(); }
@@ -172,6 +175,7 @@ public:
   inline uint8_t       GetHostCounterID() const { return m_PublicServerID; }
   inline uint32_t      GetInternalID() const { return m_InternalServerID; }
   std::string          GetLoginName() const;
+  bool                 GetIsMain() const;
   bool                 GetIsMirror() const;
   bool                 GetIsVPN() const;
   bool                 GetUsesCustomIPAddress() const;
@@ -184,6 +188,9 @@ public:
   std::string          GetPrefixedGameName(const std::string& gameName) const;
   bool                 GetAnnounceHostToChat() const;
   inline bool          GetIsChatQueuedGameAnnouncement() { return m_ChatQueuedGameAnnouncement; }  
+  inline bool          GetIsGameBroadcastSettled() { return m_GameBroadcastStatus.has_value(); }
+  inline bool          GetIsGameBroadcastSucceeded() { return m_GameBroadcastStatus.value_or(false); }
+  inline bool          GetIsGameBroadcastErrored() { return !m_GameBroadcastStatus.value_or(true); }
 
   bool                 GetHasEnhancedAntiSpoof() const;
   bool                 GetUnverifiedCannotStartGame() const;
@@ -227,8 +234,10 @@ public:
   void TrySendEnterChat();
   void TrySendGetGamesList();
 
+  void ResolveGameBroadcastStatus(bool nResult) { m_GameBroadcastStatus = nResult; }
   void ResetConnection(bool hadError);
   void ResetGameAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
+  void ResetGameBroadcastStatus() { m_GameBroadcastStatus = std::nullopt; }
   inline void SetReconnectNextTick(bool nReconnectNextTick) { m_ReconnectNextTick = nReconnectNextTick; };
 
   // other functions

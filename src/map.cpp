@@ -1118,6 +1118,10 @@ void CMap::Load(CConfig* CFG)
     m_UnsafeNameHandler = CFG->GetUint8("map.hosting.name_filter.unsafe_handler", ON_UNSAFE_NAME_DENY);
     CFG->FailIfErrorLast();
   }
+  if (CFG->Exists("map.hosting.realm_broadcast.error_handler")) {
+    m_BroadcastErrorHandler = CFG->GetUint8("map.hosting.realm_broadcast.error_handler", ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
+    CFG->FailIfErrorLast();
+  }
   if (CFG->Exists("map.hosting.name_filter.is_pipe_harmful")) {
     m_PipeConsideredHarmful = CFG->GetBool("map.hosting.name_filter.is_pipe_harmful", false);
     CFG->FailIfErrorLast();

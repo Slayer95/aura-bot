@@ -56,6 +56,13 @@
 #define HIDE_IGN_ALWAYS 2u
 #define HIDE_IGN_AUTO 3u
 
+#define ON_ADV_ERROR_IGNORE_ERRORS 0u
+#define ON_ADV_ERROR_EXIT_ON_MAIN_ERROR 1u
+#define ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY 2u
+#define ON_ADV_ERROR_EXIT_ON_ANY_ERROR 3u
+#define ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY 4u
+#define ON_ADV_ERROR_EXIT_ON_MAX_ERRORS 5u
+
 //
 // CGameConfig
 //
@@ -111,6 +118,7 @@ public:
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
   uint8_t                  m_UnsafeNameHandler;         // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care
+  uint8_t                  m_BroadcastErrorHandler;     // under which circumstances should a game lobby be closed given that we failed to announce the game in one or more realms
   bool                     m_PipeConsideredHarmful;
 
   bool                     m_UDPEnabled;                 // whether this game should be listed in "Local Area Network"

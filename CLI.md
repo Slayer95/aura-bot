@@ -822,6 +822,23 @@ This option is equivalent to ``<hosting.name_filter.unsafe_handler>`` in `config
 
 This option is equivalent to ``<map.hosting.name_filter.unsafe_handler>`` in map configuration
 
+## \`--on-broadcast-error \<ACTION\>\`
+
+This parameter customizes behavior when a game fails to be announced in one of the connected PvPGN realms.
+
+**Options:**
+
+- ignore: No action taken.
+- exit-main-error: If a game cannot be announced in one of the main PvPGN realms, the game lobby is closed.
+- exit-empty-main-error: If a game with no users cannot be announced in one of the main PvPGN realms, the game lobby is closed.
+- exit-any-error: If a game cannot be announced in one of the connected PvPGN realms, the game lobby is closed.
+- exit-empty-any-error: If a game with no users cannot be announced in one of the connected PvPGN realms, the game lobby is closed.
+- exit-max-errors: If a game cannot be announce in any of the connected PvPGN realms, the game lobby is closed.
+
+This option is equivalent to ``<hosting.realm_broadcast.error_handler>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.realm_broadcast.error_handler>`` in map configuration
+
 ## \`--hide-ign-started\`
 
 This parameter customizes whether Aura will obfuscate players names after the game starts.
