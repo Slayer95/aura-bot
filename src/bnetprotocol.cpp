@@ -52,7 +52,7 @@
 using namespace std;
 
 CBNETProtocol::CBNETProtocol()
-  : m_ClientToken(std::vector<uint8_t>{220, 1, 203, 7})
+  : m_ClientToken(vector<uint8_t>{220, 1, 203, 7})
 {
 }
 
@@ -62,7 +62,7 @@ CBNETProtocol::~CBNETProtocol() = default;
 // RECEIVE FUNCTIONS //
 ///////////////////////
 
-bool CBNETProtocol::RECEIVE_SID_NULL(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_NULL(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_NULL" );
   // DEBUG_Print( data );
@@ -73,7 +73,7 @@ bool CBNETProtocol::RECEIVE_SID_NULL(const std::vector<uint8_t>& data)
   return ValidateLength(data);
 }
 
-CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data)
+CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_GETADVLISTEX" );
   // DEBUG_Print( data );
@@ -91,18 +91,18 @@ CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const std::vector<uin
 
   if (ValidateLength(data) && data.size() >= 8)
   {
-    const std::vector<uint8_t> GamesFound = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+    const vector<uint8_t> GamesFound = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
 
     if (ByteArrayToUInt32(GamesFound, false) > 0 && data.size() >= 25)
     {
-      const std::vector<uint8_t> Port     = std::vector<uint8_t>(begin(data) + 18, begin(data) + 20);
-      const std::vector<uint8_t> IP       = std::vector<uint8_t>(begin(data) + 20, begin(data) + 24);
-      const std::vector<uint8_t> GameName = ExtractCString(data, 24);
+      const vector<uint8_t> Port     = vector<uint8_t>(begin(data) + 18, begin(data) + 20);
+      const vector<uint8_t> IP       = vector<uint8_t>(begin(data) + 20, begin(data) + 24);
+      const vector<uint8_t> GameName = ExtractCString(data, 24);
       if (GameName.size() > 0xFF) return nullptr;
 
       if (data.size() >= GameName.size() + 35)
       {
-        const std::vector<uint8_t> HostCounter =
+        const vector<uint8_t> HostCounter =
           {
             ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 27, true),
             ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 29, true),
@@ -120,7 +120,7 @@ CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const std::vector<uin
   return nullptr;
 }
 
-bool CBNETProtocol::RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_ENTERCHAT(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_ENTERCHAT" );
   // DEBUG_Print( data );
@@ -138,7 +138,7 @@ bool CBNETProtocol::RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data)
   return false;
 }
 
-CIncomingChatEvent* CBNETProtocol::RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data)
+CIncomingChatEvent* CBNETProtocol::RECEIVE_SID_CHATEVENT(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_CHATEVENT" );
   // DEBUG_Print( data );
@@ -154,11 +154,11 @@ CIncomingChatEvent* CBNETProtocol::RECEIVE_SID_CHATEVENT(const std::vector<uint8
 
   if (ValidateLength(data) && data.size() >= 29)
   {
-    const std::vector<uint8_t> EventID = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-    // std::vector<uint8_t> Ping = std::vector<uint8_t>( data.begin( ) + 12, data.begin( ) + 16 );
-    const std::vector<uint8_t> User    = ExtractCString(data, 28);
+    const vector<uint8_t> EventID = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+    // vector<uint8_t> Ping = vector<uint8_t>( data.begin( ) + 12, data.begin( ) + 16 );
+    const vector<uint8_t> User    = ExtractCString(data, 28);
     if (User.size() > 0xFF) return nullptr;
-    const std::vector<uint8_t> Message = ExtractCString(data, static_cast<uint32_t>(User.size()) + 29);
+    const vector<uint8_t> Message = ExtractCString(data, static_cast<uint32_t>(User.size()) + 29);
 
     return new CIncomingChatEvent(static_cast<CBNETProtocol::IncomingChatEvent>(ByteArrayToUInt32(EventID, false)),
                                   string(begin(User), end(User)),
@@ -168,7 +168,7 @@ CIncomingChatEvent* CBNETProtocol::RECEIVE_SID_CHATEVENT(const std::vector<uint8
   return nullptr;
 }
 
-bool CBNETProtocol::RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_CHECKAD(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_CHECKAD" );
   // DEBUG_Print( data );
@@ -179,7 +179,7 @@ bool CBNETProtocol::RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data)
   return ValidateLength(data);
 }
 
-bool CBNETProtocol::RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_STARTADVEX3(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_STARTADVEX3" );
   // DEBUG_Print( data );
@@ -190,7 +190,7 @@ bool CBNETProtocol::RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 8)
   {
-    const std::vector<uint8_t> Status = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+    const vector<uint8_t> Status = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
 
     if (ByteArrayToUInt32(Status, false) == 0)
       return true;
@@ -199,7 +199,7 @@ bool CBNETProtocol::RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data)
   return false;
 }
 
-std::vector<uint8_t> CBNETProtocol::RECEIVE_SID_PING(const std::vector<uint8_t>& data)
+array<uint8_t, 4> CBNETProtocol::RECEIVE_SID_PING(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_PING" );
   // DEBUG_Print( data );
@@ -208,13 +208,16 @@ std::vector<uint8_t> CBNETProtocol::RECEIVE_SID_PING(const std::vector<uint8_t>&
   // 2 bytes					-> Length
   // 4 bytes					-> Ping
 
-  if (ValidateLength(data) && data.size() >= 8)
-    return std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-
-  return std::vector<uint8_t>();
+  array<uint8_t, 4> value;
+  if (ValidateLength(data) && data.size() >= 8) {
+    copy_n(data.begin() + 4, 4, value.begin());
+  } else {
+    value.fill(0);
+  }
+  return value;
 }
 
-bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_AUTH_INFO" );
   // DEBUG_Print( data );
@@ -230,9 +233,9 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 25)
   {
-    m_LogonType          = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-    m_ServerToken        = std::vector<uint8_t>(begin(data) + 8, begin(data) + 12);
-    m_MPQFileTime        = std::vector<uint8_t>(begin(data) + 16, begin(data) + 24);
+    m_LogonType          = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+    m_ServerToken        = vector<uint8_t>(begin(data) + 8, begin(data) + 12);
+    m_MPQFileTime        = vector<uint8_t>(begin(data) + 16, begin(data) + 24);
     m_IX86VerFileName    = ExtractCString(data, 24);
     if (m_IX86VerFileName.size() > 0xFFFFFF00) return false; // WTF
     m_ValueStringFormula = ExtractCString(data, static_cast<uint32_t>(m_IX86VerFileName.size()) + 25);
@@ -242,7 +245,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data)
   return false;
 }
 
-bool CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_AUTH_CHECK" );
   // DEBUG_Print( data );
@@ -254,7 +257,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 9)
   {
-    m_KeyState            = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+    m_KeyState            = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
     m_KeyStateDescription = ExtractCString(data, 8);
 
     if (ByteArrayToUInt32(m_KeyState, false) == KR_GOOD)
@@ -264,7 +267,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data)
   return false;
 }
 
-bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTLOGON" );
   // DEBUG_Print( data );
@@ -278,12 +281,12 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& da
 
   if (ValidateLength(data) && data.size() >= 8)
   {
-    const std::vector<uint8_t> status = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+    const vector<uint8_t> status = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
 
     if (ByteArrayToUInt32(status, false) == 0 && data.size() >= 72)
     {
-      m_Salt            = std::vector<uint8_t>(begin(data) + 8, begin(data) + 40);
-      m_ServerPublicKey = std::vector<uint8_t>(begin(data) + 40, begin(data) + 72);
+      m_Salt            = vector<uint8_t>(begin(data) + 8, begin(data) + 40);
+      m_ServerPublicKey = vector<uint8_t>(begin(data) + 40, begin(data) + 72);
       return true;
     }
   }
@@ -291,7 +294,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& da
   return false;
 }
 
-bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTLOGONPROOF" );
   // DEBUG_Print( data );
@@ -302,7 +305,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t
 
   if (ValidateLength(data) && data.size() >= 8)
   {
-    uint32_t Status = ByteArrayToUInt32(std::vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
+    uint32_t Status = ByteArrayToUInt32(vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
 
     if (Status == 0 || Status == 0xE) {
       // OK: 0x0, EMAIL: 0xE
@@ -313,7 +316,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t
   return false;
 }
 
-bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data)
+bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTSIGNUP" );
   // DEBUG_Print( data );
@@ -324,7 +327,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& d
 
   if (ValidateLength(data) && data.size() >= 8)
   {
-    uint32_t Status = ByteArrayToUInt32(std::vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
+    uint32_t Status = ByteArrayToUInt32(vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
 
     if (Status == 0x1) {
       return true;
@@ -334,7 +337,7 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& d
   return false;
 }
 
-vector<string> CBNETProtocol::RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data)
+vector<string> CBNETProtocol::RECEIVE_SID_FRIENDLIST(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_FRIENDSLIST" );
   // DEBUG_Print( data );
@@ -363,7 +366,7 @@ vector<string> CBNETProtocol::RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>&
       if (data.size() < i + 1)
         break;
 
-      const std::vector<uint8_t> Account = ExtractCString(data, i);
+      const vector<uint8_t> Account = ExtractCString(data, i);
       i += Account.size() + 1;
 
       if (data.size() < i + 7)
@@ -379,7 +382,7 @@ vector<string> CBNETProtocol::RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>&
   return Friends;
 }
 
-vector<string> CBNETProtocol::RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data)
+vector<string> CBNETProtocol::RECEIVE_SID_CLANMEMBERLIST(const vector<uint8_t>& data)
 {
   // DEBUG_Print( "RECEIVED SID_CLANMEMBERLIST" );
   // DEBUG_Print( data );
@@ -408,7 +411,7 @@ vector<string> CBNETProtocol::RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8
       if (data.size() < i + 1)
         break;
 
-      const std::vector<uint8_t> Name = ExtractCString(data, i);
+      const vector<uint8_t> Name = ExtractCString(data, i);
       i += Name.size() + 1;
 
       if (data.size() < i + 3)
@@ -430,24 +433,24 @@ vector<string> CBNETProtocol::RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8
 // SEND FUNCTIONS //
 ////////////////////
 
-std::vector<uint8_t> CBNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR()
+vector<uint8_t> CBNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR()
 {
-  return std::vector<uint8_t>{1};
+  return vector<uint8_t>{1};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_NULL()
+vector<uint8_t> CBNETProtocol::SEND_SID_NULL()
 {
-  return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_NULL, 4, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, SID_NULL, 4, 0};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_STOPADV()
+vector<uint8_t> CBNETProtocol::SEND_SID_STOPADV()
 {
-  return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_STOPADV, 4, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, SID_STOPADV, 4, 0};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX()
+vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX()
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_GETADVLISTEX, 0, 0, /* short */ 0, 0, /* short */ 0, 0, /* unknown */ 0, 0, 0, 0, /* unknown */  0, 0, 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_GETADVLISTEX, 0, 0, /* short */ 0, 0, /* short */ 0, 0, /* unknown */ 0, 0, 0, 0, /* unknown */  0, 0, 0, 0};
   const uint8_t MaxGames[] = {255, 255, 255, 255};
   //const uint8_t GameName[] = {};
   //const uint8_t GamePassword[] = {};
@@ -463,14 +466,14 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX()
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_ENTERCHAT()
+vector<uint8_t> CBNETProtocol::SEND_SID_ENTERCHAT()
 {
-  return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_ENTERCHAT, 6, 0, 0, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, SID_ENTERCHAT, 6, 0, 0, 0};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_JOINCHANNEL(const string& channel)
+vector<uint8_t> CBNETProtocol::SEND_SID_JOINCHANNEL(const string& channel)
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_JOINCHANNEL, 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_JOINCHANNEL, 0, 0};
 
   if (channel.size() > 0)
   {
@@ -489,27 +492,27 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_JOINCHANNEL(const string& channel)
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const string& message)
+vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const string& message)
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0};
   AppendByteArrayFast(packet, message, true); // null-terminator
   AssignLength(packet);
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const vector<uint8_t>& message)
+vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const vector<uint8_t>& message)
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0};
   AppendByteArrayFast(packet, message);
   packet.push_back(0);
   AssignLength(packet);
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const string& message, const string& user)
+vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const string& message, const string& user)
 {
   // /w USER MESSAGE
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
   AppendByteArrayFast(packet, user, false);
   packet.push_back(0x20);
   AppendByteArrayFast(packet, message, true); // With null terminator
@@ -517,10 +520,10 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const string& message,
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const std::vector<uint8_t>& message, const std::vector<uint8_t>& user)
+vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const vector<uint8_t>& message, const vector<uint8_t>& user)
 {
   // /w USER MESSAGE
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
   AppendByteArrayFast(packet, user);
   packet.push_back(0x20);
   AppendByteArrayFast(packet, message);
@@ -529,14 +532,14 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const std::vector<uint
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_CHECKAD()
+vector<uint8_t> CBNETProtocol::SEND_SID_CHECKAD()
 {
-  return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_CHECKAD, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, SID_CHECKAD, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port)
+vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const array<uint8_t, 4> address, uint16_t port)
 {
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
 
   const uint8_t Unknown[] = {2, 0};
   const uint8_t Unknown2[] = {0, 0, 0, 0};
@@ -556,7 +559,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const std::array<uint8_t
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapCRC, const std::array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapCRC, const array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
 {
   string HostCounterString = ToHexString(hostCounter);
 
@@ -565,11 +568,11 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const ui
 
   HostCounterString = string(HostCounterString.rbegin(), HostCounterString.rend());
 
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
 
   // make the stat string
 
-  std::vector<uint8_t> StatString;
+  vector<uint8_t> StatString;
   AppendByteArray(StatString, mapFlags, false);
   StatString.push_back(0);
   AppendByteArrayFast(StatString, mapWidth);
@@ -614,9 +617,9 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const ui
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_NOTIFYJOIN(const string& gameName)
+vector<uint8_t> CBNETProtocol::SEND_SID_NOTIFYJOIN(const string& gameName)
 {
-  std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_NOTIFYJOIN, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_NOTIFYJOIN, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0};
   AppendByteArrayFast(packet, gameName); // Game Name
   packet.push_back(0);                   // Game Password is NULL
   AssignLength(packet);
@@ -624,23 +627,17 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_NOTIFYJOIN(const string& gameName)
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_PING(const std::vector<uint8_t>& pingValue)
+vector<uint8_t> CBNETProtocol::SEND_SID_PING(const array<uint8_t, 4>& pingValue)
 {
-  if (pingValue.size() == 4)
-  {
-    std::vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_PING, 0, 0};
-    AppendByteArrayFast(packet, pingValue); // Ping Value
-    AssignLength(packet);
-    return packet;
-  }
-
-  Print("[BNETPROTO] invalid parameters passed to SEND_SID_PING");
-  return std::vector<uint8_t>();
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, SID_PING, 0, 0};
+  AppendByteArrayFast(packet, pingValue); // Ping Value
+  AssignLength(packet);
+  return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const string& accountName)
+vector<uint8_t> CBNETProtocol::SEND_SID_LOGONRESPONSE(const vector<uint8_t>& clientToken, const vector<uint8_t>& serverToken, const vector<uint8_t>& passwordHash, const string& accountName)
 {
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);    // BNET header constant
   packet.push_back(SID_LOGONRESPONSE);       // SID_LOGONRESPONSE
   packet.push_back(0);                       // packet length will be assigned later
@@ -654,9 +651,9 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_LOGONRESPONSE(const std::vector<uin
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_NETGAMEPORT(uint16_t serverPort)
+vector<uint8_t> CBNETProtocol::SEND_SID_NETGAMEPORT(uint16_t serverPort)
 {
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);     // BNET header constant
   packet.push_back(SID_NETGAMEPORT);          // SID_NETGAMEPORT
   packet.push_back(0);                        // packet length will be assigned later
@@ -667,7 +664,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_NETGAMEPORT(uint16_t serverPort)
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const string& CountryShort, const string& country)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const string& CountryShort, const string& country)
 {
   const uint8_t ProtocolID[]    = {0, 0, 0, 0};
   const uint8_t PlatformID[]    = {54, 56, 88, 73}; // "IX86"
@@ -677,7 +674,7 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t loc
   const uint8_t LocalIP[]       = {127, 0, 0, 1};
   const uint8_t TimeZoneBias[]  = {60, 0, 0, 0}; // 60 minutes (GMT +0100) but this is probably -0100
 
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);     // BNET header constant
   packet.push_back(SID_AUTH_INFO);            // SID_AUTH_INFO
   packet.push_back(0);                        // packet length will be assigned later
@@ -698,9 +695,9 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t loc
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_CHECK(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& exeVersion, const std::vector<uint8_t>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const string& exeInfo, const string& keyOwnerName)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_CHECK(const vector<uint8_t>& clientToken, const vector<uint8_t>& exeVersion, const vector<uint8_t>& exeVersionHash, const vector<uint8_t>& keyInfoROC, const vector<uint8_t>& keyInfoTFT, const string& exeInfo, const string& keyOwnerName)
 {
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
 
   if (clientToken.size() == 4 && exeVersion.size() == 4 && exeVersionHash.size() == 4)
   {
@@ -727,9 +724,9 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_CHECK(const std::vector<uint8_
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& clientPublicKey, const string& accountName)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& clientPublicKey, const string& accountName)
 {
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
 
   if (clientPublicKey.size() == 32)
   {
@@ -747,9 +744,9 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(const std::vector
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& clientPasswordProof)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(const vector<uint8_t>& clientPasswordProof)
 {
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
 
   if (clientPasswordProof.size() == 20)
   {
@@ -766,9 +763,9 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::v
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userName, const std::vector<uint8_t>& clientPasswordProof)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userName, const vector<uint8_t>& clientPasswordProof)
 {
-  std::vector<uint8_t> packet;
+  vector<uint8_t> packet;
 
   if (clientPasswordProof.size() == 20)
   {
@@ -786,21 +783,21 @@ std::vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& us
   return packet;
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_FRIENDLIST()
+vector<uint8_t> CBNETProtocol::SEND_SID_FRIENDLIST()
 {
-  return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_FRIENDLIST, 4, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, SID_FRIENDLIST, 4, 0};
 }
 
-std::vector<uint8_t> CBNETProtocol::SEND_SID_CLANMEMBERLIST()
+vector<uint8_t> CBNETProtocol::SEND_SID_CLANMEMBERLIST()
 {
-  return std::vector<uint8_t>{BNET_HEADER_CONSTANT, SID_CLANMEMBERLIST, 8, 0, 0, 0, 0, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, SID_CLANMEMBERLIST, 8, 0, 0, 0, 0, 0};
 }
 
 /////////////////////
 // OTHER FUNCTIONS //
 /////////////////////
 
-bool CBNETProtocol::ValidateLength(const std::vector<uint8_t>& content)
+bool CBNETProtocol::ValidateLength(const vector<uint8_t>& content)
 {
   // verify that bytes 3 and 4 (indices 2 and 3) of the content array describe the length
 
@@ -811,10 +808,10 @@ bool CBNETProtocol::ValidateLength(const std::vector<uint8_t>& content)
 // CIncomingGameHost
 //
 
-CIncomingGameHost::CIncomingGameHost(std::vector<uint8_t> nIP, uint16_t nPort, string nGameName, std::vector<uint8_t> nHostCounter)
-  : m_GameName(std::move(nGameName)),
-    m_IP(std::move(nIP)),
-    m_HostCounter(std::move(nHostCounter)),
+CIncomingGameHost::CIncomingGameHost(vector<uint8_t> nIP, uint16_t nPort, string nGameName, vector<uint8_t> nHostCounter)
+  : m_GameName(move(nGameName)),
+    m_IP(move(nIP)),
+    m_HostCounter(move(nHostCounter)),
     m_Port(nPort)
 {
 }
@@ -844,8 +841,8 @@ string CIncomingGameHost::GetIPString() const
 //
 
 CIncomingChatEvent::CIncomingChatEvent(CBNETProtocol::IncomingChatEvent nChatEvent, string nUser, string nMessage)
-  : m_User(std::move(nUser)),
-    m_Message(std::move(nMessage)),
+  : m_User(move(nUser)),
+    m_Message(move(nMessage)),
     m_ChatEvent(nChatEvent)
 {
 }

@@ -167,7 +167,7 @@ public:
   CIncomingChatEvent* RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data);
-  std::vector<uint8_t> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
+  std::array<uint8_t, 4> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data);
@@ -192,7 +192,7 @@ public:
   std::vector<uint8_t> SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port);
   std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapCRC, const std::array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
   std::vector<uint8_t> SEND_SID_NOTIFYJOIN(const std::string& gameName);
-  std::vector<uint8_t> SEND_SID_PING(const std::vector<uint8_t>& pingValue);
+  std::vector<uint8_t> SEND_SID_PING(const std::array<uint8_t, 4>& pingValue);
   std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);
   std::vector<uint8_t> SEND_SID_NETGAMEPORT(uint16_t serverPort);
   std::vector<uint8_t> SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const std::string& CountryShort, const std::string& country);
