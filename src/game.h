@@ -546,7 +546,7 @@ public:
   uint8_t              SimulateActionUID(const uint8_t actionType, CGameUser* user, const bool isDisconnect);
   uint8_t              HostToMapCommunicationUID() const;
   bool                 GetHasAnyActiveTeam() const;
-  bool                 GetHasAnyPlayer() const;
+  bool                 GetHasAnyUser() const;
   bool                 GetIsPlayerSlot(const uint8_t SID) const;
   bool                 GetHasAnotherPlayer(const uint8_t ExceptSID) const;
   bool                 CheckIPFlood(const std::string joinName, const sockaddr_storage* sourceAddress) const;

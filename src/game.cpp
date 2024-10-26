@@ -5759,7 +5759,7 @@ bool CGame::GetHasAnyActiveTeam() const
   return false;
 }
 
-bool CGame::GetHasAnyPlayer() const
+bool CGame::GetHasAnyUser() const
 {
   if (m_Users.empty()) {
     return false;
@@ -6275,7 +6275,7 @@ bool CGame::CanLockSlotForJoins(const uint8_t SID)
     return GetHasAnotherPlayer(SID);
   }
 
-  return GetHasAnyPlayer();
+  return GetHasAnyUser();
 }
 
 bool CGame::CloseSlot(const uint8_t SID, const bool kick)
@@ -6705,9 +6705,9 @@ bool CGame::ComputerNSlots(const uint8_t skill, const uint8_t expectedCount, con
     return false;
   }
 
-  const bool hasPlayers = GetHasAnyPlayer(); // Ensure this is called outside the loop.
+  const bool hasUsers = GetHasAnyUser(); // Ensure this is called outside the loop.
   uint8_t remainingControllers = m_Map->GetMapNumControllers() - GetNumControllers();
-  if (!hasPlayers) --remainingControllers; // Refuse to lock the last slot
+  if (!hasUsers) --remainingControllers; // Refuse to lock the last slot
   if (expectedCount - currentCount > remainingControllers) {
     return false;
   }
@@ -6733,11 +6733,11 @@ bool CGame::ComputerAllSlots(const uint8_t skill)
     return false;
   }
 
-  const bool hasPlayers = GetHasAnyPlayer(); // Ensure this is called outside the loop.
+  const bool hasUsers = GetHasAnyUser(); // Ensure this is called outside the loop.
   uint32_t remainingSlots = m_Map->GetMapNumControllers() - GetNumControllers();
 
   // Refuse to lock the last slot
-  if (!hasPlayers && m_Slots.size() == m_Map->GetMapNumControllers()) {
+  if (!hasUsers && m_Slots.size() == m_Map->GetMapNumControllers()) {
     --remainingSlots;
   }
 
@@ -7906,13 +7906,13 @@ bool CGame::GetIsFakeObserver(const uint16_t fakePlayer) const
 uint8_t CGame::FakeAllSlots()
 {
   // Ensure this is called outside any loops.
-  const bool hasPlayers = GetHasAnyPlayer();
+  const bool hasUsers = GetHasAnyUser();
 
   uint8_t addedCounter = 0;
   if (m_RestoredGame) {
     if (m_Reserved.empty()) return 0;
     uint8_t reservedIndex = 0;
-    uint8_t reservedEnd = static_cast<uint8_t>(m_Reserved.size()) - static_cast<uint8_t>(!hasPlayers);
+    uint8_t reservedEnd = static_cast<uint8_t>(m_Reserved.size()) - static_cast<uint8_t>(!hasUsers);
     for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {
       if (m_Slots[SID].GetIsPlayerOrFake()) {
         if (++reservedIndex >= reservedEnd) break;
@@ -7927,7 +7927,7 @@ uint8_t CGame::FakeAllSlots()
     }
   } else {
     uint8_t remainingControllers = m_Map->GetMapNumControllers() - GetNumControllers();
-    if (!hasPlayers && m_Slots.size() == m_Map->GetMapNumControllers()) {
+    if (!hasUsers && m_Slots.size() == m_Map->GetMapNumControllers()) {
       --remainingControllers;
     }
     for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {

@@ -6692,7 +6692,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         // or external users (PvPGN/IRC/Discord) get it.
         // By commenting it out, external users get priority.
         // (Replaceable lobbies are NOT admin games.)
-        //|| (!m_SourceGame && m_Aura->m_CurrentLobby->GetHasAnyPlayer())
+        //|| (!m_SourceGame && m_Aura->m_CurrentLobby->GetHasAnyUser())
       )))) {
         ErrorReply("Another user is hosting a game.");
         break;
