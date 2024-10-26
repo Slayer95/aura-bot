@@ -569,7 +569,7 @@ normalized according to the rules listed in \`aliases.ini\`.
 
 This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 
 instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms. The actual host is identified 
-by their IPv4 address and PORT. The game ID, also known as "host counter", must also be provided.
+by their IPv4 address and PORT. The game ID, also known as "host counter", should be provided in hexadecimal.
 
 Aura will remain in game mirroring mode until the process finishes.
 

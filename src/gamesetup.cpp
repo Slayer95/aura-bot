@@ -1383,13 +1383,11 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   } catch (...) {
     return false;
   }
-  try {
-    int64_t value = stol(rawId);
-    if (value < 0 || value > 0xFFFFFFFF) return false;
-    gameId = static_cast<uint32_t>(value);
-  } catch (...) {
+  optional<uint32_t> maybeId = ParseUint32Hex(rawId);
+  if (!maybeId.has_value()) {
     return false;
   }
+  gameId = maybeId.value();
   SetAddressPort(&(maybeAddress.value()), gamePort);
   return SetMirrorSource(maybeAddress.value(), gameId);
 }

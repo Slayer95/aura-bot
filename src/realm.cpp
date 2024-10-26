@@ -569,8 +569,8 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
   // this case covers whispers - we assume that anyone who sends a whisper to the bot with message "spoofcheck" should be considered spoof checked
   // note that this means you can whisper "spoofcheck" even in a public game to manually spoofcheck if the /whois fails
 
-  if (Event == CBNETProtocol::EID_WHISPER && m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
-    if (Message == "s" || Message == "sc" || Message == "spoofcheck") {
+  if (Event == CBNETProtocol::EID_WHISPER && (Message == "s" || Message == "sc" || Message == "spoofcheck")) {
+    if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
       CGameUser* Player = m_Aura->m_CurrentLobby->GetUserFromName(User, true);
       if (Player) m_Aura->m_CurrentLobby->AddToRealmVerified(m_Config->m_HostName, Player, true);
       return;
@@ -948,6 +948,7 @@ void CRealm::TrySendGetGamesList()
 void CRealm::SendNetworkConfig()
 {
   if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsMirror() && !m_Config->m_IsMirror) {
+    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "mirroring public game host " + IPv4ToString(m_Aura->m_CurrentLobby->GetPublicHostAddress()) + ":" + to_string(m_Aura->m_CurrentLobby->GetPublicHostPort()))
     SendAuth(m_Protocol->SEND_SID_PUBLICHOST(m_Aura->m_CurrentLobby->GetPublicHostAddress(), m_Aura->m_CurrentLobby->GetPublicHostPort()));
     m_GamePort = m_Aura->m_CurrentLobby->GetPublicHostPort();
   } else if (m_Config->m_EnableCustomAddress) {
@@ -957,9 +958,11 @@ void CRealm::SendNetworkConfig()
     } else if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
       port = m_Aura->m_CurrentLobby->GetHostPort();
     }
+    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "using public game host " + IPv4ToString(AddressToIPv4Array(&(m_Config->m_PublicHostAddress))) + ":" + to_string(port))
     SendAuth(m_Protocol->SEND_SID_PUBLICHOST(AddressToIPv4Array(&(m_Config->m_PublicHostAddress)), port));
     m_GamePort = port;
   } else if (m_Config->m_EnableCustomPort) {
+    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "using public game port " + to_string(m_Config->m_PublicHostPort))
     SendAuth(m_Protocol->SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort));
     m_GamePort = m_Config->m_PublicHostPort;
   }
@@ -1223,12 +1226,20 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
   if (!m_LoggedIn)
     return;
 
-  const uint16_t connectPort = GetUsesCustomPort() && !game->GetIsMirror() ? GetPublicHostPort() : game->GetHostPort();
+  const uint16_t connectPort = (
+    game->GetIsMirror() ? game->GetPublicHostPort() :
+    (GetUsesCustomPort() ? GetPublicHostPort() :
+    game->GetHostPort())
+  );
+
   if (m_GamePort != connectPort) {
+    PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "updating net game port to " + to_string(connectPort))
+    // Some PvPGN servers will disconnect if this message is sent while logged in
     Send(m_Protocol->SEND_SID_NETGAMEPORT(connectPort));
     m_GamePort = connectPort;
   }
 
+  PRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "broadcasting game...")
   Send(m_Protocol->SEND_SID_STARTADVEX3(
     displayMode,
     game->GetGameType(),

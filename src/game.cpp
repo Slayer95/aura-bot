@@ -210,10 +210,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameDiscoveryInfoDynamicOffset(0)
 {
   m_Config = new CGameConfig(nAura->m_GameDefaultConfig, m_Map, nGameSetup);
-
-  if (m_Config->m_IndexVirtualHostName.empty()) {
-    m_Config->m_IndexVirtualHostName = m_CreatedBy.empty() ? "Aura Bot" : m_CreatedBy;
-  }
   m_IsHiddenPlayerNames = m_Config->m_HideLobbyNames;
   m_SupportedGameVersionsMin = m_Aura->m_GameVersion;
   m_SupportedGameVersionsMax = m_Aura->m_GameVersion;
@@ -3839,7 +3835,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
       continue;
     }
     // In a lobby, all users are always connected, but
-    // this is still a safety measure in case we check GProxy or whatever.
+    // this is still a safety measure in case we reuse this method for GProxy or whatever.
     if (GetSameAddresses(sourceAddress, &(otherPlayer->GetSocket()->m_RemoteHost))) {
       usersSameIP.push_back(otherPlayer);
     }

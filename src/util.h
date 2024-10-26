@@ -81,6 +81,24 @@ inline std::string ToHexString(uint32_t i)
   return result;
 }
 
+inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString) {
+  if (hexString.empty() || hexString.size() > 8) {
+    return std::nullopt;
+  }
+
+  // Initialize a uint32_t value
+  uint32_t result;
+
+  std::istringstream stream(hexString);
+  stream >> std::hex >> result;
+
+  if (stream.fail() || !stream.eof()) {
+    return std::nullopt;
+  }
+
+  return result;
+}
+
 inline std::string ToFormattedString(const double d, const uint8_t precision = 2)
 {
   std::ostringstream out;
@@ -832,11 +850,8 @@ inline std::string JoinVector(const std::vector<uint16_t>& list, const bool trai
   return JoinVector(list, ", ", trailingComma);
 }
 
-inline std::string IPv4ToString(const std::vector<uint8_t> ip) {
-  if (ip.size() != 4) {
-    return std::string();
-  }
-  return std::to_string(static_cast<int>(ip[0])) + "." + std::to_string(static_cast<int>(ip[1])) + "." + std::to_string(static_cast<int>(ip[2])) + "." + std::to_string(static_cast<int>(ip[3]));
+inline std::string IPv4ToString(const std::array<uint8_t, 4> ip) {
+  return ToDecString(ip[0]) + "." + ToDecString(ip[1]) + "." + ToDecString(ip[2]) + "." + ToDecString(ip[3]);
 }
 
 inline std::string EncodeURIComponent(const std::string& s) {

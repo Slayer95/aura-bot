@@ -166,6 +166,10 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT(m_EnableBroadcast)
 
   INHERIT(m_IndexVirtualHostName)
+  if (m_IndexVirtualHostName.empty()) {
+    m_IndexVirtualHostName = nGameSetup->m_CreatedBy.empty() ? "Aura Bot" : nGameSetup->m_CreatedBy;
+  }
+
   INHERIT(m_LobbyVirtualHostName)
 
   INHERIT_CUSTOM(m_NotifyJoins, m_NotifyJoins)
@@ -178,7 +182,12 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)
   INHERIT_MAP_OR_CUSTOM(m_UnsafeNameHandler, m_UnsafeNameHandler, m_UnsafeNameHandler)
   INHERIT_MAP(m_PipeConsideredHarmful, m_PipeConsideredHarmful)
-  INHERIT(m_UDPEnabled)
+
+  if (nGameSetup->GetIsMirror()) {
+    m_UDPEnabled = false;
+  } else {
+    INHERIT(m_UDPEnabled)
+  }
 
   INHERIT(m_SupportedGameVersions)
   INHERIT(m_VoteKickPercentage)
