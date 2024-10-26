@@ -1291,8 +1291,10 @@ void CRealm::ResetConnection(bool Errored)
   if (m_Socket) {
     if (m_Socket->GetConnected()) {
       if (m_Aura->MatchLogLevel(Errored ? LOG_LEVEL_WARNING : LOG_LEVEL_NOTICE)) {
-        if (Errored) {
-          Print(GetLogPrefix() + "disconnected due to socket error");
+        if (m_Socket->HasFin()) {
+          Print(GetLogPrefix() + "remote terminated the connection");
+        } else if (Errored) {
+          Print(GetLogPrefix() + "disconnected due to " + m_Socket->GetErrorString());
         } else {
           Print(GetLogPrefix() + "disconnected");
         }
