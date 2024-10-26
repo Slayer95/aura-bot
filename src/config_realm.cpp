@@ -112,7 +112,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_AuthWar3Version        = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
   m_AuthExeVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
+  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
+  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", emptyString);
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
@@ -315,7 +317,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   // These are optional, since they can be figured out with bncsutil.
   optional<uint8_t> authWar3Version            = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
   optional<vector<uint8_t>> authExeVersion     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
+  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
+  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", emptyString);
 
   if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();

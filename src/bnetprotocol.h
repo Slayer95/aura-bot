@@ -52,6 +52,7 @@
 
 #define BNET_HEADER_CONSTANT 255
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -126,38 +127,38 @@ public:
   };
 
 private:
-  std::vector<uint8_t> m_ClientToken;         // set in constructor
-  std::vector<uint8_t> m_LogonType;           // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t> m_ServerToken;         // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t> m_MPQFileTime;         // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 4> m_ClientToken;         // set in constructor
+  std::array<uint8_t, 4> m_LogonType;           // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 4> m_ServerToken;         // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 8> m_MPQFileTime;         // set in RECEIVE_SID_AUTH_INFO
   std::vector<uint8_t> m_IX86VerFileName;     // set in RECEIVE_SID_AUTH_INFO
   std::vector<uint8_t> m_ValueStringFormula;  // set in RECEIVE_SID_AUTH_INFO
   std::vector<uint8_t> m_KeyState;            // set in RECEIVE_SID_AUTH_CHECK
   std::vector<uint8_t> m_KeyStateDescription; // set in RECEIVE_SID_AUTH_CHECK
-  std::vector<uint8_t> m_Salt;                // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::vector<uint8_t> m_ServerPublicKey;     // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 32> m_Salt;             // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 32> m_ServerPublicKey;  // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
   std::vector<uint8_t> m_UniqueName;          // set in RECEIVE_SID_ENTERCHAT
 
 public:
   CBNETProtocol();
   ~CBNETProtocol();
 
-  inline std::vector<uint8_t> GetClientToken() const { return m_ClientToken; }
-  inline std::vector<uint8_t> GetLogonType() const { return m_LogonType; }
-  inline std::vector<uint8_t> GetServerToken() const { return m_ServerToken; }
-  inline std::vector<uint8_t> GetMPQFileTime() const { return m_MPQFileTime; }
-  inline std::vector<uint8_t> GetIX86VerFileName() const { return m_IX86VerFileName; }
-  inline std::string          GetIX86VerFileNameString() const { return std::string(begin(m_IX86VerFileName), end(m_IX86VerFileName)); }
-  inline std::vector<uint8_t> GetValueStringFormula() const { return m_ValueStringFormula; }
-  inline std::string          GetValueStringFormulaString() const { return std::string(begin(m_ValueStringFormula), end(m_ValueStringFormula)); }
-  inline std::vector<uint8_t> GetKeyState() const { return m_KeyState; }
-  inline std::string          GetKeyStateDescription() const { return std::string(begin(m_KeyStateDescription), end(m_KeyStateDescription)); }
-  inline std::vector<uint8_t> GetSalt() const { return m_Salt; }
-  inline std::vector<uint8_t> GetServerPublicKey() const { return m_ServerPublicKey; }
-  inline std::vector<uint8_t> GetUniqueName() const { return m_UniqueName; }
+  inline const std::array<uint8_t, 4>&  GetClientToken() const { return m_ClientToken; }
+  inline const std::array<uint8_t, 4>&  GetLogonType() const { return m_LogonType; }
+  inline const std::array<uint8_t, 4>&  GetServerToken() const { return m_ServerToken; }
+  inline const std::array<uint8_t, 8>&  GetMPQFileTime() const { return m_MPQFileTime; }
+  inline const std::vector<uint8_t>     GetIX86VerFileName() const { return m_IX86VerFileName; }
+  inline const std::string&             GetIX86VerFileNameString() const { return std::string(begin(m_IX86VerFileName), end(m_IX86VerFileName)); }
+  inline const std::vector<uint8_t>&    GetValueStringFormula() const { return m_ValueStringFormula; }
+  inline const std::string&             GetValueStringFormulaString() const { return std::string(begin(m_ValueStringFormula), end(m_ValueStringFormula)); }
+  inline const std::vector<uint8_t>&    GetKeyState() const { return m_KeyState; }
+  inline const std::string&             GetKeyStateDescription() const { return std::string(begin(m_KeyStateDescription), end(m_KeyStateDescription)); }
+  inline const std::array<uint8_t, 32>& GetSalt() const { return m_Salt; }
+  inline const std::array<uint8_t, 32>& GetServerPublicKey() const { return m_ServerPublicKey; }
+  inline const std::vector<uint8_t>&    GetUniqueName() const { return m_UniqueName; }
 
-  inline size_t               GetMessageSize(const std::vector<uint8_t> message) const { return message.size(); }
-  inline size_t               GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) const { return message.size() + name.size(); }
+  inline size_t                         GetMessageSize(const std::vector<uint8_t> message) const { return message.size(); }
+  inline size_t                         GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) const { return message.size() + name.size(); }
       
   // receive functions
 
@@ -196,10 +197,10 @@ public:
   std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);
   std::vector<uint8_t> SEND_SID_NETGAMEPORT(uint16_t serverPort);
   std::vector<uint8_t> SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const std::string& CountryShort, const std::string& country);
-  std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& exeVersion, const std::vector<uint8_t>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const std::string& exeInfo, const std::string& keyOwnerName);
-  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& clientPublicKey, const std::string& accountName);
-  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& clientPasswordProof);
-  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::vector<uint8_t>& clientPasswordProof);
+  std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const std::string& exeInfo, const std::string& keyOwnerName);
+  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::array<uint8_t, 32>& clientPublicKey, const std::string& accountName);
+  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 20>& clientPasswordProof);
+  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::array<uint8_t, 20>& clientPasswordProof);
   std::vector<uint8_t> SEND_SID_FRIENDLIST();
   std::vector<uint8_t> SEND_SID_CLANMEMBERLIST();
 
@@ -216,20 +217,20 @@ private:
 class CIncomingGameHost
 {
 private:
-  std::string          m_GameName;
-  std::vector<uint8_t> m_IP;
-  std::vector<uint8_t> m_HostCounter;
-  uint16_t             m_Port;
+  std::string                 m_GameName;
+  std::array<uint8_t, 4>      m_IP;
+  std::array<uint8_t, 4>      m_HostCounter;
+  uint16_t                    m_Port;
 
 public:
-  CIncomingGameHost(std::vector<uint8_t> nIP, uint16_t nPort, std::string nGameName, std::vector<uint8_t> nHostCounter);
+  CIncomingGameHost(std::array<uint8_t, 4>& nIP, uint16_t nPort, std::string& nGameName, std::array<uint8_t, 4>& nHostCounter);
   ~CIncomingGameHost();
 
-  std::string                 GetIPString() const;
-  inline std::vector<uint8_t> GetIP() const { return m_IP; }
-  inline uint16_t             GetPort() const { return m_Port; }
-  inline std::string          GetGameName() const { return m_GameName; }
-  inline std::vector<uint8_t> GetHostCounter() const { return m_HostCounter; }
+  std::string                           GetIPString() const;
+  inline const std::array<uint8_t, 4>&  GetIP() const { return m_IP; }
+  inline const uint16_t&                GetPort() const { return m_Port; }
+  inline const std::string&             GetGameName() const { return m_GameName; }
+  inline const std::array<uint8_t, 4>&  GetHostCounter() const { return m_HostCounter; }
 };
 
 //

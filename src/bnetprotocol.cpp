@@ -47,12 +47,13 @@
 #include "util.h"
 #include "includes.h"
 
+#include <algorithm>
 #include <utility>
 
 using namespace std;
 
 CBNETProtocol::CBNETProtocol()
-  : m_ClientToken(vector<uint8_t>{220, 1, 203, 7})
+  : m_ClientToken(array<uint8_t, 4>{220, 1, 203, 7})
 {
 }
 
@@ -95,24 +96,23 @@ CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>
 
     if (ByteArrayToUInt32(GamesFound, false) > 0 && data.size() >= 25)
     {
-      const vector<uint8_t> Port     = vector<uint8_t>(begin(data) + 18, begin(data) + 20);
-      const vector<uint8_t> IP       = vector<uint8_t>(begin(data) + 20, begin(data) + 24);
+      uint16_t Port = ByteArrayToUInt16(data, false, 18);
+
+      array<uint8_t, 4> IP;
+      copy_n(begin(data) + 20, 4, IP);
+
       const vector<uint8_t> GameName = ExtractCString(data, 24);
       if (GameName.size() > 0xFF) return nullptr;
 
-      if (data.size() >= GameName.size() + 35)
-      {
-        const vector<uint8_t> HostCounter =
-          {
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 27, true),
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 29, true),
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 31, true),
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 33, true)};
+      if (data.size() >= GameName.size() + 35) {
+        array<uint8_t, 4> HostCounter = {
+          ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 27, true),
+          ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 29, true),
+          ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 31, true),
+          ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 33, true)
+        };
 
-        return new CIncomingGameHost(IP,
-                                     ByteArrayToUInt16(Port, false),
-                                     string(begin(GameName), end(GameName)),
-                                     HostCounter);
+        return new CIncomingGameHost(IP, Port, string(begin(GameName), end(GameName)), HostCounter);
       }
     }
   }
@@ -233,9 +233,9 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 25)
   {
-    m_LogonType          = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-    m_ServerToken        = vector<uint8_t>(begin(data) + 8, begin(data) + 12);
-    m_MPQFileTime        = vector<uint8_t>(begin(data) + 16, begin(data) + 24);
+    copy_n(begin(data) + 4, 4, m_LogonType);
+    copy_n(begin(data) + 8, 4, m_ServerToken);
+    copy_n(begin(data) + 16, 8, m_MPQFileTime);
     m_IX86VerFileName    = ExtractCString(data, 24);
     if (m_IX86VerFileName.size() > 0xFFFFFF00) return false; // WTF
     m_ValueStringFormula = ExtractCString(data, static_cast<uint32_t>(m_IX86VerFileName.size()) + 25);
@@ -281,12 +281,10 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 8)
   {
-    const vector<uint8_t> status = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-
-    if (ByteArrayToUInt32(status, false) == 0 && data.size() >= 72)
+    if (ByteArrayToUInt32(data, false, 4) == 0 && data.size() >= 72)
     {
-      m_Salt            = vector<uint8_t>(begin(data) + 8, begin(data) + 40);
-      m_ServerPublicKey = vector<uint8_t>(begin(data) + 40, begin(data) + 72);
+      copy_n(data.begin() + 8, 32, m_Salt.begin());
+      copy_n(data.begin() + 40, 32, m_ServerPublicKey.begin());
       return true;
     }
   }
@@ -695,91 +693,62 @@ vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID
   return packet;
 }
 
-vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_CHECK(const vector<uint8_t>& clientToken, const vector<uint8_t>& exeVersion, const vector<uint8_t>& exeVersionHash, const vector<uint8_t>& keyInfoROC, const vector<uint8_t>& keyInfoTFT, const string& exeInfo, const string& keyOwnerName)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_CHECK(const array<uint8_t, 4>& clientToken, const array<uint8_t, 4>& exeVersion, const array<uint8_t, 4>& exeVersionHash, const vector<uint8_t>& keyInfoROC, const vector<uint8_t>& keyInfoTFT, const string& exeInfo, const string& keyOwnerName)
 {
   vector<uint8_t> packet;
-
-  if (clientToken.size() == 4 && exeVersion.size() == 4 && exeVersionHash.size() == 4)
-  {
-    uint32_t NumKeys = 2;
-
-    packet.push_back(BNET_HEADER_CONSTANT);      // BNET header constant
-    packet.push_back(SID_AUTH_CHECK);            // SID_AUTH_CHECK
-    packet.push_back(0);                         // packet length will be assigned later
-    packet.push_back(0);                         // packet length will be assigned later
-    AppendByteArrayFast(packet, clientToken);    // Client Token
-    AppendByteArrayFast(packet, exeVersion);     // EXE Version
-    AppendByteArrayFast(packet, exeVersionHash); // EXE Version Hash
-    AppendByteArray(packet, NumKeys, false);     // number of keys in this packet
-    AppendByteArray(packet, static_cast<uint32_t>(0), false); // boolean Using Spawn (32 bit)
-    AppendByteArrayFast(packet, keyInfoROC);     // ROC Key Info
-    AppendByteArrayFast(packet, keyInfoTFT);     // TFT Key Info
-    AppendByteArrayFast(packet, exeInfo);        // EXE Info
-    AppendByteArrayFast(packet, keyOwnerName);   // CD Key Owner Name
-    AssignLength(packet);
-  }
-  else
-    Print("[BNETPROTO] invalid parameters passed to SEND_SID_AUTH_CHECK");
-
+ uint32_t NumKeys = 2;
+  packet.push_back(BNET_HEADER_CONSTANT);      // BNET header constant
+  packet.push_back(SID_AUTH_CHECK);            // SID_AUTH_CHECK
+  packet.push_back(0);                         // packet length will be assigned later
+  packet.push_back(0);                         // packet length will be assigned later
+  AppendByteArrayFast(packet, clientToken);    // Client Token
+  AppendByteArrayFast(packet, exeVersion);     // EXE Version
+  AppendByteArrayFast(packet, exeVersionHash); // EXE Version Hash
+  AppendByteArray(packet, NumKeys, false);     // number of keys in this packet
+  AppendByteArray(packet, static_cast<uint32_t>(0), false); // boolean Using Spawn (32 bit)
+  AppendByteArrayFast(packet, keyInfoROC);     // ROC Key Info
+  AppendByteArrayFast(packet, keyInfoTFT);     // TFT Key Info
+  AppendByteArrayFast(packet, exeInfo);        // EXE Info
+  AppendByteArrayFast(packet, keyOwnerName);   // CD Key Owner Name
+  AssignLength(packet);
   return packet;
 }
 
-vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& clientPublicKey, const string& accountName)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(const array<uint8_t, 32>& clientPublicKey, const string& accountName)
 {
   vector<uint8_t> packet;
-
-  if (clientPublicKey.size() == 32)
-  {
-    packet.push_back(BNET_HEADER_CONSTANT);       // BNET header constant
-    packet.push_back(SID_AUTH_ACCOUNTLOGON);      // SID_AUTH_ACCOUNTLOGON
-    packet.push_back(0);                          // packet length will be assigned later
-    packet.push_back(0);                          // packet length will be assigned later
-    AppendByteArrayFast(packet, clientPublicKey); // Client Key
-    AppendByteArrayFast(packet, accountName);     // Account Name
-    AssignLength(packet);
-  }
-  else
-    Print("[BNETPROTO] invalid parameters passed to SEND_SID_AUTH_ACCOUNTLOGON");
-
+  packet.push_back(BNET_HEADER_CONSTANT);       // BNET header constant
+  packet.push_back(SID_AUTH_ACCOUNTLOGON);      // SID_AUTH_ACCOUNTLOGON
+  packet.push_back(0);                          // packet length will be assigned later
+  packet.push_back(0);                          // packet length will be assigned later
+  AppendByteArrayFast(packet, clientPublicKey); // Client Key
+  AppendByteArrayFast(packet, accountName);     // Account Name
+  AssignLength(packet);
   return packet;
 }
 
-vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(const vector<uint8_t>& clientPasswordProof)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(const array<uint8_t, 20>& clientPasswordProof)
 {
   vector<uint8_t> packet;
-
-  if (clientPasswordProof.size() == 20)
-  {
-    packet.push_back(BNET_HEADER_CONSTANT);           // BNET header constant
-    packet.push_back(SID_AUTH_ACCOUNTLOGONPROOF);     // SID_AUTH_ACCOUNTLOGONPROOF
-    packet.push_back(0);                              // packet length will be assigned later
-    packet.push_back(0);                              // packet length will be assigned later
-    AppendByteArrayFast(packet, clientPasswordProof); // Client Password Proof
-    AssignLength(packet);
-  }
-  else
-    Print("[BNETPROTO] invalid parameters passed to SEND_SID_AUTH_ACCOUNTLOGON");
-
+  packet.push_back(BNET_HEADER_CONSTANT);           // BNET header constant
+  packet.push_back(SID_AUTH_ACCOUNTLOGONPROOF);     // SID_AUTH_ACCOUNTLOGONPROOF
+  packet.push_back(0);                              // packet length will be assigned later
+  packet.push_back(0);                              // packet length will be assigned later
+  AppendByteArrayFast(packet, clientPasswordProof); // Client Password Proof
+  AssignLength(packet);
   return packet;
 }
 
-vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userName, const vector<uint8_t>& clientPasswordProof)
+vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userName, const array<uint8_t, 20>& clientPasswordProof)
 {
   vector<uint8_t> packet;
-
-  if (clientPasswordProof.size() == 20)
-  {
-    packet.push_back(BNET_HEADER_CONSTANT);           // BNET header constant
-    packet.push_back(SID_AUTH_ACCOUNTSIGNUP);         // SID_AUTH_ACCOUNTSIGNUP
-    packet.push_back(0);                              // packet length will be assigned later
-    packet.push_back(0);                              // packet length will be assigned later
-    AppendByteArrayFast(packet, clientPasswordProof); // Client Password Proof
-    AppendByteArrayFast(packet, userName);
-    AssignLength(packet);
-  }
-  else
-    Print("[BNETPROTO] invalid parameters passed to SEND_SID_AUTH_ACCOUNTLOGON");
-
+  packet.push_back(BNET_HEADER_CONSTANT);           // BNET header constant
+  packet.push_back(SID_AUTH_ACCOUNTSIGNUP);         // SID_AUTH_ACCOUNTSIGNUP
+  packet.push_back(0);                              // packet length will be assigned later
+  packet.push_back(0);                              // packet length will be assigned later
+  AppendByteArrayFast(packet, clientPasswordProof); // Client Password Proof
+  AppendByteArrayFast(packet, userName);
+  AssignLength(packet);
   return packet;
 }
 
@@ -808,7 +777,7 @@ bool CBNETProtocol::ValidateLength(const vector<uint8_t>& content)
 // CIncomingGameHost
 //
 
-CIncomingGameHost::CIncomingGameHost(vector<uint8_t> nIP, uint16_t nPort, string nGameName, vector<uint8_t> nHostCounter)
+CIncomingGameHost::CIncomingGameHost(array<uint8_t, 4>& nIP, uint16_t nPort, string& nGameName, array<uint8_t, 4>& nHostCounter)
   : m_GameName(move(nGameName)),
     m_IP(move(nIP)),
     m_HostCounter(move(nHostCounter)),

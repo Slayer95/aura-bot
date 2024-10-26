@@ -147,23 +147,23 @@ optional<uint8_t> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
   return version;
 }
 
-bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const uint8_t war3Version)
+bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken, const uint8_t war3Version)
 {
   m_KeyInfoROC     = CreateKeyInfo(realmConfig->m_CDKeyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
   m_KeyInfoTFT     = CreateKeyInfo(realmConfig->m_CDKeyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
 
   if (m_KeyInfoROC.size() != 36)
-    Print("[BNCSUI] unable to create ROC key info - invalid ROC key");
+    Print("[BNCS] unable to create ROC key info - invalid ROC key");
 
   if (m_KeyInfoTFT.size() != 36)
-    Print("[BNCSUI] unable to create TFT key info - invalid TFT key");
+    Print("[BNCS] unable to create TFT key info - invalid TFT key");
 
   if (realmConfig->m_AuthUseCustomVersion) {
     if (realmConfig->m_AuthExeVersion.has_value()) {
-      SetEXEVersion(realmConfig->m_AuthExeVersion.value());
+      copy_n(realmConfig->m_AuthExeVersion.value().begin(), 4, m_EXEVersion);
     }
     if (realmConfig->m_AuthExeVersionHash.has_value()) {
-      SetEXEVersionHash(realmConfig->m_AuthExeVersionHash.value());
+      copy_n(realmConfig->m_AuthExeVersionHash.value().begin(), 4, m_EXEVersionHash);
     }
     if (!realmConfig->m_AuthExeInfo.empty()) {
       SetEXEInfo(realmConfig->m_AuthExeInfo);
@@ -213,20 +213,20 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
 
     buffer.resize(requiredSize);
     m_EXEInfo        = buffer.data();
-    m_EXEVersion     = CreateByteArray(EXEVersion, false);
-    m_EXEVersionHash = CreateByteArray(int64_t(EXEVersionHash), false);
+    m_EXEVersion     = CreateFixedByteArray(EXEVersion, false);
+    m_EXEVersionHash = CreateFixedByteArray(int64_t(EXEVersionHash), false);
 
     return true;
   }
   else
   {
     if (FileWar3EXE.empty())
-      Print("[BNCSUI] unable to open War3EXE [" + PathToString(FileWar3EXE) + "]");
+      Print("[BNCS] unable to open War3EXE [" + PathToString(FileWar3EXE) + "]");
 
     if (FileStormDLL.empty() && war3Version < 29)
-      Print("[BNCSUI] unable to open StormDLL [" + PathToString(FileStormDLL) + "]");
+      Print("[BNCS] unable to open StormDLL [" + PathToString(FileStormDLL) + "]");
     if (FileGameDLL.empty() && war3Version < 29)
-      Print("[BNCSUI] unable to open GameDLL [" + PathToString(FileGameDLL) + "]");
+      Print("[BNCS] unable to open GameDLL [" + PathToString(FileGameDLL) + "]");
   }
 
   return false;
@@ -238,17 +238,17 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_ACCOUNTLOGON()
 
   char buf[32];
   (static_cast<NLS*>(m_NLS))->getPublicKey(buf);
-  m_ClientKey = CreateByteArray(reinterpret_cast<uint8_t*>(buf), 32);
+  copy_n(buf, 32, m_ClientKey);
   return true;
 }
 
-bool CBNCSUtilInterface::HELP_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& salt, const std::vector<uint8_t>& serverKey)
+bool CBNCSUtilInterface::HELP_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 32>& salt, const std::array<uint8_t, 32>& serverKey)
 {
   // set m_M1
 
   char buf[20];
   (static_cast<NLS*>(m_NLS))->getClientSessionKey(buf, string(begin(salt), end(salt)).c_str(), string(begin(serverKey), end(serverKey)).c_str());
-  m_M1 = CreateByteArray(reinterpret_cast<uint8_t*>(buf), 20);
+  copy_n(buf, 20, m_M1.begin());
   return true;
 }
 
@@ -258,7 +258,7 @@ bool CBNCSUtilInterface::HELP_PvPGNPasswordHash(const string& userPassword)
 
   char buf[20];
   hashPassword(userPassword.c_str(), buf);
-  m_PvPGNPasswordHash = CreateByteArray(reinterpret_cast<uint8_t*>(buf), 20);
+  copy_n(buf, 20, m_PvPGNPasswordHash.begin());
   return true;
 }
 

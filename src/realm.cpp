@@ -276,21 +276,13 @@ void CRealm::Update(void* fd, void* send_fd)
 
               bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Config, m_Protocol->GetValueStringFormulaString(), m_Protocol->GetIX86VerFileNameString(), m_Protocol->GetClientToken(), m_Protocol->GetServerToken(), m_Aura->m_GameVersion);
               if (versionSuccess) {
-                if (!m_BNCSUtil->CheckValidEXEVersion()) {
-                  m_BNCSUtil->SetEXEVersion(m_BNCSUtil->GetDefaultEXEVersion());
-                  PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "defaulting to <global_realm.auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetDefaultEXEVersion()) + ">")
-                }
-                if (!m_BNCSUtil->CheckValidEXEVersionHash()) {
-                  m_BNCSUtil->SetEXEVersionHash(m_BNCSUtil->GetDefaultEXEVersionHash());
-                  PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "defaulting to <global_realm.auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetDefaultEXEVersionHash()) + ">")
-                }
                 if (!m_BNCSUtil->CheckValidEXEInfo()) {
                   m_BNCSUtil->SetEXEInfo(m_BNCSUtil->GetDefaultEXEInfo());
                   PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "defaulting to <global_realm.auth_exe_info = " + m_BNCSUtil->GetDefaultEXEInfo() + ">")
                 }
 
-                const vector<uint8_t>& exeVersion = m_BNCSUtil->GetEXEVersion();
-                const vector<uint8_t>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
+                const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
+                const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
                 const string& exeInfo = m_BNCSUtil->GetEXEInfo();
 
                 PRINT_IF(LOG_LEVEL_DEBUG,
