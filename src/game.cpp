@@ -7099,12 +7099,14 @@ bool CGame::GetIsReserved(const string& name) const
 
 bool CGame::GetIsProxyReconnectable() const
 {
-  return 0 != (m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Map->GetProxyReconnect());
+  if (m_IsMirror) return 0 != m_Config->m_ReconnectionMode;
+  return 0 != (m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Config->m_ReconnectionMode);
 }
 
 bool CGame::GetIsProxyReconnectableLong() const
 {
-  return 0 != ((m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Map->GetProxyReconnect()) & RECONNECT_ENABLED_GPROXY_EXTENDED);
+  if (m_IsMirror) return 0 != (m_Config->m_ReconnectionMode & RECONNECT_ENABLED_GPROXY_EXTENDED);
+  return 0 != ((m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Config->m_ReconnectionMode) & RECONNECT_ENABLED_GPROXY_EXTENDED);
 }
 
 bool CGame::IsDownloading() const

@@ -124,6 +124,7 @@ public:
   std::vector<uint8_t>                  m_GameCrossplayVersions;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;
+  std::optional<std::string>            m_GameReconnectionMode;
   std::optional<std::string>            m_GameMapAlias;
   std::optional<std::string>            m_GameDisplayMode;
   std::optional<std::string>            m_GameIPFloodHandler;
@@ -151,6 +152,7 @@ public:
   // Parsing stuff
   uint8_t Parse(const int argc, char** argv);
   uint8_t GetGameSearchType() const;
+  uint8_t GetGameReconnectionMode() const;
   uint8_t GetGameDisplayType() const;
   uint8_t GetGameIPFloodHandler() const;
   uint8_t GetGameUnsafeNameHandler() const;

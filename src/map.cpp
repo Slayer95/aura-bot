@@ -72,7 +72,6 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
     m_MapFilterObs(MAPFILTER_OBS_NONE),
     m_MapMPQLoaded(false),
     m_MapMPQErrored(false),
-    m_ProxyReconnect(RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED),
     m_UseStandardPaths(false),
     m_SkipVersionCheck(skipVersionCheck),
     m_HMCMode(W3HMC_MODE_DISABLED)
@@ -1106,8 +1105,9 @@ void CMap::Load(CConfig* CFG)
     m_Latency = CFG->GetUint16("map.bot.latency", 100);
     CFG->FailIfErrorLast();
   }
-  if (CFG->Exists("map.proxy_reconnect")) {
-    m_ProxyReconnect = CFG->GetUint8("map.proxy_reconnect", RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED);
+  if (CFG->Exists("map.reconnection.mode")) {
+    m_ReconnectionMode = CFG->GetStringIndex("map.reconnection.mode", {"disabled", "basic", "extended"}, RECONNECT_DISABLED);
+    if (m_ReconnectionMode.value() == RECONNECT_ENABLED_GPROXY_EXTENDED) m_ReconnectionMode = m_ReconnectionMode.value() | RECONNECT_ENABLED_GPROXY_BASIC;
     CFG->FailIfErrorLast();
   }
   if (CFG->Exists("map.hosting.ip_filter.flood_handler")) {

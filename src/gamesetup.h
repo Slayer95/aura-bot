@@ -213,6 +213,7 @@ public:
   std::optional<uint32_t>                         m_LobbyCountDownStartValue;
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
+  std::optional<uint8_t>                          m_ReconnectionMode;
   std::optional<uint8_t>                          m_IPFloodHandler;
   std::optional<uint8_t>                          m_UnsafeNameHandler;
   std::optional<uint8_t>                          m_BroadcastErrorHandler;
@@ -342,6 +343,7 @@ public:
   void SetSupportedGameVersions(const std::vector<uint8_t>& nVersions) { m_SupportedGameVersions = nVersions; }
   void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
   void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
+  void SetReconnectionMode(const uint8_t nValue) { m_ReconnectionMode = nValue;}
   void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
   void SetUnsafeNameHandler(const uint8_t nValue) { m_UnsafeNameHandler = nValue;}
   void SetBroadcastErrorHandler(const uint8_t nValue) { m_BroadcastErrorHandler = nValue;}

@@ -141,6 +141,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--latency-max-frames", m_GameLatencyMaxFrames, "Sets a maximum amount of frames clients may fall behind. When exceeded, the lag screen shows up.");
   app.add_option("--latency-safe-frames", m_GameLatencySafeFrames, "Sets a frame difference clients must catch up to in order for the lag screen to go away.");
   app.add_flag(  "--latency-normalize,--no-latency-normalize{false}", m_GameSyncNormalize, "Whether Aura tries to automatically fix some game-start lag issues.");
+  app.add_option("--reconnection", m_GameReconnectionMode, "Customizes GProxy support for the hosted game. Values: disabled, basic, extended.")->check(CLI::IsMember({"disabled", "basic", "extended"}));
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_option("--crossplay", m_GameCrossplayVersions, "Adds support for game clients on the given version to crossplay. Repeatable.");
@@ -252,6 +253,23 @@ uint8_t CCLI::GetGameSearchType() const
     searchType = SEARCH_TYPE_ONLY_FILE;
   }
   return searchType;
+}
+
+uint8_t CCLI::GetGameReconnectionMode() const
+{
+  uint8_t reconnectionMode = RECONNECT_DISABLED;
+  if (m_GameDisplayMode.has_value()) {
+    if (m_GameDisplayMode.value() == "disabled") {
+      reconnectionMode = RECONNECT_DISABLED;
+    } else if (m_GameDisplayMode.value() == "basic") {
+      reconnectionMode = RECONNECT_ENABLED_GPROXY_BASIC;
+    } else if (m_GameDisplayMode.value() == "extended") {
+      reconnectionMode = RECONNECT_ENABLED_GPROXY_EXTENDED | RECONNECT_ENABLED_GPROXY_BASIC;
+    } else {
+      reconnectionMode = GAME_NONE;
+    }
+  }
+  return reconnectionMode;
 }
 
 uint8_t CCLI::GetGameDisplayType() const

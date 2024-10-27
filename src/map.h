@@ -168,6 +168,7 @@ public:
   std::optional<bool>                   m_HideLobbyNames;
   std::optional<uint8_t>                m_HideInGameNames;
   std::optional<bool>                   m_LogCommands;
+  std::optional<uint8_t>                m_ReconnectionMode;
   std::optional<uint8_t>                m_IPFloodHandler;
   std::optional<uint8_t>                m_UnsafeNameHandler;
   std::optional<uint8_t>                m_BroadcastErrorHandler;
@@ -209,7 +210,6 @@ private:
   std::array<uint8_t, 4>          m_MapContentMismatch;
   bool                            m_MapMPQLoaded;
   bool                            m_MapMPQErrored;
-  uint8_t                         m_ProxyReconnect;
   bool                            m_UseStandardPaths;
   bool                            m_SkipVersionCheck;
   bool                            m_Valid;
@@ -266,7 +266,6 @@ public:
   uint8_t                           GetHMCSlot() const { return m_HMCSlot; }
   std::string                       GetHMCPlayerName() const { return m_HMCPlayerName; }
   uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
-  uint8_t                           GetProxyReconnect() const { return m_ProxyReconnect; }
   bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
   void                              ClearMapData() { m_MapData.clear(); }
   bool                              SetTeamsLocked(const bool nEnable);

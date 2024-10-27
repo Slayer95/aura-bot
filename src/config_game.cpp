@@ -95,6 +95,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_CheckJoinable             = CFG.GetBool("monitor.hosting.on_start.check_connectivity", false);
   m_ExtraDiscoveryAddresses   = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
   m_ExtraDiscoveryStrict      = CFG.GetBool("net.game_discovery.udp.extra_clients.strict", false);
+  m_ReconnectionMode          = RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED;
 
   m_PrivateCmdToken           = CFG.GetString("hosting.commands.trigger", "!");
   if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
@@ -161,6 +162,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT(m_ExtraDiscoveryAddresses)
   // TODO: Implement m_ExtraDiscoveryStrict
   INHERIT(m_ExtraDiscoveryStrict)
+  INHERIT_MAP_OR_CUSTOM(m_ReconnectionMode, m_ReconnectionMode, m_ReconnectionMode)
 
   INHERIT(m_PrivateCmdToken)
   INHERIT(m_BroadcastCmdToken)
