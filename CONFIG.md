@@ -169,19 +169,19 @@ Config
 
 ## \`global_realm.auth_exe_version\`
 - Type: uint8vector
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.auth_exe_version\`
 - Type: uint8vector
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.auth_exe_version_hash\`
 - Type: uint8vector
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.auth_exe_version_hash\`
 - Type: uint8vector
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.auth_game_version\`
 - Type: uint8
@@ -198,6 +198,16 @@ Config
 
 ## \`global_realm.auth_password_hash_type\`
 - Type: enum
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.auto_register\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.auto_register\`
+- Type: bool
 - Default value: Empty
 - Error handling: Use default value
 
@@ -481,6 +491,16 @@ Config
 - Default value: true
 - Error handling: Use default value
 
+## \`global_realm.main\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`global_realm.main\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.map_transfers.max_size\`
 - Type: int
 - Default value: Empty
@@ -727,6 +747,11 @@ Config
 - Default value: 8
 - Error handling: Use default value
 
+## \`hosting.log_commands\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
 ## \`hosting.log_delay\`
 - Type: uint32
 - Default value: 180
@@ -787,6 +812,11 @@ Config
 - Default value: 20
 - Error handling: Use default value
 
+## \`hosting.name_filter.is_pipe_harmful\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`hosting.name_filter.unsafe_handler\`
 - Type: enum
 - Default value: ON_UNSAFE_NAME_DENY
@@ -805,6 +835,11 @@ Config
 ## \`hosting.nicknames.hide_lobby\`
 - Type: bool
 - Default value: false
+- Error handling: Use default value
+
+## \`hosting.realm_broadcast.error_handler\`
+- Type: enum
+- Default value: ON_ADV_ERROR_EXIT_ON_MAX_ERRORS
 - Error handling: Use default value
 
 ## \`hosting.self.virtual_player.name\`

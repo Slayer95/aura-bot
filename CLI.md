@@ -571,6 +571,10 @@ This option sets Aura to use game mirroring mode. In this mode, the bot won't ho
 instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms. The actual host is identified 
 by their IPv4 address and PORT. The game ID, also known as "host counter", should be provided in hexadecimal.
 
+When mirroring games, the following parameters are likely to also be useful:
+- `--exclude`: In order to avoid duplicate broadcasts in the source PvPGN realm, if any.
+- `--reconnection`: In order to properly communicate reconnection support to clients using GProxy.
+
 Aura will remain in game mirroring mode until the process finishes.
 
 ## \`--observers \<OBSERVER\>\`
@@ -745,6 +749,20 @@ the provided amount of updates, one per game tick.
 This option is equivalent to ``<net.stop_lag.sync_limit>`` in `config.ini`
 
 This option is equivalent to ``<map.net.stop_lag.sync_limit>`` in map configuration
+
+## \`--reconnection \<MODE\>\`
+
+This parameter customizes the reconnection support, if any, for the hosted game. For this parameter to be effective,
+related config.ini entries must also be enabled.
+
+**Options:**
+
+- disabled: GProxy reconnection not supported for the game.
+- basic: GProxy classic reconnection supported. Requires ``<net.tcp_extensions.gproxy.basic.enabled = yes>``
+- extended: GProxyDLL extended time reconnection supported, additionally to classic reconnection.
+Requires <net.tcp_extensions.gproxy.long.enabled = yes>
+
+This option is equivalent to ``<map.reconnection.mode>`` in map configuration.
 
 ## \`--start-countdown-interval \<VALUE\>\`
 
