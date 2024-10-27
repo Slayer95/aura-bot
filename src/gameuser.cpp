@@ -299,7 +299,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_RealmHostName(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
     m_TotalPacketsSent(0),
-    m_TotalPacketsReceived(1),
+    m_TotalPacketsReceived(0),
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_QuitGame(false),
     m_PongCounter(0),
