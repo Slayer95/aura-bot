@@ -1023,8 +1023,6 @@ void CNet::ReportHealthCheck()
       } else {
         ResultText = "Offline" + listedSuffix;
       }
-    } else {
-      
     }
     ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
     if (!m_HealthCheckContext->GetWritesToStdout()) {
