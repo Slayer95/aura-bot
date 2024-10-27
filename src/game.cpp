@@ -1076,7 +1076,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // update users
 
   for (auto i = begin(m_Users); i != end(m_Users);) {
-    if ((*i)->Update(fd, GAME_USER_TIMEOUT)) {
+    if ((*i)->Update(fd, (*i)->GetGProxyAny() ? GAME_USER_TIMEOUT_RECONNECTABLE : GAME_USER_TIMEOUT_VANILLA)) {
       EventUserDeleted(*i, fd, send_fd);
       m_Aura->m_Net->OnUserKicked(*i);
       delete *i;
@@ -3412,6 +3412,7 @@ void CGame::ReportPlayerDisconnected(CGameUser* user)
       m_Lagging = true;
       m_StartedLaggingTime = Time;
       m_LastLagScreenResetTime = Time;
+      m_LastLagScreenTime = Time;
     }
 
     // Report lagging users:

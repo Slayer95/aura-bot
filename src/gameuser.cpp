@@ -710,7 +710,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
     }
   } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
     // check for socket timeouts
-    // if we don't receive anything from a player for 30 seconds we can assume they've dropped
+    // if we don't receive anything from a player for 70 seconds (20 seconds if reconnectable) we can assume they've dropped
     // this works because in the lobby we send pings every 5 seconds and expect a response to each one
     // and in the game the Warcraft 3 client sends keepalives frequently (at least once per second it looks like)
     m_Game->EventUserDisconnectTimedOut(this);
