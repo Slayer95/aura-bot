@@ -82,6 +82,15 @@ bool CGameTestConnection::GetIsRealmOnline() const
   return realm->GetLoggedIn();
 }
 
+bool CGameTestConnection::GetIsRealmListed() const
+{
+  if (m_RealmInternalId < 0x10) return true;
+  string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
+  CRealm* realm = m_Aura->GetRealmByInputId(realmId);
+  if (realm == nullptr) return false;
+  return realm->GetIsGameBroadcastSucceeded();
+}
+
 uint32_t CGameTestConnection::GetHostCounter() const
 {
   uint32_t hostCounter = m_Aura->m_CurrentLobby->GetHostCounter();
@@ -997,19 +1006,25 @@ void CNet::ReportHealthCheck()
   vector<uint16_t> FailPorts;
   bool isIPv6Reachable = false;
   for (auto& testConnection : m_HealthCheckClients) {
+    string listedSuffix;
+    if (!testConnection->GetIsRealmListed()) {
+      listedSuffix = ", unlisted";
+    }
     bool success = false;
     string ResultText;
-    if (testConnection->GetIsRealmOnline()) {
+    if (!testConnection->GetIsRealmOnline()) {
+      ResultText = "Realm offline";
+    } else {
       if (testConnection->m_Passed.value_or(false)) {
         success = true;
-        ResultText = "OK";
+        ResultText = "OK" + listedSuffix;
       } else if (testConnection->m_CanConnect.value_or(false)) {
-        ResultText = "Error";
+        ResultText = "Error" + listedSuffix;
       } else {
-        ResultText = "Offline";
+        ResultText = "Offline" + listedSuffix;
       }
     } else {
-      ResultText = "Realm offline";
+      
     }
     ChatReport.push_back(testConnection->m_Name + " - " + ResultText);
     if (!m_HealthCheckContext->GetWritesToStdout()) {

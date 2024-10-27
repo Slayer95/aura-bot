@@ -3895,8 +3895,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("status"): {
       string message = "Status: ";
 
-      for (const auto& bnet : m_Aura->m_Realms)
-        message += "[" + bnet->GetUniqueDisplayName() + (bnet->GetLoggedIn() ? " - online] " : " - offline] ");
+      for (const auto& bnet : m_Aura->m_Realms) {
+        string statusFragment;
+        if (m_Aura->m_CurrentLobby && bnet->GetIsGameBroadcastErrored()) {
+          statusFragment = "unlisted";
+        } else if (bnet->GetLoggedIn()) {
+          statusFragment = "online";
+        } else {
+          statusFragment = "offline";
+        }
+        message += "[" + bnet->GetUniqueDisplayName() + " - " + statusFragment + "] ";
+      }
 
       if (m_Aura->m_IRC) {
         message += "[" + m_Aura->m_IRC->m_Config->m_HostName + (!m_Aura->m_IRC->m_WaitingToConnect ? " - online]" : " - offline]");

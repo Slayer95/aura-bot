@@ -1304,10 +1304,11 @@ void CRealm::ResetConnection(bool Errored)
     m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
   }
 
-  m_LoggedIn         = false;
+  m_LoggedIn = false;
   m_CurrentChannel.clear();
   m_AnchorChannel.clear();
   m_WaitingToConnect = true;
+  ResetGameBroadcastStatus();
 
   m_ChatQuotaInUse.clear();
   if (m_ChatQueueJoinCallback) {

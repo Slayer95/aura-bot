@@ -109,6 +109,7 @@ public:
   bool      Update(void* fd, void* send_fd);
   bool      QueryGameInfo();
   bool      GetIsRealmOnline() const;
+  bool      GetIsRealmListed() const;
   uint32_t  GetHostCounter() const;
   uint16_t  GetPort() const;
 
