@@ -163,6 +163,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_DownloadCounter(0),
     m_CountDownCounter(0),
     m_StartPlayers(0),
+    m_ControllersBalanced(false),
     m_ControllersReadyCount(0),
     m_ControllersNotReadyCount(0),
     m_ControllersWithMap(0),
@@ -1719,25 +1720,43 @@ void CGame::SendAllChat(const string& message) const
 
 void CGame::UpdateReadyCounters()
 {
+  const uint8_t numTeams = m_Map->GetMapNumTeams();
+  vector<uint8_t> readyControllersByTeam(numTeams, 0);
   m_ControllersWithMap = 0;
+  m_ControllersBalanced = true;
   m_ControllersReadyCount = 0;
   m_ControllersNotReadyCount = 0;
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OCCUPIED && m_Slots[i].GetTeam() != m_Map->GetVersionMaxSlots()) {
-      CGameUser* Player = GetUserFromSID(i);
-      if (!Player) {
-        ++m_ControllersWithMap;
+    if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OCCUPIED || m_Slots[i].GetTeam() == m_Map->GetVersionMaxSlots()) {
+      continue;
+    }
+    CGameUser* Player = GetUserFromSID(i);
+    if (!Player) {
+      ++m_ControllersWithMap;
+      ++m_ControllersReadyCount;
+      ++readyControllersByTeam[m_Slots[i].GetTeam()];
+    } else if (Player->GetMapReady()) {
+      ++m_ControllersWithMap;
+      if (Player->UpdateReady()) {
         ++m_ControllersReadyCount;
-      } else if (Player->GetMapReady()) {
-        ++m_ControllersWithMap;
-        if (Player->UpdateReady()) {
-          ++m_ControllersReadyCount;
-        } else {
-          ++m_ControllersNotReadyCount;
-        }
+        ++readyControllersByTeam[m_Slots[i].GetTeam()];
       } else {
         ++m_ControllersNotReadyCount;
       }
+    } else {
+      ++m_ControllersNotReadyCount;
+    }
+  }
+  uint8_t refCount = 0;
+  uint8_t i = static_cast<uint8_t>(numTeams);
+  while (i--) {
+    // allow empty teams
+    if (readyControllersByTeam[i] == 0) continue;
+    if (refCount == 0) {
+      refCount = readyControllersByTeam[i];
+    } else if (readyControllersByTeam[i] != refCount) {
+      m_ControllersBalanced = false;
+      break;
     }
   }
 }
@@ -2427,6 +2446,9 @@ bool CGame::SetLayoutOneVsAll(const CGameUser* targetPlayer)
 bool CGame::GetIsAutoStartDue() const
 {
   if (m_Users.empty() || m_CountDownStarted || m_AutoStartRequirements.empty()) {
+    return false;
+  }
+  if (GetIsCustomForces() && !m_ControllersBalanced) {
     return false;
   }
 
@@ -4814,12 +4836,7 @@ void CGame::EventUserMapReady(CGameUser* user)
     return;
   }
   user->SetMapReady(true);
-  if (!user->GetIsObserver()) {
-    ++m_ControllersWithMap;
-    if (user->UpdateReady()) {
-      ++m_ControllersReadyCount;
-    }
-  }
+  UpdateReadyCounters();
 }
 
 void CGame::EventGameStarted()
@@ -5356,6 +5373,7 @@ void CGame::Remake()
   m_DownloadCounter = 0;
   m_CountDownCounter = 0;
   m_StartPlayers = 0;
+  m_ControllersBalanced = false;
   m_ControllersReadyCount = 0;
   m_ControllersNotReadyCount = 0;
   m_ControllersWithMap = 0;

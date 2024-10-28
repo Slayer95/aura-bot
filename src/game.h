@@ -224,6 +224,7 @@ protected:
   uint32_t                       m_CountDownCounter;              // the countdown is finished when this reaches zero
   uint8_t                        m_StartPlayers;                  // number of players when the game started
   std::vector<std::pair<uint8_t, int64_t>> m_AutoStartRequirements;
+  bool                           m_ControllersBalanced;
   uint8_t                        m_ControllersReadyCount;
   uint8_t                        m_ControllersNotReadyCount;
   uint8_t                        m_ControllersWithMap;
