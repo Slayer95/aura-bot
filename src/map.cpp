@@ -1326,7 +1326,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   // Out of the box support for auto-starting maps using the Host Force + Others Force pattern.
-  if (m_MapNumTeams == 2 && !m_AutoStartRequiresBalance.has_value()) {
+  if (m_MapNumTeams == 2 && m_MapNumControllers > 2 && !m_AutoStartRequiresBalance.has_value()) {
     uint8_t refTeam = 0xFF;
     uint8_t playersRefTeam = 0;
     uint8_t i = static_cast<uint8_t>(m_Slots.size());
