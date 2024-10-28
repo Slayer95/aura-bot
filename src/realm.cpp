@@ -1294,7 +1294,7 @@ void CRealm::ResetConnection(bool Errored)
         if (m_Socket->HasFin()) {
           Print(GetLogPrefix() + "remote terminated the connection");
         } else if (Errored) {
-          Print(GetLogPrefix() + "disconnected due to " + m_Socket->GetErrorString());
+          Print(GetLogPrefix() + "disconnected - " + m_Socket->GetErrorString());
         } else {
           Print(GetLogPrefix() + "disconnected");
         }
