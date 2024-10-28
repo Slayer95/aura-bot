@@ -4984,8 +4984,10 @@ void CGame::EventGameStarted()
 
   if (!m_RestoredGame && m_Map->GetMapMetaDataEnabled()) {
     if (m_Map->GetMapType() == "dota") {
-      if (m_StartPlayers < 6 || !m_FakeUsers.empty()) {
+      if (m_StartPlayers < 6) {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] not using dotastats due to too few users")
+      } else if (!m_ControllersBalanced || !m_FakeUsers.empty()) {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] not using dotastats due to imbalance")
       } else {
         m_DotaStats = new CDotaStats(this);
       }
