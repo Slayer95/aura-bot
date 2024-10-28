@@ -69,7 +69,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_MaxPlayersLoopback        = CFG.GetUint8("hosting.ip_filter.max_loopback", 8);
   m_MaxPlayersSameIP          = CFG.GetUint8("hosting.ip_filter.max_same_ip", 8);
   m_PlayersReadyMode          = CFG.GetStringIndex("hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
-  m_AutoStartRequiresBalance  = CFG.GetStringIndex("hosting.autostart.requires_balance", true);
+  m_AutoStartRequiresBalance  = CFG.GetBool("hosting.autostart.requires_balance", true);
   m_SaveStats                 = CFG.GetBool("db.game_stats.enabled", true);
   m_SyncLimit                 = CFG.GetUint32("net.start_lag.sync_limit", 32);
   m_SyncLimitSafe             = CFG.GetUint32("net.stop_lag.sync_limit", 8);
