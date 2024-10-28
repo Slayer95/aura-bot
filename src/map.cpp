@@ -1325,6 +1325,25 @@ void CMap::Load(CConfig* CFG)
     CFG->FailIfErrorLast();
   }
 
+  // Out of the box support for auto-starting maps using the Host Force + Others Force pattern.
+  if (m_MapNumTeams == 2 && !m_AutoStartRequiresBalance.has_value()) {
+    uint8_t refTeam = 0xFF;
+    uint8_t playersRefTeam = 0;
+    uint8_t i = static_cast<uint8_t>(m_Slots.size());
+    while (i--) {
+      if (refTeam == 0xFF) {
+        refTeam = m_Slots[i].GetTeam();
+        ++playersRefTeam;
+      } else if (refTeam == m_Slots[i].GetTeam()) {
+        ++playersRefTeam;
+      }
+    }
+    if (playersRefTeam == 1 || playersRefTeam + 1 == m_Slots.size()) {
+      m_AutoStartRequiresBalance = false;
+      CFG->SetBool("map.hosting.autostart.requires_balance", false);
+    }
+  }
+
   if (!CFG->GetSuccess()) {
     m_Valid = false;
     if (m_ErrorMessage.empty()) m_ErrorMessage = "invalid map config file";
