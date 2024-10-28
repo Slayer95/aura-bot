@@ -133,6 +133,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--players-ready", m_GamePlayersReadyMode, "Customizes when Aura will consider a player to be ready to start the game. Values: fast, race, explicit.")->check(CLI::IsMember({"fast", "race", "explicit"}));
   app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");
   app.add_option("--auto-start-time", m_GameAutoStartSeconds, "Sets a time that should pass before automatically starting the game (seconds.)");
+  app.add_flag(  "--auto-start-balanced,--no-auto-start-balanced{false}", m_GameAutoStartRequiresBalance, "Whether to require balanced teams before automatically starting the game.");
   app.add_option("--auto-end-players", m_GameNumPlayersToStartGameOver, "Sets a low amount of players required for Aura to stop hosting a game.");
   app.add_option("--lobby-auto-kick-ping", m_GameAutoKickPing, "Customizes the maximum allowed ping in a game lobby.");
   app.add_option("--lobby-high-ping", m_GameWarnHighPing, "Customizes the ping at which Aura will issue high-ping warnings.");

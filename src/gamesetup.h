@@ -229,6 +229,7 @@ public:
   std::optional<bool>                             m_LogCommands;
   std::optional<uint8_t>                          m_NumPlayersToStartGameOver;
   std::optional<uint8_t>                          m_PlayersReadyMode;
+  std::optional<bool>                             m_AutoStartRequiresBalance;
   std::optional<uint32_t>                         m_AutoKickPing;
   std::optional<uint32_t>                         m_WarnHighPing;
   std::optional<uint32_t>                         m_SafeHighPing;
@@ -361,6 +362,7 @@ public:
   void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
   void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
   void SetLogCommands(const bool nLogCommands) { m_LogCommands = nLogCommands; }
+  void SetAutoStartRequiresBalance(const bool nRequiresBalance) { m_AutoStartRequiresBalance = nRequiresBalance; }
 
   void AcquireCLISimple(const CCLI* nCLI);
   void ResetExtraOptions();

@@ -69,6 +69,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_MaxPlayersLoopback        = CFG.GetUint8("hosting.ip_filter.max_loopback", 8);
   m_MaxPlayersSameIP          = CFG.GetUint8("hosting.ip_filter.max_same_ip", 8);
   m_PlayersReadyMode          = CFG.GetStringIndex("hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
+  m_AutoStartRequiresBalance  = CFG.GetStringIndex("hosting.autostart.requires_balance", true);
   m_SaveStats                 = CFG.GetBool("db.game_stats.enabled", true);
   m_SyncLimit                 = CFG.GetUint32("net.start_lag.sync_limit", 32);
   m_SyncLimitSafe             = CFG.GetUint32("net.stop_lag.sync_limit", 8);
@@ -142,6 +143,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT(m_MaxPlayersLoopback)
   INHERIT(m_MaxPlayersSameIP)
   INHERIT_MAP_OR_CUSTOM(m_PlayersReadyMode, m_PlayersReadyMode, m_PlayersReadyMode)
+  INHERIT_MAP_OR_CUSTOM(m_AutoStartRequiresBalance, m_AutoStartRequiresBalance, m_AutoStartRequiresBalance)
   INHERIT(m_SaveStats);
   INHERIT_MAP_OR_CUSTOM(m_SyncLimit, m_LatencyMaxFrames, m_LatencyMaxFrames)
   INHERIT_MAP_OR_CUSTOM(m_SyncLimitSafe, m_LatencySafeFrames, m_LatencySafeFrames)

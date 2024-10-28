@@ -1065,6 +1065,10 @@ void CMap::Load(CConfig* CFG)
     m_PlayersReadyMode = CFG->GetStringIndex("map.hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
     CFG->FailIfErrorLast();
   }
+  if (CFG->Exists("map.hosting.autostart.requires_balance")) {
+    m_AutoStartRequiresBalance = CFG->GetBool("map.hosting.autostart.requires_balance", false);
+    CFG->FailIfErrorLast();
+  }
   if (CFG->Exists("map.net.start_lag.sync_limit")) {
     m_LatencyMaxFrames = CFG->GetUint32("map.net.start_lag.sync_limit", 32);
     CFG->FailIfErrorLast();

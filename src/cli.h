@@ -133,6 +133,7 @@ public:
   std::optional<bool>                   m_GameHideLobbyNames;
   std::optional<std::string>            m_GameHideLoadedNames;
   std::optional<bool>                   m_GameLogCommands;
+  std::optional<bool>                   m_GameAutoStartRequiresBalance;
 
   // UPnP
   std::optional<bool>                   m_EnableUPnP;

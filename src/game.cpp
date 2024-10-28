@@ -238,13 +238,15 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     }
 
     if (nGameSetup->m_AutoStartSeconds.has_value() || nGameSetup->m_AutoStartPlayers.has_value()) {
+      uint8_t autoStartPlayers = nGameSetup->m_AutoStartPlayers.value_or(0);
       m_AutoStartRequirements.push_back(make_pair(
-        (uint8_t)nGameSetup->m_AutoStartPlayers.value_or(0),
+        autoStartPlayers,
         m_CreationTime + (int64_t)nGameSetup->m_AutoStartSeconds.value_or(0)
       ));
     } else if (m_Map->m_AutoStartSeconds.has_value() || m_Map->m_AutoStartPlayers.has_value()) {
+      uint8_t autoStartPlayers = m_Map->m_AutoStartPlayers.value_or(0);
       m_AutoStartRequirements.push_back(make_pair(
-        (uint8_t)m_Map->m_AutoStartPlayers.value_or(0),
+        autoStartPlayers,
         m_CreationTime + (int64_t)m_Map->m_AutoStartSeconds.value_or(0)
       ));
     }
@@ -2448,7 +2450,7 @@ bool CGame::GetIsAutoStartDue() const
   if (m_Users.empty() || m_CountDownStarted || m_AutoStartRequirements.empty()) {
     return false;
   }
-  if (GetIsCustomForces() && !m_ControllersBalanced) {
+  if (!m_ControllersBalanced && m_Config->m_AutoStartRequiresBalance) {
     return false;
   }
 

@@ -540,6 +540,28 @@ This option is equivalent to ``<map.hosting.log_commands>`` in map configuration
 
 This flag is disabled by default.
 
+## \`--auto-start-balanced\`
+
+This flag specifies that the game may only automatically start when the teams are balanced. In order for this 
+flag to be effective, other auto start parameters must also be supplied.
+
+This option is equivalent to ``<hosting.autostart.requires_balance">`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.autostart.requires_balance">`` in map configuration
+
+This flag is enabled by default.
+
+## \`--no-auto-start-balanced\`
+
+This flag specifies that the game may automatically start even if the teams are not balanced. In order for this 
+flag to be effective, other auto start parameters must also be supplied.
+
+This option is equivalent to ``<hosting.autostart.requires_balance">`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.autostart.requires_balance">`` in map configuration
+
+This flag is disabled by default.
+
 # Parameters for CLI games
 
 ## \`-s <TYPE>, --search-type \<TYPE\>\`
@@ -653,7 +675,8 @@ exceeded, the map download and game hosting are cancelled.
 
 This parameter specifies that the game may automatically start when the provided ``COUNT`` of slots 
 have been occupied in the game. This includes computer slots, virtual player slots, and actual players that 
-have downloaded the map.
+have downloaded the map. Note that, unless configured otherwise, balanced teams are mandatory for the game 
+to automatically start.
 
 If \`--auto-start-time\` is also supplied, the game will start only when both conditions are met simultaneously.
 
@@ -661,8 +684,9 @@ This option is equivalent to ``<map.auto_start.players>`` in map configuration
 
 ## \`--auto-start-time \<SECONDS\>\`
 
-This parameter specifies that the game will automatically start when the provided ``SECONDS`` have passed since 
-the game was created.
+This parameter specifies that the game will automatically start when the provided ``SECONDS`` 
+have passed since  the game was created. Note that, unless configured otherwise, balanced teams are 
+mandatory for the game to automatically start.
 
 If \`--auto-start-players\` is also supplied, the game will start only when both conditions are met simultaneously.
 
