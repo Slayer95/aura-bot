@@ -95,6 +95,7 @@
 #define HIDDEN_PLAYERS_ALL 3u
 
 #define HIGH_PING_KICK_DELAY 10000u
+#define MAX_SCOPE_BANS 100u
 
 //
 // CGame

@@ -7017,6 +7017,10 @@ bool CGame::CheckScopeBanned(const string& rawName, const string& hostName, cons
 
 bool CGame::AddScopeBan(const string& rawName, const string& hostName, const string& addressLiteral)
 {
+  if (m_ScopeBans.size() >= MAX_SCOPE_BANS) {
+    return false;
+  }
+
   string name = ToLowerCase(rawName);
 
   m_ScopeBans.push_back(new CDBBan(
