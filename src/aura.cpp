@@ -847,7 +847,8 @@ bool CAura::Update()
 
   if (m_AutoRehostGameSetup && !m_CurrentLobby) {
     if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
-      (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby))
+      (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby)) &&
+      (!m_LastGameHostedTime.has_value() || m_LastGameHostedTime.value() + AUTO_REHOST_COOLDOWN_TICKS < GetTicks())
     ) {
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
@@ -1678,6 +1679,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
 
   m_CurrentLobby = new CGame(this, gameSetup);
   m_CanReplaceLobby = gameSetup->m_LobbyReplaceable;
+  m_LastGameHostedTime = GetTicks();
   if (gameSetup->m_LobbyAutoRehosted) {
     m_AutoRehostGameSetup = gameSetup;
   }
