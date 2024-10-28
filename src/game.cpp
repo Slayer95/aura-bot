@@ -3269,7 +3269,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     if (user->GetLagging()) {
       SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(user));
     }
-    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetQuitGame() && (user->GetPingKicked() || user->GetMapKicked() || user->GetSpoofKicked())));
+    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetQuitGame() && (user->GetPingKicked() || user->GetMapKicked() || user->GetSpoofKicked() || user->GetAbuseKicked())));
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
@@ -3448,7 +3448,6 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
   if (user->GetDeleteMe()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      Print(GetLogPrefix() + "EventUserDisconnectTimedOut()");
       user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
       if (user->GetGProxyExtended()) {
@@ -3484,7 +3483,6 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
   if (user->GetDeleteMe()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      Print(GetLogPrefix() + "EventUserDisconnectSocketError()");
       string errorString = user->GetConnectionErrorString();
       user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
@@ -3512,7 +3510,6 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
   if (user->GetDeleteMe()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      Print(GetLogPrefix() + "EventUserDisconnectConnectionClosed()");
       user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
       SendAllChat(user->GetDisplayName() + " has terminated the connection, but is using GProxy++ and may reconnect");
@@ -3539,7 +3536,6 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
   if (user->GetDeleteMe()) return;
   if (canRecover && user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
-      Print(GetLogPrefix() + "EventUserDisconnectGameProtocolError()");
       user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
       SendAllChat(user->GetDisplayName() + " has disconnected (protocol error) but is using GProxy++ and may reconnect");
@@ -3558,6 +3554,21 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
     user->SetLeftReason("has lost the connection (unrecoverable protocol error)");
   }
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
+
+  if (!m_GameLoading && !m_GameLoaded) {
+    const uint8_t SID = GetSIDFromUID(user->GetUID());
+    OpenSlot(SID, false);
+  }
+}
+
+void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
+{
+  if (user->GetDeleteMe()) return;
+  user->SetDeleteMe(true);
+  user->SetLeftReason("was kicked by anti-abuse");
+  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
+  user->SetAbuseKicked(true);
+  user->CloseConnection();
 
   if (!m_GameLoading && !m_GameLoaded) {
     const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -4173,8 +4184,15 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
       case ACTION_SAVE:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
         SendAllChat("[" + user->GetDisplayName() + "] is saving the game");
-        user->SetSaved(true);
         SaveEnded(0xFF);
+        if (user->GetCanSave()) {
+          user->DropRemainingSaves();
+          if (user->GetIsNativeReferee() && !user->GetCanSave()) {
+            SendChat(user, "NOTE: You have reached the maximum allowed saves for this game.");
+          }
+        } else {
+          EventUserDisconnectGameAbuse(user);
+        }
         break;
       case ACTION_SAVE_ENDED:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] finished saving the game")
@@ -4767,7 +4785,7 @@ void CGame::EventUserPongToHost(CGameUser* user)
     }
   } else {
     user->SetPingKicked(false);
-    if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
+    if (!user->GetMapKicked() && user->GetKickQueued()) {
       user->ClearKickByTicks();
     }
     if (user->GetHasHighPing()) {
@@ -5175,6 +5193,13 @@ void CGame::EventGameLoaded()
       if (m_SyncPlayers[user].size() < majorityThreshold) {
         DesyncedPlayers.push_back(user);
       }
+    }
+  }
+
+  for (const auto& user : m_Users) {
+    if (user->GetIsNativeReferee()) {
+      // Natively, referees get unlimited saves. But we limit them to 3 in multiplayer games.
+      user->SetRemainingSaves(m_Users.size() >= 2 ? GAME_SAVES_PER_REFEREE_ANTIABUSE : GAME_SAVES_PER_REFEREE_DEFAULT);
     }
   }
 
@@ -5714,7 +5739,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, CGameUser* user, cons
 
     case ACTION_SAVE: {
       // Referees can save the game, but full observers cannot.
-      if (user && isDisconnect && !(isFullObservers && user->GetIsObserver()) && !user->GetLeftMessageSent() && !user->GetSaved()) {
+      if (user && isDisconnect && !(isFullObservers && user->GetIsObserver()) && !user->GetLeftMessageSent() && !user->GetCanSave()) {
         return user->GetUID();
       }
       while (m_NextSaveFakeUser < m_FakeUsers.size()) {
@@ -6887,7 +6912,7 @@ void CGame::AddToReserved(const string& name)
 
     // Reserved users are never kicked for latency reasons.
     user->SetPingKicked(false);
-    if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
+    if (!user->GetMapKicked() && user->GetKickQueued()) {
       user->ClearKickByTicks();
     }
   }
@@ -7142,7 +7167,7 @@ void CGame::SetOwner(const string& name, const string& realm)
 
     // Owner is never kicked for latency reasons.
     user->SetPingKicked(false);
-    if (!user->GetMapKicked() && !user->GetSpoofKicked() && user->GetKickQueued()) {
+    if (!user->GetMapKicked() && user->GetKickQueued()) {
       user->ClearKickByTicks();
     }
   }

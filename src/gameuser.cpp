@@ -355,7 +355,7 @@ CGameUser::CGameUser(CGame* nGame, CGameConnection* connection, uint8_t nUID, ui
     m_TotalDisconnectTicks(0),
 
     m_TeamCaptain(0),
-    m_Saved(false),
+    m_RemainingSaves(GAME_SAVES_PER_PLAYER),
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
     m_DeleteMe(false)
 {

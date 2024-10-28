@@ -81,6 +81,9 @@
 #define GAME_BANNABLE_MAX_HISTORY_SIZE 32
 
 #define GAME_PAUSES_PER_PLAYER 3u
+#define GAME_SAVES_PER_PLAYER 1u
+#define GAME_SAVES_PER_REFEREE_ANTIABUSE 3u
+#define GAME_SAVES_PER_REFEREE_DEFAULT 255u
 
 #define GAME_ONGOING 0u
 #define GAME_OVER_TRUSTED 1u
@@ -485,6 +488,7 @@ public:
   void EventUserDisconnectSocketError(CGameUser* user);
   void EventUserDisconnectConnectionClosed(CGameUser* user);
   void EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover);
+  void EventUserDisconnectGameAbuse(CGameUser* user);
   void EventUserKickUnverified(CGameUser* user);
   void EventUserKickGProxyExtendedTimeout(CGameUser* user);
   void EventUserKickHandleQueued(CGameUser* user);

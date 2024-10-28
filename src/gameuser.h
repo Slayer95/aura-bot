@@ -190,6 +190,7 @@ private:
   bool                             m_MapKicked;                    // if we're kicking this player because he has no map and we won't send it to him
   bool                             m_PingKicked;                   // if we're kicking this player because his ping is excessively high
   bool                             m_SpoofKicked;
+  bool                             m_AbuseKicked;
   std::optional<bool>              m_UserReady;
   bool                             m_Ready;
   std::optional<int64_t>           m_ReadyReminderLastTicks;
@@ -225,7 +226,7 @@ private:
   std::string                      m_PinnedMessage;
 
   // Actions
-  bool                             m_Saved;
+  uint8_t                          m_RemainingSaves;
   uint8_t                          m_RemainingPauses;
 
 protected:
@@ -314,6 +315,7 @@ public:
   inline bool                  GetMapKicked() const { return m_MapKicked; }
   inline bool                  GetPingKicked() const { return m_PingKicked; }
   inline bool                  GetSpoofKicked() const { return m_SpoofKicked; }
+  inline bool                  GetAbuseKicked() const { return m_AbuseKicked; }
   inline bool                  GetHasHighPing() const { return m_HasHighPing; }
   inline bool                  GetKickQueued() const { return m_KickByTicks.has_value(); }
   inline bool                  GetLagging() const { return m_Lagging; }
@@ -330,7 +332,7 @@ public:
   inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
   inline bool                  GetCanPause() { return m_RemainingPauses > 0; }
-  inline bool                  GetSaved() { return m_Saved; }
+  inline bool                  GetCanSave() { return m_RemainingSaves > 0; }
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
@@ -358,6 +360,7 @@ public:
   inline void SetMapKicked(bool nMapKicked) { m_MapKicked = nMapKicked; }
   inline void SetPingKicked(bool nPingKicked) { m_PingKicked = nPingKicked; }
   inline void SetSpoofKicked(bool nSpoofKicked) { m_SpoofKicked = nSpoofKicked; }
+  inline void SetAbuseKicked(bool nAbuseKicked) { m_AbuseKicked = nAbuseKicked; }
   inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
   inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
@@ -384,7 +387,9 @@ public:
   inline void ClearLastCommand() { m_LastCommand.clear(); }
   inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
   inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
-  inline void SetSaved(const bool nValue) { m_Saved = nValue; }
+  inline void DropRemainingSaves() { --m_RemainingSaves; }
+  inline void SetRemainingSaves(uint32_t nCount) { m_RemainingSaves = nCount; }
+  inline void SetCannotSave() { m_RemainingSaves = 0; }
   inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
   inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
   inline void SetSmartCommand(const uint8_t nValue) { m_SmartCommand = nValue; }
