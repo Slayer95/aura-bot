@@ -591,9 +591,7 @@ CTCPServer::CTCPServer(uint8_t nFamily)
 
   // set the socket to reuse the address in case it hasn't been released yet
   int32_t optval = 1;
-#ifdef _WIN32
-  setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(int32_t));
-#else
+#ifndef _WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int32_t));
 #endif
 
@@ -800,7 +798,7 @@ void CUDPSocket::SetBroadcastEnabled(const bool nEnable)
   // Broadcast is only defined over IPv4, but a subset of IPv6 maps to IPv6.
 
   int32_t OptVal = nEnable;
-#ifdef _WIN32
+#ifndef _WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
 #else
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&OptVal, sizeof(int32_t));
