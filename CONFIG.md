@@ -651,6 +651,11 @@ Config
 - Default value: false
 - Error handling: Use default value
 
+## \`hosting.autostart.requires_balance\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`hosting.commands.broadcast.enabled\`
 - Type: bool
 - Default value: false
