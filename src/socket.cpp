@@ -798,7 +798,7 @@ void CUDPSocket::SetBroadcastEnabled(const bool nEnable)
   // Broadcast is only defined over IPv4, but a subset of IPv6 maps to IPv6.
 
   int32_t OptVal = nEnable;
-#ifndef _WIN32
+#ifdef _WIN32
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
 #else
   setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&OptVal, sizeof(int32_t));
