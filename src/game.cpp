@@ -5761,7 +5761,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, CGameUser* user, cons
 
     case ACTION_SAVE: {
       // Referees can save the game, but full observers cannot.
-      if (user && isDisconnect && !(isFullObservers && user->GetIsObserver()) && !user->GetLeftMessageSent() && !user->GetCanSave()) {
+      if (user && isDisconnect && !(isFullObservers && user->GetIsObserver()) && !user->GetLeftMessageSent() && user->GetCanSave()) {
         return user->GetUID();
       }
       while (m_NextSaveFakeUser < m_FakeUsers.size()) {
