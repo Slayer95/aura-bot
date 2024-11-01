@@ -1224,10 +1224,10 @@ uint16_t CNet::NextHostPort()
 
 void CNet::MergeStaleConnections()
 {
-  while (!m_StaleConnections.empty()) {
-    const auto& entry = m_StaleConnections.front();
+  while (!m_DownGradedConnections.empty()) {
+    const auto& entry = m_DownGradedConnections.front();
     m_IncomingConnections[entry.first].push_back(entry.second);
-    m_StaleConnections.pop();
+    m_DownGradedConnections.pop();
   }
 }
 
@@ -1470,7 +1470,7 @@ void CNet::OnUserKicked(CGameUser* user, bool deferred)
   connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
   connection->SetTimeout(2000);
   if (deferred) {
-    m_StaleConnections.push(make_pair(port, connection));
+    m_DownGradedConnections.push(make_pair(port, connection));
   } else {
     m_IncomingConnections[port].push_back(connection);
   }

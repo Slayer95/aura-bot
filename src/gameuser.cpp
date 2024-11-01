@@ -585,7 +585,7 @@ void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t 
 
   // Runs from the CConnection iterator, so appending to CNet::m_IncomingConnections needs to wait
   // UnrefConnection(deferred = true) takes care of this
-  // a new CConnection for the old CStreamIOSocket is created, and is pushed to CNet::m_StaleConnections 
+  // a new CConnection for the old CStreamIOSocket is created, and is pushed to CNet::m_DownGradedConnections 
   UnrefConnection(true);
 
   m_Socket = NewSocket;
