@@ -94,11 +94,11 @@ Assemble:
   - export AURALINKMINIUPNP=1
   - export AURALINKCPR=1
   # This takes too long.
-  # - export AURALINKDPP=1
+  - export AURALINKDPP=0
   - make && make install
   - unset AURALINKMINIUPNP
   - unset AURALINKCPR
-  # - unset AURALINKDPP
+  - unset AURALINKDPP
   ## on static build failures, the error is reported iff mv below fails
   - mv /usr/bin/aura dist/bin-shared
   - cd dist/bin-shared
