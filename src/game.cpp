@@ -4444,7 +4444,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
           !realm || !(commandCFG->m_RequireVerified && !user->IsRealmVerified())
         );
         bool isCommand = false;
-        uint8_t activeSmartCommand = user->GetSmartCommand();
+        const uint8_t activeSmartCommand = user->GetSmartCommand();
         user->ClearSmartCommand();
         if (commandsEnabled) {
           const string message = chatPlayer->GetMessage();
@@ -4475,7 +4475,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
                 SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
               }
             }
-            CheckSmartCommands(user, message, commandCFG);
+            CheckSmartCommands(user, message, activeSmartCommand, commandCFG);
           }
         }
         if (!isCommand) {
@@ -5169,12 +5169,12 @@ void CGame::RunPlayerObfuscation()
   }
 }
 
-void CGame::CheckSmartCommands(const CGameUser* user, const std::string& message, const CCommandConfig* nConfig)
+void CGame::CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, const CCommandConfig* commandCFG)
 {
   if (message.length() >= 2) {
     string prefix = ToLowerCase(message.substr(0, 2));
     if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
-      if (activeSmartCommand == SMART_COMMAND_GO) {
+      if (activeCmd == SMART_COMMAND_GO) {
         CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
         string cmdToken = m_Config->m_PrivateCmdToken;
         string command = "start";
