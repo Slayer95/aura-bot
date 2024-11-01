@@ -4460,6 +4460,8 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
           } else if (message == "?trigger") {
             SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, false);
           } else if (message == "/p" || message == "/ping" || message == "/game") {
+            // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
+            // Therefore, these commands are only effective over LAN.
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
             cmdToken = m_Config->m_PrivateCmdToken;
             command = message.substr(1);
