@@ -5169,7 +5169,7 @@ void CGame::RunPlayerObfuscation()
   }
 }
 
-void CGame::CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, const CCommandConfig* commandCFG)
+void CGame::CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* commandCFG)
 {
   if (message.length() >= 2) {
     string prefix = ToLowerCase(message.substr(0, 2));
