@@ -228,8 +228,8 @@ public:
   inline bool                  GetGProxyExtended() const { return m_GProxyExtended; }
   inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
   
-	inline bool                  GetDisconnected() const { return m_Disconnected; }
-	int64_t                      GetTotalDisconnectTicks() const;
+  inline bool                  GetDisconnected() const { return m_Disconnected; }
+  int64_t                      GetTotalDisconnectTicks() const;
   std::string                  GetDelayText(bool displaySync) const;
   std::string                  GetSyncText() const;
   
