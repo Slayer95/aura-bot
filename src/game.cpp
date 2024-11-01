@@ -5172,18 +5172,19 @@ void CGame::RunPlayerObfuscation()
 void CGame::CheckSmartCommands(const CGameUser* user, const std::string& message, const CCommandConfig* nConfig)
 {
   if (message.length() >= 2) {
-  string prefix = ToLowerCase(message.substr(0, 2));
-  if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
-    if (activeSmartCommand == SMART_COMMAND_GO) {
-      CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
-      string cmdToken = m_Config->m_PrivateCmdToken;
-      string command = "start";
-      string payload;
-      ctx->Run(cmdToken, command, payload);
-      m_Aura->UnholdContext(ctx);
-    } else {
-      user->SetSmartCommand(SMART_COMMAND_GO);
-      SendChat(user, "You may type [" + message + "] again to start the game.");
+    string prefix = ToLowerCase(message.substr(0, 2));
+    if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
+      if (activeSmartCommand == SMART_COMMAND_GO) {
+        CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
+        string cmdToken = m_Config->m_PrivateCmdToken;
+        string command = "start";
+        string payload;
+        ctx->Run(cmdToken, command, payload);
+        m_Aura->UnholdContext(ctx);
+      } else {
+        user->SetSmartCommand(SMART_COMMAND_GO);
+        SendChat(user, "You may type [" + message + "] again to start the game.");
+      }
     }
   }
 }
