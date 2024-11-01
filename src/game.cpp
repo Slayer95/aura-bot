@@ -3238,7 +3238,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
 
   // Send to active UDP in TCP tunnels
   if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled) {
-    for (auto& serverConnections : m_Aura->m_Net->m_IncomingConnections) {
+    for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsUDPTunnel()) {
@@ -5026,15 +5026,6 @@ void CGame::EventGameStarted()
       if (user->GetIsObserver()) {
         user->SetCannotPause();
       }
-    }
-  }
-
-  // delete any potential users that are still hanging around
-  // only one lobby at a time is supported, so we can just do it from here
-
-  for (auto& pair : m_Aura->m_Net->m_IncomingConnections) {
-    for (auto& connection : pair.second) {
-      connection->SetDeleteMe(true);
     }
   }
 

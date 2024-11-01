@@ -620,7 +620,7 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
   }
 
   if (m_Config->m_EnableTCPWrapUDP || m_Config->m_VLANEnabled) {
-    for (auto& serverConnections : m_IncomingConnections) {
+    for (auto& serverConnections : m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsUDPTunnel()) {
@@ -1222,7 +1222,7 @@ uint16_t CNet::NextHostPort()
   return m_LastHostPort;
 }
 
-void CNet::MergeStaleConnections()
+void CNet::MergeDownGradedConnections()
 {
   while (!m_DownGradedConnections.empty()) {
     const auto& entry = m_DownGradedConnections.front();
@@ -1387,8 +1387,8 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
   }
   uint16_t assignedPort = gameServer->GetPort();
   m_GameServers[assignedPort] = gameServer;
-  vector<CConnection*> IncomingConnections;
-  m_IncomingConnections[assignedPort] = IncomingConnections;
+  m_IncomingConnections[assignedPort] = vector<CConnection*>();
+  m_ManagedConnections[assignedPort] = vector<CConnection*>();
 
   Print("[TCP] " + name + " listening on port " + to_string(assignedPort));
   return gameServer;
@@ -1483,6 +1483,14 @@ void CNet::GracefulExit()
   ResetIPAddressFetch();
 
   for (auto& serverConnections : m_IncomingConnections) {
+    for (auto& connection : serverConnections.second) {
+      connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
+      connection->SetTimeout(2000);
+      connection->GetSocket()->ClearRecvBuffer();
+    }
+  }
+
+  for (auto& serverConnections : m_ManagedConnections) {
     for (auto& connection : serverConnections.second) {
       connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
       connection->SetTimeout(2000);

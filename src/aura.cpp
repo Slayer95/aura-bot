@@ -897,29 +897,41 @@ bool CAura::Update()
     }
   }
 
-  // 4. the current lobby's player sockets
+  // 4. all managed TCP connections
+
+  for (auto& serverConnections : m_Net->m_ManagedConnections) {
+    // std::pair<uint16_t, vector<CConnection*>>
+    for (auto& connection : serverConnections.second) {
+      if (connection->GetSocket()) {
+        connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+        ++NumFDs;
+      }
+    }
+  }
+
+  // 5. the current lobby's player sockets
 
   if (m_CurrentLobby) {
     NumFDs += m_CurrentLobby->SetFD(&fd, &send_fd, &nfds);
   }
 
-  // 5. all running games' player sockets
+  // 6. all running games' player sockets
 
   for (auto& game : m_Games) {
     NumFDs += game->SetFD(&fd, &send_fd, &nfds);
   }
 
-  // 6. all battle.net sockets
+  // 7. all battle.net sockets
 
   for (auto& realm : m_Realms) {
     NumFDs += realm->SetFD(&fd, &send_fd, &nfds);
   }
 
-  // 7. irc socket
+  // 8. irc socket
   if (m_IRC)
     NumFDs += m_IRC->SetFD(&fd, &send_fd, &nfds);
 
-  // 8. UDP sockets, outgoing test connections
+  // 9. UDP sockets, outgoing test connections
   NumFDs += m_Net->SetFD(&fd, &send_fd, &nfds);
 
   if (NumFDs > 40) {
@@ -1035,7 +1047,31 @@ bool CAura::Update()
     }
   }
 
-  m_Net->MergeStaleConnections();
+  // when a GProxy reconnect is triggered, while there is still a CStreamIOSocket assigned to the CGameUser,
+  // the old CStreamIOSocket is assigned to a new CGameConnection, which is queued for insertion into m_IncomingConnections
+  // this statement takes care of the insertion
+  m_Net->MergeDownGradedConnections();
+
+  // update managed connections
+  for (auto& serverConnections : m_Net->m_ManagedConnections) {
+    int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
+    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
+      // *i is a pointer to a CConnection
+      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
+      // TODO: Change managed connection update return values
+      if (result == PREPLAYER_CONNECTION_OK) {
+        ++i;
+        continue;
+      }
+
+      // flush the socket (e.g. in case a rejection message is queued)
+      if ((*i)->GetSocket()) {
+        (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
+      }
+      delete *i;
+      i = serverConnections.second.erase(i);
+    }
+  }
 
   // update current lobby
 
@@ -1632,6 +1668,11 @@ bool CAura::CheckGracefulExit()
     }
   }
   for (auto& serverConnections : m_Net->m_IncomingConnections) {
+    if (!serverConnections.second.empty()) {
+      return false;
+    }
+  }
+  for (auto& serverConnections : m_Net->m_ManagedConnections) {
     if (!serverConnections.second.empty()) {
       return false;
     }
