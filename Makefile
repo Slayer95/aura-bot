@@ -4,11 +4,11 @@ ARCH = $(shell uname -m)
 INSTALL_DIR = /usr
 
 ifndef CC
-  CC = gcc
+	CC = gcc
 endif
 
 ifndef CXX
-  CXX = g++
+	CXX = g++
 endif
 
 CCFLAGS += -fno-builtin
@@ -18,37 +18,37 @@ OFLAGS = -O3 -flto
 LFLAGS += -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
 
 ifeq ($(AURASTATIC), 1)
-  LFLAGS += -static
+	LFLAGS += -static
 endif
 
 ifeq ($(AURALINKMINIUPNP), 0)
-  CXXFLAGS += -DDISABLE_MINIUPNP
+	CXXFLAGS += -DDISABLE_MINIUPNP
 else
-  ifeq ($(AURASTATIC), 1)
-    LFLAGS += -lminiupnpc
-  else
-    LFLAGS += -lminiupnpc
-  endif
+	ifeq ($(AURASTATIC), 1)
+		LFLAGS += -lminiupnpc
+	else
+		LFLAGS += -lminiupnpc
+	endif
 endif
 
 ifeq ($(AURALINKCPR), 0)
-  CXXFLAGS += -DDISABLE_CPR
+	CXXFLAGS += -DDISABLE_CPR
 else
-  ifeq ($(AURASTATIC), 1)
-    LFLAGS += -lcpr
-  else
-    LFLAGS += -lcpr
-  endif
+	ifeq ($(AURASTATIC), 1)
+		LFLAGS += -lcpr
+	else
+		LFLAGS += -lcpr
+	endif
 endif
 
 ifeq ($(AURALINKDPP), 0)
-  CXXFLAGS += -DDISABLE_DPP
+	CXXFLAGS += -DDISABLE_DPP
 else
-  ifeq ($(AURASTATIC), 1)
-    LFLAGS += -ldpp
-  else
-    LFLAGS += -ldpp
-  endif
+	ifeq ($(AURASTATIC), 1)
+		LFLAGS += -ldpp
+	else
+		LFLAGS += -ldpp
+	endif
 endif
 
 ifeq ($(ARCH),x86_64)
@@ -83,7 +83,7 @@ OBJS = src/fileutil.o \
 			 src/socket.o \
 			 src/net.o \
 			 src/csvparser.o \
-       src/bncsutilinterface.o \
+			 src/bncsutilinterface.o \
 			 src/bnetprotocol.o \
 			 src/gameprotocol.o \
 			 src/gpsprotocol.o \
@@ -100,7 +100,7 @@ OBJS = src/fileutil.o \
 			 src/crc32.o \
 			 src/sha1.o \
 			 src/realm.o \
-       src/realm_chat.o \
+			 src/realm_chat.o \
 			 src/irc.o \
 			 src/discord.o \
 			 src/map.o \
@@ -109,8 +109,8 @@ OBJS = src/fileutil.o \
 			 src/gamesetup.o \
 			 src/gameslot.o \
 			 src/game.o \
-       src/packed.o \
-       src/savegame.o \
+			 src/packed.o \
+			 src/savegame.o \
 			 src/command.o \
 			 src/aura.o \
 			 src/auradb.o \
