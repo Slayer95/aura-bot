@@ -4466,7 +4466,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
-            if (!user->GetSentAutoCommandsHelp()) {
+            if (!CheckSmartCommands(user, message, activeSmartCommand, commandCFG) && !user->GetSentAutoCommandsHelp()) {
               bool anySentCommands = false;
               for (const auto& otherPlayer : m_Users) {
                 if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
@@ -4475,7 +4475,6 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
                 SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
               }
             }
-            CheckSmartCommands(user, message, activeSmartCommand, commandCFG);
           }
         }
         if (!isCommand) {
@@ -5169,7 +5168,7 @@ void CGame::RunPlayerObfuscation()
   }
 }
 
-void CGame::CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* commandCFG)
+bool CGame::CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* commandCFG)
 {
   if (message.length() >= 2) {
     string prefix = ToLowerCase(message.substr(0, 2));
@@ -5185,8 +5184,10 @@ void CGame::CheckSmartCommands(CGameUser* user, const std::string& message, cons
         user->SetSmartCommand(SMART_COMMAND_GO);
         SendChat(user, "You may type [" + message + "] again to start the game.");
       }
+      return true;
     }
   }
+  return false;
 }
 
 void CGame::EventGameLoaded()

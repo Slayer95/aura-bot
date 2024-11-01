@@ -528,7 +528,7 @@ public:
   void UpdateBannableUsers();
   bool ResolvePlayerObfuscation() const;
   void RunPlayerObfuscation();
-  void CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* nConfig);
+  bool CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* nConfig);
 
   // other functions
 
