@@ -1388,7 +1388,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
   uint16_t assignedPort = gameServer->GetPort();
   m_GameServers[assignedPort] = gameServer;
   m_IncomingConnections[assignedPort] = vector<CConnection*>();
-  m_ManagedConnections[assignedPort] = vector<CConnection*>();
+  m_ManagedConnections[assignedPort] = vector<CGameSeeker*>();
 
   Print("[TCP] " + name + " listening on port " + to_string(assignedPort));
   return gameServer;

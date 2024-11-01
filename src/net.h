@@ -29,6 +29,7 @@
 #include "includes.h"
 #include "socket.h"
 #include "connection.h"
+#include "gameseeker.h"
 #include "gameuser.h"
 #include "config_net.h"
 #include "aura.h"
@@ -95,6 +96,7 @@ class CUDPServer;
 class CUDPSocket;
 class CStreamIOSocket;
 class CConnection;
+class CGameSeeker;
 class CGameUser;
 class CNetConfig;
 
@@ -183,7 +185,7 @@ public:
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CConnection*>>               m_IncomingConnections;        // connections that haven't identified their protocol yet
-  std::map<uint16_t, std::vector<CConnection*>>               m_ManagedConnections;         // connections that use complementary protocols, such as VLAN, or UDP over TCP
+  std::map<uint16_t, std::vector<CGameSeeker*>>               m_ManagedConnections;         // connections that use complementary protocols, such as VLAN, or UDP over TCP
   std::queue<std::pair<uint16_t, CConnection*>>               m_DownGradedConnections;      // connections that are waiting for insertion into m_IncomingConnections, built from a stale CStreamIOSocket
   std::map<std::string, sockaddr_storage*>                    m_IPv4DNSCache;
   std::map<std::string, sockaddr_storage*>                    m_IPv6DNSCache;

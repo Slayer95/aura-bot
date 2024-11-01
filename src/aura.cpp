@@ -61,6 +61,7 @@
 #include "connection.h"
 #include "realm.h"
 #include "map.h"
+#include "gameseeker.h"
 #include "gameuser.h"
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
