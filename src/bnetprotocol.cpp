@@ -114,8 +114,7 @@ CIncomingGameHost* CBNETProtocol::RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>
           ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 31, true),
           ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 33, true)
         };
-
-        return new CIncomingGameHost(IP, Port, string(begin(GameName), end(GameName)), HostCounter);
+        return new CIncomingGameHost(IP, Port, GameName, HostCounter);
       }
     }
   }
@@ -775,8 +774,8 @@ bool CBNETProtocol::ValidateLength(const vector<uint8_t>& content)
 // CIncomingGameHost
 //
 
-CIncomingGameHost::CIncomingGameHost(array<uint8_t, 4>& nIP, uint16_t nPort, string& nGameName, array<uint8_t, 4>& nHostCounter)
-  : m_GameName(move(nGameName)),
+CIncomingGameHost::CIncomingGameHost(array<uint8_t, 4>& nIP, uint16_t nPort, const std::vector<uint8_t>& nGameName, array<uint8_t, 4>& nHostCounter)
+  : m_GameName(string(begin(nGameName), end(nGameName))),
     m_IP(move(nIP)),
     m_HostCounter(move(nHostCounter)),
     m_Port(nPort)

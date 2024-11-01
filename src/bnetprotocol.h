@@ -1,4 +1,4 @@
-/*
+	/*
 
   Copyright [2024] [Leonardo Julca]
 
@@ -222,7 +222,7 @@ private:
   uint16_t                    m_Port;
 
 public:
-  CIncomingGameHost(std::array<uint8_t, 4>& nIP, uint16_t nPort, std::string& nGameName, std::array<uint8_t, 4>& nHostCounter);
+  CIncomingGameHost(std::array<uint8_t, 4>& nIP, uint16_t nPort, const std::vector<uint8_t>& nGameName, std::array<uint8_t, 4>& nHostCounter);
   ~CIncomingGameHost();
 
   std::string                           GetIPString() const;
