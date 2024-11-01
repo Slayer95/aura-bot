@@ -57,6 +57,7 @@
 #include "auradb.h"
 #include "realm.h"
 #include "map.h"
+#include "connection.h"
 #include "gameuser.h"
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
@@ -1590,7 +1591,7 @@ void CGame::FlushLogs()
   }
 }
 
-void CGame::Send(CGameConnection* user, const std::vector<uint8_t>& data) const
+void CGame::Send(CConnection* user, const std::vector<uint8_t>& data) const
 {
   if (user)
     user->Send(data);
@@ -2582,7 +2583,7 @@ array<uint8_t, 2> CGame::GetAnnounceHeight() const
   return m_Map->GetMapHeight();
 }
 
-void CGame::SendVirtualHostPlayerInfo(CGameConnection* user) const
+void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
 {
   if (m_VirtualHostUID == 0xFF)
     return;
@@ -2602,7 +2603,7 @@ void CGame::SendVirtualHostPlayerInfo(CGameUser* user) const
   Send(user, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
 
-void CGame::SendFakeUsersInfo(CGameConnection* user) const
+void CGame::SendFakeUsersInfo(CConnection* user) const
 {
   if (m_FakeUsers.empty())
     return;
@@ -2630,7 +2631,7 @@ void CGame::SendFakeUsersInfo(CGameUser* user) const
   }
 }
 
-void CGame::SendJoinedPlayersInfo(CGameConnection* connection) const
+void CGame::SendJoinedPlayersInfo(CConnection* connection) const
 {
   for (auto& otherPlayer : m_Users) {
     if (otherPlayer->GetDeleteMe())
@@ -3766,7 +3767,7 @@ void CGame::EventUserCheckStatus(CGameUser* user)
   }
 }
 
-CGameUser* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
+CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
 {
   // If realms are reloaded, HostCounter may change.
   // However, internal realm IDs maps to constant realm input IDs.
@@ -3779,7 +3780,7 @@ CGameUser* CGame::JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* 
   }
 
   CGameUser* Player = new CGameUser(this, connection, UID == 0xFF ? GetNewUID() : UID, internalRealmId, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
-  // Now, socket belongs to CGameUser. Don't look for it in CGameConnection.
+  // Now, socket belongs to CGameUser. Don't look for it in CConnection.
 
   m_Users.push_back(Player);
   connection->SetSocket(nullptr);
@@ -3891,7 +3892,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
   return true;
 }
 
-bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest)
+bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest)
 {
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
@@ -4089,7 +4090,7 @@ bool CGame::EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* 
   return true;
 }
 
-bool CGame::CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
+bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
 {
   // check if the new user's name is banned
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), hostName);
@@ -4122,7 +4123,7 @@ bool CGame::CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* j
   return isBanned;
 }
 
-bool CGame::CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
+bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
 {
   if (isLoopbackAddress(connection->GetRemoteAddress())) {
     return false;

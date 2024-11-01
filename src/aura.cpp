@@ -44,9 +44,13 @@
  */
 
 #include "aura.h"
+#include "util.h"
+#include "fileutil.h"
+#include "osutil.h"
 #include "bncsutilinterface.h"
 #include "crc32.h"
 #include "sha1.h"
+#include "auradb.h"
 #include "csvparser.h"
 #include "config.h"
 #include "config_bot.h"
@@ -54,7 +58,7 @@
 #include "config_game.h"
 #include "config_irc.h"
 #include "socket.h"
-#include "auradb.h"
+#include "connection.h"
 #include "realm.h"
 #include "map.h"
 #include "gameuser.h"
@@ -63,9 +67,6 @@
 #include "game.h"
 #include "cli.h"
 #include "irc.h"
-#include "util.h"
-#include "fileutil.h"
-#include "osutil.h"
 
 #include <csignal>
 #include <cstdlib>
@@ -887,7 +888,7 @@ bool CAura::Update()
   // 3. all unassigned incoming TCP connections
 
   for (auto& serverConnections : m_Net->m_IncomingConnections) {
-    // std::pair<uint16_t, vector<CGameConnection*>>
+    // std::pair<uint16_t, vector<CConnection*>>
     for (auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
         connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
@@ -987,7 +988,7 @@ bool CAura::Update()
     CStreamIOSocket* socket = server.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnect > 0) {
-        CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
+        CConnection* incomingConnection = new CConnection(m_GameProtocol, this, localPort, socket);
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }
@@ -998,7 +999,7 @@ bool CAura::Update()
         }
         delete socket;
       } else {
-        CGameConnection* incomingConnection = new CGameConnection(m_GameProtocol, this, localPort, socket);
+        CConnection* incomingConnection = new CConnection(m_GameProtocol, this, localPort, socket);
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }
@@ -1018,7 +1019,7 @@ bool CAura::Update()
   for (auto& serverConnections : m_Net->m_IncomingConnections) {
     int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
-      // *i is a pointer to a CGameConnection
+      // *i is a pointer to a CConnection
       uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
       if (result == PREPLAYER_CONNECTION_OK) {
         ++i;

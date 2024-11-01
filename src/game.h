@@ -118,7 +118,7 @@ class CUDPServer;
 class CCommandContext;
 class CGameProtocol;
 class CGameConfig;
-class CGameConnection;
+class CConnection;
 class CGameUser;
 class CGameSetup;
 class CMap;
@@ -433,7 +433,7 @@ public:
 
   // generic functions to send packets to players
 
-  void Send(CGameConnection* player, const std::vector<uint8_t>& data) const;
+  void Send(CConnection* player, const std::vector<uint8_t>& data) const;
   void Send(CGameUser* user, const std::vector<uint8_t>& data) const;
   void Send(uint8_t UID, const std::vector<uint8_t>& data) const;
   void Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
@@ -452,9 +452,9 @@ public:
   void SendVirtualHostPlayerInfo(CGameUser* user) const;
   void SendFakeUsersInfo(CGameUser* user) const;
   void SendJoinedPlayersInfo(CGameUser* user) const;
-  void SendVirtualHostPlayerInfo(CGameConnection* player) const;
-  void SendFakeUsersInfo(CGameConnection* player) const;
-  void SendJoinedPlayersInfo(CGameConnection* player) const;
+  void SendVirtualHostPlayerInfo(CConnection* player) const;
+  void SendFakeUsersInfo(CConnection* player) const;
+  void SendJoinedPlayersInfo(CConnection* player) const;
   void SendWelcomeMessage(CGameUser* user) const;
   void SendOwnerCommandsHelp(const std::string& cmdToken, CGameUser* user) const;
   void SendCommandsHelp(const std::string& cmdToken, CGameUser* user, const bool isIntro) const;
@@ -485,8 +485,8 @@ public:
   void EventLobbyLastPlayerLeaves();
   void ReportAllPings() const;
   void ReportPlayerDisconnected(CGameUser* user);
-  bool CheckUserBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
-  bool CheckIPBanned(CGameConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
+  bool CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
+  bool CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   void EventUserDisconnectTimedOut(CGameUser* user);
   void EventUserDisconnectSocketError(CGameUser* user);
   void EventUserDisconnectConnectionClosed(CGameUser* user);
@@ -496,7 +496,7 @@ public:
   void EventUserKickGProxyExtendedTimeout(CGameUser* user);
   void EventUserKickHandleQueued(CGameUser* user);
   void EventUserCheckStatus(CGameUser* user);
-  bool EventRequestJoin(CGameConnection* connection, CIncomingJoinRequest* joinRequest);
+  bool EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
   void EventUserLeft(CGameUser* user);
   void EventUserLoaded(CGameUser* user);
   bool EventUserAction(CGameUser* user, CIncomingAction* action);
@@ -568,7 +568,7 @@ public:
   uint8_t GetEmptyObserverSID() const;
   inline bool GetHMCEnabled() const { return m_HMCEnabled; }
   void SendIncomingPlayerInfo(CGameUser* user) const;
-  CGameUser* JoinPlayer(CGameConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  CGameUser* JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool CreateVirtualHost();
   bool DeleteVirtualHost();
   bool GetHasPvPGNPlayers() const;

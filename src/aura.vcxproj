@@ -457,6 +457,7 @@
     <ClCompile Include="map.cpp" />
     <ClCompile Include="packed.cpp" />
     <ClCompile Include="savegame.cpp" />
+    <ClCompile Include="connection.cpp" />
     <ClCompile Include="gameuser.cpp" />
     <ClCompile Include="gamesetup.cpp" />
     <ClCompile Include="gameslot.cpp" />
@@ -499,6 +500,7 @@
     <ClInclude Include="map.h" />
     <ClInclude Include="packed.h" />
     <ClInclude Include="savegame.h" />
+    <ClInclude Include="connection.h" />
     <ClInclude Include="gameuser.h" />
     <ClInclude Include="gamesetup.h" />
     <ClInclude Include="gameslot.h" />

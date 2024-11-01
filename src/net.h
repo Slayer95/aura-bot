@@ -28,6 +28,7 @@
 
 #include "includes.h"
 #include "socket.h"
+#include "connection.h"
 #include "gameuser.h"
 #include "config_net.h"
 #include "aura.h"
@@ -93,7 +94,7 @@ class CCommandContext;
 class CUDPServer;
 class CUDPSocket;
 class CStreamIOSocket;
-class CGameConnection;
+class CConnection;
 class CGameUser;
 class CNetConfig;
 
@@ -181,8 +182,8 @@ public:
   sockaddr_storage*                                           m_ProxyBroadcastTarget;
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
-  std::map<uint16_t, std::vector<CGameConnection*>>           m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
-  std::queue<std::pair<uint16_t, CGameConnection*>>           m_StaleConnections;
+  std::map<uint16_t, std::vector<CConnection*>>           m_IncomingConnections;        // (connections that haven't sent a W3GS_REQJOIN packet yet)
+  std::queue<std::pair<uint16_t, CConnection*>>           m_StaleConnections;
   std::map<std::string, sockaddr_storage*>                    m_IPv4DNSCache;
   std::map<std::string, sockaddr_storage*>                    m_IPv6DNSCache;
   std::pair<std::string, sockaddr_storage*>                   m_IPv4SelfCacheV;

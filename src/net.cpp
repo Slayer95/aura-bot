@@ -1387,7 +1387,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
   }
   uint16_t assignedPort = gameServer->GetPort();
   m_GameServers[assignedPort] = gameServer;
-  vector<CGameConnection*> IncomingConnections;
+  vector<CConnection*> IncomingConnections;
   m_IncomingConnections[assignedPort] = IncomingConnections;
 
   Print("[TCP] " + name + " listening on port " + to_string(assignedPort));
@@ -1466,7 +1466,7 @@ void CNet::OnUserKicked(CGameUser* user, bool deferred)
   if (!socket) return;
   socket->ClearRecvBuffer();
   uint16_t port = user->m_Game->GetHostPort();
-  CGameConnection* connection = new CGameConnection(m_Aura->m_GameProtocol, m_Aura, port, socket);
+  CConnection* connection = new CConnection(m_Aura->m_GameProtocol, m_Aura, port, socket);
   connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
   connection->SetTimeout(2000);
   if (deferred) {

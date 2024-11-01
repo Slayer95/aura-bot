@@ -43,26 +43,22 @@
 
  */
 
-#ifndef AURA_GAMEPLAYER_H_
-#define AURA_GAMEPLAYER_H_
-
-#include "socket.h"
+#ifndef AURA_GAMEUSER_H_
+#define AURA_GAMEUSER_H_
 
 #include <queue>
 #include <string>
 #include <optional>
 
+#include "socket.h"
+#include "connection.h"
+
 class CStreamIOSocket;
 class CGameProtocol;
 class CGame;
-class CIncomingJoinRequest;
+class CConnection;
 class CRealm;
 class CAura;
-
-#define PREPLAYER_CONNECTION_OK 0u
-#define PREPLAYER_CONNECTION_DESTROY 1u
-#define PREPLAYER_CONNECTION_PROMOTED 2u
-#define PREPLAYER_CONNECTION_RECONNECTED 3u
 
 #define CONSISTENT_PINGS_COUNT 3u
 #define MAXIMUM_PINGS_COUNT 6u
@@ -71,69 +67,10 @@ class CAura;
 #define SMART_COMMAND_NONE 0u
 #define SMART_COMMAND_GO 1u
 
-#define INCOMING_CONNECTION_TYPE_NONE 0u
-#define INCOMING_CONNECTION_TYPE_UDP_TUNNEL 1u
-#define INCOMING_CONNECTION_TYPE_PROMOTED_PLAYER 2u
-#define INCOMING_CONNECTION_TYPE_KICKED_PLAYER 3u
-#define INCOMING_CONNECTION_TYPE_VLAN 4u
-
 #define GAME_USER_UNVERIFIED_KICK_TICKS 60000u
 #define AUTO_REALM_VERIFY_LATENCY 5000u
 #define CHECK_STATUS_LATENCY 5000u
 #define READY_REMINDER_PERIOD 20000u
-
-//
-// CGameConnection
-//
-
-class CGameConnection
-{
-public:
-  CAura*                  m_Aura;
-  CGameProtocol*          m_Protocol;
-  uint16_t                m_Port;
-  uint8_t                 m_Type;
-  std::optional<int64_t>  m_TimeoutTicks;
-
-protected:
-  // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
-  // it also allows us to convert CGameConnections to CGamePlayers without the CGameConnection's destructor closing the socket
-
-  CStreamIOSocket*          m_Socket;
-  CIncomingJoinRequest*     m_IncomingJoinPlayer;
-  bool                      m_DeleteMe;
-
-public:
-  CGameConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
-  ~CGameConnection();
-
-  inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
-  inline bool                       GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
-  inline std::array<uint8_t, 4>     GetIPv4() const { return m_Socket->GetIPv4(); }
-  inline std::string                GetIPString() const { return m_Socket->GetIPString(); }
-  inline std::string                GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
-  inline sockaddr_storage*          GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
-  inline bool                       GetIsUDPTunnel() const { return m_Type == INCOMING_CONNECTION_TYPE_UDP_TUNNEL; }
-  inline bool                       GetIsVLAN() const { return m_Type == INCOMING_CONNECTION_TYPE_VLAN; }
-  inline uint8_t                    GetType() const { return m_Type; }
-  inline uint16_t                   GetPort() const { return m_Port; }
-  inline bool                       GetDeleteMe() const { return m_DeleteMe; }
-  inline CIncomingJoinRequest*      GetJoinPlayer() const { return m_IncomingJoinPlayer; }
-
-  inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
-  inline void SetType(const uint8_t nType) { m_Type = nType; }
-  inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
-
-  // processing functions
-
-  void SetTimeout(const int64_t nTicks);
-  void CloseConnection();
-  uint8_t Update(void* fd, void* send_fd, int64_t timeout);
-
-  // other functions
-
-  void Send(const std::vector<uint8_t>& data) const;
-};
 
 //
 // CGameUser
@@ -233,7 +170,7 @@ protected:
   bool m_DeleteMe;
 
 public:
-  CGameUser(CGame* game, CGameConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
+  CGameUser(CGame* game, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
   ~CGameUser();
 
   uint32_t GetOperationalRTT() const;
@@ -448,4 +385,4 @@ inline std::string PlayersToNameListString(std::vector<CGameUser*> playerList, b
   return JoinVector(playerNames, ", ", false);
 }
 
-#endif // AURA_GAMEPLAYER_H_
+#endif // AURA_GAMEUSER_H_

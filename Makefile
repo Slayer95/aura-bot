@@ -104,6 +104,7 @@ OBJS = src/fileutil.o \
 			 src/irc.o \
 			 src/discord.o \
 			 src/map.o \
+			 src/connection.o \
 			 src/gameuser.o \
 			 src/gamesetup.o \
 			 src/gameslot.o \
