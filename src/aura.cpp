@@ -1177,11 +1177,13 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
   switch (m_CurrentLobby->m_Config->m_BroadcastErrorHandler) {
     case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR:
       if (!errorRealm->GetIsMain()) break;
+      // fall through
     case ON_ADV_ERROR_EXIT_ON_ANY_ERROR:
       earlyExit = true;
       break;
     case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY:
       if (!errorRealm->GetIsMain()) break;
+      // fall through
     case ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY:
       if (!m_CurrentLobby->GetHasAnyUser()) {
         // we only close the game if it has no players since we support game rehosting (via !priv and !pub in the lobby)
@@ -1196,9 +1198,6 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
   }
 
   if (m_CurrentLobby->m_Config->m_BroadcastErrorHandler == ON_ADV_ERROR_EXIT_ON_MAX_ERRORS) {
-    bool anyPending = false;
-    bool anySuccess = false;
-
     for (auto& realm : m_Realms) {
       if (!realm->GetEnabled()) {
         continue;

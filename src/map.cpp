@@ -1338,7 +1338,7 @@ void CMap::Load(CConfig* CFG)
         ++playersRefTeam;
       }
     }
-    if (playersRefTeam == 1 || playersRefTeam + 1 == m_Slots.size()) {
+    if (playersRefTeam == 1 || playersRefTeam + 1u == static_cast<uint8_t>(m_Slots.size())) {
       m_AutoStartRequiresBalance = false;
       CFG->SetBool("map.hosting.autostart.requires_balance", false);
     }

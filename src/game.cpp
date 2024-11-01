@@ -1013,7 +1013,6 @@ vector<const CGameUser*> CGame::GetObservers() const
 {
   vector<const CGameUser*> observers;
   for (const auto& user : m_Users) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
     if (!user->GetLeftMessageSent() && user->GetIsObserver()) {
       // Check GetLeftMessageSent instead of GetDeleteMe for debugging purposes
       observers.push_back(user);
@@ -1026,8 +1025,7 @@ vector<const CGameUser*> CGame::GetUnreadyPlayers() const
 {
   vector<const CGameUser*> players;
   for (const auto& user : m_Users) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    if (!user->GetLeftMessageSent() && m_Slots[SID].GetTeam() != m_Map->GetVersionMaxSlots()) {
+    if (!user->GetLeftMessageSent() && !user->GetIsObserver()) {
       if (!user->GetIsReady()) {
         players.push_back(user);
       }
@@ -4477,18 +4475,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
                 SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
               }
             }
-            if (message.length() >= 2 && ToLowerCase(message.substr(0, 2)) == "go" && message.find_first_not_of('goGO') == string::npos && !HasOwnerInGame()) {
-              if (activeSmartCommand == SMART_COMMAND_GO) {
-                CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
-                cmdToken = m_Config->m_PrivateCmdToken;
-                command = "start";
-                ctx->Run(cmdToken, command, payload);
-                m_Aura->UnholdContext(ctx);
-              } else {
-                user->SetSmartCommand(SMART_COMMAND_GO);
-                SendChat(user, "You may type [" + message + "] again to start the game.");
-              }
-            }
+            CheckSmartCommands(user, message, commandCFG);
           }
         }
         if (!isCommand) {
@@ -5178,6 +5165,25 @@ void CGame::RunPlayerObfuscation()
         continue;
       }
       player->SetPseudonymUID(pseudonymUIDs[i++]);
+    }
+  }
+}
+
+void CGame::CheckSmartCommands(const CGameUser* user, const std::string& message, const CCommandConfig* nConfig)
+{
+  if (message.length() >= 2) {
+  string prefix = ToLowerCase(message.substr(0, 2));
+  if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
+    if (activeSmartCommand == SMART_COMMAND_GO) {
+      CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
+      string cmdToken = m_Config->m_PrivateCmdToken;
+      string command = "start";
+      string payload;
+      ctx->Run(cmdToken, command, payload);
+      m_Aura->UnholdContext(ctx);
+    } else {
+      user->SetSmartCommand(SMART_COMMAND_GO);
+      SendChat(user, "You may type [" + message + "] again to start the game.");
     }
   }
 }

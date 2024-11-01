@@ -118,6 +118,7 @@ class CUDPServer;
 class CCommandContext;
 class CGameProtocol;
 class CGameConfig;
+class CCommandConfig;
 class CConnection;
 class CGameUser;
 class CGameSetup;
@@ -527,6 +528,7 @@ public:
   void UpdateBannableUsers();
   bool ResolvePlayerObfuscation() const;
   void RunPlayerObfuscation();
+  void CheckSmartCommands(const CGameUser* user, const std::string& message, const CCommandConfig* nConfig);
 
   // other functions
 
