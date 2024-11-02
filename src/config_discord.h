@@ -26,17 +26,13 @@
 #ifndef AURA_CONFIG_DISCORD_H_
 #define AURA_CONFIG_DISCORD_H_
 
+#include "constants.h"
 #include "config.h"
 #include "config_commands.h"
 
 #include <vector>
 #include <string>
 #include <map>
-
-#define FILTER_ALLOW_ALL 0
-#define FILTER_DENY_ALL 1
-#define FILTER_ALLOW_LIST 2
-#define FILTER_DENY_LIST 3
 
 //
 // CDiscordConfig

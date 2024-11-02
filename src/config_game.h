@@ -26,6 +26,7 @@
 #ifndef AURA_CONFIG_GAME_H_
 #define AURA_CONFIG_GAME_H_
 
+#include "constants.h"
 #include "config.h"
 #include "gamesetup.h"
 #include "map.h"
@@ -34,34 +35,6 @@
 #include <set>
 #include <string>
 #include <map>
-
-#define ON_DESYNC_NONE 0u
-#define ON_DESYNC_NOTIFY 1u
-#define ON_DESYNC_DROP 2u
-
-#define ON_IPFLOOD_NONE 0u
-#define ON_IPFLOOD_NOTIFY 1u
-#define ON_IPFLOOD_DENY 2u
-
-#define ON_UNSAFE_NAME_NONE 0u
-#define ON_UNSAFE_NAME_CENSOR_MAY_DESYNC 1u
-#define ON_UNSAFE_NAME_DENY 2u
-
-#define READY_MODE_FAST 0u
-#define READY_MODE_EXPECT_RACE 1u
-#define READY_MODE_EXPLICIT 2u
-
-#define HIDE_IGN_NEVER 0u
-#define HIDE_IGN_HOST 1u
-#define HIDE_IGN_ALWAYS 2u
-#define HIDE_IGN_AUTO 3u
-
-#define ON_ADV_ERROR_IGNORE_ERRORS 0u
-#define ON_ADV_ERROR_EXIT_ON_MAIN_ERROR 1u
-#define ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY 2u
-#define ON_ADV_ERROR_EXIT_ON_ANY_ERROR 3u
-#define ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY 4u
-#define ON_ADV_ERROR_EXIT_ON_MAX_ERRORS 5u
 
 //
 // CGameConfig

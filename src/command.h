@@ -28,6 +28,7 @@
 
 #include "aura.h"
 #include "auradb.h"
+#include "constants.h"
 #include "config_commands.h"
 #include "realm.h"
 #include "game.h"
@@ -43,42 +44,6 @@
 #ifndef DISABLE_DPP
 #include <dpp/dpp.h>
 #endif
-
-#define FROM_GAME (1 << 0)
-#define FROM_BNET (1 << 1)
-#define FROM_IRC (1 << 2)
-#define FROM_DISCORD (1 << 3)
-#define FROM_OTHER (1 << 7)
-
-#define CHAT_SEND_SOURCE_ALL (1 << 0)
-#define CHAT_SEND_TARGET_ALL (1 << 1)
-#define CHAT_LOG_CONSOLE (1 << 2)
-#define CHAT_TYPE_INFO (1 << 3)
-#define CHAT_TYPE_DONE (1 << 4)
-#define CHAT_TYPE_ERROR (1 << 5)
-#define CHAT_WRITE_TARGETS (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE)
-#define CHAT_RESPONSE_TYPES (CHAT_TYPE_INFO | CHAT_TYPE_DONE | CHAT_TYPE_ERROR)
-
-#define CHAT_ORIGIN_NONE 0
-#define CHAT_ORIGIN_GAME 1
-#define CHAT_ORIGIN_REALM 2
-#define CHAT_ORIGIN_IRC 3
-#define CHAT_ORIGIN_DISCORD 4
-#define CHAT_ORIGIN_INVALID 255
-
-#define USER_PERMISSIONS_GAME_PLAYER (1 << 0)
-#define USER_PERMISSIONS_GAME_OWNER (1 << 1)
-#define USER_PERMISSIONS_CHANNEL_VERIFIED (1 << 2)
-#define USER_PERMISSIONS_CHANNEL_ADMIN (1 << 3)
-#define USER_PERMISSIONS_CHANNEL_ROOTADMIN (1 << 4)
-#define USER_PERMISSIONS_BOT_SUDO_SPOOFABLE (1 << 6)
-#define USER_PERMISSIONS_BOT_SUDO_OK (1 << 7)
-
-#define SET_USER_PERMISSIONS_ALL (0xFFFF)
-
-#define COMMAND_TOKEN_MATCH_NONE 0
-#define COMMAND_TOKEN_MATCH_PRIVATE 1
-#define COMMAND_TOKEN_MATCH_BROADCAST 2
 
 //
 // CCommandContext

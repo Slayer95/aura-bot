@@ -46,7 +46,6 @@
 #include "util.h"
 #include "includes.h"
 #include "bnetprotocol.h"
-#include "map.h"
 
 #include <algorithm>
 #include <utility>

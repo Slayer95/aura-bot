@@ -48,30 +48,27 @@
 
 // STL
 
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <string>
 #include <cstring>
 #include <cstdint>
 #include <ctime>
+
+#include <algorithm>
 #include <chrono>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <utility>
 
-#define LOG_LEVEL_EMERGENCY 1
-#define LOG_LEVEL_ALERT 2
-#define LOG_LEVEL_CRITICAL 3
-#define LOG_LEVEL_ERROR 4
-#define LOG_LEVEL_WARNING 5
-#define LOG_LEVEL_NOTICE 6
-#define LOG_LEVEL_INFO 7
-#define LOG_LEVEL_DEBUG 8
-#define LOG_LEVEL_TRACE 9
-#define LOG_LEVEL_TRACE2 10
+#include <array>
+#include <string>
+#include <map>
+#include <queue>
+#include <set>
+#include <tuple>
+#include <unordered_set>
+#include <vector>
 
-#define ANTI_SPOOF_NONE 0
-#define ANTI_SPOOF_BASIC 1
-#define ANTI_SPOOF_EXTENDED 2
-#define ANTI_SPOOF_FULL 3
+#include "constants.h"
 
 #define PRINT_IF(T, U) \
     if (m_Aura->MatchLogLevel(T)) {\

@@ -47,51 +47,12 @@
 #define AURA_GAMEPROTOCOL_H_
 
 #include "includes.h"
+#include "constants.h"
 #include "aura.h"
-
-#include <queue>
 
 //
 // CGameProtocol
 //
-
-#define W3GS_HEADER_CONSTANT 247
-#define W3FW_HEADER_CONSTANT 249
-
-#define GAME_NONE 0 // this case isn't part of the protocol, it's for internal use only
-#define GAME_FULL 2
-#define GAME_PUBLIC 16
-#define GAME_PRIVATE 17
-
-#define GAMETYPE_CUSTOM 1
-#define GAMETYPE_BLIZZARD 9
-
-#define PLAYERLEAVE_DISCONNECT 1
-#define PLAYERLEAVE_LOST 7
-#define PLAYERLEAVE_LOSTBUILDINGS 8
-#define PLAYERLEAVE_WON 9
-#define PLAYERLEAVE_DRAW 10
-#define PLAYERLEAVE_OBSERVER 11
-#define PLAYERLEAVE_LOBBY 13
-#define PLAYERLEAVE_GPROXY 100
-
-#define REJECTJOIN_FULL 9
-#define REJECTJOIN_STARTED 10
-#define REJECTJOIN_WRONGPASSWORD 27
-
-#define ACTION_PAUSE 1u
-#define ACTION_RESUME 2u
-#define ACTION_SAVE 6u
-#define ACTION_SAVE_ENDED 7u
-#define ACTION_CHAT_TRIGGER 96u
-#define ACTION_MODAL_BTN 106u
-#define ACTION_SYNC_INT 107u
-
-#define MAX_PLAYER_NAME_SIZE 15
-
-#define CHAT_RECV_ALL 0
-#define CHAT_RECV_ALLY 1
-#define CHAT_RECV_OBS 2
 
 class CAura;
 class CGameUser;

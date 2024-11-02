@@ -510,6 +510,7 @@
     <ClInclude Include="command.h" />
     <ClInclude Include="aura.h" />
     <ClInclude Include="auradb.h" />
+    <ClInclude Include="constants.h" />
     <ClInclude Include="includes.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="ms_stdint.h" />

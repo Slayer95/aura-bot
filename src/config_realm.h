@@ -26,6 +26,7 @@
 #ifndef AURA_CONFIG_REALM_H_
 #define AURA_CONFIG_REALM_H_
 
+#include "constants.h"
 #include "config.h"
 #include "config_net.h"
 #include "config_commands.h"
@@ -35,13 +36,6 @@
 #include <string>
 #include <optional>
 #include <map>
-
-#define REALM_AUTH_PVPGN 0
-#define REALM_AUTH_BATTLENET 1
-
-#define COMMANDS_ALLOWED_NONE 0
-#define COMMANDS_ALLOWED_UNVERIFIED 1
-#define COMMANDS_ALLOWED_VERIFIED 2
 
 struct sockaddr_storage;
 

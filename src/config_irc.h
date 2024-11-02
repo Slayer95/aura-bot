@@ -26,6 +26,7 @@
 #ifndef AURA_CONFIG_IRC_H_
 #define AURA_CONFIG_IRC_H_
 
+#include "constants.h"
 #include "config.h"
 #include "config_commands.h"
 

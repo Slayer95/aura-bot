@@ -36,57 +36,13 @@
 #endif
 
 #include "aura.h"
+#include "constants.h"
 #include "command.h"
 #include "irc.h"
 #include "map.h"
 #include "game.h"
 #include "realm.h"
 #include "savegame.h"
-
-#define SEARCH_TYPE_ONLY_MAP 1
-#define SEARCH_TYPE_ONLY_CONFIG 2
-#define SEARCH_TYPE_ONLY_FILE 3
-#define SEARCH_TYPE_ANY 7
-
-#define MATCH_TYPE_NONE 0u
-#define MATCH_TYPE_MAP 1u
-#define MATCH_TYPE_CONFIG 2u
-#define MATCH_TYPE_INVALID 4u
-#define MATCH_TYPE_FORBIDDEN 8u
-
-#define RESOLUTION_OK 0
-#define RESOLUTION_ERR 1
-#define RESOLUTION_BAD_NAME 2
-
-#define SETUP_USE_STANDARD_PATHS true
-#define SETUP_PROTECT_ARBITRARY_TRAVERSAL false
-
-#ifdef _WIN32
-#define FILE_EXTENSIONS_MAP {L".w3x", L".w3m"}
-#define FILE_EXTENSIONS_CONFIG {L".ini"}
-#else
-#define FILE_EXTENSIONS_MAP {".w3x", ".w3m"}
-#define FILE_EXTENSIONS_CONFIG {".ini"}
-#endif
-
-#define GAMESETUP_ORIGIN_NONE 0
-#define GAMESETUP_ORIGIN_GAME 1
-#define GAMESETUP_ORIGIN_REALM 2
-#define GAMESETUP_ORIGIN_IRC 3
-#define GAMESETUP_ORIGIN_DISCORD 4
-#define GAMESETUP_ORIGIN_INVALID 255
-
-#define GAMESETUP_STEP_MAIN 0
-#define GAMESETUP_STEP_RESOLUTION 1
-#define GAMESETUP_STEP_SUGGESTIONS 2
-#define GAMESETUP_STEP_DOWNLOAD 3
-
-#define MAP_ONREADY_SET_ACTIVE 1
-#define MAP_ONREADY_HOST 2
-#define MAP_ONREADY_ALIAS 3
-
-#define SUGGESTIONS_TIMEOUT 3000u
-#define GAMESETUP_STALE_TICKS 180000u
 
 class CAura;
 class CCLI;

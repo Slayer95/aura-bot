@@ -1006,7 +1006,6 @@ void CConfig::SetFloat(const string& key, const float& x)
   m_CFG[key] = to_string(x);
 }
 
-template <size_t SIZE>
 void CConfig::SetUint8Array(const string& key, const array<uint8_t, SIZE> &x)
 {
   m_CFG[key] = ByteArrayToDecString(x);

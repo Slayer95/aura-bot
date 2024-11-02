@@ -26,16 +26,13 @@
 #ifndef AURA_CONFIG_NET_H_
 #define AURA_CONFIG_NET_H_
 
+#include "constants.h"
 #include "config.h"
 
 #include <vector>
 #include <set>
 #include <string>
 #include <map>
-
-#define MAP_TRANSFERS_NEVER 0
-#define MAP_TRANSFERS_AUTOMATIC 1
-#define MAP_TRANSFERS_MANUAL 2
 
 //
 // CNetConfig

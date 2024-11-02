@@ -62,6 +62,7 @@
 #include <arpa/inet.h>
 #endif
 
+#include "constants.h"
 #include "config.h"
 
 class CConfig;
