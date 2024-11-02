@@ -117,6 +117,8 @@ private:
   bool                             m_FailedLogin;               // if we tried to login but failed
   bool                             m_FailedSignup;              // if we tried to sign up but failed
   uint16_t                         m_GamePort;                  // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
+  uint32_t                         m_GameHostCounter;           // game host counter for the game that is being broadcasted
+  std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
   std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted or not, or it is pending
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
   bool                             m_AnyWhisperRejected;        // whether the realm rejected any whisper because the receiver was not offline.

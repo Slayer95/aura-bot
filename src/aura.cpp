@@ -850,7 +850,7 @@ bool CAura::Update()
   if (m_AutoRehostGameSetup && !m_CurrentLobby) {
     if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
       (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby)) &&
-      (!m_LastGameHostedTime.has_value() || m_LastGameHostedTime.value() + AUTO_REHOST_COOLDOWN_TICKS < GetTicks())
+      (!m_LastGameHostedTicks.has_value() || m_LastGameHostedTicks.value() + AUTO_REHOST_COOLDOWN_TICKS < GetTicks())
     ) {
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
@@ -1153,14 +1153,14 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
   // Otherwise whisper the game creator that the (re)host failed.
 
   if (m_CurrentLobby->GetHasAnyUser()) {
-    m_CurrentLobby->SendAllChat("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name");
+    m_CurrentLobby->SendAllChat("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
   } else {
     switch (m_CurrentLobby->GetCreatedFromType()) {
       case GAMESETUP_ORIGIN_REALM:
-        reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
         break;
       case GAMESETUP_ORIGIN_IRC:
-        reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
         break;
       /*
       // TODO: CAura::EventBNETGameRefreshError SendUser()
@@ -1172,7 +1172,7 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
     }
   }
 
-  Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name");
+  Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
 
   bool earlyExit = false;
   switch (m_CurrentLobby->m_Config->m_BroadcastErrorHandler) {
@@ -1721,7 +1721,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
 
   m_CurrentLobby = new CGame(this, gameSetup);
   m_CanReplaceLobby = gameSetup->m_LobbyReplaceable;
-  m_LastGameHostedTime = GetTicks();
+  m_LastGameHostedTicks = GetTicks();
   if (gameSetup->m_LobbyAutoRehosted) {
     m_AutoRehostGameSetup = gameSetup;
   }

@@ -96,6 +96,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_FailedLogin(false),
     m_FailedSignup(false),
     m_GamePort(6112),
+    m_GameHostCounter(0),
     m_HadChatActivity(false),
     m_AnyWhisperRejected(false),
     m_ChatQueuedGameAnnouncement(false),
@@ -1273,6 +1274,16 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
     game->GetHostPort())
   );
 
+  // construct a fixed host counter which will be used to identify players from this realm
+  // the fixed host counter's highest-order byte will contain a 7 bit ID (0-127), plus a trailing bit to discriminate join from info requests
+  // the rest of the fixed host counter will contain the 24 least significant bits of the actual host counter
+  // since we're destroying 8 bits of information here the actual host counter should not be greater than 2^24 which is a reasonable assumption
+  // when a user joins a game we can obtain the ID from the received host counter
+  // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
+  // battle.net refreshes use IDs of 16-255
+  const uint32_t hostCounter = game->GetHostCounter() | (game->GetIsMirror() ? 0 : (static_cast<uint32_t>(m_PublicServerID) << 24));
+  bool changedAny = m_GamePort != connectPort || m_GameHostCounter != hostCounter;
+
   if (m_GamePort != connectPort) {
     PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "updating net game port to " + to_string(connectPort))
     // Some PvPGN servers will disconnect if this message is sent while logged in
@@ -1280,7 +1291,19 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
     m_GamePort = connectPort;
   }
 
-  PRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "broadcasting game...")
+  if (!changedAny) {
+    PRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "game refreshed")
+  } else {
+    int64_t Ticks = GetTicks();
+    if (!m_Config->m_IsHostOften && m_GameBroadcastStartTicks.has_value() && m_GameBroadcastStartTicks.value() + REALM_HOST_COOLDOWN_TICKS < Ticks) {
+      // Still in cooldown
+      return;
+    }
+    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "registering game...")
+    m_GameHostCounter = hostCounter;
+    m_GameBroadcastStartTicks = Ticks;
+  }
+
   Send(m_Protocol->SEND_SID_STARTADVEX3(
     displayMode,
     game->GetGameType(),
@@ -1292,16 +1315,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
     game->GetSourceFilePath(),
     game->GetSourceFileHash(),
     game->GetSourceFileSHA1(),
-
-  // construct a fixed host counter which will be used to identify players from this realm
-  // the fixed host counter's highest-order byte will contain a 7 bit ID (0-127), plus a trailing bit to discriminate join from info requests
-  // the rest of the fixed host counter will contain the 24 least significant bits of the actual host counter
-  // since we're destroying 8 bits of information here the actual host counter should not be greater than 2^24 which is a reasonable assumption
-  // when a user joins a game we can obtain the ID from the received host counter
-  // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
-  // battle.net refreshes use IDs of 16-255
-
-    game->GetHostCounter() | (game->GetIsMirror() ? 0 : (static_cast<uint32_t>(m_PublicServerID) << 24)),
+    hostCounter,
     game->GetMap()->GetVersionMaxSlots()
   ));
 

@@ -148,7 +148,7 @@ public:
   std::string                                        m_SudoExecCommand;
   std::queue<std::vector<std::string>>               m_PendingActions;
 
-  std::optional<int64_t>                             m_LastGameHostedTime;
+  std::optional<int64_t>                             m_LastGameHostedTicks;
   std::vector<CGame*>                                m_Games;                      // these games are in progress
   std::map<std::string, std::string>                 m_CachedMaps;
   std::unordered_multiset<std::string>               m_BusyMaps;

@@ -92,6 +92,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", false);
   m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", false);
 
+  m_IsHostOften            = !CFG.GetBool(m_CFGKeyPrefix + "game_host.throttle", true);
+  m_IsHostMulti            = !CFG.GetBool(m_CFGKeyPrefix + "game_host.unique", true);
+
   m_EnableCustomAddress    = CFG.GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", false);
   m_PublicHostAddress      = CFG.GetAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value", "0.0.0.0");
   if (m_EnableCustomAddress)
@@ -209,6 +212,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_IsMirror(nRootConfig->m_IsMirror),
     m_IsVPN(nRootConfig->m_IsVPN),
 
+    m_IsHostOften(nRootConfig->m_IsHostOften),
+    m_IsHostMulti(nRootConfig->m_IsHostMulti),
+
     m_EnableCustomAddress(nRootConfig->m_EnableCustomAddress),
     m_PublicHostAddress(nRootConfig->m_PublicHostAddress),
 
@@ -296,6 +302,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_IsReHoster             = CFG.GetBool(m_CFGKeyPrefix + "rehoster", m_IsReHoster);
   m_IsMirror               = CFG.GetBool(m_CFGKeyPrefix + "mirror", m_IsMirror);
   m_IsVPN                  = CFG.GetBool(m_CFGKeyPrefix + "vpn", m_IsVPN);
+
+  m_IsHostOften            = !CFG.GetBool(m_CFGKeyPrefix + "game_host.throttle", !m_IsHostOften);
+  m_IsHostMulti            = !CFG.GetBool(m_CFGKeyPrefix + "game_host.unique", !m_IsHostMulti);
 
   m_EnableCustomAddress    = CFG.GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
   optional<sockaddr_storage> maybeAddress = CFG.GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
