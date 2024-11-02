@@ -26,17 +26,13 @@
 #ifndef AURA_GAMESETUP_H_
 #define AURA_GAMESETUP_H_
 
-#include <string>
-#include <cstdint>
-#include <vector>
-#include <optional>
-#include <utility>
+#include "aura.h"
+#include "includes.h"
+
 #ifndef DISABLE_CPR
 #include <cpr/cpr.h>
 #endif
 
-#include "aura.h"
-#include "constants.h"
 #include "command.h"
 #include "irc.h"
 #include "map.h"

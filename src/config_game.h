@@ -26,15 +26,10 @@
 #ifndef AURA_CONFIG_GAME_H_
 #define AURA_CONFIG_GAME_H_
 
-#include "constants.h"
+#include "includes.h"
 #include "config.h"
 #include "gamesetup.h"
 #include "map.h"
-
-#include <vector>
-#include <set>
-#include <string>
-#include <map>
 
 //
 // CGameConfig

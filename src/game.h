@@ -46,57 +46,13 @@
 #ifndef AURA_GAME_H_
 #define AURA_GAME_H_
 
+#include "includes.h"
 #include "gameslot.h"
 #include "gamesetup.h"
 #include "savegame.h"
 #include "socket.h"
 
-#include <set>
-#include <queue>
 #include <algorithm>
-#include <random>
-#include <map>
-
-#define SLOTS_ALIGNMENT_CHANGED (1 << 0)
-#define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)
-#define SLOTS_HCL_INJECTED (1 << 2)
-
-#define SAVE_ON_LEAVE_NEVER 0u
-#define SAVE_ON_LEAVE_AUTO 1u
-#define SAVE_ON_LEAVE_ALWAYS 2u
-
-#define CUSTOM_LAYOUT_NONE 0u
-#define CUSTOM_LAYOUT_ONE_VS_ALL 1u
-#define CUSTOM_LAYOUT_HUMANS_VS_AI 2u
-#define CUSTOM_LAYOUT_FFA 4u
-#define CUSTOM_LAYOUT_DRAFT 8u
-#define CUSTOM_LAYOUT_LOCKTEAMS 15u
-#define CUSTOM_LAYOUT_COMPACT 16u
-#define CUSTOM_LAYOUT_ISOPLAYERS 32u
-
-#define REFRESH_PERIOD_MIN 10
-#define REFRESH_PERIOD_MAX 500
-#define LAG_TOLERANCE_MIN_TIME 100
-#define LAG_TOLERANCE_MAX_TIME 2000
-#define GAME_BANNABLE_MAX_HISTORY_SIZE 32
-
-#define GAME_PAUSES_PER_PLAYER 3u
-#define GAME_SAVES_PER_PLAYER 1u
-#define GAME_SAVES_PER_REFEREE_ANTIABUSE 3u
-#define GAME_SAVES_PER_REFEREE_DEFAULT 255u
-
-#define GAME_ONGOING 0u
-#define GAME_OVER_TRUSTED 1u
-#define GAME_OVER_MMD 2u
-
-#define HIDDEN_PLAYERS_NONE 0u
-#define HIDDEN_PLAYERS_LOBBY 1u
-#define HIDDEN_PLAYERS_GAME 2u
-#define HIDDEN_PLAYERS_ALL 3u
-
-#define HIGH_PING_KICK_DELAY 10000u
-#define MAX_SCOPE_BANS 100u
-#define AUTO_REHOST_COOLDOWN_TICKS 180000u
 
 //
 // CGame

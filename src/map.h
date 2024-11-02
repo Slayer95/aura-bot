@@ -46,27 +46,22 @@
 #ifndef AURA_MAP_H_
 #define AURA_MAP_H_
 
-//
-// CMap
-//
-
 #include "includes.h"
-#include "constants.h"
 #include "fileutil.h"
 #include "util.h"
 
-#include <algorithm>
 #include <iterator>
 #include <cctype>
-#include <vector>
-#include <set>
-#include <optional>
 
 #pragma once
 
 class CAura;
 class CGameSlot;
 class CConfig;
+
+//
+// CMap
+//
 
 class CMap
 {

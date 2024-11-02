@@ -46,51 +46,10 @@
 #ifndef AURA_GAMESLOT_H_
 #define AURA_GAMESLOT_H_
 
-#include <algorithm>
-#include <cstdint>
+#include "includes.h"
 #include <iterator>
-#include <string>
-#include <vector>
 
 #include "hash.h"
-
-#define SLOTSTATUS_OPEN 0u
-#define SLOTSTATUS_CLOSED 1u
-#define SLOTSTATUS_OCCUPIED 2u
-#define SLOTSTATUS_VALID 3u
-#define SLOTSTATUS_VALID_NON_COMPUTER 3u
-
-#define SLOTRACE_HUMAN 1u
-#define SLOTRACE_ORC 2u
-#define SLOTRACE_NIGHTELF 4u
-#define SLOTRACE_UNDEAD 8u
-#define SLOTRACE_RANDOM 32u
-#define SLOTRACE_SELECTABLE 64u
-#define SLOTRACE_PICKRANDOM 128u
-#define SLOTRACE_INVALID 255u
-
-#define SLOTCOMP_EASY 0u
-#define SLOTCOMP_NORMAL 1u
-#define SLOTCOMP_HARD 2u
-#define SLOTCOMP_VALID 3u
-#define SLOTCOMP_INVALID 255u
-
-#define SLOTCOMP_NO 0u
-#define SLOTCOMP_YES 1u
-
-#define SLOTTYPE_NONE 0u
-#define SLOTTYPE_USER 1u
-#define SLOTTYPE_COMP 2u
-#define SLOTTYPE_NEUTRAL 3u
-#define SLOTTYPE_RESCUEABLE 4u
-#define SLOTTYPE_AUTO 255u
-
-#define SLOTPROG_NEW 0u
-#define SLOTPROG_RDY 100u
-#define SLOTPROG_RST 255u
-
-constexpr int MAX_SLOTS_MODERN = 24;
-constexpr int MAX_SLOTS_LEGACY = 12;
 
 //
 // CGameSlot

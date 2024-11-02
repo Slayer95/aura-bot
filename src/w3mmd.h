@@ -51,47 +51,6 @@
 #include "game.h"
 #include "gameprotocol.h"
 
-#include <array>
-#include <map>
-#include <utility>
-#include <queue>
-#include <vector>
-
-#define MMD_ACTION_TYPE_VAR 0u
-#define MMD_ACTION_TYPE_FLAG 1u
-#define MMD_ACTION_TYPE_EVENT 2u
-#define MMD_ACTION_TYPE_BLANK 3u
-#define MMD_ACTION_TYPE_CUSTOM 4u
-
-#define MMD_DEFINITION_TYPE_INIT 0u
-#define MMD_DEFINITION_TYPE_VAR 1u
-#define MMD_DEFINITION_TYPE_EVENT 2u
-
-#define MMD_INIT_TYPE_VERSION 0u
-#define MMD_INIT_TYPE_PLAYER 1u
-
-#define MMD_VALUE_TYPE_INT 0u
-#define MMD_VALUE_TYPE_REAL 1u
-#define MMD_VALUE_TYPE_STRING 2u
-
-#define MMD_OPERATOR_SET 0u
-#define MMD_OPERATOR_ADD 1u
-#define MMD_OPERATOR_SUBTRACT 2u
-
-#define MMD_FLAG_LOSER 0u
-#define MMD_FLAG_DRAWER 1u
-#define MMD_FLAG_WINNER 2u
-#define MMD_FLAG_LEAVER 3u
-#define MMD_FLAG_PRACTICE 4u
-
-#define MMD_RESULT_LOSER 0u
-#define MMD_RESULT_DRAWER 1u
-#define MMD_RESULT_WINNER 2u
-
-#define MMD_PROCESSING_INITIAL_DELAY 60000
-#define MMD_PROCESSING_STREAM_DEF_DELAY 60000
-#define MMD_PROCESSING_STREAM_ACTION_DELAY 180000
-
 //
 // CW3MMD
 //

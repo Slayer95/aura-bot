@@ -26,13 +26,8 @@
 #ifndef AURA_CONFIG_COMMANDS_H_
 #define AURA_CONFIG_COMMANDS_H_
 
-#include "constants.h"
+#include "includes.h"
 #include "config.h"
-
-#include <vector>
-#include <string>
-#include <optional>
-#include <map>
 
 //
 // CCommandConfig

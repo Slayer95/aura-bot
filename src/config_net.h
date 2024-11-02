@@ -26,13 +26,8 @@
 #ifndef AURA_CONFIG_NET_H_
 #define AURA_CONFIG_NET_H_
 
-#include "constants.h"
+#include "includes.h"
 #include "config.h"
-
-#include <vector>
-#include <set>
-#include <string>
-#include <map>
 
 //
 // CNetConfig

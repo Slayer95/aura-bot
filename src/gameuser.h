@@ -46,10 +46,7 @@
 #ifndef AURA_GAMEUSER_H_
 #define AURA_GAMEUSER_H_
 
-#include <queue>
-#include <string>
-#include <optional>
-
+#include "includes.h"
 #include "socket.h"
 #include "connection.h"
 
@@ -59,18 +56,6 @@ class CGame;
 class CConnection;
 class CRealm;
 class CAura;
-
-#define CONSISTENT_PINGS_COUNT 3u
-#define MAXIMUM_PINGS_COUNT 6u
-#define MAX_PING_WEIGHT 4u
-
-#define SMART_COMMAND_NONE 0u
-#define SMART_COMMAND_GO 1u
-
-#define GAME_USER_UNVERIFIED_KICK_TICKS 60000u
-#define AUTO_REALM_VERIFY_LATENCY 5000u
-#define CHECK_STATUS_LATENCY 5000u
-#define READY_REMINDER_PERIOD 20000u
 
 //
 // CGameUser

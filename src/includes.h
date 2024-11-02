@@ -60,8 +60,10 @@
 #include <utility>
 
 #include <array>
+#include <bitset>
 #include <string>
 #include <map>
+#include <optional>
 #include <queue>
 #include <set>
 #include <tuple>

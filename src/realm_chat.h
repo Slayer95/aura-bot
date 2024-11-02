@@ -26,34 +26,12 @@
 #ifndef AURA_REALM_CHAT_H_
 #define AURA_REALM_CHAT_H_
 
-#include <utility>
-#include <string>
-#include <vector>
-
 #include "includes.h"
 #include "aura.h"
 #include "realm.h"
 #include "config_realm.h"
 #include "command.h"
 #include "bnetprotocol.h"
-
-#define RECV_SELECTOR_SYSTEM 1
-#define RECV_SELECTOR_ONLY_WHISPER 2
-#define RECV_SELECTOR_ONLY_PUBLIC 3
-#define RECV_SELECTOR_ONLY_PUBLIC_OR_DROP 4
-#define RECV_SELECTOR_PREFER_PUBLIC 5
-
-#define CHAT_RECV_SELECTED_NONE 0
-#define CHAT_RECV_SELECTED_SYSTEM 1
-#define CHAT_RECV_SELECTED_PUBLIC 2
-#define CHAT_RECV_SELECTED_WHISPER 3
-#define CHAT_RECV_SELECTED_DROP 4
-
-#define CHAT_CALLBACK_NONE 0
-#define CHAT_CALLBACK_REFRESH_GAME 1
-
-#define CHAT_VALIDATOR_NONE 0
-#define CHAT_VALIDATOR_CURRENT_LOBBY 1
 
 class CRealm;
 class CBNETProtocol;

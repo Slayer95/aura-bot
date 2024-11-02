@@ -21,12 +21,10 @@
 #ifndef AURA_SAVEGAME_H
 #define AURA_SAVEGAME_H
 
+#include "includes.h"
 #include "aura.h"
 #include "gameslot.h"
 #include "packed.h"
-
-#include <string>
-#include <vector>
 
 //
 // CSaveGame

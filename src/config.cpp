@@ -51,10 +51,6 @@
 
 #include <cstdlib>
 #include <fstream>
-#include <algorithm>
-#include <string>
-#include <iostream>
-#include <sstream>
 
 #include "../utf8/utf8.h"
 
@@ -1006,7 +1002,7 @@ void CConfig::SetFloat(const string& key, const float& x)
   m_CFG[key] = to_string(x);
 }
 
-void CConfig::SetUint8Array(const string& key, const array<uint8_t, SIZE> &x)
+void CConfig::SetUint8Array(const string& key, const array<uint8_t, size_t SIZE> &x)
 {
   m_CFG[key] = ByteArrayToDecString(x);
 }

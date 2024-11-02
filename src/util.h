@@ -46,20 +46,12 @@
 #ifndef AURA_UTIL_H_
 #define AURA_UTIL_H_
 
-#include <array>
-#include <string>
-#include <cstdint>
-#include <vector>
-#include <sstream>
 #include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <optional>
 #include <regex>
 #include <filesystem>
 #include <functional>
 
+#include "includes.h"
 #include "../utf8/utf8.h"
 #include "hash.h"
 

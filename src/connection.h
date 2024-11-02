@@ -46,10 +46,7 @@
 #ifndef AURA_CONNECTION_H_
 #define AURA_CONNECTION_H_
 
-#include <queue>
-#include <string>
-#include <optional>
-
+#include "includes.h"
 #include "socket.h"
 
 class CStreamIOSocket;

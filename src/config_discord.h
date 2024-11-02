@@ -26,13 +26,9 @@
 #ifndef AURA_CONFIG_DISCORD_H_
 #define AURA_CONFIG_DISCORD_H_
 
-#include "constants.h"
+#include "includes.h"
 #include "config.h"
 #include "config_commands.h"
-
-#include <vector>
-#include <string>
-#include <map>
 
 //
 // CDiscordConfig

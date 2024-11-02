@@ -26,11 +26,8 @@
 #ifndef AURA_DISCORD_H_
 #define AURA_DISCORD_H_
 
+#include "includes.h"
 #include "config_discord.h"
-#include <vector>
-#include <string>
-#include <cstdint>
-#include <queue>
 
 #ifndef DISABLE_DPP
 #if defined(_MSC_VER)

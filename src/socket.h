@@ -46,9 +46,7 @@
 #ifndef AURA_SOCKET_H_
 #define AURA_SOCKET_H_
 
-#include <optional>
-#include <iostream>
-
+#include "includes.h"
 #include "util.h"
 
 #ifdef _WIN32

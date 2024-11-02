@@ -47,7 +47,6 @@
 #define AURA_GAMEPROTOCOL_H_
 
 #include "includes.h"
-#include "constants.h"
 #include "aura.h"
 
 //

@@ -26,13 +26,9 @@
 #ifndef AURA_CONFIG_BOT_H_
 #define AURA_CONFIG_BOT_H_
 
+#include "includes.h"
 #include "config.h"
 #include "config_commands.h"
-
-#include <vector>
-#include <set>
-#include <string>
-#include <map>
 
 //
 // CBotConfig
