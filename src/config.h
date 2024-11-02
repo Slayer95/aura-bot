@@ -146,8 +146,6 @@ public:
   void SetUint16(const std::string& key, const uint16_t& x);
   void SetUint8(const std::string& key, const uint8_t& x);
   void SetFloat(const std::string& key, const float& x);
-  template <size_t SIZE>
-  void SetUint8Array(const std::string& key, const std::array<uint8_t, SIZE>& x);
   void SetUint8Vector(const std::string& key, const std::vector<uint8_t>& x);
   std::vector<uint8_t> Export() const;
 

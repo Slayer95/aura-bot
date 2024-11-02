@@ -445,20 +445,23 @@ CConfig* CBNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& data)
   gameConfig->SetUint32("rehost.unknown_1", ByteArrayToUInt32(data, false, 4));
   gameConfig->SetUint32("rehost.unknown_2", ByteArrayToUInt32(data, false, 8));
 
-  array<uint8_t, 4> mapSize, mapCRC32, mapWeakHash, rehostSeed;
-  array<uint8_t, 20> mapSHA1;
+  vector<uint8_t> mapSize = vector<uint8_t>(4, 0);
+  vector<uint8_t> mapCRC32 = vector<uint8_t>(4, 0);
+  vector<uint8_t> mapWeakHash = vector<uint8_t>(4, 0);
+  vector<uint8_t> rehostSeed = vector<uint8_t>(4, 0);
+  vector<uint8_t> mapSHA1 = vector<uint8_t>(20, 0);
 
   copy_n(data.begin() + 12, 4, mapSize.begin());
-  gameConfig->SetUint8Array("map.size", mapSize);
+  gameConfig->SetUint8Vector("map.size", mapSize);
 
   copy_n(data.begin() + 16, 4, mapCRC32.begin());
-  gameConfig->SetUint8Array("map.crc32", mapCRC32);
+  gameConfig->SetUint8Vector("map.crc32", mapCRC32);
 
   copy_n(data.begin() + 20, 4, mapWeakHash.begin());
-  gameConfig->SetUint8Array("map.weak_hash", mapWeakHash);
+  gameConfig->SetUint8Vector("map.weak_hash", mapWeakHash);
 
   copy_n(data.begin() + 24, 20, mapSHA1.begin());
-  gameConfig->SetUint8Array("map.sha1", mapSHA1);
+  gameConfig->SetUint8Vector("map.sha1", mapSHA1);
 
   uint16_t cursor = 44u;
 
@@ -467,16 +470,16 @@ CConfig* CBNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& data)
 
   uint8_t slotIndex = 0;
   while (slotIndex < maxSlots) {
-    array<uint8_t, 9> slotInfo;
+    vector<uint8_t> slotInfo = vector<uint8_t>(9, 0);
     copy_n(data.begin() + cursor, 9, slotInfo.begin());
-    gameConfig->SetUint8Array("map.slot_" + ToDecString(slotIndex + 1), slotInfo);
+    gameConfig->SetUint8Vector("map.slot_" + ToDecString(slotIndex + 1), slotInfo);
     ++slotIndex;
     cursor += 9;
   }
 
   copy_n(data.begin() + cursor, 4, rehostSeed.begin());
   cursor += 4;
-  gameConfig->SetUint8Array("rehost.game.seed", rehostSeed);
+  gameConfig->SetUint8Vector("rehost.game.seed", rehostSeed);
 
   const uint8_t mapLayout = data[cursor];
   if (mapLayout > 3) {
@@ -522,11 +525,11 @@ CConfig* CBNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& data)
   // In a PVPGN server, stored at t_game.mapsize_x
   // Meanwhile, use GProxy values as placeholder
   array<uint8_t, 2> placeholderSize = {192, 7};
-  gameConfig->SetUint8Array("map.width", placeholderSize);
+  gameConfig->SetUint8Vector("map.width", placeholderSize);
 
   // In a PVPGN server, stored at t_game.mapsize_y
   // Meanwhile, use GProxy values as placeholder
-  gameConfig->SetUint8Array("map.height", placeholderSize);
+  gameConfig->SetUint8Vector("map.height", placeholderSize);
   return gameConfig;
 }
 
