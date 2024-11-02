@@ -37,6 +37,7 @@
 #include "aura.h"
 #include "net.h"
 #include "gameprotocol.h"
+#include "game.h"
 
 using namespace std;
 
