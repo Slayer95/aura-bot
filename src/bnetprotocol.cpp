@@ -524,7 +524,7 @@ CConfig* CBNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& data)
 
   // In a PVPGN server, stored at t_game.mapsize_x
   // Meanwhile, use GProxy values as placeholder
-  array<uint8_t, 2> placeholderSize = {192, 7};
+  vector<uint8_t> placeholderSize = {192, 7};
   gameConfig->SetUint8Vector("map.width", placeholderSize);
 
   // In a PVPGN server, stored at t_game.mapsize_y
