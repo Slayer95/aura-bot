@@ -534,7 +534,7 @@ void CGame::InitSlots()
       slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
     } else {
       //slot.SetComputer(SLOTCOMP_NO);
-      slot.SetSlotStatus(slot.GetSlotStatus() & SLOTSTATUS_VALID);
+      slot.SetSlotStatus(slot.GetSlotStatus() & SLOTSTATUS_VALID_NON_COMPUTER);
     }
 
     if (!slot.GetIsSelectable()) {
