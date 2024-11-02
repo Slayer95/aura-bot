@@ -193,19 +193,8 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             Abort = true;
           }
         } else {
-          bool anyExtensions = m_Aura->m_Net->m_Config->m_EnableTCPScanUDP || m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled;
-          if (Length == 6 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSCAN) {
-            if (m_Aura->m_Net->m_Config->m_EnableTCPScanUDP) {
-              if (m_Aura->m_CurrentLobby->GetIsLobby() && m_Aura->m_CurrentLobby->GetUDPEnabled()) {
-                vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPSCAN, 6, 0};
-                uint16_t port = m_Aura->m_CurrentLobby->GetDiscoveryPort(GetInnerIPVersion(&(m_Socket->m_RemoteHost)));
-                AppendByteArray(packet, port, false);
-                m_Socket->PutBytes(packet);
-              }
-            } else if (!anyExtensions) {
-              Abort = true;
-            }
-          } else if (m_Type == INCOMING_CONNECTION_TYPE_NONE && Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
+          bool anyExtensions = m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled;
+          if (m_Type == INCOMING_CONNECTION_TYPE_NONE && Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
             if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
               vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
               m_Socket->PutBytes(packet);

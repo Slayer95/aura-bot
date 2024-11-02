@@ -57,7 +57,6 @@ public:
   uint16_t                                m_UDPCustomPortTCP6;          // the TCP port to announce to IPv6 clients
 
   bool                                    m_EnableTCPWrapUDP;
-  bool                                    m_EnableTCPScanUDP;
   bool                                    m_VLANEnabled;
   uint16_t                                m_VLANPort;
 

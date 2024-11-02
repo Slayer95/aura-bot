@@ -68,7 +68,6 @@ public:
     GPS_RECONNECT         = 2,
     GPS_ACK               = 3,
     GPS_REJECT            = 4,
-    GPS_UDPSCAN           = 10,
     GPS_UDPSYN            = 11,
     GPS_UDPACK            = 12,
     GPS_UDPFIN            = 13,

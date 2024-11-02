@@ -129,7 +129,6 @@ CNetConfig::CNetConfig(CConfig& CFG)
 #endif
 
   m_EnableTCPWrapUDP             = CFG.GetBool("net.tcp_extensions.udp_tunnel.enabled", true);
-  m_EnableTCPScanUDP             = CFG.GetBool("net.tcp_extensions.udp_scan.enabled", true);
   m_VLANEnabled                  = CFG.GetBool("net.tcp_extensions.gproxy.vlan.enabled", true);
   m_VLANPort                     = CFG.GetUint16("net.tcp_extensions.gproxy.vlan.port", onlyHostPort.value_or(6112u));
 
