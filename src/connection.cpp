@@ -179,29 +179,15 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             m_Aura->m_Net->HandleUDP(&pkt);
           } 
         } else if (Length == 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT && m_Type == INCOMING_CONNECTION_TYPE_NONE) {
-          const uint32_t ReconnectKey = ByteArrayToUInt32(Bytes, false, 5);
-          const uint32_t LastPacket   = ByteArrayToUInt32(Bytes, false, 9);
-
-          // look for a matching player in a running game
-
-          CGameUser* Match = nullptr;
-
-          for (auto& game : m_Aura->m_Games) {
-            if (game->GetGameLoaded() && game->GetIsProxyReconnectable()) {
-              CGameUser* Player = game->GetUserFromUID(Bytes[4]);
-              if (Player && Player->GetGProxyAny() && Player->GetGProxyReconnectKey() == ReconnectKey) {
-                Match = Player;
-                break;
-              }
-            }
-          }
-
-          if (!Match || Match->GetDeleteMe() || Match->m_Game->GetIsGameOver()) {
+          const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
+          const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
+          CGameUser* targetUser = m_Aura->m_Net->GetReconnectTargetUser(Bytes[4], reconnectKey);
+          if (!targetUser) {
             m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(REJECTGPS_NOTFOUND));
             Abort = true;
           } else {
             // reconnect successful!
-            Match->EventGProxyReconnect(m_Socket, LastPacket);
+            targetUser->EventGProxyReconnect(m_Socket, lastPacket);
             m_Socket = nullptr;
             result = PREPLAYER_CONNECTION_RECONNECTED;
             Abort = true;

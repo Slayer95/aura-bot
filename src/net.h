@@ -252,6 +252,7 @@ public:
 
   bool                                   IsIgnoredDatagramSource(std::string sourceIp);
   bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }
+  CGameUser*                             GetReconnectTargetUser(const uint8_t UID, const uint32_t reconnectKey) const;
 };
 
 #endif // AURA_NET_H_

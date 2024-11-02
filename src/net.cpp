@@ -640,6 +640,23 @@ bool CNet::IsIgnoredDatagramSource(string sourceIp)
   return m_Config->m_UDPBlockedIPs.find(element) != m_Config->m_UDPBlockedIPs.end();
 }
 
+CGameUser* CNet::GetReconnectTargetUser(const uint8_t UID, const uint32_t reconnectKey) const
+{
+  CGameUser* matchUser = nullptr;
+
+  for (auto& game : m_Aura->m_Games) {
+    if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
+      CGameUser* user = game->GetUserFromUID(UID);
+      if (user && !user->GetDeleteMe() && user->GetGProxyAny() && user->GetGProxyReconnectKey() == reconnectKey) {
+        matchUser = user;
+        break;
+      }
+    }
+  }
+
+  return matchUser;
+}
+
 void CNet::HandleUDP(UDPPkt* pkt)
 {
   std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)pkt->buf, pkt->length);
