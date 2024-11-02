@@ -43,9 +43,10 @@
 
  */
 
-#include "bnetprotocol.h"
 #include "util.h"
 #include "includes.h"
+#include "bnetprotocol.h"
+#include "map.h"
 
 #include <algorithm>
 #include <utility>
@@ -424,6 +425,112 @@ vector<string> CBNETProtocol::RECEIVE_SID_CLANMEMBERLIST(const vector<uint8_t>& 
   return ClanList;
 }
 
+CConfig* CBNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& data)
+{
+  CConfig* gameConfig = nullptr;
+  if (data.size() < 64 || !ValidateLength(data)) {
+    Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad data size");
+    return gameConfig;
+  }
+  const uint16_t slotInfoSize = ByteArrayToUInt16(data, false, 44);
+  if (static_cast<uint16_t>(data.size()) < 44u + slotInfoSize) {
+    Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad slot data size");
+    return gameConfig;
+  }
+  const uint8_t maxSlots = data[46];
+  if (slotInfoSize != static_cast<uint16_t>(maxSlots) * 9 + 7) {
+    Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad slot count");
+    return gameConfig;
+  }
+  gameConfig = new CConfig();
+  gameConfig->SetUint32("rehost.unknown_1", ByteArrayToUInt32(data, false, 4));
+  gameConfig->SetUint32("rehost.unknown_2", ByteArrayToUInt32(data, false, 8));
+
+  array<uint8_t, 4> mapSize, mapCRC32, mapWeakHash, rehostSeed;
+  array<uint8_t, 20> mapSHA1;
+
+  copy_n(data.begin() + 12, 4, mapSize.begin());
+  gameConfig->SetUint8Array("map.size", mapSize);
+
+  copy_n(data.begin() + 16, 4, mapCRC32.begin());
+  gameConfig->SetUint8Array("map.crc32", mapCRC32);
+
+  copy_n(data.begin() + 20, 4, mapWeakHash.begin());
+  gameConfig->SetUint8Array("map.weak_hash", mapWeakHash);
+
+  copy_n(data.begin() + 24, 20, mapSHA1.begin());
+  gameConfig->SetUint8Array("map.sha1", mapSHA1);
+
+  uint16_t cursor = 44u;
+
+  // skip 3 bytes - slot info size, max slots
+  cursor += 3u;
+
+  uint8_t slotIndex = 0;
+  while (slotIndex < maxSlots) {
+    array<uint8_t, 9> slotInfo;
+    copy_n(data.begin() + cursor, 9, slotInfo.begin());
+    gameConfig->SetUint8Array("map.slot_" + ToDecString(slotIndex + 1), slotInfo);
+    ++slotIndex;
+    cursor += 9;
+  }
+
+  copy_n(data.begin() + cursor, 4, rehostSeed.begin());
+  cursor += 4;
+  gameConfig->SetUint8Array("rehost.game.seed", rehostSeed);
+
+  const uint8_t mapLayout = data[cursor];
+  if (mapLayout > 3) {
+    // It seems like this is sometimes 4?
+    Print("[BNETPROTO] Map layout is unexpectedly " + ToDecString(mapLayout));
+  }
+  gameConfig->SetUint8("rehost.game.layout", mapLayout);
+  cursor++;
+
+  const uint8_t mapNumPlayers = data[cursor];
+  gameConfig->SetUint8("map.num_players", mapNumPlayers);
+  cursor++;
+
+  vector<uint8_t> mapClientPath = ExtractCString(data, cursor);
+  gameConfig->SetString("map.path", mapClientPath);
+
+  cursor += static_cast<uint16_t>(mapClientPath.size()) + 1u;
+  if (cursor >= data.size()) {
+    Print("[BNETPROTO] Missing hosted game name, etc.");
+    return gameConfig;
+  }
+
+  gameConfig->SetBool("rehost.game.private", data[cursor]);
+  cursor += 1;
+
+  if (cursor < data.size()) {
+    vector<uint8_t> gameName = ExtractCString(data, cursor);
+    gameConfig->SetString("rehost.game.name", gameName);
+  }
+
+  // TODO:
+  // Game flags are the first 4 bytes of the decoded stat string
+  // In a PvPGN server, the stat string is stored (encoded) at t_game.info + 9
+  // See src/bnetd/game_conv.cpp for decoding routines.
+  //
+  // Meanwhile, this should be enough as a PoC.
+  if (maxSlots > mapNumPlayers) {
+    gameConfig->SetUint8("map.observers", MAPOBS_REFEREES);
+  } else {
+    gameConfig->SetUint8("map.observers", MAPOBS_NONE);
+  }
+
+  // In a PVPGN server, stored at t_game.mapsize_x
+  // Meanwhile, use GProxy values as placeholder
+  array<uint8_t, 2> placeholderSize = {192, 7};
+  gameConfig->SetUint8Array("map.width", placeholderSize);
+
+  // In a PVPGN server, stored at t_game.mapsize_y
+  // Meanwhile, use GProxy values as placeholder
+  gameConfig->SetUint8Array("map.height", placeholderSize);
+  return gameConfig;
+}
+
 ////////////////////
 // SEND FUNCTIONS //
 ////////////////////
@@ -601,7 +708,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_
     AppendByteArrayFast(packet, gameName);                 // Game Name
     packet.push_back(0);                                   // Game Password is NULL
     packet.push_back(86 + maxSupportedSlots);              // Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of UID's Warcraft III will allocate
-    AppendByteArrayFast(packet, HostCounterString, false); // Host Counter
+    AppendByteArrayFast(packet, HostCounterString, false); // Host Counter - exclude null terminator
     AppendByteArrayFast(packet, StatString);               // Stat String
     packet.push_back(0);                                   // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
     AssignLength(packet);

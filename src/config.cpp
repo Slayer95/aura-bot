@@ -966,6 +966,12 @@ void CConfig::SetString(const string& key, const string& x)
   m_CFG[key] = x;
 }
 
+void CConfig::SetString(const string& key, const vector<uint8_t>& x)
+{
+  string xWrapped = string(begin(x), end(x));
+  m_CFG[key] = xWrapped;
+}
+
 void CConfig::SetBool(const string& key, const bool& x)
 {
   m_CFG[key] = x ? "1" : "0";
@@ -1000,7 +1006,13 @@ void CConfig::SetFloat(const string& key, const float& x)
   m_CFG[key] = to_string(x);
 }
 
-void CConfig::SetUint8Vector(const string& key, const std::vector<std::uint8_t> &x)
+template <size_t SIZE>
+void CConfig::SetUint8Array(const string& key, const array<uint8_t, SIZE> &x)
+{
+  m_CFG[key] = ByteArrayToDecString(x);
+}
+
+void CConfig::SetUint8Vector(const string& key, const vector<uint8_t> &x)
 {
   m_CFG[key] = ByteArrayToDecString(x);
 }

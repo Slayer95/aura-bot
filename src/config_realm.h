@@ -96,6 +96,7 @@ public:
   bool m_EnableBroadcast;
   bool m_AnnounceHostToChat;
   bool m_IsMain;
+  bool m_IsReHoster;
   bool m_IsMirror;
   bool m_IsVPN;
 

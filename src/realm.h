@@ -176,6 +176,7 @@ public:
   inline uint32_t      GetInternalID() const { return m_InternalServerID; }
   std::string          GetLoginName() const;
   bool                 GetIsMain() const;
+  bool                 GetIsReHoster() const;
   bool                 GetIsMirror() const;
   bool                 GetIsVPN() const;
   bool                 GetUsesCustomIPAddress() const;

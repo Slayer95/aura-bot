@@ -51,6 +51,7 @@
 
 #include <map>
 #include <string>
+#include <array>
 #include <vector>
 #include <set>
 #include <optional>
@@ -144,6 +145,7 @@ public:
 
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);
+  void SetString(const std::string& key, const std::vector<uint8_t>& x);
   void SetBool(const std::string& key, const bool& x);
   void SetInt32(const std::string& key, const int32_t& x);
   void SetInt64(const std::string& key, const int64_t& x);
@@ -151,7 +153,9 @@ public:
   void SetUint16(const std::string& key, const uint16_t& x);
   void SetUint8(const std::string& key, const uint8_t& x);
   void SetFloat(const std::string& key, const float& x);
-  void SetUint8Vector(const std::string& key, const std::vector<std::uint8_t>& x);
+  template <size_t SIZE>
+  void SetUint8Array(const std::string& key, const std::array<uint8_t, SIZE>& x);
+  void SetUint8Vector(const std::string& key, const std::vector<uint8_t>& x);
   std::vector<uint8_t> Export() const;
 
   static std::string ReadString(const std::filesystem::path& file, const std::string& key);

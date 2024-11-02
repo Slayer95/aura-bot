@@ -1258,6 +1258,11 @@ void CGameSetup::OnFetchSuggestionsEnd()
 }
 #endif
 
+bool CGameSetup::GetMapLoaded() const
+{
+  return m_Map != nullptr;
+}
+
 bool CGameSetup::LoadMapSync()
 {
   if (m_Map) return true;

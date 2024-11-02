@@ -396,6 +396,35 @@ void CRealm::Update(void* fd, void* send_fd)
             case CBNETProtocol::SID_CLANMEMBERLIST:
               m_Clan = m_Protocol->RECEIVE_SID_CLANMEMBERLIST(Data);
               break;
+
+            case CBNETProtocol::SID_GETGAMEINFO:
+              PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got SID_GETGAMEINFO: " + ByteArrayToHexString(Data))
+              break;
+
+            case CBNETProtocol::SID_HOSTGAME: {
+              if (!GetIsReHoster()) {
+                break;
+              }
+
+              CConfig* hostedGameConfig = m_Protocol->RECEIVE_HOSTED_GAME_CONFIG(Data);
+              if (!hostedGameConfig) {
+                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got invalid SID_HOSTGAME message")
+                break;
+              }
+              CCommandContext* ctx = new CCommandContext(m_Aura, false, &cout);
+              CGameSetup* gameSetup = new CGameSetup(m_Aura, ctx, hostedGameConfig);
+              if (!gameSetup->GetMapLoaded()) {
+                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
+                delete hostedGameConfig;
+                break;
+              }
+              gameSetup->SetDisplayMode(hostedGameConfig->GetBool("rehost.game.private", false) ? GAME_PRIVATE : GAME_PUBLIC);
+              gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, hostedGameConfig->GetString("rehost.game.name", 1, 31, "Rehosted Game"));
+              gameSetup->SetActive();
+              gameSetup->LoadMap();
+              delete hostedGameConfig;
+              break;
+            }
           }
         }
 
@@ -842,6 +871,11 @@ string CRealm::GetLoginName() const
 bool CRealm::GetIsMain() const
 {
   return m_Config->m_IsMain;
+}
+
+bool CRealm::GetIsReHoster() const
+{
+  return m_Config->m_IsReHoster;
 }
 
 bool CRealm::GetIsMirror() const

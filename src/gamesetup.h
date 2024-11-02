@@ -288,8 +288,9 @@ public:
 
 
 #endif
+  bool GetMapLoaded() const;
   void LoadMap();
-  bool LoadMapSync();  
+  bool LoadMapSync();
   void OnLoadMapSuccess();
   void OnLoadMapError();
   bool SetActive();

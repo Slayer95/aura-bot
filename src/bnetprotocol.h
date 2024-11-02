@@ -62,6 +62,9 @@
 #include <arpa/inet.h>
 #endif
 
+#include "config.h"
+
+class CConfig;
 class CIncomingGameHost;
 class CIncomingChatEvent;
 
@@ -95,7 +98,9 @@ public:
     SID_FRIENDLIST             = 101, // 0x65
     SID_FRIENDSUPDATE          = 102, // 0x66
     SID_CLANMEMBERLIST         = 125, // 0x7D
-    SID_CLANMEMBERSTATUSCHANGE = 127  // 0x7F
+    SID_CLANMEMBERSTATUSCHANGE = 127, // 0x7F
+    SID_GETGAMEINFO            = 131, // 0x83
+    SID_HOSTGAME               = 132  // 0x84
   };
 
   enum KeyResult
@@ -175,6 +180,7 @@ public:
   bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);
   std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);
   std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
+  CConfig* RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
 
   // send functions
 

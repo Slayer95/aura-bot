@@ -233,7 +233,7 @@ uint8_t CMap::GetMapLayoutStyle() const
 {
   // 0 = melee
   // 1 = custom forces
-  // 2 = fixed player settings (not possible with the Warcraft III map editor)
+  // 2 = fixed player settings (not possible with the Warcraft III design)
   // 3 = custom forces + fixed player settings
 
   if (!(m_MapOptions & MAPOPT_CUSTOMFORCES))

@@ -280,6 +280,7 @@ public:
   void                              SetUseStandardPaths(const bool nValue) { m_UseStandardPaths = nValue; }
   bool                              IsObserverSlot(const CGameSlot* slot) const;
   bool                              NormalizeSlots();
+  inline std::string                GetErrorString() { return m_ErrorMessage; }
 
   void Load(CConfig* CFG);
   bool UnlinkFile();
