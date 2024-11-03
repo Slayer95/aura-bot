@@ -71,7 +71,8 @@ public:
     GPS_UDPSYN            = 11,
     GPS_UDPACK            = 12,
     GPS_UDPFIN            = 13,
-    GPS_SUPPORT_EXTENDED	= 50
+    GPS_SUPPORT_EXTENDED	= 50,
+    GPS_CHANGEKEY         = 51
   };
 
   CAura* m_Aura;
@@ -90,7 +91,8 @@ public:
   std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket) const;
   std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason) const;
-  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks) const;
+  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID) const;
+  std::vector<uint8_t> SEND_GPSS_CHANGE_KEY( uint32_t reconnectKey ) const;
   std::array<uint8_t, 2> SEND_GPSS_DIMENSIONS() const;
 };
 

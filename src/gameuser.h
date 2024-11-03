@@ -134,6 +134,7 @@ private:
 
   bool                             m_GProxy;                       // if the player is using GProxy++
   uint16_t                         m_GProxyPort;                   // port where GProxy will try to reconnect
+  bool                             m_GProxyCheckGameID;
   bool                             m_GProxyDisconnectNoticeSent;   // if a disconnection notice has been sent or not when using GProxy++
 
   bool                             m_GProxyExtended;               // if the player is using GProxyDLL
@@ -208,6 +209,7 @@ public:
   inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
   inline int64_t               GetLastGProxyWaitNoticeSentTime() const { return m_LastGProxyWaitNoticeSentTime; }
   inline uint32_t              GetGProxyReconnectKey() const { return m_GProxyReconnectKey; }
+  inline bool                  GetGProxyCheckGameID() const { return m_GProxyCheckGameID; }
   inline bool                  GetGProxyAny() const { return m_GProxy; }
   inline bool                  GetGProxyLegacy() const { return m_GProxy && !m_GProxyExtended; }
   inline bool                  GetGProxyExtended() const { return m_GProxyExtended; }
@@ -341,6 +343,8 @@ public:
 
   void Send(const std::vector<uint8_t>& data);
   void EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket);
+  void EventGProxyReconnectInvalid();
+  void RotateGProxyReconnectKey();
   void CloseConnection();
   void UnrefConnection(bool deferred = false);
 };

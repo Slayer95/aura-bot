@@ -123,11 +123,22 @@ vector<uint8_t> CGPSProtocol::SEND_GPSS_REJECT(const uint32_t reason) const
   return packet;
 }
 
-vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks) const
+vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID) const
 {
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_SUPPORT_EXTENDED, 8, 0};
-  const uint32_t seconds = ticks / 1000;
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_SUPPORT_EXTENDED, 0, 0};
+  const uint32_t seconds = static_cast<uint32_t>(ticks / 1000);
   AppendByteArray(packet, seconds, false);
+  if (gameID > 0) {
+    AppendByteArray(packet, gameID, false);
+  }
+  AssignLength(packet);
+  return packet;
+}
+
+vector<uint8_t> CGPSProtocol::SEND_GPSS_CHANGE_KEY(const uint32_t reconnectKey) const
+{
+  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_CHANGEKEY, 8, 0};
+  AppendByteArray(packet, reconnectKey, false);
   return packet;
 }
 

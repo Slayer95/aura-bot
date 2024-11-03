@@ -120,6 +120,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
 
     m_GProxy(false),
     m_GProxyPort(0),
+    m_GProxyCheckGameID(false),
     m_GProxyDisconnectNoticeSent(false),
 
     m_GProxyExtended(false),
@@ -453,7 +454,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           }
           m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
           if (m_GProxyVersion >= 2) {
-            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks));
+            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
           }
           // the port to which the client directly connects
           // (proxy port if it uses a proxy; the hosted game port otherwise)
@@ -463,7 +464,13 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           if (m_GProxy && m_Game->GetIsProxyReconnectableLong()) {
             m_GProxyExtended = true;
             Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
+            if (Length >= 12) {
+              m_GProxyCheckGameID = true;
+            }
           }
+        } else if (Bytes[1] == CGPSProtocol::GPS_CHANGEKEY && Length >= 8) {
+          m_GProxyReconnectKey = ByteArrayToUInt32(Bytes, false, 4);
+          Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
         }
       }
 
@@ -629,6 +636,19 @@ void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t 
   if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
     Print("user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
   }
+}
+
+void CGameUser::EventGProxyReconnectInvalid()
+{
+  Print("EventGProxyReconnectInvalid() on [" + GetName() + "] reconnection attempt");
+  if (m_Disconnected) return;
+  // TODO: Do we need different logic?
+  RotateGProxyReconnectKey();
+}
+
+void CGameUser::RotateGProxyReconnectKey()
+{
+  m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_CHANGE_KEY(rand()));
 }
 
 int64_t CGameUser::GetTotalDisconnectTicks() const
