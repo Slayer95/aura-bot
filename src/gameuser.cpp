@@ -307,14 +307,14 @@ bool CGameUser::Update(void* fd, int64_t timeout)
     while (Bytes.size() >= 4)
     {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
+      const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
         m_Game->EventUserDisconnectGameProtocolError(this, true);
         Abort = true;
         break;
       }
       if (Bytes.size() < Length) break;
-      const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
       if (Bytes[0] == W3GS_HEADER_CONSTANT)
       {
@@ -585,7 +585,7 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
   }
 }
 
-void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket)
+void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket)
 {
   // prevent potential session hijackers from stealing sudo access
   SudoModeEnd();
@@ -595,7 +595,9 @@ void CGameUser::EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t 
   // a new CConnection for the old CStreamIOSocket is created, and is pushed to CNet::m_DownGradedConnections 
   UnrefConnection(true);
 
-  m_Socket = NewSocket;
+  m_Socket = connection->GetSocket();
+  connection->SetSocket(nullptr);
+
   m_Socket->SetLogErrors(true);
   m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
 

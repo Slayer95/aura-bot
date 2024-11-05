@@ -118,112 +118,108 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
 
     while (Bytes.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
+      const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
         Abort = true;
         break;
       }
       if (Bytes.size() < Length) break;
-      const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-      if (Bytes[0] == W3GS_HEADER_CONSTANT ||
-        (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) ||
-        Bytes[0] == VLAN_HEADER_CONSTANT
-        ) {
-        if (Length >= 8 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_REQJOIN) {
-          if (!m_Aura->m_CurrentLobby || m_Aura->m_CurrentLobby->GetIsMirror() || m_Aura->m_CurrentLobby->GetLobbyLoading() || m_Aura->m_CurrentLobby->GetExiting()) {
-            // Game already started
+      switch (Bytes[0]) {
+        case W3GS_HEADER_CONSTANT:
+          if (Bytes[1] == CGameProtocol::W3GS_REQJOIN) {
+            CIncomingJoinRequest* joinRequest = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
+            if (!joinRequest) {
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+                Print("[AURA] Got invalid REQJOIN " + ByteArrayToDecString(Bytes));
+              }
+              Abort = true;
+              break;
+            }
+            if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+              Print("[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes));
+            }
+            CGame* targetLobby = m_Aura->GetLobbyByHostCounter(joinRequest->GetHostCounter());
+            if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || targetLobby->GetExiting()) {
+              break;
+            }
+            joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
+            if (targetLobby->EventRequestJoin(this, joinRequest)) {
+              result = PREPLAYER_CONNECTION_PROMOTED;
+              m_Type = INCOMING_CONNECTION_TYPE_PROMOTED_PLAYER;
+              m_Socket = nullptr;
+            }
             Abort = true;
-            break;
-          }
-          if (GetIsVLAN()) {
-            // VLAN uses separate TCP connections for game discovery than for joining games.
-            Abort = true;
-            break;
-          }
-          if (GetIsUDPTunnel()) {
-            vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};
-            m_Socket->PutBytes(packet);
-          }
-
-          if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-            Print("[AURA] Got REQJOIN " + ByteArrayToDecString(Bytes));
-          }
-          delete m_IncomingJoinPlayer;
-          m_IncomingJoinPlayer = m_Protocol->RECEIVE_W3GS_REQJOIN(
-            Data,
-            m_Aura->m_CurrentLobby->m_Config->m_UnsafeNameHandler,
-            m_Aura->m_CurrentLobby->m_Config->m_PipeConsideredHarmful
-          );
-          if (!m_IncomingJoinPlayer) {
-            // Invalid request.
-          } else if (m_Aura->m_CurrentLobby->GetHostCounter() != (m_IncomingJoinPlayer->GetHostCounter() & 0x00FFFFFF)) {
-            // Trying to join the wrong game.
-          } else if (m_Aura->m_CurrentLobby->EventRequestJoin(this, m_IncomingJoinPlayer)) {
-            result = PREPLAYER_CONNECTION_PROMOTED;
-            m_Socket = nullptr;
-          } else {
-            // Join failed.
-          }
-          Abort = true;
-          if (result == PREPLAYER_CONNECTION_PROMOTED) {
-            m_Type = INCOMING_CONNECTION_TYPE_PROMOTED_PLAYER;
-          }
-        } else if (GetIsUDPTunnel() && Bytes[0] == W3GS_HEADER_CONSTANT && CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
-          if (Length <= 1024) {
+          } else if (CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
+            if (Length > 1024) {
+              Abort = true;
+              break;
+            }
             struct UDPPkt pkt;
             pkt.socket = m_Socket;
             pkt.sender = &(m_Socket->m_RemoteHost);
             memcpy(pkt.buf, Bytes.data(), Length);
             pkt.length = Length;
             m_Aura->m_Net->HandleUDP(&pkt);
-          } 
-        } else if (Length >= 13 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_RECONNECT && m_Type == INCOMING_CONNECTION_TYPE_NONE) {
-          const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
-          const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
-          uint32_t gameID  = 0;
-          if (Length >= 17) {
-            gameID = ByteArrayToUInt32(Bytes, false, 13);
-          }
-          CGameUser* targetUser = m_Aura->m_Net->GetReconnectTargetUser(gameID, Bytes[4], reconnectKey);
-          if (!targetUser || targetUser->GetGProxyReconnectKey() != reconnectKey) {
-            m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
-            if (targetUser) targetUser->EventGProxyReconnectInvalid();
-            Abort = true;
           } else {
-            // reconnect successful!
-            targetUser->EventGProxyReconnect(m_Socket, lastPacket);
-            m_Socket = nullptr;
-            result = PREPLAYER_CONNECTION_RECONNECTED;
+            Abort = true;
+            break;
+          }
+          break;
+
+        case GPS_HEADER_CONSTANT: {
+          if (Length >= 13 && Bytes[1] == CGPSProtocol::GPS_RECONNECT && m_Type == INCOMING_CONNECTION_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
+            const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
+            const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
+            CGameUser* targetUser = nullptr;
+            if (Length >= 17) {
+              targetUser = m_Aura->m_Net->GetReconnectTargetUser(ByteArrayToUInt32(Bytes, false, 13), Bytes[4]);
+            } else {
+              targetUser = m_Aura->m_Net->GetReconnectTargetUserLegacy(Bytes[4], reconnectKey);
+            }
+            if (!targetUser || targetUser->GetGProxyReconnectKey() != reconnectKey) {
+              m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
+              if (targetUser) targetUser->EventGProxyReconnectInvalid();
+              Abort = true;
+            } else {
+              // reconnect successful!
+              targetUser->EventGProxyReconnect(this, lastPacket);
+              result = PREPLAYER_CONNECTION_RECONNECTED;
+              Abort = true;
+            }          
+          } else if (Length >= 4 && Bytes[1] == CGPSProtocol::GPS_UDPSYN && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
+            // in-house extension
+            m_Aura->m_Net->RegisterGameSeeker(this, GAMESEEKER_TYPE_UDP_TUNNEL);
+            result = PREPLAYER_CONNECTION_PROMOTED;
             Abort = true;
           }
-        } else {
-          bool anyExtensions = m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled;
-          if (m_Type == INCOMING_CONNECTION_TYPE_NONE && Length == 4 && Bytes[0] == GPS_HEADER_CONSTANT && Bytes[1] == CGPSProtocol::GPS_UDPSYN) {
-            if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
-              vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
-              m_Socket->PutBytes(packet);
-              m_Type = INCOMING_CONNECTION_TYPE_UDP_TUNNEL;
-            } else if (!anyExtensions) {
-              Abort = true;
-            }
-          } else if (m_Type == INCOMING_CONNECTION_TYPE_NONE && Length == 4 && Bytes[0] == VLAN_HEADER_CONSTANT && Bytes[1] == 0xFF) { // TODO: VLAN
-            if (m_Aura->m_Net->m_Config->m_VLANEnabled) {
-              m_Type = INCOMING_CONNECTION_TYPE_VLAN;
-            } else if (!anyExtensions) {
-              Abort = true;
-            }
-          }
-        }
-
-        if (Abort) {
-          // Process no more packets
           break;
         }
 
-        LengthProcessed += Length;
-        Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
+        case VLAN_HEADER_CONSTANT: {
+          if (m_Type != INCOMING_CONNECTION_TYPE_NONE) {
+            Abort = true;
+            break;
+          }
+          m_Aura->m_Net->RegisterGameSeeker(this, GAMESEEKER_TYPE_VLAN);
+          result = PREPLAYER_CONNECTION_PROMOTED;
+          Abort = true;
+          break;
+        }
+
+         default:
+          Abort = true;
       }
+
+      LengthProcessed += Length;
+
+      if (Abort) {
+        // Process no more packets
+        break;
+      }
+
+      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
     if (Abort && result != PREPLAYER_CONNECTION_PROMOTED && result != PREPLAYER_CONNECTION_RECONNECTED) {

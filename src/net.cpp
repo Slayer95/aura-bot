@@ -641,15 +641,32 @@ bool CNet::IsIgnoredDatagramSource(string sourceIp)
   return m_Config->m_UDPBlockedIPs.find(element) != m_Config->m_UDPBlockedIPs.end();
 }
 
-CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID, const uint32_t reconnectKey) const
+CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const
 {
   CGameUser* matchUser = nullptr;
 
   for (auto& game : m_Aura->m_Games) {
-    if (gameID > 0 && game->GetGameID() != gameID) continue;
+    if (game->GetGameID() != gameID) continue;
     if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
       CGameUser* user = game->GetUserFromUID(UID);
-      if (user && !user->GetDeleteMe() && user->GetGProxyAny() && (user->GetGProxyCheckGameID() || user->GetGProxyReconnectKey() == reconnectKey)) {
+      if (user && !user->GetDeleteMe() && user->GetGProxyAny()) {
+        matchUser = user;
+      }
+    }
+    break;
+  }
+
+  return matchUser;
+}
+
+CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t reconnectKey) const
+{
+  CGameUser* matchUser = nullptr;
+
+  for (auto& game : m_Aura->m_Games) {
+    if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
+      CGameUser* user = game->GetUserFromUID(UID);
+      if (user && !user->GetDeleteMe() && user->GetGProxyAny() && !user->GetGProxyCheckGameID() && user->GetGProxyReconnectKey() == reconnectKey) {
         matchUser = user;
         break;
       }
@@ -1494,6 +1511,17 @@ void CNet::OnUserKicked(CGameUser* user, bool deferred)
     m_IncomingConnections[port].push_back(connection);
   }
   user->SetSocket(nullptr);
+}
+
+void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
+{
+  CStreamIOSocket* socket = connection->GetSocket();
+  if (!socket) return;
+  const uint16_t port = connection->GetPort();
+  CGameSeeker* seeker = new CGameSeeker(m_Aura->m_GameProtocol, m_Aura, port, nType, socket);
+  m_ManagedConnections[port].push_back(seeker);
+  connection->SetSocket(nullptr);
+  seeker->Init();
 }
 
 void CNet::GracefulExit()

@@ -472,6 +472,7 @@ public:
     return bytes.size();
   }
   inline void                     ClearSendBuffer() { m_SendBuffer.clear(); }
+  inline void                     SubstrSendBuffer(uint32_t i) { m_SendBuffer = m_SendBuffer.substr(i); }
   inline bool                     GetIsSendPending() { return !m_SendBuffer.empty(); }
   void DoSend(fd_set* send_fd);
   void Flush();

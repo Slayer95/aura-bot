@@ -68,6 +68,7 @@
 #include "game.h"
 #include "cli.h"
 #include "irc.h"
+#include "vlanprotocol.h"
 
 #include <csignal>
 #include <cstdlib>
@@ -767,6 +768,28 @@ CAura::~CAura()
   delete m_DB;
   delete m_IRC;
   delete m_Discord;
+}
+
+CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
+{
+  hostCounter = hostCounter & 0x00FFFFFF;
+  if (m_CurrentLobby && m_CurrentLobby->GetHostCounter() == hostCounter) {
+    return m_CurrentLobby;
+  }
+  return nullptr;
+}
+
+CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
+{
+  if (m_CurrentLobby && m_CurrentLobby->GetGameID() == gameIdentifier) {
+    return m_CurrentLobby;
+  }
+  for (const auto& game : m_Games) {
+    if (game->GetGameID() == gameIdentifier) {
+      return game;
+    }
+  }
+  return nullptr;
 }
 
 CRealm* CAura::GetRealmByInputId(const string& inputId) const

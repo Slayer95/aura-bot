@@ -165,6 +165,9 @@ public:
   ~CAura();
   CAura(CAura&) = delete;
 
+  CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
+  CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
+
   CRealm* GetRealmByInputId(const std::string& inputId) const;
   CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   CRealm* GetRealmByHostName(const std::string& hostName) const;

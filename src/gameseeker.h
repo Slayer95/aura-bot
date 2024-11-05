@@ -23,50 +23,24 @@
 
  */
 
-/*
-
-   Copyright [2010] [Josko Nikolic]
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
-
- */
-
 #ifndef AURA_GAMESEEKER_H_
 #define AURA_GAMESEEKER_H_
 
-#include <queue>
-#include <string>
-#include <optional>
-
+#include "includes.h"
 #include "socket.h"
 
 class CStreamIOSocket;
 class CGameProtocol;
 class CGame;
-class CIncomingJoinRequest;
 class CAura;
 
 #define GAMESEEKER_OK 0u
 #define GAMESEEKER_DESTROY 1u
 #define GAMESEEKER_PROMOTED 2u
 
-#define INCOMING_CONNECTION_TYPE_NONE 0u
-#define INCOMING_CONNECTION_TYPE_UDP_TUNNEL 1u
-#define INCOMING_CONNECTION_TYPE_PROMOTED_PLAYER 2u
-#define INCOMING_CONNECTION_TYPE_KICKED_PLAYER 3u
-#define INCOMING_CONNECTION_TYPE_VLAN 4u
+#define GAMESEEKER_TYPE_PROMOTED_PLAYER 0u
+#define GAMESEEKER_TYPE_UDP_TUNNEL 1u
+#define GAMESEEKER_TYPE_VLAN 2u
 
 //
 // CGameSeeker
@@ -86,7 +60,6 @@ protected:
   // it also allows us to convert CGameConnections to CGamePlayers without the CGameSeeker's destructor closing the socket
 
   CStreamIOSocket*          m_Socket;
-  CIncomingJoinRequest*     m_IncomingJoinPlayer;
   bool                      m_DeleteMe;
 
 public:
@@ -99,12 +72,11 @@ public:
   inline std::string                GetIPString() const { return m_Socket->GetIPString(); }
   inline std::string                GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
   inline sockaddr_storage*          GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
-  inline bool                       GetIsUDPTunnel() const { return m_Type == INCOMING_CONNECTION_TYPE_UDP_TUNNEL; }
-  inline bool                       GetIsVLAN() const { return m_Type == INCOMING_CONNECTION_TYPE_VLAN; }
+  inline bool                       GetIsUDPTunnel() const { return m_Type == GAMESEEKER_TYPE_UDP_TUNNEL; }
+  inline bool                       GetIsVLAN() const { return m_Type == GAMESEEKER_TYPE_VLAN; }
   inline uint8_t                    GetType() const { return m_Type; }
   inline uint16_t                   GetPort() const { return m_Port; }
   inline bool                       GetDeleteMe() const { return m_DeleteMe; }
-  inline CIncomingJoinRequest*      GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetType(const uint8_t nType) { m_Type = nType; }
@@ -114,6 +86,7 @@ public:
 
   void SetTimeout(const int64_t nTicks);
   void CloseConnection();
+  void Init();
   uint8_t Update(void* fd, void* send_fd, int64_t timeout);
 
   // other functions

@@ -47,6 +47,7 @@
 #define AURA_GAME_H_
 
 #include "includes.h"
+#include "gameseeker.h"
 #include "gameslot.h"
 #include "gamesetup.h"
 #include "savegame.h"
@@ -453,7 +454,9 @@ public:
   void EventUserKickGProxyExtendedTimeout(CGameUser* user);
   void EventUserKickHandleQueued(CGameUser* user);
   void EventUserCheckStatus(CGameUser* user);
+  bool EventRequestJoin(CGameSeeker* connection, CIncomingJoinRequest* joinRequest);
   bool EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
+  void EventBeforeJoin(CConnection* connection);
   void EventUserLeft(CGameUser* user);
   void EventUserLoaded(CGameUser* user);
   bool EventUserAction(CGameUser* user, CIncomingAction* action);

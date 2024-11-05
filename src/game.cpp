@@ -3890,10 +3890,20 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
   return true;
 }
 
+bool CGame::EventRequestJoin(CGameSeeker* seeker, CIncomingJoinRequest* joinRequest)
+{
+  return false;
+}
+
 bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest)
 {
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    return false;
+  }
+  if (joinRequest->GetIsCensored() && m_Config->m_UnsafeNameHandler == ON_UNSAFE_NAME_DENY) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] unsafe name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
@@ -3928,6 +3938,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 
   // Odd host counters are information requests
   if (HostCounterID & 0x1) {
+    EventBeforeJoin(connection);
     connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewUID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
     SendVirtualHostPlayerInfo(connection);
     SendFakeUsersInfo(connection);
@@ -4084,8 +4095,17 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
   if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN && GetSlotsOpen() == 1 && GetNumJoinedUsersOrFake() > 1)
     DeleteVirtualHost();
 
+  EventBeforeJoin(connection);
   JoinPlayer(connection, joinRequest, SID, UID, HostCounterID, JoinedRealm, isReserved, IsUnverifiedAdmin);
   return true;
+}
+
+void CGame::EventBeforeJoin(CConnection* connection)
+{
+  if (connection->GetIsUDPTunnel()) {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};
+    connection->Send(packet);
+  }
 }
 
 bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)

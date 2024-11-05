@@ -342,7 +342,7 @@ public:
   // other functions
 
   void Send(const std::vector<uint8_t>& data);
-  void EventGProxyReconnect(CStreamIOSocket* NewSocket, const uint32_t LastPacket);
+  void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
   void EventGProxyReconnectInvalid();
   void RotateGProxyReconnectKey();
   void CloseConnection();

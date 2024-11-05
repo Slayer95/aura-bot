@@ -1123,15 +1123,7 @@ CGame* CCommandContext::GetTargetGame(const string& rawInput)
     return nullptr;
   }
 
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetGameID() == gameID) {
-    return m_Aura->m_CurrentLobby;
-  }
-  for (const auto& game : m_Aura->m_Games) {
-    if (game->GetGameID() == gameID) {
-      return game;
-    }
-  }
-  return nullptr;
+  return m_Aura->GetGameByIdentifier(gameID);
 }
 
 void CCommandContext::UseImplicitHostedGame()

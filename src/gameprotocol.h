@@ -116,7 +116,7 @@ public:
 
   // receive functions
 
-  CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data, uint8_t unsafeNameHandler, bool pipeConsideredHarmful);
+  CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
   uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data);
   bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
   CIncomingAction* RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
@@ -175,7 +175,7 @@ private:
   uint32_t                  m_EntryKey;
 
 public:
-  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::array<uint8_t, 4> nIPv4Internal, uint8_t unsafeNameHandler, bool pipeConsideredHarmful);
+  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::array<uint8_t, 4> nIPv4Internal);
   ~CIncomingJoinRequest();
 
   inline bool                   GetIsCensored() const { return m_Censored; }
@@ -185,6 +185,7 @@ public:
   inline std::string            GetOriginalName() const { return m_OriginalName; }
   inline std::array<uint8_t, 4> GetIPv4Internal() const { return m_IPv4Internal; }
 
+  void                          UpdateCensored(uint8_t unsafeNameHandler, const bool pipeConsideredHarmful);
   static std::string            CensorName(const std::string& originalName, const bool pipeConsideredHarmful);
 };
 

@@ -23,26 +23,6 @@
 
  */
 
-/*
-
-   Copyright [2010] [Josko Nikolic]
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
-
- */
-
 #include <utility>
 
 #include "config_bot.h"
@@ -70,7 +50,6 @@ CGameSeeker::CGameSeeker(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort,
     m_Port(nPort),
     m_Type(nType),
     m_Socket(nSocket),
-    m_IncomingJoinPlayer(nullptr),
     m_DeleteMe(false)
 {
 }
@@ -79,7 +58,6 @@ CGameSeeker::~CGameSeeker()
 {
   delete m_Socket;
   m_Socket = nullptr;
-  delete m_IncomingJoinPlayer;
 }
 
 void CGameSeeker::SetTimeout(const int64_t delta)
@@ -90,6 +68,21 @@ void CGameSeeker::SetTimeout(const int64_t delta)
 void CGameSeeker::CloseConnection()
 {
   m_Socket->Close();
+}
+
+void CGameSeeker::Init()
+{
+  switch (m_Type) {
+    case GAMESEEKER_TYPE_UDP_TUNNEL: {
+      vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
+      m_Socket->PutBytes(packet);
+      break;
+    }
+    case GAMESEEKER_TYPE_VLAN: {
+      // do nothing - client should send VLAN_SEARCHGAME
+      break;
+    }
+  }
 }
 
 uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
@@ -118,27 +111,75 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
 
     while (Bytes.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
+      const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
         Abort = true;
         break;
       }
       if (Bytes.size() < Length) break;
-      const std::vector<uint8_t> Data   = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-      if (Bytes[0] == W3GS_HEADER_CONSTANT ||
-        (Bytes[0] == GPS_HEADER_CONSTANT && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) ||
-        Bytes[0] == VLAN_HEADER_CONSTANT
-        ) {
+      switch (Bytes[0]) {
+        case W3GS_HEADER_CONSTANT:
+          if (m_Type != GAMESEEKER_TYPE_UDP_TUNNEL) {
+            Abort = true;
+            break;
+          }
+          if (Bytes[1] == CGameProtocol::W3GS_REQJOIN) {
+            CIncomingJoinRequest* joinRequest = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
+            if (!joinRequest) {
+              Abort = true;
+              break;
+            }
+            CGame* targetLobby = m_Aura->GetLobbyByHostCounter(joinRequest->GetHostCounter());
+            if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || targetLobby->GetExiting()) {
+              delete joinRequest;
+              break;
+            }
+            joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
+            if (targetLobby->EventRequestJoin(this, joinRequest)) {
+              result = GAMESEEKER_PROMOTED;
+              m_Socket = nullptr;
+            }
+            delete joinRequest;
+          } else if (CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
+            if (Length > 1024) {
+              Abort = true;
+              break;
+            }
+            struct UDPPkt pkt;
+            pkt.socket = m_Socket;
+            pkt.sender = &(m_Socket->m_RemoteHost);
+            memcpy(pkt.buf, Bytes.data(), Length);
+            pkt.length = Length;
+            m_Aura->m_Net->HandleUDP(&pkt);
+          } else {
+            Abort = true;
+            break;
+          }
+          break;
 
-        if (Abort) {
-          // Process no more packets
+        case VLAN_HEADER_CONSTANT: {
+          if (m_Type != GAMESEEKER_TYPE_VLAN) {
+            Abort = true;
+            break;
+          }
+          // TODO: VLAN
           break;
         }
 
-        LengthProcessed += Length;
-        Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
+         default:
+          Abort = true;
       }
+
+      LengthProcessed += Length;
+
+      if (Abort) {
+        // Process no more packets
+        break;
+      }
+
+      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
     if (Abort && result != GAMESEEKER_PROMOTED) {
@@ -149,10 +190,6 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
     }
   } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
     return GAMESEEKER_DESTROY;
-  }
-
-  if (Abort) {
-    m_DeleteMe = true;
   }
 
   // At this point, m_Socket may have been transferred to CGameUser
