@@ -52,8 +52,8 @@ public:
   uint16_t                m_Port;
   uint8_t                 m_Type;
   std::optional<int64_t>  m_TimeoutTicks;
-  CStreamIOSocket*          m_Socket;
-  bool                      m_DeleteMe;
+  CStreamIOSocket*        m_Socket;
+  bool                    m_DeleteMe;
 
   CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket);
   ~CGameSeeker();
