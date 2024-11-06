@@ -12,7 +12,8 @@ class CIncomingVLanGameInfo;
 
 namespace VirtualLanProtocol
 {
-  enum Magic {
+  enum class Magic : uint8_t
+  {
     VLAN_SEARCHGAME                                     = 47,  // 0x2F (UDP/LAN)
     VLAN_GAMEINFO                                       = 48,  // 0x30 (UDP/LAN)
     VLAN_CREATEGAME                                     = 49,  // 0x31 (UDP/LAN)

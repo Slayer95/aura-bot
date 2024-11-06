@@ -55,7 +55,7 @@
 
 namespace GPSProtocol
 {
-  enum Magic
+  enum class Magic : uint8_t
   {
     GPS_INIT              = 1,
     GPS_RECONNECT         = 2,
