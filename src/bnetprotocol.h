@@ -72,7 +72,7 @@ class CIncomingChatEvent;
 class CBNETProtocol
 {
 public:
-  enum Protocol
+  enum class Protocol : uint8_t
   {
     SID_NULL                   = 0,   // 0x0
     SID_STOPADV                = 2,   // 0x2
@@ -104,7 +104,7 @@ public:
     SID_HOSTGAME               = 132  // 0x84
   };
 
-  enum KeyResult
+  enum class KeyResult : uint32_t
   {
     KR_GOOD             = 0,
     KR_BAD              = 1,
@@ -114,7 +114,7 @@ public:
     KR_TFT_KEY_IN_USE   = 529
   };
 
-  enum IncomingChatEvent
+  enum class IncomingChatEvent : uint32_t
   {
     EID_SHOWUSER            = 1,  // received when you join a channel (includes users in the channel and their information)
     EID_JOIN                = 2,  // received when someone joins the channel you're currently in
