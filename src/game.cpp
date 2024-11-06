@@ -4598,8 +4598,6 @@ void CGame::EventUserChangeHandicap(CGameUser* user, uint8_t handicap)
 
 void CGame::EventUserDropRequest(CGameUser* user)
 {
-  // TODO: check that we've waited the full 45 seconds
-
   if (m_Lagging) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] voted to drop laggers")
     SendAllChat("Player [" + user->GetDisplayName() + "] voted to drop laggers");

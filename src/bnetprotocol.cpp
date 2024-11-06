@@ -510,7 +510,7 @@ CConfig* CBNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& data)
     gameConfig->SetString("rehost.game.name", gameName);
   }
 
-  // TODO:
+  // TODO: RECEIVE_HOSTED_GAME_CONFIG game flags
   // Game flags are the first 4 bytes of the decoded stat string
   // In a PvPGN server, the stat string is stored (encoded) at t_game.info + 9
   // See src/bnetd/game_conv.cpp for decoding routines.
