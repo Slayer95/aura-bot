@@ -41,10 +41,10 @@
 
  */
 
-#include "aura.h"
-
 #ifndef AURA_GPSPROTOCOL_H_
 #define AURA_GPSPROTOCOL_H_
+
+#include "includes.h"
 
 //
 // CGameProtocol
@@ -57,12 +57,9 @@
 
 #define GPS_ACK_PERIOD 10000u
 
-class CAura;
-
-class CGPSProtocol
+namespace GPSProtocol
 {
-public:
-  enum Protocol
+  enum Magic
   {
     GPS_INIT              = 1,
     GPS_RECONNECT         = 2,
@@ -75,25 +72,20 @@ public:
     GPS_CHANGEKEY         = 51
   };
 
-  CAura* m_Aura;
-
-  CGPSProtocol(CAura* nAura);
-  ~CGPSProtocol();
-
   // receive functions
 
   // send functions
 
-  std::vector<uint8_t> SEND_GPSC_INIT(const uint32_t version) const;
-  std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket) const;
-  std::vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket) const;
-  std::vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const;
-  std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket) const;
-  std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket) const;
-  std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason) const;
-  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID) const;
-  std::vector<uint8_t> SEND_GPSS_CHANGE_KEY( uint32_t reconnectKey ) const;
-  std::array<uint8_t, 2> SEND_GPSS_DIMENSIONS() const;
+  std::vector<uint8_t> SEND_GPSC_INIT(const uint32_t version);
+  std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket);
+  std::vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket);
+  std::vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions);
+  std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket);
+  std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket);
+  std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason);
+  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID);
+  std::vector<uint8_t> SEND_GPSS_CHANGE_KEY( uint32_t reconnectKey );
+  std::array<uint8_t, 2> SEND_GPSS_DIMENSIONS();
 };
 
 #endif // AURA_GPSPROTOCOL_H_

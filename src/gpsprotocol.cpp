@@ -41,108 +41,100 @@
 
  */
 
-#include "aura.h"
-#include "game.h"
-#include "gameprotocol.h"
 #include "util.h"
 #include "gpsprotocol.h"
 
-#include <queue>
-
 using namespace std;
 
-//
-// CGPSProtocol
-//
-
-CGPSProtocol::CGPSProtocol(CAura* nAura)
- : m_Aura(nAura)
+namespace GPSProtocol
 {
-}
 
-CGPSProtocol::~CGPSProtocol() = default;
+  ///////////////////////
+  // RECEIVE FUNCTIONS //
+  ///////////////////////
 
-///////////////////////
-// RECEIVE FUNCTIONS //
-///////////////////////
+  ////////////////////////////////
+  // SEND FUNCTIONS FROM CLIENT //
+  ////////////////////////////////
 
-////////////////////
-// SEND FUNCTIONS //
-////////////////////
-
-vector<uint8_t> CGPSProtocol::SEND_GPSC_INIT(const uint32_t version) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 8, 0};
-  AppendByteArray(packet, version, false);
-  return packet;
-}
-
-vector<uint8_t> CGPSProtocol::SEND_GPSC_RECONNECT(const uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 13, 0, UID};
-  AppendByteArray(packet, reconnectKey, false);
-  AppendByteArray(packet, lastPacket, false);
-  return packet;
-}
-
-vector<uint8_t> CGPSProtocol::SEND_GPSC_ACK(const uint32_t lastPacket) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
-  AppendByteArray(packet, lastPacket, false);
-  return packet;
-}
-
-vector<uint8_t> CGPSProtocol::SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 12, 0};
-  AppendByteArray(packet, reconnectPort, false);
-  packet.push_back(UID);
-  AppendByteArray(packet, reconnectKey, false);
-  packet.push_back(numEmptyActions);
-  return packet;
-}
-
-vector<uint8_t> CGPSProtocol::SEND_GPSS_RECONNECT(const uint32_t lastPacket) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 8, 0};
-  AppendByteArray(packet, lastPacket, false);
-  return packet;
-}
-
-vector<uint8_t> CGPSProtocol::SEND_GPSS_ACK(const uint32_t lastPacket) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
-  AppendByteArray(packet, lastPacket, false);
-  return packet;
-}
-
-vector<uint8_t> CGPSProtocol::SEND_GPSS_REJECT(const uint32_t reason) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_REJECT, 8, 0};
-  AppendByteArray(packet, reason, false);
-  return packet;
-}
-
-vector<uint8_t> CGPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_SUPPORT_EXTENDED, 0, 0};
-  const uint32_t seconds = static_cast<uint32_t>(ticks / 1000);
-  AppendByteArray(packet, seconds, false);
-  if (gameID > 0) {
-    AppendByteArray(packet, gameID, false);
+  vector<uint8_t> SEND_GPSC_INIT(const uint32_t version)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 8, 0};
+    AppendByteArray(packet, version, false);
+    return packet;
   }
-  AssignLength(packet);
-  return packet;
-}
 
-vector<uint8_t> CGPSProtocol::SEND_GPSS_CHANGE_KEY(const uint32_t reconnectKey) const
-{
-  vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_CHANGEKEY, 8, 0};
-  AppendByteArray(packet, reconnectKey, false);
-  return packet;
-}
+  vector<uint8_t> SEND_GPSC_RECONNECT(const uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 13, 0, UID};
+    AppendByteArray(packet, reconnectKey, false);
+    AppendByteArray(packet, lastPacket, false);
+    return packet;
+  }
 
-array<uint8_t, 2> CGPSProtocol::SEND_GPSS_DIMENSIONS() const
-{
-  return {192, 7};
+  vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
+    AppendByteArray(packet, lastPacket, false);
+    return packet;
+  }
+
+  ////////////////////////////////
+  // SEND FUNCTIONS FROM SERVER //
+  ////////////////////////////////
+
+  vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_INIT, 12, 0};
+    AppendByteArray(packet, reconnectPort, false);
+    packet.push_back(UID);
+    AppendByteArray(packet, reconnectKey, false);
+    packet.push_back(numEmptyActions);
+    return packet;
+  }
+
+  vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_RECONNECT, 8, 0};
+    AppendByteArray(packet, lastPacket, false);
+    return packet;
+  }
+
+  vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_ACK, 8, 0};
+    AppendByteArray(packet, lastPacket, false);
+    return packet;
+  }
+
+  vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_REJECT, 8, 0};
+    AppendByteArray(packet, reason, false);
+    return packet;
+  }
+
+  vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_SUPPORT_EXTENDED, 0, 0};
+    const uint32_t seconds = static_cast<uint32_t>(ticks / 1000);
+    AppendByteArray(packet, seconds, false);
+    if (gameID > 0) {
+      AppendByteArray(packet, gameID, false);
+    }
+    AssignLength(packet);
+    return packet;
+  }
+
+  vector<uint8_t> SEND_GPSS_CHANGE_KEY(const uint32_t reconnectKey)
+  {
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPS_CHANGEKEY, 8, 0};
+    AppendByteArray(packet, reconnectKey, false);
+    return packet;
+  }
+
+  array<uint8_t, 2> SEND_GPSS_DIMENSIONS()
+  {
+    return {192, 7};
+  }
 }

@@ -169,7 +169,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case GPS_HEADER_CONSTANT: {
-          if (Length >= 13 && Bytes[1] == CGPSProtocol::GPS_RECONNECT && m_Type == INCOMING_CONNECTION_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
+          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::GPS_RECONNECT && m_Type == INCOMING_CONNECTION_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
             const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
             const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
             CGameUser* targetUser = nullptr;
@@ -179,7 +179,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               targetUser = m_Aura->m_Net->GetReconnectTargetUserLegacy(Bytes[4], reconnectKey);
             }
             if (!targetUser || targetUser->GetGProxyReconnectKey() != reconnectKey) {
-              m_Socket->PutBytes(m_Aura->m_GPSProtocol->SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
+              m_Socket->PutBytes(GPSProtocol::SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
               if (targetUser) targetUser->EventGProxyReconnectInvalid();
               Abort = true;
             } else {
@@ -188,7 +188,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               result = PREPLAYER_CONNECTION_RECONNECTED;
               Abort = true;
             }          
-          } else if (Length >= 4 && Bytes[1] == CGPSProtocol::GPS_UDPSYN && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
+          } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::GPS_UDPSYN && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
             // in-house extension
             m_Aura->m_Net->RegisterGameSeeker(this, GAMESEEKER_TYPE_UDP_TUNNEL);
             result = PREPLAYER_CONNECTION_PROMOTED;

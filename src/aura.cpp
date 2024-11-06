@@ -424,7 +424,6 @@ int main(const int argc, char** argv)
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
     m_GameProtocol(nullptr),
-    m_GPSProtocol(nullptr),
     m_SHA(new CSHA1()),
     m_Discord(nullptr),
     m_IRC(nullptr),
@@ -467,7 +466,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
   m_GameProtocol = new CGameProtocol(this);
-  m_GPSProtocol = new CGPSProtocol(this);
   m_Net = new CNet(this);
   m_Discord = new CDiscord(this);
   m_IRC = new CIRC(this);
@@ -744,7 +742,6 @@ CAura::~CAura()
   delete m_CommandDefaultConfig;
   delete m_Net;
   delete m_GameProtocol;
-  delete m_GPSProtocol;
   delete m_SHA;
 
   ClearAutoRehost();

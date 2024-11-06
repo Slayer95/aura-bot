@@ -74,7 +74,7 @@ void CGameSeeker::Init()
 {
   switch (m_Type) {
     case GAMESEEKER_TYPE_UDP_TUNNEL: {
-      vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPACK, 4, 0};
+      vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::GPS_UDPACK, 4, 0};
       m_Socket->PutBytes(packet);
       break;
     }

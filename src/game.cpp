@@ -2566,7 +2566,7 @@ array<uint8_t, 2> CGame::GetAnnounceWidth() const
 {
   if (GetIsProxyReconnectable()) {
     // use an invalid map width/height to indicate reconnectable games
-    return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
+    return GPSProtocol::SEND_GPSS_DIMENSIONS();
   }
   if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapWidth();
@@ -2575,7 +2575,7 @@ array<uint8_t, 2> CGame::GetAnnounceHeight() const
 {
   if (GetIsProxyReconnectable()) {
     // use an invalid map width/height to indicate reconnectable games
-    return m_Aura->m_GPSProtocol->SEND_GPSS_DIMENSIONS();
+    return GPSProtocol::SEND_GPSS_DIMENSIONS();
   }
   if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapHeight();
@@ -4104,7 +4104,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 void CGame::EventBeforeJoin(CConnection* connection)
 {
   if (connection->GetIsUDPTunnel()) {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, CGPSProtocol::GPS_UDPFIN, 4, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::GPS_UDPFIN, 4, 0};
     connection->Send(packet);
   }
 }

@@ -422,7 +422,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
         }
       }
       else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->GetIsProxyReconnectable()) {
-        if (Bytes[1] == CGPSProtocol::GPS_ACK && Length == 8) {
+        if (Bytes[1] == GPSProtocol::Magic::GPS_ACK && Length == 8) {
           const size_t LastPacket               = ByteArrayToUInt32(Data, false, 4);
           const size_t PacketsAlreadyUnqueued   = m_TotalPacketsSent - m_GProxyBuffer.size();
 
@@ -439,7 +439,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
               --PacketsToUnqueue;
             }
           }
-        } else if (Bytes[1] == CGPSProtocol::GPS_INIT) {
+        } else if (Bytes[1] == GPSProtocol::Magic::GPS_INIT) {
           CRealm* MyRealm = GetRealm(false);
           if (MyRealm) {
             m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
@@ -452,14 +452,14 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           if (Length >= 8) {
             m_GProxyVersion = ByteArrayToUInt32(Bytes, false, 4);
           }
-          m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
+          m_Socket->PutBytes(GPSProtocol::SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
           if (m_GProxyVersion >= 2) {
-            m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
+            m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
           }
           // the port to which the client directly connects
           // (proxy port if it uses a proxy; the hosted game port otherwise)
           Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
-        } else if (Bytes[1] == CGPSProtocol::GPS_SUPPORT_EXTENDED && Length >= 8) {
+        } else if (Bytes[1] == GPSProtocol::Magic::GPS_SUPPORT_EXTENDED && Length >= 8) {
           //uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
           if (m_GProxy && m_Game->GetIsProxyReconnectableLong()) {
             m_GProxyExtended = true;
@@ -468,7 +468,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
               m_GProxyCheckGameID = true;
             }
           }
-        } else if (Bytes[1] == CGPSProtocol::GPS_CHANGEKEY && Length >= 8) {
+        } else if (Bytes[1] == GPSProtocol::Magic::GPS_CHANGEKEY && Length >= 8) {
           m_GProxyReconnectKey = ByteArrayToUInt32(Bytes, false, 4);
           Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
         }
@@ -529,7 +529,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
   if (!m_DeleteMe) {
     // GProxy++ acks
     if (m_GProxy && (!m_LastGProxyAckTicks.has_value() || Ticks - m_LastGProxyAckTicks.value() >= GPS_ACK_PERIOD)) {
-      m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_ACK(m_TotalPacketsReceived));
+      m_Socket->PutBytes(GPSProtocol::SEND_GPSS_ACK(m_TotalPacketsReceived));
       m_LastGProxyAckTicks = Ticks;
     }
 
@@ -599,7 +599,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
   connection->SetSocket(nullptr);
 
   m_Socket->SetLogErrors(true);
-  m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
+  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
 
   const size_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
 
@@ -650,7 +650,7 @@ void CGameUser::EventGProxyReconnectInvalid()
 
 void CGameUser::RotateGProxyReconnectKey()
 {
-  m_Socket->PutBytes(m_Game->m_Aura->m_GPSProtocol->SEND_GPSS_CHANGE_KEY(rand()));
+  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_CHANGE_KEY(rand()));
 }
 
 int64_t CGameUser::GetTotalDisconnectTicks() const
