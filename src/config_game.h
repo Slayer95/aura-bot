@@ -71,7 +71,6 @@ public:
 
   bool                     m_CheckJoinable;
   std::set<std::string>    m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
-  bool                     m_ExtraDiscoveryStrict;
   uint8_t                  m_ReconnectionMode;
 
   std::string              m_PrivateCmdToken;            // a symbol prefix to identify commands and send a private reply

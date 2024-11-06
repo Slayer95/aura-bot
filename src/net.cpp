@@ -678,7 +678,7 @@ CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t 
 
 void CNet::HandleUDP(UDPPkt* pkt)
 {
-  std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)pkt->buf, pkt->length);
+  std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)pkt->buf, pkt->length);
   // pkt->buf->length at least MIN_UDP_PACKET_SIZE
 
   if (pkt->sender->ss_family != AF_INET && pkt->sender->ss_family != AF_INET6) {
