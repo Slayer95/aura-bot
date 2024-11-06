@@ -316,13 +316,13 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
         switch (Bytes[1])
         {
-          case GameProtocol::Magic::LEAVEGAME:
+          case static_cast<uint8_t>(GameProtocol::Magic::LEAVEGAME):
             m_Game->EventUserLeft(this);
             m_Socket->SetLogErrors(false);
             Abort = true;
             break;
 
-          case GameProtocol::Magic::GAMELOADED_SELF:
+          case static_cast<uint8_t>(GameProtocol::Magic::GAMELOADED_SELF):
             if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
               if (m_Game->GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
@@ -333,7 +333,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
             break;
 
-          case GameProtocol::Magic::OUTGOING_ACTION: {
+          case static_cast<uint8_t>(GameProtocol::Magic::OUTGOING_ACTION): {
             CIncomingAction* Action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
 
             if (Action) {
@@ -348,13 +348,13 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
           }
 
-          case GameProtocol::Magic::OUTGOING_KEEPALIVE:
+          case static_cast<uint8_t>(GameProtocol::Magic::OUTGOING_KEEPALIVE):
             m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
             ++m_SyncCounter;
             m_Game->EventUserKeepAlive(this);
             break;
 
-          case GameProtocol::Magic::CHAT_TO_HOST: {
+          case static_cast<uint8_t>(GameProtocol::Magic::CHAT_TO_HOST): {
             CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
             if (ChatPlayer)
@@ -364,7 +364,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
           }
 
-          case GameProtocol::Magic::DROPREQ:
+          case static_cast<uint8_t>(GameProtocol::Magic::DROPREQ):
             if (m_Game->GetLagging() && !m_DropVote) {
               m_DropVote = true;
               m_Game->EventUserDropRequest(this);
@@ -372,7 +372,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
             break;
 
-          case GameProtocol::Magic::MAPSIZE: {
+          case static_cast<uint8_t>(GameProtocol::Magic::MAPSIZE): {
             if (m_MapReady) {
               // Protection against rogue clients
               break;
@@ -387,7 +387,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
           }
 
-          case GameProtocol::Magic::PONG_TO_HOST: {
+          case static_cast<uint8_t>(GameProtocol::Magic::PONG_TO_HOST): {
             uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
 
             // we discard pong values of 1

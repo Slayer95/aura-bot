@@ -4463,16 +4463,16 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
     {
       if (!m_CountDownStarted && !m_RestoredGame) {
         switch (chatPlayer->GetType()) {
-          case GameProtocol::ChatToHostType::CTH_TEAMCHANGE:
+          case static_cast<uint8_t>(GameProtocol::ChatToHostType::CTH_TEAMCHANGE):
             EventUserChangeTeam(user, chatPlayer->GetByte());
             break;
-          case GameProtocol::ChatToHostType::CTH_COLOURCHANGE:
+          case static_cast<uint8_t>(GameProtocol::ChatToHostType::CTH_COLOURCHANGE):
             EventUserChangeColor(user, chatPlayer->GetByte());
             break;
-          case GameProtocol::ChatToHostType::CTH_RACECHANGE:
+          case static_cast<uint8_t>(GameProtocol::ChatToHostType::CTH_RACECHANGE):
             EventUserChangeRace(user, chatPlayer->GetByte());
             break;
-          case GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE:
+          case static_cast<uint8_t>(GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE):
             EventUserChangeHandicap(user, chatPlayer->GetByte());
             break;
           default:
