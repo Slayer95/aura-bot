@@ -1590,12 +1590,6 @@ void CGame::Send(CConnection* user, const std::vector<uint8_t>& data) const
     user->Send(data);
 }
 
-void CGame::Send(CGameUser* user, const std::vector<uint8_t>& data) const
-{
-  if (user)
-    user->Send(data);
-}
-
 void CGame::Send(uint8_t UID, const std::vector<uint8_t>& data) const
 {
   Send(GetUserFromUID(UID), data);
@@ -2586,31 +2580,7 @@ void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
   Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
 
-void CGame::SendVirtualHostPlayerInfo(CGameUser* user) const
-{
-  if (m_VirtualHostUID == 0xFF)
-    return;
-
-  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-
-  Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
-}
-
 void CGame::SendFakeUsersInfo(CConnection* user) const
-{
-  if (m_FakeUsers.empty())
-    return;
-
-  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-
-  for (const uint16_t fakePlayer : m_FakeUsers) {
-    // The higher 8 bytes are the original SID the user was created at.
-    // This information is important for letting hosts know which !open, !close, commands to execute.
-    Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
-  }
-}
-
-void CGame::SendFakeUsersInfo(CGameUser* user) const
 {
   if (m_FakeUsers.empty())
     return;
@@ -2627,22 +2597,13 @@ void CGame::SendFakeUsersInfo(CGameUser* user) const
 void CGame::SendJoinedPlayersInfo(CConnection* connection) const
 {
   for (auto& otherPlayer : m_Users) {
-    if (otherPlayer->GetDeleteMe())
+    if (otherPlayer->GetDeleteMe()) {
       continue;
+    }
+    if (connection->GetType() == INCON_TYPE_PLAYER && static_cast<CGameUser*>(connection) == otherPlayer) {
+      continue;
+    }
     Send(connection,
-      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
-    );
-  }
-}
-
-void CGame::SendJoinedPlayersInfo(CGameUser* user) const
-{
-  for (auto& otherPlayer : m_Users) {
-    if (otherPlayer == user)
-      continue;
-    if (otherPlayer->GetDeleteMe())
-      continue;
-    Send(user,
       GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
