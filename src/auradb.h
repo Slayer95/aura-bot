@@ -248,26 +248,26 @@ class CDBBan;
 
 constexpr int64_t SchemaNumber = 3;
 
-#define SCHEMA_CHECK_OK 0
-#define SCHEMA_CHECK_NONE 1
-#define SCHEMA_CHECK_ERRORED 2
-#define SCHEMA_CHECK_INCOMPATIBLE 3
-#define SCHEMA_CHECK_LEGACY_INCOMPATIBLE 4
-#define SCHEMA_CHECK_LEGACY_UPGRADEABLE 5
+#define SCHEMA_CHECK_OK 0u
+#define SCHEMA_CHECK_NONE 1u
+#define SCHEMA_CHECK_ERRORED 2u
+#define SCHEMA_CHECK_INCOMPATIBLE 3u
+#define SCHEMA_CHECK_LEGACY_INCOMPATIBLE 4u
+#define SCHEMA_CHECK_LEGACY_UPGRADEABLE 5u
 
-#define JOURNAL_MODE_DELETE 0
-#define JOURNAL_MODE_TRUNCATE 1
-#define JOURNAL_MODE_PERSIST 2
-#define JOURNAL_MODE_MEMORY 3
-#define JOURNAL_MODE_WAL 4
-#define JOURNAL_MODE_OFF 5
-#define JOURNAL_MODE_INVALID 0xFF
+#define JOURNAL_MODE_DELETE 0u
+#define JOURNAL_MODE_TRUNCATE 1u
+#define JOURNAL_MODE_PERSIST 2u
+#define JOURNAL_MODE_MEMORY 3u
+#define JOURNAL_MODE_WAL 4u
+#define JOURNAL_MODE_OFF 5u
+#define JOURNAL_MODE_INVALID 0xFFu
 
-#define SYNCHRONOUS_OFF 0
-#define SYNCHRONOUS_NORMAL 1
-#define SYNCHRONOUS_FULL 2
-#define SYNCHRONOUS_EXTRA 3
-#define SYNCHRONOUS_INVALID 0xFF
+#define SYNCHRONOUS_OFF 0u
+#define SYNCHRONOUS_NORMAL 1u
+#define SYNCHRONOUS_FULL 2u
+#define SYNCHRONOUS_EXTRA 3u
+#define SYNCHRONOUS_INVALID 0xFFu
 
 class CAuraDB
 {
@@ -304,8 +304,8 @@ public:
 
 private:
   CSQLITE3*                       m_DB;
-  JournalMode                     m_JournalMode;
-  SynchronousMode                 m_Synchronous;
+  CAuraDB::JournalMode            m_JournalMode;
+  CAuraDB::SynchronousMode        m_Synchronous;
   std::filesystem::path           m_File;
   std::filesystem::path           m_TWRPGFile;
   bool                            m_FirstRun;
@@ -325,66 +325,66 @@ public:
   ~CAuraDB();
   CAuraDB(CAuraDB&) = delete;
 
-  inline bool        GetIsFirstRun() const { return m_FirstRun; }
-  SchemaStatus       GetSchemaStatus(int64_t& schemaNumber);
-  void               UpdateSchema(int64_t oldSchemaNumber);
-  void               Initialize();
-  void               PreCompileStatements();
-  inline bool        HasError() const { return m_HasError; }
-  inline std::string GetError() const { return m_Error; }
-  inline std::filesystem::path GetFile() const { return m_File; }
-  uint64_t           GetLatestHistoryGameId();
-  void               UpdateLatestHistoryGameId(uint64_t gameId);
+  inline bool                   GetIsFirstRun() const { return m_FirstRun; }
+  CAuraDB::SchemaStatus         GetSchemaStatus(int64_t& schemaNumber);
+  void                          UpdateSchema(int64_t oldSchemaNumber);
+  void                          Initialize();
+  void                          PreCompileStatements();
+  inline bool                   HasError() const { return m_HasError; }
+  inline std::string            GetError() const { return m_Error; }
+  inline std::filesystem::path  GetFile() const { return m_File; }
+  uint64_t                      GetLatestHistoryGameId();
+  void                          UpdateLatestHistoryGameId(uint64_t gameId);
 
-  inline bool Begin() const { return m_DB->Exec("BEGIN TRANSACTION") == SQLITE_OK; }
-  inline bool Commit() const { return m_DB->Exec("COMMIT TRANSACTION") == SQLITE_OK; }
+  inline bool                   Begin() const { return m_DB->Exec("BEGIN TRANSACTION") == SQLITE_OK; }
+  inline bool                   Commit() const { return m_DB->Exec("COMMIT TRANSACTION") == SQLITE_OK; }
 
   // Geolocalization
-  std::string FromCheck(uint32_t ip);
-  bool FromAdd(uint32_t ip1, uint32_t ip2, const std::string& country);
+  std::string                   FromCheck(uint32_t ip);
+  bool                          FromAdd(uint32_t ip1, uint32_t ip2, const std::string& country);
 
   // Map aliases
-  bool AliasAdd(const std::string& alias, const std::string& target);
-  std::string AliasCheck(const std::string& alias);
+  bool                          AliasAdd(const std::string& alias, const std::string& target);
+  std::string                   AliasCheck(const std::string& alias);
 
   // Server moderators
-  uint32_t ModeratorCount(const std::string& server);
-  bool ModeratorCheck(const std::string& server, const std::string& user);
-  bool ModeratorAdd(const std::string& server, const std::string& user);
-  bool ModeratorRemove(const std::string& server, const std::string& user);
-  std::vector<std::string> ListModerators(const std::string& server);
+  uint32_t                      ModeratorCount(const std::string& server);
+  bool                          ModeratorCheck(const std::string& server, const std::string& user);
+  bool                          ModeratorAdd(const std::string& server, const std::string& user);
+  bool                          ModeratorRemove(const std::string& server, const std::string& user);
+  std::vector<std::string>      ListModerators(const std::string& server);
 
   // Bans
-  uint32_t BanCount(const std::string& authserver);
-  CDBBan* UserBanCheck(const std::string& user, const std::string& server, const std::string& authserver);
-  CDBBan* IPBanCheck(std::string ip, const std::string& authserver);
-  bool GetIsUserBanned(const std::string& user, const std::string& server, const std::string& authserver);
-  bool GetIsIPBanned(std::string ip, const std::string& authserver);
-  bool BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
-  bool BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
-  bool BanAddPermanent(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
-  bool BanRemove(const std::string& user, const std::string& server, const std::string& authserver);
-  std::vector<std::string> ListBans(const std::string& authserver);
+  uint32_t                      BanCount(const std::string& authserver);
+  CDBBan*                       UserBanCheck(const std::string& user, const std::string& server, const std::string& authserver);
+  CDBBan*                       IPBanCheck(std::string ip, const std::string& authserver);
+  bool                          GetIsUserBanned(const std::string& user, const std::string& server, const std::string& authserver);
+  bool                          GetIsIPBanned(std::string ip, const std::string& authserver);
+  bool                          BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  bool                          BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
+  bool                          BanAddPermanent(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  bool                          BanRemove(const std::string& user, const std::string& server, const std::string& authserver);
+  std::vector<std::string>      ListBans(const std::string& authserver);
 
   // Players
-  void UpdateGamePlayerOnStart(const std::string& name, const std::string& server, const std::string& ip, uint64_t gameId);
-  void UpdateGamePlayerOnEnd(const std::string& name, const std::string& server, const std::string& ip, uint64_t loadingtime, uint64_t duration, uint64_t left);
-  CDBGamePlayerSummary* GamePlayerSummaryCheck(const std::string& name, const std::string& server);
-  void UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
-  CDBDotAPlayerSummary* DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
-  std::string GetInitialIP(const std::string& name, const std::string& server);
-  std::string GetLatestIP(const std::string& name, const std::string& server);
-  std::vector<std::string> GetIPs(const std::string& name, const std::string& server);
-  std::vector<std::string> GetAlts(const std::string& addressLiteral);
+  void                          UpdateGamePlayerOnStart(const std::string& name, const std::string& server, const std::string& ip, uint64_t gameId);
+  void                          UpdateGamePlayerOnEnd(const std::string& name, const std::string& server, const std::string& ip, uint64_t loadingtime, uint64_t duration, uint64_t left);
+  CDBGamePlayerSummary*         GamePlayerSummaryCheck(const std::string& name, const std::string& server);
+  void                          UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
+  CDBDotAPlayerSummary*         DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
+  std::string                   GetInitialIP(const std::string& name, const std::string& server);
+  std::string                   GetLatestIP(const std::string& name, const std::string& server);
+  std::vector<std::string>      GetIPs(const std::string& name, const std::string& server);
+  std::vector<std::string>      GetAlts(const std::string& addressLiteral);
 
   // Games
-  bool GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::array<uint8_t, 4>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
-  CDBGameSummary* GameCheck(const uint64_t gameId);
+  bool                          GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::array<uint8_t, 4>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
+  CDBGameSummary*               GameCheck(const uint64_t gameId);
 
-  void InitMapData();
-  CSearchableMapData* GetMapData(uint8_t mapType) const;
-  uint8_t FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
-  std::vector<std::string> GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;
+  void                          InitMapData();
+  CSearchableMapData*           GetMapData(uint8_t mapType) const;
+  uint8_t                       FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
+  std::vector<std::string>      GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;
 };
 
 #undef SCHEMA_CHECK_OK

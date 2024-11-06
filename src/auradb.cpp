@@ -307,7 +307,7 @@ CAuraDB::~CAuraDB()
   delete m_SearchableMapData[MAP_TYPE_TWRPG];
 }
 
-SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
+CAuraDB::SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
 {
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare(R"(SELECT value FROM config WHERE name=?)", reinterpret_cast<void**>(&Statement));
