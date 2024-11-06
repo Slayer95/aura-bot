@@ -10,19 +10,15 @@
 class CIncomingVLanSearchGame;
 class CIncomingVLanGameInfo;
 
-class CVirtualLanProtocol
+namespace VirtualLanProtocol
 {
-public:
-  enum Protocol {
+  enum Magic {
     VLAN_SEARCHGAME                                     = 47,  // 0x2F (UDP/LAN)
     VLAN_GAMEINFO                                       = 48,  // 0x30 (UDP/LAN)
     VLAN_CREATEGAME                                     = 49,  // 0x31 (UDP/LAN)
     VLAN_REFRESHGAME                                    = 50,  // 0x32 (UDP/LAN)
     VLAN_DECREATEGAME                                   = 51   // 0x33 (UDP/LAN)
   };
-
-  CVirtualLanProtocol();
-  ~CVirtualLanProtocol();
 
   // receive functions
 
@@ -39,7 +35,6 @@ public:
 
   // other functions
 
-private:
   bool ValidateLength(const std::vector<uint8_t>& content);
 };
 
