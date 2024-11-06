@@ -246,7 +246,8 @@ class CDBGameSummary;
 class CConfig;
 class CDBBan;
 
-#define SCHEMA_NUMBER 3
+constexpr int64_t SchemaNumber = 3;
+
 #define SCHEMA_CHECK_OK 0
 #define SCHEMA_CHECK_NONE 1
 #define SCHEMA_CHECK_ERRORED 2
@@ -260,11 +261,13 @@ class CDBBan;
 #define JOURNAL_MODE_MEMORY 3
 #define JOURNAL_MODE_WAL 4
 #define JOURNAL_MODE_OFF 5
+#define JOURNAL_MODE_INVALID 0xFF
 
 #define SYNCHRONOUS_OFF 0
 #define SYNCHRONOUS_NORMAL 1
 #define SYNCHRONOUS_FULL 2
 #define SYNCHRONOUS_EXTRA 3
+#define SYNCHRONOUS_INVALID 0xFF
 
 class CAuraDB
 {
@@ -286,7 +289,8 @@ public:
     PERSIST                     = JOURNAL_MODE_PERSIST,
     MEMORY                      = JOURNAL_MODE_MEMORY,
     WAL                         = JOURNAL_MODE_WAL,
-    OFF                         = JOURNAL_MODE_OFF
+    OFF                         = JOURNAL_MODE_OFF,
+    INVALID                     = JOURNAL_MODE_INVALID
   };
 
   enum class SynchronousMode : uint8_t
@@ -294,7 +298,8 @@ public:
     OFF                         = SYNCHRONOUS_OFF,
     NORMAL                      = SYNCHRONOUS_NORMAL,
     FULL                        = SYNCHRONOUS_FULL,
-    EXTRA                       = SYNCHRONOUS_EXTRA
+    EXTRA                       = SYNCHRONOUS_EXTRA,
+    INVALID                     = SYNCHRONOUS_INVALID
   };
 
 private:
@@ -382,7 +387,6 @@ public:
   std::vector<std::string> GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;
 };
 
-#undef SCHEMA_NUMBER
 #undef SCHEMA_CHECK_OK
 #undef SCHEMA_CHECK_NONE
 #undef SCHEMA_CHECK_ERRORED
@@ -396,11 +400,13 @@ public:
 #undef JOURNAL_MODE_MEMORY
 #undef JOURNAL_MODE_WAL
 #undef JOURNAL_MODE_OFF
+#undef JOURNAL_MODE_INVALID
 
 #undef SYNCHRONOUS_OFF
 #undef SYNCHRONOUS_NORMAL
 #undef SYNCHRONOUS_FULL
 #undef SYNCHRONOUS_EXTRA
+#undef SYNCHRONOUS_INVALID
 
 //
 // CDBBan

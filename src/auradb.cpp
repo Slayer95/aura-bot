@@ -190,15 +190,15 @@ CAuraDB::CAuraDB(CConfig& CFG)
 
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
 
-  m_JournalMode = CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, JournalMode::DELETE);
+  m_JournalMode = static_cast<JournalMode>(CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, static_cast<uint8_t>(JournalMode::DEL)));
   if (CFG.GetErrorLast()) {
-    m_JournalMode = 0xFF;
+    m_JournalMode = JournalMode::INVALID;
     Print("[SQLITE3] invalid <db.journal_mode> (delete, truncate, persist, memory, wal, off are allowed - case sensitive)");
   }
 
-  m_Synchronous = CFG.GetStringIndex("db.synchronous", {"off", "normal", "full", "extra"}, SYNCHRONOUS_FULL);
+  m_Synchronous = static_cast<SynchronousMode>(CFG.GetStringIndex("db.synchronous", {"off", "normal", "full", "extra"}, static_cast<uint8_t>(SynchronousMode::FULL)));
   if (CFG.GetErrorLast()) {
-    m_Synchronous = 0xFF;
+    m_Synchronous = SynchronousMode::INVALID;
     Print("[SQLITE3] invalid <db.synchronous> (off, normal, full, extra are allowed - case sensitive)");
   }
 
@@ -225,7 +225,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
       break;
     case SchemaStatus::INCOMPATIBLE:
     case SchemaStatus::LEGACY_INCOMPATIBLE:
-      Print("[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(static_cast<uint16_t>(SCHEMA_NUMBER)) + ")");
+      Print("[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(SchemaNumber) + ")");
       Print("[SQLITE3] please start over with a clean [aura.db] file to run this Aura version");
       Print("[SQLITE3] you SHOULD backup your old [aura.db] file to another folder");
       m_HasError = true;
@@ -267,6 +267,9 @@ CAuraDB::CAuraDB(CConfig& CFG)
       case JournalMode::OFF:
         m_DB->Exec("PRAGMA journal_mode = OFF");
         break;
+      case JournalMode::INVALID:
+        // do nothing
+        break;
     }
 
     switch (m_Synchronous) {
@@ -281,6 +284,9 @@ CAuraDB::CAuraDB(CConfig& CFG)
         break;
       case SynchronousMode::EXTRA:
         m_DB->Exec("PRAGMA synchronous = EXTRA");
+        break;
+      case SynchronousMode::INVALID:
+        // do nothing
         break;
     }
 
@@ -308,7 +314,7 @@ SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
 
   if (!Statement) {
     // no such table: config
-    return SchemaStatus::VOID;
+    return SchemaStatus::NONE;
   }
 
   sqlite3_bind_text(Statement, 1, "schema_number", -1, SQLITE_TRANSIENT);
@@ -321,18 +327,18 @@ SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
     } else {
       m_HasError = true;
       m_Error    = "schema number missing - no columns found";
-      return SchemaStatus::ERROR;
+      return SchemaStatus::ERRORED;
     }
   } else if (RC == SQLITE_ERROR) {
     m_HasError = true;
     m_Error    = m_DB->GetError();
-    return SchemaStatus::ERROR;
+    return SchemaStatus::ERRORED;
   }
 
   m_DB->Finalize(Statement);
 
   // I am using 3 as int64.
-  if (schemaNumber == SCHEMA_NUMBER) {
+  if (schemaNumber == SchemaNumber) {
     return SchemaStatus::OK;
   }
 
@@ -343,7 +349,7 @@ SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
     return SchemaStatus::LEGACY_INCOMPATIBLE;
   }
 
-  return SchemaStatus::VOID;
+  return SchemaStatus::NONE;
 }
 
 void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
@@ -401,10 +407,10 @@ void CAuraDB::Initialize()
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare(R"(INSERT INTO config VALUES ( "schema_number", ? ))", reinterpret_cast<void**>(&Statement));
   if (Statement) {
-    sqlite3_bind_int64(Statement, 1, SCHEMA_NUMBER);
+    sqlite3_bind_int64(Statement, 1, SchemaNumber);
     const int32_t RC = m_DB->Step(Statement);
     if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error inserting schema number [" + ToDecString(static_cast<uint16_t>(SCHEMA_NUMBER)) + "] - " + m_DB->GetError());
+      Print("[SQLITE3] error inserting schema number [" + to_string(SchemaNumber) + "] - " + m_DB->GetError());
     }
     m_DB->Finalize(Statement);
   }
