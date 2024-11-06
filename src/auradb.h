@@ -248,8 +248,8 @@ class CDBBan;
 
 #define SCHEMA_NUMBER 3
 #define SCHEMA_CHECK_OK 0
-#define SCHEMA_CHECK_VOID 1
-#define SCHEMA_CHECK_ERROR 2
+#define SCHEMA_CHECK_NONE 1
+#define SCHEMA_CHECK_ERRORED 2
 #define SCHEMA_CHECK_INCOMPATIBLE 3
 #define SCHEMA_CHECK_LEGACY_INCOMPATIBLE 4
 #define SCHEMA_CHECK_LEGACY_UPGRADEABLE 5
@@ -268,16 +268,45 @@ class CDBBan;
 
 class CAuraDB
 {
+public:
+  enum class SchemaStatus : uint8_t
+  {
+    OK                          = SCHEMA_CHECK_OK,
+    INCOMPATIBLE                = SCHEMA_CHECK_INCOMPATIBLE,
+    LEGACY_INCOMPATIBLE         = SCHEMA_CHECK_LEGACY_INCOMPATIBLE,
+    LEGACY_UPGRADEABLE          = SCHEMA_CHECK_LEGACY_UPGRADEABLE,
+    NONE                        = SCHEMA_CHECK_NONE,
+    ERRORED                     = SCHEMA_CHECK_ERRORED
+  };
+
+  enum class JournalMode : uint8_t
+  {
+    DEL                         = JOURNAL_MODE_DELETE,
+    TRUNCATE                    = JOURNAL_MODE_TRUNCATE,
+    PERSIST                     = JOURNAL_MODE_PERSIST,
+    MEMORY                      = JOURNAL_MODE_MEMORY,
+    WAL                         = JOURNAL_MODE_WAL,
+    OFF                         = JOURNAL_MODE_OFF
+  };
+
+  enum class SynchronousMode : uint8_t
+  {
+    OFF                         = SYNCHRONOUS_OFF,
+    NORMAL                      = SYNCHRONOUS_NORMAL,
+    FULL                        = SYNCHRONOUS_FULL,
+    EXTRA                       = SYNCHRONOUS_EXTRA
+  };
+
 private:
-  CSQLITE3*                  m_DB;
-  uint8_t                    m_JournalMode;
-  uint8_t                    m_Synchronous;
-  std::filesystem::path      m_File;
-  std::filesystem::path      m_TWRPGFile;
-  bool                       m_FirstRun;
-  bool                       m_HasError;
-  std::string                m_Error;
-  uint64_t                   m_LatestGameId;
+  CSQLITE3*                       m_DB;
+  JournalMode                     m_JournalMode;
+  SynchronousMode                 m_Synchronous;
+  std::filesystem::path           m_File;
+  std::filesystem::path           m_TWRPGFile;
+  bool                            m_FirstRun;
+  bool                            m_HasError;
+  std::string                     m_Error;
+  uint64_t                        m_LatestGameId;
 
   // we keep some prepared statements in memory rather than recreating them each function call
   // this is an optimization because preparing statements takes time
@@ -292,7 +321,7 @@ public:
   CAuraDB(CAuraDB&) = delete;
 
   inline bool        GetIsFirstRun() const { return m_FirstRun; }
-  uint8_t            GetSchemaStatus(int64_t& schemaNumber);
+  SchemaStatus       GetSchemaStatus(int64_t& schemaNumber);
   void               UpdateSchema(int64_t oldSchemaNumber);
   void               Initialize();
   void               PreCompileStatements();
@@ -352,6 +381,26 @@ public:
   uint8_t FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
   std::vector<std::string> GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;
 };
+
+#undef SCHEMA_NUMBER
+#undef SCHEMA_CHECK_OK
+#undef SCHEMA_CHECK_NONE
+#undef SCHEMA_CHECK_ERRORED
+#undef SCHEMA_CHECK_INCOMPATIBLE
+#undef SCHEMA_CHECK_LEGACY_INCOMPATIBLE
+#undef SCHEMA_CHECK_LEGACY_UPGRADEABLE
+
+#undef JOURNAL_MODE_DELETE
+#undef JOURNAL_MODE_TRUNCATE
+#undef JOURNAL_MODE_PERSIST
+#undef JOURNAL_MODE_MEMORY
+#undef JOURNAL_MODE_WAL
+#undef JOURNAL_MODE_OFF
+
+#undef SYNCHRONOUS_OFF
+#undef SYNCHRONOUS_NORMAL
+#undef SYNCHRONOUS_FULL
+#undef SYNCHRONOUS_EXTRA
 
 //
 // CDBBan

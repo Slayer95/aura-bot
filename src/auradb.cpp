@@ -190,7 +190,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
 
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
 
-  m_JournalMode = CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, JOURNAL_MODE_DELETE);
+  m_JournalMode = CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, JournalMode::DELETE);
   if (CFG.GetErrorLast()) {
     m_JournalMode = 0xFF;
     Print("[SQLITE3] invalid <db.journal_mode> (delete, truncate, persist, memory, wal, off are allowed - case sensitive)");
@@ -218,68 +218,69 @@ CAuraDB::CAuraDB(CConfig& CFG)
   }
 
   int64_t schemaNumber = 0;
-  uint8_t schemaStatus = GetSchemaStatus(schemaNumber);
-  if (schemaStatus == SCHEMA_CHECK_OK) {
-    // do nothing
-  } else if (schemaStatus == SCHEMA_CHECK_INCOMPATIBLE || schemaStatus == SCHEMA_CHECK_LEGACY_INCOMPATIBLE) {
-    Print("[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(static_cast<uint16_t>(SCHEMA_NUMBER)) + ")");
-    Print("[SQLITE3] please start over with a clean [aura.db] file to run this Aura version");
-    Print("[SQLITE3] you SHOULD backup your old [aura.db] file to another folder");
-    m_HasError = true;
-    m_Error    = "incompatible database format";
-  } else if (schemaStatus == SCHEMA_CHECK_LEGACY_UPGRADEABLE) {
-    UpdateSchema(schemaNumber);
-  } else if (schemaStatus == SCHEMA_CHECK_VOID) {
-    m_FirstRun = true;
-    Initialize();
-  } else if (schemaStatus == SCHEMA_CHECK_ERROR) {
-    m_HasError = true;
-    if (m_Error.empty()) {
-      m_Error = "schema check error";
-    }
-  } else {
-    // TODO: static assert invalid path
+  switch (GetSchemaStatus(schemaNumber))
+  {
+    case SchemaStatus::OK:
+      // do nothing
+      break;
+    case SchemaStatus::INCOMPATIBLE:
+    case SchemaStatus::LEGACY_INCOMPATIBLE:
+      Print("[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(static_cast<uint16_t>(SCHEMA_NUMBER)) + ")");
+      Print("[SQLITE3] please start over with a clean [aura.db] file to run this Aura version");
+      Print("[SQLITE3] you SHOULD backup your old [aura.db] file to another folder");
+      m_HasError = true;
+      m_Error    = "incompatible database format";
+      break;
+    case SchemaStatus::LEGACY_UPGRADEABLE:
+      UpdateSchema(schemaNumber);
+      break;
+    case SchemaStatus::NONE:
+      m_FirstRun = true;
+      Initialize();
+      break;
+    case SchemaStatus::ERRORED:
+      m_HasError = true;
+      if (m_Error.empty()) {
+        m_Error = "schema check error";
+      }
+      break;
   }
 
   if (!m_HasError) {
     switch (m_JournalMode) {
-      case JOURNAL_MODE_DELETE:
+      case JournalMode::DEL:
         m_DB->Exec("PRAGMA journal_mode = DELETE");
         break;
-      case JOURNAL_MODE_TRUNCATE:
+      case JournalMode::TRUNCATE:
         m_DB->Exec("PRAGMA journal_mode = TRUNCATE");
         break;
-      case JOURNAL_MODE_PERSIST:
+      case JournalMode::PERSIST:
         m_DB->Exec("PRAGMA journal_mode = PERSIST");
         break;
-      case JOURNAL_MODE_MEMORY:
+      case JournalMode::MEMORY:
         m_DB->Exec("PRAGMA journal_mode = MEMORY");
         break;
-      case JOURNAL_MODE_WAL:
+      case JournalMode::WAL:
         m_DB->Exec("PRAGMA journal_mode = WAL");
         m_DB->Exec("PRAGMA wal_autocheckpoint = " + to_string(journalWALInterval));
         break;
-      case JOURNAL_MODE_OFF:
+      case JournalMode::OFF:
         m_DB->Exec("PRAGMA journal_mode = OFF");
-        break;
-      default:
         break;
     }
 
     switch (m_Synchronous) {
-      case SYNCHRONOUS_OFF:
+      case SynchronousMode::OFF:
         m_DB->Exec("PRAGMA synchronous = OFF");
         break;
-      case SYNCHRONOUS_NORMAL:
+      case SynchronousMode::NORMAL:
         m_DB->Exec("PRAGMA synchronous = NORMAL");
         break;
-      case SYNCHRONOUS_FULL:
+      case SynchronousMode::FULL:
         m_DB->Exec("PRAGMA synchronous = FULL");
         break;
-      case SYNCHRONOUS_EXTRA:
+      case SynchronousMode::EXTRA:
         m_DB->Exec("PRAGMA synchronous = EXTRA");
-        break;
-      default:
         break;
     }
 
@@ -300,14 +301,14 @@ CAuraDB::~CAuraDB()
   delete m_SearchableMapData[MAP_TYPE_TWRPG];
 }
 
-uint8_t CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
+SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
 {
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare(R"(SELECT value FROM config WHERE name=?)", reinterpret_cast<void**>(&Statement));
 
   if (!Statement) {
     // no such table: config
-    return SCHEMA_CHECK_VOID;
+    return SchemaStatus::VOID;
   }
 
   sqlite3_bind_text(Statement, 1, "schema_number", -1, SQLITE_TRANSIENT);
@@ -320,29 +321,29 @@ uint8_t CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
     } else {
       m_HasError = true;
       m_Error    = "schema number missing - no columns found";
-      return SCHEMA_CHECK_ERROR;
+      return SchemaStatus::ERROR;
     }
   } else if (RC == SQLITE_ERROR) {
     m_HasError = true;
     m_Error    = m_DB->GetError();
-    return SCHEMA_CHECK_ERROR;
+    return SchemaStatus::ERROR;
   }
 
   m_DB->Finalize(Statement);
 
   // I am using 3 as int64.
   if (schemaNumber == SCHEMA_NUMBER) {
-    return SCHEMA_CHECK_OK;
+    return SchemaStatus::OK;
   }
 
   // Other legacy schemas are not supported,
   // including Josko's original schema (1, but text).
 
   if (schemaNumber != 0) {
-    return SCHEMA_CHECK_LEGACY_INCOMPATIBLE;
+    return SchemaStatus::LEGACY_INCOMPATIBLE;
   }
 
-  return SCHEMA_CHECK_VOID;
+  return SchemaStatus::VOID;
 }
 
 void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
