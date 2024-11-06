@@ -1428,6 +1428,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (anyPing) {
         SendReply(JoinVector(pingsText, false), !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
+      } else if (m_Aura->m_Net->m_Config->m_HasBufferBloat && m_TargetGame->IsDownloading()) {
+        SendReply("Ping not measured yet (wait for map download.)", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       } else {
         SendReply("Ping not measured yet.", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       }
