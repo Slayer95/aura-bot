@@ -3161,16 +3161,10 @@ void CGame::AnnounceToAddress(string& addressLiteral, uint8_t gameVersion)
 void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion)
 {
   if (gameVersion == 0) gameVersion = m_Aura->m_GameVersion;
-  if (socket->m_Type == SOCK_DGRAM) {
-    CUDPServer* server = reinterpret_cast<CUDPServer*>(socket);
-    if (isLoopbackAddress(address)) {
-      server->SendReply(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
-    } else {
-      server->SendReply(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
-    }
-  } else if (socket->m_Type == SOCK_STREAM) {
-    CStreamIOSocket* tcpSocket = reinterpret_cast<CStreamIOSocket*>(socket);
-    tcpSocket->SendReply(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
+  if (isLoopbackAddress(address)) {
+    socket->SendReply(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
+  } else {
+    socket->SendReply(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
 
