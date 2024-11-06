@@ -450,8 +450,9 @@ public:
   inline std::array<uint8_t, 4>     GetIPv4() const { return AddressToIPv4Array(&m_RemoteHost); }
   inline std::string                GetIPString() const { return AddressToString(m_RemoteHost); }
   inline std::string                GetIPStringStrict() const { return AddressToStringStrict(m_RemoteHost); }
-  inline bool GetIsLoopback() const { return isLoopbackAddress(&m_RemoteHost); }
-  inline uint16_t GetRemotePort() const { return GetAddressPort(&m_RemoteHost); }
+  inline const sockaddr_storage*    GetRemoteAddress() const { return static_cast<const sockaddr_storage*>(&m_RemoteHost); }
+  inline bool                       GetIsLoopback() const { return isLoopbackAddress(&m_RemoteHost); }
+  inline uint16_t                   GetRemotePort() const { return GetAddressPort(&m_RemoteHost); }
 
   inline bool                       GetConnected() const { return m_Connected; }
   inline bool                       GetLogErrors() const { return m_LogErrors; }
