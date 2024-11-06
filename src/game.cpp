@@ -4751,15 +4751,9 @@ void CGame::EventUserPongToHost(CGameUser* user)
     if (user->GetStoredRTTCount() >= 2) {
       user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
       user->SetLeftCode(PLAYERLEAVE_LOBBY);
-      if (user->GetPingKicked()) {
-        user->SetDeleteMe(true);
-        const uint8_t SID = GetSIDFromUID(user->GetUID());
-        OpenSlot(SID, false);
-      } else {
-        SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
-        user->SetPingKicked(true);
-        user->KickAtLatest(GetTicks() + HIGH_PING_KICK_DELAY);
-      }
+      user->SetPingKicked(true);
+      user->KickAtLatest(GetTicks() + HIGH_PING_KICK_DELAY);
+      SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
     }
   } else {
     user->SetPingKicked(false);
