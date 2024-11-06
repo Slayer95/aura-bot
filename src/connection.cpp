@@ -69,7 +69,6 @@ CConnection::CConnection(CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
     m_Port(nPort),
     m_Type(INCOMING_CONNECTION_TYPE_NONE),
     m_Socket(nSocket),
-    m_IncomingJoinPlayer(nullptr),
     m_DeleteMe(false)
 {
 }
@@ -78,7 +77,6 @@ CConnection::~CConnection()
 {
   delete m_Socket;
   m_Socket = nullptr;
-  delete m_IncomingJoinPlayer;
 }
 
 void CConnection::SetTimeout(const int64_t delta)

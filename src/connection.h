@@ -51,7 +51,6 @@
 
 class CStreamIOSocket;
 class CGame;
-class CIncomingJoinRequest;
 class CAura;
 
 #define PREPLAYER_CONNECTION_OK 0u
@@ -83,7 +82,6 @@ protected:
   // it also allows us to convert CGameConnections to CGamePlayers without the CConnection's destructor closing the socket
 
   CStreamIOSocket*          m_Socket;
-  CIncomingJoinRequest*     m_IncomingJoinPlayer;
   bool                      m_DeleteMe;
 
 public:
@@ -101,7 +99,6 @@ public:
   inline uint8_t                    GetType() const { return m_Type; }
   inline uint16_t                   GetPort() const { return m_Port; }
   inline bool                       GetDeleteMe() const { return m_DeleteMe; }
-  inline CIncomingJoinRequest*      GetJoinPlayer() const { return m_IncomingJoinPlayer; }
 
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
   inline void SetType(const uint8_t nType) { m_Type = nType; }
