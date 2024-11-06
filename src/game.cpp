@@ -4048,7 +4048,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 void CGame::EventBeforeJoin(CConnection* connection)
 {
   if (connection->GetIsUDPTunnel()) {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::GPS_UDPFIN, 4, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::UDPFIN), 4, 0};
     connection->Send(packet);
   }
 }
@@ -4311,7 +4311,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
 {
   if (chatPlayer->GetFromUID() == user->GetUID())
   {
-    if (chatPlayer->GetType() == CIncomingChatPlayer::CTH_MESSAGE || chatPlayer->GetType() == CIncomingChatPlayer::CTH_MESSAGEEXTRA)
+    if (chatPlayer->GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE || chatPlayer->GetType() == GameProtocol::ChatToHostType::CTH_MESSAGEEXTRA)
     {
       // relay the chat message to other users
 
@@ -4463,16 +4463,16 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
     {
       if (!m_CountDownStarted && !m_RestoredGame) {
         switch (chatPlayer->GetType()) {
-          case CIncomingChatPlayer::CTH_TEAMCHANGE:
+          case GameProtocol::ChatToHostType::CTH_TEAMCHANGE:
             EventUserChangeTeam(user, chatPlayer->GetByte());
             break;
-          case CIncomingChatPlayer::CTH_COLOURCHANGE:
+          case GameProtocol::ChatToHostType::CTH_COLOURCHANGE:
             EventUserChangeColor(user, chatPlayer->GetByte());
             break;
-          case CIncomingChatPlayer::CTH_RACECHANGE:
+          case GameProtocol::ChatToHostType::CTH_RACECHANGE:
             EventUserChangeRace(user, chatPlayer->GetByte());
             break;
-          case CIncomingChatPlayer::CTH_HANDICAPCHANGE:
+          case GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE:
             EventUserChangeHandicap(user, chatPlayer->GetByte());
             break;
           default:

@@ -212,13 +212,13 @@ void CRealm::Update(void* fd, void* send_fd)
 
           switch (Bytes[1])
           {
-            case CBNETProtocol::SID_NULL:
+            case BNETProtocol::Magic::ZERO:
               // warning: we do not respond to NULL packets with a NULL packet of our own
               // this is because PVPGN servers are programmed to respond to NULL packets so it will create a vicious cycle of useless traffic
               // official battle.net servers do not respond to NULL packets
               break;
 
-            case CBNETProtocol::SID_GETADVLISTEX:
+            case BNETProtocol::Magic::GETADVLISTEX:
               if (m_Aura->m_Net->m_Config->m_UDPForwardGameLists) {
                 std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
                 std::vector<uint8_t> War3Version = {m_GameVersion, 0, 0, 0};
@@ -236,14 +236,14 @@ void CRealm::Update(void* fd, void* send_fd)
 
               break;
 
-            case CBNETProtocol::SID_ENTERCHAT:
+            case BNETProtocol::Magic::ENTERCHAT:
               if (m_Protocol->RECEIVE_SID_ENTERCHAT(Data)) {
                 AutoJoinChat();
               }
 
               break;
 
-            case CBNETProtocol::SID_CHATEVENT:
+            case BNETProtocol::Magic::CHATEVENT:
               ChatEvent = m_Protocol->RECEIVE_SID_CHATEVENT(Data);
 
               if (ChatEvent)
@@ -252,11 +252,11 @@ void CRealm::Update(void* fd, void* send_fd)
               delete ChatEvent;
               break;
 
-            case CBNETProtocol::SID_CHECKAD:
+            case BNETProtocol::Magic::CHECKAD:
               m_Protocol->RECEIVE_SID_CHECKAD(Data);
               break;
 
-            case CBNETProtocol::SID_STARTADVEX3:
+            case BNETProtocol::Magic::STARTADVEX3:
               if (m_Aura->m_CurrentLobby) {
                 if (m_Protocol->RECEIVE_SID_STARTADVEX3(Data)) {
                   m_Aura->EventBNETGameRefreshSuccess(this);
@@ -267,11 +267,11 @@ void CRealm::Update(void* fd, void* send_fd)
               }
               break;
 
-            case CBNETProtocol::SID_PING:
+            case BNETProtocol::Magic::PING:
               SendAuth(m_Protocol->SEND_SID_PING(m_Protocol->RECEIVE_SID_PING(Data)));
               break;
 
-            case CBNETProtocol::SID_AUTH_INFO: {
+            case BNETProtocol::Magic::AUTH_INFO: {
               if (!m_Protocol->RECEIVE_SID_AUTH_INFO(Data))
                 break;
 
@@ -294,7 +294,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 )
 
                 SendAuth(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, "Aura"));
-                SendAuth(m_Protocol->SEND_SID_NULL());
+                SendAuth(m_Protocol->SEND_SID_ZERO());
                 SendNetworkConfig();
               } else {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_ERROR)) {
@@ -312,9 +312,9 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
             }
 
-            case CBNETProtocol::SID_AUTH_CHECK: {
+            case BNETProtocol::Magic::AUTH_CHECK: {
               const uint32_t checkResult = m_Protocol->RECEIVE_SID_AUTH_CHECK(Data);
-              if (checkResult == CBNETProtocol::KR_GOOD)
+              if (checkResult == static_cast<uint32_t>(BNETProtocol::KeyResult::GOOD))
               {
                 // cd keys accepted
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
@@ -326,16 +326,16 @@ void CRealm::Update(void* fd, void* send_fd)
                 // cd keys not accepted
                 switch (checkResult)
                 {
-                  case CBNETProtocol::KR_ROC_KEY_IN_USE:
+                  case BNETProtocol::KeyResult::ROC_KEY_IN_USE:
                     PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...")
                     break;
 
-                  case CBNETProtocol::KR_TFT_KEY_IN_USE:
+                  case BNETProtocol::KeyResult::TFT_KEY_IN_USE:
                     PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...");
                     break;
 
-                  case CBNETProtocol::KR_OLD_GAME_VERSION:
-                  case CBNETProtocol::KR_INVALID_VERSION:
+                  case BNETProtocol::KeyResult::OLD_GAME_VERSION:
+                  case BNETProtocol::KeyResult::INVALID_VERSION:
                       PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersion()) + ">")
                       PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersionHash()) + ">")
                       PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - version not supported, or version hash invalid, disconnecting...")
@@ -353,7 +353,7 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
             }
 
-            case CBNETProtocol::SID_AUTH_ACCOUNTLOGON:
+            case BNETProtocol::Magic::AUTH_ACCOUNTLOGON:
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data)) {
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] OK")
                 Login();
@@ -368,7 +368,7 @@ void CRealm::Update(void* fd, void* send_fd)
 
               break;
 
-            case CBNETProtocol::SID_AUTH_ACCOUNTLOGONPROOF:
+            case BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF:
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
                 OnLoginOkay();
               } else {
@@ -379,7 +379,7 @@ void CRealm::Update(void* fd, void* send_fd)
               }
               break;
 
-            case CBNETProtocol::SID_AUTH_ACCOUNTSIGNUP:
+            case BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP:
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
                 OnSignupOkay();
               } else {
@@ -390,19 +390,19 @@ void CRealm::Update(void* fd, void* send_fd)
               }
               break;
 
-            case CBNETProtocol::SID_FRIENDLIST:
+            case BNETProtocol::Magic::FRIENDLIST:
               m_Friends = m_Protocol->RECEIVE_SID_FRIENDLIST(Data);
               break;
 
-            case CBNETProtocol::SID_CLANMEMBERLIST:
+            case BNETProtocol::Magic::CLANMEMBERLIST:
               m_Clan = m_Protocol->RECEIVE_SID_CLANMEMBERLIST(Data);
               break;
 
-            case CBNETProtocol::SID_GETGAMEINFO:
+            case BNETProtocol::Magic::GETGAMEINFO:
               PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got SID_GETGAMEINFO: " + ByteArrayToHexString(Data))
               break;
 
-            case CBNETProtocol::SID_HOSTGAME: {
+            case BNETProtocol::Magic::HOSTGAME: {
               if (!GetIsReHoster()) {
                 break;
               }
@@ -453,7 +453,7 @@ void CRealm::Update(void* fd, void* send_fd)
         return;
       }
       if (m_NullPacketsSent < expectedNullsSent) {
-        SendAuth(m_Protocol->SEND_SID_NULL());
+        SendAuth(m_Protocol->SEND_SID_ZERO());
         ++m_NullPacketsSent;
         m_Socket->Flush();
       }
@@ -586,8 +586,8 @@ void CRealm::Update(void* fd, void* send_fd)
 
 void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 {
-  CBNETProtocol::IncomingChatEvent Event    = chatEvent->GetChatEvent();
-  bool                             Whisper  = (Event == CBNETProtocol::EID_WHISPER);
+  BNETProtocol::IncomingChatEvent Event    = chatEvent->GetChatEvent();
+  bool                             Whisper  = (Event == BNETProtocol::IncomingChatEvent::WHISPER);
   string                           User     = chatEvent->GetUser();
   string                           Message  = chatEvent->GetMessage();
 
@@ -600,7 +600,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
   // this case covers whispers - we assume that anyone who sends a whisper to the bot with message "spoofcheck" should be considered spoof checked
   // note that this means you can whisper "spoofcheck" even in a public game to manually spoofcheck if the /whois fails
 
-  if (Event == CBNETProtocol::EID_WHISPER && (Message == "s" || Message == "sc" || Message == "spoofcheck")) {
+  if (Event == BNETProtocol::IncomingChatEvent::WHISPER && (Message == "s" || Message == "sc" || Message == "spoofcheck")) {
     if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
       CGameUser* Player = m_Aura->m_CurrentLobby->GetUserFromName(User, true);
       if (Player) m_Aura->m_CurrentLobby->AddToRealmVerified(m_Config->m_HostName, Player, true);
@@ -608,11 +608,11 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     }
   }
 
-  if (Event == CBNETProtocol::EID_WHISPER || Event == CBNETProtocol::EID_TALK) {
+  if (Event == BNETProtocol::IncomingChatEvent::WHISPER || Event == BNETProtocol::IncomingChatEvent::TALK) {
     m_HadChatActivity = true;
   }
 
-  if (Event == CBNETProtocol::EID_WHISPER || Event == CBNETProtocol::EID_TALK) {
+  if (Event == BNETProtocol::IncomingChatEvent::WHISPER || Event == BNETProtocol::IncomingChatEvent::TALK) {
     if (User == GetLoginName()) {
       return;
     }
@@ -625,7 +625,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
     // handle bot commands
 
-    if (Event == CBNETProtocol::EID_TALK && m_Config->m_IsMirror) {
+    if (Event == BNETProtocol::IncomingChatEvent::TALK && m_Config->m_IsMirror) {
       // Let bots on servers with <realm_x.mirror = yes> ignore commands at channels
       // (but still accept commands through whispers).
       return;
@@ -649,11 +649,11 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     ctx->Run(cmdToken, command, payload);
     m_Aura->UnholdContext(ctx);
   }
-  else if (Event == CBNETProtocol::EID_CHANNEL)
+  else if (Event == BNETProtocol::IncomingChatEvent::CHANNEL)
   {
     PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "joined channel [" + Message + "]")
     m_CurrentChannel = Message;
-  } else if (Event == CBNETProtocol::EID_WHISPERSENT) {
+  } else if (Event == BNETProtocol::IncomingChatEvent::WHISPERSENT) {
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "whisper sent OK [" + Message + "]")
     if (!m_ChatSentWhispers.empty()) {
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
@@ -667,7 +667,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       delete oldestWhisper;
       m_ChatSentWhispers.pop();
     }
-  } else if (Event == CBNETProtocol::EID_INFO) {
+  } else if (Event == BNETProtocol::IncomingChatEvent::INFO) {
     bool LogInfo = m_HadChatActivity;
 
     // extract the first word which we hope is the username
@@ -707,7 +707,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
     if (LogInfo) {
       PRINT_IF(LOG_LEVEL_INFO, "[INFO: " + m_Config->m_UniqueName + "] " + Message)
     }
-  } else if (Event == CBNETProtocol::EID_ERROR) {
+  } else if (Event == BNETProtocol::IncomingChatEvent::NOTICE) {
     // Note that the default English error message <<That user is not logged on.>> is also received in other two circumstances:
     // - When sending /netinfo <USER>, if the bot has admin permissions in this realm.
     // - When sending /ban <USER>, if the bot has admin permissions in this realm.

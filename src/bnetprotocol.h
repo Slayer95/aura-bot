@@ -69,70 +69,72 @@ class CConfig;
 class CIncomingGameHost;
 class CIncomingChatEvent;
 
-class CBNETProtocol
+namespace BNETProtocol
 {
-public:
-  enum class Protocol : uint8_t
+  enum class Magic : uint8_t
   {
-    SID_NULL                   = 0,   // 0x0
-    SID_STOPADV                = 2,   // 0x2
-    SID_GETADVLISTEX           = 9,   // 0x9
-    SID_ENTERCHAT              = 10,  // 0xA
-    SID_JOINCHANNEL            = 12,  // 0xC
-    SID_CHATMESSAGE            = 14,  // 0xE - PvPGN: CLIENT_MESSAGE
-    SID_CHATEVENT              = 15,  // 0xF
-    SID_CHECKAD                = 21,  // 0x15
-    SID_PUBLICHOST             = 27,  // 0x1B
-    SID_STARTADVEX3            = 28,  // 0x1C
-    SID_DISPLAYAD              = 33,  // 0x21
-    SID_NOTIFYJOIN             = 34,  // 0x22
-    SID_PING                   = 37,  // 0x25
-    SID_LOGONRESPONSE          = 41,  // 0x29
-    SID_AUTH_ACCOUNTSIGNUP     = 42,  // 0x2A
-    SID_AUTH_ACCOUNTSIGNUP2    = 61,  // 0x3D
-    SID_NETGAMEPORT            = 69,  // 0x45
-    SID_AUTH_INFO              = 80,  // 0x50
-    SID_AUTH_CHECK             = 81,  // 0x51
-    SID_AUTH_ACCOUNTLOGON      = 83,  // 0x53
-    SID_AUTH_ACCOUNTLOGONPROOF = 84,  // 0x54
-    SID_WARDEN                 = 94,  // 0x5E
-    SID_FRIENDLIST             = 101, // 0x65
-    SID_FRIENDSUPDATE          = 102, // 0x66
-    SID_CLANMEMBERLIST         = 125, // 0x7D
-    SID_CLANMEMBERSTATUSCHANGE = 127, // 0x7F
-    SID_GETGAMEINFO            = 131, // 0x83
-    SID_HOSTGAME               = 132  // 0x84
+    ZERO                   = 0,   // 0x0
+    STOPADV                = 2,   // 0x2
+    GETADVLISTEX           = 9,   // 0x9
+    ENTERCHAT              = 10,  // 0xA
+    JOINCHANNEL            = 12,  // 0xC
+    CHATMESSAGE            = 14,  // 0xE - PvPGN: CLIENT_MESSAGE
+    CHATEVENT              = 15,  // 0xF
+    CHECKAD                = 21,  // 0x15
+    PUBLICHOST             = 27,  // 0x1B
+    STARTADVEX3            = 28,  // 0x1C
+    DISPLAYAD              = 33,  // 0x21
+    NOTIFYJOIN             = 34,  // 0x22
+    PING                   = 37,  // 0x25
+    LOGONRESPONSE          = 41,  // 0x29
+    AUTH_ACCOUNTSIGNUP     = 42,  // 0x2A
+    AUTH_ACCOUNTSIGNUP2    = 61,  // 0x3D
+    NETGAMEPORT            = 69,  // 0x45
+    AUTH_INFO              = 80,  // 0x50
+    AUTH_CHECK             = 81,  // 0x51
+    AUTH_ACCOUNTLOGON      = 83,  // 0x53
+    AUTH_ACCOUNTLOGONPROOF = 84,  // 0x54
+    WARDEN                 = 94,  // 0x5E
+    FRIENDLIST             = 101, // 0x65
+    FRIENDSUPDATE          = 102, // 0x66
+    CLANMEMBERLIST         = 125, // 0x7D
+    CLANMEMBERSTATUSCHANGE = 127, // 0x7F
+    GETGAMEINFO            = 131, // 0x83
+    HOSTGAME               = 132  // 0x84
   };
 
   enum class KeyResult : uint32_t
   {
-    KR_GOOD             = 0,
-    KR_BAD              = 1,
-    KR_OLD_GAME_VERSION = 256,
-    KR_INVALID_VERSION  = 257,
-    KR_ROC_KEY_IN_USE   = 513,
-    KR_TFT_KEY_IN_USE   = 529
+    GOOD             = 0,
+    BAD              = 1,
+    OLD_GAME_VERSION = 256,
+    INVALID_VERSION  = 257,
+    ROC_KEY_IN_USE   = 513,
+    TFT_KEY_IN_USE   = 529
   };
 
   enum class IncomingChatEvent : uint32_t
   {
-    EID_SHOWUSER            = 1,  // received when you join a channel (includes users in the channel and their information)
-    EID_JOIN                = 2,  // received when someone joins the channel you're currently in
-    EID_LEAVE               = 3,  // received when someone leaves the channel you're currently in
-    EID_WHISPER             = 4,  // received a whisper message
-    EID_TALK                = 5,  // received when someone talks in the channel you're currently in
-    EID_BROADCAST           = 6,  // server broadcast
-    EID_CHANNEL             = 7,  // received when you join a channel (includes the channel's name, flags)
-    EID_USERFLAGS           = 9,  // user flags updates
-    EID_WHISPERSENT         = 10, // sent a whisper message
-    EID_CHANNELFULL         = 13, // channel is full
-    EID_CHANNELDOESNOTEXIST = 14, // channel does not exist
-    EID_CHANNELRESTRICTED   = 15, // channel is restricted
-    EID_INFO                = 18, // broadcast/information message
-    EID_ERROR               = 19, // error message
-    EID_EMOTE               = 23, // emote
+    SHOWUSER            = 1,  // received when you join a channel (includes users in the channel and their information)
+    JOIN                = 2,  // received when someone joins the channel you're currently in
+    LEAVE               = 3,  // received when someone leaves the channel you're currently in
+    WHISPER             = 4,  // received a whisper message
+    TALK                = 5,  // received when someone talks in the channel you're currently in
+    BROADCAST           = 6,  // server broadcast
+    CHANNEL             = 7,  // received when you join a channel (includes the channel's name, flags)
+    USERFLAGS           = 9,  // user flags updates
+    WHISPERSENT         = 10, // sent a whisper message
+    CHANNELFULL         = 13, // channel is full
+    CHANNELDOESNOTEXIST = 14, // channel does not exist
+    CHANNELRESTRICTED   = 15, // channel is restricted
+    INFO                = 18, // broadcast/information message
+    NOTICE              = 19, // notice/error message
+    EMOTE               = 23, // emote
   };
+};
 
+class CBNETProtocol
+{
 private:
   std::array<uint8_t, 4>   m_ClientToken;         // set in constructor
   std::array<uint8_t, 4>   m_LogonType;           // set in RECEIVE_SID_AUTH_INFO
@@ -167,7 +169,7 @@ public:
       
   // receive functions
 
-  bool RECEIVE_SID_NULL(const std::vector<uint8_t>& data);
+  bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
   CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
   CIncomingChatEvent* RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
@@ -186,7 +188,7 @@ public:
   // send functions
 
   std::vector<uint8_t> SEND_PROTOCOL_INITIALIZE_SELECTOR();
-  std::vector<uint8_t> SEND_SID_NULL();
+  std::vector<uint8_t> SEND_SID_ZERO();
   std::vector<uint8_t> SEND_SID_STOPADV();
   std::vector<uint8_t> SEND_SID_GETADVLISTEX();
   std::vector<uint8_t> SEND_SID_ENTERCHAT();
@@ -248,13 +250,13 @@ class CIncomingChatEvent
 private:
   std::string                      m_User;
   std::string                      m_Message;
-  CBNETProtocol::IncomingChatEvent m_ChatEvent;
+  BNETProtocol::IncomingChatEvent m_ChatEvent;
 
 public:
-  CIncomingChatEvent(CBNETProtocol::IncomingChatEvent nChatEvent, std::string nUser, std::string nMessage);
+  CIncomingChatEvent(BNETProtocol::IncomingChatEvent nChatEvent, std::string nUser, std::string nMessage);
   ~CIncomingChatEvent();
 
-  inline CBNETProtocol::IncomingChatEvent GetChatEvent() const { return m_ChatEvent; }
+  inline BNETProtocol::IncomingChatEvent GetChatEvent() const { return m_ChatEvent; }
   inline std::string                      GetUser() const { return m_User; }
   inline std::string                      GetMessage() const { return m_Message; }
 };

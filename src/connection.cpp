@@ -134,7 +134,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
 
       switch (Bytes[0]) {
         case W3GS_HEADER_CONSTANT:
-          if (Bytes[1] == GameProtocol::Magic::W3GS_REQJOIN) {
+          if (Bytes[1] == static_cast<uint8_t>(GameProtocol::Magic::REQJOIN)) {
             CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest) {
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
@@ -157,7 +157,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               m_Socket = nullptr;
             }
             Abort = true;
-          } else if (GameProtocol::Magic::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::W3GS_DECREATEGAME) {
+          } else if (static_cast<uint8_t>(GameProtocol::Magic::SEARCHGAME) <= Bytes[1] && Bytes[1] <= static_cast<uint8_t>(GameProtocol::Magic::DECREATEGAME)) {
             if (Length > 1024) {
               Abort = true;
               break;
@@ -175,7 +175,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case GPS_HEADER_CONSTANT: {
-          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::GPS_RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
+          if (Length >= 13 && Bytes[1] == static_cast<uint8_t>(GPSProtocol::Magic::RECONNECT) && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
             const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
             const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
             CGameUser* targetUser = nullptr;
@@ -194,7 +194,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               result = INCON_UPDATE_RECONNECTED;
               Abort = true;
             }          
-          } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::GPS_UDPSYN && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
+          } else if (Length >= 4 && Bytes[1] == static_cast<uint8_t>(GPSProtocol::Magic::UDPSYN) && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
             // in-house extension
             m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_UDP_TUNNEL);
             result = INCON_UPDATE_PROMOTED;

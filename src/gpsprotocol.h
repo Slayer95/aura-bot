@@ -57,15 +57,15 @@ namespace GPSProtocol
 {
   enum class Magic : uint8_t
   {
-    GPS_INIT              = 1,
-    GPS_RECONNECT         = 2,
-    GPS_ACK               = 3,
-    GPS_REJECT            = 4,
-    GPS_UDPSYN            = 11,
-    GPS_UDPACK            = 12,
-    GPS_UDPFIN            = 13,
-    GPS_SUPPORT_EXTENDED	= 50,
-    GPS_CHANGEKEY         = 51
+    INIT              = 1,
+    RECONNECT         = 2,
+    ACK               = 3,
+    REJECT            = 4,
+    UDPSYN            = 11,
+    UDPACK            = 12,
+    UDPFIN            = 13,
+    SUPPORT_EXTENDED	= 50,
+    CHANGEKEY         = 51
   };
 
   // receive functions

@@ -4,7 +4,7 @@
 
 using namespace std;
 
-namespace VirtualLanProtocol
+namespace VLANProtocol
 {
   ///////////////////////
   // RECEIVE FUNCTIONS //
@@ -101,21 +101,21 @@ namespace VirtualLanProtocol
 
   vector<uint8_t> SEND_VLAN_SEARCHGAME(bool TFT, uint32_t war3Version)
   {
-    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};  // "WAR3"
-    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};  // "W3XP"
+    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};    // "WAR3"
+    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};    // "W3XP"
 
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);             // VLAN header constant
-    packet.push_back(VLAN_SEARCHGAME);                  // VLAN_SEARCHGAME
-    packet.push_back(0);                                // packet length will be assigned later
-    packet.push_back(0);                                // packet length will be assigned later
+    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(static_cast<uint8_t>(VLANProtocol::Magic::SEARCHGAME));    // VLAN_SEARCHGAME
+    packet.push_back(0);                                  // packet length will be assigned later
+    packet.push_back(0);                                  // packet length will be assigned later
 
     if (TFT )
-      AppendByteArray(packet, ProductID_TFT, 4);        // Product ID (TFT)
+      AppendByteArray(packet, ProductID_TFT, 4);          // Product ID (TFT)
     else
-      AppendByteArray(packet, ProductID_ROC, 4);            // Product ID (ROC)
+      AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
 
-    AppendByteArray(packet, war3Version, false);        // Version
+    AppendByteArray(packet, war3Version, false);          // Version
     AssignLength(packet);
     // DEBUG_Print("SENT W3GS_SEARCHGAME");
     // DEBUG_Print(packet);
@@ -124,8 +124,8 @@ namespace VirtualLanProtocol
 
   vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, uint32_t war3Version, uint32_t mapGameType, uint32_t mapFlags, uint16_t mapWidth, uint16_t mapHeight, string gameName, string hostName, uint32_t elapsedTime, string mapPath, vector<uint8_t> mapCRC, uint32_t slotsTotal, uint32_t slotsOpen, vector<uint8_t> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
-    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};  // "WAR3"
-    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};  // "W3XP"
+    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};    // "WAR3"
+    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};    // "W3XP"
 
     vector<uint8_t> packet;
 
@@ -148,29 +148,29 @@ namespace VirtualLanProtocol
 
     // make the rest of the packet
 
-    packet.push_back(VLAN_HEADER_CONSTANT);            // VLAN header constant
-    packet.push_back(VLAN_GAMEINFO);                   // VLAN_GAMEINFO
-    packet.push_back(0);                               // packet length will be assigned later
-    packet.push_back(0);                               // packet length will be assigned later
+    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(static_cast<uint8_t>(VLANProtocol::Magic::GAMEINFO));      // VLAN_GAMEINFO
+    packet.push_back(0);                                  // packet length will be assigned later
+    packet.push_back(0);                                  // packet length will be assigned later
 
     if (TFT)
-      AppendByteArray(packet, ProductID_TFT, 4);       // Product ID (TFT)
+      AppendByteArray(packet, ProductID_TFT, 4);          // Product ID (TFT)
     else
-      AppendByteArray(packet, ProductID_ROC, 4);       // Product ID (ROC)
+      AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
 
-    AppendByteArray(packet, war3Version, false);       // Version
-    AppendByteArray(packet, hostCounter, false);       // Host Counter
-    AppendByteArray(packet, entryKey, false);          // Entry Key
-    AppendByteArrayFast(packet, gameName);             // Game Name
-    packet.push_back(0);                               // ??? (maybe game password)
-    AppendByteArrayFast(packet, StatString);           // Stat String
-    packet.push_back(0);                               // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
-    AppendByteArray(packet, slotsTotal, false);        // Slots Total
-    AppendByteArray(packet, mapGameType, false);       // Map Game Type
-    AppendByteArray(packet, slotsOpen, false);         // Slots Open
-    AppendByteArray(packet, elapsedTime, false);       // time since creation
-    AppendByteArrayFast(packet, ip);                   // ip
-    AppendByteArray(packet, port, false);              // port
+    AppendByteArray(packet, war3Version, false);          // Version
+    AppendByteArray(packet, hostCounter, false);          // Host Counter
+    AppendByteArray(packet, entryKey, false);             // Entry Key
+    AppendByteArrayFast(packet, gameName);                // Game Name
+    packet.push_back(0);                                  // ??? (maybe game password)
+    AppendByteArrayFast(packet, StatString);              // Stat String
+    packet.push_back(0);                                  // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
+    AppendByteArray(packet, slotsTotal, false);           // Slots Total
+    AppendByteArray(packet, mapGameType, false);          // Map Game Type
+    AppendByteArray(packet, slotsOpen, false);            // Slots Open
+    AppendByteArray(packet, elapsedTime, false);          // time since creation
+    AppendByteArrayFast(packet, ip);                      // ip
+    AppendByteArray(packet, port, false);                 // port
     AssignLength(packet);
 
     // DEBUG_Print( "SENT VLAN_GAMEINFO");
@@ -180,24 +180,24 @@ namespace VirtualLanProtocol
 
   vector<uint8_t> SEND_VLAN_CREATEGAME(bool TFT, uint32_t war3Version, uint32_t hostCounter, vector<uint8_t> ip, uint16_t port)
   {
-    unsigned char ProductID_ROC[]  = {51, 82, 65, 87}; // "WAR3"
-    unsigned char ProductID_TFT[]  = {80, 88, 51, 87}; // "W3XP"
+    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};     // "WAR3"
+    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};     // "W3XP"
 
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);            // VLAN header constant
-    packet.push_back(VLAN_CREATEGAME);                 // VLAN_CREATEGAME
-    packet.push_back(0);                               // packet length will be assigned later
-    packet.push_back(0);                               // packet length will be assigned later
+    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(static_cast<uint8_t>(VLANProtocol::Magic::CREATEGAME));    // VLAN_CREATEGAME
+    packet.push_back(0);                                  // packet length will be assigned later
+    packet.push_back(0);                                  // packet length will be assigned later
 
     if (TFT )
-      AppendByteArray(packet, ProductID_TFT, 4);       // Product ID (TFT)
+      AppendByteArray(packet, ProductID_TFT, 4);          // Product ID (TFT)
     else
-      AppendByteArray(packet, ProductID_ROC, 4);       // Product ID (ROC)
+      AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
 
-    AppendByteArray(packet, war3Version, false);       // Version
-    AppendByteArray(packet, hostCounter, false);       // Host Counter
-    AppendByteArrayFast(packet, ip);                   // IP - added by h3rmit
-    AppendByteArray(packet, port, false);              // Port - added by h3rmit
+    AppendByteArray(packet, war3Version, false);          // Version
+    AppendByteArray(packet, hostCounter, false);          // Host Counter
+    AppendByteArrayFast(packet, ip);                      // IP - added by h3rmit
+    AppendByteArray(packet, port, false);                 // Port - added by h3rmit
     AssignLength(packet);
     // DEBUG_Print("SENT VLAN_CREATEGAME");
     // DEBUG_Print(packet);
@@ -207,15 +207,15 @@ namespace VirtualLanProtocol
   vector<uint8_t> SEND_VLAN_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots, vector<uint8_t> ip, uint16_t port)
   {
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);            // VLAN header constant
-    packet.push_back(VLAN_REFRESHGAME);                // VLAN_REFRESHGAME
-    packet.push_back(0);                               // packet length will be assigned later
-    packet.push_back(0);                               // packet length will be assigned later
-    AppendByteArray(packet, hostCounter, false);       // Host Counter
-    AppendByteArray(packet, players, false);           // Players
-    AppendByteArray(packet, playerSlots, false);       // Player Slots
-    AppendByteArrayFast(packet, ip);                   // IP - added by h3rmit
-    AppendByteArray(packet, port, false);              // Port - added by h3rmit
+    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(static_cast<uint8_t>(VLANProtocol::Magic::REFRESHGAME));   // VLAN_REFRESHGAME
+    packet.push_back(0);                                  // packet length will be assigned later
+    packet.push_back(0);                                  // packet length will be assigned later
+    AppendByteArray(packet, hostCounter, false);          // Host Counter
+    AppendByteArray(packet, players, false);              // Players
+    AppendByteArray(packet, playerSlots, false);          // Player Slots
+    AppendByteArrayFast(packet, ip);                      // IP - added by h3rmit
+    AppendByteArray(packet, port, false);                 // Port - added by h3rmit
     AssignLength(packet);
     // DEBUG_Print("SENT VLAN_REFRESHGAME");
     // DEBUG_Print(packet);
@@ -225,13 +225,13 @@ namespace VirtualLanProtocol
   vector<uint8_t> SEND_VLAN_DECREATEGAME(uint32_t hostCounter, vector<uint8_t> ip, uint16_t port)
   {
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);            // VLAN header constant
-    packet.push_back(VLAN_DECREATEGAME);               // VLAN_DECREATEGAME
-    packet.push_back(0);                               // packet length will be assigned later
-    packet.push_back(0);                               // packet length will be assigned later
-    AppendByteArray(packet, hostCounter, false);       // Host Counter
-    AppendByteArrayFast(packet, ip);                   // IP - added by h3rmit
-    AppendByteArray(packet, port, false);              // Port - added by h3rmit
+    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(static_cast<uint8_t>(VLANProtocol::Magic::DECREATEGAME));  // VLAN_DECREATEGAME
+    packet.push_back(0);                                  // packet length will be assigned later
+    packet.push_back(0);                                  // packet length will be assigned later
+    AppendByteArray(packet, hostCounter, false);          // Host Counter
+    AppendByteArrayFast(packet, ip);                      // IP - added by h3rmit
+    AppendByteArray(packet, port, false);                 // Port - added by h3rmit
     AssignLength(packet);
     // DEBUG_Print("SENT VLAN_DECREATEGAME");
     // DEBUG_Print(packet);

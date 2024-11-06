@@ -275,7 +275,7 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_PING_FROM_HOST()
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_PING_FROM_HOST, 8, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::PING_FROM_HOST), 8, 0};
     AppendByteArray(packet, GetTicks(), false); // ping value
     return packet;
   }
@@ -285,7 +285,7 @@ namespace GameProtocol
     const uint8_t              Zeros[]  = {0, 0, 0, 0};
     std::vector<uint8_t> packet;
     packet.push_back(W3GS_HEADER_CONSTANT);                    // W3GS header constant
-    packet.push_back(W3GS_REQJOIN);                            // W3GS_REQJOIN
+    packet.push_back(static_cast<uint8_t>(GameProtocol::Magic::REQJOIN));            // W3GS_REQJOIN
     packet.push_back(0);                                       // packet length will be assigned later
     packet.push_back(0);                                       // packet length will be assigned later
     AppendByteArray(packet, HostCounter, false);               // game host counter
@@ -310,7 +310,7 @@ namespace GameProtocol
     const uint8_t              Zeros[]  = {0, 0, 0, 0};
     const std::vector<uint8_t> SlotInfo = EncodeSlotInfo(slots, randomSeed, layoutStyle, playerSlots);
     packet.push_back(W3GS_HEADER_CONSTANT);                    // W3GS header constant
-    packet.push_back(W3GS_SLOTINFOJOIN);                       // W3GS_SLOTINFOJOIN
+    packet.push_back(static_cast<uint8_t>(GameProtocol::Magic::SLOTINFOJOIN));       // W3GS_SLOTINFOJOIN
     packet.push_back(0);                                       // packet length will be assigned later
     packet.push_back(0);                                       // packet length will be assigned later
     AppendByteArray(packet, static_cast<uint16_t>(SlotInfo.size()), false); // SlotInfo length
@@ -329,7 +329,7 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_REJECTJOIN(uint32_t reason)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_REJECTJOIN, 8, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::REJECTJOIN), 8, 0};
     AppendByteArray(packet, reason, false); // reason
     return packet;
   }
@@ -346,29 +346,29 @@ namespace GameProtocol
     const uint8_t PlayerJoinCounter[] = {2, 0, 0, 0};
     const uint8_t Zeros[]             = {0, 0, 0, 0};
 
-    packet.push_back(W3GS_HEADER_CONSTANT);        // W3GS header constant
-    packet.push_back(W3GS_PLAYERINFO);             // W3GS_PLAYERINFO
-    packet.push_back(0);                           // packet length will be assigned later
-    packet.push_back(0);                           // packet length will be assigned later
-    AppendByteArray(packet, PlayerJoinCounter, 4); // player join counter
-    packet.push_back(UID);                         // UID
-    AppendByteArrayFast(packet, name);             // player name
-    packet.push_back(1);                           // ???
-    packet.push_back(0);                           // ???
-    packet.push_back(2);                           // AF_INET
-    packet.push_back(0);                           // AF_INET continued...
-    packet.push_back(0);                           // port
-    packet.push_back(0);                           // port continued...
-    AppendByteArrayFast(packet, externalIP);       // external IP
-    AppendByteArray(packet, Zeros, 4);             // ???
-    AppendByteArray(packet, Zeros, 4);             // ???
-    packet.push_back(2);                           // AF_INET
-    packet.push_back(0);                           // AF_INET continued...
-    packet.push_back(0);                           // port
-    packet.push_back(0);                           // port continued...
-    AppendByteArrayFast(packet, internalIP);       // internal IP
-    AppendByteArray(packet, Zeros, 4);             // ???
-    AppendByteArray(packet, Zeros, 4);             // ???
+    packet.push_back(W3GS_HEADER_CONSTANT);                         // W3GS header constant
+    packet.push_back(static_cast<uint8_t>(GameProtocol::Magic::PLAYERINFO));              // W3GS_PLAYERINFO
+    packet.push_back(0);                                            // packet length will be assigned later
+    packet.push_back(0);                                            // packet length will be assigned later
+    AppendByteArray(packet, PlayerJoinCounter, 4);                  // player join counter
+    packet.push_back(UID);                                          // UID
+    AppendByteArrayFast(packet, name);                              // player name
+    packet.push_back(1);                                            // ???
+    packet.push_back(0);                                            // ???
+    packet.push_back(2);                                            // AF_INET
+    packet.push_back(0);                                            // AF_INET continued...
+    packet.push_back(0);                                            // port
+    packet.push_back(0);                                            // port continued...
+    AppendByteArrayFast(packet, externalIP);                        // external IP
+    AppendByteArray(packet, Zeros, 4);                              // ???
+    AppendByteArray(packet, Zeros, 4);                              // ???
+    packet.push_back(2);                                            // AF_INET
+    packet.push_back(0);                                            // AF_INET continued...
+    packet.push_back(0);                                            // port
+    packet.push_back(0);                                            // port continued...
+    AppendByteArrayFast(packet, internalIP);                        // internal IP
+    AppendByteArray(packet, Zeros, 4);                              // ???
+    AppendByteArray(packet, Zeros, 4);                              // ???
     AssignLength(packet);
 
     return packet;
@@ -386,29 +386,29 @@ namespace GameProtocol
     const uint8_t PlayerJoinCounter[] = {2, 0, 0, 0};
     const uint8_t Zeros[]             = {0, 0, 0, 0};
 
-    packet.push_back(W3GS_HEADER_CONSTANT);        // W3GS header constant
-    packet.push_back(W3GS_PLAYERINFO);             // W3GS_PLAYERINFO
-    packet.push_back(0);                           // packet length will be assigned later
-    packet.push_back(0);                           // packet length will be assigned later
-    AppendByteArray(packet, PlayerJoinCounter, 4); // player join counter
-    packet.push_back(UID);                         // UID
-    AppendByteArrayFast(packet, name);             // player name
-    packet.push_back(1);                           // ???
-    packet.push_back(0);                           // ???
-    packet.push_back(2);                           // AF_INET
-    packet.push_back(0);                           // AF_INET continued...
-    packet.push_back(0);                           // port
-    packet.push_back(0);                           // port continued...
-    AppendByteArray(packet, Zeros, 4);	         // external IP hidden
-    AppendByteArray(packet, Zeros, 4);             // ???
-    AppendByteArray(packet, Zeros, 4);             // ???
-    packet.push_back(2);                           // AF_INET
-    packet.push_back(0);                           // AF_INET continued...
-    packet.push_back(0);                           // port
-    packet.push_back(0);                           // port continued...
-    AppendByteArray(packet, Zeros, 4);	         // internal IP hidden
-    AppendByteArray(packet, Zeros, 4);             // ???
-    AppendByteArray(packet, Zeros, 4);             // ???
+    packet.push_back(W3GS_HEADER_CONSTANT);                         // W3GS header constant
+    packet.push_back(static_cast<uint8_t>(GameProtocol::Magic::PLAYERINFO));              // W3GS_PLAYERINFO
+    packet.push_back(0);                                            // packet length will be assigned later
+    packet.push_back(0);                                            // packet length will be assigned later
+    AppendByteArray(packet, PlayerJoinCounter, 4);                  // player join counter
+    packet.push_back(UID);                                          // UID
+    AppendByteArrayFast(packet, name);                              // player name
+    packet.push_back(1);                                            // ???
+    packet.push_back(0);                                            // ???
+    packet.push_back(2);                                            // AF_INET
+    packet.push_back(0);                                            // AF_INET continued...
+    packet.push_back(0);                                            // port
+    packet.push_back(0);                                            // port continued...
+    AppendByteArray(packet, Zeros, 4);	                            // external IP hidden
+    AppendByteArray(packet, Zeros, 4);                              // ???
+    AppendByteArray(packet, Zeros, 4);                              // ???
+    packet.push_back(2);                                            // AF_INET
+    packet.push_back(0);                                            // AF_INET continued...
+    packet.push_back(0);                                            // port
+    packet.push_back(0);                                            // port continued...
+    AppendByteArray(packet, Zeros, 4);	                            // internal IP hidden
+    AppendByteArray(packet, Zeros, 4);                              // ???
+    AppendByteArray(packet, Zeros, 4);                              // ???
     AssignLength(packet);
 
     return packet;
@@ -418,7 +418,7 @@ namespace GameProtocol
   {
     if (UID != 255)
     {
-      std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_PLAYERLEAVE_OTHERS, 9, 0, UID};
+      std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::PLAYERLEAVE_OTHERS), 9, 0, UID};
       AppendByteArray(packet, leftCode, false); // left code (see PLAYERLEAVE_ constants in gameprotocol.h)
       return packet;
     }
@@ -430,7 +430,7 @@ namespace GameProtocol
   std::vector<uint8_t> SEND_W3GS_GAMELOADED_OTHERS(uint8_t UID)
   {
     if (UID != 255)
-      return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_GAMELOADED_OTHERS, 5, 0, UID};
+      return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::GAMELOADED_OTHERS), 5, 0, UID};
 
     Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_GAMELOADED_OTHERS");
 
@@ -442,7 +442,7 @@ namespace GameProtocol
     const std::vector<uint8_t> SlotInfo     = EncodeSlotInfo(slots, randomSeed, layoutStyle, playerSlots);
     const uint16_t             SlotInfoSize = static_cast<uint16_t>(SlotInfo.size());
 
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_SLOTINFO, 0, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::SLOTINFO), 0, 0};
     AppendByteArray(packet, SlotInfoSize, false); // SlotInfo length
     AppendByteArrayFast(packet, SlotInfo);        // SlotInfo
     AssignLength(packet);
@@ -451,17 +451,17 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_COUNTDOWN_START()
   {
-    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_COUNTDOWN_START, 4, 0};
+    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::COUNTDOWN_START), 4, 0};
   }
 
   std::vector<uint8_t> SEND_W3GS_COUNTDOWN_END()
   {
-    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_COUNTDOWN_END, 4, 0};
+    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::COUNTDOWN_END), 4, 0};
   }
 
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*> actions, uint16_t sendInterval)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_INCOMING_ACTION, 0, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::INCOMING_ACTION), 0, 0};
     AppendByteArray(packet, sendInterval, false); // send interval
 
     // create subpacket
@@ -498,7 +498,7 @@ namespace GameProtocol
   {
     if (!toUIDs.empty() && !message.empty() && message.size() < 255)
     {
-      std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_CHAT_FROM_HOST, 0, 0, static_cast<uint8_t>(toUIDs.size())};
+      std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::CHAT_FROM_HOST), 0, 0, static_cast<uint8_t>(toUIDs.size())};
       AppendByteArrayFast(packet, toUIDs);    // receivers
       packet.push_back(fromUID);              // sender
       packet.push_back(flag);                 // flag
@@ -519,7 +519,7 @@ namespace GameProtocol
       return std::vector<uint8_t>();
     }
 
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_START_LAG, 0u, 0u, static_cast<uint8_t>(users.size())};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::START_LAG), 0u, 0u, static_cast<uint8_t>(users.size())};
     for (auto& player : users) {
       packet.push_back((player)->GetUID());
       AppendByteArray(packet, GetTicks() - player->GetStartedLaggingTicks(), false);
@@ -531,7 +531,7 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGameUser* user)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_STOP_LAG, 9, 0, user->GetUID()};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::STOP_LAG), 9, 0, user->GetUID()};
     AppendByteArray(packet, GetTicks() - user->GetStartedLaggingTicks(), false);
     return packet;
   }
@@ -569,7 +569,7 @@ namespace GameProtocol
     // make the rest of the packet
 
     std::vector<uint8_t> packet = {
-      W3GS_HEADER_CONSTANT, W3GS_GAMEINFO, 0, 0,
+      W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::GAMEINFO), 0, 0,
       80, 88, 51, 87,
       war3Version, 0, 0, 0
     };
@@ -616,7 +616,7 @@ namespace GameProtocol
     // make the rest of the packet
 
     std::vector<uint8_t> packet = {
-      W3GS_HEADER_CONSTANT, W3GS_GAMEINFO, 0, 0,
+      W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::GAMEINFO), 0, 0,
       80, 88, 51, 87
     };
     *gameVersionOffset = static_cast<uint16_t>(packet.size());       // Game version
@@ -641,14 +641,14 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version, 0, 0, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::CREATEGAME), 16, 0, 80, 88, 51, 87, war3Version, 0, 0, 0};
     AppendByteArray(packet, hostCounter, false); // Host Counter
     return packet;
   }
 
   std::vector<uint8_t> SEND_W3GS_REFRESHGAME(const uint32_t hostCounter, const uint32_t players, const uint32_t playerSlots)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_REFRESHGAME, 16, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::REFRESHGAME), 16, 0};
     AppendByteArray(packet, hostCounter, false); // Host Counter
     AppendByteArray(packet, players, false);     // Players
     AppendByteArray(packet, playerSlots, false); // Player Slots
@@ -657,7 +657,7 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_DECREATEGAME(const uint32_t hostCounter)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_DECREATEGAME, 8, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::DECREATEGAME), 8, 0};
     AppendByteArray(packet, hostCounter, false); // Host Counter
     return packet;
   }
@@ -669,7 +669,7 @@ namespace GameProtocol
       return std::vector<uint8_t>();  
     }
 
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::MAPCHECK), 0, 0, 1, 0, 0, 0};
     AppendByteArrayFast(packet, mapPath); // map path
     AppendByteArrayFast(packet, mapSize); // map size
     AppendByteArrayFast(packet, mapCRC32); // map info
@@ -685,7 +685,7 @@ namespace GameProtocol
       return std::vector<uint8_t>();  
     }
 
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPCHECK, 0, 0, 1, 0, 0, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::MAPCHECK), 0, 0, 1, 0, 0, 0};
     AppendByteArrayFast(packet, mapPath); // map path
     AppendByteArrayFast(packet, mapSize); // map size
     AppendByteArrayFast(packet, mapCRC32); // map info
@@ -697,14 +697,14 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID)
   {
-    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, W3GS_STARTDOWNLOAD, 9, 0, 1, 0, 0, 0, fromUID};
+    return std::vector<uint8_t>{W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::STARTDOWNLOAD), 9, 0, 1, 0, 0, 0, fromUID};
   }
 
   std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, uint32_t start, const string* mapData)
   {
     if (start < mapData->size())
     {
-      std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_MAPPART, 0, 0, toUID, fromUID, 1, 0, 0, 0};
+      std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::MAPPART), 0, 0, toUID, fromUID, 1, 0, 0, 0};
       AppendByteArray(packet, start, false); // start position
 
       // calculate end position (don't send more than 1442 map bytes in one packet)
@@ -733,7 +733,7 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(queue<CIncomingAction*> actions)
   {
-    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, W3GS_INCOMING_ACTION2, 0, 0, 0, 0};
+    std::vector<uint8_t> packet = {W3GS_HEADER_CONSTANT, static_cast<uint8_t>(GameProtocol::Magic::INCOMING_ACTION2), 0, 0, 0, 0};
 
     // create subpacket
 
@@ -935,7 +935,7 @@ CIncomingAction::~CIncomingAction() = default;
 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage)
   : m_Message(std::move(nMessage)),
-    m_Type(CTH_MESSAGE),
+    m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE),
     m_Byte(255),
     m_FromUID(nFromUID),
     m_Flag(nFlag),
@@ -945,7 +945,7 @@ CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> 
 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage, std::vector<uint8_t> nExtraFlags)
   : m_Message(std::move(nMessage)),
-    m_Type(CTH_MESSAGE),
+    m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE),
     m_Byte(255),
     m_FromUID(nFromUID),
     m_Flag(nFlag),
@@ -955,20 +955,20 @@ CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> 
 }
 
 CIncomingChatPlayer::CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte)
-  : m_Type(CTH_TEAMCHANGE),
+  : m_Type(GameProtocol::ChatToHostType::CTH_TEAMCHANGE),
     m_Byte(nByte),
     m_FromUID(nFromUID),
     m_Flag(nFlag),
     m_ToUIDs(std::move(nToUIDs))
 {
   if (nFlag == 17)
-    m_Type = CTH_TEAMCHANGE;
+    m_Type = GameProtocol::ChatToHostType::CTH_TEAMCHANGE;
   else if (nFlag == 18)
-    m_Type = CTH_COLOURCHANGE;
+    m_Type = GameProtocol::ChatToHostType::CTH_COLOURCHANGE;
   else if (nFlag == 19)
-    m_Type = CTH_RACECHANGE;
+    m_Type = GameProtocol::ChatToHostType::CTH_RACECHANGE;
   else if (nFlag == 20)
-    m_Type = CTH_HANDICAPCHANGE;
+    m_Type = GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE;
 }
 
 CIncomingChatPlayer::~CIncomingChatPlayer() = default;

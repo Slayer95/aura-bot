@@ -160,7 +160,7 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
     if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
       string* RecvBuffer = m_Socket->GetBytes();
       std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == GameProtocol::Magic::W3GS_SLOTINFOJOIN;
+      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == static_cast<uint8_t>(GameProtocol::Magic::SLOTINFOJOIN);
       m_Passed = true;
     }
     if (!m_SentJoinRequest) {
@@ -709,7 +709,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  if (!(pkt->length >= 16 && pkt->buf[1] == GameProtocol::Magic::W3GS_SEARCHGAME)) {
+  if (!(pkt->length >= 16 && pkt->buf[1] == static_cast<uint8_t>(GameProtocol::Magic::SEARCHGAME))) {
     return;
   }
 
