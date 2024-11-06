@@ -1049,7 +1049,7 @@ bool CAura::Update()
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
       uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
-      if (result == PREPLAYER_CONNECTION_OK) {
+      if (result == INCON_UPDATE_OK) {
         ++i;
         continue;
       }
@@ -1075,7 +1075,7 @@ bool CAura::Update()
       // *i is a pointer to a CConnection
       uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
       // TODO: Change managed connection update return values
-      if (result == PREPLAYER_CONNECTION_OK) {
+      if (result == INCON_UPDATE_OK) {
         ++i;
         continue;
       }

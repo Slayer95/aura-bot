@@ -101,16 +101,16 @@ void CConnection::CloseConnection()
 uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
 {
   if (m_DeleteMe || !m_Socket || m_Socket->HasError()) {
-    return PREPLAYER_CONNECTION_DESTROY;
+    return INCON_UPDATE_DESTROY;
   }
 
   const int64_t Ticks = GetTicks();
 
   if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
-    return PREPLAYER_CONNECTION_DESTROY;
+    return INCON_UPDATE_DESTROY;
   }
 
-  uint8_t result = PREPLAYER_CONNECTION_OK;
+  uint8_t result = INCON_UPDATE_OK;
   bool Abort = false;
   if (m_Type == INCON_TYPE_KICKED_PLAYER) {
     m_Socket->Discard(static_cast<fd_set*>(fd));
@@ -152,7 +152,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             }
             joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
-              result = PREPLAYER_CONNECTION_PROMOTED;
+              result = INCON_UPDATE_PROMOTED;
               m_Type = INCON_TYPE_PLAYER;
               m_Socket = nullptr;
             }
@@ -191,13 +191,13 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             } else {
               // reconnect successful!
               targetUser->EventGProxyReconnect(this, lastPacket);
-              result = PREPLAYER_CONNECTION_RECONNECTED;
+              result = INCON_UPDATE_RECONNECTED;
               Abort = true;
             }          
           } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::GPS_UDPSYN && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
             // in-house extension
             m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_UDP_TUNNEL);
-            result = PREPLAYER_CONNECTION_PROMOTED;
+            result = INCON_UPDATE_PROMOTED;
             Abort = true;
           }
           break;
@@ -209,7 +209,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             break;
           }
           m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_VLAN);
-          result = PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH;
+          result = INCON_UPDATE_PROMOTED_PASSTHROUGH;
           Abort = true;
           break;
         }
@@ -218,7 +218,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           Abort = true;
       }
 
-      if (result != PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH) {
+      if (result != INCON_UPDATE_PROMOTED_PASSTHROUGH) {
         LengthProcessed += Length;
       }
 
@@ -230,14 +230,14 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
       Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort && result != PREPLAYER_CONNECTION_PROMOTED && result != PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH && result != PREPLAYER_CONNECTION_RECONNECTED) {
-      result = PREPLAYER_CONNECTION_DESTROY;
+    if (Abort && result != INCON_UPDATE_PROMOTED && result != INCON_UPDATE_PROMOTED_PASSTHROUGH && result != INCON_UPDATE_RECONNECTED) {
+      result = INCON_UPDATE_DESTROY;
       RecvBuffer->clear();
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
   } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
-    return PREPLAYER_CONNECTION_DESTROY;
+    return INCON_UPDATE_DESTROY;
   }
 
   if (Abort) {
@@ -245,23 +245,23 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
   }
 
   /*
-  if (result == PREPLAYER_CONNECTION_PROMOTED || result == PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH || result == PREPLAYER_CONNECTION_RECONNECTED) {
+  if (result == INCON_UPDATE_PROMOTED || result == INCON_UPDATE_PROMOTED_PASSTHROUGH || result == INCON_UPDATE_RECONNECTED) {
     return result;
   }
   */
 
   // At this point, m_Socket may have been transferred to CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
-    return PREPLAYER_CONNECTION_DESTROY;
+    return INCON_UPDATE_DESTROY;
   }
 
   m_Socket->DoSend(static_cast<fd_set*>(send_fd));
 
   if (m_Type == INCON_TYPE_KICKED_PLAYER && !m_Socket->GetIsSendPending()) {
-    return PREPLAYER_CONNECTION_DESTROY;
+    return INCON_UPDATE_DESTROY;
   }
 
-  return PREPLAYER_CONNECTION_OK;
+  return INCON_UPDATE_OK;
 }
 
 void CConnection::Send(const std::vector<uint8_t>& data)

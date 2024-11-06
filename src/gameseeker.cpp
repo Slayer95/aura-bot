@@ -45,15 +45,15 @@ using namespace std;
 //
 
 CGameSeeker::CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket)
-  : CConnection(nAura, nPort, nSocket),
-    m_Type(nType)
+  : CConnection(nAura, nPort, nSocket)
 {
+  m_Type = nType;
 }
 
 CGameSeeker::CGameSeeker(CConnection* nConnection, uint8_t nType)
-  : CConnection(*nConnection),
-    m_Type(nType)
+  : CConnection(*nConnection)
 {
+  m_Type = nType;
 }
 
 CGameSeeker::~CGameSeeker()
