@@ -142,7 +142,6 @@ CGameUser::~CGameUser()
     }
     m_Socket->Flush();
     UnrefConnection();
-    delete m_Socket;
   }
 
   for (auto& ctx : m_Game->m_Aura->m_ActiveContexts) {

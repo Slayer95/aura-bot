@@ -27,52 +27,28 @@
 #define AURA_GAMESEEKER_H_
 
 #include "includes.h"
+#include "aura.h"
+#include "connection.h"
 #include "socket.h"
 
-class CStreamIOSocket;
-class CGame;
 class CAura;
+class CConnection;
+class CStreamIOSocket;
 
 #define GAMESEEKER_OK 0u
 #define GAMESEEKER_DESTROY 1u
 #define GAMESEEKER_PROMOTED 2u
 
-#define GAMESEEKER_TYPE_PROMOTED_PLAYER 0u
-#define GAMESEEKER_TYPE_UDP_TUNNEL 1u
-#define GAMESEEKER_TYPE_VLAN 2u
-
 //
 // CGameSeeker
 //
 
-class CGameSeeker
+class CGameSeeker final : public CConnection
 {
 public:
-  CAura*                  m_Aura;
-  uint16_t                m_Port;
-  uint8_t                 m_Type;
-  std::optional<int64_t>  m_TimeoutTicks;
-  CStreamIOSocket*        m_Socket;
-  bool                    m_DeleteMe;
-
   CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket);
+  CGameSeeker(CConnection* nConnection, uint8_t nType);
   ~CGameSeeker();
-
-  inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
-  inline bool                       GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
-  inline std::array<uint8_t, 4>     GetIPv4() const { return m_Socket->GetIPv4(); }
-  inline std::string                GetIPString() const { return m_Socket->GetIPString(); }
-  inline std::string                GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
-  inline sockaddr_storage*          GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
-  inline bool                       GetIsUDPTunnel() const { return m_Type == GAMESEEKER_TYPE_UDP_TUNNEL; }
-  inline bool                       GetIsVLAN() const { return m_Type == GAMESEEKER_TYPE_VLAN; }
-  inline uint8_t                    GetType() const { return m_Type; }
-  inline uint16_t                   GetPort() const { return m_Port; }
-  inline bool                       GetDeleteMe() const { return m_DeleteMe; }
-
-  inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
-  inline void SetType(const uint8_t nType) { m_Type = nType; }
-  inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
 
   // processing functions
 

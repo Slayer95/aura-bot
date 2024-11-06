@@ -59,11 +59,11 @@ class CAura;
 #define PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH 3u
 #define PREPLAYER_CONNECTION_RECONNECTED 4u
 
-#define INCOMING_CONNECTION_TYPE_NONE 0u
-#define INCOMING_CONNECTION_TYPE_UDP_TUNNEL 1u
-#define INCOMING_CONNECTION_TYPE_PLAYER 2u
-#define INCOMING_CONNECTION_TYPE_KICKED_PLAYER 3u
-#define INCOMING_CONNECTION_TYPE_VLAN 4u
+#define INCON_TYPE_NONE 0u
+#define INCON_TYPE_UDP_TUNNEL 1u
+#define INCON_TYPE_PLAYER 2u
+#define INCON_TYPE_KICKED_PLAYER 3u
+#define INCON_TYPE_VLAN 4u
 
 //
 // CConnection
@@ -89,8 +89,8 @@ public:
   inline std::string                GetIPString() const { return m_Socket->GetIPString(); }
   inline std::string                GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
   inline sockaddr_storage*          GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
-  inline bool                       GetIsUDPTunnel() const { return m_Type == INCOMING_CONNECTION_TYPE_UDP_TUNNEL; }
-  inline bool                       GetIsVLAN() const { return m_Type == INCOMING_CONNECTION_TYPE_VLAN; }
+  inline bool                       GetIsUDPTunnel() const { return m_Type == INCON_TYPE_UDP_TUNNEL; }
+  inline bool                       GetIsVLAN() const { return m_Type == INCON_TYPE_VLAN; }
   inline uint8_t                    GetType() const { return m_Type; }
   inline uint16_t                   GetPort() const { return m_Port; }
   inline bool                       GetDeleteMe() const { return m_DeleteMe; }

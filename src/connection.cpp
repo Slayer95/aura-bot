@@ -67,7 +67,7 @@ using namespace std;
 CConnection::CConnection(CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
   : m_Aura(nAura),
     m_Port(nPort),
-    m_Type(INCOMING_CONNECTION_TYPE_NONE),
+    m_Type(INCON_TYPE_NONE),
     m_Socket(nSocket),
     m_DeleteMe(false)
 {
@@ -112,7 +112,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
 
   uint8_t result = PREPLAYER_CONNECTION_OK;
   bool Abort = false;
-  if (m_Type == INCOMING_CONNECTION_TYPE_KICKED_PLAYER) {
+  if (m_Type == INCON_TYPE_KICKED_PLAYER) {
     m_Socket->Discard(static_cast<fd_set*>(fd));
   } else if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
     // extract as many packets as possible from the socket's receive buffer and process them
@@ -153,7 +153,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
               result = PREPLAYER_CONNECTION_PROMOTED;
-              m_Type = INCOMING_CONNECTION_TYPE_PLAYER;
+              m_Type = INCON_TYPE_PLAYER;
               m_Socket = nullptr;
             }
             Abort = true;
@@ -175,7 +175,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case GPS_HEADER_CONSTANT: {
-          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::GPS_RECONNECT && m_Type == INCOMING_CONNECTION_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
+          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::GPS_RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
             const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
             const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
             CGameUser* targetUser = nullptr;
@@ -196,7 +196,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             }          
           } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::GPS_UDPSYN && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
             // in-house extension
-            m_Aura->m_Net->RegisterGameSeeker(this, GAMESEEKER_TYPE_UDP_TUNNEL);
+            m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_UDP_TUNNEL);
             result = PREPLAYER_CONNECTION_PROMOTED;
             Abort = true;
           }
@@ -204,11 +204,11 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
         }
 
         case VLAN_HEADER_CONSTANT: {
-          if (m_Type != INCOMING_CONNECTION_TYPE_NONE) {
+          if (m_Type != INCON_TYPE_NONE) {
             Abort = true;
             break;
           }
-          m_Aura->m_Net->RegisterGameSeeker(this, GAMESEEKER_TYPE_VLAN);
+          m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_VLAN);
           result = PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH;
           Abort = true;
           break;
@@ -257,7 +257,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
 
   m_Socket->DoSend(static_cast<fd_set*>(send_fd));
 
-  if (m_Type == INCOMING_CONNECTION_TYPE_KICKED_PLAYER && !m_Socket->GetIsSendPending()) {
+  if (m_Type == INCON_TYPE_KICKED_PLAYER && !m_Socket->GetIsSendPending()) {
     return PREPLAYER_CONNECTION_DESTROY;
   }
 

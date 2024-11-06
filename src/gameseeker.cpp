@@ -44,19 +44,20 @@ using namespace std;
 // CGameSeeker
 //
 
-CGameSeeker::CGameSeeker( CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket)
-  : m_Aura(nAura),
-    m_Port(nPort),
-    m_Type(nType),
-    m_Socket(nSocket),
-    m_DeleteMe(false)
+CGameSeeker::CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket)
+  : CConnection(nAura, nPort, nSocket),
+    m_Type(nType)
+{
+}
+
+CGameSeeker::CGameSeeker(CConnection* nConnection, uint8_t nType)
+  : CConnection(*nConnection),
+    m_Type(nType)
 {
 }
 
 CGameSeeker::~CGameSeeker()
-{
-  delete m_Socket;
-  m_Socket = nullptr;
+{  
 }
 
 void CGameSeeker::SetTimeout(const int64_t delta)
@@ -72,12 +73,12 @@ void CGameSeeker::CloseConnection()
 void CGameSeeker::Init()
 {
   switch (m_Type) {
-    case GAMESEEKER_TYPE_UDP_TUNNEL: {
+    case INCON_TYPE_UDP_TUNNEL: {
       vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::GPS_UDPACK, 4, 0};
       m_Socket->PutBytes(packet);
       break;
     }
-    case GAMESEEKER_TYPE_VLAN: {
+    case INCON_TYPE_VLAN: {
       // do nothing - client should send VLAN_SEARCHGAME
       break;
     }
@@ -98,7 +99,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
 
   uint8_t result = GAMESEEKER_OK;
   bool Abort = false;
-  if (m_Type == INCOMING_CONNECTION_TYPE_KICKED_PLAYER) {
+  if (m_Type == INCON_TYPE_KICKED_PLAYER) {
     m_Socket->Discard(static_cast<fd_set*>(fd));
   } else if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
     // extract as many packets as possible from the socket's receive buffer and process them
@@ -120,7 +121,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
 
       switch (Bytes[0]) {
         case W3GS_HEADER_CONSTANT:
-          if (m_Type != GAMESEEKER_TYPE_UDP_TUNNEL) {
+          if (m_Type != INCON_TYPE_UDP_TUNNEL) {
             Abort = true;
             break;
           }
@@ -138,6 +139,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
             joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
               result = GAMESEEKER_PROMOTED;
+              m_Type = INCON_TYPE_PLAYER;
               m_Socket = nullptr;
             }
             delete joinRequest;
@@ -159,7 +161,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case VLAN_HEADER_CONSTANT: {
-          if (m_Type != GAMESEEKER_TYPE_VLAN) {
+          if (m_Type != INCON_TYPE_VLAN) {
             Abort = true;
             break;
           }

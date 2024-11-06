@@ -1501,14 +1501,13 @@ void CNet::OnUserKicked(CGameUser* user, bool deferred)
   CStreamIOSocket* socket = user->GetSocket();
   if (!socket) return;
   socket->ClearRecvBuffer();
-  uint16_t port = user->m_Game->GetHostPort();
-  CConnection* connection = new CConnection(m_Aura, port, socket);
-  connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
+  CConnection* connection = new CConnection(*user);
+  connection->SetType(INCON_TYPE_KICKED_PLAYER);
   connection->SetTimeout(2000);
   if (deferred) {
-    m_DownGradedConnections.push(make_pair(port, connection));
+    m_DownGradedConnections.push(make_pair(connection->GetPort(), connection));
   } else {
-    m_IncomingConnections[port].push_back(connection);
+    m_IncomingConnections[connection->GetPort()].push_back(connection);
   }
   user->SetSocket(nullptr);
 }
@@ -1517,9 +1516,8 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
 {
   CStreamIOSocket* socket = connection->GetSocket();
   if (!socket) return;
-  const uint16_t port = connection->GetPort();
-  CGameSeeker* seeker = new CGameSeeker(m_Aura, port, nType, socket);
-  m_ManagedConnections[port].push_back(seeker);
+  CGameSeeker* seeker = new CGameSeeker(connection, nType);
+  m_ManagedConnections[seeker->GetPort()].push_back(seeker);
   connection->SetSocket(nullptr);
   seeker->Init();
 }
@@ -1531,7 +1529,7 @@ void CNet::GracefulExit()
 
   for (auto& serverConnections : m_IncomingConnections) {
     for (auto& connection : serverConnections.second) {
-      connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
+      connection->SetType(INCON_TYPE_KICKED_PLAYER);
       connection->SetTimeout(2000);
       connection->GetSocket()->ClearRecvBuffer();
     }
@@ -1539,7 +1537,7 @@ void CNet::GracefulExit()
 
   for (auto& serverConnections : m_ManagedConnections) {
     for (auto& connection : serverConnections.second) {
-      connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
+      connection->SetType(INCON_TYPE_KICKED_PLAYER);
       connection->SetTimeout(2000);
       connection->GetSocket()->ClearRecvBuffer();
     }
