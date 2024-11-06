@@ -655,11 +655,6 @@ bool CGame::GetIsCustomForces() const
   return GetMap()->GetMapLayoutStyle() != MAPLAYOUT_ANY;
 }
 
-CGameProtocol* CGame::GetProtocol() const
-{
-  return m_Aura->m_GameProtocol;
-}
-
 int64_t CGame::GetNextTimedActionTicks() const
 {
   // return the number of ticks (ms) until the next "timed action", which for our purposes is the next game update
@@ -1059,7 +1054,7 @@ bool CGame::Update(void* fd, void* send_fd)
     // note: we must send pings to users who are downloading the map because Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
 
-    SendAll(GetProtocol()->SEND_W3GS_PING_FROM_HOST());
+    SendAll(GameProtocol::SEND_W3GS_PING_FROM_HOST());
 
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
     // however we only want to broadcast if the countdown hasn't started
@@ -1161,7 +1156,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
         if (!laggingPlayers.empty()) {
           // start the lag screen
-          SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
+          SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
           ResetDropVotes();
 
           m_Lagging = true;
@@ -1198,7 +1193,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
           for (auto& user : m_Users) {
             if (user->GetLagging())
-              Send(_i, GetProtocol()->SEND_W3GS_STOP_LAG(user));
+              Send(_i, GameProtocol::SEND_W3GS_STOP_LAG(user));
           }
 
           // send an empty update
@@ -1211,16 +1206,16 @@ bool CGame::Update(void* fd, void* send_fd)
 
             (_i)->AddSyncCounterOffset(m_GProxyEmptyActions);
             for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-              Send(_i, GetProtocol()->GetEmptyAction());
+              Send(_i, GameProtocol::GetEmptyAction());
             }
           }
 
           (_i)->AddSyncCounterOffset(1);
-          Send(_i, GetProtocol()->GetEmptyAction());
+          Send(_i, GameProtocol::GetEmptyAction());
         }
 
         // start the lag screen
-        SendAll(GetProtocol()->SEND_W3GS_START_LAG(GetLaggingPlayers()));
+        SendAll(GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
 
         // Warcraft III doesn't seem to respond to empty actions
         m_LastLagScreenResetTime = Time;
@@ -1243,7 +1238,7 @@ bool CGame::Update(void* fd, void* send_fd)
         if (m_SyncCounter > user->GetNormalSyncCounter() && m_SyncCounter - user->GetNormalSyncCounter() >= GetSyncLimitSafe()) {
           ++PlayersStillLagging;
         } else {
-          SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(user));
+          SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
           user->SetLagging(false);
           user->SetStartedLaggingTicks(0);
           LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
@@ -1468,7 +1463,7 @@ bool CGame::Update(void* fd, void* send_fd)
           if (m_Aura->m_Net->m_Config->m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net->m_Config->m_MaxUploadSpeed * 1024)
             break;
 
-          Send(user, GetProtocol()->SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapData()));
+          Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapData()));
           user->SetLastMapPartSent(user->GetLastMapPartSent() + 1442);
           m_DownloadCounter += 1442;
         }
@@ -1633,9 +1628,9 @@ void CGame::SendChat(uint8_t fromUID, CGameUser* user, const string& message, co
 
   if (!m_GameLoaded) {
     if (message.size() > 254)
-      Send(user, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
+      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
     else
-      Send(user, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message));
+      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message));
   } else {
     uint8_t extraFlags[] = {3, 0, 0, 0};
 
@@ -1647,9 +1642,9 @@ void CGame::SendChat(uint8_t fromUID, CGameUser* user, const string& message, co
       extraFlags[0] = 3 + m_Slots[SID].GetColor();
 
     if (message.size() > 127)
-      Send(user, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
+      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
     else
-      Send(user, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message));
+      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message));
   }
 }
 
@@ -1688,9 +1683,9 @@ void CGame::SendAllChat(uint8_t fromUID, const string& message) const
   uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
   if (message.size() < maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
+        SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
     } else {
-        SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
+        SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
     }
     return;
   }
@@ -1698,18 +1693,18 @@ void CGame::SendAllChat(uint8_t fromUID, const string& message) const
   string leftMessage = message;
   while (leftMessage.size() > maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
+      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
     } else {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
+      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
     }
     leftMessage = leftMessage.substr(maxSize);
   }
 
   if (!leftMessage.empty()) {
     if (!m_GameLoading && !m_GameLoaded) {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage));
+      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage));
     } else {
-      SendAll(GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
+      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
     }
   }
 }
@@ -1768,7 +1763,7 @@ void CGame::SendAllSlotInfo()
     return;
 
   if (!m_Users.empty()) {
-    SendAll(GetProtocol()->SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+    SendAll(GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
   }
   m_SlotInfoChanged = 0;
 }
@@ -2588,7 +2583,7 @@ void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
 
   const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
-  Send(user, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+  Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
 
 void CGame::SendVirtualHostPlayerInfo(CGameUser* user) const
@@ -2598,7 +2593,7 @@ void CGame::SendVirtualHostPlayerInfo(CGameUser* user) const
 
   const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
-  Send(user, GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+  Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
 
 void CGame::SendFakeUsersInfo(CConnection* user) const
@@ -2611,7 +2606,7 @@ void CGame::SendFakeUsersInfo(CConnection* user) const
   for (const uint16_t fakePlayer : m_FakeUsers) {
     // The higher 8 bytes are the original SID the user was created at.
     // This information is important for letting hosts know which !open, !close, commands to execute.
-    Send(user, GetProtocol()->SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
+    Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
   }
 }
 
@@ -2625,7 +2620,7 @@ void CGame::SendFakeUsersInfo(CGameUser* user) const
   for (const uint16_t fakePlayer : m_FakeUsers) {
     // The higher 8 bytes are the original SID the user was created at.
     // This information is important for letting hosts know which !open, !close, commands to execute.
-    Send(user, GetProtocol()->SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
+    Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
   }
 }
 
@@ -2635,7 +2630,7 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
     if (otherPlayer->GetDeleteMe())
       continue;
     Send(connection,
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
+      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
 }
@@ -2648,7 +2643,7 @@ void CGame::SendJoinedPlayersInfo(CGameUser* user) const
     if (otherPlayer->GetDeleteMe())
       continue;
     Send(user,
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
+      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
 }
@@ -2661,7 +2656,7 @@ void CGame::SendIncomingPlayerInfo(CGameUser* user) const
     if (otherPlayer->GetDeleteMe())
       break;
     otherPlayer->Send(
-      GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(user->GetUID(), user->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/)
+      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(user->GetUID(), user->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/)
     );
   }
 }
@@ -2880,7 +2875,7 @@ void CGame::SendAllActions()
       if (!user->GetGProxyAny()) {
         user->AddSyncCounterOffset(m_GProxyEmptyActions);
         for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-          Send(user, GetProtocol()->GetEmptyAction());
+          Send(user, GameProtocol::GetEmptyAction());
         }
       }
     }
@@ -2913,7 +2908,7 @@ void CGame::SendAllActions()
         // so send everything already in the queue and then clear it out
         // the W3GS_INCOMING_ACTION2 packet handles the overflow but it must be sent *before* the corresponding W3GS_INCOMING_ACTION packet
 
-        SendAll(GetProtocol()->SEND_W3GS_INCOMING_ACTION2(SubActions));
+        SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION2(SubActions));
 
         while (!SubActions.empty())
         {
@@ -2928,7 +2923,7 @@ void CGame::SendAllActions()
       SubActionsLength += Action->GetLength();
     }
 
-    SendAll(GetProtocol()->SEND_W3GS_INCOMING_ACTION(SubActions, GetLatency()));
+    SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION(SubActions, GetLatency()));
 
     while (!SubActions.empty())
     {
@@ -2937,7 +2932,7 @@ void CGame::SendAllActions()
     }
   }
   else
-    SendAll(GetProtocol()->SEND_W3GS_INCOMING_ACTION(m_Actions, GetLatency()));
+    SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION(m_Actions, GetLatency()));
 
   const int64_t Ticks                = GetTicks();
   if (m_LastActionSentTicks != 0) {
@@ -3112,7 +3107,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
   // note: the PrivateGame flag is not set when broadcasting to LAN (as you might expect)
   // note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
-  return GetProtocol()->SEND_W3GS_GAMEINFO_TEMPLATE(
+  return GameProtocol::SEND_W3GS_GAMEINFO_TEMPLATE(
     gameVersionOffset, dynamicInfoOffset,
     GetGameType(),
     GetGameFlags(),
@@ -3181,7 +3176,7 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t game
 
 void CGame::SendGameDiscoveryCreate(uint8_t gameVersion) const
 {
-  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_CREATEGAME(gameVersion, m_HostCounter);
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(gameVersion, m_HostCounter);
   m_Aura->m_Net->SendGameDiscovery(packet, m_Config->m_ExtraDiscoveryAddresses);
 }
 
@@ -3198,13 +3193,13 @@ void CGame::SendGameDiscoveryCreate() const
 
 void CGame::SendGameDiscoveryDecreate() const
 {
-  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_DECREATEGAME(m_HostCounter);
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_DECREATEGAME(m_HostCounter);
   m_Aura->m_Net->SendGameDiscovery(packet, m_Config->m_ExtraDiscoveryAddresses);
 }
 
 void CGame::SendGameDiscoveryRefresh() const
 {
-  vector<uint8_t> packet = GetProtocol()->SEND_W3GS_REFRESHGAME(
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_REFRESHGAME(
     m_HostCounter,
     static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen()),
     static_cast<uint32_t>(m_Slots.size())
@@ -3290,7 +3285,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
   // in some cases we're forced to send the left message early so don't send it again
   if (!user->GetLeftMessageSent()) {
     if (user->GetLagging()) {
-      SendAll(GetProtocol()->SEND_W3GS_STOP_LAG(user));
+      SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
     SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetQuitGame() && (user->GetPingKicked() || user->GetMapKicked() || user->GetSpoofKicked() || user->GetAbuseKicked())));
   }
@@ -3451,7 +3446,7 @@ void CGame::ReportPlayerDisconnected(CGameUser* user)
       laggingPlayer->SetStartedLaggingTicks(Ticks);
       laggingPlayer->ClearStalePings(); // When someone asks for their ping, calculate it from their sync counter instead
     }
-    SendAll(GetProtocol()->SEND_W3GS_START_LAG(laggingPlayers));
+    SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
   }
   if (Time - user->GetLastGProxyWaitNoticeSentTime() >= 20 && !user->GetGProxyExtended()) {
     int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
@@ -3636,7 +3631,7 @@ void CGame::SendLeftMessage(CGameUser* user, const bool sendChat) const
     }
   }
   user->SetLeftMessageSent(true);
-  SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), user->GetLeftCode()));
+  SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), user->GetLeftCode()));
 }
 
 bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
@@ -3647,10 +3642,10 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       if (p1 == p2 || p2->GetLeftMessageSent()) {
         continue;
       }
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_DISCONNECT));
+      Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
     for (auto& fake : m_FakeUsers) {
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT));
+      Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT));
     }
     if (p1->GetDeleteMe()) continue;
     p1->SetDeleteMe(true);
@@ -3659,7 +3654,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     p1->SetLeftMessageSent(true);
     if (p1->GetGProxyAny()) {
       // Let GProxy know that it should give up at reconnecting.
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
+      Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
     anyStopped = true;
   }
@@ -3681,8 +3676,8 @@ void CGame::ShowPlayerNamesGameStart() {
       if (p1 == p2 || p2->GetLeftMessageSent()) {
         continue;
       }
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_LOBBY));
-      Send(p1, GetProtocol()->SEND_W3GS_PLAYERINFO_EXCLUDE_IP(p2->GetUID(), p2->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/));
+      Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_LOBBY));
+      Send(p1, GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(p2->GetUID(), p2->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/));
     }
   }
 }
@@ -3802,7 +3797,7 @@ CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* join
   // send slot info to the new user
   // the SLOTINFOJOIN packet also tells the client their assigned UID and that the join was successful.
 
-  Player->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(Player->GetUID(), Player->GetSocket()->GetPortLE(), Player->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+  Player->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(Player->GetUID(), Player->GetSocket()->GetPortLE(), Player->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   SendIncomingPlayerInfo(Player);
 
@@ -3815,9 +3810,9 @@ CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* join
   // send a map check packet to the new user.
 
   if (m_Aura->m_GameVersion >= 23) {
-    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
+    Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
   } else {
-    Player->Send(GetProtocol()->SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
+    Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
   }
 
   // send slot info to everyone, so the new user gets this info twice but everyone else still needs to know the new slot layout.
@@ -3900,12 +3895,12 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 {
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
   if (joinRequest->GetIsCensored() && m_Config->m_UnsafeNameHandler == ON_UNSAFE_NAME_DENY) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] unsafe name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
@@ -3933,14 +3928,14 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
   if (HostCounterID < 0x10 && joinRequest->GetEntryKey() != m_EntryKey) {
     // check if the user joining via LAN knows the entry key
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
     return false;
   }
 
   // Odd host counters are information requests
   if (HostCounterID & 0x1) {
     EventBeforeJoin(connection);
-    connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(GetNewUID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+    connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(GetNewUID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
     SendVirtualHostPlayerInfo(connection);
     SendFakeUsersInfo(connection);
     SendJoinedPlayersInfo(connection);
@@ -3950,7 +3945,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
   if (HostCounterID < 0x10 && HostCounterID != 0) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     if (HostCounterID > 0x2) {
-      connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
+      connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
       return false;
     }
   }
@@ -3965,25 +3960,25 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
       m_ReportedJoinFailNames.insert(joinRequest->GetName());
     }
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName() == GetLobbyVirtualHostName()) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[") {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] spoofer (matches fake users) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (GetHMCEnabled() && joinRequest->GetName() == m_Map->GetHMCPlayerName()) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] spoofer (matches HMC name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   } else if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
@@ -3993,7 +3988,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     // let banned users "join" the game with an arbitrary UID then immediately close the connection
     // this causes them to be kicked back to the chat channel on battle.net
     vector<CGameSlot> Slots = m_Map->GetSlots();
-    connection->Send(GetProtocol()->SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
+    connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
     return false;
   }
 
@@ -4004,14 +3999,14 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 
   if (m_CheckReservation && !isReserved) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] missing reservation - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
   if (!GetAllowsIPFlood()) {
     if (!CheckIPFlood(joinRequest->GetName(), &(connection->GetSocket()->m_RemoteHost))) {
       LOG_APP_IF(LOG_LEVEL_WARNING, "ipflood rejected from " + AddressToStringStrict(connection->GetSocket()->m_RemoteHost))
-      connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+      connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
       return false;
     }
   }
@@ -4086,7 +4081,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
   }
 
   if (SID >= static_cast<uint8_t>(m_Slots.size())) {
-    connection->Send(GetProtocol()->SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
 
@@ -4199,7 +4194,7 @@ void CGame::EventUserLoaded(CGameUser* user)
 {
   string role = user->GetIsObserver() ? "observer" : "player";
   LOG_APP_IF(LOG_LEVEL_DEBUG, role + " [" + user->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds")
-  SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(user->GetUID()));
+  SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID()));
 
   // Update stats
   const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
@@ -4424,7 +4419,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
           if (overrideObserverUIDs.empty()) {
             LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening--")
           } else {
-            Send(overrideObserverUIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideObserverUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+            Send(overrideObserverUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideObserverUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
           }
         } else if (RejectPrivateChat) {
           if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
@@ -4433,7 +4428,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
               vector<uint8_t> overrideTargetUIDs = GetUIDs(chatPlayer->GetFromUID());
               vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
               if (!overrideTargetUIDs.empty()) {
-                Send(overrideTargetUIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+                Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
                 if (extraFlags[0] != CHAT_RECV_ALL) {
                   LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All]")
                 }
@@ -4446,14 +4441,14 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
             vector<uint8_t> overrideTargetUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
             vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
             if (!overrideTargetUIDs.empty()) {
-              Send(overrideTargetUIDs, GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+              Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
               if (extraFlags[0] != CHAT_RECV_OBS) {
                 LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] enforced server-side")
               }
             }
           }
         } else {
-          Send(chatPlayer->GetToUIDs(), GetProtocol()->SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
+          Send(chatPlayer->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
         }
       }
 
@@ -4705,7 +4700,7 @@ bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
         // inform the client that we are willing to send the map
 
         LOG_APP_IF(LOG_LEVEL_DEBUG, "map download started for user [" + user->GetName() + "]")
-        Send(user, GetProtocol()->SEND_W3GS_STARTDOWNLOAD(GetHostUID()));
+        Send(user, GameProtocol::SEND_W3GS_STARTDOWNLOAD(GetHostUID()));
         user->SetDownloadStarted(true);
         user->SetStartedDownloadingTicks(GetTicks());
       } else {
@@ -4976,16 +4971,16 @@ void CGame::EventGameStarted()
   // since we use a fake countdown to deal with leavers during countdown the COUNTDOWN_START and COUNTDOWN_END packets are sent in quick succession
   // send a start countdown packet
 
-  SendAll(GetProtocol()->SEND_W3GS_COUNTDOWN_START());
+  SendAll(GameProtocol::SEND_W3GS_COUNTDOWN_START());
 
   // send an end countdown packet
 
-  SendAll(GetProtocol()->SEND_W3GS_COUNTDOWN_END());
+  SendAll(GameProtocol::SEND_W3GS_COUNTDOWN_END());
 
   // send a game loaded packet for any fake users
 
   for (auto& fakePlayer : m_FakeUsers)
-    SendAll(GetProtocol()->SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
+    SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
 
   // record the number of starting users
   // fake observers are counted, this is a feature to prevent premature game ending
@@ -7816,7 +7811,7 @@ bool CGame::CreateVirtualHost()
   // we gotta ensure that the virtual host join message is sent after the user's leave message.
   if (!m_Users.empty()) {
     const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
   }
   return true;
 }
@@ -7830,7 +7825,7 @@ bool CGame::DeleteVirtualHost()
   // When this message is sent because the last slot is filled by an incoming user,
   // we gotta ensure that the virtual host leave message is sent before the user's join message.
   if (!m_Users.empty()) {
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(m_VirtualHostUID, PLAYERLEAVE_LOBBY));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(m_VirtualHostUID, PLAYERLEAVE_LOBBY));
   }
   m_VirtualHostUID = 0xFF;
   return true;
@@ -7862,7 +7857,7 @@ void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const stri
   const bool isCustomForces = GetIsCustomForces();
   if (!m_Users.empty()) {
     const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERINFO(UID, name, IP, IP));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(UID, name, IP, IP));
   }
   m_Slots[SID] = CGameSlot(
     m_Slots[SID].GetType(),
@@ -7963,7 +7958,7 @@ bool CGame::DeleteFakeUser(uint8_t SID)
         m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, isHMCSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
       }
       // Ensure this is sent before virtual host rejoins
-      SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(*it), PLAYERLEAVE_LOBBY));
+      SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(*it), PLAYERLEAVE_LOBBY));
       it = m_FakeUsers.erase(it);
       CreateVirtualHost();
       m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -8035,7 +8030,7 @@ void CGame::DeleteFakeUsersLobby()
       m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, SID == hmcSID ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
     }
     // Ensure this is sent before virtual host rejoins
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), GetIsLobby() ? PLAYERLEAVE_DISCONNECT : PLAYERLEAVE_LOBBY));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), GetIsLobby() ? PLAYERLEAVE_DISCONNECT : PLAYERLEAVE_LOBBY));
   }
 
   m_FakeUsers.clear();
@@ -8049,7 +8044,7 @@ void CGame::DeleteFakeUsersLoaded()
     return;
 
   for (auto& fakePlayer : m_FakeUsers) {
-    SendAll(GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), PLAYERLEAVE_DISCONNECT));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), PLAYERLEAVE_DISCONNECT));
   }
 
   m_FakeUsers.clear();

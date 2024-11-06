@@ -64,9 +64,8 @@ using namespace std;
 // CConnection
 //
 
-CConnection::CConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
+CConnection::CConnection(CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
   : m_Aura(nAura),
-    m_Protocol(nProtocol),
     m_Port(nPort),
     m_Type(INCOMING_CONNECTION_TYPE_NONE),
     m_Socket(nSocket),
@@ -128,8 +127,8 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
 
       switch (Bytes[0]) {
         case W3GS_HEADER_CONSTANT:
-          if (Bytes[1] == CGameProtocol::W3GS_REQJOIN) {
-            CIncomingJoinRequest* joinRequest = m_Protocol->RECEIVE_W3GS_REQJOIN(Data);
+          if (Bytes[1] == GameProtocol::Magic::W3GS_REQJOIN) {
+            CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest) {
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
                 Print("[AURA] Got invalid REQJOIN " + ByteArrayToDecString(Bytes));
@@ -151,7 +150,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               m_Socket = nullptr;
             }
             Abort = true;
-          } else if (CGameProtocol::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= CGameProtocol::W3GS_DECREATEGAME) {
+          } else if (GameProtocol::Magic::W3GS_SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::W3GS_DECREATEGAME) {
             if (Length > 1024) {
               Abort = true;
               break;

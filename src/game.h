@@ -73,7 +73,6 @@ class CAura;
 class CTCPServer;
 class CUDPServer;
 class CCommandContext;
-class CGameProtocol;
 class CGameConfig;
 class CCommandConfig;
 class CConnection;
@@ -293,7 +292,6 @@ public:
   uint8_t               GetLayout() const;
   uint8_t               GetCustomLayout() const { return m_CustomLayout; }
   bool                  GetIsCustomForces() const;
-  CGameProtocol*        GetProtocol() const;
   int64_t               GetNextTimedActionTicks() const;
   uint32_t              GetSlotsOccupied() const;
   uint32_t              GetSlotsOpen() const;

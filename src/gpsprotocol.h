@@ -46,10 +46,6 @@
 
 #include "includes.h"
 
-//
-// CGameProtocol
-//
-
 #define GPS_HEADER_CONSTANT 248
 
 #define REJECTGPS_INVALID 1

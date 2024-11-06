@@ -49,11 +49,6 @@
 #include "includes.h"
 #include "aura.h"
 
-//
-// CGameProtocol
-//
-
-class CAura;
 class CGameUser;
 class CIncomingJoinRequest;
 class CIncomingAction;
@@ -61,13 +56,9 @@ class CIncomingChatPlayer;
 class CIncomingMapSize;
 class CGameSlot;
 
-class CGameProtocol
+namespace GameProtocol
 {
-public:
-  CAura* m_Aura;
-  std::vector<uint8_t>  m_EmptyAction;
-
-  enum Protocol
+  enum Magic
   {
     W3GS_PING_FROM_HOST     = 1,  // 0x01
     W3GS_SLOTINFOJOIN       = 4,  // 0x04
@@ -107,12 +98,11 @@ public:
     W3GS_INCOMING_ACTION2   = 72  // 0x48 - received this packet when there are too many actions to fit in W3GS_INCOMING_ACTION
   };
 
-  explicit CGameProtocol(CAura* nAura);
-  ~CGameProtocol();
+  extern std::vector<uint8_t> EmptyAction;
 
   // utility functions
 
-  const std::vector<uint8_t>& GetEmptyAction() const { return m_EmptyAction; }
+  const std::vector<uint8_t>& GetEmptyAction();
 
   // receive functions
 
@@ -155,7 +145,6 @@ public:
 
   // other functions
 
-private:
   bool ValidateLength(const std::vector<uint8_t>& content);
   std::vector<uint8_t> EncodeSlotInfo(const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
 };

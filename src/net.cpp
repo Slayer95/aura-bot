@@ -132,7 +132,7 @@ bool CGameTestConnection::QueryGameInfo()
   }
 
   const static string Name = "AuraBot";
-  const vector<uint8_t> joinRequest = m_Aura->m_GameProtocol->SEND_W3GS_REQJOIN(
+  const vector<uint8_t> joinRequest = GameProtocol::SEND_W3GS_REQJOIN(
     GetHostCounter(),
     m_Aura->m_CurrentLobby->GetEntryKey(),
     Name
@@ -160,7 +160,7 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
     if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
       string* RecvBuffer = m_Socket->GetBytes();
       std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == CGameProtocol::W3GS_SLOTINFOJOIN;
+      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == GameProtocol::Magic::W3GS_SLOTINFOJOIN;
       m_Passed = true;
     }
     if (!m_SentJoinRequest) {
@@ -709,7 +709,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  if (!(pkt->length >= 16 && pkt->buf[1] == CGameProtocol::W3GS_SEARCHGAME)) {
+  if (!(pkt->length >= 16 && pkt->buf[1] == GameProtocol::Magic::W3GS_SEARCHGAME)) {
     return;
   }
 
@@ -1502,7 +1502,7 @@ void CNet::OnUserKicked(CGameUser* user, bool deferred)
   if (!socket) return;
   socket->ClearRecvBuffer();
   uint16_t port = user->m_Game->GetHostPort();
-  CConnection* connection = new CConnection(m_Aura->m_GameProtocol, m_Aura, port, socket);
+  CConnection* connection = new CConnection(m_Aura, port, socket);
   connection->SetType(INCOMING_CONNECTION_TYPE_KICKED_PLAYER);
   connection->SetTimeout(2000);
   if (deferred) {
@@ -1518,7 +1518,7 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
   CStreamIOSocket* socket = connection->GetSocket();
   if (!socket) return;
   const uint16_t port = connection->GetPort();
-  CGameSeeker* seeker = new CGameSeeker(m_Aura->m_GameProtocol, m_Aura, port, nType, socket);
+  CGameSeeker* seeker = new CGameSeeker(m_Aura, port, nType, socket);
   m_ManagedConnections[port].push_back(seeker);
   connection->SetSocket(nullptr);
   seeker->Init();

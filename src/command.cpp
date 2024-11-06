@@ -3158,7 +3158,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       SendReply("Map download started for [" + targetPlayer->GetName() + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
-      m_TargetGame->Send(targetPlayer, m_TargetGame->GetProtocol()->SEND_W3GS_STARTDOWNLOAD(m_TargetGame->GetHostUID()));
+      m_TargetGame->Send(targetPlayer, GameProtocol::SEND_W3GS_STARTDOWNLOAD(m_TargetGame->GetHostUID()));
       targetPlayer->SetDownloadAllowed(true);
       targetPlayer->SetDownloadStarted(true);
       targetPlayer->SetStartedDownloadingTicks(GetTicks());

@@ -50,7 +50,6 @@
 #include "socket.h"
 
 class CStreamIOSocket;
-class CGameProtocol;
 class CGame;
 class CIncomingJoinRequest;
 class CAura;
@@ -75,7 +74,6 @@ class CConnection
 {
 public:
   CAura*                  m_Aura;
-  CGameProtocol*          m_Protocol;
   uint16_t                m_Port;
   uint8_t                 m_Type;
   std::optional<int64_t>  m_TimeoutTicks;
@@ -89,7 +87,7 @@ protected:
   bool                      m_DeleteMe;
 
 public:
-  CConnection(CGameProtocol* nProtocol, CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
+  CConnection(CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
   ~CConnection();
 
   inline CStreamIOSocket*           GetSocket() const { return m_Socket; }

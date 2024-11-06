@@ -423,7 +423,6 @@ int main(const int argc, char** argv)
 
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
-    m_GameProtocol(nullptr),
     m_SHA(new CSHA1()),
     m_Discord(nullptr),
     m_IRC(nullptr),
@@ -465,7 +464,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     return;
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
-  m_GameProtocol = new CGameProtocol(this);
   m_Net = new CNet(this);
   m_Discord = new CDiscord(this);
   m_IRC = new CIRC(this);
@@ -741,7 +739,6 @@ CAura::~CAura()
   delete m_GameDefaultConfig;
   delete m_CommandDefaultConfig;
   delete m_Net;
-  delete m_GameProtocol;
   delete m_SHA;
 
   ClearAutoRehost();
@@ -1019,7 +1016,7 @@ bool CAura::Update()
     CStreamIOSocket* socket = server.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnect > 0) {
-        CConnection* incomingConnection = new CConnection(m_GameProtocol, this, localPort, socket);
+        CConnection* incomingConnection = new CConnection(this, localPort, socket);
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }
@@ -1030,7 +1027,7 @@ bool CAura::Update()
         }
         delete socket;
       } else {
-        CConnection* incomingConnection = new CConnection(m_GameProtocol, this, localPort, socket);
+        CConnection* incomingConnection = new CConnection(this, localPort, socket);
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }

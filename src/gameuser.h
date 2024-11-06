@@ -51,7 +51,6 @@
 #include "connection.h"
 
 class CStreamIOSocket;
-class CGameProtocol;
 class CGame;
 class CConnection;
 class CRealm;
@@ -64,7 +63,6 @@ class CAura;
 class CGameUser
 {
 public:
-  CGameProtocol* m_Protocol;
   CGame*         m_Game;
 
 protected:

@@ -64,8 +64,7 @@ using namespace std;
 //
 
 CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
-  : m_Protocol(connection->m_Protocol),
-    m_Game(nGame),
+  : m_Game(nGame),
     m_Socket(connection->GetSocket()),
     m_IPv4Internal(std::move(nInternalIP)),
     m_RealmInternalId(nJoinedRealmInternalId),
@@ -140,7 +139,7 @@ CGameUser::~CGameUser()
 {
   if (m_Socket) {
     if (!m_LeftMessageSent) {
-      Send(m_Game->GetProtocol()->SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), GetLeftCode()));
+      Send(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), GetLeftCode()));
     }
     m_Socket->Flush();
     UnrefConnection();
@@ -299,11 +298,6 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    CIncomingAction*     Action;
-    CIncomingChatPlayer* ChatPlayer;
-    CIncomingMapSize*    MapSize;
-    uint32_t             Pong;
-
     while (Bytes.size() >= 4)
     {
       // bytes 2 and 3 contain the length of the packet
@@ -324,14 +318,14 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
         switch (Bytes[1])
         {
-          case CGameProtocol::W3GS_LEAVEGAME:
+          case GameProtocol::W3GS_LEAVEGAME:
             m_Game->EventUserLeft(this);
             m_Socket->SetLogErrors(false);
             Abort = true;
             break;
 
-          case CGameProtocol::W3GS_GAMELOADED_SELF:
-            if (m_Protocol->RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
+          case GameProtocol::W3GS_GAMELOADED_SELF:
+            if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
               if (m_Game->GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
                 m_FinishedLoadingTicks = GetTicks();
@@ -341,8 +335,8 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
             break;
 
-          case CGameProtocol::W3GS_OUTGOING_ACTION:
-            Action = m_Protocol->RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
+          case GameProtocol::W3GS_OUTGOING_ACTION: {
+            CIncomingAction* Action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
 
             if (Action) {
               if (!m_Game->EventUserAction(this, Action)) {
@@ -354,23 +348,25 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             // don't delete Action here because the game is going to store it in a queue and delete it later
 
             break;
+          }
 
-          case CGameProtocol::W3GS_OUTGOING_KEEPALIVE:
-            m_CheckSums.push(m_Protocol->RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+          case GameProtocol::W3GS_OUTGOING_KEEPALIVE:
+            m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
             ++m_SyncCounter;
             m_Game->EventUserKeepAlive(this);
             break;
 
-          case CGameProtocol::W3GS_CHAT_TO_HOST:
-            ChatPlayer = m_Protocol->RECEIVE_W3GS_CHAT_TO_HOST(Data);
+          case GameProtocol::W3GS_CHAT_TO_HOST: {
+            CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
             if (ChatPlayer)
               m_Game->EventUserChatToHost(this, ChatPlayer);
 
             delete ChatPlayer;
             break;
+          }
 
-          case CGameProtocol::W3GS_DROPREQ:
+          case GameProtocol::W3GS_DROPREQ:
             if (m_Game->GetLagging() && !m_DropVote) {
               m_DropVote = true;
               m_Game->EventUserDropRequest(this);
@@ -378,22 +374,23 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
             break;
 
-          case CGameProtocol::W3GS_MAPSIZE:
+          case GameProtocol::W3GS_MAPSIZE: {
             if (m_MapReady) {
               // Protection against rogue clients
               break;
             }
 
-            MapSize = m_Protocol->RECEIVE_W3GS_MAPSIZE(Data);
+            CIncomingMapSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
 
             if (MapSize)
               m_Game->EventUserMapSize(this, MapSize);
 
             delete MapSize;
             break;
+          }
 
-          case CGameProtocol::W3GS_PONG_TO_HOST: {
-            Pong = m_Protocol->RECEIVE_W3GS_PONG_TO_HOST(Data);
+          case GameProtocol::W3GS_PONG_TO_HOST: {
+            uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
 
             // we discard pong values of 1
             // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
@@ -414,7 +411,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             }
             if (!bufferBloatForbidden && m_RTTValues.size() < CONSISTENT_PINGS_COUNT) {
               // Measure player's ping as fast as possible, by chaining new pings to pongs received.
-              Send(m_Game->GetProtocol()->SEND_W3GS_PING_FROM_HOST());
+              Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
             }
             ++m_PongCounter;
             break;

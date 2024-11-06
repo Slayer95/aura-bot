@@ -74,7 +74,6 @@ class CCommandContext;
 class CTCPClient;
 class CBNCSUtilInterface;
 class CBNETProtocol;
-class CGameProtocol;
 class CGame;
 class CIncomingChatEvent;
 class CDBBan;
