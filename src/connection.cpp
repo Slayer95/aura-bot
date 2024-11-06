@@ -264,7 +264,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
   return PREPLAYER_CONNECTION_OK;
 }
 
-void CConnection::Send(const std::vector<uint8_t>& data) const
+void CConnection::Send(const std::vector<uint8_t>& data)
 {
   if (m_Socket && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);

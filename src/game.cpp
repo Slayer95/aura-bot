@@ -3879,12 +3879,6 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
   return true;
 }
 
-bool CGame::EventRequestJoin(CGameSeeker* seeker, CIncomingJoinRequest* joinRequest)
-{
-  // TODO: UDP tunnel join attempt
-  return false;
-}
-
 bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest)
 {
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {

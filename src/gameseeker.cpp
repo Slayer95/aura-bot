@@ -203,7 +203,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
   return result;
 }
 
-void CGameSeeker::Send(const std::vector<uint8_t>& data) const
+void CGameSeeker::Send(const std::vector<uint8_t>& data)
 {
   if (m_Socket && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);

@@ -59,7 +59,7 @@ public:
 
   // other functions
 
-  void Send(const std::vector<uint8_t>& data) const;
+  void Send(const std::vector<uint8_t>& data);
 };
 
 #endif // AURA_GAMESEEKER_H_

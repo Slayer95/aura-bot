@@ -108,7 +108,7 @@ public:
 
   // other functions
 
-  virtual void Send(const std::vector<uint8_t>& data) const;
+  virtual void Send(const std::vector<uint8_t>& data);
 };
 
 #endif // AURA_CONNECTION_H_

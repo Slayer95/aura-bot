@@ -452,7 +452,6 @@ public:
   void EventUserKickGProxyExtendedTimeout(CGameUser* user);
   void EventUserKickHandleQueued(CGameUser* user);
   void EventUserCheckStatus(CGameUser* user);
-  bool EventRequestJoin(CGameSeeker* connection, CIncomingJoinRequest* joinRequest);
   bool EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
   void EventBeforeJoin(CConnection* connection);
   void EventUserLeft(CGameUser* user);
