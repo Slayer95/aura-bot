@@ -203,7 +203,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             break;
           }
           m_Aura->m_Net->RegisterGameSeeker(this, GAMESEEKER_TYPE_VLAN);
-          result = PREPLAYER_CONNECTION_PROMOTED;
+          result = PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH;
           Abort = true;
           break;
         }
@@ -212,7 +212,9 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           Abort = true;
       }
 
-      LengthProcessed += Length;
+      if (result != PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH) {
+        LengthProcessed += Length;
+      }
 
       if (Abort) {
         // Process no more packets
@@ -222,7 +224,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
       Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort && result != PREPLAYER_CONNECTION_PROMOTED && result != PREPLAYER_CONNECTION_RECONNECTED) {
+    if (Abort && result != PREPLAYER_CONNECTION_PROMOTED && result != PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH && result != PREPLAYER_CONNECTION_RECONNECTED) {
       result = PREPLAYER_CONNECTION_DESTROY;
       RecvBuffer->clear();
     } else if (LengthProcessed > 0) {
@@ -237,7 +239,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
   }
 
   /*
-  if (result == PREPLAYER_CONNECTION_PROMOTED || result == PREPLAYER_CONNECTION_RECONNECTED) {
+  if (result == PREPLAYER_CONNECTION_PROMOTED || result == PREPLAYER_CONNECTION_PROMOTED_PASSTHROUGH || result == PREPLAYER_CONNECTION_RECONNECTED) {
     return result;
   }
   */
