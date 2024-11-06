@@ -58,7 +58,7 @@ class CGameSlot;
 
 namespace GameProtocol
 {
-  enum Magic
+  enum class Magic : uint8_t
   {
     W3GS_PING_FROM_HOST     = 1,  // 0x01
     W3GS_SLOTINFOJOIN       = 4,  // 0x04
@@ -209,7 +209,7 @@ public:
 class CIncomingChatPlayer
 {
 public:
-  enum ChatToHostType
+  enum class ChatToHostType : uint8_t
   {
     CTH_MESSAGE        = 0, // a chat message
     CTH_MESSAGEEXTRA   = 1, // a chat message with extra flags
