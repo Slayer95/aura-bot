@@ -1415,17 +1415,22 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           return a->GetOperationalRTT() > b->GetOperationalRTT();
         });
       }
+      bool anyPing = false;
       vector<string> pingsText;
       uint32_t maxPing = 0;
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
         pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));
         uint32_t ping = (*i)->GetOperationalRTT();
         if (ping == 0) continue; // also skips this iteration if there is no ping data
+        anyPing = true;
         if (ping > maxPing) maxPing = ping;
-        m_TargetGame->EventUserPongToHost(*i);
       }
 
-      SendReply(JoinVector(pingsText, false), !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
+      if (anyPing) {
+        SendReply(JoinVector(pingsText, false), !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
+      } else {
+        SendReply("Ping not measured yet.", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
+      }
 
       if (0 < maxPing && maxPing < m_TargetGame->GetLatency() && REFRESH_PERIOD_MIN < m_TargetGame->GetLatency()) {
         SendReply(
