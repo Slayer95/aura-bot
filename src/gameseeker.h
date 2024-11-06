@@ -52,15 +52,9 @@ public:
   uint16_t                m_Port;
   uint8_t                 m_Type;
   std::optional<int64_t>  m_TimeoutTicks;
-
-protected:
-  // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
-  // it also allows us to convert CGameConnections to CGamePlayers without the CGameSeeker's destructor closing the socket
-
   CStreamIOSocket*          m_Socket;
   bool                      m_DeleteMe;
 
-public:
   CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket);
   ~CGameSeeker();
 

@@ -64,11 +64,7 @@ class CGameUser
 {
 public:
   CGame*         m_Game;
-
-protected:
   CStreamIOSocket* m_Socket; // note: we permit m_Socket to be NULL in this class to allow for the virtual host player which doesn't really exist
-
-private:
   std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
   std::vector<uint32_t>            m_RTTValues;                        // store the last few (10) pings received so we can take an average
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
@@ -150,10 +146,8 @@ private:
   uint8_t                          m_RemainingSaves;
   uint8_t                          m_RemainingPauses;
 
-protected:
   bool m_DeleteMe;
 
-public:
   CGameUser(CGame* game, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
   ~CGameUser();
 
