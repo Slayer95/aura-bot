@@ -73,6 +73,15 @@ CConnection::CConnection(CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket)
 {
 }
 
+CConnection::CConnection(const CConnection& nFromCopy)
+  : m_Aura(nFromCopy.m_Aura),
+    m_Port(nFromCopy.m_Port),
+    m_Type(nFromCopy.m_Type),
+    m_Socket(nFromCopy.m_Socket),
+    m_DeleteMe(nFromCopy.m_DeleteMe)
+{
+}
+
 CConnection::~CConnection()
 {
   delete m_Socket;
@@ -144,7 +153,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
               result = PREPLAYER_CONNECTION_PROMOTED;
-              m_Type = INCOMING_CONNECTION_TYPE_PROMOTED_PLAYER;
+              m_Type = INCOMING_CONNECTION_TYPE_PLAYER;
               m_Socket = nullptr;
             }
             Abort = true;

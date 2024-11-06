@@ -60,11 +60,10 @@ class CAura;
 // CGameUser
 //
 
-class CGameUser
+class CGameUser final : public CConnection
 {
 public:
   CGame*                           m_Game;
-  CStreamIOSocket*                 m_Socket;
   std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
   std::vector<uint32_t>            m_RTTValues;                        // store the last few (10) pings received so we can take an average
   std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
@@ -146,8 +145,6 @@ public:
   uint8_t                          m_RemainingSaves;
   uint8_t                          m_RemainingPauses;
 
-  bool m_DeleteMe;
-
   CGameUser(CGame* game, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
   ~CGameUser();
 
@@ -155,13 +152,7 @@ public:
   uint32_t GetDisplayRTT() const;
   uint32_t GetRTT() const;
   std::string GetConnectionErrorString() const;
-  inline CStreamIOSocket*         GetSocket() const { return m_Socket; }
-  inline bool                     GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
-  inline std::array<uint8_t, 4>   GetIPv4() const { return m_Socket->GetIPv4(); }
-  inline std::string              GetIPString() const { return m_Socket->GetIPString(); }
-  inline std::string              GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
   inline bool                     GetIsReady() const { return m_Ready; }
-  inline bool                     GetDeleteMe() const { return m_DeleteMe; }
   inline uint8_t                  GetUID() const { return m_UID; }
   inline uint8_t                  GetOldUID() const { return m_OldUID; }
   inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
@@ -249,8 +240,7 @@ public:
   inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
   inline bool                  GetCanPause() { return m_RemainingPauses > 0; }
   inline bool                  GetCanSave() { return m_RemainingSaves > 0; }
-  inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
-  inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
+
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
   inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
   inline void SetQuitGame(bool nQuitGame) { m_QuitGame = nQuitGame; }

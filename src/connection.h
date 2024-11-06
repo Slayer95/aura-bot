@@ -61,7 +61,7 @@ class CAura;
 
 #define INCOMING_CONNECTION_TYPE_NONE 0u
 #define INCOMING_CONNECTION_TYPE_UDP_TUNNEL 1u
-#define INCOMING_CONNECTION_TYPE_PROMOTED_PLAYER 2u
+#define INCOMING_CONNECTION_TYPE_PLAYER 2u
 #define INCOMING_CONNECTION_TYPE_KICKED_PLAYER 3u
 #define INCOMING_CONNECTION_TYPE_VLAN 4u
 
@@ -76,11 +76,12 @@ public:
   uint16_t                m_Port;
   uint8_t                 m_Type;
   std::optional<int64_t>  m_TimeoutTicks;
-  CStreamIOSocket*          m_Socket;
-  bool                      m_DeleteMe;
+  CStreamIOSocket*        m_Socket;
+  bool                    m_DeleteMe;
 
   CConnection(CAura* nAura, uint16_t nPort, CStreamIOSocket* nSocket);
-  ~CConnection();
+  CConnection(const CConnection& nCopyFrom);
+  virtual ~CConnection();
 
   inline CStreamIOSocket*           GetSocket() const { return m_Socket; }
   inline bool                       GetUsingIPv6() const { return m_Socket->GetIsInnerIPv6(); }
@@ -101,12 +102,13 @@ public:
   // processing functions
 
   void SetTimeout(const int64_t nTicks);
+
   void CloseConnection();
   uint8_t Update(void* fd, void* send_fd, int64_t timeout);
 
   // other functions
 
-  void Send(const std::vector<uint8_t>& data) const;
+  virtual void Send(const std::vector<uint8_t>& data) const;
 };
 
 #endif // AURA_CONNECTION_H_

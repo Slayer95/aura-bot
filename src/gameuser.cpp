@@ -64,8 +64,8 @@ using namespace std;
 //
 
 CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
-  : m_Game(nGame),
-    m_Socket(connection->GetSocket()),
+  : CConnection(*connection),
+    m_Game(nGame),
     m_IPv4Internal(std::move(nInternalIP)),
     m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
@@ -129,8 +129,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
 
     m_TeamCaptain(0),
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
-    m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
-    m_DeleteMe(false)
+    m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
 {
   m_Socket->SetLogErrors(true);
 }
