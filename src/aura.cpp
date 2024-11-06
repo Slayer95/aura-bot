@@ -425,7 +425,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
     m_GameProtocol(nullptr),
     m_GPSProtocol(nullptr),
-    m_CRC(new CCRC32()),
     m_SHA(new CSHA1()),
     m_Discord(nullptr),
     m_IRC(nullptr),
@@ -473,7 +472,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   m_Discord = new CDiscord(this);
   m_IRC = new CIRC(this);
 
-  m_CRC->Initialize();
+  CRC32::Initialize();
 
   if (!LoadConfigs(CFG)) {
     Print("[CONFIG] Error: Critical errors found in " + PathToString(m_ConfigPath.filename()));
@@ -746,7 +745,6 @@ CAura::~CAura()
   delete m_Net;
   delete m_GameProtocol;
   delete m_GPSProtocol;
-  delete m_CRC;
   delete m_SHA;
 
   ClearAutoRehost();

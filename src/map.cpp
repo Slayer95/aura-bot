@@ -494,7 +494,7 @@ void CMap::Load(CConfig* CFG)
 
     // calculate <map.crc32>
 
-    MapCRC32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
+    MapCRC32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
     if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
       Print("[MAP] calculated <map.crc32 = " + ByteArrayToDecString(MapCRC32) + ">");
     }

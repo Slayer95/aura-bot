@@ -360,7 +360,7 @@ void CPacked::Compress(const bool TFT)
 
 	// calculate header CRC
 	string HeaderString = string(Header.begin(), Header.end());
-	uint32_t CRC = m_Aura->m_CRC->CalculateCRC((unsigned char *)HeaderString.c_str(), HeaderString.size());
+	uint32_t CRC = CRC32::CalculateCRC((unsigned char *)HeaderString.c_str(), HeaderString.size());
 
 	// overwrite the (currently zero) header CRC with the calculated CRC
 	Header.erase(Header.end() - 4, Header.end());
@@ -380,9 +380,9 @@ void CPacked::Compress(const bool TFT)
 
 		// calculate block header CRC
 		string BlockHeaderString = string(BlockHeader.begin(), BlockHeader.end());
-		uint32_t CRC1 = m_Aura->m_CRC->CalculateCRC((unsigned char *)BlockHeaderString.c_str(), BlockHeaderString.size());
+		uint32_t CRC1 = CRC32::CalculateCRC((unsigned char *)BlockHeaderString.c_str(), BlockHeaderString.size());
 		CRC1 = CRC1 ^ (CRC1 >> 16);
-		uint32_t CRC2 = m_Aura->m_CRC->CalculateCRC((unsigned char *)(*i).c_str(), (*i).size());
+		uint32_t CRC2 = CRC32::CalculateCRC((unsigned char *)(*i).c_str(), (*i).size());
 		CRC2 = CRC2 ^ (CRC2 >> 16);
 		uint32_t BlockCRC = (CRC1 & 0xFFFF) | (CRC2 << 16);
 

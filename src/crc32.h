@@ -4,18 +4,17 @@
 #include <cstdlib>
 #include <cstdint>
 
-// Slice-by-16 algorithm.
-constexpr std::size_t MaxSlices = 16;
-
-class CCRC32
+namespace CRC32
 {
-private:
-  uint32_t LUT[MaxSlices][256];
-  uint32_t Reflect(uint32_t ulReflect, const uint8_t cChar) const;
+  // Slice-by-16 algorithm.
+  constexpr std::size_t MaxSlices = 16;
 
-public:
-  void     Initialize();
-  uint32_t CalculateCRC(const uint8_t* data, std::size_t length, uint32_t previous_crc = 0) const;
+  extern uint32_t LUT[MaxSlices][256];
+  extern bool initialized;
+
+  void Initialize();
+  uint32_t Reflect(uint32_t ulReflect, const uint8_t cChar);
+  uint32_t CalculateCRC(const uint8_t* data, std::size_t length, uint32_t previous_crc = 0);
 };
 
 #endif // AURA_CRC32_H_

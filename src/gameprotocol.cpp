@@ -61,7 +61,6 @@ using namespace std;
 //
 
 CGameProtocol::CGameProtocol(CAura* nAura)
-  : m_Aura(nAura)
 {
   // Empty actions are sent very often
   m_EmptyAction = SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0);
@@ -487,7 +486,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_INCOMING_ACTION(queue<CIncomingAct
 
     // calculate crc (we only care about the first 2 bytes though)
 
-    std::vector<uint8_t> crc32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size()), false);
+    std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size()), false);
     crc32.resize(2);
 
     // finish subpacket
@@ -722,7 +721,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t t
 
     // calculate crc
 
-    const std::vector<uint8_t> crc32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)mapData->c_str() + start, static_cast<uint32_t>(end - start)), false);
+    const std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)mapData->c_str() + start, static_cast<uint32_t>(end - start)), false);
     AppendByteArrayFast(packet, crc32);
 
     // map data
@@ -758,7 +757,7 @@ std::vector<uint8_t> CGameProtocol::SEND_W3GS_INCOMING_ACTION2(queue<CIncomingAc
 
     // calculate crc (we only care about the first 2 bytes though)
 
-    std::vector<uint8_t> crc32 = CreateByteArray(m_Aura->m_CRC->CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size()), false);
+    std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size()), false);
     crc32.resize(2);
 
     // finish subpacket

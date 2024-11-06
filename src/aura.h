@@ -90,7 +90,6 @@
 class CTCPServer;
 class CGameProtocol;
 class CGPSProtocol;
-class CCRC32;
 class CSHA1;
 class CRealm;
 class CGame;
@@ -109,7 +108,6 @@ public:
   uint8_t                                            m_LogLevel;
   CGameProtocol*                                     m_GameProtocol;               // class for game protocol
   CGPSProtocol*                                      m_GPSProtocol;                // class for gproxy protocol
-  CCRC32*                                            m_CRC;                        // for calculating CRC's
   CSHA1*                                             m_SHA;                        // for calculating SHA1's
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
   CDiscord*                                          m_Discord;                    // Discord client
