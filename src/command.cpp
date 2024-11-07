@@ -325,7 +325,6 @@ CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream
 void CCommandContext::SetIdentity(const string& userName)
 {
   m_FromName = userName;
-  return true;
 }
 
 string CCommandContext::GetUserAttribution()
