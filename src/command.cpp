@@ -1699,7 +1699,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       // Name of sender and receiver should be included in the message,
-      // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
+      // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
       if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
         m_ActionMessage = targetName + ", " + m_FromName + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + m_TargetGame->m_GameName + "\"";
@@ -5620,7 +5620,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
 
         // Name of sender and receiver should be included in the message,
-        // so that they can be checked in successful whisper acks from the server (CBNETProtocol::EID_WHISPERSENT)
+        // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
         // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
         if (m_ServerName.empty()) {
           m_ActionMessage = inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>";

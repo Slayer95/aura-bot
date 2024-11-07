@@ -360,6 +360,26 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
 
+inline size_t FindNullDelimiterOrEnd(const std::vector<uint8_t>& b, const size_t start)
+{
+  // start searching the byte array at position 'start' for the first null value
+  // if found, return the subarray from 'start' to the null value but not including the null value
+
+  size_t end = b.size();
+  if (start >= end) return end;
+  for (size_t i = start; i < b.size(); ++i) {
+    if (b[i] == 0) {
+      return i;
+    }
+  }
+  return end;
+}
+
+inline std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end)
+{
+  return std::string(reinterpret_cast<const char*>(start), end - start);
+}
+
 inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start)
 {
   // start searching the byte array at position 'start' for the first null value

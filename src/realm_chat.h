@@ -34,14 +34,12 @@
 #include "bnetprotocol.h"
 
 class CRealm;
-class CBNETProtocol;
 class CCommandContext;
 
 class CQueuedChatMessage
 {
 private:
   CRealm*               m_Realm;
-  CBNETProtocol*        m_Protocol;
   int64_t               m_QueuedTime;
   std::string           m_Channel; // Empty if whisper-only.
   uint8_t               m_ReceiverSelector; // force whisper, prefer channel, wait for channel, channel or drop

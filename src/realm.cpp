@@ -43,6 +43,7 @@
 
  */
 
+#include "includes.h"
 #include "realm.h"
 #include "command.h"
 #include "aura.h"
@@ -59,10 +60,8 @@
 #include "gameprotocol.h"
 #include "gpsprotocol.h"
 #include "game.h"
-#include "includes.h"
 #include "hash.h"
 
-#include <algorithm>
 #include <cmath>
 
 using namespace std;
@@ -75,8 +74,13 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
   : m_Aura(nAura),
     m_Config(nRealmConfig),
     m_Socket(nullptr),
-    m_Protocol(new CBNETProtocol()),
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
+    m_InfoClientToken({220, 1, 203, 7}),
+    m_InfoLogonType({}),
+    m_InfoServerToken({}),
+    m_InfoMPQFileTime({}),
+    m_LoginSalt({}),
+    m_LoginServerPublicKey({}),
     m_GameVersion(0),
     m_HostName(nRealmConfig->m_HostName),
     m_ServerIndex(nRealmConfig->m_ServerIndex),
@@ -112,7 +116,6 @@ CRealm::~CRealm()
 
   delete m_Config;
   delete m_Socket;
-  delete m_Protocol;
   delete m_BNCSUtil;
 
   for (auto& ctx : m_Aura->m_ActiveContexts) {
@@ -236,15 +239,19 @@ void CRealm::Update(void* fd, void* send_fd)
 
               break;
 
-            case BNETProtocol::Magic::ENTERCHAT:
-              if (m_Protocol->RECEIVE_SID_ENTERCHAT(Data)) {
+            case BNETProtocol::Magic::ENTERCHAT: {
+              BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
+              if (enterChatResult.success) {
+                m_ChatUniqueName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
+                PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "entered chat unique name <<" + m_ChatUniqueName + ">>")
                 AutoJoinChat();
               }
 
               break;
+            }
 
             case BNETProtocol::Magic::CHATEVENT:
-              ChatEvent = m_Protocol->RECEIVE_SID_CHATEVENT(Data);
+              ChatEvent = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
 
               if (ChatEvent)
                 ProcessChatEvent(ChatEvent);
@@ -253,12 +260,12 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case BNETProtocol::Magic::CHECKAD:
-              m_Protocol->RECEIVE_SID_CHECKAD(Data);
+              BNETProtocol::RECEIVE_SID_CHECKAD(Data);
               break;
 
             case BNETProtocol::Magic::STARTADVEX3:
               if (m_Aura->m_CurrentLobby) {
-                if (m_Protocol->RECEIVE_SID_STARTADVEX3(Data)) {
+                if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
                   m_Aura->EventBNETGameRefreshSuccess(this);
                 } else {
                   PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish hosted game")
@@ -268,14 +275,21 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case BNETProtocol::Magic::PING:
-              SendAuth(m_Protocol->SEND_SID_PING(m_Protocol->RECEIVE_SID_PING(Data)));
+              SendAuth(BNETProtocol::SEND_SID_PING(BNETProtocol::RECEIVE_SID_PING(Data)));
               break;
 
             case BNETProtocol::Magic::AUTH_INFO: {
-              if (!m_Protocol->RECEIVE_SID_AUTH_INFO(Data))
+              BNETProtocol::AuthInfoResult infoResult = BNETProtocol::RECEIVE_SID_AUTH_INFO(Data);
+              if (!infoResult.success)
                 break;
 
-              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Config, m_Protocol->GetValueStringFormulaString(), m_Protocol->GetIX86VerFileNameString(), m_Protocol->GetClientToken(), m_Protocol->GetServerToken(), m_Aura->m_GameVersion);
+              copy_n(infoResult.logonType, 4, m_InfoLogonType.begin());
+              copy_n(infoResult.serverToken, 4, m_InfoServerToken.begin());
+              copy_n(infoResult.mpqFileTime, 8, m_InfoMPQFileTime.begin());
+              m_InfoIX86VerFileName = vector<uint8_t>(infoResult.verFileNameStart, infoResult.verFileNameEnd);
+              m_InfoValueStringFormula = vector<uint8_t>(infoResult.valueStringFormulaStart, infoResult.valueStringFormulaEnd);
+
+              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken(), m_Aura->m_GameVersion);
               if (versionSuccess) {
                 if (!m_BNCSUtil->CheckValidEXEInfo()) {
                   m_BNCSUtil->SetEXEInfo(m_BNCSUtil->GetDefaultEXEInfo());
@@ -293,8 +307,8 @@ void CRealm::Update(void* fd, void* send_fd)
                   "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
                 )
 
-                SendAuth(m_Protocol->SEND_SID_AUTH_CHECK(m_Protocol->GetClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, "Aura"));
-                SendAuth(m_Protocol->SEND_SID_ZERO());
+                SendAuth(BNETProtocol::SEND_SID_AUTH_CHECK(GetInfoClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, "Aura"));
+                SendAuth(BNETProtocol::SEND_SID_ZERO());
                 SendNetworkConfig();
               } else {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_ERROR)) {
@@ -313,25 +327,25 @@ void CRealm::Update(void* fd, void* send_fd)
             }
 
             case BNETProtocol::Magic::AUTH_CHECK: {
-              const uint32_t checkResult = m_Protocol->RECEIVE_SID_AUTH_CHECK(Data);
-              if (checkResult == BNETProtocol::KeyResult::GOOD)
+              BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(Data);
+              if (checkResult.state == BNETProtocol::KeyResult::GOOD)
               {
                 // cd keys accepted
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
                 m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
-                SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
+                SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
               }
               else
               {
                 // cd keys not accepted
-                switch (checkResult)
+                switch (checkResult.state)
                 {
                   case BNETProtocol::KeyResult::ROC_KEY_IN_USE:
-                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...")
+                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...")
                     break;
 
                   case BNETProtocol::KeyResult::TFT_KEY_IN_USE:
-                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...");
+                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...");
                     break;
 
                   case BNETProtocol::KeyResult::OLD_GAME_VERSION:
@@ -353,8 +367,11 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
             }
 
-            case BNETProtocol::Magic::AUTH_ACCOUNTLOGON:
-              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data)) {
+            case BNETProtocol::Magic::AUTH_ACCOUNTLOGON: {
+              BNETProtocol::AuthLoginResult loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(Data);
+              if (loginResult.success) {
+                copy_n(loginResult.salt, 32, m_LoginSalt.begin());
+                copy_n(loginResult.serverPublicKey, 32, m_LoginServerPublicKey.begin());
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] OK")
                 Login();
               } else {
@@ -367,9 +384,10 @@ void CRealm::Update(void* fd, void* send_fd)
               }
 
               break;
+            }
 
             case BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF:
-              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
+              if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
                 OnLoginOkay();
               } else {
                 m_FailedLogin = true;
@@ -380,7 +398,7 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP:
-              if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
+              if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
                 OnSignupOkay();
               } else {
                 m_FailedSignup = true;
@@ -391,11 +409,11 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case BNETProtocol::Magic::FRIENDLIST:
-              m_Friends = m_Protocol->RECEIVE_SID_FRIENDLIST(Data);
+              m_Friends = BNETProtocol::RECEIVE_SID_FRIENDLIST(Data);
               break;
 
             case BNETProtocol::Magic::CLANMEMBERLIST:
-              m_Clan = m_Protocol->RECEIVE_SID_CLANMEMBERLIST(Data);
+              m_Clan = BNETProtocol::RECEIVE_SID_CLANMEMBERLIST(Data);
               break;
 
             case BNETProtocol::Magic::GETGAMEINFO:
@@ -407,7 +425,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 break;
               }
 
-              CConfig* hostedGameConfig = m_Protocol->RECEIVE_HOSTED_GAME_CONFIG(Data);
+              CConfig* hostedGameConfig = BNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(Data);
               if (!hostedGameConfig) {
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got invalid SID_HOSTGAME message")
                 break;
@@ -453,7 +471,7 @@ void CRealm::Update(void* fd, void* send_fd)
         return;
       }
       if (m_NullPacketsSent < expectedNullsSent) {
-        SendAuth(m_Protocol->SEND_SID_ZERO());
+        SendAuth(BNETProtocol::SEND_SID_ZERO());
         ++m_NullPacketsSent;
         m_Socket->Flush();
       }
@@ -562,9 +580,9 @@ void CRealm::Update(void* fd, void* send_fd)
 
       ++m_SessionID;
       PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "connected to [" + m_HostName + "]")
-      SendAuth(m_Protocol->SEND_PROTOCOL_INITIALIZE_SELECTOR());
+      SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
       m_GameVersion = m_Config->m_AuthWar3Version.has_value() ? m_Config->m_AuthWar3Version.value() : m_Aura->m_GameVersion;
-      SendAuth(m_Protocol->SEND_SID_AUTH_INFO(m_GameVersion, m_Config->m_LocaleID, m_Config->m_CountryShort, m_Config->m_Country));
+      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameVersion, m_Config->m_LocaleID, m_Config->m_CountryShort, m_Config->m_Country));
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
       m_LastGameListTime       = Time;
       return;
@@ -965,17 +983,17 @@ string CRealm::GetCommandToken() const
 
 void CRealm::SendGetFriendsList()
 {
-  Send(m_Protocol->SEND_SID_FRIENDLIST());
+  Send(BNETProtocol::SEND_SID_FRIENDLIST());
 }
 
 void CRealm::SendGetClanList()
 {
-  Send(m_Protocol->SEND_SID_CLANMEMBERLIST());
+  Send(BNETProtocol::SEND_SID_CLANMEMBERLIST());
 }
 
 void CRealm::SendGetGamesList()
 {
-  Send(m_Protocol->SEND_SID_GETADVLISTEX());
+  Send(BNETProtocol::SEND_SID_GETADVLISTEX());
   m_LastGameListTime = GetTime();
 }
 
@@ -990,7 +1008,7 @@ void CRealm::SendNetworkConfig()
 {
   if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsMirror() && !m_Config->m_IsMirror) {
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "mirroring public game host " + IPv4ToString(m_Aura->m_CurrentLobby->GetPublicHostAddress()) + ":" + to_string(m_Aura->m_CurrentLobby->GetPublicHostPort()))
-    SendAuth(m_Protocol->SEND_SID_PUBLICHOST(m_Aura->m_CurrentLobby->GetPublicHostAddress(), m_Aura->m_CurrentLobby->GetPublicHostPort()));
+    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(m_Aura->m_CurrentLobby->GetPublicHostAddress(), m_Aura->m_CurrentLobby->GetPublicHostPort()));
     m_GamePort = m_Aura->m_CurrentLobby->GetPublicHostPort();
   } else if (m_Config->m_EnableCustomAddress) {
     uint16_t port = 6112;
@@ -1000,11 +1018,11 @@ void CRealm::SendNetworkConfig()
       port = m_Aura->m_CurrentLobby->GetHostPort();
     }
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "using public game host " + IPv4ToString(AddressToIPv4Array(&(m_Config->m_PublicHostAddress))) + ":" + to_string(port))
-    SendAuth(m_Protocol->SEND_SID_PUBLICHOST(AddressToIPv4Array(&(m_Config->m_PublicHostAddress)), port));
+    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(AddressToIPv4Array(&(m_Config->m_PublicHostAddress)), port));
     m_GamePort = port;
   } else if (m_Config->m_EnableCustomPort) {
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "using public game port " + to_string(m_Config->m_PublicHostPort))
-    SendAuth(m_Protocol->SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort));
+    SendAuth(BNETProtocol::SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort));
     m_GamePort = m_Config->m_PublicHostPort;
   }
 }
@@ -1013,13 +1031,13 @@ void CRealm::AutoJoinChat()
 {
   const string& targetChannel = m_AnchorChannel.empty() ? m_Config->m_FirstChannel : m_AnchorChannel;
   if (targetChannel.empty()) return;
-  Send(m_Protocol->SEND_SID_JOINCHANNEL(targetChannel));
+  Send(BNETProtocol::SEND_SID_JOINCHANNEL(targetChannel));
   PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "joining channel [" + targetChannel + "]")
 }
 
 void CRealm::SendEnterChat()
 {
-  Send(m_Protocol->SEND_SID_ENTERCHAT());
+  Send(BNETProtocol::SEND_SID_ENTERCHAT());
 }
 
 void CRealm::TrySendEnterChat()
@@ -1064,7 +1082,7 @@ void CRealm::Signup()
   // exclusive to pvpgn logon
   PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "registering new account in PvPGN realm")
   m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
-  SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTSIGNUP(m_Config->m_UserName, m_BNCSUtil->GetPvPGNPasswordHash()));
+  SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(m_Config->m_UserName, m_BNCSUtil->GetPvPGNPasswordHash()));
   //}
 }
 
@@ -1074,12 +1092,12 @@ bool CRealm::Login()
     // pvpgn logon
     PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using pvpgn logon type")
     m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
-    SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()));
+    SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()));
   } else {
     // battle.net logon
     PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using battle.net logon type")
-    m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(m_Protocol->GetSalt(), m_Protocol->GetServerPublicKey());
-    SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()));
+    m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(GetLoginSalt(), GetLoginServerPublicKey());
+    SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()));
   }
   return true;
 }
@@ -1101,7 +1119,7 @@ void CRealm::OnSignupOkay()
 {
   PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "signed up as [" + m_Config->m_UserName + "]")
   m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
-  SendAuth(m_Protocol->SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
+  SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
   //Login();
 }
 
@@ -1287,7 +1305,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
   if (m_GamePort != connectPort) {
     PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "updating net game port to " + to_string(connectPort))
     // Some PvPGN servers will disconnect if this message is sent while logged in
-    Send(m_Protocol->SEND_SID_NETGAMEPORT(connectPort));
+    Send(BNETProtocol::SEND_SID_NETGAMEPORT(connectPort));
     m_GamePort = connectPort;
   }
 
@@ -1304,7 +1322,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
     m_GameBroadcastStartTicks = Ticks;
   }
 
-  Send(m_Protocol->SEND_SID_STARTADVEX3(
+  Send(BNETProtocol::SEND_SID_STARTADVEX3(
     displayMode,
     game->GetGameType(),
     game->GetMap()->GetMapGameFlags(),
@@ -1328,7 +1346,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
 void CRealm::QueueGameUncreate()
 {
   ResetGameAnnouncement();
-  Send(m_Protocol->SEND_SID_STOPADV());
+  Send(BNETProtocol::SEND_SID_STOPADV());
 }
 
 void CRealm::ResetConnection(bool Errored)

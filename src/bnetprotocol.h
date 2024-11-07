@@ -46,10 +46,6 @@
 #ifndef AURA_BNETPROTOCOL_H_
 #define AURA_BNETPROTOCOL_H_
 
-//
-// CBNETProtocol
-//
-
 #include <array>
 #include <string>
 #include <vector>
@@ -132,54 +128,89 @@ namespace BNETProtocol
     constexpr uint32_t NOTICE              = 19u; // notice/error message
     constexpr uint32_t EMOTE               = 23u; // emote
   };
-};
 
-class CBNETProtocol
-{
-private:
-  std::array<uint8_t, 4>   m_ClientToken;               // set in constructor
-  std::array<uint8_t, 4>   m_InfoLogonType;             // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 4>   m_InfoServerToken;           // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 8>   m_InfoMPQFileTime;           // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>     m_InfoIX86VerFileName;       // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>     m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>     m_KeyStateDescription;       // set in RECEIVE_SID_AUTH_CHECK
-  std::array<uint8_t, 32>  m_LoginSalt;                 // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::array<uint8_t, 32>  m_LoginServerPublicKey;      // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::vector<uint8_t>     m_ChatUniqueName;            // set in RECEIVE_SID_ENTERCHAT
+  struct AuthInfoResult
+  {
+    const bool success;
+    const uint8_t* logonType;
+    const uint8_t* serverToken;
+    const uint8_t* mpqFileTime;
+    const uint8_t* verFileNameStart;
+    const uint8_t* verFileNameEnd;
+    const uint8_t* valueStringFormulaStart;
+    const uint8_t* valueStringFormulaEnd;
 
-public:
-  CBNETProtocol();
-  ~CBNETProtocol();
+    AuthInfoResult(const bool nSuccess, const uint8_t* nLogonType, const uint8_t* nServerToken, const uint8_t* nMPQFileTime, const uint8_t* nVerFileNameStart, const uint8_t* nVerFileNameEnd, const uint8_t* nValueStringFormulaStart, const uint8_t* nValueStringFormulaEnd)
+    : success(nSuccess),
+      logonType(nLogonType),
+      serverToken(nServerToken),
+      mpqFileTime(nMPQFileTime),
+      verFileNameStart(nVerFileNameStart),
+      verFileNameEnd(nVerFileNameEnd),
+      valueStringFormulaStart(nValueStringFormulaStart),
+      valueStringFormulaEnd(nValueStringFormulaEnd)
+      {};
 
-  inline const std::array<uint8_t, 4>&    GetClientToken() const { return m_ClientToken; }
-  inline const std::array<uint8_t, 4>&    GetLogonType() const { return m_InfoLogonType; }
-  inline const std::array<uint8_t, 4>&    GetServerToken() const { return m_InfoServerToken; }
-  inline const std::array<uint8_t, 8>&    GetMPQFileTime() const { return m_InfoMPQFileTime; }
-  inline const std::vector<uint8_t>       GetIX86VerFileName() const { return m_InfoIX86VerFileName; }
-  inline std::string                      GetIX86VerFileNameString() const { return std::string(begin(m_InfoIX86VerFileName), end(m_InfoIX86VerFileName)); }
-  inline const std::vector<uint8_t>&      GetValueStringFormula() const { return m_InfoValueStringFormula; }
-  inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_InfoValueStringFormula), end(m_InfoValueStringFormula)); }
-  inline std::string                      GetKeyStateDescription() const { return std::string(begin(m_KeyStateDescription), end(m_KeyStateDescription)); }
-  inline const std::array<uint8_t, 32>&   GetSalt() const { return m_LoginSalt; }
-  inline const std::array<uint8_t, 32>&   GetServerPublicKey() const { return m_LoginServerPublicKey; }
-  inline const std::vector<uint8_t>&      GetChatUniqueName() const { return m_ChatUniqueName; }
+    ~AuthInfoResult() = default;
+  };
 
-  inline size_t                           GetMessageSize(const std::vector<uint8_t> message) const { return message.size(); }
-  inline size_t                           GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) const { return message.size() + name.size(); }
+  struct AuthCheckResult
+  {
+    const uint32_t state;
+    const uint8_t* descriptionStart;
+    const uint8_t* descriptionEnd;
+
+    AuthCheckResult(const uint32_t nState, const uint8_t* nDescriptionStart, const uint8_t* nDescriptionEnd)
+     : state(nState),
+       descriptionStart(nDescriptionStart),
+       descriptionEnd(nDescriptionEnd)
+     {};
+    ~AuthCheckResult() = default;
+  };
+
+  struct AuthLoginResult
+  {
+    const bool success;
+    const uint8_t* salt;
+    const uint8_t* serverPublicKey;
+
+    AuthLoginResult(const bool nSuccess, const uint8_t* nSalt, const uint8_t* nServerPublicKey)
+    : success(nSuccess),
+      salt(nSalt),
+      serverPublicKey(nServerPublicKey)
+    {};
+    ~AuthLoginResult() = default;
+  };
+
+  struct EnterChatResult
+  {
+    const bool success;
+    const uint8_t* uniqueNameStart;
+    const uint8_t* uniqueNameEnd;
+
+    EnterChatResult(const bool nSuccess, const uint8_t* nUniqueNameStart, const uint8_t* nUniqueNameEnd)
+    : success(nSuccess),
+      uniqueNameStart(nUniqueNameStart),
+      uniqueNameEnd(nUniqueNameEnd)
+    {};
+    ~EnterChatResult() = default;
+  };
+
+  inline size_t GetMessageSize(const std::vector<uint8_t> message) { return message.size(); }
+  inline size_t GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) { return message.size() + name.size(); }
       
   // receive functions
 
   bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
   CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
+  [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
   CIncomingChatEvent* RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data);
   std::array<uint8_t, 4> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data);
-  uint32_t RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data);
+  [[nodiscard]] BNETProtocol::AuthInfoResult RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data);
+  [[nodiscard]] BNETProtocol::AuthCheckResult RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
+  [[nodiscard]] BNETProtocol::AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& data);
   bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);
   std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);

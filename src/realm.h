@@ -73,7 +73,6 @@ class CAura;
 class CCommandContext;
 class CTCPClient;
 class CBNCSUtilInterface;
-class CBNETProtocol;
 class CGame;
 class CIncomingChatEvent;
 class CDBBan;
@@ -87,14 +86,24 @@ public:
 
 private:
   CRealmConfig*                    m_Config;
-  CTCPClient*                      m_Socket;                                               // the connection to battle.net
-  CBNETProtocol*                   m_Protocol;                                             // battle.net protocol
+  CTCPClient*                      m_Socket;                    // the connection to battle.net
   CBNCSUtilInterface*              m_BNCSUtil;                                             // the interface to the bncsutil library (used for logging into battle.net)
-  std::vector<std::string>         m_Friends;                                              // std::vector of friends
-  std::vector<std::string>         m_Clan;                                                 // std::vector of clan members
+
+  std::array<uint8_t, 4>           m_InfoClientToken;           // set in constructor
+  std::array<uint8_t, 4>           m_InfoLogonType;             // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 4>           m_InfoServerToken;           // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 8>           m_InfoMPQFileTime;           // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>             m_InfoIX86VerFileName;       // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>             m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 32>          m_LoginSalt;                 // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 32>          m_LoginServerPublicKey;      // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::string                      m_ChatUniqueName;            // set in RECEIVE_SID_ENTERCHAT
+
+  std::vector<std::string>         m_Friends;                   // std::vector of friends
+  std::vector<std::string>         m_Clan;                      // std::vector of clan members
   uint8_t                          m_GameVersion;
-  std::vector<uint8_t>             m_EXEVersion;                                           // custom exe version for PvPGN users
-  std::vector<uint8_t>             m_EXEVersionHash;                                       // custom exe version hash for PvPGN users
+  std::vector<uint8_t>             m_EXEVersion;                // custom exe version for PvPGN users
+  std::vector<uint8_t>             m_EXEVersionHash;            // custom exe version hash for PvPGN users
   std::string                      m_CurrentChannel;            // the current chat channel
   std::string                      m_AnchorChannel;             // channel to rejoin automatically
   std::string                      m_HostName;                  // 
@@ -150,7 +159,18 @@ public:
   ~CRealm();
   CRealm(CRealm&) = delete;
 
-  CBNETProtocol*       GetProtocol() const { return m_Protocol; }
+  inline const std::array<uint8_t, 4>&    GetInfoClientToken() const { return m_InfoClientToken; }
+  inline const std::array<uint8_t, 4>&    GetInfoLogonType() const { return m_InfoLogonType; }
+  inline const std::array<uint8_t, 4>&    GetInfoServerToken() const { return m_InfoServerToken; }
+  inline const std::array<uint8_t, 8>&    GetMPQFileTime() const { return m_InfoMPQFileTime; }
+  inline const std::vector<uint8_t>       GetIX86VerFileName() const { return m_InfoIX86VerFileName; }
+  inline std::string                      GetIX86VerFileNameString() const { return std::string(begin(m_InfoIX86VerFileName), end(m_InfoIX86VerFileName)); }
+  inline const std::vector<uint8_t>&      GetValueStringFormula() const { return m_InfoValueStringFormula; }
+  inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_InfoValueStringFormula), end(m_InfoValueStringFormula)); }
+  inline const std::array<uint8_t, 32>&   GetLoginSalt() const { return m_LoginSalt; }
+  inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
+  inline const std::string&               GetChatUniqueName() const { return m_ChatUniqueName; }
+
   inline uint8_t       GetGameVersion() const { return m_GameVersion; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
   inline bool          GetFailedLogin() const { return m_FailedLogin; }

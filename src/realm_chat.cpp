@@ -44,7 +44,6 @@ using namespace std;
 
 CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, const bool isProxy)
   : m_Realm(nRealm),
-    m_Protocol(nRealm->GetProtocol()),
     m_QueuedTime(0),
     m_ReceiverSelector(0),
     m_MessageValue(0),
@@ -112,12 +111,12 @@ bool CQueuedChatMessage::GetIsStale() const
 
 vector<uint8_t> CQueuedChatMessage::GetMessage() const
 {
-  return m_Protocol->SEND_SID_CHAT_PUBLIC(m_Message);
+  return BNETProtocol::SEND_SID_CHAT_PUBLIC(m_Message);
 }
 
 vector<uint8_t> CQueuedChatMessage::GetWhisper() const
 {
-  return m_Protocol->SEND_SID_CHAT_WHISPER(m_Message, m_ReceiverName);
+  return BNETProtocol::SEND_SID_CHAT_WHISPER(m_Message, m_ReceiverName);
 }
 
 uint8_t CQueuedChatMessage::QuerySelection(const std::string& currentChannel) const
@@ -187,10 +186,10 @@ uint8_t CQueuedChatMessage::GetVirtualSize(const size_t wrapSize, const uint8_t 
   // according to realm's antiflood parameters
   size_t result;
   if (selectType == CHAT_RECV_SELECTED_WHISPER) {
-    result = (m_Protocol->GetWhisperSize(m_Message, m_ReceiverName) + wrapSize - 1) / wrapSize;
+    result = (BNETProtocol::GetWhisperSize(m_Message, m_ReceiverName) + wrapSize - 1) / wrapSize;
   } else {
     // public or system
-    result = (m_Protocol->GetMessageSize(m_Message) + wrapSize - 1) / wrapSize;
+    result = (BNETProtocol::GetMessageSize(m_Message) + wrapSize - 1) / wrapSize;
   }
   // Note that PvPGN antiflood accepts no more than 100 virtual lines in any given message.
   if (result > 0xFF) return 0xFF;
