@@ -133,7 +133,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
       const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
       switch (Bytes[0]) {
-        case W3GS_HEADER_CONSTANT:
+        case GameProtocol::Magic::W3GS_HEADER:
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest) {
@@ -174,7 +174,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           }
           break;
 
-        case GPS_HEADER_CONSTANT: {
+        case GPSProtocol::Magic::GPS_HEADER: {
           if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
             const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
             const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
@@ -203,7 +203,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           break;
         }
 
-        case VLAN_HEADER_CONSTANT: {
+        case VLANProtocol::Magic::VLAN_HEADER: {
           if (m_Type != INCON_TYPE_NONE) {
             Abort = true;
             break;

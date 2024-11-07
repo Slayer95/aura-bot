@@ -205,7 +205,7 @@ void CRealm::Update(void* fd, void* send_fd)
         const vector<uint8_t> Data = vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
         // byte 0 is always 255
-        if (Bytes[0] == BNET_HEADER_CONSTANT)
+        if (Bytes[0] == BNETProtocol::Magic::BNET_HEADER)
         {
           // Any BNET packet is fine to reset app-level inactivity timeout.
           m_NullPacketsSent = 0;
@@ -220,7 +220,7 @@ void CRealm::Update(void* fd, void* send_fd)
 
             case BNETProtocol::Magic::GETADVLISTEX:
               if (m_Aura->m_Net->m_Config->m_UDPForwardGameLists) {
-                std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
+                std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
                 std::vector<uint8_t> War3Version = {m_GameVersion, 0, 0, 0};
                 std::string ipString = m_Socket->GetIPString();
                 AppendByteArray(relayPacket, ipString, true);

@@ -60,52 +60,56 @@ namespace GameProtocol
 {
   namespace Magic
   {
-    constexpr uint8_t PING_FROM_HOST     = 1;  // 0x01
-    constexpr uint8_t SLOTINFOJOIN       = 4;  // 0x04
-    constexpr uint8_t REJECTJOIN         = 5;  // 0x05
-    constexpr uint8_t PLAYERINFO         = 6;  // 0x06
-    constexpr uint8_t PLAYERLEAVE_OTHERS = 7;  // 0x07
-    constexpr uint8_t GAMELOADED_OTHERS  = 8;  // 0x08
-    constexpr uint8_t SLOTINFO           = 9;  // 0x09
-    constexpr uint8_t COUNTDOWN_START    = 10; // 0x0A
-    constexpr uint8_t COUNTDOWN_END      = 11; // 0x0B
-    constexpr uint8_t INCOMING_ACTION    = 12; // 0x0C
-    constexpr uint8_t CHAT_FROM_HOST     = 15; // 0x0F
-    constexpr uint8_t START_LAG          = 16; // 0x10
-    constexpr uint8_t STOP_LAG           = 17; // 0x11
-    constexpr uint8_t HOST_KICK_PLAYER   = 28; // 0x1C
-    constexpr uint8_t REQJOIN            = 30; // 0x1E
-    constexpr uint8_t LEAVEGAME          = 33; // 0x21
-    constexpr uint8_t GAMELOADED_SELF    = 35; // 0x23
-    constexpr uint8_t OUTGOING_ACTION    = 38; // 0x26
-    constexpr uint8_t OUTGOING_KEEPALIVE = 39; // 0x27
-    constexpr uint8_t CHAT_TO_HOST       = 40; // 0x28
-    constexpr uint8_t DROPREQ            = 41; // 0x29
-    constexpr uint8_t SEARCHGAME         = 47; // 0x2F (UDP/LAN)
-    constexpr uint8_t GAMEINFO           = 48; // 0x30 (UDP/LAN)
-    constexpr uint8_t CREATEGAME         = 49; // 0x31 (UDP/LAN)
-    constexpr uint8_t REFRESHGAME        = 50; // 0x32 (UDP/LAN)
-    constexpr uint8_t DECREATEGAME       = 51; // 0x33 (UDP/LAN)
-    constexpr uint8_t CHAT_OTHERS        = 52; // 0x34
-    constexpr uint8_t PING_FROM_OTHERS   = 53; // 0x35
-    constexpr uint8_t PONG_TO_OTHERS     = 54; // 0x36
-    constexpr uint8_t MAPCHECK           = 61; // 0x3D
-    constexpr uint8_t STARTDOWNLOAD      = 63; // 0x3F
-    constexpr uint8_t MAPSIZE            = 66; // 0x42
-    constexpr uint8_t MAPPART            = 67; // 0x43
-    constexpr uint8_t MAPPARTNOTOK       = 69; // 0x45 - just a guess, received this packet after forgetting to send a crc in MAPPART (f7 45 0a 00 01 02 01 00 00 00)
-    constexpr uint8_t PONG_TO_HOST       = 70; // 0x46
-    constexpr uint8_t INCOMING_ACTION2   = 72; // 0x48 - received this packet when there are too many actions to fit in W3GS_INCOMING_ACTION
+    constexpr uint8_t PING_FROM_HOST     = 1u;  // 0x01
+    constexpr uint8_t SLOTINFOJOIN       = 4u;  // 0x04
+    constexpr uint8_t REJECTJOIN         = 5u;  // 0x05
+    constexpr uint8_t PLAYERINFO         = 6u;  // 0x06
+    constexpr uint8_t PLAYERLEAVE_OTHERS = 7u;  // 0x07
+    constexpr uint8_t GAMELOADED_OTHERS  = 8u;  // 0x08
+    constexpr uint8_t SLOTINFO           = 9u;  // 0x09
+    constexpr uint8_t COUNTDOWN_START    = 10u; // 0x0A
+    constexpr uint8_t COUNTDOWN_END      = 11u; // 0x0B
+    constexpr uint8_t INCOMING_ACTION    = 12u; // 0x0C
+    constexpr uint8_t CHAT_FROM_HOST     = 15u; // 0x0F
+    constexpr uint8_t START_LAG          = 16u; // 0x10
+    constexpr uint8_t STOP_LAG           = 17u; // 0x11
+    constexpr uint8_t HOST_KICK_PLAYER   = 28u; // 0x1C
+    constexpr uint8_t REQJOIN            = 30u; // 0x1E
+    constexpr uint8_t LEAVEGAME          = 33u; // 0x21
+    constexpr uint8_t GAMELOADED_SELF    = 35u; // 0x23
+    constexpr uint8_t OUTGOING_ACTION    = 38u; // 0x26
+    constexpr uint8_t OUTGOING_KEEPALIVE = 39u; // 0x27
+    constexpr uint8_t CHAT_TO_HOST       = 40u; // 0x28
+    constexpr uint8_t DROPREQ            = 41u; // 0x29
+    constexpr uint8_t SEARCHGAME         = 47u; // 0x2F (UDP/LAN)
+    constexpr uint8_t GAMEINFO           = 48u; // 0x30 (UDP/LAN)
+    constexpr uint8_t CREATEGAME         = 49u; // 0x31 (UDP/LAN)
+    constexpr uint8_t REFRESHGAME        = 50u; // 0x32 (UDP/LAN)
+    constexpr uint8_t DECREATEGAME       = 51u; // 0x33 (UDP/LAN)
+    constexpr uint8_t CHAT_OTHERS        = 52u; // 0x34
+    constexpr uint8_t PING_FROM_OTHERS   = 53u; // 0x35
+    constexpr uint8_t PONG_TO_OTHERS     = 54u; // 0x36
+    constexpr uint8_t MAPCHECK           = 61u; // 0x3D
+    constexpr uint8_t STARTDOWNLOAD      = 63u; // 0x3F
+    constexpr uint8_t MAPSIZE            = 66u; // 0x42
+    constexpr uint8_t MAPPART            = 67u; // 0x43
+    constexpr uint8_t MAPPARTNOTOK       = 69u; // 0x45 - just a guess, received this packet after forgetting to send a crc in MAPPART (f7 45 0a 00 01 02 01 00 00 00)
+    constexpr uint8_t PONG_TO_HOST       = 70u; // 0x46
+    constexpr uint8_t INCOMING_ACTION2   = 72u; // 0x48 - received this packet when there are too many actions to fit in W3GS_INCOMING_ACTION
+
+    // Orthogonal to above
+    constexpr uint8_t W3GS_HEADER        = 247u;// 0xF7
+    constexpr uint8_t W3FW_HEADER        = 249u;// 0xF9
   };
 
   namespace ChatToHostType
   {
-    constexpr uint8_t CTH_MESSAGE        = 0; // a chat message
-    constexpr uint8_t CTH_MESSAGEEXTRA   = 1; // a chat message with extra flags
-    constexpr uint8_t CTH_TEAMCHANGE     = 2; // a team change request
-    constexpr uint8_t CTH_COLOURCHANGE   = 3; // a colour change request
-    constexpr uint8_t CTH_RACECHANGE     = 4; // a race change request
-    constexpr uint8_t CTH_HANDICAPCHANGE = 5; // a handicap change request
+    constexpr uint8_t CTH_MESSAGE        = 0u; // a chat message
+    constexpr uint8_t CTH_MESSAGEEXTRA   = 1u; // a chat message with extra flags
+    constexpr uint8_t CTH_TEAMCHANGE     = 2u; // a team change request
+    constexpr uint8_t CTH_COLOURCHANGE   = 3u; // a colour change request
+    constexpr uint8_t CTH_RACECHANGE     = 4u; // a race change request
+    constexpr uint8_t CTH_HANDICAPCHANGE = 5u; // a handicap change request
   };
 
   extern std::vector<uint8_t> EmptyAction;

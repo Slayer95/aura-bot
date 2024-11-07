@@ -160,7 +160,7 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
     if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
       string* RecvBuffer = m_Socket->GetBytes();
       std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == W3GS_HEADER_CONSTANT && Bytes[1] == GameProtocol::Magic::SLOTINFOJOIN;
+      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == GameProtocol::Magic::W3GS_HEADER && Bytes[1] == GameProtocol::Magic::SLOTINFOJOIN;
       m_Passed = true;
     }
     if (!m_SentJoinRequest) {
@@ -693,7 +693,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
   }
 
   if (m_Config->m_UDPForwardTraffic) {
-    vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
+    vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
     AppendByteArray(relayPacket, ipAddress, true);
     size_t portOffset = relayPacket.size();
     relayPacket.resize(portOffset + 6 + pkt->length);
@@ -705,7 +705,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
     Send(&(m_Config->m_UDPForwardAddress), relayPacket);
   }
 
-  if (pkt->buf[0] != W3GS_HEADER_CONSTANT) {
+  if (pkt->buf[0] != GameProtocol::Magic::W3GS_HEADER) {
     return;
   }
 

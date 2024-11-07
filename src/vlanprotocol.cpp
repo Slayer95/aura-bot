@@ -105,7 +105,7 @@ namespace VLANProtocol
     unsigned char ProductID_TFT[]  = {80, 88, 51, 87};    // "W3XP"
 
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(VLANProtocol::Magic::VLAN_HEADER);               // VLAN header constant
     packet.push_back(VLANProtocol::Magic::SEARCHGAME);    // VLAN_SEARCHGAME
     packet.push_back(0);                                  // packet length will be assigned later
     packet.push_back(0);                                  // packet length will be assigned later
@@ -148,7 +148,7 @@ namespace VLANProtocol
 
     // make the rest of the packet
 
-    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(VLANProtocol::Magic::VLAN_HEADER);               // VLAN header constant
     packet.push_back(VLANProtocol::Magic::GAMEINFO);      // VLAN_GAMEINFO
     packet.push_back(0);                                  // packet length will be assigned later
     packet.push_back(0);                                  // packet length will be assigned later
@@ -184,7 +184,7 @@ namespace VLANProtocol
     unsigned char ProductID_TFT[]  = {80, 88, 51, 87};     // "W3XP"
 
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(VLANProtocol::Magic::VLAN_HEADER);               // VLAN header constant
     packet.push_back(VLANProtocol::Magic::CREATEGAME);    // VLAN_CREATEGAME
     packet.push_back(0);                                  // packet length will be assigned later
     packet.push_back(0);                                  // packet length will be assigned later
@@ -207,7 +207,7 @@ namespace VLANProtocol
   vector<uint8_t> SEND_VLAN_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots, vector<uint8_t> ip, uint16_t port)
   {
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(VLANProtocol::Magic::VLAN_HEADER);               // VLAN header constant
     packet.push_back(VLANProtocol::Magic::REFRESHGAME);   // VLAN_REFRESHGAME
     packet.push_back(0);                                  // packet length will be assigned later
     packet.push_back(0);                                  // packet length will be assigned later
@@ -225,7 +225,7 @@ namespace VLANProtocol
   vector<uint8_t> SEND_VLAN_DECREATEGAME(uint32_t hostCounter, vector<uint8_t> ip, uint16_t port)
   {
     vector<uint8_t> packet;
-    packet.push_back(VLAN_HEADER_CONSTANT);               // VLAN header constant
+    packet.push_back(VLANProtocol::Magic::VLAN_HEADER);               // VLAN header constant
     packet.push_back(VLANProtocol::Magic::DECREATEGAME);  // VLAN_DECREATEGAME
     packet.push_back(0);                                  // packet length will be assigned later
     packet.push_back(0);                                  // packet length will be assigned later

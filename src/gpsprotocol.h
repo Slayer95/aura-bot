@@ -46,8 +46,6 @@
 
 #include "includes.h"
 
-#define GPS_HEADER_CONSTANT 248
-
 #define REJECTGPS_INVALID 1
 #define REJECTGPS_NOTFOUND 2
 
@@ -57,15 +55,17 @@ namespace GPSProtocol
 {
   namespace Magic
   {
-    constexpr uint8_t INIT              = 1;
-    constexpr uint8_t RECONNECT         = 2;
-    constexpr uint8_t ACK               = 3;
-    constexpr uint8_t REJECT            = 4;
-    constexpr uint8_t UDPSYN            = 11;
-    constexpr uint8_t UDPACK            = 12;
-    constexpr uint8_t UDPFIN            = 13;
-    constexpr uint8_t SUPPORT_EXTENDED	= 50;
-    constexpr uint8_t CHANGEKEY         = 51;
+    constexpr uint8_t INIT              = 1u;   // 0x1
+    constexpr uint8_t RECONNECT         = 2u;   // 0x2
+    constexpr uint8_t ACK               = 3u;   // 0x3
+    constexpr uint8_t REJECT            = 4u;   // 0x4
+    constexpr uint8_t UDPSYN            = 11u;  // 0xB
+    constexpr uint8_t UDPACK            = 12u;  // 0xC
+    constexpr uint8_t UDPFIN            = 13u;  // 0xD
+    constexpr uint8_t SUPPORT_EXTENDED	= 50u;  // 0x32
+    constexpr uint8_t CHANGEKEY         = 51u;  // 0x33
+
+    constexpr uint8_t GPS_HEADER        = 248u; // 0xF8
   };
 
   // receive functions

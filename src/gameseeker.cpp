@@ -74,7 +74,7 @@ void CGameSeeker::Init()
 {
   switch (m_Type) {
     case INCON_TYPE_UDP_TUNNEL: {
-      vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::UDPACK, 4, 0};
+      vector<uint8_t> packet = {GPSProtocol::Magic::GPS_HEADER, GPSProtocol::Magic::UDPACK, 4, 0};
       m_Socket->PutBytes(packet);
       break;
     }
@@ -120,7 +120,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
       const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
       switch (Bytes[0]) {
-        case W3GS_HEADER_CONSTANT:
+        case GameProtocol::Magic::W3GS_HEADER:
           if (m_Type != INCON_TYPE_UDP_TUNNEL) {
             Abort = true;
             break;
@@ -160,7 +160,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
           }
           break;
 
-        case VLAN_HEADER_CONSTANT: {
+        case VLANProtocol::Magic::VLAN_HEADER: {
           if (m_Type != INCON_TYPE_VLAN) {
             Abort = true;
             break;

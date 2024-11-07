@@ -308,7 +308,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
       if (Bytes.size() < Length) break;
       const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
-      if (Bytes[0] == W3GS_HEADER_CONSTANT)
+      if (Bytes[0] == GameProtocol::Magic::W3GS_HEADER)
       {
         ++m_TotalPacketsReceived;
 
@@ -416,7 +416,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           }
         }
       }
-      else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->GetIsProxyReconnectable()) {
+      else if (Bytes[0] == GPSProtocol::Magic::GPS_HEADER && m_Game->GetIsProxyReconnectable()) {
         if (Bytes[1] == GPSProtocol::Magic::ACK && Length == 8) {
           const size_t LastPacket               = ByteArrayToUInt32(Data, false, 4);
           const size_t PacketsAlreadyUnqueued   = m_TotalPacketsSent - m_GProxyBuffer.size();

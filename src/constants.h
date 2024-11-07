@@ -271,9 +271,6 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 
 // gameprotocol.h
 
-#define W3GS_HEADER_CONSTANT 247
-#define W3FW_HEADER_CONSTANT 249
-
 #define GAME_NONE 0 // this case isn't part of the protocol, it's for internal use only
 #define GAME_FULL 2
 #define GAME_PUBLIC 16

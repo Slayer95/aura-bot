@@ -5,8 +5,6 @@
 // CVirtualLanProtocol
 //
 
-#define VLAN_HEADER_CONSTANT 250
-
 class CIncomingVLanSearchGame;
 class CIncomingVLanGameInfo;
 
@@ -14,11 +12,13 @@ namespace VLANProtocol
 {
   namespace Magic
   {
-    constexpr uint8_t SEARCHGAME                                     = 47;  // 0x2F (UDP/LAN)
-    constexpr uint8_t GAMEINFO                                       = 48;  // 0x30 (UDP/LAN)
-    constexpr uint8_t CREATEGAME                                     = 49;  // 0x31 (UDP/LAN)
-    constexpr uint8_t REFRESHGAME                                    = 50;  // 0x32 (UDP/LAN)
-    constexpr uint8_t DECREATEGAME                                   = 51;  // 0x33 (UDP/LAN)
+    constexpr uint8_t SEARCHGAME                                     = 47u;  // 0x2F (UDP/LAN)
+    constexpr uint8_t GAMEINFO                                       = 48u;  // 0x30 (UDP/LAN)
+    constexpr uint8_t CREATEGAME                                     = 49u;  // 0x31 (UDP/LAN)
+    constexpr uint8_t REFRESHGAME                                    = 50u;  // 0x32 (UDP/LAN)
+    constexpr uint8_t DECREATEGAME                                   = 51u;  // 0x33 (UDP/LAN)
+
+    constexpr uint8_t VLAN_HEADER                                    = 250u; // 0xFA
   };
 
   // receive functions
