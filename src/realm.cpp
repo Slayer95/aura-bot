@@ -586,10 +586,10 @@ void CRealm::Update(void* fd, void* send_fd)
 
 void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 {
-  BNETProtocol::IncomingChatEvent Event    = chatEvent->GetChatEvent();
-  bool                             Whisper  = (Event == BNETProtocol::IncomingChatEvent::WHISPER);
-  string                           User     = chatEvent->GetUser();
-  string                           Message  = chatEvent->GetMessage();
+  uint32_t Event    = chatEvent->GetChatEvent();
+  bool     Whisper  = (Event == BNETProtocol::IncomingChatEvent::WHISPER);
+  string   User     = chatEvent->GetUser();
+  string   Message  = chatEvent->GetMessage();
 
   if (!m_Socket->GetConnected()) {
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "not connected - message from [" + User + "] rejected: [" + Message + "]")

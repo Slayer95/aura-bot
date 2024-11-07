@@ -50,8 +50,6 @@
 // CBNETProtocol
 //
 
-#define BNETProtocol::Magic::BNET_HEADER 255
-
 #include <array>
 #include <string>
 #include <vector>
@@ -259,7 +257,7 @@ public:
   CIncomingChatEvent(uint32_t nChatEvent, std::string nUser, std::string nMessage);
   ~CIncomingChatEvent();
 
-  inline BNETProtocol::IncomingChatEvent GetChatEvent() const { return m_ChatEvent; }
+  inline uint32_t                         GetChatEvent() const { return m_ChatEvent; }
   inline std::string                      GetUser() const { return m_User; }
   inline std::string                      GetMessage() const { return m_Message; }
 };

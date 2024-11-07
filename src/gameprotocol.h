@@ -102,14 +102,14 @@ namespace GameProtocol
     constexpr uint8_t W3FW_HEADER        = 249u;// 0xF9
   };
 
-  namespace ChatToHostType
+  enum class ChatToHostType : uint8_t
   {
-    constexpr uint8_t CTH_MESSAGE        = 0u; // a chat message
-    constexpr uint8_t CTH_MESSAGEEXTRA   = 1u; // a chat message with extra flags
-    constexpr uint8_t CTH_TEAMCHANGE     = 2u; // a team change request
-    constexpr uint8_t CTH_COLOURCHANGE   = 3u; // a colour change request
-    constexpr uint8_t CTH_RACECHANGE     = 4u; // a race change request
-    constexpr uint8_t CTH_HANDICAPCHANGE = 5u; // a handicap change request
+    CTH_MESSAGE        = 0u, // a chat message
+    CTH_MESSAGEEXTRA   = 1u, // a chat message with extra flags
+    CTH_TEAMCHANGE     = 2u, // a team change request
+    CTH_COLOURCHANGE   = 3u, // a colour change request
+    CTH_RACECHANGE     = 4u, // a race change request
+    CTH_HANDICAPCHANGE = 5u, // a handicap change request
   };
 
   extern std::vector<uint8_t> EmptyAction;
