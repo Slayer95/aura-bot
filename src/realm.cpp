@@ -600,7 +600,7 @@ void CRealm::Update(void* fd, void* send_fd)
   }
 }
 
-void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, const string& message);
+void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, const string& message)
 {
   bool isWhisper = (eventType == BNETProtocol::IncomingChatEvent::WHISPER);
 
