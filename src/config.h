@@ -60,14 +60,14 @@
 #define CONFIG_ERROR(key, T) \
     do { \
         m_ErrorLast = true; \
-        Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        Print(std::string("[CONFIG] Error - Invalid value provided for <") + key + std::string(">.")); \
         return T; \
     } while(0);
 
 
 #define END(T) \
     do { \
-        if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        if (errored) Print(std::string("[CONFIG] Error - Invalid value provided for <") + key + std::string(">.")); \
         m_ErrorLast = errored; \
         return T; \
     } while(0);
