@@ -190,13 +190,21 @@ CAuraDB::CAuraDB(CConfig& CFG)
 
   m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
 
-  m_JournalMode = static_cast<JournalMode>(CFG.GetStringIndex("db.journal_mode", {"delete", "truncate", "persist", "memory", "wal", "off"}, static_cast<uint8_t>(JournalMode::DEL)));
+  m_JournalMode = CFG.GetEnum<JournalMode, (size_t)JournalMode::LAST>(
+    "db.journal_mode",
+    array<string, (size_t)JournalMode::LAST>({"delete", "truncate", "persist", "memory", "wal", "off"}),
+    JournalMode::DEL
+  );
   if (CFG.GetErrorLast()) {
     m_JournalMode = JournalMode::INVALID;
     Print("[SQLITE3] invalid <db.journal_mode> (delete, truncate, persist, memory, wal, off are allowed - case sensitive)");
   }
 
-  m_Synchronous = static_cast<SynchronousMode>(CFG.GetStringIndex("db.synchronous", {"off", "normal", "full", "extra"}, static_cast<uint8_t>(SynchronousMode::FULL)));
+  m_Synchronous = CFG.GetEnum<SynchronousMode, (size_t)SynchronousMode::LAST>(
+    "db.synchronous",
+    array<string, (size_t)SynchronousMode::LAST>({"off", "normal", "full", "extra"}),
+    SynchronousMode::FULL
+  );
   if (CFG.GetErrorLast()) {
     m_Synchronous = SynchronousMode::INVALID;
     Print("[SQLITE3] invalid <db.synchronous> (off, normal, full, extra are allowed - case sensitive)");

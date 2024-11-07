@@ -104,6 +104,9 @@ public:
   float GetFloat(const std::string& key, float x);
   uint8_t GetStringIndex(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);
 
+  template <typename EnumType, size_t N>
+  EnumType GetEnum(const std::string& key, const std::array<std::string, N>& fromList, EnumType x);
+
   std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
   std::set<std::string> GetSet(const std::string& key, char separator, const std::set<std::string> x);
   std::set<std::string> GetSetInsensitive(const std::string& key, char separator, const std::set<std::string> x);
