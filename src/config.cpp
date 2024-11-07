@@ -267,29 +267,6 @@ uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromLis
   CONFIG_ERROR(key, x)
 }
 
-template <typename EnumType, size_t N>
-EnumType CConfig::GetEnum(const string& key, const array<string, N>& fromList, EnumType x) {
-  static_assert(is_enum<EnumType>::value, "EnumType must be an enum type");
-
-  constexpr uint8_t enumCount = static_cast<uint8_t>(EnumType::LAST);
-  static_assert(enumCount == static_cast<uint8_t>(N), "fromList size must match the number of enum values");
-
-  m_ValidKeys.insert(key);
-
-  auto it = m_CFG.find(key);
-  if (it == m_CFG.end()) {
-    SUCCESS(x)
-  }
-
-  for (uint8_t i = 0; i < N; ++i) {
-    if (it->second == fromList[i]) {
-      SUCCESS(static_cast<EnumType>(i))
-    }
-  }
-
-  CONFIG_ERROR(key, x);
-}
-
 bool CConfig::GetBool(const string& key, bool x)
 {
   m_ValidKeys.insert(key);
@@ -1095,3 +1072,6 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
   return Output;
 }
 
+#undef SUCCESS
+#undef CONFIG_ERROR
+#undef END

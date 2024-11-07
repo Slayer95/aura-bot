@@ -50,6 +50,28 @@
 #include "socket.h"
 #include "includes.h"
 
+#define SUCCESS(T) \
+    do { \
+        m_ErrorLast = false; \
+        return T; \
+    } while(0);
+
+
+#define CONFIG_ERROR(key, T) \
+    do { \
+        m_ErrorLast = true; \
+        Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        return T; \
+    } while(0);
+
+
+#define END(T) \
+    do { \
+        if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        m_ErrorLast = errored; \
+        return T; \
+    } while(0);
+
 //
 // CConfig
 //
@@ -105,7 +127,28 @@ public:
   uint8_t GetStringIndex(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);
 
   template <typename EnumType, size_t N>
-  EnumType GetEnum(const std::string& key, const std::array<std::string, N>& fromList, EnumType x);
+  EnumType GetEnum(const std::string& key, const std::array<std::string, N>& fromList, EnumType x)
+  {
+    static_assert(std::is_enum<EnumType>::value, "EnumType must be an enum type");
+
+    constexpr uint8_t enumCount = static_cast<uint8_t>(EnumType::LAST);
+    static_assert(enumCount == static_cast<uint8_t>(N), "fromList size must match the number of enum values");
+
+    m_ValidKeys.insert(key);
+
+    auto it = m_CFG.find(key);
+    if (it == m_CFG.end()) {
+      SUCCESS(x)
+    }
+
+    for (uint8_t i = 0; i < N; ++i) {
+      if (it->second == fromList[i]) {
+        SUCCESS(static_cast<EnumType>(i))
+      }
+    }
+
+    CONFIG_ERROR(key, x)
+  }
 
   std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
   std::set<std::string> GetSet(const std::string& key, char separator, const std::set<std::string> x);
@@ -154,5 +197,9 @@ public:
 
   static std::string ReadString(const std::filesystem::path& file, const std::string& key);
 };
+
+#undef SUCCESS
+#undef CONFIG_ERROR
+#undef END
 
 #endif // AURA_CONFIG_H_
