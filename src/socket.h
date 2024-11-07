@@ -185,12 +185,12 @@ typedef int32_t SOCKET;
 #endif
 
 #ifdef _WIN32
-inline int32_t GetLastOSError()
+[[nodiscard]] inline int32_t GetLastOSError()
 {
   return GetLastError();
 }
 #else
-inline int32_t GetLastOSError()
+[[nodiscard]] inline int32_t GetLastOSError()
 {
   return errno;
 }
@@ -208,17 +208,17 @@ struct UDPPkt
   CSocket* socket;
 };
 
-inline bool isIPv4MappedAddress(const sockaddr_in6* addr6) {
+[[nodiscard]] inline bool isIPv4MappedAddress(const sockaddr_in6* addr6) {
   const uint16_t* words = reinterpret_cast<const uint16_t*>(addr6->sin6_addr.s6_addr);
   // Make sure that the reference words are endian-invariant (s6_addr is network-byte order).
   return ((words[0] | words[1] | words[2] | words[3] | words[4]) == 0) && (words[5] == 0xFFFF);
 }
 
-inline bool isIPv4MappedAddress(const sockaddr_storage* address) {
+[[nodiscard]] inline bool isIPv4MappedAddress(const sockaddr_storage* address) {
   return isIPv4MappedAddress(reinterpret_cast<const sockaddr_in6*>(address));
 }
 
-inline bool isLoopbackAddress(const sockaddr_storage* address) {
+[[nodiscard]] inline bool isLoopbackAddress(const sockaddr_storage* address) {
   if (address->ss_family == AF_INET) {
     const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(address);
     return (addr4->sin_addr.s_addr & htonl(0xFF000000)) == (htonl(INADDR_LOOPBACK) & htonl(0xFF000000));
@@ -234,14 +234,14 @@ inline bool isLoopbackAddress(const sockaddr_storage* address) {
   return false;
 }
 
-inline bool isSpecialIPv6Address(const sockaddr_in6* address) {
+[[nodiscard]] inline bool isSpecialIPv6Address(const sockaddr_in6* address) {
   const in6_addr* addr6 = &(address->sin6_addr);
   return IN6_IS_ADDR_UNSPECIFIED(addr6) || IN6_IS_ADDR_LOOPBACK(addr6) || IN6_IS_ADDR_MULTICAST(addr6) ||
     IN6_IS_ADDR_LINKLOCAL(addr6) || IN6_IS_ADDR_SITELOCAL(addr6) || IN6_IS_ADDR_V4MAPPED(addr6) ||
     IN6_IS_ADDR_V4COMPAT(addr6);
 }
 
-inline bool isSpecialIPv4Address(const sockaddr_in* address) {
+[[nodiscard]] inline bool isSpecialIPv4Address(const sockaddr_in* address) {
   uint32_t addr = address->sin_addr.s_addr;
   if ((addr & htonl(0xFF000000)) == htonl(INADDR_LOOPBACK)) return true;
   if (addr == htonl(INADDR_BROADCAST)) return true;
@@ -249,7 +249,7 @@ inline bool isSpecialIPv4Address(const sockaddr_in* address) {
   return false;
 }
 
-inline sockaddr_storage IPv4ToIPv6(const sockaddr_storage* inputAddress) {
+[[nodiscard]] inline sockaddr_storage IPv4ToIPv6(const sockaddr_storage* inputAddress) {
   sockaddr_storage outputAddress;
   std::memset(&outputAddress, 0, sizeof(outputAddress));
 
@@ -265,7 +265,7 @@ inline sockaddr_storage IPv4ToIPv6(const sockaddr_storage* inputAddress) {
   return outputAddress;
 }
 
-inline uint8_t GetInnerIPVersion(const sockaddr_storage* inputAddress) {
+[[nodiscard]] inline uint8_t GetInnerIPVersion(const sockaddr_storage* inputAddress) {
   if (inputAddress->ss_family == AF_INET) return AF_INET;
   if (inputAddress->ss_family == AF_INET6) {
     const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(inputAddress);
@@ -275,7 +275,7 @@ inline uint8_t GetInnerIPVersion(const sockaddr_storage* inputAddress) {
   return static_cast<uint8_t>(inputAddress->ss_family);
 }
 
-inline std::string AddressToString(const sockaddr_storage& address)
+[[nodiscard]] inline std::string AddressToString(const sockaddr_storage& address)
 {
   char ipString[INET6_ADDRSTRLEN];
   if (address.ss_family == AF_INET) { // IPv4
@@ -295,7 +295,7 @@ inline std::string AddressToString(const sockaddr_storage& address)
   return std::string(ipString);
 }
 
-inline std::string AddressToStringStrict(const sockaddr_storage& address)
+[[nodiscard]] inline std::string AddressToStringStrict(const sockaddr_storage& address)
 {
   char ipString[INET6_ADDRSTRLEN];
   if (address.ss_family == AF_INET) { // IPv4
@@ -319,7 +319,7 @@ inline void SetAddressPort(sockaddr_storage* address, const uint16_t port)
   }
 }
 
-inline uint16_t GetAddressPort(const sockaddr_storage* address)
+[[nodiscard]] inline uint16_t GetAddressPort(const sockaddr_storage* address)
 {
   if (address->ss_family == AF_INET6) {
     return ntohs(reinterpret_cast<const struct sockaddr_in6*>(address)->sin6_port);
@@ -328,7 +328,7 @@ inline uint16_t GetAddressPort(const sockaddr_storage* address)
   }
 }
 
-inline bool GetSameAddresses(const sockaddr_storage* reference, const sockaddr_storage* subject)
+[[nodiscard]] inline bool GetSameAddresses(const sockaddr_storage* reference, const sockaddr_storage* subject)
 {
   if (isLoopbackAddress(reference) && isLoopbackAddress(subject)) {
     return true;
@@ -343,7 +343,7 @@ inline bool GetSameAddresses(const sockaddr_storage* reference, const sockaddr_s
   }
 }
 
-inline bool GetSameAddressesAndPorts(const sockaddr_storage* reference, const sockaddr_storage* subject)
+[[nodiscard]] inline bool GetSameAddressesAndPorts(const sockaddr_storage* reference, const sockaddr_storage* subject)
 {
   if (!GetSameAddresses(reference, subject)) {
     return false;
@@ -358,7 +358,7 @@ inline bool GetSameAddressesAndPorts(const sockaddr_storage* reference, const so
   return true;
 }
 
-inline std::array<uint8_t, 4> AddressToIPv4Array(const sockaddr_storage* address) {
+[[nodiscard]] inline std::array<uint8_t, 4> AddressToIPv4Array(const sockaddr_storage* address) {
   if (address->ss_family == AF_INET) {
     std::array<uint8_t, 4> ipBytes;
     const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(address);
@@ -397,16 +397,16 @@ public:
   CSocket(const uint8_t nFamily, std::string nName);
   virtual ~CSocket();
 
-  std::string                     GetErrorString() const;
-  std::string                     GetName() const;
-  inline uint16_t                 GetPort() const { return m_Port; }
-  inline std::array<uint8_t, 2>   GetPortLE() const { return CreateFixedByteArray(m_Port, false); }
-  inline std::array<uint8_t, 2>   GetPortBE() const { return CreateFixedByteArray(m_Port, true); } // Network-byte-order
-  inline int32_t                  GetError() const { return m_Error; }
-  inline bool                     HasError() const { return m_HasError; }
-  inline bool                     HasFin() const { return m_HasFin; }
+  [[nodiscard]] std::string                     GetErrorString() const;
+  [[nodiscard]] std::string                     GetName() const;
+  [[nodiscard]] inline uint16_t                 GetPort() const { return m_Port; }
+  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortLE() const { return CreateFixedByteArray(m_Port, false); }
+  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortBE() const { return CreateFixedByteArray(m_Port, true); } // Network-byte-order
+  [[nodiscard]] inline int32_t                  GetError() const { return m_Error; }
+  [[nodiscard]] inline bool                     HasError() const { return m_HasError; }
+  [[nodiscard]] inline bool                     HasFin() const { return m_HasFin; }
 
-  inline ADDRESS_LENGTH_TYPE  GetAddressLength() const {
+  [[nodiscard]] inline ADDRESS_LENGTH_TYPE  GetAddressLength() const {
     if (m_Family == AF_INET6)
       return sizeof(sockaddr_in6);
     return sizeof(sockaddr_in);
@@ -441,24 +441,24 @@ public:
   CStreamIOSocket(SOCKET nSocket, sockaddr_storage& remoteAddress, CTCPServer* nServer, const uint16_t nCounter);
   virtual ~CStreamIOSocket();
 
-  inline int64_t                    GetLastRecv() const { return m_LastRecv; }
-  std::string                       GetName() const;
+  [[nodiscard]] inline int64_t                    GetLastRecv() const { return m_LastRecv; }
+  [[nodiscard]] std::string                       GetName() const;
 
-  inline bool                       GetIsInnerIPv4() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET; }
-  inline bool                       GetIsInnerIPv6() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET6; }
+  [[nodiscard]] inline bool                       GetIsInnerIPv4() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET; }
+  [[nodiscard]] inline bool                       GetIsInnerIPv6() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET6; }
 
-  inline std::array<uint8_t, 4>     GetIPv4() const { return AddressToIPv4Array(&m_RemoteHost); }
-  inline std::string                GetIPString() const { return AddressToString(m_RemoteHost); }
-  inline std::string                GetIPStringStrict() const { return AddressToStringStrict(m_RemoteHost); }
-  inline const sockaddr_storage*    GetRemoteAddress() const { return static_cast<const sockaddr_storage*>(&m_RemoteHost); }
-  inline bool                       GetIsLoopback() const { return isLoopbackAddress(&m_RemoteHost); }
-  inline uint16_t                   GetRemotePort() const { return GetAddressPort(&m_RemoteHost); }
+  [[nodiscard]] inline std::array<uint8_t, 4>     GetIPv4() const { return AddressToIPv4Array(&m_RemoteHost); }
+  [[nodiscard]] inline std::string                GetIPString() const { return AddressToString(m_RemoteHost); }
+  [[nodiscard]] inline std::string                GetIPStringStrict() const { return AddressToStringStrict(m_RemoteHost); }
+  [[nodiscard]] inline const sockaddr_storage*    GetRemoteAddress() const { return static_cast<const sockaddr_storage*>(&m_RemoteHost); }
+  [[nodiscard]] inline bool                       GetIsLoopback() const { return isLoopbackAddress(&m_RemoteHost); }
+  [[nodiscard]] inline uint16_t                   GetRemotePort() const { return GetAddressPort(&m_RemoteHost); }
 
-  inline bool                       GetConnected() const { return m_Connected; }
-  inline bool                       GetLogErrors() const { return m_LogErrors; }
+  [[nodiscard]] inline bool                       GetConnected() const { return m_Connected; }
+  [[nodiscard]] inline bool                       GetLogErrors() const { return m_LogErrors; }
   void Disconnect();
 
-  inline std::string*               GetBytes() { return &m_RecvBuffer; }
+  [[nodiscard]] inline std::string*               GetBytes() { return &m_RecvBuffer; }
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
   inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
   bool DoRecv(fd_set* fd);
@@ -474,7 +474,7 @@ public:
   }
   inline void                     ClearSendBuffer() { m_SendBuffer.clear(); }
   inline void                     SubstrSendBuffer(uint32_t i) { m_SendBuffer = m_SendBuffer.substr(i); }
-  inline bool                     GetIsSendPending() { return !m_SendBuffer.empty(); }
+  [[nodiscard]] inline bool                     GetIsSendPending() { return !m_SendBuffer.empty(); }
   void DoSend(fd_set* send_fd);
   void Flush();
 
@@ -498,9 +498,9 @@ public:
   CTCPClient(uint8_t nFamily, std::string nName);
   ~CTCPClient();
 
-  inline bool         GetConnecting() const { return m_Connecting; }
-  bool                CheckConnect();
-  void                Connect(const std::optional<sockaddr_storage>& localAddress, const sockaddr_storage& remoteHost);
+  [[nodiscard]] inline bool         GetConnecting() const { return m_Connecting; }
+  [[nodiscard]] bool                CheckConnect();
+  void                              Connect(const std::optional<sockaddr_storage>& localAddress, const sockaddr_storage& remoteHost);
 
   // Overrides
   void                Reset();
@@ -519,9 +519,9 @@ public:
   CTCPServer(uint8_t nFamily);
   ~CTCPServer();
 
-  std::string                     GetName() const;
+  [[nodiscard]] std::string       GetName() const;
   bool                            Listen(sockaddr_storage& address, const uint16_t port, bool retry);
-  CStreamIOSocket*                Accept(fd_set* fd);
+  [[nodiscard]] CStreamIOSocket*  Accept(fd_set* fd);
   void                            Discard(fd_set* fd);
 };
 
@@ -551,9 +551,9 @@ public:
   CUDPServer(uint8_t nFamily);
   ~CUDPServer();
 
-  std::string                 GetName() const;
+  [[nodiscard]] std::string   GetName() const;
   bool                        Listen(sockaddr_storage& address, const uint16_t port, bool retry);
-  UDPPkt*                     Accept(fd_set* fd);
+  [[nodiscard]] UDPPkt*       Accept(fd_set* fd);
   void                        Discard(fd_set* fd);
 };
 

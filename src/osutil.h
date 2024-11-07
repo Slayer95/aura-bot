@@ -50,18 +50,18 @@
 #endif
 
 #ifdef _WIN32
-std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
-std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
+[[nodiscard]] std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
+[[nodiscard]] std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
 bool DeleteUserRegistryKey(const wchar_t* subKey);
 bool SetUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const wchar_t* value);
 #endif
-std::optional<std::string> GetUserMultiPlayerName();
+[[nodiscard]] std::optional<std::string> GetUserMultiPlayerName();
 
-std::filesystem::path GetExePath();
-std::filesystem::path GetExeDirectory();
-PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment();
+[[nodiscard]] std::filesystem::path GetExePath();
+[[nodiscard]] std::filesystem::path GetExeDirectory();
+[[nodiscard]] PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment();
 void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath);
-bool GetIsDirectoryInUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);
+[[nodiscard]] bool GetIsDirectoryInUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);
 void AddDirectoryToUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);
 void EnsureDirectoryInUserPath(const std::filesystem::path& nDirectory);
 

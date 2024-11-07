@@ -190,10 +190,10 @@ public:
   ~CSQLITE3();
   CSQLITE3(CSQLITE3&) = delete;
 
-  inline bool        GetReady() const { return m_Ready; }
-  inline std::string GetError() const { return sqlite3_errmsg(static_cast<sqlite3*>(m_DB)); }
+  [[nodiscard]] inline bool        GetReady() const { return m_Ready; }
+  [[nodiscard]] inline std::string GetError() const { return sqlite3_errmsg(static_cast<sqlite3*>(m_DB)); }
 
-  inline int32_t Step(void* Statement) { return sqlite3_step(static_cast<sqlite3_stmt*>(Statement)); }
+  [[nodiscard]] inline int32_t Step(void* Statement) { return sqlite3_step(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Prepare(const std::string& query, void** Statement, bool forCache = false) {
     if (forCache) {
       return sqlite3_prepare_v3(static_cast<sqlite3*>(m_DB), query.c_str(), -1, SQLITE_PREPARE_PERSISTENT, reinterpret_cast<sqlite3_stmt**>(Statement), nullptr);
@@ -211,7 +211,7 @@ public:
   inline int32_t Finalize(void* Statement) { return sqlite3_finalize(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Reset(void* Statement) { return sqlite3_reset(static_cast<sqlite3_stmt*>(Statement)); }
   inline int32_t Exec(const std::string& query) { return sqlite3_exec(static_cast<sqlite3*>(m_DB), query.c_str(), nullptr, nullptr, nullptr); }
-  inline const unsigned char* Column(void* Statement, const uint8_t index) { return sqlite3_column_text(static_cast<sqlite3_stmt*>(Statement), index); }
+  [[nodiscard]] inline const unsigned char* Column(void* Statement, const uint8_t index) { return sqlite3_column_text(static_cast<sqlite3_stmt*>(Statement), index); }
 };
 
 //
@@ -232,7 +232,7 @@ public:
   CSearchableMapData(uint8_t nMapType);
   ~CSearchableMapData();
 
-  uint8_t Search(std::string& rwSearchName, const uint8_t searchDataType, const bool exactMatch);
+  [[nodiscard]] uint8_t Search(std::string& rwSearchName, const uint8_t searchDataType, const bool exactMatch);
   void LoadData(std::filesystem::path sourcePath);
 };
 
@@ -329,66 +329,66 @@ public:
   ~CAuraDB();
   CAuraDB(CAuraDB&) = delete;
 
-  inline bool                   GetIsFirstRun() const { return m_FirstRun; }
-  CAuraDB::SchemaStatus         GetSchemaStatus(int64_t& schemaNumber);
+  [[nodiscard]] inline bool                   GetIsFirstRun() const { return m_FirstRun; }
+  [[nodiscard]] CAuraDB::SchemaStatus         GetSchemaStatus(int64_t& schemaNumber);
   void                          UpdateSchema(int64_t oldSchemaNumber);
   void                          Initialize();
   void                          PreCompileStatements();
-  inline bool                   HasError() const { return m_HasError; }
-  inline std::string            GetError() const { return m_Error; }
-  inline std::filesystem::path  GetFile() const { return m_File; }
-  uint64_t                      GetLatestHistoryGameId();
+  [[nodiscard]] inline bool                   HasError() const { return m_HasError; }
+  [[nodiscard]] inline std::string            GetError() const { return m_Error; }
+  [[nodiscard]] inline std::filesystem::path  GetFile() const { return m_File; }
+  [[nodiscard]] uint64_t                      GetLatestHistoryGameId();
   void                          UpdateLatestHistoryGameId(uint64_t gameId);
 
-  inline bool                   Begin() const { return m_DB->Exec("BEGIN TRANSACTION") == SQLITE_OK; }
+  [[nodiscard]] inline bool                   Begin() const { return m_DB->Exec("BEGIN TRANSACTION") == SQLITE_OK; }
   inline bool                   Commit() const { return m_DB->Exec("COMMIT TRANSACTION") == SQLITE_OK; }
 
   // Geolocalization
-  std::string                   FromCheck(uint32_t ip);
-  bool                          FromAdd(uint32_t ip1, uint32_t ip2, const std::string& country);
+  [[nodiscard]] std::string                   FromCheck(uint32_t ip);
+  [[nodiscard]] bool                          FromAdd(uint32_t ip1, uint32_t ip2, const std::string& country);
 
   // Map aliases
-  bool                          AliasAdd(const std::string& alias, const std::string& target);
-  std::string                   AliasCheck(const std::string& alias);
+  [[nodiscard]] bool                          AliasAdd(const std::string& alias, const std::string& target);
+  [[nodiscard]] std::string                   AliasCheck(const std::string& alias);
 
   // Server moderators
-  uint32_t                      ModeratorCount(const std::string& server);
-  bool                          ModeratorCheck(const std::string& server, const std::string& user);
-  bool                          ModeratorAdd(const std::string& server, const std::string& user);
-  bool                          ModeratorRemove(const std::string& server, const std::string& user);
-  std::vector<std::string>      ListModerators(const std::string& server);
+  [[nodiscard]] uint32_t                      ModeratorCount(const std::string& server);
+  [[nodiscard]] bool                          ModeratorCheck(const std::string& server, const std::string& user);
+  [[nodiscard]] bool                          ModeratorAdd(const std::string& server, const std::string& user);
+  [[nodiscard]] bool                          ModeratorRemove(const std::string& server, const std::string& user);
+  [[nodiscard]] std::vector<std::string>      ListModerators(const std::string& server);
 
   // Bans
-  uint32_t                      BanCount(const std::string& authserver);
-  CDBBan*                       UserBanCheck(const std::string& user, const std::string& server, const std::string& authserver);
-  CDBBan*                       IPBanCheck(std::string ip, const std::string& authserver);
-  bool                          GetIsUserBanned(const std::string& user, const std::string& server, const std::string& authserver);
-  bool                          GetIsIPBanned(std::string ip, const std::string& authserver);
+  [[nodiscard]] uint32_t                      BanCount(const std::string& authserver);
+  [[nodiscard]] CDBBan*                       UserBanCheck(const std::string& user, const std::string& server, const std::string& authserver);
+  [[nodiscard]] CDBBan*                       IPBanCheck(std::string ip, const std::string& authserver);
+  [[nodiscard]] bool                          GetIsUserBanned(const std::string& user, const std::string& server, const std::string& authserver);
+  [[nodiscard]] bool                          GetIsIPBanned(std::string ip, const std::string& authserver);
   bool                          BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
   bool                          BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
   bool                          BanAddPermanent(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
-  bool                          BanRemove(const std::string& user, const std::string& server, const std::string& authserver);
-  std::vector<std::string>      ListBans(const std::string& authserver);
+  [[nodiscard]] bool                          BanRemove(const std::string& user, const std::string& server, const std::string& authserver);
+  [[nodiscard]] std::vector<std::string>      ListBans(const std::string& authserver);
 
   // Players
   void                          UpdateGamePlayerOnStart(const std::string& name, const std::string& server, const std::string& ip, uint64_t gameId);
   void                          UpdateGamePlayerOnEnd(const std::string& name, const std::string& server, const std::string& ip, uint64_t loadingtime, uint64_t duration, uint64_t left);
-  CDBGamePlayerSummary*         GamePlayerSummaryCheck(const std::string& name, const std::string& server);
+  [[nodiscard]] CDBGamePlayerSummary*         GamePlayerSummaryCheck(const std::string& name, const std::string& server);
   void                          UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
-  CDBDotAPlayerSummary*         DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
-  std::string                   GetInitialIP(const std::string& name, const std::string& server);
-  std::string                   GetLatestIP(const std::string& name, const std::string& server);
-  std::vector<std::string>      GetIPs(const std::string& name, const std::string& server);
-  std::vector<std::string>      GetAlts(const std::string& addressLiteral);
+  [[nodiscard]] CDBDotAPlayerSummary*         DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
+  [[nodiscard]] std::string                   GetInitialIP(const std::string& name, const std::string& server);
+  [[nodiscard]] std::string                   GetLatestIP(const std::string& name, const std::string& server);
+  [[nodiscard]] std::vector<std::string>      GetIPs(const std::string& name, const std::string& server);
+  [[nodiscard]] std::vector<std::string>      GetAlts(const std::string& addressLiteral);
 
   // Games
   bool                          GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::array<uint8_t, 4>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
-  CDBGameSummary*               GameCheck(const uint64_t gameId);
+  [[nodiscard]] CDBGameSummary*               GameCheck(const uint64_t gameId);
 
   void                          InitMapData();
-  CSearchableMapData*           GetMapData(uint8_t mapType) const;
-  uint8_t                       FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
-  std::vector<std::string>      GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;
+  [[nodiscard]] CSearchableMapData*           GetMapData(uint8_t mapType) const;
+  [[nodiscard]] uint8_t                       FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
+  [[nodiscard]] std::vector<std::string>      GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;
 };
 
 #undef SCHEMA_CHECK_OK
@@ -436,15 +436,15 @@ public:
   CDBBan(std::string nName, std::string nServer, std::string nAuthServer, std::string nIP, std::string nDate, std::string nExpiry, bool nPermanent, std::string nModerator, std::string nReason);
   ~CDBBan();
 
-  inline std::string GetName() const { return m_Name; }
-  inline std::string GetServer() const { return m_Server; }
-  inline std::string GetAuthServer() const { return m_AuthServer; }
-  inline std::string GetIP() const { return m_IP; }
-  inline std::string GetDate() const { return m_Date; }
-  inline std::string GetExpiry() const { return m_Expiry; }
-  inline std::string GetModerator() const { return m_Moderator; }
-  inline std::string GetReason() const { return m_Reason; }
-  inline bool GetSuspect() const { return m_Suspect; }
+  [[nodiscard]] inline std::string GetName() const { return m_Name; }
+  [[nodiscard]] inline std::string GetServer() const { return m_Server; }
+  [[nodiscard]] inline std::string GetAuthServer() const { return m_AuthServer; }
+  [[nodiscard]] inline std::string GetIP() const { return m_IP; }
+  [[nodiscard]] inline std::string GetDate() const { return m_Date; }
+  [[nodiscard]] inline std::string GetExpiry() const { return m_Expiry; }
+  [[nodiscard]] inline std::string GetModerator() const { return m_Moderator; }
+  [[nodiscard]] inline std::string GetReason() const { return m_Reason; }
+  [[nodiscard]] inline bool GetSuspect() const { return m_Suspect; }
   inline void SetSuspect(bool nSuspect) { m_Suspect = nSuspect; }
 };
 
@@ -468,14 +468,14 @@ public:
   CDBGamePlayer(std::string name, std::string server, std::string ip, /*uint8_t nUID, uint8_t nSID,*/ uint8_t nColor);
   ~CDBGamePlayer();
 
-  inline std::string GetName() const { return m_Name; }
-  inline std::string GetServer() const { return m_Server; }
-  inline std::string GetIP() const { return m_IP; }
-  inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
-  inline uint64_t    GetLeftTime() const { return m_LeftTime; }
-  /*inline uint8_t     GetUID() const { return m_UID; }
-  inline uint8_t     GetSID() const { return m_SID; }*/
-  inline uint8_t     GetColor() const { return m_Color; }
+  [[nodiscard]] inline std::string GetName() const { return m_Name; }
+  [[nodiscard]] inline std::string GetServer() const { return m_Server; }
+  [[nodiscard]] inline std::string GetIP() const { return m_IP; }
+  [[nodiscard]] inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
+  [[nodiscard]] inline uint64_t    GetLeftTime() const { return m_LeftTime; }
+  /*[[nodiscard]] inline uint8_t     GetUID() const { return m_UID; }
+  [[nodiscard]] inline uint8_t     GetSID() const { return m_SID; }*/
+  [[nodiscard]] inline uint8_t     GetColor() const { return m_Color; }
 
   inline void SetLoadingTime(uint64_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
   inline void SetLeftTime(uint64_t nLeftTime) { m_LeftTime = nLeftTime; }
@@ -498,11 +498,11 @@ public:
   CDBGameSummary(uint64_t nID, std::string playerNames, std::string playerIDs);
   ~CDBGameSummary();
 
-  inline uint64_t GetID() const { return m_ID; }
-  inline const std::vector<uint8_t>& GetUIDs() const { return m_UIDs; }
-  inline const std::vector<uint8_t>& GetSIDs() const { return m_SIDs; }
-  inline const std::vector<uint8_t>& GetColors() const { return m_Colors; }
-  inline const std::vector<std::string>& GetPlayerNames() const { return m_PlayerNames; }
+  [[nodiscard]] inline uint64_t GetID() const { return m_ID; }
+  [[nodiscard]] inline const std::vector<uint8_t>& GetUIDs() const { return m_UIDs; }
+  [[nodiscard]] inline const std::vector<uint8_t>& GetSIDs() const { return m_SIDs; }
+  [[nodiscard]] inline const std::vector<uint8_t>& GetColors() const { return m_Colors; }
+  [[nodiscard]] inline const std::vector<std::string>& GetPlayerNames() const { return m_PlayerNames; }
 };
 
 //
@@ -520,9 +520,9 @@ public:
   CDBGamePlayerSummary(uint32_t nTotalGames, float nAvgLoadingTime, uint32_t nAvgLeftPercent);
   ~CDBGamePlayerSummary();
 
-  inline uint32_t GetTotalGames() const { return m_TotalGames; }
-  inline float    GetAvgLoadingTime() const { return m_AvgLoadingTime; }
-  inline uint32_t GetAvgLeftPercent() const { return m_AvgLeftPercent; }
+  [[nodiscard]] inline uint32_t GetTotalGames() const { return m_TotalGames; }
+  [[nodiscard]] inline float    GetAvgLoadingTime() const { return m_AvgLoadingTime; }
+  [[nodiscard]] inline uint32_t GetAvgLeftPercent() const { return m_AvgLeftPercent; }
 };
 
 //
@@ -549,17 +549,17 @@ public:
   CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills);
   ~CDBDotAPlayer();
 
-  inline uint8_t GetColor() const { return m_Color; }
-  inline uint8_t GetNewColor() const { return m_NewColor; }
-  inline uint32_t GetKills() const { return m_Kills; }
-  inline uint32_t GetDeaths() const { return m_Deaths; }
-  inline uint32_t GetCreepKills() const { return m_CreepKills; }
-  inline uint32_t GetCreepDenies() const { return m_CreepDenies; }
-  inline uint32_t GetAssists() const { return m_Assists; }
-  inline uint32_t GetNeutralKills() const { return m_NeutralKills; }
-  inline uint32_t GetTowerKills() const { return m_TowerKills; }
-  inline uint32_t GetRaxKills() const { return m_RaxKills; }
-  inline uint32_t GetCourierKills() const { return m_CourierKills; }
+  [[nodiscard]] inline uint8_t GetColor() const { return m_Color; }
+  [[nodiscard]] inline uint8_t GetNewColor() const { return m_NewColor; }
+  [[nodiscard]] inline uint32_t GetKills() const { return m_Kills; }
+  [[nodiscard]] inline uint32_t GetDeaths() const { return m_Deaths; }
+  [[nodiscard]] inline uint32_t GetCreepKills() const { return m_CreepKills; }
+  [[nodiscard]] inline uint32_t GetCreepDenies() const { return m_CreepDenies; }
+  [[nodiscard]] inline uint32_t GetAssists() const { return m_Assists; }
+  [[nodiscard]] inline uint32_t GetNeutralKills() const { return m_NeutralKills; }
+  [[nodiscard]] inline uint32_t GetTowerKills() const { return m_TowerKills; }
+  [[nodiscard]] inline uint32_t GetRaxKills() const { return m_RaxKills; }
+  [[nodiscard]] inline uint32_t GetCourierKills() const { return m_CourierKills; }
 
   inline void IncKills() { ++m_Kills; }
   inline void IncDeaths() { ++m_Deaths; }
@@ -599,48 +599,48 @@ public:
   CDBDotAPlayerSummary(uint32_t nTotalGames, uint32_t nTotalWins, uint32_t nTotalLosses, uint32_t nTotalKills, uint32_t nTotalDeaths, uint32_t nTotalCreepKills, uint32_t nTotalCreepDenies, uint32_t nTotalAssists, uint32_t nTotalNeutralKills, uint32_t nTotalTowerKills, uint32_t nTotalRaxKills, uint32_t nTotalCourierKills);
   ~CDBDotAPlayerSummary();
 
-  inline uint32_t GetTotalGames() const { return m_TotalGames; }
-  inline uint32_t GetTotalWins() const { return m_TotalWins; }
-  inline uint32_t GetTotalLosses() const { return m_TotalLosses; }
-  inline uint32_t GetTotalKills() const { return m_TotalKills; }
-  inline uint32_t GetTotalDeaths() const { return m_TotalDeaths; }
-  inline uint32_t GetTotalCreepKills() const { return m_TotalCreepKills; }
-  inline uint32_t GetTotalCreepDenies() const { return m_TotalCreepDenies; }
-  inline uint32_t GetTotalAssists() const { return m_TotalAssists; }
-  inline uint32_t GetTotalNeutralKills() const { return m_TotalNeutralKills; }
-  inline uint32_t GetTotalTowerKills() const { return m_TotalTowerKills; }
-  inline uint32_t GetTotalRaxKills() const { return m_TotalRaxKills; }
-  inline uint32_t GetTotalCourierKills() const { return m_TotalCourierKills; }
-  inline float    GetAvgKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalKills) / m_TotalGames : 0.f; }
-  inline float    GetAvgDeaths() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalDeaths) / m_TotalGames : 0.f; }
-  inline float    GetAvgCreepKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCreepKills) / m_TotalGames : 0.f; }
-  inline float    GetAvgCreepDenies() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCreepDenies) / m_TotalGames : 0.f; }
-  inline float    GetAvgAssists() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalAssists) / m_TotalGames : 0.f; }
-  inline float    GetAvgNeutralKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalNeutralKills) / m_TotalGames : 0.f; }
-  inline float    GetAvgTowerKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalTowerKills) / m_TotalGames : 0.f; }
-  inline float    GetAvgRaxKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalRaxKills) / m_TotalGames : 0.f; }
-  inline float    GetAvgCourierKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCourierKills) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline uint32_t GetTotalGames() const { return m_TotalGames; }
+  [[nodiscard]] inline uint32_t GetTotalWins() const { return m_TotalWins; }
+  [[nodiscard]] inline uint32_t GetTotalLosses() const { return m_TotalLosses; }
+  [[nodiscard]] inline uint32_t GetTotalKills() const { return m_TotalKills; }
+  [[nodiscard]] inline uint32_t GetTotalDeaths() const { return m_TotalDeaths; }
+  [[nodiscard]] inline uint32_t GetTotalCreepKills() const { return m_TotalCreepKills; }
+  [[nodiscard]] inline uint32_t GetTotalCreepDenies() const { return m_TotalCreepDenies; }
+  [[nodiscard]] inline uint32_t GetTotalAssists() const { return m_TotalAssists; }
+  [[nodiscard]] inline uint32_t GetTotalNeutralKills() const { return m_TotalNeutralKills; }
+  [[nodiscard]] inline uint32_t GetTotalTowerKills() const { return m_TotalTowerKills; }
+  [[nodiscard]] inline uint32_t GetTotalRaxKills() const { return m_TotalRaxKills; }
+  [[nodiscard]] inline uint32_t GetTotalCourierKills() const { return m_TotalCourierKills; }
+  [[nodiscard]] inline float    GetAvgKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalKills) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgDeaths() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalDeaths) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgCreepKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCreepKills) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgCreepDenies() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCreepDenies) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgAssists() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalAssists) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgNeutralKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalNeutralKills) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgTowerKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalTowerKills) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgRaxKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalRaxKills) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgCourierKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCourierKills) / m_TotalGames : 0.f; }
 };
 
-inline uint32_t signed_to_unsigned_32(const int32_t value)
+[[nodiscard]] inline uint32_t signed_to_unsigned_32(const int32_t value)
 {
   // Add 128 to preserve ordering.
   return static_cast<uint32_t>(static_cast<int64_t>(value) - static_cast<int64_t>(INT32_MIN));
 }
 
-inline int32_t unsigned_to_signed_32(const uint32_t value)
+[[nodiscard]] inline int32_t unsigned_to_signed_32(const uint32_t value)
 {
   // Subtract 128 to preserve ordering.
   return static_cast<int32_t>(static_cast<int64_t>(value) + static_cast<int64_t>(INT32_MIN));
 }
 
-inline uint64_t signed_to_unsigned_64(const int64_t value)
+[[nodiscard]] inline uint64_t signed_to_unsigned_64(const int64_t value)
 {
   // Add 128 to preserve ordering.
   return static_cast<uint64_t>(static_cast<int64_t>(value) - static_cast<int64_t>(INT64_MIN));
 }
 
-inline int64_t unsigned_to_signed_64(const uint64_t value)
+[[nodiscard]] inline int64_t unsigned_to_signed_64(const uint64_t value)
 {
   // Subtract 128 to preserve ordering.
   return static_cast<int64_t>(static_cast<int64_t>(value) + static_cast<int64_t>(INT64_MIN));

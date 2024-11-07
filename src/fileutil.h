@@ -83,21 +83,21 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
 // unistd.h and limits.h
 
-bool FileExists(const std::filesystem::path& file);
-PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
-PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
-std::string PathToString(const std::filesystem::path& file);
-std::string PathToAbsoluteString(const std::filesystem::path& file);
-std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
-std::string FileRead(const std::filesystem::path& file, size_t start, size_t length, size_t* byteSize);
-std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
+[[nodiscard]] bool FileExists(const std::filesystem::path& file);
+[[nodiscard]] PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
+[[nodiscard]] PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
+[[nodiscard]] std::string PathToString(const std::filesystem::path& file);
+[[nodiscard]] std::string PathToAbsoluteString(const std::filesystem::path& file);
+[[nodiscard]] std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
+[[nodiscard]] std::string FileRead(const std::filesystem::path& file, size_t start, size_t length, size_t* byteSize);
+[[nodiscard]] std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
 bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileAppend(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileDelete(const std::filesystem::path& File);
-std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
-std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
-std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
-bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
+[[nodiscard]] std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
+[[nodiscard]] std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
+[[nodiscard]] std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
+[[nodiscard]] bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
 bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
 
