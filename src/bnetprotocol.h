@@ -70,7 +70,7 @@ class CIncomingChatEvent;
 namespace BNETProtocol
 {
   namespace Magic
-  {
+  { 
     constexpr uint8_t ZERO                   = 0u;   // 0x0
     constexpr uint8_t STOPADV                = 2u;   // 0x2
     constexpr uint8_t GETADVLISTEX           = 9u;   // 0x9
@@ -212,11 +212,6 @@ public:
   std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::array<uint8_t, 20>& clientPasswordProof);
   std::vector<uint8_t> SEND_SID_FRIENDLIST();
   std::vector<uint8_t> SEND_SID_CLANMEMBERLIST();
-
-  // other functions
-
-private:
-  bool ValidateLength(const std::vector<uint8_t>& content);
 };
 
 //

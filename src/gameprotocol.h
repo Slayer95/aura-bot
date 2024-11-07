@@ -159,7 +159,6 @@ namespace GameProtocol
 
   // other functions
 
-  bool ValidateLength(const std::vector<uint8_t>& content);
   std::vector<uint8_t> EncodeSlotInfo(const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
 };
 

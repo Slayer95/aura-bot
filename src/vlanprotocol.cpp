@@ -237,29 +237,6 @@ namespace VLANProtocol
     // DEBUG_Print(packet);
     return packet;
   }
-
-  /////////////////////
-  // OTHER FUNCTIONS //
-  /////////////////////
-
-  bool ValidateLength(const vector<uint8_t>& content)
-  {
-    // verify that bytes 3 and 4 (indices 2 and 3) of the content array describe the length
-
-    uint16_t Length;
-    vector<uint8_t> LengthBytes;
-
-    if (content.size() >= 4 && content.size() <= 65535) {
-      LengthBytes.push_back(content[2]);
-      LengthBytes.push_back(content[3]);
-      Length = ByteArrayToUInt16(LengthBytes, false);
-
-      if (Length == content.size())
-        return true;
-    }
-
-    return false;
-  }
 }
 
 //

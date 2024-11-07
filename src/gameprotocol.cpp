@@ -769,13 +769,6 @@ namespace GameProtocol
   // OTHER FUNCTIONS //
   /////////////////////
 
-  bool ValidateLength(const std::vector<uint8_t>& content)
-  {
-    // verify that bytes 3 and 4 (indices 2 and 3) of the content array describe the length
-
-    return (static_cast<uint16_t>(content[3] << 8 | content[2]) == content.size());
-  }
-
   std::vector<uint8_t> EncodeSlotInfo(const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
   {
     std::vector<uint8_t> SlotInfo;

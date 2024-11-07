@@ -33,10 +33,6 @@ namespace VLANProtocol
   std::vector<uint8_t> SEND_VLAN_CREATEGAME(bool TFT, uint32_t war3Version, uint32_t hostCounter, std::vector<uint8_t> ip, uint16_t port);
   std::vector<uint8_t> SEND_VLAN_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots, std::vector<uint8_t> ip, uint16_t port);
   std::vector<uint8_t> SEND_VLAN_DECREATEGAME(uint32_t hostCounter, std::vector<uint8_t> ip, uint16_t port);
-
-  // other functions
-
-  bool ValidateLength(const std::vector<uint8_t>& content);
 };
 
 //

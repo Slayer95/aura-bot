@@ -868,17 +868,6 @@ vector<uint8_t> CBNETProtocol::SEND_SID_CLANMEMBERLIST()
   return vector<uint8_t>{BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::CLANMEMBERLIST, 8, 0, 0, 0, 0, 0};
 }
 
-/////////////////////
-// OTHER FUNCTIONS //
-/////////////////////
-
-bool CBNETProtocol::ValidateLength(const vector<uint8_t>& content)
-{
-  // verify that bytes 3 and 4 (indices 2 and 3) of the content array describe the length
-
-  return (static_cast<uint16_t>(content[3] << 8 | content[2]) == content.size());
-}
-
 //
 // CIncomingGameHost
 //

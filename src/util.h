@@ -599,9 +599,19 @@ inline void AssignLength(std::vector<uint8_t>& content)
   // insert the actual length of the content array into bytes 3 and 4 (indices 2 and 3)
 
   const uint16_t Size = static_cast<uint16_t>(content.size());
-
   content[2] = static_cast<uint8_t>(Size);
   content[3] = static_cast<uint8_t>(Size >> 8);
+}
+
+inline bool ValidateLength(const std::vector<uint8_t>& content)
+{
+  // verify that bytes 3 and 4 (indices 2 and 3) of the content array describe the length
+
+  size_t size = content.size();
+  if (size >= 4 && size <= 0xFFFF) {
+    return ByteArrayToUInt16(content, false, 2) == static_cast<uint16_t>(size);
+  }
+  return false;
 }
 
 inline std::string AddPathSeparator(const std::string& path)
