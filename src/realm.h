@@ -219,7 +219,7 @@ public:
 
   uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   void Update(void* fd, void* send_fd);
-  void ProcessChatEvent(const CIncomingChatEvent* chatEvent);
+  void ProcessChatEvent(const uint32_t eventType, const std::string& fromUser, const std::string& nMessage);
   uint8_t CountChatQuota();
   bool CheckWithinChatQuota(CQueuedChatMessage* message);
   bool SendQueuedMessage(CQueuedChatMessage* message);

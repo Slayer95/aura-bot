@@ -193,7 +193,6 @@ void CRealm::Update(void* fd, void* send_fd)
       std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
       uint32_t             LengthProcessed    = 0;
       bool Abort                              = false;
-      CIncomingChatEvent* ChatEvent;
 
       // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
@@ -250,14 +249,13 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
             }
 
-            case BNETProtocol::Magic::CHATEVENT:
-              ChatEvent = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
-
-              if (ChatEvent)
-                ProcessChatEvent(ChatEvent);
-
-              delete ChatEvent;
+            case BNETProtocol::Magic::CHATEVENT: {
+              CIncomingChatEvent chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
+              if (chatEventResult.success) {
+                ProcessChatEvent(chatEventResult.type, GetStringAddressRange(chatEvent.userStart, chatEvent.userEnd), GetStringAddressRange(chatEvent.messageStart, chatEvent.messageEnd));
+              }
               break;
+            }
 
             case BNETProtocol::Magic::CHECKAD:
               BNETProtocol::RECEIVE_SID_CHECKAD(Data);
@@ -602,15 +600,12 @@ void CRealm::Update(void* fd, void* send_fd)
   }
 }
 
-void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
+void CRealm::ProcessChatEvent(const uint32_t eventType, const std::string& fromUser, const std::string& message);
 {
-  uint32_t Event    = chatEvent->GetChatEvent();
-  bool     Whisper  = (Event == BNETProtocol::IncomingChatEvent::WHISPER);
-  string   User     = chatEvent->GetUser();
-  string   Message  = chatEvent->GetMessage();
+  bool isWhisper = (eventType == BNETProtocol::IncomingChatEvent::WHISPER);
 
   if (!m_Socket->GetConnected()) {
-    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "not connected - message from [" + User + "] rejected: [" + Message + "]")
+    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "not connected - message from [" + fromUser + "] rejected: [" + message + "]")
     return;
   }
 
@@ -618,74 +613,74 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
   // this case covers whispers - we assume that anyone who sends a whisper to the bot with message "spoofcheck" should be considered spoof checked
   // note that this means you can whisper "spoofcheck" even in a public game to manually spoofcheck if the /whois fails
 
-  if (Event == BNETProtocol::IncomingChatEvent::WHISPER && (Message == "s" || Message == "sc" || Message == "spoofcheck")) {
+  if (eventType == BNETProtocol::IncomingChatEvent::WHISPER && (message == "s" || message == "sc" || message == "spoofcheck")) {
     if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
-      CGameUser* Player = m_Aura->m_CurrentLobby->GetUserFromName(User, true);
+      CGameUser* Player = m_Aura->m_CurrentLobby->GetUserFromName(fromUser, true);
       if (Player) m_Aura->m_CurrentLobby->AddToRealmVerified(m_Config->m_HostName, Player, true);
       return;
     }
   }
 
-  if (Event == BNETProtocol::IncomingChatEvent::WHISPER || Event == BNETProtocol::IncomingChatEvent::TALK) {
+  if (eventType == BNETProtocol::IncomingChatEvent::WHISPER || eventType == BNETProtocol::IncomingChatEvent::TALK) {
     m_HadChatActivity = true;
   }
 
-  if (Event == BNETProtocol::IncomingChatEvent::WHISPER || Event == BNETProtocol::IncomingChatEvent::TALK) {
-    if (User == GetLoginName()) {
+  if (eventType == BNETProtocol::IncomingChatEvent::WHISPER || eventType == BNETProtocol::IncomingChatEvent::TALK) {
+    if (fromUser == GetLoginName()) {
       return;
     }
     // FIXME: Chat logging kinda sucks
-    if (Whisper) {
-      PRINT_IF(LOG_LEVEL_NOTICE, "[WHISPER: " + m_Config->m_UniqueName + "] [" + User + "] " + Message)
+    if (isWhisper) {
+      PRINT_IF(LOG_LEVEL_NOTICE, "[WHISPER: " + m_Config->m_UniqueName + "] [" + fromUser + "] " + message)
     } else if (GetShouldLogChatToConsole()) {
-      Print("[CHAT: " + m_Config->m_UniqueName + "] [" + User + "] " + Message);
+      Print("[CHAT: " + m_Config->m_UniqueName + "] [" + fromUser + "] " + message);
     }
 
     // handle bot commands
 
-    if (Event == BNETProtocol::IncomingChatEvent::TALK && m_Config->m_IsMirror) {
+    if (eventType == BNETProtocol::IncomingChatEvent::TALK && m_Config->m_IsMirror) {
       // Let bots on servers with <realm_x.mirror = yes> ignore commands at channels
       // (but still accept commands through whispers).
       return;
     }
 
-    if (Message.empty()) {
+    if (message.empty()) {
       return;
     }
 
     string cmdToken, command, payload;
-    uint8_t tokenMatch = ExtractMessageTokensAny(Message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
+    uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
     if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
-      if (Whisper) {
+      if (isWhisper) {
         string tokenName = GetTokenName(m_Config->m_PrivateCmdToken);
         string example = m_Aura->m_Net->m_Config->m_AllowDownloads ? "host wc3maps-8" : "host castle";
-        QueueWhisper("Hi, " + User + ". Use " + m_Config->m_PrivateCmdToken + tokenName + " for commands. Example: " + m_Config->m_PrivateCmdToken + example, User);
+        QueueWhisper("Hi, " + fromUser + ". Use " + m_Config->m_PrivateCmdToken + tokenName + " for commands. Example: " + m_Config->m_PrivateCmdToken + example, fromUser);
       }
       return;
     }
-    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, User, Whisper, !Whisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
     ctx->Run(cmdToken, command, payload);
     m_Aura->UnholdContext(ctx);
   }
-  else if (Event == BNETProtocol::IncomingChatEvent::CHANNEL)
+  else if (eventType == BNETProtocol::IncomingChatEvent::CHANNEL)
   {
-    PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "joined channel [" + Message + "]")
-    m_CurrentChannel = Message;
-  } else if (Event == BNETProtocol::IncomingChatEvent::WHISPERSENT) {
-    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "whisper sent OK [" + Message + "]")
+    PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "joined channel [" + message + "]")
+    m_CurrentChannel = message;
+  } else if (eventType == BNETProtocol::IncomingChatEvent::WHISPERSENT) {
+    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "whisper sent OK [" + message + "]")
     if (!m_ChatSentWhispers.empty()) {
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
         CCommandContext* fromCtx = oldestWhisper->GetProxyCtx();
-        if (fromCtx->CheckActionMessage(Message) && !fromCtx->GetPartiallyDestroyed()) {
-          fromCtx->SendReply("Message sent to " + oldestWhisper->GetReceiver() + ".");
+        if (fromCtx->CheckActionMessage(message) && !fromCtx->GetPartiallyDestroyed()) {
+          fromCtx->SendReply("message sent to " + oldestWhisper->GetReceiver() + ".");
         }
         fromCtx->ClearActionMessage();
       }
       delete oldestWhisper;
       m_ChatSentWhispers.pop();
     }
-  } else if (Event == BNETProtocol::IncomingChatEvent::INFO) {
+  } else if (eventType == BNETProtocol::IncomingChatEvent::INFO) {
     bool LogInfo = m_HadChatActivity;
 
     // extract the first word which we hope is the username
@@ -693,12 +688,12 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
 
     if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
       string            UserName;
-      string::size_type Split = Message.find(' ');
+      string::size_type Split = message.find(' ');
 
       if (Split != string::npos)
-        UserName = Message.substr(0, Split);
+        UserName = message.substr(0, Split);
       else
-        UserName = Message;
+        UserName = message;
 
       CGameUser* AboutPlayer = m_Aura->m_CurrentLobby->GetUserFromName(UserName, true);
       if (AboutPlayer && AboutPlayer->GetRealmInternalID() == m_InternalServerID) {
@@ -706,12 +701,12 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
         // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
         // at all times you can still /w the bot with "spoofcheck" to manually spoof check
 
-        if (Message.find("Throne in game") != string::npos || Message.find("currently in  game") != string::npos || Message.find("currently in private game") != string::npos) {
+        if (message.find("Throne in game") != string::npos || message.find("currently in  game") != string::npos || message.find("currently in private game") != string::npos) {
           // note: if the game is rehosted, bnet will not be aware of the game being renamed
           string GameName = GetPrefixedGameName(m_Aura->m_CurrentLobby->GetGameName());
           string::size_type GameNameSize = GameName.length() + 2;
-          string::size_type GameNameFoundPos = Message.find("\"" + GameName + "\"");
-          if (GameNameFoundPos != string::npos && GameNameFoundPos + GameNameSize + 1 == Message.length()) {
+          string::size_type GameNameFoundPos = message.find("\"" + GameName + "\"");
+          if (GameNameFoundPos != string::npos && GameNameFoundPos + GameNameSize + 1 == message.length()) {
             m_Aura->m_CurrentLobby->AddToRealmVerified(m_HostName, AboutPlayer, true);
           } else {
             m_Aura->m_CurrentLobby->ReportSpoofed(m_HostName, AboutPlayer);
@@ -723,16 +718,16 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       }
     }
     if (LogInfo) {
-      PRINT_IF(LOG_LEVEL_INFO, "[INFO: " + m_Config->m_UniqueName + "] " + Message)
+      PRINT_IF(LOG_LEVEL_INFO, "[INFO: " + m_Config->m_UniqueName + "] " + message)
     }
-  } else if (Event == BNETProtocol::IncomingChatEvent::NOTICE) {
+  } else if (eventType == BNETProtocol::IncomingChatEvent::NOTICE) {
     // Note that the default English error message <<That user is not logged on.>> is also received in other two circumstances:
     // - When sending /netinfo <USER>, if the bot has admin permissions in this realm.
     // - When sending /ban <USER>, if the bot has admin permissions in this realm.
     //
     // Therefore, abuse of the !SAY command will temporarily break feedback for !TELL/INVITE, until m_ChatSentWhispers is emptied.
     // This is (yet another reason) why !SAY /COMMAND must always be gated behind sudo.
-    if (!m_ChatSentWhispers.empty() && Message.length() == m_Config->m_WhisperErrorReply.length() && Message == m_Config->m_WhisperErrorReply) {
+    if (!m_ChatSentWhispers.empty() && message.length() == m_Config->m_WhisperErrorReply.length() && message == m_Config->m_WhisperErrorReply) {
       m_AnyWhisperRejected = true;
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
@@ -745,7 +740,7 @@ void CRealm::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       delete oldestWhisper;
       m_ChatSentWhispers.pop();
     }
-    PRINT_IF(LOG_LEVEL_NOTICE, "[NOTE: " + m_Config->m_UniqueName + "] " + Message)
+    PRINT_IF(LOG_LEVEL_NOTICE, "[NOTE: " + m_Config->m_UniqueName + "] " + message)
   }
 }
 

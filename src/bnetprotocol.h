@@ -61,7 +61,6 @@
 
 class CConfig;
 class CIncomingGameHost;
-class CIncomingChatEvent;
 
 namespace BNETProtocol
 {
@@ -196,6 +195,30 @@ namespace BNETProtocol
     ~EnterChatResult() = default;
   };
 
+  //
+  // IncomingChatResult
+  //
+
+  struct IncomingChatResult
+  {
+    const bool success;
+    const uint32_t type;
+    const uint8_t* userStart;
+    const uint8_t* userEnd;
+    const uint8_t* messageStart;
+    const uint8_t* messageEnd;
+
+    IncomingChatResult(const bool nSuccess, const uint32_t nType, const uint8_t* nUserStart, const uint8_t* nUserEnd, const uint8_t* nMessageStart, const uint8_t* nMessageEnd)
+     : success(nSuccess),
+       type(nType),
+       userStart(nUserStart),
+       userEnd(nUserEnd),
+       messageStart(nMessageStart),
+       messageEnd(nMessageEnd)
+     {};
+    ~IncomingChatResult() = default;
+  };
+
   [[nodiscard]] inline size_t GetMessageSize(const std::vector<uint8_t> message) { return message.size(); }
   [[nodiscard]] inline size_t GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) { return message.size() + name.size(); }
       
@@ -204,7 +227,7 @@ namespace BNETProtocol
   [[nodiscard]] bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
   [[nodiscard]] CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingChatEvent* RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
+  [[nodiscard]] BNETProtocol::IncomingChatResult RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
   [[nodiscard]] bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);
   [[nodiscard]] bool RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data);
   [[nodiscard]] std::array<uint8_t, 4> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
@@ -266,26 +289,6 @@ public:
   [[nodiscard]] inline const uint16_t&                GetPort() const { return m_Port; }
   [[nodiscard]] inline const std::string&             GetGameName() const { return m_GameName; }
   [[nodiscard]] inline const std::array<uint8_t, 4>&  GetHostCounter() const { return m_HostCounter; }
-};
-
-//
-// CIncomingChatEvent
-//
-
-class CIncomingChatEvent
-{
-private:
-  std::string                      m_User;
-  std::string                      m_Message;
-  uint32_t                         m_ChatEvent;
-
-public:
-  CIncomingChatEvent(uint32_t nChatEvent, std::string nUser, std::string nMessage);
-  ~CIncomingChatEvent();
-
-  [[nodiscard]] inline uint32_t                         GetChatEvent() const { return m_ChatEvent; }
-  [[nodiscard]] inline std::string                      GetUser() const { return m_User; }
-  [[nodiscard]] inline std::string                      GetMessage() const { return m_Message; }
 };
 
 #endif // AURA_BNETPROTOCOL_H_

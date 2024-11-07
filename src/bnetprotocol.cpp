@@ -127,7 +127,7 @@ namespace BNETProtocol
     return EnterChatResult(false, nullptr, nullptr);
   }
 
-  CIncomingChatEvent* RECEIVE_SID_CHATEVENT(const vector<uint8_t>& data)
+  IncomingChatResult RECEIVE_SID_CHATEVENT(const vector<uint8_t>& data)
   {
     // DEBUG_Print( "RECEIVED SID_CHATEVENT" );
     // DEBUG_Print( data );
@@ -141,20 +141,21 @@ namespace BNETProtocol
     // null terminated string	-> User
     // null terminated string	-> Message
 
-    if (ValidateLength(data) && data.size() >= 29)
-    {
-      const vector<uint8_t> EventID = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-      // vector<uint8_t> Ping = vector<uint8_t>( data.begin( ) + 12, data.begin( ) + 16 );
-      const vector<uint8_t> User    = ExtractCString(data, 28);
-      if (User.size() > 0xFF) return nullptr;
-      const vector<uint8_t> Message = ExtractCString(data, static_cast<uint32_t>(User.size()) + 29);
-
-      return new CIncomingChatEvent(ByteArrayToUInt32(EventID, false),
-                                    string(begin(User), end(User)),
-                                    string(begin(Message), end(Message)));
+    if (!ValidateLength(data) || data.size() < 29) {
+      return IncomingChatResult(false, 0, nullptr, nullptr, nullptr, nullptr);
     }
-
-    return nullptr;
+    const uint32_t eventID = ByteArrayToUInt32(data, false, 4);
+    const size_t userEnd = FindNullDelimiterOrEnd(data, 28);
+    if (userEnd > 0xFF || data.size() <= userEnd + 1) {
+      return IncomingChatResult(false, 0, nullptr, nullptr, nullptr, nullptr);
+    }
+    const size_t messageStart = userEnd + 1;
+    const size_t messageEnd = FindNullDelimiterOrEnd(data, messageStart);
+    return IncomingChatResult(
+      true, eventID,
+      (const uint8_t*)(&data + 28), (const uint8_t*)(&data + userEnd),
+      (const uint8_t*)(&data + messageStart), (const uint8_t*)(&data + messageEnd)
+    );
   }
 
   bool RECEIVE_SID_CHECKAD(const vector<uint8_t>& data)
@@ -878,16 +879,3 @@ string CIncomingGameHost::GetIPString() const
 
   return Result;
 }
-
-//
-// CIncomingChatEvent
-//
-
-CIncomingChatEvent::CIncomingChatEvent(uint32_t nChatEvent, string nUser, string nMessage)
-  : m_User(move(nUser)),
-    m_Message(move(nMessage)),
-    m_ChatEvent(nChatEvent)
-{
-}
-
-CIncomingChatEvent::~CIncomingChatEvent() = default;
