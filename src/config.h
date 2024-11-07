@@ -93,41 +93,41 @@ public:
   CConfig();
   ~CConfig();
 
-  bool Read(const std::filesystem::path& file, CConfig* adapterConfig = nullptr);
-  bool Exists(const std::string& key);
+  [[nodiscard]] bool Read(const std::filesystem::path& file, CConfig* adapterConfig = nullptr);
+  [[nodiscard]] bool Exists(const std::string& key);
   void Accept(const std::string& key);
   void Delete(const std::string& key);
-  std::vector<std::string> GetInvalidKeys(const std::bitset<120> definedRealms) const;
-  inline std::filesystem::path GetFile() const { return m_File; };
-  inline bool GetErrorLast() const { return m_ErrorLast; };
-  inline bool GetSuccess() const { return !m_CriticalError; };
+  [[nodiscard]] std::vector<std::string> GetInvalidKeys(const std::bitset<120> definedRealms) const;
+  [[nodiscard]] inline std::filesystem::path GetFile() const { return m_File; };
+  [[nodiscard]] inline bool GetErrorLast() const { return m_ErrorLast; };
+  [[nodiscard]] inline bool GetSuccess() const { return !m_CriticalError; };
   inline void FailIfErrorLast() {
     if (m_ErrorLast) m_CriticalError = true;
   };
   inline void SetFailed() { m_CriticalError = true; };
   inline void SetHomeDir(const std::filesystem::path& nHomeDir) { m_HomeDir = nHomeDir; };
   inline void SetIsModified() { m_IsModified = true; };
-  const std::filesystem::path& GetHomeDir() const { return m_HomeDir; }
-  inline bool GetIsModified() const { return m_IsModified; };
-  inline const std::map<std::string, std::string>& GetEntries() const { return m_CFG; }
+  [[nodiscard]] const std::filesystem::path& GetHomeDir() const { return m_HomeDir; }
+  [[nodiscard]] inline bool GetIsModified() const { return m_IsModified; };
+  [[nodiscard]] inline const std::map<std::string, std::string>& GetEntries() const { return m_CFG; }
 
-  std::string GetString(const std::string& key, const std::string& x);
-  std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
+  [[nodiscard]] std::string GetString(const std::string& key, const std::string& x);
+  [[nodiscard]] std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
 
-  bool GetBool(const std::string& key, bool x);
+  [[nodiscard]] bool GetBool(const std::string& key, bool x);
 
-  int32_t GetInt(const std::string& key, int32_t x);
-  int32_t GetInt32(const std::string& key, int32_t x);
-  int64_t GetInt64(const std::string& key, int64_t x);
-  uint32_t GetUint32(const std::string& key, uint32_t x);
-  uint16_t GetUint16(const std::string& key, uint16_t x);
-  uint8_t GetUint8(const std::string& key, uint8_t x);
+  [[nodiscard]] int32_t GetInt(const std::string& key, int32_t x);
+  [[nodiscard]] int32_t GetInt32(const std::string& key, int32_t x);
+  [[nodiscard]] int64_t GetInt64(const std::string& key, int64_t x);
+  [[nodiscard]] uint32_t GetUint32(const std::string& key, uint32_t x);
+  [[nodiscard]] uint16_t GetUint16(const std::string& key, uint16_t x);
+  [[nodiscard]] uint8_t GetUint8(const std::string& key, uint8_t x);
 
-  float GetFloat(const std::string& key, float x);
-  uint8_t GetStringIndex(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);
+  [[nodiscard]] float GetFloat(const std::string& key, float x);
+  [[nodiscard]] uint8_t GetStringIndex(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);
 
   template <typename EnumType, size_t N>
-  EnumType GetEnum(const std::string& key, const std::array<std::string, N>& fromList, EnumType x)
+  [[nodiscard]] EnumType GetEnum(const std::string& key, const std::array<std::string, N>& fromList, EnumType x)
   {
     static_assert(std::is_enum<EnumType>::value, "EnumType must be an enum type");
 
@@ -150,37 +150,37 @@ public:
     CONFIG_ERROR(key, x)
   }
 
-  std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
-  std::set<std::string> GetSet(const std::string& key, char separator, const std::set<std::string> x);
-  std::set<std::string> GetSetInsensitive(const std::string& key, char separator, const std::set<std::string> x);
-  std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
+  [[nodiscard]] std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSet(const std::string& key, char separator, const std::set<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSetInsensitive(const std::string& key, char separator, const std::set<std::string> x);
+  [[nodiscard]] std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
 
-  std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
-  std::set<uint8_t> GetUint8Set(const std::string& key, char separator, const std::set<uint8_t> x);
-  std::vector<uint8_t> GetIPv4(const std::string& key, const std::array<uint8_t, 4>& x);
-  std::set<std::string> GetIPStringSet(const std::string& key, char separator, const std::set<std::string> x);
+  [[nodiscard]] std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
+  [[nodiscard]] std::set<uint8_t> GetUint8Set(const std::string& key, char separator, const std::set<uint8_t> x);
+  [[nodiscard]] std::vector<uint8_t> GetIPv4(const std::string& key, const std::array<uint8_t, 4>& x);
+  [[nodiscard]] std::set<std::string> GetIPStringSet(const std::string& key, char separator, const std::set<std::string> x);
 
-  std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
-  std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);
-  sockaddr_storage GetAddressOfType(const std::string &key, const uint8_t acceptMode, const std::string& x);
-  sockaddr_storage GetAddressIPv4(const std::string &key, const std::string& x);
-  sockaddr_storage GetAddressIPv6(const std::string &key, const std::string& x);
-  sockaddr_storage GetAddress(const std::string &key, const std::string& x);
-  std::vector<sockaddr_storage> GetAddressList(const std::string& key, char separator, const std::vector<std::string> x);
+  [[nodiscard]] std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
+  [[nodiscard]] std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);
+  [[nodiscard]] sockaddr_storage GetAddressOfType(const std::string &key, const uint8_t acceptMode, const std::string& x);
+  [[nodiscard]] sockaddr_storage GetAddressIPv4(const std::string &key, const std::string& x);
+  [[nodiscard]] sockaddr_storage GetAddressIPv6(const std::string &key, const std::string& x);
+  [[nodiscard]] sockaddr_storage GetAddress(const std::string &key, const std::string& x);
+  [[nodiscard]] std::vector<sockaddr_storage> GetAddressList(const std::string& key, char separator, const std::vector<std::string> x);
 
-  std::optional<bool> GetMaybeBool(const std::string& key);
-  std::optional<uint8_t> GetMaybeUint8(const std::string& key);
-  std::optional<uint16_t> GetMaybeUint16(const std::string& key);
-  std::optional<int64_t> GetMaybeInt64(const std::string& key);
-  std::optional<uint64_t> GetMaybeUint64(const std::string& key);
-  std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);
-  std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
-  std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);
-  std::optional<sockaddr_storage> GetMaybeAddress(const std::string& key);
-  std::optional<std::vector<uint8_t>> GetMaybeUint8Vector(const std::string& key, const uint32_t count);
-  std::optional<std::vector<uint8_t>> GetMaybeIPv4(const std::string& key);
-  std::optional<std::filesystem::path> GetMaybePath(const std::string &key);
-  std::optional<std::filesystem::path> GetMaybeDirectory(const std::string &key);
+  [[nodiscard]] std::optional<bool> GetMaybeBool(const std::string& key);
+  [[nodiscard]] std::optional<uint8_t> GetMaybeUint8(const std::string& key);
+  [[nodiscard]] std::optional<uint16_t> GetMaybeUint16(const std::string& key);
+  [[nodiscard]] std::optional<int64_t> GetMaybeInt64(const std::string& key);
+  [[nodiscard]] std::optional<uint64_t> GetMaybeUint64(const std::string& key);
+  [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);
+  [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
+  [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);
+  [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddress(const std::string& key);
+  [[nodiscard]] std::optional<std::vector<uint8_t>> GetMaybeUint8Vector(const std::string& key, const uint32_t count);
+  [[nodiscard]] std::optional<std::vector<uint8_t>> GetMaybeIPv4(const std::string& key);
+  [[nodiscard]] std::optional<std::filesystem::path> GetMaybePath(const std::string &key);
+  [[nodiscard]] std::optional<std::filesystem::path> GetMaybeDirectory(const std::string &key);
 
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);
@@ -193,9 +193,9 @@ public:
   void SetUint8(const std::string& key, const uint8_t& x);
   void SetFloat(const std::string& key, const float& x);
   void SetUint8Vector(const std::string& key, const std::vector<uint8_t>& x);
-  std::vector<uint8_t> Export() const;
+  [[nodiscard]] std::vector<uint8_t> Export() const;
 
-  static std::string ReadString(const std::filesystem::path& file, const std::string& key);
+  [[nodiscard]] static std::string ReadString(const std::filesystem::path& file, const std::string& key);
 };
 
 #undef SUCCESS

@@ -14,7 +14,7 @@ namespace CRC32
 
   void Initialize();
   uint32_t Reflect(uint32_t ulReflect, const uint8_t cChar);
-  uint32_t CalculateCRC(const uint8_t* data, std::size_t length, uint32_t previous_crc = 0);
+  [[nodiscard]] uint32_t CalculateCRC(const uint8_t* data, std::size_t length, uint32_t previous_crc = 0);
 };
 
 #endif // AURA_CRC32_H_

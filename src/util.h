@@ -59,12 +59,12 @@
 
 #pragma once
 
-inline std::string ToDecString(const uint8_t byte)
+[[nodiscard]] inline std::string ToDecString(const uint8_t byte)
 {
   return std::to_string(static_cast<uint16_t>(byte));
 }
 
-inline std::string ToHexString(uint32_t i)
+[[nodiscard]] inline std::string ToHexString(uint32_t i)
 {
   std::string       result;
   std::stringstream SS;
@@ -73,7 +73,7 @@ inline std::string ToHexString(uint32_t i)
   return result;
 }
 
-inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString) {
+[[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString) {
   if (hexString.empty() || hexString.size() > 8) {
     return std::nullopt;
   }
@@ -91,19 +91,19 @@ inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString) {
   return result;
 }
 
-inline std::string ToFormattedString(const double d, const uint8_t precision = 2)
+[[nodiscard]] inline std::string ToFormattedString(const double d, const uint8_t precision = 2)
 {
   std::ostringstream out;
   out << std::fixed << std::setprecision(precision) << d;
   return out.str();
 }
 
-inline std::string ToFormattedRealm()
+[[nodiscard]] inline std::string ToFormattedRealm()
 {
   return "@@LAN/VPN";
 }
 
-inline std::string ToFormattedRealm(const std::string& hostName)
+[[nodiscard]] inline std::string ToFormattedRealm(const std::string& hostName)
 {
   if (hostName.empty()) return "@@LAN/VPN";
   return hostName;
@@ -135,17 +135,17 @@ inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, cons
   }
 }
 
-inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const size_t size)
+[[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const uint8_t* a, const size_t size)
 {
   return std::vector<uint8_t>(a, a + size);
 }
 
-inline std::vector<uint8_t> CreateByteArray(const uint8_t c)
+[[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const uint8_t c)
 {
   return std::vector<uint8_t>{c};
 }
 
-inline std::vector<uint8_t> CreateByteArray(const uint16_t i, bool bigEndian)
+[[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const uint16_t i, bool bigEndian)
 {
   if (!bigEndian)
     return std::vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8)};
@@ -153,7 +153,7 @@ inline std::vector<uint8_t> CreateByteArray(const uint16_t i, bool bigEndian)
     return std::vector<uint8_t>{static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
 }
 
-inline std::vector<uint8_t> CreateByteArray(const uint32_t i, bool bigEndian)
+[[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const uint32_t i, bool bigEndian)
 {
   if (!bigEndian)
     return std::vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
@@ -161,7 +161,7 @@ inline std::vector<uint8_t> CreateByteArray(const uint32_t i, bool bigEndian)
     return std::vector<uint8_t>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
 }
 
-inline std::vector<uint8_t> CreateByteArray(const int64_t i, bool bigEndian)
+[[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const int64_t i, bool bigEndian)
 {
   if (!bigEndian)
     return std::vector<uint8_t>{
@@ -175,12 +175,12 @@ inline std::vector<uint8_t> CreateByteArray(const int64_t i, bool bigEndian)
     };
 }
 
-inline std::array<uint8_t, 1> CreateFixedByteArray(const uint8_t c)
+[[nodiscard]] inline std::array<uint8_t, 1> CreateFixedByteArray(const uint8_t c)
 {
   return std::array<uint8_t, 1>{c};
 }
 
-inline std::array<uint8_t, 2> CreateFixedByteArray(const uint16_t i, bool bigEndian)
+[[nodiscard]] inline std::array<uint8_t, 2> CreateFixedByteArray(const uint16_t i, bool bigEndian)
 {
   if (!bigEndian)
     return std::array<uint8_t, 2>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8)};
@@ -188,7 +188,7 @@ inline std::array<uint8_t, 2> CreateFixedByteArray(const uint16_t i, bool bigEnd
     return std::array<uint8_t, 2>{static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
 }
 
-inline std::array<uint8_t, 4> CreateFixedByteArray(const uint32_t i, bool bigEndian)
+[[nodiscard]] inline std::array<uint8_t, 4> CreateFixedByteArray(const uint32_t i, bool bigEndian)
 {
   if (!bigEndian)
     return std::array<uint8_t, 4>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
@@ -196,7 +196,7 @@ inline std::array<uint8_t, 4> CreateFixedByteArray(const uint32_t i, bool bigEnd
     return std::array<uint8_t, 4>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
 }
 
-inline std::array<uint8_t, 4> CreateFixedByteArray(const int64_t i, bool bigEndian)
+[[nodiscard]] inline std::array<uint8_t, 4> CreateFixedByteArray(const int64_t i, bool bigEndian)
 {
   if (!bigEndian)
     return std::array<uint8_t, 4>{
@@ -210,7 +210,7 @@ inline std::array<uint8_t, 4> CreateFixedByteArray(const int64_t i, bool bigEndi
     };
 }
 
-inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
+[[nodiscard]] inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
 {
   if (b.size() < start + 2)
     return 0;
@@ -221,7 +221,7 @@ inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian,
     return static_cast<uint16_t>(b[start] << 8 | b[start + 1]);
 }
 
-inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
+[[nodiscard]] inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
 {
   if (b.size() < start + 4)
     return 0;
@@ -232,7 +232,7 @@ inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian,
     return static_cast<uint32_t>(b[start] << 24 | b[start + 1] << 16 | b[start + 2] << 8 | b[start + 3]);
 }
 
-inline uint32_t ByteArrayToUInt32(const std::array<uint8_t, 4>& b, bool bigEndian)
+[[nodiscard]] inline uint32_t ByteArrayToUInt32(const std::array<uint8_t, 4>& b, bool bigEndian)
 {
   if (!bigEndian)
     return static_cast<uint32_t>(b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
@@ -240,7 +240,7 @@ inline uint32_t ByteArrayToUInt32(const std::array<uint8_t, 4>& b, bool bigEndia
     return static_cast<uint32_t>(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
 }
 
-inline std::string ByteArrayToDecString(const std::vector<uint8_t>& b)
+[[nodiscard]] inline std::string ByteArrayToDecString(const std::vector<uint8_t>& b)
 {
   if (b.empty())
     return std::string();
@@ -254,7 +254,7 @@ inline std::string ByteArrayToDecString(const std::vector<uint8_t>& b)
 }
 
 template <size_t SIZE>
-inline std::string ByteArrayToDecString(const std::array<uint8_t, SIZE>& b)
+[[nodiscard]] inline std::string ByteArrayToDecString(const std::array<uint8_t, SIZE>& b)
 {
   std::string result = std::to_string(b[0]);
 
@@ -264,7 +264,7 @@ inline std::string ByteArrayToDecString(const std::array<uint8_t, SIZE>& b)
   return result;
 }
 
-inline std::string ByteArrayToHexString(const std::vector<uint8_t>& b)
+[[nodiscard]] inline std::string ByteArrayToHexString(const std::vector<uint8_t>& b)
 {
   if (b.empty())
     return std::string();
@@ -283,7 +283,7 @@ inline std::string ByteArrayToHexString(const std::vector<uint8_t>& b)
 }
 
 template <size_t SIZE>
-inline std::string ByteArrayToHexString(const std::array<uint8_t, SIZE>& b)
+[[nodiscard]] inline std::string ByteArrayToHexString(const std::array<uint8_t, SIZE>& b)
 {
   std::string result = ToHexString(b[0]);
 
@@ -360,7 +360,7 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
 
-inline size_t FindNullDelimiterOrEnd(const std::vector<uint8_t>& b, const size_t start)
+[[nodiscard]] inline size_t FindNullDelimiterOrEnd(const std::vector<uint8_t>& b, const size_t start)
 {
   // start searching the byte array at position 'start' for the first null value
   // if found, return the subarray from 'start' to the null value but not including the null value
@@ -375,12 +375,12 @@ inline size_t FindNullDelimiterOrEnd(const std::vector<uint8_t>& b, const size_t
   return end;
 }
 
-inline std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end)
+[[nodiscard]] inline std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end)
 {
   return std::string(reinterpret_cast<const char*>(start), end - start);
 }
 
-inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start)
+[[nodiscard]] inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start)
 {
   // start searching the byte array at position 'start' for the first null value
   // if found, return the subarray from 'start' to the null value but not including the null value
@@ -401,7 +401,7 @@ inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const 
   return std::vector<uint8_t>();
 }
 
-inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, bool bigEndian)
+[[nodiscard]] inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, bool bigEndian)
 {
   // consider the byte array to contain a 2 character ASCII encoded hex value at b[start] and b[start + 1] e.g. "FF"
   // extract it as a single decoded byte
@@ -423,7 +423,7 @@ inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, b
   return 0;
 }
 
-inline std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t count)
+[[nodiscard]] inline std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t count)
 {
   // consider the std::string to contain a bytearray in dec-text form, e.g. "52 99 128 1"
 
@@ -448,7 +448,7 @@ inline std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t 
   return result;
 }
 
-inline std::vector<uint8_t> ExtractHexNumbers(const std::string& s)
+[[nodiscard]] inline std::vector<uint8_t> ExtractHexNumbers(const std::string& s)
 {
   // consider the std::string to contain a bytearray in hex-text form, e.g. "4e 17 b7 e6"
 
@@ -469,7 +469,7 @@ inline std::vector<uint8_t> ExtractHexNumbers(const std::string& s)
   return result;
 }
 
-inline std::vector<uint8_t> ExtractIPv4(const std::string& s)
+[[nodiscard]] inline std::vector<uint8_t> ExtractIPv4(const std::string& s)
 {
   std::vector<uint8_t> Output;
   std::stringstream ss(s);
@@ -497,7 +497,7 @@ inline std::vector<uint8_t> ExtractIPv4(const std::string& s)
   return Output;
 }
 
-inline std::string TrimString(const std::string& str) {
+[[nodiscard]] inline std::string TrimString(const std::string& str) {
   size_t firstNonSpace = str.find_first_not_of(" ");
   size_t lastNonSpace = str.find_last_not_of(" ");
 
@@ -508,7 +508,7 @@ inline std::string TrimString(const std::string& str) {
   }
 }
 
-inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount)
+[[nodiscard]] inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;
   std::stringstream SS(s);
@@ -529,7 +529,7 @@ inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t ex
   return Output;
 }
 
-inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount)
+[[nodiscard]] inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount)
 {
   uint8_t parsedCount = 0;
   std::stringstream SS(s);
@@ -550,7 +550,7 @@ inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t mi
   return Output;
 }
 
-inline std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t expectedCount)
+[[nodiscard]] inline std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;
   std::stringstream SS(s);
@@ -582,7 +582,7 @@ inline std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_
   return Output;
 }
 
-inline std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount)
+[[nodiscard]] inline std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount)
 {
   uint8_t parsedCount = 0;
   std::stringstream SS(s);
@@ -623,7 +623,7 @@ inline void AssignLength(std::vector<uint8_t>& content)
   content[3] = static_cast<uint8_t>(Size >> 8);
 }
 
-inline bool ValidateLength(const std::vector<uint8_t>& content)
+[[nodiscard]] inline bool ValidateLength(const std::vector<uint8_t>& content)
 {
   // verify that bytes 3 and 4 (indices 2 and 3) of the content array describe the length
 
@@ -634,7 +634,7 @@ inline bool ValidateLength(const std::vector<uint8_t>& content)
   return false;
 }
 
-inline std::string AddPathSeparator(const std::string& path)
+[[nodiscard]] inline std::string AddPathSeparator(const std::string& path)
 {
   if (path.empty())
     return std::string();
@@ -651,7 +651,7 @@ inline std::string AddPathSeparator(const std::string& path)
     return path + std::string(1, Separator);
 }
 
-inline std::vector<uint8_t> EncodeStatString(std::vector<uint8_t>& data)
+[[nodiscard]] inline std::vector<uint8_t> EncodeStatString(std::vector<uint8_t>& data)
 {
   std::vector<uint8_t> Result;
   uint8_t              Mask = 1;
@@ -676,7 +676,7 @@ inline std::vector<uint8_t> EncodeStatString(std::vector<uint8_t>& data)
   return Result;
 }
 
-inline std::vector<uint8_t> DecodeStatString(const std::vector<uint8_t>& data)
+[[nodiscard]] inline std::vector<uint8_t> DecodeStatString(const std::vector<uint8_t>& data)
 {
   uint8_t              Mask = 1;
   std::vector<uint8_t> Result;
@@ -697,7 +697,7 @@ inline std::vector<uint8_t> DecodeStatString(const std::vector<uint8_t>& data)
   return Result;
 }
 
-inline std::vector<std::string> Tokenize(const std::string& s, const char delim)
+[[nodiscard]] inline std::vector<std::string> Tokenize(const std::string& s, const char delim)
 {
   std::vector<std::string> Tokens;
   std::string              Token;
@@ -722,7 +722,7 @@ inline std::vector<std::string> Tokenize(const std::string& s, const char delim)
   return Tokens;
 }
 
-inline std::string::size_type GetLevenshteinDistance(const std::string& s1, const std::string& s2) {
+[[nodiscard]] inline std::string::size_type GetLevenshteinDistance(const std::string& s1, const std::string& s2) {
   std::string::size_type m = s1.length();
   std::string::size_type n = s2.length();
 
@@ -747,7 +747,7 @@ inline std::string::size_type GetLevenshteinDistance(const std::string& s1, cons
   return dp[m][n];
 }
 
-inline std::string::size_type GetLevenshteinDistanceForSearch(const std::string& s1, const std::string& s2, const std::string::size_type bestDistance) {
+[[nodiscard]] inline std::string::size_type GetLevenshteinDistanceForSearch(const std::string& s1, const std::string& s2, const std::string::size_type bestDistance) {
   std::string::size_type m = s1.length();
   std::string::size_type n = s2.length();
 
@@ -780,7 +780,7 @@ inline std::string::size_type GetLevenshteinDistanceForSearch(const std::string&
   return dp[m][n];
 }
 
-inline std::string CheckIsValidHCL(const std::string& s) {
+[[nodiscard]] inline std::string CheckIsValidHCL(const std::string& s) {
   std::string HCLChars = "abcdefghijklmnopqrstuvwxyz0123456789 -=,.";
   if (s.find_first_not_of(HCLChars) != std::string::npos) {
     return "[" + s + "] is not a valid HCL string.";
@@ -788,7 +788,7 @@ inline std::string CheckIsValidHCL(const std::string& s) {
   return std::string();
 }
 
-inline std::string DurationLeftToString(int64_t remainingSeconds) {
+[[nodiscard]] inline std::string DurationLeftToString(int64_t remainingSeconds) {
   if (remainingSeconds < 0)
     remainingSeconds = 0;
   int64_t remainingMinutes = remainingSeconds / 60;
@@ -802,17 +802,17 @@ inline std::string DurationLeftToString(int64_t remainingSeconds) {
   }
 }
 
-inline std::string RemoveNonAlphanumeric(const std::string& s) {
+[[nodiscard]] inline std::string RemoveNonAlphanumeric(const std::string& s) {
     std::regex nonAlphanumeric("[^a-zA-Z0-9]");
     return std::regex_replace(s, nonAlphanumeric, "");
 }
 
-inline std::string RemoveNonAlphanumericNorHyphen(const std::string& s) {
+[[nodiscard]] inline std::string RemoveNonAlphanumericNorHyphen(const std::string& s) {
     std::regex nonAlphanumericNorHyphen("[^a-zA-Z0-9-]");
     return std::regex_replace(s, nonAlphanumericNorHyphen, "");
 }
 
-inline bool IsValidMapName(const std::string& s) {
+[[nodiscard]] inline bool IsValidMapName(const std::string& s) {
   if (!s.length()) return false;
   if (s[0] == '.') return false;
   std::regex invalidChars("[^a-zA-Z0-9_ ().~-]");
@@ -820,7 +820,7 @@ inline bool IsValidMapName(const std::string& s) {
   return !std::regex_search(s, invalidChars) && std::regex_search(s, validExtensions);
 }
 
-inline bool IsValidCFGName(const std::string& s) {
+[[nodiscard]] inline bool IsValidCFGName(const std::string& s) {
   if (!s.length()) return false;
   if (s[0] == '.') return false;
   std::regex invalidChars("[^a-zA-Z0-9_ ().~-]");
@@ -828,13 +828,13 @@ inline bool IsValidCFGName(const std::string& s) {
   return !std::regex_search(s, invalidChars) && std::regex_search(s, validExtensions);
 }
 
-inline std::string TrimTrailingSlash(const std::string s) {
+[[nodiscard]] inline std::string TrimTrailingSlash(const std::string s) {
   if (s.empty()) return s;
   if (s[s.length() - 1] == '/') return s.substr(0, s.length() - 1);
   return s;
 }
 
-inline bool IsBase10Number(const std::string& s) {
+[[nodiscard]] inline bool IsBase10Number(const std::string& s) {
   if (s.empty()) return false;
   if (s[0] == '0') return s.length() == 1;
 
@@ -844,11 +844,11 @@ inline bool IsBase10Number(const std::string& s) {
   return true;
 }
 
-inline std::string MaybeBase10(const std::string s) {
+[[nodiscard]] inline std::string MaybeBase10(const std::string s) {
   return IsBase10Number(s) ? s : std::string();
 }
 
-inline std::string JoinVector(const std::vector<std::string>& list, const std::string connector, const bool trailingConnector) {
+[[nodiscard]] inline std::string JoinVector(const std::vector<std::string>& list, const std::string connector, const bool trailingConnector) {
   std::string Results;
   for (const auto& element : list)
     Results += element + connector;
@@ -856,7 +856,7 @@ inline std::string JoinVector(const std::vector<std::string>& list, const std::s
   return Results;
 }
 
-inline std::string JoinVector(const std::vector<uint16_t>& list, const std::string connector, const bool trailingConnector) {
+[[nodiscard]] inline std::string JoinVector(const std::vector<uint16_t>& list, const std::string connector, const bool trailingConnector) {
   std::string Results;
   for (const auto& element : list)
     Results += std::to_string(element) + connector;
@@ -864,19 +864,19 @@ inline std::string JoinVector(const std::vector<uint16_t>& list, const std::stri
   return Results;
 }
 
-inline std::string JoinVector(const std::vector<std::string>& list, const bool trailingComma) {
+[[nodiscard]] inline std::string JoinVector(const std::vector<std::string>& list, const bool trailingComma) {
   return JoinVector(list, ", ", trailingComma);
 }
 
-inline std::string JoinVector(const std::vector<uint16_t>& list, const bool trailingComma) {
+[[nodiscard]] inline std::string JoinVector(const std::vector<uint16_t>& list, const bool trailingComma) {
   return JoinVector(list, ", ", trailingComma);
 }
 
-inline std::string IPv4ToString(const std::array<uint8_t, 4> ip) {
+[[nodiscard]] inline std::string IPv4ToString(const std::array<uint8_t, 4> ip) {
   return ToDecString(ip[0]) + "." + ToDecString(ip[1]) + "." + ToDecString(ip[2]) + "." + ToDecString(ip[3]);
 }
 
-inline std::string EncodeURIComponent(const std::string& s) {
+[[nodiscard]] inline std::string EncodeURIComponent(const std::string& s) {
   std::ostringstream escaped;
   escaped.fill('0');
   escaped << std::hex;
@@ -894,7 +894,7 @@ inline std::string EncodeURIComponent(const std::string& s) {
   return escaped.str();
 }
 
-inline std::string DecodeURIComponent(const std::string& encoded) {
+[[nodiscard]] inline std::string DecodeURIComponent(const std::string& encoded) {
   std::ostringstream decoded;
 
   for (std::size_t i = 0; i < encoded.size(); ++i) {
@@ -915,12 +915,12 @@ inline std::string DecodeURIComponent(const std::string& encoded) {
   return decoded.str();
 }
 
-inline std::string ParseFileName(const std::string& inputPath) {
+[[nodiscard]] inline std::string ParseFileName(const std::string& inputPath) {
   std::filesystem::path filePath = inputPath;
   return filePath.filename().string();
 }
 
-inline std::string ParseFileExtension(const std::string& inputPath) {
+[[nodiscard]] inline std::string ParseFileExtension(const std::string& inputPath) {
   std::string fileName = ParseFileName(inputPath);
   size_t extIndex = fileName.find_last_of(".");
   if (extIndex == std::string::npos) return std::string();
@@ -931,7 +931,7 @@ inline std::string ParseFileExtension(const std::string& inputPath) {
   return extension;
 }
 
-inline bool CaseInsensitiveEquals(const std::string& nameOne, const std::string& nameTwo) {
+[[nodiscard]] inline bool CaseInsensitiveEquals(const std::string& nameOne, const std::string& nameTwo) {
   std::string lowerOne = nameOne;
   std::string lowerTwo = nameTwo;
   std::transform(std::begin(lowerOne), std::end(lowerOne), std::begin(lowerOne), [](unsigned char c) {
@@ -943,7 +943,7 @@ inline bool CaseInsensitiveEquals(const std::string& nameOne, const std::string&
   return lowerOne == lowerTwo;
 }
 
-inline bool FileNameEquals(const std::string& nameOne, const std::string& nameTwo) {
+[[nodiscard]] inline bool FileNameEquals(const std::string& nameOne, const std::string& nameTwo) {
 #ifndef _WIN32
   return nameOne == nameTwo;
 #else
@@ -951,7 +951,7 @@ inline bool FileNameEquals(const std::string& nameOne, const std::string& nameTw
 #endif
 }
 
-inline bool HasNullOrBreak(const std::string& unsafeInput) {
+[[nodiscard]] inline bool HasNullOrBreak(const std::string& unsafeInput) {
   for (const auto& c : unsafeInput) {
     if (c == '\0' || c == '\n' || c == '\r' || c == '\f') {
       return true;
@@ -960,7 +960,7 @@ inline bool HasNullOrBreak(const std::string& unsafeInput) {
   return false;
 }
 
-inline bool PathHasNullBytes(const std::filesystem::path& filePath) {
+[[nodiscard]] inline bool PathHasNullBytes(const std::filesystem::path& filePath) {
   for (const auto& c : filePath.native()) {
     if (c == '\0') {
       return true;
@@ -969,7 +969,7 @@ inline bool PathHasNullBytes(const std::filesystem::path& filePath) {
   return false;
 }
 
-inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
+[[nodiscard]] inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
 {
   std::string pattern = rawPattern;
   std::transform(std::begin(pattern), std::end(pattern), std::begin(pattern), [](unsigned char c) {
@@ -979,7 +979,7 @@ inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
   return RemoveNonAlphanumericNorHyphen(pattern);
 }
 
-inline std::string PrepareMapPatternForFuzzySearch(const std::string& rawPattern)
+[[nodiscard]] inline std::string PrepareMapPatternForFuzzySearch(const std::string& rawPattern)
 {
   std::string pattern = rawPattern;
   std::transform(std::begin(pattern), std::end(pattern), std::begin(pattern), [](unsigned char c) {
@@ -992,7 +992,7 @@ inline std::string PrepareMapPatternForFuzzySearch(const std::string& rawPattern
   return RemoveNonAlphanumeric(pattern);
 }
 
-inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& filePath) {
+[[nodiscard]] inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& filePath) {
   std::ifstream in;
   in.open(filePath.native().c_str(), std::ios::in);
   std::vector<std::string> fileContents;
@@ -1012,7 +1012,7 @@ inline std::vector<std::string> ReadChatTemplate(const std::filesystem::path& fi
   return fileContents;
 }
 
-inline std::string GetNormalizedAlias(const std::string& alias)
+[[nodiscard]] inline std::string GetNormalizedAlias(const std::string& alias)
 {
   if (alias.empty()) return alias;
 
@@ -1071,7 +1071,7 @@ inline void NormalizeDirectory(std::filesystem::path& filePath)
   filePath = filePath.lexically_normal();
 }
 
-inline bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> counters)
+[[nodiscard]] inline bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> counters)
 {
   if (element == 0) return false;
   do {
@@ -1080,21 +1080,21 @@ inline bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> co
   return counters[element] == 0;
 }
 
-inline std::string ToLowerCase(const std::string& input)
+[[nodiscard]] inline std::string ToLowerCase(const std::string& input)
 {
   std::string output = input;
   std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::tolower(c)); });
   return output;
 }
 
-inline std::string ToUpperCase(const std::string& input)
+[[nodiscard]] inline std::string ToUpperCase(const std::string& input)
 {
   std::string output = input;
   std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::toupper(c)); });
   return output;
 }
 
-inline std::optional<uint32_t> ToUint32(const std::string& input)
+[[nodiscard]] inline std::optional<uint32_t> ToUint32(const std::string& input)
 {
   std::optional<uint32_t> container = std::nullopt;
 
@@ -1109,7 +1109,7 @@ inline std::optional<uint32_t> ToUint32(const std::string& input)
   return container;
 }
 
-inline std::optional<int32_t> ToInt32(const std::string& input)
+[[nodiscard]] inline std::optional<int32_t> ToInt32(const std::string& input)
 {
   std::optional<int32_t> container = std::nullopt;
 
@@ -1124,7 +1124,7 @@ inline std::optional<int32_t> ToInt32(const std::string& input)
   return container;
 }
 
-inline std::optional<double> ToDouble(const std::string& input)
+[[nodiscard]] inline std::optional<double> ToDouble(const std::string& input)
 {
   std::optional<double> container = std::nullopt;
 
@@ -1136,7 +1136,7 @@ inline std::optional<double> ToDouble(const std::string& input)
   return container;
 }
 
-inline bool ReplaceText(std::string& input, const std::string& fragment, const std::string& replacement)
+[[nodiscard]] inline bool ReplaceText(std::string& input, const std::string& fragment, const std::string& replacement)
 {
   std::string::size_type matchIndex = input.find(fragment);
   if (matchIndex == std::string::npos) return false;
@@ -1144,7 +1144,7 @@ inline bool ReplaceText(std::string& input, const std::string& fragment, const s
   return true;
 }
 
-inline std::string ReplaceTemplate(const std::string& input, const std::map<int64_t, std::function<std::string()>>& funcMap) {
+[[nodiscard]] inline std::string ReplaceTemplate(const std::string& input, const std::map<int64_t, std::function<std::string()>>& funcMap) {
   std::string result;
   size_t pos = 0;
   size_t start = 0;
@@ -1183,20 +1183,20 @@ inline std::string ReplaceTemplate(const std::string& input, const std::map<int6
   return result;
 }
 
-inline float LinearInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
+[[nodiscard]] inline float LinearInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
 {
   float y = y1 + (x - x1) * (y2 - y1) / (x2 - x1);
   return y;
 }
 
 /*
-inline float HyperbolicInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
+[[nodiscard]] inline float HyperbolicInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
 {
   float y = y1 + (x - x1) * (y2 - y1) / (x2 - x1);
   return y;
 }
 
-inline float ExponentialInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
+[[nodiscard]] inline float ExponentialInterpolation(const float x, const float x1, const float x2, const float y1, const float y2)
 {
   float y = y1 + (x - x1) * (y2 - y1) / (x2 - x1);
   return y;

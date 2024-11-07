@@ -110,36 +110,36 @@ public:
   CCommandContext(CAura* nAura, const bool& nIsBroadcast, std::ostream* outputStream);
   CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const bool& nIsBroadcast, std::ostream* outputStream);
 
-  inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; }
+  [[nodiscard]] inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; }
 
-  std::string GetUserAttribution();
-  std::string GetUserAttributionPreffix();
-  std::ostream* GetOutputStream() { return m_Output; }
+  [[nodiscard]] std::string GetUserAttribution();
+  [[nodiscard]] std::string GetUserAttributionPreffix();
+  [[nodiscard]] std::ostream* GetOutputStream() { return m_Output; }
 
-  inline bool GetIsWhisper() const { return m_FromWhisper; }
-  inline const std::string& GetSender() const { return m_FromName; }
-  inline std::string GetChannelName() const { return m_ChannelName; }
-  inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
-  inline CGame* GetSourceGame() const { return m_SourceGame; }
-  inline CIRC* GetSourceIRC() const { return m_IRC; }
+  [[nodiscard]] inline bool GetIsWhisper() const { return m_FromWhisper; }
+  [[nodiscard]] inline const std::string& GetSender() const { return m_FromName; }
+  [[nodiscard]] inline std::string GetChannelName() const { return m_ChannelName; }
+  [[nodiscard]] inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
+  [[nodiscard]] inline CGame* GetSourceGame() const { return m_SourceGame; }
+  [[nodiscard]] inline CIRC* GetSourceIRC() const { return m_IRC; }
 #ifndef DISABLE_DPP
-  inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
+  [[nodiscard]] inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
 #endif
 
-  bool SetIdentity(const std::string& userName);
+  void SetIdentity(const std::string& userName);
   void SetAuthenticated(const bool& nAuthenticated);
   void SetPermissions(const uint16_t nPermissions);
   void UpdatePermissions();
   void ClearActionMessage() { m_ActionMessage.clear(); }
 
-  std::optional<bool> CheckPermissions(const uint8_t nPermissionsRequired) const;
-  bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
-  std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
-  bool GetIsSudo() const;
-  bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
-  bool CheckConfirmation(const std::string& cmdToken, const std::string& cmd, const std::string& payload, const std::string& errorMessage);
+  [[nodiscard]] std::optional<bool> CheckPermissions(const uint8_t nPermissionsRequired) const;
+  [[nodiscard]] bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
+  [[nodiscard]] std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
+  [[nodiscard]] bool GetIsSudo() const;
+  [[nodiscard]] bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
+  [[nodiscard]] bool CheckConfirmation(const std::string& cmdToken, const std::string& cmd, const std::string& payload, const std::string& errorMessage);
 
-  std::vector<std::string> JoinReplyListCompact(const std::vector<std::string>& stringList) const;
+  [[nodiscard]] std::vector<std::string> JoinReplyListCompact(const std::vector<std::string>& stringList) const;
 
   void SendPrivateReply(const std::string& message, const uint8_t ctxFlags = 0);
   void SendReplyCustomFlags(const std::string& message, const uint8_t ctxFlags);
@@ -152,18 +152,18 @@ public:
   void DoneAll(const std::string& message);
   void ErrorAll(const std::string& message);
   void SendAllUnlessHidden(const std::string& message);
-  CGameUser* GetTargetUser(const std::string& target);
-  CGameUser* RunTargetUser(const std::string& target);
-  CGameUser* GetTargetUserOrSelf(const std::string& target);
-  CGameUser* RunTargetPlayerOrSelf(const std::string& target);
-  bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
-  bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
-  bool GetParseNonPlayerSlot(const std::string& target, uint8_t& SID);
-  bool RunParseNonPlayerSlot(const std::string& target, uint8_t& SID);
-  CRealm* GetTargetRealmOrCurrent(const std::string& target);
-  bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool allowNoRealm = false, bool searchHistory = false);
-  uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
-  CGame* GetTargetGame(const std::string& target);
+  [[nodiscard]] CGameUser* GetTargetUser(const std::string& target);
+  [[nodiscard]] CGameUser* RunTargetUser(const std::string& target);
+  [[nodiscard]] CGameUser* GetTargetUserOrSelf(const std::string& target);
+  [[nodiscard]] CGameUser* RunTargetPlayerOrSelf(const std::string& target);
+  [[nodiscard]] bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
+  [[nodiscard]] bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, CGameUser*& user);
+  [[nodiscard]] bool GetParseNonPlayerSlot(const std::string& target, uint8_t& SID);
+  [[nodiscard]] bool RunParseNonPlayerSlot(const std::string& target, uint8_t& SID);
+  [[nodiscard]] CRealm* GetTargetRealmOrCurrent(const std::string& target);
+  [[nodiscard]] bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool allowNoRealm = false, bool searchHistory = false);
+  [[nodiscard]] uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
+  [[nodiscard]] CGame* GetTargetGame(const std::string& target);
   void UseImplicitHostedGame();
   void Run(const std::string& token, const std::string& command, const std::string& payload);
   void Ref() { ++m_RefCount; }
@@ -174,7 +174,7 @@ public:
   ~CCommandContext();
 };
 
-inline std::string GetTokenName(const std::string& token) {
+[[nodiscard]] inline std::string GetTokenName(const std::string& token) {
   if (token.length() != 1) return std::string();
   switch (token[0]) {
     case '.':
@@ -197,12 +197,12 @@ inline std::string GetTokenName(const std::string& token) {
   return std::string();
 }
 
-inline std::string HelpMissingComma(const std::string& payload) {
+[[nodiscard]] inline std::string HelpMissingComma(const std::string& payload) {
   if (payload.find(',') == std::string::npos) return " - did you miss the comma?";
   return std::string();
 }
 
-inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchPayload)
+[[nodiscard]] inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchPayload)
 {
   if (message.empty()) return false;
   std::string::size_type tokenSize = token.length();
@@ -234,7 +234,7 @@ inline bool ExtractMessageTokens(const std::string& message, const std::string& 
   return false;
 }
 
-inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchPayload)
+[[nodiscard]] inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchPayload)
 {
   uint8_t result = COMMAND_TOKEN_MATCH_NONE;
   if (message.empty()) return result;
@@ -270,7 +270,7 @@ inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::st
   return result;
 }
 
-inline bool ParseBoolean(const std::string& payload, std::optional<bool>& result)
+[[nodiscard]] inline bool ParseBoolean(const std::string& payload, std::optional<bool>& result)
 {
   if (payload.empty()) return true;
   std::string inputLower = payload;

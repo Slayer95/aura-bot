@@ -52,16 +52,16 @@ public:
 	CSaveGame(CAura* nAura, const std::filesystem::path& fromPath);
 	~CSaveGame();
 
-	const std::filesystem::path& GetServerPath()const { return m_ServerPath; }
-	const std::string& GetClientPath() const { return m_ClientPath; }
-  const std::string& GetClientMapPath() const { return m_ClientMapPath; }
-	const std::string& GetGameName()	const { return m_GameName; }
-	uint8_t GetNumSlots() const { return m_NumSlots; }
-  uint8_t GetNumHumanSlots() const;
-	const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
-	uint32_t GetRandomSeed() const { return m_RandomSeed; }
-	const std::array<uint8_t, 4>& GetSaveHash()	const { return m_SaveHash; }
-  const CGameSlot* InspectSlot(const uint8_t SID) const;
+	[[nodiscard]] const std::filesystem::path& GetServerPath()const { return m_ServerPath; }
+	[[nodiscard]] const std::string& GetClientPath() const { return m_ClientPath; }
+  [[nodiscard]] const std::string& GetClientMapPath() const { return m_ClientMapPath; }
+	[[nodiscard]] const std::string& GetGameName()	const { return m_GameName; }
+	[[nodiscard]] uint8_t GetNumSlots() const { return m_NumSlots; }
+  [[nodiscard]] uint8_t GetNumHumanSlots() const;
+	[[nodiscard]] const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
+	[[nodiscard]] uint32_t GetRandomSeed() const { return m_RandomSeed; }
+	[[nodiscard]] const std::array<uint8_t, 4>& GetSaveHash()	const { return m_SaveHash; }
+  [[nodiscard]] const CGameSlot* InspectSlot(const uint8_t SID) const;
   bool Load();
   void Unload();
 	bool Parse();

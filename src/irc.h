@@ -72,9 +72,9 @@ public:
   ~CIRC();
   CIRC(CIRC&) = delete;
 
-  inline CTCPClient* GetSocket() const { return m_Socket; }
+  [[nodiscard]] inline CTCPClient* GetSocket() const { return m_Socket; }
 
-  uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
+  [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   void ResetConnection();
   void Update(void* fd, void* send_fd);
   void ExtractPackets();
@@ -83,8 +83,8 @@ public:
   void SendChannel(const std::string& message, const std::string& target);
   void SendAllChannels(const std::string& message);
 
-  bool GetIsModerator(const std::string& nHostName);
-  bool GetIsSudoer(const std::string& nHostName);
+  [[nodiscard]] bool GetIsModerator(const std::string& nHostName);
+  [[nodiscard]] bool GetIsSudoer(const std::string& nHostName);
 };
 
 #endif // AURA_IRC_H_

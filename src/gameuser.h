@@ -319,7 +319,7 @@ public:
 
   // processing functions
 
-  bool Update(void* fd, int64_t timeout);
+  [[nodiscard]] bool Update(void* fd, int64_t timeout);
 
   // other functions
 

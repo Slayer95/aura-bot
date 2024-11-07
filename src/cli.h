@@ -152,20 +152,20 @@ public:
 
   // Parsing stuff
   uint8_t Parse(const int argc, char** argv);
-  uint8_t GetGameSearchType() const;
-  uint8_t GetGameReconnectionMode() const;
-  uint8_t GetGameDisplayType() const;
-  uint8_t GetGameIPFloodHandler() const;
-  uint8_t GetGameUnsafeNameHandler() const;
-  uint8_t GetGameBroadcastErrorHandler() const;
-  uint8_t GetGameHideLoadedNames() const;
-  bool CheckGameParameters() const;
-  bool CheckGameLoadParameters(CGameSetup* nGameSetup) const;
+  [[nodiscard]] uint8_t GetGameSearchType() const;
+  [[nodiscard]] uint8_t GetGameReconnectionMode() const;
+  [[nodiscard]] uint8_t GetGameDisplayType() const;
+  [[nodiscard]] uint8_t GetGameIPFloodHandler() const;
+  [[nodiscard]] uint8_t GetGameUnsafeNameHandler() const;
+  [[nodiscard]] uint8_t GetGameBroadcastErrorHandler() const;
+  [[nodiscard]] uint8_t GetGameHideLoadedNames() const;
+  [[nodiscard]] bool CheckGameParameters() const;
+  [[nodiscard]] bool CheckGameLoadParameters(CGameSetup* nGameSetup) const;
 
   void RunEarlyOptions() const;
   void OverrideConfig(CAura* nAura) const;
   bool QueueActions(CAura* nAura) const;
-  inline std::optional<bool> GetInitSystem() const { return m_InitSystem; };
+  [[nodiscard]] inline std::optional<bool> GetInitSystem() const { return m_InitSystem; };
 };
 
 #endif // AURA_CLI_H_

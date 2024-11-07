@@ -60,13 +60,13 @@ public:
   CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const std::string& nName);
   ~CGameTestConnection();
 
-  uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
-  bool      Update(void* fd, void* send_fd);
-  bool      QueryGameInfo();
-  bool      GetIsRealmOnline() const;
-  bool      GetIsRealmListed() const;
-  uint32_t  GetHostCounter() const;
-  uint16_t  GetPort() const;
+  [[nodiscard]] uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
+  [[nodiscard]] bool      Update(void* fd, void* send_fd);
+  [[nodiscard]] bool      QueryGameInfo();
+  [[nodiscard]] bool      GetIsRealmOnline() const;
+  [[nodiscard]] bool      GetIsRealmListed() const;
+  [[nodiscard]] uint32_t  GetHostCounter() const;
+  [[nodiscard]] uint16_t  GetPort() const;
 
   sockaddr_storage            m_TargetHost;
   CAura*                      m_Aura;
@@ -87,9 +87,9 @@ public:
   CIPAddressAPIConnection(CAura* nAura, const sockaddr_storage& nTargetHost, const std::string& nEndPoint, const std::string& nHostName);
   ~CIPAddressAPIConnection();
 
-  uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
-  bool      Update(void* fd, void* send_fd);
-  bool QueryIPAddress();
+  [[nodiscard]] uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
+  [[nodiscard]] bool      Update(void* fd, void* send_fd);
+  bool                    QueryIPAddress();
 
   sockaddr_storage                  m_TargetHost;
   CAura*                            m_Aura;
@@ -155,8 +155,8 @@ public:
 
   void InitPersistentConfig();
   bool Init();
-  uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
-  bool Update(void* fd, void* send_fd);
+  [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
+  [[nodiscard]] bool Update(void* fd, void* send_fd);
   bool SendBroadcast(const std::vector<uint8_t>& packet);
   void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet);
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet);
@@ -166,17 +166,17 @@ public:
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::set<std::string>& clientIps);
   void HandleUDP(UDPPkt* pkt);
 
-  sockaddr_storage*               GetPublicIPv4();
-  sockaddr_storage*               GetPublicIPv6();
+  [[nodiscard]] sockaddr_storage*               GetPublicIPv4();
+  [[nodiscard]] sockaddr_storage*               GetPublicIPv6();
   
-  std::vector<uint16_t>           GetPotentialGamePorts() const;
-  uint16_t                        GetUDPPort(const uint8_t protocol) const;
+  [[nodiscard]] std::vector<uint16_t>           GetPotentialGamePorts() const;
+  [[nodiscard]] uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
-  bool                            ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
-  bool                            ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<std::string, sockaddr_storage*>&);
-  CTCPServer*                     GetOrCreateTCPServer(uint16_t, const std::string& name);
-  void                            FlushDNSCache();
-  void                            FlushSelfIPCache();
+  bool                                          ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
+  bool                                          ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<std::string, sockaddr_storage*>&);
+  [[nodiscard]] CTCPServer*                     GetOrCreateTCPServer(uint16_t, const std::string& name);
+  void                                          FlushDNSCache();
+  void                                          FlushSelfIPCache();
 
 #ifndef DISABLE_MINIUPNP
   uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel = LOG_LEVEL_INFO);
@@ -192,8 +192,8 @@ public:
   uint16_t NextHostPort();
   void     MergeDownGradedConnections();
 
-  static std::optional<std::tuple<std::string, std::string, uint16_t, std::string>> ParseURL(const std::string& address);
-  static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
+  [[nodiscard]] static std::optional<std::tuple<std::string, std::string, uint16_t, std::string>> ParseURL(const std::string& address);
+  [[nodiscard]] static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
   void                                   SetBroadcastTarget(sockaddr_storage& subnet);
   void                                   PropagateBroadcastEnabled(const bool nEnable);
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);
@@ -202,10 +202,10 @@ public:
   void                                   RegisterGameSeeker(CConnection* connection, uint8_t nType);
   void                                   GracefulExit();
 
-  bool                                   IsIgnoredDatagramSource(std::string sourceIp);
-  bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }
-  CGameUser*                             GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const;
-  CGameUser*                             GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t reconnectKey) const;
+  [[nodiscard]] bool                                   IsIgnoredDatagramSource(std::string sourceIp);
+  [[nodiscard]] bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }
+  [[nodiscard]] CGameUser*                             GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const;
+  [[nodiscard]] CGameUser*                             GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t reconnectKey) const;
 };
 
 #endif // AURA_NET_H_

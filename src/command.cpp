@@ -322,7 +322,7 @@ CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream
 {
 }
 
-bool CCommandContext::SetIdentity(const string& userName)
+void CCommandContext::SetIdentity(const string& userName)
 {
   m_FromName = userName;
   return true;

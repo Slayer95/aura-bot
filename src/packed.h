@@ -54,18 +54,18 @@ public:
   CPacked(CAura* nAura);
 	~CPacked();
 
-	bool GetValid()				{ return m_Valid; }
-	uint32_t GetHeaderSize()		{ return m_HeaderSize; }
-	uint32_t GetCompressedSize()	{ return m_CompressedSize; }
-	uint32_t GetHeaderVersion()	{ return m_HeaderVersion; }
-	uint32_t GetDecompressedSize()	{ return m_DecompressedSize; }
-  const std::string& GetDecompressed() { return m_Decompressed; }
-	uint32_t GetNumBlocks()		{ return m_NumBlocks; }
-	uint32_t GetWar3Identifier()	{ return m_War3Identifier; }
-	uint32_t GetWar3Version()		{ return m_War3Version; }
-	uint16_t GetBuildNumber()		{ return m_BuildNumber; }
-	uint16_t GetFlags()			{ return m_Flags; }
-	uint32_t GetReplayLength()		{ return m_ReplayLength; }
+	[[nodiscard]] bool GetValid()				{ return m_Valid; }
+	[[nodiscard]] uint32_t GetHeaderSize()		{ return m_HeaderSize; }
+	[[nodiscard]] uint32_t GetCompressedSize()	{ return m_CompressedSize; }
+	[[nodiscard]] uint32_t GetHeaderVersion()	{ return m_HeaderVersion; }
+	[[nodiscard]] uint32_t GetDecompressedSize()	{ return m_DecompressedSize; }
+  [[nodiscard]] const std::string& GetDecompressed() { return m_Decompressed; }
+	[[nodiscard]] uint32_t GetNumBlocks()		{ return m_NumBlocks; }
+	[[nodiscard]] uint32_t GetWar3Identifier()	{ return m_War3Identifier; }
+	[[nodiscard]] uint32_t GetWar3Version()		{ return m_War3Version; }
+	[[nodiscard]] uint16_t GetBuildNumber()		{ return m_BuildNumber; }
+	[[nodiscard]] uint16_t GetFlags()			{ return m_Flags; }
+	[[nodiscard]] uint32_t GetReplayLength()		{ return m_ReplayLength; }
 
 	void SetWar3Version(const uint32_t nWar3Version)			{ m_War3Version = nWar3Version; }
 	void SetBuildNumber(const uint16_t nBuildNumber)			{ m_BuildNumber = nBuildNumber; }

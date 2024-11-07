@@ -72,16 +72,16 @@ namespace GPSProtocol
 
   // send functions
 
-  std::vector<uint8_t> SEND_GPSC_INIT(const uint32_t version);
-  std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions);
-  std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket);
-  std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason);
-  std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID);
-  std::vector<uint8_t> SEND_GPSS_CHANGE_KEY( uint32_t reconnectKey );
-  std::array<uint8_t, 2> SEND_GPSS_DIMENSIONS();
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSC_INIT(const uint32_t version);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSC_RECONNECT(uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID);
+  [[nodiscard]] std::vector<uint8_t> SEND_GPSS_CHANGE_KEY( uint32_t reconnectKey );
+  [[nodiscard]] std::array<uint8_t, 2> SEND_GPSS_DIMENSIONS();
 };
 
 #endif // AURA_GPSPROTOCOL_H_

@@ -157,7 +157,7 @@ public:
   CW3MMD(CGame* nGame);
   ~CW3MMD();
 
-  inline bool GetIsGameOver() { return m_GameOver; }
+  [[nodiscard]] inline bool GetIsGameOver() { return m_GameOver; }
 
   bool HandleTokens(uint8_t fromUID, uint32_t valueID, std::vector<std::string> tokens);
   bool RecvAction(uint8_t fromUID, CIncomingAction *Action);
@@ -165,13 +165,13 @@ public:
   bool ProcessAction(CW3MMDAction* nAction);
   bool UpdateQueue();
   bool FlushQueue();
-  std::vector<std::string> TokenizeKey(std::string key) const;
-  std::string GetStoredPlayerName(uint8_t SID) const;
-  std::string GetTrustedPlayerNameFromColor(uint8_t color) const;
-  std::string GetSenderName(CW3MMDAction* action) const;
-  std::string GetSenderName(CW3MMDDefinition* definition) const;
-  std::vector<std::string> GetWinners() const;
-  std::string GetLogPrefix() const;
+  [[nodiscard]] std::vector<std::string> TokenizeKey(std::string key) const;
+  [[nodiscard]] std::string GetStoredPlayerName(uint8_t SID) const;
+  [[nodiscard]] std::string GetTrustedPlayerNameFromColor(uint8_t color) const;
+  [[nodiscard]] std::string GetSenderName(CW3MMDAction* action) const;
+  [[nodiscard]] std::string GetSenderName(CW3MMDDefinition* definition) const;
+  [[nodiscard]] std::vector<std::string> GetWinners() const;
+  [[nodiscard]] std::string GetLogPrefix() const;
   void LogMetaData(int64_t recvTicks, const std::string& text) const;
 };
 

@@ -17,7 +17,7 @@ static constexpr uint64_t HashCode(const char* str)
 
 // runtime function for std::string
 
-static uint64_t HashCode(const std::string& str)
+[[nodiscard]] static uint64_t HashCode(const std::string& str)
 {
   return HashCode(str.c_str());
 }

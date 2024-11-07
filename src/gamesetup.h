@@ -202,59 +202,59 @@ public:
   CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck);
   ~CGameSetup();
 
-  std::string GetInspectName() const;
-  bool GetDeleteMe() const { return m_DeleteMe; }
-  bool GetIsStale() const;
+  [[nodiscard]] std::string GetInspectName() const;
+  [[nodiscard]] bool GetDeleteMe() const { return m_DeleteMe; }
+  [[nodiscard]] bool GetIsStale() const;
 
   void ParseInputLocal();
   void ParseInput();
-  std::pair<uint8_t, std::filesystem::path> SearchInputStandard();
-  std::pair<uint8_t, std::filesystem::path> SearchInputAlias();
-  std::pair<uint8_t, std::filesystem::path> SearchInputLocalExact();
-  std::pair<uint8_t, std::filesystem::path> SearchInputLocalTryExtensions();
-  std::pair<uint8_t, std::filesystem::path> SearchInputLocalFuzzy(std::vector<std::string>& fuzzyMatches);
+  [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInputStandard();
+  [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInputAlias();
+  [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInputLocalExact();
+  [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInputLocalTryExtensions();
+  [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInputLocalFuzzy(std::vector<std::string>& fuzzyMatches);
 #ifndef DISABLE_CPR
   void SearchInputRemoteFuzzy(std::vector<std::string>& fuzzyMatches);
 #endif
-  std::pair<uint8_t, std::filesystem::path> SearchInputLocal(std::vector<std::string>& fuzzyMatches);
-  std::pair<uint8_t, std::filesystem::path> SearchInput();
+  [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInputLocal(std::vector<std::string>& fuzzyMatches);
+  [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInput();
   inline CMap* GetMap() const { return m_Map; }
-  CMap* GetBaseMapFromConfig(CConfig* mapCFG, const bool silent);
-  CMap* GetBaseMapFromConfigFile(const std::filesystem::path& filePath, const bool isCache, const bool silent);
-  CMap* GetBaseMapFromMapFile(const std::filesystem::path& filePath, const bool silent);
-  CMap* GetBaseMapFromMapFileOrCache(const std::filesystem::path& mapPath, const bool silent);
+  [[nodiscard]] CMap* GetBaseMapFromConfig(CConfig* mapCFG, const bool silent);
+  [[nodiscard]] CMap* GetBaseMapFromConfigFile(const std::filesystem::path& filePath, const bool isCache, const bool silent);
+  [[nodiscard]] CMap* GetBaseMapFromMapFile(const std::filesystem::path& filePath, const bool silent);
+  [[nodiscard]] CMap* GetBaseMapFromMapFileOrCache(const std::filesystem::path& mapPath, const bool silent);
   bool ApplyMapModifiers(CGameExtraOptions* extraOptions);
 #ifndef DISABLE_CPR
-  uint32_t ResolveMapRepositoryTask();
+  [[nodiscard]] uint32_t ResolveMapRepositoryTask();
   void RunResolveMapRepository();
-  uint32_t RunResolveMapRepositorySync();
+  [[nodiscard]] uint32_t RunResolveMapRepositorySync();
   void SetDownloadFilePath(std::filesystem::path&& filePath);
-  bool PrepareDownloadMap();
+  [[nodiscard]] bool PrepareDownloadMap();
   void RunDownloadMap();
-  uint32_t DownloadMapTask();
-  uint32_t RunDownloadMapSync();
+  [[nodiscard]] uint32_t DownloadMapTask();
+  [[nodiscard]] uint32_t RunDownloadMapSync();
   void OnResolveMapSuccess();
   void OnDownloadMapSuccess();
   void OnFetchSuggestionsEnd();
-  std::vector<std::pair<std::string, std::string>> GetMapRepositorySuggestions(const std::string & pattern, const uint8_t maxCount);
+  [[nodiscard]] std::vector<std::pair<std::string, std::string>> GetMapRepositorySuggestions(const std::string & pattern, const uint8_t maxCount);
 
 
 #endif
-  bool GetMapLoaded() const;
+  [[nodiscard]] bool GetMapLoaded() const;
   void LoadMap();
-  bool LoadMapSync();
+  [[nodiscard]] bool LoadMapSync();
   void OnLoadMapSuccess();
   void OnLoadMapError();
-  bool SetActive();
-  bool RestoreFromSaveFile();
-  bool RunHost();
+  [[nodiscard]] bool SetActive();
+  [[nodiscard]] bool RestoreFromSaveFile();
+  [[nodiscard]] bool RunHost();
 
   inline bool GetIsMirror() const { return m_IsMirror; }
   inline bool GetIsDownloading() const { return m_IsStepDownloading; }
   inline bool GetHasBeenHosted() const { return m_CreationCounter > 0; }
 
-  bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
-  bool SetMirrorSource(const std::string& nInput);
+  [[nodiscard]] bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
+  [[nodiscard]] bool SetMirrorSource(const std::string& nInput);
   void AddIgnoredRealm(const CRealm* nRealm);
   void RemoveIgnoredRealm(const CRealm* nRealm);
   void SetDisplayMode(const uint8_t nDisplayMode);
@@ -266,7 +266,7 @@ public:
   void SetCreator(const std::string& nCreator, CIRC* nIRC);
   void SetCreator(const std::string& nCreator, CDiscord* nDiscord);
   void RemoveCreator();
-  bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
+  [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   void SetName(const std::string& nName) { m_Name = nName; }
   void SetBaseName(const std::string& nName) {
     m_Name = nName;
@@ -321,7 +321,7 @@ public:
   void ResetExtraOptions();
 
   void OnGameCreate();
-  bool Update();
+  [[nodiscard]] bool Update();
 };
 
 #endif // AURA_GAMESETUP_H_

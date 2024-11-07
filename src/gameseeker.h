@@ -55,7 +55,7 @@ public:
   void SetTimeout(const int64_t nTicks);
   void CloseConnection();
   void Init();
-  uint8_t Update(void* fd, void* send_fd, int64_t timeout);
+  [[nodiscard]] uint8_t Update(void* fd, void* send_fd, int64_t timeout);
 
   // other functions
 

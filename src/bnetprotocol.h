@@ -196,53 +196,53 @@ namespace BNETProtocol
     ~EnterChatResult() = default;
   };
 
-  inline size_t GetMessageSize(const std::vector<uint8_t> message) { return message.size(); }
-  inline size_t GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) { return message.size() + name.size(); }
+  [[nodiscard]] inline size_t GetMessageSize(const std::vector<uint8_t> message) { return message.size(); }
+  [[nodiscard]] inline size_t GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) { return message.size() + name.size(); }
       
   // receive functions
 
-  bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
-  CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
+  [[nodiscard]] bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
-  CIncomingChatEvent* RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data);
-  std::array<uint8_t, 4> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingChatEvent* RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
+  [[nodiscard]] bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);
+  [[nodiscard]] bool RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data);
+  [[nodiscard]] std::array<uint8_t, 4> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::AuthInfoResult RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::AuthCheckResult RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& data);
-  bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);
-  std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);
-  std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
-  CConfig* RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
+  [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& data);
+  [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);
+  [[nodiscard]] std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);
+  [[nodiscard]] std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
+  [[nodiscard]] CConfig* RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
 
   // send functions
 
-  std::vector<uint8_t> SEND_PROTOCOL_INITIALIZE_SELECTOR();
-  std::vector<uint8_t> SEND_SID_ZERO();
-  std::vector<uint8_t> SEND_SID_STOPADV();
-  std::vector<uint8_t> SEND_SID_GETADVLISTEX();
-  std::vector<uint8_t> SEND_SID_ENTERCHAT();
-  std::vector<uint8_t> SEND_SID_JOINCHANNEL(const std::string& channel);
-  std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::string& message);
-  std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::string& message, const std::string& user);
-  std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::vector<uint8_t>& message);
-  std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::vector<uint8_t>& message, const std::vector<uint8_t>& user);
-  std::vector<uint8_t> SEND_SID_CHECKAD();
-  std::vector<uint8_t> SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port);
-  std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapCRC, const std::array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
-  std::vector<uint8_t> SEND_SID_NOTIFYJOIN(const std::string& gameName);
-  std::vector<uint8_t> SEND_SID_PING(const std::array<uint8_t, 4>& pingValue);
-  std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);
-  std::vector<uint8_t> SEND_SID_NETGAMEPORT(uint16_t serverPort);
-  std::vector<uint8_t> SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const std::string& CountryShort, const std::string& country);
-  std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const std::string& exeInfo, const std::string& keyOwnerName);
-  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::array<uint8_t, 32>& clientPublicKey, const std::string& accountName);
-  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 20>& clientPasswordProof);
-  std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::array<uint8_t, 20>& clientPasswordProof);
-  std::vector<uint8_t> SEND_SID_FRIENDLIST();
-  std::vector<uint8_t> SEND_SID_CLANMEMBERLIST();
+  [[nodiscard]] std::vector<uint8_t> SEND_PROTOCOL_INITIALIZE_SELECTOR();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_ZERO();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_STOPADV();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_GETADVLISTEX();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_ENTERCHAT();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_JOINCHANNEL(const std::string& channel);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::string& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::string& message, const std::string& user);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::vector<uint8_t>& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::vector<uint8_t>& message, const std::vector<uint8_t>& user);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHECKAD();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapCRC, const std::array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_NOTIFYJOIN(const std::string& gameName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_PING(const std::array<uint8_t, 4>& pingValue);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_NETGAMEPORT(uint16_t serverPort);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const std::string& CountryShort, const std::string& country);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const std::string& exeInfo, const std::string& keyOwnerName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::array<uint8_t, 32>& clientPublicKey, const std::string& accountName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 20>& clientPasswordProof);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::array<uint8_t, 20>& clientPasswordProof);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_FRIENDLIST();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CLANMEMBERLIST();
 };
 
 //
@@ -261,11 +261,11 @@ public:
   CIncomingGameHost(std::array<uint8_t, 4>& nIP, uint16_t nPort, const std::vector<uint8_t>& nGameName, std::array<uint8_t, 4>& nHostCounter);
   ~CIncomingGameHost();
 
-  std::string                           GetIPString() const;
-  inline const std::array<uint8_t, 4>&  GetIP() const { return m_IP; }
-  inline const uint16_t&                GetPort() const { return m_Port; }
-  inline const std::string&             GetGameName() const { return m_GameName; }
-  inline const std::array<uint8_t, 4>&  GetHostCounter() const { return m_HostCounter; }
+  [[nodiscard]] std::string                           GetIPString() const;
+  [[nodiscard]] inline const std::array<uint8_t, 4>&  GetIP() const { return m_IP; }
+  [[nodiscard]] inline const uint16_t&                GetPort() const { return m_Port; }
+  [[nodiscard]] inline const std::string&             GetGameName() const { return m_GameName; }
+  [[nodiscard]] inline const std::array<uint8_t, 4>&  GetHostCounter() const { return m_HostCounter; }
 };
 
 //
@@ -283,9 +283,9 @@ public:
   CIncomingChatEvent(uint32_t nChatEvent, std::string nUser, std::string nMessage);
   ~CIncomingChatEvent();
 
-  inline uint32_t                         GetChatEvent() const { return m_ChatEvent; }
-  inline std::string                      GetUser() const { return m_User; }
-  inline std::string                      GetMessage() const { return m_Message; }
+  [[nodiscard]] inline uint32_t                         GetChatEvent() const { return m_ChatEvent; }
+  [[nodiscard]] inline std::string                      GetUser() const { return m_User; }
+  [[nodiscard]] inline std::string                      GetMessage() const { return m_Message; }
 };
 
 #endif // AURA_BNETPROTOCOL_H_
