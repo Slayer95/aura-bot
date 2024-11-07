@@ -250,9 +250,9 @@ void CRealm::Update(void* fd, void* send_fd)
             }
 
             case BNETProtocol::Magic::CHATEVENT: {
-              CIncomingChatEvent chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
+              BNETProtocol::IncomingChatResult chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
               if (chatEventResult.success) {
-                ProcessChatEvent(chatEventResult.type, GetStringAddressRange(chatEvent.userStart, chatEvent.userEnd), GetStringAddressRange(chatEvent.messageStart, chatEvent.messageEnd));
+                ProcessChatEvent(chatEventResult.type, GetStringAddressRange(chatEventResult.userStart, chatEventResult.userEnd), GetStringAddressRange(chatEventResult.messageStart, chatEventResult.messageEnd));
               }
               break;
             }
@@ -600,7 +600,7 @@ void CRealm::Update(void* fd, void* send_fd)
   }
 }
 
-void CRealm::ProcessChatEvent(const uint32_t eventType, const std::string& fromUser, const std::string& message);
+void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, const string& message);
 {
   bool isWhisper = (eventType == BNETProtocol::IncomingChatEvent::WHISPER);
 
