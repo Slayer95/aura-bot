@@ -76,7 +76,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ga
 }
 
 /* Command received from BNET but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_SourceRealm(fromRealm),
@@ -199,7 +199,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 }
 
 /* BNET command */
-CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_SourceRealm(fromRealm),

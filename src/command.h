@@ -93,8 +93,8 @@ public:
   CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // IRC, IRC->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
