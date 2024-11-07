@@ -261,14 +261,12 @@ constexpr int64_t SchemaNumber = 3;
 #define JOURNAL_MODE_MEMORY 3u
 #define JOURNAL_MODE_WAL 4u
 #define JOURNAL_MODE_OFF 5u
-#define JOURNAL_MODE_LAST 6u
 #define JOURNAL_MODE_INVALID 0xFFu
 
 #define SYNCHRONOUS_OFF 0u
 #define SYNCHRONOUS_NORMAL 1u
 #define SYNCHRONOUS_FULL 2u
 #define SYNCHRONOUS_EXTRA 3u
-#define SYNCHRONOUS_LAST 4u
 #define SYNCHRONOUS_INVALID 0xFFu
 
 class CAuraDB
@@ -292,7 +290,6 @@ public:
     MEMORY                      = JOURNAL_MODE_MEMORY,
     WAL                         = JOURNAL_MODE_WAL,
     OFF                         = JOURNAL_MODE_OFF,
-    LAST                        = JOURNAL_MODE_LAST,
     INVALID                     = JOURNAL_MODE_INVALID
   };
 
@@ -302,8 +299,7 @@ public:
     NORMAL                      = SYNCHRONOUS_NORMAL,
     FULL                        = SYNCHRONOUS_FULL,
     EXTRA                       = SYNCHRONOUS_EXTRA,
-    LAST                        = SYNCHRONOUS_LAST,
-    INVALID                     = SYNCHRONOUS_INVALID,
+    INVALID                     = SYNCHRONOUS_INVALID
   };
 
 private:
@@ -404,14 +400,12 @@ public:
 #undef JOURNAL_MODE_MEMORY
 #undef JOURNAL_MODE_WAL
 #undef JOURNAL_MODE_OFF
-#undef JOURNAL_MODE_LAST
 #undef JOURNAL_MODE_INVALID
 
 #undef SYNCHRONOUS_OFF
 #undef SYNCHRONOUS_NORMAL
 #undef SYNCHRONOUS_FULL
 #undef SYNCHRONOUS_EXTRA
-#undef SYNCHRONOUS_LAST
 #undef SYNCHRONOUS_INVALID
 
 //
