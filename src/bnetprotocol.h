@@ -137,33 +137,33 @@ namespace BNETProtocol
 class CBNETProtocol
 {
 private:
-  std::array<uint8_t, 4>   m_ClientToken;         // set in constructor
-  std::array<uint8_t, 4>   m_LogonType;           // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 4>   m_ServerToken;         // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 8>   m_MPQFileTime;         // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>     m_IX86VerFileName;     // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>     m_ValueStringFormula;  // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>     m_KeyStateDescription; // set in RECEIVE_SID_AUTH_CHECK
-  std::array<uint8_t, 32>  m_Salt;             // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::array<uint8_t, 32>  m_ServerPublicKey;  // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::vector<uint8_t>     m_UniqueName;          // set in RECEIVE_SID_ENTERCHAT
+  std::array<uint8_t, 4>   m_ClientToken;               // set in constructor
+  std::array<uint8_t, 4>   m_InfoLogonType;             // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 4>   m_InfoServerToken;           // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 8>   m_InfoMPQFileTime;           // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>     m_InfoIX86VerFileName;       // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>     m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>     m_KeyStateDescription;       // set in RECEIVE_SID_AUTH_CHECK
+  std::array<uint8_t, 32>  m_LoginSalt;                 // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 32>  m_LoginServerPublicKey;      // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::vector<uint8_t>     m_ChatUniqueName;            // set in RECEIVE_SID_ENTERCHAT
 
 public:
   CBNETProtocol();
   ~CBNETProtocol();
 
   inline const std::array<uint8_t, 4>&    GetClientToken() const { return m_ClientToken; }
-  inline const std::array<uint8_t, 4>&    GetLogonType() const { return m_LogonType; }
-  inline const std::array<uint8_t, 4>&    GetServerToken() const { return m_ServerToken; }
-  inline const std::array<uint8_t, 8>&    GetMPQFileTime() const { return m_MPQFileTime; }
-  inline const std::vector<uint8_t>       GetIX86VerFileName() const { return m_IX86VerFileName; }
-  inline std::string                      GetIX86VerFileNameString() const { return std::string(begin(m_IX86VerFileName), end(m_IX86VerFileName)); }
-  inline const std::vector<uint8_t>&      GetValueStringFormula() const { return m_ValueStringFormula; }
-  inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_ValueStringFormula), end(m_ValueStringFormula)); }
+  inline const std::array<uint8_t, 4>&    GetLogonType() const { return m_InfoLogonType; }
+  inline const std::array<uint8_t, 4>&    GetServerToken() const { return m_InfoServerToken; }
+  inline const std::array<uint8_t, 8>&    GetMPQFileTime() const { return m_InfoMPQFileTime; }
+  inline const std::vector<uint8_t>       GetIX86VerFileName() const { return m_InfoIX86VerFileName; }
+  inline std::string                      GetIX86VerFileNameString() const { return std::string(begin(m_InfoIX86VerFileName), end(m_InfoIX86VerFileName)); }
+  inline const std::vector<uint8_t>&      GetValueStringFormula() const { return m_InfoValueStringFormula; }
+  inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_InfoValueStringFormula), end(m_InfoValueStringFormula)); }
   inline std::string                      GetKeyStateDescription() const { return std::string(begin(m_KeyStateDescription), end(m_KeyStateDescription)); }
-  inline const std::array<uint8_t, 32>&   GetSalt() const { return m_Salt; }
-  inline const std::array<uint8_t, 32>&   GetServerPublicKey() const { return m_ServerPublicKey; }
-  inline const std::vector<uint8_t>&      GetUniqueName() const { return m_UniqueName; }
+  inline const std::array<uint8_t, 32>&   GetSalt() const { return m_LoginSalt; }
+  inline const std::array<uint8_t, 32>&   GetServerPublicKey() const { return m_LoginServerPublicKey; }
+  inline const std::vector<uint8_t>&      GetChatUniqueName() const { return m_ChatUniqueName; }
 
   inline size_t                           GetMessageSize(const std::vector<uint8_t> message) const { return message.size(); }
   inline size_t                           GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) const { return message.size() + name.size(); }

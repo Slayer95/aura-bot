@@ -54,11 +54,11 @@ using namespace std;
 
 CBNETProtocol::CBNETProtocol()
   : m_ClientToken(array<uint8_t, 4>{220, 1, 203, 7}),
-    m_LogonType({}),
-    m_ServerToken({}),
-    m_MPQFileTime({}),
-    m_Salt({}),
-    m_ServerPublicKey({})
+    m_InfoLogonType({}),
+    m_InfoServerToken({}),
+    m_InfoMPQFileTime({}),
+    m_LoginSalt({}),
+    m_LoginServerPublicKey({})
 {
 }
 
@@ -133,7 +133,7 @@ bool CBNETProtocol::RECEIVE_SID_ENTERCHAT(const vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 5)
   {
-    m_UniqueName = ExtractCString(data, 4);
+    m_ChatUniqueName = ExtractCString(data, 4);
     return true;
   }
 
@@ -235,12 +235,12 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_INFO(const vector<uint8_t>& data)
 
   if (ValidateLength(data) && data.size() >= 25)
   {
-    copy_n(data.begin() + 4, 4, m_LogonType.begin());
-    copy_n(data.begin() + 8, 4, m_ServerToken.begin());
-    copy_n(data.begin() + 16, 8, m_MPQFileTime.begin());
-    m_IX86VerFileName    = ExtractCString(data, 24);
-    if (m_IX86VerFileName.size() > 0xFFFFFF00) return false; // WTF
-    m_ValueStringFormula = ExtractCString(data, static_cast<uint32_t>(m_IX86VerFileName.size()) + 25);
+    copy_n(data.begin() + 4, 4, m_InfoLogonType.begin());
+    copy_n(data.begin() + 8, 4, m_InfoServerToken.begin());
+    copy_n(data.begin() + 16, 8, m_InfoMPQFileTime.begin());
+    m_InfoIX86VerFileName    = ExtractCString(data, 24);
+    if (m_InfoIX86VerFileName.size() > 0xFFFFFF00) return false; // WTF
+    m_InfoValueStringFormula = ExtractCString(data, static_cast<uint32_t>(m_InfoIX86VerFileName.size()) + 25);
     return true;
   }
 
@@ -280,8 +280,8 @@ bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& data)
   {
     if (ByteArrayToUInt32(data, false, 4) == 0 && data.size() >= 72)
     {
-      copy_n(data.begin() + 8, 32, m_Salt.begin());
-      copy_n(data.begin() + 40, 32, m_ServerPublicKey.begin());
+      copy_n(data.begin() + 8, 32, m_LoginSalt.begin());
+      copy_n(data.begin() + 40, 32, m_LoginServerPublicKey.begin());
       return true;
     }
   }
