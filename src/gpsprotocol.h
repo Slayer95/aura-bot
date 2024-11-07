@@ -55,17 +55,17 @@
 
 namespace GPSProtocol
 {
-  enum class Magic : uint8_t
+  namespace Magic
   {
-    INIT              = 1,
-    RECONNECT         = 2,
-    ACK               = 3,
-    REJECT            = 4,
-    UDPSYN            = 11,
-    UDPACK            = 12,
-    UDPFIN            = 13,
-    SUPPORT_EXTENDED	= 50,
-    CHANGEKEY         = 51
+    constexpr uint8_t INIT              = 1;
+    constexpr uint8_t RECONNECT         = 2;
+    constexpr uint8_t ACK               = 3;
+    constexpr uint8_t REJECT            = 4;
+    constexpr uint8_t UDPSYN            = 11;
+    constexpr uint8_t UDPACK            = 12;
+    constexpr uint8_t UDPFIN            = 13;
+    constexpr uint8_t SUPPORT_EXTENDED	= 50;
+    constexpr uint8_t CHANGEKEY         = 51;
   };
 
   // receive functions

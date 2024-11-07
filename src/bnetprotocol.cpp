@@ -162,7 +162,7 @@ CIncomingChatEvent* CBNETProtocol::RECEIVE_SID_CHATEVENT(const vector<uint8_t>& 
     if (User.size() > 0xFF) return nullptr;
     const vector<uint8_t> Message = ExtractCString(data, static_cast<uint32_t>(User.size()) + 29);
 
-    return new CIncomingChatEvent(static_cast<BNETProtocol::IncomingChatEvent>(ByteArrayToUInt32(EventID, false)),
+    return new CIncomingChatEvent(ByteArrayToUInt32(EventID, false),
                                   string(begin(User), end(User)),
                                   string(begin(Message), end(Message)));
   }
@@ -261,7 +261,7 @@ uint32_t CBNETProtocol::RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& data)
     m_KeyStateDescription = ExtractCString(data, 8);
     return ByteArrayToUInt32(data, false, 4);
   }
-  return static_cast<uint32_t>(BNETProtocol::KeyResult::BAD);
+  return BNETProtocol::KeyResult::BAD;
 }
 
 bool CBNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& data)
@@ -544,17 +544,17 @@ vector<uint8_t> CBNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR()
 
 vector<uint8_t> CBNETProtocol::SEND_SID_ZERO()
 {
-  return vector<uint8_t>{BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::ZERO), 4, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, BNETProtocol::Magic::ZERO, 4, 0};
 }
 
 vector<uint8_t> CBNETProtocol::SEND_SID_STOPADV()
 {
-  return vector<uint8_t>{BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::STOPADV), 4, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, BNETProtocol::Magic::STOPADV, 4, 0};
 }
 
 vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX()
 {
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::GETADVLISTEX), 0, 0, /* short */ 0, 0, /* short */ 0, 0, /* unknown */ 0, 0, 0, 0, /* unknown */  0, 0, 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::GETADVLISTEX, 0, 0, /* short */ 0, 0, /* short */ 0, 0, /* unknown */ 0, 0, 0, 0, /* unknown */  0, 0, 0, 0};
   const uint8_t MaxGames[] = {255, 255, 255, 255};
   //const uint8_t GameName[] = {};
   //const uint8_t GamePassword[] = {};
@@ -572,12 +572,12 @@ vector<uint8_t> CBNETProtocol::SEND_SID_GETADVLISTEX()
 
 vector<uint8_t> CBNETProtocol::SEND_SID_ENTERCHAT()
 {
-  return vector<uint8_t>{BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::ENTERCHAT), 6, 0, 0, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, BNETProtocol::Magic::ENTERCHAT, 6, 0, 0, 0};
 }
 
 vector<uint8_t> CBNETProtocol::SEND_SID_JOINCHANNEL(const string& channel)
 {
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::JOINCHANNEL), 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::JOINCHANNEL, 0, 0};
 
   if (channel.size() > 0)
   {
@@ -598,7 +598,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_JOINCHANNEL(const string& channel)
 
 vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const string& message)
 {
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::CHATMESSAGE), 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::CHATMESSAGE, 0, 0};
   AppendByteArrayFast(packet, message, true); // null-terminator
   AssignLength(packet);
   return packet;
@@ -606,7 +606,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const string& message)
 
 vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const vector<uint8_t>& message)
 {
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::CHATMESSAGE), 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::CHATMESSAGE, 0, 0};
   AppendByteArrayFast(packet, message);
   packet.push_back(0);
   AssignLength(packet);
@@ -616,7 +616,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_PUBLIC(const vector<uint8_t>& messa
 vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const string& message, const string& user)
 {
   // /w USER MESSAGE
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::CHATMESSAGE), 0, 0, 0x2f, 0x77, 0x20};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
   AppendByteArrayFast(packet, user, false);
   packet.push_back(0x20);
   AppendByteArrayFast(packet, message, true); // With null terminator
@@ -627,7 +627,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const string& message, cons
 vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const vector<uint8_t>& message, const vector<uint8_t>& user)
 {
   // /w USER MESSAGE
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::CHATMESSAGE), 0, 0, 0x2f, 0x77, 0x20};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
   AppendByteArrayFast(packet, user);
   packet.push_back(0x20);
   AppendByteArrayFast(packet, message);
@@ -638,7 +638,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_CHAT_WHISPER(const vector<uint8_t>& mess
 
 vector<uint8_t> CBNETProtocol::SEND_SID_CHECKAD()
 {
-  return vector<uint8_t>{BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::CHECKAD), 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, BNETProtocol::Magic::CHECKAD, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 }
 
 vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const array<uint8_t, 4> address, uint16_t port)
@@ -650,7 +650,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_PUBLICHOST(const array<uint8_t, 4> addre
   const uint8_t Unknown3[] = {0, 0, 0, 0};
 
   packet.push_back(BNET_HEADER_CONSTANT);                // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::PUBLICHOST));// SID_PUBLICHOST
+  packet.push_back(BNETProtocol::Magic::PUBLICHOST);// SID_PUBLICHOST
   packet.push_back(0);                                   //
   packet.push_back(0);                                   //
   AppendByteArray(packet, Unknown, 2);                   //
@@ -696,7 +696,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_
     const uint8_t CustomGame[] = {0, 0, 0, 0};
 
     packet.push_back(BNET_HEADER_CONSTANT);                // BNET header constant
-    packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::STARTADVEX3));   // SID_STARTADVEX3
+    packet.push_back(BNETProtocol::Magic::STARTADVEX3);   // SID_STARTADVEX3
     packet.push_back(0);                                   // packet length will be assigned later
     packet.push_back(0);                                   // packet length will be assigned later
     packet.push_back(state);                               // State (16 = public, 17 = private, 18 = close)
@@ -723,7 +723,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_STARTADVEX3(uint8_t state, const uint32_
 
 vector<uint8_t> CBNETProtocol::SEND_SID_NOTIFYJOIN(const string& gameName)
 {
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::NOTIFYJOIN), 0, 0, 0, 0, 0, 0, 14, 0, 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::NOTIFYJOIN, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0};
   AppendByteArrayFast(packet, gameName);                    // Game Name
   packet.push_back(0);                                      // Game Password is NULL
   AssignLength(packet);
@@ -733,7 +733,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_NOTIFYJOIN(const string& gameName)
 
 vector<uint8_t> CBNETProtocol::SEND_SID_PING(const array<uint8_t, 4>& pingValue)
 {
-  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::PING), 0, 0};
+  vector<uint8_t> packet = {BNET_HEADER_CONSTANT, BNETProtocol::Magic::PING, 0, 0};
   AppendByteArrayFast(packet, pingValue); // Ping Value
   AssignLength(packet);
   return packet;
@@ -743,7 +743,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_LOGONRESPONSE(const vector<uint8_t>& cli
 {
   vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);                       // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::LOGONRESPONSE));    // SID_LOGONRESPONSE
+  packet.push_back(BNETProtocol::Magic::LOGONRESPONSE);    // SID_LOGONRESPONSE
   packet.push_back(0);                                          // packet length will be assigned later
   packet.push_back(0);                                          // packet length will be assigned later
   AppendByteArrayFast(packet, clientToken);                     // Client Token
@@ -759,7 +759,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_NETGAMEPORT(uint16_t serverPort)
 {
   vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);                       // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::NETGAMEPORT));      // SID_NETGAMEPORT
+  packet.push_back(BNETProtocol::Magic::NETGAMEPORT);      // SID_NETGAMEPORT
   packet.push_back(0);                                          // packet length will be assigned later
   packet.push_back(0);                                          // packet length will be assigned later
   AppendByteArray(packet, serverPort, false);                   // local game server port
@@ -780,7 +780,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID
 
   vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);                        // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::AUTH_INFO));         // SID_AUTH_INFO
+  packet.push_back(BNETProtocol::Magic::AUTH_INFO);         // SID_AUTH_INFO
   packet.push_back(0);                                           // packet length will be assigned later
   packet.push_back(0);                                           // packet length will be assigned later
   AppendByteArray(packet, ProtocolID, 4);                        // Protocol ID
@@ -804,7 +804,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_CHECK(const array<uint8_t, 4>& clie
   vector<uint8_t> packet;
  uint32_t NumKeys = 2;
   packet.push_back(BNET_HEADER_CONSTANT);                         // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::AUTH_CHECK));         // SID_AUTH_CHECK
+  packet.push_back(BNETProtocol::Magic::AUTH_CHECK);         // SID_AUTH_CHECK
   packet.push_back(0);                                            // packet length will be assigned later
   packet.push_back(0);                                            // packet length will be assigned later
   AppendByteArrayFast(packet, clientToken);                       // Client Token
@@ -824,7 +824,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(const array<uint8_t, 3
 {
   vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);                          // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::AUTH_ACCOUNTLOGON));   // SID_AUTH_ACCOUNTLOGON
+  packet.push_back(BNETProtocol::Magic::AUTH_ACCOUNTLOGON);   // SID_AUTH_ACCOUNTLOGON
   packet.push_back(0);                                             // packet length will be assigned later
   packet.push_back(0);                                             // packet length will be assigned later
   AppendByteArrayFast(packet, clientPublicKey);                    // Client Key
@@ -837,7 +837,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(const array<uint8
 {
   vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);                              // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF));  // SID_AUTH_ACCOUNTLOGONPROOF
+  packet.push_back(BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF);  // SID_AUTH_ACCOUNTLOGONPROOF
   packet.push_back(0);                                                 // packet length will be assigned later
   packet.push_back(0);                                                 // packet length will be assigned later
   AppendByteArrayFast(packet, clientPasswordProof);                    // Client Password Proof
@@ -849,7 +849,7 @@ vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userNam
 {
   vector<uint8_t> packet;
   packet.push_back(BNET_HEADER_CONSTANT);                              // BNET header constant
-  packet.push_back(static_cast<uint8_t>(BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP));      // SID_AUTH_ACCOUNTSIGNUP
+  packet.push_back(BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP);      // SID_AUTH_ACCOUNTSIGNUP
   packet.push_back(0);                                                 // packet length will be assigned later
   packet.push_back(0);                                                 // packet length will be assigned later
   AppendByteArrayFast(packet, clientPasswordProof);                    // Client Password Proof
@@ -860,12 +860,12 @@ vector<uint8_t> CBNETProtocol::SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userNam
 
 vector<uint8_t> CBNETProtocol::SEND_SID_FRIENDLIST()
 {
-  return vector<uint8_t>{BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::FRIENDLIST), 4, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, BNETProtocol::Magic::FRIENDLIST, 4, 0};
 }
 
 vector<uint8_t> CBNETProtocol::SEND_SID_CLANMEMBERLIST()
 {
-  return vector<uint8_t>{BNET_HEADER_CONSTANT, static_cast<uint8_t>(BNETProtocol::Magic::CLANMEMBERLIST), 8, 0, 0, 0, 0, 0};
+  return vector<uint8_t>{BNET_HEADER_CONSTANT, BNETProtocol::Magic::CLANMEMBERLIST, 8, 0, 0, 0, 0, 0};
 }
 
 /////////////////////
@@ -915,7 +915,7 @@ string CIncomingGameHost::GetIPString() const
 // CIncomingChatEvent
 //
 
-CIncomingChatEvent::CIncomingChatEvent(BNETProtocol::IncomingChatEvent nChatEvent, string nUser, string nMessage)
+CIncomingChatEvent::CIncomingChatEvent(uint32_t nChatEvent, string nUser, string nMessage)
   : m_User(move(nUser)),
     m_Message(move(nMessage)),
     m_ChatEvent(nChatEvent)

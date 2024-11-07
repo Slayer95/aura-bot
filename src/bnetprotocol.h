@@ -71,65 +71,65 @@ class CIncomingChatEvent;
 
 namespace BNETProtocol
 {
-  enum class Magic : uint8_t
+  namespace Magic
   {
-    ZERO                   = 0,   // 0x0
-    STOPADV                = 2,   // 0x2
-    GETADVLISTEX           = 9,   // 0x9
-    ENTERCHAT              = 10,  // 0xA
-    JOINCHANNEL            = 12,  // 0xC
-    CHATMESSAGE            = 14,  // 0xE - PvPGN: CLIENT_MESSAGE
-    CHATEVENT              = 15,  // 0xF
-    CHECKAD                = 21,  // 0x15
-    PUBLICHOST             = 27,  // 0x1B
-    STARTADVEX3            = 28,  // 0x1C
-    DISPLAYAD              = 33,  // 0x21
-    NOTIFYJOIN             = 34,  // 0x22
-    PING                   = 37,  // 0x25
-    LOGONRESPONSE          = 41,  // 0x29
-    AUTH_ACCOUNTSIGNUP     = 42,  // 0x2A
-    AUTH_ACCOUNTSIGNUP2    = 61,  // 0x3D
-    NETGAMEPORT            = 69,  // 0x45
-    AUTH_INFO              = 80,  // 0x50
-    AUTH_CHECK             = 81,  // 0x51
-    AUTH_ACCOUNTLOGON      = 83,  // 0x53
-    AUTH_ACCOUNTLOGONPROOF = 84,  // 0x54
-    WARDEN                 = 94,  // 0x5E
-    FRIENDLIST             = 101, // 0x65
-    FRIENDSUPDATE          = 102, // 0x66
-    CLANMEMBERLIST         = 125, // 0x7D
-    CLANMEMBERSTATUSCHANGE = 127, // 0x7F
-    GETGAMEINFO            = 131, // 0x83
-    HOSTGAME               = 132  // 0x84
+    constexpr uint8_t ZERO                   = 0;   // 0x0
+    constexpr uint8_t STOPADV                = 2;   // 0x2
+    constexpr uint8_t GETADVLISTEX           = 9;   // 0x9
+    constexpr uint8_t ENTERCHAT              = 10;  // 0xA
+    constexpr uint8_t JOINCHANNEL            = 12;  // 0xC
+    constexpr uint8_t CHATMESSAGE            = 14;  // 0xE - PvPGN: CLIENT_MESSAGE
+    constexpr uint8_t CHATEVENT              = 15;  // 0xF
+    constexpr uint8_t CHECKAD                = 21;  // 0x15
+    constexpr uint8_t PUBLICHOST             = 27;  // 0x1B
+    constexpr uint8_t STARTADVEX3            = 28;  // 0x1C
+    constexpr uint8_t DISPLAYAD              = 33;  // 0x21
+    constexpr uint8_t NOTIFYJOIN             = 34;  // 0x22
+    constexpr uint8_t PING                   = 37;  // 0x25
+    constexpr uint8_t LOGONRESPONSE          = 41;  // 0x29
+    constexpr uint8_t AUTH_ACCOUNTSIGNUP     = 42;  // 0x2A
+    constexpr uint8_t AUTH_ACCOUNTSIGNUP2    = 61;  // 0x3D
+    constexpr uint8_t NETGAMEPORT            = 69;  // 0x45
+    constexpr uint8_t AUTH_INFO              = 80;  // 0x50
+    constexpr uint8_t AUTH_CHECK             = 81;  // 0x51
+    constexpr uint8_t AUTH_ACCOUNTLOGON      = 83;  // 0x53
+    constexpr uint8_t AUTH_ACCOUNTLOGONPROOF = 84;  // 0x54
+    constexpr uint8_t WARDEN                 = 94;  // 0x5E
+    constexpr uint8_t FRIENDLIST             = 101; // 0x65
+    constexpr uint8_t FRIENDSUPDATE          = 102; // 0x66
+    constexpr uint8_t CLANMEMBERLIST         = 125; // 0x7D
+    constexpr uint8_t CLANMEMBERSTATUSCHANGE = 127; // 0x7F
+    constexpr uint8_t GETGAMEINFO            = 131; // 0x83
+    constexpr uint8_t HOSTGAME               = 132; // 0x84
   };
 
-  enum class KeyResult : uint32_t
+  namespace KeyResult
   {
-    GOOD             = 0,
-    BAD              = 1,
-    OLD_GAME_VERSION = 256,
-    INVALID_VERSION  = 257,
-    ROC_KEY_IN_USE   = 513,
-    TFT_KEY_IN_USE   = 529
+    constexpr uint32_t GOOD             = 0u;
+    constexpr uint32_t BAD              = 1u;
+    constexpr uint32_t OLD_GAME_VERSION = 256u;
+    constexpr uint32_t INVALID_VERSION  = 257u;
+    constexpr uint32_t ROC_KEY_IN_USE   = 513u;
+    constexpr uint32_t TFT_KEY_IN_USE   = 529u;
   };
 
-  enum class IncomingChatEvent : uint32_t
+  namespace IncomingChatEvent
   {
-    SHOWUSER            = 1,  // received when you join a channel (includes users in the channel and their information)
-    JOIN                = 2,  // received when someone joins the channel you're currently in
-    LEAVE               = 3,  // received when someone leaves the channel you're currently in
-    WHISPER             = 4,  // received a whisper message
-    TALK                = 5,  // received when someone talks in the channel you're currently in
-    BROADCAST           = 6,  // server broadcast
-    CHANNEL             = 7,  // received when you join a channel (includes the channel's name, flags)
-    USERFLAGS           = 9,  // user flags updates
-    WHISPERSENT         = 10, // sent a whisper message
-    CHANNELFULL         = 13, // channel is full
-    CHANNELDOESNOTEXIST = 14, // channel does not exist
-    CHANNELRESTRICTED   = 15, // channel is restricted
-    INFO                = 18, // broadcast/information message
-    NOTICE              = 19, // notice/error message
-    EMOTE               = 23, // emote
+    constexpr uint32_t SHOWUSER            = 1;  // received when you join a channel (includes users in the channel and their information)
+    constexpr uint32_t JOIN                = 2;  // received when someone joins the channel you're currently in
+    constexpr uint32_t LEAVE               = 3;  // received when someone leaves the channel you're currently in
+    constexpr uint32_t WHISPER             = 4;  // received a whisper message
+    constexpr uint32_t TALK                = 5;  // received when someone talks in the channel you're currently in
+    constexpr uint32_t BROADCAST           = 6;  // server broadcast
+    constexpr uint32_t CHANNEL             = 7;  // received when you join a channel (includes the channel's name; flags)
+    constexpr uint32_t USERFLAGS           = 9;  // user flags updates
+    constexpr uint32_t WHISPERSENT         = 10; // sent a whisper message
+    constexpr uint32_t CHANNELFULL         = 13; // channel is full
+    constexpr uint32_t CHANNELDOESNOTEXIST = 14; // channel does not exist
+    constexpr uint32_t CHANNELRESTRICTED   = 15; // channel is restricted
+    constexpr uint32_t INFO                = 18; // broadcast/information message
+    constexpr uint32_t NOTICE              = 19; // notice/error message
+    constexpr uint32_t EMOTE               = 23; // emote
   };
 };
 
@@ -250,10 +250,10 @@ class CIncomingChatEvent
 private:
   std::string                      m_User;
   std::string                      m_Message;
-  BNETProtocol::IncomingChatEvent m_ChatEvent;
+  uint32_t                         m_ChatEvent;
 
 public:
-  CIncomingChatEvent(BNETProtocol::IncomingChatEvent nChatEvent, std::string nUser, std::string nMessage);
+  CIncomingChatEvent(uint32_t nChatEvent, std::string nUser, std::string nMessage);
   ~CIncomingChatEvent();
 
   inline BNETProtocol::IncomingChatEvent GetChatEvent() const { return m_ChatEvent; }

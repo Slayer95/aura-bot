@@ -12,13 +12,13 @@ class CIncomingVLanGameInfo;
 
 namespace VLANProtocol
 {
-  enum class Magic : uint8_t
+  namespace Magic
   {
-    SEARCHGAME                                     = 47,  // 0x2F (UDP/LAN)
-    GAMEINFO                                       = 48,  // 0x30 (UDP/LAN)
-    CREATEGAME                                     = 49,  // 0x31 (UDP/LAN)
-    REFRESHGAME                                    = 50,  // 0x32 (UDP/LAN)
-    DECREATEGAME                                   = 51   // 0x33 (UDP/LAN)
+    constexpr uint8_t SEARCHGAME                                     = 47;  // 0x2F (UDP/LAN)
+    constexpr uint8_t GAMEINFO                                       = 48;  // 0x30 (UDP/LAN)
+    constexpr uint8_t CREATEGAME                                     = 49;  // 0x31 (UDP/LAN)
+    constexpr uint8_t REFRESHGAME                                    = 50;  // 0x32 (UDP/LAN)
+    constexpr uint8_t DECREATEGAME                                   = 51;  // 0x33 (UDP/LAN)
   };
 
   // receive functions

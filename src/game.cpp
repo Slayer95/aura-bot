@@ -4048,7 +4048,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 void CGame::EventBeforeJoin(CConnection* connection)
 {
   if (connection->GetIsUDPTunnel()) {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::UDPFIN), 4, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::UDPFIN, 4, 0};
     connection->Send(packet);
   }
 }

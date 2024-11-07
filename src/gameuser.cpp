@@ -316,13 +316,13 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
         switch (Bytes[1])
         {
-          case static_cast<uint8_t>(GameProtocol::Magic::LEAVEGAME):
+          case GameProtocol::Magic::LEAVEGAME:
             m_Game->EventUserLeft(this);
             m_Socket->SetLogErrors(false);
             Abort = true;
             break;
 
-          case static_cast<uint8_t>(GameProtocol::Magic::GAMELOADED_SELF):
+          case GameProtocol::Magic::GAMELOADED_SELF:
             if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
               if (m_Game->GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
@@ -333,7 +333,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
             break;
 
-          case static_cast<uint8_t>(GameProtocol::Magic::OUTGOING_ACTION): {
+          case GameProtocol::Magic::OUTGOING_ACTION: {
             CIncomingAction* Action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
 
             if (Action) {
@@ -348,13 +348,13 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
           }
 
-          case static_cast<uint8_t>(GameProtocol::Magic::OUTGOING_KEEPALIVE):
+          case GameProtocol::Magic::OUTGOING_KEEPALIVE:
             m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
             ++m_SyncCounter;
             m_Game->EventUserKeepAlive(this);
             break;
 
-          case static_cast<uint8_t>(GameProtocol::Magic::CHAT_TO_HOST): {
+          case GameProtocol::Magic::CHAT_TO_HOST: {
             CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
             if (ChatPlayer)
@@ -364,7 +364,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
           }
 
-          case static_cast<uint8_t>(GameProtocol::Magic::DROPREQ):
+          case GameProtocol::Magic::DROPREQ:
             if (m_Game->GetLagging() && !m_DropVote) {
               m_DropVote = true;
               m_Game->EventUserDropRequest(this);
@@ -372,7 +372,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
             break;
 
-          case static_cast<uint8_t>(GameProtocol::Magic::MAPSIZE): {
+          case GameProtocol::Magic::MAPSIZE: {
             if (m_MapReady) {
               // Protection against rogue clients
               break;
@@ -387,7 +387,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
           }
 
-          case static_cast<uint8_t>(GameProtocol::Magic::PONG_TO_HOST): {
+          case GameProtocol::Magic::PONG_TO_HOST: {
             uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
 
             // we discard pong values of 1
@@ -417,7 +417,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
         }
       }
       else if (Bytes[0] == GPS_HEADER_CONSTANT && m_Game->GetIsProxyReconnectable()) {
-        if (Bytes[1] == static_cast<uint8_t>(GPSProtocol::Magic::ACK) && Length == 8) {
+        if (Bytes[1] == GPSProtocol::Magic::ACK && Length == 8) {
           const size_t LastPacket               = ByteArrayToUInt32(Data, false, 4);
           const size_t PacketsAlreadyUnqueued   = m_TotalPacketsSent - m_GProxyBuffer.size();
 
@@ -434,7 +434,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
               --PacketsToUnqueue;
             }
           }
-        } else if (Bytes[1] == static_cast<uint8_t>(GPSProtocol::Magic::INIT)) {
+        } else if (Bytes[1] == GPSProtocol::Magic::INIT) {
           CRealm* MyRealm = GetRealm(false);
           if (MyRealm) {
             m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
@@ -454,7 +454,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           // the port to which the client directly connects
           // (proxy port if it uses a proxy; the hosted game port otherwise)
           Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
-        } else if (Bytes[1] == static_cast<uint8_t>(GPSProtocol::Magic::SUPPORT_EXTENDED) && Length >= 8) {
+        } else if (Bytes[1] == GPSProtocol::Magic::SUPPORT_EXTENDED && Length >= 8) {
           //uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
           if (m_GProxy && m_Game->GetIsProxyReconnectableLong()) {
             m_GProxyExtended = true;
@@ -463,7 +463,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
               m_GProxyCheckGameID = true;
             }
           }
-        } else if (Bytes[1] == static_cast<uint8_t>(GPSProtocol::Magic::CHANGEKEY) && Length >= 8) {
+        } else if (Bytes[1] == GPSProtocol::Magic::CHANGEKEY && Length >= 8) {
           m_GProxyReconnectKey = ByteArrayToUInt32(Bytes, false, 4);
           Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
         }

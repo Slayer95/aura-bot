@@ -74,7 +74,7 @@ void CGameSeeker::Init()
 {
   switch (m_Type) {
     case INCON_TYPE_UDP_TUNNEL: {
-      vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::UDPACK), 4, 0};
+      vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::UDPACK, 4, 0};
       m_Socket->PutBytes(packet);
       break;
     }
@@ -125,7 +125,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
             Abort = true;
             break;
           }
-          if (Bytes[1] == static_cast<uint8_t>(GameProtocol::Magic::REQJOIN)) {
+          if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest) {
               Abort = true;
@@ -143,7 +143,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
               m_Socket = nullptr;
             }
             delete joinRequest;
-          } else if (static_cast<uint8_t>(GameProtocol::Magic::SEARCHGAME) <= Bytes[1] && Bytes[1] <= static_cast<uint8_t>(GameProtocol::Magic::DECREATEGAME)) {
+          } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
             if (Length > 1024) {
               Abort = true;
               break;

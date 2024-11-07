@@ -212,13 +212,13 @@ void CRealm::Update(void* fd, void* send_fd)
 
           switch (Bytes[1])
           {
-            case static_cast<uint8_t>(BNETProtocol::Magic::ZERO):
+            case BNETProtocol::Magic::ZERO:
               // warning: we do not respond to NULL packets with a NULL packet of our own
               // this is because PVPGN servers are programmed to respond to NULL packets so it will create a vicious cycle of useless traffic
               // official battle.net servers do not respond to NULL packets
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::GETADVLISTEX):
+            case BNETProtocol::Magic::GETADVLISTEX:
               if (m_Aura->m_Net->m_Config->m_UDPForwardGameLists) {
                 std::vector<uint8_t> relayPacket = {W3FW_HEADER_CONSTANT, 0, 0, 0};
                 std::vector<uint8_t> War3Version = {m_GameVersion, 0, 0, 0};
@@ -236,14 +236,14 @@ void CRealm::Update(void* fd, void* send_fd)
 
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::ENTERCHAT):
+            case BNETProtocol::Magic::ENTERCHAT:
               if (m_Protocol->RECEIVE_SID_ENTERCHAT(Data)) {
                 AutoJoinChat();
               }
 
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::CHATEVENT):
+            case BNETProtocol::Magic::CHATEVENT:
               ChatEvent = m_Protocol->RECEIVE_SID_CHATEVENT(Data);
 
               if (ChatEvent)
@@ -252,11 +252,11 @@ void CRealm::Update(void* fd, void* send_fd)
               delete ChatEvent;
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::CHECKAD):
+            case BNETProtocol::Magic::CHECKAD:
               m_Protocol->RECEIVE_SID_CHECKAD(Data);
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::STARTADVEX3):
+            case BNETProtocol::Magic::STARTADVEX3:
               if (m_Aura->m_CurrentLobby) {
                 if (m_Protocol->RECEIVE_SID_STARTADVEX3(Data)) {
                   m_Aura->EventBNETGameRefreshSuccess(this);
@@ -267,11 +267,11 @@ void CRealm::Update(void* fd, void* send_fd)
               }
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::PING):
+            case BNETProtocol::Magic::PING:
               SendAuth(m_Protocol->SEND_SID_PING(m_Protocol->RECEIVE_SID_PING(Data)));
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::AUTH_INFO): {
+            case BNETProtocol::Magic::AUTH_INFO: {
               if (!m_Protocol->RECEIVE_SID_AUTH_INFO(Data))
                 break;
 
@@ -312,9 +312,9 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
             }
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::AUTH_CHECK): {
+            case BNETProtocol::Magic::AUTH_CHECK: {
               const uint32_t checkResult = m_Protocol->RECEIVE_SID_AUTH_CHECK(Data);
-              if (checkResult == static_cast<uint32_t>(BNETProtocol::KeyResult::GOOD))
+              if (checkResult == BNETProtocol::KeyResult::GOOD)
               {
                 // cd keys accepted
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
@@ -326,16 +326,16 @@ void CRealm::Update(void* fd, void* send_fd)
                 // cd keys not accepted
                 switch (checkResult)
                 {
-                  case static_cast<uint32_t>(BNETProtocol::KeyResult::ROC_KEY_IN_USE):
+                  case BNETProtocol::KeyResult::ROC_KEY_IN_USE:
                     PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...")
                     break;
 
-                  case static_cast<uint32_t>(BNETProtocol::KeyResult::TFT_KEY_IN_USE):
+                  case BNETProtocol::KeyResult::TFT_KEY_IN_USE:
                     PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + m_Protocol->GetKeyStateDescription() + "], disconnecting...");
                     break;
 
-                  case static_cast<uint32_t>(BNETProtocol::KeyResult::OLD_GAME_VERSION):
-                  case static_cast<uint32_t>(BNETProtocol::KeyResult::INVALID_VERSION):
+                  case BNETProtocol::KeyResult::OLD_GAME_VERSION:
+                  case BNETProtocol::KeyResult::INVALID_VERSION:
                       PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersion()) + ">")
                       PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersionHash()) + ">")
                       PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - version not supported, or version hash invalid, disconnecting...")
@@ -353,7 +353,7 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
             }
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::AUTH_ACCOUNTLOGON):
+            case BNETProtocol::Magic::AUTH_ACCOUNTLOGON:
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGON(Data)) {
                 PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] OK")
                 Login();
@@ -368,7 +368,7 @@ void CRealm::Update(void* fd, void* send_fd)
 
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF):
+            case BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF:
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
                 OnLoginOkay();
               } else {
@@ -379,7 +379,7 @@ void CRealm::Update(void* fd, void* send_fd)
               }
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP):
+            case BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP:
               if (m_Protocol->RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
                 OnSignupOkay();
               } else {
@@ -390,19 +390,19 @@ void CRealm::Update(void* fd, void* send_fd)
               }
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::FRIENDLIST):
+            case BNETProtocol::Magic::FRIENDLIST:
               m_Friends = m_Protocol->RECEIVE_SID_FRIENDLIST(Data);
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::CLANMEMBERLIST):
+            case BNETProtocol::Magic::CLANMEMBERLIST:
               m_Clan = m_Protocol->RECEIVE_SID_CLANMEMBERLIST(Data);
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::GETGAMEINFO):
+            case BNETProtocol::Magic::GETGAMEINFO:
               PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got SID_GETGAMEINFO: " + ByteArrayToHexString(Data))
               break;
 
-            case static_cast<uint8_t>(BNETProtocol::Magic::HOSTGAME): {
+            case BNETProtocol::Magic::HOSTGAME: {
               if (!GetIsReHoster()) {
                 break;
               }

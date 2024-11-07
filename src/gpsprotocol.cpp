@@ -59,14 +59,14 @@ namespace GPSProtocol
 
   vector<uint8_t> SEND_GPSC_INIT(const uint32_t version)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::INIT), 8, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::INIT, 8, 0};
     AppendByteArray(packet, version, false);
     return packet;
   }
 
   vector<uint8_t> SEND_GPSC_RECONNECT(const uint8_t UID, const uint32_t reconnectKey, const uint32_t lastPacket)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::RECONNECT), 13, 0, UID};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::RECONNECT, 13, 0, UID};
     AppendByteArray(packet, reconnectKey, false);
     AppendByteArray(packet, lastPacket, false);
     return packet;
@@ -74,7 +74,7 @@ namespace GPSProtocol
 
   vector<uint8_t> SEND_GPSC_ACK(const uint32_t lastPacket)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::ACK), 8, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::ACK, 8, 0};
     AppendByteArray(packet, lastPacket, false);
     return packet;
   }
@@ -85,7 +85,7 @@ namespace GPSProtocol
 
   vector<uint8_t> SEND_GPSS_INIT(const uint16_t reconnectPort, const uint8_t UID, const uint32_t reconnectKey, const uint8_t numEmptyActions)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::INIT), 12, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::INIT, 12, 0};
     AppendByteArray(packet, reconnectPort, false);
     packet.push_back(UID);
     AppendByteArray(packet, reconnectKey, false);
@@ -95,28 +95,28 @@ namespace GPSProtocol
 
   vector<uint8_t> SEND_GPSS_RECONNECT(const uint32_t lastPacket)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::RECONNECT), 8, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::RECONNECT, 8, 0};
     AppendByteArray(packet, lastPacket, false);
     return packet;
   }
 
   vector<uint8_t> SEND_GPSS_ACK(const uint32_t lastPacket)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::ACK), 8, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::ACK, 8, 0};
     AppendByteArray(packet, lastPacket, false);
     return packet;
   }
 
   vector<uint8_t> SEND_GPSS_REJECT(const uint32_t reason)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::REJECT), 8, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::REJECT, 8, 0};
     AppendByteArray(packet, reason, false);
     return packet;
   }
 
   vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::SUPPORT_EXTENDED), 0, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::SUPPORT_EXTENDED, 0, 0};
     const uint32_t seconds = static_cast<uint32_t>(ticks / 1000);
     AppendByteArray(packet, seconds, false);
     if (gameID > 0) {
@@ -128,7 +128,7 @@ namespace GPSProtocol
 
   vector<uint8_t> SEND_GPSS_CHANGE_KEY(const uint32_t reconnectKey)
   {
-    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, static_cast<uint8_t>(GPSProtocol::Magic::CHANGEKEY), 8, 0};
+    vector<uint8_t> packet = {GPS_HEADER_CONSTANT, GPSProtocol::Magic::CHANGEKEY, 8, 0};
     AppendByteArray(packet, reconnectKey, false);
     return packet;
   }
