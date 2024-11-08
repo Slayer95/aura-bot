@@ -377,6 +377,7 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
 
 [[nodiscard]] inline std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end)
 {
+  if (end == start) return std::string();
   return std::string(reinterpret_cast<const char*>(start), end - start);
 }
 

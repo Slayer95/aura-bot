@@ -58,21 +58,21 @@ namespace BNETProtocol
   // RECEIVE FUNCTIONS //
   ///////////////////////
 
-  bool RECEIVE_SID_ZERO(const vector<uint8_t>& data)
+  bool RECEIVE_SID_ZERO(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_ZERO" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
 
-    return ValidateLength(data);
+    return ValidateLength(packet);
   }
 
-  CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& data)
+  CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_GETADVLISTEX" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
@@ -85,24 +85,24 @@ namespace BNETProtocol
     //		2 bytes				-> ???
     //		8 bytes				-> HostCounter
 
-    if (ValidateLength(data) && data.size() >= 8)
+    if (ValidateLength(packet) && packet.size() >= 8)
     {
-      if (ByteArrayToUInt32(data, false, 4) > 0 && data.size() >= 25)
+      if (ByteArrayToUInt32(packet, false, 4) > 0 && packet.size() >= 25)
       {
-        uint16_t Port = ByteArrayToUInt16(data, false, 18);
+        uint16_t Port = ByteArrayToUInt16(packet, false, 18);
 
         array<uint8_t, 4> IP;
-        copy_n(data.begin() + 20, 4, IP.begin());
+        copy_n(packet.begin() + 20, 4, IP.begin());
 
-        const vector<uint8_t> GameName = ExtractCString(data, 24);
+        const vector<uint8_t> GameName = ExtractCString(packet, 24);
         if (GameName.size() > 0xFF) return nullptr;
 
-        if (data.size() >= GameName.size() + 35) {
+        if (packet.size() >= GameName.size() + 35) {
           array<uint8_t, 4> HostCounter = {
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 27, true),
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 29, true),
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 31, true),
-            ExtractHex(data, static_cast<uint32_t>(GameName.size()) + 33, true)
+            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 27, true),
+            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 29, true),
+            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 31, true),
+            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 33, true)
           };
           return new CIncomingGameHost(IP, Port, GameName, HostCounter);
         }
@@ -112,25 +112,25 @@ namespace BNETProtocol
     return nullptr;
   }
 
-  EnterChatResult RECEIVE_SID_ENTERCHAT(const vector<uint8_t>& data)
+  EnterChatResult RECEIVE_SID_ENTERCHAT(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_ENTERCHAT" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
     // null terminated string	-> UniqueName
 
-    if (ValidateLength(data) && data.size() >= 5) {
-      return EnterChatResult(true, (const uint8_t*)(&data + 4), (const uint8_t*)(&data + FindNullDelimiterOrEnd(data, 4)));
+    if (ValidateLength(packet) && packet.size() >= 5) {
+      return EnterChatResult(true, (packet.data() + 4), (packet.data() + FindNullDelimiterOrEnd(packet, 4)));
     }
     return EnterChatResult(false, nullptr, nullptr);
   }
 
-  IncomingChatResult RECEIVE_SID_CHATEVENT(const vector<uint8_t>& data)
+  IncomingChatResult RECEIVE_SID_CHATEVENT(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_CHATEVENT" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
@@ -141,46 +141,46 @@ namespace BNETProtocol
     // null terminated string	-> User
     // null terminated string	-> Message
 
-    if (!ValidateLength(data) || data.size() < 29) {
+    if (!ValidateLength(packet) || packet.size() < 29) {
       return IncomingChatResult(false, 0, nullptr, nullptr, nullptr, nullptr);
     }
-    const uint32_t eventID = ByteArrayToUInt32(data, false, 4);
-    const size_t userEnd = FindNullDelimiterOrEnd(data, 28);
-    if (userEnd > 0xFF || data.size() <= userEnd + 1) {
+    const uint32_t eventID = ByteArrayToUInt32(packet, false, 4);
+    const size_t userEnd = FindNullDelimiterOrEnd(packet, 28);
+    if (userEnd > 0xFF || packet.size() <= userEnd + 1) {
       return IncomingChatResult(false, 0, nullptr, nullptr, nullptr, nullptr);
     }
     const size_t messageStart = userEnd + 1;
-    const size_t messageEnd = FindNullDelimiterOrEnd(data, messageStart);
+    const size_t messageEnd = FindNullDelimiterOrEnd(packet, messageStart);
     return IncomingChatResult(
       true, eventID,
-      (const uint8_t*)(&data + 28), (const uint8_t*)(&data + userEnd),
-      (const uint8_t*)(&data + messageStart), (const uint8_t*)(&data + messageEnd)
+      (packet.data() + 28), (packet.data() + userEnd),
+      (packet.data() + messageStart), (packet.data() + messageEnd)
     );
   }
 
-  bool RECEIVE_SID_CHECKAD(const vector<uint8_t>& data)
+  bool RECEIVE_SID_CHECKAD(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_CHECKAD" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
 
-    return ValidateLength(data);
+    return ValidateLength(packet);
   }
 
-  bool RECEIVE_SID_STARTADVEX3(const vector<uint8_t>& data)
+  bool RECEIVE_SID_STARTADVEX3(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_STARTADVEX3" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
     // 4 bytes					-> Status
 
-    if (ValidateLength(data) && data.size() >= 8)
+    if (ValidateLength(packet) && packet.size() >= 8)
     {
-      const vector<uint8_t> Status = vector<uint8_t>(begin(data) + 4, begin(data) + 8);
+      const vector<uint8_t> Status = vector<uint8_t>(begin(packet) + 4, begin(packet) + 8);
 
       if (ByteArrayToUInt32(Status, false) == 0)
         return true;
@@ -189,28 +189,28 @@ namespace BNETProtocol
     return false;
   }
 
-  array<uint8_t, 4> RECEIVE_SID_PING(const vector<uint8_t>& data)
+  array<uint8_t, 4> RECEIVE_SID_PING(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_PING" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
     // 4 bytes					-> Ping
 
     array<uint8_t, 4> value;
-    if (ValidateLength(data) && data.size() >= 8) {
-      copy_n(data.begin() + 4, 4, value.begin());
+    if (ValidateLength(packet) && packet.size() >= 8) {
+      copy_n(packet.begin() + 4, 4, value.begin());
     } else {
       value.fill(0);
     }
     return value;
   }
 
-  AuthInfoResult RECEIVE_SID_AUTH_INFO(const vector<uint8_t>& data)
+  AuthInfoResult RECEIVE_SID_AUTH_INFO(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_AUTH_INFO" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes				    -> Header
     // 2 bytes				    -> Length
@@ -221,36 +221,39 @@ namespace BNETProtocol
     // null terminated string	    -> IX86VerFileName
     // null terminated string	    -> ValueStringFormula
 
-    if (!ValidateLength(data) || data.size() < 25) {
+    Print("[BNETPROTO] RECEIVE_SID_AUTH_INFO() 1");
+    if (!ValidateLength(packet) || packet.size() < 25) {
       return AuthInfoResult(false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     }
-    size_t fileNameEndPos = FindNullDelimiterOrEnd(data, 24);
-    if (fileNameEndPos >= data.size() || fileNameEndPos > 0xFFFFFF18) {
+    size_t fileNameEndPos = FindNullDelimiterOrEnd(packet, 24);
+    Print("[BNETPROTO] RECEIVE_SID_AUTH_INFO() 2");
+    if (fileNameEndPos >= packet.size() || fileNameEndPos > 0xFFFFFF18) {
       return AuthInfoResult(false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     }
-    return AuthInfoResult(true, &data[4] /* 4 bytes */, &data[8] /* 4 bytes */, &data[16] /* 8 bytes */, &data[24], (const uint8_t*)(&data + fileNameEndPos), (const uint8_t*)(&data + fileNameEndPos + 1), (const uint8_t*)(&data + FindNullDelimiterOrEnd(data, fileNameEndPos + 1)));
+    Print("[BNETPROTO] RECEIVE_SID_AUTH_INFO() 3");
+    return AuthInfoResult(true, packet.data() + 4 /* 4 bytes */, packet.data() + 8 /* 4 bytes */, packet.data() + 16 /* 8 bytes */, packet.data() + 24, (packet.data() + fileNameEndPos), (packet.data() + fileNameEndPos + 1), (packet.data() + FindNullDelimiterOrEnd(packet, fileNameEndPos + 1)));
   }
 
-  AuthCheckResult RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& data)
+  AuthCheckResult RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_AUTH_CHECK" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
     // 4 bytes					-> KeyState
     // null terminated string	    -> KeyStateDescription
 
-    if (ValidateLength(data) && data.size() >= 9) {
-      return AuthCheckResult(ByteArrayToUInt32(data, false, 4), (const uint8_t*)(&data + 8), (const uint8_t*)(&data + FindNullDelimiterOrEnd(data, 8)));
+    if (ValidateLength(packet) && packet.size() >= 9) {
+      return AuthCheckResult(ByteArrayToUInt32(packet, false, 4), (packet.data() + 8), (packet.data() + FindNullDelimiterOrEnd(packet, 8)));
     }
     return AuthCheckResult(BNETProtocol::KeyResult::BAD, nullptr, nullptr);
   }
 
-  AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& data)
+  AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTLOGON" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
@@ -259,27 +262,27 @@ namespace BNETProtocol
     //		32 bytes			-> Salt
     //		32 bytes			-> ServerPublicKey
 
-    if (ValidateLength(data) && data.size() >= 8) {
-      if (ByteArrayToUInt32(data, false, 4) == 0 && data.size() >= 72) {
-        return AuthLoginResult(true, &data[8], &data[40]);
+    if (ValidateLength(packet) && packet.size() >= 8) {
+      if (ByteArrayToUInt32(packet, false, 4) == 0 && packet.size() >= 72) {
+        return AuthLoginResult(true, packet.data() + 8, packet.data() + 40);
       }
     }
 
     return AuthLoginResult(false, nullptr, nullptr);
   }
 
-  bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const vector<uint8_t>& data)
+  bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTLOGONPROOF" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
     // 4 bytes					-> Status
 
-    if (ValidateLength(data) && data.size() >= 8)
+    if (ValidateLength(packet) && packet.size() >= 8)
     {
-      uint32_t Status = ByteArrayToUInt32(vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
+      uint32_t Status = ByteArrayToUInt32(vector<uint8_t>(begin(packet) + 4, begin(packet) + 8), false);
 
       if (Status == 0 || Status == 0xE) {
         // OK: 0x0, EMAIL: 0xE
@@ -290,18 +293,18 @@ namespace BNETProtocol
     return false;
   }
 
-  bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const vector<uint8_t>& data)
+  bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTSIGNUP" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
     // 4 bytes					-> Status
 
-    if (ValidateLength(data) && data.size() >= 8)
+    if (ValidateLength(packet) && packet.size() >= 8)
     {
-      uint32_t Status = ByteArrayToUInt32(vector<uint8_t>(begin(data) + 4, begin(data) + 8), false);
+      uint32_t Status = ByteArrayToUInt32(vector<uint8_t>(begin(packet) + 4, begin(packet) + 8), false);
 
       if (Status == 0x1) {
         return true;
@@ -311,10 +314,10 @@ namespace BNETProtocol
     return false;
   }
 
-  vector<string> RECEIVE_SID_FRIENDLIST(const vector<uint8_t>& data)
+  vector<string> RECEIVE_SID_FRIENDLIST(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_FRIENDSLIST" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
@@ -328,26 +331,26 @@ namespace BNETProtocol
 
     vector<string> Friends;
 
-    if (ValidateLength(data) && data.size() >= 5)
+    if (ValidateLength(packet) && packet.size() >= 5)
     {
       size_t   i     = 5;
-      uint8_t  Total = data[4];
+      uint8_t  Total = packet[4];
 
       while (Total > 0)
       {
         --Total;
 
-        if (data.size() < i + 1)
+        if (packet.size() < i + 1)
           break;
 
-        const vector<uint8_t> Account = ExtractCString(data, i);
+        const vector<uint8_t> Account = ExtractCString(packet, i);
         i += Account.size() + 1;
 
-        if (data.size() < i + 7)
+        if (packet.size() < i + 7)
           break;
 
         i += 6;
-        i += ExtractCString(data, i).size() + 1;
+        i += ExtractCString(packet, i).size() + 1;
 
         Friends.emplace_back(begin(Account), end(Account));
       }
@@ -356,10 +359,10 @@ namespace BNETProtocol
     return Friends;
   }
 
-  vector<string> RECEIVE_SID_CLANMEMBERLIST(const vector<uint8_t>& data)
+  vector<string> RECEIVE_SID_CLANMEMBERLIST(const vector<uint8_t>& packet)
   {
     // DEBUG_Print( "RECEIVED SID_CLANMEMBERLIST" );
-    // DEBUG_Print( data );
+    // DEBUG_Print( packet );
 
     // 2 bytes					-> Header
     // 2 bytes					-> Length
@@ -373,29 +376,29 @@ namespace BNETProtocol
 
     vector<string> ClanList;
 
-    if (ValidateLength(data) && data.size() >= 9)
+    if (ValidateLength(packet) && packet.size() >= 9)
     {
       size_t   i     = 9;
-      uint8_t  Total = data[8];
+      uint8_t  Total = packet[8];
 
       while (Total > 0)
       {
         --Total;
 
-        if (data.size() < i + 1)
+        if (packet.size() < i + 1)
           break;
 
-        const vector<uint8_t> Name = ExtractCString(data, i);
+        const vector<uint8_t> Name = ExtractCString(packet, i);
         i += Name.size() + 1;
 
-        if (data.size() < i + 3)
+        if (packet.size() < i + 3)
           break;
 
         i += 2;
 
         // in the original VB source the location string is read but discarded, so that's what I do here
 
-        i += ExtractCString(data, i).size() + 1;
+        i += ExtractCString(packet, i).size() + 1;
         ClanList.emplace_back(begin(Name), end(Name));
       }
     }
@@ -403,26 +406,26 @@ namespace BNETProtocol
     return ClanList;
   }
 
-  CConfig* RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& data)
+  CConfig* RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& packet)
   {
     CConfig* gameConfig = nullptr;
-    if (data.size() < 64 || !ValidateLength(data)) {
-      Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad data size");
+    if (packet.size() < 64 || !ValidateLength(packet)) {
+      Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad packet size");
       return gameConfig;
     }
-    const uint16_t slotInfoSize = ByteArrayToUInt16(data, false, 44);
-    if (static_cast<uint16_t>(data.size()) < 44u + slotInfoSize) {
-      Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad slot data size");
+    const uint16_t slotInfoSize = ByteArrayToUInt16(packet, false, 44);
+    if (static_cast<uint16_t>(packet.size()) < 44u + slotInfoSize) {
+      Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad slot packet size");
       return gameConfig;
     }
-    const uint8_t maxSlots = data[46];
+    const uint8_t maxSlots = packet[46];
     if (slotInfoSize != static_cast<uint16_t>(maxSlots) * 9 + 7) {
       Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad slot count");
       return gameConfig;
     }
     gameConfig = new CConfig();
-    gameConfig->SetUint32("rehost.unknown_1", ByteArrayToUInt32(data, false, 4));
-    gameConfig->SetUint32("rehost.unknown_2", ByteArrayToUInt32(data, false, 8));
+    gameConfig->SetUint32("rehost.unknown_1", ByteArrayToUInt32(packet, false, 4));
+    gameConfig->SetUint32("rehost.unknown_2", ByteArrayToUInt32(packet, false, 8));
 
     vector<uint8_t> mapSize = vector<uint8_t>(4, 0);
     vector<uint8_t> mapCRC32 = vector<uint8_t>(4, 0);
@@ -430,16 +433,16 @@ namespace BNETProtocol
     vector<uint8_t> rehostSeed = vector<uint8_t>(4, 0);
     vector<uint8_t> mapSHA1 = vector<uint8_t>(20, 0);
 
-    copy_n(data.begin() + 12, 4, mapSize.begin());
+    copy_n(packet.begin() + 12, 4, mapSize.begin());
     gameConfig->SetUint8Vector("map.size", mapSize);
 
-    copy_n(data.begin() + 16, 4, mapCRC32.begin());
+    copy_n(packet.begin() + 16, 4, mapCRC32.begin());
     gameConfig->SetUint8Vector("map.crc32", mapCRC32);
 
-    copy_n(data.begin() + 20, 4, mapWeakHash.begin());
+    copy_n(packet.begin() + 20, 4, mapWeakHash.begin());
     gameConfig->SetUint8Vector("map.weak_hash", mapWeakHash);
 
-    copy_n(data.begin() + 24, 20, mapSHA1.begin());
+    copy_n(packet.begin() + 24, 20, mapSHA1.begin());
     gameConfig->SetUint8Vector("map.sha1", mapSHA1);
 
     uint16_t cursor = 44u;
@@ -450,17 +453,17 @@ namespace BNETProtocol
     uint8_t slotIndex = 0;
     while (slotIndex < maxSlots) {
       vector<uint8_t> slotInfo = vector<uint8_t>(9, 0);
-      copy_n(data.begin() + cursor, 9, slotInfo.begin());
+      copy_n(packet.begin() + cursor, 9, slotInfo.begin());
       gameConfig->SetUint8Vector("map.slot_" + ToDecString(slotIndex + 1), slotInfo);
       ++slotIndex;
       cursor += 9;
     }
 
-    copy_n(data.begin() + cursor, 4, rehostSeed.begin());
+    copy_n(packet.begin() + cursor, 4, rehostSeed.begin());
     cursor += 4;
     gameConfig->SetUint8Vector("rehost.game.seed", rehostSeed);
 
-    const uint8_t mapLayout = data[cursor];
+    const uint8_t mapLayout = packet[cursor];
     if (mapLayout > 3) {
       // It seems like this is sometimes 4?
       Print("[BNETPROTO] Map layout is unexpectedly " + ToDecString(mapLayout));
@@ -468,24 +471,24 @@ namespace BNETProtocol
     gameConfig->SetUint8("rehost.game.layout", mapLayout);
     cursor++;
 
-    const uint8_t mapNumPlayers = data[cursor];
+    const uint8_t mapNumPlayers = packet[cursor];
     gameConfig->SetUint8("map.num_players", mapNumPlayers);
     cursor++;
 
-    vector<uint8_t> mapClientPath = ExtractCString(data, cursor);
+    vector<uint8_t> mapClientPath = ExtractCString(packet, cursor);
     gameConfig->SetString("map.path", mapClientPath);
 
     cursor += static_cast<uint16_t>(mapClientPath.size()) + 1u;
-    if (cursor >= data.size()) {
+    if (cursor >= packet.size()) {
       Print("[BNETPROTO] Missing hosted game name, etc.");
       return gameConfig;
     }
 
-    gameConfig->SetBool("rehost.game.private", data[cursor]);
+    gameConfig->SetBool("rehost.game.private", packet[cursor]);
     cursor += 1;
 
-    if (cursor < data.size()) {
-      vector<uint8_t> gameName = ExtractCString(data, cursor);
+    if (cursor < packet.size()) {
+      vector<uint8_t> gameName = ExtractCString(packet, cursor);
       gameConfig->SetString("rehost.game.name", gameName);
     }
 
