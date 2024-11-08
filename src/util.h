@@ -1137,7 +1137,7 @@ inline void NormalizeDirectory(std::filesystem::path& filePath)
   return container;
 }
 
-[[nodiscard]] inline bool ReplaceText(std::string& input, const std::string& fragment, const std::string& replacement)
+inline bool ReplaceText(std::string& input, const std::string& fragment, const std::string& replacement)
 {
   std::string::size_type matchIndex = input.find(fragment);
   if (matchIndex == std::string::npos) return false;
