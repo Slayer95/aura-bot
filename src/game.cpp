@@ -121,6 +121,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_DotaStats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_ActionQueueSelector(false),
+    m_NextActionCallback(ON_SEND_ACTIONS_NONE),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
@@ -1556,6 +1557,30 @@ void CGame::UpdatePost(void* send_fd)
   }
 }
 
+void CGame::RunActionsScheduler()
+{
+  const int64_t Ticks                = GetTicks();
+  if (m_LastActionSentTicks != 0) {
+    const int64_t ActualSendInterval   = Ticks - m_LastActionSentTicks;
+    const int64_t ExpectedSendInterval = GetLatency() - m_LastActionLateBy;
+    int64_t ThisActionLateBy     = ActualSendInterval - ExpectedSendInterval;
+
+    if (ThisActionLateBy > m_Config->m_PerfThreshold && !GetIsSinglePlayerMode()) {
+      // something is going terribly wrong - Aura is probably starved of resources
+      // print a message because even though this will take more resources it should provide some information to the administrator for future reference
+      // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
+      LOG_APP_IF(LOG_LEVEL_WARNING, "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(GetLatency()) + "ms]")
+    }
+
+    if (ThisActionLateBy > GetLatency()) {
+      ThisActionLateBy = GetLatency();
+    }
+
+    m_LastActionLateBy = ThisActionLateBy;
+  }
+  m_LastActionSentTicks = Ticks;
+}
+
 void CGame::LogApp(const string& logText) const
 {
   Print(GetLogPrefix() + logText);
@@ -2834,6 +2859,22 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGameUser* user, const bool
   user->SetSentAutoCommandsHelp(true);
 }
 
+void CGame::SendAllActionsCallback()
+{
+  switch (m_NextActionCallback) {
+    case ON_SEND_ACTIONS_PAUSE:
+      m_Paused = true;
+      m_LastPausedTicks = GetTicks();
+      break;
+    case ON_SEND_ACTIONS_RESUME:
+      m_Paused = false;
+      break;
+    default:
+      break;
+  }
+  m_NextActionCallback = ON_SEND_ACTIONS_NONE;
+}
+
 void CGame::SendAllActions()
 {
   if (!m_Paused) {
@@ -2911,26 +2952,8 @@ void CGame::SendAllActions()
   else
     SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION(actions, GetLatency()));
 
-  const int64_t Ticks                = GetTicks();
-  if (m_LastActionSentTicks != 0) {
-    const int64_t ActualSendInterval   = Ticks - m_LastActionSentTicks;
-    const int64_t ExpectedSendInterval = GetLatency() - m_LastActionLateBy;
-    int64_t ThisActionLateBy     = ActualSendInterval - ExpectedSendInterval;
-
-    if (ThisActionLateBy > m_Config->m_PerfThreshold && !GetIsSinglePlayerMode()) {
-      // something is going terribly wrong - Aura is probably starved of resources
-      // print a message because even though this will take more resources it should provide some information to the administrator for future reference
-      // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
-      LOG_APP_IF(LOG_LEVEL_WARNING, "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(GetLatency()) + "ms]")
-    }
-
-    if (ThisActionLateBy > GetLatency()) {
-      ThisActionLateBy = GetLatency();
-    }
-
-    m_LastActionLateBy = ThisActionLateBy;
-  }
-  m_LastActionSentTicks = Ticks;
+  RunActionsScheduler();
+  SendAllActionsCallback();
 }
 
 std::string CGame::GetPrefixedGameName(const CRealm* realm) const
@@ -4207,12 +4230,11 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
         if (!user->GetIsNativeReferee()) {
           user->DropRemainingPauses();
         }
-        m_Paused = true;
-        m_LastPausedTicks = GetTicks();
+        m_NextActionCallback = ON_SEND_ACTIONS_PAUSE;
         break;
       case ACTION_RESUME:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
-        m_Paused = false;
+        m_NextActionCallback = ON_SEND_ACTIONS_RESUME;
         break;
       case ACTION_CHAT_TRIGGER: {
         const vector<uint8_t>& actionBytes = *action->GetAction();
@@ -7587,8 +7609,7 @@ bool CGame::Pause(CGameUser* user, const bool isDisconnect)
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_PAUSE);
   GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
-  m_Paused = true;
-  m_LastPausedTicks = GetTicks();
+  m_NextActionCallback = ON_SEND_ACTIONS_PAUSE;
   return true;
 }
 
@@ -7600,7 +7621,7 @@ bool CGame::Resume()
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_RESUME);
   GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
-  m_Paused = false;
+  m_NextActionCallback = ON_SEND_ACTIONS_RESUME;
   return true;
 }
 
@@ -7702,7 +7723,6 @@ bool CGame::TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary)
 
   if (Save(user, true)) {
     Pause(user, true);
-    SendAllActions();
     // In FFA games, it's okay to show the real name (instead of GetDisplayName()) when disconnected.
     SendAllChat("Game saved on " + user->GetName() + "'s disconnection.");
     SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");

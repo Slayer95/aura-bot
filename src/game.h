@@ -131,6 +131,7 @@ protected:
   UserList                            m_Users;                         // std::vector of players
   std::pair<ActionQueue, ActionQueue> m_Actions;                       // queue of actions to be sent
   bool                                m_ActionQueueSelector;
+  uint8_t                             m_NextActionCallback;
   std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>               m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
   std::vector<uint16_t>               m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
@@ -386,6 +387,7 @@ public:
   uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool                      Update(void* fd, void* send_fd);
   void                      UpdatePost(void* send_fd);
+  void                      RunActionsScheduler();
 
   // logging
   void                      LogApp(const std::string& logText) const;
@@ -418,6 +420,7 @@ public:
   void                      SendOwnerCommandsHelp(const std::string& cmdToken, CGameUser* user) const;
   void                      SendCommandsHelp(const std::string& cmdToken, CGameUser* user, const bool isIntro) const;
   void                      SendLeftMessage(CGameUser* user, const bool sendChat) const;
+  void                      SendAllActionsCallback();
   void                      SendAllActions();
   void                      SendAllAutoStart() const;
 
