@@ -241,8 +241,7 @@ void CRealm::Update(void* fd, void* send_fd)
             case BNETProtocol::Magic::ENTERCHAT: {
               BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
               if (enterChatResult.success) {
-                m_ChatUniqueName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
-                PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "entered chat unique name <<" + m_ChatUniqueName + ">>")
+                m_ChatNickName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
                 AutoJoinChat();
               }
 

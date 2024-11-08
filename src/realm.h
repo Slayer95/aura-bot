@@ -97,7 +97,7 @@ private:
   std::vector<uint8_t>             m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
   std::array<uint8_t, 32>          m_LoginSalt;                 // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
   std::array<uint8_t, 32>          m_LoginServerPublicKey;      // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::string                      m_ChatUniqueName;            // set in RECEIVE_SID_ENTERCHAT
+  std::string                      m_ChatNickName;            // set in RECEIVE_SID_ENTERCHAT
 
   std::vector<std::string>         m_Friends;                   // std::vector of friends
   std::vector<std::string>         m_Clan;                      // std::vector of clan members
@@ -169,7 +169,7 @@ public:
   inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_InfoValueStringFormula), end(m_InfoValueStringFormula)); }
   inline const std::array<uint8_t, 32>&   GetLoginSalt() const { return m_LoginSalt; }
   inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
-  inline const std::string&               GetChatUniqueName() const { return m_ChatUniqueName; }
+  inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
   inline uint8_t       GetGameVersion() const { return m_GameVersion; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
