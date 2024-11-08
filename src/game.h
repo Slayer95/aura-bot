@@ -132,6 +132,8 @@ protected:
   std::pair<ActionQueue, ActionQueue> m_Actions;                       // queue of actions to be sent
   bool                                m_ActionQueueSelector;
   uint8_t                             m_NextActionCallback;
+  uint16_t                            m_ActionsLatency;
+  bool                                m_ActionsEqualizer;
   std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>               m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
   std::vector<uint16_t>               m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
@@ -250,8 +252,8 @@ public:
   CGame(CGame&) = delete;
 
   bool                      GetExiting() const { return m_Exiting; }
-  ActionQueue               GetIncomingActionQueue() const { return m_ActionQueueSelector ? m_Actions.first : m_Actions.second; }
-  ActionQueue               GetOutgoingActionQueue() const { return m_ActionQueueSelector ? m_Actions.second : m_Actions.first; }
+  ActionQueue&              GetIncomingActionQueue();
+  ActionQueue&              GetOutgoingActionQueue();
   inline CMap*              GetMap() const { return m_Map; }
   inline uint32_t           GetEntryKey() const { return m_EntryKey; }
   inline uint16_t           GetHostPort() const { return m_HostPort; }

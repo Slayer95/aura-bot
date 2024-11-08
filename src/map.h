@@ -81,6 +81,7 @@ public:
   std::optional<uint32_t>               m_LobbyCountDownInterval;
   std::optional<uint32_t>               m_LobbyCountDownStartValue;
   std::optional<uint16_t>               m_Latency;
+  std::optional<bool>                   m_LatencyEqualizer;
   std::optional<int64_t>                m_AutoStartSeconds;
   std::optional<uint8_t>                m_AutoStartPlayers;
   std::optional<bool>                   m_HideLobbyNames;

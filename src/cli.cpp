@@ -141,6 +141,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--latency", m_GameLatencyAverage, "Sets the refresh period for the game as a ping equalizer, in milliseconds.");
   app.add_option("--latency-max-frames", m_GameLatencyMaxFrames, "Sets a maximum amount of frames clients may fall behind. When exceeded, the lag screen shows up.");
   app.add_option("--latency-safe-frames", m_GameLatencySafeFrames, "Sets a frame difference clients must catch up to in order for the lag screen to go away.");
+  app.add_flag(  "--latency-equalizer,--no-latency-equalizer{false}", m_GameLatencyEqualizer, "Enables a minimum delay for all actions sent by game players.");
   app.add_flag(  "--latency-normalize,--no-latency-normalize{false}", m_GameSyncNormalize, "Whether Aura tries to automatically fix some game-start lag issues.");
   app.add_option("--reconnection", m_GameReconnectionMode, "Customizes GProxy support for the hosted game. Values: disabled, basic, extended.")->check(CLI::IsMember({"disabled", "basic", "extended"}));
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");

@@ -64,7 +64,8 @@ public:
   uint32_t                 m_LobbyOwnerTimeout;          // relinquish game ownership after this many minutes
   uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
   uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
-  uint16_t                 m_Latency;                    // the latency (by default)
+  uint16_t                 m_Latency;                    // the game refresh latency (by default)
+  bool                     m_LatencyEqualizer;           // whether to add a minimum delay proportional to m_Latency to all actions sent by players
   uint32_t                 m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;
   uint32_t                 m_LogDelay;

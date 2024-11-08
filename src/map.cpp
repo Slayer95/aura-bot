@@ -1109,6 +1109,10 @@ void CMap::Load(CConfig* CFG)
     m_Latency = CFG->GetUint16("map.bot.latency", 100);
     CFG->FailIfErrorLast();
   }
+  if (CFG->Exists("map.bot.latency.equalizer")) {
+    m_LatencyEqualizer = CFG->GetBool("map.bot.latency.equalizer", false);
+    CFG->FailIfErrorLast();
+  }
   if (CFG->Exists("map.reconnection.mode")) {
     m_ReconnectionMode = CFG->GetStringIndex("map.reconnection.mode", {"disabled", "basic", "extended"}, RECONNECT_DISABLED);
     if (m_ReconnectionMode.value() == RECONNECT_ENABLED_GPROXY_EXTENDED) m_ReconnectionMode = m_ReconnectionMode.value() | RECONNECT_ENABLED_GPROXY_BASIC;

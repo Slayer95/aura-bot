@@ -106,6 +106,7 @@ public:
   std::optional<uint16_t>               m_GameLatencyAverage;
   std::optional<uint16_t>               m_GameLatencyMaxFrames;
   std::optional<uint16_t>               m_GameLatencySafeFrames;
+  std::optional<bool>                   m_GameLatencyEqualizer;
   std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_GameNotifyJoins;

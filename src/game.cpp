@@ -1579,7 +1579,10 @@ void CGame::RunActionsScheduler()
     m_LastActionLateBy = ThisActionLateBy;
   }
   m_LastActionSentTicks = Ticks;
+
+  //if (m_Config->m_EnableLatencyEqualizer) {
   m_ActionQueueSelector = !m_ActionQueueSelector;
+  //}
 }
 
 void CGame::LogApp(const string& logText) const
@@ -2903,7 +2906,7 @@ void CGame::SendAllActions()
 
   // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
 
-  ActionQueue actions = GetOutgoingActionQueue();
+  ActionQueue& actions = GetOutgoingActionQueue();
   if (!actions.empty())
   {
     // we use a "sub actions queue" which we keep adding actions to until we reach the size limit
@@ -3065,6 +3068,22 @@ bool CGame::GetAnyUsingGProxyLegacy() const
 
 uint8_t CGame::GetPlayersReadyMode() const {
   return m_Config->m_PlayersReadyMode;
+}
+
+ActionQueue& CGame::GetIncomingActionQueue()
+{
+  if (!m_Config->m_EnableLatencyEqualizer) {
+    return m_Actions.first;
+  }
+  return m_ActionQueueSelector ? m_Actions.first : m_Actions.second;
+}
+
+ActionQueue& CGame::GetOutgoingActionQueue()
+{
+  if (!m_Config->m_EnableLatencyEqualizer) {
+    return m_Actions.first;
+  }
+  return m_ActionQueueSelector ? m_Actions.second : m_Actions.first;
 }
 
 uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
@@ -7624,7 +7643,7 @@ bool CGame::Save(CGameUser* user, const bool isDisconnect)
     ActionStart.push_back(ACTION_SAVE);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionStart, fileName);
-    ActionQueue actions = GetOutgoingActionQueue();
+    ActionQueue& actions = GetOutgoingActionQueue();
     actions.push(new CIncomingAction(UID, CRC, ActionStart));
     actions.push(new CIncomingAction(UID, CRC, ActionEnd));
   }
@@ -8074,6 +8093,7 @@ string CGame::GetLobbyVirtualHostName() const {
 
 uint16_t CGame::GetLatency() const
 {
+  if (m_Config->m_EnableLatencyEqualizer) return m_Config->m_Latency / 2;
   return m_Config->m_Latency;
 }
 
