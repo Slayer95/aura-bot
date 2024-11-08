@@ -658,7 +658,7 @@ void CGameUser::EventGProxyReconnectInvalid()
   RotateGProxyReconnectKey();
 }
 
-void CGameUser::RotateGProxyReconnectKey()
+void CGameUser::RotateGProxyReconnectKey() const
 {
   m_Socket->PutBytes(GPSProtocol::SEND_GPSS_CHANGE_KEY(rand()));
 }

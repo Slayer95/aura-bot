@@ -150,101 +150,101 @@ public:
   CGameUser(CGame* game, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
   ~CGameUser();
 
-  uint32_t GetOperationalRTT() const;
-  uint32_t GetDisplayRTT() const;
-  uint32_t GetRTT() const;
-  std::string GetConnectionErrorString() const;
-  inline bool                     GetIsReady() const { return m_Ready; }
-  inline uint8_t                  GetUID() const { return m_UID; }
-  inline uint8_t                  GetOldUID() const { return m_OldUID; }
-  inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
-  inline std::string              GetName() const { return m_Name; }
-  std::string                     GetLowerName() const;
-  std::string                     GetDisplayName() const;
-  inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
-  inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
-  inline uint32_t                 GetPongCounter() const { return m_PongCounter; }
-  inline size_t                   GetNumCheckSums() const { return m_CheckSums.size(); }
-  inline std::queue<uint32_t>*    GetCheckSums() { return &m_CheckSums; }
-  inline bool                     HasCheckSums() const { return !m_CheckSums.empty(); }
-  inline std::string              GetLeftReason() const { return m_LeftReason; }
-  inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
-  inline bool                     GetQuitGame() const { return m_QuitGame; }
-  CRealm*                         GetRealm(bool mustVerify) const;
-  std::string                     GetRealmDataBaseID(bool mustVerify) const;
-  inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
-  inline std::string              GetRealmHostName() const { return m_RealmHostName; }
-  inline std::string              GetExtendedName() const {
+  [[nodiscard]] uint32_t GetOperationalRTT() const;
+  [[nodiscard]] uint32_t GetDisplayRTT() const;
+  [[nodiscard]] uint32_t GetRTT() const;
+  [[nodiscard]] std::string GetConnectionErrorString() const;
+  [[nodiscard]] inline bool                     GetIsReady() const { return m_Ready; }
+  [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
+  [[nodiscard]] inline uint8_t                  GetOldUID() const { return m_OldUID; }
+  [[nodiscard]] inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
+  [[nodiscard]] inline std::string              GetName() const { return m_Name; }
+  [[nodiscard]] std::string                     GetLowerName() const;
+  [[nodiscard]] std::string                     GetDisplayName() const;
+  [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
+  [[nodiscard]] inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
+  [[nodiscard]] inline uint32_t                 GetPongCounter() const { return m_PongCounter; }
+  [[nodiscard]] inline size_t                   GetNumCheckSums() const { return m_CheckSums.size(); }
+  [[nodiscard]] inline std::queue<uint32_t>*    GetCheckSums() { return &m_CheckSums; }
+  [[nodiscard]] inline bool                     HasCheckSums() const { return !m_CheckSums.empty(); }
+  [[nodiscard]] inline std::string              GetLeftReason() const { return m_LeftReason; }
+  [[nodiscard]] inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
+  [[nodiscard]] inline bool                     GetQuitGame() const { return m_QuitGame; }
+  [[nodiscard]] CRealm*                         GetRealm(bool mustVerify) const;
+  [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
+  [[nodiscard]] inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
+  [[nodiscard]] inline std::string              GetRealmHostName() const { return m_RealmHostName; }
+  [[nodiscard]] inline std::string              GetExtendedName() const {
     if (m_RealmHostName.empty()) {
       return m_Name + "@@@LAN/VPN";
     } else {
       return m_Name + "@" + m_RealmHostName;
     }
   }
-  inline bool                  IsRealmVerified() const { return m_Verified; }
-  inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
-  inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
-  bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
-  inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
-  inline uint32_t              GetLastMapPartSent() const { return m_LastMapPartSent; }
-  inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
-  inline int64_t               GetStartedDownloadingTicks() const { return m_StartedDownloadingTicks; }
-  inline int64_t               GetFinishedDownloadingTime() const { return m_FinishedDownloadingTime; }
-  inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
+  [[nodiscard]] inline bool                  IsRealmVerified() const { return m_Verified; }
+  [[nodiscard]] inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
+  [[nodiscard]] inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
+  [[nodiscard]] bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
+  [[nodiscard]] inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
+  [[nodiscard]] inline uint32_t              GetLastMapPartSent() const { return m_LastMapPartSent; }
+  [[nodiscard]] inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
+  [[nodiscard]] inline int64_t               GetStartedDownloadingTicks() const { return m_StartedDownloadingTicks; }
+  [[nodiscard]] inline int64_t               GetFinishedDownloadingTime() const { return m_FinishedDownloadingTime; }
+  [[nodiscard]] inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
 
-  inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
-  inline int64_t               GetLastGProxyWaitNoticeSentTime() const { return m_LastGProxyWaitNoticeSentTime; }
-  inline uint32_t              GetGProxyReconnectKey() const { return m_GProxyReconnectKey; }
-  inline bool                  GetGProxyCheckGameID() const { return m_GProxyCheckGameID; }
-  inline bool                  GetGProxyAny() const { return m_GProxy; }
-  inline bool                  GetGProxyLegacy() const { return m_GProxy && !m_GProxyExtended; }
-  inline bool                  GetGProxyExtended() const { return m_GProxyExtended; }
-  inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
+  [[nodiscard]] inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
+  [[nodiscard]] inline int64_t               GetLastGProxyWaitNoticeSentTime() const { return m_LastGProxyWaitNoticeSentTime; }
+  [[nodiscard]] inline uint32_t              GetGProxyReconnectKey() const { return m_GProxyReconnectKey; }
+  [[nodiscard]] inline bool                  GetGProxyCheckGameID() const { return m_GProxyCheckGameID; }
+  [[nodiscard]] inline bool                  GetGProxyAny() const { return m_GProxy; }
+  [[nodiscard]] inline bool                  GetGProxyLegacy() const { return m_GProxy && !m_GProxyExtended; }
+  [[nodiscard]] inline bool                  GetGProxyExtended() const { return m_GProxyExtended; }
+  [[nodiscard]] inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
   
-  inline bool                  GetDisconnected() const { return m_Disconnected; }
-  inline bool                  GetDisconnectedUnrecoverably() const { return m_Disconnected && !m_GProxy; }
-  int64_t                      GetTotalDisconnectTicks() const;
-  std::string                  GetDelayText(bool displaySync) const;
-  std::string                  GetSyncText() const;
+  [[nodiscard]] inline bool                  GetDisconnected() const { return m_Disconnected; }
+  [[nodiscard]] inline bool                  GetDisconnectedUnrecoverably() const { return m_Disconnected && !m_GProxy; }
+  [[nodiscard]] int64_t                      GetTotalDisconnectTicks() const;
+  [[nodiscard]] std::string                  GetDelayText(bool displaySync) const;
+  [[nodiscard]] std::string                  GetSyncText() const;
   
-  inline bool                  GetIsReserved() const { return m_Reserved; }
-  bool                         GetIsSudoMode() const;
-  bool                         CheckSudoMode();
+  [[nodiscard]] inline bool                  GetIsReserved() const { return m_Reserved; }
+  [[nodiscard]] bool                         GetIsSudoMode() const;
+  [[nodiscard]] bool                         CheckSudoMode();
   void                         SudoModeStart();
   void                         SudoModeEnd();
-  inline bool                  GetIsObserver() const { return m_Observer; }
-  inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
-  bool                         GetIsNativeReferee() const;
-  bool                         GetCanUsePublicChat() const;
-  inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
-  inline bool                  GetWhoisSent() const { return m_WhoisSent; }
-  inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }
-  inline bool                  GetDownloadStarted() const { return m_DownloadStarted; }
-  inline bool                  GetDownloadFinished() const { return m_DownloadFinished; }
-  inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
-  inline bool                  GetMapReady() const { return m_MapReady; }
-  inline bool                  GetMapKicked() const { return m_MapKicked; }
-  inline bool                  GetPingKicked() const { return m_PingKicked; }
-  inline bool                  GetSpoofKicked() const { return m_SpoofKicked; }
-  inline bool                  GetAbuseKicked() const { return m_AbuseKicked; }
-  inline bool                  GetHasHighPing() const { return m_HasHighPing; }
-  inline bool                  GetKickQueued() const { return m_KickByTicks.has_value(); }
-  inline bool                  GetLagging() const { return m_Lagging; }
-  inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
-  inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
-  inline bool                  GetMuted() const { return m_Muted; }
-  inline bool                  GetIsActionLocked() const { return m_ActionLocked; }
-  inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
-  inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
-  inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
-  inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
-  inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
-  bool                         UpdateReady();
-  bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
-  inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
-  inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
-  inline bool                  GetCanPause() { return m_RemainingPauses > 0; }
-  inline bool                  GetCanSave() { return m_RemainingSaves > 0; }
+  [[nodiscard]] inline bool                  GetIsObserver() const { return m_Observer; }
+  [[nodiscard]] inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
+  [[nodiscard]] bool                         GetIsNativeReferee() const;
+  [[nodiscard]] bool                         GetCanUsePublicChat() const;
+  [[nodiscard]] inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
+  [[nodiscard]] inline bool                  GetWhoisSent() const { return m_WhoisSent; }
+  [[nodiscard]] inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }
+  [[nodiscard]] inline bool                  GetDownloadStarted() const { return m_DownloadStarted; }
+  [[nodiscard]] inline bool                  GetDownloadFinished() const { return m_DownloadFinished; }
+  [[nodiscard]] inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
+  [[nodiscard]] inline bool                  GetMapReady() const { return m_MapReady; }
+  [[nodiscard]] inline bool                  GetMapKicked() const { return m_MapKicked; }
+  [[nodiscard]] inline bool                  GetPingKicked() const { return m_PingKicked; }
+  [[nodiscard]] inline bool                  GetSpoofKicked() const { return m_SpoofKicked; }
+  [[nodiscard]] inline bool                  GetAbuseKicked() const { return m_AbuseKicked; }
+  [[nodiscard]] inline bool                  GetHasHighPing() const { return m_HasHighPing; }
+  [[nodiscard]] inline bool                  GetKickQueued() const { return m_KickByTicks.has_value(); }
+  [[nodiscard]] inline bool                  GetLagging() const { return m_Lagging; }
+  [[nodiscard]] inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
+  [[nodiscard]] inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
+  [[nodiscard]] inline bool                  GetMuted() const { return m_Muted; }
+  [[nodiscard]] inline bool                  GetIsActionLocked() const { return m_ActionLocked; }
+  [[nodiscard]] inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
+  [[nodiscard]] inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
+  [[nodiscard]] inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
+  [[nodiscard]] inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
+  [[nodiscard]] inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
+  [[nodiscard]] bool                         UpdateReady();
+  [[nodiscard]] bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
+  [[nodiscard]] inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
+  [[nodiscard]] inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
+  [[nodiscard]] inline bool                  GetCanPause() { return m_RemainingPauses > 0; }
+  [[nodiscard]] inline bool                  GetCanSave() { return m_RemainingSaves > 0; }
 
   inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
   inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
@@ -292,10 +292,10 @@ public:
   inline void SetUserReady(bool nReady) { m_UserReady = nReady; }
   inline void ClearUserReady() { m_UserReady = std::nullopt; }
 
-  bool GetReadyReminderIsDue() const;
+  [[nodiscard]] bool GetReadyReminderIsDue() const;
   void SetReadyReminded();
 
-  inline std::string GetLastCommand() const { return m_LastCommand; }
+  [[nodiscard]] inline std::string GetLastCommand() const { return m_LastCommand; }
   inline void ClearLastCommand() { m_LastCommand.clear(); }
   inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
   inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
@@ -316,8 +316,8 @@ public:
   }
   inline void ClearPings() { m_RTTValues.clear(); }
 
-  inline std::string GetPinnedMessage() { return  m_PinnedMessage; }
-  inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }
+  [[nodiscard]] inline const std::string& GetPinnedMessage() { return  m_PinnedMessage; }
+  [[nodiscard]] inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }
   inline void SetPinnedMessage(const std::string nPinnedMessage) { m_PinnedMessage = nPinnedMessage; }
   inline void ClearPinnedMessage() { m_PinnedMessage.clear(); }
 
@@ -332,12 +332,12 @@ public:
   void Send(const std::vector<uint8_t>& data);
   void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
   void EventGProxyReconnectInvalid();
-  void RotateGProxyReconnectKey();
+  void RotateGProxyReconnectKey() const;
   void CloseConnection();
   void UnrefConnection(bool deferred = false);
 };
 
-inline std::string PlayersToNameListString(std::vector<const CGameUser*> playerList, bool useRealNames = false) {
+[[nodiscard]] inline std::string PlayersToNameListString(std::vector<const CGameUser*> playerList, bool useRealNames = false) {
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {
@@ -349,7 +349,8 @@ inline std::string PlayersToNameListString(std::vector<const CGameUser*> playerL
   }
   return JoinVector(playerNames, ", ", false);
 }
-inline std::string PlayersToNameListString(std::vector<CGameUser*> playerList, bool useRealNames = false) {
+
+[[nodiscard]] inline std::string PlayersToNameListString(std::vector<CGameUser*> playerList, bool useRealNames = false) {
   if (playerList.empty()) return std::string();
   std::vector<std::string> playerNames;
   for (const auto& player : playerList) {
