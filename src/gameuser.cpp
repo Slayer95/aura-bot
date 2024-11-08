@@ -110,6 +110,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_DropVote(false),
     m_KickVote(false),
     m_Muted(false),
+    m_ActionLocked(false),
     m_LeftMessageSent(false),
     m_StatusMessageSent(false),
     m_UsedAnyCommands(false),

@@ -118,6 +118,7 @@ public:
   std::optional<bool>              m_DropVote;                     // if the player voted to drop the laggers or not (on the lag screen)
   std::optional<bool>              m_KickVote;                     // if the player voted to kick a player or not
   bool                             m_Muted;                        // if the player is muted or not
+  bool                             m_ActionLocked;                 // if the player is not allowed to use commands, change their race/team/color/handicap or they are
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
   std::optional<uint32_t>          m_LeftMessageBySyncCounter;
   bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
@@ -232,6 +233,7 @@ public:
   inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
   inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
   inline bool                  GetMuted() const { return m_Muted; }
+  inline bool                  GetIsActionLocked() const { return m_ActionLocked; }
   inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
   inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
   inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
@@ -275,6 +277,7 @@ public:
   inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
   inline void SetKickVote(bool nKickVote) { m_KickVote = nKickVote; }
   inline void SetMuted(bool nMuted) { m_Muted = nMuted; }
+  inline void SetActionLocked(bool nActionLocked) { m_ActionLocked = nActionLocked; }
   inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
   inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }

@@ -4492,6 +4492,11 @@ void CGame::EventUserChangeTeam(CGameUser* user, uint8_t team)
 {
   // user is requesting a team change
 
+  if (m_Locked || user->GetIsActionLocked()) {
+    SendChat(user, "You are not allowed to change your alignment.");
+    return;
+  }
+
   if (team > m_Map->GetVersionMaxSlots()) {
     return;
   }
@@ -4540,6 +4545,11 @@ void CGame::EventUserChangeColor(CGameUser* user, uint8_t colour)
 {
   // user is requesting a colour change
 
+  if (m_Locked || user->GetIsActionLocked()) {
+    SendChat(user, "You are not allowed to change your player color.");
+    return;
+  }
+
   if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
     // user should directly choose a different slot instead.
     return;
@@ -4574,6 +4584,11 @@ void CGame::EventUserChangeRace(CGameUser* user, uint8_t race)
   if (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)
     return;
 
+  if (m_Locked || user->GetIsActionLocked()) {
+    SendChat(user, "You are not allowed to change your race.");
+    return;
+  }
+
   if (race != SLOTRACE_HUMAN && race != SLOTRACE_ORC && race != SLOTRACE_NIGHTELF && race != SLOTRACE_UNDEAD && race != SLOTRACE_RANDOM)
     return;
 
@@ -4593,6 +4608,11 @@ void CGame::EventUserChangeHandicap(CGameUser* user, uint8_t handicap)
 
   if (handicap != 50 && handicap != 60 && handicap != 70 && handicap != 80 && handicap != 90 && handicap != 100)
     return;
+
+  if (m_Locked || user->GetIsActionLocked()) {
+    SendChat(user, "You are not allowed to change your handicap.");
+    return;
+  }
 
   CGameSlot* slot = GetSlot(GetSIDFromUID(user->GetUID()));
   if (slot) {

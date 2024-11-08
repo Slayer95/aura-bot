@@ -1191,7 +1191,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
   }
 
-  if (m_TargetGame && m_TargetGame->m_Locked && 0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
+  const bool isLocked = m_TargetGame && (m_GameUser->GetIsActionLocked() || m_TargetGame->GetLocked());
+  if (isLocked && 0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
     LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "Command ignored, the game is locked");
     ErrorReply("Only the game owner and root admins can run game commands when the game is locked.");
     return;
@@ -5423,9 +5424,30 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      string Warning = m_TargetGame->m_OwnerRealm.empty() ? " (Owner joined over LAN - will get removed if they leave.)" : "";
-      SendReply("Game locked. Only the game owner and root admins may run game commands." + Warning);
-      m_TargetGame->m_Locked = true;
+      if (Payload.empty()) {
+        if (m_TargetGame->GetCountDownStarted()) {
+          SendReply("Game is now locked. Only the game owner may use commands.");
+        } else {
+          string Warning = m_TargetGame->m_OwnerRealm.empty() ? " (Owner joined over LAN - will get removed if they leave.)" : "";
+          SendReply("Game is now locked. Only the game owner may use commands, and edit players' races, teams, etc." + Warning);
+        }
+        m_TargetGame->m_Locked = true;
+      } else {
+        CGameUser* targetPlayer = RunTargetUser(Payload);
+        if (!targetPlayer) {
+          break;
+        }
+        if (targetPlayer->GetIsActionLocked()) {
+          ErrorReply("Player [" + targetPlayer->GetDisplayName() + "] was already locked.");
+          break;
+        }
+        targetPlayer->SetActionLocked(true);
+        if (m_TargetGame->GetCountDownStarted()) {
+          SendReply("Player [" + targetPlayer->GetDisplayName() + "]  locked. They cannot use commands.");
+        } else {
+          SendReply("Player [" + targetPlayer->GetDisplayName() + "]  locked. They cannot use commands, nor choose their race, team, etc.");
+        }
+      }
       break;
     }
 
@@ -5478,8 +5500,30 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      SendAll("Game unlocked. All admins may now run game commands");
-      m_TargetGame->m_Locked = false;
+      if (Payload.empty()) {
+        if (m_TargetGame->GetCountDownStarted()) {
+          SendReply("Game unlocked. Everyone may now use commands.");
+        } else {
+          SendReply("Game unlocked. Everyone may now use commands, and choose their races, teams, etc.");
+        }
+
+        m_TargetGame->m_Locked = false;
+      } else {
+        CGameUser* targetPlayer = RunTargetUser(Payload);
+        if (!targetPlayer) {
+          break;
+        }
+        if (!targetPlayer->GetIsActionLocked()) {
+          ErrorReply("Player [" + targetPlayer->GetDisplayName() + "] was not locked.");
+          break;
+        }
+        targetPlayer->SetActionLocked(false);
+        if (m_TargetGame->GetCountDownStarted()) {
+          SendReply("Player [" + targetPlayer->GetDisplayName() + "]  unlocked. They may now use commands.");
+        } else {
+          SendReply("Player [" + targetPlayer->GetDisplayName() + "]  unlocked. They may now use commands, and choose their race, team, etc.");
+        }
+      }
       break;
     }
 
