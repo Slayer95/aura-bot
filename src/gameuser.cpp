@@ -133,6 +133,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
 {
   m_Socket->SetLogErrors(true);
+  m_Type = INCON_TYPE_PLAYER;
 }
 
 CGameUser::~CGameUser()
