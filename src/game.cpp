@@ -120,6 +120,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CustomStats(nullptr),
     m_DotaStats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
+    m_ActionQueueSelector(false),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
@@ -294,6 +295,19 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   InitSlots();
 }
 
+void CGame::ClearActions()
+{
+  while (!m_Actions.first.empty()) {
+    delete m_Actions.first.front();
+    m_Actions.first.pop();
+  }
+
+  while (!m_Actions.second.empty()) {
+    delete m_Actions.second.front();
+    m_Actions.second.pop();
+  }
+}
+
 void CGame::Reset()
 {
   m_FakeUsers.clear();
@@ -303,10 +317,7 @@ void CGame::Reset()
   }
   m_SyncPlayers.clear();
 
-  while (!m_Actions.empty()) {
-    delete m_Actions.front();
-    m_Actions.pop();
-  }
+  ClearActions();
 
   if (m_GameLoaded && m_Config->m_SaveStats) {
     // store the CDBGamePlayers in the database
@@ -992,9 +1003,9 @@ string CGame::GetLogPrefix() const
   return "[" + GetCategory() + ": " + GetGameName() + "] ";
 }
 
-vector<const CGameUser*> CGame::GetPlayers() const
+ImmutableUserList CGame::GetPlayers() const
 {
-  vector<const CGameUser*> players;
+  ImmutableUserList players;
   for (const auto& user : m_Users) {
     if (!user->GetLeftMessageSent() && !user->GetIsObserver()) {
       // Check GetLeftMessageSent instead of GetDeleteMe for debugging purposes
@@ -1004,9 +1015,9 @@ vector<const CGameUser*> CGame::GetPlayers() const
   return players;
 }
 
-vector<const CGameUser*> CGame::GetObservers() const
+ImmutableUserList CGame::GetObservers() const
 {
-  vector<const CGameUser*> observers;
+  ImmutableUserList observers;
   for (const auto& user : m_Users) {
     if (!user->GetLeftMessageSent() && user->GetIsObserver()) {
       // Check GetLeftMessageSent instead of GetDeleteMe for debugging purposes
@@ -1016,9 +1027,9 @@ vector<const CGameUser*> CGame::GetObservers() const
   return observers;
 }
 
-vector<const CGameUser*> CGame::GetUnreadyPlayers() const
+ImmutableUserList CGame::GetUnreadyPlayers() const
 {
-  vector<const CGameUser*> players;
+  ImmutableUserList players;
   for (const auto& user : m_Users) {
     if (!user->GetLeftMessageSent() && !user->GetIsObserver()) {
       if (!user->GetIsReady()) {
@@ -1129,7 +1140,7 @@ bool CGame::Update(void* fd, void* send_fd)
         uint8_t bestLaggerIndex = 0;
         uint32_t worstLaggerFrames = 0;
         uint32_t bestLaggerFrames = 0xFFFFFFFF;
-        vector<CGameUser*> laggingPlayers;
+        UserList laggingPlayers;
         i = static_cast<uint8_t>(m_Users.size());
         while (i--) {
           if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
@@ -2850,21 +2861,22 @@ void CGame::SendAllActions()
 
   // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
 
-  if (!m_Actions.empty())
+  ActionQueue actions = GetOutgoingActionQueue();
+  if (!actions.empty())
   {
     // we use a "sub actions queue" which we keep adding actions to until we reach the size limit
     // start by adding one action to the sub actions queue
 
     queue<CIncomingAction*> SubActions;
-    CIncomingAction*        Action = m_Actions.front();
-    m_Actions.pop();
+    CIncomingAction*        Action = actions.front();
+    actions.pop();
     SubActions.push(Action);
     size_t SubActionsLength = Action->GetLength();
 
-    while (!m_Actions.empty())
+    while (!actions.empty())
     {
-      Action = m_Actions.front();
-      m_Actions.pop();
+      Action = actions.front();
+      actions.pop();
 
       // check if adding the next action to the sub actions queue would put us over the limit (1452 because the INCOMING_ACTION and INCOMING_ACTION2 packets use an extra 8 bytes)
       bool isOverflows = SubActionsLength > 1452 || Action->GetLength() > 1452 || SubActionsLength + Action->GetLength() > 1452;
@@ -2897,7 +2909,7 @@ void CGame::SendAllActions()
     }
   }
   else
-    SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION(m_Actions, GetLatency()));
+    SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION(actions, GetLatency()));
 
   const int64_t Ticks                = GetTicks();
   if (m_LastActionSentTicks != 0) {
@@ -3225,7 +3237,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
 
   if (m_GameLoading || m_GameLoaded) {
     for (auto& otherPlayer : m_SyncPlayers[user]) {
-      std::vector<CGameUser*>& BackList = m_SyncPlayers[otherPlayer];
+      UserList& BackList = m_SyncPlayers[otherPlayer];
       auto BackIterator = std::find(BackList.begin(), BackList.end(), user);
       if (BackIterator == BackList.end()) {
       } else {
@@ -3337,7 +3349,7 @@ void CGame::EventLobbyLastPlayerLeaves()
 
 void CGame::ReportAllPings() const
 {
-  vector<CGameUser*> SortedPlayers = m_Users;
+  UserList SortedPlayers = m_Users;
   if (SortedPlayers.empty()) return;
 
   if (m_Lagging) {
@@ -3398,7 +3410,7 @@ void CGame::ReportPlayerGProxyDisconnected(CGameUser* user)
     // Since the disconnected user has already been flagged with SetGProxyDisconnectNoticeSent, they get
     // excluded from the output vector of CalculateNewLaggingPlayers(),
     // So we have to add them afterwards.
-    vector<CGameUser*> laggingPlayers = CalculateNewLaggingPlayers();
+    UserList laggingPlayers = CalculateNewLaggingPlayers();
     laggingPlayers.push_back(user);
     for (auto& laggingPlayer : laggingPlayers) {
       laggingPlayer->SetLagging(true);
@@ -3819,7 +3831,7 @@ CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* join
 bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAddress) const
 {
   // check for multiple IP usage
-  vector<CGameUser*> usersSameIP;
+  UserList usersSameIP;
   for (auto& otherPlayer : m_Users) {
     if (joinName == otherPlayer->GetName()) {
       continue;
@@ -4168,7 +4180,7 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
     return false;
   }
 
-  m_Actions.push(action);
+  GetIncomingActionQueue().push(action);
 
   if (!action->GetAction()->empty()) {
     LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
@@ -4248,7 +4260,7 @@ void CGame::EventUserKeepAlive(CGameUser* user)
     return;
 
   bool CanConsumeFrame = true;
-  std::vector<CGameUser*>& otherPlayers = m_SyncPlayers[user];
+  UserList& otherPlayers = m_SyncPlayers[user];
   for (auto& otherPlayer: otherPlayers) {
     if (otherPlayer == user) {
       CanConsumeFrame = false;;
@@ -4268,15 +4280,15 @@ void CGame::EventUserKeepAlive(CGameUser* user)
   user->GetCheckSums()->pop();
 
   bool DesyncDetected = false;
-  vector<CGameUser*> DesyncedPlayers;
-  typename std::vector<CGameUser*>::iterator it = otherPlayers.begin();
+  UserList DesyncedPlayers;
+  UserList::iterator it = otherPlayers.begin();
   while (it != otherPlayers.end()) {
     if ((*it)->GetCheckSums()->front() == MyCheckSum) {
       (*it)->GetCheckSums()->pop();
       ++it;
     } else {
       DesyncDetected = true;
-      std::vector<CGameUser*>& BackList = m_SyncPlayers[*it];
+      UserList& BackList = m_SyncPlayers[*it];
       auto BackIterator = std::find(BackList.begin(), BackList.end(), user);
       if (BackIterator == BackList.end()) {
       } else {
@@ -4982,7 +4994,7 @@ void CGame::EventGameStarted()
   }
 
   for (auto& user : m_Users) {
-    std::vector<CGameUser*> otherPlayers;
+    UserList otherPlayers;
     for (auto& otherPlayer : m_Users) {
       if (otherPlayer != user) {
         otherPlayers.push_back(otherPlayer);
@@ -5186,7 +5198,7 @@ void CGame::EventGameLoaded()
   const CGameUser* Longest  = nullptr;
 
   uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
-  vector<const CGameUser*> DesyncedPlayers;
+  ImmutableUserList DesyncedPlayers;
   if (m_Users.size() >= 2) {
     for (const auto& user : m_Users) {
       if (!Shortest || user->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks()) {
@@ -5208,7 +5220,7 @@ void CGame::EventGameLoaded()
     }
   }
 
-  vector<const CGameUser*> players = GetPlayers();
+  ImmutableUserList players = GetPlayers();
   if (players.size() <= 2) {
     m_PlayedBy = PlayersToNameListString(players, true);
   } else {
@@ -7076,9 +7088,9 @@ vector<uint32_t> CGame::GetPlayersFramesBehind() const
   return framesBehind;
 }
 
-vector<CGameUser*> CGame::GetLaggingPlayers() const
+UserList CGame::GetLaggingPlayers() const
 {
-  vector<CGameUser*> laggingPlayers;
+  UserList laggingPlayers;
   if (!m_Lagging) return laggingPlayers;
   for (const auto& user : m_Users) {
     if (!user->GetLagging()) {
@@ -7089,9 +7101,9 @@ vector<CGameUser*> CGame::GetLaggingPlayers() const
   return laggingPlayers;
 }
 
-vector<CGameUser*> CGame::CalculateNewLaggingPlayers() const
+UserList CGame::CalculateNewLaggingPlayers() const
 {
-  vector<CGameUser*> laggingPlayers;
+  UserList laggingPlayers;
   if (!m_Lagging) return laggingPlayers;
   for (const auto& user : m_Users) {
     if (user->GetIsObserver()) {
@@ -7574,7 +7586,7 @@ bool CGame::Pause(CGameUser* user, const bool isDisconnect)
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_PAUSE);
-  m_Actions.push(new CIncomingAction(UID, CRC, Action));
+  GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
   m_Paused = true;
   m_LastPausedTicks = GetTicks();
   return true;
@@ -7587,7 +7599,7 @@ bool CGame::Resume()
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_RESUME);
-  m_Actions.push(new CIncomingAction(UID, CRC, Action));
+  GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
   m_Paused = false;
   return true;
 }
@@ -7619,8 +7631,9 @@ bool CGame::Save(CGameUser* user, const bool isDisconnect)
     ActionStart.push_back(ACTION_SAVE);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionStart, fileName);
-    m_Actions.push(new CIncomingAction(UID, CRC, ActionStart));
-    m_Actions.push(new CIncomingAction(UID, CRC, ActionEnd));
+    ActionQueue actions = GetOutgoingActionQueue();
+    actions.push(new CIncomingAction(UID, CRC, ActionStart));
+    actions.push(new CIncomingAction(UID, CRC, ActionEnd));
   }
 
   SaveEnded(UID);
@@ -7635,7 +7648,7 @@ void CGame::SaveEnded(const uint8_t exceptUID)
     }
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    m_Actions.push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
+    GetOutgoingActionQueue().push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
   }
 }
 
@@ -7709,7 +7722,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> CRC, Action;
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
-  m_Actions.push(new CIncomingAction(UID, CRC, Action));
+  GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
   return true;
 }
 
