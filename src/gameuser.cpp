@@ -240,11 +240,21 @@ string CGameUser::GetRealmDataBaseID(bool mustVerify) const
   return string();
 }
 
+bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
+{
+  return m_Game->GetSyncCounter() > GetNormalSyncCounter() && m_Game->GetSyncCounter() - GetNormalSyncCounter() >= frameLimit;
+}
+
 void CGameUser::CloseConnection()
 {
   if (m_Disconnected) return;
   m_LastDisconnectTicks = GetTicks();
   m_Disconnected = true;
+  if (m_Game->GetGameLoaded()) {
+    m_LeftMessageBySyncCounter = m_Game->GetSyncCounter() + 1;
+  } else {
+    m_DeleteMe = true;
+  }
   m_Socket->Close();
 }
 
@@ -269,6 +279,9 @@ bool CGameUser::Update(void* fd, int64_t timeout)
   if (m_Disconnected) {
     if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks) {
       m_Game->EventUserKickGProxyExtendedTimeout(this);
+    }
+    if (m_LeftMessageBySyncCounter.has_value() && m_Game->GetSyncCounter() > m_LeftMessageBySyncCounter.value()) {
+      m_DeleteMe = true;
     }
     return m_DeleteMe;
   }

@@ -1119,7 +1119,7 @@ bool CGame::Update(void* fd, void* send_fd)
       vector<uint32_t> framesBehind = GetPlayersFramesBehind();
       uint8_t i = static_cast<uint8_t>(m_Users.size());
       while (i--) {
-        if (framesBehind[i] > GetSyncLimit()) {
+        if (framesBehind[i] > GetSyncLimit() && !(m_Users[i]->GetDisconnected() && !m_Users[i]->GetGProxyAny())) {
           startedLagging = true;
           break;
         }
@@ -1132,7 +1132,7 @@ bool CGame::Update(void* fd, void* send_fd)
         vector<CGameUser*> laggingPlayers;
         i = static_cast<uint8_t>(m_Users.size());
         while (i--) {
-          if (framesBehind[i] > GetSyncLimitSafe()) {
+          if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
             m_Users[i]->SetLagging(true);
             m_Users[i]->SetStartedLaggingTicks(Ticks);
             m_Users[i]->ClearStalePings(); // When someone ask for their ping, calculate it from their sync counter instead
@@ -1224,28 +1224,32 @@ bool CGame::Update(void* fd, void* send_fd)
       // check if anyone has stopped lagging normally
       // we consider a user to have stopped lagging if they're less than m_SyncLimitSafe keepalives behind
 
-      uint32_t PlayersStillLagging = 0;
+      uint32_t stillLaggingCounter = 0;
       for (auto& user : m_Users) {
         if (!user->GetLagging()) {
           continue;
         }
 
         if (user->GetGProxyDisconnectNoticeSent()) {
-          ++PlayersStillLagging;
+          ++stillLaggingCounter;
           continue;
         }
 
-        if (m_SyncCounter > user->GetNormalSyncCounter() && m_SyncCounter - user->GetNormalSyncCounter() >= GetSyncLimitSafe()) {
-          ++PlayersStillLagging;
+        if (user->GetIsBehindFramesNormal(GetSyncLimitSafe()) && !user->GetDisconnectedUnrecoverably()) {
+          ++stillLaggingCounter;
         } else {
           SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
           user->SetLagging(false);
           user->SetStartedLaggingTicks(0);
-          LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
+          if (user->GetDisconnected()) {
+            LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
+          } else {
+            LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
+          }
         }
       }
 
-      if (PlayersStillLagging == 0) {
+      if (stillLaggingCounter == 0) {
         m_Lagging = false;
         m_LastActionSentTicks = Ticks - GetLatency();
         m_LastActionLateBy = 0;
@@ -3373,7 +3377,7 @@ void CGame::ResetOwnerSeen()
   m_LastOwnerSeen = GetTime();
 }
 
-void CGame::ReportPlayerDisconnected(CGameUser* user)
+void CGame::ReportPlayerGProxyDisconnected(CGameUser* user)
 {
   user->SudoModeEnd();
 
@@ -3418,7 +3422,7 @@ void CGame::ReportPlayerDisconnected(CGameUser* user)
 
 void CGame::EventUserDisconnectTimedOut(CGameUser* user)
 {
-  if (user->GetDeleteMe()) return;
+  if (user->GetDisconnected()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       user->UnrefConnection();
@@ -3429,7 +3433,7 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
         SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxy++ and may reconnect");
       }
     }
-    ReportPlayerDisconnected(user);
+    ReportPlayerGProxyDisconnected(user);
     return;
   }
 
@@ -3440,7 +3444,7 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
   if (GetTime() - m_LastLagScreenTime >= 10 && !user->GetGProxyExtended()) {
     user->CloseConnection();
     TrySaveOnDisconnect(user, false);
-    user->SetDeleteMe(true);
+    //user->SetDeleteMe(true);
     user->SetLeftReason("has lost the connection (timed out)");
     user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 
@@ -3453,7 +3457,7 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
 
 void CGame::EventUserDisconnectSocketError(CGameUser* user)
 {
-  if (user->GetDeleteMe()) return;
+  if (user->GetDisconnected()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       string errorString = user->GetConnectionErrorString();
@@ -3462,13 +3466,13 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
       SendAllChat(user->GetDisplayName() + " has disconnected (connection error - " + errorString + ") but is using GProxy++ and may reconnect");
     }
 
-    ReportPlayerDisconnected(user);
+    ReportPlayerGProxyDisconnected(user);
     return;
   }
 
   user->CloseConnection();
   TrySaveOnDisconnect(user, false);
-  user->SetDeleteMe(true);
+  //user->SetDeleteMe(true);
   user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 
@@ -3480,7 +3484,7 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
 
 void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
 {
-  if (user->GetDeleteMe()) return;
+  if (user->GetDisconnected()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       user->UnrefConnection();
@@ -3488,13 +3492,13 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
       SendAllChat(user->GetDisplayName() + " has terminated the connection, but is using GProxy++ and may reconnect");
     }
 
-    ReportPlayerDisconnected(user);
+    ReportPlayerGProxyDisconnected(user);
     return;
   }
 
   user->CloseConnection();
   TrySaveOnDisconnect(user, false);
-  user->SetDeleteMe(true);
+  //user->SetDeleteMe(true);
   user->SetLeftReason("has terminated the connection");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 
@@ -3506,7 +3510,7 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
 
 void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover)
 {
-  if (user->GetDeleteMe()) return;
+  if (user->GetDisconnected()) return;
   if (canRecover && user->GetGProxyAny() && m_GameLoaded) {
     if (!user->GetGProxyDisconnectNoticeSent()) {
       user->UnrefConnection();
@@ -3514,13 +3518,13 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
       SendAllChat(user->GetDisplayName() + " has disconnected (protocol error) but is using GProxy++ and may reconnect");
     }
 
-    ReportPlayerDisconnected(user);
+    ReportPlayerGProxyDisconnected(user);
     return;
   }
 
   user->CloseConnection();
   TrySaveOnDisconnect(user, false);
-  user->SetDeleteMe(true);
+  //user->SetDeleteMe(true);
   if (canRecover) {
     user->SetLeftReason("has lost the connection (protocol error)");
   } else {
@@ -3536,12 +3540,12 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
 
 void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
 {
-  if (user->GetDeleteMe()) return;
-  user->SetDeleteMe(true);
+  if (user->GetDisconnected()) return;
+  user->CloseConnection();
+  //user->SetDeleteMe(true);
   user->SetLeftReason("was kicked by anti-abuse");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
   user->SetAbuseKicked(true);
-  user->CloseConnection();
 
   if (!m_GameLoading && !m_GameLoaded) {
     const uint8_t SID = GetSIDFromUID(user->GetUID());
@@ -3551,12 +3555,12 @@ void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
 
 void CGame::EventUserKickUnverified(CGameUser* user)
 {
-  if (user->GetDeleteMe()) return;
-  user->SetDeleteMe(true);
+  if (user->GetDisconnected()) return;
+  user->CloseConnection();
+  //user->SetDeleteMe(true);
   user->SetLeftReason("has been kicked because they are not verified by their realm");
   user->SetLeftCode(PLAYERLEAVE_LOBBY);
   user->SetSpoofKicked(true);
-  user->CloseConnection();
 
   const uint8_t SID = GetSIDFromUID(user->GetUID());
   OpenSlot(SID, false);
@@ -3602,8 +3606,8 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     for (auto& fake : m_FakeUsers) {
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT));
     }
-    if (p1->GetDeleteMe()) continue;
-    p1->SetDeleteMe(true);
+    if (p1->GetDisconnected()) continue;
+    //p1->SetDeleteMe(true);
     p1->SetLeftReason(reason);
     p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     p1->SetLeftMessageSent(true);
@@ -3611,6 +3615,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       // Let GProxy know that it should give up at reconnecting.
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
+    p1->CloseConnection();
     anyStopped = true;
   }
   return anyStopped;
@@ -3643,7 +3648,7 @@ void CGame::ShowPlayerNamesInGame() {
 
 void CGame::EventUserKickHandleQueued(CGameUser* user)
 {
-  if (user->GetDeleteMe())
+  if (user->GetDisconnected())
     return;
 
   if (m_CountDownStarted) {
@@ -3651,7 +3656,7 @@ void CGame::EventUserKickHandleQueued(CGameUser* user)
     return;
   }
 
-  user->SetDeleteMe(true);
+  //user->SetDeleteMe(true);
   user->CloseConnection();
   // left reason, left code already assigned when queued
 
@@ -3661,7 +3666,7 @@ void CGame::EventUserKickHandleQueued(CGameUser* user)
 
 void CGame::EventUserCheckStatus(CGameUser* user)
 {
-  if (user->GetDeleteMe())
+  if (user->GetDisconnected())
     return;
 
   if (m_CountDownStarted) {
@@ -3986,7 +3991,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
         CGameUser* kickedPlayer = GetUserFromSID(SID);
 
         if (kickedPlayer) {
-          kickedPlayer->SetDeleteMe(true);
+          kickedPlayer->CloseConnection();
           if (m_IsHiddenPlayerNames) {
             kickedPlayer->SetLeftReason("was kicked to make room for a reserved user");
           } else {
@@ -4016,7 +4021,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
       CGameUser* kickedPlayer = GetUserFromSID(SID);
 
       if (kickedPlayer) {
-        kickedPlayer->SetDeleteMe(true);
+        kickedPlayer->CloseConnection();
         if (m_IsHiddenPlayerNames) {
           kickedPlayer->SetLeftReason("was kicked to make room for the owner");
         } else {
@@ -4124,11 +4129,11 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
 
 void CGame::EventUserLeft(CGameUser* user)
 {
-  if (user->GetDeleteMe()) return;
+  if (user->GetDisconnected()) return;
   // this function is only called when a user leave packet is received, not when there's a socket error, kick, etc...
   TrySaveOnDisconnect(user, true);
   user->CloseConnection();
-  user->SetDeleteMe(true);
+  //user->SetDeleteMe(true);
   user->SetLeftReason("Leaving the game voluntarily");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_LOST);
   user->SetQuitGame(true);
@@ -4714,7 +4719,7 @@ bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
 
 void CGame::EventUserPongToHost(CGameUser* user)
 {
-  if (m_GameLoading || m_GameLoaded || user->GetDeleteMe() || user->GetIsReserved()) {
+  if (m_GameLoading || m_GameLoaded || user->GetDisconnected() || user->GetIsReserved()) {
     return;
   }
 
@@ -6224,7 +6229,8 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   CGameUser* user = GetUserFromSID(SID);
   if (user && !user->GetDeleteMe()) {
     if (!kick) return false;
-    user->SetDeleteMe(true);
+    //user->SetDeleteMe(true);
+    user->CloseConnection();
     user->SetLeftReason("was kicked when opening a slot");
     user->SetLeftCode(PLAYERLEAVE_LOBBY);
   } else if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
@@ -6294,7 +6300,8 @@ bool CGame::CloseSlot(const uint8_t SID, const bool kick)
   CGameUser* user = GetUserFromSID(SID);
   if (user && !user->GetDeleteMe()) {
     if (!kick) return false;
-    user->SetDeleteMe(true);
+    //user->SetDeleteMe(true);
+    user->CloseConnection();
     user->SetLeftReason("was kicked when closing a slot");
     user->SetLeftCode(PLAYERLEAVE_LOBBY);
   }
@@ -6354,9 +6361,10 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
   CGameUser* Player = GetUserFromSID(SID);
   if (Player && !Player->GetDeleteMe()) {
     if (!kick) return false;
-    Player->SetDeleteMe(true);
+    Player->CloseConnection();
     Player->SetLeftReason("was kicked when creating a computer in a slot");
     Player->SetLeftCode(PLAYERLEAVE_LOBBY);
+    //Player->SetDeleteMe(true);
   }
 
   // ignore layout, override computers
@@ -6842,9 +6850,10 @@ void CGame::ReportSpoofed(const string& server, CGameUser* user)
     SendAllChat("Name spoof detected. The real [" + user->GetName() + "@" + server + "] is not in this game.");
   }
   if (GetIsLobby() && MatchOwnerName(user->GetName())) {
-    user->SetDeleteMe(true);
+    user->CloseConnection();
     user->SetLeftReason("was autokicked for spoofing the game owner");
     user->SetLeftCode(PLAYERLEAVE_LOBBY);
+    //user->SetDeleteMe(true);
     const uint8_t SID = GetSIDFromUID(user->GetUID());
     OpenSlot(SID, false);
   }
@@ -7071,10 +7080,7 @@ vector<CGameUser*> CGame::CalculateNewLaggingPlayers() const
     if (user->GetLagging() || user->GetGProxyDisconnectNoticeSent()) {
       continue;
     }
-    if (m_SyncCounter <= user->GetNormalSyncCounter()) {
-      continue;
-    }
-    if (m_SyncCounter - user->GetNormalSyncCounter() > GetSyncLimitSafe()) {
+    if (user->GetIsBehindFramesNormal(GetSyncLimitSafe()) && !user->GetDisconnectedUnrecoverably()) {
       laggingPlayers.push_back(user);
     }
   }
@@ -7221,7 +7227,8 @@ void CGame::CountKickVotes()
     CGameUser* victim = GetUserFromName(m_KickVotePlayer, true);
 
     if (victim) {
-      victim->SetDeleteMe(true);
+      victim->CloseConnection();
+      //victim->SetDeleteMe(true);
       victim->SetLeftReason("was kicked by vote");
 
       if (GetIsLobby())
@@ -7364,7 +7371,8 @@ void CGame::StartCountDown(bool fromUser, bool force)
         }
       }
       if (shouldKick) {
-        user->SetDeleteMe(true);
+        user->CloseConnection();
+        //user->SetDeleteMe(true);
         user->SetLeftReason("kicked when starting the game");
         user->SetLeftCode(PLAYERLEAVE_LOBBY);
         CloseSlot(GetSIDFromUID(user->GetUID()), false);
@@ -7500,6 +7508,7 @@ bool CGame::StopPlayers(const string& reason) const
   bool anyStopped = false;
   for (auto& user : m_Users) {
     if (user->GetDeleteMe()) continue;
+    user->CloseConnection();
     user->SetDeleteMe(true);
     user->SetLeftReason(reason);
     user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
@@ -7512,7 +7521,8 @@ void CGame::StopLaggers(const string& reason) const
 {
   for (auto& user : m_Users) {
     if (user->GetLagging()) {
-      user->SetDeleteMe(true);
+      user->CloseConnection();
+      //user->SetDeleteMe(true);
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
@@ -7529,7 +7539,8 @@ void CGame::StopDesynchronized(const string& reason) const
       continue;
     }
     if ((it->second).size() < majorityThreshold) {
-      user->SetDeleteMe(true);
+      user->CloseConnection();
+      //user->SetDeleteMe(true);
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }

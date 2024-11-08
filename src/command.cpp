@@ -2394,7 +2394,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      targetPlayer->SetDeleteMe(true);
+      targetPlayer->CloseConnection();
+      //targetPlayer->SetDeleteMe(true);
       targetPlayer->SetLeftReason("was kicked by [" + m_FromName + "]");
 
       if (m_TargetGame->GetIsLobby())
@@ -3678,7 +3679,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CGameUser* targetPlayer = m_TargetGame->GetUserFromName(targetName, false);
       if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
-        targetPlayer->SetDeleteMe(true);
+        targetPlayer->CloseConnection();
+        //targetPlayer->SetDeleteMe(true);
         targetPlayer->SetLeftReason("was banned by [" + m_FromName + "]");
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
         m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromUID(targetPlayer->GetUID()), false);
@@ -3800,7 +3802,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       CGameUser* targetPlayer = m_TargetGame->GetUserFromName(targetName, false);
       if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
-        targetPlayer->SetDeleteMe(true);
+        targetPlayer->CloseConnection();
+        //targetPlayer->SetDeleteMe(true);
         targetPlayer->SetLeftReason("was persistently banned by [" + m_FromName + "]");
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
         m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromUID(targetPlayer->GetUID()), false);

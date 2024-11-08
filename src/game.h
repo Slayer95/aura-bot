@@ -436,7 +436,7 @@ public:
   void                      EventUserDeleted(CGameUser* user, void* fd, void* send_fd);
   void                      EventLobbyLastPlayerLeaves();
   void                      ReportAllPings() const;
-  void                      ReportPlayerDisconnected(CGameUser* user);
+  void                      ReportPlayerGProxyDisconnected(CGameUser* user);
   bool                      CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   bool                      CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   void                      EventUserDisconnectTimedOut(CGameUser* user);

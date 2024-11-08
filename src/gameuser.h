@@ -119,6 +119,7 @@ public:
   std::optional<bool>              m_KickVote;                     // if the player voted to kick a player or not
   bool                             m_Muted;                        // if the player is muted or not
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
+  std::optional<uint32_t>          m_LeftMessageBySyncCounter;
   bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
   bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
   bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
@@ -182,6 +183,7 @@ public:
   inline bool                  IsRealmVerified() const { return m_Verified; }
   inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
   inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
+  bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
   inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
   inline uint32_t              GetLastMapPartSent() const { return m_LastMapPartSent; }
   inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
@@ -199,6 +201,7 @@ public:
   inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
   
   inline bool                  GetDisconnected() const { return m_Disconnected; }
+  inline bool                  GetDisconnectedUnrecoverably() const { return m_Disconnected && !m_GProxy; }
   int64_t                      GetTotalDisconnectTicks() const;
   std::string                  GetDelayText(bool displaySync) const;
   std::string                  GetSyncText() const;
