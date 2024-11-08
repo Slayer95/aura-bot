@@ -880,7 +880,11 @@ bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& S
 
     case '@': {
       user = GetTargetUser(target.substr(1));
-      return user != nullptr;
+      if (user == nullptr) {
+        return false;
+      }
+      SID = GetSIDFromUID(user->GetUID());
+      return true;
     }
 
     default: {
@@ -923,7 +927,11 @@ bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& S
 
     case '@': {
       user = RunTargetUser(target.substr(1));
-      return user != nullptr;
+      if (user == nullptr) {
+        return false;
+      }
+      SID = GetSIDFromUID(user->GetUID());
+      return true;
     }
 
     default: {
@@ -2407,9 +2415,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (m_TargetGame->GetIsLobby()) {
         bool KickAndClose = CommandHash == HashCode("ckick") || CommandHash == HashCode("closekick");
         if (KickAndClose && !m_TargetGame->GetIsRestored()) {
-          m_TargetGame->CloseSlot(m_TargetGame->GetSIDFromUID(targetPlayer->GetUID()), false);
-        } else {
-          m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromUID(targetPlayer->GetUID()), false);
+          m_TargetGame->CloseSlot(SID, false);
         }
       }
 
@@ -3684,7 +3690,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         //targetPlayer->SetDeleteMe(true);
         targetPlayer->SetLeftReason("was banned by [" + m_FromName + "]");
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
-        m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromUID(targetPlayer->GetUID()), false);
       }
 
       SendReply("[" + targetName + "@" + targetHostName + "] banned from joining this game.");
@@ -3807,7 +3812,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         //targetPlayer->SetDeleteMe(true);
         targetPlayer->SetLeftReason("was persistently banned by [" + m_FromName + "]");
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
-        m_TargetGame->OpenSlot(m_TargetGame->GetSIDFromUID(targetPlayer->GetUID()), false);
       }
 
       SendReply("[" + targetName + "@" + targetHostName + "] banned.");

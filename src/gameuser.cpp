@@ -247,17 +247,13 @@ bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
   return m_Game->GetSyncCounter() > GetNormalSyncCounter() && m_Game->GetSyncCounter() - GetNormalSyncCounter() >= frameLimit;
 }
 
-void CGameUser::CloseConnection()
+void CGameUser::CloseConnection(bool fromOpen)
 {
   if (m_Disconnected) return;
   m_LastDisconnectTicks = GetTicks();
   m_Disconnected = true;
-  if (m_Game->GetGameLoaded()) {
-    m_LeftMessageBySyncCounter = m_Game->GetSyncCounter() + 1;
-  } else {
-    m_DeleteMe = true;
-  }
   m_Socket->Close();
+  m_Game->EventUserAfterDisconnect(this, fromOpen);  
 }
 
 void CGameUser::UnrefConnection(bool deferred)

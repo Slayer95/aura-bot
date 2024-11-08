@@ -333,7 +333,7 @@ public:
   void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
   void EventGProxyReconnectInvalid();
   void RotateGProxyReconnectKey() const;
-  void CloseConnection();
+  void CloseConnection(bool fromOpen = false);
   void UnrefConnection(bool deferred = false);
 };
 

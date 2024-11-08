@@ -3455,6 +3455,19 @@ void CGame::ReportPlayerGProxyDisconnected(CGameUser* user)
   }
 }
 
+void CGame::EventUserAfterDisconnect(CGameUser* user, bool fromOpen)
+{
+  if (!m_GameLoading && !m_GameLoaded) {
+    if (!fromOpen) {
+      const uint8_t SID = GetSIDFromUID(user->GetUID());
+      OpenSlot(SID, false);
+    }
+    user->SetDeleteMe(true);
+  } else {
+    m_LeftMessageBySyncCounter = m_Game->GetSyncCounter() + 1;
+  }
+}
+
 void CGame::EventUserDisconnectTimedOut(CGameUser* user)
 {
   if (user->GetDisconnected()) return;
@@ -3482,11 +3495,6 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
     //user->SetDeleteMe(true);
     user->SetLeftReason("has lost the connection (timed out)");
     user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
-
-    if (!m_GameLoading && !m_GameLoaded) {
-      const uint8_t SID = GetSIDFromUID(user->GetUID());
-      OpenSlot(SID, false);
-    }
   }
 }
 
@@ -3510,11 +3518,6 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
   //user->SetDeleteMe(true);
   user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
-
-  if (!m_GameLoading && !m_GameLoaded) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    OpenSlot(SID, false);
-  }
 }
 
 void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
@@ -3536,11 +3539,6 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
   //user->SetDeleteMe(true);
   user->SetLeftReason("has terminated the connection");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
-
-  if (!m_GameLoading && !m_GameLoaded) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    OpenSlot(SID, false);
-  }
 }
 
 void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover)
@@ -3566,11 +3564,6 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
     user->SetLeftReason("has lost the connection (unrecoverable protocol error)");
   }
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
-
-  if (!m_GameLoading && !m_GameLoaded) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    OpenSlot(SID, false);
-  }
 }
 
 void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
@@ -3581,11 +3574,6 @@ void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
   user->SetLeftReason("was kicked by anti-abuse");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
   user->SetAbuseKicked(true);
-
-  if (!m_GameLoading && !m_GameLoaded) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    OpenSlot(SID, false);
-  }
 }
 
 void CGame::EventUserKickUnverified(CGameUser* user)
@@ -3596,9 +3584,6 @@ void CGame::EventUserKickUnverified(CGameUser* user)
   user->SetLeftReason("has been kicked because they are not verified by their realm");
   user->SetLeftCode(PLAYERLEAVE_LOBBY);
   user->SetSpoofKicked(true);
-
-  const uint8_t SID = GetSIDFromUID(user->GetUID());
-  OpenSlot(SID, false);
 }
 
 void CGame::EventUserKickGProxyExtendedTimeout(CGameUser* user)
@@ -3694,9 +3679,6 @@ void CGame::EventUserKickHandleQueued(CGameUser* user)
   //user->SetDeleteMe(true);
   user->CloseConnection();
   // left reason, left code already assigned when queued
-
-  const uint8_t SID = GetSIDFromUID(user->GetUID());
-  OpenSlot(SID, false);
 }
 
 void CGame::EventUserCheckStatus(CGameUser* user)
@@ -4172,11 +4154,6 @@ void CGame::EventUserLeft(CGameUser* user)
   user->SetLeftReason("Leaving the game voluntarily");
   user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_LOST);
   user->SetQuitGame(true);
-
-  if (!m_GameLoading && !m_GameLoaded) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    OpenSlot(SID, false);
-  }
 }
 
 void CGame::EventUserLoaded(CGameUser* user)
@@ -6284,7 +6261,8 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   if (user && !user->GetDeleteMe()) {
     if (!kick) return false;
     //user->SetDeleteMe(true);
-    user->CloseConnection();
+    // fromOpen = true, so that EventUserAfterDisconnect doesn't call OpenSlot() itself
+    user->CloseConnection(true);
     user->SetLeftReason("was kicked when opening a slot");
     user->SetLeftCode(PLAYERLEAVE_LOBBY);
   } else if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
@@ -6908,8 +6886,6 @@ void CGame::ReportSpoofed(const string& server, CGameUser* user)
     user->SetLeftReason("was autokicked for spoofing the game owner");
     user->SetLeftCode(PLAYERLEAVE_LOBBY);
     //user->SetDeleteMe(true);
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
-    OpenSlot(SID, false);
   }
 }
 
@@ -7289,11 +7265,6 @@ void CGame::CountKickVotes()
         victim->SetLeftCode(PLAYERLEAVE_LOBBY);
       else
         victim->SetLeftCode(PLAYERLEAVE_LOST);
-
-      if (GetIsLobby()) {
-        const uint8_t SID = GetSIDFromUID(victim->GetUID());
-        OpenSlot(SID, false);
-      }
 
       Log("votekick against user [" + m_KickVotePlayer + "] passed with " + to_string(Votes) + "/" + to_string(GetNumJoinedPlayers()) + " votes");
       SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has passed");
