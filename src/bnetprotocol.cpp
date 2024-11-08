@@ -221,16 +221,13 @@ namespace BNETProtocol
     // null terminated string	    -> IX86VerFileName
     // null terminated string	    -> ValueStringFormula
 
-    Print("[BNETPROTO] RECEIVE_SID_AUTH_INFO() 1");
     if (!ValidateLength(packet) || packet.size() < 25) {
       return AuthInfoResult(false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     }
     size_t fileNameEndPos = FindNullDelimiterOrEnd(packet, 24);
-    Print("[BNETPROTO] RECEIVE_SID_AUTH_INFO() 2");
     if (fileNameEndPos >= packet.size() || fileNameEndPos > 0xFFFFFF18) {
       return AuthInfoResult(false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     }
-    Print("[BNETPROTO] RECEIVE_SID_AUTH_INFO() 3");
     return AuthInfoResult(true, packet.data() + 4 /* 4 bytes */, packet.data() + 8 /* 4 bytes */, packet.data() + 16 /* 8 bytes */, packet.data() + 24, (packet.data() + fileNameEndPos), (packet.data() + fileNameEndPos + 1), (packet.data() + FindNullDelimiterOrEnd(packet, fileNameEndPos + 1)));
   }
 
