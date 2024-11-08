@@ -3072,7 +3072,7 @@ uint8_t CGame::GetPlayersReadyMode() const {
 
 ActionQueue& CGame::GetIncomingActionQueue()
 {
-  if (!m_Config->m_EnableLatencyEqualizer) {
+  if (!m_Config->m_LatencyEqualizer) {
     return m_Actions.first;
   }
   return m_ActionQueueSelector ? m_Actions.first : m_Actions.second;
@@ -3080,7 +3080,7 @@ ActionQueue& CGame::GetIncomingActionQueue()
 
 ActionQueue& CGame::GetOutgoingActionQueue()
 {
-  if (!m_Config->m_EnableLatencyEqualizer) {
+  if (!m_Config->m_LatencyEqualizer) {
     return m_Actions.first;
   }
   return m_ActionQueueSelector ? m_Actions.second : m_Actions.first;
@@ -8093,7 +8093,7 @@ string CGame::GetLobbyVirtualHostName() const {
 
 uint16_t CGame::GetLatency() const
 {
-  if (m_Config->m_EnableLatencyEqualizer) return m_Config->m_Latency / 2;
+  if (m_Config->m_LatencyEqualizer) return m_Config->m_Latency / 2;
   return m_Config->m_Latency;
 }
 
