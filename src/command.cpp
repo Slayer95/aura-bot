@@ -2472,6 +2472,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       double refreshTime = static_cast<double>(Args[0]);
+      double refreshFactor = m_TargetGame->m_Config->m_LatencyEqualizer ? 2. : 1.;
       optional<double> tolerance;
       if (Args.size() >= 2) {
         tolerance = static_cast<double>(Args[1]);
@@ -2507,7 +2508,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (syncLimitSafe < syncLimit / 2) syncLimitSafe = syncLimit / 2;
       if (syncLimitSafe < 1) syncLimitSafe = 1;
 
-      m_TargetGame->m_Config->m_Latency = static_cast<uint16_t>(refreshTime);
+      m_TargetGame->m_Config->m_Latency = static_cast<uint16_t>(refreshTime * refreshFactor);
       m_TargetGame->m_Config->m_SyncLimit = static_cast<uint16_t>(syncLimit);
       m_TargetGame->m_Config->m_SyncLimitSafe = static_cast<uint16_t>(syncLimitSafe);
 
