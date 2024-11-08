@@ -59,6 +59,8 @@
 
 #pragma once
 
+#define TO_ARRAY(...) StringArray({__VA_ARGS__})
+
 [[nodiscard]] inline std::string ToDecString(const uint8_t byte)
 {
   return std::to_string(static_cast<uint16_t>(byte));
@@ -875,6 +877,15 @@ inline void AssignLength(std::vector<uint8_t>& content)
 
 [[nodiscard]] inline std::string IPv4ToString(const std::array<uint8_t, 4> ip) {
   return ToDecString(ip[0]) + "." + ToDecString(ip[1]) + "." + ToDecString(ip[2]) + "." + ToDecString(ip[3]);
+}
+
+template <size_t N>
+constexpr std::array<std::string, N> StringArray(const char* const (&strings)[N]) {
+  std::array<std::string, N> arr;
+  for (size_t i = 0; i < N; ++i) {
+    arr[i] = strings[i];
+  }
+  return arr;
 }
 
 [[nodiscard]] inline std::string EncodeURIComponent(const std::string& s) {
