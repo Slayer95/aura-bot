@@ -883,7 +883,7 @@ bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& S
       if (user == nullptr) {
         return false;
       }
-      SID = GetSIDFromUID(user->GetUID());
+      SID = m_TargetGame->GetSIDFromUID(user->GetUID());
       return true;
     }
 
@@ -930,7 +930,7 @@ bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& S
       if (user == nullptr) {
         return false;
       }
-      SID = GetSIDFromUID(user->GetUID());
+      SID = m_TargetGame->GetSIDFromUID(user->GetUID());
       return true;
     }
 

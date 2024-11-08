@@ -250,7 +250,7 @@ public:
   CGame(CGame&) = delete;
 
   bool                      GetExiting() const { return m_Exiting; }
-  ActionQueue               GetIncomingActionQueue() const { return m_ActionQueueSelector ? m_Actions.second : m_Actions.first; }
+  ActionQueue               GetIncomingActionQueue() const { return m_ActionQueueSelector ? m_Actions.first : m_Actions.second; }
   ActionQueue               GetOutgoingActionQueue() const { return m_ActionQueueSelector ? m_Actions.second : m_Actions.first; }
   inline CMap*              GetMap() const { return m_Map; }
   inline uint32_t           GetEntryKey() const { return m_EntryKey; }

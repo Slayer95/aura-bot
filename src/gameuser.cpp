@@ -278,7 +278,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
     if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks) {
       m_Game->EventUserKickGProxyExtendedTimeout(this);
     }
-    if (m_LeftMessageBySyncCounter.has_value() && m_Game->GetSyncCounter() > m_LeftMessageBySyncCounter.value()) {
+    if (m_SendLeftMessageBySyncCounter.has_value() && m_Game->GetSyncCounter() > m_SendLeftMessageBySyncCounter.value()) {
       m_DeleteMe = true;
     }
     return m_DeleteMe;

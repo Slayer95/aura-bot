@@ -120,7 +120,7 @@ public:
   bool                             m_Muted;                        // if the player is muted or not
   bool                             m_ActionLocked;                 // if the player is not allowed to use commands, change their race/team/color/handicap or they are
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
-  std::optional<uint32_t>          m_LeftMessageBySyncCounter;
+  std::optional<uint32_t>          m_SendLeftMessageBySyncCounter;
   bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
   bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
   bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
@@ -280,6 +280,7 @@ public:
   inline void SetActionLocked(bool nActionLocked) { m_ActionLocked = nActionLocked; }
   inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
   inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
+  inline void SetSendLeftMessageBySyncCounter(bool nSyncCounter) { m_SendLeftMessageBySyncCounter = nSyncCounter; }
   inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
   inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
   inline void SetKickByTicks(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }

@@ -1559,11 +1559,11 @@ void CGame::UpdatePost(void* send_fd)
 
 void CGame::RunActionsScheduler()
 {
-  const int64_t Ticks                = GetTicks();
+  const int64_t Ticks = GetTicks();
   if (m_LastActionSentTicks != 0) {
-    const int64_t ActualSendInterval   = Ticks - m_LastActionSentTicks;
+    const int64_t ActualSendInterval = Ticks - m_LastActionSentTicks;
     const int64_t ExpectedSendInterval = GetLatency() - m_LastActionLateBy;
-    int64_t ThisActionLateBy     = ActualSendInterval - ExpectedSendInterval;
+    int64_t ThisActionLateBy = ActualSendInterval - ExpectedSendInterval;
 
     if (ThisActionLateBy > m_Config->m_PerfThreshold && !GetIsSinglePlayerMode()) {
       // something is going terribly wrong - Aura is probably starved of resources
@@ -1579,6 +1579,7 @@ void CGame::RunActionsScheduler()
     m_LastActionLateBy = ThisActionLateBy;
   }
   m_LastActionSentTicks = Ticks;
+  m_ActionQueueSelector = !m_ActionQueueSelector;
 }
 
 void CGame::LogApp(const string& logText) const
@@ -3464,7 +3465,7 @@ void CGame::EventUserAfterDisconnect(CGameUser* user, bool fromOpen)
     }
     user->SetDeleteMe(true);
   } else {
-    m_LeftMessageBySyncCounter = m_Game->GetSyncCounter() + 1;
+    user->SetSendLeftMessageBySyncCounter(GetSyncCounter() + 2);
   }
 }
 
