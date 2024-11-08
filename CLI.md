@@ -484,6 +484,20 @@ This flag prevents players from taking ownership of the hosted game.
 
 This flag is disabled by default.
 
+## \`--latency-equalize\`
+
+This flag adds a minimum delay to all actions performed by players in the hosted game,
+evening the field in case players' connection quality differ significatively.
+
+This flag is enabled by default.
+
+## \`--no-latency-equalize\`
+
+This flag prevents a minimum delay from being added to actions performed by players in the hosted game,
+allowing maximum responsiveness during gameplay.
+
+This flag is disabled by default.
+
 ## \`--latency-normalize\`
 
 This flag automatically synchronizes the network state of players in the hosted game, in such a game that some 
