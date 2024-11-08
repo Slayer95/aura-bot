@@ -1313,7 +1313,7 @@ bool CGameSetup::LoadMapSync()
   return m_Map != nullptr;
 }
 
-bool CGameSetup::SetActive()
+void CGameSetup::SetActive()
 {
   if (m_Aura->m_GameSetup) {
     if (m_Aura->m_AutoRehostGameSetup != m_Aura->m_GameSetup) {
@@ -1327,7 +1327,6 @@ bool CGameSetup::SetActive()
   }
   m_Aura->m_GameSetup = this;
   m_ActiveTicks = GetTicks();
-  return true;
 }
 
 bool CGameSetup::RestoreFromSaveFile()

@@ -245,7 +245,7 @@ public:
   [[nodiscard]] bool LoadMapSync();
   void OnLoadMapSuccess();
   void OnLoadMapError();
-  [[nodiscard]] bool SetActive();
+  void SetActive();
   [[nodiscard]] bool RestoreFromSaveFile();
   [[nodiscard]] bool RunHost();
 
