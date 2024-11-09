@@ -26,7 +26,7 @@
 #ifndef AURA_CONFIG_NET_H_
 #define AURA_CONFIG_NET_H_
 
-#include "includes.h"
+#include "../includes.h"
 #include "config.h"
 
 //

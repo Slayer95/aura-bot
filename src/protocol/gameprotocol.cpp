@@ -47,11 +47,11 @@
 #include <utility>
 
 #include "gameprotocol.h"
-#include "util.h"
 #include <crc32/crc32.h>
-#include "gameuser.h"
-#include "gameslot.h"
-#include "game.h"
+#include "../util.h"
+#include "../gameuser.h"
+#include "../gameslot.h"
+#include "../game.h"
 
 using namespace std;
 

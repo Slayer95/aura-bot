@@ -26,7 +26,7 @@
 #ifndef AURA_CONFIG_BOT_H_
 #define AURA_CONFIG_BOT_H_
 
-#include "includes.h"
+#include "../includes.h"
 #include "config.h"
 #include "config_commands.h"
 

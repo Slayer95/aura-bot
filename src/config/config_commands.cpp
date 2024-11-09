@@ -24,7 +24,7 @@
  */
 
 #include "config_commands.h"
-#include "command.h"
+#include "../command.h"
 
 #include <utility>
 #include <algorithm>

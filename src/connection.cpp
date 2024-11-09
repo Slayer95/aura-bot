@@ -45,15 +45,15 @@
 
 #include <utility>
 
-#include "config_bot.h"
+#include "config/config_bot.h"
 #include "connection.h"
 #include "gameuser.h"
 #include "aura.h"
 #include "realm.h"
 #include "map.h"
-#include "gameprotocol.h"
-#include "gpsprotocol.h"
-#include "vlanprotocol.h"
+#include "protocol/gameprotocol.h"
+#include "protocol/gpsprotocol.h"
+#include "protocol/vlanprotocol.h"
 #include "game.h"
 #include "socket.h"
 #include "net.h"

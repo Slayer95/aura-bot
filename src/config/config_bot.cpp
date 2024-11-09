@@ -24,11 +24,11 @@
  */
 
 #include "config_bot.h"
-#include "util.h"
-#include "net.h"
-#include "fileutil.h"
-#include "map.h"
-#include "command.h"
+#include "../util.h"
+#include "../net.h"
+#include "../fileutil.h"
+#include "../map.h"
+#include "../command.h"
 
 #include <utility>
 #include <algorithm>

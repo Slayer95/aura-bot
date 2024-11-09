@@ -24,8 +24,8 @@
  */
 
 #include "config_net.h"
-#include "util.h"
-#include "net.h"
+#include "../util.h"
+#include "../net.h"
 
 #include <utility>
 #include <algorithm>

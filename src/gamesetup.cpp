@@ -29,7 +29,7 @@
 #include "command.h"
 #include "fileutil.h"
 #include "game.h"
-#include "gameprotocol.h"
+#include "protocol/gameprotocol.h"
 #include "hash.h"
 #include "irc.h"
 #include "map.h"

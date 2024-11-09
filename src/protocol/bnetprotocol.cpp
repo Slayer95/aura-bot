@@ -43,9 +43,9 @@
 
  */
 
-#include "util.h"
-#include "includes.h"
 #include "bnetprotocol.h"
+
+#include "../util.h"
 
 #include <algorithm>
 #include <utility>

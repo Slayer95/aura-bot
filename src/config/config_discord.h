@@ -23,37 +23,33 @@
 
  */
 
-#ifndef AURA_CONFIG_IRC_H_
-#define AURA_CONFIG_IRC_H_
+#ifndef AURA_CONFIG_DISCORD_H_
+#define AURA_CONFIG_DISCORD_H_
 
-#include "includes.h"
+#include "../includes.h"
 #include "config.h"
 #include "config_commands.h"
 
 //
-// CIRCConfig
+// CDiscordConfig
 //
 
-class CIRCConfig
+class CDiscordConfig
 {
 public:
   std::string                         m_HostName;
-  std::string                         m_NickName;
-  std::string                         m_UserName;
-  std::string                         m_Password;
+  std::string                         m_Token;
+  std::string                         m_InviteUrl;
   bool                                m_Enabled;
-  std::vector<std::string>            m_Channels;
-  std::set<std::string>               m_Admins;
-  std::set<std::string>               m_SudoUsers;
-  uint16_t                            m_Port;
-  std::string                         m_PrivateCmdToken;   // a symbol prefix to identify commands and send a private reply
-  std::string                         m_BroadcastCmdToken; // a symbol prefix to identify commands and send the reply to everyone
-  bool                                m_EnableBroadcast;
+  uint8_t                             m_FilterJoinServersMode;
+  std::set<uint64_t>                  m_FilterJoinServersList;
+  uint8_t                             m_FilterInstallUsersMode;
+  std::set<uint64_t>                  m_FilterInstallUsersList;
+  std::set<uint64_t>                  m_SudoUsers;
   CCommandConfig*                     m_CommandCFG;
-  std::string                         m_VerifiedDomain;
 
-  explicit CIRCConfig(CConfig& CFG);
-  ~CIRCConfig();
+  explicit CDiscordConfig(CConfig& CFG);
+  ~CDiscordConfig();
 };
 
 #endif

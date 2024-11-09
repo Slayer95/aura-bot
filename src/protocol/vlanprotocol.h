@@ -1,7 +1,7 @@
 #ifndef VLANPROTOCOL_H
 #define VLANPROTOCOL_H
 
-#include "includes.h"
+#include "../includes.h"
 
 //
 // CVirtualLanProtocol

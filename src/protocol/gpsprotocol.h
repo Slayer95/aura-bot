@@ -44,7 +44,7 @@
 #ifndef AURA_GPSPROTOCOL_H_
 #define AURA_GPSPROTOCOL_H_
 
-#include "includes.h"
+#include "../includes.h"
 
 #define REJECTGPS_INVALID 1
 #define REJECTGPS_NOTFOUND 2

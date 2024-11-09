@@ -24,7 +24,7 @@
  */
 
 #include "config_irc.h"
-#include "util.h"
+#include "../util.h"
 
 #include <utility>
 #include <algorithm>

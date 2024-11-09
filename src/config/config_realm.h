@@ -26,11 +26,11 @@
 #ifndef AURA_CONFIG_REALM_H_
 #define AURA_CONFIG_REALM_H_
 
-#include "includes.h"
+#include "../includes.h"
 #include "config.h"
 #include "config_net.h"
 #include "config_commands.h"
-#include "socket.h"
+#include "../socket.h"
 
 //
 // CRealmConfig

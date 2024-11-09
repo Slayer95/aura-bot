@@ -28,10 +28,10 @@
 #include <algorithm>
 #include <cmath>
 
-#include "bnetprotocol.h"
+#include "protocol/bnetprotocol.h"
 #include "command.h"
-#include "config.h"
-#include "config_realm.h"
+#include "config/config.h"
+#include "config/config_realm.h"
 #include "fileutil.h"
 #include "game.h"
 #include "includes.h"

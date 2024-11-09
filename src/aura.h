@@ -47,10 +47,10 @@
 #define AURA_AURA_H_
 
 #include "includes.h"
-#include "config.h"
-#include "config_bot.h"
-#include "config_realm.h"
-#include "config_game.h"
+#include "config/config.h"
+#include "config/config_bot.h"
+#include "config/config_realm.h"
+#include "config/config_game.h"
 #include "cli.h"
 #include "irc.h"
 #include "discord.h"

@@ -43,13 +43,13 @@
 
  */
 
-#include "config_irc.h"
+#include "config/config_irc.h"
 #include "irc.h"
 #include "command.h"
 #include "aura.h"
 #include "socket.h"
 #include "util.h"
-#include "bnetprotocol.h"
+#include "protocol/bnetprotocol.h"
 #include "realm.h"
 #include "net.h"
 

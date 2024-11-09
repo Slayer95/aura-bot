@@ -36,10 +36,10 @@
 #endif
 
 #include "command.h"
-#include "config_net.h"
+#include "config/config_net.h"
 #include "connection.h"
 #include "game.h"
-#include "gameprotocol.h"
+#include "protocol/gameprotocol.h"
 #include "gameseeker.h"
 #include "gameuser.h"
 #include "realm.h"

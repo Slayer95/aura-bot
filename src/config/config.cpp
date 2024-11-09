@@ -44,9 +44,9 @@
  */
 
 #include "config.h"
-#include "includes.h"
-#include "util.h"
-#include "net.h"
+#include "../includes.h"
+#include "../util.h"
+#include "../net.h"
 
 #include <cstdlib>
 #include <fstream>

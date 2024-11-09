@@ -86,18 +86,18 @@ OBJS = lib/csvparser/csvparser.o \
 			 src/socket.o \
 			 src/net.o \
 			 src/bncsutilinterface.o \
-			 src/bnetprotocol.o \
-			 src/gameprotocol.o \
-			 src/gpsprotocol.o \
-			 src/vlanprotocol.o \
-			 src/config.o \
-			 src/config_bot.o \
-			 src/config_realm.o \
-			 src/config_commands.o \
-			 src/config_game.o \
-			 src/config_irc.o \
-			 src/config_discord.o \
-			 src/config_net.o \
+			 src/protocol/bnetprotocol.o \
+			 src/protocol/gameprotocol.o \
+			 src/protocol/gpsprotocol.o \
+			 src/protocol/vlanprotocol.o \
+			 src/config/config.o \
+			 src/config/config_bot.o \
+			 src/config/config_realm.o \
+			 src/config/config_commands.o \
+			 src/config/config_game.o \
+			 src/config/config_irc.o \
+			 src/config/config_discord.o \
+			 src/config/config_net.o \
 			 src/cli.o \
 			 src/realm.o \
 			 src/realm_chat.o \

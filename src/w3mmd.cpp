@@ -45,9 +45,9 @@
 
 #include "w3mmd.h"
 #include "auradb.h"
-#include "config_game.h"
+#include "config/config_game.h"
 #include "game.h"
-#include "gameprotocol.h"
+#include "protocol/gameprotocol.h"
 #include "gameslot.h"
 #include "util.h"
 

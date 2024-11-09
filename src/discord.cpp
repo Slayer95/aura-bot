@@ -23,13 +23,13 @@
 
  */
 
-#include "config_discord.h"
+#include "config/config_discord.h"
 #include "discord.h"
 #include "command.h"
 #include "aura.h"
 #include "socket.h"
 #include "util.h"
-#include "bnetprotocol.h"
+#include "protocol/bnetprotocol.h"
 #include "realm.h"
 #include "net.h"
 

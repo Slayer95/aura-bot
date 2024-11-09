@@ -52,8 +52,8 @@
 #include <arpa/inet.h>
 #endif
 
-#include "includes.h"
-#include "config.h"
+#include "../includes.h"
+#include "../config/config.h"
 
 namespace BNETProtocol
 {

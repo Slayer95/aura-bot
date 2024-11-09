@@ -46,9 +46,9 @@
 #ifndef AURA_CONFIG_H_
 #define AURA_CONFIG_H_
 
-#include "fileutil.h"
-#include "socket.h"
-#include "includes.h"
+#include "../fileutil.h"
+#include "../socket.h"
+#include "../includes.h"
 
 #define SUCCESS(T) \
     do { \

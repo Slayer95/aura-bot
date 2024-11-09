@@ -28,16 +28,16 @@
 #include "gameseeker.h"
 
 #include "aura.h"
-#include "config_bot.h"
+#include "config/config_bot.h"
 #include "game.h"
-#include "gameprotocol.h"
+#include "protocol/gameprotocol.h"
 #include "gameuser.h"
-#include "gpsprotocol.h"
+#include "protocol/gpsprotocol.h"
 #include "map.h"
 #include "net.h"
 #include "realm.h"
 #include "socket.h"
-#include "vlanprotocol.h"
+#include "protocol/vlanprotocol.h"
 
 using namespace std;
 

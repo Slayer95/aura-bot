@@ -36,31 +36,31 @@
     <ClCompile Include="realm_chat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bnetprotocol.cpp">
+    <ClCompile Include="protocol\bnetprotocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config.cpp">
+    <ClCompile Include="config\config.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_bot.cpp">
+    <ClCompile Include="config\config_bot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_realm.cpp">
+    <ClCompile Include="config\config_realm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_commands.cpp">
+    <ClCompile Include="config\config_commands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_irc.cpp">
+    <ClCompile Include="config\config_irc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_discord.cpp">
+    <ClCompile Include="config\config_discord.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_game.cpp">
+    <ClCompile Include="config\config_game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_net.cpp">
+    <ClCompile Include="config\config_net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cli.cpp">
@@ -84,13 +84,13 @@
     <ClCompile Include="gameuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gameprotocol.cpp">
+    <ClCompile Include="protocol\gameprotocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gpsprotocol.cpp">
+    <ClCompile Include="protocol\gpsprotocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vlanprotocol.cpp">
+    <ClCompile Include="protocol\vlanprotocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gamesetup.cpp">
@@ -167,31 +167,31 @@
     <ClInclude Include="realm_chat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bnetprotocol.h">
+    <ClInclude Include="protocol\bnetprotocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config.h">
+    <ClInclude Include="config\config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_bot.h">
+    <ClInclude Include="config\config_bot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_realm.h">
+    <ClInclude Include="config\config_realm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_commands.h">
+    <ClInclude Include="config\config_commands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_irc.h">
+    <ClInclude Include="config\config_irc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_discord.h">
+    <ClInclude Include="config\config_discord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_game.h">
+    <ClInclude Include="config\config_game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_net.h">
+    <ClInclude Include="config\config_net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cli.h">
@@ -215,13 +215,13 @@
     <ClInclude Include="gameuser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="gameprotocol.h">
+    <ClInclude Include="protocol\gameprotocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="gpsprotocol.h">
+    <ClInclude Include="protocol\gpsprotocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vlanprotocol.h">
+    <ClInclude Include="protocol\vlanprotocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gamesetup.h">

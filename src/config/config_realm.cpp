@@ -25,8 +25,8 @@
 
 #include "config_realm.h"
 #include "config_bot.h"
-#include "command.h"
-#include "util.h"
+#include "../command.h"
+#include "../util.h"
 
 #include <utility>
 #include <algorithm>

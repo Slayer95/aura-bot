@@ -46,7 +46,7 @@
 #include "auradb.h"
 #include "net.h"
 #include "util.h"
-#include "config.h"
+#include "config/config.h"
 #ifdef DISABLE_DPP
 #include <nlohmann/json.hpp>
 #else
