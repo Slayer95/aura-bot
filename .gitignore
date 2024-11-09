@@ -50,7 +50,7 @@ Thumbs.db
 **/Debug-x64/
 **/Release/
 **/Release-x64/
-miniupnpc/msvc/build
+deps/miniupnpc/msvc/build
 
 # CMake directories #
 #####################
@@ -74,4 +74,5 @@ log.txt
 patch.diff
 gamedata-update.js
 *.json
+*.diff
 
