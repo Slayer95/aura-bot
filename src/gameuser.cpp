@@ -351,6 +351,8 @@ bool CGameUser::Update(void* fd, int64_t timeout)
               if (!m_Game->EventUserAction(this, Action)) {
                 m_Game->EventUserDisconnectGameProtocolError(this, false);
                 Abort = true;
+              } else if (m_Disconnected) {
+                Abort = true;
               }
             }
 
@@ -368,10 +370,14 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           case GameProtocol::Magic::CHAT_TO_HOST: {
             CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
-            if (ChatPlayer)
+            if (ChatPlayer) {
               m_Game->EventUserChatToHost(this, ChatPlayer);
+              delete ChatPlayer;
 
-            delete ChatPlayer;
+              if (m_Disconnected) {
+                Abort = true;
+              }
+            }
             break;
           }
 
@@ -532,7 +538,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
     }
   }
 
-  if (!m_DeleteMe) {
+  if (!m_Disconnected) {
     // GProxy++ acks
     if (m_GProxy && (!m_LastGProxyAckTicks.has_value() || Ticks - m_LastGProxyAckTicks.value() >= GPS_ACK_PERIOD)) {
       m_Socket->PutBytes(GPSProtocol::SEND_GPSS_ACK(m_TotalPacketsReceived));
