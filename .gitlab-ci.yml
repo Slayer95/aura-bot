@@ -25,7 +25,7 @@ Assemble:
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "jass/common.j"
   # BNCSUtil (dynamic, .so)
   - cd $CI_PROJECT_DIR
-  - cd bncsutil/src/bncsutil
+  - cd deps/bncsutil/src/bncsutil
   - export BNCSUTIL_SHARED_LIB=1
   - make && make install
   - unset BNCSUTIL_SHARED_LIB
@@ -37,7 +37,7 @@ Assemble:
   ### - cp -R /usr/include/bncsutil dist/include
   # StormLib (shared, .so)
   - cd $CI_PROJECT_DIR
-  - cd StormLib
+  - cd deps/StormLib
   #- sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/g' CMakeLists.txt
   - rm -rf build && mkdir -p build
   - cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1 ..
@@ -52,7 +52,7 @@ Assemble:
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
   # MiniUPNP (shared, .so)
   - cd $CI_PROJECT_DIR
-  - cd miniupnpc
+  - cd deps/miniupnpc
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Shared library
