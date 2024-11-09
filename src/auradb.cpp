@@ -48,8 +48,10 @@
 #include "util.h"
 #include "config.h"
 #include "sqlite3.h"
-#ifndef DISABLE_DPP
+#ifdef DISABLE_DPP
 #include "json.hpp"
+#else
+#include <dpp/dpp.h>
 #endif
 
 #include <fstream>
