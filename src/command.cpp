@@ -1443,8 +1443,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (0 < maxPing && maxPing < m_TargetGame->GetLatency() && REFRESH_PERIOD_MIN < m_TargetGame->GetLatency()) {
+        string refreshModeHeader;
+        if (m_TargetGame->m_Config->m_LatencyEqualizer) {
+          refreshModeHeader = "HINT: Using ping equalizer at ";
+        } else {
+          refreshModeHeader = "HINT: Internal latency is ";
+        }
         SendReply(
-          "HINT: Using ping equalizer at " + to_string(m_TargetGame->GetLatency()) + "ms. Decrease it with " + cmdToken + "latency [VALUE]",
+          refreshModeHeader + to_string(m_TargetGame->GetLatency()) + "ms. Decrease it with " + cmdToken + "latency [VALUE]",
           !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0
         );
       }
