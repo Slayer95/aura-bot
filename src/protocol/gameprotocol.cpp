@@ -478,15 +478,12 @@ namespace GameProtocol
         AppendByteArrayFast(subpacket, *Action->GetAction());
       } while (!actions.empty());
 
-      // calculate crc (we only care about the first 2 bytes though)
-
-      std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size()), false);
-      crc32.resize(2);
+      // calculate crc (we only care about the lower 2 bytes though)
+      uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size());
 
       // finish subpacket
-
-      AppendByteArrayFast(packet, crc32);     // crc
-      AppendByteArrayFast(packet, subpacket); // subpacket
+      AppendByteArray(packet, static_cast<uint16_t>(crc32 & 0xFFFF), false);      // crc
+      AppendByteArrayFast(packet, subpacket);                                     // subpacket
     }
 
     AssignLength(packet);
@@ -749,15 +746,12 @@ namespace GameProtocol
         AppendByteArrayFast(subpacket, *Action->GetAction());
       }
 
-      // calculate crc (we only care about the first 2 bytes though)
-
-      std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size()), false);
-      crc32.resize(2);
+      // calculate crc (we only care about the lower 2 bytes though)
+      uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)string(begin(subpacket), end(subpacket)).c_str(), subpacket.size());
 
       // finish subpacket
-
-      AppendByteArrayFast(packet, crc32);     // crc
-      AppendByteArrayFast(packet, subpacket); // subpacket
+      AppendByteArray(packet, static_cast<uint16_t>(crc32 & 0xFFFF), false);      // crc
+      AppendByteArrayFast(packet, subpacket);                                     // subpacket
     }
 
     AssignLength(packet);
