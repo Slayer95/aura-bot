@@ -4641,8 +4641,10 @@ void CGame::EventUserChangeRace(CGameUser* user, uint8_t race)
   if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS)
     return;
 
-  if (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)
+  if (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+    SendChat(user, "This game lobby has forced random races.");
     return;
+  }
 
   if (m_Locked || user->GetIsActionLocked()) {
     SendChat(user, "You are not allowed to change your race.");
