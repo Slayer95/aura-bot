@@ -196,10 +196,6 @@ typedef int32_t SOCKET;
 }
 #endif
 
-class CStreamIOSocket;
-class CTCPServer;
-class CSocket;
-
 struct UDPPkt
 {
   sockaddr_storage* sender;

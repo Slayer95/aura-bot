@@ -1,12 +1,11 @@
 #ifndef VLANPROTOCOL_H
 #define VLANPROTOCOL_H
 
+#include "includes.h"
+
 //
 // CVirtualLanProtocol
 //
-
-class CIncomingVLanSearchGame;
-class CIncomingVLanGameInfo;
 
 namespace VLANProtocol
 {

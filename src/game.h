@@ -69,25 +69,7 @@
  Controller: Any of user, fake user, or AI, that does not occupy an observer slot.
  */
 
-class CAura;
-class CTCPServer;
-class CUDPServer;
-class CCommandContext;
-class CGameConfig;
-class CCommandConfig;
-class CConnection;
-class CGameSetup;
-class CMap;
-class CIncomingJoinRequest;
-class CIncomingAction;
-class CIncomingChatPlayer;
-class CIncomingMapSize;
-class CDBBan;
-class CDBGamePlayer;
-class CDotaStats;
-class CW3MMD;
-class CRealm;
-class CSaveGame;
+
 
 class CGameLogRecord
 {
@@ -102,15 +84,6 @@ public:
   CGameLogRecord(int64_t gameTicks, std::string text);
   ~CGameLogRecord();
 };
-
-namespace GameUser
-{
-  class CGameUser;
-};
-
-typedef std::queue<CIncomingAction*>              ActionQueue;
-typedef std::vector<GameUser::CGameUser*>         UserList;
-typedef std::vector<const GameUser::CGameUser*>   ImmutableUserList;
 
 class CGame
 {

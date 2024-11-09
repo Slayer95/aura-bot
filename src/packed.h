@@ -30,8 +30,6 @@
 // CPacked
 //
 
-class CAura;
-
 class CPacked
 {
 protected:

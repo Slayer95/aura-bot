@@ -71,6 +71,7 @@
 #include <vector>
 
 #include "constants.h"
+#include "forward.h"
 
 #define PRINT_IF(T, U) \
     if (m_Aura->MatchLogLevel(T)) {\

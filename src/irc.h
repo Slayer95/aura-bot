@@ -52,10 +52,6 @@
 #define LF ('\x0A')
 #define IRC_TCP_KEEPALIVE_IDLE_TIME 300
 
-class CAura;
-class CTCPClient;
-class CIRCConfig;
-
 class CIRC
 {
 public:

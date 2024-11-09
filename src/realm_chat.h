@@ -33,9 +33,6 @@
 #include "command.h"
 #include "bnetprotocol.h"
 
-class CRealm;
-class CCommandContext;
-
 class CQueuedChatMessage
 {
 private:

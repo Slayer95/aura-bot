@@ -46,6 +46,7 @@
 #ifndef AURA_AURA_H_
 #define AURA_AURA_H_
 
+#include "includes.h"
 #include "config.h"
 #include "config_bot.h"
 #include "config_realm.h"
@@ -57,15 +58,7 @@
 #include "net.h"
 #include "gamesetup.h"
 
-#include <cstdint>
-#include <vector>
-#include <queue>
-#include <set>
-#include <string>
-#include <map>
-#include <algorithm>
 #include <random>
-#include <unordered_set>
 #include <filesystem>
 
 #ifndef NOMINMAX
@@ -86,19 +79,6 @@
 //
 // CAura
 //
-
-class CTCPServer;
-class CSHA1;
-class CRealm;
-class CGame;
-class CCommandContext;
-class CAuraDB;
-class CConfig;
-class CNet;
-class CGameSetup;
-class CDiscord;
-class CIRC;
-class CCLI;
 
 class CAura
 {

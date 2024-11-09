@@ -30,9 +30,6 @@
 // CSaveGame
 //
 
-class CAura;
-class CPacked;
-
 class CSaveGame
 {
 private:

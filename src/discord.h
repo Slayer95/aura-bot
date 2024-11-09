@@ -42,9 +42,6 @@
 #endif
 #endif
 
-class CAura;
-class CDiscordConfig;
-
 class CDiscord
 {
 public:

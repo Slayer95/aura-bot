@@ -49,13 +49,6 @@
 #include "includes.h"
 #include "aura.h"
 
-class GameUser::CGameUser;
-class CIncomingJoinRequest;
-class CIncomingAction;
-class CIncomingChatPlayer;
-class CIncomingMapSize;
-class CGameSlot;
-
 namespace GameProtocol
 {
   namespace Magic

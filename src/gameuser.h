@@ -50,12 +50,6 @@
 #include "socket.h"
 #include "connection.h"
 
-class CStreamIOSocket;
-class CGame;
-class CConnection;
-class CRealm;
-class CAura;
-
 //
 // GameUser::CGameUser
 //
@@ -346,9 +340,6 @@ namespace GameUser
     void CloseConnection(bool fromOpen = false);
     void UnrefConnection(bool deferred = false);
   };
-
-  typedef std::vector<GameUser::CGameUser*>         UserList;
-  typedef std::vector<const GameUser::CGameUser*>   ImmutableUserList;
 
   [[nodiscard]] inline std::string ToNameListSentence(ImmutableUserList userList, bool useRealNames = false) {
     if (userList.empty()) return std::string();

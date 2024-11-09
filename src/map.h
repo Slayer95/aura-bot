@@ -55,10 +55,6 @@
 
 #pragma once
 
-class CAura;
-class CGameSlot;
-class CConfig;
-
 //
 // CMap
 //

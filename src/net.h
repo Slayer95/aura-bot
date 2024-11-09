@@ -41,18 +41,7 @@
 // CNet
 //
 
-class CAura;
-class CCommandContext;
-class CUDPServer;
-class CUDPSocket;
-class CStreamIOSocket;
-class CConnection;
-class CGameSeeker;
-class GameUser::CGameUser;
-class CNetConfig;
-
 struct sockaddr_storage;
-struct UDPPkt;
 
 class CGameTestConnection
 {

@@ -40,16 +40,6 @@
 #include "realm.h"
 #include "savegame.h"
 
-class CAura;
-class CCLI;
-class CCommandContext;
-class CIRC;
-class CDiscord;
-class CMap;
-class CGame;
-class CRealm;
-class CSaveGame;
-
 inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount) {
   std::regex pattern(R"(<a href="/maps/(\d+)/"><b>([^<\n]+)</b></a>)");
   std::vector<std::pair<std::string, int>> output;

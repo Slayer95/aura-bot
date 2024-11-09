@@ -31,10 +31,6 @@
 #include "connection.h"
 #include "socket.h"
 
-class CAura;
-class CConnection;
-class CStreamIOSocket;
-
 #define GAMESEEKER_OK 0u
 #define GAMESEEKER_DESTROY 1u
 #define GAMESEEKER_PROMOTED 2u

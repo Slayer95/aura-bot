@@ -49,10 +49,6 @@
 #include "includes.h"
 #include "socket.h"
 
-class CStreamIOSocket;
-class CGame;
-class CAura;
-
 #define INCON_UPDATE_OK 0u
 #define INCON_UPDATE_DESTROY 1u
 #define INCON_UPDATE_PROMOTED 2u

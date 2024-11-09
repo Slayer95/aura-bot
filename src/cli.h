@@ -26,15 +26,11 @@
 #ifndef AURA_CLI_H_
 #define AURA_CLI_H_
 
-#include <map>
-#include <string>
-#include <vector>
-#include <set>
-#include <optional>
-#include <filesystem>
-
+#include "includes.h"
 #include "aura.h"
 #include "gamesetup.h"
+
+#include <filesystem>
 
 #define CLI_OK 0
 #define CLI_ERROR 1
@@ -46,9 +42,6 @@
 //
 // CCLI
 //
-
-class CAura;
-class CGameSetup;
 
 class CCLI
 {

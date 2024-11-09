@@ -46,21 +46,14 @@
 #ifndef AURA_BNETPROTOCOL_H_
 #define AURA_BNETPROTOCOL_H_
 
-#include <array>
-#include <string>
-#include <vector>
-
 #ifdef _WIN32
 #include <winsock2.h>
 #else
 #include <arpa/inet.h>
 #endif
 
-#include "constants.h"
+#include "includes.h"
 #include "config.h"
-
-class CConfig;
-class CIncomingGameHost;
 
 namespace BNETProtocol
 {

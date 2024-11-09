@@ -57,10 +57,6 @@
 
 typedef std::pair<uint32_t, std::string> VarP;
 
-class CAura;
-class CGame;
-class CIncomingAction;
-
 class CW3MMDAction
 {
 public:

@@ -40,9 +40,6 @@
 // Default map config (*) map.flags_locked = yes/no
 // Game setup
 
-class CGameSetup;
-class CMap;
-
 class CGameConfig
 {
 public:

@@ -69,16 +69,6 @@
 // CRealm
 //
 
-class CAura;
-class CCommandContext;
-class CTCPClient;
-class CBNCSUtilInterface;
-class CGame;
-class CIncomingChatEvent;
-class CDBBan;
-class CIRC;
-class CMap;
-
 class CRealm
 {
 public:

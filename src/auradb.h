@@ -240,12 +240,6 @@ public:
 // CAuraDB
 //
 
-class CDBDotAPlayerSummary;
-class CDBGamePlayerSummary;
-class CDBGameSummary;
-class CConfig;
-class CDBBan;
-
 constexpr int64_t SchemaNumber = 3;
 
 #define SCHEMA_CHECK_OK 0u
