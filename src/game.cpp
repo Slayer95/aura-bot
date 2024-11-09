@@ -7449,7 +7449,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
           user->SetLeftReason("kicked when starting the game");
         }
         user->CloseConnection();
-        CloseSlot(GetSIDFromUID(user->GetUID()), false);
+        CloseSlot(GetSIDFromUID(user->GetUID()), true);
       }
     }
   } else {
