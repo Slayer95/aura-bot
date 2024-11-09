@@ -193,7 +193,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
     return GAMESEEKER_DESTROY;
   }
 
-  // At this point, m_Socket may have been transferred to CGameUser
+  // At this point, m_Socket may have been transferred to GameUser::CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
     return GAMESEEKER_DESTROY;
   }

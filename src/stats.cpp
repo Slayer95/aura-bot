@@ -135,8 +135,8 @@ bool CDotaStats::ProcessAction(uint8_t UID, CIncomingAction* Action)
                   VictimColor = static_cast<uint8_t>(stoul(VictimName));
                 } catch (...) {
                 }
-                CGameUser*   Killer       = m_Game->GetPlayerFromColor(KillerColor);
-                CGameUser*   Victim       = m_Game->GetPlayerFromColor(VictimColor);
+                GameUser::CGameUser* Killer = m_Game->GetPlayerFromColor(KillerColor);
+                GameUser::CGameUser* Victim = m_Game->GetPlayerFromColor(VictimColor);
 
                 if (!m_Players[KillerColor])
                   m_Players[KillerColor] = new CDBDotAPlayer();

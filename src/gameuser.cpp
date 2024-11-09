@@ -58,6 +58,7 @@
 #include "net.h"
 
 using namespace std;
+using namespace GameUser;
 
 //
 // CGameUser
@@ -97,10 +98,8 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_WhoisShouldBeSent(false),
     m_WhoisSent(false),
     m_MapReady(false),
-    m_MapKicked(false),
-    m_PingKicked(false),
-    m_SpoofKicked(false),
     m_Ready(false),
+    m_KickReason(KickReason::NONE),
     m_HasHighPing(false),
     m_DownloadAllowed(false),
     m_DownloadStarted(false),

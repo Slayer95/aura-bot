@@ -1063,7 +1063,7 @@ bool CAura::Update()
     }
   }
 
-  // when a GProxy reconnect is triggered, while there is still a CStreamIOSocket assigned to the CGameUser,
+  // when a GProxy reconnect is triggered, while there is still a CStreamIOSocket assigned to the GameUser::CGameUser,
   // the old CStreamIOSocket is assigned to a new CGameConnection, which is queued for insertion into m_IncomingConnections
   // this statement takes care of the insertion
   m_Net->MergeDownGradedConnections();

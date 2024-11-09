@@ -512,7 +512,7 @@ namespace GameProtocol
     return std::vector<uint8_t>();
   }
 
-  std::vector<uint8_t> SEND_W3GS_START_LAG(vector<CGameUser*> users)
+  std::vector<uint8_t> SEND_W3GS_START_LAG(vector<GameUser::CGameUser*> users)
   {
     if (users.empty()) {
       Print("[GAMEPROTO] no laggers passed to SEND_W3GS_START_LAG");
@@ -529,7 +529,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGameUser* user)
+  std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::STOP_LAG, 9, 0, user->GetUID()};
     AppendByteArray(packet, GetTicks() - user->GetStartedLaggingTicks(), false);

@@ -61,7 +61,7 @@
 
 /*
  Nomenclature notes:
- User: CGameUser instance, representing a remote game client that successfully joined the game.
+ User: GameUser::CGameUser instance, representing a remote game client that successfully joined the game.
  Fake user: (UID, SID) comboes that may occupy game slots. Stored as 16 bits. Higher = SID, Lower = UID.
             WC3 game client cannot distinguish them from actual users.
             Aura never treats them as "users".
@@ -76,7 +76,6 @@ class CCommandContext;
 class CGameConfig;
 class CCommandConfig;
 class CConnection;
-class CGameUser;
 class CGameSetup;
 class CMap;
 class CIncomingJoinRequest;
@@ -104,9 +103,14 @@ public:
   ~CGameLogRecord();
 };
 
-typedef std::queue<CIncomingAction*>    ActionQueue;
-typedef std::vector<CGameUser*>         UserList;
-typedef std::vector<const CGameUser*>   ImmutableUserList;
+namespace GameUser
+{
+  class CGameUser;
+};
+
+typedef std::queue<CIncomingAction*>              ActionQueue;
+typedef std::vector<GameUser::CGameUser*>         UserList;
+typedef std::vector<const GameUser::CGameUser*>   ImmutableUserList;
 
 class CGame
 {
@@ -241,7 +245,7 @@ protected:
   std::vector<uint8_t>                  m_GameDiscoveryInfo;
   uint16_t                              m_GameDiscoveryInfoVersionOffset;
   uint16_t                              m_GameDiscoveryInfoDynamicOffset;
-  std::map<const CGameUser*, UserList>  m_SyncPlayers;     //
+  std::map<const GameUser::CGameUser*, UserList>  m_SyncPlayers;     //
 
   std::queue<CGameLogRecord*>    m_PendingLogs;
   
@@ -409,9 +413,9 @@ public:
 
   // functions to send packets to players
 
-  void                      SendChat(uint8_t fromUID, CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void                      SendChat(uint8_t fromUID, GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                      SendChat(uint8_t fromUID, uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
-  void                      SendChat(CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void                      SendChat(GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                      SendChat(uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                      SendAllChat(uint8_t fromUID, const std::string& message) const;
   void                      SendAllChat(const std::string& message) const;
@@ -419,10 +423,10 @@ public:
   void                      SendVirtualHostPlayerInfo(CConnection* player) const;
   void                      SendFakeUsersInfo(CConnection* player) const;
   void                      SendJoinedPlayersInfo(CConnection* player) const;
-  void                      SendWelcomeMessage(CGameUser* user) const;
-  void                      SendOwnerCommandsHelp(const std::string& cmdToken, CGameUser* user) const;
-  void                      SendCommandsHelp(const std::string& cmdToken, CGameUser* user, const bool isIntro) const;
-  void                      SendLeftMessage(CGameUser* user, const bool sendChat) const;
+  void                      SendWelcomeMessage(GameUser::CGameUser* user) const;
+  void                      SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
+  void                      SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
+  void                      SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
   void                      SendAllActionsCallback();
   void                      SendAllActions();
   void                      SendAllAutoStart() const;
@@ -446,37 +450,37 @@ public:
   // note: these are only called while iterating through the m_Potentials or m_Users std::vectors
   // therefore you can't modify those std::vectors and must use the player's m_DeleteMe member to flag for deletion
 
-  void                      EventUserDeleted(CGameUser* user, void* fd, void* send_fd);
+  void                      EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd);
   void                      EventLobbyLastPlayerLeaves();
   void                      ReportAllPings() const;
-  void                      ReportPlayerGProxyDisconnected(CGameUser* user);
+  void                      ReportPlayerGProxyDisconnected(GameUser::CGameUser* user);
   bool                      CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   bool                      CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
-  void                      EventUserDisconnectTimedOut(CGameUser* user);
-  void                      EventUserDisconnectSocketError(CGameUser* user);
-  void                      EventUserDisconnectConnectionClosed(CGameUser* user);
-  void                      EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover);
-  void                      EventUserDisconnectGameAbuse(CGameUser* user);
-  void                      EventUserKickUnverified(CGameUser* user);
-  void                      EventUserKickGProxyExtendedTimeout(CGameUser* user);
-  void                      EventUserKickHandleQueued(CGameUser* user);
-  void                      EventUserAfterDisconnect(CGameUser* user, bool fromOpen);
-  void                      EventUserCheckStatus(CGameUser* user);
+  void                      EventUserDisconnectTimedOut(GameUser::CGameUser* user);
+  void                      EventUserDisconnectSocketError(GameUser::CGameUser* user);
+  void                      EventUserDisconnectConnectionClosed(GameUser::CGameUser* user);
+  void                      EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool canRecover);
+  void                      EventUserDisconnectGameAbuse(GameUser::CGameUser* user);
+  void                      EventUserKickUnverified(GameUser::CGameUser* user);
+  void                      EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user);
+  void                      EventUserKickHandleQueued(GameUser::CGameUser* user);
+  void                      EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen);
+  void                      EventUserCheckStatus(GameUser::CGameUser* user);
   bool                      EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
   void                      EventBeforeJoin(CConnection* connection);
-  void                      EventUserLeft(CGameUser* user);
-  void                      EventUserLoaded(CGameUser* user);
-  bool                      EventUserAction(CGameUser* user, CIncomingAction* action);
-  void                      EventUserKeepAlive(CGameUser* user);
-  void                      EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer);
-  void                      EventUserChangeTeam(CGameUser* user, uint8_t team);
-  void                      EventUserChangeColor(CGameUser* user, uint8_t colour);
-  void                      EventUserChangeRace(CGameUser* user, uint8_t race);
-  void                      EventUserChangeHandicap(CGameUser* user, uint8_t handicap);
-  void                      EventUserDropRequest(CGameUser* user);
-  bool                      EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize);
-  void                      EventUserPongToHost(CGameUser* user);
-  void                      EventUserMapReady(CGameUser* user);
+  void                      EventUserLeft(GameUser::CGameUser* user);
+  void                      EventUserLoaded(GameUser::CGameUser* user);
+  bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction* action);
+  void                      EventUserKeepAlive(GameUser::CGameUser* user);
+  void                      EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* chatPlayer);
+  void                      EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team);
+  void                      EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour);
+  void                      EventUserChangeRace(GameUser::CGameUser* user, uint8_t race);
+  void                      EventUserChangeHandicap(GameUser::CGameUser* user, uint8_t handicap);
+  void                      EventUserDropRequest(GameUser::CGameUser* user);
+  bool                      EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSize);
+  void                      EventUserPongToHost(GameUser::CGameUser* user);
+  void                      EventUserMapReady(GameUser::CGameUser* user);
 
   // these events are called outside of any iterations
 
@@ -490,33 +494,33 @@ public:
   bool                      GetIsRemakeable();
   void                      Remake();
 
-  void                      AddProvisionalBannableUser(const CGameUser* user);
+  void                      AddProvisionalBannableUser(const GameUser::CGameUser* user);
   void                      ClearBannableUsers();
   void                      UpdateBannableUsers();
   bool                      ResolvePlayerObfuscation() const;
   void                      RunPlayerObfuscation();
-  bool                      CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* nConfig);
+  bool                      CheckSmartCommands(GameUser::CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* nConfig);
 
   // other functions
 
   uint8_t                   GetSIDFromUID(uint8_t UID) const;
-  CGameUser*                GetUserFromUID(uint8_t UID) const;
-  CGameUser*                GetUserFromSID(uint8_t SID) const;
+  GameUser::CGameUser*                GetUserFromUID(uint8_t UID) const;
+  GameUser::CGameUser*                GetUserFromSID(uint8_t SID) const;
   std::string               GetUserNameFromUID(uint8_t UID) const;
-  CGameUser*                GetUserFromName(std::string name, bool sensitive) const;
+  GameUser::CGameUser*                GetUserFromName(std::string name, bool sensitive) const;
   bool                      HasOwnerSet() const;
   bool                      HasOwnerInGame() const;
-  uint8_t                   GetUserFromNamePartial(const std::string& name, CGameUser*& matchPlayer) const;
-  uint8_t                   GetUserFromDisplayNamePartial(const std::string& name, CGameUser*& matchPlayer) const;
+  uint8_t                   GetUserFromNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
+  uint8_t                   GetUserFromDisplayNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
   uint8_t                   GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
   CDBGamePlayer*            GetDBPlayerFromColor(uint8_t colour) const;
-  CGameUser*                GetPlayerFromColor(uint8_t colour) const;
+  GameUser::CGameUser*                GetPlayerFromColor(uint8_t colour) const;
   uint8_t                   GetColorFromUID(uint8_t UID) const;
   uint8_t                   GetNewUID() const;
   uint8_t                   GetNewTeam() const;
   uint8_t                   GetNewColor() const;
   uint8_t                   GetNewPseudonymUID() const;
-  uint8_t                   SimulateActionUID(const uint8_t actionType, CGameUser* user, const bool isDisconnect);
+  uint8_t                   SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect);
   uint8_t                   HostToMapCommunicationUID() const;
   bool                      GetHasAnyActiveTeam() const;
   bool                      GetHasAnyUser() const;
@@ -536,8 +540,8 @@ public:
   uint8_t                   GetEmptyPlayerSID() const;
   uint8_t                   GetEmptyObserverSID() const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
-  void                      SendIncomingPlayerInfo(CGameUser* user) const;
-  CGameUser*                JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
+  GameUser::CGameUser*                JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;
@@ -584,8 +588,8 @@ public:
   bool ComputerAllSlots(const uint8_t skill);
   void ShuffleSlots();
 
-  void ReportSpoofed(const std::string& server, CGameUser* user);
-  void AddToRealmVerified(const std::string& server, CGameUser* user, bool sendMessage);
+  void ReportSpoofed(const std::string& server, GameUser::CGameUser* user);
+  void AddToRealmVerified(const std::string& server, GameUser::CGameUser* user, bool sendMessage);
   void AddToReserved(const std::string& name);
   void RemoveFromReserved(const std::string& name);
   void RemoveAllReserved();
@@ -622,12 +626,12 @@ public:
   bool StopPlayers(const std::string& reason) const;
   void StopLaggers(const std::string& reason) const;
   void StopDesynchronized(const std::string& reason) const;
-  bool Pause(CGameUser* user, const bool isDisconnect);
+  bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
   bool Resume();
   std::string GetSaveFileName(const uint8_t UID) const;
-  bool Save(CGameUser* user, const bool isDisconnect);
+  bool Save(GameUser::CGameUser* user, const bool isDisconnect);
   void SaveEnded(const uint8_t exceptUID);
-  bool TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary);
+  bool TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstByte, const uint32_t secondByte);
   bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);
@@ -674,7 +678,7 @@ public:
   void ResetLayout(const bool quiet);
   void ResetLayoutIfNotMatching();
   bool SetLayoutFFA();
-  bool SetLayoutOneVsAll(const CGameUser* user);
+  bool SetLayoutOneVsAll(const GameUser::CGameUser* user);
   bool SetLayoutTwoTeams();
   bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
   bool SetLayoutCompact();

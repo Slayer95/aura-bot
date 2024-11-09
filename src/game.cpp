@@ -1178,7 +1178,7 @@ bool CGame::Update(void* fd, void* send_fd)
           // print debug information
           double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(GetLatency()) / static_cast<double>(1000.);
           if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-            LogApp("started lagging on " + PlayersToNameListString(laggingPlayers, true) + ".");
+            LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".");
             LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)");
           }
         }
@@ -1547,7 +1547,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
 void CGame::UpdatePost(void* send_fd)
 {
-  // we need to manually call DoSend on each user now because CGameUser :: Update doesn't do it
+  // we need to manually call DoSend on each user now because GameUser::CGameUser :: Update doesn't do it
   // this is in case user 2 generates a packet for user 1 during the update but it doesn't get sent because user 1 already finished updating
   // in reality since we're queueing actions it might not make a big difference but oh well
 
@@ -1665,7 +1665,7 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
   }
 }
 
-void CGame::SendChat(uint8_t fromUID, CGameUser* user, const string& message, const uint8_t logLevel) const
+void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& message, const uint8_t logLevel) const
 {
   // send a private message to one user - it'll be marked [Private] in Warcraft 3
 
@@ -1704,7 +1704,7 @@ void CGame::SendChat(uint8_t fromUID, uint8_t toUID, const string& message, cons
   SendChat(fromUID, GetUserFromUID(toUID), message, logLevel);
 }
 
-void CGame::SendChat(CGameUser* user, const string& message, const uint8_t logLevel) const
+void CGame::SendChat(GameUser::CGameUser* user, const string& message, const uint8_t logLevel) const
 {
   SendChat(GetHostUID(), user, message, logLevel);
 }
@@ -1777,7 +1777,7 @@ void CGame::UpdateReadyCounters()
     if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OCCUPIED || m_Slots[i].GetTeam() == m_Map->GetVersionMaxSlots()) {
       continue;
     }
-    CGameUser* Player = GetUserFromSID(i);
+    GameUser::CGameUser* Player = GetUserFromSID(i);
     if (!Player) {
       ++m_ControllersWithMap;
       ++m_ControllersReadyCount;
@@ -2409,7 +2409,7 @@ uint8_t CGame::GetOneVsAllTeamOne(const uint8_t teamAll) const
   return smallestTeam.first;
 }
 
-bool CGame::SetLayoutOneVsAll(const CGameUser* targetPlayer)
+bool CGame::SetLayoutOneVsAll(const GameUser::CGameUser* targetPlayer)
 {
   m_CustomLayout = CUSTOM_LAYOUT_COMPACT;
 
@@ -2657,7 +2657,7 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
     if (otherPlayer->GetDeleteMe()) {
       continue;
     }
-    if (connection->GetType() == INCON_TYPE_PLAYER && static_cast<CGameUser*>(connection) == otherPlayer) {
+    if (connection->GetType() == INCON_TYPE_PLAYER && static_cast<GameUser::CGameUser*>(connection) == otherPlayer) {
       continue;
     }
     Send(connection,
@@ -2666,7 +2666,7 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
   }
 }
 
-void CGame::SendIncomingPlayerInfo(CGameUser* user) const
+void CGame::SendIncomingPlayerInfo(GameUser::CGameUser* user) const
 {
   for (auto& otherPlayer : m_Users) {
     if (otherPlayer == user)
@@ -2679,7 +2679,7 @@ void CGame::SendIncomingPlayerInfo(CGameUser* user) const
   }
 }
 
-void CGame::SendWelcomeMessage(CGameUser *user) const
+void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
 {
   for (size_t i = 0; i < m_Aura->m_Config->m_Greeting.size(); i++) {
     string::size_type matchIndex;
@@ -2845,7 +2845,7 @@ void CGame::SendWelcomeMessage(CGameUser *user) const
   }
 }
 
-void CGame::SendOwnerCommandsHelp(const string& cmdToken, CGameUser* user) const
+void CGame::SendOwnerCommandsHelp(const string& cmdToken, GameUser::CGameUser* user) const
 {
   SendChat(user, cmdToken + "open [NUMBER] - opens a slot", LOG_LEVEL_TRACE);
   SendChat(user, cmdToken + "close [NUMBER] - closes a slot", LOG_LEVEL_TRACE);
@@ -2857,7 +2857,7 @@ void CGame::SendOwnerCommandsHelp(const string& cmdToken, CGameUser* user) const
   SendChat(user, cmdToken + "terminator - sets humans vs computers", LOG_LEVEL_TRACE);
 }
 
-void CGame::SendCommandsHelp(const string& cmdToken, CGameUser* user, const bool isIntro) const
+void CGame::SendCommandsHelp(const string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const
 {
   if (isIntro) {
     SendChat(user, "Welcome, " + user->GetName() + ". Please use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LOG_LEVEL_TRACE);
@@ -3284,7 +3284,7 @@ void CGame::SendGameDiscoveryInfo()
   }
 }
 
-void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
+void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
 {
   LOG_APP_IF(m_Exiting ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
 
@@ -3315,7 +3315,7 @@ void CGame::EventUserDeleted(CGameUser* user, void* fd, void* send_fd)
     if (user->GetLagging()) {
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
-    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetQuitGame() && (user->GetPingKicked() || user->GetMapKicked() || user->GetSpoofKicked() || user->GetAbuseKicked())));
+    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetQuitGame() && user->GetAnyKicked()));
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
@@ -3410,11 +3410,11 @@ void CGame::ReportAllPings() const
   if (SortedPlayers.empty()) return;
 
   if (m_Lagging) {
-    sort(begin(SortedPlayers), end(SortedPlayers), [](const CGameUser* a, const CGameUser* b) {
+    sort(begin(SortedPlayers), end(SortedPlayers), [](const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
       return a->GetNormalSyncCounter() < b->GetNormalSyncCounter();
     });
   } else {
-    sort(begin(SortedPlayers), end(SortedPlayers), [](const CGameUser* a, const CGameUser* b) {
+    sort(begin(SortedPlayers), end(SortedPlayers), [](const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
       return a->GetOperationalRTT() > b->GetOperationalRTT();
     });
   }
@@ -3426,7 +3426,7 @@ void CGame::ReportAllPings() const
   SendAllChat(JoinVector(pingsText, false));
 
   if (m_Lagging) {
-    CGameUser* worstLagger = SortedPlayers[0];
+    GameUser::CGameUser* worstLagger = SortedPlayers[0];
     string syncDelayText = worstLagger->GetSyncText();
     if (!syncDelayText.empty()) {
       SendAllChat("[" + worstLagger->GetDisplayName() + "] is " + syncDelayText);
@@ -3446,7 +3446,7 @@ void CGame::ResetOwnerSeen()
   m_LastOwnerSeen = GetTime();
 }
 
-void CGame::ReportPlayerGProxyDisconnected(CGameUser* user)
+void CGame::ReportPlayerGProxyDisconnected(GameUser::CGameUser* user)
 {
   user->SudoModeEnd();
 
@@ -3489,7 +3489,7 @@ void CGame::ReportPlayerGProxyDisconnected(CGameUser* user)
   }
 }
 
-void CGame::EventUserAfterDisconnect(CGameUser* user, bool fromOpen)
+void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
 {
   if (!m_GameLoading && !m_GameLoaded) {
     if (!fromOpen) {
@@ -3502,7 +3502,7 @@ void CGame::EventUserAfterDisconnect(CGameUser* user, bool fromOpen)
   }
 }
 
-void CGame::EventUserDisconnectTimedOut(CGameUser* user)
+void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
@@ -3533,7 +3533,7 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
   }
 }
 
-void CGame::EventUserDisconnectSocketError(CGameUser* user)
+void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
@@ -3556,7 +3556,7 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
   TrySaveOnDisconnect(user, false);
 }
 
-void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
+void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
   if (user->GetGProxyAny() && m_GameLoaded) {
@@ -3578,7 +3578,7 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
   TrySaveOnDisconnect(user, false);
 }
 
-void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover)
+void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool canRecover)
 {
   if (user->GetDisconnected()) return;
   if (canRecover && user->GetGProxyAny() && m_GameLoaded) {
@@ -3604,7 +3604,7 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
   TrySaveOnDisconnect(user, false);
 }
 
-void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
+void CGame::EventUserDisconnectGameAbuse(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
   if (!user->HasLeftReason()) {
@@ -3612,20 +3612,20 @@ void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
   user->CloseConnection();
-  user->SetAbuseKicked(true);
+  user->AddKickReason(GameUser::KickReason::ABUSER);
 }
 
-void CGame::EventUserKickUnverified(CGameUser* user)
+void CGame::EventUserKickUnverified(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
   if (!user->HasLeftReason()) {
     user->SetLeftReason("has been kicked because they are not verified by their realm");
   }
   user->CloseConnection();
-  user->SetSpoofKicked(true);
+  user->AddKickReason(GameUser::KickReason::SPOOFER);
 }
 
-void CGame::EventUserKickGProxyExtendedTimeout(CGameUser* user)
+void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
 {
   if (user->GetDeleteMe()) return;
   TrySaveOnDisconnect(user, false);
@@ -3636,7 +3636,7 @@ void CGame::EventUserKickGProxyExtendedTimeout(CGameUser* user)
   }
 }
 
-void CGame::SendLeftMessage(CGameUser* user, const bool sendChat) const
+void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const
 {
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which UIDs Aura considers available.
@@ -3709,7 +3709,7 @@ void CGame::ShowPlayerNamesInGame() {
   m_IsHiddenPlayerNames = false;
 }
 
-void CGame::EventUserKickHandleQueued(CGameUser* user)
+void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected())
     return;
@@ -3723,7 +3723,7 @@ void CGame::EventUserKickHandleQueued(CGameUser* user)
   // left reason, left code already assigned when queued
 }
 
-void CGame::EventUserCheckStatus(CGameUser* user)
+void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected())
     return;
@@ -3779,7 +3779,7 @@ void CGame::EventUserCheckStatus(CGameUser* user)
   }
 }
 
-CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
+GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
 {
   // If realms are reloaded, HostCounter may change.
   // However, internal realm IDs maps to constant realm input IDs.
@@ -3791,8 +3791,8 @@ CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* join
     if (matchingRealm) internalRealmId = matchingRealm->GetInternalID();
   }
 
-  CGameUser* Player = new CGameUser(this, connection, UID == 0xFF ? GetNewUID() : UID, internalRealmId, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
-  // Now, socket belongs to CGameUser. Don't look for it in CConnection.
+  GameUser::CGameUser* Player = new GameUser::CGameUser(this, connection, UID == 0xFF ? GetNewUID() : UID, internalRealmId, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
+  // Now, socket belongs to GameUser::CGameUser. Don't look for it in CConnection.
 
   m_Users.push_back(Player);
   connection->SetSocket(nullptr);
@@ -3897,7 +3897,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
   uint8_t maxPlayersFromSameIp = isLoopbackAddress(sourceAddress) ? m_Config->m_MaxPlayersLoopback : m_Config->m_MaxPlayersSameIP;
   if (static_cast<uint8_t>(usersSameIP.size()) >= maxPlayersFromSameIp) {
     if (GetIPFloodHandler() == ON_IPFLOOD_NOTIFY) {
-      SendAllChat("Player [" + joinName + "] has the same IP address as: " + PlayersToNameListString(usersSameIP));
+      SendAllChat("Player [" + joinName + "] has the same IP address as: " + ToNameListSentence(usersSameIP));
     }
     return false;
   }
@@ -4047,7 +4047,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 
       SID = GetEmptySID(true);
       if (SID != 0xFF) {
-        CGameUser* kickedPlayer = GetUserFromSID(SID);
+        GameUser::CGameUser* kickedPlayer = GetUserFromSID(SID);
 
         if (kickedPlayer) {
           if (!kickedPlayer->HasLeftReason()) {
@@ -4078,7 +4078,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
         }
       }
 
-      CGameUser* kickedPlayer = GetUserFromSID(SID);
+      GameUser::CGameUser* kickedPlayer = GetUserFromSID(SID);
 
       if (kickedPlayer) {
         if (!kickedPlayer->HasLeftReason()) {
@@ -4188,7 +4188,7 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   return isBanned;
 }
 
-void CGame::EventUserLeft(CGameUser* user)
+void CGame::EventUserLeft(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
   LOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
@@ -4202,7 +4202,7 @@ void CGame::EventUserLeft(CGameUser* user)
   TrySaveOnDisconnect(user, true);
 }
 
-void CGame::EventUserLoaded(CGameUser* user)
+void CGame::EventUserLoaded(GameUser::CGameUser* user)
 {
   string role = user->GetIsObserver() ? "observer" : "player";
   LOG_APP_IF(LOG_LEVEL_DEBUG, role + " [" + user->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds")
@@ -4216,7 +4216,7 @@ void CGame::EventUserLoaded(CGameUser* user)
   }
 }
 
-bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
+bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction* action)
 {
   if (!m_GameLoading && !m_GameLoaded) {
     return false;
@@ -4298,7 +4298,7 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
   return true;
 }
 
-void CGame::EventUserKeepAlive(CGameUser* user)
+void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
 {
   if (!m_GameLoading && !m_GameLoaded)
     return;
@@ -4350,8 +4350,8 @@ void CGame::EventUserKeepAlive(CGameUser* user)
   }
   if (DesyncDetected) {
     m_Desynced = true;
-    string syncListText = PlayersToNameListString(m_SyncPlayers[user]);
-    string desyncListText = PlayersToNameListString(DesyncedPlayers);
+    string syncListText = ToNameListSentence(m_SyncPlayers[user]);
+    string desyncListText = ToNameListSentence(DesyncedPlayers);
     uint8_t GProxyMode = GetActiveReconnectProtocols();
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
       LogApp(" [GProxy=" + ToDecString(GProxyMode) + "] " + user->GetName() + " (" + user->GetDelayText(true) + ") is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
@@ -4371,7 +4371,7 @@ void CGame::EventUserKeepAlive(CGameUser* user)
   }
 }
 
-void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer)
+void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* chatPlayer)
 {
   if (chatPlayer->GetFromUID() == user->GetUID())
   {
@@ -4547,7 +4547,7 @@ void CGame::EventUserChatToHost(CGameUser* user, CIncomingChatPlayer* chatPlayer
   }
 }
 
-void CGame::EventUserChangeTeam(CGameUser* user, uint8_t team)
+void CGame::EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team)
 {
   // user is requesting a team change
 
@@ -4600,7 +4600,7 @@ void CGame::EventUserChangeTeam(CGameUser* user, uint8_t team)
   }
 }
 
-void CGame::EventUserChangeColor(CGameUser* user, uint8_t colour)
+void CGame::EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour)
 {
   // user is requesting a colour change
 
@@ -4633,7 +4633,7 @@ void CGame::EventUserChangeColor(CGameUser* user, uint8_t colour)
   }
 }
 
-void CGame::EventUserChangeRace(CGameUser* user, uint8_t race)
+void CGame::EventUserChangeRace(GameUser::CGameUser* user, uint8_t race)
 {
   // user is requesting a race change
 
@@ -4660,7 +4660,7 @@ void CGame::EventUserChangeRace(CGameUser* user, uint8_t race)
   }
 }
 
-void CGame::EventUserChangeHandicap(CGameUser* user, uint8_t handicap)
+void CGame::EventUserChangeHandicap(GameUser::CGameUser* user, uint8_t handicap)
 {
   // user is requesting a handicap change
 
@@ -4682,7 +4682,7 @@ void CGame::EventUserChangeHandicap(CGameUser* user, uint8_t handicap)
   }
 }
 
-void CGame::EventUserDropRequest(CGameUser* user)
+void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 {
   if (m_Lagging) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] voted to drop laggers")
@@ -4702,7 +4702,7 @@ void CGame::EventUserDropRequest(CGameUser* user)
   }
 }
 
-bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
+bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSize)
 {
   if (m_GameLoading || m_GameLoaded) {
     return true;
@@ -4740,7 +4740,7 @@ bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
         user->SetLastMapPartAcked(mapSize->GetMapSize());
       }
     } else if (!user->GetMapKicked()) {
-      user->SetMapKicked(true);
+      user->AddKickReason(GameUser::KickReason::MAP_MISSING);
       user->KickAtLatest(GetTicks() + m_Config->m_LacksMapKickDelay);
       if (!user->HasLeftReason()) {
         if (m_Remade) {
@@ -4799,7 +4799,7 @@ bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
   return true;
 }
 
-void CGame::EventUserPongToHost(CGameUser* user)
+void CGame::EventUserPongToHost(GameUser::CGameUser* user)
 {
   if (m_GameLoading || m_GameLoaded || user->GetDisconnected() || user->GetIsReserved()) {
     return;
@@ -4837,13 +4837,13 @@ void CGame::EventUserPongToHost(CGameUser* user)
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
       }
-      user->SetPingKicked(true);
+      user->AddKickReason(GameUser::KickReason::HIGH_PING);
       user->KickAtLatest(GetTicks() + HIGH_PING_KICK_DELAY);
       SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
     }
   } else {
-    user->SetPingKicked(false);
-    if (!user->GetMapKicked() && user->GetKickQueued()) {
+    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
+    if (!user->GetAnyKicked() && user->GetKickQueued()) {
       user->ClearKickByTicks();
     }
     if (user->GetHasHighPing()) {
@@ -4866,7 +4866,7 @@ void CGame::EventUserPongToHost(CGameUser* user)
   }
 }
 
-void CGame::EventUserMapReady(CGameUser* user)
+void CGame::EventUserMapReady(GameUser::CGameUser* user)
 {
   if (user->GetMapReady()) {
     return;
@@ -5088,7 +5088,7 @@ void CGame::EventGameStarted()
   UpdateBannableUsers();
 }
 
-void CGame::AddProvisionalBannableUser(const CGameUser* user)
+void CGame::AddProvisionalBannableUser(const GameUser::CGameUser* user)
 {
   const bool isOversized = m_Bannables.size() > GAME_BANNABLE_MAX_HISTORY_SIZE;
   bool matchedSameName = false, matchedShrink = false;
@@ -5215,7 +5215,7 @@ void CGame::RunPlayerObfuscation()
   }
 }
 
-bool CGame::CheckSmartCommands(CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* commandCFG)
+bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* commandCFG)
 {
   if (message.length() >= 2) {
     string prefix = ToLowerCase(message.substr(0, 2));
@@ -5245,8 +5245,8 @@ void CGame::EventGameLoaded()
 
   // send shortest, longest, and personal load times to each user
 
-  const CGameUser* Shortest = nullptr;
-  const CGameUser* Longest  = nullptr;
+  const GameUser::CGameUser* Shortest = nullptr;
+  const GameUser::CGameUser* Longest  = nullptr;
 
   uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
   ImmutableUserList DesyncedPlayers;
@@ -5273,7 +5273,7 @@ void CGame::EventGameLoaded()
 
   ImmutableUserList players = GetPlayers();
   if (players.size() <= 2) {
-    m_PlayedBy = PlayersToNameListString(players, true);
+    m_PlayedBy = ToNameListSentence(players, true);
   } else {
     m_PlayedBy = players[0]->GetName() + ", and others";
   }
@@ -5288,7 +5288,7 @@ void CGame::EventGameLoaded()
   }
   if (!DesyncedPlayers.empty()) {
     if (GetHasDesyncHandler()) {
-      SendAllChat("Some users desynchronized during game load: " + PlayersToNameListString(DesyncedPlayers));
+      SendAllChat("Some users desynchronized during game load: " + ToNameListSentence(DesyncedPlayers));
       if (!GetAllowsDesync()) {
         StopDesynchronized("was automatically dropped after desync");
       }
@@ -5326,7 +5326,7 @@ void CGame::HandleGameLoadedStats()
     if (!slot->GetIsPlayerOrFake()) {
       continue;
     }
-    const CGameUser* user = GetUserFromSID(SID);
+    const GameUser::CGameUser* user = GetUserFromSID(SID);
     exportSlotIDs.push_back(SID);
     exportColorIDs.push_back(slot->GetColor());
     if (user == nullptr) {
@@ -5475,7 +5475,7 @@ uint8_t CGame::GetSIDFromUID(uint8_t UID) const
   return 0xFF;
 }
 
-CGameUser* CGame::GetUserFromUID(uint8_t UID) const
+GameUser::CGameUser* CGame::GetUserFromUID(uint8_t UID) const
 {
   for (auto& user : m_Users) {
     if (!user->GetLeftMessageSent() && user->GetUID() == UID)
@@ -5485,7 +5485,7 @@ CGameUser* CGame::GetUserFromUID(uint8_t UID) const
   return nullptr;
 }
 
-CGameUser* CGame::GetUserFromSID(uint8_t SID) const
+GameUser::CGameUser* CGame::GetUserFromSID(uint8_t SID) const
 {
   if (SID >= static_cast<uint8_t>(m_Slots.size()))
     return nullptr;
@@ -5519,12 +5519,12 @@ bool CGame::HasOwnerSet() const
 bool CGame::HasOwnerInGame() const
 {
   if (!HasOwnerSet()) return false;
-  CGameUser* MaybeOwner = GetUserFromName(m_OwnerName, false);
+  GameUser::CGameUser* MaybeOwner = GetUserFromName(m_OwnerName, false);
   if (!MaybeOwner) return false;
   return MaybeOwner->GetIsOwner(nullopt);
 }
 
-CGameUser* CGame::GetUserFromName(string name, bool sensitive) const
+GameUser::CGameUser* CGame::GetUserFromName(string name, bool sensitive) const
 {
   if (!sensitive) {
     transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
@@ -5542,7 +5542,7 @@ CGameUser* CGame::GetUserFromName(string name, bool sensitive) const
   return nullptr;
 }
 
-uint8_t CGame::GetUserFromNamePartial(const string& name, CGameUser*& matchPlayer) const
+uint8_t CGame::GetUserFromNamePartial(const string& name, GameUser::CGameUser*& matchPlayer) const
 {
   uint8_t matches = 0;
   if (name.empty()) {
@@ -5577,7 +5577,7 @@ uint8_t CGame::GetUserFromNamePartial(const string& name, CGameUser*& matchPlaye
   return matches;
 }
 
-uint8_t CGame::GetUserFromDisplayNamePartial(const string& name, CGameUser*& matchPlayer) const
+uint8_t CGame::GetUserFromDisplayNamePartial(const string& name, GameUser::CGameUser*& matchPlayer) const
 {
   uint8_t matches = 0;
   if (name.empty()) {
@@ -5660,7 +5660,7 @@ uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanP
   return matches;
 }
 
-CGameUser* CGame::GetPlayerFromColor(uint8_t colour) const
+GameUser::CGameUser* CGame::GetPlayerFromColor(uint8_t colour) const
 {
   for (uint8_t i = 0; i < m_Slots.size(); ++i)
   {
@@ -5767,7 +5767,7 @@ uint8_t CGame::GetNewColor() const
   return m_Map->GetVersionMaxSlots(); // should never happen
 }
 
-uint8_t CGame::SimulateActionUID(const uint8_t actionType, CGameUser* user, const bool isDisconnect)
+uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect)
 {
   const bool isFullObservers = m_Map->GetMapObservers() == MAPOBS_ALLOWED;
   // Note that the game client desyncs if the UID of an actual user is used.
@@ -5871,7 +5871,7 @@ bool CGame::GetIsPlayerSlot(const uint8_t SID) const
 {
   const CGameSlot* slot = InspectSlot(SID);
   if (!slot || !slot->GetIsPlayerOrFake()) return false;
-  const CGameUser* user = GetUserFromSID(SID);
+  const GameUser::CGameUser* user = GetUserFromSID(SID);
   if (user == nullptr) return false;
   return !user->GetDeleteMe();
 }
@@ -6097,7 +6097,7 @@ uint8_t CGame::GetEmptySID(bool reserved) const
 
     for (uint8_t i = 0; i < m_Slots.size(); ++i) {
       if (!m_Slots[i].GetIsPlayerOrFake()) continue;
-      CGameUser* Player = GetUserFromSID(i);
+      GameUser::CGameUser* Player = GetUserFromSID(i);
       if (Player && !Player->GetIsReserved() && m_Slots[i].GetDownloadStatus() < LeastDownloaded) {
         LeastSID = i;
         LeastDownloaded = m_Slots[i].GetDownloadStatus();
@@ -6112,7 +6112,7 @@ uint8_t CGame::GetEmptySID(bool reserved) const
 
     for (uint8_t i = 0; i < m_Slots.size(); ++i) {
       if (!m_Slots[i].GetIsPlayerOrFake()) continue;
-      CGameUser* Player = GetUserFromSID(i);
+      GameUser::CGameUser* Player = GetUserFromSID(i);
       if (Player && !Player->GetIsReserved()) {
         return i;
       }
@@ -6278,8 +6278,8 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
   }
 
   // Players that are at given slots afterwards.
-  CGameUser* PlayerOne = GetUserFromSID(SID1);
-  CGameUser* PlayerTwo = GetUserFromSID(SID2);
+  GameUser::CGameUser* PlayerOne = GetUserFromSID(SID1);
+  GameUser::CGameUser* PlayerTwo = GetUserFromSID(SID2);
   if (PlayerOne) {
     PlayerOne->SetObserver(m_Slots[SID1].GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerOne->GetIsObserver()) {
@@ -6309,7 +6309,7 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
     return false;
   }
 
-  CGameUser* user = GetUserFromSID(SID);
+  GameUser::CGameUser* user = GetUserFromSID(SID);
   if (user && !user->GetDeleteMe()) {
     if (!kick) return false;
     if (!user->HasLeftReason()) {
@@ -6381,7 +6381,7 @@ bool CGame::CloseSlot(const uint8_t SID, const bool kick)
   }
   const CGameSlot* slot = InspectSlot(SID);
   const uint8_t openSlots = static_cast<uint8_t>(GetSlotsOpen());
-  CGameUser* user = GetUserFromSID(SID);
+  GameUser::CGameUser* user = GetUserFromSID(SID);
   if (user && !user->GetDeleteMe()) {
     if (!kick) return false;
     if (!user->HasLeftReason()) {
@@ -6442,7 +6442,7 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
   if (!CanLockSlotForJoins(SID)) {
     return false;
   }
-  CGameUser* Player = GetUserFromSID(SID);
+  GameUser::CGameUser* Player = GetUserFromSID(SID);
   if (Player && !Player->GetDeleteMe()) {
     if (!kick) return false;
     if (!Player->HasLeftReason()) {
@@ -6492,7 +6492,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
         }
       }
 
-      CGameUser* user = GetUserFromUID(slot->GetUID());
+      GameUser::CGameUser* user = GetUserFromUID(slot->GetUID());
       if (user) {
         user->SetObserver(toObservers);
         if (toObservers) {
@@ -6928,7 +6928,7 @@ void CGame::ShuffleSlots()
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
 }
 
-void CGame::ReportSpoofed(const string& server, CGameUser* user)
+void CGame::ReportSpoofed(const string& server, GameUser::CGameUser* user)
 {
   if (!m_IsHiddenPlayerNames) {
     SendAllChat("Name spoof detected. The real [" + user->GetName() + "@" + server + "] is not in this game.");
@@ -6941,7 +6941,7 @@ void CGame::ReportSpoofed(const string& server, CGameUser* user)
   }
 }
 
-void CGame::AddToRealmVerified(const string& server, CGameUser* Player, bool sendMessage)
+void CGame::AddToRealmVerified(const string& server, GameUser::CGameUser* Player, bool sendMessage)
 {
   // Must only be called on a lobby, for many reasons (e.g. GetName() used instead of GetDisplayName())
   Player->SetRealmVerified(true);
@@ -6983,8 +6983,8 @@ void CGame::AddToReserved(const string& name)
     }
 
     // Reserved users are never kicked for latency reasons.
-    user->SetPingKicked(false);
-    if (!user->GetMapKicked() && user->GetKickQueued()) {
+    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
+    if (!user->GetAnyKicked() && user->GetKickQueued()) {
       user->ClearKickByTicks();
     }
   }
@@ -7001,7 +7001,7 @@ void CGame::RemoveFromReserved(const string& name)
   m_Reserved.erase(m_Reserved.begin() + index);
 
   // demote the user if they're already in the game
-  CGameUser* matchPlayer = GetUserFromName(name, false);
+  GameUser::CGameUser* matchPlayer = GetUserFromName(name, false);
   if (matchPlayer) {
     matchPlayer->SetReserved(false);
   }
@@ -7234,13 +7234,13 @@ void CGame::SetOwner(const string& name, const string& realm)
   m_OwnerRealm = realm;
   UncacheOwner();
 
-  CGameUser* user = GetUserFromName(name, false);
+  GameUser::CGameUser* user = GetUserFromName(name, false);
   if (user && user->GetRealmHostName() == realm) {
     user->SetOwner(true);
 
     // Owner is never kicked for latency reasons.
-    user->SetPingKicked(false);
-    if (!user->GetMapKicked() && user->GetKickQueued()) {
+    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
+    if (!user->GetAnyKicked() && user->GetKickQueued()) {
       user->ClearKickByTicks();
     }
   }
@@ -7280,7 +7280,7 @@ void CGame::ResetTeams(const bool alsoCaptains)
     if (slot->GetTeam() == m_Map->GetVersionMaxSlots()) continue;
     if (!slot->GetIsPlayerOrFake()) continue;
     if (!alsoCaptains) {
-      CGameUser* user = GetUserFromSID(SID);
+      GameUser::CGameUser* user = GetUserFromSID(SID);
       if (user && user->GetIsDraftCaptain()) continue;
     }
     if (!SetSlotTeam(SID, m_Map->GetVersionMaxSlots(), false)) {
@@ -7306,7 +7306,7 @@ void CGame::CountKickVotes()
   }
 
   if (Votes >= VotesNeeded) {
-    CGameUser* victim = GetUserFromName(m_KickVotePlayer, true);
+    GameUser::CGameUser* victim = GetUserFromName(m_KickVotePlayer, true);
 
     if (victim) {
       if (!victim->HasLeftReason()) {
@@ -7344,7 +7344,7 @@ bool CGame::GetCanStartGracefulCountDown() const
   uint8_t sameTeam = m_Map->GetVersionMaxSlots();
   for (const auto& slot : m_Slots) {
     if (slot.GetIsPlayerOrFake() && slot.GetDownloadStatus() != 100) {
-      CGameUser* Player = GetUserFromUID(slot.GetUID());
+      GameUser::CGameUser* Player = GetUserFromUID(slot.GetUID());
       if (Player) {
         return false;
       }
@@ -7466,7 +7466,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
     string StillDownloading;
     for (const auto& slot : m_Slots) {
       if (slot.GetIsPlayerOrFake() && slot.GetDownloadStatus() != 100) {
-        CGameUser* Player = GetUserFromUID(slot.GetUID());
+        GameUser::CGameUser* Player = GetUserFromUID(slot.GetUID());
         if (Player) {
           if (StillDownloading.empty())
             StillDownloading = Player->GetDisplayName();
@@ -7554,7 +7554,9 @@ void CGame::StartCountDown(bool fromUser, bool force)
   }
 
   for (auto& user : m_Users) {
-    user->SetPingKicked(false);
+    if (!user->GetDisconnected()) {
+      user->ResetKickReason();
+    }
     if (user->GetKickQueued()) {
       user->ClearKickByTicks();
     }
@@ -7606,8 +7608,8 @@ void CGame::StopLaggers(const string& reason) const
 void CGame::StopDesynchronized(const string& reason) const
 {
   uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
-  for (CGameUser* user : m_Users) {
-    auto it = m_SyncPlayers.find(static_cast<const CGameUser*>(user));
+  for (GameUser::CGameUser* user : m_Users) {
+    auto it = m_SyncPlayers.find(static_cast<const GameUser::CGameUser*>(user));
     if (it == m_SyncPlayers.end()) {
       continue;
     }
@@ -7619,7 +7621,7 @@ void CGame::StopDesynchronized(const string& reason) const
   }
 }
 
-bool CGame::Pause(CGameUser* user, const bool isDisconnect)
+bool CGame::Pause(GameUser::CGameUser* user, const bool isDisconnect)
 {
   const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect);
   if (UID == 0xFF) return false;
@@ -7658,7 +7660,7 @@ string CGame::GetSaveFileName(const uint8_t UID) const
   return "auto_p" + ToDecString(GetSIDFromUID(UID) + 1) + "_" + oss.str() + ".w3z";
 }
 
-bool CGame::Save(CGameUser* user, const bool isDisconnect)
+bool CGame::Save(GameUser::CGameUser* user, const bool isDisconnect)
 {
   const uint8_t UID = SimulateActionUID(ACTION_SAVE, user, isDisconnect);
   if (UID == 0xFF) return false;
@@ -7691,7 +7693,7 @@ void CGame::SaveEnded(const uint8_t exceptUID)
   }
 }
 
-bool CGame::TrySaveOnDisconnect(CGameUser* user, const bool isVoluntary)
+bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary)
 {
   if (m_SaveOnLeave == SAVE_ON_LEAVE_NEVER) {
     return false;

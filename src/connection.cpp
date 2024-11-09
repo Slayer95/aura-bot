@@ -178,7 +178,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
             const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
             const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
-            CGameUser* targetUser = nullptr;
+            GameUser::CGameUser* targetUser = nullptr;
             if (Length >= 17) {
               targetUser = m_Aura->m_Net->GetReconnectTargetUser(ByteArrayToUInt32(Bytes, false, 13), Bytes[4]);
             } else {
@@ -250,7 +250,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
   }
   */
 
-  // At this point, m_Socket may have been transferred to CGameUser
+  // At this point, m_Socket may have been transferred to GameUser::CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
     return INCON_UPDATE_DESTROY;
   }

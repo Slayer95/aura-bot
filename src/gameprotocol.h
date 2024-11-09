@@ -49,7 +49,7 @@
 #include "includes.h"
 #include "aura.h"
 
-class CGameUser;
+class GameUser::CGameUser;
 class CIncomingJoinRequest;
 class CIncomingAction;
 class CIncomingChatPlayer;
@@ -145,8 +145,8 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(std::queue<CIncomingAction*> actions, uint16_t sendInterval);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(std::queue<CIncomingAction*> actions);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const std::string& message);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<CGameUser*> users);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(CGameUser* user);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<GameUser::CGameUser*> users);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, const std::string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter);

@@ -614,7 +614,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
 
   if (eventType == BNETProtocol::IncomingChatEvent::WHISPER && (message == "s" || message == "sc" || message == "spoofcheck")) {
     if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
-      CGameUser* Player = m_Aura->m_CurrentLobby->GetUserFromName(fromUser, true);
+      GameUser::CGameUser* Player = m_Aura->m_CurrentLobby->GetUserFromName(fromUser, true);
       if (Player) m_Aura->m_CurrentLobby->AddToRealmVerified(m_Config->m_HostName, Player, true);
       return;
     }
@@ -694,7 +694,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       else
         UserName = message;
 
-      CGameUser* AboutPlayer = m_Aura->m_CurrentLobby->GetUserFromName(UserName, true);
+      GameUser::CGameUser* AboutPlayer = m_Aura->m_CurrentLobby->GetUserFromName(UserName, true);
       if (AboutPlayer && AboutPlayer->GetRealmInternalID() == m_InternalServerID) {
         // handle spoof checking for current game
         // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)

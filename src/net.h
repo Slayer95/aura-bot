@@ -48,7 +48,7 @@ class CUDPSocket;
 class CStreamIOSocket;
 class CConnection;
 class CGameSeeker;
-class CGameUser;
+class GameUser::CGameUser;
 class CNetConfig;
 
 struct sockaddr_storage;
@@ -198,14 +198,14 @@ public:
   void                                   PropagateBroadcastEnabled(const bool nEnable);
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);
   void                                   OnConfigReload();
-  void                                   OnUserKicked(CGameUser* user, bool deferred = false);
+  void                                   OnUserKicked(GameUser::CGameUser* user, bool deferred = false);
   void                                   RegisterGameSeeker(CConnection* connection, uint8_t nType);
   void                                   GracefulExit();
 
   [[nodiscard]] bool                                   IsIgnoredDatagramSource(std::string sourceIp);
   [[nodiscard]] bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }
-  [[nodiscard]] CGameUser*                             GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const;
-  [[nodiscard]] CGameUser*                             GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t reconnectKey) const;
+  [[nodiscard]] GameUser::CGameUser*                             GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const;
+  [[nodiscard]] GameUser::CGameUser*                             GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t reconnectKey) const;
 };
 
 #endif // AURA_NET_H_

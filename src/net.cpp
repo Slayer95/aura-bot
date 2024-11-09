@@ -641,14 +641,14 @@ bool CNet::IsIgnoredDatagramSource(string sourceIp)
   return m_Config->m_UDPBlockedIPs.find(element) != m_Config->m_UDPBlockedIPs.end();
 }
 
-CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const
+GameUser::CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const
 {
-  CGameUser* matchUser = nullptr;
+  GameUser::CGameUser* matchUser = nullptr;
 
   for (auto& game : m_Aura->m_Games) {
     if (game->GetGameID() != gameID) continue;
     if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
-      CGameUser* user = game->GetUserFromUID(UID);
+      GameUser::CGameUser* user = game->GetUserFromUID(UID);
       if (user && !user->GetDeleteMe() && user->GetGProxyAny()) {
         matchUser = user;
       }
@@ -659,13 +659,13 @@ CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID
   return matchUser;
 }
 
-CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t reconnectKey) const
+GameUser::CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const uint32_t reconnectKey) const
 {
-  CGameUser* matchUser = nullptr;
+  GameUser::CGameUser* matchUser = nullptr;
 
   for (auto& game : m_Aura->m_Games) {
     if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
-      CGameUser* user = game->GetUserFromUID(UID);
+      GameUser::CGameUser* user = game->GetUserFromUID(UID);
       if (user && !user->GetDeleteMe() && user->GetGProxyAny() && !user->GetGProxyCheckGameID() && user->GetGProxyReconnectKey() == reconnectKey) {
         matchUser = user;
         break;
@@ -1496,7 +1496,7 @@ void CNet::OnConfigReload()
   SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
 }
 
-void CNet::OnUserKicked(CGameUser* user, bool deferred)
+void CNet::OnUserKicked(GameUser::CGameUser* user, bool deferred)
 {
   CStreamIOSocket* socket = user->GetSocket();
   if (!socket) return;
