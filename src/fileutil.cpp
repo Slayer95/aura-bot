@@ -54,6 +54,9 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <locale>
 #include <system_error>
 
+#define __STORMLIB_SELF__
+#include <StormLib.h>
+
 using namespace std;
 
 bool FileExists(const filesystem::path& file)

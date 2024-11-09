@@ -26,10 +26,10 @@
 #ifndef AURA_OSUTIL_H_
 #define AURA_OSUTIL_H_
 
+#include "includes.h"
 #include "fileutil.h"
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
 #pragma once
 #include <windows.h>
 #define stat _stat

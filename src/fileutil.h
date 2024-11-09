@@ -49,24 +49,13 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #define FUZZY_SEARCH_MAX_RESULTS 5
 #define FUZZY_SEARCH_MAX_DISTANCE 10
 
-#ifdef _WIN32
-#define PLATFORM_STRING_TYPE std::wstring
-#else
-#define PLATFORM_STRING_TYPE std::string
-#endif
-
 #include "includes.h"
-#include <vector>
-#include <set>
 #include <fstream>
 #include <filesystem>
 #include <system_error>
 #include <cstdio>
-#include <optional>
-#include <ctime>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
 #pragma once
 #include <windows.h>
 #define stat _stat
@@ -77,9 +66,6 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <unistd.h>
 #include <limits.h>
 #endif
-
-#define __STORMLIB_SELF__
-#include <StormLib.h>
 
 // unistd.h and limits.h
 

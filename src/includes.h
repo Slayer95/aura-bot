@@ -73,6 +73,22 @@
 #include "constants.h"
 #include "forward.h"
 
+#ifdef _WIN32
+#define PLATFORM_STRING_TYPE std::wstring
+#else
+#define PLATFORM_STRING_TYPE std::string
+#endif
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#endif
+
 #define PRINT_IF(T, U) \
     if (m_Aura->MatchLogLevel(T)) {\
         Print(U); \
