@@ -20,6 +20,11 @@ Config
 - Default value: 100
 - Error handling: Use default value
 
+## \`bot.latency.equalizer\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`bot.load_maps.cache.enabled\`
 - Type: bool
 - Default value: true
@@ -89,19 +94,9 @@ Config
 - Default value: true
 - Error handling: Use default value
 
-## \`db.journal_mode\`
-- Type: enum
-- Default value: JOURNAL_MODE_DELETE
-- Error handling: Use default value
-
 ## \`db.storage_file\`
 - Type: path
 - Default value: Aura home directory
-- Error handling: Use default value
-
-## \`db.synchronous\`
-- Type: enum
-- Default value: SYNCHRONOUS_FULL
 - Error handling: Use default value
 
 ## \`db.wal_autocheckpoint\`
@@ -450,6 +445,26 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
+## \`global_realm.game_host.throttle\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`global_realm.game_host.throttle\`
+- Type: bool
+- Default value: !m_IsHostOften
+- Error handling: Use default value
+
+## \`global_realm.game_host.unique\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`global_realm.game_host.unique\`
+- Type: bool
+- Default value: !m_IsHostMulti
+- Error handling: Use default value
+
 ## \`global_realm.game_prefix\`
 - Type: string
 - Default value: Empty
@@ -547,6 +562,16 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.queries.games_list.enabled\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.rehoster\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`global_realm.rehoster\`
 - Type: bool
 - Default value: Empty
 - Error handling: Use default value
@@ -1028,11 +1053,6 @@ Config
 - Default value: 
 - Error handling: Use default value
 
-## \`net.game_discovery.udp.extra_clients.strict\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
 ## \`net.game_discovery.udp.ipv6.target_port\`
 - Type: uint16
 - Default value: 5678
@@ -1180,11 +1200,6 @@ Config
 ## \`net.tcp_extensions.gproxy.vlan.port\`
 - Type: uint16
 - Default value: onlyHostPort.value_or(6112u
-- Error handling: Use default value
-
-## \`net.tcp_extensions.udp_scan.enabled\`
-- Type: bool
-- Default value: true
 - Error handling: Use default value
 
 ## \`net.tcp_extensions.udp_tunnel.enabled\`
