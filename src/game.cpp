@@ -121,7 +121,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_DotaStats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_ActionQueueSelector(false),
-    m_NextActionCallback(ON_SEND_ACTIONS_NONE),
+    m_NextActionsCallback(make_pair(ON_SEND_ACTIONS_NONE, ON_SEND_ACTIONS_NONE)),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
@@ -1580,9 +1580,13 @@ void CGame::RunActionsScheduler()
   }
   m_LastActionSentTicks = Ticks;
 
-  //if (m_Config->m_EnableLatencyEqualizer) {
-  m_ActionQueueSelector = !m_ActionQueueSelector;
-  //}
+  if (m_Config->m_LatencyEqualizer) {
+    m_ActionQueueSelector = !m_ActionQueueSelector;
+  } else {
+    // Skip an actions callback frame.
+    m_NextActionsCallback.first = m_NextActionsCallback.second;
+    m_NextActionsCallback.second = ON_SEND_ACTIONS_NONE;
+  }
 }
 
 void CGame::LogApp(const string& logText) const
@@ -2874,7 +2878,7 @@ void CGame::SendCommandsHelp(const string& cmdToken, CGameUser* user, const bool
 
 void CGame::SendAllActionsCallback()
 {
-  switch (m_NextActionCallback) {
+  switch (m_NextActionsCallback.first) {
     case ON_SEND_ACTIONS_PAUSE:
       m_Paused = true;
       m_LastPausedTicks = GetTicks();
@@ -2885,7 +2889,8 @@ void CGame::SendAllActionsCallback()
     default:
       break;
   }
-  m_NextActionCallback = ON_SEND_ACTIONS_NONE;
+  m_NextActionsCallback.first = m_NextActionsCallback.second;
+  m_NextActionsCallback.second = ON_SEND_ACTIONS_NONE;
 }
 
 void CGame::SendAllActions()
@@ -3519,13 +3524,12 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
   // so when the lag screen finishes we would immediately disconnect everyone if we didn't give them some extra time
 
   if (GetTime() - m_LastLagScreenTime >= 10 && !user->GetGProxyExtended()) {
-    user->CloseConnection();
-    TrySaveOnDisconnect(user, false);
-    //user->SetDeleteMe(true);
     if (!user->HasLeftReason()) {
       user->SetLeftReason("has lost the connection (timed out)");
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
+    user->CloseConnection();
+    TrySaveOnDisconnect(user, false);
   }
 }
 
@@ -3544,13 +3548,12 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
     return;
   }
 
-  user->CloseConnection();
-  TrySaveOnDisconnect(user, false);
-  //user->SetDeleteMe(true);
   if (!user->HasLeftReason()) {
     user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
+  user->CloseConnection();
+  TrySaveOnDisconnect(user, false);
 }
 
 void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
@@ -3567,13 +3570,12 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
     return;
   }
 
-  user->CloseConnection();
-  TrySaveOnDisconnect(user, false);
-  //user->SetDeleteMe(true);
   if (!user->HasLeftReason()) {
     user->SetLeftReason("has terminated the connection");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
+  user->CloseConnection();
+  TrySaveOnDisconnect(user, false);
 }
 
 void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover)
@@ -3590,9 +3592,6 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
     return;
   }
 
-  user->CloseConnection();
-  TrySaveOnDisconnect(user, false);
-  //user->SetDeleteMe(true);
   if (!user->HasLeftReason()) {
     if (canRecover) {
       user->SetLeftReason("has lost the connection (protocol error)");
@@ -3601,28 +3600,28 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
     }
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
+  user->CloseConnection();
+  TrySaveOnDisconnect(user, false);
 }
 
 void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
 {
   if (user->GetDisconnected()) return;
-  user->CloseConnection();
-  //user->SetDeleteMe(true);
   if (!user->HasLeftReason()) {
     user->SetLeftReason("was kicked by anti-abuse");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
+  user->CloseConnection();
   user->SetAbuseKicked(true);
 }
 
 void CGame::EventUserKickUnverified(CGameUser* user)
 {
   if (user->GetDisconnected()) return;
-  user->CloseConnection();
-  //user->SetDeleteMe(true);
   if (!user->HasLeftReason()) {
     user->SetLeftReason("has been kicked because they are not verified by their realm");
   }
+  user->CloseConnection();
   user->SetSpoofKicked(true);
 }
 
@@ -3720,7 +3719,6 @@ void CGame::EventUserKickHandleQueued(CGameUser* user)
     return;
   }
 
-  //user->SetDeleteMe(true);
   user->CloseConnection();
   // left reason, left code already assigned when queued
 }
@@ -4052,7 +4050,6 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
         CGameUser* kickedPlayer = GetUserFromSID(SID);
 
         if (kickedPlayer) {
-          kickedPlayer->CloseConnection();
           if (!kickedPlayer->HasLeftReason()) {
             if (m_IsHiddenPlayerNames) {
               kickedPlayer->SetLeftReason("was kicked to make room for a reserved user");
@@ -4060,6 +4057,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
               kickedPlayer->SetLeftReason("was kicked to make room for a reserved user [" + joinRequest->GetName() + "]");
             }
           }
+          kickedPlayer->CloseConnection();
 
           // Ensure the userleave message is sent before the reserved userjoin message.
           SendLeftMessage(kickedPlayer, true);
@@ -4083,7 +4081,6 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
       CGameUser* kickedPlayer = GetUserFromSID(SID);
 
       if (kickedPlayer) {
-        kickedPlayer->CloseConnection();
         if (!kickedPlayer->HasLeftReason()) {
           if (m_IsHiddenPlayerNames) {
             kickedPlayer->SetLeftReason("was kicked to make room for the owner");
@@ -4091,6 +4088,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
             kickedPlayer->SetLeftReason("was kicked to make room for the owner [" + joinRequest->GetName() + "]");
           }
         }
+        kickedPlayer->CloseConnection();
         // Ensure the userleave message is sent before the game owner' userjoin message.
         SendLeftMessage(kickedPlayer, true);
       }
@@ -4195,14 +4193,13 @@ void CGame::EventUserLeft(CGameUser* user)
   if (user->GetDisconnected()) return;
   LOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
   // this function is only called when a user leave packet is received, not when there's a socket error, kick, etc...
-  TrySaveOnDisconnect(user, true);
-  user->CloseConnection();
-  //user->SetDeleteMe(true);
   if (!user->HasLeftReason()) {
     user->SetLeftReason("Leaving the game voluntarily");
     user->SetLeftCode(PLAYERLEAVE_LOST);
   }
   user->SetQuitGame(true);
+  user->CloseConnection();
+  TrySaveOnDisconnect(user, true);
 }
 
 void CGame::EventUserLoaded(CGameUser* user)
@@ -4245,6 +4242,8 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
             SendChat(user, "NOTE: You have reached the maximum allowed saves for this game.");
           }
         } else {
+          // Game engine lets referees save without limit nor throttle whatsoever.
+          // This path prevents save-spamming leading to unplayable games.
           EventUserDisconnectGameAbuse(user);
         }
         break;
@@ -4256,11 +4255,11 @@ bool CGame::EventUserAction(CGameUser* user, CIncomingAction* action)
         if (!user->GetIsNativeReferee()) {
           user->DropRemainingPauses();
         }
-        m_NextActionCallback = ON_SEND_ACTIONS_PAUSE;
+        m_NextActionsCallback.second = ON_SEND_ACTIONS_PAUSE;
         break;
       case ACTION_RESUME:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
-        m_NextActionCallback = ON_SEND_ACTIONS_RESUME;
+        m_NextActionsCallback.second = ON_SEND_ACTIONS_RESUME;
         break;
       case ACTION_CHAT_TRIGGER: {
         const vector<uint8_t>& actionBytes = *action->GetAction();
@@ -6313,12 +6312,11 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   CGameUser* user = GetUserFromSID(SID);
   if (user && !user->GetDeleteMe()) {
     if (!kick) return false;
-    //user->SetDeleteMe(true);
-    // fromOpen = true, so that EventUserAfterDisconnect doesn't call OpenSlot() itself
-    user->CloseConnection(true);
     if (!user->HasLeftReason()) {
       user->SetLeftReason("was kicked when opening a slot");
     }
+    // fromOpen = true, so that EventUserAfterDisconnect doesn't call OpenSlot() itself
+    user->CloseConnection(true);
   } else if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
     ResetLayout(false);
   }
@@ -6386,11 +6384,10 @@ bool CGame::CloseSlot(const uint8_t SID, const bool kick)
   CGameUser* user = GetUserFromSID(SID);
   if (user && !user->GetDeleteMe()) {
     if (!kick) return false;
-    //user->SetDeleteMe(true);
-    user->CloseConnection();
     if (!user->HasLeftReason()) {
       user->SetLeftReason("was kicked when closing a slot");
     }
+    user->CloseConnection();
   }
   if (slot->GetSlotStatus() == SLOTSTATUS_OPEN && openSlots == 1 && GetNumJoinedUsersOrFake() > 1) {
     DeleteVirtualHost();
@@ -6448,11 +6445,10 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
   CGameUser* Player = GetUserFromSID(SID);
   if (Player && !Player->GetDeleteMe()) {
     if (!kick) return false;
-    Player->CloseConnection();
     if (!Player->HasLeftReason()) {
       Player->SetLeftReason("was kicked when creating a computer in a slot");
     }
-    //Player->SetDeleteMe(true);
+    Player->CloseConnection();
   }
 
   // ignore layout, override computers
@@ -6938,11 +6934,10 @@ void CGame::ReportSpoofed(const string& server, CGameUser* user)
     SendAllChat("Name spoof detected. The real [" + user->GetName() + "@" + server + "] is not in this game.");
   }
   if (GetIsLobby() && MatchOwnerName(user->GetName())) {
-    user->CloseConnection();
     if (!user->HasLeftReason()) {
       user->SetLeftReason("was autokicked for spoofing the game owner");
     }
-    //user->SetDeleteMe(true);
+    user->CloseConnection();
   }
 }
 
@@ -7314,12 +7309,11 @@ void CGame::CountKickVotes()
     CGameUser* victim = GetUserFromName(m_KickVotePlayer, true);
 
     if (victim) {
-      victim->CloseConnection();
-      //victim->SetDeleteMe(true);
       if (!victim->HasLeftReason()) {
         victim->SetLeftReason("was kicked by vote");
         victim->SetLeftCode(PLAYERLEAVE_LOST);
       }
+      victim->CloseConnection();
 
       Log("votekick against user [" + m_KickVotePlayer + "] passed with " + to_string(Votes) + "/" + to_string(GetNumJoinedPlayers()) + " votes");
       SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has passed");
@@ -7451,11 +7445,10 @@ void CGame::StartCountDown(bool fromUser, bool force)
         }
       }
       if (shouldKick) {
-        user->CloseConnection();
-        //user->SetDeleteMe(true);
         if (!user->HasLeftReason()) {
           user->SetLeftReason("kicked when starting the game");
         }
+        user->CloseConnection();
         CloseSlot(GetSIDFromUID(user->GetUID()), false);
       }
     }
@@ -7589,10 +7582,10 @@ bool CGame::StopPlayers(const string& reason) const
   bool anyStopped = false;
   for (auto& user : m_Users) {
     if (user->GetDeleteMe()) continue;
-    user->CloseConnection();
-    user->SetDeleteMe(true);
     user->SetLeftReason(reason);
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    user->CloseConnection();
+    user->SetDeleteMe(true);
     anyStopped = true;
   }
   return anyStopped;
@@ -7602,10 +7595,9 @@ void CGame::StopLaggers(const string& reason) const
 {
   for (auto& user : m_Users) {
     if (user->GetLagging()) {
-      user->CloseConnection();
-      //user->SetDeleteMe(true);
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+      user->CloseConnection();
     }
     user->SetDropVote(false);
   }
@@ -7620,10 +7612,9 @@ void CGame::StopDesynchronized(const string& reason) const
       continue;
     }
     if ((it->second).size() < majorityThreshold) {
-      user->CloseConnection();
-      //user->SetDeleteMe(true);
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+      user->CloseConnection();
     }
   }
 }
@@ -7635,8 +7626,8 @@ bool CGame::Pause(CGameUser* user, const bool isDisconnect)
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_PAUSE);
-  GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
-  m_NextActionCallback = ON_SEND_ACTIONS_PAUSE;
+  GetIncomingActionQueue().push(new CIncomingAction(UID, CRC, Action));
+  m_NextActionsCallback.second = ON_SEND_ACTIONS_PAUSE;
   return true;
 }
 
@@ -7647,8 +7638,8 @@ bool CGame::Resume()
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_RESUME);
-  GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
-  m_NextActionCallback = ON_SEND_ACTIONS_RESUME;
+  GetIncomingActionQueue().push(new CIncomingAction(UID, CRC, Action));
+  m_NextActionsCallback.second = ON_SEND_ACTIONS_RESUME;
   return true;
 }
 
@@ -7679,7 +7670,7 @@ bool CGame::Save(CGameUser* user, const bool isDisconnect)
     ActionStart.push_back(ACTION_SAVE);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionStart, fileName);
-    ActionQueue& actions = GetOutgoingActionQueue();
+    ActionQueue& actions = GetIncomingActionQueue();
     actions.push(new CIncomingAction(UID, CRC, ActionStart));
     actions.push(new CIncomingAction(UID, CRC, ActionEnd));
   }
@@ -7696,7 +7687,7 @@ void CGame::SaveEnded(const uint8_t exceptUID)
     }
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    GetOutgoingActionQueue().push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
+    GetIncomingActionQueue().push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
   }
 }
 
@@ -7769,7 +7760,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> CRC, Action;
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
-  GetOutgoingActionQueue().push(new CIncomingAction(UID, CRC, Action));
+  GetIncomingActionQueue().push(new CIncomingAction(UID, CRC, Action));
   return true;
 }
 

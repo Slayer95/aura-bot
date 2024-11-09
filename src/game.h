@@ -131,7 +131,7 @@ protected:
   UserList                            m_Users;                         // std::vector of players
   std::pair<ActionQueue, ActionQueue> m_Actions;                       // queue of actions to be sent
   bool                                m_ActionQueueSelector;
-  uint8_t                             m_NextActionCallback;
+  std::pair<uint8_t, uint8_t>         m_NextActionsCallback;
   uint16_t                            m_ActionsLatency;
   bool                                m_ActionsEqualizer;
   std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
