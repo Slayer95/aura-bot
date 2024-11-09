@@ -42,10 +42,9 @@
    CODE PORTED FROM THE ORIGINAL GHOST PROJECT
  */
 
-#include "aura.h"
-#include "util.h"
 #include "socket.h"
-#include "includes.h"
+#include "net.h"
+#include "util.h"
 
 using namespace std;
 

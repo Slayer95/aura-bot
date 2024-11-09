@@ -44,13 +44,13 @@
  */
 
 #include "bncsutilinterface.h"
-#include "aura.h"
-#include "util.h"
 
 #include <bncsutil/bncsutil.h>
 
 #include <algorithm>
 #include <cmath>
+
+#include "util.h"
 
 using namespace std;
 

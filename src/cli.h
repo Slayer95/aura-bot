@@ -27,8 +27,6 @@
 #define AURA_CLI_H_
 
 #include "includes.h"
-#include "aura.h"
-#include "gamesetup.h"
 
 #include <filesystem>
 

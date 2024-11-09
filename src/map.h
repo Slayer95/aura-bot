@@ -48,6 +48,7 @@
 
 #include "includes.h"
 #include "fileutil.h"
+#include "gameslot.h"
 #include "util.h"
 
 #include <iterator>

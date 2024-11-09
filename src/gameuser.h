@@ -47,7 +47,6 @@
 #define AURA_GAMEUSER_H_
 
 #include "includes.h"
-#include "socket.h"
 #include "connection.h"
 
 //

@@ -18,10 +18,13 @@
 
 */
 
-#include "aura.h"
-#include "util.h"
-#include "packed.h"
 #include "savegame.h"
+
+#include "util.h"
+#include "gameslot.h"
+#include "packed.h"
+
+#include "aura.h"
 
 using namespace std;
 

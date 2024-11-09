@@ -43,26 +43,28 @@
 
  */
 
-#include "includes.h"
 #include "realm.h"
-#include "command.h"
-#include "aura.h"
-#include "util.h"
-#include "fileutil.h"
-#include "config.h"
-#include "config_realm.h"
-#include "socket.h"
+
+#include <cmath>
+
 #include "auradb.h"
 #include "bncsutilinterface.h"
 #include "bnetprotocol.h"
-#include "map.h"
-#include "gameuser.h"
-#include "gameprotocol.h"
-#include "gpsprotocol.h"
+#include "command.h"
+#include "config.h"
+#include "config_realm.h"
+#include "fileutil.h"
 #include "game.h"
+#include "gameprotocol.h"
+#include "gameuser.h"
+#include "gpsprotocol.h"
 #include "hash.h"
+#include "map.h"
+#include "realm_chat.h"
+#include "socket.h"
+#include "util.h"
 
-#include <cmath>
+#include "aura.h"
 
 using namespace std;
 

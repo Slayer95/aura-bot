@@ -23,6 +23,7 @@
 
  */
 
+#include "auradb.h"
 #include "cli.h"
 #include "config_bot.h"
 #include "config_game.h"
@@ -35,6 +36,8 @@
 #include "realm.h"
 #include "util.h"
 #include "CLI11.hpp"
+
+#include "aura.h"
 
 using namespace std;
 

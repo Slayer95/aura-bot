@@ -23,18 +23,22 @@
 
  */
 
-#include "realm.h"
-#include "command.h"
-#include "aura.h"
-#include "util.h"
-#include "fileutil.h"
-#include "config.h"
-#include "config_realm.h"
 #include "realm_chat.h"
-#include "includes.h"
 
 #include <algorithm>
 #include <cmath>
+
+#include "bnetprotocol.h"
+#include "command.h"
+#include "config.h"
+#include "config_realm.h"
+#include "fileutil.h"
+#include "game.h"
+#include "includes.h"
+#include "realm.h"
+#include "util.h"
+
+#include "aura.h"
 
 using namespace std;
 
@@ -109,12 +113,12 @@ bool CQueuedChatMessage::GetIsStale() const
   }
 }
 
-vector<uint8_t> CQueuedChatMessage::GetMessage() const
+vector<uint8_t> CQueuedChatMessage::GetMessageBytes() const
 {
   return BNETProtocol::SEND_SID_CHAT_PUBLIC(m_Message);
 }
 
-vector<uint8_t> CQueuedChatMessage::GetWhisper() const
+vector<uint8_t> CQueuedChatMessage::GetWhisperBytes() const
 {
   return BNETProtocol::SEND_SID_CHAT_WHISPER(m_Message, m_ReceiverName);
 }
@@ -146,10 +150,10 @@ vector<uint8_t> CQueuedChatMessage::SelectBytes(const std::string& currentChanne
   selectType = QuerySelection(currentChannel);
   switch (selectType) {
     case CHAT_RECV_SELECTED_WHISPER:
-      return GetWhisper();
+      return GetWhisperBytes();
     case CHAT_RECV_SELECTED_PUBLIC:
     case CHAT_RECV_SELECTED_SYSTEM:
-      return GetMessage();
+      return GetMessageBytes();
     default:
       return vector<uint8_t>();
   }

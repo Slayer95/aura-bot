@@ -27,9 +27,7 @@
 #define AURA_GAMESEEKER_H_
 
 #include "includes.h"
-#include "aura.h"
 #include "connection.h"
-#include "socket.h"
 
 #define GAMESEEKER_OK 0u
 #define GAMESEEKER_DESTROY 1u

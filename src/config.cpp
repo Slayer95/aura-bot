@@ -43,7 +43,6 @@
 
  */
 
-#include "aura.h"
 #include "config.h"
 #include "includes.h"
 #include "util.h"

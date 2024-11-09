@@ -32,8 +32,6 @@
 #include "config_commands.h"
 #include "socket.h"
 
-struct sockaddr_storage;
-
 //
 // CRealmConfig
 //

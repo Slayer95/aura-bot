@@ -18,13 +18,15 @@
 
 */
 
-#include "aura.h"
-#include "util.h"
-#include "crc32.h"
 #include "packed.h"
-#include "fileutil.h"
 
 #include <zlib.h>
+
+#include "crc32.h"
+#include "util.h"
+#include "fileutil.h"
+
+#include "aura.h"
 
 using namespace std;
 

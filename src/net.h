@@ -28,20 +28,12 @@
 
 #include "includes.h"
 #include "socket.h"
-#include "connection.h"
-#include "gameseeker.h"
-#include "gameuser.h"
-#include "config_net.h"
-#include "aura.h"
-#include "command.h"
 
 #pragma once
 
 //
 // CNet
 //
-
-struct sockaddr_storage;
 
 class CGameTestConnection
 {
@@ -57,7 +49,7 @@ public:
   [[nodiscard]] uint32_t  GetHostCounter() const;
   [[nodiscard]] uint16_t  GetPort() const;
 
-  sockaddr_storage            m_TargetHost;
+  sockaddr_storage            m_TargetHost; // TODO: Define sockaddr_storage
   CAura*                      m_Aura;
   uint32_t                    m_RealmInternalId;
   CTCPClient*                 m_Socket;

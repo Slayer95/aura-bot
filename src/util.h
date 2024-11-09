@@ -46,12 +46,13 @@
 #ifndef AURA_UTIL_H_
 #define AURA_UTIL_H_
 
+#include "includes.h"
+
 #include <fstream>
 #include <regex>
 #include <filesystem>
 #include <functional>
 
-#include "includes.h"
 #include "../utf8/utf8.h"
 #include "hash.h"
 

@@ -43,10 +43,13 @@
 
 */
 
-#include "util.h"
+#include "w3mmd.h"
+#include "auradb.h"
+#include "config_game.h"
+#include "game.h"
 #include "gameprotocol.h"
 #include "gameslot.h"
-#include "w3mmd.h"
+#include "util.h"
 
 using namespace std;
 

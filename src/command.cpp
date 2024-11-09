@@ -23,11 +23,21 @@
 
  */
 
-#include "command.h"
+#include "aura.h"
+#include "auradb.h"
 #include "bnetprotocol.h"
+#include "command.h"
+#include "config_commands.h"
+#include "hash.h"
+#include "realm.h"
+#include "game.h"
 #include "gameprotocol.h"
 #include "gamesetup.h"
-#include "hash.h"
+#include "gameuser.h"
+#include "irc.h"
+#include "map.h"
+#include "net.h"
+#include "realm_chat.h"
 
 #include <random>
 #include <tuple>

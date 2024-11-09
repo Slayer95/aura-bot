@@ -47,9 +47,7 @@
 #define AURA_REALM_H_
 
 #include "includes.h"
-#include "config_realm.h"
-#include "realm_chat.h"
-#include "game.h"
+#include "socket.h"
 
 #include <fstream>
 

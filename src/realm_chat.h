@@ -27,11 +27,6 @@
 #define AURA_REALM_CHAT_H_
 
 #include "includes.h"
-#include "aura.h"
-#include "realm.h"
-#include "config_realm.h"
-#include "command.h"
-#include "bnetprotocol.h"
 
 class CQueuedChatMessage
 {
@@ -80,8 +75,8 @@ public:
   void SetValidator(const uint8_t validator);
   int64_t GetQueuedDuration() const;
   bool GetIsStale() const;
-  std::vector<uint8_t> GetMessage() const;
-  std::vector<uint8_t> GetWhisper() const;
+  std::vector<uint8_t> GetMessageBytes() const;
+  std::vector<uint8_t> GetWhisperBytes() const;
   inline std::string GetInnerMessage() const { return std::string(m_Message.begin(), m_Message.end()); }
   uint8_t QuerySelection(const std::string& currentChannel) const;
   std::vector<uint8_t> SelectBytes(const std::string& currentChannel, uint8_t& selectType) const;

@@ -44,7 +44,6 @@
  */
 
 #include "auradb.h"
-#include "aura.h"
 #include "net.h"
 #include "util.h"
 #include "config.h"

@@ -26,21 +26,10 @@
 #ifndef AURA_COMMAND_H_
 #define AURA_COMMAND_H_
 
-#include "aura.h"
-#include "auradb.h"
-#include "constants.h"
-#include "config_commands.h"
-#include "realm.h"
-#include "game.h"
-#include "gameuser.h"
-#include "irc.h"
-#include "map.h"
-#include "net.h"
+#include "includes.h"
 
-#include <set>
-#include <optional>
 #include <ostream>
-#include <utility>
+
 #ifndef DISABLE_DPP
 #include <dpp/dpp.h>
 #endif

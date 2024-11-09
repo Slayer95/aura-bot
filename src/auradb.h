@@ -46,12 +46,11 @@
 #ifndef AURA_AURADB_H_
 #define AURA_AURADB_H_
 
-#include "sqlite3.h"
+#include "includes.h"
 
 #include <filesystem>
-#include <vector>
-#include <map>
-#include <string>
+
+#include "sqlite3.h"
 
 #define MAP_TYPE_NONE 0
 #define MAP_TYPE_MELEE 1
@@ -173,8 +172,6 @@ CREATE TABLE commands (
 //
 // CSQLITE3 (wrapper class)
 //
-
-#include "includes.h"
 
 struct sqlite3;
 struct sqlite3_stmt;

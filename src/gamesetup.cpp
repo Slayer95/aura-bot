@@ -23,13 +23,20 @@
 
  */
 
-#include "aura.h"
 #include "gamesetup.h"
-#include "gameprotocol.h"
-#include "fileutil.h"
+
+#include "auradb.h"
 #include "command.h"
+#include "fileutil.h"
+#include "game.h"
+#include "gameprotocol.h"
 #include "hash.h"
+#include "irc.h"
 #include "map.h"
+#include "realm.h"
+#include "savegame.h"
+
+#include "aura.h"
 
 #define SEARCH_RESULT(a, b) (make_pair(a, b))
 

@@ -25,18 +25,19 @@
 
 #include <utility>
 
-#include "config_bot.h"
 #include "gameseeker.h"
-#include "gameuser.h"
+
 #include "aura.h"
-#include "realm.h"
-#include "map.h"
-#include "gameprotocol.h"
-#include "gpsprotocol.h"
-#include "vlanprotocol.h"
+#include "config_bot.h"
 #include "game.h"
-#include "socket.h"
+#include "gameprotocol.h"
+#include "gameuser.h"
+#include "gpsprotocol.h"
+#include "map.h"
 #include "net.h"
+#include "realm.h"
+#include "socket.h"
+#include "vlanprotocol.h"
 
 using namespace std;
 

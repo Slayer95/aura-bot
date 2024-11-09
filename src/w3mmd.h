@@ -47,9 +47,6 @@
 #define W3MMD_H
 
 #include "includes.h"
-#include "aura.h"
-#include "game.h"
-#include "gameprotocol.h"
 
 //
 // CW3MMD

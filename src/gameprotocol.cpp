@@ -47,7 +47,6 @@
 #include <utility>
 
 #include "gameprotocol.h"
-#include "aura.h"
 #include "util.h"
 #include "crc32.h"
 #include "gameuser.h"

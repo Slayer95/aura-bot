@@ -43,7 +43,6 @@
 
  */
 
-#include "aura.h"
 #include "gameslot.h"
 
 using namespace std;

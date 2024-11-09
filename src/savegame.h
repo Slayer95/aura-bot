@@ -22,9 +22,10 @@
 #define AURA_SAVEGAME_H
 
 #include "includes.h"
-#include "aura.h"
+
+#include <filesystem>
+
 #include "gameslot.h"
-#include "packed.h"
 
 //
 // CSaveGame

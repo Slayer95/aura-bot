@@ -26,19 +26,15 @@
 #ifndef AURA_GAMESETUP_H_
 #define AURA_GAMESETUP_H_
 
-#include "aura.h"
 #include "includes.h"
+#include "socket.h"
+
+#include <filesystem>
+#include <regex>
 
 #ifndef DISABLE_CPR
 #include <cpr/cpr.h>
 #endif
-
-#include "command.h"
-#include "irc.h"
-#include "map.h"
-#include "game.h"
-#include "realm.h"
-#include "savegame.h"
 
 inline std::vector<std::pair<std::string, int>> ExtractEpicWarMaps(const std::string &s, const int maxCount) {
   std::regex pattern(R"(<a href="/maps/(\d+)/"><b>([^<\n]+)</b></a>)");

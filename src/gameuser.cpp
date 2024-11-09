@@ -43,10 +43,11 @@
 
  */
 
+#include "gameuser.h"
+
 #include <utility>
 
 #include "config_bot.h"
-#include "gameuser.h"
 #include "aura.h"
 #include "realm.h"
 #include "map.h"

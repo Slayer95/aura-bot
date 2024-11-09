@@ -24,8 +24,6 @@
 #include "includes.h"
 #include <filesystem>
 
-#include "aura.h"
-
 //
 // CPacked
 //

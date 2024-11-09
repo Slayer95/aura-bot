@@ -23,9 +23,10 @@
 
  */
 
+#include "net.h"
+
 #include <thread>
-#include <string>
-#include <utility>
+
 #ifndef DISABLE_CPR
 #include <cpr/cpr.h>
 #endif
@@ -34,10 +35,16 @@
 #include <upnpcommands.h>
 #endif
 
-#include "aura.h"
-#include "net.h"
-#include "gameprotocol.h"
+#include "command.h"
+#include "config_net.h"
+#include "connection.h"
 #include "game.h"
+#include "gameprotocol.h"
+#include "gameseeker.h"
+#include "gameuser.h"
+#include "realm.h"
+#include "socket.h"
+#include "aura.h"
 
 using namespace std;
 
