@@ -1628,6 +1628,15 @@ void CGame::FlushLogs()
   }
 }
 
+void CGame::LogSlots()
+{
+  uint8_t i = 0;
+  while (i < static_cast<uint8_t>(m_Slots.size())) {
+    LogApp("slot_" + ToDecString(i) + " = <" + ByteArrayToHexString(m_Slots[i].GetProtocolArray()) + ">");
+    ++i;
+  }
+}
+
 void CGame::Send(CConnection* user, const std::vector<uint8_t>& data) const
 {
   if (user)
@@ -3480,7 +3489,7 @@ void CGame::EventUserAfterDisconnect(CGameUser* user, bool fromOpen)
   if (!m_GameLoading && !m_GameLoaded) {
     if (!fromOpen) {
       const uint8_t SID = GetSIDFromUID(user->GetUID());
-      OpenSlot(SID, false);
+      OpenSlot(SID, true); // kick = true
     }
     user->SetDeleteMe(true);
   } else {
@@ -3513,8 +3522,10 @@ void CGame::EventUserDisconnectTimedOut(CGameUser* user)
     user->CloseConnection();
     TrySaveOnDisconnect(user, false);
     //user->SetDeleteMe(true);
-    user->SetLeftReason("has lost the connection (timed out)");
-    user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
+    if (!user->HasLeftReason()) {
+      user->SetLeftReason("has lost the connection (timed out)");
+      user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    }
   }
 }
 
@@ -3536,8 +3547,10 @@ void CGame::EventUserDisconnectSocketError(CGameUser* user)
   user->CloseConnection();
   TrySaveOnDisconnect(user, false);
   //user->SetDeleteMe(true);
-  user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
-  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
+  if (!user->HasLeftReason()) {
+    user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
+    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  }
 }
 
 void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
@@ -3557,8 +3570,10 @@ void CGame::EventUserDisconnectConnectionClosed(CGameUser* user)
   user->CloseConnection();
   TrySaveOnDisconnect(user, false);
   //user->SetDeleteMe(true);
-  user->SetLeftReason("has terminated the connection");
-  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
+  if (!user->HasLeftReason()) {
+    user->SetLeftReason("has terminated the connection");
+    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  }
 }
 
 void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecover)
@@ -3578,12 +3593,14 @@ void CGame::EventUserDisconnectGameProtocolError(CGameUser* user, bool canRecove
   user->CloseConnection();
   TrySaveOnDisconnect(user, false);
   //user->SetDeleteMe(true);
-  if (canRecover) {
-    user->SetLeftReason("has lost the connection (protocol error)");
-  } else {
-    user->SetLeftReason("has lost the connection (unrecoverable protocol error)");
+  if (!user->HasLeftReason()) {
+    if (canRecover) {
+      user->SetLeftReason("has lost the connection (protocol error)");
+    } else {
+      user->SetLeftReason("has lost the connection (unrecoverable protocol error)");
+    }
+    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
 }
 
 void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
@@ -3591,8 +3608,10 @@ void CGame::EventUserDisconnectGameAbuse(CGameUser* user)
   if (user->GetDisconnected()) return;
   user->CloseConnection();
   //user->SetDeleteMe(true);
-  user->SetLeftReason("was kicked by anti-abuse");
-  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
+  if (!user->HasLeftReason()) {
+    user->SetLeftReason("was kicked by anti-abuse");
+    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  }
   user->SetAbuseKicked(true);
 }
 
@@ -3601,8 +3620,9 @@ void CGame::EventUserKickUnverified(CGameUser* user)
   if (user->GetDisconnected()) return;
   user->CloseConnection();
   //user->SetDeleteMe(true);
-  user->SetLeftReason("has been kicked because they are not verified by their realm");
-  user->SetLeftCode(PLAYERLEAVE_LOBBY);
+  if (!user->HasLeftReason()) {
+    user->SetLeftReason("has been kicked because they are not verified by their realm");
+  }
   user->SetSpoofKicked(true);
 }
 
@@ -3611,8 +3631,10 @@ void CGame::EventUserKickGProxyExtendedTimeout(CGameUser* user)
   if (user->GetDeleteMe()) return;
   TrySaveOnDisconnect(user, false);
   user->SetDeleteMe(true);
-  user->SetLeftReason("has been kicked because they didn't reconnect in time");
-  user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  if (!user->HasLeftReason()) {
+    user->SetLeftReason("has been kicked because they didn't reconnect in time");
+    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  }
 }
 
 void CGame::SendLeftMessage(CGameUser* user, const bool sendChat) const
@@ -3630,7 +3652,7 @@ void CGame::SendLeftMessage(CGameUser* user, const bool sendChat) const
     }
   }
   user->SetLeftMessageSent(true);
-  SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), user->GetLeftCode()));
+  SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobby() ? PLAYERLEAVE_LOBBY : user->GetLeftCode()));
 }
 
 bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
@@ -3648,8 +3670,10 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     }
     if (p1->GetDisconnected()) continue;
     //p1->SetDeleteMe(true);
-    p1->SetLeftReason(reason);
-    p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    if (!p1->HasLeftReason()) {
+      p1->SetLeftReason(reason);
+      p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    }
     p1->SetLeftMessageSent(true);
     if (p1->GetGProxyAny()) {
       // Let GProxy know that it should give up at reconnecting.
@@ -4029,12 +4053,13 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 
         if (kickedPlayer) {
           kickedPlayer->CloseConnection();
-          if (m_IsHiddenPlayerNames) {
-            kickedPlayer->SetLeftReason("was kicked to make room for a reserved user");
-          } else {
-            kickedPlayer->SetLeftReason("was kicked to make room for a reserved user [" + joinRequest->GetName() + "]");
+          if (!kickedPlayer->HasLeftReason()) {
+            if (m_IsHiddenPlayerNames) {
+              kickedPlayer->SetLeftReason("was kicked to make room for a reserved user");
+            } else {
+              kickedPlayer->SetLeftReason("was kicked to make room for a reserved user [" + joinRequest->GetName() + "]");
+            }
           }
-          kickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
 
           // Ensure the userleave message is sent before the reserved userjoin message.
           SendLeftMessage(kickedPlayer, true);
@@ -4059,12 +4084,13 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 
       if (kickedPlayer) {
         kickedPlayer->CloseConnection();
-        if (m_IsHiddenPlayerNames) {
-          kickedPlayer->SetLeftReason("was kicked to make room for the owner");
-        } else {
-          kickedPlayer->SetLeftReason("was kicked to make room for the owner [" + joinRequest->GetName() + "]");
+        if (!kickedPlayer->HasLeftReason()) {
+          if (m_IsHiddenPlayerNames) {
+            kickedPlayer->SetLeftReason("was kicked to make room for the owner");
+          } else {
+            kickedPlayer->SetLeftReason("was kicked to make room for the owner [" + joinRequest->GetName() + "]");
+          }
         }
-        kickedPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
         // Ensure the userleave message is sent before the game owner' userjoin message.
         SendLeftMessage(kickedPlayer, true);
       }
@@ -4167,12 +4193,15 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
 void CGame::EventUserLeft(CGameUser* user)
 {
   if (user->GetDisconnected()) return;
+  LOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
   // this function is only called when a user leave packet is received, not when there's a socket error, kick, etc...
   TrySaveOnDisconnect(user, true);
   user->CloseConnection();
   //user->SetDeleteMe(true);
-  user->SetLeftReason("Leaving the game voluntarily");
-  user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_LOST);
+  if (!user->HasLeftReason()) {
+    user->SetLeftReason("Leaving the game voluntarily");
+    user->SetLeftCode(PLAYERLEAVE_LOST);
+  }
   user->SetQuitGame(true);
 }
 
@@ -4712,21 +4741,22 @@ bool CGame::EventUserMapSize(CGameUser* user, CIncomingMapSize* mapSize)
     } else if (!user->GetMapKicked()) {
       user->SetMapKicked(true);
       user->KickAtLatest(GetTicks() + m_Config->m_LacksMapKickDelay);
-      if (m_Remade) {
-        user->SetLeftReason("autokicked - they don't have the map (remade game)");
-      } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
-        // Even if manual, claim they are disabled.
-        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-      } else if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames || (m_Aura->m_Games.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
-        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
-      } else if (IsMapTooLarge) {
-        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
-      } else if (MapData->empty()) {
-        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
-      } else {
-        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");
+      if (!user->HasLeftReason()) {
+        if (m_Remade) {
+          user->SetLeftReason("autokicked - they don't have the map (remade game)");
+        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
+          // Even if manual, claim they are disabled.
+          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
+        } else if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames || (m_Aura->m_Games.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
+          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
+        } else if (IsMapTooLarge) {
+          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
+        } else if (MapData->empty()) {
+          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
+        } else {
+          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");
+        }
       }
-      user->SetLeftCode(PLAYERLEAVE_LOBBY);
       if (GetMapSiteURL().empty()) {
         SendChat(user, "" + user->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Config->m_LacksMapKickDelay / 1000) + " seconds...)");
       } else {
@@ -4803,8 +4833,9 @@ void CGame::EventUserPongToHost(CGameUser* user)
   if (LatencyMilliseconds >= m_Config->m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner(nullopt)) {
     user->SetHasHighPing(true);
     if (user->GetStoredRTTCount() >= 2) {
-      user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
-      user->SetLeftCode(PLAYERLEAVE_LOBBY);
+      if (!user->HasLeftReason()) {
+        user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
+      }
       user->SetPingKicked(true);
       user->KickAtLatest(GetTicks() + HIGH_PING_KICK_DELAY);
       SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
@@ -6283,8 +6314,9 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
     //user->SetDeleteMe(true);
     // fromOpen = true, so that EventUserAfterDisconnect doesn't call OpenSlot() itself
     user->CloseConnection(true);
-    user->SetLeftReason("was kicked when opening a slot");
-    user->SetLeftCode(PLAYERLEAVE_LOBBY);
+    if (!user->HasLeftReason()) {
+      user->SetLeftReason("was kicked when opening a slot");
+    }
   } else if (slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
     ResetLayout(false);
   }
@@ -6354,8 +6386,9 @@ bool CGame::CloseSlot(const uint8_t SID, const bool kick)
     if (!kick) return false;
     //user->SetDeleteMe(true);
     user->CloseConnection();
-    user->SetLeftReason("was kicked when closing a slot");
-    user->SetLeftCode(PLAYERLEAVE_LOBBY);
+    if (!user->HasLeftReason()) {
+      user->SetLeftReason("was kicked when closing a slot");
+    }
   }
   if (slot->GetSlotStatus() == SLOTSTATUS_OPEN && openSlots == 1 && GetNumJoinedUsersOrFake() > 1) {
     DeleteVirtualHost();
@@ -6414,8 +6447,9 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
   if (Player && !Player->GetDeleteMe()) {
     if (!kick) return false;
     Player->CloseConnection();
-    Player->SetLeftReason("was kicked when creating a computer in a slot");
-    Player->SetLeftCode(PLAYERLEAVE_LOBBY);
+    if (!Player->HasLeftReason()) {
+      Player->SetLeftReason("was kicked when creating a computer in a slot");
+    }
     //Player->SetDeleteMe(true);
   }
 
@@ -6903,8 +6937,9 @@ void CGame::ReportSpoofed(const string& server, CGameUser* user)
   }
   if (GetIsLobby() && MatchOwnerName(user->GetName())) {
     user->CloseConnection();
-    user->SetLeftReason("was autokicked for spoofing the game owner");
-    user->SetLeftCode(PLAYERLEAVE_LOBBY);
+    if (!user->HasLeftReason()) {
+      user->SetLeftReason("was autokicked for spoofing the game owner");
+    }
     //user->SetDeleteMe(true);
   }
 }
@@ -7279,12 +7314,10 @@ void CGame::CountKickVotes()
     if (victim) {
       victim->CloseConnection();
       //victim->SetDeleteMe(true);
-      victim->SetLeftReason("was kicked by vote");
-
-      if (GetIsLobby())
-        victim->SetLeftCode(PLAYERLEAVE_LOBBY);
-      else
+      if (!victim->HasLeftReason()) {
+        victim->SetLeftReason("was kicked by vote");
         victim->SetLeftCode(PLAYERLEAVE_LOST);
+      }
 
       Log("votekick against user [" + m_KickVotePlayer + "] passed with " + to_string(Votes) + "/" + to_string(GetNumJoinedPlayers()) + " votes");
       SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has passed");
@@ -7418,8 +7451,9 @@ void CGame::StartCountDown(bool fromUser, bool force)
       if (shouldKick) {
         user->CloseConnection();
         //user->SetDeleteMe(true);
-        user->SetLeftReason("kicked when starting the game");
-        user->SetLeftCode(PLAYERLEAVE_LOBBY);
+        if (!user->HasLeftReason()) {
+          user->SetLeftReason("kicked when starting the game");
+        }
         CloseSlot(GetSIDFromUID(user->GetUID()), false);
       }
     }
@@ -7556,7 +7590,7 @@ bool CGame::StopPlayers(const string& reason) const
     user->CloseConnection();
     user->SetDeleteMe(true);
     user->SetLeftReason(reason);
-    user->SetLeftCode(GetIsLobby() ? PLAYERLEAVE_LOBBY : PLAYERLEAVE_DISCONNECT);
+    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     anyStopped = true;
   }
   return anyStopped;

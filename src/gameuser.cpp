@@ -140,7 +140,7 @@ CGameUser::~CGameUser()
 {
   if (m_Socket) {
     if (!m_LeftMessageSent) {
-      Send(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), GetLeftCode()));
+      Send(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), m_Game->GetIsLobby() ? PLAYERLEAVE_LOBBY : GetLeftCode()));
     }
     m_Socket->Flush();
     UnrefConnection();

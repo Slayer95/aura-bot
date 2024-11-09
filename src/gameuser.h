@@ -167,6 +167,7 @@ public:
   [[nodiscard]] inline size_t                   GetNumCheckSums() const { return m_CheckSums.size(); }
   [[nodiscard]] inline std::queue<uint32_t>*    GetCheckSums() { return &m_CheckSums; }
   [[nodiscard]] inline bool                     HasCheckSums() const { return !m_CheckSums.empty(); }
+  [[nodiscard]] inline bool                     HasLeftReason() const { return !m_LeftReason.empty(); }
   [[nodiscard]] inline std::string              GetLeftReason() const { return m_LeftReason; }
   [[nodiscard]] inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
   [[nodiscard]] inline bool                     GetQuitGame() const { return m_QuitGame; }

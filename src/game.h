@@ -397,6 +397,7 @@ public:
   void                      Log(const std::string& logText, int64_t gameTicks);
   void                      UpdateLogs();
   void                      FlushLogs();
+  void                      LogSlots();
 
   // generic functions to send packets to players
 
