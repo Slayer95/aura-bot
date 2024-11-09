@@ -35,7 +35,7 @@
 #include "gamesetup.h"
 #include "realm.h"
 #include "util.h"
-#include "CLI11.hpp"
+#include <CLI11/CLI11.hpp>
 
 #include "aura.h"
 

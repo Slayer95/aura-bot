@@ -15,7 +15,7 @@ CCFLAGS += -fno-builtin
 CXXFLAGS += -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti
 DFLAGS =
 OFLAGS = -O3 -flto
-LFLAGS += -L. -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
+LFLAGS += -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
 
 ifeq ($(AURASTATIC), 1)
 	LFLAGS += -static
@@ -76,13 +76,15 @@ ifeq ($(SYSTEM),SunOS)
 endif
 
 CCFLAGS += $(OFLAGS) -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -I.
-CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
+CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
 
-OBJS = src/fileutil.o \
+OBJS = lib/csvparser/csvparser.o \
+			 lib/crc32/crc32.o \
+			 lib/sha1/sha1.o \
+			 src/fileutil.o \
 			 src/osutil.o \
 			 src/socket.o \
 			 src/net.o \
-			 src/csvparser.o \
 			 src/bncsutilinterface.o \
 			 src/bnetprotocol.o \
 			 src/gameprotocol.o \
@@ -97,8 +99,6 @@ OBJS = src/fileutil.o \
 			 src/config_discord.o \
 			 src/config_net.o \
 			 src/cli.o \
-			 src/crc32.o \
-			 src/sha1.o \
 			 src/realm.o \
 			 src/realm_chat.o \
 			 src/irc.o \

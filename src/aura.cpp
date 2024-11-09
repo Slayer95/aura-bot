@@ -48,10 +48,10 @@
 #include "fileutil.h"
 #include "osutil.h"
 #include "bncsutilinterface.h"
-#include "crc32.h"
-#include "sha1.h"
+#include <crc32/crc32.h>
+#include <sha1/sha1.h>
 #include "auradb.h"
-#include "csvparser.h"
+#include <csvparser/csvparser.h>
 #include "config.h"
 #include "config_bot.h"
 #include "config_realm.h"

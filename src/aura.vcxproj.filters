@@ -15,6 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\lib\crc32\crc32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\csvparser\csvparser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\sha1\sha1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\sqlite3\sqlite3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="bncsutilinterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -52,12 +64,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cli.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="crc32.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="csvparser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="packed.cpp">
@@ -102,16 +108,10 @@
     <ClCompile Include="map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sha1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="socket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="net.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="sqlite3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stats.cpp">
@@ -137,6 +137,27 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\lib\crc32\crc32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\csvparser\csvparser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\nlohmann\json.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\sha1\sha1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\sqlite3\sqlite3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\sqlite3\sqlite3ext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\CLI11\CLI11.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="bncsutilinterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -174,12 +195,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cli.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="crc32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="csvparser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="packed.h">
@@ -230,28 +245,16 @@
     <ClInclude Include="includes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="json.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="map.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ms_stdint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sha1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="socket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="net.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sqlite3.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sqlite3ext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stats.h">
@@ -273,9 +276,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="osutil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CLI11.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="command.h">

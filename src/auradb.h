@@ -50,7 +50,7 @@
 
 #include <filesystem>
 
-#include "sqlite3.h"
+#include <sqlite3/sqlite3.h>
 
 #define MAP_TYPE_NONE 0
 #define MAP_TYPE_MELEE 1

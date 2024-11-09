@@ -47,8 +47,8 @@
 #include "aura.h"
 #include "util.h"
 #include "fileutil.h"
-#include "crc32.h"
-#include "sha1.h"
+#include <crc32/crc32.h>
+#include <sha1/sha1.h>
 #include "config.h"
 #include "config_bot.h"
 #include "config_game.h"

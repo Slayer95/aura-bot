@@ -176,7 +176,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -216,7 +216,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -256,7 +256,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -299,7 +299,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -340,7 +340,7 @@
     <ClCompile>
       <Optimization>MinSpace</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -381,7 +381,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -422,14 +422,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ProjectReference Include="..\bncsutil\vc8_build\BNCSutil.vcxproj">
+    <ProjectReference Include="..\deps\bncsutil\vc8_build\BNCSutil.vcxproj">
       <Project>{cfb9aee6-c0bb-49b0-b0f5-f564975202b8}</Project>
       <CopyLocalSatelliteAssemblies>true</CopyLocalSatelliteAssemblies>
       <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="csvparser.cpp" />
+    <ClCompile Include="..\lib\crc32\crc32.cpp" />
+    <ClCompile Include="..\lib\csvparser\csvparser.cpp" />
+    <ClCompile Include="..\lib\sha1\sha1.cpp" />
+    <ClCompile Include="..\lib\sqlite3\sqlite3.c" />
     <ClCompile Include="fileutil.cpp" />
     <ClCompile Include="osutil.cpp" />
     <ClCompile Include="socket.cpp" />
@@ -448,8 +451,6 @@
     <ClCompile Include="gpsprotocol.cpp" />
     <ClCompile Include="vlanprotocol.cpp" />
     <ClCompile Include="bncsutilinterface.cpp" />
-    <ClCompile Include="crc32.cpp" />
-    <ClCompile Include="sha1.cpp" />
     <ClCompile Include="realm.cpp" />
     <ClCompile Include="realm_chat.cpp" />
     <ClCompile Include="irc.cpp" />
@@ -466,14 +467,18 @@
     <ClCompile Include="command.cpp" />
     <ClCompile Include="aura.cpp" />
     <ClCompile Include="auradb.cpp" />
-    <ClCompile Include="sqlite3.c" />
     <ClCompile Include="stats.cpp" />
     <ClCompile Include="w3mmd.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util.h" />
-    <ClInclude Include="CLI11.hpp" />
-    <ClInclude Include="csvparser.h" />
+    <ClInclude Include="..\lib\CLI11\CLI11.hpp" />
+    <ClInclude Include="..\lib\crc32\crc32.h" />
+    <ClInclude Include="..\lib\csvparser\csvparser.h" />
+    <ClInclude Include="..\lib\nlohmann\json.hpp" />
+    <ClInclude Include="..\lib\sha1\sha1.h" />
+    <ClInclude Include="..\lib\sqlite3\sqlite3.h" />
+    <ClInclude Include="..\lib\sqlite3\sqlite3ext.h" />
     <ClInclude Include="fileutil.h" />
     <ClInclude Include="osutil.h" />
     <ClInclude Include="socket.h" />
@@ -492,8 +497,6 @@
     <ClInclude Include="gpsprotocol.h" />
     <ClInclude Include="vlanprotocol.h" />
     <ClInclude Include="bncsutilinterface.h" />
-    <ClInclude Include="crc32.h" />
-    <ClInclude Include="sha1.h" />
     <ClInclude Include="realm.h" />
     <ClInclude Include="realm_chat.h" />
     <ClInclude Include="irc.h" />
@@ -513,10 +516,7 @@
     <ClInclude Include="constants.h" />
     <ClInclude Include="forward.h" />
     <ClInclude Include="includes.h" />
-    <ClInclude Include="json.hpp" />
     <ClInclude Include="ms_stdint.h" />
-    <ClInclude Include="sqlite3.h" />
-    <ClInclude Include="sqlite3ext.h" />
     <ClInclude Include="stats.h" />
     <ClInclude Include="w3mmd.h" />
   </ItemGroup>

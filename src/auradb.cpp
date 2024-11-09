@@ -47,11 +47,10 @@
 #include "net.h"
 #include "util.h"
 #include "config.h"
-#include "sqlite3.h"
 #ifdef DISABLE_DPP
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #else
-#include <dpp/dpp.h>
+#include <dpp/nlohmann/json.hpp>
 #endif
 
 #include <fstream>

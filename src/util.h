@@ -53,7 +53,7 @@
 #include <filesystem>
 #include <functional>
 
-#include "../utf8/utf8.h"
+#include <utf8/utf8.h>
 #include "hash.h"
 
 #undef min

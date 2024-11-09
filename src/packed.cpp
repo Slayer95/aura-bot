@@ -22,7 +22,7 @@
 
 #include <zlib.h>
 
-#include "crc32.h"
+#include <crc32/crc32.h>
 #include "util.h"
 #include "fileutil.h"
 
