@@ -137,7 +137,7 @@ public:
   void InitPersistentConfig();
   bool Init();
   [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
-  [[nodiscard]] bool Update(void* fd, void* send_fd);
+  void Update(void* fd, void* send_fd);
   bool SendBroadcast(const std::vector<uint8_t>& packet);
   void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet);
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet);

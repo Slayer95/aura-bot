@@ -468,7 +468,7 @@ uint32_t CNet::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return NumFDs;
 }
 
-bool CNet::Update(void* fd, void* send_fd)
+void CNet::Update(void* fd, void* send_fd)
 {
   if (m_HealthCheckInProgress) {
     bool anyPending = false;
@@ -507,8 +507,6 @@ bool CNet::Update(void* fd, void* send_fd)
   } else if (m_UDPDeafSocket) {
     m_UDPDeafSocket->Discard(static_cast<fd_set*>(fd));
   }
-
-  return false;
 }
 
 void CNet::SetBroadcastTarget(sockaddr_storage& subnet)

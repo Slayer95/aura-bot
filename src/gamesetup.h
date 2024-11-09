@@ -234,7 +234,7 @@ public:
   void OnLoadMapError();
   void SetActive();
   [[nodiscard]] bool RestoreFromSaveFile();
-  [[nodiscard]] bool RunHost();
+  bool RunHost();
 
   inline bool GetIsMirror() const { return m_IsMirror; }
   inline bool GetIsDownloading() const { return m_IsStepDownloading; }

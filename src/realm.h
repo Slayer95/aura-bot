@@ -258,10 +258,7 @@ public:
   void Disable();
   void ResetLogin();
 
-  inline void SetConfig(CRealmConfig* CFG) {
-    delete m_Config;
-    m_Config = CFG;
-  }
+  void SetConfig(CRealmConfig* CFG);
 
   inline void SetHostCounter(const uint8_t nHostCounter) { m_PublicServerID = nHostCounter; }
 

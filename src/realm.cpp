@@ -259,7 +259,7 @@ void CRealm::Update(void* fd, void* send_fd)
             }
 
             case BNETProtocol::Magic::CHECKAD:
-              BNETProtocol::RECEIVE_SID_CHECKAD(Data);
+              //BNETProtocol::RECEIVE_SID_CHECKAD(Data);
               break;
 
             case BNETProtocol::Magic::STARTADVEX3:
@@ -1446,3 +1446,7 @@ void CRealm::ResetLogin()
   m_FailedSignup = false;
 }
 
+void CRealm::SetConfig(CRealmConfig* CFG) {
+  delete m_Config;
+  m_Config = CFG;
+}

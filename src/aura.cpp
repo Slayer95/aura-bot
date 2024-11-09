@@ -1278,8 +1278,9 @@ bool CAura::ReloadConfigs()
   filesystem::path WasCachePath = m_Config->m_MapCachePath;
   filesystem::path WasJASSPath = m_Config->m_JASSPath;
   CConfig CFG;
-  CFG.Read(m_ConfigPath);
-  if (!LoadConfigs(CFG)) {
+  if (!CFG.Read(m_ConfigPath)) {
+    Print("[CONFIG] warning - failed to read config file");
+  } else if (!LoadConfigs(CFG)) {
     Print("[CONFIG] error - bot configuration invalid: not reloaded");
     success = false;
   }
@@ -1503,7 +1504,7 @@ void CAura::LoadMapAliases()
   for (const auto& entry : aliases.GetEntries()) {
     string normalizedAlias = GetNormalizedAlias(entry.first);
     if (normalizedAlias.empty()) continue;
-    m_DB->AliasAdd(normalizedAlias, entry.second);
+    static_cast<void>(m_DB->AliasAdd(normalizedAlias, entry.second));
   }
 
   if (!m_DB->Commit()) {
@@ -1548,7 +1549,7 @@ void CAura::LoadIPToCountryData(const CConfig& CFG)
     parser >> IP1;
     parser >> IP2;
     parser >> Country;
-    m_DB->FromAdd(stoul(IP1), stoul(IP2), Country);
+    static_cast<void>(m_DB->FromAdd(stoul(IP1), stoul(IP2), Country));
   }
 
   if (!m_DB->Commit()) {
