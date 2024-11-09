@@ -32,9 +32,7 @@
 class CAura;
 class CAuraDB;
 class CBNCSUtilInterface;
-class CBotConfig;
 class CCLI;
-class CCommandConfig;
 class CCommandContext;
 class CConfig;
 class CConnection;
@@ -45,10 +43,8 @@ class CDBGamePlayer;
 class CDBGamePlayerSummary;
 class CDBGameSummary;
 class CDiscord;
-class CDiscordConfig;
 class CDotaStats;
 class CGame;
-class CGameConfig;
 class CGameSeeker;
 class CGameSetup;
 class CGameSlot;
@@ -61,14 +57,11 @@ class CIncomingMapSize;
 class CIncomingVLanGameInfo;
 class CIncomingVLanSearchGame;
 class CIRC;
-class CIRCConfig;
 class CMap;
 class CNet;
-class CNetConfig;
 class CPacked;
 class CQueuedChatMessage;
 class CRealm;
-class CRealmConfig;
 class CSaveGame;
 class CSHA1;
 class CSocket;
@@ -83,6 +76,14 @@ namespace GameUser
 {
   class CGameUser;
 };
+
+struct CBotConfig;
+struct CCommandConfig;
+struct CDiscordConfig;
+struct CGameConfig;
+struct CIRCConfig;
+struct CNetConfig;
+struct CRealmConfig;
 
 struct UDPPkt;
 

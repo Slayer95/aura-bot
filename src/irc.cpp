@@ -56,8 +56,6 @@
 #include <utility>
 #include <algorithm>
 
-class CIRCConfig;
-
 using namespace std;
 
 //////////////

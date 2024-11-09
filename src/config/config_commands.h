@@ -33,9 +33,8 @@
 // CCommandConfig
 //
 
-class CCommandConfig
+struct CCommandConfig
 {
-public:
   bool m_Enabled;
   bool m_RequireVerified;                          // whether commands are enabled or not, and whether they require verification if sent by a GameUser::CGameUser
 

@@ -40,9 +40,8 @@
 // Default map config (*) map.flags_locked = yes/no
 // Game setup
 
-class CGameConfig
+struct CGameConfig
 {
-public:
   uint8_t                  m_VoteKickPercentage;         // percentage of players required to vote yes for a votekick to pass
   uint8_t                  m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
   uint8_t                  m_MaxPlayersLoopback;

@@ -34,9 +34,8 @@
 // CIRCConfig
 //
 
-class CIRCConfig
+struct CIRCConfig
 {
-public:
   std::string                         m_HostName;
   std::string                         m_NickName;
   std::string                         m_UserName;

@@ -34,9 +34,8 @@
 // CDiscordConfig
 //
 
-class CDiscordConfig
+struct CDiscordConfig
 {
-public:
   std::string                         m_HostName;
   std::string                         m_Token;
   std::string                         m_InviteUrl;

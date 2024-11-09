@@ -36,9 +36,8 @@
 // CRealmConfig
 //
 
-class CRealmConfig
+struct CRealmConfig
 {
-public:
   // Automatically-assigned values
   uint8_t m_ServerIndex;                         // unique server ID to identify players' realms through host counters (may be recycled on !reload)
   std::string m_CFGKeyPrefix;                    // 

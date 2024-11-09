@@ -39,8 +39,6 @@
 
 #define THINKING_PUBLIC false
 
-class CDiscordConfig;
-
 using namespace std;
 
 //////////////////
