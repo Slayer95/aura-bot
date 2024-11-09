@@ -118,7 +118,7 @@ OBJS = lib/csvparser/csvparser.o \
 			 src/stats.o \
 			 src/w3mmd.o \
 
-COBJS = src/sqlite3.o
+COBJS = lib/sqlite3/sqlite3.o
 
 PROG = aura
 
