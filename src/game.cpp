@@ -3646,6 +3646,53 @@ void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
   }
 }
 
+void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const
+{
+  // Never allow observers/referees to send private messages to users.
+  // Referee rulings/warnings are expected to be public.
+  const bool forcePrivateChat = user->GetIsObserver() && (m_GameLoading || m_GameLoaded);
+  const bool forceOnlyToObservers = forcePrivateChat && (
+    m_Map->GetMapObservers() != MAPOBS_REFEREES || (m_UsesCustomReferees && !user->GetIsPowerObserver())
+  );
+  const vector<uint8_t>& extraFlags = chatPlayer->GetExtraFlags();
+  if (forceOnlyToObservers) {
+    vector<uint8_t> overrideObserverUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
+    vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
+    if (overrideObserverUIDs.empty()) {
+      LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening to [" + user->GetName() + "] --")
+    } else {
+      Send(overrideObserverUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideObserverUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+    }
+  } else if (forcePrivateChat) {
+    if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
+      if (!m_MuteAll) {
+        vector<uint8_t> overrideTargetUIDs = GetUIDs(chatPlayer->GetFromUID());
+        vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
+        if (!overrideTargetUIDs.empty()) {
+          Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+          if (extraFlags[0] != CHAT_RECV_ALL) {
+            LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All]")
+          }
+        }
+      } else if (extraFlags[0] != CHAT_RECV_ALL) { 
+        LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All], but muteAll is active (message from [" + user->GetName() + "] discarded)")
+      }
+    } else {
+      // enforce observer-only chat, just in case rogue clients are doing funny things
+      vector<uint8_t> overrideTargetUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
+      vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
+      if (!overrideTargetUIDs.empty()) {
+        Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+        if (extraFlags[0] != CHAT_RECV_OBS) {
+          LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] enforced server-side")
+        }
+      }
+    }
+  } else {
+    Send(chatPlayer->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
+  }
+}
+
 void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const
 {
   // This function, together with GetLeftMessage and SetLeftMessageSent,
@@ -4389,14 +4436,8 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
     {
       // relay the chat message to other users
 
-      bool Relay = !user->GetMuted();
-      // Never allow observers/referees to send private messages to users.
-      // Referee rulings/warnings are expected to be public.
-      bool RejectPrivateChat = user->GetIsObserver() && (m_GameLoading || m_GameLoaded);
-      bool OnlyToObservers = RejectPrivateChat && (
-        m_Map->GetMapObservers() != MAPOBS_REFEREES || (m_UsesCustomReferees && !user->GetIsPowerObserver())
-      );
-      const vector<uint8_t> extraFlags = chatPlayer->GetExtraFlags();
+      bool shouldRelay = !user->GetMuted();
+      const vector<uint8_t>& extraFlags = chatPlayer->GetExtraFlags();
       const bool isLobbyChat = extraFlags.empty();
       if (isLobbyChat == (m_GameLoading || m_GameLoaded)) {
         // Racing condition
@@ -4409,7 +4450,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
       if (isLobbyChat) {
         Log("[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
         if (m_MuteLobby) {
-          Relay = false;
+          shouldRelay = false;
         }
       } else {
         if (extraFlags[0] == CHAT_RECV_ALL) {
@@ -4418,7 +4459,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
           if (m_MuteAll) {
             // don't relay ingame messages targeted for all users if we're currently muting all
             // note that any commands will still be processed
-            Relay = false;
+            shouldRelay = false;
           }
         } else if (extraFlags[0] == CHAT_RECV_ALLY) {
           chatTypeFragment = "[Allies] ";
@@ -4432,47 +4473,6 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
         }
 
         Log(chatTypeFragment + "[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
-      }
-
-      if (Relay) {
-        //Log("[Private] [" + user->GetDisplayName() + "] --X- >[" + JoinVector(ForbiddenNames, false) + "] " + chatPlayer->GetMessage());
-        if (OnlyToObservers) {
-          vector<uint8_t> overrideObserverUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
-          vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
-          if (overrideObserverUIDs.empty()) {
-            LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening--")
-          } else {
-            Send(overrideObserverUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideObserverUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-          }
-        } else if (RejectPrivateChat) {
-          if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
-            Relay = !m_MuteAll;
-            if (Relay) {
-              vector<uint8_t> overrideTargetUIDs = GetUIDs(chatPlayer->GetFromUID());
-              vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
-              if (!overrideTargetUIDs.empty()) {
-                Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-                if (extraFlags[0] != CHAT_RECV_ALL) {
-                  LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All]")
-                }
-              }
-            } else if (extraFlags[0] != CHAT_RECV_ALL) { 
-              LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All], but muteAll is active (message discarded)")
-            }
-          } else {
-            // enforce observer-only chat, just in case rogue clients are doing funny things
-            vector<uint8_t> overrideTargetUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
-            vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
-            if (!overrideTargetUIDs.empty()) {
-              Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
-              if (extraFlags[0] != CHAT_RECV_OBS) {
-                LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] enforced server-side")
-              }
-            }
-          }
-        } else {
-          Send(chatPlayer->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
-        }
       }
 
       // handle bot commands
@@ -4493,20 +4493,36 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
           if (isCommand) {
             user->SetUsedAnyCommands(true);
             // If we want users identities hidden, we must keep bot responses private.
+            if (shouldRelay) {
+              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
+              shouldRelay = false;
+            }
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (message == "?trigger") {
+            if (shouldRelay) {
+              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
+              shouldRelay = false;
+            }
             SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, false);
           } else if (message == "/p" || message == "/ping" || message == "/game") {
             // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
             // Therefore, these commands are only effective over LAN.
+            if (shouldRelay) {
+              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
+              shouldRelay = false;
+            }
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
             cmdToken = m_Config->m_PrivateCmdToken;
             command = message.substr(1);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
           } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
+            if (shouldRelay) {
+              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
+              shouldRelay = false;
+            }
             if (!CheckSmartCommands(user, message, activeSmartCommand, commandCFG) && !user->GetSentAutoCommandsHelp()) {
               bool anySentCommands = false;
               for (const auto& otherPlayer : m_Users) {
@@ -4520,6 +4536,10 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
         }
         if (!isCommand) {
           user->ClearLastCommand();
+        }
+        if (shouldRelay) {
+          SendChatMessage(user, chatPlayer);
+          shouldRelay = false;
         }
         bool logMessage = false;
         for (const auto& word : m_Config->m_LoggedWords) {

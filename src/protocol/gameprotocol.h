@@ -232,11 +232,11 @@ public:
 
   [[nodiscard]] inline GameProtocol::ChatToHostType       GetType() const { return m_Type; }
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
-  [[nodiscard]] inline std::vector<uint8_t>               GetToUIDs() const { return m_ToUIDs; }
+  [[nodiscard]] inline const std::vector<uint8_t>&        GetToUIDs() const { return m_ToUIDs; }
   [[nodiscard]] inline uint8_t                            GetFlag() const { return m_Flag; }
   [[nodiscard]] inline std::string                        GetMessage() const { return m_Message; }
   [[nodiscard]] inline uint8_t                            GetByte() const { return m_Byte; }
-  [[nodiscard]] inline std::vector<uint8_t>               GetExtraFlags() const { return m_ExtraFlags; }
+  [[nodiscard]] inline const std::vector<uint8_t>&        GetExtraFlags() const { return m_ExtraFlags; }
 };
 
 class CIncomingMapSize

@@ -400,6 +400,7 @@ public:
   void                      SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
   void                      SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
   void                      SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
+  void                      SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const;
   void                      SendAllActionsCallback();
   void                      SendAllActions();
   void                      SendAllAutoStart() const;
