@@ -3161,7 +3161,7 @@ void CGame::AddPingEqualizerDelay(GameUser::CGameUser* user) const
 {
   uint8_t currentDelay = user->GetPingEqualizerOffset();
   uint8_t nextDelay = currentDelay + 1;
-  if (nextDelay <= m_Actions.size()) {
+  if (nextDelay < m_Actions.size()) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Increasing delay for [" + user->GetName())
     user->SetPingEqualizerOffset(nextDelay);
   } else {
