@@ -3144,7 +3144,6 @@ void CGame::UpdatePingEqualizer()
   vector<pair<GameUser::CGameUser*, uint32_t>> descendingRTTs = GetDescendingSortedRTT();
   if (descendingRTTs.empty()) return;
   const uint32_t maxPing = descendingRTTs[0].second;
-  LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Player [" + descendingRTTs[0].first->GetName() + "] has worst ping: " + to_string(maxPing) + " ms")
   for (const pair<GameUser::CGameUser*, uint32_t>& userPing : descendingRTTs) {
     // How much better ping than the worst player?
     const uint32_t framesAheadNow = (maxPing - userPing.second) / GetLatency();
@@ -3162,10 +3161,7 @@ void CGame::AddPingEqualizerDelay(GameUser::CGameUser* user) const
   uint8_t currentDelay = user->GetPingEqualizerOffset();
   uint8_t nextDelay = currentDelay + 1;
   if (nextDelay < m_Actions.size()) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Increasing delay for [" + user->GetName())
     user->SetPingEqualizerOffset(nextDelay);
-  } else {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Cannot further increase delay for [" + user->GetName())
   }
 }
 
@@ -3173,10 +3169,8 @@ void CGame::RemovePingEqualizerDelay(GameUser::CGameUser* user) const
 {
   uint8_t currentDelay = user->GetPingEqualizerOffset();
   if (currentDelay == 0) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Cannot further decrease delay for [" + user->GetName())
     return;
   }
-  LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Decreasing delay for [" + user->GetName())
   user->SetPingEqualizerOffset(currentDelay - 1);
 }
 
