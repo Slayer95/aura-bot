@@ -3503,7 +3503,12 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
     }
     user->SetDeleteMe(true);
   } else {
+    // Avoid sending leave messages during game load.
     user->SetSendLeftMessageBySyncCounter(GetSyncCounter() + 2);
+  }
+
+  if (m_GameLoading && !user->GetFinishedLoading()) {
+    SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID()));
   }
 }
 
