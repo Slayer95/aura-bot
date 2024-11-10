@@ -941,7 +941,7 @@ string CGame::GetStatusDescription() const
 
   string Description = (
     "[" + GetClientFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " +
-    ToDecString(GetNumJoinedPlayersOrFakeUsers()) + "/" + to_string(m_GameLoading || m_GameLoaded ? m_StartPlayers : m_Slots.size())
+    ToDecString(GetNumJoinedPlayersOrFake()) + "/" + ToDecString(m_GameLoading || m_GameLoaded ? m_ControllersWithMap : static_cast<uint8_t>(m_Slots.size()))
   );
 
   if (m_GameLoading || m_GameLoaded)
@@ -1415,6 +1415,11 @@ bool CGame::Update(void* fd, void* send_fd)
     }
 
     m_LastRefreshTime = Time;
+
+    if (!m_IsMirror && m_Aura->m_Games.empty()) {
+      // This is a lobby. Take the chance to update the detailed console title
+      m_Aura->UpdateMetaData();
+    }
   }
 
   // send more map data
@@ -5080,6 +5085,7 @@ void CGame::EventGameStarted()
 
   m_Aura->m_CurrentLobby = nullptr;
   m_Aura->m_Games.push_back(this);
+  m_Aura->UpdateMetaData();
 
   // and finally reenter battle.net chat
   AnnounceDecreateToRealms();

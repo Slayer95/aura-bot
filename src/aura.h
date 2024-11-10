@@ -200,6 +200,8 @@ public:
   void InitContextMenu();
   void InitPathVariable();
   void InitSystem();
+  void UpdateWindowTitle();
+  void UpdateMetaData();
 
   void CacheMapPresets();
   

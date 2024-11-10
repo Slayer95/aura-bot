@@ -69,6 +69,7 @@
 #include "cli.h"
 #include "irc.h"
 #include "protocol/vlanprotocol.h"
+#include <utf8/utf8.h>
 
 #include <csignal>
 #include <cstdlib>
@@ -291,6 +292,51 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
 inline CAura* CreateAura(CConfig& CFG, const CCLI& cliApp)
 {
   return new CAura(CFG, cliApp);
+}
+
+inline PLATFORM_STRING_TYPE GetAuraTitle(CGame* detailsGame, size_t lobbyCount, size_t gameCount, bool hasRehost)
+{
+  const static PLATFORM_STRING_TYPE HyphenConnector = PLATFORM_STRING(" - ");
+  const static PLATFORM_STRING_TYPE DetailsLobbyPrefix = PLATFORM_STRING(" - Lobby: ");
+  const static PLATFORM_STRING_TYPE DetailsGamePrefix = PLATFORM_STRING(" - Playing: ");
+  const static PLATFORM_STRING_TYPE SingleLobbySuffix = PLATFORM_STRING(" hosted lobby");
+  const static PLATFORM_STRING_TYPE PluralLobbySuffix = PLATFORM_STRING(" hosted lobbies");
+  const static PLATFORM_STRING_TYPE SingleGameSuffix = PLATFORM_STRING(" hosted game");
+  const static PLATFORM_STRING_TYPE PluralGameSuffix = PLATFORM_STRING(" hosted games");
+  const static PLATFORM_STRING_TYPE IdleSuffix = PLATFORM_STRING(" - Idle");
+  const static PLATFORM_STRING_TYPE RehostingSuffix = PLATFORM_STRING(" | Auto-rehosting");
+  const static PLATFORM_STRING_TYPE EmptyString = PLATFORM_STRING("");
+  const bool showDetails = detailsGame != nullptr;
+
+  PLATFORM_STRING_TYPE titleText = PLATFORM_STRING(AURA_APP_NAME);
+
+  if (showDetails) {
+    string detailsText = detailsGame->GetStatusDescription();
+#ifdef _WIN32
+    PLATFORM_STRING_TYPE detailsTextPlatform;
+    if (utf8::is_valid(detailsText.begin(), detailsText.end())) {
+      utf8::utf8to16(detailsText.begin(), detailsText.end(), back_inserter(detailsTextPlatform));
+    }
+#else
+    PLATFORM_STRING_TYPE& detailsTextPlatform = detailsText;
+#endif
+    titleText += (lobbyCount == 1 ? DetailsLobbyPrefix : DetailsGamePrefix) + detailsTextPlatform;
+  } else if (lobbyCount == 0 && gameCount == 0) {
+    titleText += IdleSuffix;
+  } else if (lobbyCount > 0 && gameCount > 0) {
+    titleText += (
+      HyphenConnector +
+      ToDecStringCPlatform(lobbyCount) + (lobbyCount > 1 ? PluralLobbySuffix : SingleLobbySuffix) +
+      HyphenConnector +
+      ToDecStringCPlatform(gameCount) + (gameCount > 1 ? PluralGameSuffix : SingleGameSuffix)
+    );
+  } else if (lobbyCount > 0) {
+    titleText += HyphenConnector + ToDecStringCPlatform(lobbyCount) + (lobbyCount > 1 ? PluralLobbySuffix : SingleLobbySuffix);
+  } else {
+    titleText += HyphenConnector + ToDecStringCPlatform(gameCount) + (gameCount > 1 ? PluralGameSuffix : SingleGameSuffix);
+  }
+  
+  return titleText + (hasRehost ? RehostingSuffix : EmptyString);
 }
 
 //
@@ -582,6 +628,8 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Ready = false;
     return;
   }
+
+  UpdateMetaData();
 }
 
 bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
@@ -1105,6 +1153,7 @@ bool CAura::Update()
         realm->QueueGameUncreate();
         realm->SendEnterChat();
       }
+      UpdateMetaData();
     } else if (m_CurrentLobby) {
       m_CurrentLobby->UpdatePost(&send_fd);
     }
@@ -1124,6 +1173,7 @@ bool CAura::Update()
         EventGameRemake(*it);
       }
       it = m_Games.erase(it);
+      UpdateMetaData();
     } else {
       (*it)->UpdatePost(&send_fd);
       ++it;
@@ -1596,6 +1646,23 @@ void CAura::InitSystem()
   InitPathVariable();
 }
 
+void CAura::UpdateWindowTitle()
+{
+  CGame* detailsGame = nullptr;
+  if (m_CurrentLobby) {
+    if (m_Games.size() == 0) detailsGame = m_CurrentLobby;
+  } else if (m_Games.size() == 1) {
+    detailsGame = m_Games[0];
+  }
+  PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_CurrentLobby == nullptr ? 0 : 1, m_Games.size(), m_AutoRehostGameSetup != nullptr);
+  SetWindowTitle(windowTitle);
+}
+
+void CAura::UpdateMetaData()
+{
+  UpdateWindowTitle();
+}
+
 void CAura::CacheMapPresets()
 {
   m_CachedMaps.clear();
@@ -1749,6 +1816,8 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + m_CurrentLobby->GetGameName() + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
+
+  UpdateMetaData();
 
 #ifndef DISABLE_MINIUPNP
   if (m_Net->m_Config->m_EnableUPnP && m_CurrentLobby->GetIsLobby() && m_Games.empty()) {
