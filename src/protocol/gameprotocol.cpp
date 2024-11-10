@@ -458,7 +458,7 @@ namespace GameProtocol
     return std::vector<uint8_t>{GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::COUNTDOWN_END, 4, 0};
   }
 
-  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*> actions, uint16_t sendInterval)
+  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>& actions, uint16_t sendInterval)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION, 0, 0};
     AppendByteArray(packet, sendInterval, false); // send interval
@@ -476,6 +476,7 @@ namespace GameProtocol
         subpacket.push_back(Action->GetUID());
         AppendByteArray(subpacket, static_cast<uint16_t>(Action->GetAction()->size()), false);
         AppendByteArrayFast(subpacket, *Action->GetAction());
+        delete Action;
       } while (!actions.empty());
 
       // calculate crc (we only care about the lower 2 bytes though)
@@ -727,7 +728,7 @@ namespace GameProtocol
     return std::vector<uint8_t>();
   }
 
-  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(queue<CIncomingAction*> actions)
+  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(queue<CIncomingAction*>& actions)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION2, 0, 0, 0, 0};
 
@@ -744,6 +745,7 @@ namespace GameProtocol
         subpacket.push_back(Action->GetUID());
         AppendByteArray(subpacket, static_cast<uint16_t>(Action->GetAction()->size()), false);
         AppendByteArrayFast(subpacket, *Action->GetAction());
+        delete Action;
       }
 
       // calculate crc (we only care about the lower 2 bytes though)
@@ -776,7 +778,7 @@ namespace GameProtocol
     return SlotInfo;
   }
 
-  vector<uint8_t> EmptyAction = SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>(), 0);
+  vector<uint8_t> EmptyAction = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION, 6, 0, 0, 0};
 }
 
 //

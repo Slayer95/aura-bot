@@ -108,6 +108,77 @@ string CGameLogRecord::ToString() const
 CGameLogRecord::~CGameLogRecord() = default;
 
 //
+// CQueuedActionsFrame
+//
+
+CQueuedActionsFrame::CQueuedActionsFrame()
+ : callback(ON_SEND_ACTIONS_NONE),
+   bufferSize(0),
+   activeQueue(nullptr)
+ {
+   activeQueue = &actions.emplace();
+ }
+
+CQueuedActionsFrame::~CQueuedActionsFrame() = default;
+
+void CQueuedActionsFrame::AddAction(CIncomingAction* action)
+{
+  const uint16_t actionSize = action->GetLength();
+
+  // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
+  // check if adding the next action to the sub actions queue would put us over the limit
+  // (1452 because the INCOMING_ACTION and INCOMING_ACTION2 packets use an extra 8 bytes)
+  // we'd be over the limit if we added the next action to the sub actions queue
+
+  if (actionSize > 1452) {
+    if (bufferSize > 0) {
+      activeQueue = &actions.emplace();
+    }
+    bufferSize = actionSize;
+  } else if (bufferSize + actionSize > 1452) {
+    activeQueue = &actions.emplace();
+    bufferSize = actionSize;
+  } else {
+    bufferSize += actionSize;
+  }
+  activeQueue->push(action);
+}
+
+vector<uint8_t> CQueuedActionsFrame::GetBytes(const uint16_t sendInterval)
+{
+  vector<uint8_t> packet;
+
+  // the W3GS_INCOMING_ACTION2 packet handles the overflow but it must be sent *before*
+  // the corresponding W3GS_INCOMING_ACTION packet
+
+  while (actions.size() > 1) {
+    ActionQueue& subActions = actions.front();
+    const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION2(subActions);
+    AppendByteArrayFast(packet, subPacket);
+    actions.pop();
+  }
+
+  {
+    ActionQueue& subActions = actions.front();
+    const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION(subActions, sendInterval);
+    AppendByteArrayFast(packet, subPacket);
+    actions.pop();
+  }
+
+  activeQueue = nullptr;
+  // Note: ensure Reset() is called afterwards
+  return packet;
+}
+
+void CQueuedActionsFrame::Reset()
+{
+  callback = ON_SEND_ACTIONS_NONE;
+  bufferSize = 0;
+  activeQueue = &actions.emplace();
+  leavers.clear();
+}
+
+//
 // CGame
 //
 
@@ -120,8 +191,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_CustomStats(nullptr),
     m_DotaStats(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
-    m_ActionQueueSelector(false),
-    m_NextActionsCallback(make_pair(ON_SEND_ACTIONS_NONE, ON_SEND_ACTIONS_NONE)),
+    m_ActionsFrameSelector(0),
     m_Map(nGameSetup->m_Map),
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
@@ -163,6 +233,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_HostCounter(nGameSetup->m_Identifier.has_value() ? nGameSetup->m_Identifier.value() : nAura->NextHostCounter()),
     m_EntryKey(0),
     m_SyncCounter(0),
+    m_LastPingEqualizerGameTicks(0),
     m_DownloadCounter(0),
     m_CountDownCounter(0),
     m_StartPlayers(0),
@@ -212,6 +283,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
+  m_Actions.reserve(4);
   m_Config = new CGameConfig(nAura->m_GameDefaultConfig, m_Map, nGameSetup);
   m_IsHiddenPlayerNames = m_Config->m_HideLobbyNames;
   m_SupportedGameVersionsMin = m_Aura->m_GameVersion;
@@ -298,14 +370,16 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
 void CGame::ClearActions()
 {
-  while (!m_Actions.first.empty()) {
-    delete m_Actions.first.front();
-    m_Actions.first.pop();
-  }
-
-  while (!m_Actions.second.empty()) {
-    delete m_Actions.second.front();
-    m_Actions.second.pop();
+  for (CQueuedActionsFrame& frame : m_Actions) {
+    frame.leavers.clear();
+    while (!frame.actions.empty()) {
+      ActionQueue& subActions = frame.actions.front();
+      while (!subActions.empty()) {
+        delete subActions.front();
+        subActions.pop();
+      }
+      frame.actions.pop();
+    }
   }
 }
 
@@ -1585,12 +1659,9 @@ void CGame::RunActionsScheduler()
   }
   m_LastActionSentTicks = Ticks;
 
-  if (m_Config->m_LatencyEqualizer) {
-    m_ActionQueueSelector = !m_ActionQueueSelector;
-  } else {
-    // Skip an actions callback frame.
-    m_NextActionsCallback.first = m_NextActionsCallback.second;
-    m_NextActionsCallback.second = ON_SEND_ACTIONS_NONE;
+  ++m_ActionsFrameSelector;
+  if (m_ActionsFrameSelector > GetMaxPingEqualizerOffset()) {
+    m_ActionsFrameSelector = 0;
   }
 }
 
@@ -2883,7 +2954,8 @@ void CGame::SendCommandsHelp(const string& cmdToken, GameUser::CGameUser* user, 
 
 void CGame::SendAllActionsCallback()
 {
-  switch (m_NextActionsCallback.first) {
+  CQueuedActionsFrame& frame = GetFirstActionFrame();
+  switch (frame.callback) {
     case ON_SEND_ACTIONS_PAUSE:
       m_Paused = true;
       m_LastPausedTicks = GetTicks();
@@ -2894,8 +2966,10 @@ void CGame::SendAllActionsCallback()
     default:
       break;
   }
-  m_NextActionsCallback.first = m_NextActionsCallback.second;
-  m_NextActionsCallback.second = ON_SEND_ACTIONS_NONE;
+  for (GameUser::CGameUser* user : frame.leavers) {
+    user->SetDeleteMe(true);
+  }
+  frame.Reset();
 }
 
 void CGame::SendAllActions()
@@ -2923,60 +2997,10 @@ void CGame::SendAllActions()
 
   ++m_SyncCounter;
 
-  // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
-
-  ActionQueue& actions = GetOutgoingActionQueue();
-  if (!actions.empty())
-  {
-    // we use a "sub actions queue" which we keep adding actions to until we reach the size limit
-    // start by adding one action to the sub actions queue
-
-    queue<CIncomingAction*> SubActions;
-    CIncomingAction*        Action = actions.front();
-    actions.pop();
-    SubActions.push(Action);
-    size_t SubActionsLength = Action->GetLength();
-
-    while (!actions.empty())
-    {
-      Action = actions.front();
-      actions.pop();
-
-      // check if adding the next action to the sub actions queue would put us over the limit (1452 because the INCOMING_ACTION and INCOMING_ACTION2 packets use an extra 8 bytes)
-      bool isOverflows = SubActionsLength > 1452 || Action->GetLength() > 1452 || SubActionsLength + Action->GetLength() > 1452;
-      if (isOverflows) {
-        // we'd be over the limit if we added the next action to the sub actions queue
-        // so send everything already in the queue and then clear it out
-        // the W3GS_INCOMING_ACTION2 packet handles the overflow but it must be sent *before* the corresponding W3GS_INCOMING_ACTION packet
-
-        SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION2(SubActions));
-
-        while (!SubActions.empty())
-        {
-          delete SubActions.front();
-          SubActions.pop();
-        }
-
-        SubActionsLength = 0;
-      }
-
-      SubActions.push(Action);
-      SubActionsLength += Action->GetLength();
-    }
-
-    SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION(SubActions, GetLatency()));
-
-    while (!SubActions.empty())
-    {
-      delete SubActions.front();
-      SubActions.pop();
-    }
-  }
-  else
-    SendAll(GameProtocol::SEND_W3GS_INCOMING_ACTION(actions, GetLatency()));
-
-  RunActionsScheduler();
+  SendAll(GetFirstActionFrame().GetBytes(GetLatency()));
   SendAllActionsCallback();
+  CheckUpdatePingEqualizer();
+  RunActionsScheduler();
 }
 
 std::string CGame::GetPrefixedGameName(const CRealm* realm) const
@@ -3089,20 +3113,85 @@ uint8_t CGame::GetPlayersReadyMode() const {
   return m_Config->m_PlayersReadyMode;
 }
 
-ActionQueue& CGame::GetIncomingActionQueue()
+CQueuedActionsFrame& CGame::GetNthActionFrame(const uint8_t n)
 {
-  if (!m_Config->m_LatencyEqualizer) {
-    return m_Actions.first;
-  }
-  return m_ActionQueueSelector ? m_Actions.first : m_Actions.second;
+  return m_Actions[(n + m_ActionsFrameSelector) % (GetMaxPingEqualizerOffset() + 1)];
 }
 
-ActionQueue& CGame::GetOutgoingActionQueue()
+CQueuedActionsFrame& CGame::GetLastActionFrame()
 {
-  if (!m_Config->m_LatencyEqualizer) {
-    return m_Actions.first;
+  return GetNthActionFrame(GetMaxPingEqualizerOffset());
+}
+
+CQueuedActionsFrame& CGame::GetFirstActionFrame()
+{
+  return m_Actions[m_ActionsFrameSelector];
+}
+
+void CGame::CheckUpdatePingEqualizer()
+{
+  if (!m_Config->m_LatencyEqualizer) return;
+  // Use m_GameTicks instead of GetTicks() to ensure we don't drift while lag screen is displayed.
+  if (m_GameTicks - m_LastPingEqualizerGameTicks < PING_EQUALIZER_PERIOD_TICKS) {
+    return;
   }
-  return m_ActionQueueSelector ? m_Actions.second : m_Actions.first;
+  UpdatePingEqualizer();
+  m_LastPingEqualizerGameTicks = m_GameTicks;
+}
+
+void CGame::UpdatePingEqualizer()
+{
+  vector<pair<GameUser::CGameUser*, uint32_t>>& descendingRTTs = GetDescendingSortedRTT();
+  if (descendingRTTs.empty()) return;
+  const uint32_t maxPing = descendingRTTs[0].second;
+  LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Player [" + descendingRTTs[0].first->GetName() + "] has worst ping: " + to_string(maxPing) + " ms")
+  for (const pair<GameUser::CGameUser*, uint32_t>& userPing : descendingRTTs) {
+    // How much better ping than the worst player?
+    const uint32_t framesAheadNow = (maxPing - userPing.second) / GetLatency();
+    const uint32_t framesAheadBefore = userPing.first->GetPingEqualizerOffset();
+    if (framesAheadNow > framesAheadBefore) {
+      AddPingEqualizerDelay(userPing.first);
+    } else if (framesAheadNow < framesAheadBefore) {
+      RemovePingEqualizerDelay(userPing.first);
+    }
+  }
+}
+
+void CGame::AddPingEqualizerDelay(GameUser::CGameUser* user) const
+{
+  uint8_t currentDelay = user->GetPingEqualizerOffset();
+  uint8_t nextDelay = currentDelay + 1;
+  if (nextDelay <= m_Actions.size()) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Increasing delay for [" + user->GetName())
+    user->SetPingEqualizerOffset(nextDelay);
+  } else {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Cannot further increase delay for [" + user->GetName())
+  }
+}
+
+void CGame::RemovePingEqualizerDelay(GameUser::CGameUser* user) const
+{
+  uint8_t currentDelay = user->GetPingEqualizerOffset();
+  if (currentDelay == 0) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Cannot further decrease delay for [" + user->GetName())
+    return;
+  }
+  LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Decreasing delay for [" + user->GetName())
+  user->SetPingEqualizerOffset(currentDelay - 1);
+}
+
+vector<pair<GameUser::CGameUser*, uint32_t>> CGame::GetDescendingSortedRTT() const
+{
+  vector<pair<GameUser::CGameUser*, uint32_t>> sortableUserPings;
+  for (auto& user : m_Users) {
+     if (!user->GetLeftMessageSent() && !user->GetIsObserver()) {
+       sortableUserPings.emplace_back(user, user->GetRTT());
+     }
+  }
+  sort(begin(sortableUserPings), end(sortableUserPings), [](const pair<GameUser::CGameUser*, uint32_t> a, const pair<GameUser::CGameUser*, uint32_t> b) {
+    return a.second > b.second;
+  });
+  return sortableUserPings;
 }
 
 uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
@@ -3503,8 +3592,10 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
     }
     user->SetDeleteMe(true);
   } else {
-    // Avoid sending leave messages during game load.
-    user->SetSendLeftMessageBySyncCounter(GetSyncCounter() + 2);
+    // Let's avoid sending leave messages during game load.
+    // Also, once the game is loaded, ensure all the users' actions will be sent before the leave message is sent.
+    CQueuedActionsFrame& frame = m_GameLoading ? GetFirstActionFrame() : GetLastActionFrame();
+    frame.leavers.push_back(user);
   }
 
   if (m_GameLoading && !user->GetFinishedLoading()) {
@@ -4283,7 +4374,8 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction* action)
     return false;
   }
 
-  GetIncomingActionQueue().push(action);
+  CQueuedActionsFrame& actionFrame = GetNthActionFrame(user->GetPingEqualizerOffset());
+  actionFrame.AddAction(action);
 
   if (!action->GetAction()->empty()) {
     LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
@@ -4292,7 +4384,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction* action)
       case ACTION_SAVE:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
         SendAllChat("[" + user->GetDisplayName() + "] is saving the game");
-        SaveEnded(0xFF);
+        SaveEnded(0xFF, actionFrame);
         if (user->GetCanSave()) {
           user->DropRemainingSaves();
           if (user->GetIsNativeReferee() && !user->GetCanSave()) {
@@ -4312,11 +4404,11 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction* action)
         if (!user->GetIsNativeReferee()) {
           user->DropRemainingPauses();
         }
-        m_NextActionsCallback.second = ON_SEND_ACTIONS_PAUSE;
+        actionFrame.callback =  ON_SEND_ACTIONS_PAUSE;
         break;
       case ACTION_RESUME:
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
-        m_NextActionsCallback.second = ON_SEND_ACTIONS_RESUME;
+        actionFrame.callback =  ON_SEND_ACTIONS_RESUME;
         break;
       case ACTION_CHAT_TRIGGER: {
         const vector<uint8_t>& actionBytes = *action->GetAction();
@@ -4905,6 +4997,7 @@ void CGame::EventUserMapReady(GameUser::CGameUser* user)
   UpdateReadyCounters();
 }
 
+// keyword: EventGameLoading
 void CGame::EventGameStarted()
 {
   if (GetUDPEnabled())
@@ -5036,15 +5129,18 @@ void CGame::EventGameStarted()
 
   SendAll(GameProtocol::SEND_W3GS_COUNTDOWN_END());
 
-  // send a game loaded packet for any fake users
-
-  for (auto& fakePlayer : m_FakeUsers)
-    SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
-
   // record the number of starting users
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
+
+  // send a game loaded packet for any fake users
+
+  for (auto& fakePlayer : m_FakeUsers) {
+    SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
+  }
+
+  m_Actions.resize(m_Config->m_LatencyEqualizer ? 4 : 1);
 
   // enable stats
 
@@ -5451,6 +5547,7 @@ void CGame::Remake()
   m_PauseCounter = 0;
   m_NextSaveFakeUser = 0;
   m_SyncCounter = 0;
+  m_LastPingEqualizerGameTicks = 0;
 
   m_DownloadCounter = 0;
   m_CountDownCounter = 0;
@@ -7652,30 +7749,6 @@ void CGame::StopDesynchronized(const string& reason) const
   }
 }
 
-bool CGame::Pause(GameUser::CGameUser* user, const bool isDisconnect)
-{
-  const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect);
-  if (UID == 0xFF) return false;
-
-  vector<uint8_t> CRC, Action;
-  Action.push_back(ACTION_PAUSE);
-  GetIncomingActionQueue().push(new CIncomingAction(UID, CRC, Action));
-  m_NextActionsCallback.second = ON_SEND_ACTIONS_PAUSE;
-  return true;
-}
-
-bool CGame::Resume()
-{
-  const uint8_t UID = SimulateActionUID(ACTION_RESUME, nullptr, false);
-  if (UID == 0xFF) return false;
-
-  vector<uint8_t> CRC, Action;
-  Action.push_back(ACTION_RESUME);
-  GetIncomingActionQueue().push(new CIncomingAction(UID, CRC, Action));
-  m_NextActionsCallback.second = ON_SEND_ACTIONS_RESUME;
-  return true;
-}
-
 string CGame::GetSaveFileName(const uint8_t UID) const
 {
   auto now = chrono::system_clock::to_time_t(chrono::system_clock::now());
@@ -7691,7 +7764,7 @@ string CGame::GetSaveFileName(const uint8_t UID) const
   return "auto_p" + ToDecString(GetSIDFromUID(UID) + 1) + "_" + oss.str() + ".w3z";
 }
 
-bool CGame::Save(GameUser::CGameUser* user, const bool isDisconnect)
+bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
   const uint8_t UID = SimulateActionUID(ACTION_SAVE, user, isDisconnect);
   if (UID == 0xFF) return false;
@@ -7703,16 +7776,15 @@ bool CGame::Save(GameUser::CGameUser* user, const bool isDisconnect)
     ActionStart.push_back(ACTION_SAVE);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionStart, fileName);
-    ActionQueue& actions = GetIncomingActionQueue();
-    actions.push(new CIncomingAction(UID, CRC, ActionStart));
-    actions.push(new CIncomingAction(UID, CRC, ActionEnd));
+    actionFrame.AddAction(new CIncomingAction(UID, CRC, ActionStart));
+    actionFrame.AddAction(new CIncomingAction(UID, CRC, ActionEnd));
   }
 
   SaveEnded(UID);
   return true;
 }
 
-void CGame::SaveEnded(const uint8_t exceptUID)
+void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
 {
   for (const auto& fakePlayer : m_FakeUsers) {
     if (static_cast<uint8_t>(fakePlayer) == exceptUID) {
@@ -7720,8 +7792,32 @@ void CGame::SaveEnded(const uint8_t exceptUID)
     }
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    GetIncomingActionQueue().push(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
+    actionFrame.AddAction(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
   }
+}
+
+bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
+{
+  const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect);
+  if (UID == 0xFF) return false;
+
+  vector<uint8_t> CRC, Action;
+  Action.push_back(ACTION_PAUSE);
+  actionFrame.AddAction(new CIncomingAction(UID, CRC, Action));
+  actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
+  return true;
+}
+
+bool CGame::Resume(CQueuedActionsFrame& actionFrame)
+{
+  const uint8_t UID = SimulateActionUID(ACTION_RESUME, nullptr, false);
+  if (UID == 0xFF) return false;
+
+  vector<uint8_t> CRC, Action;
+  Action.push_back(ACTION_RESUME);
+  actionFrame.AddAction(new CIncomingAction(UID, CRC, Action));
+  actionFrame.callback = ON_SEND_ACTIONS_RESUME;
+  return true;
 }
 
 bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary)
@@ -7785,6 +7881,26 @@ bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntar
   return false;
 }
 
+bool CGame::Save(GameUser::CGameUser* user, const bool isDisconnect)
+{
+  return Save(user, GetLastActionFrame(), isDisconnect);
+}
+
+void CGame::SaveEnded(const uint8_t exceptUID)
+{
+  SaveEnded(exceptUID, GetLastActionFrame());
+}
+
+bool CGame::Pause(GameUser::CGameUser* user, const bool isDisconnect)
+{
+  return Pause(user, GetLastActionFrame(), isDisconnect);
+}
+
+bool CGame::Resume()
+{
+  return Resume(GetLastActionFrame());
+}
+
 bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstByte, const uint32_t secondByte)
 {
   vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
@@ -7793,7 +7909,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> CRC, Action;
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
-  GetIncomingActionQueue().push(new CIncomingAction(UID, CRC, Action));
+  GetLastActionFrame().AddAction(new CIncomingAction(UID, CRC, Action));
   return true;
 }
 
@@ -8143,12 +8259,26 @@ bool CGame::GetAllowsIPFlood() const
   return m_Config->m_IPFloodHandler != ON_IPFLOOD_DENY;
 }
 
-string CGame::GetIndexVirtualHostName() const {
+string CGame::GetIndexVirtualHostName() const
+{
   return m_Config->m_IndexVirtualHostName;
 }
 
-string CGame::GetLobbyVirtualHostName() const {
+string CGame::GetLobbyVirtualHostName() const
+{
   return m_Config->m_LobbyVirtualHostName;
+}
+
+uint8_t CGame::GetMaxPingEqualizerOffset() const
+{
+  if (!m_Config->m_LatencyEqualizer) return 0;
+  uint8_t max = 0;
+  for (const auto& user : m_Users) {
+    uint8_t thisOffset = user->GetPingEqualizerOffset();
+    if (max < thisOffset) max = thisOffset;
+  }
+  // static_assert(max < m_Actions.size());
+  return max;
 }
 
 uint16_t CGame::GetLatency() const

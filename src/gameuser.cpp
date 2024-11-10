@@ -76,6 +76,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_TotalPacketsReceived(0),
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_QuitGame(false),
+    m_PingEqualizerOffset(0),
     m_PongCounter(0),
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
@@ -223,6 +224,12 @@ string CGameUser::GetDisplayName() const
   return m_Name;
 }
 
+uint32_t CGameUser::GetPingEqualizerDelay() const
+{
+  if (!m_Game->GetGameLoaded()) return 0u;
+  return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game->GetLatency());
+}
+
 CRealm* CGameUser::GetRealm(bool mustVerify) const
 {
   if (m_RealmInternalId < 0x10)
@@ -277,9 +284,6 @@ bool CGameUser::Update(void* fd, int64_t timeout)
   if (m_Disconnected) {
     if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net->m_Config->m_ReconnectWaitTicks) {
       m_Game->EventUserKickGProxyExtendedTimeout(this);
-    }
-    if (m_SendLeftMessageBySyncCounter.has_value() && m_Game->GetSyncCounter() > m_SendLeftMessageBySyncCounter.value()) {
-      m_DeleteMe = true;
     }
     return m_DeleteMe;
   }
@@ -681,10 +685,17 @@ string CGameUser::GetDelayText(bool displaySync) const
   const bool anyPings = GetStoredRTTCount() > 0;
   if (!anyPings) {
     pingText = "?";
-  } else if (GetStoredRTTCount() < 3) {
-    pingText = "*" + to_string(GetOperationalRTT());
   } else {
-    pingText = to_string(GetOperationalRTT());
+    uint32_t rtt = GetOperationalRTT();
+    uint32_t equalizerDelay = GetPingEqualizerDelay();
+    if (GetStoredRTTCount() < 3) {
+      pingText = "*" + to_string(rtt);
+    } else {
+      pingText = to_string(rtt);
+    }
+    if (equalizerDelay > 0) {
+      pingText += "(" + to_string(equalizerDelay) + ")";
+    }
   }
   if (!displaySync || !m_Game->GetGameLoaded() || GetNormalSyncCounter() >= m_Game->GetSyncCounter()) {
     if (anyPings) return pingText + "ms";

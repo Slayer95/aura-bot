@@ -172,6 +172,8 @@
 #define ON_SEND_ACTIONS_PAUSE 1u
 #define ON_SEND_ACTIONS_RESUME 2u
 
+#define PING_EQUALIZER_PERIOD_TICKS 10000u
+
 // gameslot.h
 
 #define SLOTSTATUS_OPEN 0u

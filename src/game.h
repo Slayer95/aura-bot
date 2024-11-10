@@ -71,9 +71,8 @@
 
 
 
-class CGameLogRecord
+struct CGameLogRecord
 {
-public:
   int64_t                        m_Ticks;
   std::string                    m_Text;
 
@@ -83,6 +82,35 @@ public:
 
   CGameLogRecord(int64_t gameTicks, std::string text);
   ~CGameLogRecord();
+};
+
+struct CQueuedActionsFrame
+{
+  // action to be performed after this frame is sent: ON_SEND_ACTIONS_PAUSE, ON_SEND_ACTIONS_RESUME
+  uint8_t callback;   
+
+  // total size of the active ActionQueue  
+  uint16_t bufferSize;
+
+  // ActionQueue we append new incoming actions to
+  ActionQueue* activeQueue;
+
+  // queue of queues of size N
+  // first (N-1) queues are sent with SEND_W3GS_INCOMING_ACTION2
+  // last queue is sent with SEND_W3GS_INCOMING_ACTION, together with the expected delay til next action (latency)
+  std::queue<ActionQueue> actions;
+
+  // when a player leaves, the SEND_W3GS_PLAYERLEAVE_OTHERS is delayed until we are sure all their pending actions have been sent
+  // so, if they leave during the game, we must append it to the last CQueuedActionsFrame
+  // but if they leave while loading, we may append it to the first CQueuedActionsFrame
+  UserList leavers;
+
+  CQueuedActionsFrame();
+  ~CQueuedActionsFrame();
+
+  void AddAction(CIncomingAction* action);
+  std::vector<uint8_t> GetBytes(const uint16_t sendInterval);
+  void Reset();
 };
 
 class CGame
@@ -106,9 +134,8 @@ protected:
   std::vector<CGameSlot>              m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>         m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
   UserList                            m_Users;                         // std::vector of players
-  std::pair<ActionQueue, ActionQueue> m_Actions;                       // queue of actions to be sent
-  bool                                m_ActionQueueSelector;
-  std::pair<uint8_t, uint8_t>         m_NextActionsCallback;
+  std::vector<CQueuedActionsFrame>    m_Actions;                       // actions to be sent
+  uint8_t                             m_ActionsFrameSelector;
   uint16_t                            m_ActionsLatency;
   bool                                m_ActionsEqualizer;
   std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
@@ -161,6 +188,7 @@ protected:
   uint32_t                            m_HostCounter;                   // a unique game number
   uint32_t                            m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
   uint32_t                            m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
+  int64_t                             m_LastPingEqualizerGameTicks;    // m_GameTicks when ping equalizer was last run
 
   uint32_t                            m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                            m_CountDownCounter;              // the countdown is finished when this reaches zero
@@ -229,8 +257,14 @@ public:
   CGame(CGame&) = delete;
 
   bool                      GetExiting() const { return m_Exiting; }
-  ActionQueue&              GetIncomingActionQueue();
-  ActionQueue&              GetOutgoingActionQueue();
+  CQueuedActionsFrame&      GetNthActionFrame(const uint8_t n); // zero-based
+  CQueuedActionsFrame&      GetLastActionFrame();
+  CQueuedActionsFrame&      GetFirstActionFrame();
+  void                      CheckUpdatePingEqualizer();
+  void                      UpdatePingEqualizer();
+  void                      AddPingEqualizerDelay(GameUser::CGameUser* user) const;
+  void                      RemovePingEqualizerDelay(GameUser::CGameUser* user) const;
+  std::vector<std::pair<GameUser::CGameUser*, uint32_t>> GetDescendingSortedRTT() const;
   inline CMap*              GetMap() const { return m_Map; }
   inline uint32_t           GetEntryKey() const { return m_EntryKey; }
   inline uint16_t           GetHostPort() const { return m_HostPort; }
@@ -269,6 +303,7 @@ public:
   inline bool               GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool               GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline uint32_t           GetSyncCounter() const { return m_SyncCounter; }
+  uint8_t                   GetMaxPingEqualizerOffset() const;
   uint16_t                  GetLatency() const;
   uint32_t                  GetSyncLimit() const;
   uint32_t                  GetSyncLimitSafe() const;
@@ -600,12 +635,16 @@ public:
   bool StopPlayers(const std::string& reason) const;
   void StopLaggers(const std::string& reason) const;
   void StopDesynchronized(const std::string& reason) const;
-  bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
-  bool Resume();
   std::string GetSaveFileName(const uint8_t UID) const;
+  bool Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
+  void SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame);
+  bool Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
+  bool Resume(CQueuedActionsFrame& actionFrame);
+  bool TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
   bool Save(GameUser::CGameUser* user, const bool isDisconnect);
   void SaveEnded(const uint8_t exceptUID);
-  bool TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
+  bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
+  bool Resume();
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstByte, const uint32_t secondByte);
   bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);

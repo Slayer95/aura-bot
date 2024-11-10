@@ -80,8 +80,9 @@ namespace GameUser
     uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
     uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
     bool                             m_QuitGame;
+    uint8_t                          m_PingEqualizerOffset;          // whow many frames should actions sent by this player be offset by ping equalizer
     uint32_t                         m_PongCounter;
-    uint32_t                         m_SyncCounterOffset;              // missed keepalive packets we are gonna ignore
+    uint32_t                         m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
     uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
     int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
     uint32_t                         m_LastMapPartSent;              // the last mappart sent to the player (for sending more than one part at a time)
@@ -121,7 +122,6 @@ namespace GameUser
     bool                             m_Muted;                        // if the player is muted or not
     bool                             m_ActionLocked;                 // if the player is not allowed to use commands, change their race/team/color/handicap or they are
     bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
-    std::optional<uint32_t>          m_SendLeftMessageBySyncCounter;
     bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
     bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
     bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
@@ -172,6 +172,8 @@ namespace GameUser
     [[nodiscard]] inline std::string              GetLeftReason() const { return m_LeftReason; }
     [[nodiscard]] inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
     [[nodiscard]] inline bool                     GetQuitGame() const { return m_QuitGame; }
+    [[nodiscard]] inline uint8_t                  GetPingEqualizerOffset() const { return m_PingEqualizerOffset; }
+    [[nodiscard]] uint32_t                        GetPingEqualizerDelay() const;
     [[nodiscard]] CRealm*                         GetRealm(bool mustVerify) const;
     [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
     [[nodiscard]] inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
@@ -252,6 +254,7 @@ namespace GameUser
     inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
     inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
     inline void SetQuitGame(bool nQuitGame) { m_QuitGame = nQuitGame; }
+    inline void SetPingEqualizerOffset(uint8_t nOffset) { m_PingEqualizerOffset = nOffset; }
     inline void SetSyncCounter(uint32_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
     inline void AddSyncCounterOffset(const uint32_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
@@ -279,7 +282,6 @@ namespace GameUser
     inline void SetActionLocked(bool nActionLocked) { m_ActionLocked = nActionLocked; }
     inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
     inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
-    inline void SetSendLeftMessageBySyncCounter(bool nSyncCounter) { m_SendLeftMessageBySyncCounter = nSyncCounter; }
     inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
     inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
     inline void SetKickByTicks(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }
