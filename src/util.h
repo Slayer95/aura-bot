@@ -76,7 +76,23 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString) {
+#ifdef _WIN32
+[[nodiscard]] inline PLATFORM_STRING_TYPE ToDecStringCPlatform(const size_t value)
+{
+  PLATFORM_STRING_TYPE platformNumeral;
+  std::string numeral = std::to_string(value);
+  utf8::utf8to16(numeral.begin(), numeral.end(), std::back_inserter(platformNumeral));
+  return platformNumeral;
+}
+#else
+[[nodiscard]] inline PLATFORM_STRING_TYPE ToDecStringCPlatform(const size_t value)
+{
+  return std::to_string(value);
+}
+#endif
+
+[[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString)
+{
   if (hexString.empty() || hexString.size() > 8) {
     return std::nullopt;
   }
