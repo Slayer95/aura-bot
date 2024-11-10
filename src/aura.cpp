@@ -288,7 +288,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
   return true;
 }
 
-inline CAura* StartAura(CConfig& CFG, const CCLI& cliApp)
+inline CAura* CreateAura(CConfig& CFG, const CCLI& cliApp)
 {
   return new CAura(CFG, cliApp);
 }
@@ -364,7 +364,7 @@ int main(const int argc, char** argv)
       filesystem::path homeDir;
       GetAuraHome(cliApp, homeDir);
       if (LoadConfig(CFG, cliApp, homeDir)) {
-        gAura = StartAura(CFG, cliApp);
+        gAura = CreateAura(CFG, cliApp);
         if (!gAura || !gAura->GetReady()) {
           exitCode = 1;
           Print("[AURA] initialization failure");
