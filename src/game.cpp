@@ -130,12 +130,12 @@ void CQueuedActionsFrame::AddAction(CIncomingAction* action)
   // (1452 because the INCOMING_ACTION and INCOMING_ACTION2 packets use an extra 8 bytes)
   // we'd be over the limit if we added the next action to the sub actions queue
 
-  if (actionSize > 1452) {
+  /*if (actionSize > 1452) {
     if (bufferSize > 0) {
       activeQueue = &actions.emplace();
     }
     bufferSize = actionSize;
-  } else if (bufferSize + actionSize > 1452) {
+  } else */if (bufferSize + actionSize > 1452) {
     activeQueue = &actions.emplace();
     bufferSize = actionSize;
   } else {
@@ -1075,7 +1075,11 @@ string CGame::GetLogPrefix() const
   if (SecString.size() == 1)
     SecString.insert(0, "0");
 
-  return "[" + GetCategory() + ": " + GetGameName() + "] ";
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    return "[" + GetCategory() + ": " + GetGameName() + " | Frame " + to_string(m_SyncCounter) + "] ";
+  } else {
+    return "[" + GetCategory() + ": " + GetGameName() + "] ";
+  }
 }
 
 ImmutableUserList CGame::GetPlayers() const
@@ -4368,11 +4372,12 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction* action)
     return false;
   }
 
-  CQueuedActionsFrame& actionFrame = GetNthActionFrame(user->GetPingEqualizerOffset());
+  const uint8_t frameOffset = user->GetPingEqualizerOffset();
+  CQueuedActionsFrame& actionFrame = GetNthActionFrame(frameOffset);
   actionFrame.AddAction(action);
 
   if (!action->GetAction()->empty()) {
-    LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
+    LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
 
     switch((*action->GetAction())[0]) {
       case ACTION_SAVE:
