@@ -3141,7 +3141,7 @@ void CGame::CheckUpdatePingEqualizer()
 
 void CGame::UpdatePingEqualizer()
 {
-  vector<pair<GameUser::CGameUser*, uint32_t>>& descendingRTTs = GetDescendingSortedRTT();
+  vector<pair<GameUser::CGameUser*, uint32_t>> descendingRTTs = GetDescendingSortedRTT();
   if (descendingRTTs.empty()) return;
   const uint32_t maxPing = descendingRTTs[0].second;
   LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Player [" + descendingRTTs[0].first->GetName() + "] has worst ping: " + to_string(maxPing) + " ms")
