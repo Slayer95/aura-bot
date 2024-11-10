@@ -19,8 +19,11 @@ Thumbs.db
 
 # Databases #
 #############
+*.db
 *.dbs
 *.dbs-journal
+*.db-wal
+*.db-shm
 
 # Editor generated files #
 ##########################
@@ -38,9 +41,6 @@ Thumbs.db
 *.log
 *.opendb
 *.suo
-*.db
-*.db-wal
-*.db-shm
 
 # MSVC directories #
 ####################
