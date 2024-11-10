@@ -263,15 +263,15 @@ uint8_t CCLI::GetGameSearchType() const
 uint8_t CCLI::GetGameReconnectionMode() const
 {
   uint8_t reconnectionMode = RECONNECT_DISABLED;
-  if (m_GameDisplayMode.has_value()) {
-    if (m_GameDisplayMode.value() == "disabled") {
+  if (m_GameReconnectionMode.has_value()) {
+    if (m_GameReconnectionMode.value() == "disabled") {
       reconnectionMode = RECONNECT_DISABLED;
-    } else if (m_GameDisplayMode.value() == "basic") {
+    } else if (m_GameReconnectionMode.value() == "basic") {
       reconnectionMode = RECONNECT_ENABLED_GPROXY_BASIC;
-    } else if (m_GameDisplayMode.value() == "extended") {
+    } else if (m_GameReconnectionMode.value() == "extended") {
       reconnectionMode = RECONNECT_ENABLED_GPROXY_EXTENDED | RECONNECT_ENABLED_GPROXY_BASIC;
     } else {
-      reconnectionMode = GAME_NONE;
+      reconnectionMode = RECONNECT_DISABLED;
     }
   }
   return reconnectionMode;
