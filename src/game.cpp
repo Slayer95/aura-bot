@@ -283,7 +283,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
-  m_Actions.reserve(7);
+  m_Actions.reserve(PING_EQUALIZER_MAX_FRAMES);
   m_Config = new CGameConfig(nAura->m_GameDefaultConfig, m_Map, nGameSetup);
   m_IsHiddenPlayerNames = m_Config->m_HideLobbyNames;
   m_SupportedGameVersionsMin = m_Aura->m_GameVersion;
@@ -5140,7 +5140,7 @@ void CGame::EventGameStarted()
     SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
   }
 
-  m_Actions.resize(m_Config->m_LatencyEqualizer ? 7 : 1);
+  m_Actions.resize(m_Config->m_LatencyEqualizer ? PING_EQUALIZER_MAX_FRAMES : 1);
 
   // enable stats
 
