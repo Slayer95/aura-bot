@@ -4377,7 +4377,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction* action)
   actionFrame.AddAction(action);
 
   if (!action->GetAction()->empty()) {
-    LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
+    LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
 
     switch((*action->GetAction())[0]) {
       case ACTION_SAVE:
