@@ -4831,7 +4831,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
 
 void CGame::EventUserPongToHost(GameUser::CGameUser* user)
 {
-  if (m_GameLoading || m_GameLoaded || user->GetDisconnected() || user->GetIsReserved()) {
+  if (m_CountDownStarted || user->GetDisconnected()) {
     return;
   }
 
