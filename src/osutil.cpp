@@ -236,3 +236,12 @@ void EnsureDirectoryInUserPath(const filesystem::path& nDirectory)
     Print("[AURA] Installed to user PATH environment variable.");
   }
 }
+
+void SetWindowTitle(PLATFORM_STRING_TYPE nWindowTitle)
+{
+#ifdef _WIN32
+  SetConsoleTitleW(nWindowTitle.c_str());
+#else
+  cout << "\033]0;" << nWindowTitle.c_str() << "\007";
+#endif
+}
