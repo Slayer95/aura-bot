@@ -75,8 +75,11 @@
 
 #ifdef _WIN32
 #define PLATFORM_STRING_TYPE std::wstring
+#define WIDEN(T) L##T
+#define PLATFORM_STRING(T) WIDEN(T)
 #else
 #define PLATFORM_STRING_TYPE std::string
+#define PLATFORM_STRING(T) T
 #endif
 
 #ifndef NOMINMAX
