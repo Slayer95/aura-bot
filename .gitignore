@@ -28,6 +28,7 @@ Thumbs.db
 # Editor generated files #
 ##########################
 *.swp
+*.user
 *~
 
 # SVN Directories #
@@ -42,7 +43,7 @@ Thumbs.db
 *.opendb
 *.suo
 
-# MSVC directories #
+# MSVC             #
 ####################
 
 **/.msvc/
