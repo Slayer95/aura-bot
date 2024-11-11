@@ -260,6 +260,9 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
 
   // disable Nagle's algorithm
   SetNoDelay(true);
+
+  // disable delayed acks
+  SetQuickAck(true);
 }
 
 CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTCPServer* nServer, const uint16_t nCounter)
@@ -715,7 +718,9 @@ CStreamIOSocket* CTCPServer::Accept(fd_set* fd)
 
     if ((NewSocket = accept(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength)) != INVALID_SOCKET) {
       ++m_AcceptCounter;
-      return new CStreamIOSocket(NewSocket, address, this, m_AcceptCounter);
+      CStreamIOSocket* incomingSocket = new CStreamIOSocket(NewSocket, address, this, m_AcceptCounter);
+      incomingSocket->SetKeepAlive(true, 180);
+      return incomingSocket;
     }
   }
 
