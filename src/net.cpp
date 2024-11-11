@@ -718,13 +718,13 @@ void CNet::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE3)) {
     Print("[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...");
   }
 
   if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetUDPEnabled() && !m_Aura->m_CurrentLobby->GetCountDownStarted()) {
     if (pkt->buf[8] == 0 || m_Aura->m_CurrentLobby->GetIsSupportedGameVersion(pkt->buf[8])) {
-      PRINT_IF(LOG_LEVEL_TRACE2, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
+      PRINT_IF(LOG_LEVEL_TRACE3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
       m_Aura->m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket, pkt->buf[8]);
 
       // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.

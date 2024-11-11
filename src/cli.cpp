@@ -108,7 +108,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
   app.add_option("--bind-address", m_BindAddress, "Restricts connections to the game server, only allowing the input IPv4 address.")->check(CLI::ValidIPV4);
   app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
-  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: info, debug, trace.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"}));
+  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: info, debug, trace.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"}));
 
   // Game hosting
   app.add_option("--owner", m_GameOwner, "Customizes the game owner when hosting from the CLI.");
