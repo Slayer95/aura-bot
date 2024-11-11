@@ -56,8 +56,6 @@
 #include <utf8/utf8.h>
 #include "hash.h"
 
-#undef min
-
 #pragma once
 
 #define TO_ARRAY(...) StringArray({__VA_ARGS__})

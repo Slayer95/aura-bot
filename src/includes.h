@@ -82,8 +82,16 @@
 #define PLATFORM_STRING(T) T
 #endif
 
+#ifdef min
+#undef min
+#endif
+
 #ifndef NOMINMAX
 #define NOMINMAX
+#endif
+
+#ifdef _MSVC
+#define VC_EXTRALEAN
 #endif
 
 #ifdef _WIN32
