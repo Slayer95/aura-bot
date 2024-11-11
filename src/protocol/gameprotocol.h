@@ -198,6 +198,10 @@ private:
 
 public:
   CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction);
+  CIncomingAction(const CIncomingAction&) = delete;
+  CIncomingAction& operator=(const CIncomingAction&) = delete;
+  CIncomingAction(CIncomingAction&&) noexcept;
+  CIncomingAction& operator=(CIncomingAction&&) noexcept;
   ~CIncomingAction();
 
   [[nodiscard]] inline uint8_t                      GetUID() const { return m_UID; }

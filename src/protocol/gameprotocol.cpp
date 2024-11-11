@@ -906,6 +906,23 @@ CIncomingAction::CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::v
 
 CIncomingAction::~CIncomingAction() = default;
 
+CIncomingAction::CIncomingAction(CIncomingAction&& other) noexcept
+  : m_CRC(std::move(other.m_CRC)),
+    m_Action(std::move(other.m_Action)),
+    m_UID(other.m_UID)
+{
+}
+
+CIncomingAction& CIncomingAction::operator=(CIncomingAction&& other) noexcept
+{
+  if (this != &other) {
+    m_CRC = std::move(other.m_CRC);
+    m_Action = std::move(other.m_Action);
+    m_UID = other.m_UID;
+  }
+  return *this;
+}
+
 //
 // CIncomingChatPlayer
 //
