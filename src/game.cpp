@@ -1116,7 +1116,7 @@ string CGame::GetLogPrefix() const
   if (SecString.size() == 1)
     SecString.insert(0, "0");
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+  if (m_GameLoaded && m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
     return "[" + GetCategory() + ": " + GetGameName() + " | Frame " + to_string(m_SyncCounter) + "] ";
   } else {
     return "[" + GetCategory() + ": " + GetGameName() + "] ";
