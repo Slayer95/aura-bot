@@ -154,7 +154,8 @@ vector<uint8_t> CQueuedActionsFrame::GetBytes(const uint16_t sendInterval)
   // the corresponding W3GS_INCOMING_ACTION packet
 
   auto it = actions.begin();
-  while (it != actions.end()) {
+  auto back = actions.end() - 1;
+  while (it != back) {
     const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION2(*it);
     AppendByteArrayFast(packet, subPacket);
     ++it;
