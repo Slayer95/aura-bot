@@ -178,6 +178,50 @@ void CQueuedActionsFrame::Reset()
   leavers.clear();
 }
 
+bool CQueuedActionsFrame::GetIsEmpty() const
+{
+  if (callback != ON_SEND_ACTIONS_NONE) return false;
+  if (!leavers.empty()) return false;
+  if (bufferSize != 0) return false;
+  if (actions.empty() && activeQueue == nullptr) return true;
+  return actions.size() == 1 && activeQueue == &actions.front() && activeQueue->empty();
+}
+
+uint32_t CQueuedActionsFrame::GetActionCount() const
+{
+  if (actions.empty()) return 0;
+  // FIXME?: Rework actions into a std::vector
+  return actions.front().size();
+}
+
+void CQueuedActionsFrame::MergeFrame(CQueuedActionsFrame& frame)
+{
+  if (frame.bufferSize == 0) return;
+
+  callback = frame.callback;
+
+  for (auto& user : frame.leavers) {
+    leavers.push_back(user);
+  }
+
+  while (!frame.actions.empty()) {
+    ActionQueue& actionQueue = frame.actions.front();
+    while (!actionQueue.empty()) {
+      CIncomingAction* action = actionQueue.front();
+      actionQueue.pop();
+      AddAction(action);
+    }
+    frame.actions.pop();
+  }
+  frame.Reset();
+}
+
+bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
+{
+  // FIXME?: Rework ActionQueue into std::vector
+  return false;
+}
+
 //
 // CGame
 //
@@ -1640,7 +1684,7 @@ void CGame::UpdatePost(void* send_fd)
   }
 }
 
-void CGame::RunActionsScheduler()
+void CGame::RunActionsScheduler(const uint8_t maxOffset)
 {
   const int64_t Ticks = GetTicks();
   if (m_LastActionSentTicks != 0) {
@@ -1664,9 +1708,33 @@ void CGame::RunActionsScheduler()
   m_LastActionSentTicks = Ticks;
 
   ++m_ActionsFrameSelector;
-  if (m_ActionsFrameSelector > GetMaxPingEqualizerOffset()) {
+  if (m_ActionsFrameSelector > maxOffset) {
     m_ActionsFrameSelector = 0;
   }
+
+  const uint8_t firstOffset = GetFirstFrameOffset();
+  const uint8_t lastOffset = GetLastFrameOffset();
+  const uint8_t ghostOffset = GetNextFrameOffset(lastOffset, true);
+  if (ghostOffset != firstOffset) {
+    // Our lagger's latency improved. Let everyone else benefit.
+    CQueuedActionsFrame& ghostFrame = m_Actions[ghostOffset];
+    if (ghostFrame.bufferSize > 0) {
+      //LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Frame +" + ToDecString(ghostOffset) + " merged into frame +" + ToDecString(lastOffset) + " (" + to_string(ghostFrame.bufferSize) + " bytes)")
+      GetNthActionFrame(lastOffset).MergeFrame(ghostFrame);
+    }
+  }
+  /*
+  uint8_t thisOffset = ghostOffset;
+  while (thisOffset != firstOffset) {
+    const CQueuedActionsFrame& frame = m_Actions[thisOffset];
+    if (!frame.GetIsEmpty()) {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Frame +" + ToDecString(thisOffset) + " must be empty, but is not (maxOffset == " + ToDecString(maxOffset) + ", m_ActionsFrameSelector == " + ToDecString(m_ActionsFrameSelector) + ")!")
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "bufferSize = " + to_string(frame.bufferSize) + ", action count >= " + to_string(frame.GetActionCount()))
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "callback = " + ToDecString(frame.callback) + ", leavers = " + GameUser::ToNameListSentence(frame.leavers))
+    }
+    thisOffset = GetNextFrameOffset(thisOffset, true);
+  }
+  */
 }
 
 void CGame::LogApp(const string& logText) const
@@ -2971,9 +3039,15 @@ void CGame::SendAllActionsCallback()
       break;
   }
   for (GameUser::CGameUser* user : frame.leavers) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[" + user->GetName() + "] scheduled for deletion")
     user->SetDeleteMe(true);
   }
   frame.Reset();
+  /*
+  if (!frame.GetIsEmpty()) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Error - failed to reset frame !!")
+  }
+  */
 }
 
 void CGame::SendAllActions()
@@ -3003,8 +3077,14 @@ void CGame::SendAllActions()
 
   SendAll(GetFirstActionFrame().GetBytes(GetLatency()));
   SendAllActionsCallback();
-  CheckUpdatePingEqualizer();
-  RunActionsScheduler();
+
+  uint8_t maxEqualizerOffset;
+  if (CheckUpdatePingEqualizer()) {
+    maxEqualizerOffset = UpdatePingEqualizer();
+  } else {
+    maxEqualizerOffset = GetMaxEqualizerOffset();
+  }
+  RunActionsScheduler(maxEqualizerOffset);
 }
 
 std::string CGame::GetPrefixedGameName(const CRealm* realm) const
@@ -3119,63 +3199,103 @@ uint8_t CGame::GetPlayersReadyMode() const {
 
 CQueuedActionsFrame& CGame::GetNthActionFrame(const uint8_t n)
 {
-  return m_Actions[(n + m_ActionsFrameSelector) % (GetMaxPingEqualizerOffset() + 1)];
+  return m_Actions[(n + m_ActionsFrameSelector) % (GetMaxEqualizerOffset() + 1)];
 }
 
-CQueuedActionsFrame& CGame::GetLastActionFrame()
+const CQueuedActionsFrame& CGame::InspectNthActionFrame(const uint8_t n) const
 {
-  return GetNthActionFrame(GetMaxPingEqualizerOffset());
+  return m_Actions[(n + m_ActionsFrameSelector) % (GetMaxEqualizerOffset() + 1)];
+}
+
+uint8_t CGame::GetFirstFrameOffset() const
+{
+  return m_ActionsFrameSelector;
+}
+
+uint8_t CGame::GetLastFrameOffset() const
+{
+  const uint8_t maxOffset = GetMaxEqualizerOffset();
+  return (maxOffset + m_ActionsFrameSelector) % (maxOffset + 1);
+}
+
+uint8_t CGame::GetNextFrameOffset(const uint8_t n, const bool allowStale) const
+{
+  return (n + 1) % (allowStale ? static_cast<uint8_t>(m_Actions.size()) : GetMaxEqualizerOffset() + 1u);
 }
 
 CQueuedActionsFrame& CGame::GetFirstActionFrame()
 {
-  return m_Actions[m_ActionsFrameSelector];
+  return m_Actions[GetFirstFrameOffset()];
 }
 
-void CGame::CheckUpdatePingEqualizer()
+CQueuedActionsFrame& CGame::GetLastActionFrame()
 {
-  if (!m_Config->m_LatencyEqualizer) return;
+  return m_Actions[GetLastFrameOffset()];
+}
+
+bool CGame::CheckUpdatePingEqualizer()
+{
+  if (!m_Config->m_LatencyEqualizer) return false;
   // Use m_GameTicks instead of GetTicks() to ensure we don't drift while lag screen is displayed.
   if (m_GameTicks - m_LastPingEqualizerGameTicks < PING_EQUALIZER_PERIOD_TICKS) {
-    return;
+    return false;
   }
-  UpdatePingEqualizer();
-  m_LastPingEqualizerGameTicks = m_GameTicks;
+  return true;
+  
 }
 
-void CGame::UpdatePingEqualizer()
+uint8_t CGame::UpdatePingEqualizer()
 {
+  uint8_t maxEqualizerOffset = 0;
   vector<pair<GameUser::CGameUser*, uint32_t>> descendingRTTs = GetDescendingSortedRTT();
-  if (descendingRTTs.empty()) return;
+  if (descendingRTTs.empty()) return maxEqualizerOffset;
   const uint32_t maxPing = descendingRTTs[0].second;
   for (const pair<GameUser::CGameUser*, uint32_t>& userPing : descendingRTTs) {
     // How much better ping than the worst player?
     const uint32_t framesAheadNow = (maxPing - userPing.second) / GetLatency();
     const uint32_t framesAheadBefore = userPing.first->GetPingEqualizerOffset();
+    uint8_t nextOffset;
     if (framesAheadNow > framesAheadBefore) {
-      AddPingEqualizerDelay(userPing.first);
+      nextOffset = AddPingEqualizerOffset(userPing.first);
     } else if (framesAheadNow < framesAheadBefore) {
-      RemovePingEqualizerDelay(userPing.first);
+      nextOffset = RemovePingEqualizerOffset(userPing.first);
+    } else {
+      nextOffset = userPing.first->GetPingEqualizerOffset();
+    }
+    if (nextOffset > maxEqualizerOffset) {
+      maxEqualizerOffset = nextOffset;
     }
   }
+  m_LastPingEqualizerGameTicks = m_GameTicks;
+  return maxEqualizerOffset;
 }
 
-void CGame::AddPingEqualizerDelay(GameUser::CGameUser* user) const
+uint8_t CGame::AddPingEqualizerOffset(GameUser::CGameUser* user) const
 {
-  uint8_t currentDelay = user->GetPingEqualizerOffset();
-  uint8_t nextDelay = currentDelay + 1;
-  if (nextDelay < m_Actions.size()) {
-    user->SetPingEqualizerOffset(nextDelay);
+  uint8_t currentOffset = user->GetPingEqualizerOffset();
+  uint8_t nextOffset = currentOffset + 1;
+  if (nextOffset >= m_Actions.size()) {
+    return currentOffset;
   }
+  user->SetPingEqualizerOffset(nextOffset);
+  const CQueuedActionsFrame& nextFrame = InspectNthActionFrame(nextOffset);
+  const CQueuedActionsFrame& subNextFrame = InspectNthActionFrame(nextOffset + 1);
+  //LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] (+) Adding up to " + to_string(GetLatency() * user->GetPingEqualizerOffset()) + " ms delay to [" + user->GetName() + "]")
+  return nextOffset;
 }
 
-void CGame::RemovePingEqualizerDelay(GameUser::CGameUser* user) const
+uint8_t CGame::RemovePingEqualizerOffset(GameUser::CGameUser* user) const
 {
-  uint8_t currentDelay = user->GetPingEqualizerOffset();
-  if (currentDelay == 0) {
-    return;
+  uint8_t currentOffset = user->GetPingEqualizerOffset();
+  if (currentOffset == 0) {
+    return currentOffset;
   }
-  user->SetPingEqualizerOffset(currentDelay - 1);
+  uint8_t nextOffset = currentOffset - 1;
+  user->SetPingEqualizerOffset(nextOffset);
+  const CQueuedActionsFrame& nextFrame = InspectNthActionFrame(nextOffset);
+  const CQueuedActionsFrame& subNextFrame = InspectNthActionFrame(nextOffset + 1);
+  //LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] (-) Adding up to " + to_string(GetLatency() * user->GetPingEqualizerOffset()) + " ms delay to [" + user->GetName() + "]")
+  return nextOffset;
 }
 
 vector<pair<GameUser::CGameUser*, uint32_t>> CGame::GetDescendingSortedRTT() const
@@ -3592,7 +3712,7 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
   } else {
     // Let's avoid sending leave messages during game load.
     // Also, once the game is loaded, ensure all the users' actions will be sent before the leave message is sent.
-    CQueuedActionsFrame& frame = m_GameLoading ? GetFirstActionFrame() : GetLastActionFrame();
+    CQueuedActionsFrame& frame = /*m_GameLoading ? GetFirstActionFrame() : */GetNthActionFrame(user->GetPingEqualizerOffset());
     frame.leavers.push_back(user);
   }
 
@@ -8268,7 +8388,7 @@ string CGame::GetLobbyVirtualHostName() const
   return m_Config->m_LobbyVirtualHostName;
 }
 
-uint8_t CGame::GetMaxPingEqualizerOffset() const
+uint8_t CGame::GetMaxEqualizerOffset() const
 {
   if (!m_Config->m_LatencyEqualizer) return 0;
   uint8_t max = 0;

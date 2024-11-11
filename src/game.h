@@ -110,6 +110,10 @@ struct CQueuedActionsFrame
 
   void AddAction(CIncomingAction* action);
   std::vector<uint8_t> GetBytes(const uint16_t sendInterval);
+  void MergeFrame(CQueuedActionsFrame& frame);
+  bool GetHasActionsBy(const uint8_t fromUID) const;
+  bool GetIsEmpty() const;
+  uint32_t GetActionCount() const;
   void Reset();
 };
 
@@ -258,12 +262,16 @@ public:
 
   bool                      GetExiting() const { return m_Exiting; }
   CQueuedActionsFrame&      GetNthActionFrame(const uint8_t n); // zero-based
-  CQueuedActionsFrame&      GetLastActionFrame();
+  const CQueuedActionsFrame&  InspectNthActionFrame(const uint8_t n) const; // zero-based
+  uint8_t                   GetFirstFrameOffset() const;
+  uint8_t                   GetLastFrameOffset() const;
+  uint8_t                   GetNextFrameOffset(const uint8_t n, const bool allowStale = false) const;
   CQueuedActionsFrame&      GetFirstActionFrame();
-  void                      CheckUpdatePingEqualizer();
-  void                      UpdatePingEqualizer();
-  void                      AddPingEqualizerDelay(GameUser::CGameUser* user) const;
-  void                      RemovePingEqualizerDelay(GameUser::CGameUser* user) const;
+  CQueuedActionsFrame&      GetLastActionFrame();
+  bool                      CheckUpdatePingEqualizer();
+  uint8_t                   UpdatePingEqualizer();
+  uint8_t                   AddPingEqualizerOffset(GameUser::CGameUser* user) const;
+  uint8_t                   RemovePingEqualizerOffset(GameUser::CGameUser* user) const;
   std::vector<std::pair<GameUser::CGameUser*, uint32_t>> GetDescendingSortedRTT() const;
   inline CMap*              GetMap() const { return m_Map; }
   inline uint32_t           GetEntryKey() const { return m_EntryKey; }
@@ -303,7 +311,7 @@ public:
   inline bool               GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool               GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline uint32_t           GetSyncCounter() const { return m_SyncCounter; }
-  uint8_t                   GetMaxPingEqualizerOffset() const;
+  uint8_t                   GetMaxEqualizerOffset() const;
   uint16_t                  GetLatency() const;
   uint32_t                  GetSyncLimit() const;
   uint32_t                  GetSyncLimitSafe() const;
@@ -401,7 +409,7 @@ public:
   uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool                      Update(void* fd, void* send_fd);
   void                      UpdatePost(void* send_fd);
-  void                      RunActionsScheduler();
+  void                      RunActionsScheduler(const uint8_t maxOffset);
 
   // logging
   void                      LogApp(const std::string& logText) const;
