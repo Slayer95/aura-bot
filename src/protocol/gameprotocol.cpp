@@ -141,7 +141,7 @@ namespace GameProtocol
 
     const std::vector<uint8_t> CRC    = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
     const std::vector<uint8_t> action = std::vector<uint8_t>(begin(data) + 8, end(data));
-    return CIncomingAction(UID, CRC, action);
+    return std::move(CIncomingAction(UID, CRC, action));
   }
 
   uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data)
@@ -904,7 +904,12 @@ CIncomingAction::CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::v
 {
 }
 
-CIncomingAction::~CIncomingAction() = default;
+CIncomingAction::CIncomingAction(const CIncomingAction& other)
+  : m_CRC(other.m_CRC),
+    m_Action(other.m_Action),
+    m_UID(other.m_UID)
+{
+}
 
 CIncomingAction::CIncomingAction(CIncomingAction&& other) noexcept
   : m_CRC(std::move(other.m_CRC)),
@@ -922,6 +927,8 @@ CIncomingAction& CIncomingAction::operator=(CIncomingAction&& other) noexcept
   }
   return *this;
 }
+
+CIncomingAction::~CIncomingAction() = default;
 
 //
 // CIncomingChatPlayer

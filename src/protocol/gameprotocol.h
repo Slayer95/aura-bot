@@ -198,9 +198,9 @@ private:
 
 public:
   CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction);
-  CIncomingAction(const CIncomingAction&) = delete;
-  CIncomingAction& operator=(const CIncomingAction&) = delete;
+  CIncomingAction(const CIncomingAction&);
   CIncomingAction(CIncomingAction&&) noexcept;
+  CIncomingAction& operator=(const CIncomingAction&) = delete;
   CIncomingAction& operator=(CIncomingAction&&) noexcept;
   ~CIncomingAction();
 
