@@ -73,6 +73,12 @@
 #include "constants.h"
 #include "forward.h"
 
+#ifdef WIN32
+#ifndef _WIN32
+#define _WIN32
+#endif
+#endif
+
 #ifdef _WIN32
 #define PLATFORM_STRING_TYPE std::wstring
 #define WIDEN(T) L##T
