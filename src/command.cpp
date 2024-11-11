@@ -1452,14 +1452,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply("Ping not measured yet.", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       }
 
-      if (0 < maxPing && maxPing < m_TargetGame->GetLatency() && REFRESH_PERIOD_MIN < m_TargetGame->GetLatency()) {
+      const bool suggestLowerLatency = 0 < maxPing && maxPing < m_TargetGame->GetLatency() && REFRESH_PERIOD_MIN_SUGGESTED < m_TargetGame->GetLatency();
+      if (m_TargetGame->m_Config->m_LatencyEqualizer || suggestLowerLatency) {
+        string refreshText = "Internal latency is " + to_string(m_TargetGame->GetLatency()) + "ms.";
         string equalizerHeader;
         if (m_TargetGame->m_Config->m_LatencyEqualizer) {
           equalizerHeader = "Ping equalizer ENABLED. ";
         }
-        string refreshText = "Internal latency is " + to_string(m_TargetGame->GetLatency()) + "ms. ";
+        string suggestionText;
+        if (suggestLowerLatency) {
+          suggestionText = " Decrease it with " + cmdToken + "latency [VALUE]";
+        }
         SendReply(
-          "HINT: " + equalizerHeader + refreshText + "Decrease it with " + cmdToken + "latency [VALUE]",
+          "HINT: " + equalizerHeader + refreshText + suggestionText,
           !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0
         );
       }
