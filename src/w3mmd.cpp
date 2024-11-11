@@ -269,14 +269,14 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   return true;
 }
 
-bool CW3MMD::RecvAction(uint8_t fromUID, const CIncomingAction& Action)
+bool CW3MMD::RecvAction(uint8_t fromUID, const CIncomingAction& action)
 {
   if (m_Error) {
     return false;
   }
 
   unsigned int i = 0;
-  const vector<uint8_t>& ActionData = Action.GetImmutableAction();
+  const vector<uint8_t>& ActionData = action.GetImmutableAction();
   vector<uint8_t> MissionKey;
   vector<uint8_t> Key;
   vector<uint8_t> Value;

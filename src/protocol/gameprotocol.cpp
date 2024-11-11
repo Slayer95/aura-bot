@@ -140,8 +140,8 @@ namespace GameProtocol
     // remainder of packet		-> Action
 
     const std::vector<uint8_t> CRC    = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-    const std::vector<uint8_t> Action = std::vector<uint8_t>(begin(data) + 8, end(data));
-    return CIncomingAction(UID, CRC, Action);
+    const std::vector<uint8_t> action = std::vector<uint8_t>(begin(data) + 8, end(data));
+    return CIncomingAction(UID, CRC, action);
   }
 
   uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data)

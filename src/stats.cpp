@@ -76,10 +76,10 @@ CDotaStats::~CDotaStats()
   }
 }
 
-bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& Action)
+bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
 {
   size_t                      i          = 0;
-  const std::vector<uint8_t>& ActionData = Action.GetImmutableAction();
+  const std::vector<uint8_t>& ActionData = action.GetImmutableAction();
   std::vector<uint8_t>        Data, Key, Value;
 
   // dota actions with real time replay data start with 0x6b then the nullptr terminated string "dr.x"

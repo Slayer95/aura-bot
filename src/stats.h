@@ -45,7 +45,7 @@ public:
   ~CDotaStats();
   CDotaStats(CDotaStats&) = delete;
 
-  bool ProcessAction(uint8_t UID, const CIncomingAction& Action);
+  bool ProcessAction(uint8_t UID, const CIncomingAction& action);
   void Save(CAura* nAura, CAuraDB* nDB);
 };
 
