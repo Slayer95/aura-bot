@@ -7812,6 +7812,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   for (auto& user : m_Users) {
     if (!user->GetDisconnected()) {
       user->ResetKickReason();
+      user->ResetLeftReason();
     }
     if (user->GetKickQueued()) {
       user->ClearKickByTicks();
