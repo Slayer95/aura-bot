@@ -1721,7 +1721,7 @@ void CGame::RunActionsScheduler(const uint8_t maxOffset)
       GetNthActionFrame(lastOffset).MergeFrame(ghostFrame);
     }
   }
-  /*
+
   uint8_t thisOffset = ghostOffset;
   while (thisOffset != firstOffset) {
     const CQueuedActionsFrame& frame = m_Actions[thisOffset];
@@ -1732,7 +1732,6 @@ void CGame::RunActionsScheduler(const uint8_t maxOffset)
     }
     thisOffset = GetNextFrameOffset(thisOffset, true);
   }
-  */
 }
 
 void CGame::LogApp(const string& logText) const
