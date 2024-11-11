@@ -269,37 +269,37 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   return true;
 }
 
-bool CW3MMD::RecvAction(uint8_t fromUID, CIncomingAction *Action)
+bool CW3MMD::RecvAction(uint8_t fromUID, const CIncomingAction& Action)
 {
   if (m_Error) {
     return false;
   }
 
   unsigned int i = 0;
-  vector<uint8_t> *ActionData = Action->GetAction();
+  const vector<uint8_t>& ActionData = Action.GetImmutableAction();
   vector<uint8_t> MissionKey;
   vector<uint8_t> Key;
   vector<uint8_t> Value;
 
-  while (ActionData->size() >= i + 9) {
-    if ((*ActionData)[i] == ACTION_SYNC_INT &&
-      (*ActionData)[i + 1] == 'M' &&
-      (*ActionData)[i + 2] == 'M' &&
-      (*ActionData)[i + 3] == 'D' &&
-      (*ActionData)[i + 4] == '.' &&
-      (*ActionData)[i + 5] == 'D' &&
-      (*ActionData)[i + 6] == 'a' &&
-      (*ActionData)[i + 7] == 't' &&
-      (*ActionData)[i + 8] == 0x00)
+  while (ActionData.size() >= i + 9) {
+    if (ActionData[i] == ACTION_SYNC_INT &&
+      ActionData[i + 1] == 'M' &&
+      ActionData[i + 2] == 'M' &&
+      ActionData[i + 3] == 'D' &&
+      ActionData[i + 4] == '.' &&
+      ActionData[i + 5] == 'D' &&
+      ActionData[i + 6] == 'a' &&
+      ActionData[i + 7] == 't' &&
+      ActionData[i + 8] == 0x00)
     {
-      if (ActionData->size() >= i + 10) {
-        MissionKey = ExtractCString(*ActionData, i + 9);
+      if (ActionData.size() >= i + 10) {
+        MissionKey = ExtractCString(ActionData, i + 9);
 
-        if (ActionData->size() >= i + 11 + MissionKey.size()) {
-          Key = ExtractCString(*ActionData, i + 10 + MissionKey.size());
+        if (ActionData.size() >= i + 11 + MissionKey.size()) {
+          Key = ExtractCString(ActionData, i + 10 + MissionKey.size());
 
-          if (ActionData->size() >= i + 15 + MissionKey.size() + Key.size()) {
-            Value = vector<uint8_t>(ActionData->begin() + i + 11 + MissionKey.size() + Key.size(), ActionData->begin() + i + 15 + MissionKey.size() + Key.size());
+          if (ActionData.size() >= i + 15 + MissionKey.size() + Key.size()) {
+            Value = vector<uint8_t>(ActionData.begin() + i + 11 + MissionKey.size() + Key.size(), ActionData.begin() + i + 15 + MissionKey.size() + Key.size());
             string MissionKeyString = string(MissionKey.begin(), MissionKey.end());
             string KeyString = string(Key.begin(), Key.end());
             //uint32_t ValueInt = ByteArrayToUInt32(Value, false);

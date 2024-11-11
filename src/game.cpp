@@ -116,14 +116,15 @@ CQueuedActionsFrame::CQueuedActionsFrame()
    bufferSize(0),
    activeQueue(nullptr)
  {
-   activeQueue = &actions.emplace();
+   activeQueue = &actions.emplace_back();
+   activeQueue->reserve(DEFAULT_ACTIONS_PER_FRAME);
  }
 
 CQueuedActionsFrame::~CQueuedActionsFrame() = default;
 
-void CQueuedActionsFrame::AddAction(CIncomingAction* action)
+void CQueuedActionsFrame::AddAction(CIncomingAction&& action)
 {
-  const uint16_t actionSize = action->GetLength();
+  const uint16_t actionSize = action.GetLength();
 
   // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
   // check if adding the next action to the sub actions queue would put us over the limit
@@ -132,16 +133,17 @@ void CQueuedActionsFrame::AddAction(CIncomingAction* action)
 
   /*if (actionSize > 1452) {
     if (bufferSize > 0) {
-      activeQueue = &actions.emplace();
+      activeQueue = &actions.emplace_back();
     }
     bufferSize = actionSize;
   } else */if (bufferSize + actionSize > 1452) {
-    activeQueue = &actions.emplace();
+    activeQueue = &actions.emplace_back();
+    activeQueue->reserve(DEFAULT_ACTIONS_PER_FRAME);
     bufferSize = actionSize;
   } else {
     bufferSize += actionSize;
   }
-  activeQueue->push(action);
+  activeQueue->push_back(std::move(action));
 }
 
 vector<uint8_t> CQueuedActionsFrame::GetBytes(const uint16_t sendInterval)
@@ -151,30 +153,32 @@ vector<uint8_t> CQueuedActionsFrame::GetBytes(const uint16_t sendInterval)
   // the W3GS_INCOMING_ACTION2 packet handles the overflow but it must be sent *before*
   // the corresponding W3GS_INCOMING_ACTION packet
 
-  while (actions.size() > 1) {
-    ActionQueue& subActions = actions.front();
-    const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION2(subActions);
+  auto& it = actions.begin();
+  while (it != actions.end()) {
+    const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION2(*it);
     AppendByteArrayFast(packet, subPacket);
-    actions.pop();
+    ++it;
   }
 
   {
-    ActionQueue& subActions = actions.front();
-    const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION(subActions, sendInterval);
+    const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION(*it, sendInterval);
     AppendByteArrayFast(packet, subPacket);
-    actions.pop();
   }
 
+  actions.clear();
   activeQueue = nullptr;
-  // Note: ensure Reset() is called afterwards
+  // Note: Must ensure Reset() is called afterwards
+
   return packet;
 }
 
 void CQueuedActionsFrame::Reset()
 {
+  actions.clear();
   callback = ON_SEND_ACTIONS_NONE;
   bufferSize = 0;
-  activeQueue = &actions.emplace();
+  activeQueue = &actions.emplace_back();
+  activeQueue->reserve(DEFAULT_ACTIONS_PER_FRAME);
   leavers.clear();
 }
 
@@ -204,14 +208,17 @@ void CQueuedActionsFrame::MergeFrame(CQueuedActionsFrame& frame)
     leavers.push_back(user);
   }
 
-  while (!frame.actions.empty()) {
-    ActionQueue& actionQueue = frame.actions.front();
-    while (!actionQueue.empty()) {
-      CIncomingAction* action = actionQueue.front();
-      actionQueue.pop();
-      AddAction(action);
+  auto& it = frame.actions.begin();
+  while (it != frame.actions.end()) {
+    ActionQueue& subActions = (*it);
+    auto& it2 = subActions.begin();
+    while (it2 != subActions.end()) {
+      AddAction(std::move(*it2));
+      ++it2;
     }
-    frame.actions.pop();
+    // subActions is now in indeterminate state, so use erase() instead of clear()
+    subActions.erase(subActions.begin(), subActions.end());
+    ++it;
   }
   frame.Reset();
 }
@@ -414,17 +421,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
 void CGame::ClearActions()
 {
-  for (CQueuedActionsFrame& frame : m_Actions) {
-    frame.leavers.clear();
-    while (!frame.actions.empty()) {
-      ActionQueue& subActions = frame.actions.front();
-      while (!subActions.empty()) {
-        delete subActions.front();
-        subActions.pop();
-      }
-      frame.actions.pop();
-    }
-  }
+  m_Actions.clear();
 }
 
 void CGame::Reset()
@@ -4482,87 +4479,99 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   }
 }
 
-bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction* action)
+bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
 {
   if (!m_GameLoading && !m_GameLoaded) {
     return false;
   }
 
-  if (action->GetLength() > 1027) {
+  if (action.GetLength() > 1027) {
     return false;
   }
 
+  const uint8_t actionType = action.GetSniffedType();
   const uint8_t frameOffset = user->GetPingEqualizerOffset();
   CQueuedActionsFrame& actionFrame = GetNthActionFrame(frameOffset);
-  actionFrame.AddAction(action);
 
-  if (!action->GetAction()->empty()) {
-    LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((*action->GetAction())[0])) + ": [" + ByteArrayToHexString((*action->GetAction())) + "]")
+  if (!action.GetImmutableAction().empty()) {
+    LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
+  }
 
-    switch((*action->GetAction())[0]) {
-      case ACTION_SAVE:
-        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
-        SendAllChat("[" + user->GetDisplayName() + "] is saving the game");
-        SaveEnded(0xFF, actionFrame);
-        if (user->GetCanSave()) {
-          user->DropRemainingSaves();
-          if (user->GetIsNativeReferee() && !user->GetCanSave()) {
-            SendChat(user, "NOTE: You have reached the maximum allowed saves for this game.");
-          }
-        } else {
-          // Game engine lets referees save without limit nor throttle whatsoever.
-          // This path prevents save-spamming leading to unplayable games.
-          EventUserDisconnectGameAbuse(user);
+  if (actionType == ACTION_CHAT_TRIGGER && (m_Config->m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
+    const vector<uint8_t>& actionBytes = action.GetImmutableAction();
+    if (actionBytes.size() >= 10) {
+      const uint8_t* chatMessageStart = actionBytes.data() + 9;
+      const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
+      if (chatMessageStart < chatMessageEnd) {
+        const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
+        if (m_Config->m_LogCommands) {
+          m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
         }
-        break;
-      case ACTION_SAVE_ENDED:
-        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] finished saving the game")
-        break;
-      case ACTION_PAUSE:
-        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] paused the game")
-        if (!user->GetIsNativeReferee()) {
-          user->DropRemainingPauses();
-        }
-        actionFrame.callback =  ON_SEND_ACTIONS_PAUSE;
-        break;
-      case ACTION_RESUME:
-        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
-        actionFrame.callback =  ON_SEND_ACTIONS_RESUME;
-        break;
-      case ACTION_CHAT_TRIGGER: {
-        const vector<uint8_t>& actionBytes = *action->GetAction();
-        if ((m_Config->m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) && actionBytes.size() > 9) {
-          vector<uint8_t> chatBytes = ExtractCString(actionBytes, 9);
-          string chatMessage = string(chatBytes.begin(), chatBytes.end());
-          if (m_Config->m_LogCommands) {
-            m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
-          }
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "[" + user->GetName() + "] sent chat message with trigger [" + to_string(ByteArrayToUInt32(actionBytes, false, 1)) + " | " + to_string(ByteArrayToUInt32(actionBytes, false, 5)) + "]: " + chatMessage)
-        }
-        break;
+        // Enable --log-level debug to figure out HMC map-specific constants
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [" + to_string(ByteArrayToUInt32(actionBytes, false, 1)) + " | " + to_string(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
       }
-      case ACTION_SYNC_INT: {
-        // FIXME: more than one action can be sent in a single packet, but the length of each action isn't explicitly represented in the packet
-        // so we ought to parse all the actions and calculate their lengths based on their types
-        break;
-      }
-      default:
-        break;
     }
   }
 
-  if (m_CustomStats && action->GetAction()->size() >= 6) {
+  if (m_CustomStats && action.GetImmutableAction().size() >= 6) {
     if (!m_CustomStats->RecvAction(user->GetUID(), action)) {
       delete m_CustomStats;
       m_CustomStats = nullptr;
     }
   }
-  if (m_DotaStats && action->GetAction()->size() >= 6) {
+  if (m_DotaStats && action.GetImmutableAction().size() >= 6) {
     if (m_DotaStats->ProcessAction(user->GetUID(), action) && !GetIsGameOver()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started (dota stats class reported game over)")
       StartGameOverTimer(true);
     }
   }
+
+  actionFrame.AddAction(std::move(action));
+
+  switch (actionType) {
+    case ACTION_SAVE:
+      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
+      SendAllChat("[" + user->GetDisplayName() + "] is saving the game");
+      SaveEnded(0xFF, actionFrame);
+      if (user->GetCanSave()) {
+        user->DropRemainingSaves();
+        if (user->GetIsNativeReferee() && !user->GetCanSave()) {
+          SendChat(user, "NOTE: You have reached the maximum allowed saves for this game.");
+        }
+      } else {
+        // Game engine lets referees save without limit nor throttle whatsoever.
+        // This path prevents save-spamming leading to unplayable games.
+        EventUserDisconnectGameAbuse(user);
+      }
+      break;
+    case ACTION_SAVE_ENDED:
+      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] finished saving the game")
+      break;
+    case ACTION_PAUSE:
+      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] paused the game")
+      if (!user->GetIsNativeReferee()) {
+        user->DropRemainingPauses();
+      }
+      actionFrame.callback =  ON_SEND_ACTIONS_PAUSE;
+      break;
+    case ACTION_RESUME:
+      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
+      actionFrame.callback =  ON_SEND_ACTIONS_RESUME;
+      break;
+    case ACTION_CHAT_TRIGGER: {
+      // Already logged. Do not extract action here, since it has already been moved.
+      break;
+    }
+    case ACTION_SYNC_INT: {
+      // This is the W3MMD action type.
+      // FIXME: more than one action may be sent in a single packet, but the length of each action isn't explicitly represented in the packet
+      // so we ought to parse all the actions and calculate their lengths based on their types
+      break;
+    }
+    default:
+      break;
+  }
+
   return true;
 }
 
@@ -7895,8 +7904,8 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
     ActionStart.push_back(ACTION_SAVE);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionStart, fileName);
-    actionFrame.AddAction(new CIncomingAction(UID, CRC, ActionStart));
-    actionFrame.AddAction(new CIncomingAction(UID, CRC, ActionEnd));
+    actionFrame.AddAction(CIncomingAction(UID, CRC, ActionStart));
+    actionFrame.AddAction(CIncomingAction(UID, CRC, ActionEnd));
   }
 
   SaveEnded(UID);
@@ -7911,7 +7920,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
     }
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    actionFrame.AddAction(new CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
+    actionFrame.AddAction(CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
   }
 }
 
@@ -7922,7 +7931,7 @@ bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, c
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_PAUSE);
-  actionFrame.AddAction(new CIncomingAction(UID, CRC, Action));
+  actionFrame.AddAction(CIncomingAction(UID, CRC, Action));
   actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
   return true;
 }
@@ -7934,7 +7943,7 @@ bool CGame::Resume(CQueuedActionsFrame& actionFrame)
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_RESUME);
-  actionFrame.AddAction(new CIncomingAction(UID, CRC, Action));
+  actionFrame.AddAction(CIncomingAction(UID, CRC, Action));
   actionFrame.callback = ON_SEND_ACTIONS_RESUME;
   return true;
 }
@@ -8028,7 +8037,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> CRC, Action;
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
-  GetLastActionFrame().AddAction(new CIncomingAction(UID, CRC, Action));
+  GetLastActionFrame().AddAction(CIncomingAction(UID, CRC, Action));
   return true;
 }
 

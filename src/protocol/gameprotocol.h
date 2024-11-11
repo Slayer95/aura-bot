@@ -53,6 +53,7 @@ namespace GameProtocol
 {
   namespace Magic
   {
+    constexpr uint8_t ZERO               = 0u;  // 0x00
     constexpr uint8_t PING_FROM_HOST     = 1u;  // 0x01
     constexpr uint8_t SLOTINFOJOIN       = 4u;  // 0x04
     constexpr uint8_t REJECTJOIN         = 5u;  // 0x05
@@ -116,7 +117,7 @@ namespace GameProtocol
   [[nodiscard]] CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
   [[nodiscard]] uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data);
   [[nodiscard]] bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingAction* RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
+  [[nodiscard]] CIncomingAction RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
   [[nodiscard]] uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data);
   [[nodiscard]] CIncomingChatPlayer* RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data);
   [[nodiscard]] CIncomingMapSize* RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data);
@@ -135,8 +136,8 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFO(std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_COUNTDOWN_START();
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_COUNTDOWN_END();
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(ActionQueue& actions, uint16_t sendInterval);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(ActionQueue& actions);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(const ActionQueue& actions, uint16_t sendInterval);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(const ActionQueue& actions);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const std::string& message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<GameUser::CGameUser*> users);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user);
@@ -199,10 +200,12 @@ public:
   CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction);
   ~CIncomingAction();
 
-  [[nodiscard]] inline uint8_t               GetUID() const { return m_UID; }
-  [[nodiscard]] inline std::vector<uint8_t>  GetCRC() const { return m_CRC; }
-  [[nodiscard]] inline std::vector<uint8_t>* GetAction() { return &m_Action; }
-  [[nodiscard]] inline size_t                GetLength() const {
+  [[nodiscard]] inline uint8_t                      GetUID() const { return m_UID; }
+  [[nodiscard]] inline std::vector<uint8_t>         GetCRC() const { return m_CRC; }
+  [[nodiscard]] inline const std::vector<uint8_t>&  GetImmutableAction() const { return m_Action; }
+  [[nodiscard]] inline std::vector<uint8_t>&        GetAction() { return m_Action; }
+  [[nodiscard]] inline uint8_t                      GetSniffedType() const { return m_Action.empty() ? GameProtocol::Magic::ZERO : m_Action[0]; }
+  [[nodiscard]] inline size_t                       GetLength() const {
     size_t result = m_Action.size() + 3;
     return result < 3 ? m_Action.size() : result;
   }

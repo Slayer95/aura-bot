@@ -76,10 +76,10 @@ CDotaStats::~CDotaStats()
   }
 }
 
-bool CDotaStats::ProcessAction(uint8_t UID, CIncomingAction* Action)
+bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& Action)
 {
   size_t                      i          = 0;
-  const std::vector<uint8_t>* ActionData = Action->GetAction();
+  const std::vector<uint8_t>& ActionData = Action.GetImmutableAction();
   std::vector<uint8_t>        Data, Key, Value;
 
   // dota actions with real time replay data start with 0x6b then the nullptr terminated string "dr.x"
@@ -90,28 +90,28 @@ bool CDotaStats::ProcessAction(uint8_t UID, CIncomingAction* Action)
 
   do
   {
-    if ((*ActionData)[i] == ACTION_SYNC_INT && (*ActionData)[i + 1] == 0x64 && (*ActionData)[i + 2] == 0x72 && (*ActionData)[i + 3] == 0x2e && (*ActionData)[i + 4] == 0x78 && (*ActionData)[i + 5] == 0x00)
+    if (ActionData[i] == ACTION_SYNC_INT && ActionData[i + 1] == 0x64 && ActionData[i + 2] == 0x72 && ActionData[i + 3] == 0x2e && ActionData[i + 4] == 0x78 && ActionData[i + 5] == 0x00)
     {
       // we think we've found an action with real time replay data (but we can't be 100% sure)
       // next we parse out two nullptr terminated strings and a 4 byte integer
 
-      if (ActionData->size() >= i + 7)
+      if (ActionData.size() >= i + 7)
       {
         // the first nullptr terminated string should either be the strings "Data" or "Global" or a player id in ASCII representation, e.g. "1" or "2"
 
-        Data = ExtractCString(*ActionData, i + 6);
+        Data = ExtractCString(ActionData, i + 6);
 
-        if (ActionData->size() >= i + 8 + Data.size())
+        if (ActionData.size() >= i + 8 + Data.size())
         {
           // the second nullptr terminated string should be the key
 
-          Key = ExtractCString(*ActionData, i + 7 + Data.size());
+          Key = ExtractCString(ActionData, i + 7 + Data.size());
 
-          if (ActionData->size() >= i + 12 + Data.size() + Key.size())
+          if (ActionData.size() >= i + 12 + Data.size() + Key.size())
           {
             // the 4 byte int32_teger should be the value
 
-            Value                     = std::vector<uint8_t>(ActionData->begin() + i + 8 + Data.size() + Key.size(), ActionData->begin() + i + 12 + Data.size() + Key.size());
+            Value                     = std::vector<uint8_t>(ActionData.begin() + i + 8 + Data.size() + Key.size(), ActionData.begin() + i + 12 + Data.size() + Key.size());
             const string   DataString = string(begin(Data), end(Data));
             const string   KeyString  = string(begin(Key), end(Key));
             const uint32_t ValueInt   = static_cast<uint8_t>(ByteArrayToUInt32(Value, false));
@@ -311,7 +311,7 @@ bool CDotaStats::ProcessAction(uint8_t UID, CIncomingAction* Action)
     }
     else
       ++i;
-  } while (ActionData->size() >= i + 6);
+  } while (ActionData.size() >= i + 6);
 
   return m_Winner != 0;
 }

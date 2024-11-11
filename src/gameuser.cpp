@@ -349,9 +349,8 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
 
           case GameProtocol::Magic::OUTGOING_ACTION: {
-            CIncomingAction* Action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
-
-            if (Action) {
+            if (ValidateLength(Data) && Data.size() >= 8) {
+              CIncomingAction Action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
               if (!m_Game->EventUserAction(this, Action)) {
                 m_Game->EventUserDisconnectGameProtocolError(this, false);
                 Abort = true;

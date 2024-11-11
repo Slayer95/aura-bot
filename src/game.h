@@ -98,7 +98,7 @@ struct CQueuedActionsFrame
   // queue of queues of size N
   // first (N-1) queues are sent with SEND_W3GS_INCOMING_ACTION2
   // last queue is sent with SEND_W3GS_INCOMING_ACTION, together with the expected delay til next action (latency)
-  std::queue<ActionQueue> actions;
+  std::vector<ActionQueue> actions;
 
   // when a player leaves, the SEND_W3GS_PLAYERLEAVE_OTHERS is delayed until we are sure all their pending actions have been sent
   // so, if they leave during the game, we must append it to the last CQueuedActionsFrame
@@ -108,7 +108,7 @@ struct CQueuedActionsFrame
   CQueuedActionsFrame();
   ~CQueuedActionsFrame();
 
-  void AddAction(CIncomingAction* action);
+  void AddAction(CIncomingAction&& action);
   std::vector<uint8_t> GetBytes(const uint16_t sendInterval);
   void MergeFrame(CQueuedActionsFrame& frame);
   bool GetHasActionsBy(const uint8_t fromUID) const;
@@ -487,7 +487,7 @@ public:
   void                      EventBeforeJoin(CConnection* connection);
   void                      EventUserLeft(GameUser::CGameUser* user);
   void                      EventUserLoaded(GameUser::CGameUser* user);
-  bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction* action);
+  bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
   void                      EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* chatPlayer);
   void                      EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team);

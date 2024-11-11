@@ -175,6 +175,9 @@
 #define PING_EQUALIZER_PERIOD_TICKS 10000u
 #define PING_EQUALIZER_MAX_FRAMES 7u
 
+// 10 players x 150 APM x (1 min / 60000 ms) x (100 ms latency) = 2.5
+#define DEFAULT_ACTIONS_PER_FRAME 3u
+
 // gameslot.h
 
 #define SLOTSTATUS_OPEN 0u

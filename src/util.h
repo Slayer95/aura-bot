@@ -377,6 +377,21 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
 
+[[nodiscard]] inline size_t FindNullDelimiterOrStart(const std::vector<uint8_t>& b, const size_t start)
+{
+  // start searching the byte array at position 'start' for the first null value
+  // if found, return the subarray from 'start' to the null value but not including the null value
+
+  size_t end = b.size();
+  if (start >= end) return start;
+  for (size_t i = start; i < end; ++i) {
+    if (b[i] == 0) {
+      return i;
+    }
+  }
+  return start;
+}
+
 [[nodiscard]] inline size_t FindNullDelimiterOrEnd(const std::vector<uint8_t>& b, const size_t start)
 {
   // start searching the byte array at position 'start' for the first null value
@@ -384,7 +399,7 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
 
   size_t end = b.size();
   if (start >= end) return end;
-  for (size_t i = start; i < b.size(); ++i) {
+  for (size_t i = start; i < end; ++i) {
     if (b[i] == 0) {
       return i;
     }

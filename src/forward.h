@@ -26,7 +26,6 @@
 #ifndef AURA_FORWARD_H_
 #define AURA_FORWARD_H_
 
-#include <queue>
 #include <vector>
 
 class CAura;
@@ -96,6 +95,6 @@ struct UDPPkt;
 
 typedef std::vector<GameUser::CGameUser*>         UserList;
 typedef std::vector<const GameUser::CGameUser*>   ImmutableUserList;
-typedef std::queue<CIncomingAction*>              ActionQueue;
+typedef std::vector<CIncomingAction>              ActionQueue;
 
 #endif // AURA_FORWARD_H_
