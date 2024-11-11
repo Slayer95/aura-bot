@@ -68,14 +68,14 @@ Assemble:
   ## Shared library
   - cp /usr/local/lib/libcpr.so* dist/bin-shared
   # DPP (shared, .so)
-  - git clone https://github.com/brainboxdotcc/DPP.git dpp-src
-  - cd dpp-src && mkdir build && cd build
-  - cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
-  - cmake --build . -j4
-  - make install
-  - cd $CI_PROJECT_DIR
+  # - git clone https://github.com/brainboxdotcc/DPP.git dpp-src
+  # - cd dpp-src && mkdir build && cd build
+  # - cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
+  # - cmake --build . -j4
+  # - make install
+  # - cd $CI_PROJECT_DIR
   ## Shared library
-  - cp /usr/local/lib/libdpp.so* dist/bin-shared
+  # - cp /usr/local/lib/libdpp.so* dist/bin-shared
   ## Log all library locations
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libgmp.so*
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libgmp.a*
@@ -87,14 +87,14 @@ Assemble:
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libminiupnpc.a*
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libcpr.so*
   - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libcpr.a*
-  - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libdpp.so*
-  - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libdpp.a*
+  # - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libdpp.so*
+  # - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libdpp.a*
   # Aura (all shared libraries)
   - cd $CI_PROJECT_DIR
   - export AURALINKMINIUPNP=1
   - export AURALINKCPR=1
   # This takes too long.
-  - export AURALINKDPP=1
+  - export AURALINKDPP=0
   - make && make install
   - unset AURALINKMINIUPNP
   - unset AURALINKCPR
