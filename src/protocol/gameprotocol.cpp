@@ -458,7 +458,7 @@ namespace GameProtocol
     return std::vector<uint8_t>{GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::COUNTDOWN_END, 4, 0};
   }
 
-  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(queue<CIncomingAction*>& actions, uint16_t sendInterval)
+  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(ActionQueue& actions, uint16_t sendInterval)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION, 0, 0};
     AppendByteArray(packet, sendInterval, false); // send interval
@@ -728,7 +728,7 @@ namespace GameProtocol
     return std::vector<uint8_t>();
   }
 
-  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(queue<CIncomingAction*>& actions)
+  std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(ActionQueue& actions)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION2, 0, 0, 0, 0};
 

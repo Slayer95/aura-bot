@@ -135,8 +135,8 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFO(std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_COUNTDOWN_START();
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_COUNTDOWN_END();
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(std::queue<CIncomingAction*>& actions, uint16_t sendInterval);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(std::queue<CIncomingAction*>& actions);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(ActionQueue& actions, uint16_t sendInterval);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(ActionQueue& actions);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const std::string& message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<GameUser::CGameUser*> users);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user);
