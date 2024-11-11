@@ -1438,7 +1438,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint32_t maxPing = 0;
       for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
         pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));
-        uint32_t ping = (*i)->GetOperationalRTT();
+        uint32_t ping = (*i)->GetRTT();
         if (ping == 0) continue; // also skips this iteration if there is no ping data
         anyPing = true;
         if (ping > maxPing) maxPing = ping;
@@ -1452,8 +1452,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply("Ping not measured yet.", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       }
 
-      const bool suggestLowerLatency = 0 < maxPing && maxPing < m_TargetGame->GetLatency() && REFRESH_PERIOD_MIN_SUGGESTED < m_TargetGame->GetLatency();
-      if (m_TargetGame->m_Config->m_LatencyEqualizer || suggestLowerLatency) {
+      const uint16_t internalLatency = m_TargetGame->GetLatency();
+      const bool suggestLowerLatency = 0 < maxPing && maxPing < internalLatency && REFRESH_PERIOD_MIN_SUGGESTED < internalLatency;
+      const bool suggestHigherLatency = 0 < maxPing && internalLatency < maxPing / 4 && REFRESH_PERIOD_MAX_SUGGESTED > internalLatency;
+      if (m_TargetGame->m_Config->m_LatencyEqualizer || suggestLowerLatency || suggestHigherLatency) {
         string refreshText = "Internal latency is " + to_string(m_TargetGame->GetLatency()) + "ms.";
         string equalizerHeader;
         if (m_TargetGame->m_Config->m_LatencyEqualizer) {
@@ -1462,6 +1464,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         string suggestionText;
         if (suggestLowerLatency) {
           suggestionText = " Decrease it with " + cmdToken + "latency [VALUE]";
+        } else if (suggestHigherLatency) {
+          suggestionText = " Increase it with " + cmdToken + "latency [VALUE]";
         }
         SendReply(
           "HINT: " + equalizerHeader + refreshText + suggestionText,
