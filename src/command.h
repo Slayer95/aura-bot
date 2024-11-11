@@ -30,10 +30,6 @@
 
 #include <ostream>
 
-#ifndef DISABLE_DPP
-#include <dpp/dpp.h>
-#endif
-
 //
 // CCommandContext
 //

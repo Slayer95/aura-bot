@@ -77,6 +77,13 @@ namespace GameUser
   class CGameUser;
 };
 
+#ifndef DISABLE_DPP
+namespace dpp
+{
+  struct slashcommand_t;
+};
+#endif
+
 struct CBotConfig;
 struct CCommandConfig;
 struct CDiscordConfig;
