@@ -477,6 +477,7 @@ public:
   void Reset();
   void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override;
   void SetNoDelay(const bool noDelay);
+  void SetQuickAck(const bool quickAck);
   void SetKeepAlive(const bool keepAlive, const uint32_t seconds);
   inline void SetLogErrors(const bool nLogErrors) { m_LogErrors = nLogErrors; }
 };

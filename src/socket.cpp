@@ -300,6 +300,18 @@ void CStreamIOSocket::SetNoDelay(const bool noDelay)
   setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
 }
 
+void CStreamIOSocket::SetQuickAck(const bool quickAck)
+{
+#ifdef _WIN32
+  int32_t OptVal = quickAck;
+  DWORD bytesReturned;
+	WSAIoctl(m_Socket, SIO_TCP_SET_ACK_FREQUENCY, &OptVal, sizeof(OptVal), nullptr, 0, &bytesReturned, nullptr, nullptr);
+#else
+  int32_t OptVal = quickAck;
+  setsockopt(m_Socket, IPPROTO_TCP, TCP_QUICKACK, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+#endif
+}
+
 void CStreamIOSocket::SetKeepAlive(const bool keepAlive, const uint32_t seconds)
 {
 #ifdef _WIN32
@@ -309,7 +321,7 @@ void CStreamIOSocket::SetKeepAlive(const bool keepAlive, const uint32_t seconds)
   keepAliveSettings.keepaliveinterval = 30000;
 
   DWORD bytesReturned;
-  WSAIoctl(m_Socket, SIO_KEEPALIVE_VALS, &keepAliveSettings, sizeof(keepAliveSettings), NULL, 0, &bytesReturned, NULL, NULL);
+  WSAIoctl(m_Socket, SIO_KEEPALIVE_VALS, &keepAliveSettings, sizeof(keepAliveSettings), nullptr, 0, &bytesReturned, nullptr, nullptr);
 #else
   int32_t OptVal = keepAlive;
   setsockopt(m_Socket, IPPROTO_TCP, SO_KEEPALIVE, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
@@ -601,8 +613,21 @@ CTCPServer::CTCPServer(uint8_t nFamily)
   }
 
   // disable Nagle's algorithm
-  int32_t OptVal = 1;
-  setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  {
+    int32_t OptVal = 1;
+    setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  }
+
+  // disable Delayed Ack algorithm
+  {
+    int32_t OptVal = 1;
+#ifdef _WIN32
+    DWORD bytesReturned;
+    WSAIoctl(m_Socket, SIO_TCP_SET_ACK_FREQUENCY, &OptVal, sizeof(OptVal), nullptr, 0, &bytesReturned, nullptr, nullptr);
+#else
+    setsockopt(m_Socket, IPPROTO_TCP, TCP_QUICKACK, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+#endif
+  }
 }
 
 CTCPServer::~CTCPServer()
