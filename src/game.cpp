@@ -7901,12 +7901,11 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
   LOG_APP_IF(LOG_LEVEL_INFO, "saving as " + fileName)
 
   {
-    vector<uint8_t> CRC, ActionStart, ActionEnd;
+    vector<uint8_t> ActionStart;
     ActionStart.push_back(ACTION_SAVE);
-    ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionStart, fileName);
-    actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, ActionStart)));
-    actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, ActionEnd)));
+    actionFrame.AddAction(std::move(CIncomingAction(UID, ActionStart)));
+    actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_SAVE_ENDED)));
   }
 
   SaveEnded(UID);
@@ -7919,9 +7918,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
     if (static_cast<uint8_t>(fakePlayer) == exceptUID) {
       continue;
     }
-    vector<uint8_t> CRC, action;
-    action.push_back(ACTION_SAVE_ENDED);
-    actionFrame.AddAction(std::move(CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, action)));
+    actionFrame.AddAction(std::move(CIncomingAction(static_cast<uint8_t>(fakePlayer), ACTION_SAVE_ENDED)));
   }
 }
 
@@ -7930,9 +7927,7 @@ bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, c
   const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect);
   if (UID == 0xFF) return false;
 
-  vector<uint8_t> CRC, action;
-  action.push_back(ACTION_PAUSE);
-  actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, action)));
+  actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_PAUSE)));
   actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
   return true;
 }
@@ -7942,9 +7937,7 @@ bool CGame::Resume(CQueuedActionsFrame& actionFrame)
   const uint8_t UID = SimulateActionUID(ACTION_RESUME, nullptr, false);
   if (UID == 0xFF) return false;
 
-  vector<uint8_t> CRC, action;
-  action.push_back(ACTION_RESUME);
-  actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, action)));
+  actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_RESUME)));
   actionFrame.callback = ON_SEND_ACTIONS_RESUME;
   return true;
 }
@@ -8035,10 +8028,10 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
   AppendByteArray(packet, firstByte, false);
   AppendByteArray(packet, secondByte, false);
-  vector<uint8_t> CRC, action;
-  AppendByteArray(action, packet);
+  vector<uint8_t> action;
   AppendByteArrayFast(packet, message);
-  GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, CRC, action)));
+  AppendByteArray(action, packet);
+  GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;
 }
 

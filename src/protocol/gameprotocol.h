@@ -192,24 +192,24 @@ public:
 class CIncomingAction
 {
 private:
-  std::vector<uint8_t> m_CRC;
-  std::vector<uint8_t> m_Action;
-  uint8_t              m_UID;
+  std::vector<uint8_t>   m_Action;
+  uint8_t                m_UID;
 
 public:
-  CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction);
+  CIncomingAction();
+  CIncomingAction(uint8_t nUID, std::vector<uint8_t>& nAction);
+  CIncomingAction(uint8_t nUID, const uint8_t actionType);
   CIncomingAction(const CIncomingAction&);
   CIncomingAction(CIncomingAction&&) noexcept;
   CIncomingAction& operator=(const CIncomingAction&) = delete;
   CIncomingAction& operator=(CIncomingAction&&) noexcept;
   ~CIncomingAction();
 
-  [[nodiscard]] inline uint8_t                      GetUID() const { return m_UID; }
-  [[nodiscard]] inline std::vector<uint8_t>         GetCRC() const { return m_CRC; }
-  [[nodiscard]] inline const std::vector<uint8_t>&  GetImmutableAction() const { return m_Action; }
-  [[nodiscard]] inline std::vector<uint8_t>&        GetAction() { return m_Action; }
-  [[nodiscard]] inline uint8_t                      GetSniffedType() const { return m_Action.empty() ? GameProtocol::Magic::ZERO : m_Action[0]; }
-  [[nodiscard]] inline size_t                       GetLength() const {
+  [[nodiscard]] inline uint8_t                       GetUID() const { return m_UID; }
+  [[nodiscard]] inline const std::vector<uint8_t>&   GetImmutableAction() const { return m_Action; }
+  [[nodiscard]] inline std::vector<uint8_t>&         GetAction() { return m_Action; }
+  [[nodiscard]] inline uint8_t                       GetSniffedType() const { return m_Action.empty() ? GameProtocol::Magic::ZERO : m_Action[0]; }
+  [[nodiscard]] inline size_t                        GetLength() const {
     size_t result = m_Action.size() + 3;
     return result < 3 ? m_Action.size() : result;
   }

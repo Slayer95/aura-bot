@@ -139,9 +139,10 @@ namespace GameProtocol
     // 4 bytes                -> CRC
     // remainder of packet		-> Action
 
-    const std::vector<uint8_t> CRC    = std::vector<uint8_t>(begin(data) + 4, begin(data) + 8);
-    const std::vector<uint8_t> action = std::vector<uint8_t>(begin(data) + 8, end(data));
-    return std::move(CIncomingAction(UID, CRC, action));
+    /*const std::array<uint8_t, 4> CRC;
+    copy_n(data.begin() + 4, 4, CRC.begin());*/
+    std::vector<uint8_t> action = std::vector<uint8_t>(begin(data) + 8, end(data));
+    return std::move(CIncomingAction(UID, action));
   }
 
   uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data)
@@ -897,23 +898,32 @@ string CIncomingJoinRequest::CensorName(const std::string& originalName, const b
 // CIncomingAction
 //
 
-CIncomingAction::CIncomingAction(uint8_t nUID, std::vector<uint8_t> nCRC, std::vector<uint8_t> nAction)
-  : m_CRC(std::move(nCRC)),
-    m_Action(std::move(nAction)),
+CIncomingAction::CIncomingAction()
+  : m_Action(vector<uint8_t>{0}),
+    m_UID(0xFF)
+{
+}
+
+CIncomingAction::CIncomingAction(uint8_t nUID, vector<uint8_t>& nAction)
+  : m_Action(std::move(nAction)),
+    m_UID(nUID)
+{
+}
+
+CIncomingAction::CIncomingAction(uint8_t nUID, uint8_t nActionType)
+  : m_Action(vector<uint8_t>{nActionType}),
     m_UID(nUID)
 {
 }
 
 CIncomingAction::CIncomingAction(const CIncomingAction& other)
-  : m_CRC(other.m_CRC),
-    m_Action(other.m_Action),
+  : m_Action(other.m_Action),
     m_UID(other.m_UID)
 {
 }
 
 CIncomingAction::CIncomingAction(CIncomingAction&& other) noexcept
-  : m_CRC(std::move(other.m_CRC)),
-    m_Action(std::move(other.m_Action)),
+  : m_Action(move(other.m_Action)),
     m_UID(other.m_UID)
 {
 }
@@ -921,7 +931,6 @@ CIncomingAction::CIncomingAction(CIncomingAction&& other) noexcept
 CIncomingAction& CIncomingAction::operator=(CIncomingAction&& other) noexcept
 {
   if (this != &other) {
-    m_CRC = std::move(other.m_CRC);
     m_Action = std::move(other.m_Action);
     m_UID = other.m_UID;
   }
