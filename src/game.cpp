@@ -153,7 +153,7 @@ vector<uint8_t> CQueuedActionsFrame::GetBytes(const uint16_t sendInterval)
   // the W3GS_INCOMING_ACTION2 packet handles the overflow but it must be sent *before*
   // the corresponding W3GS_INCOMING_ACTION packet
 
-  auto& it = actions.begin();
+  auto it = actions.begin();
   while (it != actions.end()) {
     const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION2(*it);
     AppendByteArrayFast(packet, subPacket);
@@ -208,10 +208,10 @@ void CQueuedActionsFrame::MergeFrame(CQueuedActionsFrame& frame)
     leavers.push_back(user);
   }
 
-  auto& it = frame.actions.begin();
+  auto it = frame.actions.begin();
   while (it != frame.actions.end()) {
     ActionQueue& subActions = (*it);
-    auto& it2 = subActions.begin();
+    auto it2 = subActions.begin();
     while (it2 != subActions.end()) {
       AddAction(std::move(*it2));
       ++it2;
@@ -7905,8 +7905,8 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
     ActionStart.push_back(ACTION_SAVE);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionStart, fileName);
-    actionFrame.AddAction(CIncomingAction(UID, CRC, ActionStart));
-    actionFrame.AddAction(CIncomingAction(UID, CRC, ActionEnd));
+    actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, ActionStart)));
+    actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, ActionEnd)));
   }
 
   SaveEnded(UID);
@@ -7921,7 +7921,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
     }
     vector<uint8_t> CRC, Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    actionFrame.AddAction(CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action));
+    actionFrame.AddAction(std::move(CIncomingAction(static_cast<uint8_t>(fakePlayer), CRC, Action)));
   }
 }
 
@@ -7932,7 +7932,7 @@ bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, c
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_PAUSE);
-  actionFrame.AddAction(CIncomingAction(UID, CRC, Action));
+  actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, Action)));
   actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
   return true;
 }
@@ -7944,7 +7944,7 @@ bool CGame::Resume(CQueuedActionsFrame& actionFrame)
 
   vector<uint8_t> CRC, Action;
   Action.push_back(ACTION_RESUME);
-  actionFrame.AddAction(CIncomingAction(UID, CRC, Action));
+  actionFrame.AddAction(std::move(CIncomingAction(UID, CRC, Action)));
   actionFrame.callback = ON_SEND_ACTIONS_RESUME;
   return true;
 }
@@ -8038,7 +8038,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> CRC, Action;
   AppendByteArray(Action, packet);
   AppendByteArrayFast(packet, message);
-  GetLastActionFrame().AddAction(CIncomingAction(UID, CRC, Action));
+  GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, CRC, Action)));
   return true;
 }
 

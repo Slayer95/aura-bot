@@ -463,7 +463,7 @@ namespace GameProtocol
     if (!actions.empty())
     {
       std::vector<uint8_t> subpacket;
-      auto& it = actions.begin();
+      auto it = actions.begin();
       while (it != actions.end()) {
         subpacket.push_back(it->GetUID());
         AppendByteArray(subpacket, static_cast<uint16_t>(it->GetImmutableAction().size()), false);
@@ -729,7 +729,7 @@ namespace GameProtocol
     if (!actions.empty())
     {
       std::vector<uint8_t> subpacket;
-      auto& it = actions.begin();
+      auto it = actions.begin();
       while (it != actions.end()) {
         subpacket.push_back(it->GetUID());
         AppendByteArray(subpacket, static_cast<uint16_t>(it->GetImmutableAction().size()), false);
