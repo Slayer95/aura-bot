@@ -694,6 +694,7 @@ string CGameUser::GetDelayText(bool displaySync) const
       pingText = to_string(rtt);
     }
     if (equalizerDelay > 0) {
+      if (!m_Game->m_Aura->m_Config->m_LiteralRTT) equalizerDelay /= 2;
       pingText += "(" + to_string(equalizerDelay) + ")";
     }
   }
