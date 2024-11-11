@@ -3039,7 +3039,7 @@ void CGame::SendAllActionsCallback()
       break;
   }
   for (GameUser::CGameUser* user : frame.leavers) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[" + user->GetName() + "] scheduled for deletion")
+    LOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion")
     user->SetDeleteMe(true);
   }
   frame.Reset();
