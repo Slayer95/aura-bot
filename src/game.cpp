@@ -5241,6 +5241,10 @@ void CGame::EventGameStarted()
   }
 
   m_Actions.emplaceBack();
+  m_CurrentActionsFrame = m_Actions.head;
+  for (auto& user : m_Users) {
+    user->SetPingEqualizerFrame(m_Actions.head);
+  }
 
   // enable stats
 
