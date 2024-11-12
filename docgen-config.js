@@ -6,7 +6,7 @@ const util = require('util');
 const path = require('path');
 
 const OUTPUT_PATH = `CONFIG.md`;
-const COMMAND_FILES = ['src/auradb.cpp', 'src/net.cpp', 'src/config_bot.cpp', 'src/config_game.cpp', 'src/config_irc.cpp', 'src/config_net.cpp', 'src/config_realm.cpp', 'src/config_commands.cpp'];
+const COMMAND_FILES = ['src/auradb.cpp', 'src/net.cpp', 'src/config/config_bot.cpp', 'src/config/config_game.cpp', 'src/config/config_irc.cpp', 'src/config/config_net.cpp', 'src/config/config_realm.cpp', 'src/config/config_commands.cpp'];
 const configMaybeKeyRegexp = /CFG\.(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
 const configKeyRegexp = /CFG\.(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
 
@@ -83,7 +83,7 @@ async function main() {
       if (trimmed === `CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)`) {
         isRealmN = true;
       }
-      if (fileName === `src/config_realm.cpp`) {
+      if (fileName === `src/config/config_realm.cpp`) {
         if (isRealmN) {
           trimmed = trimmed.replace(`m_CFGKeyPrefix + "`, `"realm_N.`);
         } else {
@@ -106,7 +106,7 @@ async function main() {
         if (!optionsMeta.has(lastConfigName)) optionsMeta.set(lastConfigName, {});
         if (isCannotBeReloadedOn) {
           optionsMeta.get(lastConfigName).reload = ReloadModes.NONE;
-        } else if (fileName == 'src/config_game.cpp') {
+        } else if (fileName == 'src/config/config_game.cpp') {
           optionsMeta.get(lastConfigName).reload = ReloadModes.NEXT;
         }
         continue;

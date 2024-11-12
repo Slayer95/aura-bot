@@ -31,7 +31,7 @@ Linux users will probably need some packages for it to build:
 
 For building StormLib execute the following commands (line by line):
 
-	cd aura-bot/StormLib
+	cd aura-bot/deps/StormLib
 	mkdir build
 	cd build
 	cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1 ..
@@ -56,7 +56,7 @@ Continue building miniupnpc
 
 Afterwards, C++ Requests
 
-	cd ..
+	cd ../..
 	git clone https://github.com/libcpr/cpr.git cpr-src
 	cd cpr-src
 	mkdir build
