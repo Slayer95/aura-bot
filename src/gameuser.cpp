@@ -743,7 +743,7 @@ string CGameUser::GetDelayText(bool displaySync) const
   if (m_SyncCounterOffset == 0) {
     // Expect clients to always be at least one RTT behind.
     // The "sync delay" is defined as the additional delay they got.
-    syncDelay -= static_cast<float>(GetRTT());
+    syncDelay -= static_cast<float>(GetRTT() + GetPingEqualizerDelay());
   }
 
   if (!anyPings) {
