@@ -3087,7 +3087,9 @@ void CGame::SendAllActions()
   uint8_t maxOldEqualizerOffset = m_MaxPingEqualizerDelayFrames;
   if (CheckUpdatePingEqualizer()) {
     m_MaxPingEqualizerDelayFrames = UpdatePingEqualizer();
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Max ping equalizer delay frames updated to " + ToDecString(m_MaxPingEqualizerDelayFrames))
+    if (maxOldEqualizerOffset != m_MaxPingEqualizerDelayFrames) {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Max ping equalizer delay frames updated to " + ToDecString(m_MaxPingEqualizerDelayFrames))
+    }
   }
   RunActionsScheduler(m_MaxPingEqualizerDelayFrames, maxOldEqualizerOffset);
 }
