@@ -1443,20 +1443,28 @@ bool CGame::Update(void* fd, void* send_fd)
   // check if the game is loaded
 
   if (m_GameLoading) {
-    bool FinishedLoading = true;
+    bool finishedLoading = true;
+    bool anyLoaded = false;
     for (auto& user : m_Users) {
-      if (!user->GetFinishedLoading()) {
-        FinishedLoading = false;
+      if (user->GetFinishedLoading()) {
+        anyLoaded = true;
+      } else if (!user->GetDisconnected()) {
+        finishedLoading = false;
         break;
       }
     }
 
-    if (FinishedLoading) {
-      m_LastActionSentTicks = Ticks;
-      m_FinishedLoadingTicks = Ticks;
-      m_GameLoading = false;
-      m_GameLoaded = true;
-      EventGameLoaded();
+    if (finishedLoading) {
+      if (anyLoaded) {
+        m_LastActionSentTicks = Ticks;
+        m_FinishedLoadingTicks = Ticks;
+        m_GameLoading = false;
+        m_GameLoaded = true;
+        EventGameLoaded();
+      } else {
+        // Flush leaver queue to allow players and the game itself to be destroyed.
+        SendAllActionsCallback();
+      }
     }
   }
 
