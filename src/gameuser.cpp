@@ -258,7 +258,7 @@ bool CGameUser::SubDelayPingEqualizerFrame()
   m_PingEqualizerFrame = m_PingEqualizerFrame->prev;
   --m_PingEqualizerOffset;
   Print("[PingEqualizer] Decreased delay for [" + GetName() + "]");
-  Print("[PingEqualizer] (+) Adding up to " + to_string(m_Game->GetLatency() * m_PingEqualizerOffset) + " ms delay to [" + GetName() + "]");
+  Print("[PingEqualizer] (-) Adding up to " + to_string(m_Game->GetLatency() * m_PingEqualizerOffset) + " ms delay to [" + GetName() + "]");
   return true;
 }
 
