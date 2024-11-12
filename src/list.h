@@ -27,35 +27,57 @@
 #define AURA_LIST_H_
 
 template <typename T>
+struct DoubleLinkedListNode {
+  T* data;
+  DoubleLinkedListNode* next;
+  DoubleLinkedListNode* prev;
+
+  DoubleLinkedListNode()
+   : data(new T()),
+     next(nullptr),
+     prev(nullptr)
+ {
+ }
+
+  ~DoubleLinkedListNode()
+  {
+    delete data;
+  }
+};
+
+template <typename T>
 struct CircleDoubleLinkedList
 {
-  T* head;
-  T* tail;
+  DoubleLinkedListNode<T>* head;
+  DoubleLinkedListNode<T>* tail;
 
   CircleDoubleLinkedList()
    : head(nullptr),
      tail(nullptr)
   {}
 
-  ~CircleDoubleLinkedList() = default;
+  ~CircleDoubleLinkedList()
+  {
+    reset();
+  }
 
   inline bool getEmpty() const
   {
     return head == nullptr;
   }
 
-  void insertBefore(T* next, T* node)
+  void insertBefore(DoubleLinkedListNode<T>* next, DoubleLinkedListNode<T>* node)
   {
-    T* prev = next->prev;
+    DoubleLinkedListNode<T>* prev = next->prev;
     next->prev = node;
     prev->next = node;
     node->next = next;
     node->prev = prev;
   }
 
-  void insertAfter(T* prev, T* node)
+  void insertAfter(DoubleLinkedListNode<T>* prev, DoubleLinkedListNode<T>* node)
   {
-    T* next = prev->next;
+    DoubleLinkedListNode<T>* next = prev->next;
     prev->next = node;
     next->prev = node;
     node->prev = prev;
@@ -66,17 +88,17 @@ struct CircleDoubleLinkedList
     }
   }
 
-  void emplaceBefore(T* next)
+  void emplaceBefore(DoubleLinkedListNode<T>* next)
   {
-    insertBefore(next, new T());
+    insertBefore(next, new DoubleLinkedListNode<T>());
   }
 
-  void emplaceAfter(T* prev)
+  void emplaceAfter(DoubleLinkedListNode<T>* prev)
   {
-    insertAfter(prev, new T());
+    insertAfter(prev, new DoubleLinkedListNode<T>());
   }
 
-  void insertBack(T* node)
+  void insertBack(DoubleLinkedListNode<T>* node)
   {
     if (getEmpty()) {
       node->next = node;
@@ -94,21 +116,35 @@ struct CircleDoubleLinkedList
 
   void emplaceBack()
   {
-    insertBack(new T());
+    insertBack(new DoubleLinkedListNode<T>());
   }
 
-  void remove(T* node)
+  void remove(DoubleLinkedListNode<T>* node)
   {
-    T* prev = node->prev;
-    T* next = node->next;
+    if (node == tail && node == head) {
+      head = nullptr;
+      tail = nullptr;
+      return;
+    }
+    DoubleLinkedListNode<T>* prev = node->prev;
+    DoubleLinkedListNode<T>* next = node->next;
     prev->next = next;
     next->prev = prev;
 
-    if (node == tail) {
+   if (node == tail) {
       tail = prev;
     }
     if (node == head) {
-      head = nullptr;
+      head = next;
+    }
+  }
+
+  void reset()
+  {
+    while (head != nullptr) {
+      DoubleLinkedListNode<T>* tmpTail = tail;
+      remove(tmpTail);
+      delete tmpTail;
     }
   }
 };

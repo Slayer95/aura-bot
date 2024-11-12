@@ -77,7 +77,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_QuitGame(false),
     m_PingEqualizerOffset(0),
-    m_PingEqualizerFrame(nullptr),
+    m_PingEqualizerFrameNode(nullptr),
     m_PongCounter(0),
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
@@ -231,18 +231,23 @@ uint32_t CGameUser::GetPingEqualizerDelay() const
   return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game->GetLatency());
 }
 
+CQueuedActionsFrame& CGameUser::GetPingEqualizerFrame()
+{
+  return *GetPingEqualizerFrameNode()->data;
+}
+
 void CGameUser::AdvanceActiveGameFrame()
 {
-  m_PingEqualizerFrame = m_PingEqualizerFrame->next;
+  m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->next;
 }
 
 bool CGameUser::AddDelayPingEqualizerFrame()
 {
-  if (m_PingEqualizerFrame->next == &m_Game->GetFirstActionFrame()) {
+  if (m_PingEqualizerFrameNode->next == m_Game->GetFirstActionFrameNode()) {
     Print("[PingEqualizer] Cannot further increase delay for [" + GetName() + "]");
     return false;
   }
-  m_PingEqualizerFrame = m_PingEqualizerFrame->next;
+  m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->next;
   ++m_PingEqualizerOffset;
   Print("[PingEqualizer] Increased delay for [" + GetName() + "]");
   Print("[PingEqualizer] (+) Adding up to " + to_string(m_Game->GetLatency() * m_PingEqualizerOffset) + " ms delay to [" + GetName() + "]");
@@ -251,11 +256,11 @@ bool CGameUser::AddDelayPingEqualizerFrame()
 
 bool CGameUser::SubDelayPingEqualizerFrame()
 {
-  if (m_PingEqualizerFrame == &m_Game->GetFirstActionFrame()) {
+  if (m_PingEqualizerFrameNode == m_Game->GetFirstActionFrameNode()) {
     Print("[PingEqualizer] Cannot further decrease delay for [" + GetName() + "]");
     return false;
   }
-  m_PingEqualizerFrame = m_PingEqualizerFrame->prev;
+  m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->prev;
   --m_PingEqualizerOffset;
   Print("[PingEqualizer] Decreased delay for [" + GetName() + "]");
   Print("[PingEqualizer] (-) Adding up to " + to_string(m_Game->GetLatency() * m_PingEqualizerOffset) + " ms delay to [" + GetName() + "]");

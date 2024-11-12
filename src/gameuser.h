@@ -81,7 +81,7 @@ namespace GameUser
     uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
     bool                             m_QuitGame;
     uint8_t                          m_PingEqualizerOffset;          // whow many frames should actions sent by this player be offset by ping equalizer
-    CQueuedActionsFrame*             m_PingEqualizerFrame;
+    QueuedActionsFrameNode*             m_PingEqualizerFrameNode;
     uint32_t                         m_PongCounter;
     uint32_t                         m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
     uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
@@ -175,7 +175,8 @@ namespace GameUser
     [[nodiscard]] inline bool                     GetQuitGame() const { return m_QuitGame; }
     [[nodiscard]] inline uint8_t                  GetPingEqualizerOffset() const { return m_PingEqualizerOffset; }
     [[nodiscard]] uint32_t                        GetPingEqualizerDelay() const;
-    [[nodiscard]] inline CQueuedActionsFrame*     GetPingEqualizerFrame() const { return m_PingEqualizerFrame; }
+    [[nodiscard]] inline QueuedActionsFrameNode*  GetPingEqualizerFrameNode() const { return m_PingEqualizerFrameNode; }
+    [[nodiscard]] CQueuedActionsFrame&            GetPingEqualizerFrame();
     [[nodiscard]] CRealm*                         GetRealm(bool mustVerify) const;
     [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
     [[nodiscard]] inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
@@ -260,7 +261,7 @@ namespace GameUser
     void AdvanceActiveGameFrame();
     bool AddDelayPingEqualizerFrame();
     bool SubDelayPingEqualizerFrame();
-    void SetPingEqualizerFrame(CQueuedActionsFrame* nFrame) { m_PingEqualizerFrame = nFrame; }
+    void SetPingEqualizerFrameNode(QueuedActionsFrameNode* nFrame) { m_PingEqualizerFrameNode = nFrame; }
     inline void SetSyncCounter(uint32_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
     inline void AddSyncCounterOffset(const uint32_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }

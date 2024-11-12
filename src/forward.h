@@ -94,8 +94,15 @@ struct CQueuedActionsFrame;
 
 struct UDPPkt;
 
+template <typename T>
+struct DoubleLinkedListNode;
+
+template <typename T>
+struct CircleDoubleLinkedList;
+
 typedef std::vector<GameUser::CGameUser*>         UserList;
 typedef std::vector<const GameUser::CGameUser*>   ImmutableUserList;
 typedef std::vector<CIncomingAction>              ActionQueue;
+typedef DoubleLinkedListNode<CQueuedActionsFrame> QueuedActionsFrameNode;
 
 #endif // AURA_FORWARD_H_

@@ -427,12 +427,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
 void CGame::ClearActions()
 {
-  while (m_Actions.head != nullptr) {
-    CQueuedActionsFrame* tail = m_Actions.tail;
-    delete tail;
-    //tail->Reset();
-    m_Actions.remove(tail);
-  }
+  m_Actions.reset();
 }
 
 void CGame::Reset()
@@ -1726,21 +1721,23 @@ void CGame::RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8
   if (maxNewEqualizerOffset < maxOldEqualizerOffset) {
     // No longer are that many frames needed.
     LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Max new equalizer offset dropped " + ToDecString(maxOldEqualizerOffset) + " -> " + ToDecString(maxNewEqualizerOffset))
-    vector<CQueuedActionsFrame*> mergeableFrames = GetFramesInRangeInclusive(maxNewEqualizerOffset, maxOldEqualizerOffset);
-    size_t i = 0, frameCount = mergeableFrames.size();
+    vector<QueuedActionsFrameNode*> mergeableNodes = GetFrameNodesInRangeInclusive(maxNewEqualizerOffset, maxOldEqualizerOffset);
+    size_t i = 0, frameCount = mergeableNodes.size();
     LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Merging " + to_string(frameCount) + " frames in 1...")
-    CQueuedActionsFrame* targetFrame = mergeableFrames[i++];
+    CQueuedActionsFrame* targetFrame = mergeableNodes[i++]->data;
     while (i < frameCount) {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Frame +" + to_string(i) + " merged (" + to_string(mergeableFrames[i]->bufferSize) + " bytes)")
-      targetFrame->MergeFrame(*mergeableFrames[i]);
-      m_Actions.remove(mergeableFrames[i]);
+      CQueuedActionsFrame* obsoleteFrame = mergeableNodes[i]->data;
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Frame +" + to_string(i) + " merged (" + to_string(obsoleteFrame->bufferSize) + " bytes)")
+      targetFrame->MergeFrame(*obsoleteFrame);
       for (const auto& user : m_Users) {
-        if (user->GetPingEqualizerFrame() == mergeableFrames[i]) {
-          user->SetPingEqualizerFrame(&GetFirstActionFrame());
+        if (&user->GetPingEqualizerFrame() == obsoleteFrame) {
+          user->SetPingEqualizerFrameNode(GetFirstActionFrameNode());
           LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] !! Frame +" + to_string(i) + " was still referenced by user [" + user->GetName() + "] !!")
         }
       }
-      delete mergeableFrames[i];
+      m_Actions.remove(mergeableNodes[i]);
+      // When the node is deleted, data is deleted as well.
+      delete mergeableNodes[i];
       ++i;
     }
   }
@@ -3205,21 +3202,31 @@ uint8_t CGame::GetPlayersReadyMode() const {
   return m_Config->m_PlayersReadyMode;
 }
 
-vector<CQueuedActionsFrame*> CGame::GetFramesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset)
+CQueuedActionsFrame& CGame::GetFirstActionFrame()
 {
-  vector<CQueuedActionsFrame*> frames;
-  frames.reserve(endOffset - startOffset + 1);
-  CQueuedActionsFrame* frame = &GetFirstActionFrame();
+  return *GetFirstActionFrameNode()->data;
+}
+
+CQueuedActionsFrame& CGame::GetLastActionFrame()
+{
+  return *GetLastActionFrameNode()->data;
+}
+
+vector<QueuedActionsFrameNode*> CGame::GetFrameNodesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset)
+{
+  vector<QueuedActionsFrameNode*> frameNodes;
+  frameNodes.reserve(endOffset - startOffset + 1);
+  QueuedActionsFrameNode* frameNode = GetFirstActionFrameNode();
   uint8_t offset = startOffset;
   while (offset--) {
-    frame = frame->next;
+    frameNode = frameNode->next;
   }
   offset = endOffset - startOffset + 1;
   while (offset--) {
-    frames.push_back(frame);
-    frame = frame->next;
+    frameNodes.push_back(frameNode);
+    frameNode = frameNode->next;
   }
-  return frames;
+  return frameNodes;
 }
 
 bool CGame::CheckUpdatePingEqualizer()
@@ -3249,7 +3256,7 @@ uint8_t CGame::UpdatePingEqualizer()
       framesAheadNow = framesAheadBefore + 1;
       if (!addedFrame && m_MaxPingEqualizerDelayFrames < framesAheadNow && framesAheadNow < m_Config->m_LatencyEqualizerFrames) {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Added frame to delay [" + userPing.first->GetName() + "] (+" + ToDecString(framesAheadNow) + " offset)")
-        m_Actions.emplaceAfter(&GetLastActionFrame());
+        m_Actions.emplaceAfter(GetLastActionFrameNode());
         addedFrame = true;
       }
       userPing.first->AddDelayPingEqualizerFrame();
@@ -3681,8 +3688,8 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
   } else {
     // Let's avoid sending leave messages during game load.
     // Also, once the game is loaded, ensure all the users' actions will be sent before the leave message is sent.
-    CQueuedActionsFrame* frame = user->GetPingEqualizerFrame();
-    frame->leavers.push_back(user);
+    CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
+    frame.leavers.push_back(user);
   }
 
   if (m_GameLoading && !user->GetFinishedLoading()) {
@@ -4463,7 +4470,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
 
   const uint8_t actionType = action.GetSniffedType();
   const uint8_t frameOffset = user->GetPingEqualizerOffset();
-  CQueuedActionsFrame& actionFrame = *user->GetPingEqualizerFrame();
+  CQueuedActionsFrame& actionFrame = user->GetPingEqualizerFrame();
 
   if (!action.GetImmutableAction().empty()) {
     LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
@@ -5243,7 +5250,7 @@ void CGame::EventGameStarted()
   m_Actions.emplaceBack();
   m_CurrentActionsFrame = m_Actions.head;
   for (auto& user : m_Users) {
-    user->SetPingEqualizerFrame(m_Actions.head);
+    user->SetPingEqualizerFrameNode(m_Actions.head);
   }
 
   // enable stats

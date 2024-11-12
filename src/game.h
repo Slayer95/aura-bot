@@ -96,10 +96,6 @@ struct CQueuedActionsFrame
   // ActionQueue we append new incoming actions to
   ActionQueue* activeQueue;
 
-  CQueuedActionsFrame* prev;
-
-  CQueuedActionsFrame* next;
-
   // queue of queues of size N
   // first (N-1) queues are sent with SEND_W3GS_INCOMING_ACTION2
   // last queue is sent with SEND_W3GS_INCOMING_ACTION, together with the expected delay til next action (latency)
@@ -144,7 +140,7 @@ protected:
   std::vector<CDBGamePlayer*>         m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
   UserList                            m_Users;                         // std::vector of players
   CircleDoubleLinkedList<CQueuedActionsFrame>    m_Actions;            // actions to be sent
-  CQueuedActionsFrame*                m_CurrentActionsFrame;
+  QueuedActionsFrameNode*     m_CurrentActionsFrame;
   uint16_t                            m_ActionsLatency;
   std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>               m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
@@ -266,9 +262,11 @@ public:
   CGame(CGame&) = delete;
 
   bool                      GetExiting() const { return m_Exiting; }
-  inline CQueuedActionsFrame& GetFirstActionFrame() { return *m_CurrentActionsFrame; }
-  inline CQueuedActionsFrame& GetLastActionFrame() { return *(m_CurrentActionsFrame->prev); }
-  std::vector<CQueuedActionsFrame*> GetFramesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset);
+  inline QueuedActionsFrameNode* GetFirstActionFrameNode() { return m_CurrentActionsFrame; }
+  inline QueuedActionsFrameNode* GetLastActionFrameNode() { return m_CurrentActionsFrame->prev; }
+  inline CQueuedActionsFrame& GetFirstActionFrame();
+  inline CQueuedActionsFrame& GetLastActionFrame();
+  std::vector<QueuedActionsFrameNode*> GetFrameNodesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset);
   bool                      CheckUpdatePingEqualizer();
   uint8_t                   UpdatePingEqualizer();
   std::vector<std::pair<GameUser::CGameUser*, uint32_t>> GetDescendingSortedRTT() const;
