@@ -244,26 +244,20 @@ void CGameUser::AdvanceActiveGameFrame()
 bool CGameUser::AddDelayPingEqualizerFrame()
 {
   if (m_PingEqualizerFrameNode->next == m_Game->GetFirstActionFrameNode()) {
-    Print("[PingEqualizer] Cannot further increase delay for [" + GetName() + "]");
     return false;
   }
   m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->next;
   ++m_PingEqualizerOffset;
-  Print("[PingEqualizer] Increased delay for [" + GetName() + "]");
-  Print("[PingEqualizer] (+) Adding up to " + to_string(m_Game->GetLatency() * m_PingEqualizerOffset) + " ms delay to [" + GetName() + "]");
   return true;
 }
 
 bool CGameUser::SubDelayPingEqualizerFrame()
 {
   if (m_PingEqualizerFrameNode == m_Game->GetFirstActionFrameNode()) {
-    Print("[PingEqualizer] Cannot further decrease delay for [" + GetName() + "]");
     return false;
   }
   m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->prev;
   --m_PingEqualizerOffset;
-  Print("[PingEqualizer] Decreased delay for [" + GetName() + "]");
-  Print("[PingEqualizer] (-) Adding up to " + to_string(m_Game->GetLatency() * m_PingEqualizerOffset) + " ms delay to [" + GetName() + "]");
   return true;
 }
 
