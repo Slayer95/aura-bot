@@ -1722,24 +1722,7 @@ void CGame::RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8
     // No longer are that many frames needed.
     LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Max new equalizer offset dropped " + ToDecString(maxOldEqualizerOffset) + " -> " + ToDecString(maxNewEqualizerOffset))
     vector<QueuedActionsFrameNode*> mergeableNodes = GetFrameNodesInRangeInclusive(maxNewEqualizerOffset, maxOldEqualizerOffset);
-    size_t i = 0, frameCount = mergeableNodes.size();
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Merging " + to_string(frameCount) + " frames in 1...")
-    CQueuedActionsFrame* targetFrame = mergeableNodes[i++]->data;
-    while (i < frameCount) {
-      CQueuedActionsFrame* obsoleteFrame = mergeableNodes[i]->data;
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Frame +" + to_string(i) + " merged (" + to_string(obsoleteFrame->bufferSize) + " bytes)")
-      targetFrame->MergeFrame(*obsoleteFrame);
-      for (const auto& user : m_Users) {
-        if (&user->GetPingEqualizerFrame() == obsoleteFrame) {
-          user->SetPingEqualizerFrameNode(GetFirstActionFrameNode());
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] !! Frame +" + to_string(i) + " was still referenced by user [" + user->GetName() + "] !!")
-        }
-      }
-      m_Actions.remove(mergeableNodes[i]);
-      // When the node is deleted, data is deleted as well.
-      delete mergeableNodes[i];
-      ++i;
-    }
+    MergeFrameNodes(mergeableNodes);
   }
 
   m_CurrentActionsFrame = m_CurrentActionsFrame->next;
@@ -3229,6 +3212,48 @@ vector<QueuedActionsFrameNode*> CGame::GetFrameNodesInRangeInclusive(const uint8
     frameNode = frameNode->next;
   }
   return frameNodes;
+}
+
+vector<QueuedActionsFrameNode*> CGame::GetAllFrameNodes()
+{
+  vector<QueuedActionsFrameNode*> frameNodes;
+  frameNodes.reserve(GetMaxEqualizerDelayFrames());
+  QueuedActionsFrameNode* frameNode = GetFirstActionFrameNode();
+  QueuedActionsFrameNode* lastFrameNode = GetLastActionFrameNode();
+  while (frameNode != lastFrameNode) {
+    frameNodes.push_back(frameNode);
+    frameNode = frameNode->next;
+  }
+  return frameNodes;
+}
+
+void CGame::MergeFrameNodes(vector<QueuedActionsFrameNode*>& frameNodes)
+{
+  size_t i = 0, frameCount = frameNodes.size();
+  LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Merging " + to_string(frameCount) + " frames in 1...")
+  CQueuedActionsFrame* targetFrame = frameNodes[i++]->data;
+  while (i < frameCount) {
+    CQueuedActionsFrame* obsoleteFrame = frameNodes[i]->data;
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] Frame +" + to_string(i) + " merged (" + to_string(obsoleteFrame->bufferSize) + " bytes)")
+    targetFrame->MergeFrame(*obsoleteFrame);
+    for (const auto& user : m_Users) {
+      if (&user->GetPingEqualizerFrame() == obsoleteFrame) {
+        user->SetPingEqualizerFrameNode(GetFirstActionFrameNode());
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "[PingEqualizer] !! Frame +" + to_string(i) + " was still referenced by user [" + user->GetName() + "] !!")
+      }
+    }
+    m_Actions.remove(frameNodes[i]);
+    // When the node is deleted, data is deleted as well.
+    delete frameNodes[i];
+    ++i;
+  }
+}
+
+void CGame::ResetUserPingEqualizerDelays()
+{
+  for (auto& user : m_Users) {
+    user->SetPingEqualizerFrameNode(m_Actions.head);
+  }
 }
 
 bool CGame::CheckUpdatePingEqualizer()
@@ -5251,9 +5276,7 @@ void CGame::EventGameStarted()
 
   m_Actions.emplaceBack();
   m_CurrentActionsFrame = m_Actions.head;
-  for (auto& user : m_Users) {
-    user->SetPingEqualizerFrameNode(m_Actions.head);
-  }
+  ResetUserPingEqualizerDelays();
 
   // enable stats
 

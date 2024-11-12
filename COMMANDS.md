@@ -108,6 +108,8 @@ Commands
 
 ## \`end\`
 
+## \`equalizer\`
+
 ## \`eras\`
 - Syntax: eras \<PLAYER|COUNTRY|COLOR\>
 

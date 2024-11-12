@@ -2553,6 +2553,53 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !EQUALIZER (set ping equalizer)
+    //
+
+    case HashCode("equalizer"): {
+      UseImplicitHostedGame();      
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+        break;
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot toggle the latency equalizer.");
+        break;
+      }
+
+      optional<bool> targetValue;
+      if (Payload.empty() || Payload == "on" || Payload == "ON") {
+        targetValue = true;
+      } else if (Payload == "off" || Payload == "OFF") {
+        targetValue = false;
+      }
+      if (!targetValue.has_value()) {
+        ErrorReply("Unrecognized setting [" + Payload + "].");
+        break;
+      }
+
+      if (m_TargetGame->m_Config->m_LatencyEqualizerEnabled == targetValue.value()) {
+        if (targetValue.value()) {
+          ErrorReply("Latency equalizer is already enabled.");
+        } else {
+          ErrorReply("Latency equalizer is already disabled.");
+        }
+        break;
+      }
+
+      m_TargetGame->m_Config->m_LatencyEqualizerEnabled = targetValue.value();
+
+      if (!targetValue.value()) {
+        auto& nodes = m_TargetGame->GetAllFrameNodes();
+        m_TargetGame->MergeFrameNodes(nodes);
+        m_TargetGame->ResetUserPingEqualizerDelays();
+        SendReply("Latency equalizer DISABLED.");
+      } else {
+        SendReply("Latency equalizer ENABLED.");
+      }
+      break;
+    }
+
+    //
     // !OPEN (open slot)
     //
 

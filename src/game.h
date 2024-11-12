@@ -267,6 +267,9 @@ public:
   inline CQueuedActionsFrame& GetFirstActionFrame();
   inline CQueuedActionsFrame& GetLastActionFrame();
   std::vector<QueuedActionsFrameNode*> GetFrameNodesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset);
+  std::vector<QueuedActionsFrameNode*> GetAllFrameNodes();
+  void                      MergeFrameNodes(std::vector<QueuedActionsFrameNode*>& frameNodes);
+  void                      ResetUserPingEqualizerDelays();
   bool                      CheckUpdatePingEqualizer();
   uint8_t                   UpdatePingEqualizer();
   std::vector<std::pair<GameUser::CGameUser*, uint32_t>> GetDescendingSortedRTT() const;
