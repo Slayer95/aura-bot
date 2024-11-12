@@ -1455,10 +1455,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       const uint16_t internalLatency = m_TargetGame->GetLatency();
       const bool suggestLowerLatency = 0 < maxPing && maxPing < internalLatency && REFRESH_PERIOD_MIN_SUGGESTED < internalLatency;
       const bool suggestHigherLatency = 0 < maxPing && internalLatency < maxPing / 4 && REFRESH_PERIOD_MAX_SUGGESTED > internalLatency;
-      if (m_TargetGame->m_Config->m_LatencyEqualizer || suggestLowerLatency || suggestHigherLatency) {
+      if (m_TargetGame->m_Config->m_LatencyEqualizerEnabled || suggestLowerLatency || suggestHigherLatency) {
         string refreshText = "Internal latency is " + to_string(m_TargetGame->GetLatency()) + "ms.";
         string equalizerHeader;
-        if (m_TargetGame->m_Config->m_LatencyEqualizer) {
+        if (m_TargetGame->m_Config->m_LatencyEqualizerEnabled) {
           equalizerHeader = "Ping equalizer ENABLED. ";
         }
         string suggestionText;
@@ -2496,7 +2496,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       double refreshTime = static_cast<double>(Args[0]);
-      double refreshFactor = m_TargetGame->m_Config->m_LatencyEqualizer ? 2. : 1.;
+      double refreshFactor = /*m_TargetGame->m_Config->m_LatencyEqualizerEnabled ? 2. : */1.;
       optional<double> tolerance;
       if (Args.size() >= 2) {
         tolerance = static_cast<double>(Args[1]);

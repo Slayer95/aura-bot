@@ -1109,8 +1109,12 @@ void CMap::Load(CConfig* CFG)
     m_Latency = CFG->GetUint16("map.bot.latency", 100);
     CFG->FailIfErrorLast();
   }
-  if (CFG->Exists("map.bot.latency.equalizer")) {
-    m_LatencyEqualizer = CFG->GetBool("map.bot.latency.equalizer", false);
+  if (CFG->Exists("map.bot.latency.equalizer.enabled")) {
+    m_LatencyEqualizerEnabled = CFG->GetBool("map.bot.latency.equalizer.enabled", false);
+    CFG->FailIfErrorLast();
+  }
+  if (CFG->Exists("map.bot.latency.equalizer.frames")) {
+    m_LatencyEqualizerFrames = CFG->GetUint8("map.bot.latency.equalizer.frames", false);
     CFG->FailIfErrorLast();
   }
   if (CFG->Exists("map.reconnection.mode")) {

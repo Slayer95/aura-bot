@@ -479,6 +479,7 @@
     <ClInclude Include="..\lib\sqlite3\sqlite3.h" />
     <ClInclude Include="..\lib\sqlite3\sqlite3ext.h" />
     <ClInclude Include="util.h" />
+    <ClInclude Include="list.h" />
     <ClInclude Include="fileutil.h" />
     <ClInclude Include="osutil.h" />
     <ClInclude Include="socket.h" />

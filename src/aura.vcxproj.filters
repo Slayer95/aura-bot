@@ -266,6 +266,9 @@
     <ClInclude Include="util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="irc.h">
       <Filter>Header Files</Filter>
     </ClInclude>

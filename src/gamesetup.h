@@ -158,7 +158,8 @@ public:
   std::optional<uint16_t>                         m_LatencyAverage;
   std::optional<uint16_t>                         m_LatencyMaxFrames;
   std::optional<uint16_t>                         m_LatencySafeFrames;
-  std::optional<bool>                             m_LatencyEqualizer;
+  std::optional<bool>                             m_LatencyEqualizerEnabled;
+  std::optional<uint8_t>                          m_LatencyEqualizerFrames;
   std::optional<std::string>                      m_HCL;
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
@@ -291,7 +292,8 @@ public:
   void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
   void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
   void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }
-  void SetLatencyEqualizer(const bool nValue) { m_LatencyEqualizer = nValue; }
+  void SetLatencyEqualizerEnabled(const bool nValue) { m_LatencyEqualizerEnabled = nValue; }
+  void SetLatencyEqualizerFrames(const uint8_t nValue) { m_LatencyEqualizerFrames = nValue; }
   void SetHCL(const std::string& nHCL) { m_HCL = nHCL; }
   void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
 

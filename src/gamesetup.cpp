@@ -1577,7 +1577,8 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameLatencyAverage.has_value()) SetLatencyAverage(nCLI->m_GameLatencyAverage.value());
   if (nCLI->m_GameLatencyMaxFrames.has_value()) SetLatencyMaxFrames(nCLI->m_GameLatencyMaxFrames.value());
   if (nCLI->m_GameLatencySafeFrames.has_value()) SetLatencySafeFrames(nCLI->m_GameLatencySafeFrames.value());
-  if (nCLI->m_GameLatencyEqualizer.has_value()) SetLatencyEqualizer(nCLI->m_GameLatencyEqualizer.value());
+  if (nCLI->m_GameLatencyEqualizerEnabled.has_value()) SetLatencyEqualizerEnabled(nCLI->m_GameLatencyEqualizerEnabled.value());
+  if (nCLI->m_GameLatencyEqualizerFrames.has_value()) SetLatencyEqualizerFrames(nCLI->m_GameLatencyEqualizerFrames.value());
   if (nCLI->m_GameHCL.has_value()) SetHCL(nCLI->m_GameHCL.value());
   if (nCLI->m_GameFreeForAll.value_or(false)) SetCustomLayout(CUSTOM_LAYOUT_FFA);
 

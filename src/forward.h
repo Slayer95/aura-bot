@@ -90,6 +90,7 @@ struct CGameConfig;
 struct CIRCConfig;
 struct CNetConfig;
 struct CRealmConfig;
+struct CQueuedActionsFrame;
 
 struct UDPPkt;
 

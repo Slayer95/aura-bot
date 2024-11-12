@@ -47,6 +47,7 @@
 #define AURA_GAME_H_
 
 #include "includes.h"
+#include "list.h"
 #include "gameseeker.h"
 #include "gameslot.h"
 #include "gamesetup.h"
@@ -95,6 +96,10 @@ struct CQueuedActionsFrame
   // ActionQueue we append new incoming actions to
   ActionQueue* activeQueue;
 
+  CQueuedActionsFrame* prev;
+
+  CQueuedActionsFrame* next;
+
   // queue of queues of size N
   // first (N-1) queues are sent with SEND_W3GS_INCOMING_ACTION2
   // last queue is sent with SEND_W3GS_INCOMING_ACTION, together with the expected delay til next action (latency)
@@ -109,11 +114,11 @@ struct CQueuedActionsFrame
   ~CQueuedActionsFrame();
 
   void AddAction(CIncomingAction&& action);
-  std::vector<uint8_t> GetBytes(const uint16_t sendInterval);
+  std::vector<uint8_t> GetBytes(const uint16_t sendInterval) const;
   void MergeFrame(CQueuedActionsFrame& frame);
   bool GetHasActionsBy(const uint8_t fromUID) const;
   bool GetIsEmpty() const;
-  uint32_t GetActionCount() const;
+  size_t GetActionCount() const;
   void Reset();
 };
 
@@ -138,10 +143,9 @@ protected:
   std::vector<CGameSlot>              m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>         m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
   UserList                            m_Users;                         // std::vector of players
-  std::vector<CQueuedActionsFrame>    m_Actions;                       // actions to be sent
-  uint8_t                             m_ActionsFrameSelector;
+  CircleDoubleLinkedList<CQueuedActionsFrame>    m_Actions;            // actions to be sent
+  CQueuedActionsFrame*                m_CurrentActionsFrame;
   uint16_t                            m_ActionsLatency;
-  bool                                m_ActionsEqualizer;
   std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>               m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
   std::vector<uint16_t>               m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
@@ -192,6 +196,7 @@ protected:
   uint32_t                            m_HostCounter;                   // a unique game number
   uint32_t                            m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
   uint32_t                            m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
+  uint8_t                             m_MaxPingEqualizerDelayFrames;
   int64_t                             m_LastPingEqualizerGameTicks;    // m_GameTicks when ping equalizer was last run
 
   uint32_t                            m_DownloadCounter;               // # of map bytes downloaded in the last second
@@ -261,17 +266,11 @@ public:
   CGame(CGame&) = delete;
 
   bool                      GetExiting() const { return m_Exiting; }
-  CQueuedActionsFrame&      GetNthActionFrame(const uint8_t n); // zero-based
-  const CQueuedActionsFrame&  InspectNthActionFrame(const uint8_t n) const; // zero-based
-  uint8_t                   GetFirstFrameOffset() const;
-  uint8_t                   GetLastFrameOffset() const;
-  uint8_t                   GetNextFrameOffset(const uint8_t n, const bool allowStale = false) const;
-  CQueuedActionsFrame&      GetFirstActionFrame();
-  CQueuedActionsFrame&      GetLastActionFrame();
+  inline CQueuedActionsFrame& GetFirstActionFrame() { return *m_CurrentActionsFrame; }
+  inline CQueuedActionsFrame& GetLastActionFrame() { return *(m_CurrentActionsFrame->prev); }
+  std::vector<CQueuedActionsFrame*> GetFramesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset);
   bool                      CheckUpdatePingEqualizer();
   uint8_t                   UpdatePingEqualizer();
-  uint8_t                   AddPingEqualizerOffset(GameUser::CGameUser* user) const;
-  uint8_t                   RemovePingEqualizerOffset(GameUser::CGameUser* user) const;
   std::vector<std::pair<GameUser::CGameUser*, uint32_t>> GetDescendingSortedRTT() const;
   inline CMap*              GetMap() const { return m_Map; }
   inline uint32_t           GetEntryKey() const { return m_EntryKey; }
@@ -311,7 +310,8 @@ public:
   inline bool               GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool               GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline uint32_t           GetSyncCounter() const { return m_SyncCounter; }
-  uint8_t                   GetMaxEqualizerOffset() const;
+  uint8_t                   GetMaxEqualizerDelayFrames() const { return m_MaxPingEqualizerDelayFrames; }
+  uint8_t                   CalcMaxEqualizerDelayFrames() const;
   uint16_t                  GetLatency() const;
   uint32_t                  GetSyncLimit() const;
   uint32_t                  GetSyncLimitSafe() const;
@@ -409,7 +409,7 @@ public:
   uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool                      Update(void* fd, void* send_fd);
   void                      UpdatePost(void* send_fd);
-  void                      RunActionsScheduler(const uint8_t maxOffset);
+  void                      RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
 
   // logging
   void                      LogApp(const std::string& logText) const;

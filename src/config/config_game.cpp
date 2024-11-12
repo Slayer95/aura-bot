@@ -86,7 +86,9 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownInterval    = CFG.GetUint32("hosting.game_start.count_down_interval", 500);
   m_LobbyCountDownStartValue  = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
   m_Latency                   = CFG.GetUint16("bot.latency", 100);
-  m_LatencyEqualizer          = CFG.GetBool("bot.latency.equalizer", false);
+  m_LatencyEqualizerEnabled   = CFG.GetBool("bot.latency.equalizer.enabled", false);
+  m_LatencyEqualizerFrames    = CFG.GetUint8("bot.latency.equalizer.frames", PING_EQUALIZER_MAX_FRAMES);
+
   m_PerfThreshold             = CFG.GetUint32("bot.perf_limit", 150);
   m_LacksMapKickDelay         = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
   m_LogDelay                  = CFG.GetUint32("hosting.log_delay", 180); // default: 3 minutes
@@ -156,7 +158,13 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownInterval, m_LobbyCountDownInterval, m_LobbyCountDownInterval)
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownStartValue, m_LobbyCountDownStartValue, m_LobbyCountDownStartValue)
   INHERIT_MAP_OR_CUSTOM(m_Latency, m_Latency, m_LatencyAverage)
-  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizer, m_LatencyEqualizer, m_LatencyEqualizer)
+  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled)
+  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerFrames, m_LatencyEqualizerFrames, m_LatencyEqualizerFrames)
+
+  if (m_LatencyEqualizerFrames == 0) {
+    m_LatencyEqualizerFrames = 1;
+  }
+
   INHERIT(m_PerfThreshold)
   INHERIT(m_LacksMapKickDelay)
   INHERIT(m_LogDelay)
