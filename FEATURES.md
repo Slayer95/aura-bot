@@ -57,6 +57,7 @@ from chatting with players.
 - Supports flipping coins, and randomly picking items from a list
 - Users can send whispers cross-realm
 - Can send cross-realm game invitations to other players
+- Optionally equalizes players' latencies for competitive settings
 
 # Permissions:
 - Staff from some PvPGN realms no longer have access to 

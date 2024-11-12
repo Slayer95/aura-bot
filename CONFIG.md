@@ -20,9 +20,14 @@ Config
 - Default value: 100
 - Error handling: Use default value
 
-## \`bot.latency.equalizer\`
+## \`bot.latency.equalizer.enabled\`
 - Type: bool
-- Default value: true
+- Default value: false
+- Error handling: Use default value
+
+## \`bot.latency.equalizer.frames\`
+- Type: uint8
+- Default value: PING_EQUALIZER_MAX_FRAMES
 - Error handling: Use default value
 
 ## \`bot.load_maps.cache.enabled\`
