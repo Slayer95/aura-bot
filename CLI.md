@@ -484,14 +484,14 @@ This flag prevents players from taking ownership of the hosted game.
 
 This flag is disabled by default.
 
-## \`--latency-equalize\`
+## \`--latency-equalize4\`
 
 This flag adds a minimum delay to all actions performed by players in the hosted game,
 evening the field in case players' connection quality differ significatively.
 
 This flag is enabled by default.
 
-## \`--no-latency-equalize\`
+## \`--no-latency-equalize4\`
 
 This flag prevents a minimum delay from being added to actions performed by players in the hosted game,
 allowing maximum responsiveness during gameplay.
@@ -779,6 +779,11 @@ This option is restricted to a minimum of 10 ms, and a maximum of 500 ms. The de
 This option is equivalent to ``<bot.latency>`` in `config.ini`
 
 This option is equivalent to ``<map.bot.latency>`` in map configuration
+
+## \`--latency-equalizer-frames\`
+
+When the latency equalizer feature is enabled, this parameter specifies the maximum delay that can be added
+to players' actions, measured in game ticks.
 
 ## \`--latency-max-frames \<VALUE\>\`
 
