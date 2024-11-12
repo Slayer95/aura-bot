@@ -87,7 +87,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownStartValue  = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
   m_Latency                   = CFG.GetUint16("bot.latency", 100);
   m_LatencyEqualizerEnabled   = CFG.GetBool("bot.latency.equalizer.enabled", false);
-  m_LatencyEqualizerFrames    = CFG.GetUint8("bot.latency.equalizer.frames", PING_EQUALIZER_MAX_FRAMES);
+  m_LatencyEqualizerFrames    = CFG.GetUint8("bot.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
 
   m_PerfThreshold             = CFG.GetUint32("bot.perf_limit", 150);
   m_LacksMapKickDelay         = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
