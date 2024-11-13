@@ -92,7 +92,11 @@ struct CNetConfig
   bool                                    m_SupportUDPOverIPv6;
   uint16_t                                m_UDPFallbackPort;
   uint16_t                                m_UDPIPv6Port;
+  bool                                    m_LiteralRTT;                  // legit, or use LC style pings (divides actual pings by two)
+  bool                                    m_UseSystemRTT;                // uses getsockopt syscall to measure TCP latency, rather than trusting the game client
   // == SECTION END ==
+
+
 
   explicit CNetConfig(CConfig& CFG);
   ~CNetConfig();

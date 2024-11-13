@@ -115,6 +115,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_ActionLocked(false),
     m_LeftMessageSent(false),
     m_StatusMessageSent(false),
+    m_LatencySent(false),
     m_UsedAnyCommands(false),
     m_SentAutoCommandsHelp(false),
     m_SmartCommand(SMART_COMMAND_NONE),
@@ -134,6 +135,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
 {
+  m_RTTValues.reserve(MAXIMUM_PINGS_COUNT);
   m_Socket->SetLogErrors(true);
   m_Type = INCON_TYPE_PLAYER;
 }
@@ -158,6 +160,10 @@ CGameUser::~CGameUser()
 
 uint32_t CGameUser::GetOperationalRTT() const
 {
+  if (m_MeasuredRTT.has_value()) {
+    return m_MeasuredRTT.value().second;
+  }
+
   // weighted average of stored pings (max 6 stored = 25-30 seconds)
   // 4:3:2:1:1:1 (more recent = more weight)
   //
@@ -189,7 +195,7 @@ uint32_t CGameUser::GetDisplayRTT() const
 
 uint32_t CGameUser::GetRTT() const
 {
-  if (m_Game->m_Aura->m_Config->m_LiteralRTT) {
+  if (m_Game->m_Aura->m_Net->m_Config->m_LiteralRTT) {
     return GetOperationalRTT();
   }
   return GetOperationalRTT() * 2;
@@ -302,6 +308,12 @@ void CGameUser::UnrefConnection(bool deferred)
     m_LastDisconnectTicks = GetTicks();
     m_Disconnected = true;
   }
+}
+
+void CGameUser::ClearStalePings() {
+  if (m_RTTValues.empty()) return;
+  m_RTTValues[0] = m_RTTValues[m_RTTValues.size() - 1];
+  m_RTTValues.erase(m_RTTValues.begin() + 1, m_RTTValues.end());
 }
 
 void CGameUser::RefreshUID()
@@ -441,27 +453,45 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           case GameProtocol::Magic::PONG_TO_HOST: {
             uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
 
-            // we discard pong values of 1
-            // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
-
-            // we also discard pong values when anyone else is downloading if we're configured to
             const bool bufferBloatForbidden = m_Game->m_Aura->m_Net->m_Config->m_HasBufferBloat && m_Game->IsDownloading();
+            bool useSystemRTT = m_Game->GetGameLoaded() && m_Game->m_Aura->m_Net->m_Config->m_UseSystemRTT;
+            const bool useLiteralRTT = m_Game->m_Aura->m_Net->m_Config->m_LiteralRTT;
 
-            if (Pong != 1 && !bufferBloatForbidden) {
-              // we also discard pong values when we're downloading because they're almost certainly inaccurate
-              // this statement also gives the player a 8 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
-              if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 8)) {
-                m_RTTValues.push_back(m_Game->m_Aura->m_Config->m_LiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
-                if (m_RTTValues.size() > MAXIMUM_PINGS_COUNT) {
-                  m_RTTValues.erase(begin(m_RTTValues));
+            // discard pong values when anyone else is downloading if we're configured to do so
+            if (!bufferBloatForbidden) {
+              if (useSystemRTT && (!m_MeasuredRTT.has_value() || m_MeasuredRTT.value().first + SYSTEM_RTT_POLLING_PERIOD < Ticks)) {
+                optional<uint32_t> rtt = m_Socket->GetRTT();
+                if (rtt.has_value()) {
+                  m_MeasuredRTT = make_pair(Ticks, useLiteralRTT ? rtt.value() : (2 * rtt.value()));
+                  m_RTTValues.clear();
+                } else {
+                  useSystemRTT = false;
                 }
+              }
+
+              if (!useSystemRTT && Pong != 1) {
+                // we discard pong values of 1
+                // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
+                // we also discard pong values when we're downloading because they're almost certainly inaccurate
+                // this statement also gives the player a 8 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
+                if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 8)) {
+                  m_RTTValues.push_back(useLiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
+                  if (m_RTTValues.size() > MAXIMUM_PINGS_COUNT) {
+                    m_RTTValues.erase(begin(m_RTTValues));
+                  }
+                }
+              }
+
+              if (useSystemRTT || Pong != 1) {
                 m_Game->EventUserPongToHost(this);
               }
+
+              if (!GetIsRTTMeasuredConsistent()) {
+                // Measure player's ping as fast as possible, by chaining new pings to pongs received.
+                Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
+              }
             }
-            if (!bufferBloatForbidden && m_RTTValues.size() < CONSISTENT_PINGS_COUNT) {
-              // Measure player's ping as fast as possible, by chaining new pings to pongs received.
-              Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
-            }
+
             ++m_PongCounter;
             break;
           }
@@ -712,19 +742,19 @@ string CGameUser::GetDelayText(bool displaySync) const
 {
   string pingText, syncText;
   // Note: When someone is lagging, we actually clear their ping data.
-  const bool anyPings = GetStoredRTTCount() > 0;
+  const bool anyPings = GetIsRTTMeasured();
   if (!anyPings) {
     pingText = "?";
   } else {
     uint32_t rtt = GetOperationalRTT();
     uint32_t equalizerDelay = GetPingEqualizerDelay();
-    if (GetStoredRTTCount() < 3) {
-      pingText = "*" + to_string(rtt);
-    } else {
+    if (GetIsRTTMeasuredConsistent()) {
       pingText = to_string(rtt);
+    } else {
+      pingText = "*" + to_string(rtt);
     }
     if (equalizerDelay > 0) {
-      if (!m_Game->m_Aura->m_Config->m_LiteralRTT) equalizerDelay /= 2;
+      if (!m_Game->m_Aura->m_Net->m_Config->m_LiteralRTT) equalizerDelay /= 2;
       pingText += "(" + to_string(equalizerDelay) + ")";
     }
   }

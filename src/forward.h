@@ -26,6 +26,8 @@
 #ifndef AURA_FORWARD_H_
 #define AURA_FORWARD_H_
 
+#include <optional>
+#include <utility>
 #include <vector>
 
 class CAura;
@@ -100,9 +102,11 @@ struct DoubleLinkedListNode;
 template <typename T>
 struct CircleDoubleLinkedList;
 
-typedef std::vector<GameUser::CGameUser*>         UserList;
-typedef std::vector<const GameUser::CGameUser*>   ImmutableUserList;
-typedef std::vector<CIncomingAction>              ActionQueue;
-typedef DoubleLinkedListNode<CQueuedActionsFrame> QueuedActionsFrameNode;
+typedef std::vector<GameUser::CGameUser*>           UserList;
+typedef std::vector<const GameUser::CGameUser*>     ImmutableUserList;
+typedef std::vector<CIncomingAction>                ActionQueue;
+typedef DoubleLinkedListNode<CQueuedActionsFrame>   QueuedActionsFrameNode;
+typedef std::optional<std::pair<int64_t, uint32_t>> OptionalTimedUint32;
+typedef std::optional<int64_t>                      OptionalTime;
 
 #endif // AURA_FORWARD_H_

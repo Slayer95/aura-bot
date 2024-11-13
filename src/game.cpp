@@ -1273,7 +1273,7 @@ bool CGame::Update(void* fd, void* send_fd)
           if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
             m_Users[i]->SetLagging(true);
             m_Users[i]->SetStartedLaggingTicks(Ticks);
-            m_Users[i]->ClearStalePings(); // When someone ask for their ping, calculate it from their sync counter instead
+            m_Users[i]->ClearStalePings();
             laggingPlayers.push_back(m_Users[i]);
             if (framesBehind[i] > worstLaggerFrames) {
               worstLaggerIndex = i;
@@ -3732,7 +3732,7 @@ void CGame::ReportPlayerGProxyDisconnected(GameUser::CGameUser* user)
     for (auto& laggingPlayer : laggingPlayers) {
       laggingPlayer->SetLagging(true);
       laggingPlayer->SetStartedLaggingTicks(Ticks);
-      laggingPlayer->ClearStalePings(); // When someone asks for their ping, calculate it from their sync counter instead
+      laggingPlayer->ClearStalePings();
     }
     SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
   }
@@ -5106,13 +5106,14 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
     return;
   }
 
-  if (user->GetStoredRTTCount() == CONSISTENT_PINGS_COUNT) {
+  if (!user->GetLatencySent() && user->GetIsRTTMeasuredConsistent()) {
     SendChat(user, user->GetName() + ", your latency is " + user->GetDelayText(false), LOG_LEVEL_DEBUG);
+    user->SetLatencySent(true);
   }
 
   if ((!user->GetIsReady() && user->GetMapReady() && !user->GetIsObserver()) &&
     (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxGames) &&
-    (user->GetReadyReminderIsDue() && user->GetStoredRTTCount() >= CONSISTENT_PINGS_COUNT)) {
+    (user->GetReadyReminderIsDue() && user->GetIsRTTMeasuredConsistent())) {
     if (!m_AutoStartRequirements.empty()) {
       switch (GetPlayersReadyMode()) {
         case READY_MODE_EXPECT_RACE: {
@@ -5134,7 +5135,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   uint32_t LatencyMilliseconds = user->GetOperationalRTT();
   if (LatencyMilliseconds >= m_Config->m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner(nullopt)) {
     user->SetHasHighPing(true);
-    if (user->GetStoredRTTCount() >= 2) {
+    if (user->GetIsRTTMeasuredBadConsistent()) {
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
       }

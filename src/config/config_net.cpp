@@ -222,6 +222,13 @@ CNetConfig::CNetConfig(CConfig& CFG)
   m_AnnounceGProxy               = CFG.GetBool("net.tcp_extensions.gproxy.announce_chat", true);
   m_AnnounceGProxySite           = CFG.GetString("net.tcp_extensions.gproxy.site", "https://www.mymgn.com/gproxy/");
   m_AnnounceIPv6                 = CFG.GetBool("net.ipv6.tcp.announce_chat", true);
+
+  m_LiteralRTT                   = CFG.GetBool("metrics.ping.use_rtt", false);
+#ifdef _WIN32
+  m_UseSystemRTT                 = CFG.GetBool("metrics.ping.use_tcpinfo", false);
+#else
+  m_UseSystemRTT                 = CFG.GetBool("metrics.ping.use_tcpinfo", true);
+#endif
 }
 
 CNetConfig::~CNetConfig() = default;

@@ -425,6 +425,22 @@ void CStreamIOSocket::Discard(fd_set* fd)
   recv(m_Socket, buffer, 1024, 0);
 }
 
+optional<uint32_t> CStreamIOSocket::GetRTT() const
+{
+  optional<uint32_t> rtt;
+
+#ifndef _WIN32
+  struct tcp_info info;
+  socklen_t info_len = sizeof(info);
+
+  if (getsockopt(m_Socket, IPPROTO_TCP, TCP_INFO, &info, &info_len) == 0) {
+    rtt = static_cast<uint32_t>(info.tcpi_rtt / 1000);
+  }
+#endif
+
+  return rtt;
+}
+
 void CStreamIOSocket::DoSend(fd_set* send_fd)
 {
   if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())

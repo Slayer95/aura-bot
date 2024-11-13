@@ -58,8 +58,6 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_AliasesPath                  = CFG.GetHomeDir() / filesystem::path("aliases.ini");
   m_LogPath                      = CFG.GetHomeDir() / filesystem::path("aura.log");
 
-  m_LiteralRTT                   = CFG.GetBool("metrics.rtt_pings", false);
-
   m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
   m_MaxGames                     = CFG.GetInt("hosting.max_games", 20);
   m_AllowExtraLobby              = CFG.GetBool("hosting.allow_extra_lobby", false);

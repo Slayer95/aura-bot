@@ -70,6 +70,7 @@ namespace GameUser
     CGame*                           m_Game;
     std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
     std::vector<uint32_t>            m_RTTValues;                    // store the last few (10) pings received so we can take an average
+    OptionalTimedUint32              m_MeasuredRTT;
     std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
     std::queue<std::vector<uint8_t>> m_GProxyBuffer;                 // buffer with data used with GProxy++
     std::string                      m_LeftReason;                   // the reason the player left the game
@@ -81,7 +82,7 @@ namespace GameUser
     uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
     bool                             m_QuitGame;
     uint8_t                          m_PingEqualizerOffset;          // whow many frames should actions sent by this player be offset by ping equalizer
-    QueuedActionsFrameNode*             m_PingEqualizerFrameNode;
+    QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
     uint32_t                         m_PongCounter;
     uint32_t                         m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
     uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
@@ -124,6 +125,7 @@ namespace GameUser
     bool                             m_ActionLocked;                 // if the player is not allowed to use commands, change their race/team/color/handicap or they are
     bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
     bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
+    bool                             m_LatencySent;
     bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
     bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
     uint8_t                          m_SmartCommand;
@@ -165,6 +167,9 @@ namespace GameUser
     [[nodiscard]] std::string                     GetDisplayName() const;
     [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
     [[nodiscard]] inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
+    [[nodiscard]] inline bool                     GetIsRTTMeasured() const { return m_MeasuredRTT.has_value() || !m_RTTValues.empty(); }
+    [[nodiscard]] inline bool                     GetIsRTTMeasuredConsistent() const { return m_MeasuredRTT.has_value() || GetStoredRTTCount() >= CONSISTENT_PINGS_COUNT; }
+    [[nodiscard]] inline bool                     GetIsRTTMeasuredBadConsistent() const { return m_MeasuredRTT.has_value() || GetStoredRTTCount() >= 2; }
     [[nodiscard]] inline uint32_t                 GetPongCounter() const { return m_PongCounter; }
     [[nodiscard]] inline size_t                   GetNumCheckSums() const { return m_CheckSums.size(); }
     [[nodiscard]] inline std::queue<uint32_t>*    GetCheckSums() { return &m_CheckSums; }
@@ -243,6 +248,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetMuted() const { return m_Muted; }
     [[nodiscard]] inline bool                  GetIsActionLocked() const { return m_ActionLocked; }
     [[nodiscard]] inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
+    [[nodiscard]] inline bool                  GetLatencySent() const { return m_LatencySent; }
     [[nodiscard]] inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
     [[nodiscard]] inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
     [[nodiscard]] inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
@@ -288,6 +294,7 @@ namespace GameUser
     inline void SetMuted(bool nMuted) { m_Muted = nMuted; }
     inline void SetActionLocked(bool nActionLocked) { m_ActionLocked = nActionLocked; }
     inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
+    inline void SetLatencySent(bool nLatencySent) { m_LatencySent = nLatencySent; }
     inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
     inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
     inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
@@ -321,13 +328,7 @@ namespace GameUser
     inline void ClearSmartCommand() { m_SmartCommand = SMART_COMMAND_NONE; }
     inline void DropRemainingPauses() { --m_RemainingPauses; }
     inline void SetCannotPause() { m_RemainingPauses = 0; }
-    inline void ClearStalePings() {
-      if (m_RTTValues.empty()) return;
-      uint32_t lastPing = m_RTTValues[m_RTTValues.size() - 1];
-      m_RTTValues.clear();
-      m_RTTValues.push_back(lastPing);
-    }
-    inline void ClearPings() { m_RTTValues.clear(); }
+    void ClearStalePings();
 
     [[nodiscard]] inline const std::string& GetPinnedMessage() { return  m_PinnedMessage; }
     [[nodiscard]] inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }

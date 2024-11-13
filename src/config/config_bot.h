@@ -52,8 +52,6 @@ struct CBotConfig
   std::filesystem::path                   m_GreetingPath;                // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
-  bool                                    m_LiteralRTT;                    // use LC style pings (divide actual pings by two
-
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
   uint32_t                                m_MaxGames;                    // maximum number of games in progress
   bool                                    m_AllowExtraLobby;             // when auto rehost is active, always create the next lobby even if max games limit has been reached (cannot be started, though)

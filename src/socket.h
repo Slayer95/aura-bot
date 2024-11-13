@@ -459,17 +459,18 @@ public:
   bool DoRecv(fd_set* fd);
   void Discard(fd_set* fd);
 
-  inline size_t                   PutBytes(const std::string& bytes) {
+  inline size_t                                 PutBytes(const std::string& bytes) {
     m_SendBuffer += bytes;
     return bytes.size();
   }
-  inline size_t                   PutBytes(const std::vector<uint8_t>& bytes) {
+  inline size_t                                 PutBytes(const std::vector<uint8_t>& bytes) {
     m_SendBuffer += std::string(begin(bytes), end(bytes));
     return bytes.size();
   }
-  inline void                     ClearSendBuffer() { m_SendBuffer.clear(); }
-  inline void                     SubstrSendBuffer(uint32_t i) { m_SendBuffer = m_SendBuffer.substr(i); }
+  inline void                                   ClearSendBuffer() { m_SendBuffer.clear(); }
+  inline void                                   SubstrSendBuffer(uint32_t i) { m_SendBuffer = m_SendBuffer.substr(i); }
   [[nodiscard]] inline bool                     GetIsSendPending() { return !m_SendBuffer.empty(); }
+  [[nodiscard]] std::optional<uint32_t>         GetRTT() const;
   void DoSend(fd_set* send_fd);
   void Flush();
 
