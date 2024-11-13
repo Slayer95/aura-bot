@@ -145,10 +145,27 @@ public:
   bool                                            m_LobbyReplaceable;
   bool                                            m_LobbyAutoRehosted;
   uint16_t                                        m_CreationCounter;
+
+  std::optional<uint8_t>                          m_LobbyTimeoutMode;
+  std::optional<uint8_t>                          m_LobbyOwnerTimeoutMode;
+  std::optional<uint8_t>                          m_LoadingTimeoutMode;
+  std::optional<uint8_t>                          m_PlayingTimeoutMode;
+
   std::optional<uint32_t>                         m_LobbyTimeout;
   std::optional<uint32_t>                         m_LobbyOwnerTimeout;
+  std::optional<uint32_t>                         m_LoadingTimeout;
+  std::optional<uint32_t>                         m_PlayingTimeout;
+
+  std::optional<uint8_t>                          m_PlayingTimeoutWarningShortCountDown;
+  std::optional<uint32_t>                         m_PlayingTimeoutWarningShortInterval;
+  std::optional<uint8_t>                          m_PlayingTimeoutWarningLargeCountDown;
+  std::optional<uint32_t>                         m_PlayingTimeoutWarningLargeInterval;
+
+  std::optional<bool>                             m_LobbyOwnerReleaseLANLeaver;
+
   std::optional<uint32_t>                         m_LobbyCountDownInterval;
   std::optional<uint32_t>                         m_LobbyCountDownStartValue;
+
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_ReconnectionMode;
@@ -263,10 +280,27 @@ public:
   void SetOwner(const std::string& ownerName, const std::string& ownerRealm) {
     m_Owner = std::make_pair(ownerName, ownerRealm);
   }
+
+  void SetLobbyTimeoutMode(const uint8_t nMode) { m_LobbyTimeoutMode = nMode; }
+  void SetLobbyOwnerTimeoutMode(const uint8_t nMode) { m_LobbyOwnerTimeoutMode = nMode; }
+  void SetLoadingTimeoutMode(const uint8_t nMode) { m_LoadingTimeoutMode = nMode; }
+  void SetPlayingTimeoutMode(const uint8_t nMode) { m_PlayingTimeoutMode = nMode; }
+
   void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
   void SetLobbyOwnerTimeout(const uint32_t nTimeout) { m_LobbyOwnerTimeout = nTimeout; }
+  void SetLoadingTimeout(const uint32_t nTimeout) { m_LoadingTimeout = nTimeout; }
+  void SetPlayingTimeout(const uint32_t nTimeout) { m_PlayingTimeout = nTimeout; }
+
+  void SetPlayingTimeoutWarningShortCountDown(const uint8_t nMode) { m_PlayingTimeoutWarningShortCountDown = nMode; }
+  void SetPlayingTimeoutWarningShortInterval(const uint32_t nTimeout) { m_PlayingTimeoutWarningShortInterval = nTimeout; }
+  void SetPlayingTimeoutWarningLargeCountDown(const uint8_t nMode) { m_PlayingTimeoutWarningLargeCountDown = nMode; }
+  void SetPlayingTimeoutWarningLargeInterval(const uint32_t nTimeout) { m_PlayingTimeoutWarningLargeInterval = nTimeout; }
+
+  void SetLobbyOwnerReleaseLANLeaver(const bool nRelease) { m_LobbyOwnerReleaseLANLeaver = nRelease; }
+
   void SetLobbyCountDownInterval(const uint32_t nValue) { m_LobbyCountDownInterval = nValue; }
   void SetLobbyCountDownStartValue(const uint32_t nValue) { m_LobbyCountDownStartValue = nValue; }
+
   void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
   void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }

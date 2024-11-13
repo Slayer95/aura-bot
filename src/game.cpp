@@ -3507,7 +3507,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
     }
     m_SyncPlayers.erase(user);
     m_HadLeaver = true;
-  } else if (!m_LobbyLoading) {
+  } else if (!m_LobbyLoading && m_Config->m_LobbyOwnerReleaseLANLeaver) {
     if (MatchOwnerName(user->GetName()) && m_OwnerRealm == user->GetRealmHostName() && user->GetRealmHostName().empty()) {
       ReleaseOwner();
     }

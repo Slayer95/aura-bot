@@ -318,7 +318,7 @@ Specifies the directory where Warcraft 3 save files (``.w3z``) are stored.
 
 This option is equivalent to ``<bot.save_path>`` in `config.ini`
 
-## \`--bind-address <IPv4>\`
+## \`--bind-address \<IPv4>\`
 
 If specified, Aura's game server will only allow connections from the provided IPv4 address.
 Note that \`0.0.0.0\` is a special value that will allow connections from every IPv4 address.
@@ -371,18 +371,20 @@ By default, the logging level is set to info.
 
 ## \`--port-forward-tcp \<PORT\>\`, \`--port-forward-udp \<PORT\>\`
 
-The --port-forward-tcp <PORT> and --port-forward-udp <PORT> flags are used to trigger 
+The ``--port-forward-tcp <PORT>`` and ``--port-forward-udp <PORT>`` flags are used to trigger 
 Universal Plug and Play (UPnP) requests from the command line interface (CLI) for TCP and UDP 
 port forwarding, respectively. These flags facilitate the hosting and discovery of multiplayer games 
 by allowing incoming connections on specific ports.
 
   TCP (Transmission Control Protocol):
-      The --port-forward-tcp <PORT> flag initiates UPnP requests to forward TCP traffic on the specified port.
+
+      The ``--port-forward-tcp <PORT>`` flag initiates UPnP requests to forward TCP traffic on the specified port.
       TCP is used for establishing connections between the game server and multiple clients for multiplayer gameplay.
       Enabling TCP port forwarding ensures that incoming TCP connections can reach the game server, allowing players to join multiplayer games seamlessly.
 
   UDP (User Datagram Protocol):
-      The --port-forward-udp <PORT> flag initiates UPnP requests to forward UDP traffic on the specified port.
+
+      The ``--port-forward-udp <PORT>`` flag initiates UPnP requests to forward UDP traffic on the specified port.
       UDP is utilized for server and client communication to discover hosted games and exchange game data efficiently.
       Enabling UDP port forwarding ensures that UDP packets related to game discovery and communication can reach the game server and clients.
 
@@ -559,9 +561,9 @@ This flag is disabled by default.
 This flag specifies that the game may only automatically start when the teams are balanced. In order for this 
 flag to be effective, other auto start parameters must also be supplied.
 
-This option is equivalent to ``<hosting.autostart.requires_balance">`` in `config.ini`
+This option is equivalent to ``<hosting.autostart.requires_balance>`` in `config.ini`
 
-This option is equivalent to ``<map.hosting.autostart.requires_balance">`` in map configuration
+This option is equivalent to ``<map.hosting.autostart.requires_balance>`` in map configuration
 
 This flag is enabled by default.
 
@@ -570,15 +572,45 @@ This flag is enabled by default.
 This flag specifies that the game may automatically start even if the teams are not balanced. In order for this 
 flag to be effective, other auto start parameters must also be supplied.
 
-This option is equivalent to ``<hosting.autostart.requires_balance">`` in `config.ini`
+This option is equivalent to ``<hosting.autostart.requires_balance>`` in `config.ini`
 
-This option is equivalent to ``<map.hosting.autostart.requires_balance">`` in map configuration
+This option is equivalent to ``<map.hosting.autostart.requires_balance>`` in map configuration
+
+This flag is disabled by default.
+
+## \`--fast-expire-lan-owner\`
+
+Enables a security measure that instantly removes the lobby owner if they disconnect from a game session joined 
+over a Local Area Network (LAN).
+
+Immediate removal minimizes the risk of impersonation, as an unauthenticated player could otherwise attempt to 
+reconnect as the lobby owner. By ensuring the owner is removed upon disconnection, the lobby remains secure from 
+potential exploits involving owner impersonation.
+
+This option is equivalent to ``<hosting.expiry.owner.lan>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.owner.lan>`` in map configuration
+
+This flag is enabled by default.
+
+## \`--no-fast-expire-lan-owner\`
+
+Disables the automatic removal of the lobby owner when they leave a game session joined over LAN.
+
+This may be useful in environments where temporary disconnections are common, but it significantly increases the
+risk of impersonation. Without authentication, another player could potentially rejoin as the lobby owner, 
+leading to unauthorized control over the game. Use this flag cautiously, as it trusts the legitimacy of the 
+owner’s reconnection without verification, potentially exposing the lobby to security vulnerabilities.
+
+This option is equivalent to ``<hosting.expiry.owner.lan>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.owner.lan>`` in map configuration
 
 This flag is disabled by default.
 
 # Parameters for CLI games
 
-## \`-s <TYPE>, --search-type \<TYPE\>\`
+## \`-s \<TYPE>, --search-type \<TYPE\>\`
 
 Specifies the type of hostable being referenced. This parameter helps Aura determine how to resolve 
 the input when hosting maps from the CLI, whether they are maps, configuration files, or remote resources.
@@ -658,13 +690,78 @@ PvPGN realms.
 - private: The game can only be joined from PvPGN realms by typing the game name.
 - public: The game is visible and clickable in the game lists in PvPGN realms.
 
-## \`--owner <USER@SERVER>\`
+## \`--owner \<USER@SERVER>\`
 
 This parameter specifies the owner of the hosted game. The owner is typically the user who has 
 administrative control over the game session. Here's the format for specifying the owner:
 
 - USER: The username of the owner.
 - SERVER: The server the user is registered in.
+
+## \`--lobby-timeout-mode \<MODE>\`
+
+Sets the conditions that trigger the countdown for the game lobby timeout, based on a pre-configured timeout value.
+
+**Options:**
+
+- never: The timeout countdown will never start, keeping the lobby active indefinitely.
+- empty: The countdown starts when the lobby becomes completely empty of players.
+- ownerless: The countdown begins if the lobby owner disconnects, even if other players remain in the lobby.
+- strict: The countdown starts immediately when the lobby is created and expires solely based on the timeout value,
+with no additional conditions.
+
+This option is equivalent to ``<hosting.expiry.lobby.timeout.mode>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.lobby.timeout.mode>`` in map configuration
+
+## \`--lobby-owner-timeout-mode \<MODE>\`
+
+Determines when the timeout countdown for game ownership expiration should begin, based on a specified timeout value.
+
+**Options:**
+
+- never: The timeout countdown for ownership will never start, even if the owner is absent.
+- absent: The countdown starts when the lobby owner has left the room. Node that this mechanism is independent from
+``--fast-expire-lan-owner``, which doesn't use a timer.
+- strict: The countdown starts as a new game owner is assigned, and ownership expires solely based on the timeout value,
+with no further conditions.
+
+This option is equivalent to ``<hosting.expiry.owner.timeout.mode>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.owner.timeout.mode>`` in map configuration
+
+## \`--loading-timeout-mode \<MODE>\`
+
+Defines when the timeout countdown for kicking slow-loading players begins, in conjunction with a set timeout value.
+
+**Options:**
+
+- never: The countdown will not begin, allowing players unlimited time to load.
+- strict: The countdown starts as soon as players begin loading,
+and any player who exceeds the timeout will be kicked, with no other conditions applied.
+
+This option is equivalent to ``<hosting.expiry.loading.timeout.mode>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.loading.timeout.mode>`` in map configuration
+
+## \`--playing-timeout-mode \<MODE>\`
+
+Specifies when the timeout countdown starts for an active game, used together with a predefined timeout duration. Once 
+the timeout condition is fulfilled, all players are kicked from the game even if it is still in progress.
+
+**Options:**
+
+- never: The countdown will not be triggered after the game starts, allowing it to continue indefinitely.
+- dry: The countdown starts immediately when the game begins, but instead of terminating the game, the
+server simulates the expiration process. This mode is primarily used for testing server configuration without 
+affecting active sessions or for playfully pressuring players to finish quickly. In dry mode, warnings and 
+countdown messages will appear, but the game itself will not be forcibly ended when the timeout is reached.
+- strict: The countdown starts as soon as the game begins, and the game will expire purely based on the timeout
+value, without any additional conditions.
+
+This option is equivalent to ``<hosting.expiry.playing.timeout.mode>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.playing.timeout.mode>`` in map configuration
 
 ## \`--lobby-timeout \<TIME\>\`
 
@@ -673,9 +770,9 @@ without a game owner. After this time passes, the lobby is unhosted.
 
 - TIME: Provided in seconds.
 
-This option is equivalent to ``<hosting.abandoned_lobby.game_expiry_time>`` in `config.ini`
+This option is equivalent to ``<hosting.expiry.lobby.timeout>`` in `config.ini`
 
-This option is equivalent to ``<map.hosting.abandoned_lobby.game_expiry_time>`` in map configuration
+This option is equivalent to ``<map.hosting.expiry.lobby.timeout>`` in map configuration
 
 ## \`--lobby-owner-timeout \<TIME\>\`
 
@@ -684,9 +781,55 @@ the game lobby. After this time passes, the game owner authority is removed.
 
 - TIME: Provided in seconds.
 
-This option is equivalent to ``<hosting.abandoned_lobby.owner_expiry_time>`` in `config.ini`
+This option is equivalent to ``<hosting.expiry.owner.timeout>`` in `config.ini`
 
-This option is equivalent to ``<map.hosting.abandoned_lobby.owner_expiry_time>`` in map configuration
+This option is equivalent to ``<map.hosting.expiry.owner.timeout>`` in map configuration
+
+## \`--loading-timeout \<TIME\>\`
+
+This parameter specifies the maximum time a player loading the game is waited for, before they
+are automatically kicked from the game.
+
+- TIME: Provided in seconds.
+
+This option is equivalent to ``<hosting.expiry.loading.timeout>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.loading.timeout>`` in map configuration
+
+## \`--playing-timeout \<TIME\>\`
+
+This parameter specifies the maximum time a game is allowed to exist after it is started. When the 
+timeout is reached, all players are kicked from the game even if it is still in progress.
+
+- TIME: Provided in seconds.
+
+This option is equivalent to ``<hosting.expiry.playing.timeout>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.playing.timeout>`` in map configuration
+
+## \`--playing-timeout-warning-short-interval \<INTERVAL>\`
+
+Sets the interval for the most frequent game timeout warnings as the time limit nears. 
+These warnings will be displayed at regular intervals when the countdown is in its final phase, 
+giving players a clear indication that the game is about to end soon.
+
+## \`--playing-timeout-warning-short-ticks \<TICKS>\`
+
+Determines the number of ticks for which the most frequent game timeout warnings will be displayed 
+before the game reaches the time limit. This option specifies how long the final, frequent warnings 
+will persist, helping players to prepare for the end of the session.
+
+## \`--playing-timeout-warning-large-interval \<INTERVAL>\`
+
+Sets the interval for the earliest and least frequent game timeout warnings. These warnings will 
+appear sporadically when the game is still far from reaching the timeout limit, serving as an early 
+reminder without causing too much distraction.
+
+## \`--playing-timeout-warning-large-ticks \<TICKS>\`
+
+Determines the number of ticks for which the earliest and rarest game timeout warnings will be displayed. 
+This option specifies how long the initial, infrequent warnings will persist, gently alerting players 
+of the eventual game timeout.
 
 ## \`--download-timeout \<TIME\>\`
 
@@ -813,7 +956,7 @@ related config.ini entries must also be enabled.
 - disabled: GProxy reconnection not supported for the game.
 - basic: GProxy classic reconnection supported. Requires ``<net.tcp_extensions.gproxy.basic.enabled = yes>``
 - extended: GProxyDLL extended time reconnection supported, additionally to classic reconnection.
-Requires <net.tcp_extensions.gproxy.long.enabled = yes>
+Requires ``<net.tcp_extensions.gproxy.long.enabled = yes>``
 
 This option is equivalent to ``<map.reconnection.mode>`` in map configuration.
 
@@ -948,7 +1091,7 @@ has been created. Here's how it works:
 
 - COMMAND: The command to be executed. The command token is not to be included (e.g. ! or .)
 
-## \`--exec-as <USER@SERVER>\`
+## \`--exec-as \<USER@SERVER>\`
 
 This parameter specifies the user and server on which the command specified by --exec should be executed. 
 It allows the execution of commands as a specific user on a particular server. Here's the format:

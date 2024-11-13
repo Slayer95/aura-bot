@@ -1495,12 +1495,14 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.autostart.requires_balance")) {
     m_AutoStartRequiresBalance = CFG.GetBool("map.hosting.autostart.requires_balance", false);
   }
+
   if (CFG.Exists("map.net.start_lag.sync_limit")) {
     m_LatencyMaxFrames = CFG.GetUint32("map.net.start_lag.sync_limit", 32);
   }
   if (CFG.Exists("map.net.stop_lag.sync_limit")) {
     m_LatencySafeFrames = CFG.GetUint32("map.net.stop_lag.sync_limit", 8);
   }
+
   if (CFG.Exists("map.hosting.high_ping.kick_ms")) {
     m_AutoKickPing = CFG.GetUint32("map.hosting.high_ping.kick_ms", 300);
   }
@@ -1510,18 +1512,57 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.high_ping.safe_ms")) {
     m_SafeHighPing = CFG.GetUint32("map.hosting.high_ping.safe_ms", 150);
   }
-  if (CFG.Exists("map.hosting.abandoned_lobby.game_expiry_time")) {
-    m_LobbyTimeout = CFG.GetUint32("map.hosting.abandoned_lobby.game_expiry_time", 600);
+
+  if (CFG.Exists("map.hosting.expiry.lobby.mode")) {
+    m_LobbyTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.lobby.mode", {"never", "empty", "ownerless", "strict"}, LOBBY_TIMEOUT_OWNERLESS);
   }
-  if (CFG.Exists("map.hosting.abandoned_lobby.owner_expiry_time")) {
-    m_LobbyOwnerTimeout = CFG.GetUint32("map.hosting.abandoned_lobby.owner_expiry_time", 120);
+  if (CFG.Exists("map.hosting.expiry.owner.mode")) {
+    m_LobbyOwnerTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.owner.mode", {"never", "absent", "strict"}, LOBBY_OWNER_TIMEOUT_ABSENT);
   }
+  if (CFG.Exists("map.hosting.expiry.loading.mode")) {
+    m_LoadingTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.loading.mode", {"never", "strict"}, GAME_LOADING_TIMEOUT_STRICT);
+  }
+  if (CFG.Exists("map.hosting.expiry.playing.mode")) {
+    m_PlayingTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.playing.mode", {"never", "dry", "strict"}, GAME_PLAYING_TIMEOUT_STRICT);
+  }
+
+  if (CFG.Exists("map.hosting.expiry.lobby.timeout")) {
+    m_LobbyTimeout = CFG.GetUint32("map.hosting.expiry.lobby.timeout", 600);
+  }
+  if (CFG.Exists("map.hosting.expiry.owner.timeout")) {
+    m_LobbyOwnerTimeout = CFG.GetUint32("map.hosting.expiry.owner.timeout", 120);
+  }
+  if (CFG.Exists("map.hosting.expiry.loading.timeout")) {
+    m_LoadingTimeout = CFG.GetUint32("map.hosting.expiry.loading.timeout", 900);
+  }
+  if (CFG.Exists("map.hosting.expiry.playing.timeout")) {
+    m_PlayingTimeout = CFG.GetUint32("map.hosting.expiry.playing.timeout", 18000);
+  }
+
+  if (CFG.Exists("hosting.expiry.playing.timeout.warnings")) {
+    m_PlayingTimeoutWarningShortCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.warnings", 10);
+  }
+  if (CFG.Exists("hosting.expiry.playing.timeout.interval")) {
+    m_PlayingTimeoutWarningShortInterval = CFG.GetUint32("hosting.expiry.playing.timeout.interval", 60);
+  }
+  if (CFG.Exists("hosting.expiry.playing.timeout.warnings")) {
+    m_PlayingTimeoutWarningLargeCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.warnings", 5);
+  }
+  if (CFG.Exists("hosting.expiry.playing.timeout.interval")) {
+    m_PlayingTimeoutWarningLargeInterval = CFG.GetUint32("hosting.expiry.playing.timeout.interval", 900);
+  }
+
+  if (CFG.Exists("hosting.expiry.owner.lan")) {
+    m_LobbyOwnerReleaseLANLeaver = CFG.GetBool("hosting.expiry.owner.lan", true);
+  }
+
   if (CFG.Exists("map.hosting.game_start.count_down_interval")) {
     m_LobbyCountDownInterval = CFG.GetUint32("map.hosting.game_start.count_down_interval", 500);
   }
   if (CFG.Exists("map.hosting.game_start.count_down_ticks")) {
     m_LobbyCountDownStartValue = CFG.GetUint32("map.hosting.game_start.count_down_ticks", 5);
   }
+
   if (CFG.Exists("map.bot.latency")) {
     m_Latency = CFG.GetUint16("map.bot.latency", 100);
   }
@@ -1531,6 +1572,7 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.bot.latency.equalizer.frames")) {
     m_LatencyEqualizerFrames = CFG.GetUint8("map.bot.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
   }
+
   if (CFG.Exists("map.reconnection.mode")) {
     m_ReconnectionMode = CFG.GetStringIndex("map.reconnection.mode", {"disabled", "basic", "extended"}, RECONNECT_DISABLED);
     if (m_ReconnectionMode.value() == RECONNECT_ENABLED_GPROXY_EXTENDED) m_ReconnectionMode = m_ReconnectionMode.value() | RECONNECT_ENABLED_GPROXY_BASIC;

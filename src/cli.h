@@ -88,17 +88,36 @@ public:
   std::optional<bool>                   m_GameOwnerLess;
   std::vector<std::string>              m_ExcludedRealms;
   std::optional<std::string>            m_MirrorSource;
+
+  std::optional<std::string>            m_GameLobbyTimeoutMode;
+  std::optional<std::string>            m_GameLobbyOwnerTimeoutMode;
+  std::optional<std::string>            m_GameLoadingTimeoutMode;
+  std::optional<std::string>            m_GamePlayingTimeoutMode;
+
   std::optional<uint32_t>               m_GameLobbyTimeout;
   std::optional<uint32_t>               m_GameLobbyOwnerTimeout;
+  std::optional<uint32_t>               m_GameLoadingTimeout;
+  std::optional<uint32_t>               m_GamePlayingTimeout;
+
+  std::optional<uint8_t>                m_GamePlayingTimeoutWarningShortCountDown;
+  std::optional<uint32_t>               m_GamePlayingTimeoutWarningShortInterval;
+  std::optional<uint8_t>                m_GamePlayingTimeoutWarningLargeCountDown;
+  std::optional<uint32_t>               m_GamePlayingTimeoutWarningLargeInterval;
+
+  std::optional<bool>                   m_GameLobbyOwnerReleaseLANLeaver;
+
   std::optional<uint32_t>               m_GameLobbyCountDownInterval;
   std::optional<uint32_t>               m_GameLobbyCountDownStartValue;
+
   std::optional<uint8_t>                m_GameAutoStartPlayers;
   std::optional<int64_t>                m_GameAutoStartSeconds;
+
   std::optional<uint16_t>               m_GameLatencyAverage;
   std::optional<uint16_t>               m_GameLatencyMaxFrames;
   std::optional<uint16_t>               m_GameLatencySafeFrames;
   std::optional<bool>                   m_GameLatencyEqualizerEnabled;
   std::optional<uint8_t>                m_GameLatencyEqualizerFrames;
+
   std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_GameNotifyJoins;
@@ -146,6 +165,10 @@ public:
   // Parsing stuff
   uint8_t Parse(const int argc, char** argv);
   [[nodiscard]] uint8_t GetGameSearchType() const;
+  [[nodiscard]] uint8_t GetGameLobbyTimeoutMode() const;
+  [[nodiscard]] uint8_t GetGameLobbyOwnerTimeoutMode() const;
+  [[nodiscard]] uint8_t GetGameLoadingTimeoutMode() const;
+  [[nodiscard]] uint8_t GetGamePlayingTimeoutMode() const;
   [[nodiscard]] uint8_t GetGameReconnectionMode() const;
   [[nodiscard]] uint8_t GetGameDisplayType() const;
   [[nodiscard]] uint8_t GetGameIPFloodHandler() const;

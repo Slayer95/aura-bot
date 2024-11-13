@@ -73,13 +73,31 @@ public:
   std::optional<uint32_t>               m_AutoKickPing;
   std::optional<uint32_t>               m_WarnHighPing;
   std::optional<uint32_t>               m_SafeHighPing;
+
+  std::optional<uint8_t>                m_LobbyTimeoutMode;
+  std::optional<uint8_t>                m_LobbyOwnerTimeoutMode;
+  std::optional<uint8_t>                m_LoadingTimeoutMode;
+  std::optional<uint8_t>                m_PlayingTimeoutMode;
+
   std::optional<uint32_t>               m_LobbyTimeout;
   std::optional<uint32_t>               m_LobbyOwnerTimeout;
+  std::optional<uint32_t>               m_LoadingTimeout;
+  std::optional<uint32_t>               m_PlayingTimeout;
+
+  std::optional<uint8_t>                m_PlayingTimeoutWarningShortCountDown;
+  std::optional<uint32_t>               m_PlayingTimeoutWarningShortInterval;
+  std::optional<uint8_t>                m_PlayingTimeoutWarningLargeCountDown;
+  std::optional<uint32_t>               m_PlayingTimeoutWarningLargeInterval;
+
+  std::optional<bool>                   m_LobbyOwnerReleaseLANLeaver;
+
   std::optional<uint32_t>               m_LobbyCountDownInterval;
   std::optional<uint32_t>               m_LobbyCountDownStartValue;
+
   std::optional<uint16_t>               m_Latency;
   std::optional<bool>                   m_LatencyEqualizerEnabled;
   std::optional<uint8_t>                m_LatencyEqualizerFrames;
+
   std::optional<int64_t>                m_AutoStartSeconds;
   std::optional<uint8_t>                m_AutoStartPlayers;
   std::optional<bool>                   m_HideLobbyNames;

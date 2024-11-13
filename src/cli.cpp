@@ -128,11 +128,29 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
+
+  app.add_option("--lobby-timeout-mode", m_GameLobbyTimeoutMode, "Customizes under which circumstances should a game lobby timeout. Values: never, empty, ownerless, strict")->check(CLI::IsMember({"never", "empty", "ownerless", "strict"}));
+  app.add_option("--lobby-owner-timeout-mode", m_GameLobbyOwnerTimeoutMode, "Customizes under which circumstances should game ownership expire. Values: never, absent, strict")->check(CLI::IsMember({"never", "absent", "strict"}));
+  app.add_option("--loading-timeout-mode", m_GameLoadingTimeoutMode, "Customizes under which circumstances should players taking too long to load the game be kicked. Values: never, strict")->check(CLI::IsMember({"never", "strict"}));
+  app.add_option("--playing-timeout-mode", m_GamePlayingTimeoutMode, "Customizes under which circumstances should a started game expire. Values: never, dry, strict")->check(CLI::IsMember({"never", "dry", "strict"}));
+
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
   app.add_option("--lobby-owner-timeout", m_GameLobbyOwnerTimeout, "Sets the time limit for an absent game owner to keep their power (seconds.)");
+  app.add_option("--loading-timeout", m_GameLoadingTimeout, "Sets the time limit for players to load a started game (seconds.)");
+  app.add_option("--playing-timeout", m_GamePlayingTimeout, "Sets the time limit for a started game (seconds.)");
+
+  app.add_option("--playing-timeout-warning-short-interval", m_GamePlayingTimeoutWarningShortInterval, "Sets the interval for the latest and most often game timeout warnings to be displayed.");
+  app.add_option("--playing-timeout-warning-short-ticks", m_GamePlayingTimeoutWarningShortCountDown, "Sets the amount of ticks for the latest and most often game timeout warnings to be displayed.");
+  app.add_option("--playing-timeout-warning-large-interval", m_GamePlayingTimeoutWarningLargeInterval, "Sets the interval for the earliest and rarest game timeout warnings to be displayed.");
+  app.add_option("--playing-timeout-warning-large-ticks", m_GamePlayingTimeoutWarningLargeCountDown, "Sets the amount of ticks for the earliest and rarest timeout warnings to be displayed.");
+
+  app.add_flag(  "--fast-expire-lan-owner,--no-fast-expire-lan-owner{false}", m_GameLobbyOwnerReleaseLANLeaver, "Allows to unsafely turn off the feature that removes game owners as soon as they leave a game lobby they joined from LAN.");
+
   app.add_option("--start-countdown-interval", m_GameLobbyCountDownInterval, "Sets the interval for the game start countdown to tick down.");
   app.add_option("--start-countdown-ticks", m_GameLobbyCountDownStartValue, "Sets the amount of ticks for the game start countdown.");
+
   app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
+
   app.add_option("--players-ready", m_GamePlayersReadyMode, "Customizes when Aura will consider a player to be ready to start the game. Values: fast, race, explicit.")->check(CLI::IsMember({"fast", "race", "explicit"}));
   app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");
   app.add_option("--auto-start-time", m_GameAutoStartSeconds, "Sets a time that should pass before automatically starting the game (seconds.)");
@@ -259,6 +277,74 @@ uint8_t CCLI::GetGameSearchType() const
     searchType = SEARCH_TYPE_ONLY_FILE;
   }
   return searchType;
+}
+
+uint8_t CCLI::GetGameLobbyTimeoutMode() const
+{
+  uint8_t timeoutMode = LOBBY_TIMEOUT_OWNERLESS;
+  if (m_GameLobbyTimeoutMode.has_value()) {
+    if (m_GameLobbyTimeoutMode.value() == "never") {
+      timeoutMode = LOBBY_TIMEOUT_NEVER;
+    } else if (m_GameLobbyTimeoutMode.value() == "empty") {
+      timeoutMode = LOBBY_TIMEOUT_EMPTY;
+    } else if (m_GameLobbyTimeoutMode.value() == "ownerless") {
+      timeoutMode = LOBBY_TIMEOUT_OWNERLESS;
+    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
+      timeoutMode = LOBBY_TIMEOUT_STRICT;
+    } else {
+      timeoutMode = LOBBY_TIMEOUT_OWNERLESS;
+    }
+  }
+  return timeoutMode;
+}
+
+uint8_t CCLI::GetGameLobbyOwnerTimeoutMode() const
+{
+  uint8_t timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
+  if (m_GameLobbyTimeoutMode.has_value()) {
+    if (m_GameLobbyTimeoutMode.value() == "never") {
+      timeoutMode = LOBBY_OWNER_TIMEOUT_NEVER;
+    } else if (m_GameLobbyTimeoutMode.value() == "absent") {
+      timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
+    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
+      timeoutMode = LOBBY_OWNER_TIMEOUT_STRICT;
+    } else {
+      timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
+    }
+  }
+  return timeoutMode;
+}
+
+uint8_t CCLI::GetGameLoadingTimeoutMode() const
+{
+  uint8_t timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
+  if (m_GameLobbyTimeoutMode.has_value()) {
+    if (m_GameLobbyTimeoutMode.value() == "never") {
+      timeoutMode = GAME_LOADING_TIMEOUT_NEVER;
+    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
+      timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
+    } else {
+      timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
+    }
+  }
+  return timeoutMode;
+}
+
+uint8_t CCLI::GetGamePlayingTimeoutMode() const
+{
+  uint8_t timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
+  if (m_GameLobbyTimeoutMode.has_value()) {
+    if (m_GameLobbyTimeoutMode.value() == "never") {
+      timeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
+    } else if (m_GameLobbyTimeoutMode.value() == "dry") {
+      timeoutMode = GAME_PLAYING_TIMEOUT_DRY;
+    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
+      timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
+    } else {
+      timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
+    }
+  }
+  return timeoutMode;
 }
 
 uint8_t CCLI::GetGameReconnectionMode() const
