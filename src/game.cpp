@@ -5561,10 +5561,12 @@ void CGame::EventGameLoaded()
   ImmutableUserList DesyncedPlayers;
   if (m_Users.size() >= 2) {
     for (const auto& user : m_Users) {
-      if (!Shortest || user->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks()) {
-        Shortest = user;
-      } else if (Shortest && (!Longest || user->GetFinishedLoadingTicks() > Longest->GetFinishedLoadingTicks())) {
-        Longest = user;
+      if (user->GetFinishedLoading()) {
+        if (!Shortest || user->GetFinishedLoadingTicks() < Shortest->GetFinishedLoadingTicks()) {
+          Shortest = user;
+        } else if (Shortest && (!Longest || user->GetFinishedLoadingTicks() > Longest->GetFinishedLoadingTicks())) {
+          Longest = user;
+        }
       }
 
       if (m_SyncPlayers[user].size() < majorityThreshold) {
@@ -5605,7 +5607,9 @@ void CGame::EventGameLoaded()
   }
 
   for (auto& user : m_Users) {
-    SendChat(user, "Your load time was " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+    if (user->GetFinishedLoading()) {
+      SendChat(user, "Your load time was " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds");
+    }
   }
 
   // GProxy hangs trying to reconnect
