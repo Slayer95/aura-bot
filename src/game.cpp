@@ -3215,6 +3215,7 @@ vector<QueuedActionsFrameNode*> CGame::GetAllFrameNodes()
   vector<QueuedActionsFrameNode*> frameNodes;
   frameNodes.reserve(GetMaxEqualizerDelayFrames());
   QueuedActionsFrameNode* frameNode = GetFirstActionFrameNode();
+  if (frameNode == nullptr) return frameNodes;
   QueuedActionsFrameNode* lastFrameNode = GetLastActionFrameNode();
   while (frameNode != lastFrameNode) {
     frameNodes.push_back(frameNode);
