@@ -49,7 +49,7 @@ public:
   [[nodiscard]] uint32_t  GetHostCounter() const;
   [[nodiscard]] uint16_t  GetPort() const;
 
-  sockaddr_storage            m_TargetHost; // TODO: Define sockaddr_storage
+  sockaddr_storage            m_TargetHost;
   CAura*                      m_Aura;
   uint32_t                    m_RealmInternalId;
   CTCPClient*                 m_Socket;
