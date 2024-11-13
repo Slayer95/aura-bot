@@ -1479,7 +1479,7 @@ bool CGame::Update(void* fd, void* send_fd)
   uint8_t RemainingPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   if (RemainingPlayers != m_StartPlayers && !GetIsGameOverTrusted() && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: 0 p | " + ToDecString(GetNumJoinedObservers()) + " | obs | 0 fake")
+      LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: 0 p | " + ToDecString(GetNumJoinedObservers()) + " obs | 0 fake")
       StartGameOverTimer();
     } else if (RemainingPlayers <= m_Config->m_NumPlayersToStartGameOver) {
       LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
