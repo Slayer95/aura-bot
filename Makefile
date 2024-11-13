@@ -12,10 +12,10 @@ ifndef CXX
 endif
 
 CCFLAGS += -fno-builtin
-CXXFLAGS += -g -std=c++17 -pipe -Wall -Wextra -fno-builtin -fno-rtti
+CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti
 DFLAGS =
 OFLAGS = -O3 -flto
-LFLAGS += -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
+LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
 
 ifeq ($(AURASTATIC), 1)
 	LFLAGS += -static
