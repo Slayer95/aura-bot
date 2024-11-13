@@ -1056,108 +1056,7 @@ void CMap::Load(CConfig* CFG)
   m_HMCSlot = CFG->GetUint8("map.w3hmc.slot", 1);
   m_HMCPlayerName = CFG->GetString("map.w3hmc.player_name", 1, 15, "[HMC]Aura");
 
-  // CGameConfig overrides
-  if (CFG->Exists("map.hosting.game_over.player_count")) {
-    m_NumPlayersToStartGameOver = CFG->GetUint8("map.hosting.game_over.player_count", 1);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.game_ready.mode")) {
-    m_PlayersReadyMode = CFG->GetStringIndex("map.hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.autostart.requires_balance")) {
-    m_AutoStartRequiresBalance = CFG->GetBool("map.hosting.autostart.requires_balance", false);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.net.start_lag.sync_limit")) {
-    m_LatencyMaxFrames = CFG->GetUint32("map.net.start_lag.sync_limit", 32);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.net.stop_lag.sync_limit")) {
-    m_LatencySafeFrames = CFG->GetUint32("map.net.stop_lag.sync_limit", 8);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.high_ping.kick_ms")) {
-    m_AutoKickPing = CFG->GetUint32("map.hosting.high_ping.kick_ms", 300);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.high_ping.warn_ms")) {
-    m_WarnHighPing = CFG->GetUint32("map.hosting.high_ping.warn_ms", 200);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.high_ping.safe_ms")) {
-    m_SafeHighPing = CFG->GetUint32("map.hosting.high_ping.safe_ms", 150);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.abandoned_lobby.game_expiry_time")) {
-    m_LobbyTimeout = CFG->GetUint32("map.hosting.abandoned_lobby.game_expiry_time", 600);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.abandoned_lobby.owner_expiry_time")) {
-    m_LobbyOwnerTimeout = CFG->GetUint32("map.hosting.abandoned_lobby.owner_expiry_time", 120);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.game_start.count_down_interval")) {
-    m_LobbyCountDownInterval = CFG->GetUint32("map.hosting.game_start.count_down_interval", 500);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.game_start.count_down_ticks")) {
-    m_LobbyCountDownStartValue = CFG->GetUint32("map.hosting.game_start.count_down_ticks", 5);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.bot.latency")) {
-    m_Latency = CFG->GetUint16("map.bot.latency", 100);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.bot.latency.equalizer.enabled")) {
-    m_LatencyEqualizerEnabled = CFG->GetBool("map.bot.latency.equalizer.enabled", false);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.bot.latency.equalizer.frames")) {
-    m_LatencyEqualizerFrames = CFG->GetUint8("map.bot.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.reconnection.mode")) {
-    m_ReconnectionMode = CFG->GetStringIndex("map.reconnection.mode", {"disabled", "basic", "extended"}, RECONNECT_DISABLED);
-    if (m_ReconnectionMode.value() == RECONNECT_ENABLED_GPROXY_EXTENDED) m_ReconnectionMode = m_ReconnectionMode.value() | RECONNECT_ENABLED_GPROXY_BASIC;
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.ip_filter.flood_handler")) {
-    m_IPFloodHandler = CFG->GetUint8("map.hosting.ip_filter.flood_handler", ON_IPFLOOD_DENY);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.name_filter.unsafe_handler")) {
-    m_UnsafeNameHandler = CFG->GetUint8("map.hosting.name_filter.unsafe_handler", ON_UNSAFE_NAME_DENY);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.realm_broadcast.error_handler")) {
-    m_BroadcastErrorHandler = CFG->GetUint8("map.hosting.realm_broadcast.error_handler", ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.name_filter.is_pipe_harmful")) {
-    m_PipeConsideredHarmful = CFG->GetBool("map.hosting.name_filter.is_pipe_harmful", false);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.auto_start.seconds")) {
-    m_AutoStartSeconds = CFG->GetInt64("map.auto_start.seconds", 180);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.auto_start.players")) {
-    m_AutoStartPlayers = CFG->GetUint8("map.auto_start.players", 2);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.nicknames.hide_lobby")) {
-    m_HideLobbyNames = CFG->GetBool("map.hosting.nicknames.hide_lobby", false);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.nicknames.hide_in_game")) {
-    m_HideInGameNames = CFG->GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.hosting.log_commands")) {
-    m_LogCommands = CFG->GetBool("map.hosting.log_commands", false);
-    CFG->FailIfErrorLast();
-  }
+  LoadGameConfigOverrides(*CFG);
 
   if (CFG->Exists("map.options")) {
     MapOptions = CFG->GetUint32("map.options", 0);
@@ -1580,6 +1479,91 @@ uint32_t CMap::XORRotateLeft(const uint8_t* data, const uint32_t length)
   }
 
   return Val;
+}
+
+void CMap::LoadGameConfigOverrides(CConfig& CFG)
+{
+  const bool wasStrict = CFG.GetStrictMode();
+  CFG.SetStrictMode(true);
+
+  if (CFG.Exists("map.hosting.game_over.player_count")) {
+    m_NumPlayersToStartGameOver = CFG.GetUint8("map.hosting.game_over.player_count", 1);
+  }
+  if (CFG.Exists("map.hosting.game_ready.mode")) {
+    m_PlayersReadyMode = CFG.GetStringIndex("map.hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
+  }
+  if (CFG.Exists("map.hosting.autostart.requires_balance")) {
+    m_AutoStartRequiresBalance = CFG.GetBool("map.hosting.autostart.requires_balance", false);
+  }
+  if (CFG.Exists("map.net.start_lag.sync_limit")) {
+    m_LatencyMaxFrames = CFG.GetUint32("map.net.start_lag.sync_limit", 32);
+  }
+  if (CFG.Exists("map.net.stop_lag.sync_limit")) {
+    m_LatencySafeFrames = CFG.GetUint32("map.net.stop_lag.sync_limit", 8);
+  }
+  if (CFG.Exists("map.hosting.high_ping.kick_ms")) {
+    m_AutoKickPing = CFG.GetUint32("map.hosting.high_ping.kick_ms", 300);
+  }
+  if (CFG.Exists("map.hosting.high_ping.warn_ms")) {
+    m_WarnHighPing = CFG.GetUint32("map.hosting.high_ping.warn_ms", 200);
+  }
+  if (CFG.Exists("map.hosting.high_ping.safe_ms")) {
+    m_SafeHighPing = CFG.GetUint32("map.hosting.high_ping.safe_ms", 150);
+  }
+  if (CFG.Exists("map.hosting.abandoned_lobby.game_expiry_time")) {
+    m_LobbyTimeout = CFG.GetUint32("map.hosting.abandoned_lobby.game_expiry_time", 600);
+  }
+  if (CFG.Exists("map.hosting.abandoned_lobby.owner_expiry_time")) {
+    m_LobbyOwnerTimeout = CFG.GetUint32("map.hosting.abandoned_lobby.owner_expiry_time", 120);
+  }
+  if (CFG.Exists("map.hosting.game_start.count_down_interval")) {
+    m_LobbyCountDownInterval = CFG.GetUint32("map.hosting.game_start.count_down_interval", 500);
+  }
+  if (CFG.Exists("map.hosting.game_start.count_down_ticks")) {
+    m_LobbyCountDownStartValue = CFG.GetUint32("map.hosting.game_start.count_down_ticks", 5);
+  }
+  if (CFG.Exists("map.bot.latency")) {
+    m_Latency = CFG.GetUint16("map.bot.latency", 100);
+  }
+  if (CFG.Exists("map.bot.latency.equalizer.enabled")) {
+    m_LatencyEqualizerEnabled = CFG.GetBool("map.bot.latency.equalizer.enabled", false);
+  }
+  if (CFG.Exists("map.bot.latency.equalizer.frames")) {
+    m_LatencyEqualizerFrames = CFG.GetUint8("map.bot.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
+  }
+  if (CFG.Exists("map.reconnection.mode")) {
+    m_ReconnectionMode = CFG.GetStringIndex("map.reconnection.mode", {"disabled", "basic", "extended"}, RECONNECT_DISABLED);
+    if (m_ReconnectionMode.value() == RECONNECT_ENABLED_GPROXY_EXTENDED) m_ReconnectionMode = m_ReconnectionMode.value() | RECONNECT_ENABLED_GPROXY_BASIC;
+  }
+  if (CFG.Exists("map.hosting.ip_filter.flood_handler")) {
+    m_IPFloodHandler = CFG.GetUint8("map.hosting.ip_filter.flood_handler", ON_IPFLOOD_DENY);
+  }
+  if (CFG.Exists("map.hosting.name_filter.unsafe_handler")) {
+    m_UnsafeNameHandler = CFG.GetUint8("map.hosting.name_filter.unsafe_handler", ON_UNSAFE_NAME_DENY);
+  }
+  if (CFG.Exists("map.hosting.realm_broadcast.error_handler")) {
+    m_BroadcastErrorHandler = CFG.GetUint8("map.hosting.realm_broadcast.error_handler", ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
+  }
+  if (CFG.Exists("map.hosting.name_filter.is_pipe_harmful")) {
+    m_PipeConsideredHarmful = CFG.GetBool("map.hosting.name_filter.is_pipe_harmful", false);
+  }
+  if (CFG.Exists("map.auto_start.seconds")) {
+    m_AutoStartSeconds = CFG.GetInt64("map.auto_start.seconds", 180);
+  }
+  if (CFG.Exists("map.auto_start.players")) {
+    m_AutoStartPlayers = CFG.GetUint8("map.auto_start.players", 2);
+  }
+  if (CFG.Exists("map.hosting.nicknames.hide_lobby")) {
+    m_HideLobbyNames = CFG.GetBool("map.hosting.nicknames.hide_lobby", false);
+  }
+  if (CFG.Exists("map.hosting.nicknames.hide_in_game")) {
+    m_HideInGameNames = CFG.GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
+  }
+  if (CFG.Exists("map.hosting.log_commands")) {
+    m_LogCommands = CFG.GetBool("map.hosting.log_commands", false);
+  }
+
+  CFG.SetStrictMode(wasStrict);
 }
 
 uint8_t CMap::GetLobbyRace(const CGameSlot* slot) const

@@ -199,6 +199,8 @@ public:
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
   void Load(CConfig* CFG);
+  void LoadGameConfigOverrides(CConfig& CFG);
+
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
   [[nodiscard]] uint32_t                          XORRotateLeft(const uint8_t* data, const uint32_t length);

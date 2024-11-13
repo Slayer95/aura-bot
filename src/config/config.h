@@ -104,6 +104,7 @@ public:
   [[nodiscard]] inline std::filesystem::path GetFile() const { return m_File; };
   [[nodiscard]] inline bool GetErrorLast() const { return m_ErrorLast; };
   [[nodiscard]] inline bool GetSuccess() const { return !m_CriticalError; };
+  [[nodiscard]] inline bool GetStrictMode() const { return m_StrictMode; };
   inline void FailIfErrorLast() {
     if (m_ErrorLast) m_CriticalError = true;
   };
