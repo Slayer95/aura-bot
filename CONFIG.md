@@ -751,24 +751,24 @@ Config
 - Default value: 18000
 - Error handling: Use default value
 
-## \`hosting.expiry.playing.timeout.interval\`
-- Type: uint32
-- Default value: 60
-- Error handling: Use default value
-
-## \`hosting.expiry.playing.timeout.interval\`
+## \`hosting.expiry.playing.timeout.eager_interval\`
 - Type: uint32
 - Default value: 1200
 - Error handling: Use default value
 
-## \`hosting.expiry.playing.timeout.warnings\`
-- Type: uint8
-- Default value: 10
-- Error handling: Use default value
-
-## \`hosting.expiry.playing.timeout.warnings\`
+## \`hosting.expiry.playing.timeout.eager_warnings\`
 - Type: uint8
 - Default value: 3
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.timeout.soon_interval\`
+- Type: uint32
+- Default value: 60
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.timeout.soon_warnings\`
+- Type: uint8
+- Default value: 10
 - Error handling: Use default value
 
 ## \`hosting.game_over.player_count\`
@@ -1063,9 +1063,19 @@ Config
 - Default value: auto
 - Error handling: Use default value
 
-## \`metrics.rtt_pings\`
+## \`metrics.ping.use_rtt\`
 - Type: bool
 - Default value: false
+- Error handling: Use default value
+
+## \`metrics.ping.use_tcpinfo\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`metrics.ping.use_tcpinfo\`
+- Type: bool
+- Default value: true
 - Error handling: Use default value
 
 ## \`monitor.hosting.on_start.check_connectivity\`
