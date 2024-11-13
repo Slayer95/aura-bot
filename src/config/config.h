@@ -60,6 +60,7 @@
 #define CONFIG_ERROR(key, T) \
     do { \
         m_ErrorLast = true; \
+        if (m_StrictMode) m_CriticalError = true; \
         Print(std::string("[CONFIG] Error - Invalid value provided for <") + key + std::string(">.")); \
         return T; \
     } while(0);
@@ -69,6 +70,7 @@
     do { \
         if (errored) Print(std::string("[CONFIG] Error - Invalid value provided for <") + key + std::string(">.")); \
         m_ErrorLast = errored; \
+        if (errored && m_StrictMode) m_CriticalError = true; \
         return T; \
     } while(0);
 
@@ -81,6 +83,7 @@ class CConfig
 private:
   bool                               m_ErrorLast;
   bool                               m_CriticalError;
+  bool                               m_StrictMode;
   std::map<std::string, std::string> m_CFG;
   std::filesystem::path              m_File;
   std::set<std::string>              m_ValidKeys;
@@ -105,6 +108,7 @@ public:
     if (m_ErrorLast) m_CriticalError = true;
   };
   inline void SetFailed() { m_CriticalError = true; };
+  inline void SetStrictMode(const bool nStrictMode) { m_StrictMode = nStrictMode; }
   inline void SetHomeDir(const std::filesystem::path& nHomeDir) { m_HomeDir = nHomeDir; };
   inline void SetIsModified() { m_IsModified = true; };
   [[nodiscard]] const std::filesystem::path& GetHomeDir() const { return m_HomeDir; }

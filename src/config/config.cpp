@@ -65,6 +65,7 @@ using namespace std;
 #define CONFIG_ERROR(key, T) \
     do { \
         m_ErrorLast = true; \
+        if (m_StrictMode) m_CriticalError = true; \
         Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
         return T; \
     } while(0);
@@ -74,6 +75,7 @@ using namespace std;
     do { \
         if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
         m_ErrorLast = errored; \
+        if (errored && m_StrictMode) m_CriticalError = true; \
         return T; \
     } while(0);
 
@@ -85,6 +87,7 @@ using namespace std;
 CConfig::CConfig()
  : m_ErrorLast(false),
    m_CriticalError(false),
+   m_StrictMode(false),
    m_IsModified(false)
 {
 }
