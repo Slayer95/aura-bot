@@ -3,7 +3,7 @@
 ####
 
 # Image
-image: ubuntu:24.04
+image: ubuntu:20.04
 
 # Stages
 stages:
