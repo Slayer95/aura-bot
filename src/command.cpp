@@ -2589,7 +2589,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_TargetGame->m_Config->m_LatencyEqualizerEnabled = targetValue.value();
 
       if (!targetValue.value()) {
-        auto& nodes = m_TargetGame->GetAllFrameNodes();
+        auto nodes = m_TargetGame->GetAllFrameNodes();
         m_TargetGame->MergeFrameNodes(nodes);
         m_TargetGame->ResetUserPingEqualizerDelays();
         SendReply("Latency equalizer DISABLED.");
