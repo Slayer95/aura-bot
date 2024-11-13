@@ -178,7 +178,9 @@ protected:
   int64_t                             m_StartedLaggingTime;            // GetTime when the last lag screen started
   int64_t                             m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
   uint32_t                            m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
-  int64_t                             m_LastOwnerSeen;                 // GetTime when the last reserved player was seen in the lobby
+  int64_t                             m_LastUserSeen;                  // GetTicks when any user was last seen in the lobby
+  int64_t                             m_LastOwnerSeen;                 // GetTicks when the game owner was last seen in the lobby
+  int64_t                             m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
   int64_t                             m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                             m_LastCustomStatsUpdateTime;
   uint8_t                             m_GameOver;
@@ -382,10 +384,6 @@ public:
   bool                      GetAnyUsingGProxyLegacy() const;
   uint8_t                   GetPlayersReadyMode() const;
 
-  bool                      GetHasExpiryTime() const;
-  bool                      GetIsReleaseOwnerDue() const;
-  bool                      GetIsDeleteOrphanLobbyDue() const;
-
   inline void               SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void               SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
   inline void               SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
@@ -410,6 +408,7 @@ public:
   uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds);
   bool                      Update(void* fd, void* send_fd);
   void                      UpdatePost(void* send_fd);
+  void                      CheckLobbyTimeouts();
   void                      RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
 
   // logging

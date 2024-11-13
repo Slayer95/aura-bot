@@ -158,6 +158,7 @@ Commands
 - Aliases: git
 
 ## \`hold\`
+- Aliases: reserve
 - Syntax: hold \<PLAYER1\> , \<PLAYER2\>, ...
 
 ## \`host\`

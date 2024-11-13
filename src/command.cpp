@@ -2326,6 +2326,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !HOLD (hold a slot for someone)
     //
 
+    case HashCode("reserve"):
     case HashCode("hold"): {
       UseImplicitHostedGame();
       if (!m_TargetGame)

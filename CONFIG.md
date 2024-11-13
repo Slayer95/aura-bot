@@ -27,7 +27,7 @@ Config
 
 ## \`bot.latency.equalizer.frames\`
 - Type: uint8
-- Default value: PING_EQUALIZER_MAX_FRAMES
+- Default value: PING_EQUALIZER_DEFAULT_FRAMES
 - Error handling: Use default value
 
 ## \`bot.load_maps.cache.enabled\`
@@ -666,16 +666,6 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`hosting.abandoned_lobby.game_expiry_time\`
-- Type: uint32
-- Default value: 600
-- Error handling: Use default value
-
-## \`hosting.abandoned_lobby.owner_expiry_time\`
-- Type: uint32
-- Default value: 120
-- Error handling: Use default value
-
 ## \`hosting.allow_extra_lobby\`
 - Type: bool
 - Default value: false
@@ -714,6 +704,71 @@ Config
 ## \`hosting.enabled\`
 - Type: bool
 - Default value: true
+- Error handling: Use default value
+
+## \`hosting.expiry.loading.mode\`
+- Type: enum
+- Default value: GAME_LOADING_TIMEOUT_STRICT
+- Error handling: Use default value
+
+## \`hosting.expiry.loading.timeout\`
+- Type: uint32
+- Default value: 900
+- Error handling: Use default value
+
+## \`hosting.expiry.lobby.mode\`
+- Type: enum
+- Default value: LOBBY_TIMEOUT_OWNERLESS
+- Error handling: Use default value
+
+## \`hosting.expiry.lobby.timeout\`
+- Type: uint32
+- Default value: 600
+- Error handling: Use default value
+
+## \`hosting.expiry.owner.lan\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`hosting.expiry.owner.mode\`
+- Type: enum
+- Default value: LOBBY_OWNER_TIMEOUT_ABSENT
+- Error handling: Use default value
+
+## \`hosting.expiry.owner.timeout\`
+- Type: uint32
+- Default value: 120
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.mode\`
+- Type: enum
+- Default value: GAME_PLAYING_TIMEOUT_STRICT
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.timeout\`
+- Type: uint32
+- Default value: 18000
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.timeout.interval\`
+- Type: uint32
+- Default value: 60
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.timeout.interval\`
+- Type: uint32
+- Default value: 1200
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.timeout.warnings\`
+- Type: uint8
+- Default value: 10
+- Error handling: Use default value
+
+## \`hosting.expiry.playing.timeout.warnings\`
+- Type: uint8
+- Default value: 3
 - Error handling: Use default value
 
 ## \`hosting.game_over.player_count\`

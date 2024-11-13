@@ -94,10 +94,10 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LoadingTimeout                         = CFG.GetUint32("hosting.expiry.loading.timeout", 900);
   m_PlayingTimeout                         = CFG.GetUint32("hosting.expiry.playing.timeout", 18000);
 
-  m_PlayingTimeoutWarningShortCountDown    = CFG.GetUint8("hosting.expiry.playing.timeout.warnings", 10);
-  m_PlayingTimeoutWarningShortInterval     = CFG.GetUint32("hosting.expiry.playing.timeout.interval", 60);
-  m_PlayingTimeoutWarningLargeCountDown    = CFG.GetUint8("hosting.expiry.playing.timeout.warnings", 3);
-  m_PlayingTimeoutWarningLargeInterval     = CFG.GetUint32("hosting.expiry.playing.timeout.interval", 1200);
+  m_PlayingTimeoutWarningShortCountDown    = CFG.GetUint8("hosting.expiry.playing.timeout.soon_warnings", 10);
+  m_PlayingTimeoutWarningShortInterval     = CFG.GetUint32("hosting.expiry.playing.timeout.soon_interval", 60);
+  m_PlayingTimeoutWarningLargeCountDown    = CFG.GetUint8("hosting.expiry.playing.timeout.eager_warnings", 3);
+  m_PlayingTimeoutWarningLargeInterval     = CFG.GetUint32("hosting.expiry.playing.timeout.eager_interval", 1200);
 
   m_LobbyOwnerReleaseLANLeaver             = CFG.GetBool("hosting.expiry.owner.lan", true);
 
@@ -111,9 +111,6 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_PerfThreshold                          = CFG.GetUint32("bot.perf_limit", 150);
   m_LacksMapKickDelay                      = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
   m_LogDelay                               = CFG.GetUint32("hosting.log_delay", 180); // default: 3 minutes
-
-  m_LacksMapKickDelay                      = 1000 * m_LacksMapKickDelay;
-  m_LogDelay                               = 1000 * m_LogDelay;
 
   m_CheckJoinable                          = CFG.GetBool("monitor.hosting.on_start.check_connectivity", false);
   m_ExtraDiscoveryAddresses                = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
@@ -152,14 +149,15 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   set<uint8_t> supportedGameVersions       = CFG.GetUint8Set("hosting.crossplay.versions", ',', {});
   m_SupportedGameVersions = vector<uint8_t>(supportedGameVersions.begin(), supportedGameVersions.end());
-
-  if (m_VoteKickPercentage > 100)
-    m_VoteKickPercentage = 100;
 }
 
 CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGameSetup)
 {
   INHERIT(m_VoteKickPercentage)
+
+  if (m_VoteKickPercentage > 100)
+    m_VoteKickPercentage = 100;
+
   INHERIT_MAP_OR_CUSTOM(m_NumPlayersToStartGameOver, m_NumPlayersToStartGameOver, m_NumPlayersToStartGameOver)
   INHERIT(m_MaxPlayersLoopback)
   INHERIT(m_MaxPlayersSameIP)
@@ -185,6 +183,11 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT_MAP_OR_CUSTOM(m_LoadingTimeout, m_LoadingTimeout, m_LoadingTimeout)
   INHERIT_MAP_OR_CUSTOM(m_PlayingTimeout, m_PlayingTimeout, m_PlayingTimeout)
 
+  m_LobbyTimeout *= 1000;
+  m_LobbyOwnerTimeout *= 1000;
+  m_LoadingTimeout *= 1000;
+  m_PlayingTimeout *= 1000;
+
   INHERIT_MAP_OR_CUSTOM(m_PlayingTimeoutWarningShortCountDown, m_PlayingTimeoutWarningShortCountDown, m_PlayingTimeoutWarningShortCountDown)
   INHERIT_MAP_OR_CUSTOM(m_PlayingTimeoutWarningShortInterval, m_PlayingTimeoutWarningShortInterval, m_PlayingTimeoutWarningShortInterval);
   INHERIT_MAP_OR_CUSTOM(m_PlayingTimeoutWarningLargeCountDown, m_PlayingTimeoutWarningLargeCountDown, m_PlayingTimeoutWarningLargeCountDown)
@@ -206,6 +209,9 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGame
   INHERIT(m_PerfThreshold)
   INHERIT(m_LacksMapKickDelay)
   INHERIT(m_LogDelay)
+
+  m_LacksMapKickDelay *= 1000;
+  m_LogDelay *= 1000;
 
   INHERIT_CUSTOM(m_CheckJoinable, m_CheckJoinable)
   INHERIT(m_ExtraDiscoveryAddresses)

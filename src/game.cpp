@@ -279,7 +279,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_StartedLaggingTime(0),
     m_LastLagScreenTime(0),
     m_PingReportedSinceLagTimes(0),
-    m_LastOwnerSeen(GetTime()),
+    m_LastUserSeen(GetTicks()),
+    m_LastOwnerSeen(GetTicks()),
     m_StartedKickVoteTime(0),
     m_LastCustomStatsUpdateTime(0),
     m_GameOver(GAME_ONGOING),
@@ -1460,6 +1461,10 @@ bool CGame::Update(void* fd, void* send_fd)
         // Flush leaver queue to allow players and the game itself to be destroyed.
         SendAllActionsCallback();
       }
+    } else if (m_Config->m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
+      if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config->m_LoadingTimeout)) {
+        StopLaggers("was automatically dropped after " + to_string(m_Config->m_LoadingTimeout / 1000) + " seconds");
+      }
     }
   }
 
@@ -1515,7 +1520,24 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   if (m_GameLoaded) {
-    return m_Exiting;
+    switch (m_Config->m_PlayingTimeoutMode) {
+      case GAME_PLAYING_TIMEOUT_NEVER:
+        return m_Exiting;
+      case GAME_PLAYING_TIMEOUT_DRY:
+      case GAME_PLAYING_TIMEOUT_STRICT:
+        if (Ticks - m_FinishedLoadingTicks > static_cast<int64_t>(m_Config->m_PlayingTimeout)) {
+          if (m_Config->m_PlayingTimeoutMode == GAME_PLAYING_TIMEOUT_STRICT) {
+            m_GameOverTolerance = 0;
+            StartGameOverTimer();
+          } else {
+            Log("game timed out after " + to_string(m_Config->m_PlayingTimeout / 1000) + " seconds");
+            m_Config->m_PlayingTimeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
+          }
+        }
+        return m_Exiting;
+      default:
+        return m_Exiting;
+    }
   }
 
   // refresh every 3 seconds
@@ -1654,21 +1676,15 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   // release abandoned lobbies, so other users can take ownership
-  if (!m_GameLoading && !m_GameLoaded && !m_IsMirror && GetHasExpiryTime()) {
-    // check if there is an owner in the game
-    if (HasOwnerInGame()) {
-      m_LastOwnerSeen = Time;
-    } else {
-      // check if we've hit the time limit
-      if (!m_OwnerName.empty() && GetIsReleaseOwnerDue()) {
-        ReleaseOwner();
-      }
-      if (GetIsDeleteOrphanLobbyDue()) {
-        Log("is over (lobby time limit hit)");
-        m_Exiting = true;
-        return m_Exiting;
+  if (!m_GameLoading && !m_GameLoaded) {
+    if (!m_Users.empty()) {
+      m_LastUserSeen = Ticks;
+      if (HasOwnerInGame()) {
+        m_LastOwnerSeen = Ticks;
       }
     }
+    CheckLobbyTimeouts();
+    return m_Exiting;
   }
 
   // last action of CGame::Update
@@ -1692,6 +1708,47 @@ void CGame::UpdatePost(void* send_fd)
   for (auto& user : m_Users) {
     if (user->GetDisconnected()) continue;
     user->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
+  }
+}
+
+void CGame::CheckLobbyTimeouts()
+{
+  if (HasOwnerSet()) {
+    switch (m_Config->m_LobbyOwnerTimeoutMode) {
+      case LOBBY_OWNER_TIMEOUT_NEVER:
+        break;
+      case LOBBY_OWNER_TIMEOUT_ABSENT:
+        if (m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyOwnerTimeout) < GetTicks()) {
+          ReleaseOwner();
+        }
+        break;
+      case LOBBY_OWNER_TIMEOUT_STRICT:
+        if (m_LastOwnerAssigned + static_cast<int64_t>(m_Config->m_LobbyOwnerTimeout) < GetTicks()) {
+          ReleaseOwner();
+        }
+        break;
+    }
+  }
+
+  if (!m_Aura->m_Net->m_HealthCheckInProgress && (!m_IsMirror || m_Config->m_LobbyTimeoutMode == LOBBY_TIMEOUT_STRICT)) {
+    bool timedOut = false;
+    switch (m_Config->m_LobbyTimeoutMode) {
+    case LOBBY_TIMEOUT_NEVER:
+      break;
+    case LOBBY_TIMEOUT_EMPTY:
+      timedOut = m_LastUserSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTicks();
+      break;
+    case LOBBY_TIMEOUT_OWNERLESS:
+      timedOut = m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTicks();
+      break;
+    case LOBBY_TIMEOUT_STRICT:
+      timedOut = m_CreationTime + (static_cast<int64_t>(m_Config->m_LobbyTimeout) / 1000) < GetTime();
+      break;
+    }
+    if (timedOut) {
+      Log("is over (lobby time limit hit)");
+      m_Exiting = true;
+    }
   }
 }
 
@@ -3646,7 +3703,7 @@ void CGame::ResetDropVotes()
 
 void CGame::ResetOwnerSeen()
 {
-  m_LastOwnerSeen = GetTime();
+  m_LastOwnerSeen = GetTicks();
 }
 
 void CGame::ReportPlayerGProxyDisconnected(GameUser::CGameUser* user)
@@ -5662,7 +5719,8 @@ void CGame::Remake()
   m_StartedLaggingTime = 0;
   m_LastLagScreenTime = 0;
   m_PingReportedSinceLagTimes = 0;
-  m_LastOwnerSeen = Time;
+  m_LastUserSeen = Ticks;
+  m_LastOwnerSeen = Ticks;
   m_StartedKickVoteTime = 0;
   m_LastCustomStatsUpdateTime = 0;
   m_GameOverTime = nullopt;
@@ -7485,6 +7543,8 @@ void CGame::SetOwner(const string& name, const string& realm)
 {
   m_OwnerName = name;
   m_OwnerRealm = realm;
+  m_LastOwnerAssigned = GetTicks();
+
   UncacheOwner();
 
   GameUser::CGameUser* user = GetUserFromName(name, false);
@@ -7850,7 +7910,7 @@ bool CGame::StopPlayers(const string& reason) const
 void CGame::StopLaggers(const string& reason) const
 {
   for (auto& user : m_Users) {
-    if (user->GetLagging()) {
+    if (user->GetLagging() || !user->GetFinishedLoading()) {
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
       user->CloseConnection();
@@ -8414,20 +8474,4 @@ uint32_t CGame::GetSyncLimit() const
 uint32_t CGame::GetSyncLimitSafe() const
 {
   return m_Config->m_SyncLimitSafe;
-}
-
-bool CGame::GetHasExpiryTime() const {
-  // TODO: Implement config keys to toggle time limits
-  return true;
-}
-
-bool CGame::GetIsReleaseOwnerDue() const
-{
-  return m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyOwnerTimeout) < GetTime();
-}
-
-bool CGame::GetIsDeleteOrphanLobbyDue() const
-{
-  if (m_Aura->m_Net->m_HealthCheckInProgress) return false;
-  return m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTime();
 }

@@ -813,11 +813,19 @@ Sets the interval for the most frequent game timeout warnings as the time limit 
 These warnings will be displayed at regular intervals when the countdown is in its final phase, 
 giving players a clear indication that the game is about to end soon.
 
+This option is equivalent to ``<hosting.expiry.playing.timeout.soon_interval>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.playing.timeout.soon_interval>`` in map configuration
+
 ## \`--playing-timeout-warning-short-ticks \<TICKS>\`
 
 Determines the number of ticks for which the most frequent game timeout warnings will be displayed 
 before the game reaches the time limit. This option specifies how long the final, frequent warnings 
 will persist, helping players to prepare for the end of the session.
+
+This option is equivalent to ``<hosting.expiry.playing.timeout.soon_warnings>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.playing.timeout.soon_warnings>`` in map configuration
 
 ## \`--playing-timeout-warning-large-interval \<INTERVAL>\`
 
@@ -825,11 +833,19 @@ Sets the interval for the earliest and least frequent game timeout warnings. The
 appear sporadically when the game is still far from reaching the timeout limit, serving as an early 
 reminder without causing too much distraction.
 
+This option is equivalent to ``<hosting.expiry.playing.timeout.eager_interval>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.playing.timeout.eager_interval>`` in map configuration
+
 ## \`--playing-timeout-warning-large-ticks \<TICKS>\`
 
 Determines the number of ticks for which the earliest and rarest game timeout warnings will be displayed. 
 This option specifies how long the initial, infrequent warnings will persist, gently alerting players 
 of the eventual game timeout.
+
+This option is equivalent to ``<hosting.expiry.playing.timeout.eager_warnings>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.expiry.playing.timeout.eager_warnings>`` in map configuration
 
 ## \`--download-timeout \<TIME\>\`
 

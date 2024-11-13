@@ -1540,16 +1540,16 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   }
 
   if (CFG.Exists("hosting.expiry.playing.timeout.warnings")) {
-    m_PlayingTimeoutWarningShortCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.warnings", 10);
+    m_PlayingTimeoutWarningShortCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.soon_warnings", 10);
   }
   if (CFG.Exists("hosting.expiry.playing.timeout.interval")) {
-    m_PlayingTimeoutWarningShortInterval = CFG.GetUint32("hosting.expiry.playing.timeout.interval", 60);
+    m_PlayingTimeoutWarningShortInterval = CFG.GetUint32("hosting.expiry.playing.timeout.soon_interval", 60);
   }
   if (CFG.Exists("hosting.expiry.playing.timeout.warnings")) {
-    m_PlayingTimeoutWarningLargeCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.warnings", 5);
+    m_PlayingTimeoutWarningLargeCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.eager_warnings", 5);
   }
   if (CFG.Exists("hosting.expiry.playing.timeout.interval")) {
-    m_PlayingTimeoutWarningLargeInterval = CFG.GetUint32("hosting.expiry.playing.timeout.interval", 900);
+    m_PlayingTimeoutWarningLargeInterval = CFG.GetUint32("hosting.expiry.playing.timeout.eager_interval", 900);
   }
 
   if (CFG.Exists("hosting.expiry.owner.lan")) {
