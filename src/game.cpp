@@ -1684,7 +1684,9 @@ bool CGame::Update(void* fd, void* send_fd)
       }
     }
     CheckLobbyTimeouts();
-    return m_Exiting;
+    if (m_Exiting) {
+      return m_Exiting;
+    }
   }
 
   // last action of CGame::Update
@@ -2827,8 +2829,9 @@ array<uint8_t, 2> CGame::GetAnnounceHeight() const
 
 void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
 {
-  if (m_VirtualHostUID == 0xFF)
+  if (m_VirtualHostUID == 0xFF) {
     return;
+  }
 
   const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
 
