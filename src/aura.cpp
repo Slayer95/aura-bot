@@ -913,11 +913,12 @@ bool CAura::Update()
   if (m_AutoRehostGameSetup && !m_CurrentLobby) {
     if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
       (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby)) &&
-      (!m_LastGameHostedTicks.has_value() || m_LastGameHostedTicks.value() + AUTO_REHOST_COOLDOWN_TICKS < GetTicks())
+      (!m_LastGameAutoHostedTicks.has_value() || m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) < GetTicks())
     ) {
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
       m_PendingActions.push(hostAction);
+      Print("Rehost action queued");
     }
   }
 
@@ -1807,6 +1808,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   m_LastGameHostedTicks = GetTicks();
   if (gameSetup->m_LobbyAutoRehosted) {
     m_AutoRehostGameSetup = gameSetup;
+    m_LastGameAutoHostedTicks = m_LastGameHostedTicks;
   }
   gameSetup->OnGameCreate();
 

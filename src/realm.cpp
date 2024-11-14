@@ -810,7 +810,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
     uint8_t extraQuota = message->GetVirtualSize(m_Config->m_VirtualLineLength, selectType);
     m_ChatQuotaInUse.push_back(make_pair(GetTicks(), extraQuota));
   }
-  
+
   switch (message->GetCallback()) {
     case CHAT_CALLBACK_REFRESH_GAME:
       m_ChatQueuedGameAnnouncement = false;
@@ -1279,8 +1279,9 @@ void CRealm::TryQueueChat(const string& message, const string& user, bool isPriv
 
 void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
 {
-  if (!m_LoggedIn)
+  if (!m_LoggedIn) {
     return;
+  }
 
   const uint16_t connectPort = (
     game->GetIsMirror() ? game->GetPublicHostPort() :
@@ -1309,8 +1310,9 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
     PRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "game refreshed")
   } else {
     int64_t Ticks = GetTicks();
-    if (!m_Config->m_IsHostOften && m_GameBroadcastStartTicks.has_value() && m_GameBroadcastStartTicks.value() + REALM_HOST_COOLDOWN_TICKS < Ticks) {
+    if (!m_Config->m_IsHostOften && m_GameBroadcastStartTicks.has_value() && Ticks < m_GameBroadcastStartTicks.value() + static_cast<int64_t>(REALM_HOST_COOLDOWN_TICKS)) {
       // Still in cooldown
+      PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "not registering game... still in cooldown")
       return;
     }
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "registering game...")
