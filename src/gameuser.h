@@ -152,7 +152,7 @@ namespace GameUser
     uint8_t                          m_RemainingPauses;
 
     CGameUser(CGame* game, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
-    ~CGameUser();
+    ~CGameUser() final;
 
     [[nodiscard]] uint32_t GetOperationalRTT() const;
     [[nodiscard]] uint32_t GetDisplayRTT() const;
@@ -343,7 +343,7 @@ namespace GameUser
 
     // other functions
 
-    void Send(const std::vector<uint8_t>& data);
+    void Send(const std::vector<uint8_t>& data) final;
     void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
     void EventGProxyReconnectInvalid();
     void RotateGProxyReconnectKey() const;

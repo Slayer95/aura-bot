@@ -476,7 +476,7 @@ public:
 
   void Close();
   void Reset();
-  void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override;
+  void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override final;
   void SetNoDelay(const bool noDelay);
   void SetQuickAck(const bool quickAck);
   void SetKeepAlive(const bool keepAlive, const uint32_t seconds);
@@ -493,7 +493,7 @@ public:
   bool                      m_Connecting;
 
   CTCPClient(uint8_t nFamily, std::string nName);
-  ~CTCPClient();
+  ~CTCPClient() final;
 
   [[nodiscard]] inline bool         GetConnecting() const { return m_Connecting; }
   [[nodiscard]] bool                CheckConnect();
@@ -514,7 +514,7 @@ public:
   uint16_t                        m_AcceptCounter;
 
   CTCPServer(uint8_t nFamily);
-  ~CTCPServer();
+  ~CTCPServer() final;
 
   [[nodiscard]] std::string       GetName() const;
   bool                            Listen(sockaddr_storage& address, const uint16_t port, bool retry);
@@ -539,14 +539,14 @@ public:
   void                        Reset();
   void                        SetBroadcastEnabled(const bool nEnable);
   void                        SetDontRoute(bool dontRoute);
-  void                        SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override;
+  void                        SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet) override final;
 };
 
 class CUDPServer final : public CUDPSocket
 {
 public:
   CUDPServer(uint8_t nFamily);
-  ~CUDPServer();
+  ~CUDPServer() final;
 
   [[nodiscard]] std::string   GetName() const;
   bool                        Listen(sockaddr_storage& address, const uint16_t port, bool retry);
