@@ -318,6 +318,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_MuteLobby(false),
     m_IsMirror(nGameSetup->GetIsMirror()),
     m_CountDownStarted(false),
+    m_CountDownFast(false),
     m_CountDownUserInitiated(false),
     m_GameLoading(false),
     m_GameLoaded(false),
@@ -1667,8 +1668,7 @@ bool CGame::Update(void* fd, void* send_fd)
         // Ensure that the game doesn't start if there are neither real nor fake users.
         // (If a user leaves or joins, the countdown is stopped elsewhere.)
         LOG_APP_IF(LOG_LEVEL_DEBUG, "countdown stopped - lobby is empty.")
-        m_CountDownStarted = false;
-        m_CountDownCounter = 0;
+        StopCountDown();
       }
     }
 
@@ -3582,7 +3582,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
-  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded) {
+  if (m_CountDownStarted && !m_CountDownFast && !m_GameLoading && !m_GameLoaded) {
     if (!user->GetIsObserver() || GetSlotsOccupied() < m_HCLCommandString.size()) {
       // Intentionally reveal the name of the lobby leaver (may be trolling.)
       SendAllChat("Countdown stopped because [" + user->GetName() + "] left!");
@@ -3754,7 +3754,7 @@ void CGame::ReportPlayerGProxyDisconnected(GameUser::CGameUser* user)
 
 void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
 {
-  if (!m_GameLoading && !m_GameLoaded) {
+  if (!m_GameLoading && !m_GameLoaded && !m_CountDownFast) {
     if (!fromOpen) {
       const uint8_t SID = GetSIDFromUID(user->GetUID());
       OpenSlot(SID, true); // kick = true
@@ -4159,13 +4159,6 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
     CheckIPFlood(joinRequest->GetName(), &(Player->GetSocket()->m_RemoteHost));
   }
 
-  // abort the countdown if there was one in progress.
-
-  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded) {
-    SendAllChat("Countdown stopped!");
-    m_CountDownStarted = false;
-  }
-
   // send a welcome message
 
   if (!m_RestoredGame) {
@@ -4223,6 +4216,10 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
 
 bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest)
 {
+  if (m_CountDownStarted) {
+    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_STARTED));
+    return false;
+  }
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
@@ -4505,9 +4502,9 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   return isBanned;
 }
 
-void CGame::EventUserLeft(GameUser::CGameUser* user)
+bool CGame::EventUserLeft(GameUser::CGameUser* user)
 {
-  if (user->GetDisconnected()) return;
+  if (user->GetDisconnected()) return false;
   LOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
   // this function is only called when a user leave packet is received, not when there's a socket error, kick, etc...
   if (!user->HasLeftReason()) {
@@ -4517,6 +4514,7 @@ void CGame::EventUserLeft(GameUser::CGameUser* user)
   user->SetQuitGame(true);
   user->CloseConnection();
   TrySaveOnDisconnect(user, true);
+  return true;
 }
 
 void CGame::EventUserLoaded(GameUser::CGameUser* user)
@@ -5757,6 +5755,7 @@ void CGame::Remake()
   m_PublicStart = false;
   m_Locked = false;
   m_CountDownStarted = false;
+  m_CountDownFast = false;
   m_CountDownUserInitiated = false;
   m_GameLoading = false;
   m_GameLoaded = false;
@@ -7894,6 +7893,24 @@ void CGame::StartCountDown(bool fromUser, bool force)
   if (!m_FakeUsers.empty()) {
     SendAllChat("HINT: " + to_string(m_FakeUsers.size()) + " slots are occupied by fake users.");
   }
+}
+
+void CGame::StartCountDownFast(bool fromUser)
+{
+  StartCountDown(fromUser, true);
+  if (m_CountDownStarted) {
+    // 500 ms countdown
+    m_CountDownCounter = 1;
+    m_CountDownFast = true;
+  }
+}
+
+void CGame::StopCountDown()
+{
+  m_CountDownStarted = false;
+  m_CountDownFast = false;
+  m_CountDownUserInitiated = false;
+  m_CountDownCounter = 0;
 }
 
 bool CGame::StopPlayers(const string& reason) const

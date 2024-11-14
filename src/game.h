@@ -226,6 +226,7 @@ protected:
   bool                                m_MuteLobby;                     // if we should stop forwarding lobby chat messages
   bool                                m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
   bool                                m_CountDownStarted;              // if the game start countdown has started or not
+  bool                                m_CountDownFast;
   bool                                m_CountDownUserInitiated;
   bool                                m_GameLoading;                   // if the game is currently loading or not
   bool                                m_GameLoaded;                    // if the game has loaded or not
@@ -303,6 +304,7 @@ public:
   inline bool               GetLocked() const { return m_Locked; }
   inline bool               GetMuteAll() const { return m_MuteAll; }
   inline bool               GetCountDownStarted() const { return m_CountDownStarted; }
+  inline bool               GetCountDownFast() const { return m_CountDownFast; }
   inline bool               GetCountDownUserInitiated() const { return m_CountDownUserInitiated; }
   inline bool               GetIsMirror() const { return m_IsMirror; }
   inline bool               GetIsDraftMode() const { return m_IsDraftMode; }
@@ -485,7 +487,7 @@ public:
   void                      EventUserCheckStatus(GameUser::CGameUser* user);
   bool                      EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
   void                      EventBeforeJoin(CConnection* connection);
-  void                      EventUserLeft(GameUser::CGameUser* user);
+  bool                      EventUserLeft(GameUser::CGameUser* user);
   void                      EventUserLoaded(GameUser::CGameUser* user);
   bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
@@ -637,6 +639,8 @@ public:
   void CountKickVotes();
   bool GetCanStartGracefulCountDown() const;
   void StartCountDown(bool fromUser, bool force);
+  void StartCountDownFast(bool force);
+  void StopCountDown();
   bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
   void ShowPlayerNamesGameStart();
   void ShowPlayerNamesInGame();

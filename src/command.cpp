@@ -2918,11 +2918,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Someone left the game less than two seconds ago.");
         break;
       }
-      m_TargetGame->StartCountDown(true, true);
-      if (m_TargetGame->GetCountDownStarted()) {
-        // 500 ms countdown
-        m_TargetGame->m_CountDownCounter = 1;
-      }
+      m_TargetGame->StartCountDownFast(true);
       break;
     }
 
@@ -3406,7 +3402,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame->GetCountDownStarted()) {
-        m_TargetGame->m_CountDownStarted = false;
+        m_TargetGame->StopCountDown();
         if (m_TargetGame->GetIsAutoStartDue()) {
           m_TargetGame->m_AutoStartRequirements.clear();
           SendAll("Countdown stopped by " + m_FromName + ". Autostart removed.");
