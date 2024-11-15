@@ -59,6 +59,7 @@ public:
   std::optional<bool>                   m_ExitOnStandby;
   std::optional<bool>                   m_UseMapCFGCache;
   std::optional<std::string>            m_BindAddress;
+  std::optional<uint16_t>               m_HostPort;
   std::optional<std::string>            m_LANMode;
   std::optional<std::string>            m_LogLevel;
   std::optional<bool>                   m_InitSystem;

@@ -107,6 +107,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--savedir", m_GameSavePath, "Customizes the game save directory.");
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
   app.add_option("--bind-address", m_BindAddress, "Restricts connections to the game server, only allowing the input IPv4 address.")->check(CLI::ValidIPV4);
+  app.add_option("--host-port", m_HostPort, "Customizes the game server to only listen in the specified port.");
   app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
   app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: info, debug, trace.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"}));
 
@@ -555,6 +556,10 @@ void CCLI::OverrideConfig(CAura* nAura) const
     if (address.has_value()) {
       nAura->m_Net->m_Config->m_BindAddress4 = address.value();
     }
+  }
+  if (m_HostPort.has_value()) {
+    nAura->m_Net->m_Config->m_MinHostPort = m_HostPort.value();
+    nAura->m_Net->m_Config->m_MaxHostPort = m_HostPort.value();
   }
 
 #ifndef DISABLE_MINIUPNP
