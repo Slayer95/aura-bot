@@ -328,6 +328,13 @@ The most interesting value is \`127.0.0.1\`, which will only allow connections f
 
 This option is equivalent to ``<net.bind_address>`` in `config.ini`
 
+## \`--host-port \<PORT>\`
+
+If specified, Aura's game server will listen exclusively at the provided port.
+Note that \`0.0.0.0\` is a special value that will allow connections from every IPv4 address.
+
+This option is equivalent to ``<net.host_port.only>`` in `config.ini`
+
 ## \`--lan-mode \<MODE\>\`
 
 Specifies how hosted games available for "Local Area Network" should be made known to potential players.
