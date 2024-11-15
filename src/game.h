@@ -139,6 +139,7 @@ protected:
   std::vector<CGameSlot>              m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>         m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
   UserList                            m_Users;                         // std::vector of players
+  std::vector<CConnection*>           m_Observers;
   CircleDoubleLinkedList<CQueuedActionsFrame>    m_Actions;            // actions to be sent
   QueuedActionsFrameNode*     m_CurrentActionsFrame;
   uint16_t                            m_ActionsLatency;
@@ -245,6 +246,12 @@ protected:
   bool                                m_Remade;
   uint8_t                             m_SaveOnLeave;
   bool                                m_HMCEnabled;
+  uint8_t                             m_BufferingEnabled;
+
+  std::vector<uint8_t>                m_LobbyBuffer;
+  std::vector<uint8_t>                m_BeforeLoadingBuffer;
+  std::vector<uint8_t>                m_LoadingBuffer;
+  std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
 
   std::bitset<64>                       m_SupportedGameVersions;
   uint8_t                               m_SupportedGameVersionsMin;
@@ -625,6 +632,7 @@ public:
   std::vector<uint32_t> GetPlayersFramesBehind() const;
   UserList GetLaggingPlayers() const;
   UserList CalculateNewLaggingPlayers() const;
+  void StopLagScreen(GameUser::CGameUser* forUser);
   void ResetLatency();
   void NormalizeSyncCounters() const;
   bool GetIsReserved(const std::string& name) const;

@@ -102,6 +102,10 @@ public:
   std::optional<uint8_t>                m_AutoStartPlayers;
   std::optional<bool>                   m_HideLobbyNames;
   std::optional<uint8_t>                m_HideInGameNames;
+  std::optional<bool>                   m_LoadInGame;
+  std::optional<bool>                   m_EnableJoinObserversInProgress;
+  std::optional<bool>                   m_EnableJoinPlayersInProgress;
+
   std::optional<bool>                   m_LogCommands;
   std::optional<uint8_t>                m_ReconnectionMode;
   std::optional<uint8_t>                m_IPFloodHandler;

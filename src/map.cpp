@@ -1601,8 +1601,17 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.nicknames.hide_in_game")) {
     m_HideInGameNames = CFG.GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   }
-  if (CFG.Exists("map.hosting.log_commands")) {
-    m_LogCommands = CFG.GetBool("map.hosting.log_commands", false);
+  if (CFG.Exists("map.hosting.nicknames.hide_lobby")) {
+    m_HideLobbyNames = CFG.GetBool("map.hosting.nicknames.hide_lobby", false);
+  }
+  if (CFG.Exists("hosting.load_in_game.enabled")) {
+    m_HideLobbyNames = CFG.GetBool("hosting.load_in_game.enabled", false);
+  }
+  if (CFG.Exists("hosting.join_in_progress.observers")) {
+    m_HideLobbyNames = CFG.GetBool("hosting.join_in_progress.observers", false);
+  }
+  if (CFG.Exists("hosting.join_in_progress.players")) {
+    m_LogCommands = CFG.GetBool("hosting.join_in_progress.players", false);
   }
 
   CFG.SetStrictMode(wasStrict);

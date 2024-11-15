@@ -177,6 +177,9 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
   app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")->check(CLI::IsMember({"never", "host", "always", "auto"}));
   app.add_flag(  "--hide-ign,--no-hide-ign{false}", m_GameHideLobbyNames, "Whether to hide player names in a hosted game lobby.");
+  app.add_flag(  "--load-in-game,--no-load-in-game{false}", m_GameLoadInGame, "Whether to allow players chat in the game while waiting for others to finish loading.");
+  app.add_flag(  "--join-in-progress-observers,--no-join-in-progress-observers{false}", m_GameEnableJoinObserversInProgress, "Whether to allow observers to watch the game after it has already started.");
+  app.add_flag(  "--join-in-progress-players,--no-join-in-progress-players{false}", m_GameEnableJoinPlayersInProgress, "Whether to allow players to join the game after it has already started.");
   app.add_flag(  "--log-game-commands,--no-log-game-commands{false}", m_GameLogCommands, "Whether to log usage of chat triggers in a hosted game lobby.");
 
   app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");

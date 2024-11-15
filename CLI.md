@@ -541,6 +541,75 @@ This option corresponds to ``<map.hosting.nicknames.hide_lobby>`` in map configu
 
 This flag is enabled by default.
 
+## \`--load-in-game\`
+
+This flag allows players into the game, in a paused state, as soon as each of them finishes loading. 
+This allows them to preview the game map and chat together, while waiting for others to finish loading 
+the game themselves.
+
+This option is equivalent to ``<hosting.load_in_game.enabled>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.load_in_game.enabled>`` in map configuration
+
+This flag is disabled by default.
+
+## \`--no-load-in-game\`
+
+This flag ensures the game loading screen stays up before every player has finished loading the game.
+This ensures that faster players will not get unfair advantages due to previewing the map too early.
+
+This option corresponds to ``<hosting.load_in_game.enabled>`` in `config.ini`
+
+This option corresponds to ``<map.hosting.load_in_game.enabled>`` in map configuration
+
+This flag is enabled by default.
+
+## \`--join-in-progress-observers\`
+
+This flag allows the game to remain being announced over LAN and PvPGN servers even after it has started. 
+Observers may still join the started game, at any of the game slots the map configuration allows.
+
+If the map has Custom Forces enabled, only the designated game slots may be used for observers to watch an 
+ongoing game. More than one observer may watch the game concurrently using any game slot.
+
+This option is equivalent to ``<hosting.join_in_progress.observers>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.join_in_progress.observers>`` in map configuration
+
+This flag is disabled by default.
+
+## \`--no-join-in-progress-observers\`
+
+This flag causes the game to stop being announced over LAN and PvPGN servers as soon as it starts. 
+Only observers that were in the lobby by the time the game started will be able to watch the game.
+
+This flag is enabled by default.
+
+## \`--join-in-progress-players\`
+
+This flag allows the game to remain being announced over LAN and PvPGN servers even after it has started. 
+Players may still join the started game, at any of the game slots the map configuration allows.
+
+If the map has Custom Forces enabled, only the designated game slots may be used for players to join a game. 
+Note that a single game slot cannot be used for more than one actual player, not even if they disconnect.
+
+This option is equivalent to ``<hosting.join_in_progress.players>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.join_in_progress.players>`` in map configuration
+
+This flag is disabled by default.
+
+## \`--no-join-in-progress-players\`
+
+This flag causes the game to stop being announced over LAN and PvPGN servers as soon as it starts. 
+Only players that were in the lobby by the time the game started will be able to play the game.
+
+This option corresponds to ``<hosting.join_in_progress.players>`` in `config.ini`
+
+This option corresponds to ``<map.hosting.join_in_progress.players>`` in map configuration
+
+This flag is enabled by default.
+
 ## \`--log-game-commands\`
 
 This flag causes all usage of game commands to be logged persistently.

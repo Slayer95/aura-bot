@@ -98,6 +98,10 @@ struct CGameConfig
   std::set<std::string>    m_IgnoredNotifyJoinPlayers;
   bool                     m_HideLobbyNames;
   uint8_t                  m_HideInGameNames;
+  bool                     m_LoadInGame;
+  bool                     m_EnableJoinObserversInProgress;
+  bool                     m_EnableJoinPlayersInProgress;
+
   std::set<std::string>    m_LoggedWords;
   bool                     m_LogCommands;
   uint8_t                  m_DesyncHandler;

@@ -145,6 +145,9 @@ public:
   std::optional<std::string>            m_GameBroadcastErrorHandler;
   std::optional<bool>                   m_GameHideLobbyNames;
   std::optional<std::string>            m_GameHideLoadedNames;
+  std::optional<bool>                   m_GameLoadInGame;
+  std::optional<bool>                   m_GameEnableJoinObserversInProgress;
+  std::optional<bool>                   m_GameEnableJoinPlayersInProgress;
   std::optional<bool>                   m_GameLogCommands;
   std::optional<bool>                   m_GameAutoStartRequiresBalance;
 

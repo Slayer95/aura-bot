@@ -338,6 +338,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_Remade(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_AUTO),
     m_HMCEnabled(false),
+    m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_SupportedGameVersionsMin(nAura->m_GameVersion),
     m_SupportedGameVersionsMax(nAura->m_GameVersion),
     m_GameDiscoveryInfoChanged(false),
@@ -365,6 +366,13 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_SupportedGameVersions.set(version);
     if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
     if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
+  }
+
+  if (m_Config->m_LoadInGame) {
+    m_BufferingEnabled |= BUFFERING_ENABLED_LOADING;
+  }
+  if (m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress) {
+    m_BufferingEnabled |= BUFFERING_ENABLED_ALL;
   }
 
   if (!nGameSetup->GetIsMirror()) {
@@ -1328,30 +1336,8 @@ bool CGame::Update(void* fd, void* send_fd)
       // another solution is to reset the lag screen the same way we reset it when using load-in-game
 
       if (Time - m_LastLagScreenResetTime >= 60) {
-        for (auto& _i : m_Users) {
-          // stop the lag screen
-
-          for (auto& user : m_Users) {
-            if (user->GetLagging())
-              Send(_i, GameProtocol::SEND_W3GS_STOP_LAG(user));
-          }
-
-          // send an empty update
-          // this resets the lag screen timer
-
-          if (anyUsingLegacyGProxy && !(_i)->GetGProxyAny()) {
-            // we must send additional empty actions to non-GProxy++ users
-            // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
-            // empty actions are used to extend the time a user can use when reconnecting
-
-            (_i)->AddSyncCounterOffset(m_GProxyEmptyActions);
-            for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-              Send(_i, GameProtocol::GetEmptyAction());
-            }
-          }
-
-          (_i)->AddSyncCounterOffset(1);
-          Send(_i, GameProtocol::GetEmptyAction());
+        for (auto& user : m_Users) {
+          StopLagScreen(user);
         }
 
         // start the lag screen
@@ -1463,9 +1449,31 @@ bool CGame::Update(void* fd, void* send_fd)
         // Flush leaver queue to allow players and the game itself to be destroyed.
         SendAllActionsCallback();
       }
-    } else if (m_Config->m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
-      if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config->m_LoadingTimeout)) {
-        StopLaggers("was automatically dropped after " + to_string(m_Config->m_LoadingTimeout / 1000) + " seconds");
+    } else {
+      if (m_Config->m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
+        if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config->m_LoadingTimeout)) {
+          StopLaggers("was automatically dropped after " + to_string(m_Config->m_LoadingTimeout / 1000) + " seconds");
+        }
+      }
+
+      // reset the "lag" screen (the load-in-game screen) every 30 seconds
+      if (anyLoaded && ((m_BufferingEnabled & BUFFERING_ENABLED_LOADING) > 0) && GetTime() - m_LastLagScreenResetTime >= 30 ) {
+        for (auto& user : m_Users) {
+          if (user->GetFinishedLoading()) {
+            StopLagScreen(user);
+            Send(user, GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
+          } else {
+            const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
+            if (GetAnyUsingGProxy() && !user->GetGProxyAny()) {
+              user->AddSyncCounterOffset(m_GProxyEmptyActions);
+              for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
+                AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+              }
+            }
+            AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+          }
+        }
+        m_LastLagScreenResetTime = GetTime( );
       }
     }
   }
@@ -3806,8 +3814,12 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
     frame.leavers.push_back(user);
   }
 
-  if (m_GameLoading && !user->GetFinishedLoading()) {
-    SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID()));
+  if (m_GameLoading && !user->GetFinishedLoading() && !m_Config->m_LoadInGame) {
+    vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
+    if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
+      AppendByteArrayFast(m_LoadingBuffer, packet);
+    }
+    SendAll(packet);
   }
 }
 
@@ -4560,7 +4572,6 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
 {
   string role = user->GetIsObserver() ? "observer" : "player";
   LOG_APP_IF(LOG_LEVEL_DEBUG, role + " [" + user->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds")
-  SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID()));
 
   // Update stats
   const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
@@ -4568,6 +4579,19 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   if (dbPlayer) {
     dbPlayer->SetLoadingTime(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks);
   }
+
+  if (!m_Config->m_LoadInGame) {
+    vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
+    if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING > 0) {
+      AppendByteArrayFast(m_LoadingBuffer, packet);
+    }
+    SendAll(packet);
+    return;
+  }
+
+//
+  Send(user, m_LoadingBuffer);
+  // TODO: Handle lag screen
 }
 
 bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
@@ -5327,6 +5351,11 @@ void CGame::EventGameStarted()
     }
   }
 
+  if (m_Config->m_EnableJoinObserversInProgress && !GetIsCustomForces()) {
+    // TODO: Join-in-progress select observer slot
+    // Let's also choose the virtual host fake player, if it exists.
+  }
+
   //if (GetNumJoinedUsersOrFake() < 2) {
     // This is a single-user game. Neither chat events nor bot commands will work.
     // Keeping the virtual host does no good - The game client then refuses to remain in the game.
@@ -5343,11 +5372,24 @@ void CGame::EventGameStarted()
   // since we use a fake countdown to deal with leavers during countdown the COUNTDOWN_START and COUNTDOWN_END packets are sent in quick succession
   // send a start countdown packet
 
-  SendAll(GameProtocol::SEND_W3GS_COUNTDOWN_START());
+  {
+    vector<uint8_t> packet = GameProtocol::SEND_W3GS_COUNTDOWN_START();
+    if (m_BufferingEnabled & BUFFERING_ENABLED_BEFORE_LOADING) {
+      m_BeforeLoadingBuffer.reserve(8 + (5 * m_FakeUsers.size()));
+      AppendByteArrayFast(m_BeforeLoadingBuffer, packet);
+    }
+    SendAll(packet);
+  }
 
   // send an end countdown packet
 
-  SendAll(GameProtocol::SEND_W3GS_COUNTDOWN_END());
+  {
+    vector<uint8_t> packet = GameProtocol::SEND_W3GS_COUNTDOWN_END();
+    if (m_BufferingEnabled & BUFFERING_ENABLED_BEFORE_LOADING) {
+      AppendByteArrayFast(m_BeforeLoadingBuffer, packet);
+    }
+    SendAll(packet);
+  }
 
   // record the number of starting users
   // fake observers are counted, this is a feature to prevent premature game ending
@@ -5357,7 +5399,9 @@ void CGame::EventGameStarted()
   // send a game loaded packet for any fake users
 
   for (auto& fakePlayer : m_FakeUsers) {
-    SendAll(GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer)));
+    vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer));
+    AppendByteArrayFast(m_BeforeLoadingBuffer, packet);
+    SendAll(packet);
   }
 
   m_Actions.emplaceBack();
@@ -5423,6 +5467,20 @@ void CGame::EventGameStarted()
 
   // delete the map data
   ReleaseMap();
+
+  if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
+    // Preallocate memory for all SEND_W3GS_GAMELOADED_OTHERS packets
+    // When load-in-game is enabled, m_LoadingBuffer also includes lag screens and empty actions,
+    // but we let automatic resizing handle that.
+    m_LoadingBuffer.reserve(5 * m_Users.size());
+  }
+
+  if (m_Config->m_LoadInGame) {
+    for (const auto& user : m_Users) {
+      vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
+      AppendByteArray(m_LoadingBuffer, packet);
+    }
+  }
 
   // move the game to the games in progress vector
 
@@ -7524,6 +7582,31 @@ UserList CGame::CalculateNewLaggingPlayers() const
     }
   }
   return laggingPlayers;
+}
+
+void CGame::StopLagScreen(GameUser::CGameUser* forUser)
+{
+  for (auto& user : m_Users) {
+    if (user->GetLagging())
+      Send(forUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
+  }
+
+  // send an empty update
+  // this resets the lag screen timer
+
+  if (GetAnyUsingGProxyLegacy() && !forUser->GetGProxyAny()) {
+    // we must send additional empty actions to non-GProxy++ users
+    // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
+    // empty actions are used to extend the time a user can use when reconnecting
+
+    forUser->AddSyncCounterOffset(m_GProxyEmptyActions);
+    for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
+      Send(forUser, GameProtocol::GetEmptyAction());
+    }
+  }
+
+  forUser->AddSyncCounterOffset(1);
+  Send(forUser, GameProtocol::GetEmptyAction());
 }
 
 void CGame::ResetLatency()
