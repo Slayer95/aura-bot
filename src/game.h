@@ -460,6 +460,7 @@ public:
   void                      ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion);
   void                      SendGameDiscoveryInfo(uint8_t gameVersion);
   void                      SendGameDiscoveryInfo();
+  void                      SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const;
   void                      SendGameDiscoveryRefresh() const;
   void                      SendGameDiscoveryCreate(uint8_t gameVersion) const;
   void                      SendGameDiscoveryCreate() const;

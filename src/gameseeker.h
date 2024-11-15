@@ -40,9 +40,13 @@
 class CGameSeeker final : public CConnection
 {
 public:
+  uint8_t m_GameVersion;
+
   CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket);
   CGameSeeker(CConnection* nConnection, uint8_t nType);
   ~CGameSeeker();
+
+  uint8_t GetGameVersion() { return m_GameVersion; }
 
   // processing functions
 

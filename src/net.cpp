@@ -632,9 +632,6 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
         if (connection->GetIsUDPTunnel()) {
           connection->Send(packet);
         }
-        if (connection->GetIsVLAN()) {
-          // TODO: VLAN
-        }
       }
     }
   }

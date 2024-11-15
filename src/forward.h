@@ -55,8 +55,6 @@ class CIncomingChatPlayer;
 class CIncomingGameHost;
 class CIncomingJoinRequest;
 class CIncomingMapSize;
-class CIncomingVLanGameInfo;
-class CIncomingVLanSearchGame;
 class CIRC;
 class CMap;
 class CNet;
@@ -93,6 +91,9 @@ struct CIRCConfig;
 struct CNetConfig;
 struct CRealmConfig;
 struct CQueuedActionsFrame;
+
+struct CIncomingVLanGameInfo;
+struct CIncomingVLanSearchGame;
 
 struct UDPPkt;
 

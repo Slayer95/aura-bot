@@ -61,6 +61,7 @@
 #include "gameuser.h"
 #include "protocol/gameprotocol.h"
 #include "protocol/gpsprotocol.h"
+#include "protocol/vlanprotocol.h"
 #include "stats.h"
 #include "w3mmd.h"
 #include "irc.h"
@@ -3495,6 +3496,18 @@ void CGame::SendGameDiscoveryRefresh() const
     static_cast<uint32_t>(m_Slots.size())
   );
   m_Aura->m_Net->SendGameDiscovery(packet, m_Config->m_ExtraDiscoveryAddresses);
+
+  // Send to active VLAN connections
+  if (m_Aura->m_Net->m_Config->m_VLANEnabled) {
+    for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
+      for (auto& connection : serverConnections.second) {
+        if (connection->GetDeleteMe()) continue;
+        if (connection->GetIsVLAN() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
+          SendGameDiscoveryInfoVLAN(connection);
+        }
+      }
+    }
+  }
 }
 
 void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
@@ -3519,7 +3532,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
     m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(isIPv6 ? AF_INET6 : AF_INET)));
   }
 
-  // Send to active UDP in TCP tunnels
+  // Send to active UDP in TCP tunnels and VLAN connections
   if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled) {
     for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
@@ -3527,12 +3540,38 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
         if (connection->GetIsUDPTunnel()) {
           connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
         }
-        if (connection->GetIsVLAN()) {
-          // TODO: VLAN
+        if (connection->GetIsVLAN() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
+          SendGameDiscoveryInfoVLAN(connection);
         }
       }
     }
   }
+}
+
+void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
+{
+  array<uint8_t, 4> IP = {0, 0, 0, 0};
+  gameSeeker->Send(
+    VLANProtocol::SEND_VLAN_GAMEINFO(
+      true /* TFT */,
+      gameSeeker->GetGameVersion(),
+      GetGameType(),
+      GetGameFlags(),
+      GetAnnounceWidth(),
+      GetAnnounceHeight(),
+      m_GameName,
+      GetIndexVirtualHostName(),
+      GetUptime(), // dynamic
+      GetSourceFilePath(),
+      GetSourceFileHash(),
+      static_cast<uint32_t>(m_Slots.size()), // Total Slots
+      static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1),
+      IP,
+      GetHostPortForDiscoveryInfo(AF_INET),
+      m_HostCounter,
+      m_EntryKey
+    )
+  );
 }
 
 void CGame::SendGameDiscoveryInfo()

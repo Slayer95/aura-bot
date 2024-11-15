@@ -46,13 +46,15 @@ using namespace std;
 //
 
 CGameSeeker::CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket)
-  : CConnection(nAura, nPort, nSocket)
+  : CConnection(nAura, nPort, nSocket),
+    m_GameVersion(0)
 {
   m_Type = nType;
 }
 
 CGameSeeker::CGameSeeker(CConnection* nConnection, uint8_t nType)
-  : CConnection(*nConnection)
+  : CConnection(*nConnection),
+    m_GameVersion(0)
 {
   m_Type = nType;
 }
@@ -166,7 +168,16 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
             Abort = true;
             break;
           }
-          // TODO: VLAN
+          if (Bytes[1] == VLANProtocol::Magic::SEARCHGAME) {
+            CIncomingVLanSearchGame vlanSearch = VLANProtocol::RECEIVE_VLAN_SEARCHGAME(Data);
+            if (vlanSearch.isValid) {
+              m_GameVersion = vlanSearch.gameVersion;
+              CGame* lobby = m_Aura->m_CurrentLobby;
+              if (lobby && !lobby->GetLobbyLoading() && !lobby->GetCountDownStarted()) {
+                lobby->SendGameDiscoveryInfoVLAN(this);
+              }
+            }
+          }
           break;
         }
 
