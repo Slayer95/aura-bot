@@ -3502,7 +3502,7 @@ void CGame::SendGameDiscoveryRefresh() const
     for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
-        if (connection->GetIsVLAN() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
+        if (connection->GetIsVLAN() && connection->GetGameVersion() > 0 && GetIsSupportedGameVersion(connection->GetGameVersion())) {
           SendGameDiscoveryInfoVLAN(connection);
         }
       }
@@ -3540,7 +3540,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
         if (connection->GetIsUDPTunnel()) {
           connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
         }
-        if (connection->GetIsVLAN() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
+        if (connection->GetIsVLAN() && connection->GetGameVersion() > 0 && GetIsSupportedGameVersion(connection->GetGameVersion())) {
           SendGameDiscoveryInfoVLAN(connection);
         }
       }
