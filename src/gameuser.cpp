@@ -718,7 +718,6 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
 
 void CGameUser::EventGProxyReconnectInvalid()
 {
-  Print("EventGProxyReconnectInvalid() on [" + GetName() + "] reconnection attempt");
   if (m_Disconnected) return;
   // TODO: Do we need different logic?
   RotateGProxyReconnectKey();
