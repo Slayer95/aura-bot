@@ -204,7 +204,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
         }
 
         case VLANProtocol::Magic::VLAN_HEADER: {
-          if (m_Type != INCON_TYPE_NONE) {
+          if (m_Type != INCON_TYPE_NONE || !m_Aura->m_Net->m_Config->m_VLANEnabled) {
             Abort = true;
             break;
           }
