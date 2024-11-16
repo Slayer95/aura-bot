@@ -707,6 +707,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
   m_Disconnected = false;
   m_GProxyBuffer = TempBuffer;
   m_GProxyDisconnectNoticeSent = false;
+  m_LastGProxyWaitNoticeSentTime = 0;
   if (m_LastDisconnectTicks.has_value()) {
     m_TotalDisconnectTicks += GetTicks() - m_LastDisconnectTicks.value();
   }

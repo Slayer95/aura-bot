@@ -296,6 +296,8 @@ namespace GameUser
     inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
     inline void SetLatencySent(bool nLatencySent) { m_LatencySent = nLatencySent; }
     inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
+    inline void SetGProxy(bool nGProxy) { m_GProxy = nGProxy; }
+    inline void SetGProxyExtended(bool nGProxyExtended) { m_GProxyExtended = nGProxyExtended; }
     inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
     inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
     inline void SetKickByTicks(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }

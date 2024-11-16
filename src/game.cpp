@@ -1267,7 +1267,7 @@ bool CGame::Update(void* fd, void* send_fd)
       vector<uint32_t> framesBehind = GetPlayersFramesBehind();
       uint8_t i = static_cast<uint8_t>(m_Users.size());
       while (i--) {
-        if (framesBehind[i] > GetSyncLimit() && !(m_Users[i]->GetDisconnected() && !m_Users[i]->GetGProxyAny())) {
+        if (framesBehind[i] > GetSyncLimit() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
           startedLagging = true;
           break;
         }
@@ -1355,6 +1355,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
         if (user->GetGProxyDisconnectNoticeSent()) {
           ++stillLaggingCounter;
+          ReportRecoverableDisconnect(user);
           continue;
         }
 
@@ -3838,22 +3839,22 @@ void CGame::SetEveryoneLagging()
 void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
 {
   int64_t Time = GetTime();
-  int64_t timeRemaining = 0;
+  if (Time - user->GetLastGProxyWaitNoticeSentTime() < 20) {
+    return;
+  }
 
+  int64_t timeRemaining = 0;
   if (Time - m_StartedLaggingTime < (m_GProxyEmptyActions + 1) * 60) {
     timeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
   } else if (Time - m_StartedLaggingTime < m_Aura->m_Net->m_Config->m_ReconnectWaitTicks / 1000) {
     timeRemaining = (m_Aura->m_Net->m_Config->m_ReconnectWaitTicks / 1000) - (Time - m_StartedLaggingTime);
   }
-
   if (timeRemaining <= 0) {
     return;
   }
 
-  if (Time - user->GetLastGProxyWaitNoticeSentTime() >= 20) {
-    SendAllChat(user->GetUID(), "Please wait for me to reconnect (" + to_string(timeRemaining) + " seconds remain)");
-    user->SetLastGProxyWaitNoticeSentTime(Time);
-  }
+  SendAllChat(user->GetUID(), "Please wait for me to reconnect (" + to_string(timeRemaining) + " seconds remain)");
+  user->SetLastGProxyWaitNoticeSentTime(Time);
 }
 
 void CGame::OnRecoverableDisconnect(GameUser::CGameUser* user)
@@ -8152,7 +8153,10 @@ void CGame::StopLaggers(const string& reason) const
     if (user->GetLagging() || !user->GetFinishedLoading()) {
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+      user->SetGProxy(false);
+      user->SetGProxyExtended(false);
       user->CloseConnection();
+      user->SetLagging(false);
     }
     user->SetDropVote(false);
   }
