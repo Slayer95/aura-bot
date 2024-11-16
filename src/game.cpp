@@ -1454,7 +1454,7 @@ bool CGame::Update(void* fd, void* send_fd)
       }
 
       // reset the "lag" screen (the load-in-game screen) every 30 seconds
-      if (anyLoaded && ((m_BufferingEnabled & BUFFERING_ENABLED_LOADING) > 0) && GetTime() - m_LastLagScreenResetTime >= 30 ) {
+      if (anyLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) && GetTime() - m_LastLagScreenResetTime >= 30 ) {
         for (auto& user : m_Users) {
           if (user->GetFinishedLoading()) {
             StopLagScreen(user);
@@ -3833,7 +3833,7 @@ void CGame::OnRecoverableDisconnect(GameUser::CGameUser* user)
     SetLaggingPlayerAndUpdate(user);
   }
 
-  ReportRecoverableDisconnect();
+  ReportRecoverableDisconnect(user);
 }
 
 void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
@@ -4619,7 +4619,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
 
   if (!m_Config->m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
-    if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING > 0) {
+    if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
       AppendByteArrayFast(m_LoadingBuffer, packet);
     }
     SendAll(packet);
@@ -7621,7 +7621,7 @@ UserList CGame::CalculateNewLaggingPlayers() const
     if (user->GetLagging() || user->GetGProxyDisconnectNoticeSent() || user->GetDisconnectedUnrecoverably()) {
       continue;
     }
-    if (!user->GetFinishedLoading() || user->GetIsBehindFramesNormal(GetSyncLimitSafe()) {
+    if (!user->GetFinishedLoading() || user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
       laggingPlayers.push_back(user);
     }
   }
