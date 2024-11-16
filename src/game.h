@@ -249,7 +249,7 @@ protected:
   uint8_t                             m_BufferingEnabled;
 
   std::vector<uint8_t>                m_LobbyBuffer;
-  std::vector<uint8_t>                m_BeforeLoadingBuffer;
+  std::vector<uint8_t>                m_FakeLoadedBuffer;
   std::vector<uint8_t>                m_LoadingBuffer;
   std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
 
@@ -433,7 +433,9 @@ public:
   void                      Send(CConnection* player, const std::vector<uint8_t>& data) const;
   void                      Send(uint8_t UID, const std::vector<uint8_t>& data) const;
   void                      Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
+  void                      SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
   void                      SendAll(const std::vector<uint8_t>& data) const;
+  void                      SendAllAsChat(const std::vector<uint8_t>& data) const;
  
 
   // functions to send packets to players
@@ -560,7 +562,7 @@ public:
   std::vector<uint8_t>      GetUIDs() const;
   std::vector<uint8_t>      GetUIDs(uint8_t excludeUID) const;
   std::vector<uint8_t>      GetObserverUIDs() const;
-  std::vector<uint8_t>      GetObserverUIDs(uint8_t excludeUID) const;
+  std::vector<uint8_t>      GetChatObserverUIDs(uint8_t excludeUID) const;
   uint8_t                   GetPublicHostUID() const;
   uint8_t                   GetHiddenHostUID() const;
   uint8_t                   GetHostUID() const;
@@ -634,6 +636,7 @@ public:
 
   std::vector<uint32_t> GetPlayersFramesBehind() const;
   UserList GetLaggingPlayers() const;
+  uint8_t CountLaggingPlayers() const;
   UserList CalculateNewLaggingPlayers() const;
   void StopLagScreen(GameUser::CGameUser* forUser);
   void ResetLatency();

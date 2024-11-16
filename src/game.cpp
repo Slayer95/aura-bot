@@ -1436,6 +1436,9 @@ bool CGame::Update(void* fd, void* send_fd)
     }
 
     if (finishedLoading) {
+      if (!m_FakeLoadedBuffer.empty()) {
+        SendAll(m_FakeLoadedBuffer);
+      }
       if (anyLoaded) {
         m_LastActionSentTicks = Ticks;
         m_FinishedLoadingTicks = Ticks;
@@ -1454,26 +1457,28 @@ bool CGame::Update(void* fd, void* send_fd)
       }
 
       // reset the "lag" screen (the load-in-game screen) every 30 seconds
-      if (anyLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) && GetTime() - m_LastLagScreenResetTime >= 30 ) {
+      if (anyLoaded && m_Config->m_LoadInGame && GetTime() - m_LastLagScreenResetTime >= 30 ) {
+        const bool anyUsingGProxy = GetAnyUsingGProxy();
         for (auto& user : m_Users) {
           if (user->GetFinishedLoading()) {
             StopLagScreen(user);
             Send(user, GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
           } else {
-            const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
-            if (GetAnyUsingGProxy() && !user->GetGProxyAny()) {
-              // Warcraft III doesn't respond to empty actions
+            // Warcraft III doesn't respond to empty actions,
+            // so we need to artificially increase users' sync counters.
+            if (anyUsingGProxy && !user->GetGProxyAny()) {
               user->AddSyncCounterOffset(m_GProxyEmptyActions);
-              for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-                AppendByteArrayFast(m_LoadingBuffer, emptyAction);
-              }
             }
-            // Warcraft III doesn't respond to empty actions
             user->AddSyncCounterOffset(1);
-            AppendByteArrayFast(m_LoadingBuffer, emptyAction);
           }
         }
-        m_LastLagScreenResetTime = GetTime( );
+        const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
+        AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+        for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
+          AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+        }
+        m_LastLagScreenResetTime = GetTime();
+        SendAllChat("Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
       }
     }
   }
@@ -1874,12 +1879,33 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
   }
 }
 
+void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) const
+{
+  // Assumes m_GameLoading => m_Config->m_LoadInGame
+  if (m_GameLoading && user->GetType() == INCON_TYPE_PLAYER && !static_cast<const GameUser::CGameUser*>(user)->GetFinishedLoading()) {
+    return;
+  }
+  user->Send(data);
+}
+
+void CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
+{
+  // Assumes m_GameLoading => m_Config->m_LoadInGame
+  for (auto& user : m_Users) {
+    if (m_GameLoading && !user->GetFinishedLoading()) {
+      continue;
+    }
+    user->Send(data);
+  }
+}
+
 void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& message, const uint8_t logLevel) const
 {
   // send a private message to one user - it'll be marked [Private] in Warcraft 3
 
-  if (m_GameLoading)
+  if (m_GameLoading && !(m_Config->m_LoadInGame && user->GetFinishedLoading())) {
     return;
+  }
 
   if (message.empty() || !user)
     return;
@@ -1888,9 +1914,9 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
 
   if (!m_GameLoaded) {
     if (message.size() > 254)
-      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
     else
-      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message));
   } else {
     uint8_t extraFlags[] = {3, 0, 0, 0};
 
@@ -1902,9 +1928,9 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
       extraFlags[0] = 3 + m_Slots[SID].GetColor();
 
     if (message.size() > 127)
-      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
     else
-      Send(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message));
   }
 }
 
@@ -1925,7 +1951,7 @@ void CGame::SendChat(uint8_t toUID, const string& message, const uint8_t logLeve
 
 void CGame::SendAllChat(uint8_t fromUID, const string& message) const
 {
-  if (m_GameLoading)
+  if (m_GameLoading && !m_Config->m_LoadInGame)
     return;
 
   if (message.empty())
@@ -1943,9 +1969,9 @@ void CGame::SendAllChat(uint8_t fromUID, const string& message) const
   uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
   if (message.size() < maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-        SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
+        SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
     } else {
-        SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
+        SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
     }
     return;
   }
@@ -1953,18 +1979,18 @@ void CGame::SendAllChat(uint8_t fromUID, const string& message) const
   string leftMessage = message;
   while (leftMessage.size() > maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
+      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
     } else {
-      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
+      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
     }
     leftMessage = leftMessage.substr(maxSize);
   }
 
   if (!leftMessage.empty()) {
     if (!m_GameLoading && !m_GameLoaded) {
-      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage));
+      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage));
     } else {
-      SendAll(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
+      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
     }
   }
 }
@@ -3122,7 +3148,8 @@ void CGame::SendAllActions()
 
     for (auto& user : m_Users) {
       if (!user->GetGProxyAny()) {
-        // Warcraft III doesn't respond to empty actions
+        // Warcraft III doesn't respond to empty actions,
+        // so we need to artificially increase users' sync counters.
         user->AddSyncCounterOffset(m_GProxyEmptyActions);
         for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
           Send(user, GameProtocol::GetEmptyAction());
@@ -3810,7 +3837,7 @@ void CGame::SetEveryoneLagging()
 
 void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
 {
-  int64_t Time = GetTime(), Ticks = GetTicks();
+  int64_t Time = GetTime();
   int64_t timeRemaining = 0;
 
   if (Time - m_StartedLaggingTime < (m_GProxyEmptyActions + 1) * 60) {
@@ -3819,7 +3846,11 @@ void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
     timeRemaining = (m_Aura->m_Net->m_Config->m_ReconnectWaitTicks / 1000) - (Time - m_StartedLaggingTime);
   }
 
-  if (timeRemaining > 0 && Time - user->GetLastGProxyWaitNoticeSentTime() >= 20) {
+  if (timeRemaining <= 0) {
+    return;
+  }
+
+  if (Time - user->GetLastGProxyWaitNoticeSentTime() >= 20) {
     SendAllChat(user->GetUID(), "Please wait for me to reconnect (" + to_string(timeRemaining) + " seconds remain)");
     user->SetLastGProxyWaitNoticeSentTime(Time);
   }
@@ -3996,6 +4027,10 @@ void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
 
 void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const
 {
+  if (m_GameLoading && !m_Config->m_LoadInGame) {
+    return;
+  }
+
   // Never allow observers/referees to send private messages to users.
   // Referee rulings/warnings are expected to be public.
   const bool forcePrivateChat = user->GetIsObserver() && (m_GameLoading || m_GameLoaded);
@@ -4004,7 +4039,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
   );
   const vector<uint8_t>& extraFlags = chatPlayer->GetExtraFlags();
   if (forceOnlyToObservers) {
-    vector<uint8_t> overrideObserverUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
+    vector<uint8_t> overrideObserverUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID());
     vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
     if (overrideObserverUIDs.empty()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening to [" + user->GetName() + "] --")
@@ -4027,7 +4062,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
       }
     } else {
       // enforce observer-only chat, just in case rogue clients are doing funny things
-      vector<uint8_t> overrideTargetUIDs = GetObserverUIDs(chatPlayer->GetFromUID());
+      vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID());
       vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
       if (!overrideTargetUIDs.empty()) {
         Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
@@ -4627,7 +4662,11 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     Send(user, m_LoadingBuffer);
     user->SetLagging(false);
     user->SetStartedLaggingTicks(0);
-    if (GetLaggingPlayers().empty()) {
+    uint8_t stillLagging = CountLaggingPlayers();
+    if (stillLagging > 0) {
+      SendChat(user, "[" + user->GetName() + "], please wait for " + ToDecString(stillLagging) + " players to load the game.");
+    } else {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "Load finished!")
       m_Lagging = false;
     }
   }
@@ -5417,10 +5456,6 @@ void CGame::EventGameStarted()
 
   {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_COUNTDOWN_START();
-    if (m_BufferingEnabled & BUFFERING_ENABLED_BEFORE_LOADING) {
-      m_BeforeLoadingBuffer.reserve(8 + (5 * m_FakeUsers.size()));
-      AppendByteArrayFast(m_BeforeLoadingBuffer, packet);
-    }
     SendAll(packet);
   }
 
@@ -5428,9 +5463,6 @@ void CGame::EventGameStarted()
 
   {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_COUNTDOWN_END();
-    if (m_BufferingEnabled & BUFFERING_ENABLED_BEFORE_LOADING) {
-      AppendByteArrayFast(m_BeforeLoadingBuffer, packet);
-    }
     SendAll(packet);
   }
 
@@ -5441,10 +5473,10 @@ void CGame::EventGameStarted()
 
   // send a game loaded packet for any fake users
 
+  m_FakeLoadedBuffer.reserve(5 * m_FakeUsers.size());
   for (auto& fakePlayer : m_FakeUsers) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer));
-    AppendByteArrayFast(m_BeforeLoadingBuffer, packet);
-    SendAll(packet);
+    AppendByteArrayFast(m_FakeLoadedBuffer, packet);
   }
 
   m_Actions.emplaceBack();
@@ -6373,24 +6405,23 @@ std::vector<uint8_t> CGame::GetUIDs(uint8_t excludeUID) const
 std::vector<uint8_t> CGame::GetObserverUIDs() const
 {
   std::vector<uint8_t> result;
-
-  for (auto& user : m_Users)
-  {
+  for (auto& user : m_Users) {
     if (!user->GetLeftMessageSent() && user->GetIsObserver())
       result.push_back(user->GetUID());
   }
-
   return result;
 }
 
-std::vector<uint8_t> CGame::GetObserverUIDs(uint8_t excludeUID) const
+std::vector<uint8_t> CGame::GetChatObserverUIDs(uint8_t excludeUID) const
 {
+  // Assumes m_GameLoading => m_Config->m_LoadInGame
   std::vector<uint8_t> result;
-
-  for (auto& user : m_Users)
-  {
-    if (!user->GetLeftMessageSent() && user->GetIsObserver() && user->GetUID() != excludeUID)
+  for (auto& user : m_Users) {
+    if (user->GetLeftMessageSent()) continue;
+    if (m_GameLoading && !user->GetFinishedLoading()) continue;
+    if (user->GetIsObserver() && user->GetUID() != excludeUID) {
       result.push_back(user->GetUID());
+    }
   }
 
   return result;
@@ -7610,6 +7641,19 @@ UserList CGame::GetLaggingPlayers() const
   return laggingPlayers;
 }
 
+uint8_t CGame::CountLaggingPlayers() const
+{
+  uint8_t count = 0;
+  if (!m_Lagging) return count;
+  for (const auto& user : m_Users) {
+    if (!user->GetLagging()) {
+      continue;
+    }
+    ++count;
+  }
+  return count;
+}
+
 UserList CGame::CalculateNewLaggingPlayers() const
 {
   UserList laggingPlayers;
@@ -7643,14 +7687,16 @@ void CGame::StopLagScreen(GameUser::CGameUser* forUser)
     // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
     // empty actions are used to extend the time a user can use when reconnecting
 
-    // Warcraft III doesn't respond to empty actions
+    // Warcraft III doesn't respond to empty actions,
+    // so we need to artificially increase users' sync counters.
     forUser->AddSyncCounterOffset(m_GProxyEmptyActions);
     for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
       Send(forUser, GameProtocol::GetEmptyAction());
     }
   }
 
-  // Warcraft III doesn't respond to empty actions
+  // Warcraft III doesn't respond to empty actions,
+  // so we need to artificially increase users' sync counters.
   forUser->AddSyncCounterOffset(1);
   Send(forUser, GameProtocol::GetEmptyAction());
 }
