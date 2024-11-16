@@ -898,6 +898,24 @@ bool CGameUser::UpdateReady()
   return m_Ready;
 }
 
+void CGameUser::DisableReconnect()
+{
+  m_GProxy = false;
+  m_GProxyExtended = false;
+  while (!m_GProxyBuffer.empty()) {
+    m_GProxyBuffer.pop();
+  }
+  /*
+  m_LastGProxyWaitNoticeSentTime = 0;
+  m_GProxyReconnectKey = 0;
+  m_LastGProxyAckTicks = nullopt;
+  m_GProxyPort = 0;
+  m_GProxyCheckGameID = false;
+  m_GProxyDisconnectNoticeSent = false;
+  m_GProxyVersion = 0;
+  */
+}
+
 bool CGameUser::GetReadyReminderIsDue() const
 {
   return !m_ReadyReminderLastTicks.has_value() || m_ReadyReminderLastTicks.value() + READY_REMINDER_PERIOD < GetTicks();

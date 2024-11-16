@@ -8153,8 +8153,7 @@ void CGame::StopLaggers(const string& reason) const
     if (user->GetLagging() || !user->GetFinishedLoading()) {
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
-      user->SetGProxy(false);
-      user->SetGProxyExtended(false);
+      user->DisableReconnect();
       user->CloseConnection();
       user->SetLagging(false);
     }

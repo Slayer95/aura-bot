@@ -300,6 +300,7 @@ namespace GameUser
     inline void SetGProxyExtended(bool nGProxyExtended) { m_GProxyExtended = nGProxyExtended; }
     inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
     inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
+    void DisableReconnect();
     inline void SetKickByTicks(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }
     inline void ClearKickByTicks() { m_KickByTicks = std::nullopt; }
     inline void AddKickReason(const uint8_t nKickReason) { m_KickReason |= nKickReason; }
