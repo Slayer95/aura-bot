@@ -480,7 +480,10 @@ public:
   void                      EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd);
   void                      EventLobbyLastPlayerLeaves();
   void                      ReportAllPings() const;
-  void                      ReportPlayerGProxyDisconnected(GameUser::CGameUser* user);
+  void                      SetLaggingPlayerAndUpdate(GameUser::CGameUser* user);
+  void                      SetEveryoneLagging();
+  void                      ReportRecoverableDisconnect(GameUser::CGameUser* user);
+  void                      OnRecoverableDisconnect(GameUser::CGameUser* user);
   bool                      CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   bool                      CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
   void                      EventUserDisconnectTimedOut(GameUser::CGameUser* user);

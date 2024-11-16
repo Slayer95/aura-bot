@@ -1340,10 +1340,7 @@ bool CGame::Update(void* fd, void* send_fd)
           StopLagScreen(user);
         }
 
-        // start the lag screen
         SendAll(GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
-
-        // Warcraft III doesn't seem to respond to empty actions
         m_LastLagScreenResetTime = Time;
       }
 
@@ -1465,11 +1462,14 @@ bool CGame::Update(void* fd, void* send_fd)
           } else {
             const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
             if (GetAnyUsingGProxy() && !user->GetGProxyAny()) {
+              // Warcraft III doesn't respond to empty actions
               user->AddSyncCounterOffset(m_GProxyEmptyActions);
               for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
                 AppendByteArrayFast(m_LoadingBuffer, emptyAction);
               }
             }
+            // Warcraft III doesn't respond to empty actions
+            user->AddSyncCounterOffset(1);
             AppendByteArrayFast(m_LoadingBuffer, emptyAction);
           }
         }
@@ -3122,6 +3122,7 @@ void CGame::SendAllActions()
 
     for (auto& user : m_Users) {
       if (!user->GetGProxyAny()) {
+        // Warcraft III doesn't respond to empty actions
         user->AddSyncCounterOffset(m_GProxyEmptyActions);
         for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
           Send(user, GameProtocol::GetEmptyAction());
@@ -3756,10 +3757,8 @@ void CGame::ResetOwnerSeen()
   m_LastOwnerSeen = GetTicks();
 }
 
-void CGame::ReportPlayerGProxyDisconnected(GameUser::CGameUser* user)
+void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
 {
-  user->SudoModeEnd();
-
   int64_t Time = GetTime(), Ticks = GetTicks();
   if (!user->GetLagging()) {
     ResetDropVotes();
@@ -3786,17 +3785,55 @@ void CGame::ReportPlayerGProxyDisconnected(GameUser::CGameUser* user)
     }
     SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
   }
-  if (Time - user->GetLastGProxyWaitNoticeSentTime() >= 20 && !user->GetGProxyExtended()) {
-    int64_t TimeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
+}
 
-    if (TimeRemaining > (m_GProxyEmptyActions + 1) * 60)
-      TimeRemaining = (m_GProxyEmptyActions + 1) * 60;
-    else if (TimeRemaining < 0)
-      TimeRemaining = 0;
+void CGame::SetEveryoneLagging()
+{
+  if (GetLagging()) {
+    return;
+  }
+  int64_t Time = GetTime(), Ticks = GetTicks();
 
-    SendAllChat(user->GetUID(), "Please wait for me to reconnect (" + to_string(TimeRemaining) + " seconds remain)");
+  ResetDropVotes();
+
+  m_Lagging = true;
+  m_StartedLaggingTime = Time;
+  m_LastLagScreenResetTime = Time;
+  m_LastLagScreenTime = Time;
+
+  for (auto& user : m_Users) {
+    user->SetLagging(true);
+    user->SetStartedLaggingTicks(Ticks);
+    user->ClearStalePings();
+  }
+}
+
+void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
+{
+  int64_t Time = GetTime(), Ticks = GetTicks();
+  int64_t timeRemaining = 0;
+
+  if (Time - m_StartedLaggingTime < (m_GProxyEmptyActions + 1) * 60) {
+    timeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
+  } else if (Time - m_StartedLaggingTime < m_Aura->m_Net->m_Config->m_ReconnectWaitTicks / 1000) {
+    timeRemaining = (m_Aura->m_Net->m_Config->m_ReconnectWaitTicks / 1000) - (Time - m_StartedLaggingTime);
+  }
+
+  if (timeRemaining > 0 && Time - user->GetLastGProxyWaitNoticeSentTime() >= 20) {
+    SendAllChat(user->GetUID(), "Please wait for me to reconnect (" + to_string(timeRemaining) + " seconds remain)");
     user->SetLastGProxyWaitNoticeSentTime(Time);
   }
+}
+
+void CGame::OnRecoverableDisconnect(GameUser::CGameUser* user)
+{
+  user->SudoModeEnd();
+
+  if (!user->GetLagging()) {
+    SetLaggingPlayerAndUpdate(user);
+  }
+
+  ReportRecoverableDisconnect();
 }
 
 void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
@@ -3836,7 +3873,7 @@ void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
         SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxy++ and may reconnect");
       }
     }
-    ReportPlayerGProxyDisconnected(user);
+    OnRecoverableDisconnect(user);
     return;
   }
 
@@ -3865,7 +3902,7 @@ void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
       SendAllChat(user->GetDisplayName() + " has disconnected (connection error - " + errorString + ") but is using GProxy++ and may reconnect");
     }
 
-    ReportPlayerGProxyDisconnected(user);
+    OnRecoverableDisconnect(user);
     return;
   }
 
@@ -3887,7 +3924,7 @@ void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
       SendAllChat(user->GetDisplayName() + " has terminated the connection, but is using GProxy++ and may reconnect");
     }
 
-    ReportPlayerGProxyDisconnected(user);
+    OnRecoverableDisconnect(user);
     return;
   }
 
@@ -3909,7 +3946,7 @@ void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool
       SendAllChat(user->GetDisplayName() + " has disconnected (protocol error) but is using GProxy++ and may reconnect");
     }
 
-    ReportPlayerGProxyDisconnected(user);
+    OnRecoverableDisconnect(user);
     return;
   }
 
@@ -4586,12 +4623,14 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
       AppendByteArrayFast(m_LoadingBuffer, packet);
     }
     SendAll(packet);
-    return;
+  } else {
+    Send(user, m_LoadingBuffer);
+    user->SetLagging(false);
+    user->SetStartedLaggingTicks(0);
+    if (GetLaggingPlayers().empty()) {
+      m_Lagging = false;
+    }
   }
-
-//
-  Send(user, m_LoadingBuffer);
-  // TODO: Handle lag screen
 }
 
 bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
@@ -5049,6 +5088,10 @@ void CGame::EventUserChangeHandicap(GameUser::CGameUser* user, uint8_t handicap)
 
 void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 {
+  if (!m_GameLoaded) {
+    return;
+  }
+
   if (m_Lagging) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] voted to drop laggers")
     SendAllChat("Player [" + user->GetDisplayName() + "] voted to drop laggers");
@@ -5480,6 +5523,7 @@ void CGame::EventGameStarted()
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
       AppendByteArray(m_LoadingBuffer, packet);
     }
+    SetEveryoneLagging();
   }
 
   // move the game to the games in progress vector
@@ -7574,10 +7618,10 @@ UserList CGame::CalculateNewLaggingPlayers() const
     if (user->GetIsObserver()) {
       continue;
     }
-    if (user->GetLagging() || user->GetGProxyDisconnectNoticeSent()) {
+    if (user->GetLagging() || user->GetGProxyDisconnectNoticeSent() || user->GetDisconnectedUnrecoverably()) {
       continue;
     }
-    if (user->GetIsBehindFramesNormal(GetSyncLimitSafe()) && !user->GetDisconnectedUnrecoverably()) {
+    if (!user->GetFinishedLoading() || user->GetIsBehindFramesNormal(GetSyncLimitSafe()) {
       laggingPlayers.push_back(user);
     }
   }
@@ -7599,12 +7643,14 @@ void CGame::StopLagScreen(GameUser::CGameUser* forUser)
     // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
     // empty actions are used to extend the time a user can use when reconnecting
 
+    // Warcraft III doesn't respond to empty actions
     forUser->AddSyncCounterOffset(m_GProxyEmptyActions);
     for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
       Send(forUser, GameProtocol::GetEmptyAction());
     }
   }
 
+  // Warcraft III doesn't respond to empty actions
   forUser->AddSyncCounterOffset(1);
   Send(forUser, GameProtocol::GetEmptyAction());
 }
