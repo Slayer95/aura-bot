@@ -769,7 +769,19 @@ void CAura::ClearAutoRehost()
   if (m_GameSetup == m_AutoRehostGameSetup) {
     m_GameSetup = nullptr;
   }
-  delete m_AutoRehostGameSetup->m_Map;
+  bool mapHasRefs = false;
+  if (m_CurrentLobby && m_CurrentLobby->GetMap() == m_AutoRehostGameSetup->m_Map) {
+    mapHasRefs = true;
+  } else {
+    for (auto& game : m_Games) {
+      if (game->GetMap() == m_AutoRehostGameSetup->m_Map) {
+        mapHasRefs = true;
+      }
+    }
+  }
+  if (!mapHasRefs) {
+    delete m_AutoRehostGameSetup->m_Map;
+  }
   m_AutoRehostGameSetup->m_Map = nullptr;
   UnholdContext(m_AutoRehostGameSetup->m_Ctx);
   m_AutoRehostGameSetup->m_Ctx = nullptr;
