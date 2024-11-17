@@ -3736,18 +3736,13 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
       // Observers that leave during countdown are replaced by fake observers.
       // This ensures the integrity of many things related to game slots.
       // e.g. this allows m_ControllersWithMap to remain unchanged.
-      uint8_t SID = GetSIDFromUID(user->GetUID());
-      if (SID >= m_Slots.size()) {
-        SID = GetEmptyObserverSID();
-        LOG_APP_IF(LOG_LEVEL_WARNING, "tried to replace observer leaver during countdown, but SID was not found; fallback to new: " + ToDecString(SID))
-      } else {
-        // TODO: Investigate under which circumstances, EventUserDeleted() is called without releasing the SID.
-        LOG_APP_IF(LOG_LEVEL_WARNING, "replaced observer leaver during countdown by fake observer (SID was NOT released)")
-      }
-      CreateFakeUserInner(SID, GetNewUID(), "User[" + ToDecString(SID + 1) + "]");
-      CGameSlot* slot = GetSlot(SID);
+      const uint8_t replaceSID = GetEmptyObserverSID();
+      const uint8_t replaceUID = GetNewUID();
+      CreateFakeUserInner(replaceSID, replaceUID, "User[" + ToDecString(replaceSID + 1) + "]");
+      CGameSlot* slot = GetSlot(replaceSID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
       slot->SetColor(m_Map->GetVersionMaxSlots());
+      LOG_APP_IF(LOG_LEVEL_INFO, "replaced leaving observer by fake user (SID=" + ToDecString(replaceSID) + "|UID=" + ToDecString(replaceUID) + ")")
     }
   }
 
