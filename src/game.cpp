@@ -4739,11 +4739,12 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     Send(user, m_LoadingBuffer);
     user->SetLagging(false);
     user->SetStartedLaggingTicks(0);
-    uint8_t stillLagging = CountLaggingPlayers();
-    if (stillLagging > 0) {
-      SendChat(user, "[" + user->GetName() + "], please wait for " + ToDecString(stillLagging) + " players to load the game.");
+    UserList laggingPlayers = GetLaggingPlayers();
+    if (laggingPlayers.size() >= 3) {
+      SendChat(user, "[" + user->GetName() + "], please wait for " + to_string(laggingPlayers.size()) + " players to load the game...");
+    } else if (!laggingPlayers.empty()) {
+      SendChat(user, "[" + user->GetName() + "], please wait for " + ToNameListSentence(laggingPlayers) + " to load the game...");
     } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "Load finished!")
       m_Lagging = false;
     }
   }
