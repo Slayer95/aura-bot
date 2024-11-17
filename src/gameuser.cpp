@@ -848,6 +848,7 @@ bool CGameUser::GetIsNativeReferee() const
 
 bool CGameUser::GetCanUsePublicChat() const
 {
+  if (m_Game->GetGameLoading() && (!m_Game->m_Config->m_LoadInGame || !m_FinishedLoading)) return false;
   if (!m_Observer || m_PowerObserver || (!m_Game->GetGameLoading() && !m_Game->GetGameLoaded())) return true;
   return !m_Game->GetUsesCustomReferees() && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
 }

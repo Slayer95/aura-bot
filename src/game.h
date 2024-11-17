@@ -521,7 +521,7 @@ public:
 
   // these events are called outside of any iterations
 
-  void                      EventGameStarted();
+  void                      EventGameStartedLoading();
   void                      EventGameLoaded();
   void                      HandleGameLoadedStats();
   bool                      ReleaseMap();
@@ -662,7 +662,7 @@ public:
   void StartCountDownFast(bool force);
   void StopCountDown();
   bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
-  void ShowPlayerNamesGameStart();
+  void ShowPlayerNamesGameStartLoading();
   void ShowPlayerNamesInGame();
   bool StopPlayers(const std::string& reason) const;
   void StopLagger(GameUser::CGameUser* user, const std::string& reason) const;

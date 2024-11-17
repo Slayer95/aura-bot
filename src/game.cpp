@@ -581,6 +581,7 @@ void CGame::StartGameOverTimer(bool isMMD)
       m_DisplayMode = GAME_NONE;
     }
     m_ChatOnly = true;
+    StopCountDown();
     m_Aura->m_Games.push_back(this);
     m_Aura->m_CurrentLobby = nullptr;
   }
@@ -1205,6 +1206,13 @@ void CGame::UpdateLobby()
     StartCountDown(false, true);
   }
 
+  if (!m_Users.empty()) {
+    m_LastUserSeen = Ticks;
+    if (HasOwnerInGame()) {
+      m_LastOwnerSeen = Ticks;
+    }
+  }
+
   // refresh every 3 seconds
 
   if (!m_CountDownStarted && m_DisplayMode == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
@@ -1314,32 +1322,27 @@ void CGame::UpdateLobby()
   // countdown every m_LobbyCountDownInterval ms (default 500 ms)
 
   if (m_CountDownStarted && Ticks - m_LastCountDownTicks >= m_Config->m_LobbyCountDownInterval) {
+    bool shouldStartLoading = false;
     if (m_CountDownCounter > 0) {
       // we use a countdown counter rather than a "finish countdown time" here because it might alternately round up or down the count
       // this sometimes resulted in a countdown of e.g. "6 5 3 2 1" during my testing which looks pretty dumb
       // doing it this way ensures it's always "5 4 3 2 1" but each interval might not be *exactly* the same length
 
       SendAllChat(to_string(m_CountDownCounter--) + ". . .");
-    } else if (!m_ChatOnly) {
-      // allow observing AI vs AI matches
-      if (GetNumJoinedUsers() >= 1) {
-        EventGameStarted();
-      } else {
-        // Some operations may remove fake users during countdown.
-        // Ensure that the game doesn't start if there are neither real nor fake users.
-        // (If a user leaves or joins, the countdown is stopped elsewhere.)
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "countdown stopped - lobby is empty.")
-        StopCountDown();
-      }
+    } else if (GetNumJoinedUsers() >= 1) { // allow observing AI vs AI matches
+      shouldStartLoading = true;
+    } else {
+      // Some operations may remove fake users during countdown.
+      // Ensure that the game doesn't start if there are neither real nor fake users.
+      // (If a user leaves or joins, the countdown is stopped elsewhere.)
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "countdown stopped - lobby is empty.")
+      StopCountDown();
     }
 
     m_LastCountDownTicks = Ticks;
-  }
-
-  if (!m_Users.empty()) {
-    m_LastUserSeen = Ticks;
-    if (HasOwnerInGame()) {
-      m_LastOwnerSeen = Ticks;
+    if (shouldStartLoading) {
+      EventGameStartedLoading();
+      return;
     }
   }
 
@@ -1355,7 +1358,7 @@ void CGame::UpdateLobby()
   //
   // ensures that all pending users' leave messages have already been sent
   // either at CGame::EventUserDeleted or at CGame::EventRequestJoin (reserve system kicks)
-  if (GetSlotsOpen() > 0) {
+  if (!m_GameLoading && GetSlotsOpen() > 0) {
     CreateVirtualHost();
   }
 }
@@ -1955,7 +1958,18 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
   if (message.empty() || !user)
     return;
 
-  LOG_APP_IF(logLevel, "sent <<" + message + ">>")
+  if (logLevel <= LOG_LEVEL_TRACE && m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
+    if (fromUser) {
+      LOG_APP_IF(logLevel, "sent as [" + fromUser->GetName() + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>")
+    } else if (fromUID == m_VirtualHostUID) {
+      LOG_APP_IF(logLevel, "sent as Virtual Host -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>")
+    } else {
+      LOG_APP_IF(logLevel, "sent as [UID:" + ToDecString(fromUID) + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>")
+    }
+  } else {
+    LOG_APP_IF(logLevel, "sent to [" + user->GetName() + "] <<" + message + ">>")
+  }
 
   if (!m_GameLoaded) {
     if (message.size() > 254)
@@ -2007,7 +2021,18 @@ void CGame::SendAllChat(uint8_t fromUID, const string& message) const
     return;
   }
 
-  LOG_APP_IF(LOG_LEVEL_INFO, "sent <<" + message + ">>")
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
+    if (fromUser) {
+      LogApp("sent as [" + fromUser->GetName() + "] <<" + message + ">>");
+    } else if (fromUID == m_VirtualHostUID) {
+      LogApp("sent as Virtual Host <<" + message + ">>");
+    } else {
+      LogApp("sent as [UID:" + ToDecString(fromUID) + "] <<" + message + ">>");
+    }
+  } else {
+    LOG_APP_IF(LOG_LEVEL_INFO, "sent <<" + message + ">>")
+  }
 
   // send a public message to all users - it'll be marked [All] in Warcraft 3
 
@@ -4180,7 +4205,7 @@ bool CGame::GetIsHiddenPlayerNames() const
   return m_IsHiddenPlayerNames;
 }
 
-void CGame::ShowPlayerNamesGameStart() {
+void CGame::ShowPlayerNamesGameStartLoading() {
   if (!m_IsHiddenPlayerNames) return;
 
   m_IsHiddenPlayerNames = false;
@@ -4455,7 +4480,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
       if (!m_IsHiddenPlayerNames) {
         // Note: Someone can probably figure out whether a given player has joined a lobby by trying to impersonate them, and failing to.
-        // An alternative would be no longer preventing joins and, potentially, disambiguating their names at CGame::ShowPlayerNamesGameStart.
+        // An alternative would be no longer preventing joins and, potentially, disambiguating their names at CGame::ShowPlayerNamesGameStartLoading.
         SendAllChat("Entry denied for another user with the same name: [" + joinRequest->GetName() + "@" + JoinedRealm + "]");
       }
       m_ReportedJoinFailNames.insert(joinRequest->GetName());
@@ -5377,7 +5402,7 @@ void CGame::EventUserMapReady(GameUser::CGameUser* user)
 }
 
 // keyword: EventGameLoading
-void CGame::EventGameStarted()
+void CGame::EventGameStartedLoading()
 {
   if (GetUDPEnabled())
     SendGameDiscoveryDecreate();
@@ -5461,7 +5486,7 @@ void CGame::EventGameStarted()
   }
 
   if (m_IsHiddenPlayerNames && m_Config->m_HideInGameNames != HIDE_IGN_ALWAYS) {
-    ShowPlayerNamesGameStart();
+    ShowPlayerNamesGameStartLoading();
   }
 
   if (!m_RestoredGame && GetSlotsOpen() > 0) {
@@ -6484,7 +6509,7 @@ uint8_t CGame::GetPublicHostUID() const
 {
   // try to find the fakeuser next
 
-  if (!m_FakeUsers.empty()) {
+  if (!m_GameLoading && !m_FakeUsers.empty()) {
     if (!m_GameLoading && !m_GameLoaded) {
       return static_cast<uint8_t>(m_FakeUsers[m_FakeUsers.size() - 1]);
     }
@@ -6539,15 +6564,18 @@ uint8_t CGame::GetHiddenHostUID() const
 
   vector<uint8_t> availableUIDs;
   //vector<uint8_t> availableRefereeUIDs;
-  for (auto& fakePlayer : m_FakeUsers) {
-    if (GetIsFakeObserver(fakePlayer) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
-      continue;
-    }
-    if (GetIsFakeObserver(fakePlayer)) {
-      //availableRefereeUIDs.push_back(static_cast<uint8_t>(fakePlayer));
-      return static_cast<uint8_t>(fakePlayer);
-    } else {
-      availableUIDs.push_back(static_cast<uint8_t>(fakePlayer));
+
+  if (!m_GameLoading && !m_FakeUsers.empty()) {
+    for (auto& fakePlayer : m_FakeUsers) {
+      if (GetIsFakeObserver(fakePlayer) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+        continue;
+      }
+      if (GetIsFakeObserver(fakePlayer)) {
+        //availableRefereeUIDs.push_back(static_cast<uint8_t>(fakePlayer));
+        return static_cast<uint8_t>(fakePlayer);
+      } else {
+        availableUIDs.push_back(static_cast<uint8_t>(fakePlayer));
+      }
     }
   }
 
@@ -8461,6 +8489,13 @@ bool CGame::CreateVirtualHost()
 {
   if (m_VirtualHostUID != 0xFF)
     return false;
+
+  if (m_GameLoading || m_GameLoaded) {
+    // In principle, CGame::CreateVirtualHost() should not be called when the game has started loading,
+    // but too many times has that asssumption broke due to faulty logic.
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Rejected creation of virtual host after game started");
+    return false;
+  }
 
   m_VirtualHostUID = GetNewUID();
 
