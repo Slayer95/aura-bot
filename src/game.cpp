@@ -1320,20 +1320,32 @@ bool CGame::Update(void* fd, void* send_fd)
         }
       }
     } else if (!m_Users.empty()) { // m_Lagging == true
-      const bool anyUsingLegacyGProxy = GetAnyUsingGProxyLegacy();
-
-      int64_t WaitTime = 60;
-
-      if (anyUsingLegacyGProxy)
-        WaitTime = (m_GProxyEmptyActions + 1) * 60;
-
-      if (Time - m_StartedLaggingTime >= WaitTime) {
-        StopLaggers("was automatically dropped after " + to_string(WaitTime) + " seconds");
+      pair<int64_t, int64_t> waitTicks = GetReconnectWaitTicks();
+      bool anyDropped = false;
+      for (auto& user : m_Users) {
+        if (!user->GetLagging()) {
+          continue;
+        }
+        bool timeExceeded = false;
+        if (user->GetDisconnected() && user->GetGProxyExtended()) {
+          timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.second;
+        } else if (user->GetDisconnected() && user->GetGProxyAny()) {
+          timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.first;
+        } else {
+          timeExceeded = Ticks - user->GetStartedLaggingTicks() > 60000;
+        }
+        if (timeExceeded) {
+          StopLagger(user, "was automatically dropped after " + to_string(Ticks - user->GetStartedLaggingTicks()) + " seconds");
+          anyDropped = true;
+        }
+      }
+      if (anyDropped) {
+        ResetDropVotes();
       }
 
-      // we cannot allow the lag screen to stay up for more than ~65 seconds because Warcraft III disconnects if it doesn't receive an action packet at least this often
-      // one (easy) solution is to simply drop all the laggers if they lag for more than 60 seconds
-      // another solution is to reset the lag screen the same way we reset it when using load-in-game
+      // we cannot allow the lag screen to stay up for more than ~65 seconds because
+      // Warcraft III disconnects if it doesn't receive an action packet at least this often
+      // so we reset the lag screen every 60 seconds
 
       if (Time - m_LastLagScreenResetTime >= 60) {
         for (auto& user : m_Users) {
@@ -1347,33 +1359,34 @@ bool CGame::Update(void* fd, void* send_fd)
       // check if anyone has stopped lagging normally
       // we consider a user to have stopped lagging if they're less than m_SyncLimitSafe keepalives behind
 
-      uint32_t stillLaggingCounter = 0;
+      uint8_t playersLaggingCounter = 0;
       for (auto& user : m_Users) {
         if (!user->GetLagging()) {
           continue;
         }
 
         if (user->GetGProxyDisconnectNoticeSent()) {
-          ++stillLaggingCounter;
+          ++playersLaggingCounter;
           ReportRecoverableDisconnect(user);
           continue;
         }
 
-        if (user->GetIsBehindFramesNormal(GetSyncLimitSafe()) && !user->GetDisconnectedUnrecoverably()) {
-          ++stillLaggingCounter;
+        if (user->GetDisconnectedUnrecoverably()) {
+          SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+          user->SetLagging(false);
+          user->SetStartedLaggingTicks(0);
+          LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
+        } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
+          ++playersLaggingCounter;
         } else {
           SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
           user->SetLagging(false);
           user->SetStartedLaggingTicks(0);
-          if (user->GetDisconnected()) {
-            LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
-          } else {
-            LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
-          }
+          LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
         }
       }
 
-      if (stillLaggingCounter == 0) {
+      if (playersLaggingCounter == 0) {
         m_Lagging = false;
         m_LastActionSentTicks = Ticks - GetLatency();
         m_LastActionLateBy = 0;
@@ -1454,6 +1467,7 @@ bool CGame::Update(void* fd, void* send_fd)
       if (m_Config->m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
         if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config->m_LoadingTimeout)) {
           StopLaggers("was automatically dropped after " + to_string(m_Config->m_LoadingTimeout / 1000) + " seconds");
+          ResetDropVotes();
         }
       }
 
@@ -3836,18 +3850,27 @@ void CGame::SetEveryoneLagging()
   }
 }
 
+pair<int64_t, int64_t> CGame::GetReconnectWaitTicks() const
+{
+  return make_pair(
+    static_cast<int64_t>(m_GProxyEmptyActions + 1) * 60000,
+    m_Aura->m_Net->m_Config->m_ReconnectWaitTicks
+  );
+}
+
 void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
 {
-  int64_t Time = GetTime();
+  int64_t Time = GetTime(), Ticks = GetTicks();
   if (Time - user->GetLastGProxyWaitNoticeSentTime() < 20) {
     return;
   }
 
   int64_t timeRemaining = 0;
-  if (Time - m_StartedLaggingTime < (m_GProxyEmptyActions + 1) * 60) {
-    timeRemaining = (m_GProxyEmptyActions + 1) * 60 - (Time - m_StartedLaggingTime);
-  } else if (Time - m_StartedLaggingTime < m_Aura->m_Net->m_Config->m_ReconnectWaitTicks / 1000) {
-    timeRemaining = (m_Aura->m_Net->m_Config->m_ReconnectWaitTicks / 1000) - (Time - m_StartedLaggingTime);
+  pair<int64_t, int64_t> ticksRemaining = GetReconnectWaitTicks();
+  if (user->GetGProxyExtended()) {
+    timeRemaining = Ticks - user->GetStartedLaggingTicks() - ticksRemaining.second;
+  } else {
+    timeRemaining = Ticks - user->GetStartedLaggingTicks() - ticksRemaining.first;
   }
   if (timeRemaining <= 0) {
     return;
@@ -4019,11 +4042,12 @@ void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
 {
   if (user->GetDeleteMe()) return;
   TrySaveOnDisconnect(user, false);
-  user->SetDeleteMe(true);
   if (!user->HasLeftReason()) {
     user->SetLeftReason("has been kicked because they didn't reconnect in time");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
+  StopLagger(user, "failed to reconnect in time");
+  ResetDropVotes();
 }
 
 void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const
@@ -5146,6 +5170,7 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 
     if (static_cast<uint8_t>(m_Users.size()) < 2 * votesCount) {
       StopLaggers("lagged out (dropped by vote)");
+      ResetDropVotes();
     }
   }
 }
@@ -8147,16 +8172,27 @@ bool CGame::StopPlayers(const string& reason) const
   return anyStopped;
 }
 
+void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
+{  
+  user->SetLeftReason(reason);
+  user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  user->DisableReconnect();
+  user->CloseConnection();
+  user->SetLagging(false);
+}
+
 void CGame::StopLaggers(const string& reason) const
 {
   for (auto& user : m_Users) {
     if (user->GetLagging() || !user->GetFinishedLoading()) {
-      user->SetLeftReason(reason);
-      user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
-      user->DisableReconnect();
-      user->CloseConnection();
-      user->SetLagging(false);
+      StopLagger(user, reason);
     }
+  }
+}
+
+void CGame::ResetDropVotes() const
+{
+  for (auto& user : m_Users) {
     user->SetDropVote(false);
   }
 }

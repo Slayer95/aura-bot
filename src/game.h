@@ -484,6 +484,7 @@ public:
   void                      ReportAllPings() const;
   void                      SetLaggingPlayerAndUpdate(GameUser::CGameUser* user);
   void                      SetEveryoneLagging();
+  std::pair<int64_t, int64_t> GetReconnectWaitTicks() const;
   void                      ReportRecoverableDisconnect(GameUser::CGameUser* user);
   void                      OnRecoverableDisconnect(GameUser::CGameUser* user);
   bool                      CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
@@ -660,8 +661,10 @@ public:
   void ShowPlayerNamesGameStart();
   void ShowPlayerNamesInGame();
   bool StopPlayers(const std::string& reason) const;
+  void StopLagger(GameUser::CGameUser* user, const std::string& reason) const;
   void StopLaggers(const std::string& reason) const;
   void StopDesynchronized(const std::string& reason) const;
+  void ResetDropVotes() const;
   std::string GetSaveFileName(const uint8_t UID) const;
   bool Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   void SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame);

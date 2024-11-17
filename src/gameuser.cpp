@@ -902,6 +902,7 @@ void CGameUser::DisableReconnect()
 {
   m_GProxy = false;
   m_GProxyExtended = false;
+  m_GProxyDisconnectNoticeSent = false;
   while (!m_GProxyBuffer.empty()) {
     m_GProxyBuffer.pop();
   }
@@ -911,7 +912,6 @@ void CGameUser::DisableReconnect()
   m_LastGProxyAckTicks = nullopt;
   m_GProxyPort = 0;
   m_GProxyCheckGameID = false;
-  m_GProxyDisconnectNoticeSent = false;
   m_GProxyVersion = 0;
   */
 }
