@@ -1620,10 +1620,18 @@ bool CGame::Update(void* fd, void* send_fd)
   // changed this to ping during the game as well
 
   if (!m_LobbyLoading && (Time - m_LastPingTime >= 5)) {
-    // note: we must send pings to users who are downloading the map because Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
+    // we must send pings to users who are downloading the map because
+    // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
 
-    SendAll(GameProtocol::SEND_W3GS_PING_FROM_HOST());
+    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST();
+    for (auto& user : m_Users) {
+      // Avoid ping-spamming GProxy-reconnected players
+      // TODO: Check whether this desyncs!
+      if (!user->GetDisconnected()) {
+        user->Send(pingPacket);
+      }
+    }
 
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
     // however we only want to broadcast if the countdown hasn't started
