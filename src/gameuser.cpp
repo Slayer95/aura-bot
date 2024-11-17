@@ -294,6 +294,9 @@ bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
 void CGameUser::CloseConnection(bool fromOpen)
 {
   if (m_Disconnected) return;
+  if (!m_Game->GetGameLoaded()) {
+    DisableReconnect();
+  }
   m_LastDisconnectTicks = GetTicks();
   m_Disconnected = true;
   m_Socket->Close();
@@ -900,6 +903,7 @@ bool CGameUser::UpdateReady()
 
 void CGameUser::DisableReconnect()
 {
+  if (!m_GProxy) return;
   m_GProxy = false;
   m_GProxyExtended = false;
   m_GProxyDisconnectNoticeSent = false;

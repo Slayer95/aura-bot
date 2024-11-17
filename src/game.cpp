@@ -895,7 +895,7 @@ uint32_t CGame::GetNumJoinedUsers() const
   uint32_t counter = 0;
 
   for (const auto& user : m_Users) {
-    if (user->GetDeleteMe())
+    if (user->GetDeleteMe() || user->GetDisconnectedUnrecoverably())
       continue;
 
     ++counter;
@@ -909,7 +909,7 @@ uint32_t CGame::GetNumJoinedUsersOrFake() const
   uint32_t counter = static_cast<uint8_t>(m_FakeUsers.size());
 
   for (const auto& user : m_Users) {
-    if (user->GetDeleteMe())
+    if (user->GetDeleteMe() || user->GetDisconnectedUnrecoverably())
       continue;
 
     ++counter;
@@ -923,7 +923,7 @@ uint8_t CGame::GetNumJoinedPlayers() const
   uint8_t counter = 0;
 
   for (const auto& user : m_Users) {
-    if (user->GetDeleteMe())
+    if (user->GetDeleteMe() || user->GetDisconnectedUnrecoverably())
       continue;
     if (user->GetIsObserver())
       continue;
@@ -939,7 +939,7 @@ uint8_t CGame::GetNumJoinedObservers() const
   uint8_t counter = 0;
 
   for (const auto& user : m_Users) {
-    if (user->GetDeleteMe())
+    if (user->GetDeleteMe() || user->GetDisconnectedUnrecoverably())
       continue;
     if (!user->GetIsObserver())
       continue;
@@ -987,7 +987,7 @@ uint8_t CGame::GetNumJoinedPlayersOrFakeUsers() const
   uint8_t counter = static_cast<uint8_t>(m_FakeUsers.size());
 
   for (const auto& user : m_Users) {
-    if (user->GetDeleteMe())
+    if (user->GetDeleteMe() || user->GetDisconnectedUnrecoverably())
       continue;
     if (user->GetIsObserver())
       continue;
@@ -1190,6 +1190,427 @@ uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return NumFDs;
 }
 
+void CGame::UpdateLobby()
+{
+  const int64_t Time = GetTime(), Ticks = GetTicks();
+
+  if (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED)) {
+    SendAllSlotInfo();
+    UpdateReadyCounters();
+    m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
+  }
+
+  if (GetIsAutoStartDue()) {
+    SendAllChat("Game automatically starting in. . .");
+    StartCountDown(false, true);
+  }
+
+  // refresh every 3 seconds
+
+  if (!m_CountDownStarted && m_DisplayMode == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
+    // send a game refresh packet to each battle.net connection
+
+    for (auto& realm : m_Aura->m_Realms) {
+      if (!realm->GetLoggedIn()) {
+        continue;
+      }
+      if (m_IsMirror && realm->GetIsMirror()) {
+      // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+      // Do not display external games in those realms.
+        continue;
+      }
+      if (realm->GetIsChatQueuedGameAnnouncement()) {
+        // Wait til we have sent a chat message first.
+        continue;
+      }
+      if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
+        continue;
+
+      }
+      if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
+        continue;
+      }
+      // Send STARTADVEX3
+      AnnounceToRealm(realm);
+    }
+
+    m_LastRefreshTime = Time;
+
+    if (!m_IsMirror && m_Aura->m_Games.empty()) {
+      // This is a lobby. Take the chance to update the detailed console title
+      m_Aura->UpdateMetaData();
+    }
+  }
+
+  // send more map data
+
+  if (Ticks - m_LastDownloadCounterResetTicks >= 1000) {
+    // hackhack: another timer hijack is in progress here
+    // since the download counter is reset once per second it's a great place to update the slot info if necessary
+
+    if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
+      SendAllSlotInfo();
+      UpdateReadyCounters();
+      m_SlotInfoChanged &= ~(SLOTS_DOWNLOAD_PROGRESS_CHANGED);
+    }
+
+    m_DownloadCounter               = 0;
+    m_LastDownloadCounterResetTicks = Ticks;
+  }
+
+  if (Ticks - m_LastDownloadTicks >= 100) {
+    uint32_t Downloaders = 0;
+
+    for (auto& user : m_Users) {
+      if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
+        ++Downloaders;
+
+        if (m_Aura->m_Net->m_Config->m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net->m_Config->m_MaxDownloaders) {
+          break;
+        }
+
+        // send up to 100 pieces of the map at once so that the download goes faster
+        // if we wait for each MAPPART packet to be acknowledged by the client it'll take a long time to download
+        // this is because we would have to wait the round trip time (the ping time) between sending every 1442 bytes of map data
+        // doing it this way allows us to send at least 1.4 MB in each round trip interval which is much more reasonable
+        // the theoretical throughput is [1.4 MB * 1000 / ping] in KB/sec so someone with 100 ping (round trip ping, not LC ping) could download at 1400 KB/sec
+        // note: this creates a queue of map data which clogs up the connection when the client is on a slower connection (e.g. dialup)
+        // in this case any changes to the lobby are delayed by the amount of time it takes to send the queued data (i.e. 140 KB, which could be 30 seconds or more)
+        // for example, users joining and leaving, slot changes, chat messages would all appear to happen much later for the low bandwidth user
+        // note: the throughput is also limited by the number of times this code is executed each second
+        // e.g. if we send the maximum amount (1.4 MB) 10 times per second the theoretical throughput is 1400 KB/sec
+        // therefore the maximum throughput is 14 MB/sec, and this value slowly diminishes as the user's ping increases
+        // in addition to this, the throughput is limited by the configuration value bot_maxdownloadspeed
+        // in summary: the actual throughput is MIN( 1.4 * 1000 / ping, 1400, bot_maxdownloadspeed ) in KB/sec assuming only one user is downloading the map
+
+        const uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+
+        while (user->GetLastMapPartSent() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net->m_Config->m_MaxParallelMapPackets && user->GetLastMapPartSent() < MapSize)
+        {
+          if (user->GetLastMapPartSent() == 0)
+          {
+            // overwrite the "started download ticks" since this is the first time we've sent any map data to the user
+            // prior to this we've only determined if the user needs to download the map but it's possible we could have delayed sending any data due to download limits
+
+            user->SetStartedDownloadingTicks(Ticks);
+          }
+
+          // limit the download speed if we're sending too much data
+          // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
+
+          if (m_Aura->m_Net->m_Config->m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net->m_Config->m_MaxUploadSpeed * 1024)
+            break;
+
+          Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapData()));
+          user->SetLastMapPartSent(user->GetLastMapPartSent() + 1442);
+          m_DownloadCounter += 1442;
+        }
+      }
+    }
+
+    m_LastDownloadTicks = Ticks;
+  }
+
+  // countdown every m_LobbyCountDownInterval ms (default 500 ms)
+
+  if (m_CountDownStarted && Ticks - m_LastCountDownTicks >= m_Config->m_LobbyCountDownInterval) {
+    if (m_CountDownCounter > 0) {
+      // we use a countdown counter rather than a "finish countdown time" here because it might alternately round up or down the count
+      // this sometimes resulted in a countdown of e.g. "6 5 3 2 1" during my testing which looks pretty dumb
+      // doing it this way ensures it's always "5 4 3 2 1" but each interval might not be *exactly* the same length
+
+      SendAllChat(to_string(m_CountDownCounter--) + ". . .");
+    } else if (!m_ChatOnly) {
+      // allow observing AI vs AI matches
+      if (GetNumJoinedUsers() >= 1) {
+        EventGameStarted();
+      } else {
+        // Some operations may remove fake users during countdown.
+        // Ensure that the game doesn't start if there are neither real nor fake users.
+        // (If a user leaves or joins, the countdown is stopped elsewhere.)
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "countdown stopped - lobby is empty.")
+        StopCountDown();
+      }
+    }
+
+    m_LastCountDownTicks = Ticks;
+  }
+
+  if (!m_Users.empty()) {
+    m_LastUserSeen = Ticks;
+    if (HasOwnerInGame()) {
+      m_LastOwnerSeen = Ticks;
+    }
+  }
+
+  // release abandoned lobbies, so other users can take ownership
+  CheckLobbyTimeouts();
+
+  if (m_Exiting) {
+    return;
+  }
+
+  // last action of CGame::UpdateLobby
+  // try to create the virtual host user, if there are slots available
+  //
+  // ensures that all pending users' leave messages have already been sent
+  // either at CGame::EventUserDeleted or at CGame::EventRequestJoin (reserve system kicks)
+  if (GetSlotsOpen() > 0) {
+    CreateVirtualHost();
+  }
+}
+
+void CGame::UpdateLoading()
+{
+  const int64_t Time = GetTime(), Ticks = GetTicks();
+
+  bool finishedLoading = true;
+  bool anyLoaded = false;
+  for (auto& user : m_Users) {
+    if (user->GetFinishedLoading()) {
+      anyLoaded = true;
+    } else if (!user->GetDisconnected()) {
+      finishedLoading = false;
+      break;
+    }
+  }
+
+  if (finishedLoading) {
+    if (!m_FakeLoadedBuffer.empty()) {
+      SendAll(m_FakeLoadedBuffer);
+    }
+    if (anyLoaded) {
+      m_LastActionSentTicks = Ticks;
+      m_FinishedLoadingTicks = Ticks;
+      m_GameLoading = false;
+      m_GameLoaded = true;
+      EventGameLoaded();
+    } else {
+      // Flush leaver queue to allow players and the game itself to be destroyed.
+      SendAllActionsCallback();
+    }
+  } else {
+    if (m_Config->m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
+      if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config->m_LoadingTimeout)) {
+        StopLaggers("was automatically dropped after " + to_string(m_Config->m_LoadingTimeout / 1000) + " seconds");
+        ResetDropVotes();
+      }
+    }
+
+    // reset the "lag" screen (the load-in-game screen) every 30 seconds
+    if (anyLoaded && m_Config->m_LoadInGame && GetTime() - m_LastLagScreenResetTime >= 30 ) {
+      const bool anyUsingGProxy = GetAnyUsingGProxy();
+      const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers());
+      for (auto& user : m_Users) {
+        if (user->GetFinishedLoading()) {
+          StopLagScreen(user);
+          Send(user, startLagPacket);
+        } else {
+          // Warcraft III doesn't respond to empty actions,
+          // so we need to artificially increase users' sync counters.
+          if (anyUsingGProxy && !user->GetGProxyAny()) {
+            user->AddSyncCounterOffset(m_GProxyEmptyActions);
+          }
+          user->AddSyncCounterOffset(1);
+        }
+      }
+      const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
+      AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+      for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
+        AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+      }
+      m_LastLagScreenResetTime = GetTime();
+      SendAllChat("Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
+    }
+  }
+}
+
+void CGame::UpdateLoaded()
+{
+  const int64_t Time = GetTime(), Ticks = GetTicks();
+
+  // check if anyone has started lagging
+  // we consider a user to have started lagging if they're more than m_SyncLimit keepalives behind
+
+  if (!m_Lagging) {
+    string LaggingString;
+    bool startedLagging = false;
+    vector<uint32_t> framesBehind = GetPlayersFramesBehind();
+    uint8_t i = static_cast<uint8_t>(m_Users.size());
+    while (i--) {
+      if (framesBehind[i] > GetSyncLimit() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
+        startedLagging = true;
+        break;
+      }
+    }
+    if (startedLagging) {
+      uint8_t worstLaggerIndex = 0;
+      uint8_t bestLaggerIndex = 0;
+      uint32_t worstLaggerFrames = 0;
+      uint32_t bestLaggerFrames = 0xFFFFFFFF;
+      UserList laggingPlayers;
+      i = static_cast<uint8_t>(m_Users.size());
+      while (i--) {
+        if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
+          m_Users[i]->SetLagging(true);
+          m_Users[i]->SetStartedLaggingTicks(Ticks);
+          m_Users[i]->ClearStalePings();
+          laggingPlayers.push_back(m_Users[i]);
+          if (framesBehind[i] > worstLaggerFrames) {
+            worstLaggerIndex = i;
+            worstLaggerFrames = framesBehind[i];
+          }
+          if (framesBehind[i] < bestLaggerFrames) {
+            bestLaggerIndex = i;
+            bestLaggerFrames = framesBehind[i];
+          }
+        }
+      }
+      if (laggingPlayers.size() == m_Users.size()) {
+        // Avoid showing everyone as lagging
+        m_Users[bestLaggerIndex]->SetLagging(false);
+        m_Users[bestLaggerIndex]->SetStartedLaggingTicks(0);
+        laggingPlayers.erase(laggingPlayers.begin() + (m_Users.size() - 1 - bestLaggerIndex));
+      }
+
+      if (!laggingPlayers.empty()) {
+        // start the lag screen
+        SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
+        ResetDropVotes();
+
+        m_Lagging = true;
+        m_StartedLaggingTime = Time;
+        m_LastLagScreenResetTime = Time;
+
+        // print debug information
+        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(GetLatency()) / static_cast<double>(1000.);
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+          LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".");
+          LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)");
+        }
+      }
+    }
+  } else if (!m_Users.empty()) { // m_Lagging == true
+    pair<int64_t, int64_t> waitTicks = GetReconnectWaitTicks();
+    bool anyDropped = false;
+    for (auto& user : m_Users) {
+      if (!user->GetLagging()) {
+        continue;
+      }
+      bool timeExceeded = false;
+      if (user->GetDisconnected() && user->GetGProxyExtended()) {
+        timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.second;
+      } else if (user->GetDisconnected() && user->GetGProxyAny()) {
+        timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.first;
+      } else {
+        timeExceeded = Ticks - user->GetStartedLaggingTicks() > 60000;
+      }
+      if (timeExceeded) {
+        if (user->GetDisconnected()) {
+          StopLagger(user, "failed to reconnect within " + to_string(Ticks - user->GetStartedLaggingTicks()) + " seconds");
+        } else {
+          StopLagger(user, "was automatically dropped after " + to_string(Ticks - user->GetStartedLaggingTicks()) + " seconds");
+        }
+        anyDropped = true;
+      }
+    }
+    if (anyDropped) {
+      ResetDropVotes();
+    }
+
+    // we cannot allow the lag screen to stay up for more than ~65 seconds because
+    // Warcraft III disconnects if it doesn't receive an action packet at least this often
+    // so we reset the lag screen every 60 seconds
+
+    if (Time - m_LastLagScreenResetTime >= 60) {
+      for (auto& user : m_Users) {
+        StopLagScreen(user);
+      }
+      SendAll(GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
+      m_LastLagScreenResetTime = Time;
+    }
+
+    // check if anyone has stopped lagging normally
+    // we consider a user to have stopped lagging if they're less than m_SyncLimitSafe keepalives behind
+
+    uint8_t playersLaggingCounter = 0;
+    for (auto& user : m_Users) {
+      if (!user->GetLagging()) {
+        continue;
+      }
+
+      if (user->GetGProxyDisconnectNoticeSent()) {
+        ++playersLaggingCounter;
+        ReportRecoverableDisconnect(user);
+        continue;
+      }
+
+      if (user->GetDisconnectedUnrecoverably()) {
+        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+        user->SetLagging(false);
+        user->SetStartedLaggingTicks(0);
+        LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
+      } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
+        ++playersLaggingCounter;
+      } else {
+        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+        user->SetLagging(false);
+        user->SetStartedLaggingTicks(0);
+        LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
+      }
+    }
+
+    if (playersLaggingCounter == 0) {
+      m_Lagging = false;
+      m_LastActionSentTicks = Ticks - GetLatency();
+      m_LastActionLateBy = 0;
+      m_PingReportedSinceLagTimes = 0;
+      LOG_APP_IF(LOG_LEVEL_INFO, "stopped lagging after " + ToFormattedString(static_cast<double>(Time - m_StartedLaggingTime)) + " seconds")
+    }
+  }
+
+  if (m_Lagging) {
+    // reset m_LastActionSentTicks because we want the game to stop running while the lag screen is up
+    m_LastActionSentTicks = Ticks;
+
+    // keep track of the last lag screen time so we can avoid timing out users
+    m_LastLagScreenTime = Time;
+
+    // every 11 seconds, report most recent lag data
+    if (Time - m_StartedLaggingTime >= m_PingReportedSinceLagTimes * 11) {
+      ReportAllPings();
+      ++m_PingReportedSinceLagTimes;
+    }
+    if (m_Config->m_SyncNormalize) {
+      if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 60000) {
+        NormalizeSyncCounters();
+      } else if (m_PingReportedSinceLagTimes == 5 && Ticks - m_FinishedLoadingTicks < 180000) {
+        NormalizeSyncCounters();
+      }
+    }
+  }
+
+  switch (m_Config->m_PlayingTimeoutMode) {
+    case GAME_PLAYING_TIMEOUT_NEVER:
+      break;
+    case GAME_PLAYING_TIMEOUT_DRY:
+    case GAME_PLAYING_TIMEOUT_STRICT:
+      if (Ticks - m_FinishedLoadingTicks > static_cast<int64_t>(m_Config->m_PlayingTimeout)) {
+        if (m_Config->m_PlayingTimeoutMode == GAME_PLAYING_TIMEOUT_STRICT) {
+          m_GameOverTolerance = 0;
+          StartGameOverTimer();
+        } else {
+          Log("game timed out after " + to_string(m_Config->m_PlayingTimeout / 1000) + " seconds");
+          m_Config->m_PlayingTimeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
+        }
+      }
+      break;
+    default:
+      // impossible path
+      break;
+  }
+}
+
 bool CGame::Update(void* fd, void* send_fd)
 {
   const int64_t Time = GetTime(), Ticks = GetTicks();
@@ -1258,163 +1679,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // if anyone falls behind by more than m_SyncLimit keepalives we start the lag screen
 
   if (m_GameLoaded) {
-    // check if anyone has started lagging
-    // we consider a user to have started lagging if they're more than m_SyncLimit keepalives behind
-
-    if (!m_Lagging) {
-      string LaggingString;
-      bool startedLagging = false;
-      vector<uint32_t> framesBehind = GetPlayersFramesBehind();
-      uint8_t i = static_cast<uint8_t>(m_Users.size());
-      while (i--) {
-        if (framesBehind[i] > GetSyncLimit() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
-          startedLagging = true;
-          break;
-        }
-      }
-      if (startedLagging) {
-        uint8_t worstLaggerIndex = 0;
-        uint8_t bestLaggerIndex = 0;
-        uint32_t worstLaggerFrames = 0;
-        uint32_t bestLaggerFrames = 0xFFFFFFFF;
-        UserList laggingPlayers;
-        i = static_cast<uint8_t>(m_Users.size());
-        while (i--) {
-          if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
-            m_Users[i]->SetLagging(true);
-            m_Users[i]->SetStartedLaggingTicks(Ticks);
-            m_Users[i]->ClearStalePings();
-            laggingPlayers.push_back(m_Users[i]);
-            if (framesBehind[i] > worstLaggerFrames) {
-              worstLaggerIndex = i;
-              worstLaggerFrames = framesBehind[i];
-            }
-            if (framesBehind[i] < bestLaggerFrames) {
-              bestLaggerIndex = i;
-              bestLaggerFrames = framesBehind[i];
-            }
-          }
-        }
-        if (laggingPlayers.size() == m_Users.size()) {
-          // Avoid showing everyone as lagging
-          m_Users[bestLaggerIndex]->SetLagging(false);
-          m_Users[bestLaggerIndex]->SetStartedLaggingTicks(0);
-          laggingPlayers.erase(laggingPlayers.begin() + (m_Users.size() - 1 - bestLaggerIndex));
-        }
-
-        if (!laggingPlayers.empty()) {
-          // start the lag screen
-          SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
-          ResetDropVotes();
-
-          m_Lagging = true;
-          m_StartedLaggingTime = Time;
-          m_LastLagScreenResetTime = Time;
-
-          // print debug information
-          double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(GetLatency()) / static_cast<double>(1000.);
-          if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-            LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".");
-            LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)");
-          }
-        }
-      }
-    } else if (!m_Users.empty()) { // m_Lagging == true
-      pair<int64_t, int64_t> waitTicks = GetReconnectWaitTicks();
-      bool anyDropped = false;
-      for (auto& user : m_Users) {
-        if (!user->GetLagging()) {
-          continue;
-        }
-        bool timeExceeded = false;
-        if (user->GetDisconnected() && user->GetGProxyExtended()) {
-          timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.second;
-        } else if (user->GetDisconnected() && user->GetGProxyAny()) {
-          timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.first;
-        } else {
-          timeExceeded = Ticks - user->GetStartedLaggingTicks() > 60000;
-        }
-        if (timeExceeded) {
-          StopLagger(user, "was automatically dropped after " + to_string(Ticks - user->GetStartedLaggingTicks()) + " seconds");
-          anyDropped = true;
-        }
-      }
-      if (anyDropped) {
-        ResetDropVotes();
-      }
-
-      // we cannot allow the lag screen to stay up for more than ~65 seconds because
-      // Warcraft III disconnects if it doesn't receive an action packet at least this often
-      // so we reset the lag screen every 60 seconds
-
-      if (Time - m_LastLagScreenResetTime >= 60) {
-        for (auto& user : m_Users) {
-          StopLagScreen(user);
-        }
-
-        SendAll(GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
-        m_LastLagScreenResetTime = Time;
-      }
-
-      // check if anyone has stopped lagging normally
-      // we consider a user to have stopped lagging if they're less than m_SyncLimitSafe keepalives behind
-
-      uint8_t playersLaggingCounter = 0;
-      for (auto& user : m_Users) {
-        if (!user->GetLagging()) {
-          continue;
-        }
-
-        if (user->GetGProxyDisconnectNoticeSent()) {
-          ++playersLaggingCounter;
-          ReportRecoverableDisconnect(user);
-          continue;
-        }
-
-        if (user->GetDisconnectedUnrecoverably()) {
-          SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
-          user->SetLagging(false);
-          user->SetStartedLaggingTicks(0);
-          LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
-        } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
-          ++playersLaggingCounter;
-        } else {
-          SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
-          user->SetLagging(false);
-          user->SetStartedLaggingTicks(0);
-          LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
-        }
-      }
-
-      if (playersLaggingCounter == 0) {
-        m_Lagging = false;
-        m_LastActionSentTicks = Ticks - GetLatency();
-        m_LastActionLateBy = 0;
-        m_PingReportedSinceLagTimes = 0;
-        LOG_APP_IF(LOG_LEVEL_INFO, "stopped lagging after " + ToFormattedString(static_cast<double>(Time - m_StartedLaggingTime)) + " seconds")
-      }
-    }
-
-    if (m_Lagging) {
-      // reset m_LastActionSentTicks because we want the game to stop running while the lag screen is up
-      m_LastActionSentTicks = Ticks;
-
-      // keep track of the last lag screen time so we can avoid timing out users
-      m_LastLagScreenTime = Time;
-
-      // every 11 seconds, report most recent lag data
-      if (Time - m_StartedLaggingTime >= m_PingReportedSinceLagTimes * 11) {
-        ReportAllPings();
-        ++m_PingReportedSinceLagTimes;
-      }
-      if (m_Config->m_SyncNormalize) {
-        if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 60000) {
-          NormalizeSyncCounters();
-        } else if (m_PingReportedSinceLagTimes == 5 && Ticks - m_FinishedLoadingTicks < 180000) {
-          NormalizeSyncCounters();
-        }
-      }
-    }
+    UpdateLoaded();
   }
 
   // send actions every m_Latency milliseconds
@@ -1425,6 +1690,7 @@ bool CGame::Update(void* fd, void* send_fd)
     SendAllActions();
 
   UpdateLogs();
+
   // end the game if there aren't any users left
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
     if (!m_Exiting) {
@@ -1435,78 +1701,16 @@ bool CGame::Update(void* fd, void* send_fd)
     return m_Exiting;
   }
 
-  // check if the game is loaded
-
   if (m_GameLoading) {
-    bool finishedLoading = true;
-    bool anyLoaded = false;
-    for (auto& user : m_Users) {
-      if (user->GetFinishedLoading()) {
-        anyLoaded = true;
-      } else if (!user->GetDisconnected()) {
-        finishedLoading = false;
-        break;
-      }
-    }
-
-    if (finishedLoading) {
-      if (!m_FakeLoadedBuffer.empty()) {
-        SendAll(m_FakeLoadedBuffer);
-      }
-      if (anyLoaded) {
-        m_LastActionSentTicks = Ticks;
-        m_FinishedLoadingTicks = Ticks;
-        m_GameLoading = false;
-        m_GameLoaded = true;
-        EventGameLoaded();
-      } else {
-        // Flush leaver queue to allow players and the game itself to be destroyed.
-        SendAllActionsCallback();
-      }
-    } else {
-      if (m_Config->m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
-        if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config->m_LoadingTimeout)) {
-          StopLaggers("was automatically dropped after " + to_string(m_Config->m_LoadingTimeout / 1000) + " seconds");
-          ResetDropVotes();
-        }
-      }
-
-      // reset the "lag" screen (the load-in-game screen) every 30 seconds
-      if (anyLoaded && m_Config->m_LoadInGame && GetTime() - m_LastLagScreenResetTime >= 30 ) {
-        const bool anyUsingGProxy = GetAnyUsingGProxy();
-        for (auto& user : m_Users) {
-          if (user->GetFinishedLoading()) {
-            StopLagScreen(user);
-            Send(user, GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
-          } else {
-            // Warcraft III doesn't respond to empty actions,
-            // so we need to artificially increase users' sync counters.
-            if (anyUsingGProxy && !user->GetGProxyAny()) {
-              user->AddSyncCounterOffset(m_GProxyEmptyActions);
-            }
-            user->AddSyncCounterOffset(1);
-          }
-        }
-        const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
-        AppendByteArrayFast(m_LoadingBuffer, emptyAction);
-        for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-          AppendByteArrayFast(m_LoadingBuffer, emptyAction);
-        }
-        m_LastLagScreenResetTime = GetTime();
-        SendAllChat("Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
-      }
-    }
+    UpdateLoading();
   }
 
-  if ((!m_GameLoading && !m_GameLoaded) && (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED))) {
-    SendAllSlotInfo();
-    UpdateReadyCounters();
-    m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
-  }
-
-  if (GetIsAutoStartDue()) {
-    SendAllChat("Game automatically starting in. . .");
-    StartCountDown(false, true);
+  // expire the votekick
+  if (!m_KickVotePlayer.empty() && Time - m_StartedKickVoteTime >= 60) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "votekick against user [" + m_KickVotePlayer + "] expired")
+    SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has expired");
+    m_KickVotePlayer.clear();
+    m_StartedKickVoteTime = 0;
   }
 
   // start the gameover timer if there's only a configured number of players left
@@ -1533,14 +1737,6 @@ bool CGame::Update(void* fd, void* send_fd)
     }
   }
 
-  // expire the votekick
-  if (!m_KickVotePlayer.empty() && Time - m_StartedKickVoteTime >= 60) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "votekick against user [" + m_KickVotePlayer + "] expired")
-    SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has expired");
-    m_KickVotePlayer.clear();
-    m_StartedKickVoteTime = 0;
-  }
-
   if (m_CustomStats && Time - m_LastCustomStatsUpdateTime >= 30) {
     if (!m_CustomStats->UpdateQueue() && !GetIsGameOver()) {
       Log("gameover timer started (w3mmd reported game over)");
@@ -1549,182 +1745,8 @@ bool CGame::Update(void* fd, void* send_fd)
     m_LastCustomStatsUpdateTime = Time;
   }
 
-  if (m_GameLoaded) {
-    switch (m_Config->m_PlayingTimeoutMode) {
-      case GAME_PLAYING_TIMEOUT_NEVER:
-        return m_Exiting;
-      case GAME_PLAYING_TIMEOUT_DRY:
-      case GAME_PLAYING_TIMEOUT_STRICT:
-        if (Ticks - m_FinishedLoadingTicks > static_cast<int64_t>(m_Config->m_PlayingTimeout)) {
-          if (m_Config->m_PlayingTimeoutMode == GAME_PLAYING_TIMEOUT_STRICT) {
-            m_GameOverTolerance = 0;
-            StartGameOverTimer();
-          } else {
-            Log("game timed out after " + to_string(m_Config->m_PlayingTimeout / 1000) + " seconds");
-            m_Config->m_PlayingTimeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
-          }
-        }
-        return m_Exiting;
-      default:
-        return m_Exiting;
-    }
-  }
-
-  // refresh every 3 seconds
-
-  if (!m_CountDownStarted && m_DisplayMode == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
-    // send a game refresh packet to each battle.net connection
-
-    for (auto& realm : m_Aura->m_Realms) {
-      if (!realm->GetLoggedIn()) {
-        continue;
-      }
-      if (m_IsMirror && realm->GetIsMirror()) {
-      // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
-      // Do not display external games in those realms.
-        continue;
-      }
-      if (realm->GetIsChatQueuedGameAnnouncement()) {
-        // Wait til we have sent a chat message first.
-        continue;
-      }
-      if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
-        continue;
-
-      }
-      if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
-        continue;
-      }
-      // Send STARTADVEX3
-      AnnounceToRealm(realm);
-    }
-
-    m_LastRefreshTime = Time;
-
-    if (!m_IsMirror && m_Aura->m_Games.empty()) {
-      // This is a lobby. Take the chance to update the detailed console title
-      m_Aura->UpdateMetaData();
-    }
-  }
-
-  // send more map data
-
-  if (!m_GameLoading && !m_GameLoaded && Ticks - m_LastDownloadCounterResetTicks >= 1000)
-  {
-    // hackhack: another timer hijack is in progress here
-    // since the download counter is reset once per second it's a great place to update the slot info if necessary
-
-    if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
-      SendAllSlotInfo();
-      UpdateReadyCounters();
-      m_SlotInfoChanged &= ~(SLOTS_DOWNLOAD_PROGRESS_CHANGED);
-    }
-
-    m_DownloadCounter               = 0;
-    m_LastDownloadCounterResetTicks = Ticks;
-  }
-
-  if (!m_GameLoading && Ticks - m_LastDownloadTicks >= 100)
-  {
-    uint32_t Downloaders = 0;
-
-    for (auto& user : m_Users)
-    {
-      if (user->GetDownloadStarted() && !user->GetDownloadFinished())
-      {
-        ++Downloaders;
-
-        if (m_Aura->m_Net->m_Config->m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net->m_Config->m_MaxDownloaders)
-          break;
-
-        // send up to 100 pieces of the map at once so that the download goes faster
-        // if we wait for each MAPPART packet to be acknowledged by the client it'll take a long time to download
-        // this is because we would have to wait the round trip time (the ping time) between sending every 1442 bytes of map data
-        // doing it this way allows us to send at least 1.4 MB in each round trip interval which is much more reasonable
-        // the theoretical throughput is [1.4 MB * 1000 / ping] in KB/sec so someone with 100 ping (round trip ping, not LC ping) could download at 1400 KB/sec
-        // note: this creates a queue of map data which clogs up the connection when the client is on a slower connection (e.g. dialup)
-        // in this case any changes to the lobby are delayed by the amount of time it takes to send the queued data (i.e. 140 KB, which could be 30 seconds or more)
-        // for example, users joining and leaving, slot changes, chat messages would all appear to happen much later for the low bandwidth user
-        // note: the throughput is also limited by the number of times this code is executed each second
-        // e.g. if we send the maximum amount (1.4 MB) 10 times per second the theoretical throughput is 1400 KB/sec
-        // therefore the maximum throughput is 14 MB/sec, and this value slowly diminishes as the user's ping increases
-        // in addition to this, the throughput is limited by the configuration value bot_maxdownloadspeed
-        // in summary: the actual throughput is MIN( 1.4 * 1000 / ping, 1400, bot_maxdownloadspeed ) in KB/sec assuming only one user is downloading the map
-
-        const uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
-
-        while (user->GetLastMapPartSent() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net->m_Config->m_MaxParallelMapPackets && user->GetLastMapPartSent() < MapSize)
-        {
-          if (user->GetLastMapPartSent() == 0)
-          {
-            // overwrite the "started download ticks" since this is the first time we've sent any map data to the user
-            // prior to this we've only determined if the user needs to download the map but it's possible we could have delayed sending any data due to download limits
-
-            user->SetStartedDownloadingTicks(Ticks);
-          }
-
-          // limit the download speed if we're sending too much data
-          // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
-
-          if (m_Aura->m_Net->m_Config->m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net->m_Config->m_MaxUploadSpeed * 1024)
-            break;
-
-          Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapData()));
-          user->SetLastMapPartSent(user->GetLastMapPartSent() + 1442);
-          m_DownloadCounter += 1442;
-        }
-      }
-    }
-
-    m_LastDownloadTicks = Ticks;
-  }
-
-  // countdown every m_LobbyCountDownInterval ms (default 500 ms)
-
-  if (m_CountDownStarted && !m_GameLoading && !m_GameLoaded && Ticks - m_LastCountDownTicks >= m_Config->m_LobbyCountDownInterval) {
-    if (m_CountDownCounter > 0) {
-      // we use a countdown counter rather than a "finish countdown time" here because it might alternately round up or down the count
-      // this sometimes resulted in a countdown of e.g. "6 5 3 2 1" during my testing which looks pretty dumb
-      // doing it this way ensures it's always "5 4 3 2 1" but each interval might not be *exactly* the same length
-
-      SendAllChat(to_string(m_CountDownCounter--) + ". . .");
-    } else if (!m_ChatOnly) {
-      // allow observing AI vs AI matches
-      if (GetNumJoinedUsers() >= 1) {
-        EventGameStarted();
-      } else {
-        // Some operations may remove fake users during countdown.
-        // Ensure that the game doesn't start if there are neither real nor fake users.
-        // (If a user leaves or joins, the countdown is stopped elsewhere.)
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "countdown stopped - lobby is empty.")
-        StopCountDown();
-      }
-    }
-
-    m_LastCountDownTicks = Ticks;
-  }
-
-  // release abandoned lobbies, so other users can take ownership
   if (!m_GameLoading && !m_GameLoaded) {
-    if (!m_Users.empty()) {
-      m_LastUserSeen = Ticks;
-      if (HasOwnerInGame()) {
-        m_LastOwnerSeen = Ticks;
-      }
-    }
-    CheckLobbyTimeouts();
-    if (m_Exiting) {
-      return m_Exiting;
-    }
-  }
-
-  // last action of CGame::Update
-  // try to create the virtual host user, if there are slots available
-  //
-  // ensures that all pending users' leave messages have already been sent
-  // either at CGame::EventUserDeleted or at CGame::EventRequestJoin (reserve system kicks)
-  if (!m_GameLoading && !m_GameLoaded && GetSlotsOpen() > 0) {
-    CreateVirtualHost();
+    UpdateLobby();
   }
 
   return m_Exiting;
@@ -4042,10 +4064,6 @@ void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
 {
   if (user->GetDeleteMe()) return;
   TrySaveOnDisconnect(user, false);
-  if (!user->HasLeftReason()) {
-    user->SetLeftReason("has been kicked because they didn't reconnect in time");
-    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
-  }
   StopLagger(user, "failed to reconnect in time");
   ResetDropVotes();
 }
@@ -4660,6 +4678,7 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user)
     user->SetLeftCode(PLAYERLEAVE_LOST);
   }
   user->SetQuitGame(true);
+  user->DisableReconnect();
   user->CloseConnection();
   TrySaveOnDisconnect(user, true);
   return true;
@@ -7701,8 +7720,9 @@ UserList CGame::CalculateNewLaggingPlayers() const
 void CGame::StopLagScreen(GameUser::CGameUser* forUser)
 {
   for (auto& user : m_Users) {
-    if (user->GetLagging())
+    if (user->GetLagging()) {
       Send(forUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
+    }
   }
 
   // send an empty update

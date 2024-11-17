@@ -249,8 +249,9 @@ protected:
   uint8_t                             m_BufferingEnabled;
 
   std::vector<uint8_t>                m_LobbyBuffer;
-  std::vector<uint8_t>                m_FakeLoadedBuffer;
-  std::vector<uint8_t>                m_LoadingBuffer;
+  std::vector<uint8_t>                m_SlotsBuffer;
+  std::vector<uint8_t>                m_LoadingBuffer;                 // W3GS_GAMELOADED messages for real players. When load-in-game is enabled, also a bunch of interleaved empty actions when load-in-game is enabled
+  std::vector<uint8_t>                m_FakeLoadedBuffer;              // W3GS_GAMELOADED messages for fake players.
   std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
 
   std::bitset<64>                       m_SupportedGameVersions;
@@ -415,6 +416,9 @@ public:
   // processing functions
 
   uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds);
+  void                      UpdateLobby();
+  void                      UpdateLoading();
+  void                      UpdateLoaded();
   bool                      Update(void* fd, void* send_fd);
   void                      UpdatePost(void* send_fd);
   void                      CheckLobbyTimeouts();
