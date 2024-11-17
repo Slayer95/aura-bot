@@ -244,6 +244,7 @@ void CRealm::Update(void* fd, void* send_fd)
               BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
               if (enterChatResult.success) {
                 m_ChatNickName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
+                ResetGameBroadcastStatus();
                 AutoJoinChat();
               }
 
@@ -1279,7 +1280,7 @@ void CRealm::TryQueueChat(const string& message, const string& user, bool isPriv
 
 void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
 {
-  if (!m_LoggedIn) {
+  if (!m_LoggedIn || GetIsGameBroadcastErrored()) {
     return;
   }
 

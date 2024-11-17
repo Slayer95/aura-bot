@@ -1226,6 +1226,8 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
     return;
   }
 
+  errorRealm->ResolveGameBroadcastStatus(false); 
+
   // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
   // Otherwise whisper the game creator that the (re)host failed.
 
