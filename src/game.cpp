@@ -292,6 +292,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_HostCounter(nGameSetup->m_Identifier.has_value() ? nGameSetup->m_Identifier.value() : nAura->NextHostCounter()),
     m_EntryKey(0),
     m_SyncCounter(0),
+    m_SyncCounterChecked(0),
     m_MaxPingEqualizerDelayFrames(0),
     m_LastPingEqualizerGameTicks(0),
     m_DownloadCounter(0),
@@ -1380,9 +1381,9 @@ void CGame::UpdateLoading()
 
   if (finishedLoading) {
     if (anyLoaded) {
-      if (!m_Config->m_LoadInGame && !m_BeforePlayingBuffer.empty()) {
+      if (!m_Config->m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
         // Fake players loaded
-        SendAll(m_BeforePlayingBuffer);
+        SendAll(m_LoadingVirtualBuffer);
       }
 
       m_LastActionSentTicks = Ticks;
@@ -1402,12 +1403,13 @@ void CGame::UpdateLoading()
       }
     }
 
-    // reset the "lag" screen (the load-in-game screen) every 30 seconds
+    // load-in-game: reset the fake lag screen every 30 seconds
     if (m_Config->m_LoadInGame && anyLoaded && Time - m_LastLagScreenResetTime >= 30 ) {
       const bool anyUsingGProxy = GetAnyUsingGProxy();
       const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers());
 
       const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
+      m_BeforePlayingBuffer.reserve(m_BeforePlayingBuffer.size() + emptyAction.size() * (1 + m_GProxyEmptyActions));
       AppendByteArrayFast(m_BeforePlayingBuffer, emptyAction);
       for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
         AppendByteArrayFast(m_BeforePlayingBuffer, emptyAction);
@@ -1940,8 +1942,7 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
 
 void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) const
 {
-  // Assumes m_GameLoading => m_Config->m_LoadInGame
-  if (m_GameLoading && user->GetType() == INCON_TYPE_PLAYER && !static_cast<const GameUser::CGameUser*>(user)->GetFinishedLoading()) {
+  if (user->GetType() == INCON_TYPE_PLAYER && static_cast<const GameUser::CGameUser*>(user)->GetIsInLoadingScreen()) {
     return;
   }
   user->Send(data);
@@ -1949,9 +1950,8 @@ void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) cons
 
 void CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
 {
-  // Assumes m_GameLoading => m_Config->m_LoadInGame
   for (auto& user : m_Users) {
-    if (m_GameLoading && !user->GetFinishedLoading()) {
+    if (user->GetIsInLoadingScreen()) {
       continue;
     }
     user->Send(data);
@@ -1962,12 +1962,9 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
 {
   // send a private message to one user - it'll be marked [Private] in Warcraft 3
 
-  if (m_GameLoading && !(m_Config->m_LoadInGame && user->GetFinishedLoading())) {
+  if (message.empty() || !user || user->GetIsInLoadingScreen()) {
     return;
   }
-
-  if (message.empty() || !user)
-    return;
 
   if (logLevel <= LOG_LEVEL_TRACE && m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
@@ -3969,10 +3966,9 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
   }
 
   if (m_GameLoading && !user->GetFinishedLoading() && !m_Config->m_LoadInGame) {
-    vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
-    if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
-      AppendByteArrayFast(m_BeforePlayingBuffer, packet);
-    }
+    const vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
+    m_LoadingVirtualBuffer.reserve(m_LoadingVirtualBuffer.size() + packet.size());
+    AppendByteArrayFast(m_LoadingVirtualBuffer, packet);
     SendAll(packet);
   }
 }
@@ -3998,12 +3994,12 @@ void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
   // this is because Warcraft 3 stops sending packets during the lag screen
   // so when the lag screen finishes we would immediately disconnect everyone if we didn't give them some extra time
 
-  if (GetTime() - m_LastLagScreenTime >= 10 && !user->GetGProxyExtended()) {
+  if (GetTime() - m_LastLagScreenTime >= 10) {
     if (!user->HasLeftReason()) {
       user->SetLeftReason("has lost the connection (timed out)");
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
-    user->CloseConnection();
+    user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
     TrySaveOnDisconnect(user, false);
   }
 }
@@ -4027,7 +4023,7 @@ void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
     user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  user->CloseConnection();
+  user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
   TrySaveOnDisconnect(user, false);
 }
 
@@ -4049,7 +4045,7 @@ void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
     user->SetLeftReason("has terminated the connection");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  user->CloseConnection();
+  user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
   TrySaveOnDisconnect(user, false);
 }
 
@@ -4076,7 +4072,7 @@ void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
   user->DisableReconnect();
-  user->CloseConnection();
+  user->CloseConnection(); // automatically sets ended
   TrySaveOnDisconnect(user, false);
 }
 
@@ -4088,8 +4084,16 @@ void CGame::EventUserDisconnectGameAbuse(GameUser::CGameUser* user)
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
   user->DisableReconnect();
-  user->CloseConnection();
+  user->CloseConnection(); // automatically sets ended
   user->AddKickReason(GameUser::KickReason::ABUSER);
+}
+
+void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
+{
+  if (user->GetDeleteMe()) return;
+  TrySaveOnDisconnect(user, false);
+  StopLagger(user, "failed to reconnect in time");
+  ResetDropVotes();
 }
 
 void CGame::EventUserKickUnverified(GameUser::CGameUser* user)
@@ -4102,12 +4106,18 @@ void CGame::EventUserKickUnverified(GameUser::CGameUser* user)
   user->AddKickReason(GameUser::KickReason::SPOOFER);
 }
 
-void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
+void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
 {
-  if (user->GetDeleteMe()) return;
-  TrySaveOnDisconnect(user, false);
-  StopLagger(user, "failed to reconnect in time");
-  ResetDropVotes();
+  if (user->GetDisconnected())
+    return;
+
+  if (m_CountDownStarted) {
+    user->ClearKickByTicks();
+    return;
+  }
+
+  user->CloseConnection();
+  // left reason, left code already assigned when queued
 }
 
 void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const
@@ -4175,8 +4185,9 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
       SendAllChat(user->GetUID(), user->GetLeftReason());
     }
   }
-  user->SetLeftMessageSent(true);
   SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobby() ? PLAYERLEAVE_LOBBY : user->GetLeftCode()));
+  user->SetLeftMessageSent(true);
+  user->SetStatus(USERSTATUS_ENDED);
 }
 
 bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
@@ -4194,8 +4205,6 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     }
     p1->DisableReconnect();
     p1->SetLagging(false);
-    if (p1->GetDisconnected()) continue;
-    //p1->SetDeleteMe(true);
     if (!p1->HasLeftReason()) {
       p1->SetLeftReason(reason);
       p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
@@ -4206,7 +4215,10 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
     p1->CloseConnection();
-    anyStopped = true;
+    p1->SetStatus(USERSTATUS_ENDED);
+    if (!p1->GetDisconnected()) {
+      anyStopped = true;
+    }
   }
   return anyStopped;
 }
@@ -4234,20 +4246,6 @@ void CGame::ShowPlayerNamesGameStartLoading() {
 
 void CGame::ShowPlayerNamesInGame() {
   m_IsHiddenPlayerNames = false;
-}
-
-void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
-{
-  if (user->GetDisconnected())
-    return;
-
-  if (m_CountDownStarted) {
-    user->ClearKickByTicks();
-    return;
-  }
-
-  user->CloseConnection();
-  // left reason, left code already assigned when queued
 }
 
 void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
@@ -4745,13 +4743,17 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   if (!m_Config->m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
-      AppendByteArrayFast(m_LoadingBuffer, packet);
+      AppendByteArrayFast(m_LoadingRealBuffer, packet);
     }
     SendAll(packet);
   } else {
-    Send(user, m_LoadingBuffer);
+    Send(user, m_LoadingRealBuffer);
+    if (!m_LoadingVirtualBuffer.empty()) {
+      // Fake users loaded
+      Send(user, m_LoadingVirtualBuffer);
+    }
     if (!m_BeforePlayingBuffer.empty()) {
-      // Fake users loaded, and buffered empty actions
+      // Buffered empty actions
       Send(user, m_BeforePlayingBuffer);
     }
 
@@ -4769,6 +4771,8 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     } else {
       m_Lagging = false;
     }
+
+    user->SetStatus(USERSTATUS_PLAYING);
   }
 }
 
@@ -4870,31 +4874,37 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
 
 void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
 {
-  if (!m_GameLoading && !m_GameLoaded)
+  if (!m_GameLoading && !m_GameLoaded) {
     return;
+  }
 
-  if (!user->HasCheckSums())
-    return;
-
-  bool CanConsumeFrame = true;
+  bool canConsumeFrame = true;
   UserList& otherPlayers = m_SyncPlayers[user];
+
+  if (!otherPlayers.empty() && m_SyncCounter < SYNCHRONIZATION_CHECK_MIN_FRAMES) {
+    // Add a grace period in order for any desync warnings to be displayed in chat (rather than just in chat logs!)
+    return;
+  }
+
   for (auto& otherPlayer: otherPlayers) {
     if (otherPlayer == user) {
-      CanConsumeFrame = false;;
+      canConsumeFrame = false;;
       break;
     }
 
     if (!otherPlayer->HasCheckSums()) {
-      CanConsumeFrame = false;
+      canConsumeFrame = false;
       break;
     }
   }
 
-  if (!CanConsumeFrame)
+  if (!canConsumeFrame) {
     return;
+  }
 
   const uint32_t MyCheckSum = user->GetCheckSums()->front();
   user->GetCheckSums()->pop();
+  ++m_SyncCounterChecked;
 
   bool DesyncDetected = false;
   UserList DesyncedPlayers;
@@ -4924,18 +4934,18 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     string desyncListText = ToNameListSentence(DesyncedPlayers);
     uint8_t GProxyMode = GetActiveReconnectProtocols();
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      LogApp(" [GProxy=" + ToDecString(GProxyMode) + "] " + user->GetName() + " (" + user->GetDelayText(true) + ") is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
-      LogApp(" [GProxy=" + ToDecString(GProxyMode) + "] " + user->GetName() + " (" + user->GetDelayText(true) + ") no longer synchronized with " + desyncListText);
+      LogApp("Desync detected on frame " + to_string(m_SyncCounterChecked));
+      LogApp("[GProxy=" + ToDecString(GProxyMode) + "] " + user->GetName() + " (" + user->GetDelayText(true) + ") is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
+      LogApp("[GProxy=" + ToDecString(GProxyMode) + "] " + user->GetName() + " (" + user->GetDelayText(true) + ") no longer synchronized with " + desyncListText);
       if (GProxyMode > 0) {
         LogApp("GProxy: " + GetActiveReconnectProtocolsDetails());
       }
     }
-    if (m_GameLoaded) {
-      if (GetHasDesyncHandler()) {
-        SendAllChat("Warning! Desync detected (" + user->GetDisplayName() + " (" + user->GetDelayText(true) + ") may not be in the same game as " + desyncListText);
-        if (!GetAllowsDesync()) {
-          StopDesynchronized("was automatically dropped after desync");
-        }
+
+    if (GetHasDesyncHandler()) {
+      SendAllChat("Warning! Desync detected (" + user->GetDisplayName() + " (" + user->GetDelayText(true) + ") may not be in the same game as " + desyncListText);
+      if (!GetAllowsDesync()) {
+        StopDesynchronized("was automatically dropped after desync");
       }
     }
   }
@@ -5567,19 +5577,23 @@ void CGame::EventGameStartedLoading()
     SendAll(packet);
   }
 
+  for (auto& user : m_Users) {
+    user->SetStatus(USERSTATUS_LOADING_SCREEN);
+  }
+
   // record the number of starting users
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
 
-  // When load-in-game is enabled, m_BeforePlayingBuffer also includes empty actions,
-  // but we let automatic resizing handle that.
+  // When load-in-game is disabled, m_LoadingVirtualBuffer also includes
+  // load messages for disconnected real players, but we let automatic resizing handle that.
 
-  m_BeforePlayingBuffer.reserve(5 * m_FakeUsers.size() + 6);
+  m_LoadingVirtualBuffer.reserve(5 * m_FakeUsers.size());
   for (auto& fakePlayer : m_FakeUsers) {
-    // send a game loaded packet for any fake users
+    // send a game loaded packet for each fake user
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer));
-    AppendByteArrayFast(m_BeforePlayingBuffer, packet);
+    AppendByteArrayFast(m_LoadingVirtualBuffer, packet);
   }
 
   // Always send an empty action.
@@ -5587,6 +5601,7 @@ void CGame::EventGameStartedLoading()
   // keeps complexity in check. It's just 6 bytes, too...
   //
   // NOTE: It's specially important when load-in-game is enabled.
+  m_BeforePlayingBuffer.reserve(6);
   AppendByteArrayFast(m_BeforePlayingBuffer, GameProtocol::GetEmptyAction());
 
   m_Actions.emplaceBack();
@@ -5655,13 +5670,13 @@ void CGame::EventGameStartedLoading()
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
     // Preallocate memory for all SEND_W3GS_GAMELOADED_OTHERS packets
-    m_LoadingBuffer.reserve(5 * m_Users.size());
+    m_LoadingRealBuffer.reserve(5 * m_Users.size());
   }
 
   if (m_Config->m_LoadInGame) {
     for (const auto& user : m_Users) {
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
-      AppendByteArray(m_LoadingBuffer, packet);
+      AppendByteArray(m_LoadingRealBuffer, packet);
     }
     SetEveryoneLagging();
   }
@@ -5858,6 +5873,7 @@ void CGame::EventGameLoaded()
   }
 
   for (const auto& user : m_Users) {
+    user->SetStatus(USERSTATUS_PLAYING);
     if (user->GetIsNativeReferee()) {
       // Natively, referees get unlimited saves. But we limit them to 3 in multiplayer games.
       user->SetRemainingSaves(m_Users.size() >= 2 ? GAME_SAVES_PER_REFEREE_ANTIABUSE : GAME_SAVES_PER_REFEREE_DEFAULT);
@@ -5905,8 +5921,9 @@ void CGame::EventGameLoaded()
 
   if (!(m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
     // These buffers serve no purpose anymore.
-    m_LoadingBuffer.clear();
-    m_BeforePlayingBuffer.clear();
+    m_LoadingRealBuffer = vector<uint8_t>();
+    m_LoadingVirtualBuffer = vector<uint8_t>();
+    m_BeforePlayingBuffer = vector<uint8_t>();
   }
 
   HandleGameLoadedStats();
@@ -6022,6 +6039,7 @@ void CGame::Remake()
   m_PauseCounter = 0;
   m_NextSaveFakeUser = 0;
   m_SyncCounter = 0;
+  m_SyncCounterChecked = 0;
   m_MaxPingEqualizerDelayFrames = 0;
   m_LastPingEqualizerGameTicks = 0;
 
@@ -6528,11 +6546,9 @@ std::vector<uint8_t> CGame::GetObserverUIDs() const
 
 std::vector<uint8_t> CGame::GetChatObserverUIDs(uint8_t excludeUID) const
 {
-  // Assumes m_GameLoading => m_Config->m_LoadInGame
   std::vector<uint8_t> result;
   for (auto& user : m_Users) {
-    if (user->GetLeftMessageSent()) continue;
-    if (m_GameLoading && !user->GetFinishedLoading()) continue;
+    if (user->GetLeftMessageSent() || user->GetIsInLoadingScreen()) continue;
     if (user->GetIsObserver() && user->GetUID() != excludeUID) {
       result.push_back(user->GetUID());
     }
@@ -6543,9 +6559,10 @@ std::vector<uint8_t> CGame::GetChatObserverUIDs(uint8_t excludeUID) const
 
 uint8_t CGame::GetPublicHostUID() const
 {
-  // try to find the fakeuser next
-
+  // First try to use a fake user.
+  // But fake users are not available while the game is loading.
   if (!m_GameLoading && !m_FakeUsers.empty()) {
+    // After loaded, we need to carefully consider who to speak as.
     if (!m_GameLoading && !m_GameLoaded) {
       return static_cast<uint8_t>(m_FakeUsers[m_FakeUsers.size() - 1]);
     }
@@ -6596,7 +6613,8 @@ uint8_t CGame::GetPublicHostUID() const
 
 uint8_t CGame::GetHiddenHostUID() const
 {
-  // try to find the virtual host user first
+  // First try to use a fake user.
+  // But fake users are not available while the game is loading.
 
   vector<uint8_t> availableUIDs;
   //vector<uint8_t> availableRefereeUIDs;
@@ -6617,7 +6635,7 @@ uint8_t CGame::GetHiddenHostUID() const
 
   uint8_t fallbackUID = 0xFF;
   for (auto& user : m_Users) {
-    if (user->GetLeftMessageSent()) {
+    if (user->GetLeftMessageSent() || user->GetIsInLoadingScreen()) {
       continue;
     }
     if (user->GetCanUsePublicChat()) {
@@ -8258,6 +8276,7 @@ bool CGame::StopPlayers(const string& reason) const
     if (user->GetDeleteMe()) continue;
     user->SetLeftReason(reason);
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    user->TrySetEnding();
     user->DisableReconnect();
     user->CloseConnection();
     user->SetDeleteMe(true);
@@ -8267,9 +8286,10 @@ bool CGame::StopPlayers(const string& reason) const
 }
 
 void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
-{  
+{
   user->SetLeftReason(reason);
   user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  user->TrySetEnding();
   user->DisableReconnect();
   user->CloseConnection();
   user->SetLagging(false);
@@ -8302,6 +8322,7 @@ void CGame::StopDesynchronized(const string& reason) const
     if ((it->second).size() < majorityThreshold) {
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+      user->TrySetEnding();
       user->DisableReconnect();
       user->CloseConnection();
     }

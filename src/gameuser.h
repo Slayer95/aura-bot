@@ -80,6 +80,7 @@ namespace GameUser
     size_t                           m_TotalPacketsSent;             // the total number of packets sent to the player
     uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
     uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
+    uint8_t                          m_Status;
     bool                             m_QuitGame;
     uint8_t                          m_PingEqualizerOffset;          // whow many frames should actions sent by this player be offset by ping equalizer
     QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
@@ -178,6 +179,10 @@ namespace GameUser
     [[nodiscard]] inline std::string              GetLeftReason() const { return m_LeftReason; }
     [[nodiscard]] inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
     [[nodiscard]] inline bool                     GetQuitGame() const { return m_QuitGame; }
+    [[nodiscard]] inline bool                     GetIsInLoadingScreen() const { return m_Status == USERSTATUS_LOADING_SCREEN; }
+    [[nodiscard]] inline bool                     GetIsEnding() const { return m_Status == USERSTATUS_ENDING; }
+    [[nodiscard]] inline bool                     GetIsEnded() const { return m_Status == USERSTATUS_ENDED; }
+    [[nodiscard]] inline bool                     GetIsEndingOrEnded() const { return m_Status == USERSTATUS_ENDING || m_Status == USERSTATUS_ENDED; }
     [[nodiscard]] inline uint8_t                  GetPingEqualizerOffset() const { return m_PingEqualizerOffset; }
     [[nodiscard]] uint32_t                        GetPingEqualizerDelay() const;
     [[nodiscard]] inline QueuedActionsFrameNode*  GetPingEqualizerFrameNode() const { return m_PingEqualizerFrameNode; }
@@ -263,6 +268,12 @@ namespace GameUser
     inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
     inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
     inline void SetQuitGame(bool nQuitGame) { m_QuitGame = nQuitGame; }
+    inline void SetStatus(uint8_t nStatus) { m_Status = nStatus; }
+    inline void TrySetEnding() {
+      if (m_Status != USERSTATUS_ENDED) {
+        m_Status = USERSTATUS_ENDING;
+      }
+    }
     inline void SetPingEqualizerOffset(uint8_t nOffset) { m_PingEqualizerOffset = nOffset; }
     void AdvanceActiveGameFrame();
     bool AddDelayPingEqualizerFrame();

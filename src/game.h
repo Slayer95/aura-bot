@@ -195,6 +195,7 @@ protected:
   uint32_t                            m_HostCounter;                   // a unique game number
   uint32_t                            m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
   uint32_t                            m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
+  uint32_t                            m_SyncCounterChecked;            // the number of verified keepalive packets
   uint8_t                             m_MaxPingEqualizerDelayFrames;
   int64_t                             m_LastPingEqualizerGameTicks;    // m_GameTicks when ping equalizer was last run
 
@@ -250,7 +251,8 @@ protected:
 
   std::vector<uint8_t>                m_LobbyBuffer;
   std::vector<uint8_t>                m_SlotsBuffer;
-  std::vector<uint8_t>                m_LoadingBuffer;                 // W3GS_GAMELOADED messages for real players.
+  std::vector<uint8_t>                m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players.
+  std::vector<uint8_t>                m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players
   std::vector<uint8_t>                m_BeforePlayingBuffer;           // W3GS_GAMELOADED messages for fake players. When load-in-game is enabled, also a bunch of interleaved empty actions when load-in-game is enabled
   std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
 
@@ -498,8 +500,8 @@ public:
   void                      EventUserDisconnectConnectionClosed(GameUser::CGameUser* user);
   void                      EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool canRecover);
   void                      EventUserDisconnectGameAbuse(GameUser::CGameUser* user);
-  void                      EventUserKickUnverified(GameUser::CGameUser* user);
   void                      EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user);
+  void                      EventUserKickUnverified(GameUser::CGameUser* user);
   void                      EventUserKickHandleQueued(GameUser::CGameUser* user);
   void                      EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen);
   void                      EventUserCheckStatus(GameUser::CGameUser* user);

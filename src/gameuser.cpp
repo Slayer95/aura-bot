@@ -75,6 +75,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_TotalPacketsSent(0),
     m_TotalPacketsReceived(0),
     m_LeftCode(PLAYERLEAVE_LOBBY),
+    m_Status(USERSTATUS_LOBBY),
     m_QuitGame(false),
     m_PingEqualizerOffset(0),
     m_PingEqualizerFrameNode(nullptr),
@@ -294,7 +295,8 @@ bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
 void CGameUser::CloseConnection(bool fromOpen)
 {
   if (m_Disconnected) return;
-  if (!m_Game->GetGameLoaded()) {
+  if (!m_Game->GetGameLoaded() || !m_GProxy) {
+    TrySetEnding();
     DisableReconnect();
   }
   m_LastDisconnectTicks = GetTicks();
@@ -848,7 +850,7 @@ bool CGameUser::GetIsNativeReferee() const
 
 bool CGameUser::GetCanUsePublicChat() const
 {
-  if (m_Game->GetGameLoading() && (!m_Game->m_Config->m_LoadInGame || !m_FinishedLoading)) return false;
+  if (GetIsInLoadingScreen()) return false;
   if (!m_Observer || m_PowerObserver || (!m_Game->GetGameLoading() && !m_Game->GetGameLoaded())) return true;
   return !m_Game->GetUsesCustomReferees() && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
 }
