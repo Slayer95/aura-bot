@@ -1423,7 +1423,11 @@ void CGame::UpdateLoading()
         AppendByteArrayFast(m_LoadingBuffer, emptyAction);
       }
       m_LastLagScreenResetTime = Time;
-      SendAllChat("Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
+      for (auto& user : m_Users) {
+        if (user->GetFinishedLoading()) {
+          Send(user, "Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
+        }
+      }
     }
   }
 }
