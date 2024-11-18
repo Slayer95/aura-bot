@@ -10,7 +10,6 @@ build/
 *.lib
 *.dylib
 Makefile.bak
-miniupnpcstrings.h
 rc_version.h
 pythonmodule
 pythonmodule3
