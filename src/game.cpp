@@ -5572,7 +5572,7 @@ void CGame::EventGameStartedLoading()
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
 
-  // When load-in-game is enabled, m_BeforePlayingBuffer also includes lag screens and empty actions,
+  // When load-in-game is enabled, m_BeforePlayingBuffer also includes empty actions,
   // but we let automatic resizing handle that.
 
   m_BeforePlayingBuffer.reserve(5 * m_FakeUsers.size() + 6);
