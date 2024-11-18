@@ -1425,7 +1425,7 @@ void CGame::UpdateLoading()
       m_LastLagScreenResetTime = Time;
       for (auto& user : m_Users) {
         if (user->GetFinishedLoading()) {
-          Send(user, "Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
+          SendChat(user, "Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
         }
       }
     }
