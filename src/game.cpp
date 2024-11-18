@@ -1401,7 +1401,7 @@ void CGame::UpdateLoading()
     }
 
     // reset the "lag" screen (the load-in-game screen) every 30 seconds
-    if (anyLoaded && m_Config->m_LoadInGame && GetTime() - m_LastLagScreenResetTime >= 30 ) {
+    if (anyLoaded && m_Config->m_LoadInGame && Time - m_LastLagScreenResetTime >= 30 ) {
       const bool anyUsingGProxy = GetAnyUsingGProxy();
       const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers());
       for (auto& user : m_Users) {
@@ -1422,7 +1422,7 @@ void CGame::UpdateLoading()
       for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
         AppendByteArrayFast(m_LoadingBuffer, emptyAction);
       }
-      m_LastLagScreenResetTime = GetTime();
+      m_LastLagScreenResetTime = Time;
       SendAllChat("Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
     }
   }
@@ -4181,6 +4181,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT));
     }
     p1->DisableReconnect();
+    p1->SetLagging(false);
     if (p1->GetDisconnected()) continue;
     //p1->SetDeleteMe(true);
     if (!p1->HasLeftReason()) {
@@ -4703,7 +4704,9 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return false;
   LOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
-  // this function is only called when a user leave packet is received, not when there's a socket error, kick, etc...
+  // this function is only called when a client leave packet is received, not when there's a socket error or kick
+  // however, clients not only send the leave packet by a user clicking on Quit Game
+  // clients also will send a leave packet if the server sends unexpected data
   if (!user->HasLeftReason()) {
     user->SetLeftReason("Leaving the game voluntarily");
     user->SetLeftCode(PLAYERLEAVE_LOST);
