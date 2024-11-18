@@ -4751,8 +4751,9 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     if (!m_FakeLoadedBuffer.empty()) {
       Send(user, m_FakeLoadedBuffer);
     }
-    // Send an empty action.
-    // This ensures GProxy clients are correctly initialized.
+    // Always send an empty action when load-in-game is enabled.
+    // This ensures GProxy clients are correctly initialized, and 
+    // keeps complexity on check. It's just 6 bytes, too...
     Send(user, GameProtocol::GetEmptyAction());
 
     // Warcraft III doesn't respond to empty actions,
