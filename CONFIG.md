@@ -837,6 +837,21 @@ Config
 - Default value: 8
 - Error handling: Use default value
 
+## \`hosting.join_in_progress.observers\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`hosting.join_in_progress.players\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`hosting.load_in_game.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
 ## \`hosting.log_commands\`
 - Type: bool
 - Default value: false
@@ -1264,7 +1279,7 @@ Config
 
 ## \`net.tcp_extensions.gproxy.vlan.enabled\`
 - Type: bool
-- Default value: true
+- Default value: false
 - Error handling: Use default value
 
 ## \`net.tcp_extensions.gproxy.vlan.port\`
