@@ -3926,7 +3926,7 @@ void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
     return;
   }
 
-  SendAllChat(user->GetUID(), "Please wait for me to reconnect (" + to_string(timeRemaining) + " seconds remain)");
+  SendAllChat(user->GetUID(), "Please wait for me to reconnect (time limit: " + to_string(timeRemaining) + " seconds)");
   user->SetLastGProxyWaitNoticeSentTime(Time);
 }
 
@@ -4063,6 +4063,7 @@ void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool
     }
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
+  user->DisableReconnect();
   user->CloseConnection();
   TrySaveOnDisconnect(user, false);
 }
@@ -4074,6 +4075,7 @@ void CGame::EventUserDisconnectGameAbuse(GameUser::CGameUser* user)
     user->SetLeftReason("was kicked by anti-abuse");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
+  user->DisableReconnect();
   user->CloseConnection();
   user->AddKickReason(GameUser::KickReason::ABUSER);
 }
@@ -4178,6 +4180,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     for (auto& fake : m_FakeUsers) {
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT));
     }
+    p1->DisableReconnect();
     if (p1->GetDisconnected()) continue;
     //p1->SetDeleteMe(true);
     if (!p1->HasLeftReason()) {
@@ -8217,6 +8220,7 @@ bool CGame::StopPlayers(const string& reason) const
     if (user->GetDeleteMe()) continue;
     user->SetLeftReason(reason);
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+    user->DisableReconnect();
     user->CloseConnection();
     user->SetDeleteMe(true);
     anyStopped = true;
@@ -8260,6 +8264,7 @@ void CGame::StopDesynchronized(const string& reason) const
     if ((it->second).size() < majorityThreshold) {
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+      user->DisableReconnect();
       user->CloseConnection();
     }
   }
