@@ -250,8 +250,8 @@ protected:
 
   std::vector<uint8_t>                m_LobbyBuffer;
   std::vector<uint8_t>                m_SlotsBuffer;
-  std::vector<uint8_t>                m_LoadingBuffer;                 // W3GS_GAMELOADED messages for real players. When load-in-game is enabled, also a bunch of interleaved empty actions when load-in-game is enabled
-  std::vector<uint8_t>                m_FakeLoadedBuffer;              // W3GS_GAMELOADED messages for fake players.
+  std::vector<uint8_t>                m_LoadingBuffer;                 // W3GS_GAMELOADED messages for real players.
+  std::vector<uint8_t>                m_BeforePlayingBuffer;           // W3GS_GAMELOADED messages for fake players. When load-in-game is enabled, also a bunch of interleaved empty actions when load-in-game is enabled
   std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
 
   std::bitset<64>                       m_SupportedGameVersions;

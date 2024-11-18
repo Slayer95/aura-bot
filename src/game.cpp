@@ -1379,8 +1379,9 @@ void CGame::UpdateLoading()
   }
 
   if (finishedLoading) {
-    if (!m_Config->m_LoadInGame && !m_FakeLoadedBuffer.empty()) {
-      SendAll(m_FakeLoadedBuffer);
+    if (!m_Config->m_LoadInGame && !m_BeforePlayingBuffer.empty()) {
+      // Fake players loaded
+      SendAll(m_BeforePlayingBuffer);
     }
     if (anyLoaded) {
       m_LastActionSentTicks = Ticks;
@@ -1406,9 +1407,9 @@ void CGame::UpdateLoading()
       const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers());
 
       const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
-      AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+      AppendByteArrayFast(m_BeforePlayingBuffer, emptyAction);
       for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-        AppendByteArrayFast(m_LoadingBuffer, emptyAction);
+        AppendByteArrayFast(m_BeforePlayingBuffer, emptyAction);
       }
 
       for (auto& user : m_Users) {
@@ -3969,7 +3970,7 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
   if (m_GameLoading && !user->GetFinishedLoading() && !m_Config->m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
-      AppendByteArrayFast(m_LoadingBuffer, packet);
+      AppendByteArrayFast(m_BeforePlayingBuffer, packet);
     }
     SendAll(packet);
   }
@@ -4748,13 +4749,10 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     SendAll(packet);
   } else {
     Send(user, m_LoadingBuffer);
-    if (!m_FakeLoadedBuffer.empty()) {
-      Send(user, m_FakeLoadedBuffer);
+    if (!m_BeforePlayingBuffer.empty()) {
+      // Fake users loaded, and buffered empty actions
+      Send(user, m_BeforePlayingBuffer);
     }
-    // Always send an empty action when load-in-game is enabled.
-    // This ensures GProxy clients are correctly initialized, and 
-    // keeps complexity on check. It's just 6 bytes, too...
-    Send(user, GameProtocol::GetEmptyAction());
 
     // Warcraft III doesn't respond to empty actions,
     // so we need to artificially increase users' sync counters.
@@ -5573,13 +5571,22 @@ void CGame::EventGameStartedLoading()
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
 
-  // send a game loaded packet for any fake users
+  // When load-in-game is enabled, m_BeforePlayingBuffer also includes lag screens and empty actions,
+  // but we let automatic resizing handle that.
 
-  m_FakeLoadedBuffer.reserve(5 * m_FakeUsers.size());
+  m_BeforePlayingBuffer.reserve(5 * m_FakeUsers.size() + 6);
   for (auto& fakePlayer : m_FakeUsers) {
+    // send a game loaded packet for any fake users
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer));
-    AppendByteArrayFast(m_FakeLoadedBuffer, packet);
+    AppendByteArrayFast(m_BeforePlayingBuffer, packet);
   }
+
+  // Always send an empty action.
+  // This ensures GProxy clients are correctly initialized, and 
+  // keeps complexity in check. It's just 6 bytes, too...
+  //
+  // NOTE: It's specially important when load-in-game is enabled.
+  AppendByteArrayFast(m_BeforePlayingBuffer, GameProtocol::GetEmptyAction());
 
   m_Actions.emplaceBack();
   m_CurrentActionsFrame = m_Actions.head;
@@ -5647,8 +5654,6 @@ void CGame::EventGameStartedLoading()
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
     // Preallocate memory for all SEND_W3GS_GAMELOADED_OTHERS packets
-    // When load-in-game is enabled, m_LoadingBuffer also includes lag screens and empty actions,
-    // but we let automatic resizing handle that.
     m_LoadingBuffer.reserve(5 * m_Users.size());
   }
 
