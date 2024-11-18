@@ -5903,6 +5903,12 @@ void CGame::EventGameLoaded()
     SendEveryoneElseLeftAndDisconnect("single-player game untracked");
   }
 
+  if (!(m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
+    // These buffers serve no purpose anymore.
+    m_LoadingBuffer.clear();
+    m_BeforePlayingBuffer.clear();
+  }
+
   HandleGameLoadedStats();
 }
 
