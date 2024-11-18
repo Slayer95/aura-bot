@@ -4763,6 +4763,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
 
     user->SetLagging(false);
     user->SetStartedLaggingTicks(0);
+    user->SetStatus(USERSTATUS_PLAYING);
     UserList laggingPlayers = GetLaggingPlayers();
     if (laggingPlayers.size() >= 3) {
       SendChat(user, "[" + user->GetName() + "], please wait for " + to_string(laggingPlayers.size()) + " players to load the game...");
@@ -4771,8 +4772,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     } else {
       m_Lagging = false;
     }
-
-    user->SetStatus(USERSTATUS_PLAYING);
+    LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...");
   }
 }
 
