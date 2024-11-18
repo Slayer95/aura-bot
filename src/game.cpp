@@ -1379,11 +1379,12 @@ void CGame::UpdateLoading()
   }
 
   if (finishedLoading) {
-    if (!m_Config->m_LoadInGame && !m_BeforePlayingBuffer.empty()) {
-      // Fake players loaded
-      SendAll(m_BeforePlayingBuffer);
-    }
     if (anyLoaded) {
+      if (!m_Config->m_LoadInGame && !m_BeforePlayingBuffer.empty()) {
+        // Fake players loaded
+        SendAll(m_BeforePlayingBuffer);
+      }
+
       m_LastActionSentTicks = Ticks;
       m_FinishedLoadingTicks = Ticks;
       m_GameLoading = false;
