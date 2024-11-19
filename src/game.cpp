@@ -3178,19 +3178,23 @@ void CGame::SendAllActionsCallback()
 
 void CGame::SendGProxyEmptyActions()
 {
-  if (GetAnyUsingGProxy()) {
-    // GProxy sends these empty actions itself BEFORE every action received.
-    // So we need to match it, to avoid desyncs.
-    for (auto& user : m_Users) {
-      if (!user->GetGProxyAny()) {
-        Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GProxyEmptyActions));
+  if (!GetAnyUsingGProxy()) {
+    return;
+  }
 
-        // Warcraft III doesn't respond to empty actions,
-        // so we need to artificially increase users' sync counters.
-        /*
-        user->AddSyncCounterOffset(m_GProxyEmptyActions);
-        */
-      }
+  const vector<uint8_t> emptyActions = GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GProxyEmptyActions);
+
+  // GProxy sends these empty actions itself BEFORE every action received.
+  // So we need to match it, to avoid desyncs.
+  for (auto& user : m_Users) {
+    if (!user->GetGProxyAny()) {
+      Send(user, emptyActions);
+
+      // Warcraft III doesn't respond to empty actions,
+      // so we need to artificially increase users' sync counters.
+      /*
+      user->AddSyncCounterOffset(m_GProxyEmptyActions);
+      */
     }
   }
 }
