@@ -788,15 +788,13 @@ string CGameUser::GetDelayText(bool displaySync) const
 
 string CGameUser::GetReconnectionText() const
 {
-  string reconnectionText;
-  if (targetPlayer->GetGProxyExtended()) {
-    reconnectionText = "Extended";
-  } else if (targetPlayer->GetGProxyAny()) {
-    reconnectionText = "Yes";
-  } else {
-    reconnectionText = "No";
+  if (!GetGProxyAny()) {
+    return "No";
   }
-  return reconnectionText;
+  if (GetGProxyExtended()) {
+    return "Extended";
+  }
+  return "Yes";
 }
 
 string CGameUser::GetSyncText() const
