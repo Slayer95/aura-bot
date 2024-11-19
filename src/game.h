@@ -646,6 +646,7 @@ public:
   uint8_t CountLaggingPlayers() const;
   UserList CalculateNewLaggingPlayers() const;
   void StopLagScreen(GameUser::CGameUser* forUser);
+  void RemoveFromLagScreens(GameUser::CGameUser* user);
   void ResetLatency();
   void NormalizeSyncCounters() const;
   bool GetIsReserved(const std::string& name) const;

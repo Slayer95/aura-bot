@@ -4765,6 +4765,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     user->SetLagging(false);
     user->SetStartedLaggingTicks(0);
     user->SetStatus(USERSTATUS_PLAYING);
+    RemoveFromLagScreens(user);
     UserList laggingPlayers = GetLaggingPlayers();
     if (laggingPlayers.size() >= 3) {
       SendChat(user, "[" + user->GetName() + "], please wait for " + to_string(laggingPlayers.size()) + " players to load the game...");
@@ -7847,6 +7848,16 @@ void CGame::StopLagScreen(GameUser::CGameUser* forUser)
     // Warcraft III doesn't respond to empty actions,
     // so we need to artificially increase users' sync counters.
     forUser->AddSyncCounterOffset(m_GProxyEmptyActions);
+  }
+}
+
+void CGame::RemoveFromLagScreens(GameUser::CGameUser* user)
+{
+  for (auto& otherUser : m_Users) {
+    if (user == otherUser || otherUser->GetIsInLoadingScreen()) {
+      continue;
+    }
+    Send(otherUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
   }
 }
 
