@@ -1924,13 +1924,15 @@ void CGame::Send(CConnection* user, const std::vector<uint8_t>& data) const
 
 void CGame::Send(uint8_t UID, const std::vector<uint8_t>& data) const
 {
-  Send(GetUserFromUID(UID), data);
+  GameUser::CGameUser* user = GetUserFromUID(UID);
+  Send(user, data);
 }
 
 void CGame::Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const
 {
-  for (auto& UID : UIDs)
+  for (auto& UID : UIDs) {
     Send(UID, data);
+  }
 }
 
 void CGame::SendAll(const std::vector<uint8_t>& data) const
@@ -1979,7 +1981,7 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
     LOG_APP_IF(logLevel, "sent to [" + user->GetName() + "] <<" + message + ">>")
   }
 
-  if (!m_GameLoaded) {
+  if (!m_GameLoading && !m_GameLoaded) {
     if (message.size() > 254)
       SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
     else
@@ -2024,7 +2026,7 @@ void CGame::SendAllChat(uint8_t fromUID, const string& message) const
   if (message.empty())
     return;
 
-  vector<uint8_t> toUIDs = GetUIDs();
+  vector<uint8_t> toUIDs = GetChatUIDs();
   if (toUIDs.empty()) {
     return;
   }
@@ -4144,7 +4146,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
   } else if (forcePrivateChat) {
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
       if (!m_MuteAll) {
-        vector<uint8_t> overrideTargetUIDs = GetUIDs(chatPlayer->GetFromUID());
+        vector<uint8_t> overrideTargetUIDs = GetChatUIDs(chatPlayer->GetFromUID());
         vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
         if (!overrideTargetUIDs.empty()) {
           Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
@@ -6508,20 +6510,21 @@ bool CGame::GetHasAnotherPlayer(const uint8_t ExceptSID) const
   return SID != ExceptSID;
 }
 
-std::vector<uint8_t> CGame::GetUIDs() const
+std::vector<uint8_t> CGame::GetChatUIDs() const
 {
   std::vector<uint8_t> result;
 
-  for (auto& user : m_Users)
-  {
-    if (!user->GetLeftMessageSent())
-      result.push_back(user->GetUID());
+  for (auto& user : m_Users) {
+    if (user->GetLeftMessageSent() || user->GetIsInLoadingScreen()) {
+      continue;
+    }
+    result.push_back(user->GetUID());
   }
 
   return result;
 }
 
-std::vector<uint8_t> CGame::GetUIDs(uint8_t excludeUID) const
+std::vector<uint8_t> CGame::GetChatUIDs(uint8_t excludeUID) const
 {
   std::vector<uint8_t> result;
 

@@ -566,8 +566,8 @@ public:
   bool                      GetIsPlayerSlot(const uint8_t SID) const;
   bool                      GetHasAnotherPlayer(const uint8_t ExceptSID) const;
   bool                      CheckIPFlood(const std::string joinName, const sockaddr_storage* sourceAddress) const;
-  std::vector<uint8_t>      GetUIDs() const;
-  std::vector<uint8_t>      GetUIDs(uint8_t excludeUID) const;
+  std::vector<uint8_t>      GetChatUIDs() const;
+  std::vector<uint8_t>      GetChatUIDs(uint8_t excludeUID) const;
   std::vector<uint8_t>      GetObserverUIDs() const;
   std::vector<uint8_t>      GetChatObserverUIDs(uint8_t excludeUID) const;
   uint8_t                   GetPublicHostUID() const;
