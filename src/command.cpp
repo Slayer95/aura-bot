@@ -503,6 +503,13 @@ optional<bool> CCommandContext::CheckPermissions(const uint8_t requiredPermissio
         result = (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
       }
       break;
+    case COMMAND_PERMISSIONS_START_GAME:
+      if (m_TargetGame && (m_TargetGame->m_PublicStart || !m_TargetGame->HasOwnerSet())) {
+        result = (m_Permissions & (USER_PERMISSIONS_GAME_PLAYER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
+      } else {
+        result = (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_BOT_SUDO_OK)) > 0;
+      }
+      break;
     case COMMAND_PERMISSIONS_UNVERIFIED:
       result = true;
       break;
@@ -2907,7 +2914,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
         break;
 
-      if (!m_TargetGame->m_PublicStart && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_START_GAME)) {
         ErrorReply("You are not allowed to start this game.");
         break;
       }
