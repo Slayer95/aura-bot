@@ -340,6 +340,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_SaveOnLeave(SAVE_ON_LEAVE_AUTO),
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
+    m_BeforePlayingEmptyActions(0),
     m_SupportedGameVersionsMin(nAura->m_GameVersion),
     m_SupportedGameVersionsMax(nAura->m_GameVersion),
     m_GameDiscoveryInfoChanged(false),
@@ -1403,35 +1404,9 @@ void CGame::UpdateLoading()
       }
     }
 
-    // load-in-game: reset the fake lag screen every 60 seconds
+    // Warcraft III disconnects if it doesn't receive an action packet for more than ~65 seconds
     if (m_Config->m_LoadInGame && anyLoaded && Time - m_LastLagScreenResetTime >= 60 ) {
-      const bool anyUsingGProxy = GetAnyUsingGProxy();
-      const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers());
-
-      const vector<uint8_t>& emptyAction = GameProtocol::GetEmptyAction();
-      m_BeforePlayingBuffer.reserve(m_BeforePlayingBuffer.size() + emptyAction.size() * (1 + m_GProxyEmptyActions));
-      AppendByteArrayFast(m_BeforePlayingBuffer, emptyAction);
-      for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-        AppendByteArrayFast(m_BeforePlayingBuffer, emptyAction);
-      }
-
-      for (auto& user : m_Users) {
-        if (user->GetFinishedLoading()) {
-          // Already send empty actions that we've just buffered.
-          StopLagScreen(user);
-          Send(user, startLagPacket);
-          SendChat(user, "Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
-        } else {
-          // Warcraft III doesn't respond to empty actions,
-          // so we need to artificially increase users' sync counters.
-
-          if (anyUsingGProxy && !user->GetGProxyAny()) {
-            user->AddSyncCounterOffset(m_GProxyEmptyActions);
-          }
-          user->AddSyncCounterOffset(1);
-        }
-      }
-      m_LastLagScreenResetTime = Time;
+      ResetLagScreen();
     }
   }
 }
@@ -1529,16 +1504,9 @@ void CGame::UpdateLoaded()
       ResetDropVotes();
     }
 
-    // we cannot allow the lag screen to stay up for more than ~65 seconds because
-    // Warcraft III disconnects if it doesn't receive an action packet at least this often
-    // so we reset the lag screen every 60 seconds
-
+    // Warcraft III disconnects if it doesn't receive an action packet for more than ~65 seconds
     if (Time - m_LastLagScreenResetTime >= 60) {
-      for (auto& user : m_Users) {
-        StopLagScreen(user);
-      }
-      SendAll(GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers()));
-      m_LastLagScreenResetTime = Time;
+      ResetLagScreen();
     }
 
     // check if anyone has stopped lagging normally
@@ -3208,6 +3176,25 @@ void CGame::SendAllActionsCallback()
   frame.Reset();
 }
 
+void CGame::SendGProxyEmptyActions()
+{
+  if (GetAnyUsingGProxy()) {
+    // GProxy sends these empty actions itself BEFORE every action received.
+    // So we need to match it, to avoid desyncs.
+    for (auto& user : m_Users) {
+      if (!user->GetGProxyAny()) {
+        Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GProxyEmptyActions));
+
+        // Warcraft III doesn't respond to empty actions,
+        // so we need to artificially increase users' sync counters.
+        /*
+        user->AddSyncCounterOffset(m_GProxyEmptyActions);
+        */
+      }
+    }
+  }
+}
+
 void CGame::SendAllActions()
 {
   if (!m_Paused) {
@@ -3216,26 +3203,9 @@ void CGame::SendAllActions()
     m_PausedTicksDeltaSum = GetLatency();
   }
 
-  if (GetAnyUsingGProxy()) {
-    // we must send empty actions to non-GProxy++ users
-    // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
-    // empty actions are used to extend the time a user can use when reconnecting
-
-    for (auto& user : m_Users) {
-      if (!user->GetGProxyAny()) {
-        for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-          Send(user, GameProtocol::GetEmptyAction());
-        }
-
-        // Warcraft III doesn't respond to empty actions,
-        // so we need to artificially increase users' sync counters.
-        user->AddSyncCounterOffset(m_GProxyEmptyActions);
-      }
-    }
-  }
-
   ++m_SyncCounter;
 
+  SendGProxyEmptyActions();
   SendAll(GetFirstActionFrame().GetBytes(GetLatency()));
   SendAllActionsCallback();
 
@@ -4753,14 +4723,13 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
       // Fake users loaded
       Send(user, m_LoadingVirtualBuffer);
     }
-    if (!m_BeforePlayingBuffer.empty()) {
-      // Buffered empty actions
-      Send(user, m_BeforePlayingBuffer);
-    }
+    Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions));
 
     // Warcraft III doesn't respond to empty actions,
     // so we need to artificially increase users' sync counters.
+    /*
     user->AddSyncCounterOffset(1);
+    */
 
     user->SetLagging(false);
     user->SetStartedLaggingTicks(0);
@@ -5608,13 +5577,15 @@ void CGame::EventGameStartedLoading()
     AppendByteArrayFast(m_LoadingVirtualBuffer, packet);
   }
 
-  // Always send an empty action.
-  // This ensures GProxy clients are correctly initialized, and 
-  // keeps complexity in check. It's just 6 bytes, too...
-  //
-  // NOTE: It's specially important when load-in-game is enabled.
-  m_BeforePlayingBuffer.reserve(6);
-  AppendByteArrayFast(m_BeforePlayingBuffer, GameProtocol::GetEmptyAction());
+  if (GetAnyUsingGProxy()) {
+    // Always send an empty action.
+    // This ensures GProxy clients are correctly initialized, and 
+    // keeps complexity in check. It's just 6 bytes, too...
+    //
+    // NOTE: It's specially important when load-in-game is enabled.
+
+    ++m_BeforePlayingEmptyActions;
+  }
 
   m_Actions.emplaceBack();
   m_CurrentActionsFrame = m_Actions.head;
@@ -5935,7 +5906,6 @@ void CGame::EventGameLoaded()
     // These buffers serve no purpose anymore.
     m_LoadingRealBuffer = vector<uint8_t>();
     m_LoadingVirtualBuffer = vector<uint8_t>();
-    m_BeforePlayingBuffer = vector<uint8_t>();
   }
 
   HandleGameLoadedStats();
@@ -6089,6 +6059,8 @@ void CGame::Remake()
   m_Remade = false;
   m_GameDiscoveryInfoChanged = true;
   m_HMCEnabled = false;
+  m_BufferingEnabled = BUFFERING_ENABLED_NONE;
+  m_BeforePlayingEmptyActions = 0;
 
   m_HostCounter = m_Aura->NextHostCounter();
   InitPRNG();
@@ -7820,45 +7792,68 @@ UserList CGame::CalculateNewLaggingPlayers() const
   return laggingPlayers;
 }
 
-void CGame::StopLagScreen(GameUser::CGameUser* forUser)
-{
-  for (auto& user : m_Users) {
-    if (user->GetLagging()) {
-      Send(forUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
-    }
-  }
-
-  // send an empty update
-  // this resets the lag screen timer
-  Send(forUser, GameProtocol::GetEmptyAction());
-
-  // Warcraft III doesn't respond to empty actions,
-  // so we need to artificially increase users' sync counters.
-  forUser->AddSyncCounterOffset(1);
-
-  if (GetAnyUsingGProxyLegacy() && !forUser->GetGProxyAny()) {
-    // we must send additional empty actions to non-GProxy++ users
-    // GProxy++ will insert these itself so we don't need to send them to GProxy++ users
-    // empty actions are used to extend the time a user can use when reconnecting
-
-    for (uint8_t j = 0; j < m_GProxyEmptyActions; ++j) {
-      Send(forUser, GameProtocol::GetEmptyAction());
-    }
-
-    // Warcraft III doesn't respond to empty actions,
-    // so we need to artificially increase users' sync counters.
-    forUser->AddSyncCounterOffset(m_GProxyEmptyActions);
-  }
-}
-
 void CGame::RemoveFromLagScreens(GameUser::CGameUser* user)
 {
   for (auto& otherUser : m_Users) {
-    if (user == otherUser || otherUser->GetIsInLoadingScreen()) {
+    if (user == otherUser || otherUser->GetLagging()) {
       continue;
     }
     Send(otherUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
   }
+}
+
+void CGame::ResetLagScreen()
+{
+  const UserList laggingPlayers = GetLaggingPlayers();
+    const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(laggingPlayers);
+  const bool anyUsingGProxy = GetAnyUsingGProxy();
+
+  if (m_GameLoading) {
+    ++m_BeforePlayingEmptyActions;
+  }
+
+  for (auto& user : m_Users) {
+    if (user->GetFinishedLoading()) {
+      for (auto& otherUser : m_Users) {
+        if (!otherUser->GetLagging()) continue;
+        Send(user, GameProtocol::SEND_W3GS_STOP_LAG(otherUser));
+      }
+
+      Send(user, GameProtocol::GetEmptyAction());
+      /*
+      user->AddSyncCounterOffset(1);
+      */
+
+      // GProxy sends these empty actions itself for every action received.
+      // So we need to match it, to avoid desyncs.
+      if (anyUsingGProxy && !user->GetGProxyAny()) {
+        Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GProxyEmptyActions));
+
+        // Warcraft III doesn't respond to empty actions,
+        // so we need to artificially increase users' sync counters.
+        /*
+        user->AddSyncCounterOffset(m_GProxyEmptyActions);
+        */
+      }
+
+      Send(user, startLagPacket);
+
+      if (m_GameLoading) {
+        SendChat(user, "Please wait for " + to_string(laggingPlayers.size()) + " player(s) to load the game.");
+      }
+    } else {
+      // Warcraft III doesn't respond to empty actions,
+      // so we need to artificially increase users' sync counters.
+      /*
+      user->AddSyncCounterOffset(1);
+      if (anyUsingGProxy && !user->GetGProxyAny()) {
+        user->AddSyncCounterOffset(m_GProxyEmptyActions);
+      }
+      */
+    }
+  }
+
+  m_LastLagScreenResetTime = GetTime();
 }
 
 void CGame::ResetLatency()

@@ -248,12 +248,12 @@ protected:
   uint8_t                             m_SaveOnLeave;
   bool                                m_HMCEnabled;
   uint8_t                             m_BufferingEnabled;
+  uint32_t                            m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
 
   std::vector<uint8_t>                m_LobbyBuffer;
   std::vector<uint8_t>                m_SlotsBuffer;
   std::vector<uint8_t>                m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
   std::vector<uint8_t>                m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players
-  std::vector<uint8_t>                m_BeforePlayingBuffer;           // buffer for game-start empty actions. When load-in-game is enabled, it's filled in real time with as many empty actions as needed for everyone to load.
   std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
 
   std::bitset<64>                       m_SupportedGameVersions;
@@ -461,6 +461,7 @@ public:
   void                      SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
   void                      SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
   void                      SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const;
+  void                      SendGProxyEmptyActions();
   void                      SendAllActionsCallback();
   void                      SendAllActions();
   void                      SendAllAutoStart() const;
@@ -645,8 +646,8 @@ public:
   UserList GetLaggingPlayers() const;
   uint8_t CountLaggingPlayers() const;
   UserList CalculateNewLaggingPlayers() const;
-  void StopLagScreen(GameUser::CGameUser* forUser);
   void RemoveFromLagScreens(GameUser::CGameUser* user);
+  void ResetLagScreen();
   void ResetLatency();
   void NormalizeSyncCounters() const;
   bool GetIsReserved(const std::string& name) const;

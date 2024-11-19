@@ -454,6 +454,16 @@ namespace GameProtocol
     return std::vector<uint8_t>{GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::COUNTDOWN_END, 4, 0};
   }
 
+  std::vector<uint8_t> SEND_W3GS_EMPTY_ACTIONS(uint32_t count)
+  {
+    std::vector<uint8_t> actions;
+    actions.reserve(6 * count);
+    while (count--) {
+      AppendByteArrayFast(actions, GetEmptyAction());
+    }
+    return actions;
+  }
+
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(const ActionQueue& actions, uint16_t sendInterval)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION, 0, 0};
