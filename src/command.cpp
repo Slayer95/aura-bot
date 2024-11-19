@@ -2395,6 +2395,43 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       break;
     }
 
+
+#ifdef DEBUG
+    //
+    // !DISCONNECT (disconnect a user)
+    //
+    case HashCode("disconnect"): {
+      UseImplicitHostedGame();
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+        break;
+
+      if (!GetIsSudo()) {
+        ErrorReply("You are not a sudoer, and therefore cannot disconnect a player.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "disconnect <PLAYERNAME>");
+        break;
+      }
+
+      uint8_t SID = 0xFF;
+      GameUser::CGameUser* targetPlayer = nullptr;
+      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+        ErrorReply("Usage: " + cmdToken + "disconnect <PLAYERNAME>");
+        break;
+      }
+      if (!targetPlayer) {
+        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a player.");
+        break;
+      }
+
+      targetPlayer->GetSocket()->m_HasError = true;
+      SendReply("Forcibly disconnected user [" + targetPlayer->GetName() + "]");
+      break;
+    }
+#endif
+
     //
     // !KICK (kick a user)
     //
