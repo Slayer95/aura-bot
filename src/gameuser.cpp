@@ -544,9 +544,11 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           //uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
           if (m_GProxy && m_Game->GetIsProxyReconnectableLong()) {
             m_GProxyExtended = true;
-            Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
             if (Length >= 12) {
               m_GProxyCheckGameID = true;
+              Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
+            } else {
+              Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
             }
           }
         } else if (Bytes[1] == GPSProtocol::Magic::CHANGEKEY && Length >= 8) {
