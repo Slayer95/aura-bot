@@ -4723,7 +4723,13 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
       // Fake users loaded
       Send(user, m_LoadingVirtualBuffer);
     }
-    Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions));
+    // GProxy sends m_GProxyEmptyActions additional empty actions for every action received.
+    // So we need to match it, to avoid desyncs.
+    if (user->GetGProxyAny()) {
+      Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions));
+    } else {
+      Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions * (1 + m_GProxyEmptyActions)));
+    }
 
     // Warcraft III doesn't respond to empty actions,
     // so we need to artificially increase users' sync counters.
