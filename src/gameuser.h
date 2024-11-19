@@ -222,6 +222,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetDisconnectedUnrecoverably() const { return m_Disconnected && !m_GProxy; }
     [[nodiscard]] int64_t                      GetTotalDisconnectTicks() const;
     [[nodiscard]] std::string                  GetDelayText(bool displaySync) const;
+    [[nodiscard]] std::string                  GetReconnectionText() const;
     [[nodiscard]] std::string                  GetSyncText() const;
     
     [[nodiscard]] inline bool                  GetIsReserved() const { return m_Reserved; }

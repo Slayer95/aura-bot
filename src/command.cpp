@@ -1356,14 +1356,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
       
-      string GProxyFragment;
-      if (targetPlayer->GetGProxyExtended()) {
-        GProxyFragment = "Extended";
-      } else if (targetPlayer->GetGProxyAny()) {
-        GProxyFragment = "Yes";
-      } else {
-        GProxyFragment = "No";
-      }
       string IPVersionFragment;
       if (targetPlayer->GetUsingIPv6()) {
         IPVersionFragment = ", IPv6";
@@ -1374,7 +1366,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (m_Aura->m_Net->m_Config->m_EnableGeoLocalization) {
         FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true));
       }
-      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + GProxyFragment + FromFragment + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
+      SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + targetPlayer->GetReconnectionText() + FromFragment + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
       SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
       if (IsOwner || IsAdmin || IsRootAdmin) {
         SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));

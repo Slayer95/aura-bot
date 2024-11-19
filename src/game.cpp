@@ -1420,6 +1420,7 @@ void CGame::UpdateLoading()
           // Already send empty actions that we've just buffered.
           StopLagScreen(user);
           Send(user, startLagPacket);
+          SendChat(user, "Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
         } else {
           // Warcraft III doesn't respond to empty actions,
           // so we need to artificially increase users' sync counters.
@@ -1431,12 +1432,6 @@ void CGame::UpdateLoading()
         }
       }
       m_LastLagScreenResetTime = Time;
-
-      for (auto& user : m_Users) {
-        if (user->GetFinishedLoading()) {
-          SendChat(user, "Please wait for " + ToDecString(CountLaggingPlayers()) + " players to load the game.");
-        }
-      }
     }
   }
 }
@@ -4940,12 +4935,19 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     string desyncListText = ToNameListSentence(DesyncedPlayers);
     uint8_t GProxyMode = GetActiveReconnectProtocols();
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      LogApp("Desync detected on frame " + to_string(m_SyncCounterChecked));
-      LogApp("[GProxy=" + ToDecString(GProxyMode) + "] " + user->GetName() + " (" + user->GetDelayText(true) + ") is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
-      LogApp("[GProxy=" + ToDecString(GProxyMode) + "] " + user->GetName() + " (" + user->GetDelayText(true) + ") no longer synchronized with " + desyncListText);
+      LogApp("===== !! Desync detected !! ======================================");
+      if (m_Config->m_LoadInGame) {
+        LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: ENABLED");
+      } else {
+        LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: DISABLED");
+      }
+      LogApp("User: [" + user->GetName() + "] (" + user->GetDelayText(true) + ") Reconnection: " + user->GetReconnectionText());
+      LogApp("User: [" + user->GetName() + "] is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
+      LogApp("User: [" + user->GetName() + "] is no longer synchronized with " + desyncListText);
       if (GProxyMode > 0) {
         LogApp("GProxy: " + GetActiveReconnectProtocolsDetails());
       }
+      LogApp("==================================================================");
     }
 
     if (GetHasDesyncHandler()) {

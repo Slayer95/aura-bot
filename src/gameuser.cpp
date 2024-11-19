@@ -786,6 +786,19 @@ string CGameUser::GetDelayText(bool displaySync) const
   }
 }
 
+string CGameUser::GetReconnectionText() const
+{
+  string reconnectionText;
+  if (targetPlayer->GetGProxyExtended()) {
+    reconnectionText = "Extended";
+  } else if (targetPlayer->GetGProxyAny()) {
+    reconnectionText = "Yes";
+  } else {
+    reconnectionText = "No";
+  }
+  return reconnectionText;
+}
+
 string CGameUser::GetSyncText() const
 {
   if (!m_Game->GetGameLoaded() || GetSyncCounter() >= m_Game->GetSyncCounter()) {
