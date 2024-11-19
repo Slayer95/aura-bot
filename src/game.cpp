@@ -3841,9 +3841,13 @@ void CGame::ReportAllPings() const
 
   if (m_Lagging) {
     GameUser::CGameUser* worstLagger = SortedPlayers[0];
-    string syncDelayText = worstLagger->GetSyncText();
-    if (!syncDelayText.empty()) {
-      SendAllChat("[" + worstLagger->GetDisplayName() + "] is " + syncDelayText);
+    if (worstLagger->GetDisconnected() && worstLagger->GetGProxyAny()) {
+      SendAllChat("[" + worstLagger->GetDisplayName() + "] is disconnected, but may reconnect");
+    } else {
+      string syncDelayText = worstLagger->GetSyncText();
+      if (!syncDelayText.empty()) {
+        SendAllChat("[" + worstLagger->GetDisplayName() + "] is " + syncDelayText);
+      }
     }
   }
 }
