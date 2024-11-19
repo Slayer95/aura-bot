@@ -1403,8 +1403,8 @@ void CGame::UpdateLoading()
       }
     }
 
-    // load-in-game: reset the fake lag screen every 30 seconds
-    if (m_Config->m_LoadInGame && anyLoaded && Time - m_LastLagScreenResetTime >= 30 ) {
+    // load-in-game: reset the fake lag screen every 60 seconds
+    if (m_Config->m_LoadInGame && anyLoaded && Time - m_LastLagScreenResetTime >= 60 ) {
       const bool anyUsingGProxy = GetAnyUsingGProxy();
       const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(GetLaggingPlayers());
 
@@ -4773,7 +4773,10 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     } else {
       m_Lagging = false;
     }
-    LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...");
+    if (m_Lagging) {
+      Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
+      LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...");
+    }
   }
 }
 
@@ -4941,9 +4944,9 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
       } else {
         LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: DISABLED");
       }
-      LogApp("User: [" + user->GetName() + "] (" + user->GetDelayText(true) + ") Reconnection: " + user->GetReconnectionText());
-      LogApp("User: [" + user->GetName() + "] is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
-      LogApp("User: [" + user->GetName() + "] is no longer synchronized with " + desyncListText);
+      LogApp("User [" + user->GetName() + "] (" + user->GetDelayText(true) + ") Reconnection: " + user->GetReconnectionText());
+      LogApp("User [" + user->GetName() + "] is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
+      LogApp("User [" + user->GetName() + "] is no longer synchronized with " + desyncListText);
       if (GProxyMode > 0) {
         LogApp("GProxy: " + GetActiveReconnectProtocolsDetails());
       }
