@@ -4736,16 +4736,18 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     user->SetStatus(USERSTATUS_PLAYING);
     RemoveFromLagScreens(user);
     UserList laggingPlayers = GetLaggingPlayers();
-    if (laggingPlayers.size() >= 3) {
-      SendChat(user, "[" + user->GetName() + "], please wait for " + to_string(laggingPlayers.size()) + " players to load the game...");
-    } else if (!laggingPlayers.empty()) {
-      SendChat(user, "[" + user->GetName() + "], please wait for " + ToNameListSentence(laggingPlayers) + " to load the game...");
-    } else {
+    if (laggingPlayers.empty()) {
       m_Lagging = false;
     }
     if (m_Lagging) {
       Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
       LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...");
+
+      if (laggingPlayers.size() >= 3) {
+        SendChat(user, "[" + user->GetName() + "], please wait for " + to_string(laggingPlayers.size()) + " players to load the game...");
+      } else {
+        SendChat(user, "[" + user->GetName() + "], please wait for " + ToNameListSentence(laggingPlayers) + " to load the game...");
+      }
     }
   }
 }
