@@ -668,7 +668,7 @@ public:
   void ShowPlayerNamesInGame();
   bool StopPlayers(const std::string& reason) const;
   void StopLagger(GameUser::CGameUser* user, const std::string& reason) const;
-  void StopLaggers(const std::string& reason) const;
+  void StopLaggers(const std::string& reason);
   void StopDesynchronized(const std::string& reason) const;
   void ResetDropVotes() const;
   std::string GetSaveFileName(const uint8_t UID) const;

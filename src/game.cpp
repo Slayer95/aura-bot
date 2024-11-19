@@ -8298,10 +8298,14 @@ void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
   user->SetLagging(false);
 }
 
-void CGame::StopLaggers(const string& reason) const
+void CGame::StopLaggers(const string& reason)
 {
+  bool savedAny = false;
   for (auto& user : m_Users) {
     if (user->GetLagging() || !user->GetFinishedLoading()) {
+      if (!savedAny && TrySaveOnDisconnect(user, false)) {
+        savedAny = true;
+      }
       StopLagger(user, reason);
     }
   }
