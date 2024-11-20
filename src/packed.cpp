@@ -147,9 +147,7 @@ void CPacked::Decompress(const bool allBlocks)
     m_Valid = false;
     return;
   }
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    Print("[PACKED] decompressing data");
-  }
+  DPRINT_IF(LOG_LEVEL_TRACE, "[PACKED] decompressing data")
 
 	// format found at http://www.thehelper.net/forums/showthread.php?t=42787
 	istringstream ISS(m_Compressed);
@@ -272,9 +270,7 @@ void CPacked::Decompress(const bool allBlocks)
     }
 	}
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    Print("[PACKED] decompressed " + to_string(m_Decompressed.size()) + " bytes");
-  }
+  DPRINT_IF(LOG_LEVEL_TRACE, "[PACKED] decompressed " + to_string(m_Decompressed.size()) + " bytes")
 
 	if (allBlocks || m_NumBlocks == 1) {
 		if (m_DecompressedSize > m_Decompressed.size()) {
@@ -287,18 +283,14 @@ void CPacked::Decompress(const bool allBlocks)
 
 		// the last block is padded with zeros, discard them
 
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-      Print("[PACKED] discarding " + to_string(m_Decompressed.size() - m_DecompressedSize) + " bytes");
-    }
+    DPRINT_IF(LOG_LEVEL_TRACE, "[PACKED] discarding " + to_string(m_Decompressed.size() - m_DecompressedSize) + " bytes")
 		m_Decompressed.erase(m_DecompressedSize);
 	}
 }
 
 void CPacked::Compress(const bool TFT)
 {
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    Print("[PACKED] compressing data");
-  }
+  DPRINT_IF(LOG_LEVEL_TRACE, "[PACKED] compressing data")
 
 	// format found at http://www.thehelper.net/forums/showthread.php?t=42787
 

@@ -283,14 +283,18 @@ void CDiscord::SendUser(const string& message, const uint64_t target)
 {
   m_Client->direct_message_create(target, dpp::message(message), [this](const dpp::confirmation_callback_t& callback){
     if (callback.is_error()) {
+#ifdef DEBUG
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
         Print("[DISCORD] Failed to send direct message.");
       }
+#endif
       return;
     } else {
+#ifdef DEBUG
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
         Print("[DISCORD] Direct message sent OK.");
       }
+#endif
     }
   });
 }

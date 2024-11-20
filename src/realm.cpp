@@ -232,9 +232,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 AppendByteArray(relayPacket, War3Version);
                 AppendByteArrayFast(relayPacket, Data);
                 AssignLength(relayPacket);
-                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-                  Print(GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net->m_Config->m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)");
-                }
+                DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net->m_Config->m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)")
                 m_Aura->m_Net->Send(&(m_Aura->m_Net->m_Config->m_UDPForwardAddress), relayPacket);
               }
 
@@ -331,7 +329,7 @@ void CRealm::Update(void* fd, void* send_fd)
               if (checkResult.state == BNETProtocol::KeyResult::GOOD)
               {
                 // cd keys accepted
-                PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
+                DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
                 m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
                 SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config->m_UserName));
               }
@@ -372,10 +370,10 @@ void CRealm::Update(void* fd, void* send_fd)
               if (loginResult.success) {
                 copy_n(loginResult.salt, 32, m_LoginSalt.begin());
                 copy_n(loginResult.serverPublicKey, 32, m_LoginServerPublicKey.begin());
-                PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] OK")
+                DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] OK")
                 Login();
               } else {
-                PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] invalid")
+                DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config->m_UserName + "] invalid")
                 if (!TrySignup()) {
                   Disable();
                   PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "logon failed - invalid username, disconnecting")
@@ -554,7 +552,7 @@ void CRealm::Update(void* fd, void* send_fd)
       if (m_Config->m_BindAddress.has_value()) {
         PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "connecting with local address [" + AddressToString(m_Config->m_BindAddress.value()) + "]...")
       } else {
-        PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "connecting...")
+        DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "connecting...")
       }
     }
     m_FirstConnect = false;
@@ -1049,7 +1047,7 @@ void CRealm::Send(const vector<uint8_t>& packet)
   if (m_LoggedIn) {
     SendAuth(packet);
   } else {
-    PRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "packet not sent (not logged in)")
+    DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "packet not sent (not logged in)")
   }
 }
 
@@ -1057,7 +1055,7 @@ void CRealm::SendAuth(const vector<uint8_t>& packet)
 {
   // This function is public only for the login phase.
   // Though it's also privately used by CRealm::Send.
-  PRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending packet - " + ByteArrayToHexString(packet))
+  DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending packet - " + ByteArrayToHexString(packet))
   m_Socket->PutBytes(packet);
 }
 
@@ -1087,12 +1085,12 @@ bool CRealm::Login()
 {
   if (m_Config->m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
     // pvpgn logon
-    PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using pvpgn logon type")
+    DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using pvpgn logon type")
     m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config->m_PassWord);
     SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetPvPGNPasswordHash()));
   } else {
     // battle.net logon
-    PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using battle.net logon type")
+    DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using battle.net logon type")
     m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGONPROOF(GetLoginSalt(), GetLoginServerPublicKey());
     SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGONPROOF(m_BNCSUtil->GetM1()));
   }
@@ -1135,7 +1133,7 @@ CQueuedChatMessage* CRealm::QueueCommand(const string& message, CCommandContext*
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
 
-  PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued command \"" + entry->GetInnerMessage() + "\"")
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued command \"" + entry->GetInnerMessage() + "\"")
   return entry;
 }
 
@@ -1156,7 +1154,7 @@ CQueuedChatMessage* CRealm::QueuePriorityWhois(const string& message)
   m_ChatQueueGameHostWhois->SetReceiver(RECV_SELECTOR_SYSTEM);
   m_HadChatActivity = true;
 
-  PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued fast spoofcheck \"" + m_ChatQueueGameHostWhois->GetInnerMessage() + "\"")
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued fast spoofcheck \"" + m_ChatQueueGameHostWhois->GetInnerMessage() + "\"")
   return m_ChatQueueGameHostWhois;
 }
 
@@ -1175,7 +1173,7 @@ CQueuedChatMessage* CRealm::QueueChatChannel(const string& message, CCommandCont
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
 
-  PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued chat message \"" + entry->GetInnerMessage() + "\"")
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued chat message \"" + entry->GetInnerMessage() + "\"")
   return entry;
 }
 
@@ -1190,7 +1188,7 @@ CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const str
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
 
-  PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued reply to [" + user + "] - \"" + entry->GetInnerMessage() + "\"")
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued reply to [" + user + "] - \"" + entry->GetInnerMessage() + "\"")
   return entry;
 }
 
@@ -1209,7 +1207,7 @@ CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& us
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
 
-  PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued whisper to [" + user + "] - \"" + entry->GetInnerMessage() + "\"")
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued whisper to [" + user + "] - \"" + entry->GetInnerMessage() + "\"")
   return entry;
 }
 
@@ -1249,7 +1247,7 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CComman
   m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_CURRENT_LOBBY);
   m_HadChatActivity = true;
 
-  PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued game announcement")
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued game announcement")
   return m_ChatQueueJoinCallback;
 }
 
@@ -1301,19 +1299,19 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
   bool changedAny = m_GamePort != connectPort || m_GameHostCounter != hostCounter;
 
   if (m_GamePort != connectPort) {
-    PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "updating net game port to " + to_string(connectPort))
+    DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "updating net game port to " + to_string(connectPort))
     // Some PvPGN servers will disconnect if this message is sent while logged in
     Send(BNETProtocol::SEND_SID_NETGAMEPORT(connectPort));
     m_GamePort = connectPort;
   }
 
   if (!changedAny) {
-    PRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "game refreshed")
+    DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "game refreshed")
   } else {
     int64_t Ticks = GetTicks();
     if (!m_Config->m_IsHostOften && m_GameBroadcastStartTicks.has_value() && Ticks < m_GameBroadcastStartTicks.value() + static_cast<int64_t>(REALM_HOST_COOLDOWN_TICKS)) {
       // Still in cooldown
-      PRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "not registering game... still in cooldown")
+      DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "not registering game... still in cooldown")
       return;
     }
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "registering game...")
