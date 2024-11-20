@@ -86,11 +86,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
     CFG.GetStringIndex("lan_realm.commands.bot_owner.permissions", commandPermissions, COMMAND_PERMISSIONS_AUTO)
   );
 
-#ifdef DEBUG
-  m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"}, LOG_LEVEL_INFO - 1);
-#else
-  m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"}, LOG_LEVEL_INFO - 1);
-#endif
+  m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"}, LOG_LEVEL_INFO - 1);
   m_ExitOnStandby                = CFG.GetBool("bot.exit_on_standby", false);
 
   // Master switch mainly intended for CLI. CFG key provided for completeness.

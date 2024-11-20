@@ -495,7 +495,9 @@ void CMap::Load(CConfig* CFG)
     // calculate <map.crc32>
 
     MapCRC32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size()), false);
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(MapCRC32) + ">")
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+      Print("[MAP] calculated <map.crc32 = " + ByteArrayToDecString(MapCRC32) + ">");
+    }
 
     // calculate <map.weak_hash>, and <map.sha1>
     // a big thank you to Strilanc for figuring the <map.weak_hash> algorithm out
@@ -663,14 +665,18 @@ void CMap::Load(CConfig* CFG)
             Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ file, calculated <map.weak_hash>, and <map.sha1> is probably wrong)");
 
           MapScriptsWeakHash = CreateByteArray(Val, false);
-          DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.weak_hash = " + ByteArrayToDecString(MapScriptsWeakHash) + ">")
+          if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+            Print("[MAP] calculated <map.weak_hash = " + ByteArrayToDecString(MapScriptsWeakHash) + ">");
+          }
 
           m_Aura->m_SHA->Final();
           uint8_t SHA1[20];
           memset(SHA1, 0, sizeof(uint8_t) * 20);
           m_Aura->m_SHA->GetHash(SHA1);
           MapScriptsSHA1 = CreateByteArray(SHA1, 20);
-          DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.sha1 = " + ByteArrayToDecString(MapScriptsSHA1) + ">")
+          if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+            Print("[MAP] calculated <map.sha1 = " + ByteArrayToDecString(MapScriptsSHA1) + ">");
+          }
         }
         else
           Print("[MAP] skipping <map.weak_hash>, and <map.sha1> calculation - map not decompressed");
@@ -855,7 +861,9 @@ void CMap::Load(CConfig* CFG)
               MapOptions = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
               if (MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) MapOptions |= MAPOPT_CUSTOMFORCES;
 
-              DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.options = " + to_string(MapOptions) + ">")
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                Print("[MAP] calculated <map.options = " + to_string(MapOptions) + ">");
+              }
 
               if (!(MapOptions & MAPOPT_CUSTOMFORCES)) {
                 MapNumTeams = static_cast<uint8_t>(RawMapNumPlayers);
@@ -890,7 +898,9 @@ void CMap::Load(CConfig* CFG)
               MapNumDisabled = disabledSlots;
 
               if (MapOptions & MAPOPT_MELEE) {
-                DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] found melee map")
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                  Print("[MAP] found melee map");
+                }
                 MapFilterType = MAPFILTER_TYPE_MELEE;
               }
 
@@ -903,7 +913,6 @@ void CMap::Load(CConfig* CFG)
 
               uint32_t SlotNum = 1;
 
-#ifdef DEBUG
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
                 Print("[MAP] calculated <map.width = " + ByteArrayToDecString(MapWidth) + ">");
                 Print("[MAP] calculated <map.height = " + ByteArrayToDecString(MapHeight) + ">");
@@ -911,10 +920,11 @@ void CMap::Load(CConfig* CFG)
                 Print("[MAP] calculated <map.num_players = " + ToDecString(MapNumPlayers) + ">");
                 Print("[MAP] calculated <map.num_teams = " + ToDecString(MapNumTeams) + ">");
               }
-#endif
 
               for (auto& Slot : Slots) {
-                DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.slot_" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetProtocolArray()) + ">")
+                if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+                  Print("[MAP] calculated <map.slot_" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetProtocolArray()) + ">");
+                }
                 ++SlotNum;
               }
             } else {
@@ -935,7 +945,9 @@ void CMap::Load(CConfig* CFG)
   } else {
     if (!isPartial) {
       //This is debug log
-      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
+      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+        Print("[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>");
+      }
     } else if (!m_MapMPQLoaded) {
       Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams> - map archive not loaded");
     }
