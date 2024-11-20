@@ -1355,7 +1355,13 @@ bool CGameSetup::RestoreFromSaveFile()
 
 bool CGameSetup::RunHost()
 {
-  return m_Aura->CreateGame(this);
+  bool created = m_Aura->CreateGame(this);
+  if (created) {
+    PRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Game hosted OK")
+  } else {
+    PRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Game hosted error")
+  }
+  return created;
 }
 
 bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier)

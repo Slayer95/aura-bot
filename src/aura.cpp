@@ -1680,7 +1680,13 @@ void CAura::UpdateWindowTitle()
 
 void CAura::UpdateMetaData()
 {
+  if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
+    Print("[AURA] Updating map metadata...");
+  }
   UpdateWindowTitle();
+  if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
+    Print("[AURA] Map metadata updated OK");
+  }
 }
 
 void CAura::CacheMapPresets()
