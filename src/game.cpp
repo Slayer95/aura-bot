@@ -1555,15 +1555,15 @@ void CGame::UpdateLoaded()
     // keep track of the last lag screen time so we can avoid timing out users
     m_LastLagScreenTime = Time;
 
-    // every 11 seconds, report most recent lag data
-    if (Time - m_StartedLaggingTime >= m_PingReportedSinceLagTimes * 11) {
+    // every 17 seconds, report most recent lag data
+    if (Time - m_StartedLaggingTime >= m_PingReportedSinceLagTimes * 17) {
       ReportAllPings();
       ++m_PingReportedSinceLagTimes;
     }
     if (m_Config->m_SyncNormalize) {
-      if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 60000) {
+      if (m_PingReportedSinceLagTimes == 2 && Ticks - m_FinishedLoadingTicks < 60000) {
         NormalizeSyncCounters();
-      } else if (m_PingReportedSinceLagTimes == 5 && Ticks - m_FinishedLoadingTicks < 180000) {
+      } else if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 180000) {
         NormalizeSyncCounters();
       }
     }
