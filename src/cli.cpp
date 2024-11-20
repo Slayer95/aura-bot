@@ -109,7 +109,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_option("--bind-address", m_BindAddress, "Restricts connections to the game server, only allowing the input IPv4 address.")->check(CLI::ValidIPV4);
   app.add_option("--host-port", m_HostPort, "Customizes the game server to only listen in the specified port.");
   app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
-  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: info, debug, trace.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"}));
+  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: info, debug, trace, trace2, trace3.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"}));
 
   // Game hosting
   app.add_option("--owner", m_GameOwner, "Customizes the game owner when hosting from the CLI.");
@@ -536,7 +536,7 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_Config->m_EnableCFGCache = m_UseMapCFGCache.value();
   }
   if (m_LogLevel.has_value()) {
-    vector<string> logLevels = {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2"};
+    vector<string> logLevels = {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"};
     uint8_t maxIndex = static_cast<uint8_t>(logLevels.size());
     for (uint8_t i = 0; i < maxIndex; ++i) {
       if (m_LogLevel.value() == logLevels[i]) {
