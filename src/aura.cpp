@@ -1834,7 +1834,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   if (m_CurrentLobby->GetExiting()) {
     delete m_CurrentLobby;
     m_CurrentLobby = nullptr;
-    gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + m_CurrentLobby->GetGameName() + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_Name + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
 

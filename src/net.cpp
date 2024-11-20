@@ -1419,6 +1419,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
   CTCPServer* gameServer = new CTCPServer(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
   if (!gameServer->Listen(m_SupportTCPOverIPv6 ? m_Config->m_BindAddress6 : m_Config->m_BindAddress4, inputPort, false)) {
     Print("[TCP] " + name + " Error listening on port " + to_string(inputPort));
+    delete gameServer;
     return nullptr;
   }
   uint16_t assignedPort = gameServer->GetPort();
