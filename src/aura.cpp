@@ -1078,20 +1078,26 @@ bool CAura::Update()
     if (socket) {
       if (m_Net->m_Config->m_ProxyReconnect > 0) {
         CConnection* incomingConnection = new CConnection(this, localPort, socket);
+#ifdef DEBUG
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }
+#endif
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
+#ifdef DEBUG
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] connection to port " + to_string(localPort) + " rejected.");
         }
+#endif
         delete socket;
       } else {
         CConnection* incomingConnection = new CConnection(this, localPort, socket);
+#ifdef DEBUG
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }
+#endif
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       }
       if (m_Net->m_IncomingConnections[localPort].size() > MAX_INCOMING_CONNECTIONS) {
@@ -1940,9 +1946,11 @@ void CAura::UnholdContext(CCommandContext* nCtx)
     return;
 
   if (nCtx->Unref()) {
+#ifdef DEBUG
     if (MatchLogLevel(LOG_LEVEL_TRACE)) {
       Print("[AURA] deleting ctx for message sent by [" + nCtx->GetSender() + "].");
     }
+#endif
     m_ActiveContexts.erase(nCtx);
     delete nCtx;
   }

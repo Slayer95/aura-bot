@@ -137,15 +137,11 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest) {
-              if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-                Print("[AURA] Got invalid REQJOIN " + ByteArrayToDecString(Bytes));
-              }
+              DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got invalid REQJOIN " + ByteArrayToDecString(Bytes))
               Abort = true;
               break;
             }
-            if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE2)) {
-              Print("[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes));
-            }
+            DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
             CGame* targetLobby = m_Aura->GetLobbyByHostCounter(joinRequest->GetHostCounter());
             if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || targetLobby->GetExiting()) {
               break;
