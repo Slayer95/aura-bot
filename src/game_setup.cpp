@@ -23,18 +23,18 @@
 
  */
 
-#include "gamesetup.h"
+#include "game_setup.h"
 
 #include "auradb.h"
 #include "command.h"
-#include "fileutil.h"
+#include "file_util.h"
 #include "game.h"
-#include "protocol/gameprotocol.h"
+#include "protocol/game_protocol.h"
 #include "hash.h"
 #include "irc.h"
 #include "map.h"
 #include "realm.h"
-#include "savegame.h"
+#include "save_game.h"
 
 #include "aura.h"
 

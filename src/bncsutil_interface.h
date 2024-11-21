@@ -46,7 +46,7 @@
 #ifndef AURA_BNCSUTILINTERFACE_H_
 #define AURA_BNCSUTILINTERFACE_H_
 
-#include "fileutil.h"
+#include "file_util.h"
 #include "config/config_realm.h"
 
 #include <cstdint>

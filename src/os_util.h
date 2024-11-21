@@ -27,7 +27,7 @@
 #define AURA_OSUTIL_H_
 
 #include "includes.h"
-#include "fileutil.h"
+#include "file_util.h"
 
 #ifdef _WIN32
 #pragma once

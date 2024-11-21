@@ -24,7 +24,7 @@
 
 #include <crc32/crc32.h>
 #include "util.h"
-#include "fileutil.h"
+#include "file_util.h"
 
 #include "aura.h"
 

@@ -46,7 +46,7 @@
 #ifndef AURA_CONFIG_H_
 #define AURA_CONFIG_H_
 
-#include "../fileutil.h"
+#include "../file_util.h"
 #include "../socket.h"
 #include "../includes.h"
 

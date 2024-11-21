@@ -28,7 +28,7 @@
 
 #include "../includes.h"
 #include "config.h"
-#include "../gamesetup.h"
+#include "../game_setup.h"
 #include "../map.h"
 
 //

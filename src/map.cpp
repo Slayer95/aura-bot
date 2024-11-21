@@ -46,13 +46,13 @@
 #include "map.h"
 #include "aura.h"
 #include "util.h"
-#include "fileutil.h"
+#include "file_util.h"
 #include <crc32/crc32.h>
 #include <sha1/sha1.h>
 #include "config/config.h"
 #include "config/config_bot.h"
 #include "config/config_game.h"
-#include "gameslot.h"
+#include "game_slot.h"
 
 #define __STORMLIB_SELF__
 #include <StormLib.h>

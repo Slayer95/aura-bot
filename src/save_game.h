@@ -25,7 +25,7 @@
 
 #include <filesystem>
 
-#include "gameslot.h"
+#include "game_slot.h"
 
 //
 // CSaveGame

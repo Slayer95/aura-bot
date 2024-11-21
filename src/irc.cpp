@@ -49,7 +49,7 @@
 #include "aura.h"
 #include "socket.h"
 #include "util.h"
-#include "protocol/bnetprotocol.h"
+#include "protocol/bnet_protocol.h"
 #include "realm.h"
 #include "net.h"
 

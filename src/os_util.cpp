@@ -23,7 +23,7 @@
 
  */
 
-#include "osutil.h"
+#include "os_util.h"
 #include "util.h"
 
 using namespace std;

@@ -43,7 +43,7 @@
 
  */
 
-#include "gameslot.h"
+#include "game_slot.h"
 
 using namespace std;
 

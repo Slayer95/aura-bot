@@ -56,7 +56,7 @@
 #include "discord.h"
 #include "command.h"
 #include "net.h"
-#include "gamesetup.h"
+#include "game_setup.h"
 
 #include <random>
 #include <filesystem>

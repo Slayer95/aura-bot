@@ -48,10 +48,10 @@
 
 #include "includes.h"
 #include "list.h"
-#include "gameseeker.h"
-#include "gameslot.h"
-#include "gamesetup.h"
-#include "savegame.h"
+#include "game_seeker.h"
+#include "game_slot.h"
+#include "game_setup.h"
+#include "save_game.h"
 #include "socket.h"
 
 #include <algorithm>

@@ -47,8 +47,8 @@
 #include "auradb.h"
 #include "config/config_game.h"
 #include "game.h"
-#include "protocol/gameprotocol.h"
-#include "gameslot.h"
+#include "protocol/game_protocol.h"
+#include "game_slot.h"
 #include "util.h"
 
 using namespace std;

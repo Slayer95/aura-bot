@@ -18,10 +18,10 @@
 
 */
 
-#include "savegame.h"
+#include "save_game.h"
 
 #include "util.h"
-#include "gameslot.h"
+#include "game_slot.h"
 #include "packed.h"
 
 #include "aura.h"

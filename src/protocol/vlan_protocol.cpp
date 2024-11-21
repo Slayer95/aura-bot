@@ -1,4 +1,4 @@
-#include "vlanprotocol.h"
+#include "vlan_protocol.h"
 
 #include "../util.h"
 

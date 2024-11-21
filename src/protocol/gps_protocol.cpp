@@ -42,7 +42,7 @@
  */
 
 #include "../util.h"
-#include "gpsprotocol.h"
+#include "gps_protocol.h"
 
 using namespace std;
 

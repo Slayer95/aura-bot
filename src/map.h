@@ -47,8 +47,8 @@
 #define AURA_MAP_H_
 
 #include "includes.h"
-#include "fileutil.h"
-#include "gameslot.h"
+#include "file_util.h"
+#include "game_slot.h"
 #include "util.h"
 
 #include <iterator>

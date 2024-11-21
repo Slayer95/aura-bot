@@ -58,14 +58,14 @@
 #include "realm.h"
 #include "map.h"
 #include "connection.h"
-#include "gameuser.h"
-#include "protocol/gameprotocol.h"
-#include "protocol/gpsprotocol.h"
-#include "protocol/vlanprotocol.h"
+#include "game_user.h"
+#include "protocol/game_protocol.h"
+#include "protocol/gps_protocol.h"
+#include "protocol/vlan_protocol.h"
 #include "stats.h"
 #include "w3mmd.h"
 #include "irc.h"
-#include "fileutil.h"
+#include "file_util.h"
 
 #include <bitset>
 #include <ctime>

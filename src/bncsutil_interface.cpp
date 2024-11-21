@@ -43,7 +43,7 @@
 
  */
 
-#include "bncsutilinterface.h"
+#include "bncsutil_interface.h"
 
 #include <bncsutil/bncsutil.h>
 

@@ -47,7 +47,7 @@
 #define AURA_GAMEPROTOCOL_H_
 
 #include "../includes.h"
-#include "../gameslot.h"
+#include "../game_slot.h"
 
 namespace GameProtocol
 {

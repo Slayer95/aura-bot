@@ -43,7 +43,7 @@
 
  */
 
-#include "bnetprotocol.h"
+#include "bnet_protocol.h"
 
 #include "../util.h"
 

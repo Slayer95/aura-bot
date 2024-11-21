@@ -43,7 +43,7 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
 */
 
-#include "fileutil.h"
+#include "file_util.h"
 #include "util.h"
 
 #include <algorithm>

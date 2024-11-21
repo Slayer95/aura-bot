@@ -27,16 +27,16 @@
     <ClCompile Include="..\lib\sqlite3\sqlite3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bncsutilinterface.cpp">
+    <ClCompile Include="protocol\bnet_protocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="realm.cpp">
+    <ClCompile Include="protocol\game_protocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="realm_chat.cpp">
+    <ClCompile Include="protocol\gps_protocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="protocol\bnetprotocol.cpp">
+    <ClCompile Include="protocol\vlan_protocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="config\config.cpp">
@@ -63,49 +63,10 @@
     <ClCompile Include="config\config_net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cli.cpp">
+    <ClCompile Include="file_util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="packed.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="savegame.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="game.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="connection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gameseeker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gameuser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\gameprotocol.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\gpsprotocol.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\vlanprotocol.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gamesetup.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gameslot.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="aura.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="auradb.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="map.cpp">
+    <ClCompile Include="os_util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="socket.cpp">
@@ -114,25 +75,64 @@
     <ClCompile Include="net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stats.cpp">
+    <ClCompile Include="auradb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="w3mmd.cpp">
+    <ClCompile Include="bncsutil_interface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="irc.cpp">
+    <ClCompile Include="realm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="realm_chat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="map.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="packed.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="save_game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="connection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_seeker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_user.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_setup.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_slot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aura.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cli.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="discord.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="fileutil.cpp">
+    <ClCompile Include="irc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="osutil.cpp">
+    <ClCompile Include="stats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="command.cpp">
+    <ClCompile Include="w3mmd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -158,16 +158,25 @@
     <ClInclude Include="..\lib\CLI11\CLI11.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bncsutilinterface.h">
+    <ClInclude Include="constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="realm.h">
+    <ClInclude Include="forward.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="realm_chat.h">
+    <ClInclude Include="includes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="protocol\bnetprotocol.h">
+    <ClInclude Include="protocol\bnet_protocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\game_protocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\gps_protocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\vlan_protocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config\config.h">
@@ -194,73 +203,7 @@
     <ClInclude Include="config\config_net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cli.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="packed.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="savegame.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="game.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="connection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="gameseeker.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="gameuser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\gameprotocol.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\gpsprotocol.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\vlanprotocol.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="gamesetup.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="gameslot.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="aura.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="auradb.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="forward.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="includes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="map.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ms_stdint.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="socket.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="net.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="stats.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="w3mmd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="util.h">
@@ -269,19 +212,76 @@
     <ClInclude Include="list.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="irc.h">
+    <ClInclude Include="file_util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="os_util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="socket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="net.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="auradb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bncsutil_interface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="realm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="realm_chat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="packed.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="save_game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="connection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_seeker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_user.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_setup.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_slot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aura.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cli.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="command.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="discord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fileutil.h">
+    <ClInclude Include="irc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="osutil.h">
+    <ClInclude Include="stats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="command.h">
+    <ClInclude Include="w3mmd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

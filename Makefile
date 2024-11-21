@@ -81,15 +81,10 @@ CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/
 OBJS = lib/csvparser/csvparser.o \
 			 lib/crc32/crc32.o \
 			 lib/sha1/sha1.o \
-			 src/fileutil.o \
-			 src/osutil.o \
-			 src/socket.o \
-			 src/net.o \
-			 src/bncsutilinterface.o \
-			 src/protocol/bnetprotocol.o \
-			 src/protocol/gameprotocol.o \
-			 src/protocol/gpsprotocol.o \
-			 src/protocol/vlanprotocol.o \
+			 src/protocol/bnet_protocol.o \
+			 src/protocol/game_protocol.o \
+			 src/protocol/gps_protocol.o \
+			 src/protocol/vlan_protocol.o \
 			 src/config/config.o \
 			 src/config/config_bot.o \
 			 src/config/config_realm.o \
@@ -98,23 +93,28 @@ OBJS = lib/csvparser/csvparser.o \
 			 src/config/config_irc.o \
 			 src/config/config_discord.o \
 			 src/config/config_net.o \
-			 src/cli.o \
+			 src/auradb.o \
+			 src/bncsutil_interface.o \
+			 src/file_util.o \
+			 src/os_util.o \
+			 src/map.o \
+			 src/packed.o \
+			 src/save_game.o \
+			 src/socket.o \
+			 src/connection.o \
+			 src/net.o \
 			 src/realm.o \
 			 src/realm_chat.o \
-			 src/irc.o \
-			 src/discord.o \
-			 src/map.o \
-			 src/connection.o \
-			 src/gameseeker.o \
-			 src/gameuser.o \
-			 src/gamesetup.o \
-			 src/gameslot.o \
+			 src/game_seeker.o \
+			 src/game_user.o \
+			 src/game_setup.o \
+			 src/game_slot.o \
 			 src/game.o \
-			 src/packed.o \
-			 src/savegame.o \
-			 src/command.o \
 			 src/aura.o \
-			 src/auradb.o \
+			 src/cli.o \
+			 src/command.o \
+			 src/discord.o \
+			 src/irc.o \
 			 src/stats.o \
 			 src/w3mmd.o \
 

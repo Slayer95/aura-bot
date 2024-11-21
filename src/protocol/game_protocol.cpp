@@ -46,11 +46,11 @@
 #include <algorithm>
 #include <utility>
 
-#include "gameprotocol.h"
+#include "game_protocol.h"
 #include <crc32/crc32.h>
 #include "../util.h"
-#include "../gameuser.h"
-#include "../gameslot.h"
+#include "../game_user.h"
+#include "../game_slot.h"
 #include "../game.h"
 
 using namespace std;
@@ -414,7 +414,7 @@ namespace GameProtocol
     if (UID != 255)
     {
       std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::PLAYERLEAVE_OTHERS, 9, 0, UID};
-      AppendByteArray(packet, leftCode, false); // left code (see PLAYERLEAVE_ constants in gameprotocol.h)
+      AppendByteArray(packet, leftCode, false); // left code (see PLAYERLEAVE_ constants in game_protocol.h)
       return packet;
     }
 

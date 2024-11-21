@@ -45,9 +45,9 @@
 
 #include "aura.h"
 #include "util.h"
-#include "fileutil.h"
-#include "osutil.h"
-#include "bncsutilinterface.h"
+#include "file_util.h"
+#include "os_util.h"
+#include "bncsutil_interface.h"
 #include <crc32/crc32.h>
 #include <sha1/sha1.h>
 #include "auradb.h"
@@ -61,14 +61,14 @@
 #include "connection.h"
 #include "realm.h"
 #include "map.h"
-#include "gameseeker.h"
-#include "gameuser.h"
-#include "protocol/gameprotocol.h"
-#include "protocol/gpsprotocol.h"
+#include "game_seeker.h"
+#include "game_user.h"
+#include "protocol/game_protocol.h"
+#include "protocol/gps_protocol.h"
 #include "game.h"
 #include "cli.h"
 #include "irc.h"
-#include "protocol/vlanprotocol.h"
+#include "protocol/vlan_protocol.h"
 #include <utf8/utf8.h>
 
 #include <csignal>

@@ -26,7 +26,7 @@
 #include "config_bot.h"
 #include "../util.h"
 #include "../net.h"
-#include "../fileutil.h"
+#include "../file_util.h"
 #include "../map.h"
 #include "../command.h"
 

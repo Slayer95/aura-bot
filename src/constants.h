@@ -190,7 +190,7 @@
 #define BUFFERING_ENABLED_LOBBY 8u
 #define BUFFERING_ENABLED_ALL 15u
 
-// gameslot.h
+// game_slot.h
 
 #define SLOTSTATUS_OPEN 0u
 #define SLOTSTATUS_CLOSED 1u
@@ -230,7 +230,7 @@
 constexpr int MAX_SLOTS_MODERN = 24;
 constexpr int MAX_SLOTS_LEGACY = 12;
 
-// gameuser.h
+// game_user.h
 
 #define CONSISTENT_PINGS_COUNT 3u
 #define MAXIMUM_PINGS_COUNT 6u
@@ -252,7 +252,7 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 #define USERSTATUS_ENDING 3u
 #define USERSTATUS_ENDED 4u
 
-// gamesetup.h
+// game_setup.h
 
 #define SEARCH_TYPE_ONLY_MAP 1
 #define SEARCH_TYPE_ONLY_CONFIG 2
@@ -299,7 +299,7 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 #define SUGGESTIONS_TIMEOUT 3000u
 #define GAMESETUP_STALE_TICKS 180000u
 
-// gameprotocol.h
+// game_protocol.h
 
 #define GAME_NONE 0 // this case isn't part of the protocol, it's for internal use only
 #define GAME_FULL 2
