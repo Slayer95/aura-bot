@@ -1680,13 +1680,17 @@ void CAura::UpdateWindowTitle()
 
 void CAura::UpdateMetaData()
 {
+#ifdef DEBUG
   if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
     Print("[AURA] Updating map metadata...");
   }
+#endif
   UpdateWindowTitle();
+#ifdef DEBUG
   if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
     Print("[AURA] Map metadata updated OK");
   }
+#endif
 }
 
 void CAura::CacheMapPresets()

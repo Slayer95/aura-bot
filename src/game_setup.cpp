@@ -1357,9 +1357,9 @@ bool CGameSetup::RunHost()
 {
   bool created = m_Aura->CreateGame(this);
   if (created) {
-    PRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Game hosted OK")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Game hosted OK")
   } else {
-    PRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Game hosted error")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Game hosted error")
   }
   return created;
 }
