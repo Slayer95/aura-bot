@@ -610,6 +610,41 @@ set<string> CConfig::GetIPStringSet(const string& key, char separator, const set
   END(Output)
 }
 
+vector<sockaddr_storage> CConfig::GetHostsWithImplicitPort(const string& key, const uint16_t defaultPort)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS({})
+  }
+
+  bool errored = false;
+  vector<sockaddr_storage> Output;
+  stringstream ss(it->second);
+  while (ss.good()) {
+    string element;
+    getline(ss, element, ',');
+    if (element.empty())
+      continue;
+
+    string ip;
+    uint16_t port;
+    if (!SplitIPAddressAndPortOrDefault(element, defaultPort, ip, port)) {
+      errored = true;
+      continue;
+    }
+    optional<sockaddr_storage> result = CNet::ParseAddress(ip, ACCEPT_ANY);
+    if (!result.has_value()) {
+      errored = true;
+      continue;
+    }
+    SetAddressPort(&(result.value()), port);
+    Output.push_back(std::move(result.value()));
+    result.reset();
+  }
+  END(Output)
+}
+
 
 filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
 {

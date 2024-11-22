@@ -4055,20 +4055,42 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> TargetValue;
+      optional<bool> targetValue;
       if (Payload.empty() || Payload == "on" || Payload == "ON") {
-        TargetValue = true;
+        targetValue = true;
       } else if (Payload == "off" || Payload == "OFF") {
-        TargetValue = false;
+        targetValue = false;
       }
 
-      if (!TargetValue.has_value()) {
-        optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(Payload);
+      if (targetValue.has_value()) {
+        // Turn ON/OFF
+        m_TargetGame->SetUDPEnabled(targetValue.value());
+        if (targetValue) {
+          m_TargetGame->SendGameDiscoveryCreate();
+          m_TargetGame->SendGameDiscoveryRefresh();
+          if (!m_Aura->m_Net->m_UDPMainServerEnabled)
+            m_TargetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
+        }
+        if (m_TargetGame->GetUDPEnabled()) {
+          SendReply("This lobby will now be displayed in the Local Area Network game list");
+        } else {
+          SendReply("This lobby will no longer be displayed in the Local Area Network game list");
+        }
+      } else {
+        string ip;
+        uint16_t port;
+        if (!SplitIPAddressAndPortOrDefault(Payload, GAME_DEFAULT_UDP_PORT, ip, port)) {
+          ErrorReply("Usage: " + cmdToken + "sendlan ON/OFF");
+          ErrorReply("Usage: " + cmdToken + "sendlan <IP>");
+          break;
+        }
+        optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(ip, ACCEPT_ANY);
         if (!maybeAddress.has_value()) {
           ErrorReply("Usage: " + cmdToken + "sendlan ON/OFF");
           ErrorReply("Usage: " + cmdToken + "sendlan <IP>");
           break;
         }
+        SetAddressPort(&(maybeAddress.value()), port);
         sockaddr_storage* address = &(maybeAddress.value());
         if (GetInnerIPVersion(address) == AF_INET6 && !(m_Aura->m_Net->m_SupportUDPOverIPv6 && m_Aura->m_Net->m_SupportTCPOverIPv6)) {
           ErrorReply("IPv6 support hasn't been enabled. Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
@@ -4079,30 +4101,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> if you are sure about this.");
           break;
         }
-        if (m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.find(Payload) != m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.end()) {
-          ErrorReply("Already sending game info to " + Payload);
-          break;
+        for (auto& existingAddress : m_TargetGame->m_Config->m_ExtraDiscoveryAddresses) {
+          if (GetSameAddressesAndPorts(&existingAddress, address)) {
+            ErrorReply("Already sending game info to " + Payload);
+            break;
+          }
         }
         if (!m_TargetGame->GetUDPEnabled())
           SendReply("This lobby will now be displayed in the Local Area Network game list");
         m_TargetGame->SetUDPEnabled(true);
-        m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.insert(Payload);
+        m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
         SendReply("This lobby will be displayed in the Local Area Network game list for IP " + Payload + ". Make sure your peer has done UDP hole-punching.");
-        break;
       }
 
-      m_TargetGame->SetUDPEnabled(TargetValue.value());
-      if (TargetValue) {
-        m_TargetGame->SendGameDiscoveryCreate();
-        m_TargetGame->SendGameDiscoveryRefresh();
-        if (!m_Aura->m_Net->m_UDPMainServerEnabled)
-          m_TargetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
-      }
-      if (m_TargetGame->GetUDPEnabled()) {
-        SendReply("This lobby will now be displayed in the Local Area Network game list");
-      } else {
-        SendReply("This lobby will no longer be displayed in the Local Area Network game list");
-      }
       break;
     }
 

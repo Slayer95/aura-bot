@@ -113,7 +113,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LogDelay                               = CFG.GetUint32("hosting.log_delay", 180); // default: 3 minutes
 
   m_CheckJoinable                          = CFG.GetBool("monitor.hosting.on_start.check_connectivity", false);
-  m_ExtraDiscoveryAddresses                = CFG.GetIPStringSet("net.game_discovery.udp.extra_clients.ip_addresses", ',', {});
+  m_ExtraDiscoveryAddresses                = CFG.GetHostListWithImplicitPort("net.game_discovery.udp.extra_clients.ip_addresses", GAME_DEFAULT_UDP_PORT, ',');
   m_ReconnectionMode                       = RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED;
 
   m_PrivateCmdToken                        = CFG.GetString("hosting.commands.trigger", "!");

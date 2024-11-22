@@ -3606,16 +3606,13 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
     m_Aura->m_Net->SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
   }
 
-  for (auto& clientIp : m_Config->m_ExtraDiscoveryAddresses) {
-    optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(clientIp);
-    if (!maybeAddress.has_value()) continue; // Should never happen.
-    sockaddr_storage* address = &(maybeAddress.value());
-    if (isLoopbackAddress(address)) continue; // We already ensure sending loopback packets above.
-    bool isIPv6 = GetInnerIPVersion(address) == AF_INET6;
+  for (auto& address : m_Config->m_ExtraDiscoveryAddresses) {
+    if (isLoopbackAddress(&address)) continue; // We already ensure sending loopback packets above.
+    bool isIPv6 = GetInnerIPVersion(&address) == AF_INET6;
     if (isIPv6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) {
       continue;
     }
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(isIPv6 ? AF_INET6 : AF_INET)));
+    m_Aura->m_Net->Send(&address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(isIPv6 ? AF_INET6 : AF_INET)));
   }
 
   // Send to active UDP in TCP tunnels and VLAN connections

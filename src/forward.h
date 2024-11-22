@@ -30,6 +30,7 @@
 #include <utility>
 #include <vector>
 
+class CAsyncObserver;
 class CAura;
 class CAuraDB;
 class CBNCSUtilInterface;
@@ -49,6 +50,7 @@ class CGame;
 class CGameSeeker;
 class CGameSetup;
 class CGameSlot;
+class CGameVirtualUser;
 class CIncomingAction;
 class CIncomingChatEvent;
 class CIncomingChatPlayer;

@@ -164,6 +164,7 @@ public:
   [[nodiscard]] std::set<uint8_t> GetUint8Set(const std::string& key, char separator, const std::set<uint8_t> x);
   [[nodiscard]] std::vector<uint8_t> GetIPv4(const std::string& key, const std::array<uint8_t, 4>& x);
   [[nodiscard]] std::set<std::string> GetIPStringSet(const std::string& key, char separator, const std::set<std::string> x);
+  [[nodiscard]] std::vector<sockaddr_storage> GetHostListWithImplicitPort(const std::string& key, const uint16_t defaultPort, char separator);
 
   [[nodiscard]] std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
   [[nodiscard]] std::filesystem::path GetDirectory(const std::string &key, const std::filesystem::path &x);

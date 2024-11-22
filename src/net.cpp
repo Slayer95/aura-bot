@@ -423,8 +423,7 @@ bool CNet::Init()
     }
   } else {
     for (const auto& clientIp : m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses) {
-      optional<sockaddr_storage> maybeAddress = ParseAddress(clientIp, ACCEPT_IPV6);
-      if (maybeAddress.has_value()) {
+      if (clientIp.ss_family == AF_INET6) {
         Print("[CONFIG] Address " + clientIp + " at <net.game_discovery.udp.extra_clients.ip_addresses> cannot receive game discovery messages, because IPv6 support hasn't been enabled");
         Print("[CONFIG] Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
       }
@@ -610,7 +609,7 @@ void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t por
     PropagateBroadcastEnabled(true);
 }
 
-void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& clientIps)
+void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const vector<sockaddr_storage>& clientIps)
 {
   SendBroadcast(packet);
 
@@ -619,7 +618,7 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const set<string>& c
       PropagateBroadcastEnabled(false);
 
     for (auto& clientIp : clientIps)
-      Send(clientIp, packet);
+      Send(&clientIp, packet);
 
     if (m_Config->m_UDPBroadcastEnabled)
       PropagateBroadcastEnabled(true);

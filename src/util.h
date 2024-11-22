@@ -909,6 +909,47 @@ inline void AssignLength(std::vector<uint8_t>& content)
   return ToDecString(ip[0]) + "." + ToDecString(ip[1]) + "." + ToDecString(ip[2]) + "." + ToDecString(ip[3]);
 }
 
+[[nodiscard]] inline bool SplitIPAddressAndPortOrDefault(const std::string& input, const uint16_t defaultPort, std::string& ip, uint16_t& port)
+{
+  size_t colonPos = input.rfind(':');
+  
+  if (colonPos == std::string::npos) {
+    ip = input;
+    port = defaultPort;
+    return true;
+  }
+
+  if (input.find(']') == std::string::npos) {
+    ip = input.substr(0, colonPos);
+    try {
+      port = std::stoi(input.substr(colonPos + 1));
+    } catch (...) {
+      return false;
+    }
+    return true;
+  }
+
+  // This is an IPv6 literal, expect format: [IPv6]:PORT
+  size_t startBracket = input.find('[');
+  size_t endBracket = input.find(']');
+  if (startBracket == std::string::npos || endBracket == std::string::npos || endBracket < startBracket) {
+    return false;
+  }
+
+  ip = input.substr(startBracket + 1, endBracket - startBracket - 1);
+  if (colonPos > endBracket) {
+    try {
+      port = std::stoi(input.substr(colonPos + 1));
+    } catch (...) {
+      return false;
+    }
+  } else {
+    port = defaultPort;
+  }
+
+  return true;
+}
+
 template <size_t N>
 constexpr std::array<std::string, N> StringArray(const char* const (&strings)[N]) {
   std::array<std::string, N> arr;
