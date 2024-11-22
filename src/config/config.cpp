@@ -610,7 +610,7 @@ set<string> CConfig::GetIPStringSet(const string& key, char separator, const set
   END(Output)
 }
 
-vector<sockaddr_storage> CConfig::GetHostsWithImplicitPort(const string& key, const uint16_t defaultPort)
+vector<sockaddr_storage> CConfig::GetHostListWithImplicitPort(const string& key, const uint16_t defaultPort, char separator)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
@@ -623,13 +623,13 @@ vector<sockaddr_storage> CConfig::GetHostsWithImplicitPort(const string& key, co
   stringstream ss(it->second);
   while (ss.good()) {
     string element;
-    getline(ss, element, ',');
+    getline(ss, element, separator);
     if (element.empty())
       continue;
 
     string ip;
     uint16_t port;
-    if (!SplitIPAddressAndPortOrDefault(element, defaultPort, ip, port)) {
+    if (!SplitIPAddressAndPortOrDefault(element, defaultPort, ip, port) || port == 0) {
       errored = true;
       continue;
     }

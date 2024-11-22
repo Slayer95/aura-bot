@@ -424,7 +424,7 @@ bool CNet::Init()
   } else {
     for (const auto& clientIp : m_Aura->m_GameDefaultConfig->m_ExtraDiscoveryAddresses) {
       if (clientIp.ss_family == AF_INET6) {
-        Print("[CONFIG] Address " + clientIp + " at <net.game_discovery.udp.extra_clients.ip_addresses> cannot receive game discovery messages, because IPv6 support hasn't been enabled");
+        Print("[CONFIG] Address " + AddressToString(clientIp) + " at <net.game_discovery.udp.extra_clients.ip_addresses> cannot receive game discovery messages, because IPv6 support hasn't been enabled");
         Print("[CONFIG] Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
       }
     }
