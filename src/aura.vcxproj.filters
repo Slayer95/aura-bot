@@ -99,6 +99,9 @@
     <ClCompile Include="connection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="async_observer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="game_seeker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -109,6 +112,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game_slot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_virtual_user.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game.cpp">
@@ -251,6 +257,9 @@
     <ClInclude Include="connection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="async_observer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="game_seeker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -261,6 +270,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_slot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_virtual_user.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="aura.h">

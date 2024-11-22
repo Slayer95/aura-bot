@@ -105,10 +105,12 @@ OBJS = lib/csvparser/csvparser.o \
 			 src/net.o \
 			 src/realm.o \
 			 src/realm_chat.o \
+			 src/async_observer.o \
 			 src/game_seeker.o \
 			 src/game_user.o \
 			 src/game_setup.o \
 			 src/game_slot.o \
+			 src/game_virtual_user.o \
 			 src/game.o \
 			 src/aura.o \
 			 src/cli.o \
