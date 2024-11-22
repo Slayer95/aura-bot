@@ -79,9 +79,20 @@ using namespace std;
 //
 
 #define LOG_APP_IF(T, U) \
+    static_assert(T < LOG_LEVEL_TRACE, "Use DLOG_APP_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
         LogApp(U); \
     }
+
+#ifdef DEBUG
+#define DLOG_APP_IF(T, U) \
+    static_assert(T >= LOG_LEVEL_TRACE, "Use LOG_APP_IF for regular log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        LogApp(U); \
+    }
+#else
+#define DLOG_APP_IF(T, U)
+#endif
 
 CGameLogRecord::CGameLogRecord(int64_t gameTicks, string text)
   : m_Ticks(gameTicks),
@@ -1931,18 +1942,22 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
     return;
   }
 
-  if (logLevel <= LOG_LEVEL_TRACE && m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+#ifdef DEBUG
+  if (m_Aura->MatchLogLevel(logLevel)) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
     if (fromUser) {
-      LOG_APP_IF(logLevel, "sent as [" + fromUser->GetName() + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>")
+      LogApp("sent as [" + fromUser->GetName() + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>");
     } else if (fromUID == m_VirtualHostUID) {
-      LOG_APP_IF(logLevel, "sent as Virtual Host -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>")
+      LogApp("sent as Virtual Host -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>");
     } else {
-      LOG_APP_IF(logLevel, "sent as [UID:" + ToDecString(fromUID) + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>")
+      LogApp("sent as [UID:" + ToDecString(fromUID) + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>");
     }
-  } else {
-    LOG_APP_IF(logLevel, "sent to [" + user->GetName() + "] <<" + message + ">>")
   }
+#else
+  if (m_Aura->MatchLogLevel(logLevel)) {
+    LogApp("sent to [" + user->GetName() + "] <<" + message + ">>");
+  }
+#endif
 
   if (!m_GameLoading && !m_GameLoaded) {
     if (message.size() > 254)
@@ -3170,7 +3185,7 @@ void CGame::SendAllActionsCallback()
       break;
   }
   for (GameUser::CGameUser* user : frame.leavers) {
-    LOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion")
+    DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion")
     user->SetDeleteMe(true);
   }
   frame.Reset();
@@ -3602,7 +3617,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
 
   if (!m_Aura->m_Net->SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(AF_INET)))) {
     // Ensure the game is available at loopback.
-    LOG_APP_IF(LOG_LEVEL_TRACE2, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
+    DLOG_APP_IF(LOG_LEVEL_TRACE2, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
     m_Aura->m_Net->SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
   }
 
@@ -3670,7 +3685,11 @@ void CGame::SendGameDiscoveryInfo()
 
 void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
 {
-  LOG_APP_IF(m_Exiting ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
+  if (m_Exiting) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
+  } else {
+    LOG_APP_IF(LOG_LEVEL_INFO, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
+  }
 
   if (!user->GetIsObserver()) {
     m_LastPlayerLeaveTicks = GetTicks();
@@ -4361,7 +4380,11 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
     notifyString = "\x07";
   }
 
-  LOG_APP_IF(notifyString.empty() ? LOG_LEVEL_INFO : LOG_LEVEL_NOTICE, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
+  if (notifyString.empty()) {
+    LOG_APP_IF(LOG_LEVEL_INFO, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
+  } else {
+    LOG_APP_IF(LOG_LEVEL_NOTICE, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
+  }
   return Player;
 }
 
@@ -4685,7 +4708,7 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
 bool CGame::EventUserLeft(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return false;
-  LOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
+  DLOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
   // this function is only called when a client leave packet is received, not when there's a socket error or kick
   // however, clients not only send the leave packet by a user clicking on Quit Game
   // clients also will send a leave packet if the server sends unexpected data
@@ -4774,7 +4797,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   CQueuedActionsFrame& actionFrame = user->GetPingEqualizerFrame();
 
   if (!action.GetImmutableAction().empty()) {
-    LOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
+    DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
   }
 
   if (actionType == ACTION_CHAT_TRIGGER && (m_Config->m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {

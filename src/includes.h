@@ -107,9 +107,20 @@
 #endif
 
 #define PRINT_IF(T, U) \
+    static_assert(T < LOG_LEVEL_TRACE, "Use DPRINT_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
         Print(U); \
     }
+
+#ifdef DEBUG
+#define DPRINT_IF(T, U) \
+    static_assert(T >= LOG_LEVEL_TRACE, "Use PRINT_IF for regular log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        Print(U); \
+    }
+#else
+#define DPRINT_IF(T, U)
+#endif
 
 // time
 
