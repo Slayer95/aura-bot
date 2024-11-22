@@ -4079,7 +4079,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       } else {
         string ip;
         uint16_t port;
-        if (!SplitIPAddressAndPortOrDefault(Payload, GAME_DEFAULT_UDP_PORT, ip, port)) {
+        if (!SplitIPAddressAndPortOrDefault(Payload, GAME_DEFAULT_UDP_PORT, ip, port) || port == 0) {
           ErrorReply("Usage: " + cmdToken + "sendlan ON/OFF");
           ErrorReply("Usage: " + cmdToken + "sendlan <IP>");
           break;
@@ -4096,9 +4096,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("IPv6 support hasn't been enabled. Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
           break;
         }
-        if ((address->ss_family == AF_INET6 && isSpecialIPv6Address(reinterpret_cast<struct sockaddr_in6*>(address))) ||
-          (address->ss_family == AF_INET && isSpecialIPv4Address(reinterpret_cast<struct sockaddr_in*>(address)))) {
-          ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> if you are sure about this.");
+        if (((address->ss_family == AF_INET6 && isSpecialIPv6Address(reinterpret_cast<struct sockaddr_in6*>(address))) ||
+          (address->ss_family == AF_INET && isSpecialIPv4Address(reinterpret_cast<struct sockaddr_in*>(address)))) && !GetIsSudo()) {
+          ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> or use sudo if you are sure about this.");
+          break;
+        }
+        if (m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.size() >= UDP_DISCOVERY_MAX_EXTRA_ADDRESSES) {
+          ErrorReply("Max sendlan addresses reached.");
           break;
         }
         for (auto& existingAddress : m_TargetGame->m_Config->m_ExtraDiscoveryAddresses) {
