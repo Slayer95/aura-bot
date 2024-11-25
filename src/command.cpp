@@ -4105,16 +4105,24 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Max sendlan addresses reached.");
           break;
         }
+        bool alreadySending = false;
         for (auto& existingAddress : m_TargetGame->m_Config->m_ExtraDiscoveryAddresses) {
           if (GetSameAddressesAndPorts(&existingAddress, address)) {
-            ErrorReply("Already sending game info to " + Payload);
+            alreadySending = true;
             break;
           }
         }
-        if (!m_TargetGame->GetUDPEnabled())
+        if (alreadySending && m_TargetGame->GetUDPEnabled()) {
+          ErrorReply("Already sending game info to " + Payload);
+          break;
+        }
+        if (!m_TargetGame->GetUDPEnabled()) {
           SendReply("This lobby will now be displayed in the Local Area Network game list");
+        }
         m_TargetGame->SetUDPEnabled(true);
-        m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
+        if (!alreadySending) {
+          m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
+        }
         SendReply("This lobby will be displayed in the Local Area Network game list for IP " + Payload + ". Make sure your peer has done UDP hole-punching.");
       }
 
