@@ -4793,11 +4793,10 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   }
 
   const uint8_t actionType = action.GetSniffedType();
-  const uint8_t frameOffset = user->GetPingEqualizerOffset();
   CQueuedActionsFrame& actionFrame = user->GetPingEqualizerFrame();
 
   if (!action.GetImmutableAction().empty()) {
-    DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(frameOffset) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
+    DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
   }
 
   if (actionType == ACTION_CHAT_TRIGGER && (m_Config->m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {

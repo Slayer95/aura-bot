@@ -901,9 +901,8 @@ void CMap::Load(CConfig* CFG)
                   (Slot).SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
               }
 
-              uint32_t SlotNum = 1;
-
 #ifdef DEBUG
+              uint32_t SlotNum = 1;
               if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
                 Print("[MAP] calculated <map.width = " + ByteArrayToDecString(MapWidth) + ">");
                 Print("[MAP] calculated <map.height = " + ByteArrayToDecString(MapHeight) + ">");
@@ -911,12 +910,12 @@ void CMap::Load(CConfig* CFG)
                 Print("[MAP] calculated <map.num_players = " + ToDecString(MapNumPlayers) + ">");
                 Print("[MAP] calculated <map.num_teams = " + ToDecString(MapNumTeams) + ">");
               }
-#endif
 
-              for (auto& Slot : Slots) {
-                DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.slot_" + to_string(SlotNum) + " = " + ByteArrayToDecString((Slot).GetProtocolArray()) + ">")
+              for (const auto& Slot : Slots) {
+                DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.slot_" + to_string(SlotNum) + " = " + ByteArrayToDecString(Slot.GetProtocolArray()) + ">")
                 ++SlotNum;
               }
+#endif
             } else {
               Print("[MAP] unable to calculate <map.slot_N>, <map.num_players>, <map.num_teams> - unable to extract war3map.w3i from map file");
             }
