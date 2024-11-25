@@ -6402,12 +6402,12 @@ uint8_t CGame::GetNewColor() const
 uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect)
 {
   // Full observers can never pause/resume/save the game.
-  const uint8_t isUserFullObserver = user != nullptr && user->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_ALLOWED;
+  const uint8_t userCanSendActions = user && isDisconnect && !user->GetLeftMessageSent() && !(user->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_ALLOWED);
 
   // Note that the game client desyncs if the UID of an actual user is used.
   switch (actionType) {
     case ACTION_PAUSE: {
-      if (user && isDisconnect && !isUserFullObserver && !user->GetLeftMessageSent() && user->GetCanPause()) {
+      if (userCanSendActions && user->GetCanPause()) {
         return user->GetUID();
       }
       
@@ -6421,7 +6421,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
       return 0xFF;
     }
     case ACTION_RESUME: {
-      if (user && isDisconnect && !isUserFullObserver && !user->GetLeftMessageSent()) {
+      if (userCanSendActions) {
         return user->GetUID();
       }
 
@@ -6435,8 +6435,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
     }
 
     case ACTION_SAVE: {
-      // Referees can save the game, but full observers cannot.
-      if (user && isDisconnect && !isUserFullObserver && !user->GetLeftMessageSent() && user->GetCanSave()) {
+      if (userCanSendActions && user->GetCanSave()) {
         return user->GetUID();
       }
       for (CGameVirtualUser& fakeUser : m_FakeUsers) {
