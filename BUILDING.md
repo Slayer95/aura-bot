@@ -74,7 +74,7 @@ Optionally, D++ for Discord integration. Note that this step can take around hal
 	cd dpp-src
 	mkdir build
 	cd build
-	cmake .. -DCPR_USE_SYSTEM_CURL=ON
+	cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
 	cmake --build . -j4
 	make install
 
