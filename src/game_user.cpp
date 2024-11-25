@@ -76,7 +76,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_TotalPacketsReceived(0),
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_Status(USERSTATUS_LOBBY),
-    m_QuitGame(false),
+    m_IsLeaver(false),
     m_PingEqualizerOffset(0),
     m_PingEqualizerFrameNode(nullptr),
     m_PongCounter(0),

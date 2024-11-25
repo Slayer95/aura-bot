@@ -145,7 +145,7 @@ protected:
   uint16_t                            m_ActionsLatency;
   std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>               m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
-  std::vector<uint16_t>               m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
+  std::vector<CGameVirtualUser>       m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   CMap*                               m_Map;                           // map data
   std::string                         m_GameName;                      // game name
   uint64_t                            m_GameHistoryId;
@@ -614,7 +614,7 @@ public:
   bool CreateFakePlayer(const bool useVirtualHostName);
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakeUser(uint8_t SID);
-  bool GetIsFakeObserver(const uint16_t fakePlayer) const;
+  bool GetIsFakeObserver(const CGameVirtualUser& fakeUser) const;
 
   uint8_t FakeAllSlots();
   void DeleteFakeUsersLobby();

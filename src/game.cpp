@@ -59,6 +59,7 @@
 #include "map.h"
 #include "connection.h"
 #include "game_user.h"
+#include "game_virtual_user.h"
 #include "protocol/game_protocol.h"
 #include "protocol/gps_protocol.h"
 #include "protocol/vlan_protocol.h"
@@ -967,8 +968,8 @@ uint8_t CGame::GetNumJoinedObservers() const
 uint8_t CGame::GetNumFakePlayers() const
 {
   uint8_t counter = 0;
-  for (const auto& fake : m_FakeUsers) {
-    if (!GetIsFakeObserver(fake)) {
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    if (!GetIsFakeObserver(fakeUser)) {
       ++counter;
     }
   }
@@ -978,8 +979,8 @@ uint8_t CGame::GetNumFakePlayers() const
 uint8_t CGame::GetNumFakeObservers() const
 {
   uint8_t counter = 0;
-  for (const auto& fake : m_FakeUsers) {
-    if (GetIsFakeObserver(fake)) {
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    if (GetIsFakeObserver(fakeUser)) {
       ++counter;
     }
   }
@@ -2933,15 +2934,12 @@ void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
 
 void CGame::SendFakeUsersInfo(CConnection* user) const
 {
-  if (m_FakeUsers.empty())
+  if (m_FakeUsers.empty()) {
     return;
+  }
 
-  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-
-  for (const uint16_t fakePlayer : m_FakeUsers) {
-    // The higher 8 bytes are the original SID the user was created at.
-    // This information is important for letting hosts know which !open, !close, commands to execute.
-    Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(static_cast<uint8_t>(fakePlayer), "User[" + ToDecString(1 + (fakePlayer >> 8)) + "]", IP, IP));
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    Send(user, fakeUser.GetPlayerInfoBytes());
   }
 }
 
@@ -3719,7 +3717,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
     if (user->GetLagging()) {
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
-    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetQuitGame() && user->GetAnyKicked()));
+    SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetIsLeaver() && user->GetAnyKicked()));
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
@@ -4167,7 +4165,7 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which UIDs Aura considers available.
   if (sendChat) {
-    if (!user->GetQuitGame()) {
+    if (!user->GetIsLeaver()) {
       SendAllChat(user->GetExtendedName() + " " + user->GetLeftReason() + ".");
     } else if (user->GetRealm(false)) {
       // Note: Not necessarily spoof-checked
@@ -4191,8 +4189,8 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       }
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
-    for (auto& fake : m_FakeUsers) {
-      Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fake), PLAYERLEAVE_DISCONNECT));
+    for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+      Send(p1, fakeUser.GetGameQuitBytes(PLAYERLEAVE_DISCONNECT));
     }
     p1->DisableReconnect();
     p1->SetLagging(false);
@@ -4716,7 +4714,7 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user)
     user->SetLeftReason("Leaving the game voluntarily");
     user->SetLeftCode(PLAYERLEAVE_LOST);
   }
-  user->SetQuitGame(true);
+  user->SetIsLeaver(true);
   user->DisableReconnect();
   user->CloseConnection();
   TrySaveOnDisconnect(user, true);
@@ -5602,10 +5600,9 @@ void CGame::EventGameStartedLoading()
   // load messages for disconnected real players, but we let automatic resizing handle that.
 
   m_LoadingVirtualBuffer.reserve(5 * m_FakeUsers.size());
-  for (auto& fakePlayer : m_FakeUsers) {
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
     // send a game loaded packet for each fake user
-    vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(static_cast<uint8_t>(fakePlayer));
-    AppendByteArrayFast(m_LoadingVirtualBuffer, packet);
+    AppendByteArrayFast(m_LoadingVirtualBuffer, fakeUser.GetGameLoadedBytes());
   }
 
   if (GetAnyUsingGProxy()) {
@@ -5964,7 +5961,7 @@ void CGame::HandleGameLoadedStats()
       uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
       if (fakePlayerIndex != 0xFF) {
         exportPlayerNames.push_back(string());
-        exportPlayerIDs.push_back(static_cast<uint8_t>(m_FakeUsers[fakePlayerIndex]));
+        exportPlayerIDs.push_back(m_FakeUsers[fakePlayerIndex].GetUID());
       }
     } else {
       exportPlayerNames.push_back(user->GetName());
@@ -6326,8 +6323,8 @@ uint8_t CGame::GetNewUID() const
       continue;
 
     bool inUse = false;
-    for (const uint16_t fakePlayer : m_FakeUsers) {
-      if (static_cast<uint8_t>(fakePlayer) == TestUID) {
+    for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+      if (fakeUser.GetUID() == TestUID) {
         inUse = true;
         break;
       }
@@ -6418,9 +6415,9 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
       }
       // Referees have unlimited pauses
       if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-        for (auto& fakeUser : m_FakeUsers) {
+        for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
           if (GetIsFakeObserver(fakeUser)) {
-            return static_cast<uint8_t>(fakeUser);
+            return fakeUser.GetUID();
           }
         }
       }
@@ -6429,7 +6426,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
           m_PauseCounter++;
           continue;
         }
-        return static_cast<uint8_t>(m_FakeUsers[m_PauseCounter++ % m_FakeUsers.size()]);
+        return m_FakeUsers[m_PauseCounter++ % m_FakeUsers.size()].GetUID();
       }
       return 0xFF;
     }
@@ -6438,7 +6435,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
       uint8_t fakePlayerIndex = static_cast<uint8_t>(m_FakeUsers.size());
       while (fakePlayerIndex--) {
         if (!isFullObservers && GetIsFakeObserver(m_FakeUsers[fakePlayerIndex])) {
-          return static_cast<uint8_t>(m_FakeUsers[fakePlayerIndex]);
+          return m_FakeUsers[fakePlayerIndex].GetUID();
         }
       }
       return 0xFF;
@@ -6454,7 +6451,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
           m_NextSaveFakeUser++;
           continue;
         }
-        return static_cast<uint8_t>(m_FakeUsers[m_NextSaveFakeUser++]);
+        return m_FakeUsers[m_NextSaveFakeUser++].GetUID();
       }
       return 0xFF;
     }
@@ -6471,7 +6468,7 @@ uint8_t CGame::HostToMapCommunicationUID() const
   const uint8_t SID = m_Map->GetHMCSlot() - 1;
   const uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
   if (fakePlayerIndex >= static_cast<uint8_t>(m_FakeUsers.size())) return 0xFF; 
-  return static_cast<uint8_t>(m_FakeUsers[fakePlayerIndex]);
+  return m_FakeUsers[fakePlayerIndex].GetUID();
 }
 
 bool CGame::GetHasAnyActiveTeam() const
@@ -6580,13 +6577,13 @@ uint8_t CGame::GetPublicHostUID() const
   if (!m_GameLoading && !m_FakeUsers.empty()) {
     // After loaded, we need to carefully consider who to speak as.
     if (!m_GameLoading && !m_GameLoaded) {
-      return static_cast<uint8_t>(m_FakeUsers[m_FakeUsers.size() - 1]);
+      return m_FakeUsers[m_FakeUsers.size() - 1].GetUID();
     }
-    for (auto& fakePlayer : m_FakeUsers) {
-      if (GetIsFakeObserver(fakePlayer) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+    for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+      if (GetIsFakeObserver(fakeUser) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
         continue;
       }
-      return static_cast<uint8_t>(fakePlayer);
+      return fakeUser.GetUID();
     }
   }
 
@@ -6636,15 +6633,15 @@ uint8_t CGame::GetHiddenHostUID() const
   //vector<uint8_t> availableRefereeUIDs;
 
   if (!m_GameLoading && !m_FakeUsers.empty()) {
-    for (auto& fakePlayer : m_FakeUsers) {
-      if (GetIsFakeObserver(fakePlayer) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+    for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+      if (GetIsFakeObserver(fakeUser) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
         continue;
       }
-      if (GetIsFakeObserver(fakePlayer)) {
+      if (GetIsFakeObserver(fakeUser)) {
         //availableRefereeUIDs.push_back(static_cast<uint8_t>(fakePlayer));
-        return static_cast<uint8_t>(fakePlayer);
+        return fakeUser.GetUID();
       } else {
-        availableUIDs.push_back(static_cast<uint8_t>(fakePlayer));
+        availableUIDs.push_back(fakeUser.GetUID());
       }
     }
   }
@@ -6910,11 +6907,13 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
 
   uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
   while (i--) {
-    uint8_t fakeSID = static_cast<uint8_t>(m_FakeUsers[i]);
+    uint8_t fakeSID = m_FakeUsers[i].GetSID();
     if (fakeSID == SID1) {
-      m_FakeUsers[i] &= (static_cast<uint16_t>(SID2) | 0xFF00);
+      m_FakeUsers[i].SetSID(SID2);
+      m_FakeUsers[i].SetObserver(SID2 == m_Map->GetVersionMaxSlots());
     } else if (fakeSID == SID2) {
-      m_FakeUsers[i] &= (static_cast<uint16_t>(SID1) | 0xFF00);
+      m_FakeUsers[i].SetSID(SID1);
+      m_FakeUsers[i].SetObserver(SID1 == m_Map->GetVersionMaxSlots());
     }
   }
 
@@ -7141,6 +7140,11 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
           user->ClearUserReady();
         } else {
           user->SetPowerObserver(false);
+        }
+      } else {
+        uint8_t fakeUserIndex = FindFakeUserFromSID(SID);
+        if (fakeUserIndex < static_cast<uint8_t>(m_FakeUsers.size())) {
+          m_FakeUsers[fakeUserIndex].SetObserver(toObservers);
         }
       }
     }
@@ -8418,11 +8422,11 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
 
 void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
 {
-  for (const auto& fakePlayer : m_FakeUsers) {
-    if (static_cast<uint8_t>(fakePlayer) == exceptUID) {
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    if (fakeUser.GetUID() == exceptUID) {
       continue;
     }
-    actionFrame.AddAction(std::move(CIncomingAction(static_cast<uint8_t>(fakePlayer), ACTION_SAVE_ENDED)));
+    actionFrame.AddAction(std::move(CIncomingAction(fakeUser.GetUID(), ACTION_SAVE_ENDED)));
   }
 }
 
@@ -8650,7 +8654,7 @@ uint8_t CGame::FindFakeUserFromSID(const uint8_t SID) const
 {
   uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
   while (i--) {
-    if (SID == static_cast<uint8_t>(m_FakeUsers[i] >> 8)) {
+    if (SID == m_FakeUsers[i].GetSID()) {
       return i;
     }
   }
@@ -8676,7 +8680,7 @@ void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const stri
   );
   if (!isCustomForces) SetSlotTeamAndColorAuto(SID);
 
-  m_FakeUsers.push_back(UID | (SID << 8));
+  m_FakeUsers.emplace_back(this, UID, SID, name);
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
 }
 
@@ -8756,14 +8760,14 @@ bool CGame::DeleteFakeUser(uint8_t SID)
   if (!slot) return false;
   const bool isHMCSlot = m_Map->GetHMCEnabled() && SID + 1 == m_Map->GetHMCSlot();
   for (auto it = begin(m_FakeUsers); it != end(m_FakeUsers); ++it) {
-    if (slot->GetUID() == static_cast<uint8_t>(*it)) {
+    if (slot->GetUID() == it->GetUID()) {
       if (GetIsCustomForces()) {
         m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, isHMCSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
       } else {
         m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, isHMCSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
       }
       // Ensure this is sent before virtual host rejoins
-      SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(*it), PLAYERLEAVE_LOBBY));
+      SendAll(it->GetGameQuitBytes(PLAYERLEAVE_LOBBY));
       it = m_FakeUsers.erase(it);
       CreateVirtualHost();
       m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -8773,9 +8777,9 @@ bool CGame::DeleteFakeUser(uint8_t SID)
   return false;
 }
 
-bool CGame::GetIsFakeObserver(const uint16_t fakePlayer) const
+bool CGame::GetIsFakeObserver(const CGameVirtualUser& fakeUser) const
 {
-  const CGameSlot* slot = InspectSlot(fakePlayer >> 8);
+  const CGameSlot* slot = InspectSlot(fakeUser.GetSID());
   return slot != nullptr && slot->GetTeam() == m_Map->GetVersionMaxSlots();
 }
 
@@ -8827,15 +8831,15 @@ void CGame::DeleteFakeUsersLobby()
     return;
 
   uint8_t hmcSID = GetHMCSID();
-  for (auto& fakePlayer : m_FakeUsers) {
-    uint8_t SID = fakePlayer >> 8;
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    const uint8_t SID = fakeUser.GetSID();
     if (GetIsCustomForces()) {
       m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, SID == hmcSID ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Slots[SID].GetTeam(), m_Slots[SID].GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(&(m_Slots[SID])));
     } else {
       m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, SID == hmcSID ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
     }
     // Ensure this is sent before virtual host rejoins
-    SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), GetIsLobby() ? PLAYERLEAVE_DISCONNECT : PLAYERLEAVE_LOBBY));
+    SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_LOBBY));
   }
 
   m_FakeUsers.clear();
@@ -8848,8 +8852,8 @@ void CGame::DeleteFakeUsersLoaded()
   if (m_FakeUsers.empty())
     return;
 
-  for (auto& fakePlayer : m_FakeUsers) {
-    SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(static_cast<uint8_t>(fakePlayer), PLAYERLEAVE_DISCONNECT));
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_DISCONNECT));
   }
 
   m_FakeUsers.clear();

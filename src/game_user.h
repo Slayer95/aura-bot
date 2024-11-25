@@ -81,8 +81,8 @@ namespace GameUser
     uint32_t                         m_TotalPacketsReceived;         // the total number of packets received from the player
     uint32_t                         m_LeftCode;                     // the code to be sent in W3GS_PLAYERLEAVE_OTHERS for why this player left the game
     uint8_t                          m_Status;
-    bool                             m_QuitGame;
-    uint8_t                          m_PingEqualizerOffset;          // whow many frames should actions sent by this player be offset by ping equalizer
+    bool                             m_IsLeaver;
+    uint8_t                          m_PingEqualizerOffset;          // how many frames are actions sent by this player offset by ping equalizer
     QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
     uint32_t                         m_PongCounter;
     uint32_t                         m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
@@ -178,7 +178,7 @@ namespace GameUser
     [[nodiscard]] inline bool                     HasLeftReason() const { return !m_LeftReason.empty(); }
     [[nodiscard]] inline std::string              GetLeftReason() const { return m_LeftReason; }
     [[nodiscard]] inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
-    [[nodiscard]] inline bool                     GetQuitGame() const { return m_QuitGame; }
+    [[nodiscard]] inline bool                     GetIsLeaver() const { return m_IsLeaver; }
     [[nodiscard]] inline bool                     GetIsInLoadingScreen() const { return m_Status == USERSTATUS_LOADING_SCREEN; }
     [[nodiscard]] inline bool                     GetIsEnding() const { return m_Status == USERSTATUS_ENDING; }
     [[nodiscard]] inline bool                     GetIsEnded() const { return m_Status == USERSTATUS_ENDED; }
@@ -268,7 +268,7 @@ namespace GameUser
 
     inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
     inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
-    inline void SetQuitGame(bool nQuitGame) { m_QuitGame = nQuitGame; }
+    inline void SetIsLeaver(bool nIsLeaver) { m_IsLeaver = nIsLeaver; }
     inline void SetStatus(uint8_t nStatus) { m_Status = nStatus; }
     inline void TrySetEnding() {
       if (m_Status != USERSTATUS_ENDED) {

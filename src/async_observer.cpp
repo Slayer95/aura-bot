@@ -30,14 +30,14 @@
 #include "aura.h"
 #include "config/config_bot.h"
 #include "game.h"
-#include "protocol/gameprotocol.h"
-#include "gameuser.h"
-#include "protocol/gpsprotocol.h"
+#include "game_user.h"
 #include "map.h"
 #include "net.h"
 #include "realm.h"
 #include "socket.h"
-#include "protocol/vlanprotocol.h"
+#include "protocol/game_protocol.h"
+#include "protocol/gps_protocol.h"
+#include "protocol/vlan_protocol.h"
 
 using namespace std;
 
@@ -138,7 +138,6 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
             break;
           }
           break;
-        }
 
          default:
           Abort = true;
