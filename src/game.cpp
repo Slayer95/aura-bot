@@ -298,8 +298,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_LastCustomStatsUpdateTime(0),
     m_GameOver(GAME_ONGOING),
     m_LastLagScreenResetTime(0),
-    m_PauseCounter(0),
-    m_NextSaveFakeUser(0),
     m_RandomSeed(0),
     m_HostCounter(nGameSetup->m_Identifier.has_value() ? nGameSetup->m_Identifier.value() : nAura->NextHostCounter()),
     m_EntryKey(0),
@@ -5589,6 +5587,7 @@ void CGame::EventGameStartedLoading()
 
   for (auto& user : m_Users) {
     user->SetStatus(USERSTATUS_LOADING_SCREEN);
+    user->SetWhoisShouldBeSent(false);
   }
 
   // record the number of starting users
@@ -5644,7 +5643,6 @@ void CGame::EventGameStartedLoading()
       user->GetIPStringStrict(),
       m_Slots[SID].GetColor()
     ));
-    user->SetWhoisShouldBeSent(false);
   }
 
   for (auto& user : m_Users) {
@@ -5661,6 +5659,7 @@ void CGame::EventGameStartedLoading()
     for (auto& user : m_Users) {
       if (user->GetIsObserver()) {
         user->SetCannotPause();
+        user->SetCannotSave();
       }
     }
   }
@@ -6046,8 +6045,6 @@ void CGame::Remake()
   m_GameOverTime = nullopt;
   m_LastPlayerLeaveTicks = nullopt;
   m_LastLagScreenResetTime = 0;
-  m_PauseCounter = 0;
-  m_NextSaveFakeUser = 0;
   m_SyncCounter = 0;
   m_SyncCounterChecked = 0;
   m_MaxPingEqualizerDelayFrames = 0;
@@ -6404,54 +6401,50 @@ uint8_t CGame::GetNewColor() const
 
 uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect)
 {
-  const bool isFullObservers = m_Map->GetMapObservers() == MAPOBS_ALLOWED;
+  // Full observers can never pause/resume/save the game.
+  const uint8_t isUserFullObserver = user != nullptr && user->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_ALLOWED;
+
   // Note that the game client desyncs if the UID of an actual user is used.
   switch (actionType) {
     case ACTION_PAUSE: {
-      // Referees can pause the game without limit.
-      // Full observers can never pause the game.
-      if (user && isDisconnect && !user->GetLeftMessageSent() && user->GetCanPause()) {
+      if (user && isDisconnect && !isUserFullObserver && !user->GetLeftMessageSent() && user->GetCanPause()) {
         return user->GetUID();
       }
-      // Referees have unlimited pauses
-      if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-        for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-          if (GetIsFakeObserver(fakeUser)) {
-            return fakeUser.GetUID();
-          }
+      
+      for (CGameVirtualUser& fakeUser : m_FakeUsers) {
+        if (fakeUser.GetCanPause()) {
+          // Referees could get unlimited pauses, but that's abusable, so we limit them just like regular players.
+          fakeUser.DropRemainingPauses();
+          return fakeUser.GetUID();
         }
-      }
-      while (m_PauseCounter < m_FakeUsers.size() * 3) {
-        if (isFullObservers && GetIsFakeObserver(m_FakeUsers[m_PauseCounter % m_FakeUsers.size()])) {
-          m_PauseCounter++;
-          continue;
-        }
-        return m_FakeUsers[m_PauseCounter++ % m_FakeUsers.size()].GetUID();
       }
       return 0xFF;
     }
     case ACTION_RESUME: {
-      // Referees can unpause the game, but full observers cannot.
-      uint8_t fakePlayerIndex = static_cast<uint8_t>(m_FakeUsers.size());
-      while (fakePlayerIndex--) {
-        if (!isFullObservers && GetIsFakeObserver(m_FakeUsers[fakePlayerIndex])) {
-          return m_FakeUsers[fakePlayerIndex].GetUID();
+      if (user && isDisconnect && !isUserFullObserver && !user->GetLeftMessageSent()) {
+        return user->GetUID();
+      }
+
+      for (CGameVirtualUser& fakeUser : m_FakeUsers) {
+        if (fakeUser.GetCanResume()) {
+          return fakeUser.GetUID();
         }
       }
+
       return 0xFF;
     }
 
     case ACTION_SAVE: {
       // Referees can save the game, but full observers cannot.
-      if (user && isDisconnect && !(isFullObservers && user->GetIsObserver()) && !user->GetLeftMessageSent() && user->GetCanSave()) {
+      if (user && isDisconnect && !isUserFullObserver && !user->GetLeftMessageSent() && user->GetCanSave()) {
         return user->GetUID();
       }
-      while (m_NextSaveFakeUser < m_FakeUsers.size()) {
-        if (isFullObservers && GetIsFakeObserver(m_FakeUsers[m_NextSaveFakeUser])) {
-          m_NextSaveFakeUser++;
-          continue;
+      for (CGameVirtualUser& fakeUser : m_FakeUsers) {
+        if (fakeUser.GetCanSave()) {
+          // Referees could get unlimited saves, but that's abusable, so we limit them just like regular players.
+          fakeUser.DropRemainingSaves();
+          return fakeUser.GetUID();
         }
-        return m_FakeUsers[m_NextSaveFakeUser++].GetUID();
       }
       return 0xFF;
     }
@@ -8405,6 +8398,7 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
 {
   const uint8_t UID = SimulateActionUID(ACTION_SAVE, user, isDisconnect);
   if (UID == 0xFF) return false;
+
   string fileName = GetSaveFileName(UID);
   LOG_APP_IF(LOG_LEVEL_INFO, "saving as " + fileName)
 
@@ -8565,6 +8559,11 @@ bool CGame::GetIsCheckJoinable() const
 void CGame::SetIsCheckJoinable(const bool nCheckIsJoinable) const 
 {
   m_Config->m_CheckJoinable = nCheckIsJoinable;
+}
+
+bool CGame::GetHasReferees() const
+{
+  return m_Map->GetMapObservers() == MAPOBS_REFEREES;
 }
 
 bool CGame::GetIsSupportedGameVersion(uint8_t nVersion) const {

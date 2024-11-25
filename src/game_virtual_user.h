@@ -74,8 +74,9 @@ public:
 
   [[nodiscard]] inline bool                     GetIsObserver() const { return m_Observer; }
   [[nodiscard]] inline bool                     GetLeftMessageSent() const { return m_LeftMessageSent; }
-  [[nodiscard]] inline bool                     GetCanPause() { return (m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_PAUSE) && m_RemainingPauses > 0; }
-  [[nodiscard]] inline bool                     GetCanSave() { return (m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SAVE) && m_RemainingSaves > 0; }
+  [[nodiscard]] bool                            GetCanPause() const;
+  [[nodiscard]] bool                            GetCanResume() const;
+  [[nodiscard]] bool                            GetCanSave() const;
 
   [[nodiscard]] std::vector<uint8_t>            GetPlayerInfoBytes() const;
   [[nodiscard]] std::vector<uint8_t>            GetGameLoadedBytes() const;

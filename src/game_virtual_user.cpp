@@ -73,6 +73,34 @@ string CGameVirtualUser::GetDisplayName() const
   */
 }
 
+bool CGameVirtualUser::GetCanPause() const
+{
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_PAUSE)) return false;
+  if (m_RemainingPauses == 0) return false;
+
+  // Referees can pause the game without limit.
+  // Full observers can never pause the game.
+  return !m_Game->GetIsFakeObserver(this) || m_Game->GetHasReferees();
+}
+
+bool CGameVirtualUser::GetCanResume() const
+{
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_RESUME)) return false;
+
+  // Referees can unpause the game, but full observers cannot.
+  return !m_Game->GetIsFakeObserver(this) || m_Game->GetHasReferees();
+}
+
+bool CGameVirtualUser::GetCanSave() const
+{
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SAVE)) return false;
+  if (m_RemainingSaves == 0) return false;
+
+  // Referees can save the game without limit.
+  // Full observers can never save the game.
+  return !m_Game->GetIsFakeObserver(this) || m_Game->GetHasReferees();
+}
+
 vector<uint8_t> CGameVirtualUser::GetPlayerInfoBytes() const
 {
   const array<uint8_t, 4> IP = {0, 0, 0, 0};
