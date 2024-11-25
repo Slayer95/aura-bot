@@ -5499,7 +5499,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->m_FakeUsers.empty() || !m_TargetGame->Resume()) {
+      if (m_TargetGame->m_FakeUsers.empty() || !m_TargetGame->Resume(m_GameUser, false)) {
         ErrorReply("This game does not support the " + cmdToken + "resume command. Use the game menu instead.");
         break;
       }

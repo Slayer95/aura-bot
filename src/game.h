@@ -675,12 +675,12 @@ public:
   bool Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   void SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame);
   bool Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
-  bool Resume(CQueuedActionsFrame& actionFrame);
+  bool Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   bool TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
   bool Save(GameUser::CGameUser* user, const bool isDisconnect);
   void SaveEnded(const uint8_t exceptUID);
   bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
-  bool Resume();
+  bool Resume(GameUser::CGameUser* user, const bool isDisconnect);
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstByte, const uint32_t secondByte);
   bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);

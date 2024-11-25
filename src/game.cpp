@@ -8433,9 +8433,9 @@ bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, c
   return true;
 }
 
-bool CGame::Resume(CQueuedActionsFrame& actionFrame)
+bool CGame::Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
-  const uint8_t UID = SimulateActionUID(ACTION_RESUME, nullptr, false);
+  const uint8_t UID = SimulateActionUID(ACTION_RESUME, user, isDisconnect);
   if (UID == 0xFF) return false;
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_RESUME)));
@@ -8519,9 +8519,9 @@ bool CGame::Pause(GameUser::CGameUser* user, const bool isDisconnect)
   return Pause(user, GetLastActionFrame(), isDisconnect);
 }
 
-bool CGame::Resume()
+bool CGame::Resume(GameUser::CGameUser* user, const bool isDisconnect)
 {
-  return Resume(GetLastActionFrame());
+  return Resume(user, GetLastActionFrame(), isDisconnect);
 }
 
 bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstByte, const uint32_t secondByte)
