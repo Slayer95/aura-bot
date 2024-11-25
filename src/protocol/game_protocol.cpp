@@ -142,7 +142,7 @@ namespace GameProtocol
     /*const std::array<uint8_t, 4> CRC;
     copy_n(data.begin() + 4, 4, CRC.begin());*/
     std::vector<uint8_t> action = std::vector<uint8_t>(begin(data) + 8, end(data));
-    return std::move(CIncomingAction(UID, action));
+    return CIncomingAction(UID, action);
   }
 
   uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data)
