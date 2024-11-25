@@ -40,8 +40,15 @@
 class CAsyncObserver final : public CConnection
 {
 public:
-  CAsyncObserver(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket);
-  CAsyncObserver(CConnection* nConnection, uint8_t nType);
+  CGame*                                                        m_Game;
+  bool                                                          m_Synchronized;
+  uint8_t                                                       m_Goal;
+  uint8_t                                                       m_UID;
+  uint8_t                                                       m_SID;
+  uint8_t                                                       m_FrameRate;
+  uint32_t                                                      m_Offset;
+
+  CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID);
   ~CAsyncObserver();
 
   // processing functions

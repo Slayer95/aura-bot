@@ -45,16 +45,16 @@ using namespace std;
 // CAsyncObserver
 //
 
-CAsyncObserver::CAsyncObserver(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket)
-  : CConnection(nAura, nPort, nSocket)
+CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID)
+  : CConnection(*nConnection),
+    m_Game(nGame),
+    m_Synchronized(false),
+    m_Goal(ASYNC_OBSERVER_GOAL_OBSERVER),
+    m_UID(nUID),
+    m_SID(nGame->GetSIDFromUID(nUID)),
+    m_FrameRate(1),
+    m_Offset(0)
 {
-  m_Type = nType;
-}
-
-CAsyncObserver::CAsyncObserver(CConnection* nConnection, uint8_t nType)
-  : CConnection(*nConnection)
-{
-  m_Type = nType;
 }
 
 CAsyncObserver::~CAsyncObserver()

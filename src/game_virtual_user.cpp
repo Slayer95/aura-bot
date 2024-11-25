@@ -36,18 +36,20 @@ using namespace std;
 
 CGameVirtualUser::CGameVirtualUser(CGame* nGame, uint8_t nSID, uint8_t nUID, string nName)
   : m_Game(nGame),
-    m_Name(std::move(nName)),
-    m_LeftCode(PLAYERLEAVE_LOBBY),
+    m_Observer(false),
+    m_LeftMessageSent(false),
+    m_HasPlayerIntent(false),
     m_Status(USERSTATUS_LOBBY),
     m_SID(nSID),
     m_UID(nUID),
     m_OldUID(0xFF),
     m_PseudonymUID(0xFF),
-    m_Observer(false),
-    m_LeftMessageSent(false),
     m_AllowedActions(VIRTUAL_USER_ALLOW_ACTIONS_ANY),
+    m_AllowedConnections(VIRTUAL_USER_ALLOW_CONNECTIONS_NONE),
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
-    m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
+    m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
+    m_LeftCode(PLAYERLEAVE_LOBBY),
+    m_Name(std::move(nName))
 {
 }
 

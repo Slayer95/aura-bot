@@ -147,6 +147,7 @@ protected:
   std::set<std::string>               m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
   std::vector<CGameVirtualUser>       m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   CMap*                               m_Map;                           // map data
+  GameUser::CGameUser*                m_PauseUser;
   std::string                         m_GameName;                      // game name
   uint64_t                            m_GameHistoryId;
   std::string                         m_LastOwner;                     // name of the player who was owner last time the owner was released
