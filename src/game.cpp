@@ -5537,6 +5537,7 @@ void CGame::EventGameStartedLoading()
 
     // This is an AWFUL hack to please WC3Stats.com parser
     // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
+
     if (m_Map->GetMapType() == "evergreen" && GetNumComputers() > 0) {
       m_Config->m_LobbyVirtualHostName = "AMAI Insane";
     }
@@ -8690,6 +8691,7 @@ void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const stri
   );
   if (!isCustomForces) SetSlotTeamAndColorAuto(SID);
 
+  DLOG_APP_IF(LOG_LEVEL_TRACE, "Added fake user (UID=" + ToDecString(UID) + ", SID=" + ToDecString(SID) + ", name = " + name + ")")
   m_FakeUsers.emplace_back(this, UID, SID, name);
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
 }
@@ -8795,15 +8797,15 @@ bool CGame::GetIsFakeObserver(const CGameVirtualUser& fakeUser) const
 #ifdef DEBUG
   if (result == fakeUser.GetIsObserver()) {
     if (result) {
-      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache OK (observer)")
+      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache OK (observer)")
     } else {
-      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache OK (player)")
+      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache OK (player)")
     }
   } else {
     if (result) {
-      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache mismatch (should be observer)")
+      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache mismatch (should be observer)")
     } else {
-      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache mismatch (should be player)")
+      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache mismatch (should be player)")
     }
   }
 #endif
