@@ -606,7 +606,8 @@ public:
 
   void OpenObserverSlots();
   void CloseObserverSlots();
-  uint8_t FindFakeUserFromSID(const uint8_t SID) const;
+  CGameVirtualUser* GetVirtualUserFromSID(const uint8_t SID);
+  const CGameVirtualUser* InspectVirtualUserFromSID(const uint8_t SID) const;
   void CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const std::string& name);
   bool CreateFakeUser(const bool useVirtualHostName);
   bool CreateHMCPlayer();

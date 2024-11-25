@@ -263,6 +263,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_CurrentActionsFrame(nullptr),
     m_Map(nGameSetup->m_Map),
+    m_PauseUser(nullptr),
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
     m_OwnerLess(nGameSetup->m_OwnerLess),
@@ -5668,8 +5669,8 @@ void CGame::EventGameStartedLoading()
     const uint8_t SID = m_Map->GetHMCSlot() - 1;
     const CGameSlot* slot = InspectSlot(SID);
     if (slot && slot->GetIsPlayerOrFake() && !GetUserFromSID(SID)) {
-      const uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
-      if (fakePlayerIndex < m_FakeUsers.size() && !GetIsFakeObserver(m_FakeUsers[fakePlayerIndex])) {
+      const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
+      if (virtualUserMatch && !GetIsFakeObserver(*virtualUserMatch)) {
         m_HMCEnabled = true;
       }
     }
@@ -5957,10 +5958,10 @@ void CGame::HandleGameLoadedStats()
     exportSlotIDs.push_back(SID);
     exportColorIDs.push_back(slot->GetColor());
     if (user == nullptr) {
-      uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
-      if (fakePlayerIndex != 0xFF) {
+      const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
+      if (virtualUserMatch) {
         exportPlayerNames.push_back(string());
-        exportPlayerIDs.push_back(m_FakeUsers[fakePlayerIndex].GetUID());
+        exportPlayerIDs.push_back(virtualUserMatch->GetUID());
       }
     } else {
       exportPlayerNames.push_back(user->GetName());
@@ -6458,9 +6459,9 @@ uint8_t CGame::HostToMapCommunicationUID() const
 {
   if (!GetHMCEnabled()) return 0xFF;
   const uint8_t SID = m_Map->GetHMCSlot() - 1;
-  const uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
-  if (fakePlayerIndex >= static_cast<uint8_t>(m_FakeUsers.size())) return 0xFF; 
-  return m_FakeUsers[fakePlayerIndex].GetUID();
+  const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
+  if (!virtualUserMatch) return 0xFF;
+  return virtualUserMatch->GetUID();
 }
 
 bool CGame::GetHasAnyActiveTeam() const
@@ -7134,9 +7135,9 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
           user->SetPowerObserver(false);
         }
       } else {
-        uint8_t fakeUserIndex = FindFakeUserFromSID(SID);
-        if (fakeUserIndex < static_cast<uint8_t>(m_FakeUsers.size())) {
-          m_FakeUsers[fakeUserIndex].SetObserver(toObservers);
+        CGameVirtualUser* virtualUserMatch = GetVirtualUserFromSID(SID);
+        if (virtualUserMatch) {
+          virtualUserMatch->SetObserver(toObservers);
         }
       }
     }
@@ -8135,12 +8136,12 @@ void CGame::StartCountDown(bool fromUser, bool force)
       SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
       return;
     }
-    const uint8_t fakePlayerIndex = FindFakeUserFromSID(SID);
-    if (fakePlayerIndex < m_FakeUsers.size() && GetIsFakeObserver(m_FakeUsers[fakePlayerIndex])) {
-      SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
+    const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
+    if (virtualUserMatch && GetIsFakeObserver(*virtualUserMatch)) {
+      SendAllChat("This game requires a fake player (not observer) on slot " + ToDecString(SID + 1));
       return;
     }
-    if (fakePlayerIndex >= static_cast<uint8_t>(m_FakeUsers.size()) && m_Map->GetHMCRequired()) {
+    if (!virtualUserMatch && m_Map->GetHMCRequired()) {
       SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
       return;
     }
@@ -8648,15 +8649,26 @@ bool CGame::GetHasPvPGNPlayers() const
   return false;
 }
 
-uint8_t CGame::FindFakeUserFromSID(const uint8_t SID) const
+CGameVirtualUser* CGame::GetVirtualUserFromSID(const uint8_t SID)
 {
   uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
   while (i--) {
     if (SID == m_FakeUsers[i].GetSID()) {
-      return i;
+      return &(m_FakeUsers[i]);
     }
   }
-  return 0xFF;
+  return nullptr;
+}
+
+const CGameVirtualUser* CGame::InspectVirtualUserFromSID(const uint8_t SID) const
+{
+  uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
+  while (i--) {
+    if (SID == m_FakeUsers[i].GetSID()) {
+      return &(m_FakeUsers[i]);
+    }
+  }
+  return nullptr;
 }
 
 void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const string& name)
@@ -8777,8 +8789,25 @@ bool CGame::DeleteFakeUser(uint8_t SID)
 
 bool CGame::GetIsFakeObserver(const CGameVirtualUser& fakeUser) const
 {
+  bool result;
   const CGameSlot* slot = InspectSlot(fakeUser.GetSID());
-  return slot != nullptr && slot->GetTeam() == m_Map->GetVersionMaxSlots();
+  result = slot != nullptr && slot->GetTeam() == m_Map->GetVersionMaxSlots();
+#ifdef DEBUG
+  if (result == fakeUser.GetIsObserver()) {
+    if (result) {
+      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache OK (observer)")
+    } else {
+      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache OK (player)")
+    }
+  } else {
+    if (result) {
+      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache mismatch (should be observer)")
+    } else {
+      DLOG_APP_IF("Fake user [" + fakeUser.GetName() + "] cache mismatch (should be player)")
+    }
+  }
+#endif
+  return result;
 }
 
 uint8_t CGame::FakeAllSlots()
