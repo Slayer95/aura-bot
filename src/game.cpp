@@ -8691,8 +8691,7 @@ void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const stri
   );
   if (!isCustomForces) SetSlotTeamAndColorAuto(SID);
 
-  DLOG_APP_IF(LOG_LEVEL_TRACE, "Added fake user (UID=" + ToDecString(UID) + ", SID=" + ToDecString(SID) + ", name = " + name + ")")
-  m_FakeUsers.emplace_back(this, UID, SID, name);
+  m_FakeUsers.emplace_back(this, SID, UID, name);
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
 }
 
