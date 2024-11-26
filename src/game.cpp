@@ -457,6 +457,7 @@ void CGame::ClearActions()
 
 void CGame::Reset()
 {
+  m_PauseUser = nullptr;
   m_FakeUsers.clear();
 
   for (auto& entry : m_SyncPlayers) {
@@ -6097,6 +6098,7 @@ void CGame::Remake()
   m_VirtualHostUID = 0xFF;
   m_SlotInfoChanged = 0;
   m_JoinedVirtualHosts = 0;
+  m_ReconnectProtocols = 0;
   m_PublicStart = false;
   m_Locked = false;
   m_CountDownStarted = false;
