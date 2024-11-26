@@ -324,6 +324,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_ExitingSoon(false),
     m_SlotInfoChanged(0),
     m_JoinedVirtualHosts(0),
+    m_ReconnectProtocols(0),
     m_PublicStart(false),
     m_Locked(false),
     m_ChatOnly(false),
@@ -3301,7 +3302,7 @@ uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
   return m_HostPort;
 }
 
-uint8_t CGame::GetActiveReconnectProtocols() const
+uint8_t CGame::CalcActiveReconnectProtocols() const
 {
   uint8_t protocols = 0;
   for (const auto& user : m_Users) {
@@ -3333,7 +3334,7 @@ string CGame::GetActiveReconnectProtocolsDetails() const
   return JoinVector(protocols, false);
 }
 
-bool CGame::GetAnyUsingGProxy() const
+bool CGame::CalcAnyUsingGProxy() const
 {
   for (const auto& user : m_Users) {
     if (user->GetGProxyAny()) {
@@ -3343,7 +3344,7 @@ bool CGame::GetAnyUsingGProxy() const
   return false;
 }
 
-bool CGame::GetAnyUsingGProxyLegacy() const
+bool CGame::CalcAnyUsingGProxyLegacy() const
 {
   for (const auto& user : m_Users) {
     if (!user->GetGProxyAny()) continue;
@@ -4950,7 +4951,6 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     m_Desynced = true;
     string syncListText = ToNameListSentence(m_SyncPlayers[user]);
     string desyncListText = ToNameListSentence(DesyncedPlayers);
-    uint8_t GProxyMode = GetActiveReconnectProtocols();
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
       LogApp("===== !! Desync detected !! ======================================");
       if (m_Config->m_LoadInGame) {
@@ -4961,7 +4961,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
       LogApp("User [" + user->GetName() + "] (" + user->GetDelayText(true) + ") Reconnection: " + user->GetReconnectionText());
       LogApp("User [" + user->GetName() + "] is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
       LogApp("User [" + user->GetName() + "] is no longer synchronized with " + desyncListText);
-      if (GProxyMode > 0) {
+      if (m_ReconnectProtocols > 0) {
         LogApp("GProxy: " + GetActiveReconnectProtocolsDetails());
       }
       LogApp("==================================================================");
@@ -5692,6 +5692,8 @@ void CGame::EventGameStartedLoading()
       }
     }
   }
+
+  m_ReconnectProtocols = CalcActiveReconnectProtocols();
 
   // delete the map data
   ReleaseMap();

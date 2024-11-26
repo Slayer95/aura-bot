@@ -220,6 +220,7 @@ protected:
   bool                                m_ExitingSoon;                   // set to true and this instance will be deleted when no players remain
   uint8_t                             m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
   uint8_t                             m_JoinedVirtualHosts;
+  uint8_t                             m_ReconnectProtocols;
   bool                                m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                                m_Locked;                        // if the game owner is the only one allowed to run game commands or not
   bool                                m_ChatOnly;                      // if we should ignore game start commands
@@ -367,6 +368,7 @@ public:
   inline int64_t            GetLastPausedTicks() const { return m_LastPausedTicks; }
   inline int64_t            GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
   inline bool               GetChatOnly() const { return m_ChatOnly; }
+  inline bool               GetAnyUsingGProxy() { return m_ReconnectProtocols > 0; }
   std::string               GetStatusDescription() const;
   std::string               GetEndDescription() const;
   std::string               GetCategory() const;
@@ -390,10 +392,10 @@ public:
 
   uint16_t                  GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
   inline bool               GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
-  uint8_t                   GetActiveReconnectProtocols() const;
+  uint8_t                   CalcActiveReconnectProtocols() const;
   std::string               GetActiveReconnectProtocolsDetails() const;
-  bool                      GetAnyUsingGProxy() const;
-  bool                      GetAnyUsingGProxyLegacy() const;
+  bool                      CalcAnyUsingGProxy() const;
+  bool                      CalcAnyUsingGProxyLegacy() const;
   uint8_t                   GetPlayersReadyMode() const;
 
   inline void               SetExiting(bool nExiting) { m_Exiting = nExiting; }
