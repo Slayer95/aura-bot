@@ -4961,7 +4961,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
       LogApp("User [" + user->GetName() + "] (" + user->GetDelayText(true) + ") Reconnection: " + user->GetReconnectionText());
       LogApp("User [" + user->GetName() + "] is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
       LogApp("User [" + user->GetName() + "] is no longer synchronized with " + desyncListText);
-      if (m_ReconnectProtocols > 0) {
+      if (GetAnyUsingGProxy()) {
         LogApp("GProxy: " + GetActiveReconnectProtocolsDetails());
       }
       LogApp("==================================================================");
