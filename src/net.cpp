@@ -716,7 +716,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
 
   DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
 
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetUDPEnabled() && !m_Aura->m_CurrentLobby->GetCountDownStarted()) {
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetUDPEnabled() && m_Aura->m_CurrentLobby->GetIsStageAcceptingJoins()) {
     if (pkt->buf[8] == 0 || m_Aura->m_CurrentLobby->GetIsSupportedGameVersion(pkt->buf[8])) {
       DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
       m_Aura->m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket, pkt->buf[8]);

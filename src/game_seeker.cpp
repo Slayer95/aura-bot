@@ -173,7 +173,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
             if (vlanSearch.isValid) {
               m_GameVersion = vlanSearch.gameVersion;
               CGame* lobby = m_Aura->m_CurrentLobby;
-              if (lobby && !lobby->GetLobbyLoading() && !lobby->GetCountDownStarted()) {
+              if (lobby && !lobby->GetIsMirror() && lobby->GetIsStageAcceptingJoins()) {
                 lobby->SendGameDiscoveryInfoVLAN(this);
               }
             }

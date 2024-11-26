@@ -1204,63 +1204,51 @@ uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return NumFDs;
 }
 
-void CGame::UpdateLobby()
+void CGame::UpdateJoinable()
 {
   const int64_t Time = GetTime(), Ticks = GetTicks();
 
-  if (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED)) {
-    SendAllSlotInfo();
-    UpdateReadyCounters();
-    m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
-  }
-
-  if (GetIsAutoStartDue()) {
-    SendAllChat("Game automatically starting in. . .");
-    StartCountDown(false, true);
-  }
-
-  if (!m_Users.empty()) {
-    m_LastUserSeen = Ticks;
-    if (HasOwnerInGame()) {
-      m_LastOwnerSeen = Ticks;
-    }
-  }
-
   // refresh every 3 seconds
 
-  if (!m_CountDownStarted && m_DisplayMode == GAME_PUBLIC && HasSlotsOpen() && m_LastRefreshTime + 3 <= Time) {
+  if (m_LastRefreshTime + 3 <= Time) {
     // send a game refresh packet to each battle.net connection
 
-    for (auto& realm : m_Aura->m_Realms) {
-      if (!realm->GetLoggedIn()) {
-        continue;
-      }
-      if (m_IsMirror && realm->GetIsMirror()) {
-      // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
-      // Do not display external games in those realms.
-        continue;
-      }
-      if (realm->GetIsChatQueuedGameAnnouncement()) {
-        // Wait til we have sent a chat message first.
-        continue;
-      }
-      if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
-        continue;
+    if (m_DisplayMode == GAME_PUBLIC && HasSlotsOpen()) {
+      for (auto& realm : m_Aura->m_Realms) {
+        if (!realm->GetLoggedIn()) {
+          continue;
+        }
+        if (m_IsMirror && realm->GetIsMirror()) {
+        // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+        // Do not display external games in those realms.
+          continue;
+        }
+        if (realm->GetIsChatQueuedGameAnnouncement()) {
+          // Wait til we have sent a chat message first.
+          continue;
+        }
+        if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
+          continue;
 
+        }
+        if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
+          continue;
+        }
+        // Send STARTADVEX3
+        AnnounceToRealm(realm);
       }
-      if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
-        continue;
-      }
-      // Send STARTADVEX3
-      AnnounceToRealm(realm);
     }
-
-    m_LastRefreshTime = Time;
 
     if (!m_IsMirror && m_Aura->m_Games.empty()) {
       // This is a lobby. Take the chance to update the detailed console title
       m_Aura->UpdateMetaData();
     }
+
+    m_LastRefreshTime = Time;
+  }
+
+  if (m_IsMirror) {
+    return;
   }
 
   // send more map data
@@ -1330,6 +1318,29 @@ void CGame::UpdateLobby()
     }
 
     m_LastDownloadTicks = Ticks;
+  }
+}
+
+void CGame::UpdateLobby()
+{
+  const int64_t Ticks = GetTicks();
+
+  if (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED)) {
+    SendAllSlotInfo();
+    UpdateReadyCounters();
+    m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
+  }
+
+  if (GetIsAutoStartDue()) {
+    SendAllChat("Game automatically starting in. . .");
+    StartCountDown(false, true);
+  }
+
+  if (!m_Users.empty()) {
+    m_LastUserSeen = Ticks;
+    if (HasOwnerInGame()) {
+      m_LastOwnerSeen = Ticks;
+    }
   }
 
   // countdown every m_LobbyCountDownInterval ms (default 500 ms)
@@ -1626,7 +1637,7 @@ bool CGame::Update(void* fd, void* send_fd)
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
     // however we only want to broadcast if the countdown hasn't started
 
-    if (!m_CountDownStarted && GetUDPEnabled()) {
+    if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
       if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Net->m_Config->m_UDPBroadcastStrictMode) {
         SendGameDiscoveryRefresh();
       } else {
@@ -1743,7 +1754,12 @@ bool CGame::Update(void* fd, void* send_fd)
     m_LastCustomStatsUpdateTime = Time;
   }
 
-  if (!m_GameLoading && !m_GameLoaded) {
+  if (GetIsStageAcceptingJoins()) {
+    // Also updates mirror games.
+    UpdateJoinable();
+  }
+
+  if (GetIsLobby()) {
     UpdateLobby();
   }
 
@@ -8895,6 +8911,15 @@ void CGame::RemoveCreator()
   m_CreatedBy.clear();
   m_CreatedFrom = nullptr;
   m_CreatedFromType = GAMESETUP_ORIGIN_INVALID;
+}
+
+bool CGame::GetIsStageAcceptingJoins() const
+{
+  // This method does not care whether this is actually a mirror game. This is intended.
+  if (m_LobbyLoading) return false;
+  if (!m_CountDownStarted) return true;
+  if (!m_GameLoaded) return false;
+  return m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress;
 }
 
 bool CGame::GetUDPEnabled() const

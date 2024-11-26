@@ -1705,7 +1705,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("invite"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame || !m_TargetGame->GetIsStageAcceptingJoins()) {
         // Intentionally allows !invite to fake (mirror) lobbies.
         break;
       }
@@ -4040,7 +4040,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("sendlan"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame || !m_TargetGame->GetIsStageAcceptingJoins()) {
         break;
       }
 
@@ -4136,7 +4136,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("sendlaninfo"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame || !m_TargetGame->GetIsStageAcceptingJoins()) {
         break;
       }
 

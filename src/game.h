@@ -289,6 +289,7 @@ public:
   inline uint32_t           GetEntryKey() const { return m_EntryKey; }
   inline uint16_t           GetHostPort() const { return m_HostPort; }
   uint16_t                  GetDiscoveryPort(const uint8_t protocol) const;
+  bool                      GetIsStageAcceptingJoins() const;
   bool                      GetUDPEnabled() const;
   inline bool               GetPublicHostOverride() const { return m_PublicHostOverride; }
   inline std::array<uint8_t, 4> GetPublicHostAddress() const { return m_PublicHostAddress; }
@@ -417,6 +418,7 @@ public:
   // processing functions
 
   uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds);
+  void                      UpdateJoinable();
   void                      UpdateLobby();
   void                      UpdateLoading();
   void                      UpdateLoaded();
