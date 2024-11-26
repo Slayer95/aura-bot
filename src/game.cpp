@@ -1938,6 +1938,7 @@ void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) cons
   if (user->GetType() == INCON_TYPE_PLAYER && static_cast<const GameUser::CGameUser*>(user)->GetIsInLoadingScreen()) {
     return;
   }
+  // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
   user->Send(data);
 }
 
@@ -1947,6 +1948,7 @@ void CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
     if (user->GetIsInLoadingScreen()) {
       continue;
     }
+    // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
     user->Send(data);
   }
 }
@@ -3199,6 +3201,7 @@ void CGame::SendAllActionsCallback()
       break;
   }
   for (GameUser::CGameUser* user : frame.leavers) {
+    // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
     DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion")
     user->SetDeleteMe(true);
   }
@@ -3226,6 +3229,10 @@ void CGame::SendGProxyEmptyActions()
       */
     }
   }
+
+  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    m_PlayingBuffer.emplace_back();
+  }
 }
 
 void CGame::SendAllActions()
@@ -3239,7 +3246,13 @@ void CGame::SendAllActions()
   ++m_SyncCounter;
 
   SendGProxyEmptyActions();
-  SendAll(GetFirstActionFrame().GetBytes(GetLatency()));
+  vector<uint8_t> actions = GetFirstActionFrame().GetBytes(GetLatency());
+  SendAll(actions);
+
+  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    m_PlayingBuffer.push_back(std::move(actions));
+  }
+
   SendAllActionsCallback();
 
   uint8_t maxOldEqualizerOffset = m_MaxPingEqualizerDelayFrames;
