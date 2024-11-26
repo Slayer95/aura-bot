@@ -5726,9 +5726,10 @@ void CGame::EventGameStartedLoading()
   }
 
   // move the game to the games in progress vector
-
-  m_Aura->m_CurrentLobby = nullptr;
-  m_Aura->m_Games.push_back(this);
+  if (!m_Config->m_EnableJoinObserversInProgress && !m_Config->m_EnableJoinPlayersInProgress) {
+    m_Aura->m_CurrentLobby = nullptr;
+    m_Aura->m_Games.push_back(this);
+  }
   m_Aura->UpdateMetaData();
 
   // and finally reenter battle.net chat
@@ -8933,6 +8934,7 @@ void CGame::RemoveCreator()
 bool CGame::GetIsStageAcceptingJoins() const
 {
   // This method does not care whether this is actually a mirror game. This is intended.
+  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby != this) return false;
   if (m_LobbyLoading) return false;
   if (!m_CountDownStarted) return true;
   if (!m_GameLoaded) return false;
