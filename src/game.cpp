@@ -7834,7 +7834,10 @@ void CGame::RemoveFromLagScreens(GameUser::CGameUser* user)
 void CGame::ResetLagScreen()
 {
   const UserList laggingPlayers = GetLaggingPlayers();
-    const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(laggingPlayers);
+  if (laggingPlayers.empty()) {
+    return;
+  }
+  const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(laggingPlayers);
   const bool anyUsingGProxy = GetAnyUsingGProxy();
 
   if (m_GameLoading) {
