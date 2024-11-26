@@ -1504,9 +1504,9 @@ void CGame::UpdateLoaded()
       }
       if (timeExceeded) {
         if (user->GetDisconnected()) {
-          StopLagger(user, "failed to reconnect within " + to_string(Ticks - user->GetStartedLaggingTicks()) + " seconds");
+          StopLagger(user, "failed to reconnect within " + to_string((Ticks - user->GetStartedLaggingTicks()) / 1000) + " seconds");
         } else {
-          StopLagger(user, "was automatically dropped after " + to_string(Ticks - user->GetStartedLaggingTicks()) + " seconds");
+          StopLagger(user, "was automatically dropped after " + to_string((Ticks - user->GetStartedLaggingTicks()) / 1000) + " seconds");
         }
         anyDropped = true;
       }

@@ -712,6 +712,8 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
   }
 
   m_Disconnected = false;
+  m_Lagging = false;
+  m_StartedLaggingTicks = 0;
   m_GProxyBuffer = TempBuffer;
   m_GProxyDisconnectNoticeSent = false;
   m_LastGProxyWaitNoticeSentTime = 0;
