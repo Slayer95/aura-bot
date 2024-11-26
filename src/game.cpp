@@ -8727,7 +8727,7 @@ void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const stri
   );
   if (!isCustomForces) SetSlotTeamAndColorAuto(SID);
 
-  m_FakeUsers.emplace_back(this, SID, UID, name);
+  m_FakeUsers.emplace_back(this, SID, UID, name).SetObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
 }
 
