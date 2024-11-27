@@ -473,8 +473,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Discord(nullptr),
     m_IRC(nullptr),
     m_Net(nullptr),
-    m_CurrentLobby(nullptr),
-    m_CanReplaceLobby(false),
 
     m_ConfigPath(CFG.GetFile()),
     m_Config(nullptr),
@@ -811,8 +809,7 @@ CAura::~CAura()
     delete realm;
   }
 
-  delete m_CurrentLobby;
-
+  m_Lobbies.erase(m_Lobbies.begin(), m_Lobbies.end());
   for (auto& game : m_Games) {
     delete game;
   }
@@ -924,8 +921,7 @@ bool CAura::Update()
 
   if (m_AutoRehostGameSetup && !m_CurrentLobby) {
     if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
-      (m_Games.size() < m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && m_Config->m_AllowExtraLobby)) &&
-      (!m_LastGameAutoHostedTicks.has_value() || m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) < GetTicks())
+      (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
     ) {
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
@@ -1783,6 +1779,26 @@ bool CAura::CheckGracefulExit()
   return true;
 }
 
+bool CAura::GetNewGameIsInQuota() const
+{
+  return m_Lobbies.size() < m_Config->m_MaxLobbies;
+}
+
+bool CAura::GetNewGameIsInQuotaConservative() const
+{
+  if (!GetNewGameIsInQuota()) return false;
+  return m_Games.size() < m_Config->m_MaxStartedGames;
+}
+
+bool CAura::GetNewGameIsInQuotaAutoReHost() const
+{
+  if (m_Config->m_AutoRehostQuotaConservative) {
+    return GetNewGameIsInQuotaConservative();
+  } else {
+    return GetNewGameIsInQuota();
+  }
+}
+
 bool CAura::CreateGame(CGameSetup* gameSetup)
 {
   if (!m_Config->m_Enabled) {
@@ -1809,7 +1825,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     return false;
   }
 
-  if (m_Games.size() > m_Config->m_MaxGames || (m_Games.size() == m_Config->m_MaxGames && !m_Config->m_AllowExtraLobby)) {
+  if (!GetNewGameIsInQuota()) {
     gameSetup->m_Ctx->ErrorReply("Too many active games.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
@@ -1823,7 +1839,6 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   m_CurrentLobby = new CGame(this, gameSetup);
-  m_CanReplaceLobby = gameSetup->m_LobbyReplaceable;
   m_LastGameHostedTicks = GetTicks();
   if (gameSetup->m_LobbyAutoRehosted) {
     m_AutoRehostGameSetup = gameSetup;
@@ -1973,4 +1988,24 @@ uint32_t CAura::NextServerID()
     m_LastServerID = 0;
   }
   return m_LastServerID;
+}
+
+string CAura::GetSudoAuthPayload(const string& Payload)
+{
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, 15);
+
+  // Generate random hex digits
+  string result;
+  result.reserve(21 + Payload.length());
+
+  for (size_t i = 0; i < 20; ++i) {
+      const int randomDigit = dis(gen);
+      result += (randomDigit < 10) ? (char)('0' + randomDigit) : (char)('a' + (randomDigit - 10));
+  }
+
+  result += " " + Payload;
+  m_SudoAuthPayload = result;
+  return result;
 }

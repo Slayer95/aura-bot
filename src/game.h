@@ -221,6 +221,7 @@ protected:
   uint8_t                             m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
   uint8_t                             m_JoinedVirtualHosts;
   uint8_t                             m_ReconnectProtocols;
+  bool                                m_Replaceable;                   // whether this game can be destroyed when !host command is used inside
   bool                                m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                                m_Locked;                        // if the game owner is the only one allowed to run game commands or not
   bool                                m_ChatOnly;                      // if we should ignore game start commands
@@ -312,6 +313,8 @@ public:
   bool                      MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   inline uint32_t           GetHostCounter() const { return m_HostCounter; }
   inline int64_t            GetLastLagScreenTime() const { return m_LastLagScreenTime; }
+  inline bool               GetIsReplaceable() const { return m_Replaceable;}
+  inline bool               GetIsPublicStartable() const { return m_PublicStart; }
   inline bool               GetLocked() const { return m_Locked; }
   inline bool               GetMuteAll() const { return m_MuteAll; }
   inline bool               GetCountDownStarted() const { return m_CountDownStarted; }

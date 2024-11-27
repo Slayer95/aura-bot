@@ -1193,12 +1193,12 @@ void CGameSetup::OnLoadMapSuccess()
       m_Ctx->ErrorReply("Failed to add alias.");
     }
   } else if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
-    /*if (m_Aura->m_Games.size() > m_Aura->m_Config->m_MaxGames || m_Aura->m_Games.size() == m_Aura->m_Config->m_MaxGames && !m_Aura->m_Config->m_AllowExtraLobby) {
+    /*if (m_Aura->m_Games.size() > m_Aura->m_Config->m_MaxStartedGames || m_Aura->m_Games.size() == m_Aura->m_Config->m_MaxStartedGames && !m_Aura->m_Config->m_DoNotCountReplaceableLobby) {
       m_Ctx->ErrorReply("Games hosted quota reached.", CHAT_SEND_SOURCE_ALL);
       return;
 	}*/
     if (m_Aura->m_CurrentLobby) {
-      if (!m_Aura->m_CanReplaceLobby) {
+      if (!m_Aura->m_CurrentLobby->GetIsReplaceable()) {
         m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
         return;
       }

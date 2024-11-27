@@ -59,8 +59,15 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_LogPath                      = CFG.GetHomeDir() / filesystem::path("aura.log");
 
   m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
-  m_MaxGames                     = CFG.GetInt("hosting.max_games", 20);
-  m_AllowExtraLobby              = CFG.GetBool("hosting.allow_extra_lobby", false);
+
+  //m_MaxLobbies                   = CFG.GetInt("hosting.games_quota.max_lobbies", 1);
+  m_MaxLobbies                   = 1;
+  m_MaxStartedGames              = CFG.GetInt("hosting.games_quota.max_started", 20);
+  //m_MaxJoinInProgressGames     = CFG.GetInt("hosting.games_quota.max_join_in_progress", 1);
+  m_MaxJoinInProgressGames       = 1;
+  m_MaxTotalGames                = CFG.GetInt("hosting.games_quota.max_total", 20);
+  m_AutoRehostQuotaConservative  = CFG.GetBool("hosting.games_quota.auto_rehost.conservative", false);
+
   m_AutomaticallySetGameOwner    = CFG.GetBool("hosting.game_owner.from_creator", true);
   m_EnableDeleteOversizedMaps    = CFG.GetBool("bot.persistence.delete_huge_maps.enabled", false);
   m_MaxSavedMapSize              = CFG.GetInt("bot.persistence.delete_huge_maps.size", 0x6400); // 25 MiB

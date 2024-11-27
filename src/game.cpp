@@ -325,6 +325,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_SlotInfoChanged(0),
     m_JoinedVirtualHosts(0),
     m_ReconnectProtocols(0),
+    m_Replaceable(nGameSetup->m_LobbyReplaceable),
     m_PublicStart(false),
     m_Locked(false),
     m_ChatOnly(false),
@@ -5323,7 +5324,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
     bool ShouldTransferMap = (
       IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER &&
       (user->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
-      (m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxGames) &&
+      (m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxStartedGames) &&
       (m_Aura->m_Games.empty() || !m_Aura->m_Net->m_Config->m_HasBufferBloat)
     );
     if (ShouldTransferMap) {
@@ -5346,7 +5347,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
         } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-        } else if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames || (m_Aura->m_Games.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
+        } else if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames || (m_Aura->m_Games.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
@@ -5409,7 +5410,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   }
 
   if ((!user->GetIsReady() && user->GetMapReady() && !user->GetIsObserver()) &&
-    (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxGames) &&
+    (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxStartedGames) &&
     (user->GetReadyReminderIsDue() && user->GetIsRTTMeasuredConsistent())) {
     if (!m_AutoStartRequirements.empty()) {
       switch (GetPlayersReadyMode()) {
@@ -6101,7 +6102,8 @@ void CGame::Remake()
   m_SlotInfoChanged = 0;
   m_JoinedVirtualHosts = 0;
   m_ReconnectProtocols = 0;
-  m_PublicStart = false;
+  //m_Replaceable = false;
+  //m_PublicStart = false;
   m_Locked = false;
   m_CountDownStarted = false;
   m_CountDownFast = false;
@@ -8088,7 +8090,7 @@ bool CGame::GetCanStartGracefulCountDown() const
     return false;
   }
 
-  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
+  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames) {
     return false;
   }
 
@@ -8163,8 +8165,8 @@ void CGame::StartCountDown(bool fromUser, bool force)
     return;
   }
 
-  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
-    SendAllChat("This game cannot be started while there are " +  to_string(m_Aura->m_Config->m_MaxGames) + " additional games in progress.");
+  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames) {
+    SendAllChat("This game cannot be started while there are " +  to_string(m_Aura->m_Config->m_MaxStartedGames) + " additional games in progress.");
     return;
   }
 

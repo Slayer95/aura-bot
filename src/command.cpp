@@ -3253,7 +3253,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool IsMapAvailable = !m_TargetGame->GetMap()->GetMapData()->empty() && !m_TargetGame->GetMap()->HasMismatch();
-      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxGames) {
+      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
@@ -6834,7 +6834,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("hostpriv"):
     case HashCode("host"): {
       if (!CheckPermissions(m_Config->m_HostPermissions, (
-        m_SourceGame == m_Aura->m_CurrentLobby && m_Aura->m_CanReplaceLobby ?
+        m_SourceGame && m_SourceGame->GetIsLobby() && m_SourceGame->GetIsReplaceable() ?
         COMMAND_PERMISSIONS_UNVERIFIED :
         COMMAND_PERMISSIONS_ADMIN
       ))) {
@@ -6874,15 +6874,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Another user is hosting a game.");
         break;
       }
-      if (m_Aura->m_CurrentLobby && (!m_Aura->m_CanReplaceLobby || (!GetIsSudo() && (
+      if (!m_Aura->m_Lobbies.empty() && (!m_Aura->m_Lobbies[0]->GetIsReplaceable() || (!GetIsSudo() && (
         // This block defines under which circumstances a replaceable lobby can actually be replaced.
         // Do not allow replacements when using !host from another game, unless sudo.
-        (m_SourceGame && m_SourceGame != m_Aura->m_CurrentLobby)
+        (m_SourceGame && m_SourceGame != m_Aura->m_Lobbies[0]->GetIsReplaceable())
         // The following check defines whether players in the replaceable lobby get priority,
         // or external users (PvPGN/IRC/Discord) get it.
         // By commenting it out, external users get priority.
         // (Replaceable lobbies are NOT admin games.)
-        //|| (!m_SourceGame && m_Aura->m_CurrentLobby->GetHasAnyUser())
+        //|| (!m_SourceGame && m_Aura->m_Lobbies[0]->GetIsReplaceable()->GetHasAnyUser())
       )))) {
         ErrorReply("Another user is hosting a game.");
         break;

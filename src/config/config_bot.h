@@ -53,8 +53,13 @@ struct CBotConfig
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
-  uint32_t                                m_MaxGames;                    // maximum number of games in progress
-  bool                                    m_AllowExtraLobby;             // when auto rehost is active, always create the next lobby even if max games limit has been reached (cannot be started, though)
+
+  uint32_t                                m_MaxLobbies;                  // maximum number of non-started games
+  uint32_t                                m_MaxStartedGames;             // maximum number of games in progress
+  uint32_t                                m_MaxJoinInProgressGames;           // maximum number of games in progress that can be watched
+  uint32_t                                m_MaxTotalGames;               // maximum sum of all active games
+  bool                                    m_AutoRehostQuotaConservative;
+
   bool                                    m_AutomaticallySetGameOwner;   // whether the game creator should automatically be set as game owner
   bool                                    m_EnableDeleteOversizedMaps;   // may delete maps in m_MapPath exceeding m_MaxSavedMapSize
   uint32_t                                m_MaxSavedMapSize;             // maximum byte size of maps kept persistently in the m_MapPath folder

@@ -85,8 +85,6 @@ public:
   CDiscord*                                          m_Discord;                    // Discord client
   CIRC*                                              m_IRC;                        // IRC client
   CNet*                                              m_Net;                        // network manager
-  CGame*                                             m_CurrentLobby;               // this is the hosted lobby if any
-  bool                                               m_CanReplaceLobby;           // whether usage of the host command is allowed - doing so will cause this game to be destroyed after 60 seconds
 
   std::filesystem::path                              m_ConfigPath;
   CBotConfig*                                        m_Config;
@@ -96,7 +94,7 @@ public:
 
   CAuraDB*                                           m_DB;                         // database
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map
-  CGameSetup*                                        m_AutoRehostGameSetup;            // game setup to be rehosted whenever free
+  CGameSetup*                                        m_AutoRehostGameSetup;        // game setup to be rehosted whenever free
   std::string                                        m_Version;                    // Aura version string
   std::string                                        m_RepositoryURL;              // Aura repository URL
   std::string                                        m_IssuesURL;                  // Aura issues URL
@@ -120,7 +118,9 @@ public:
 
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
-  std::vector<CGame*>                                m_Games;                      // these games are in progress
+  std::vector<CGame*>                                m_Games;                      // all games after they have started
+  std::vector<CGame*>                                m_Lobbies;                    // all games before they are started
+  std::vector<CGame*>                                m_JoinInProgressGames;        // started games that can be joined in-progress (either as observer or player)
   std::map<std::string, std::string>                 m_CachedMaps;
   std::unordered_multiset<std::string>               m_BusyMaps;
   std::map<std::string, std::string>                 m_LastMapSuggestions;
@@ -152,31 +152,19 @@ public:
   uint64_t NextHistoryGameID();
   uint32_t NextServerID();
 
-  inline std::string GetSudoAuthPayload(const std::string& Payload) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 15);
-
-    // Generate random hex digits
-    std::string result;
-    result.reserve(21 + Payload.length());
-
-    for (std::size_t i = 0; i < 20; ++i) {
-        const int randomDigit = dis(gen);
-        result += (randomDigit < 10) ? (char)('0' + randomDigit) : (char)('a' + (randomDigit - 10));
-    }
-
-    result += " " + Payload;
-    m_SudoAuthPayload = result;
-    return result;
-  }
+  std::string GetSudoAuthPayload();
 
   // processing functions
 
   bool HandleAction(std::vector<std::string> action);
   bool Update();
   inline bool GetReady() const { return m_Ready; }
+
+  bool GetNewGameIsInQuota() const;
+  bool GetNewGameIsInQuotaConservative() const;
+  bool GetNewGameIsInQuotaAutoReHost() const;
   bool CreateGame(CGameSetup* gameSetup);
+  inline bool GetIsAutoHostThrottled() { return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= GetTicks(); }
 
   // events
 
