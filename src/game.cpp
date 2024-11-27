@@ -3762,7 +3762,8 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
       // e.g. this allows m_ControllersWithMap to remain unchanged.
       const uint8_t replaceSID = GetEmptyObserverSID();
       const uint8_t replaceUID = GetNewUID();
-      CreateFakeUserInner(replaceSID, replaceUID, "User[" + ToDecString(replaceSID + 1) + "]").SetObserver(true);
+      CreateFakeUserInner(replaceSID, replaceUID, "User[" + ToDecString(replaceSID + 1) + "]");
+      m_FakeUsers[m_FakeUsers.size() - 1].SetObserver(true);
       CGameSlot* slot = GetSlot(replaceSID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
       slot->SetColor(m_Map->GetVersionMaxSlots());
