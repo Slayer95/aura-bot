@@ -326,6 +326,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_JoinedVirtualHosts(0),
     m_ReconnectProtocols(0),
     m_Replaceable(nGameSetup->m_LobbyReplaceable),
+    m_Replacing(false),
     m_PublicStart(false),
     m_Locked(false),
     m_ChatOnly(false),
@@ -587,7 +588,11 @@ void CGame::StartGameOverTimer(bool isMMD)
     SendAllChat("Gameover timer started (disconnecting in " + to_string(m_GameOverTolerance.value_or(60)) + " seconds...)");
   }
 
-  if (this == m_Aura->m_CurrentLobby) {
+  if (wasAnnouncing) {
+    SendGameDiscoveryDecreate();
+    SetUDPEnabled(false);
+  }
+  if (GetIsLobby()) {
     if (GetUDPEnabled()) {
       SendGameDiscoveryDecreate();
       SetUDPEnabled(false);
@@ -598,9 +603,30 @@ void CGame::StartGameOverTimer(bool isMMD)
     }
     m_ChatOnly = true;
     StopCountDown();
-    m_Aura->m_Games.push_back(this);
-    m_Aura->m_CurrentLobby = nullptr;
   }
+
+  UntrackLobby();
+  UntrackInProgress();
+}
+
+void CGame::TrackLobby() const
+{
+  m_Aura->TrackGameLobby(this);
+}
+
+void CGame::UntrackLobby() const
+{
+  m_Aura->UntrackGameLobby(this);
+}
+
+void CGame::TrackJoinInProgress() const
+{
+  m_Aura->TrackGameJoinInProgress(this);
+}
+
+void CGame::UntrackJoinInProgress() const
+{
+  m_Aura->UntrackGameJoinInProgress(this);
 }
 
 CGame::~CGame()
@@ -614,6 +640,9 @@ CGame::~CGame()
   }
   for (auto& user : m_Users) {
     delete user;
+  }
+  if (GetIsBeingReplaced()) {
+    --m_Aura->m_ReplacingLobbiesCounter;
   }
 }
 
@@ -1242,7 +1271,7 @@ void CGame::UpdateJoinable()
       }
     }
 
-    if (!m_IsMirror && m_Aura->m_Games.empty()) {
+    if (!m_IsMirror && m_Aura->m_StartedGames.empty()) {
       // This is a lobby. Take the chance to update the detailed console title
       m_Aura->UpdateMetaData();
     }
@@ -1666,10 +1695,11 @@ bool CGame::Update(void* fd, void* send_fd)
 
   if (m_Remaking) {
     m_Remaking = false;
-    if (m_Aura->m_CurrentLobby == nullptr) {
+    if (GetNewGameIsInQuota()) {
       m_Remade = true;
-      m_Aura->m_CurrentLobby = this;
+      TrackLobby();
     } else {
+      // Cannot remake
       m_Exiting = true;
     }
     if (m_CustomStats) m_CustomStats->FlushQueue();
@@ -1762,7 +1792,7 @@ bool CGame::Update(void* fd, void* send_fd)
     UpdateJoinable();
   }
 
-  if (GetIsLobby()) {
+  if (GetIsLobbyStrict()) {
     UpdateLobby();
   }
 
@@ -1944,15 +1974,18 @@ void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) cons
   user->Send(data);
 }
 
-void CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
+bool CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
 {
+  bool success = false;
   for (auto& user : m_Users) {
     if (user->GetIsInLoadingScreen()) {
       continue;
     }
     // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
     user->Send(data);
+    success = true;
   }
+  return success;
 }
 
 void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& message, const uint8_t logLevel) const
@@ -2017,17 +2050,17 @@ void CGame::SendChat(uint8_t toUID, const string& message, const uint8_t logLeve
   SendChat(GetHostUID(), toUID, message, logLevel);
 }
 
-void CGame::SendAllChat(uint8_t fromUID, const string& message) const
+bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
 {
   if (m_GameLoading && !m_Config->m_LoadInGame)
-    return;
+    return false;
 
   if (message.empty())
-    return;
+    return false;
 
   vector<uint8_t> toUIDs = GetChatUIDs();
   if (toUIDs.empty()) {
-    return;
+    return false;
   }
 
   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
@@ -2046,37 +2079,39 @@ void CGame::SendAllChat(uint8_t fromUID, const string& message) const
   // send a public message to all users - it'll be marked [All] in Warcraft 3
 
   uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
+  bool success = false;
   if (message.size() < maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-        SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
     } else {
-        SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
     }
-    return;
-  }
+  } else {
+    bool success = false;
+    string leftMessage = message;
+    while (leftMessage.size() > maxSize) {
+      if (!m_GameLoading && !m_GameLoaded) {
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize))) || success;
+      } else {
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize))) || success;
+      }
+      leftMessage = leftMessage.substr(maxSize);
+    }
 
-  string leftMessage = message;
-  while (leftMessage.size() > maxSize) {
-    if (!m_GameLoading && !m_GameLoaded) {
-      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize)));
-    } else {
-      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize)));
-    }
-    leftMessage = leftMessage.substr(maxSize);
-  }
-
-  if (!leftMessage.empty()) {
-    if (!m_GameLoading && !m_GameLoaded) {
-      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage));
-    } else {
-      SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage));
+    if (!leftMessage.empty()) {
+      if (!m_GameLoading && !m_GameLoaded) {
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage)) || success;
+      } else {
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage)) || success;
+      }
     }
   }
+  return success;
 }
 
-void CGame::SendAllChat(const string& message) const
+bool CGame::SendAllChat(const string& message) const
 {
-  SendAllChat(GetHostUID(), message);
+  return SendAllChat(GetHostUID(), message);
 }
 
 void CGame::UpdateReadyCounters()
@@ -4206,7 +4241,7 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
       SendAllChat(user->GetUID(), user->GetLeftReason());
     }
   }
-  SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobby() ? PLAYERLEAVE_LOBBY : user->GetLeftCode()));
+  SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode()));
   user->SetLeftMessageSent(true);
   user->SetStatus(USERSTATUS_ENDED);
 }
@@ -5324,8 +5359,8 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
     bool ShouldTransferMap = (
       IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER &&
       (user->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
-      (m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxStartedGames) &&
-      (m_Aura->m_Games.empty() || !m_Aura->m_Net->m_Config->m_HasBufferBloat)
+      (m_Aura->m_StartedGames.size() < m_Aura->m_Config->m_MaxStartedGames) &&
+      (m_Aura->m_StartedGames.empty() || !m_Aura->m_Net->m_Config->m_HasBufferBloat)
     );
     if (ShouldTransferMap) {
       if (!user->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
@@ -5347,7 +5382,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
         } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-        } else if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames || (m_Aura->m_Games.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
+        } else if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames || (m_Aura->m_StartedGames.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
@@ -5410,7 +5445,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   }
 
   if ((!user->GetIsReady() && user->GetMapReady() && !user->GetIsObserver()) &&
-    (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_Games.size() < m_Aura->m_Config->m_MaxStartedGames) &&
+    (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_StartedGames.size() < m_Aura->m_Config->m_MaxStartedGames) &&
     (user->GetReadyReminderIsDue() && user->GetIsRTTMeasuredConsistent())) {
     if (!m_AutoStartRequirements.empty()) {
       switch (GetPlayersReadyMode()) {
@@ -5727,11 +5762,7 @@ void CGame::EventGameStartedLoading()
     SetEveryoneLagging();
   }
 
-  // move the game to the games in progress vector
-  if (!m_Config->m_EnableJoinObserversInProgress && !m_Config->m_EnableJoinPlayersInProgress) {
-    m_Aura->m_CurrentLobby = nullptr;
-    m_Aura->m_Games.push_back(this);
-  }
+  UntrackLobby();
   m_Aura->UpdateMetaData();
 
   // and finally reenter battle.net chat
@@ -5972,6 +6003,11 @@ void CGame::EventGameLoaded()
     m_LoadingVirtualBuffer = vector<uint8_t>();
   }
 
+  // move the game to the games in progress vector
+  if (m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress) {
+    TrackInProgress();
+  }
+
   HandleGameLoadedStats();
 }
 
@@ -6103,6 +6139,7 @@ void CGame::Remake()
   m_JoinedVirtualHosts = 0;
   m_ReconnectProtocols = 0;
   //m_Replaceable = false;
+  //m_Replacing = false;
   //m_PublicStart = false;
   m_Locked = false;
   m_CountDownStarted = false;
@@ -7609,7 +7646,7 @@ void CGame::ReportSpoofed(const string& server, GameUser::CGameUser* user)
   if (!m_IsHiddenPlayerNames) {
     SendAllChat("Name spoof detected. The real [" + user->GetName() + "@" + server + "] is not in this game.");
   }
-  if (GetIsLobby() && MatchOwnerName(user->GetName())) {
+  if (GetIsLobbyStrict() && MatchOwnerName(user->GetName())) {
     if (!user->HasLeftReason()) {
       user->SetLeftReason("was autokicked for spoofing the game owner");
     }
@@ -8090,7 +8127,7 @@ bool CGame::GetCanStartGracefulCountDown() const
     return false;
   }
 
-  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames) {
+  if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames) {
     return false;
   }
 
@@ -8159,13 +8196,14 @@ void CGame::StartCountDown(bool fromUser, bool force)
 
   if (m_ChatOnly) {
     SendAllChat("This lobby is in chat-only mode. Please join another hosted game.");
-    if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby != this) {
-      SendAllChat("Currently hosting: " + m_Aura->m_CurrentLobby->GetStatusDescription());
+    const CGame* recentLobby = m_Aura->GetMostRecentLobby();
+    if (recentLobby && recentLobby != this) {
+      SendAllChat("Currently hosting: " + recentLobby->GetStatusDescription());
     }
     return;
   }
 
-  if (m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames) {
+  if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames) {
     SendAllChat("This game cannot be started while there are " +  to_string(m_Aura->m_Config->m_MaxStartedGames) + " additional games in progress.");
     return;
   }
@@ -8937,8 +8975,7 @@ void CGame::RemoveCreator()
 bool CGame::GetIsStageAcceptingJoins() const
 {
   // This method does not care whether this is actually a mirror game. This is intended.
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby != this) return false;
-  if (m_LobbyLoading) return false;
+  if (m_LobbyLoading || m_Exiting || GetIsGameOver()) return false;
   if (!m_CountDownStarted) return true;
   if (!m_GameLoaded) return false;
   return m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress;

@@ -145,7 +145,7 @@ CGameUser::~CGameUser()
 {
   if (m_Socket) {
     if (!m_LeftMessageSent) {
-      Send(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), m_Game->GetIsLobby() ? PLAYERLEAVE_LOBBY : GetLeftCode()));
+      Send(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), m_Game->GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : GetLeftCode()));
     }
     m_Socket->Flush();
     UnrefConnection();
@@ -597,7 +597,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
       m_Game->EventUserDisconnectConnectionClosed(this);
     } else if (m_KickByTicks.has_value() && m_KickByTicks.value() < Ticks) {
       m_Game->EventUserKickHandleQueued(this);
-    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Ticks - m_JoinTicks >= GAME_USER_UNVERIFIED_KICK_TICKS && m_Game->GetIsLobby()) {
+    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Ticks - m_JoinTicks >= GAME_USER_UNVERIFIED_KICK_TICKS && m_Game->GetIsLobbyStrict()) {
       CRealm* Realm = GetRealm(false);
       if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
         m_Game->EventUserKickUnverified(this);

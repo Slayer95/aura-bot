@@ -78,16 +78,17 @@ CQueuedChatMessage::~CQueuedChatMessage()
   }
 }
 
-void CQueuedChatMessage::SetValidator(const uint8_t validator)
+void CQueuedChatMessage::SetValidator(const uint8_t validatorType const uint32_t validatorData)
 {
   switch (validator) {
-    case CHAT_VALIDATOR_CURRENT_LOBBY:
-      if (!m_Realm->m_Aura->m_CurrentLobby) return;
-      m_Validator = vector<uint8_t>(5, validator);
-      m_Validator[1] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter());
-      m_Validator[2] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 8);
-      m_Validator[3] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 16);
-      m_Validator[4] = static_cast<uint8_t>(m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() >> 24);
+    case CHAT_VALIDATOR_LOBBY_JOINABLE:
+      m_Validator = vector<uint8_t>();
+      m_Validator.reserve(5);
+      m_Validator[0] = validatorType;
+      m_Validator[1] = static_cast<uint8_t>(validatorData);
+      m_Validator[2] = static_cast<uint8_t>(validatorData >> 8);
+      m_Validator[3] = static_cast<uint8_t>(validatorData >> 16);
+      m_Validator[4] = static_cast<uint8_t>(validatorData >> 24);
       break;
     default:
       break;
@@ -103,11 +104,11 @@ bool CQueuedChatMessage::GetIsStale() const
 {
   if (m_Validator.empty()) return false;
   switch (m_Validator[0]) {
-    case CHAT_VALIDATOR_CURRENT_LOBBY:
+    case CHAT_VALIDATOR_LOBBY_JOINABLE: {
       if (m_Realm->GetIsGameBroadcastErrored()) return true;
-      if (!m_Realm->m_Aura->m_CurrentLobby) return true;
-      if (!m_Realm->m_Aura->m_CurrentLobby->GetIsSupportedGameVersion(m_Realm->GetGameVersion())) return true;
-      return m_Realm->m_Aura->m_CurrentLobby->GetHostCounter() != ByteArrayToUInt32(m_Validator, false, 1);
+      CGame* refLobby = m_Realm->m_Aura->GetLobbyByHostCounter(ByteArrayToUInt32(m_Validator, false, 1));
+      if (!refLobby || !refLobby->GetIsSupportedGameVersion(m_Realm->GetGameVersion())) return true;
+    }
     default:
       return false;
   }

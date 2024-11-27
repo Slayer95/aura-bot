@@ -573,7 +573,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
     }
 
     if (m_Aura->m_Config->m_MapSearchShowSuggestions) {
-      if (m_Aura->m_Games.empty()) {
+      if (m_Aura->m_StartedGames.empty()) {
         // Synchronous download, only if there are no ongoing games.
 #ifndef DISABLE_CPR
         SearchInputRemoteFuzzy(fuzzyMatches);
@@ -1193,20 +1193,18 @@ void CGameSetup::OnLoadMapSuccess()
       m_Ctx->ErrorReply("Failed to add alias.");
     }
   } else if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
-    /*if (m_Aura->m_Games.size() > m_Aura->m_Config->m_MaxStartedGames || m_Aura->m_Games.size() == m_Aura->m_Config->m_MaxStartedGames && !m_Aura->m_Config->m_DoNotCountReplaceableLobby) {
+    /*if (m_Aura->m_StartedGames.size() > m_Aura->m_Config->m_MaxStartedGames || m_Aura->m_StartedGames.size() == m_Aura->m_Config->m_MaxStartedGames && !m_Aura->m_Config->m_DoNotCountReplaceableLobby) {
       m_Ctx->ErrorReply("Games hosted quota reached.", CHAT_SEND_SOURCE_ALL);
       return;
 	}*/
-    if (m_Aura->m_CurrentLobby) {
-      if (!m_Aura->m_CurrentLobby->GetIsReplaceable()) {
-        m_Ctx->ErrorReply("Already hosting a game.", CHAT_SEND_SOURCE_ALL);
-        return;
-      }
-      m_Aura->m_CurrentLobby->SendAllChat("Another lobby is being created. This lobby will be closed soon.");
-      m_Aura->m_CurrentLobby->StartGameOverTimer();
-    }
     SetBaseName(m_MapReadyCallbackData);
     CGame* sourceGame = m_Ctx->GetSourceGame();
+    if (sourceGame && sourceGame->GetIsLobbyStrict() && sourceGame->GetIsReplaceable() && !sourceGame->GetIsBeingReplaced()) {
+      sourceGame->SendAllChat("Another lobby is being created. This lobby will be closed soon.");
+      sourceGame->StartGameOverTimer();
+      sourceGame->SetIsBeingReplaced(true);
+      ++m_Aura->m_ReplacingLobbiesCounter;
+    }
     CRealm* sourceRealm = m_Ctx->GetSourceRealm();
     if (m_Aura->m_Config->m_AutomaticallySetGameOwner) {
       SetOwner(m_Ctx->GetSender(), sourceRealm);

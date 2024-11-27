@@ -101,6 +101,7 @@ public:
 
   uint8_t                                            m_MaxSlots;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
+  uint32_t                                           m_ReplacingLobbiesCounter;
   uint64_t                                           m_HistoryGameID;
   uint32_t                                           m_LastServerID;
   size_t                                             m_MaxGameNameSize;
@@ -118,7 +119,7 @@ public:
 
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
-  std::vector<CGame*>                                m_Games;                      // all games after they have started
+  std::vector<CGame*>                                m_StartedGames;                      // all games after they have started
   std::vector<CGame*>                                m_Lobbies;                    // all games before they are started
   std::vector<CGame*>                                m_JoinInProgressGames;        // started games that can be joined in-progress (either as observer or player)
   std::map<std::string, std::string>                 m_CachedMaps;
@@ -136,12 +137,18 @@ public:
   ~CAura();
   CAura(CAura&) = delete;
 
+  CGame* GetMostRecentLobby() const;
   CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
   CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
 
   CRealm* GetRealmByInputId(const std::string& inputId) const;
   CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   CRealm* GetRealmByHostName(const std::string& hostName) const;
+
+  void TrackGameLobby(CGame* game) const;
+  void UntrackGameLobby(CGame* game) const;
+  void TrackGameJoinInProgress(CGame* game) const;
+  void UntrackGameJoinInProgress(CGame* game) const;
 
   void HoldContext(CCommandContext* nCtx);
   void UnholdContext(CCommandContext* nCtx);
@@ -165,6 +172,9 @@ public:
   bool GetNewGameIsInQuotaAutoReHost() const;
   bool CreateGame(CGameSetup* gameSetup);
   inline bool GetIsAutoHostThrottled() { return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= GetTicks(); }
+
+  inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
+  inline bool GetHasGames() { return !m_StartedGames.empty() || !m_Lobbies.empty(); }
 
   // events
 

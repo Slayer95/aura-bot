@@ -222,6 +222,7 @@ protected:
   uint8_t                             m_JoinedVirtualHosts;
   uint8_t                             m_ReconnectProtocols;
   bool                                m_Replaceable;                   // whether this game can be destroyed when !host command is used inside
+  bool                                m_Replacing;
   bool                                m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
   bool                                m_Locked;                        // if the game owner is the only one allowed to run game commands or not
   bool                                m_ChatOnly;                      // if we should ignore game start commands
@@ -314,6 +315,7 @@ public:
   inline uint32_t           GetHostCounter() const { return m_HostCounter; }
   inline int64_t            GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool               GetIsReplaceable() const { return m_Replaceable;}
+  inline bool               GetIsBeingReplaced() const { return m_Replacing;}
   inline bool               GetIsPublicStartable() const { return m_PublicStart; }
   inline bool               GetLocked() const { return m_Locked; }
   inline bool               GetMuteAll() const { return m_MuteAll; }
@@ -326,7 +328,8 @@ public:
   inline bool               GetGameLoading() const { return m_GameLoading; }
   inline bool               GetGameLoaded() const { return m_GameLoaded; }
   inline bool               GetLobbyLoading() const { return m_LobbyLoading; }
-  inline bool               GetIsLobby() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
+  inline bool               GetIsLobby() const { return !m_GameLoading && !m_GameLoaded; }
+  inline bool               GetIsLobbyStrict() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool               GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline uint32_t           GetSyncCounter() const { return m_SyncCounter; }
   uint8_t                   GetMaxEqualizerDelayFrames() const { return m_MaxPingEqualizerDelayFrames; }
@@ -447,7 +450,7 @@ public:
   void                      Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
   void                      SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
   void                      SendAll(const std::vector<uint8_t>& data) const;
-  void                      SendAllAsChat(const std::vector<uint8_t>& data) const;
+  bool                      SendAllAsChat(const std::vector<uint8_t>& data) const;
  
 
   // functions to send packets to players
@@ -456,8 +459,8 @@ public:
   void                      SendChat(uint8_t fromUID, uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                      SendChat(GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                      SendChat(uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
-  void                      SendAllChat(uint8_t fromUID, const std::string& message) const;
-  void                      SendAllChat(const std::string& message) const;
+  bool                      SendAllChat(uint8_t fromUID, const std::string& message) const;
+  bool                      SendAllChat(const std::string& message) const;
   void                      SendAllSlotInfo();
   void                      SendVirtualHostPlayerInfo(CConnection* player) const;
   void                      SendFakeUsersInfo(CConnection* player) const;
@@ -535,6 +538,10 @@ public:
   void                      HandleGameLoadedStats();
   bool                      ReleaseMap();
   void                      StartGameOverTimer(bool isMMD = false);
+  void                      TrackLobby() const;
+  void                      UntrackLobby() const;
+  void                      TrackJoinInProgress() const;
+  void                      UntrackJoinInProgress() const;
   void                      ClearActions();
   void                      Reset();
   bool                      GetIsRemakeable();
@@ -700,11 +707,14 @@ public:
   bool GetHasReferees() const;
   inline bool GetUsesCustomReferees() const { return m_UsesCustomReferees; }
   bool GetIsSupportedGameVersion(uint8_t nVersion) const;
-  void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
-  void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
-  void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
-  void SetSupportedGameVersion(uint8_t nVersion);
-  void SetSaveOnLeave(const uint8_t nValue) { m_SaveOnLeave = nValue; }
+  inline void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
+  inline void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
+  inline void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
+  inline void SetSupportedGameVersion(uint8_t nVersion);
+  inline void SetSaveOnLeave(const uint8_t nValue) { m_SaveOnLeave = nValue; }
+
+  inline void SetIsReplaceable(const bool nValue) const { return m_Replaceable = nValue;}
+  inline bool SetIsBeingReplaced(const bool nValue() const { return m_Replacing = nValue;}
 
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
   void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }

@@ -488,6 +488,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_IssuesURL(AURA_ISSUES_URL),
     m_MaxSlots(MAX_SLOTS_LEGACY),
     m_HostCounter(0),
+    m_ReplacingLobbiesCounter(0),
     m_HistoryGameID(0),
     m_LastServerID(0xF),
     m_MaxGameNameSize(31),
@@ -771,7 +772,7 @@ void CAura::ClearAutoRehost()
   if (m_CurrentLobby && m_CurrentLobby->GetMap() == m_AutoRehostGameSetup->m_Map) {
     mapHasRefs = true;
   } else {
-    for (auto& game : m_Games) {
+    for (auto& game : m_StartedGames) {
       if (game->GetMap() == m_AutoRehostGameSetup->m_Map) {
         mapHasRefs = true;
       }
@@ -810,13 +811,19 @@ CAura::~CAura()
   }
 
   m_Lobbies.erase(m_Lobbies.begin(), m_Lobbies.end());
-  for (auto& game : m_Games) {
+  for (auto& game : m_StartedGames) {
     delete game;
   }
 
   delete m_DB;
   delete m_IRC;
   delete m_Discord;
+}
+
+CGame* CAura::GetMostRecentLobby(uint32_t hostCounter) const
+{
+  if (m_Lobbies.empty()) return nullptr;
+  return m_Lobbies[m_Lobbies.size() - 1];
 }
 
 CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
@@ -833,7 +840,7 @@ CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
   if (m_CurrentLobby && m_CurrentLobby->GetGameID() == gameIdentifier) {
     return m_CurrentLobby;
   }
-  for (const auto& game : m_Games) {
+  for (const auto& game : m_StartedGames) {
     if (game->GetGameID() == gameIdentifier) {
       return game;
     }
@@ -931,7 +938,7 @@ bool CAura::Update()
   }
 
   bool isStandby = (
-    !m_CurrentLobby && m_Games.empty() &&
+    !m_CurrentLobby && m_StartedGames.empty() &&
     !m_Net->m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     m_PendingActions.empty() &&
@@ -990,7 +997,7 @@ bool CAura::Update()
 
   // 6. all running games' player sockets
 
-  for (auto& game : m_Games) {
+  for (auto& game : m_StartedGames) {
     NumFDs += game->SetFD(&fd, &send_fd, &nfds);
   }
 
@@ -1016,7 +1023,7 @@ bool CAura::Update()
 
   int64_t usecBlock = 50000;
 
-  for (auto& game : m_Games)
+  for (auto& game : m_StartedGames)
   {
     if (game->GetNextTimedActionTicks() * 1000 < usecBlock)
       usecBlock = game->GetNextTimedActionTicks() * 1000;
@@ -1175,7 +1182,7 @@ bool CAura::Update()
 
   // update running games
 
-  for (auto it = begin(m_Games); it != end(m_Games);) {
+  for (auto it = begin(m_StartedGames); it != end(m_StartedGames);) {
     if ((*it)->Update(&fd, &send_fd)) {
       (*it)->FlushLogs();
       if ((*it)->GetExiting()) {
@@ -1186,7 +1193,7 @@ bool CAura::Update()
         Print("[AURA] remaking game [" + (*it)->GetGameName() + "]");
         EventGameRemake(*it);
       }
-      it = m_Games.erase(it);
+      it = m_StartedGames.erase(it);
       UpdateMetaData();
     } else {
       (*it)->UpdatePost(&send_fd);
@@ -1666,11 +1673,11 @@ void CAura::UpdateWindowTitle()
 {
   CGame* detailsGame = nullptr;
   if (m_CurrentLobby) {
-    if (m_Games.size() == 0) detailsGame = m_CurrentLobby;
-  } else if (m_Games.size() == 1) {
-    detailsGame = m_Games[0];
+    if (m_StartedGames.size() == 0) detailsGame = m_CurrentLobby;
+  } else if (m_StartedGames.size() == 1) {
+    detailsGame = m_StartedGames[0];
   }
-  PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_CurrentLobby == nullptr ? 0 : 1, m_Games.size(), m_AutoRehostGameSetup != nullptr);
+  PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_CurrentLobby == nullptr ? 0 : 1, m_StartedGames.size(), m_AutoRehostGameSetup != nullptr);
   SetWindowTitle(windowTitle);
 }
 
@@ -1726,7 +1733,7 @@ void CAura::GracefulExit()
     m_GameSetup->m_ExitingSoon = true;
   }
 
-  for (auto& game : m_Games) {
+  for (auto& game : m_StartedGames) {
     game->SendEveryoneElseLeftAndDisconnect("shutdown");
   }
 
@@ -1752,7 +1759,7 @@ void CAura::GracefulExit()
 bool CAura::CheckGracefulExit()
 {
   /* Already checked:
-    (!m_CurrentLobby && m_Games.empty() &&
+    (!m_CurrentLobby && m_StartedGames.empty() &&
     !m_Net->m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     m_PendingActions.empty())
@@ -1781,13 +1788,14 @@ bool CAura::CheckGracefulExit()
 
 bool CAura::GetNewGameIsInQuota() const
 {
-  return m_Lobbies.size() < m_Config->m_MaxLobbies;
+  return m_Lobbies.size() - m_ReplacingLobbiesCounter < m_Config->m_MaxLobbies;
 }
 
 bool CAura::GetNewGameIsInQuotaConservative() const
 {
-  if (!GetNewGameIsInQuota()) return false;
-  return m_Games.size() < m_Config->m_MaxStartedGames;
+  if (m_Lobbies.size() >= m_Config->m_MaxLobbies) return false;
+  if (m_StartedGames.size() >= m_Config->m_MaxStartedGames) return false;
+  return true;
 }
 
 bool CAura::GetNewGameIsInQuotaAutoReHost() const
@@ -1856,7 +1864,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   UpdateMetaData();
 
 #ifndef DISABLE_MINIUPNP
-  if (m_Net->m_Config->m_EnableUPnP && m_CurrentLobby->GetIsLobby() && m_Games.empty()) {
+  if (m_Net->m_Config->m_EnableUPnP && m_CurrentLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // This is a long synchronous network call.
     m_Net->RequestUPnP("TCP", m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET), m_CurrentLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
@@ -1941,6 +1949,38 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   return true;
+}
+
+void CAura::TrackGameLobby(CGame* game) const
+{
+  m_Lobbies.push_back(game);
+}
+
+void CAura::UntrackGameLobby(CGame* game) const
+{
+  for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
+    if (it == game) {
+      it = m_Lobbies.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void CAura::TrackGameJoinInProgress(CGame* game) const
+{
+  m_JoinInProgressGames.push_back(game);
+}
+
+void CAura::UntrackGameJoinInProgress(CGame* game) const
+{
+  for (auto it = begin(m_JoinInProgressGames); it != end(m_JoinInProgressGames);) {
+    if (it == game) {
+      it = m_JoinInProgressGames.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 void CAura::HoldContext(CCommandContext* nCtx)

@@ -134,7 +134,7 @@ CRealm::~CRealm()
   if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
     m_Aura->m_CurrentLobby->RemoveCreator();
   }
-  for (auto& game : m_Aura->m_Games) {
+  for (auto& game : m_Aura->m_StartedGames) {
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
       game->RemoveCreator();
     }
@@ -1009,7 +1009,7 @@ void CRealm::SendNetworkConfig()
     uint16_t port = 6112;
     if (m_Config->m_EnableCustomPort) {
       port = m_Config->m_PublicHostPort;
-    } else if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
+    } else if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobbyStrict()) {
       port = m_Aura->m_CurrentLobby->GetHostPort();
     }
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "using public game host " + IPv4ToString(AddressToIPv4Array(&(m_Config->m_PublicHostAddress))) + ":" + to_string(port))
@@ -1244,7 +1244,7 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CComman
   m_ChatQueueJoinCallback->SetMessage(game->GetAnnounceText(this));
   m_ChatQueueJoinCallback->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
   m_ChatQueueJoinCallback->SetCallback(CHAT_CALLBACK_REFRESH_GAME);
-  m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_CURRENT_LOBBY);
+  m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_LOBBY_JOINABLE, game->GetHostCounter());
   m_HadChatActivity = true;
 
   DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued game announcement")

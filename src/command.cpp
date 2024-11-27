@@ -440,7 +440,7 @@ void CCommandContext::UpdatePermissions()
   bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
 
   // Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
-  if (m_GameUser || (IsOwner && m_TargetGame && m_TargetGame->GetIsLobby())) {
+  if (m_GameUser || (IsOwner && m_TargetGame && m_TargetGame->GetIsLobbyStrict())) {
     m_Permissions |= USER_PERMISSIONS_GAME_PLAYER;
   }
 
@@ -448,7 +448,7 @@ void CCommandContext::UpdatePermissions()
   if (IsRealmVerified) {
     m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
   }
-  if (IsOwner && (m_GameUser || (m_TargetGame && m_TargetGame->GetIsLobby()))) {
+  if (IsOwner && (m_GameUser || (m_TargetGame && m_TargetGame->GetIsLobbyStrict()))) {
     m_Permissions |= USER_PERMISSIONS_GAME_OWNER;
   }
   if (IsAdmin) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
@@ -801,7 +801,7 @@ void CCommandContext::SendAllUnlessHidden(const string& message)
   if (!m_TargetGame) {
     SendAll(message);
   } else {
-    SendReply(message, m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+    SendReply(message, m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
   }
 }
 
@@ -1128,12 +1128,12 @@ CGame* CCommandContext::GetTargetGame(const string& rawInput)
     return m_Aura->m_CurrentLobby;
   }
   if (inputGame == "oldest" || inputGame == "game#oldest") {
-    if (m_Aura->m_Games.empty()) return nullptr;
-    return m_Aura->m_Games[0];
+    if (m_Aura->m_StartedGames.empty()) return nullptr;
+    return m_Aura->m_StartedGames[0];
   }
   if (inputGame == "newest" || inputGame == "latest" || inputGame == "game#newest" || inputGame == "game#latest") {
-    if (m_Aura->m_Games.empty()) return nullptr;
-    return m_Aura->m_Games[m_Aura->m_Games.size() - 1];
+    if (m_Aura->m_StartedGames.empty()) return nullptr;
+    return m_Aura->m_StartedGames[m_Aura->m_StartedGames.size() - 1];
   }
   if (inputGame.substr(0, 5) == "game#") {
     inputGame = inputGame.substr(5);
@@ -1269,7 +1269,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("key"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -1354,7 +1354,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
       string SlotFragment, ReadyFragment;
-      if (m_TargetGame->GetIsLobby()) {
+      if (m_TargetGame->GetIsLobbyStrict()) {
         SlotFragment = "Slot #" + to_string(1 + m_TargetGame->GetSIDFromUID(targetPlayer->GetUID())) + ". ";
         if (targetPlayer->GetIsReady()) {
           ReadyFragment = "Ready. ";
@@ -1396,7 +1396,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       optional<uint32_t> kickPing;
       if (!Payload.empty()) {
-        if (!m_TargetGame->GetIsLobby()) {
+        if (!m_TargetGame->GetIsLobbyStrict()) {
           ErrorReply("Maximum ping may only be set in a lobby.");
           break;
         }
@@ -1511,7 +1511,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("statsdota"):
     case HashCode("stats"): {
       if (
-        !(m_SourceGame && m_SourceGame->GetIsLobby()) &&
+        !(m_SourceGame && m_SourceGame->GetIsLobbyStrict()) &&
         !CheckPermissions(m_Config->m_StatsPermissions, COMMAND_PERMISSIONS_VERIFIED)
       ) {
         ErrorReply("Not allowed to look up stats.");
@@ -2163,7 +2163,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -2252,7 +2252,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->GetIsLobby())
+      if (!m_TargetGame->GetIsLobbyStrict())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -2261,7 +2261,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->SetMapSiteURL(TargetUrl);
-      SendReply("Download URL set to [" + TargetUrl + "]", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+      SendReply("Download URL set to [" + TargetUrl + "]", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -2285,7 +2285,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's configuration.");
         break;
       }
@@ -2331,7 +2331,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's configuration.");
         break;
       }
@@ -2367,7 +2367,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's configuration.");
         break;
       }
@@ -2468,12 +2468,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       //targetPlayer->SetDeleteMe(true);
       targetPlayer->SetLeftReason("was kicked by [" + m_FromName + "]");
 
-      if (m_TargetGame->GetIsLobby())
+      if (m_TargetGame->GetIsLobbyStrict())
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
       else
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOST);
 
-      if (m_TargetGame->GetIsLobby()) {
+      if (m_TargetGame->GetIsLobbyStrict()) {
         bool KickAndClose = CommandHash == HashCode("ckick") || CommandHash == HashCode("closekick");
         if (KickAndClose && !m_TargetGame->GetIsRestored()) {
           m_TargetGame->CloseSlot(SID, false);
@@ -2507,7 +2507,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (lower == "default" || lower == "reset") {
         m_TargetGame->ResetLatency();
-        SendReply("Latency settings reset to default.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Latency settings reset to default.", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
         break;
       } else if (lower == "ignore" || lower == "bypass" || lower == "normal") {
         if (!m_TargetGame->GetGameLoaded()) {
@@ -2515,7 +2515,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         m_TargetGame->NormalizeSyncCounters();
-        SendReply("Ignoring lagging players. (They may not be able to control their units.)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Ignoring lagging players. (They may not be able to control their units.)", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
         break;
       }
 
@@ -2579,13 +2579,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       );
 
       if (refreshTime == REFRESH_PERIOD_MIN) {
-        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       } else if (refreshTime == REFRESH_PERIOD_MAX) {
-        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->GetLatency()) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->GetLatency()) + "ms.", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       }
-      SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", m_TargetGame->GetIsLobby() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+      SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -2649,7 +2649,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -2718,7 +2718,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame) {
-        if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
+        if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted()) {
           break;
         }
         if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -2788,7 +2788,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
           break;
         }
-        if (m_Aura->m_CurrentLobby) {
+        if (!m_Aura->GetNewGameIsInQuotaConservative()) {
           ErrorReply("Already hosting a game.");
           break;
         }
@@ -2835,7 +2835,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_Aura->m_CurrentLobby) {
+      if (!m_Aura->GetNewGameIsInQuotaConservative()) {
         ErrorReply("Already hosting a game.");
         break;
       }
@@ -2885,7 +2885,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_Aura->m_CurrentLobby) {
+      if (!m_Aura->GetNewGameIsInQuotaConservative()) {
         ErrorReply("There is already a lobby being hosted.");
         break;
       }
@@ -2911,7 +2911,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("s"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_START_GAME)) {
@@ -2942,7 +2942,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("sn"):
     case HashCode("startn"):
     case HashCode("quickstart"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -2965,7 +2965,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("freestart"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -3002,7 +3002,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("autostart"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -3060,7 +3060,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("clearautostart"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -3088,7 +3088,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -3244,7 +3244,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("download"):
     case HashCode("dl"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -3253,7 +3253,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool IsMapAvailable = !m_TargetGame->GetMap()->GetMapData()->empty() && !m_TargetGame->GetMap()->HasMismatch();
-      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_Games.size() >= m_Aura->m_Config->m_MaxStartedGames) {
+      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
@@ -3430,7 +3430,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("abort"):
     case HashCode("a"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -3735,7 +3735,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("ban"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby()) {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict()) {
         ErrorReply("This command may only be used in a game lobby, and will only affect it. For persistent bans, use " + cmdToken + "pban .");
         break;
       }
@@ -3806,7 +3806,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("unban"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby()) {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict()) {
         ErrorReply("This command may only be used in a game lobby, and will only affect it. For persistent bans, use " + cmdToken + "punban .");
         break;
       }
@@ -3982,7 +3982,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's configuration.");
         break;
       }
@@ -4011,7 +4011,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       for (const auto& bnet : m_Aura->m_Realms) {
         string statusFragment;
-        if (m_Aura->m_CurrentLobby && bnet->GetIsGameBroadcastErrored()) {
+        if (!m_Aura->m_Lobbies.empty() && bnet->GetIsGameBroadcastErrored()) {
           statusFragment = "unlisted";
         } else if (bnet->GetLoggedIn()) {
           statusFragment = "online";
@@ -4175,7 +4175,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if ((!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess) && !GetIsSudo()) {
+      if ((!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess) && !GetIsSudo()) {
         ErrorReply("Cannot take ownership of this game.");
         break;
       }
@@ -4265,7 +4265,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if ((!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess) && !GetIsSudo()) {
+      if ((!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted() || m_TargetGame->m_OwnerLess) && !GetIsSudo()) {
         ErrorReply("Cannot take ownership of this game.");
         break;
       }
@@ -4315,7 +4315,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("You are not allowed to send bnet commands.");
         break;
       }
-      if (!IsCommand && m_Aura->m_CurrentLobby) {
+      if (!IsCommand && m_Aura->GetIsAdvertisingGames()) {
         ErrorReply("Cannot send bnet chat messages while the bot is hosting a game lobby.");
         break;
       }
@@ -4354,7 +4354,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (m_Aura->m_Realms.empty())
         break;
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict())
         break;
 
       if (m_TargetGame->m_DisplayMode == GAME_PRIVATE) {
@@ -4436,7 +4436,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4466,7 +4466,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4520,7 +4520,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4548,7 +4548,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4605,7 +4605,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4684,7 +4684,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4769,7 +4769,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4883,7 +4883,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4946,7 +4946,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -4982,7 +4982,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5076,7 +5076,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5121,7 +5121,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5172,7 +5172,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5236,7 +5236,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5287,7 +5287,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5342,7 +5342,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         if (!GetIsSudo() || !m_TargetGame->GetGameLoaded()) {
           ErrorReply("Cannot edit this game's slots.");
           break;
@@ -5359,7 +5359,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetIsLobby()) {
+      if (m_TargetGame->GetIsLobbyStrict()) {
         m_TargetGame->DeleteFakeUsersLobby();
       } else {
         m_TargetGame->DeleteFakeUsersLoaded();
@@ -5377,7 +5377,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5519,7 +5519,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5596,7 +5596,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame)
         break;
 
-      if (!m_TargetGame->GetIsLobby() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
@@ -5617,7 +5617,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("unlock"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
@@ -5930,7 +5930,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("virtualhost"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || m_TargetGame->GetCountDownStarted())
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted())
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
@@ -6193,19 +6193,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string Message = TrimString(Payload.substr(MessageStart + 1));
       if (!IsRaw) Message = "[ADMIN] " + Message;
       if (GameId == "*") {
-        bool Success = false;
-        if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
-          Success = true;
-          m_Aura->m_CurrentLobby->SendAllChat(Message);
+        bool success = false;
+        for (const auto& targetGame : m_Aura->m_Lobbies) {
+          success = targetGame.SendAllChat(Message) || success;
         }
-        if (m_Aura->m_Games.size()) {
-          Success = true;
-          for (auto& targetGame : m_Aura->m_Games)
-            targetGame->SendAllChat(Message);
+        for (auto& targetGame : m_Aura->m_StartedGames) {
+          success = targetGame.SendAllChat(Message) || success;
         }
-        if (!Success) {
+        if (!success) {
           ErrorReply("No games found.");
           break;
+        }
+        if (!m_SourceGame) {
+          SendReply("Sent chat message to all games.");
         }
       } else {
         CGame* targetGame = GetTargetGame(GameId);
@@ -6217,7 +6217,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Game [" + GameId + "] is a mirror game.");
           break;
         }
-        targetGame->SendAllChat(Message);
+        if (!targetGame->SendAllChat(Message)) {
+          ErrorReply("Failed to send chat message to [" + targetGame->GetGameName() + "]");
+          break;
+        }
+        if (targetGame != m_SourceGame) {
+          SendReply("Sent chat message to [" + targetGame->GetGameName() + "]");
+        }
       }
       break;
     }
@@ -6383,7 +6389,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
+      if (m_Aura->GetHasGames()) {
         if (Payload != "force" && Payload != "f") {
           ErrorReply("At least one game is in progress, or a lobby is hosted. Use '"+ cmdToken + "exit force' to shutdown anyway");
           break;
@@ -6403,7 +6409,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_Aura->m_CurrentLobby || !m_Aura->m_Games.empty()) {
+      if (m_Aura->GetHasGames()) {
         if (Payload != "force" && Payload != "f") {
           ErrorReply("At least one game is in progress, or a lobby is hosted. Use '" + cmdToken + "restart force' to restart anyway");
           break;
@@ -6779,7 +6785,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to invite the bot to another channel.");
         break;
       }
-      if (m_Aura->m_CurrentLobby)  {
+      if (!m_Aura->m_Lobbies.empty()) {
         ErrorReply("Cannot join a chat channel while hosting a lobby.");
         break;
       }
@@ -6808,19 +6814,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to list games.");
         break;
       }
-      vector<string> CurrentGames;
-      if (m_Aura->m_CurrentLobby) {
-        CurrentGames.push_back(string("Lobby#")+ to_string(m_Aura->m_CurrentLobby->GetGameID()) + ": " + m_Aura->m_CurrentLobby->GetStatusDescription());
+      vector<string> currentGames;
+      for (const auto& game : m_Aura->m_Lobbies) {
+        currentGames.push_back(string("Lobby#")+ to_string(game.GetGameID()) + ": " + game.GetStatusDescription());
       }
-      for (size_t i = 0; i < m_Aura->m_Games.size(); ++i) {
-        CGame* game = m_Aura->m_Games[i];
-        CurrentGames.push_back(string("Game#") + to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
+      for (const auto& game : m_Aura->m_StartedGames) {
+        currentGames.push_back(string("Game#") + to_string(game.GetGameID()) + ": " + game.GetStatusDescription());
       }
-      if (CurrentGames.empty()) {
-        SendReply("No games are active.");
+      if (currentGames.empty()) {
+        SendReply("No games hosted.");
         break;
       }
-      SendReply(JoinVector(CurrentGames, false), CHAT_LOG_CONSOLE);
+      SendReply(JoinVector(currentGames, false), CHAT_LOG_CONSOLE);
       break;
     }
 
@@ -6834,7 +6839,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("hostpriv"):
     case HashCode("host"): {
       if (!CheckPermissions(m_Config->m_HostPermissions, (
-        m_SourceGame && m_SourceGame->GetIsLobby() && m_SourceGame->GetIsReplaceable() ?
+        m_SourceGame && m_SourceGame->GetIsLobbyStrict() && m_SourceGame->GetIsReplaceable() ?
         COMMAND_PERMISSIONS_UNVERIFIED :
         COMMAND_PERMISSIONS_ADMIN
       ))) {
@@ -6950,7 +6955,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_Aura->m_CurrentLobby) {
+      if (!m_Aura->GetNewGameIsInQuotaConservative()) {
         ErrorReply("Already hosting a game.");
         break;
       }
@@ -7042,7 +7047,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("afk"):
     case HashCode("unready"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || !m_GameUser)
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || !m_GameUser)
         break;
 
       if (m_TargetGame->GetCountDownStarted()/* && !m_TargetGame->GetCountDownUserInitiated()*/) {
@@ -7086,7 +7091,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("ready"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby() || !m_GameUser) {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict() || !m_GameUser) {
         break;
       }
 
@@ -7135,7 +7140,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("checkready"):
     case HashCode("askready"):
     case HashCode("readystatus"): {
-      if (!m_TargetGame || !m_TargetGame->GetIsLobby()) {
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict()) {
         break;
       }
       if (m_TargetGame->GetCountDownStarted()) {
@@ -7151,7 +7156,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("pin"): {
-      if (!m_GameUser || !m_TargetGame->GetIsLobby()) {
+      if (!m_GameUser || !m_TargetGame->GetIsLobbyStrict()) {
         break;
       }
       if (m_TargetGame->GetCountDownStarted()) {
@@ -7171,7 +7176,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("unpin"): {
-      if (!m_GameUser || !m_TargetGame->GetIsLobby()) {
+      if (!m_GameUser || !m_TargetGame->GetIsLobbyStrict()) {
         break;
       }
       if (m_TargetGame->GetCountDownStarted()) {

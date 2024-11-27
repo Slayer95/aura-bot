@@ -134,7 +134,7 @@ bool CGameTestConnection::QueryGameInfo()
     return false;
   }
 
-  if (!m_Aura->m_CurrentLobby || (!m_Aura->m_CurrentLobby->GetIsLobby() && !m_Aura->m_CurrentLobby->GetIsMirror())) {
+  if (!m_Aura->m_CurrentLobby || (!m_Aura->m_CurrentLobby->GetIsLobbyStrict() && !m_Aura->m_CurrentLobby->GetIsMirror())) {
     return false;
   }
 
@@ -646,7 +646,7 @@ GameUser::CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const u
 {
   GameUser::CGameUser* matchUser = nullptr;
 
-  for (auto& game : m_Aura->m_Games) {
+  for (auto& game : m_Aura->m_StartedGames) {
     if (game->GetGameID() != gameID) continue;
     if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
       GameUser::CGameUser* user = game->GetUserFromUID(UID);
@@ -664,7 +664,7 @@ GameUser::CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const
 {
   GameUser::CGameUser* matchUser = nullptr;
 
-  for (auto& game : m_Aura->m_Games) {
+  for (auto& game : m_Aura->m_StartedGames) {
     if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
       GameUser::CGameUser* user = game->GetUserFromUID(UID);
       if (user && !user->GetDeleteMe() && user->GetGProxyAny() && !user->GetGProxyCheckGameID() && user->GetGProxyReconnectKey() == reconnectKey) {
@@ -1080,7 +1080,7 @@ void CNet::ReportHealthCheck()
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
   if (publicIPv4 != nullptr && hasDirectAttempts) {
     string portForwardInstructions;
-    if (m_HealthCheckVerbose && m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobby()) {
+    if (m_HealthCheckVerbose && m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobbyStrict()) {
       portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(GetPotentialGamePorts(), false) + "}";
     }
     if (anyDirectSuccess) {

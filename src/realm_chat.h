@@ -43,7 +43,7 @@ private:
   std::vector<uint8_t>  m_ProxySenderName; // !whois, !tell, !invite, !say, !announce
   std::string           m_EarlyFeedback;
 
-  std::vector<uint8_t>  m_Validator; // First byte CHAT_VALIDATOR_NONE, CHAT_VALIDATOR_CURRENT_LOBBY. Rest is parsed.
+  std::vector<uint8_t>  m_Validator; // First byte CHAT_VALIDATOR_NONE, CHAT_VALIDATOR_LOBBY_JOINABLE. Rest is parsed.
   uint8_t               m_Callback;
   bool                  m_WasThrottled;
 
@@ -72,7 +72,7 @@ public:
   inline void SetChannel(const std::string& nChannel) { m_Channel = nChannel; }
   inline void SetCallback(const uint8_t callback) { m_Callback = callback; }
   inline void SetWasThrottled(const bool nValue) { m_WasThrottled = nValue; }
-  void SetValidator(const uint8_t validator);
+  void SetValidator(const uint8_t validatorType, const uint32_t validatorData);
   int64_t GetQueuedDuration() const;
   bool GetIsStale() const;
   std::vector<uint8_t> GetMessageBytes() const;
