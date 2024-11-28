@@ -951,6 +951,8 @@ bool CAura::Update()
     }
   }
 
+  bool metaDataNeedsUpdate = false;
+
   if (m_AutoRehostGameSetup && !m_AutoReHosted) {
     if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
       (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
@@ -1184,8 +1186,6 @@ bool CAura::Update()
 
   // update current lobby
 
-  bool metaDataNeedsUpdate = false;
-
   for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
     if ((*it)->Update(&fd, &send_fd)) {
       EventGameDeleted(*it);
@@ -1199,6 +1199,7 @@ bool CAura::Update()
   }
 
   // update running games
+
   for (auto it = begin(m_StartedGames); it != end(m_StartedGames);) {
     if ((*it)->Update(&fd, &send_fd)) {
       (*it)->FlushLogs();
@@ -1214,10 +1215,6 @@ bool CAura::Update()
       (*it)->UpdatePost(&send_fd);
       ++it;
     }
-  }
-
-  if (metaDataNeedsUpdate) {
-    UpdateMetaData();
   }
 
   // update battle.net connections
@@ -1239,6 +1236,10 @@ bool CAura::Update()
 
   // update UDP sockets, outgoing test connections
   m_Net->Update(&fd, &send_fd);
+
+  if (metaDataNeedsUpdate) {
+    UpdateMetaData();
+  }
 
   return m_Exiting;
 }
