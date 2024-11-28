@@ -99,18 +99,19 @@ public:
   std::string                                        m_RepositoryURL;              // Aura repository URL
   std::string                                        m_IssuesURL;                  // Aura issues URL
 
-  uint8_t                                            m_MaxSlots;
+  uint32_t                                           m_LastServerID;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
   uint32_t                                           m_ReplacingLobbiesCounter;
   uint64_t                                           m_HistoryGameID;
-  uint32_t                                           m_LastServerID;
+  uint8_t                                            m_GameVersion;
+  uint8_t                                            m_MaxSlots;
   size_t                                             m_MaxGameNameSize;
 
   bool                                               m_ScriptsExtracted;           // indicates if there's lacking configuration info so we can quit
-  uint8_t                                            m_GameVersion;
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                                               m_ExitingSoon;                // set to true to let aura gracefully stop all services and network traffic, and shutdown once done
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
+  bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
 
   CCommandContext*                                   m_SudoContext;
   std::string                                        m_SudoAuthPayload;
@@ -145,10 +146,10 @@ public:
   CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   CRealm* GetRealmByHostName(const std::string& hostName) const;
 
-  void TrackGameLobby(CGame* game) const;
-  void UntrackGameLobby(CGame* game) const;
-  void TrackGameJoinInProgress(CGame* game) const;
-  void UntrackGameJoinInProgress(CGame* game) const;
+  void TrackGameLobby(CGame* game);
+  void UntrackGameLobby(CGame* game);
+  void TrackGameJoinInProgress(CGame* game);
+  void UntrackGameJoinInProgress(CGame* game);
 
   void HoldContext(CCommandContext* nCtx);
   void UnholdContext(CCommandContext* nCtx);
@@ -159,7 +160,7 @@ public:
   uint64_t NextHistoryGameID();
   uint32_t NextServerID();
 
-  std::string GetSudoAuthPayload();
+  std::string GetSudoAuthPayload(const std::string& payload);
 
   // processing functions
 
@@ -178,8 +179,8 @@ public:
 
   // events
 
-  void EventBNETGameRefreshSuccess(CRealm* bnet);
-  void EventBNETGameRefreshError(CRealm* bnet);
+  void EventBNETGameRefreshSuccess(CRealm* realm);
+  void EventBNETGameRefreshError(CRealm* realm);
   void EventGameDeleted(CGame* game);
   void EventGameRemake(CGame* game);
 
@@ -192,6 +193,7 @@ public:
 
   uint8_t ExtractScripts();
   bool CopyScripts();
+  bool GetAutoReHostMapHasRefs() const;
   void ClearAutoRehost();
 
   void LoadMapAliases();

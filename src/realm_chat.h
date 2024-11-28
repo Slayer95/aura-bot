@@ -45,6 +45,7 @@ private:
 
   std::vector<uint8_t>  m_Validator; // First byte CHAT_VALIDATOR_NONE, CHAT_VALIDATOR_LOBBY_JOINABLE. Rest is parsed.
   uint8_t               m_Callback;
+  uint32_t              m_CallbackData;
   bool                  m_WasThrottled;
 
 public:
@@ -70,7 +71,7 @@ public:
     m_ReceiverName = name;
   }
   inline void SetChannel(const std::string& nChannel) { m_Channel = nChannel; }
-  inline void SetCallback(const uint8_t callback) { m_Callback = callback; }
+  void SetCallback(const uint8_t type, const uint32_t data);
   inline void SetWasThrottled(const bool nValue) { m_WasThrottled = nValue; }
   void SetValidator(const uint8_t validatorType, const uint32_t validatorData);
   int64_t GetQueuedDuration() const;
@@ -91,6 +92,7 @@ public:
   CCommandContext* GetProxyCtx() const { return m_ProxySenderCtx; }
   std::string GetReceiver() const { return std::string(m_ReceiverName.begin(), m_ReceiverName.end()); }
   inline uint8_t GetCallback() const { return m_Callback; }
+  inline uint32_t GetCallbackData() const { return m_CallbackData; }
   inline bool GetWasThrottled() const { return m_WasThrottled; }
 
   CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, const bool isProxy);

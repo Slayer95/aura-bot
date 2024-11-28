@@ -123,7 +123,12 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             }
             DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
             CGame* targetLobby = m_Aura->GetLobbyByHostCounter(joinRequest->GetHostCounter());
-            if (!targetLobby || targetLobby->GetIsMirror() || !targetLobby->GetIsStageAcceptingJoins()) {
+            if (!targetLobby) {
+              break;
+            }
+            if (targetLobby->GetIsMirror() || targetLobby->GetHostPort() != m_Port) {
+              DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
+              Abort = true;
               break;
             }
             joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);

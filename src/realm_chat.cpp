@@ -54,6 +54,7 @@ CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, co
 
     m_ProxySenderCtx(nullptr),
     m_Callback(CHAT_CALLBACK_NONE),
+    m_CallbackData(0),
     m_WasThrottled(false)
 {
   if (nCtx && nCtx->m_SourceRealm == nRealm) {
@@ -78,9 +79,9 @@ CQueuedChatMessage::~CQueuedChatMessage()
   }
 }
 
-void CQueuedChatMessage::SetValidator(const uint8_t validatorType const uint32_t validatorData)
+void CQueuedChatMessage::SetValidator(const uint8_t validatorType, const uint32_t validatorData)
 {
-  switch (validator) {
+  switch (validatorType) {
     case CHAT_VALIDATOR_LOBBY_JOINABLE:
       m_Validator = vector<uint8_t>();
       m_Validator.reserve(5);
@@ -93,6 +94,12 @@ void CQueuedChatMessage::SetValidator(const uint8_t validatorType const uint32_t
     default:
       break;
   }
+}
+
+void CQueuedChatMessage::SetCallback(const uint8_t type, const uint32_t data)
+{
+  m_Callback = type;
+  m_CallbackData = data;
 }
 
 int64_t CQueuedChatMessage::GetQueuedDuration() const

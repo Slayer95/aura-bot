@@ -151,6 +151,7 @@ protected:
   std::string                         m_GameName;                      // game name
   uint64_t                            m_GameHistoryId;
   std::string                         m_LastOwner;                     // name of the player who was owner last time the owner was released
+  bool                                m_FromAutoReHost;
   bool                                m_OwnerLess;
   std::string                         m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                         m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
@@ -306,6 +307,8 @@ public:
   std::string               GetLobbyVirtualHostName() const;
   std::string               GetPrefixedGameName(const CRealm* realm = nullptr) const;
   std::string               GetAnnounceText(const CRealm* realm = nullptr) const;
+  inline bool               GetFromAutoReHost() const { return m_FromAutoReHost; }
+  inline bool               GetLockedOwnerLess() const { return m_OwnerLess; }
   inline std::string        GetOwnerName() const { return m_OwnerName; }
   inline std::string        GetOwnerRealm() const { return m_OwnerRealm; }
   inline std::string        GetCreatorName() const { return m_CreatedBy; }
@@ -538,10 +541,10 @@ public:
   void                      HandleGameLoadedStats();
   bool                      ReleaseMap();
   void                      StartGameOverTimer(bool isMMD = false);
-  void                      TrackLobby() const;
-  void                      UntrackLobby() const;
-  void                      TrackJoinInProgress() const;
-  void                      UntrackJoinInProgress() const;
+  void                      TrackLobby();
+  void                      UntrackLobby();
+  void                      TrackJoinInProgress();
+  void                      UntrackJoinInProgress();
   void                      ClearActions();
   void                      Reset();
   bool                      GetIsRemakeable();
@@ -713,8 +716,8 @@ public:
   inline void SetSupportedGameVersion(uint8_t nVersion);
   inline void SetSaveOnLeave(const uint8_t nValue) { m_SaveOnLeave = nValue; }
 
-  inline void SetIsReplaceable(const bool nValue) const { return m_Replaceable = nValue;}
-  inline bool SetIsBeingReplaced(const bool nValue() const { return m_Replacing = nValue;}
+  inline void SetIsReplaceable(const bool nValue) { m_Replaceable = nValue; }
+  inline void SetIsBeingReplaced(const bool nValue) { m_Replacing = nValue; }
 
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
   void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }

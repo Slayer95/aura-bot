@@ -1125,7 +1125,7 @@ CGame* CCommandContext::GetTargetGame(const string& rawInput)
   string inputGame = rawInput;
   transform(begin(inputGame), end(inputGame), begin(inputGame), [](char c) { return static_cast<char>(std::tolower(c)); });
   if (inputGame == "lobby" || inputGame == "game#lobby") {
-    return m_Aura->m_CurrentLobby;
+    return m_Aura->GetMostRecentLobby();
   }
   if (inputGame == "oldest" || inputGame == "game#oldest") {
     if (m_Aura->m_StartedGames.empty()) return nullptr;
@@ -1154,7 +1154,7 @@ void CCommandContext::UseImplicitHostedGame()
 {
   if (m_TargetGame) return;
 
-  m_TargetGame = m_Aura->m_CurrentLobby;
+  m_TargetGame = m_Aura->GetMostRecentLobby();
   if (m_TargetGame && !GetIsSudo()) {
     UpdatePermissions();
   }
@@ -2771,15 +2771,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           }
 
           // unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
-          // this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
+          // TODO: this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
           // we assume this won't happen very often since the only downside is a potential false positive
 
-          realm->ResetGameBroadcastStatus();
-          realm->QueueGameUncreate();
-          realm->SendEnterChat();
-
-          if (!realm->GetPvPGN())
-            realm->SendEnterChat();
+          realm->ResetGameBroadcastData();
         }
 
         m_TargetGame->m_CreationTime = m_TargetGame->m_LastRefreshTime = GetTime();
@@ -3459,7 +3454,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("checknetwork"): {
       UseImplicitHostedGame();
 
-      uint16_t gamePort = m_TargetGame ? m_TargetGame->GetHostPortForDiscoveryInfo(AF_INET) : m_Aura->m_Net->NextHostPort();
+      if (!m_TargetGame || !m_TargetGame->GetIsStageAcceptingJoins()) {
+        ErrorReply("Use this command when you are hosting a game lobby.");
+        break;
+      }
       uint8_t checkMode = HEALTH_CHECK_ALL | HEALTH_CHECK_VERBOSE;
       if (!m_Aura->m_Net->m_SupportTCPOverIPv6) {
         checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
@@ -3481,7 +3479,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
-      if (!m_Aura->m_Net->QueryHealthCheck(this, checkMode, targetRealm, gamePort)) {
+      if (!m_Aura->m_Net->QueryHealthCheck(this, checkMode, targetRealm, m_TargetGame)) {
         ErrorReply("Already testing the network.");
         break;
       }
@@ -4412,16 +4410,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (toAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {
           if (!m_TargetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
-          bnet->ResetGameBroadcastStatus();
-          bnet->QueueGameUncreate(); //?
+          bnet->ResetGameBroadcastData();
           bnet->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
-          bnet->SendEnterChat();
         }
       } else {
-        targetRealm->ResetGameBroadcastStatus();
-        targetRealm->QueueGameUncreate();
+        targetRealm->ResetGameBroadcastData();
         targetRealm->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
-        targetRealm->SendEnterChat();
       }
       break;
     }
@@ -6195,10 +6189,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (GameId == "*") {
         bool success = false;
         for (const auto& targetGame : m_Aura->m_Lobbies) {
-          success = targetGame.SendAllChat(Message) || success;
+          success = targetGame->SendAllChat(Message) || success;
         }
         for (auto& targetGame : m_Aura->m_StartedGames) {
-          success = targetGame.SendAllChat(Message) || success;
+          success = targetGame->SendAllChat(Message) || success;
         }
         if (!success) {
           ErrorReply("No games found.");
@@ -6816,10 +6810,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       vector<string> currentGames;
       for (const auto& game : m_Aura->m_Lobbies) {
-        currentGames.push_back(string("Lobby#")+ to_string(game.GetGameID()) + ": " + game.GetStatusDescription());
+        currentGames.push_back(string("Lobby#")+ to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
       }
       for (const auto& game : m_Aura->m_StartedGames) {
-        currentGames.push_back(string("Game#") + to_string(game.GetGameID()) + ": " + game.GetStatusDescription());
+        currentGames.push_back(string("Game#") + to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
       }
       if (currentGames.empty()) {
         SendReply("No games hosted.");
@@ -6882,7 +6876,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_Aura->m_Lobbies.empty() && (!m_Aura->m_Lobbies[0]->GetIsReplaceable() || (!GetIsSudo() && (
         // This block defines under which circumstances a replaceable lobby can actually be replaced.
         // Do not allow replacements when using !host from another game, unless sudo.
-        (m_SourceGame && m_SourceGame != m_Aura->m_Lobbies[0]->GetIsReplaceable())
+        (m_SourceGame == m_Aura->m_Lobbies[0] && !m_SourceGame->GetIsReplaceable())
         // The following check defines whether players in the replaceable lobby get priority,
         // or external users (PvPGN/IRC/Discord) get it.
         // By commenting it out, external users get priority.

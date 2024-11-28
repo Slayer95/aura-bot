@@ -486,18 +486,19 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Version(AURA_VERSION),
     m_RepositoryURL(AURA_REPOSITORY_URL),
     m_IssuesURL(AURA_ISSUES_URL),
+    m_LastServerID(0xFu),
+    m_HostCounter(0u),
+    m_ReplacingLobbiesCounter(0u),
+    m_HistoryGameID(0u),
     m_MaxSlots(MAX_SLOTS_LEGACY),
-    m_HostCounter(0),
-    m_ReplacingLobbiesCounter(0),
-    m_HistoryGameID(0),
-    m_LastServerID(0xF),
-    m_MaxGameNameSize(31),
+    m_GameVersion(0u),
+    m_MaxGameNameSize(31u),
 
     m_ScriptsExtracted(false),
-    m_GameVersion(0),
     m_Exiting(false),
     m_ExitingSoon(false),
     m_Ready(true),
+    m_AutoReHosted(false),
 
     m_SudoContext(nullptr)
 {
@@ -760,6 +761,22 @@ bool CAura::CopyScripts()
   return true;
 }
 
+bool CAura::GetAutoReHostMapHasRefs() const
+{
+  // TODO: Smart pointers really
+  for (auto& lobby : m_Lobbies) {
+    if (lobby->GetMap() == m_AutoRehostGameSetup->m_Map) {
+      return true;
+    }
+  }
+  for (auto& game : m_StartedGames) {
+    if (game->GetMap() == m_AutoRehostGameSetup->m_Map) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void CAura::ClearAutoRehost()
 {
   if (!m_AutoRehostGameSetup) {
@@ -768,17 +785,7 @@ void CAura::ClearAutoRehost()
   if (m_GameSetup == m_AutoRehostGameSetup) {
     m_GameSetup = nullptr;
   }
-  bool mapHasRefs = false;
-  if (m_CurrentLobby && m_CurrentLobby->GetMap() == m_AutoRehostGameSetup->m_Map) {
-    mapHasRefs = true;
-  } else {
-    for (auto& game : m_StartedGames) {
-      if (game->GetMap() == m_AutoRehostGameSetup->m_Map) {
-        mapHasRefs = true;
-      }
-    }
-  }
-  if (!mapHasRefs) {
+  if (!GetAutoReHostMapHasRefs()) {
     delete m_AutoRehostGameSetup->m_Map;
   }
   m_AutoRehostGameSetup->m_Map = nullptr;
@@ -820,7 +827,7 @@ CAura::~CAura()
   delete m_Discord;
 }
 
-CGame* CAura::GetMostRecentLobby(uint32_t hostCounter) const
+CGame* CAura::GetMostRecentLobby() const
 {
   if (m_Lobbies.empty()) return nullptr;
   return m_Lobbies[m_Lobbies.size() - 1];
@@ -829,16 +836,20 @@ CGame* CAura::GetMostRecentLobby(uint32_t hostCounter) const
 CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
 {
   hostCounter = hostCounter & 0x00FFFFFF;
-  if (m_CurrentLobby && m_CurrentLobby->GetHostCounter() == hostCounter) {
-    return m_CurrentLobby;
+  for (const auto& lobby : m_Lobbies) {
+    if (lobby->GetHostCounter() == hostCounter) {
+      return lobby;
+    }
   }
   return nullptr;
 }
 
 CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
 {
-  if (m_CurrentLobby && m_CurrentLobby->GetGameID() == gameIdentifier) {
-    return m_CurrentLobby;
+  for (const auto& lobby : m_Lobbies) {
+    if (lobby->GetGameID() == gameIdentifier) {
+      return lobby;
+    }
   }
   for (const auto& game : m_StartedGames) {
     if (game->GetGameID() == gameIdentifier) {
@@ -926,7 +937,7 @@ bool CAura::Update()
     }
   }
 
-  if (m_AutoRehostGameSetup && !m_CurrentLobby) {
+  if (m_AutoRehostGameSetup && !m_AutoReHosted) {
     if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
       (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
     ) {
@@ -938,7 +949,7 @@ bool CAura::Update()
   }
 
   bool isStandby = (
-    !m_CurrentLobby && m_StartedGames.empty() &&
+    m_Lobbies.empty() && m_StartedGames.empty() &&
     !m_Net->m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     m_PendingActions.empty() &&
@@ -991,8 +1002,8 @@ bool CAura::Update()
 
   // 5. the current lobby's player sockets
 
-  if (m_CurrentLobby) {
-    NumFDs += m_CurrentLobby->SetFD(&fd, &send_fd, &nfds);
+  for (auto& lobby : m_Lobbies) {
+    NumFDs += lobby->SetFD(&fd, &send_fd, &nfds);
   }
 
   // 6. all running games' player sockets
@@ -1073,7 +1084,7 @@ bool CAura::Update()
       continue;
     }
     uint16_t localPort = server.first;
-    if (m_Net->m_IncomingConnections[localPort].size() > MAX_INCOMING_CONNECTIONS) {
+    if (m_Net->m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
       server.second->Discard(static_cast<fd_set*>(&fd));
       continue;
     }
@@ -1087,7 +1098,7 @@ bool CAura::Update()
         }
 #endif
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
-      } else if (!m_CurrentLobby || m_CurrentLobby->GetIsMirror() || localPort != m_CurrentLobby->GetHostPort()) {
+      } else if (m_Lobbies.empty() && m_JoinInProgressGames.empty()) {
 #ifdef DEBUG
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] connection to port " + to_string(localPort) + " rejected.");
@@ -1103,7 +1114,7 @@ bool CAura::Update()
 #endif
         m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
       }
-      if (m_Net->m_IncomingConnections[localPort].size() > MAX_INCOMING_CONNECTIONS) {
+      if (m_Net->m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
         Print("[AURA] " + to_string(m_Net->m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections");
       }
     }
@@ -1160,25 +1171,26 @@ bool CAura::Update()
 
   // update current lobby
 
-  if (m_CurrentLobby) {
-    if (m_CurrentLobby->Update(&fd, &send_fd)) {
-      Print("[AURA] deleting current game [" + m_CurrentLobby->GetGameName() + "]");
-      if (m_CurrentLobby->GetUDPEnabled()) {
-        m_CurrentLobby->SendGameDiscoveryDecreate();
+  for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
+    if ((*it)->Update(&fd, &send_fd)) {
+      Print("[AURA] deleting lobby [" + (*it)->GetGameName() + "]");
+      if ((*it)->GetUDPEnabled()) {
+        (*it)->SendGameDiscoveryDecreate();
       }
-      delete m_CurrentLobby;
-      m_CurrentLobby = nullptr;
-
       for (auto& realm : m_Realms) {
-        realm->ResetGameBroadcastStatus();
-        realm->QueueGameUncreate();
-        realm->SendEnterChat();
+        if (realm->GetGameBroadcast() == *it) {
+          realm->ResetGameBroadcastData();
+        }
       }
+      delete (*it);
+      it = m_Lobbies.erase(it);
       UpdateMetaData();
-    } else if (m_CurrentLobby) {
-      m_CurrentLobby->UpdatePost(&send_fd);
+    } else {
+      (*it)->UpdatePost(&send_fd);
+      ++it;
     }
   }
+
 
   // update running games
 
@@ -1240,30 +1252,32 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
   // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
   // Otherwise whisper the game creator that the (re)host failed.
 
-  if (m_CurrentLobby->GetHasAnyUser()) {
-    m_CurrentLobby->SendAllChat("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
+  CGame* game = errorRealm->GetGameBroadcast();
+
+  if (game->GetHasAnyUser()) {
+    game->SendAllChat("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
   } else {
-    switch (m_CurrentLobby->GetCreatedFromType()) {
+    switch (game->GetCreatedFromType()) {
       case GAMESETUP_ORIGIN_REALM:
-        reinterpret_cast<CRealm*>(m_CurrentLobby->GetCreatedFrom())->QueueWhisper("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        reinterpret_cast<CRealm*>(game->GetCreatedFrom())->QueueWhisper("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
       case GAMESETUP_ORIGIN_IRC:
-        reinterpret_cast<CIRC*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        reinterpret_cast<CIRC*>(game->GetCreatedFrom())->SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
       /*
       // TODO: CAura::EventBNETGameRefreshError SendUser()
       case GAMESETUP_ORIGIN_DISCORD:
-        reinterpret_cast<CDiscord*>(m_CurrentLobby->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", m_CurrentLobby->GetCreatorName());
+        reinterpret_cast<CDiscord*>(game->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;*/
       default:
         break;
     }
   }
 
-  Print("[GAME: " + m_CurrentLobby->GetGameName() + "] Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
+  Print("[GAME: " + game->GetGameName() + "] Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
 
   bool earlyExit = false;
-  switch (m_CurrentLobby->m_Config->m_BroadcastErrorHandler) {
+  switch (game->m_Config->m_BroadcastErrorHandler) {
     case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR:
       if (!errorRealm->GetIsMain()) break;
       // fall through
@@ -1274,32 +1288,32 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
       if (!errorRealm->GetIsMain()) break;
       // fall through
     case ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY:
-      if (!m_CurrentLobby->GetHasAnyUser()) {
+      if (!game->GetHasAnyUser()) {
         // we only close the game if it has no players since we support game rehosting (via !priv and !pub in the lobby)
         earlyExit = true;
       }
       break;
   }
   if (earlyExit) {
-    m_CurrentLobby->StopPlayers("failed to broadcast game");
-    m_CurrentLobby->SetExiting(true);
+    game->StopPlayers("failed to broadcast game");
+    game->SetExiting(true);
     return;
   }
 
-  if (m_CurrentLobby->m_Config->m_BroadcastErrorHandler == ON_ADV_ERROR_EXIT_ON_MAX_ERRORS) {
+  if (game->m_Config->m_BroadcastErrorHandler == ON_ADV_ERROR_EXIT_ON_MAX_ERRORS) {
     for (auto& realm : m_Realms) {
       if (!realm->GetEnabled()) {
         continue;
       }
-      if (m_CurrentLobby->GetIsMirror() && realm->GetIsMirror()) {
+      if (game->GetIsMirror() && realm->GetIsMirror()) {
       // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
       // Do not display external games in those realms.
         continue;
       }
-      if (realm->GetGameVersion() > 0 && !m_CurrentLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
+      if (realm->GetGameVersion() > 0 && !game->GetIsSupportedGameVersion(realm->GetGameVersion())) {
         continue;
       }
-      if (m_CurrentLobby->GetIsRealmExcluded(realm->GetServer())) {
+      if (game->GetIsRealmExcluded(realm->GetServer())) {
         continue;
       }
       if (!realm->GetIsGameBroadcastErrored()) {
@@ -1307,8 +1321,8 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
       }
     }
 
-    m_CurrentLobby->StopPlayers("failed to broadcast game");
-    m_CurrentLobby->SetExiting(true);
+    game->StopPlayers("failed to broadcast game");
+    game->SetExiting(true);
     return;
   }
 }
@@ -1672,12 +1686,12 @@ void CAura::InitSystem()
 void CAura::UpdateWindowTitle()
 {
   CGame* detailsGame = nullptr;
-  if (m_CurrentLobby) {
-    if (m_StartedGames.size() == 0) detailsGame = m_CurrentLobby;
+  if (m_Lobbies.size() == 1) {
+    if (m_StartedGames.size() == 0) detailsGame = GetMostRecentLobby();
   } else if (m_StartedGames.size() == 1) {
     detailsGame = m_StartedGames[0];
   }
-  PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_CurrentLobby == nullptr ? 0 : 1, m_StartedGames.size(), m_AutoRehostGameSetup != nullptr);
+  PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_Lobbies.size(), m_StartedGames.size(), m_AutoRehostGameSetup != nullptr);
   SetWindowTitle(windowTitle);
 }
 
@@ -1739,9 +1753,9 @@ void CAura::GracefulExit()
 
   m_Net->GracefulExit();
 
-  if (m_CurrentLobby) {
-    m_CurrentLobby->StopPlayers("shutdown");
-    m_CurrentLobby->SetExiting(true);
+  for (auto& lobby : m_Lobbies) {
+    lobby->StopPlayers("shutdown");
+    lobby->SetExiting(true);
   }
 
   for (auto& realm : m_Realms) {
@@ -1759,7 +1773,7 @@ void CAura::GracefulExit()
 bool CAura::CheckGracefulExit()
 {
   /* Already checked:
-    (!m_CurrentLobby && m_StartedGames.empty() &&
+    (m_Lobbies.empty() && m_StartedGames.empty() &&
     !m_Net->m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     m_PendingActions.empty())
@@ -1828,13 +1842,12 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     return false;
   }
 
-  if (m_CurrentLobby) {
-    gameSetup->m_Ctx->ErrorReply("Another game lobby [" + m_CurrentLobby->GetStatusDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
-    return false;
-  }
-
   if (!GetNewGameIsInQuota()) {
-    gameSetup->m_Ctx->ErrorReply("Too many active games.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    if (m_Lobbies.size() == 1) {
+      gameSetup->m_Ctx->ErrorReply("Another game lobby [" + GetMostRecentLobby()->GetStatusDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    } else {
+      gameSetup->m_Ctx->ErrorReply("Too many lobbies (" + to_string(m_Lobbies.size()) + ") are currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    }
     return false;
   }
 
@@ -1846,17 +1859,18 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     Print("[AURA] creating game [" + gameSetup->m_Name + "]");
   }
 
-  m_CurrentLobby = new CGame(this, gameSetup);
+  CGame* createdLobby = m_Lobbies.emplace_back(this, gameSetup);
   m_LastGameHostedTicks = GetTicks();
-  if (gameSetup->m_LobbyAutoRehosted) {
+  if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;
     m_LastGameAutoHostedTicks = m_LastGameHostedTicks;
+    m_AutoReHosted = true;
   }
   gameSetup->OnGameCreate();
 
-  if (m_CurrentLobby->GetExiting()) {
-    delete m_CurrentLobby;
-    m_CurrentLobby = nullptr;
+  if (createdLobby->GetExiting()) {
+    delete createdLobby;
+    createdLobby = nullptr;
     gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_Name + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
@@ -1864,36 +1878,36 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   UpdateMetaData();
 
 #ifndef DISABLE_MINIUPNP
-  if (m_Net->m_Config->m_EnableUPnP && m_CurrentLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
+  if (m_Net->m_Config->m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // This is a long synchronous network call.
-    m_Net->RequestUPnP("TCP", m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET), m_CurrentLobby->GetHostPort(), LOG_LEVEL_INFO);
+    m_Net->RequestUPnP("TCP", createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
 #endif
 
-  if (m_CurrentLobby->GetIsCheckJoinable() && !m_Net->GetIsFetchingIPAddresses()) {
+  if (createdLobby->GetIsCheckJoinable() && !m_Net->GetIsFetchingIPAddresses()) {
     uint8_t checkMode = HEALTH_CHECK_ALL;
     if (!m_Net->m_SupportTCPOverIPv6) {
       checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
       checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
     }
-    if (m_CurrentLobby->GetIsVerbose()) {
+    if (createdLobby->GetIsVerbose()) {
       checkMode |= HEALTH_CHECK_VERBOSE;
     }
-    m_Net->QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
-    m_CurrentLobby->SetIsCheckJoinable(false);
+    m_Net->QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, createdLobby);
+    createdLobby->SetIsCheckJoinable(false);
   }
 
-  if (m_CurrentLobby->GetUDPEnabled()) {
-    m_CurrentLobby->SendGameDiscoveryCreate();
+  if (createdLobby->GetUDPEnabled()) {
+    createdLobby->SendGameDiscoveryCreate();
   }
 
   for (auto& realm : m_Realms) {
-    if (!m_CurrentLobby->GetIsMirror() && !m_CurrentLobby->GetIsRestored()) {
-      realm->HoldFriends(m_CurrentLobby);
-      realm->HoldClan(m_CurrentLobby);
+    if (!createdLobby->GetIsMirror() && !createdLobby->GetIsRestored()) {
+      realm->HoldFriends(createdLobby);
+      realm->HoldClan(createdLobby);
     }
 
-    if (m_CurrentLobby->GetIsMirror() && realm->GetIsMirror()) {
+    if (createdLobby->GetIsMirror() && realm->GetIsMirror()) {
       // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
       // Do not display external games in those realms.
       continue;
@@ -1901,65 +1915,65 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
       continue;
     }
-    if (realm->GetGameVersion() > 0 && !m_CurrentLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
+    if (realm->GetGameVersion() > 0 && !createdLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
       if (MatchLogLevel(LOG_LEVEL_WARNING)) {
         Print(realm->GetLogPrefix() + "skipping announcement for v 1." + ToDecString(realm->GetGameVersion()) + "(check <hosting.crossplay.versions>)");
       }
       continue;
     }
 
-    if (m_CurrentLobby->GetDisplayMode() == GAME_PUBLIC && realm->GetAnnounceHostToChat()) {
-      realm->QueueGameChatAnnouncement(m_CurrentLobby);
+    if (createdLobby->GetDisplayMode() == GAME_PUBLIC && realm->GetAnnounceHostToChat()) {
+      realm->QueueGameChatAnnouncement(createdLobby);
     } else {
       // Send STARTADVEX3
-      m_CurrentLobby->AnnounceToRealm(realm);
+      createdLobby->AnnounceToRealm(realm);
 
       // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
       // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
       // so don't rejoin the chat if we're using PVPGN
 
-      if (m_CurrentLobby->GetDisplayMode() == GAME_PRIVATE && !realm->GetPvPGN()) {
+      if (createdLobby->GetDisplayMode() == GAME_PRIVATE && !realm->GetPvPGN()) {
         realm->SendEnterChat();
       }
     }
   }
 
-  if (m_CurrentLobby->GetDisplayMode() != GAME_PUBLIC ||
+  if (createdLobby->GetDisplayMode() != GAME_PUBLIC ||
     gameSetup->m_CreatedFromType != GAMESETUP_ORIGIN_REALM ||
     gameSetup->m_Ctx->GetIsWhisper()) {
-    gameSetup->m_Ctx->SendPrivateReply(m_CurrentLobby->GetAnnounceText());
+    gameSetup->m_Ctx->SendPrivateReply(createdLobby->GetAnnounceText());
   }
 
-  if (m_CurrentLobby->GetDisplayMode() == GAME_PUBLIC) {
+  if (createdLobby->GetDisplayMode() == GAME_PUBLIC) {
     if (m_IRC) {
-     m_IRC->SendAllChannels(m_CurrentLobby->GetAnnounceText());
+     m_IRC->SendAllChannels(createdLobby->GetAnnounceText());
     }
     if (m_Discord) {
       //TODO: Discord game created announcement
-      //m_Discord->SendAnnouncementChannels(m_CurrentLobby->GetAnnounceText());
+      //m_Discord->SendAnnouncementChannels(createdLobby->GetAnnounceText());
     }
   }
 
-  uint32_t mapSize = ByteArrayToUInt32(m_CurrentLobby->GetMap()->GetMapSize(), false);
+  uint32_t mapSize = ByteArrayToUInt32(createdLobby->GetMap()->GetMapSize(), false);
   if (m_GameVersion <= 26 && mapSize > 0x800000) {
-    Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + m_CurrentLobby->GetMap()->GetServerFileName() + "]");
+    Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
   }
-  if (m_GameVersion < m_CurrentLobby->GetMap()->GetMapMinGameVersion()) {
-    Print("[AURA] warning - hosting game that may require version 1." + to_string(m_CurrentLobby->GetMap()->GetMapMinGameVersion()));
+  if (m_GameVersion < createdLobby->GetMap()->GetMapMinGameVersion()) {
+    Print("[AURA] warning - hosting game that may require version 1." + to_string(createdLobby->GetMap()->GetMapMinGameVersion()));
   }
 
   return true;
 }
 
-void CAura::TrackGameLobby(CGame* game) const
+void CAura::TrackGameLobby(CGame* game)
 {
   m_Lobbies.push_back(game);
 }
 
-void CAura::UntrackGameLobby(CGame* game) const
+void CAura::UntrackGameLobby(CGame* game)
 {
   for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
-    if (it == game) {
+    if (*it == game) {
       it = m_Lobbies.erase(it);
     } else {
       ++it;
@@ -1967,15 +1981,15 @@ void CAura::UntrackGameLobby(CGame* game) const
   }
 }
 
-void CAura::TrackGameJoinInProgress(CGame* game) const
+void CAura::TrackGameJoinInProgress(CGame* game)
 {
   m_JoinInProgressGames.push_back(game);
 }
 
-void CAura::UntrackGameJoinInProgress(CGame* game) const
+void CAura::UntrackGameJoinInProgress(CGame* game)
 {
   for (auto it = begin(m_JoinInProgressGames); it != end(m_JoinInProgressGames);) {
-    if (it == game) {
+    if (*it == game) {
       it = m_JoinInProgressGames.erase(it);
     } else {
       ++it;
@@ -2030,7 +2044,7 @@ uint32_t CAura::NextServerID()
   return m_LastServerID;
 }
 
-string CAura::GetSudoAuthPayload(const string& Payload)
+string CAura::GetSudoAuthPayload(const string& payload)
 {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -2038,14 +2052,14 @@ string CAura::GetSudoAuthPayload(const string& Payload)
 
   // Generate random hex digits
   string result;
-  result.reserve(21 + Payload.length());
+  result.reserve(21 + payload.length());
 
   for (size_t i = 0; i < 20; ++i) {
       const int randomDigit = dis(gen);
       result += (randomDigit < 10) ? (char)('0' + randomDigit) : (char)('a' + (randomDigit - 10));
   }
 
-  result += " " + Payload;
+  result += " " + payload;
   m_SudoAuthPayload = result;
   return result;
 }

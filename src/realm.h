@@ -75,28 +75,17 @@ public:
 private:
   CRealmConfig*                    m_Config;
   CTCPClient*                      m_Socket;                    // the connection to battle.net
-  CBNCSUtilInterface*              m_BNCSUtil;                                             // the interface to the bncsutil library (used for logging into battle.net)
+  CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
 
-  std::array<uint8_t, 4>           m_InfoClientToken;           // set in constructor
-  std::array<uint8_t, 4>           m_InfoLogonType;             // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 4>           m_InfoServerToken;           // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 8>           m_InfoMPQFileTime;           // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>             m_InfoIX86VerFileName;       // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>             m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 32>          m_LoginSalt;                 // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::array<uint8_t, 32>          m_LoginServerPublicKey;      // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::string                      m_ChatNickName;            // set in RECEIVE_SID_ENTERCHAT
-
-  std::vector<std::string>         m_Friends;                   // std::vector of friends
-  std::vector<std::string>         m_Clan;                      // std::vector of clan members
+  CGame*                           m_GameBroadcast;
   uint8_t                          m_GameVersion;
-  std::vector<uint8_t>             m_EXEVersion;                // custom exe version for PvPGN users
-  std::vector<uint8_t>             m_EXEVersionHash;            // custom exe version hash for PvPGN users
-  std::string                      m_CurrentChannel;            // the current chat channel
-  std::string                      m_AnchorChannel;             // channel to rejoin automatically
-  std::string                      m_HostName;                  // 
-  uint8_t                          m_ServerIndex;               // one-based
+  std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
+  std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted or not, or it is pending
+  uint16_t                         m_LastGamePort;              // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
+  uint32_t                         m_LastGameHostCounter;       // game host counter for the game that is being broadcasted
+
   uint32_t                         m_InternalServerID;          // internal server ID, maps 1:1 to CRealmConfig::m_InputID
+  uint8_t                          m_ServerIndex;               // one-based
   uint8_t                          m_PublicServerID;            // for building host counters, which allows matching game join requests to a realm (or none)
   int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
   int64_t                          m_LastConnectionAttemptTime; // GetTime when we last attempted to connect to battle.net
@@ -112,13 +101,28 @@ private:
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
   bool                             m_FailedLogin;               // if we tried to login but failed
   bool                             m_FailedSignup;              // if we tried to sign up but failed
-  uint16_t                         m_GamePort;                  // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
-  uint32_t                         m_GameHostCounter;           // game host counter for the game that is being broadcasted
-  std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
-  std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted or not, or it is pending
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
   bool                             m_AnyWhisperRejected;        // whether the realm rejected any whisper because the receiver was not offline.
   bool                             m_ChatQueuedGameAnnouncement;// for !host, !announce
+
+  std::array<uint8_t, 32>          m_LoginSalt;                 // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 32>          m_LoginServerPublicKey;      // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 4>           m_InfoClientToken;           // set in constructor
+  std::array<uint8_t, 4>           m_InfoLogonType;             // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 4>           m_InfoServerToken;           // set in RECEIVE_SID_AUTH_INFO
+  std::array<uint8_t, 8>           m_InfoMPQFileTime;           // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>             m_InfoIX86VerFileName;       // set in RECEIVE_SID_AUTH_INFO
+  std::vector<uint8_t>             m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
+  std::string                      m_ChatNickName;              // set in RECEIVE_SID_ENTERCHAT
+
+  std::vector<std::string>         m_Friends;                   // std::vector of friends
+  std::vector<std::string>         m_Clan;                      // std::vector of clan members
+  std::vector<uint8_t>             m_EXEVersion;                // custom exe version for PvPGN users
+  std::vector<uint8_t>             m_EXEVersionHash;            // custom exe version hash for PvPGN users
+  std::string                      m_CurrentChannel;            // the current chat channel
+  std::string                      m_AnchorChannel;             // channel to rejoin automatically
+  std::string                      m_HostName;                  // 
+
   std::queue<CQueuedChatMessage*>             m_ChatQueueMain;
   CQueuedChatMessage*                         m_ChatQueueJoinCallback; // High priority
   CQueuedChatMessage*                         m_ChatQueueGameHostWhois; // Also high priority
@@ -159,6 +163,7 @@ public:
   inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
+  inline CGame*        GetGameBroadcast() const { return m_GameBroadcast; }
   inline uint8_t       GetGameVersion() const { return m_GameVersion; }
   inline bool          GetLoggedIn() const { return m_LoggedIn; }
   inline bool          GetFailedLogin() const { return m_FailedLogin; }
@@ -235,14 +240,15 @@ public:
   CQueuedChatMessage* QueueGameChatAnnouncement(const CGame* game, CCommandContext* fromCtx = nullptr, const bool isProxy = false);
   void TryQueueChat(const std::string& chatCommand, const std::string& user, bool isPrivate, CCommandContext* ctx = nullptr, const uint8_t ctxFlags = 0);
   void TryQueueGameChatAnnouncement(const CGame* game);
-  void SendGameRefresh(const uint8_t displayMode, const CGame* game);
+  void SendGameRefresh(const uint8_t displayMode, CGame* game);
   void QueueGameUncreate();
   void TrySendEnterChat();
   void TrySendGetGamesList();
 
   void ResolveGameBroadcastStatus(bool nResult) { m_GameBroadcastStatus = nResult; }
+  void ResetGameBroadcastData();
   void ResetConnection(bool hadError);
-  void ResetGameAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
+  void ResetGameChatAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
   void ResetGameBroadcastStatus() { m_GameBroadcastStatus = std::nullopt; }
   inline void SetReconnectNextTick(bool nReconnectNextTick) { m_ReconnectNextTick = nReconnectNextTick; };
 

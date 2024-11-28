@@ -266,6 +266,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_PauseUser(nullptr),
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
+    m_FromAutoReHost(nGameSetup->m_LobbyAutoRehosted),
     m_OwnerLess(nGameSetup->m_OwnerLess),
     m_OwnerName(nGameSetup->m_Owner.first),
     m_OwnerRealm(nGameSetup->m_Owner.second),
@@ -532,7 +533,7 @@ void CGame::Reset()
   }
 
   for (auto& realm : m_Aura->m_Realms) {
-    realm->ResetGameAnnouncement();
+    realm->ResetGameChatAnnouncement();
   }
 }
 
@@ -588,10 +589,6 @@ void CGame::StartGameOverTimer(bool isMMD)
     SendAllChat("Gameover timer started (disconnecting in " + to_string(m_GameOverTolerance.value_or(60)) + " seconds...)");
   }
 
-  if (wasAnnouncing) {
-    SendGameDiscoveryDecreate();
-    SetUDPEnabled(false);
-  }
   if (GetIsLobby()) {
     if (GetUDPEnabled()) {
       SendGameDiscoveryDecreate();
@@ -606,25 +603,25 @@ void CGame::StartGameOverTimer(bool isMMD)
   }
 
   UntrackLobby();
-  UntrackInProgress();
+  UntrackJoinInProgress();
 }
 
-void CGame::TrackLobby() const
+void CGame::TrackLobby()
 {
   m_Aura->TrackGameLobby(this);
 }
 
-void CGame::UntrackLobby() const
+void CGame::UntrackLobby()
 {
   m_Aura->UntrackGameLobby(this);
 }
 
-void CGame::TrackJoinInProgress() const
+void CGame::TrackJoinInProgress()
 {
   m_Aura->TrackGameJoinInProgress(this);
 }
 
-void CGame::UntrackJoinInProgress() const
+void CGame::UntrackJoinInProgress()
 {
   m_Aura->UntrackGameJoinInProgress(this);
 }
@@ -643,6 +640,9 @@ CGame::~CGame()
   }
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
+  }
+  if (m_FromAutoReHost) {
+    m_Aura->m_AutoReHosted = false;
   }
 }
 
@@ -1695,7 +1695,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
   if (m_Remaking) {
     m_Remaking = false;
-    if (GetNewGameIsInQuota()) {
+    if (m_Aura->GetNewGameIsInQuota()) {
       m_Remade = true;
       TrackLobby();
     } else {
@@ -3118,13 +3118,13 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       Line = Line.substr(17);
     }
     if (Line.substr(0, 14) == "{REPLACEABLE?}") {
-      if (!m_Aura->m_CanReplaceLobby) {
+      if (!m_Replaceable) {
         continue;
       }
       Line = Line.substr(14);
     }
     if (Line.substr(0,14) == "{REPLACEABLE!}") {
-      if (m_Aura->m_CanReplaceLobby) {
+      if (m_Replaceable) {
         continue;
       }
       Line = Line.substr(14);
@@ -3597,10 +3597,8 @@ void CGame::AnnounceDecreateToRealms()
     if (m_IsMirror && realm->GetIsMirror())
       continue;
 
-    realm->ResetGameBroadcastStatus();
-    realm->ResetGameAnnouncement();
-    realm->QueueGameUncreate();
-    realm->SendEnterChat();
+    realm->ResetGameChatAnnouncement();
+    realm->ResetGameBroadcastData();
   }
 }
 
@@ -3799,7 +3797,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
       const uint8_t replaceSID = GetEmptyObserverSID();
       const uint8_t replaceUID = GetNewUID();
       CreateFakeUserInner(replaceSID, replaceUID, "User[" + ToDecString(replaceSID + 1) + "]");
-      m_FakeUsers[m_FakeUsers.size() - 1].SetObserver(true);
+      m_FakeUsers.back().SetObserver(true);
       CGameSlot* slot = GetSlot(replaceSID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
       slot->SetColor(m_Map->GetVersionMaxSlots());
@@ -4484,7 +4482,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
 
 bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest)
 {
-  if (m_CountDownStarted) {
+  if (!GetIsStageAcceptingJoins()) {
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_STARTED));
     return false;
   }
@@ -6005,7 +6003,7 @@ void CGame::EventGameLoaded()
 
   // move the game to the games in progress vector
   if (m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress) {
-    TrackInProgress();
+    TrackJoinInProgress();
   }
 
   HandleGameLoadedStats();
@@ -6095,6 +6093,7 @@ void CGame::Remake()
   int64_t Time = GetTime();
   int64_t Ticks = GetTicks();
 
+  m_FromAutoReHost = false;
   m_GameTicks = 0;
   m_CreationTime = Time;
   m_LastPingTime = Time;
@@ -6645,7 +6644,7 @@ uint8_t CGame::GetPublicHostUID() const
   if (!m_GameLoading && !m_FakeUsers.empty()) {
     // After loaded, we need to carefully consider who to speak as.
     if (!m_GameLoading && !m_GameLoaded) {
-      return m_FakeUsers[m_FakeUsers.size() - 1].GetUID();
+      return m_FakeUsers.back().GetUID();
     }
     for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
       if (GetIsFakeObserver(fakeUser) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
@@ -8339,7 +8338,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
       return;
   }
 
-  m_Aura->m_CanReplaceLobby = false;
+  m_Replaceable = false;
   m_CountDownStarted = true;
   m_CountDownUserInitiated = fromUser;
   m_CountDownCounter = m_Config->m_LobbyCountDownStartValue;

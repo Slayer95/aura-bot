@@ -38,7 +38,7 @@
 class CGameTestConnection
 {
 public:
-  CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const std::string& nName);
+  CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const std::string& nName);
   ~CGameTestConnection();
 
   [[nodiscard]] uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
@@ -52,6 +52,7 @@ public:
   sockaddr_storage            m_TargetHost;
   CAura*                      m_Aura;
   uint32_t                    m_RealmInternalId;
+  uint32_t                    m_BaseHostCounter;
   CTCPClient*                 m_Socket;
   uint8_t                     m_Type;
   std::string                 m_Name;
@@ -162,7 +163,7 @@ public:
 #ifndef DISABLE_MINIUPNP
   uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel = LOG_LEVEL_INFO);
 #endif
-  bool QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* realm, const uint16_t gamePort);
+  bool QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* realm, const CGame* game);
   void ResetHealthCheck();
   void ReportHealthCheck();
 

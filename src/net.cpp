@@ -52,10 +52,11 @@ using namespace std;
 // CGameTestConnection
 //
 
-CGameTestConnection::CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint8_t nType, const string& nName)
+CGameTestConnection::CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const string& nName)
   : m_TargetHost(nTargetHost),
     m_Aura(nAura),
     m_RealmInternalId(nRealm ? nRealm->GetInternalID() : 0),
+    m_BaseHostCounter(nBaseHostCounter),
     m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName)),
     m_Type(nType),
     m_Name(nName),
@@ -101,11 +102,11 @@ bool CGameTestConnection::GetIsRealmListed() const
 
 uint32_t CGameTestConnection::GetHostCounter() const
 {
-  uint32_t hostCounter = m_Aura->m_CurrentLobby->GetHostCounter();
-  if (m_Aura->m_CurrentLobby->GetIsMirror()) {
-    return hostCounter;
+  const CGame* lobby = m_Aura->GetLobbyByHostCounter(m_BaseHostCounter);
+  if (lobby && lobby->GetIsMirror()) {
+    return m_BaseHostCounter;
   }
-  hostCounter |= 0x01 << 24;
+  uint32_t hostCounter = m_BaseHostCounter | (0x01 << 24); // informational bit
   string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
   CRealm* realm = m_Aura->GetRealmByInputId(realmId);
   if (realm == nullptr) {
@@ -134,14 +135,15 @@ bool CGameTestConnection::QueryGameInfo()
     return false;
   }
 
-  if (!m_Aura->m_CurrentLobby || (!m_Aura->m_CurrentLobby->GetIsLobbyStrict() && !m_Aura->m_CurrentLobby->GetIsMirror())) {
+  const CGame* lobby = m_Aura->GetLobbyByHostCounter(m_BaseHostCounter);
+  if (!lobby || (!lobby->GetIsLobbyStrict() && !lobby->GetIsMirror())) {
     return false;
   }
 
   const static string Name = "AuraBot";
   const vector<uint8_t> joinRequest = GameProtocol::SEND_W3GS_REQJOIN(
     GetHostCounter(),
-    m_Aura->m_CurrentLobby->GetEntryKey(),
+    lobby->GetEntryKey(),
     Name
   );
   m_Socket->PutBytes(joinRequest);
@@ -716,14 +718,17 @@ void CNet::HandleUDP(UDPPkt* pkt)
 
   DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
 
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetUDPEnabled() && m_Aura->m_CurrentLobby->GetIsStageAcceptingJoins()) {
-    if (pkt->buf[8] == 0 || m_Aura->m_CurrentLobby->GetIsSupportedGameVersion(pkt->buf[8])) {
+  for (const auto& lobby : m_Aura->m_Lobbies) {
+    if (!lobby->GetUDPEnabled() || !lobby->GetIsStageAcceptingJoins()) {
+      continue;
+    }
+    if (pkt->buf[8] == 0 || lobby->GetIsSupportedGameVersion(pkt->buf[8])) {
       DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
-      m_Aura->m_CurrentLobby->ReplySearch(pkt->sender, pkt->socket, pkt->buf[8]);
+      lobby->ReplySearch(pkt->sender, pkt->socket, pkt->buf[8]);
 
       // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.
       if (remotePort != m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
-        m_Aura->m_CurrentLobby->AnnounceToAddress(ipAddress, pkt->buf[8]);
+        lobby->AnnounceToAddress(ipAddress, pkt->buf[8]);
       }
     }
   }
@@ -920,13 +925,15 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
 }
 #endif
 
-bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* targetRealm, const uint16_t gamePort)
+bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* targetRealm, const CGame* game)
 {
   if (m_Aura->m_ExitingSoon || m_HealthCheckInProgress) {
     return false;
   }
 
   bool isVerbose = 0 != (checkMode & HEALTH_CHECK_VERBOSE);
+  const uint16_t gamePort = game->GetHostPortForDiscoveryInfo(AF_INET);
+  const uint32_t hostCounter = game->GetHostCounter();
 
   if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV4)) {
     sockaddr_storage loopBackAddress;
@@ -935,7 +942,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&loopBackAddress);
     addr4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr4->sin_port = htons(gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback]"));
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, hostCounter, CONNECTION_TYPE_LOOPBACK, "[Loopback]"));
   }
 
   if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV6)) {
@@ -945,7 +952,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&loopBackAddress);
     memcpy(&(addr6->sin6_addr), &in6addr_loopback, sizeof(in6_addr));
     addr6->sin6_port = htons(gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, CONNECTION_TYPE_LOOPBACK, "[Loopback IPv6]"));
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, hostCounter, CONNECTION_TYPE_LOOPBACK, "[Loopback IPv6]"));
   }
 
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
@@ -981,7 +988,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, selfIPInThisRealm, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, port);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, realm, targetHost, connectionType, realm->GetUniqueDisplayName()));
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, realm, targetHost, hostCounter, connectionType, realm->GetUniqueDisplayName()));
 
     if (reinterpret_cast<sockaddr_in*>(selfIPInThisRealm)->sin_addr.s_addr == reinterpret_cast<sockaddr_in*>(publicIPv4)->sin_addr.s_addr) {
       anySendsPublicIp = true;
@@ -993,7 +1000,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, 0, "[Public IPv4]"));
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, hostCounter, 0, "[Public IPv4]"));
   }
   if (publicIPv6 != nullptr && !IN6_IS_ADDR_UNSPECIFIED(&(reinterpret_cast<sockaddr_in6*>(publicIPv6)->sin6_addr)) && (
     (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6))
@@ -1001,7 +1008,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv6, sizeof(sockaddr_storage));
     SetAddressPort(&targetHost, gamePort);
-    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, CONNECTION_TYPE_IPV6, "[Public IPv6]"));
+    m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, hostCounter, CONNECTION_TYPE_IPV6, "[Public IPv6]"));
   }
 
   if (m_HealthCheckClients.empty()) {
@@ -1080,7 +1087,7 @@ void CNet::ReportHealthCheck()
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
   if (publicIPv4 != nullptr && hasDirectAttempts) {
     string portForwardInstructions;
-    if (m_HealthCheckVerbose && m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobbyStrict()) {
+    if (m_HealthCheckVerbose && m_HealthCheckContext->GetSourceGame() != nullptr && m_HealthCheckContext->GetSourceGame()->GetIsLobbyStrict()) {
       portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(GetPotentialGamePorts(), false) + "}";
     }
     if (anyDirectSuccess) {
@@ -1220,19 +1227,21 @@ void CNet::HandleIPAddressFetchDone()
   }
   ResetIPAddressFetch();
 
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsCheckJoinable()) {
-    uint8_t checkMode = HEALTH_CHECK_ALL;
-    if (!m_SupportTCPOverIPv6) {
-      checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
-      checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
+  for (const auto& lobby : m_Aura->m_Lobbies) {
+    if (lobby->GetIsCheckJoinable()) {
+      uint8_t checkMode = HEALTH_CHECK_ALL;
+      if (!m_SupportTCPOverIPv6) {
+        checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
+        checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
+      }
+      if (lobby->GetIsVerbose()) {
+        checkMode |= HEALTH_CHECK_VERBOSE;
+      }
+      CCommandContext* ctx = new CCommandContext(m_Aura, false, &cout);
+      QueryHealthCheck(ctx, checkMode, nullptr, lobby);
+      m_Aura->UnholdContext(ctx);
+      lobby->SetIsCheckJoinable(false);
     }
-    if (m_Aura->m_CurrentLobby->GetIsVerbose()) {
-      checkMode |= HEALTH_CHECK_VERBOSE;
-    }
-    CCommandContext* ctx = new CCommandContext(m_Aura, false, &cout);
-    QueryHealthCheck(ctx, checkMode, nullptr, m_Aura->m_CurrentLobby->GetHostPortForDiscoveryInfo(AF_INET));
-    m_Aura->UnholdContext(ctx);
-    m_Aura->m_CurrentLobby->SetIsCheckJoinable(false);
   }
 }
 

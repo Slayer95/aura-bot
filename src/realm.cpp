@@ -77,16 +77,14 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_Config(nRealmConfig),
     m_Socket(nullptr),
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
-    m_InfoClientToken({220, 1, 203, 7}),
-    m_InfoLogonType({}),
-    m_InfoServerToken({}),
-    m_InfoMPQFileTime({}),
-    m_LoginSalt({}),
-    m_LoginServerPublicKey({}),
+
+    m_GameBroadcast(nullptr),
     m_GameVersion(0),
-    m_HostName(nRealmConfig->m_HostName),
-    m_ServerIndex(nRealmConfig->m_ServerIndex),
+    m_LastGamePort(6112),
+    m_LastGameHostCounter(0),
+
     m_InternalServerID(nAura->NextServerID()),
+    m_ServerIndex(nRealmConfig->m_ServerIndex),
     m_PublicServerID(14 + 2 * nRealmConfig->m_ServerIndex), // First is 16
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
@@ -101,11 +99,19 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_LoggedIn(false),
     m_FailedLogin(false),
     m_FailedSignup(false),
-    m_GamePort(6112),
-    m_GameHostCounter(0),
     m_HadChatActivity(false),
     m_AnyWhisperRejected(false),
     m_ChatQueuedGameAnnouncement(false),
+
+    m_InfoClientToken({220, 1, 203, 7}),
+    m_InfoLogonType({}),
+    m_InfoServerToken({}),
+    m_InfoMPQFileTime({}),
+    m_LoginSalt({}),
+    m_LoginServerPublicKey({}),
+
+    m_HostName(nRealmConfig->m_HostName),
+
     m_ChatQueueJoinCallback(nullptr),
     m_ChatQueueGameHostWhois(nullptr)
 {
@@ -131,8 +137,10 @@ CRealm::~CRealm()
     }
   }
 
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-    m_Aura->m_CurrentLobby->RemoveCreator();
+  for (auto& lobby: m_Aura->m_Lobbies) {
+    if (lobby->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+      lobby->RemoveCreator();
+    }
   }
   for (auto& game : m_Aura->m_StartedGames) {
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
@@ -262,7 +270,7 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case BNETProtocol::Magic::STARTADVEX3:
-              if (m_Aura->m_CurrentLobby) {
+              if (m_GameBroadcast) {
                 if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
                   m_Aura->EventBNETGameRefreshSuccess(this);
                 } else {
@@ -614,9 +622,9 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
   // note that this means you can whisper "spoofcheck" even in a public game to manually spoofcheck if the /whois fails
 
   if (eventType == BNETProtocol::IncomingChatEvent::WHISPER && (message == "s" || message == "sc" || message == "spoofcheck")) {
-    if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
-      GameUser::CGameUser* Player = m_Aura->m_CurrentLobby->GetUserFromName(fromUser, true);
-      if (Player) m_Aura->m_CurrentLobby->AddToRealmVerified(m_Config->m_HostName, Player, true);
+    if (m_GameBroadcast && !m_GameBroadcast->GetIsMirror()) {
+      GameUser::CGameUser* matchUser = m_GameBroadcast->GetUserFromName(fromUser, true);
+      if (matchUser) m_GameBroadcast->AddToRealmVerified(m_Config->m_HostName, matchUser, true);
       return;
     }
   }
@@ -686,30 +694,29 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     // extract the first word which we hope is the username
     // this is not necessarily true though since info messages also include channel MOTD's and such
 
-    if (m_Aura->m_CurrentLobby && !m_Aura->m_CurrentLobby->GetIsMirror()) {
-      string            UserName;
-      string::size_type Split = message.find(' ');
+    if (m_GameBroadcast && !m_GameBroadcast->GetIsMirror()) {
+      string aboutName;
+      string::size_type spIndex = message.find(' ');
 
-      if (Split != string::npos)
-        UserName = message.substr(0, Split);
+      if (spIndex != string::npos)
+        aboutName = message.substr(0, spIndex);
       else
-        UserName = message;
+        aboutName = message;
 
-      GameUser::CGameUser* AboutPlayer = m_Aura->m_CurrentLobby->GetUserFromName(UserName, true);
-      if (AboutPlayer && AboutPlayer->GetRealmInternalID() == m_InternalServerID) {
+      GameUser::CGameUser* aboutPlayer = m_GameBroadcast->GetUserFromName(aboutName, true);
+      if (aboutPlayer && aboutPlayer->GetRealmInternalID() == m_InternalServerID) {
         // handle spoof checking for current game
         // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
         // at all times you can still /w the bot with "spoofcheck" to manually spoof check
 
         if (message.find("Throne in game") != string::npos || message.find("currently in  game") != string::npos || message.find("currently in private game") != string::npos) {
           // note: if the game is rehosted, bnet will not be aware of the game being renamed
-          string GameName = GetPrefixedGameName(m_Aura->m_CurrentLobby->GetGameName());
-          string::size_type GameNameSize = GameName.length() + 2;
-          string::size_type GameNameFoundPos = message.find("\"" + GameName + "\"");
-          if (GameNameFoundPos != string::npos && GameNameFoundPos + GameNameSize + 1 == message.length()) {
-            m_Aura->m_CurrentLobby->AddToRealmVerified(m_HostName, AboutPlayer, true);
+          string gameName = GetPrefixedGameName(m_GameBroadcast->GetGameName());
+          string::size_type GameNameFoundPos = message.find("\"" + gameName + "\"");
+          if (GameNameFoundPos != string::npos && GameNameFoundPos + gameName.length() + 3 == message.length()) {
+            m_GameBroadcast->AddToRealmVerified(m_HostName, aboutPlayer, true);
           } else {
-            m_Aura->m_CurrentLobby->ReportSpoofed(m_HostName, AboutPlayer);
+            m_GameBroadcast->ReportSpoofed(m_HostName, aboutPlayer);
           }
         } else {
           // [ERROR] Unknown user.
@@ -811,13 +818,16 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   }
 
   switch (message->GetCallback()) {
-    case CHAT_CALLBACK_REFRESH_GAME:
+    case CHAT_CALLBACK_REFRESH_GAME: {
       m_ChatQueuedGameAnnouncement = false;
-      //assert(m_Aura->m_CurrentLobby != nullptr);
-      if (m_Aura->m_CurrentLobby->GetIsSupportedGameVersion(GetGameVersion())) {
-        m_Aura->m_CurrentLobby->AnnounceToRealm(this);
+      
+      CGame* matchLobby = m_Aura->GetLobbyByHostCounter(message->GetCallbackData());
+      //assert(matchLobby != nullptr);
+      if (matchLobby->GetIsSupportedGameVersion(GetGameVersion())) {
+        matchLobby->AnnounceToRealm(this);
       }
       break;
+    }
 
     default:
       // Do nothing
@@ -1001,24 +1011,25 @@ void CRealm::TrySendGetGamesList()
 
 void CRealm::SendNetworkConfig()
 {
-  if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsMirror() && !m_Config->m_IsMirror) {
-    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "mirroring public game host " + IPv4ToString(m_Aura->m_CurrentLobby->GetPublicHostAddress()) + ":" + to_string(m_Aura->m_CurrentLobby->GetPublicHostPort()))
-    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(m_Aura->m_CurrentLobby->GetPublicHostAddress(), m_Aura->m_CurrentLobby->GetPublicHostPort()));
-    m_GamePort = m_Aura->m_CurrentLobby->GetPublicHostPort();
+  CGame* lobbyPendingForBroadcast = m_Aura->GetMostRecentLobby();
+  if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetIsMirror() && !m_Config->m_IsMirror) {
+    PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "mirroring public game host " + IPv4ToString(lobbyPendingForBroadcast->GetPublicHostAddress()) + ":" + to_string(lobbyPendingForBroadcast->GetPublicHostPort()))
+    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(lobbyPendingForBroadcast->GetPublicHostAddress(), lobbyPendingForBroadcast->GetPublicHostPort()));
+    m_LastGamePort = lobbyPendingForBroadcast->GetPublicHostPort();
   } else if (m_Config->m_EnableCustomAddress) {
     uint16_t port = 6112;
     if (m_Config->m_EnableCustomPort) {
       port = m_Config->m_PublicHostPort;
-    } else if (m_Aura->m_CurrentLobby && m_Aura->m_CurrentLobby->GetIsLobbyStrict()) {
-      port = m_Aura->m_CurrentLobby->GetHostPort();
+    } else if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetIsLobbyStrict()) {
+      port = lobbyPendingForBroadcast->GetHostPort();
     }
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "using public game host " + IPv4ToString(AddressToIPv4Array(&(m_Config->m_PublicHostAddress))) + ":" + to_string(port))
     SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(AddressToIPv4Array(&(m_Config->m_PublicHostAddress)), port));
-    m_GamePort = port;
+    m_LastGamePort = port;
   } else if (m_Config->m_EnableCustomPort) {
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "using public game port " + to_string(m_Config->m_PublicHostPort))
     SendAuth(BNETProtocol::SEND_SID_NETGAMEPORT(m_Config->m_PublicHostPort));
-    m_GamePort = m_Config->m_PublicHostPort;
+    m_LastGamePort = m_Config->m_PublicHostPort;
   }
 }
 
@@ -1107,7 +1118,7 @@ void CRealm::OnLoginOkay()
   SendGetClanList();
 
   TrySendEnterChat();
-  TryQueueGameChatAnnouncement(m_Aura->m_CurrentLobby);
+  TryQueueGameChatAnnouncement(m_Aura->GetMostRecentLobby());
 }
 
 void CRealm::OnSignupOkay()
@@ -1243,7 +1254,7 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CComman
   m_ChatQueueJoinCallback = new CQueuedChatMessage(this, fromCtx, isProxy);
   m_ChatQueueJoinCallback->SetMessage(game->GetAnnounceText(this));
   m_ChatQueueJoinCallback->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
-  m_ChatQueueJoinCallback->SetCallback(CHAT_CALLBACK_REFRESH_GAME);
+  m_ChatQueueJoinCallback->SetCallback(CHAT_CALLBACK_REFRESH_GAME, game->GetHostCounter());
   m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_LOBBY_JOINABLE, game->GetHostCounter());
   m_HadChatActivity = true;
 
@@ -1276,7 +1287,7 @@ void CRealm::TryQueueChat(const string& message, const string& user, bool isPriv
 }
 
 
-void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
+void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
 {
   if (!m_LoggedIn || GetIsGameBroadcastErrored()) {
     return;
@@ -1296,13 +1307,13 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
   // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
   // battle.net refreshes use IDs of 16-255
   const uint32_t hostCounter = game->GetHostCounter() | (game->GetIsMirror() ? 0 : (static_cast<uint32_t>(m_PublicServerID) << 24));
-  bool changedAny = m_GamePort != connectPort || m_GameHostCounter != hostCounter;
+  bool changedAny = m_LastGamePort != connectPort || m_LastGameHostCounter != hostCounter;
 
-  if (m_GamePort != connectPort) {
+  if (m_LastGamePort != connectPort) {
     DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "updating net game port to " + to_string(connectPort))
     // Some PvPGN servers will disconnect if this message is sent while logged in
     Send(BNETProtocol::SEND_SID_NETGAMEPORT(connectPort));
-    m_GamePort = connectPort;
+    m_LastGamePort = connectPort;
   }
 
   if (!changedAny) {
@@ -1315,9 +1326,11 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
       return;
     }
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "registering game...")
-    m_GameHostCounter = hostCounter;
+    m_LastGameHostCounter = hostCounter;
     m_GameBroadcastStartTicks = Ticks;
   }
+
+  m_GameBroadcast = game;
 
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
     displayMode,
@@ -1342,8 +1355,16 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, const CGame* game)
 
 void CRealm::QueueGameUncreate()
 {
-  ResetGameAnnouncement();
+  ResetGameChatAnnouncement();
   Send(BNETProtocol::SEND_SID_STOPADV());
+}
+
+void CRealm::ResetGameBroadcastData()
+{
+  m_GameBroadcast = nullptr;
+  ResetGameBroadcastStatus();
+  QueueGameUncreate();
+  SendEnterChat();
 }
 
 void CRealm::ResetConnection(bool Errored)
