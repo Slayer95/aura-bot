@@ -1372,6 +1372,8 @@ void CAura::EventGameDeleted(CGame* game)
 void CAura::EventGameRemake(CGame* game)
 {
   Print("[AURA] remaking game [" + game->GetGameName() + "]");
+  TrackGameLobby(game);
+
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     realm->QueueChatChannel("Game remake: " + ParseFileName(game->GetMap()->GetServerPath()));
@@ -1384,6 +1386,8 @@ void CAura::EventGameRemake(CGame* game)
 void CAura::EventGameStarted(CGame* game)
 {
   Print("[AURA] started game [" + game->GetGameName() + "]");
+  TrackGameStarted(game);
+
   /*
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
@@ -1905,7 +1909,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   CGame* createdLobby = new CGame(this, gameSetup);
-  m_Lobbies.push_back(createdLobby);
+  TrackGameLobby(createdLobby);
   m_LastGameHostedTicks = GetTicks();
   if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;

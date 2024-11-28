@@ -1678,7 +1678,6 @@ bool CGame::Update(void* fd, void* send_fd)
     m_Remaking = false;
     if (m_Aura->GetNewGameIsInQuota()) {
       m_Remade = true;
-      m_Aura->TrackGameLobby(this);
     } else {
       // Cannot remake
       m_Exiting = true;
@@ -5743,8 +5742,6 @@ void CGame::EventGameStartedLoading()
     }
     SetEveryoneLagging();
   }
-
-  m_Aura->TrackGameStarted(this);
 
   // and finally reenter battle.net chat
   AnnounceDecreateToRealms();
