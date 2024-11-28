@@ -149,6 +149,8 @@ public:
 
   void TrackGameLobby(CGame* game);
   void UntrackGameLobby(CGame* game);
+  void TrackGameStarted(CGame* game);
+  void UntrackGameStarted(CGame* game);
   void TrackGameJoinInProgress(CGame* game);
   void UntrackGameJoinInProgress(CGame* game);
 
@@ -184,6 +186,7 @@ public:
   void EventBNETGameRefreshError(CRealm* realm);
   void EventGameDeleted(CGame* game);
   void EventGameRemake(CGame* game);
+  void EventGameStarted(CGame* game);
 
   // other functions
 

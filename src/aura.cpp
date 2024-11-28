@@ -1188,8 +1188,12 @@ bool CAura::Update()
 
   for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
     if ((*it)->Update(&fd, &send_fd)) {
-      EventGameDeleted(*it);
-      delete *it;
+      if ((*it)->GetExiting()) {
+        EventGameDeleted(*it);
+        delete *it;
+      } else {
+        EventGameStarted(*it);
+      }
       it = m_Lobbies.erase(it);
       metaDataNeedsUpdate = true;
     } else {
@@ -1375,6 +1379,20 @@ void CAura::EventGameRemake(CGame* game)
       realm->QueueWhisper("Game remake: " + ParseFileName(game->GetMap()->GetServerPath()), game->GetCreatorName());
     }
   }
+}
+
+void CAura::EventGameStarted(CGame* game)
+{
+  Print("[AURA] started game [" + game->GetGameName() + "]");
+  /*
+  for (auto& realm : m_Realms) {
+    if (!realm->GetAnnounceHostToChat()) continue;
+    realm->QueueChatChannel("Game started: " + ParseFileName(game->GetMap()->GetServerPath()));
+    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+      realm->QueueWhisper("Game started: " + ParseFileName(game->GetMap()->GetServerPath()), game->GetCreatorName());
+    }
+  }
+  */
 }
 
 bool CAura::ReloadConfigs()
@@ -2003,6 +2021,22 @@ void CAura::UntrackGameLobby(CGame* game)
   for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
     if (*it == game) {
       it = m_Lobbies.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void CAura::TrackGameStarted(CGame* game)
+{
+  m_StartedGames.push_back(game);
+}
+
+void CAura::UntrackGameStarted(CGame* game)
+{
+  for (auto it = begin(m_StartedGames); it != end(m_StartedGames);) {
+    if (*it == game) {
+      it = m_StartedGames.erase(it);
     } else {
       ++it;
     }

@@ -430,7 +430,7 @@ public:
 
   uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds) const;
   void                      UpdateJoinable();
-  void                      UpdateLobby();
+  bool                      UpdateLobby();
   void                      UpdateLoading();
   void                      UpdateLoaded();
   bool                      Update(void* fd, void* send_fd);
@@ -541,10 +541,6 @@ public:
   void                      HandleGameLoadedStats();
   bool                      ReleaseMap();
   void                      StartGameOverTimer(bool isMMD = false);
-  void                      TrackLobby();
-  void                      UntrackLobby();
-  void                      TrackJoinInProgress();
-  void                      UntrackJoinInProgress();
   void                      ClearActions();
   void                      Reset();
   bool                      GetIsRemakeable();

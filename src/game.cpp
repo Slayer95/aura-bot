@@ -602,27 +602,6 @@ void CGame::StartGameOverTimer(bool isMMD)
     StopCountDown();
   }
 
-  UntrackLobby();
-  UntrackJoinInProgress();
-}
-
-void CGame::TrackLobby()
-{
-  m_Aura->TrackGameLobby(this);
-}
-
-void CGame::UntrackLobby()
-{
-  m_Aura->UntrackGameLobby(this);
-}
-
-void CGame::TrackJoinInProgress()
-{
-  m_Aura->TrackGameJoinInProgress(this);
-}
-
-void CGame::UntrackJoinInProgress()
-{
   m_Aura->UntrackGameJoinInProgress(this);
 }
 
@@ -1353,7 +1332,7 @@ void CGame::UpdateJoinable()
   }
 }
 
-void CGame::UpdateLobby()
+bool CGame::UpdateLobby()
 {
   const int64_t Ticks = GetTicks();
 
@@ -1398,7 +1377,7 @@ void CGame::UpdateLobby()
     m_LastCountDownTicks = Ticks;
     if (shouldStartLoading) {
       EventGameStartedLoading();
-      return;
+      return true;
     }
   }
 
@@ -1406,7 +1385,7 @@ void CGame::UpdateLobby()
   CheckLobbyTimeouts();
 
   if (m_Exiting) {
-    return;
+    return true;
   }
 
   // last action of CGame::UpdateLobby
@@ -1417,6 +1396,8 @@ void CGame::UpdateLobby()
   if (!m_GameLoading && GetSlotsOpen() > 0) {
     CreateVirtualHost();
   }
+
+  return false;
 }
 
 void CGame::UpdateLoading()
@@ -1697,7 +1678,7 @@ bool CGame::Update(void* fd, void* send_fd)
     m_Remaking = false;
     if (m_Aura->GetNewGameIsInQuota()) {
       m_Remade = true;
-      TrackLobby();
+      m_Aura->TrackGameLobby(this);
     } else {
       // Cannot remake
       m_Exiting = true;
@@ -1708,7 +1689,7 @@ bool CGame::Update(void* fd, void* send_fd)
 
   if (m_LobbyLoading) {
     if (!m_Users.empty()) {
-      return false;
+      return m_Exiting;
     }
     // This is a remake.
     // All users left the original game, and they can rejoin now.
@@ -1793,7 +1774,10 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   if (GetIsLobbyStrict()) {
-    UpdateLobby();
+    if (UpdateLobby()) {
+      // EventGameStartedLoading or m_Exiting
+      return true;
+    }
   }
 
   return m_Exiting;
@@ -5760,8 +5744,7 @@ void CGame::EventGameStartedLoading()
     SetEveryoneLagging();
   }
 
-  UntrackLobby();
-  m_Aura->UpdateMetaData();
+  m_Aura->TrackGameStarted(this);
 
   // and finally reenter battle.net chat
   AnnounceDecreateToRealms();
@@ -6003,7 +5986,7 @@ void CGame::EventGameLoaded()
 
   // move the game to the games in progress vector
   if (m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress) {
-    TrackJoinInProgress();
+    m_Aura->TrackGameJoinInProgress(this);
   }
 
   HandleGameLoadedStats();
