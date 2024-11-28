@@ -1886,8 +1886,8 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     Print("[AURA] creating game [" + gameSetup->m_Name + "]");
   }
 
-  m_Lobbies.emplace_back(this, gameSetup);
-  CGame* createdLobby = m_Lobbies.back();
+  CGame* createdLobby = new CGame(this, gameSetup);
+  m_Lobbies.push_back(createdLobby);
   m_LastGameHostedTicks = GetTicks();
   if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;
