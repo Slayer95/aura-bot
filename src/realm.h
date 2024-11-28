@@ -210,7 +210,7 @@ public:
 
   // processing functions
 
-  uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
+  uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds) const;
   void Update(void* fd, void* send_fd);
   void ProcessChatEvent(const uint32_t eventType, const std::string& fromUser, const std::string& nMessage);
   uint8_t CountChatQuota();

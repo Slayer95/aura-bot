@@ -813,14 +813,18 @@ CAura::~CAura()
     m_GameSetup->m_ExitingSoon = true;
   }
 
-  for (auto& realm : m_Realms) {
+  for (const auto& realm : m_Realms) {
     delete realm;
   }
 
-  m_Lobbies.erase(m_Lobbies.begin(), m_Lobbies.end());
-  for (auto& game : m_StartedGames) {
+  for (const auto& lobby : m_Lobbies) {
+    delete lobby;
+  }
+  for (const auto& game : m_StartedGames) {
     delete game;
   }
+
+  m_JoinInProgressGames.clear();
 
   delete m_DB;
   delete m_IRC;
@@ -830,7 +834,17 @@ CAura::~CAura()
 CGame* CAura::GetMostRecentLobby() const
 {
   if (m_Lobbies.empty()) return nullptr;
-  return m_Lobbies[m_Lobbies.size() - 1];
+  return m_Lobbies.back();
+}
+
+CGame* CAura::GetMostRecentLobbyFromCreator(const string& fromName) const
+{
+  for (auto it = rbegin(m_Lobbies); it != rend(m_Lobbies); ++it) {
+    if ((*it)->GetCreatorName() == fromName) {
+      return (*it);
+    }
+  }
+  return nullptr;
 }
 
 CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
@@ -1002,25 +1016,26 @@ bool CAura::Update()
 
   // 5. the current lobby's player sockets
 
-  for (auto& lobby : m_Lobbies) {
+  for (const auto& lobby : m_Lobbies) {
     NumFDs += lobby->SetFD(&fd, &send_fd, &nfds);
   }
 
   // 6. all running games' player sockets
 
-  for (auto& game : m_StartedGames) {
+  for (const auto& game : m_StartedGames) {
     NumFDs += game->SetFD(&fd, &send_fd, &nfds);
   }
 
   // 7. all battle.net sockets
 
-  for (auto& realm : m_Realms) {
+  for (const auto& realm : m_Realms) {
     NumFDs += realm->SetFD(&fd, &send_fd, &nfds);
   }
 
   // 8. irc socket
-  if (m_IRC)
+  if (m_IRC) {
     NumFDs += m_IRC->SetFD(&fd, &send_fd, &nfds);
+  }
 
   // 9. UDP sockets, outgoing test connections
   NumFDs += m_Net->SetFD(&fd, &send_fd, &nfds);
@@ -1034,8 +1049,7 @@ bool CAura::Update()
 
   int64_t usecBlock = 50000;
 
-  for (auto& game : m_StartedGames)
-  {
+  for (auto& game : m_StartedGames) {
     if (game->GetNextTimedActionTicks() * 1000 < usecBlock)
       usecBlock = game->GetNextTimedActionTicks() * 1000;
   }
@@ -1056,8 +1070,7 @@ bool CAura::Update()
   select(nfds + 1, nullptr, &send_fd, nullptr, &send_tv);
 #endif
 
-  if (NumFDs == 0)
-  {
+  if (NumFDs == 0) {
     // we don't have any sockets (i.e. we aren't connected to battle.net and irc maybe due to a lost connection and there aren't any games running)
     // select will return immediately and we'll chew up the CPU if we let it loop so just sleep for 200ms to kill some time
 
@@ -1171,46 +1184,40 @@ bool CAura::Update()
 
   // update current lobby
 
+  bool metaDataNeedsUpdate = false;
+
   for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
     if ((*it)->Update(&fd, &send_fd)) {
-      Print("[AURA] deleting lobby [" + (*it)->GetGameName() + "]");
-      if ((*it)->GetUDPEnabled()) {
-        (*it)->SendGameDiscoveryDecreate();
-      }
-      for (auto& realm : m_Realms) {
-        if (realm->GetGameBroadcast() == *it) {
-          realm->ResetGameBroadcastData();
-        }
-      }
-      delete (*it);
+      EventGameDeleted(*it);
+      delete *it;
       it = m_Lobbies.erase(it);
-      UpdateMetaData();
+      metaDataNeedsUpdate = true;
     } else {
       (*it)->UpdatePost(&send_fd);
       ++it;
     }
   }
 
-
   // update running games
-
   for (auto it = begin(m_StartedGames); it != end(m_StartedGames);) {
     if ((*it)->Update(&fd, &send_fd)) {
       (*it)->FlushLogs();
       if ((*it)->GetExiting()) {
-        Print("[AURA] deleting game [" + (*it)->GetGameName() + "]");
         EventGameDeleted(*it);
         delete *it;
       } else {
-        Print("[AURA] remaking game [" + (*it)->GetGameName() + "]");
         EventGameRemake(*it);
       }
       it = m_StartedGames.erase(it);
-      UpdateMetaData();
+      metaDataNeedsUpdate = true;
     } else {
       (*it)->UpdatePost(&send_fd);
       ++it;
     }
+  }
+
+  if (metaDataNeedsUpdate) {
+    UpdateMetaData();
   }
 
   // update battle.net connections
@@ -1329,16 +1336,29 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
 
 void CAura::EventGameDeleted(CGame* game)
 {
-  if ((game->GetGameTicks() / 1000) < 180) {
-    // Do not announce game ended if game lasted less than 3 minutes.
-    return;
-  }
-  for (auto& realm : m_Realms) {
-    if (!realm->GetAnnounceHostToChat()) continue;
-    if (game->GetGameLoaded()) {
-      realm->QueueChatChannel("Game ended: " + game->GetEndDescription());
-      if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-        realm->QueueWhisper("Game ended: " + game->GetEndDescription(), game->GetCreatorName());
+  if (game->GetIsLobby()) {
+    Print("[AURA] deleting lobby [" + game->GetGameName() + "]");
+    if (game->GetUDPEnabled()) {
+      game->SendGameDiscoveryDecreate();
+    }
+    for (auto& realm : m_Realms) {
+      if (realm->GetGameBroadcast() == game) {
+        realm->ResetGameBroadcastData();
+      }
+    }
+  } else {
+    Print("[AURA] deleting game [" + game->GetGameName() + "]");
+    if ((game->GetGameTicks() / 1000) < 180) {
+      // Do not announce game ended if game lasted less than 3 minutes.
+      return;
+    }
+    for (auto& realm : m_Realms) {
+      if (!realm->GetAnnounceHostToChat()) continue;
+      if (game->GetGameLoaded()) {
+        realm->QueueChatChannel("Game ended: " + game->GetEndDescription());
+        if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+          realm->QueueWhisper("Game ended: " + game->GetEndDescription(), game->GetCreatorName());
+        }
       }
     }
   }
@@ -1346,6 +1366,7 @@ void CAura::EventGameDeleted(CGame* game)
 
 void CAura::EventGameRemake(CGame* game)
 {
+  Print("[AURA] remaking game [" + game->GetGameName() + "]");
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     realm->QueueChatChannel("Game remake: " + ParseFileName(game->GetMap()->GetServerPath()));
@@ -1535,6 +1556,8 @@ void CAura::OnLoadConfigs()
   }
 
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
+  m_Lobbies.reserve(m_Config->m_MaxLobbies);
+  m_StartedGames.reserve(m_Config->m_MaxStartedGames);
 }
 
 uint8_t CAura::ExtractScripts()
@@ -1687,9 +1710,9 @@ void CAura::UpdateWindowTitle()
 {
   CGame* detailsGame = nullptr;
   if (m_Lobbies.size() == 1) {
-    if (m_StartedGames.size() == 0) detailsGame = GetMostRecentLobby();
-  } else if (m_StartedGames.size() == 1) {
-    detailsGame = m_StartedGames[0];
+    if (m_StartedGames.size() == 0) detailsGame = m_Lobbies.back();
+  } else if (m_Lobbies.empty() && m_StartedGames.size() == 1) {
+    detailsGame = m_StartedGames.back();
   }
   PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_Lobbies.size(), m_StartedGames.size(), m_AutoRehostGameSetup != nullptr);
   SetWindowTitle(windowTitle);
@@ -1751,12 +1774,12 @@ void CAura::GracefulExit()
     game->SendEveryoneElseLeftAndDisconnect("shutdown");
   }
 
-  m_Net->GracefulExit();
-
   for (auto& lobby : m_Lobbies) {
     lobby->StopPlayers("shutdown");
     lobby->SetExiting(true);
   }
+
+  m_Net->GracefulExit();
 
   for (auto& realm : m_Realms) {
     realm->Disable();
@@ -1802,13 +1825,16 @@ bool CAura::CheckGracefulExit()
 
 bool CAura::GetNewGameIsInQuota() const
 {
-  return m_Lobbies.size() - m_ReplacingLobbiesCounter < m_Config->m_MaxLobbies;
+  if (m_Lobbies.size() - m_ReplacingLobbiesCounter >= m_Config->m_MaxLobbies) return false;
+  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config->m_MaxTotalGames) return false;
+  return true;
 }
 
 bool CAura::GetNewGameIsInQuotaConservative() const
 {
   if (m_Lobbies.size() >= m_Config->m_MaxLobbies) return false;
   if (m_StartedGames.size() >= m_Config->m_MaxStartedGames) return false;
+  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config->m_MaxTotalGames) return false;
   return true;
 }
 
@@ -1859,7 +1885,8 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     Print("[AURA] creating game [" + gameSetup->m_Name + "]");
   }
 
-  CGame* createdLobby = m_Lobbies.emplace_back(this, gameSetup);
+  m_Lobbies.emplace_back(this, gameSetup);
+  CGame* createdLobby = m_Lobbies.back();
   m_LastGameHostedTicks = GetTicks();
   if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;

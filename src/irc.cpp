@@ -88,7 +88,7 @@ CIRC::~CIRC()
   }
 }
 
-uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds) const
 {
   // irc socket
 

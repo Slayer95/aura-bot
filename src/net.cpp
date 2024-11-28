@@ -71,7 +71,7 @@ CGameTestConnection::~CGameTestConnection()
   delete m_Socket;
 }
 
-uint32_t CGameTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CGameTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds) const
 {
   if (!m_Socket->HasError() && m_Socket->GetConnected())
   {
@@ -544,7 +544,7 @@ bool CNet::SendBroadcast(const vector<uint8_t>& packet)
   return mainSuccess;
 }
 
-void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet)
+void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet) const
 {
   if (address->ss_family == AF_INET6 && !m_SupportUDPOverIPv6) {
     Print("[CONFIG] Game discovery message to " + AddressToStringStrict(*address) + " cannot be sent, because IPv6 support hasn't been enabled");
@@ -563,7 +563,7 @@ void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet)
   }
 }
 
-void CNet::Send(const string& addressLiteral, const vector<uint8_t>& packet)
+void CNet::Send(const string& addressLiteral, const vector<uint8_t>& packet) const
 {
   optional<sockaddr_storage> maybeAddress = ParseAddress(addressLiteral);
   if (!maybeAddress.has_value())
@@ -574,7 +574,7 @@ void CNet::Send(const string& addressLiteral, const vector<uint8_t>& packet)
   Send(address, packet);
 }
 
-void CNet::Send(const string& addressLiteral, const uint16_t port, const vector<uint8_t>& packet)
+void CNet::Send(const string& addressLiteral, const uint16_t port, const vector<uint8_t>& packet) const
 {
   optional<sockaddr_storage> maybeAddress = ParseAddress(addressLiteral);
   if (!maybeAddress.has_value())
@@ -681,7 +681,6 @@ GameUser::CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const
 
 void CNet::HandleUDP(UDPPkt* pkt)
 {
-  std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)pkt->buf, pkt->length);
   // pkt->buf->length at least MIN_UDP_PACKET_SIZE
 
   if (pkt->sender->ss_family != AF_INET && pkt->sender->ss_family != AF_INET6) {
@@ -696,16 +695,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
   }
 
   if (m_Config->m_UDPForwardTraffic) {
-    vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
-    AppendByteArray(relayPacket, ipAddress, true);
-    size_t portOffset = relayPacket.size();
-    relayPacket.resize(portOffset + 6 + pkt->length);
-    relayPacket[portOffset] = static_cast<uint8_t>(remotePort >> 8); // Network-byte-order (Big-endian)
-    relayPacket[portOffset + 1] = static_cast<uint8_t>(remotePort);
-    memset(relayPacket.data() + portOffset + 2, 0, 4); // Game version unknown at this layer.
-    memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
-    AssignLength(relayPacket);
-    Send(&(m_Config->m_UDPForwardAddress), relayPacket);
+    RelayUDPPacket(pkt, ipAddress, remotePort);
   }
 
   if (pkt->buf[0] != GameProtocol::Magic::W3GS_HEADER) {
@@ -732,6 +722,20 @@ void CNet::HandleUDP(UDPPkt* pkt)
       }
     }
   }
+}
+
+void CNet::RelayUDPPacket(const UDPPkt* pkt, const string& fromAddress, const uint16_t fromPort) const
+{
+  vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
+  AppendByteArray(relayPacket, fromAddress, true);
+  size_t portOffset = relayPacket.size();
+  relayPacket.resize(portOffset + 6 + pkt->length);
+  relayPacket[portOffset] = static_cast<uint8_t>(fromPort >> 8); // Network-byte-order (Big-endian)
+  relayPacket[portOffset + 1] = static_cast<uint8_t>(fromPort);
+  memset(relayPacket.data() + portOffset + 2, 0, 4); // Game version unknown at this layer.
+  memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
+  AssignLength(relayPacket);
+  Send(&(m_Config->m_UDPForwardAddress), relayPacket);
 }
 
 sockaddr_storage* CNet::GetPublicIPv4()
@@ -1045,7 +1049,7 @@ void CNet::ReportHealthCheck()
   bool hasDirectAttempts = false;
   bool anyDirectSuccess = false;
   vector<string> ChatReport;
-  vector<uint16_t> FailPorts;
+  set<uint16_t> failedPorts;
   bool isIPv6Reachable = false;
   for (auto& testConnection : m_HealthCheckClients) {
     string listedSuffix;
@@ -1078,17 +1082,14 @@ void CNet::ReportHealthCheck()
       if (success) isIPv6Reachable = true;
     }
     if (m_HealthCheckVerbose && !success) {
-      uint16_t port = testConnection->GetPort();
-      if (std::find(FailPorts.begin(), FailPorts.end(), port) == FailPorts.end()) {
-        FailPorts.push_back(port);
-      }
+      failedPorts.insert(testConnection->GetPort());
     }
   }
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
   if (publicIPv4 != nullptr && hasDirectAttempts) {
     string portForwardInstructions;
     if (m_HealthCheckVerbose && m_HealthCheckContext->GetSourceGame() != nullptr && m_HealthCheckContext->GetSourceGame()->GetIsLobbyStrict()) {
-      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinVector(FailPorts, false) + "} to internal port(s) {" + JoinVector(GetPotentialGamePorts(), false) + "}";
+      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinSet(failedPorts, false) + "} to internal port(s) {" + JoinVector(GetPotentialGamePorts(), false) + "}";
     }
     if (anyDirectSuccess) {
       Print("[NET] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4));
@@ -1226,7 +1227,19 @@ void CNet::HandleIPAddressFetchDone()
     }
   }
   ResetIPAddressFetch();
+  HandleIPAddressFetchDoneCallback();
+}
 
+void CNet::HandleIPAddressFetchDoneCallback()
+{
+  // CAura::CreateGame() skips joinable checks if we are still figuring out our IP address,
+  // so let's do them now that we know our address.
+  CheckJoinableLobbies();
+}
+
+void CNet::CheckJoinableLobbies()
+{
+  // TODO: Missing support for concurrent (or even serial) joinable checks for multiple lobbies.
   for (const auto& lobby : m_Aura->m_Lobbies) {
     if (lobby->GetIsCheckJoinable()) {
       uint8_t checkMode = HEALTH_CHECK_ALL;

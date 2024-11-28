@@ -905,6 +905,30 @@ inline void AssignLength(std::vector<uint8_t>& content)
   return JoinVector(list, ", ", trailingComma);
 }
 
+[[nodiscard]] inline std::string JoinSet(const std::set<std::string>& list, const std::string connector, const bool trailingConnector) {
+  std::string Results;
+  for (const auto& element : list)
+    Results += element + connector;
+  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
+  return Results;
+}
+
+[[nodiscard]] inline std::string JoinSet(const std::set<uint16_t>& list, const std::string connector, const bool trailingConnector) {
+  std::string Results;
+  for (const auto& element : list)
+    Results += std::to_string(element) + connector;
+  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
+  return Results;
+}
+
+[[nodiscard]] inline std::string JoinSet(const std::set<std::string>& list, const bool trailingComma) {
+  return JoinSet(list, ", ", trailingComma);
+}
+
+[[nodiscard]] inline std::string JoinSet(const std::set<uint16_t>& list, const bool trailingComma) {
+  return JoinSet(list, ", ", trailingComma);
+}
+
 [[nodiscard]] inline std::string IPv4ToString(const std::array<uint8_t, 4> ip) {
   return ToDecString(ip[0]) + "." + ToDecString(ip[1]) + "." + ToDecString(ip[2]) + "." + ToDecString(ip[3]);
 }

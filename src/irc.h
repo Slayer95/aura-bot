@@ -70,7 +70,7 @@ public:
 
   [[nodiscard]] inline CTCPClient* GetSocket() const { return m_Socket; }
 
-  [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
+  [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds) const;
   void ResetConnection();
   void Update(void* fd, void* send_fd);
   void ExtractPackets();

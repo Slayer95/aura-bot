@@ -153,7 +153,7 @@ CRealm::~CRealm()
   }
 }
 
-uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds) const
 {
   if (m_Socket && !m_Socket->HasError() && !m_Socket->HasFin() && m_Socket->GetConnected())
   {

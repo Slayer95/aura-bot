@@ -1223,7 +1223,7 @@ ImmutableUserList CGame::GetUnreadyPlayers() const
   return players;
 }
 
-uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds) const
 {
   uint32_t NumFDs = 0;
 

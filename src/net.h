@@ -41,7 +41,7 @@ public:
   CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const std::string& nName);
   ~CGameTestConnection();
 
-  [[nodiscard]] uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
+  [[nodiscard]] uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds) const;
   [[nodiscard]] bool      Update(void* fd, void* send_fd);
   [[nodiscard]] bool      QueryGameInfo();
   [[nodiscard]] bool      GetIsRealmOnline() const;
@@ -140,13 +140,14 @@ public:
   [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
   void Update(void* fd, void* send_fd);
   bool SendBroadcast(const std::vector<uint8_t>& packet);
-  void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet);
-  void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet);
-  void Send(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
+  void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet) const;
+  void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet) const;
+  void Send(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet) const;
   void SendLoopback(const std::vector<uint8_t>& packet);
   void SendArbitraryUnicast(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::vector<sockaddr_storage>& clientIps);
   void HandleUDP(UDPPkt* pkt);
+  void RelayUDPPacket(const UDPPkt* pkt, const std::string& fromAddress, const uint16_t fromPort) const;
 
   [[nodiscard]] sockaddr_storage*               GetPublicIPv4();
   [[nodiscard]] sockaddr_storage*               GetPublicIPv6();
@@ -170,6 +171,8 @@ public:
   bool QueryIPAddress();
   void ResetIPAddressFetch();
   void HandleIPAddressFetchDone();
+  void HandleIPAddressFetchDoneCallback();
+  void CheckJoinableLobbies();
 
   uint16_t NextHostPort();
   void     MergeDownGradedConnections();

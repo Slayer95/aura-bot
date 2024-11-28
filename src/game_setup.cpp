@@ -1199,10 +1199,11 @@ void CGameSetup::OnLoadMapSuccess()
 	}*/
     SetBaseName(m_MapReadyCallbackData);
     CGame* sourceGame = m_Ctx->GetSourceGame();
-    if (sourceGame && sourceGame->GetIsLobbyStrict() && sourceGame->GetIsReplaceable() && !sourceGame->GetIsBeingReplaced()) {
-      sourceGame->SendAllChat("Another lobby is being created. This lobby will be closed soon.");
-      sourceGame->StartGameOverTimer();
-      sourceGame->SetIsBeingReplaced(true);
+    CGame* targetGame = m_Ctx->GetTargetGame();
+    if (targetGame && !targetGame->GetCountDownStarted() && targetGame->GetIsReplaceable() && !targetGame->GetIsBeingReplaced()) {
+      targetGame->SendAllChat("Another lobby is being created. This lobby will be closed soon.");
+      targetGame->StartGameOverTimer();
+      targetGame->SetIsBeingReplaced(true);
       ++m_Aura->m_ReplacingLobbiesCounter;
     }
     CRealm* sourceRealm = m_Ctx->GetSourceRealm();

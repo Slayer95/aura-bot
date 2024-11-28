@@ -106,6 +106,7 @@ public:
   [[nodiscard]] inline std::string GetChannelName() const { return m_ChannelName; }
   [[nodiscard]] inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
   [[nodiscard]] inline CGame* GetSourceGame() const { return m_SourceGame; }
+  [[nodiscard]] inline CGame* GetTargetGame() const { return m_TargetGame; }
   [[nodiscard]] inline CIRC* GetSourceIRC() const { return m_IRC; }
 #ifndef DISABLE_DPP
   [[nodiscard]] inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
@@ -149,6 +150,7 @@ public:
   [[nodiscard]] bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool allowNoRealm = false, bool searchHistory = false);
   [[nodiscard]] uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
   [[nodiscard]] CGame* GetTargetGame(const std::string& target);
+  void UseImplicitReplaceable();
   void UseImplicitHostedGame();
   void Run(const std::string& token, const std::string& command, const std::string& payload);
   void Ref() { ++m_RefCount; }

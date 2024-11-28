@@ -428,7 +428,7 @@ public:
 
   // processing functions
 
-  uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds);
+  uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds) const;
   void                      UpdateJoinable();
   void                      UpdateLobby();
   void                      UpdateLoading();

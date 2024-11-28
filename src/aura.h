@@ -139,6 +139,7 @@ public:
   CAura(CAura&) = delete;
 
   CGame* GetMostRecentLobby() const;
+  CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
   CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
   CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
 

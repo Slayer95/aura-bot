@@ -1122,8 +1122,7 @@ CGame* CCommandContext::GetTargetGame(const string& rawInput)
   if (rawInput.empty()) {
     return nullptr;
   }
-  string inputGame = rawInput;
-  transform(begin(inputGame), end(inputGame), begin(inputGame), [](char c) { return static_cast<char>(std::tolower(c)); });
+  string inputGame = ToLowerCase(rawInput);
   if (inputGame == "lobby" || inputGame == "game#lobby") {
     return m_Aura->GetMostRecentLobby();
   }
@@ -1135,8 +1134,17 @@ CGame* CCommandContext::GetTargetGame(const string& rawInput)
     if (m_Aura->m_StartedGames.empty()) return nullptr;
     return m_Aura->m_StartedGames[m_Aura->m_StartedGames.size() - 1];
   }
+  if (inputGame == "lobby#oldest") {
+    if (m_Aura->m_Lobbies.empty()) return nullptr;
+    return m_Aura->m_Lobbies[0];
+  }
+  if (inputGame == "lobby#newest") {
+    return m_Aura->GetMostRecentLobby();
+  }
   if (inputGame.substr(0, 5) == "game#") {
     inputGame = inputGame.substr(5);
+  } else if (inputGame.substr(0, 6) == "lobby#") {
+    inputGame = inputGame.substr(6);
   }
 
   uint64_t gameID = 0;
@@ -1150,11 +1158,28 @@ CGame* CCommandContext::GetTargetGame(const string& rawInput)
   return m_Aura->GetGameByIdentifier(gameID);
 }
 
+void CCommandContext::UseImplicitReplaceable()
+{
+  if (m_TargetGame) return;
+
+  for (auto it = m_Aura->m_Lobbies.rbegin(); it != m_Aura->m_Lobbies.rend(); ++it) {
+    if ((*it)->GetIsReplaceable() && !(*it)->GetCountDownStarted()) {
+      m_TargetGame = *it;
+    }
+  }
+
+  if (m_TargetGame && !GetIsSudo()) {
+    UpdatePermissions();
+  }
+}
+
 void CCommandContext::UseImplicitHostedGame()
 {
   if (m_TargetGame) return;
 
-  m_TargetGame = m_Aura->GetMostRecentLobby();
+  m_TargetGame = m_Aura->GetMostRecentLobbyFromCreator(m_FromName);
+  if (!m_TargetGame) m_TargetGame = m_Aura->GetMostRecentLobby();
+
   if (m_TargetGame && !GetIsSudo()) {
     UpdatePermissions();
   }
@@ -1488,7 +1513,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       vector<string> output;
-      output.push_back("Game #" + to_string(m_TargetGame->GetGameID()));
+      output.push_back("Game#" + to_string(m_TargetGame->GetGameID()));
 
       vector<const GameUser::CGameUser*> players = m_TargetGame->GetPlayers();
       for (const auto& player : players) {
@@ -2409,19 +2434,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (Payload.empty()) {
-        ErrorReply("Usage: " + cmdToken + "disconnect <PLAYERNAME>");
-        break;
-      }
-
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
-        ErrorReply("Usage: " + cmdToken + "disconnect <PLAYERNAME>");
-        break;
-      }
+      GameUser::CGameUser* targetPlayer = RunTargetPlayerOrSelf(Payload);
       if (!targetPlayer) {
-        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a player.");
         break;
       }
 
@@ -4005,18 +4019,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("status"): {
+      UseImplicitHostedGame();
+
       string message = "Status: ";
 
-      for (const auto& bnet : m_Aura->m_Realms) {
+      for (const auto& realm : m_Aura->m_Realms) {
         string statusFragment;
-        if (!m_Aura->m_Lobbies.empty() && bnet->GetIsGameBroadcastErrored()) {
-          statusFragment = "unlisted";
-        } else if (bnet->GetLoggedIn()) {
-          statusFragment = "online";
-        } else {
+        if (!realm->GetLoggedIn()) {
           statusFragment = "offline";
+        } else if (m_TargetGame && (realm->GetGameBroadcast() != m_TargetGame || realm->GetIsGameBroadcastErrored())) {
+          statusFragment = "unlisted";
+        } else {
+          statusFragment = "online";
         }
-        message += "[" + bnet->GetUniqueDisplayName() + " - " + statusFragment + "] ";
+        message += "[" + realm->GetUniqueDisplayName() + " - " + statusFragment + "] ";
       }
 
       if (m_Aura->m_IRC) {
@@ -6191,7 +6207,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         for (const auto& targetGame : m_Aura->m_Lobbies) {
           success = targetGame->SendAllChat(Message) || success;
         }
-        for (auto& targetGame : m_Aura->m_StartedGames) {
+        for (const auto& targetGame : m_Aura->m_StartedGames) {
           success = targetGame->SendAllChat(Message) || success;
         }
         if (!success) {
@@ -6779,16 +6795,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to invite the bot to another channel.");
         break;
       }
-      if (!m_Aura->m_Lobbies.empty()) {
-        ErrorReply("Cannot join a chat channel while hosting a lobby.");
-        break;
-      }
       if (Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "channel <CHANNEL>");
         break;
       }
       if (!m_SourceRealm) {
         ErrorReply("Realm not found.");
+        break;
+      }
+      if (m_SourceRealm->GetGameBroadcast()) {
+        ErrorReply("Cannot join a chat channel while hosting a lobby.");
         break;
       }
       if (!m_SourceRealm->QueueCommand("/join " + Payload)) {
@@ -6832,8 +6848,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("load"):
     case HashCode("hostpriv"):
     case HashCode("host"): {
+      UseImplicitReplaceable();
+
       if (!CheckPermissions(m_Config->m_HostPermissions, (
-        m_SourceGame && m_SourceGame->GetIsLobbyStrict() && m_SourceGame->GetIsReplaceable() ?
+        m_TargetGame && m_TargetGame->GetIsLobbyStrict() && m_TargetGame->GetIsReplaceable() ?
         COMMAND_PERMISSIONS_UNVERIFIED :
         COMMAND_PERMISSIONS_ADMIN
       ))) {
@@ -6873,19 +6891,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Another user is hosting a game.");
         break;
       }
-      if (!m_Aura->m_Lobbies.empty() && (!m_Aura->m_Lobbies[0]->GetIsReplaceable() || (!GetIsSudo() && (
-        // This block defines under which circumstances a replaceable lobby can actually be replaced.
-        // Do not allow replacements when using !host from another game, unless sudo.
-        (m_SourceGame == m_Aura->m_Lobbies[0] && !m_SourceGame->GetIsReplaceable())
-        // The following check defines whether players in the replaceable lobby get priority,
-        // or external users (PvPGN/IRC/Discord) get it.
-        // By commenting it out, external users get priority.
-        // (Replaceable lobbies are NOT admin games.)
-        //|| (!m_SourceGame && m_Aura->m_Lobbies[0]->GetIsReplaceable()->GetHasAnyUser())
-      )))) {
-        ErrorReply("Another user is hosting a game.");
-        break;
-      }
       if (m_Aura->m_ExitingSoon) {
         ErrorReply("Aura is shutting down. No games may be hosted.");
         break;
@@ -6893,6 +6898,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string gameName;
       if (isHostCommand) {
+        if (!m_Aura->GetNewGameIsInQuota()) {
+          ErrorReply("Other lobbies are already being hosted (maximum is " + to_string(m_Aura->m_Config->m_MaxLobbies) + ").");
+          break;
+        }
+        if (m_TargetGame && m_SourceGame != m_TargetGame && m_TargetGame->GetIsReplaceable() && m_TargetGame->GetHasAnyUser()) {
+          // If there are users in the replaceable lobby (and we are not among them), do not replace it.
+          m_TargetGame = nullptr;
+        }
+
         if (Args.size() >= 2) {
           gameName = Args[Args.size() - 1];
           Args.pop_back();
@@ -6907,6 +6921,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           }
         }
       }
+
       CGameExtraOptions* options = new CGameExtraOptions();
       if (2 <= Args.size()) options->ParseMapObservers(Args[1]);
       if (3 <= Args.size()) options->ParseMapVisibility(Args[2]);
