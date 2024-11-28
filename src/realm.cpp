@@ -820,10 +820,15 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   switch (message->GetCallback()) {
     case CHAT_CALLBACK_REFRESH_GAME: {
       m_ChatQueuedGameAnnouncement = false;
-      
       CGame* matchLobby = m_Aura->GetLobbyByHostCounter(message->GetCallbackData());
-      //assert(matchLobby != nullptr);
-      if (matchLobby->GetIsSupportedGameVersion(GetGameVersion())) {
+      if (!matchLobby) {
+        Print(GetLogPrefix() + " !! lobby not found !! host counter 0x" + ToHexString(message->GetCallbackData()));
+        if (message->GetIsStale()) {
+          Print(GetLogPrefix() + " !! lobby is stale !!");
+        } else {
+          Print(GetLogPrefix() + " !! lobby is not stale !!");
+        }
+      } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion())) {
         matchLobby->AnnounceToRealm(this);
       }
       break;
