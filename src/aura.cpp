@@ -379,8 +379,7 @@ int main(const int argc, char** argv)
 
   WSADATA wsadata;
 
-  if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0)
-  {
+  if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
     Print("[AURA] error starting winsock");
     return 1;
   }
@@ -900,6 +899,7 @@ CRealm* CAura::GetRealmByHostName(const string& hostName) const
 bool CAura::HandleAction(vector<string> action)
 {
   if (action[0] == "exec") {
+    // TODO: CLI --exec
     Print("[AURA] Exec cli unsupported yet");
     return false;
   } else if (action[0] == "host" || action[0] == "rehost") {
@@ -960,7 +960,6 @@ bool CAura::Update()
       m_AutoRehostGameSetup->SetActive();
       vector<string> hostAction{"rehost"};
       m_PendingActions.push(hostAction);
-      Print("Rehost action queued");
     }
   }
 
@@ -1041,10 +1040,6 @@ bool CAura::Update()
 
   // 9. UDP sockets, outgoing test connections
   NumFDs += m_Net->SetFD(&fd, &send_fd, &nfds);
-
-  if (NumFDs > 40) {
-    Print("[AURA] " + to_string(NumFDs) + " file descriptors watched");
-  }
 
   // before we call select we need to determine how long to block for
   // 50 ms is the hard maximum
