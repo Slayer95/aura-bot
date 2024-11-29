@@ -1781,11 +1781,11 @@ bool CGame::Update(void* fd, void* send_fd)
 
 void CGame::UpdatePost(void* send_fd)
 {
-  // we need to manually call DoSend on each user now because GameUser::CGameUser :: Update doesn't do it
+  // we need to manually call DoSend on each user now because GameUser::CGameUser::Update doesn't do it
   // this is in case user 2 generates a packet for user 1 during the update but it doesn't get sent because user 1 already finished updating
   // in reality since we're queueing actions it might not make a big difference but oh well
 
-  for (auto& user : m_Users) {
+  for (const auto& user : m_Users) {
     if (user->GetDisconnected()) continue;
     user->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
   }
