@@ -85,11 +85,11 @@ void CQueuedChatMessage::SetValidator(const uint8_t validatorType, const uint32_
     case CHAT_VALIDATOR_LOBBY_JOINABLE:
       m_Validator = vector<uint8_t>();
       m_Validator.reserve(5);
-      m_Validator[0] = validatorType;
-      m_Validator[1] = static_cast<uint8_t>(validatorData);
-      m_Validator[2] = static_cast<uint8_t>(validatorData >> 8);
-      m_Validator[3] = static_cast<uint8_t>(validatorData >> 16);
-      m_Validator[4] = static_cast<uint8_t>(validatorData >> 24);
+      m_Validator.push_back(validatorType);
+      m_Validator.push_back(static_cast<uint8_t>(validatorData));
+      m_Validator.push_back(static_cast<uint8_t>(validatorData >> 8));
+      m_Validator.push_back(static_cast<uint8_t>(validatorData >> 16));
+      m_Validator.push_back(static_cast<uint8_t>(validatorData >> 24));
       break;
     default:
       break;

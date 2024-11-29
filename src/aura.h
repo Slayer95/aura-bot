@@ -172,6 +172,7 @@ public:
   inline bool GetReady() const { return m_Ready; }
 
   bool GetNewGameIsInQuota() const;
+  bool GetNewGameIsInQuotaReplace() const;
   bool GetNewGameIsInQuotaConservative() const;
   bool GetNewGameIsInQuotaAutoReHost() const;
   bool CreateGame(CGameSetup* gameSetup);

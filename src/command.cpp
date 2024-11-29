@@ -6898,13 +6898,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string gameName;
       if (isHostCommand) {
-        if (!m_Aura->GetNewGameIsInQuota()) {
-          ErrorReply("Other lobbies are already being hosted (maximum is " + to_string(m_Aura->m_Config->m_MaxLobbies) + ").");
-          break;
-        }
         if (m_TargetGame && m_SourceGame != m_TargetGame && m_TargetGame->GetIsReplaceable() && m_TargetGame->GetHasAnyUser()) {
           // If there are users in the replaceable lobby (and we are not among them), do not replace it.
           m_TargetGame = nullptr;
+        }
+        const bool isReplace = m_TargetGame && !m_TargetGame->GetCountDownStarted() && m_TargetGame->GetIsReplaceable() && !m_TargetGame->GetIsBeingReplaced();
+        if (!(isReplace ? m_Aura->GetNewGameIsInQuotaReplace() : m_Aura->GetNewGameIsInQuota())) {
+          ErrorReply("Other lobbies are already being hosted (maximum is " + to_string(m_Aura->m_Config->m_MaxLobbies) + ").");
+          break;
         }
 
         if (Args.size() >= 2) {
