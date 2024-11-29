@@ -192,7 +192,8 @@ public:
 
   // other functions
 
-  bool ReloadConfigs();
+  [[nodiscard]] bool ReloadConfigs();
+  void TryReloadConfigs();
   bool LoadConfigs(CConfig& CFG);
   void OnLoadConfigs();
   bool LoadBNETs(CConfig& CFG, std::bitset<120>& definedConfigs);

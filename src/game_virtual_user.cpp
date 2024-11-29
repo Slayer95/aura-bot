@@ -116,7 +116,7 @@ vector<uint8_t> CGameVirtualUser::GetGameLoadedBytes() const
 
 vector<uint8_t> CGameVirtualUser::GetGameQuitBytes(const uint8_t leftCode) const
 {
-  return GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(m_UID, PLAYERLEAVE_DISCONNECT);
+  return GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(m_UID, leftCode);
 }
 
 void CGameVirtualUser::RefreshUID()

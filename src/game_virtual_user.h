@@ -111,7 +111,7 @@ public:
 
   inline void DisableAllActions() { m_AllowedActions = VIRTUAL_USER_ALLOW_ACTIONS_NONE; }
   inline void DropRemainingSaves() { --m_RemainingSaves; }
-  inline void SetRemainingSaves(uint32_t nCount) { m_RemainingSaves = nCount; }
+  inline void SetRemainingSaves(uint8_t nCount) { m_RemainingSaves = nCount; }
   inline void SetCannotSave() { m_RemainingSaves = 0; }
   inline void DropRemainingPauses() { --m_RemainingPauses; }
   inline void SetCannotPause() { m_RemainingPauses = 0; }

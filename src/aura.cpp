@@ -1057,8 +1057,10 @@ bool CAura::Update()
   int64_t usecBlock = 50000;
 
   for (const auto& game : m_StartedGames) {
-    if (game->GetNextTimedActionTicks() * 1000 < usecBlock)
-      usecBlock = game->GetNextTimedActionTicks() * 1000;
+    int64_t nextGameTimedActionMicroSeconds = game->GetNextTimedActionMicroSeconds();
+    if (nextGameTimedActionMicroSeconds < usecBlock) {
+      usecBlock = nextGameTimedActionMicroSeconds;
+    }
   }
 
   struct timeval tv;
@@ -1967,6 +1969,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
 #ifndef DISABLE_MINIUPNP
   if (m_Net->m_Config->m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // This is a long synchronous network call.
+    // TODO: Cache UPnP per-port
     m_Net->RequestUPnP("TCP", createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
 #endif

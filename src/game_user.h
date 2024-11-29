@@ -335,7 +335,7 @@ namespace GameUser
     inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
     inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
     inline void DropRemainingSaves() { --m_RemainingSaves; }
-    inline void SetRemainingSaves(uint32_t nCount) { m_RemainingSaves = nCount; }
+    inline void SetRemainingSaves(uint8_t nCount) { m_RemainingSaves = nCount; }
     inline void SetCannotSave() { m_RemainingSaves = 0; }
     inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
     inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
