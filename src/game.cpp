@@ -620,9 +620,6 @@ CGame::~CGame()
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
   }
-  if (m_FromAutoReHost) {
-    m_Aura->m_AutoReHosted = false;
-  }
 }
 
 void CGame::InitPRNG()
@@ -6058,7 +6055,7 @@ void CGame::HandleGameLoadedStats()
 
 bool CGame::GetIsRemakeable()
 {
-  if (!m_Map || m_RestoredGame) {
+  if (!m_Map || m_RestoredGame || m_FromAutoReHost) {
     return false;
   }
   return true;

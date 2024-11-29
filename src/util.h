@@ -945,11 +945,16 @@ inline void AssignLength(std::vector<uint8_t>& content)
 
   if (input.find(']') == std::string::npos) {
     ip = input.substr(0, colonPos);
+    int32_t parsedPort = 0;
     try {
-      port = std::stoi(input.substr(colonPos + 1));
+      parsedPort = std::stoi(input.substr(colonPos + 1));
     } catch (...) {
       return false;
     }
+    if (parsedPort < 0 || 0xFFFF < parsedPort) {
+      return false;
+    }
+    port = static_cast<uint16_t>(parsedPort);
     return true;
   }
 
@@ -962,11 +967,16 @@ inline void AssignLength(std::vector<uint8_t>& content)
 
   ip = input.substr(startBracket + 1, endBracket - startBracket - 1);
   if (colonPos > endBracket) {
+    int32_t parsedPort = 0;
     try {
-      port = std::stoi(input.substr(colonPos + 1));
+      parsedPort = std::stoi(input.substr(colonPos + 1));
     } catch (...) {
       return false;
     }
+    if (parsedPort < 0 || 0xFFFF < parsedPort) {
+      return false;
+    }
+    port = static_cast<uint16_t>(parsedPort);
   } else {
     port = defaultPort;
   }

@@ -1341,6 +1341,10 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
 
 void CAura::EventGameDeleted(CGame* game)
 {
+  if (game->GetFromAutoReHost()) {
+    m_AutoReHosted = false;
+  }
+
   if (game->GetIsLobby()) {
     Print("[AURA] deleting lobby [" + game->GetGameName() + "]");
     if (game->GetUDPEnabled()) {
@@ -1374,6 +1378,12 @@ void CAura::EventGameRemake(CGame* game)
   Print("[AURA] remaking game [" + game->GetGameName() + "]");
   TrackGameLobby(game);
 
+  /*
+  if (game->GetFromAutoReHost()) {
+    m_AutoReHosted = true;
+  }
+  */
+
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     realm->QueueChatChannel("Game remake: " + ParseFileName(game->GetMap()->GetServerPath()));
@@ -1387,6 +1397,10 @@ void CAura::EventGameStarted(CGame* game)
 {
   Print("[AURA] started game [" + game->GetGameName() + "]");
   TrackGameStarted(game);
+
+  if (game->GetFromAutoReHost()) {
+    m_AutoReHosted = false;
+  }
 
   /*
   for (auto& realm : m_Realms) {
