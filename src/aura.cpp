@@ -499,6 +499,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Ready(true),
     m_AutoReHosted(false),
 
+    m_ReloadContext(nullptr),
     m_SudoContext(nullptr)
 {
   Print("[AURA] Aura version " + m_Version);
@@ -816,6 +817,9 @@ CAura::~CAura()
     delete realm;
   }
 
+  for (const auto& lobby : m_LobbiesPending) {
+    delete lobby;
+  }
   for (const auto& lobby : m_Lobbies) {
     delete lobby;
   }
@@ -830,8 +834,9 @@ CAura::~CAura()
   delete m_Discord;
 }
 
-CGame* CAura::GetMostRecentLobby() const
+CGame* CAura::GetMostRecentLobby(bool allowPending) const
 {
+  if (allowPending && !m_LobbiesPending.empty()) return m_LobbiesPending.back();
   if (m_Lobbies.empty()) return nullptr;
   return m_Lobbies.back();
 }
@@ -953,6 +958,11 @@ bool CAura::Update()
 
   bool metaDataNeedsUpdate = false;
 
+  if (m_ReloadContext) {
+    TryReloadConfigs();
+    assert(m_ReloadContext == nullptr && "m_ReloadContext should be reset");
+  }
+
   if (m_AutoRehostGameSetup && !m_AutoReHosted) {
     if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
       (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
@@ -986,16 +996,16 @@ bool CAura::Update()
 
   // 2. all running game servers
 
-  for (auto& server : m_Net->m_GameServers) {
+  for (const auto& server : m_Net->m_GameServers) {
     server.second->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
     ++NumFDs;
   }
 
   // 3. all unassigned incoming TCP connections
 
-  for (auto& serverConnections : m_Net->m_IncomingConnections) {
+  for (const auto& serverConnections : m_Net->m_IncomingConnections) {
     // std::pair<uint16_t, vector<CConnection*>>
-    for (auto& connection : serverConnections.second) {
+    for (const auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
         connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
         ++NumFDs;
@@ -1005,9 +1015,9 @@ bool CAura::Update()
 
   // 4. all managed TCP connections
 
-  for (auto& serverConnections : m_Net->m_ManagedConnections) {
+  for (const auto& serverConnections : m_Net->m_ManagedConnections) {
     // std::pair<uint16_t, vector<CConnection*>>
-    for (auto& connection : serverConnections.second) {
+    for (const auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
         connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
         ++NumFDs;
@@ -1046,7 +1056,7 @@ bool CAura::Update()
 
   int64_t usecBlock = 50000;
 
-  for (auto& game : m_StartedGames) {
+  for (const auto& game : m_StartedGames) {
     if (game->GetNextTimedActionTicks() * 1000 < usecBlock)
       usecBlock = game->GetNextTimedActionTicks() * 1000;
   }
@@ -1079,16 +1089,12 @@ bool CAura::Update()
     if (m_GameSetup->Update()) {
       delete m_GameSetup;
       m_GameSetup = nullptr;
-
-      if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
-        Print("[AURA] Setup game released");
-      }
     }
   }
 
   // if hosting a lobby, accept new connections to its game server
 
-  for (auto& server : m_Net->m_GameServers) {
+  for (const auto& server : m_Net->m_GameServers) {
     if (m_ExitingSoon) {
       server.second->Discard(static_cast<fd_set*>(&fd));
       continue;
@@ -1154,11 +1160,6 @@ bool CAura::Update()
     }
   }
 
-  // when a GProxy reconnect is triggered, while there is still a CStreamIOSocket assigned to the GameUser::CGameUser,
-  // the old CStreamIOSocket is assigned to a new CGameConnection, which is queued for insertion into m_IncomingConnections
-  // this statement takes care of the insertion
-  m_Net->MergeDownGradedConnections();
-
   // update managed connections
   for (auto& serverConnections : m_Net->m_ManagedConnections) {
     int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
@@ -1218,7 +1219,7 @@ bool CAura::Update()
 
   // update battle.net connections
 
-  for (auto& realm : m_Realms) {
+  for (const auto& realm : m_Realms) {
     realm->Update(&fd, &send_fd);
   }
 
@@ -1235,6 +1236,10 @@ bool CAura::Update()
 
   // update UDP sockets, outgoing test connections
   m_Net->Update(&fd, &send_fd);
+
+  // move stuff from pending vectors to their intended places
+  m_Net->MergeDownGradedConnections();
+  MergePendingLobbies();
 
   if (metaDataNeedsUpdate) {
     UpdateMetaData();
@@ -1371,7 +1376,7 @@ void CAura::EventGameDeleted(CGame* game)
 void CAura::EventGameRemake(CGame* game)
 {
   Print("[AURA] remaking game [" + game->GetGameName() + "]");
-  TrackGameLobby(game);
+  m_LobbiesPending.push_back(game);
 
   /*
   if (game->GetFromAutoReHost()) {
@@ -1390,8 +1395,9 @@ void CAura::EventGameRemake(CGame* game)
 
 void CAura::EventGameStarted(CGame* game)
 {
+  // Always called from CGame::Update() while iterating m_Lobbies
   Print("[AURA] started game [" + game->GetGameName() + "]");
-  TrackGameStarted(game);
+  m_StartedGames.push_back(game);
 
   if (game->GetFromAutoReHost()) {
     m_AutoReHosted = false;
@@ -1486,7 +1492,22 @@ bool CAura::ReloadConfigs()
     CacheMapPresets();
   }
   m_Net->OnConfigReload();
+
   return success;
+}
+
+void CAura::TryReloadConfigs()
+{
+  const bool success = ReloadConfigs();
+  if (!m_ReloadContext->GetPartiallyDestroyed()) {
+    if (success) {
+      m_ReloadContext->SendReply("Reloaded successfully.");
+    } else {
+      m_ReloadContext->ErrorReply("Reload failed. See the console output.");
+    }
+  }
+  UnholdContext(m_ReloadContext);
+  m_ReloadContext = nullptr;
 }
 
 bool CAura::LoadConfigs(CConfig& CFG)
@@ -1925,7 +1946,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   CGame* createdLobby = new CGame(this, gameSetup);
-  TrackGameLobby(createdLobby);
+  m_LobbiesPending.push_back(createdLobby);
   m_LastGameHostedTicks = GetTicks();
   if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;
@@ -2031,36 +2052,11 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   return true;
 }
 
-void CAura::TrackGameLobby(CGame* game)
+void CAura::MergePendingLobbies()
 {
-  m_Lobbies.push_back(game);
-}
-
-void CAura::UntrackGameLobby(CGame* game)
-{
-  for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
-    if (*it == game) {
-      it = m_Lobbies.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
-
-void CAura::TrackGameStarted(CGame* game)
-{
-  m_StartedGames.push_back(game);
-}
-
-void CAura::UntrackGameStarted(CGame* game)
-{
-  for (auto it = begin(m_StartedGames); it != end(m_StartedGames);) {
-    if (*it == game) {
-      it = m_StartedGames.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  m_Lobbies.reserve(m_Lobbies.size() + m_LobbiesPending.size());
+  m_Lobbies.insert(m_Lobbies.end(), m_LobbiesPending.begin(), m_LobbiesPending.end());
+  m_LobbiesPending.clear();
 }
 
 void CAura::TrackGameJoinInProgress(CGame* game)
@@ -2077,6 +2073,14 @@ void CAura::UntrackGameJoinInProgress(CGame* game)
       ++it;
     }
   }
+}
+
+bool CAura::QueueConfigReload(CCommandContext* nCtx)
+{
+  if (m_ReloadContext != nullptr) return false;
+  HoldContext(nCtx);
+  m_ReloadContext = nCtx;
+  return true;
 }
 
 void CAura::HoldContext(CCommandContext* nCtx)

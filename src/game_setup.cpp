@@ -1173,10 +1173,10 @@ void CGameSetup::OnLoadMapSuccess()
     if (!ApplyMapModifiers(m_MapExtraOptions)) {
       m_Ctx->ErrorReply("Invalid map options. Map has fixed player settings.", CHAT_SEND_SOURCE_ALL);
       m_DeleteMe = true;
-      ResetExtraOptions();
+      ClearExtraOptions();
       return;
     }
-    ResetExtraOptions();
+    ClearExtraOptions();
   }
   if (!m_SaveFile.empty()) {
     if (!RestoreFromSaveFile()) {
@@ -1552,7 +1552,7 @@ void CGameSetup::SetGameSavedFile(const std::filesystem::path& filePath)
   }
 }
 
-void CGameSetup::ResetExtraOptions()
+void CGameSetup::ClearExtraOptions()
 {
   if (m_MapExtraOptions) {
     delete m_MapExtraOptions;
@@ -1629,10 +1629,11 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 
 CGameSetup::~CGameSetup()
 {
-  ResetExtraOptions();
+  ClearExtraOptions();
 
   if (m_Aura) {
     m_Aura->UnholdContext(m_Ctx);
+    PRINT_IF(LOG_LEVEL_DEBUG, "[GAMESETUP] Releasing...")
   } else {
     delete m_Ctx;
   }

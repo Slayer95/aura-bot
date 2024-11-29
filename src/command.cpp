@@ -6378,11 +6378,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      SendReply("Reloading configuration files...");
-      if (m_Aura->ReloadConfigs()) {
-        SendReply("Reloaded successfully.");
+      if (!m_Aura->QueueConfigReload(this)) {
+        ErrorReply("Reload already scheduled. See the console output.");
       } else {
-        ErrorReply("Reload failed. See the console output.");
+        SendReply("Reloading configuration files...");
       }
       return;
     }
@@ -7003,10 +7002,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetBaseName(gameName);
       if (excludedServer) m_Aura->m_GameSetup->AddIgnoredRealm(excludedServer);
       m_Aura->m_GameSetup->RunHost();
-      for (auto& bnet : m_Aura->m_Realms) {
-        if (bnet != excludedServer && !bnet->GetIsMirror()) {
-          bnet->ResetConnection(false);
-          bnet->SetReconnectNextTick(true);
+      for (auto& realm : m_Aura->m_Realms) {
+        if (realm != excludedServer && !realm->GetIsMirror()) {
+          realm->ResetConnection(false);
+          realm->SetReconnectNextTick(true);
         }
       }
       break;

@@ -113,6 +113,8 @@ public:
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
   bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
 
+  CCommandContext*                                   m_ReloadContext;
+
   CCommandContext*                                   m_SudoContext;
   std::string                                        m_SudoAuthPayload;
   std::string                                        m_SudoExecCommand;
@@ -120,8 +122,9 @@ public:
 
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
-  std::vector<CGame*>                                m_StartedGames;                      // all games after they have started
+  std::vector<CGame*>                                m_StartedGames;               // all games after they have started
   std::vector<CGame*>                                m_Lobbies;                    // all games before they are started
+  std::vector<CGame*>                                m_LobbiesPending;             // vector for just-created lobbies before they get into m_Lobbies
   std::vector<CGame*>                                m_JoinInProgressGames;        // started games that can be joined in-progress (either as observer or player)
   std::map<std::string, std::string>                 m_CachedMaps;
   std::unordered_multiset<std::string>               m_BusyMaps;
@@ -138,7 +141,7 @@ public:
   ~CAura();
   CAura(CAura&) = delete;
 
-  CGame* GetMostRecentLobby() const;
+  CGame* GetMostRecentLobby(bool allowPending = false) const;
   CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
   CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
   CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
@@ -147,13 +150,11 @@ public:
   CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   CRealm* GetRealmByHostName(const std::string& hostName) const;
 
-  void TrackGameLobby(CGame* game);
-  void UntrackGameLobby(CGame* game);
-  void TrackGameStarted(CGame* game);
-  void UntrackGameStarted(CGame* game);
+  void MergePendingLobbies();
   void TrackGameJoinInProgress(CGame* game);
   void UntrackGameJoinInProgress(CGame* game);
 
+  bool QueueConfigReload(CCommandContext* nCtx);
   void HoldContext(CCommandContext* nCtx);
   void UnholdContext(CCommandContext* nCtx);
 

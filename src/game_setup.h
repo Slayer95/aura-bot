@@ -349,7 +349,7 @@ public:
   void SetAutoStartRequiresBalance(const bool nRequiresBalance) { m_AutoStartRequiresBalance = nRequiresBalance; }
 
   void AcquireCLISimple(const CCLI* nCLI);
-  void ResetExtraOptions();
+  void ClearExtraOptions();
 
   void OnGameCreate();
   [[nodiscard]] bool Update();

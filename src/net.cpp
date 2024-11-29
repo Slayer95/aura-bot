@@ -1281,6 +1281,9 @@ uint16_t CNet::NextHostPort()
 
 void CNet::MergeDownGradedConnections()
 {
+  // when a GProxy reconnect is triggered, while there is still a CStreamIOSocket assigned to the GameUser::CGameUser,
+  // the old CStreamIOSocket is assigned to a new CGameConnection, which is queued for insertion into m_IncomingConnections
+  // this method takes care of the insertion
   while (!m_DownGradedConnections.empty()) {
     const auto& entry = m_DownGradedConnections.front();
     m_IncomingConnections[entry.first].push_back(entry.second);
