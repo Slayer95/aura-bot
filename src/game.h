@@ -434,7 +434,7 @@ public:
   void                      UpdateLoading();
   void                      UpdateLoaded();
   bool                      Update(void* fd, void* send_fd);
-  void                      UpdatePost(void* send_fd);
+  void                      UpdatePost(void* send_fd) const;
   void                      CheckLobbyTimeouts();
   void                      RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
 

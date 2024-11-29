@@ -617,9 +617,11 @@ CGame::~CGame()
   for (auto& user : m_Users) {
     delete user;
   }
+
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
   }
+  m_Aura->UntrackGameJoinInProgress(this);
 }
 
 void CGame::InitPRNG()
@@ -1779,7 +1781,7 @@ bool CGame::Update(void* fd, void* send_fd)
   return m_Exiting;
 }
 
-void CGame::UpdatePost(void* send_fd)
+void CGame::UpdatePost(void* send_fd) const
 {
   // we need to manually call DoSend on each user now because GameUser::CGameUser::Update doesn't do it
   // this is in case user 2 generates a packet for user 1 during the update but it doesn't get sent because user 1 already finished updating
