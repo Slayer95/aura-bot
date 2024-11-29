@@ -177,7 +177,7 @@ public:
   bool GetNewGameIsInQuotaConservative() const;
   bool GetNewGameIsInQuotaAutoReHost() const;
   bool CreateGame(CGameSetup* gameSetup);
-  inline bool GetIsAutoHostThrottled() { return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= GetTicks(); }
+  bool GetIsAutoHostThrottled() const;
 
   inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
   inline bool GetHasGames() { return !m_StartedGames.empty() || !m_Lobbies.empty(); }

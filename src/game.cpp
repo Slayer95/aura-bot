@@ -4750,18 +4750,25 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   return isBanned;
 }
 
-bool CGame::EventUserLeft(GameUser::CGameUser* user)
+bool CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason)
 {
   if (user->GetDisconnected()) return false;
-  DLOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet")
+  DLOG_APP_IF(LOG_LEVEL_TRACE, "user [" + user->GetName() + "] sent leave packet " + GameProtocol::LeftCodeToString(clientReason));
+
   // this function is only called when a client leave packet is received, not when there's a socket error or kick
   // however, clients not only send the leave packet by a user clicking on Quit Game
   // clients also will send a leave packet if the server sends unexpected data
-  if (!user->HasLeftReason()) {
-    user->SetLeftReason("Leaving the game voluntarily");
-    user->SetLeftCode(PLAYERLEAVE_LOST);
+
+  if (user->GetGProxyAny() && clientReason == PLAYERLEAVE_GPROXY) {
+    user->SetLeftReason("Game client disconnected automatically");
+    user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  } else {
+    if (!user->HasLeftReason()) {
+      user->SetLeftReason("Leaving the game voluntarily");
+      user->SetLeftCode(PLAYERLEAVE_LOST);
+    }
+    user->SetIsLeaver(true);
   }
-  user->SetIsLeaver(true);
   user->DisableReconnect();
   user->CloseConnection();
   TrySaveOnDisconnect(user, true);

@@ -379,11 +379,16 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
         switch (Bytes[1])
         {
-          case GameProtocol::Magic::LEAVEGAME:
-            m_Game->EventUserLeft(this);
+          case GameProtocol::Magic::LEAVEGAME: {
+            uint32_t reason = 0;
+            if (Data.size() >= 8) {
+              reason = ByteArrayToUInt32(Data, false, 4);
+            }
+            m_Game->EventUserLeft(this, reason);
             m_Socket->SetLogErrors(false);
             Abort = true;
             break;
+          }
 
           case GameProtocol::Magic::GAMELOADED_SELF:
             if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {

@@ -1912,6 +1912,12 @@ bool CAura::GetNewGameIsInQuotaAutoReHost() const
   }
 }
 
+bool CAura::GetIsAutoHostThrottled() const
+{
+  if (m_Realms.empty()) return false;
+  return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= GetTicks();
+}
+
 bool CAura::CreateGame(CGameSetup* gameSetup)
 {
   if (!m_Config->m_Enabled) {

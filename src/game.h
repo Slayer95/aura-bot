@@ -520,7 +520,7 @@ public:
   void                      EventUserCheckStatus(GameUser::CGameUser* user);
   bool                      EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
   void                      EventBeforeJoin(CConnection* connection);
-  bool                      EventUserLeft(GameUser::CGameUser* user);
+  bool                      EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason);
   void                      EventUserLoaded(GameUser::CGameUser* user);
   bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);

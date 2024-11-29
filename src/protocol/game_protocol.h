@@ -155,6 +155,29 @@ namespace GameProtocol
   // other functions
 
   [[nodiscard]] std::vector<uint8_t> EncodeSlotInfo(const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
+  [[nodiscard]] inline std::string LeftCodeToString(const uint32_t leftCode)
+  {
+    switch (leftCode) {
+      case PLAYERLEAVE_DISCONNECT:
+        return "on disconnect";
+      case PLAYERLEAVE_LOST:
+        return "on lost";
+      case PLAYERLEAVE_LOSTBUILDINGS:
+        return "on lost buildings";
+      case PLAYERLEAVE_WON:
+        return "on win";
+      case PLAYERLEAVE_DRAW:
+        return "on draw";
+      case PLAYERLEAVE_OBSERVER:
+        return "as observer";
+      case PLAYERLEAVE_LOBBY:
+        return "from lobby";
+      case PLAYERLEAVE_GPROXY:
+        return "after they lost connection to their local GProxy instance";
+      default:
+        return "(code " + std::to_string(leftCode) + ")";
+    }
+  }
 };
 
 //
