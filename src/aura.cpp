@@ -800,6 +800,9 @@ CAura::~CAura()
   UnholdContext(m_SudoContext);
   m_SudoContext = nullptr;
 
+  UnholdContext(m_ReloadContext),
+  m_ReloadContext = nullptr;
+
   delete m_Config;
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
