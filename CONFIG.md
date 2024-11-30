@@ -55,6 +55,11 @@ Config
 - Default value: LOG_LEVEL_INFO - 1
 - Error handling: Use default value
 
+## \`bot.log_level\`
+- Type: enum
+- Default value: LOG_LEVEL_INFO - 1
+- Error handling: Use default value
+
 ## \`bot.map_cache_path\`
 - Type: directory
 - Default value: Aura home directory
@@ -666,11 +671,6 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`hosting.allow_extra_lobby\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
 ## \`hosting.autostart.requires_balance\`
 - Type: bool
 - Default value: true
@@ -796,6 +796,31 @@ Config
 - Default value: 5
 - Error handling: Use default value
 
+## \`hosting.games_quota.auto_rehost.conservative\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`hosting.games_quota.max_join_in_progress\`
+- Type: int
+- Default value: 0
+- Error handling: Use default value
+
+## \`hosting.games_quota.max_lobbies\`
+- Type: int
+- Default value: 1
+- Error handling: Use default value
+
+## \`hosting.games_quota.max_started\`
+- Type: int
+- Default value: 20
+- Error handling: Use default value
+
+## \`hosting.games_quota.max_total\`
+- Type: int
+- Default value: 20
+- Error handling: Use default value
+
 ## \`hosting.geolocalization.enabled\`
 - Type: bool
 - Default value: true
@@ -910,11 +935,6 @@ Config
 ## \`hosting.map.missing.kick_delay\`
 - Type: uint32
 - Default value: 60
-- Error handling: Use default value
-
-## \`hosting.max_games\`
-- Type: int
-- Default value: 20
 - Error handling: Use default value
 
 ## \`hosting.name_filter.is_pipe_harmful\`
@@ -1134,8 +1154,8 @@ Config
 - Error handling: Use default value
 
 ## \`net.game_discovery.udp.extra_clients.ip_addresses\`
-- Type: ipstringset
-- Default value: 
+- Type: hostlistwithimplicitport
+- Default value: '
 - Error handling: Use default value
 
 ## \`net.game_discovery.udp.ipv6.target_port\`
