@@ -468,7 +468,21 @@ int main(const int argc, char** argv)
 //
 
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
-  : m_LogLevel(LOG_LEVEL_DEBUG),
+  : m_ScriptsExtracted(false),
+    m_Exiting(false),
+    m_ExitingSoon(false),
+    m_Ready(true),
+    m_AutoReHosted(false),
+
+    m_LogLevel(LOG_LEVEL_DEBUG),
+    m_GameVersion(0u),
+    m_MaxSlots(MAX_SLOTS_LEGACY),
+
+    m_LastServerID(0xFu),
+    m_HostCounter(0u),
+    m_ReplacingLobbiesCounter(0u),
+    m_HistoryGameID(0u),
+    m_MaxGameNameSize(31u),
 
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
@@ -477,20 +491,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_DB(new CAuraDB(CFG)),
     m_GameSetup(nullptr),
     m_AutoRehostGameSetup(nullptr),
-
-    m_LastServerID(0xFu),
-    m_HostCounter(0u),
-    m_ReplacingLobbiesCounter(0u),
-    m_HistoryGameID(0u),
-    m_GameVersion(0u),
-    m_MaxSlots(MAX_SLOTS_LEGACY),
-    m_MaxGameNameSize(31u),
-
-    m_ScriptsExtracted(false),
-    m_Exiting(false),
-    m_ExitingSoon(false),
-    m_Ready(true),
-    m_AutoReHosted(false),
 
     m_ReloadContext(nullptr),
     m_SudoContext(nullptr),

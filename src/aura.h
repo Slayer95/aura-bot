@@ -80,7 +80,21 @@
 class CAura
 {
 public:
+  bool                                               m_ScriptsExtracted;           // indicates if there's lacking configuration info so we can quit
+  bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
+  bool                                               m_ExitingSoon;                // set to true to let aura gracefully stop all services and network traffic, and shutdown once done
+  bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
+  bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
+
   uint8_t                                            m_LogLevel;
+  uint8_t                                            m_GameVersion;
+  uint8_t                                            m_MaxSlots;
+
+  uint32_t                                           m_LastServerID;
+  uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
+  uint32_t                                           m_ReplacingLobbiesCounter;
+  uint64_t                                           m_HistoryGameID;
+  size_t                                             m_MaxGameNameSize;
 
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
@@ -90,31 +104,18 @@ public:
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map
   CGameSetup*                                        m_AutoRehostGameSetup;        // game setup to be rehosted whenever free
 
-  uint32_t                                           m_LastServerID;
-  uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
-  uint32_t                                           m_ReplacingLobbiesCounter;
-  uint64_t                                           m_HistoryGameID;
-  uint8_t                                            m_GameVersion;
-  uint8_t                                            m_MaxSlots;
-  size_t                                             m_MaxGameNameSize;
-
-  bool                                               m_ScriptsExtracted;           // indicates if there's lacking configuration info so we can quit
-  bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
-  bool                                               m_ExitingSoon;                // set to true to let aura gracefully stop all services and network traffic, and shutdown once done
-  bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
-  bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
-
   CCommandContext*                                   m_ReloadContext;
   CCommandContext*                                   m_SudoContext;
+
+  std::optional<int64_t>                             m_LastGameHostedTicks;
+  std::optional<int64_t>                             m_LastGameAutoHostedTicks;
+
   std::string                                        m_SudoAuthPayload;
   std::string                                        m_SudoExecCommand;
 
   std::string                                        m_Version;                    // Aura version string
   std::string                                        m_RepositoryURL;              // Aura repository URL
   std::string                                        m_IssuesURL;                  // Aura issues URL
-
-  std::optional<int64_t>                             m_LastGameHostedTicks;
-  std::optional<int64_t>                             m_LastGameAutoHostedTicks;
 
   CSHA1                                              m_SHA;                        // for calculating SHA1's
   CDiscord                                           m_Discord;                    // Discord client
