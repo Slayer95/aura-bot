@@ -482,8 +482,8 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_HostCounter(0u),
     m_ReplacingLobbiesCounter(0u),
     m_HistoryGameID(0u),
-    m_MaxSlots(MAX_SLOTS_LEGACY),
     m_GameVersion(0u),
+    m_MaxSlots(MAX_SLOTS_LEGACY),
     m_MaxGameNameSize(31u),
 
     m_ScriptsExtracted(false),

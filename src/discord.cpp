@@ -47,12 +47,12 @@ using namespace std;
 
 CDiscord::CDiscord(CConfig& nCFG)
   : m_Aura(nullptr),
-    m_Config(CDiscordConfig(nCFG)),
     m_Client(nullptr),
-    m_NickName(string()),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
-    m_WaitingToConnect(true)
+    m_WaitingToConnect(true),
+    m_NickName(string()),
+    m_Config(CDiscordConfig(nCFG))
 {
 }
 

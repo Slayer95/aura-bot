@@ -64,13 +64,13 @@ using namespace std;
 
 CIRC::CIRC(CConfig& nCFG)
   : m_Aura(nullptr),
-    m_Config(CIRCConfig(nCFG)),
     m_Socket(new CTCPClient(AF_INET, "IRC")),
-    m_NickName(string()),
     m_LastConnectionAttemptTime(0),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
-    m_WaitingToConnect(true)
+    m_WaitingToConnect(true),
+    m_NickName(string()),
+    m_Config(CIRCConfig(nCFG))
 {
   m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
 }

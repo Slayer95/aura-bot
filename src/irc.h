@@ -57,12 +57,12 @@ class CIRC
 public:
   CAura*                   m_Aura;
   CTCPClient*              m_Socket;
-  CIRCConfig               m_Config;
-  std::string              m_NickName;
   int64_t                  m_LastConnectionAttemptTime;
   int64_t                  m_LastPacketTime;
   int64_t                  m_LastAntiIdleTime;
   bool                     m_WaitingToConnect;
+  std::string              m_NickName;
+  CIRCConfig               m_Config;
 
   CIRC(CConfig& nCFG);
   ~CIRC();

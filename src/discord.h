@@ -51,11 +51,11 @@ public:
 #else
   void*                             m_Client;
 #endif
-  CDiscordConfig                    m_Config;
-  std::string                       m_NickName;
   int64_t                           m_LastPacketTime;
   int64_t                           m_LastAntiIdleTime;
   bool                              m_WaitingToConnect;
+  std::string                       m_NickName;
+  CDiscordConfig                    m_Config;
 #ifndef DISABLE_DPP
   std::queue<dpp::slashcommand_t*>  m_CommandQueue;
 #endif

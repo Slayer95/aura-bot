@@ -103,12 +103,12 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_AnyWhisperRejected(false),
     m_ChatQueuedGameAnnouncement(false),
 
+    m_LoginSalt({}),
+    m_LoginServerPublicKey({}),
     m_InfoClientToken({220, 1, 203, 7}),
     m_InfoLogonType({}),
     m_InfoServerToken({}),
     m_InfoMPQFileTime({}),
-    m_LoginSalt({}),
-    m_LoginServerPublicKey({}),
 
     m_HostName(nRealmConfig->m_HostName),
 
