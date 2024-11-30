@@ -117,6 +117,8 @@ public:
   std::string                                        m_RepositoryURL;              // Aura repository URL
   std::string                                        m_IssuesURL;                  // Aura issues URL
 
+  std::set<CCommandContext*>                         m_ActiveContexts;             // declare before command sources, to ensure m_ActiveContexts is destroyed after them
+
   CSHA1                                              m_SHA;                        // for calculating SHA1's
   CDiscord                                           m_Discord;                    // Discord client
   CIRC                                               m_IRC;                        // IRC client
@@ -134,7 +136,6 @@ public:
   std::map<std::string, std::string>                 m_CachedMaps;
   std::unordered_multiset<std::string>               m_BusyMaps;
   std::map<std::string, std::string>                 m_LastMapSuggestions;
-  std::set<CCommandContext*>                         m_ActiveContexts;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;
