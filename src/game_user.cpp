@@ -380,12 +380,13 @@ bool CGameUser::Update(void* fd, int64_t timeout)
         switch (Bytes[1])
         {
           case GameProtocol::Magic::LEAVEGAME: {
-            uint32_t reason = 0;
-            if (Data.size() >= 8) {
-              reason = ByteArrayToUInt32(Data, false, 4);
+            if (ValidateLength(Data) && Data.size() >= 8) {
+              const uint32_t reason = ByteArrayToUInt32(Data, false, 4);
+              m_Game->EventUserLeft(this, reason);
+              m_Socket->SetLogErrors(false);
+            } else {
+              m_Game->EventUserDisconnectGameProtocolError(this, false);
             }
-            m_Game->EventUserLeft(this, reason);
-            m_Socket->SetLogErrors(false);
             Abort = true;
             break;
           }
@@ -717,8 +718,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
   }
 
   m_Disconnected = false;
-  m_Lagging = false;
-  m_StartedLaggingTicks = 0;
+  m_StartedLaggingTicks = GetTicks();
   m_GProxyBuffer = TempBuffer;
   m_GProxyDisconnectNoticeSent = false;
   m_LastGProxyWaitNoticeSentTime = 0;
