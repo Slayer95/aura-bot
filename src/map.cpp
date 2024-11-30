@@ -490,7 +490,7 @@ void CMap::Load(CConfig* CFG)
   std::vector<uint8_t> MapSize, MapCRC32, MapScriptsWeakHash, MapScriptsSHA1;
 
   if (!m_MapData.empty()) {
-    m_Aura->m_SHA->Reset();
+    m_Aura->m_SHA.Reset();
 
     // calculate <map.crc32>
 
@@ -546,7 +546,7 @@ void CMap::Load(CConfig* CFG)
                 Print("[MAP] overriding default common.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
                 OverrodeCommonJ = true;
                 Val             = Val ^ XORRotateLeft(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
-                m_Aura->m_SHA->Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
+                m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
               }
 
               delete[] SubFileData;
@@ -559,7 +559,7 @@ void CMap::Load(CConfig* CFG)
         if (!OverrodeCommonJ)
         {
           Val = Val ^ XORRotateLeft((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
-          m_Aura->m_SHA->Update((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
+          m_Aura->m_SHA.Update((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
         }
 
         if (m_MapMPQLoaded)
@@ -586,7 +586,7 @@ void CMap::Load(CConfig* CFG)
                 Print("[MAP] overriding default blizzard.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
                 OverrodeBlizzardJ = true;
                 Val               = Val ^ XORRotateLeft(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
-                m_Aura->m_SHA->Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
+                m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
               }
 
               delete[] SubFileData;
@@ -599,12 +599,12 @@ void CMap::Load(CConfig* CFG)
         if (!OverrodeBlizzardJ)
         {
           Val = Val ^ XORRotateLeft((uint8_t*)BlizzardJ.c_str(), static_cast<uint32_t>(BlizzardJ.size()));
-          m_Aura->m_SHA->Update((uint8_t*)BlizzardJ.c_str(), static_cast<uint32_t>(BlizzardJ.size()));
+          m_Aura->m_SHA.Update((uint8_t*)BlizzardJ.c_str(), static_cast<uint32_t>(BlizzardJ.size()));
         }
 
         Val = ROTL(Val, 3);
         Val = ROTL(Val ^ 0x03F1379E, 3);
-        m_Aura->m_SHA->Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
+        m_Aura->m_SHA.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
 
         if (m_MapMPQLoaded)
         {
@@ -649,7 +649,7 @@ void CMap::Load(CConfig* CFG)
                     FoundScript = true;
 
                   Val = ROTL(Val ^ XORRotateLeft((uint8_t*)SubFileData, BytesRead), 3);
-                  m_Aura->m_SHA->Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
+                  m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(SubFileData), BytesRead);
                 }
 
                 delete[] SubFileData;
@@ -665,10 +665,10 @@ void CMap::Load(CConfig* CFG)
           MapScriptsWeakHash = CreateByteArray(Val, false);
           DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.weak_hash = " + ByteArrayToDecString(MapScriptsWeakHash) + ">")
 
-          m_Aura->m_SHA->Final();
+          m_Aura->m_SHA.Final();
           uint8_t SHA1[20];
           memset(SHA1, 0, sizeof(uint8_t) * 20);
-          m_Aura->m_SHA->GetHash(SHA1);
+          m_Aura->m_SHA.GetHash(SHA1);
           MapScriptsSHA1 = CreateByteArray(SHA1, 20);
           DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.sha1 = " + ByteArrayToDecString(MapScriptsSHA1) + ">")
         }

@@ -469,7 +469,6 @@ int main(const int argc, char** argv)
 
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
-    m_SHA(new CSHA1()),
 
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
@@ -812,7 +811,6 @@ CAura::~CAura()
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
   delete m_CommandDefaultConfig;
-  delete m_SHA;
 
   ClearAutoRehost();
 

@@ -58,6 +58,7 @@
 #include "net.h"
 #include "game_setup.h"
 
+#include <sha1/sha1.h>
 #include <random>
 #include <filesystem>
 
@@ -80,7 +81,6 @@ class CAura
 {
 public:
   uint8_t                                            m_LogLevel;
-  CSHA1*                                             m_SHA;                        // for calculating SHA1's
 
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
@@ -115,6 +115,14 @@ public:
 
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
+
+  CSHA1                                              m_SHA;                        // for calculating SHA1's
+  CDiscord                                           m_Discord;                    // Discord client
+  CIRC                                               m_IRC;                        // IRC client
+  CNet                                               m_Net;                        // network manager
+  CBotConfig                                         m_Config;
+  std::filesystem::path                              m_ConfigPath;
+  std::filesystem::path                              m_GameInstallPath;
 
   std::queue<std::vector<std::string>>               m_PendingActions;
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
