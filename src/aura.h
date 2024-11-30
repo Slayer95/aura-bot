@@ -81,13 +81,7 @@ class CAura
 public:
   uint8_t                                            m_LogLevel;
   CSHA1*                                             m_SHA;                        // for calculating SHA1's
-  std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
-  CDiscord                                           m_Discord;                    // Discord client
-  CIRC                                               m_IRC;                        // IRC client
-  CNet                                               m_Net;                        // network manager
 
-  std::filesystem::path                              m_ConfigPath;
-  CBotConfig                                         m_Config;
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
   CCommandConfig*                                    m_CommandDefaultConfig;
@@ -95,9 +89,6 @@ public:
   CAuraDB*                                           m_DB;                         // database
   CGameSetup*                                        m_GameSetup;                  // the currently loaded map
   CGameSetup*                                        m_AutoRehostGameSetup;        // game setup to be rehosted whenever free
-  std::string                                        m_Version;                    // Aura version string
-  std::string                                        m_RepositoryURL;              // Aura repository URL
-  std::string                                        m_IssuesURL;                  // Aura issues URL
 
   uint32_t                                           m_LastServerID;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
@@ -114,14 +105,19 @@ public:
   bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
 
   CCommandContext*                                   m_ReloadContext;
-
   CCommandContext*                                   m_SudoContext;
   std::string                                        m_SudoAuthPayload;
   std::string                                        m_SudoExecCommand;
-  std::queue<std::vector<std::string>>               m_PendingActions;
+
+  std::string                                        m_Version;                    // Aura version string
+  std::string                                        m_RepositoryURL;              // Aura repository URL
+  std::string                                        m_IssuesURL;                  // Aura issues URL
 
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
+
+  std::queue<std::vector<std::string>>               m_PendingActions;
+  std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
   std::vector<CGame*>                                m_StartedGames;               // all games after they have started
   std::vector<CGame*>                                m_Lobbies;                    // all games before they are started
   std::vector<CGame*>                                m_LobbiesPending;             // vector for just-created lobbies before they get into m_Lobbies
@@ -130,8 +126,6 @@ public:
   std::unordered_multiset<std::string>               m_BusyMaps;
   std::map<std::string, std::string>                 m_LastMapSuggestions;
   std::set<CCommandContext*>                         m_ActiveContexts;
-
-  std::filesystem::path                              m_GameInstallPath;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;

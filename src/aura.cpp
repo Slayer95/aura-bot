@@ -470,12 +470,7 @@ int main(const int argc, char** argv)
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
     m_SHA(new CSHA1()),
-    m_Discord(CDiscord(CFG)),
-    m_IRC(CIRC(CFG)),
-    m_Net(CNet(CFG)),
 
-    m_ConfigPath(CFG.GetFile()),
-    m_Config(CBotConfig(CFG)),
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
     m_CommandDefaultConfig(new CCommandConfig()),
@@ -483,9 +478,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_DB(new CAuraDB(CFG)),
     m_GameSetup(nullptr),
     m_AutoRehostGameSetup(nullptr),
-    m_Version(AURA_VERSION),
-    m_RepositoryURL(AURA_REPOSITORY_URL),
-    m_IssuesURL(AURA_ISSUES_URL),
+
     m_LastServerID(0xFu),
     m_HostCounter(0u),
     m_ReplacingLobbiesCounter(0u),
@@ -501,7 +494,17 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_AutoReHosted(false),
 
     m_ReloadContext(nullptr),
-    m_SudoContext(nullptr)
+    m_SudoContext(nullptr),
+
+    m_Version(AURA_VERSION),
+    m_RepositoryURL(AURA_REPOSITORY_URL),
+    m_IssuesURL(AURA_ISSUES_URL),
+
+    m_Discord(CDiscord(CFG)),
+    m_IRC(CIRC(CFG)),
+    m_Net(CNet(CFG)),
+    m_Config(CBotConfig(CFG)),
+    m_ConfigPath(CFG.GetFile())
 {
   m_Discord.m_Aura = this;
   m_IRC.m_Aura = this;
