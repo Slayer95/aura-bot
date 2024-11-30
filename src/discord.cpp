@@ -45,8 +45,8 @@ using namespace std;
 //// CDiscord ////
 //////////////////
 
-CDiscord::CDiscord(CAura* nAura, CConfig& nCFG)
-  : m_Aura(nAura),
+CDiscord::CDiscord(CConfig& nCFG)
+  : m_Aura(nullptr),
     m_Config(CDiscordConfig(nCFG)),
     m_Client(nullptr),
     m_NickName(string()),
@@ -235,7 +235,6 @@ void CDiscord::Update()
         */
       }
 #endif
-      return;
     }
   }
 

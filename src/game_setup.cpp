@@ -1218,7 +1218,7 @@ void CGameSetup::OnLoadMapSuccess()
       SetCreator(m_Ctx->GetSender(), m_Ctx->GetSourceIRC());
 #ifndef DISABLE_DPP
     } else if (m_Ctx->GetDiscordAPI()) {
-      SetCreator(m_Ctx->GetSender(), m_Aura->m_Discord);
+      SetCreator(m_Ctx->GetSender(), &m_Aura->m_Discord);
 #endif
     } else {
       SetCreator(m_Ctx->GetSender());

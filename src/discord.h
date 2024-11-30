@@ -60,7 +60,7 @@ public:
   std::queue<dpp::slashcommand_t*>  m_CommandQueue;
 #endif
 
-  CDiscord(CAura* nAura, CConfig& nCFG);
+  CDiscord(CConfig& nCFG);
   ~CDiscord();
   CDiscord(CDiscord&) = delete;
 
@@ -73,11 +73,14 @@ public:
   void LeaveServer(const uint64_t target, const std::string& name, const bool isJoining);
 #endif
 
+  [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }
+
   bool GetIsServerAllowed(const uint64_t target) const;
   bool GetIsUserAllowed(const uint64_t target) const;
-  bool GetIsEnabled() const { return m_Client != nullptr; }
   bool GetIsSudoer(const uint64_t nIdentifier);
   bool GetIsConnected() const;
+
+  void Disable() { m_Config.m_Enabled = false; }  
 };
 
 #endif // AURA_DISCORD_H_

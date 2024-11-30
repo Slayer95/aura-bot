@@ -409,7 +409,7 @@ void CCommandContext::UpdatePermissions()
   }
   if (m_DiscordAPI) {
 #ifndef DISABLE_DPP
-    if (m_Aura->m_Discord->GetIsSudoer(m_FromIdentifier)) {
+    if (m_Aura->m_Discord.GetIsSudoer(m_FromIdentifier)) {
       m_Permissions = SET_USER_PERMISSIONS_ALL &~ (USER_PERMISSIONS_BOT_SUDO_OK);
     } else if (m_DiscordAPI->command.get_issuing_user().is_verified()) {
       m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
@@ -675,7 +675,7 @@ void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxF
 #ifndef DISABLE_DPP
     case FROM_DISCORD: {
       if (m_DiscordAPI) {
-        m_Aura->m_Discord->SendUser(message, m_FromIdentifier);
+        m_Aura->m_Discord.SendUser(message, m_FromIdentifier);
       }
       break;
     }
@@ -2811,7 +2811,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         } else if (m_IRC) {
           m_Aura->m_GameSetup->SetCreator(m_FromName, m_IRC);
         } else if (m_DiscordAPI) {
-          m_Aura->m_GameSetup->SetCreator(m_FromName, m_Aura->m_Discord);
+          m_Aura->m_GameSetup->SetCreator(m_FromName, &m_Aura->m_Discord);
         }
 
         m_Aura->m_GameSetup->RunHost();
@@ -4038,8 +4038,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         message += "[" + m_Aura->m_IRC.m_Config.m_HostName + (!m_Aura->m_IRC.m_WaitingToConnect ? " - online]" : " - offline]");
       }
 
-      if (m_Aura->m_Discord) {
-        message += m_Aura->m_Discord->m_Config.m_HostName + (m_Aura->m_Discord->GetIsConnected() ? " [online]" : " [offline]");
+      if (m_Aura->m_Discord.GetIsEnabled()) {
+        message += m_Aura->m_Discord.m_Config.m_HostName + (m_Aura->m_Discord.GetIsConnected() ? " [online]" : " [offline]");
       }
 
       SendReply(message);
@@ -7040,25 +7040,25 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     case HashCode("discord"): {
-      if (!m_Aura->m_Discord->m_Client) {
+      if (!m_Aura->m_Discord.m_Client) {
         ErrorReply("Not connected to Discord.");
         break;
       }
 
-      if (m_Aura->m_Discord->m_Config.m_InviteUrl.empty()) {
+      if (m_Aura->m_Discord.m_Config.m_InviteUrl.empty()) {
         ErrorReply("This bot is invite-only. Ask the owner for an invitation link.");
         break;
       }
 
-      switch (m_Aura->m_Discord->m_Config.m_FilterJoinServersMode) {
+      switch (m_Aura->m_Discord.m_Config.m_FilterJoinServersMode) {
         case FILTER_DENY_ALL:
-          SendReply("Install me to your user (DM-only) at <" + m_Aura->m_Discord->m_Config.m_InviteUrl + ">");
+          SendReply("Install me to your user (DM-only) at <" + m_Aura->m_Discord.m_Config.m_InviteUrl + ">");
           break;
         case FILTER_ALLOW_LIST:
-          SendReply("Install me to your server (requires approval) at <" + m_Aura->m_Discord->m_Config.m_InviteUrl + ">");
+          SendReply("Install me to your server (requires approval) at <" + m_Aura->m_Discord.m_Config.m_InviteUrl + ">");
           break;
         default:
-          SendReply("Install me to your server at <" + m_Aura->m_Discord->m_Config.m_InviteUrl + ">");
+          SendReply("Install me to your server at <" + m_Aura->m_Discord.m_Config.m_InviteUrl + ">");
       }
       break;
     }

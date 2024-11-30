@@ -470,7 +470,7 @@ int main(const int argc, char** argv)
 CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
     m_SHA(new CSHA1()),
-    m_Discord(nullptr),
+    m_Discord(CDiscord(CFG)),
     m_IRC(CIRC(CFG)),
     m_Net(CNet(CFG)),
 
@@ -503,6 +503,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_ReloadContext(nullptr),
     m_SudoContext(nullptr)
 {
+  m_Discord.m_Aura = this;
   m_IRC.m_Aura = this;
   m_Net.m_Aura = this;
 
@@ -514,7 +515,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     return;
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
-  m_Discord = new CDiscord(this, CFG);
 
   CRC32::Initialize();
 
@@ -622,10 +622,10 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     Print("[AURA] notice - no enabled battle.net connections configured");
   if (!m_IRC.GetIsEnabled())
     Print("[AURA] notice - no irc connection configured");
-  if (!m_Discord->m_Config.m_Enabled)
+  if (!m_Discord.GetIsEnabled())
     Print("[AURA] notice - no discord connection configured");
 
-  if (m_Realms.empty() && !m_IRC.GetIsEnabled() && !m_Discord->m_Config.m_Enabled && m_PendingActions.empty()) {
+  if (m_Realms.empty() && !m_IRC.GetIsEnabled() && !m_Discord.GetIsEnabled() && m_PendingActions.empty()) {
     Print("[AURA] error - no inputs connected");
     m_Ready = false;
     return;
@@ -834,7 +834,6 @@ CAura::~CAura()
   m_JoinInProgressGames.clear();
 
   delete m_DB;
-  delete m_Discord;
 }
 
 CGame* CAura::GetMostRecentLobby(bool allowPending) const
@@ -1157,6 +1156,7 @@ bool CAura::Update()
   }
 
   // update unassigned incoming connections
+
   for (auto& serverConnections : m_Net.m_IncomingConnections) {
     int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
@@ -1176,7 +1176,8 @@ bool CAura::Update()
     }
   }
 
-  // update managed connections
+  // update CGameSeeker incoming connections
+
   for (auto& serverConnections : m_Net.m_ManagedConnections) {
     int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
@@ -1196,7 +1197,7 @@ bool CAura::Update()
     }
   }
 
-  // update current lobby
+  // update games, starting from lobbies
 
   for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
     if ((*it)->Update(&fd, &send_fd)) {
@@ -1213,8 +1214,6 @@ bool CAura::Update()
       ++it;
     }
   }
-
-  // update running games
 
   for (auto it = begin(m_StartedGames); it != end(m_StartedGames);) {
     if ((*it)->Update(&fd, &send_fd)) {
@@ -1233,21 +1232,14 @@ bool CAura::Update()
     }
   }
 
-  // update battle.net connections
-
   for (const auto& realm : m_Realms) {
     realm->Update(&fd, &send_fd);
   }
 
-  // update irc
   m_IRC.Update(&fd, &send_fd);
+  m_Discord.Update();
 
-  // update discord
-  if (m_Discord) {
-    m_Discord->Update();
-  }
-
-  // update UDP sockets, outgoing test connections
+  // UDP sockets, outgoing test connections
   m_Net.Update(&fd, &send_fd);
 
   // move stuff from pending vectors to their intended places
@@ -1563,7 +1555,7 @@ bool CAura::LoadAllConfigs(CConfig& CFG)
   m_Config = BotConfig;
   m_Net.m_Config = NetConfig;
   m_IRC.m_Config = IRCConfig;
-  m_Discord->m_Config = DiscordConfig;
+  m_Discord.m_Config = DiscordConfig;
   return true;
 }
 
@@ -1860,10 +1852,7 @@ void CAura::GracefulExit()
   }
 
   m_IRC.Disable();
-
-  if (m_Discord) {
-    m_Discord->m_Config.m_Enabled = false;
-  }
+  m_Discord.Disable();
 }
 
 bool CAura::CheckGracefulExit()
@@ -2065,9 +2054,9 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
     if (m_IRC.GetIsEnabled()) {
      m_IRC.SendAllChannels(createdLobby->GetAnnounceText());
     }
-    if (m_Discord) {
+    if (m_Discord.GetIsEnabled()) {
       //TODO: Discord game created announcement
-      //m_Discord->SendAnnouncementChannels(createdLobby->GetAnnounceText());
+      //m_Discord.SendAnnouncementChannels(createdLobby->GetAnnounceText());
     }
   }
 

@@ -531,7 +531,7 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_IRC.m_Config.m_Enabled = m_IRC.value();
   }
   if (m_Discord.has_value()) {
-    nAura->m_Discord->m_Config.m_Enabled = m_Discord.value();
+    nAura->m_Discord.m_Config.m_Enabled = m_Discord.value();
   }
   if (m_LAN.has_value()) {
     nAura->m_GameDefaultConfig->m_UDPEnabled = m_LAN.value();
