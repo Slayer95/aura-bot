@@ -727,7 +727,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
   }
   m_Game->SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
   if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
-    Print("user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
+    Print(m_Game->GetLogPrefix() + "user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
   }
 }
 
