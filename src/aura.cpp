@@ -926,6 +926,7 @@ bool CAura::HandleAction(vector<string> action)
       // Delete all other pending actions
       return false;
     }
+    MergePendingLobbies();
   } else if (action[0] == "lazy") {
     vector<string> lazyAction(action.begin() + 1, action.end());
     m_PendingActions.push(lazyAction);
@@ -1244,7 +1245,9 @@ bool CAura::Update()
 
   // move stuff from pending vectors to their intended places
   m_Net->MergeDownGradedConnections();
-  MergePendingLobbies();
+  if (MergePendingLobbies()) {
+    metaDataNeedsUpdate = true;
+  }
 
   if (metaDataNeedsUpdate) {
     UpdateMetaData();
@@ -2064,11 +2067,13 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   return true;
 }
 
-void CAura::MergePendingLobbies()
+bool CAura::MergePendingLobbies()
 {
+  if (m_LobbiesPending.empty()) return false;
   m_Lobbies.reserve(m_Lobbies.size() + m_LobbiesPending.size());
   m_Lobbies.insert(m_Lobbies.end(), m_LobbiesPending.begin(), m_LobbiesPending.end());
   m_LobbiesPending.clear();
+  return true;
 }
 
 void CAura::TrackGameJoinInProgress(CGame* game)
