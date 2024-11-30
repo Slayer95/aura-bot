@@ -3416,12 +3416,12 @@ uint8_t CGame::GetPlayersReadyMode() const {
 
 CQueuedActionsFrame& CGame::GetFirstActionFrame()
 {
-  return *GetFirstActionFrameNode()->data;
+  return GetFirstActionFrameNode()->data;
 }
 
 CQueuedActionsFrame& CGame::GetLastActionFrame()
 {
-  return *GetLastActionFrameNode()->data;
+  return GetLastActionFrameNode()->data;
 }
 
 vector<QueuedActionsFrameNode*> CGame::GetFrameNodesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset)
@@ -3458,10 +3458,10 @@ vector<QueuedActionsFrameNode*> CGame::GetAllFrameNodes()
 void CGame::MergeFrameNodes(vector<QueuedActionsFrameNode*>& frameNodes)
 {
   size_t i = 0, frameCount = frameNodes.size();
-  CQueuedActionsFrame* targetFrame = frameNodes[i++]->data;
+  CQueuedActionsFrame& targetFrame = frameNodes[i++]->data;
   while (i < frameCount) {
-    CQueuedActionsFrame* obsoleteFrame = frameNodes[i]->data;
-    targetFrame->MergeFrame(*obsoleteFrame);
+    CQueuedActionsFrame& obsoleteFrame = frameNodes[i]->data;
+    targetFrame.MergeFrame(obsoleteFrame);
     m_Actions.remove(frameNodes[i]);
     // When the node is deleted, data is deleted as well.
     delete frameNodes[i];

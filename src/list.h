@@ -28,12 +28,12 @@
 
 template <typename T>
 struct DoubleLinkedListNode {
-  T* data;
+  T data;
   DoubleLinkedListNode* next;
   DoubleLinkedListNode* prev;
 
   DoubleLinkedListNode()
-   : data(new T()),
+   : data(T()),
      next(nullptr),
      prev(nullptr)
  {
@@ -41,7 +41,6 @@ struct DoubleLinkedListNode {
 
   ~DoubleLinkedListNode()
   {
-    delete data;
   }
 };
 

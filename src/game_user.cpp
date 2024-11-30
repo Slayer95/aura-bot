@@ -252,7 +252,7 @@ uint32_t CGameUser::GetPingEqualizerDelay() const
 
 CQueuedActionsFrame& CGameUser::GetPingEqualizerFrame()
 {
-  return *GetPingEqualizerFrameNode()->data;
+  return GetPingEqualizerFrameNode()->data;
 }
 
 void CGameUser::AdvanceActiveGameFrame()
