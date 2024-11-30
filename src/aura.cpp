@@ -1881,6 +1881,9 @@ bool CAura::CheckGracefulExit()
       return false;
     }
   }
+  if (!m_Net->m_DownGradedConnections.empty()) {
+    return false;
+  }
   return true;
 }
 
