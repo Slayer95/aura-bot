@@ -98,7 +98,6 @@ using namespace std;
 #undef FD_SETSIZE
 #define FD_SETSIZE 512
 
-static CAura*         gAura        = nullptr;
 bool                  gRestart     = false;
 volatile sig_atomic_t gGracefulExit = 0;
 
@@ -290,11 +289,6 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
   return true;
 }
 
-inline CAura* CreateAura(CConfig& CFG, const CCLI& cliApp)
-{
-  return new CAura(CFG, cliApp);
-}
-
 inline PLATFORM_STRING_TYPE GetAuraTitle(CGame* detailsGame, size_t lobbyCount, size_t gameCount, bool hasRehost)
 {
   const static PLATFORM_STRING_TYPE HyphenConnector = PLATFORM_STRING(" - ");
@@ -394,6 +388,7 @@ int main(const int argc, char** argv)
   }
 
   // initialize aura
+  optional<CAura> gAura;
 
   {
     // extra scope, so that cliApp can be deallocated
@@ -410,8 +405,8 @@ int main(const int argc, char** argv)
       filesystem::path homeDir;
       GetAuraHome(cliApp, homeDir);
       if (LoadConfig(CFG, cliApp, homeDir)) {
-        gAura = CreateAura(CFG, cliApp);
-        if (!gAura || !gAura->GetReady()) {
+        gAura.emplace(CFG, cliApp);
+        if (!gAura->GetReady()) {
           exitCode = 1;
           Print("[AURA] initialization failure");
         }
@@ -426,7 +421,7 @@ int main(const int argc, char** argv)
     }
   }
 
-  if (gAura && gAura->GetReady()) {
+  if (gAura.has_value() && gAura->GetReady()) {
     // loop start
 
     while (!gAura->Update())
@@ -434,7 +429,6 @@ int main(const int argc, char** argv)
 
     // loop end - shut down
     Print("[AURA] shutting down");
-    delete gAura;
   }
 
 
