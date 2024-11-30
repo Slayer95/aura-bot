@@ -51,7 +51,7 @@ public:
 #else
   void*                             m_Client;
 #endif
-  CDiscordConfig*                   m_Config;
+  CDiscordConfig                    m_Config;
   std::string                       m_NickName;
   int64_t                           m_LastPacketTime;
   int64_t                           m_LastAntiIdleTime;
@@ -60,7 +60,7 @@ public:
   std::queue<dpp::slashcommand_t*>  m_CommandQueue;
 #endif
 
-  CDiscord(CAura* nAura);
+  CDiscord(CAura* nAura, CConfig& nCFG);
   ~CDiscord();
   CDiscord(CDiscord&) = delete;
 

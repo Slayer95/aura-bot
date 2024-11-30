@@ -319,9 +319,9 @@ bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
 // CNet
 //
 
-CNet::CNet(CAura* nAura)
+CNet::CNet(CAura* nAura, CConfig& nCFG)
   : m_Aura(nAura),
-    m_Config(nullptr),
+    m_Config(CNetConfig(nCFG)),
     m_SupportUDPOverIPv6(false),
     m_UDPMainServerEnabled(false),
     m_UDPMainServer(nullptr),
@@ -355,13 +355,13 @@ CNet::CNet(CAura* nAura)
 void CNet::InitPersistentConfig()
 {
   // Implements non-reloadable config entries.
-  m_UDPMainServerEnabled = m_Config->m_UDPMainServerEnabled;
-  m_SupportTCPOverIPv6 = m_Config->m_SupportTCPOverIPv6;
-  m_SupportUDPOverIPv6 = m_Config->m_SupportUDPOverIPv6;
-  m_UDPFallbackPort = m_Config->m_UDPFallbackPort;
-  m_UDPIPv6Port = m_Config->m_UDPIPv6Port;
-  m_VLANEnabled = m_Config->m_VLANEnabled;
-  m_VLANPort = m_Config->m_VLANPort;
+  m_UDPMainServerEnabled = m_Config.m_UDPMainServerEnabled;
+  m_SupportTCPOverIPv6 = m_Config.m_SupportTCPOverIPv6;
+  m_SupportUDPOverIPv6 = m_Config.m_SupportUDPOverIPv6;
+  m_UDPFallbackPort = m_Config.m_UDPFallbackPort;
+  m_UDPIPv6Port = m_Config.m_UDPIPv6Port;
+  m_VLANEnabled = m_Config.m_VLANEnabled;
+  m_VLANPort = m_Config.m_VLANPort;
 }
 
 bool CNet::Init()
@@ -373,15 +373,15 @@ bool CNet::Init()
 
   if (m_UDPMainServerEnabled) {
     m_UDPMainServer = new CUDPServer(AF_INET);
-    if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, false)) {
+    if (!m_UDPMainServer->Listen(m_Config.m_BindAddress4, 6112, false)) {
       Print("=======================================================================================");
       Print("[UDP] <net.udp_server.enabled = yes> requires active instances of Warcraft to be closed...");
       Print("[UDP] Please release port 6112, or set <net.udp_server.enabled = no>");
       Print("=======================================================================================");
       Print("[UDP] Waiting...");
       this_thread::sleep_for(chrono::milliseconds(5000));
-      if (!m_UDPMainServer->Listen(m_Config->m_BindAddress4, 6112, true)) {
-        if (m_Config->m_UDPBroadcastEnabled) {
+      if (!m_UDPMainServer->Listen(m_Config.m_BindAddress4, 6112, true)) {
+        if (m_Config.m_UDPBroadcastEnabled) {
           Print("[UDP] Failed to start UDP/IPv4 service on port 6112. Cannot start broadcast service.");
         } else {
           Print("[UDP] Failed to start UDP/IPv4 service on port 6112");
@@ -391,7 +391,7 @@ bool CNet::Init()
       }
     }
 #ifndef DISABLE_MINIUPNP
-    if (m_Config->m_EnableUPnP) {
+    if (m_Config.m_EnableUPnP) {
       RequestUPnP("UDP", 6112, 6112, LOG_LEVEL_DEBUG);
     }
 #endif
@@ -399,11 +399,11 @@ bool CNet::Init()
 
   if (!m_UDPMainServerEnabled) {
     m_UDPDeafSocket = new CUDPServer(AF_INET);
-    if (!m_UDPDeafSocket->Listen(m_Config->m_BindAddress4, m_UDPFallbackPort, true)) {
+    if (!m_UDPDeafSocket->Listen(m_Config.m_BindAddress4, m_UDPFallbackPort, true)) {
       Print("====================================================================");
       Print("[UDP] Failed to bind to fallback port " + to_string(m_UDPFallbackPort) + ".");
       Print("[UDP] For a random available port, set <net.udp_fallback.outbound_port = 0>");
-      if (m_Config->m_UDPBroadcastEnabled) {
+      if (m_Config.m_UDPBroadcastEnabled) {
         Print("[UDP] Failed to start UDP/IPv4 service. Cannot start broadcast service.");
       } else {
         Print("[UDP] Failed to start UDP/IPv4 service");
@@ -415,7 +415,7 @@ bool CNet::Init()
 
   if (m_SupportUDPOverIPv6) {
     m_UDPIPv6Server = new CUDPServer(AF_INET6);
-    if (!m_UDPIPv6Server->Listen(m_Config->m_BindAddress6, m_UDPIPv6Port, true)) {
+    if (!m_UDPIPv6Server->Listen(m_Config.m_BindAddress6, m_UDPIPv6Port, true)) {
       Print("====================================================================");
       Print("[UDP] Failed to bind to port " + to_string(m_UDPIPv6Port) + ".");
       Print("[UDP] For a random available port, set <net.udp_ipv6.port = 0>");
@@ -432,10 +432,10 @@ bool CNet::Init()
     }
   }
 
-  m_UDP6TargetPort = m_Config->m_UDP6TargetPort;
-  if (m_Config->m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
-  if (m_Config->m_UDPDoNotRouteEnabled) PropagateDoNotRouteEnabled(true);
-  SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
+  m_UDP6TargetPort = m_Config.m_UDP6TargetPort;
+  if (m_Config.m_UDPBroadcastEnabled) PropagateBroadcastEnabled(true);
+  if (m_Config.m_UDPDoNotRouteEnabled) PropagateDoNotRouteEnabled(true);
+  SetBroadcastTarget(m_Config.m_UDPBroadcastTarget);
 
   if (m_VLANEnabled) {
     m_VLANServer = GetOrCreateTCPServer(m_VLANPort, "VLAN Server");
@@ -527,16 +527,16 @@ void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
 
 bool CNet::SendBroadcast(const vector<uint8_t>& packet)
 {
-  if (!m_Config->m_UDPBroadcastEnabled)
+  if (!m_Config.m_UDPBroadcastEnabled)
     return false;
 
   bool mainSuccess = false;
   if (m_UDPMainServerEnabled) {
     if (m_UDPMainServer->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
-    if (m_Config->m_ProxyReconnect) m_UDPMainServer->Broadcast(m_ProxyBroadcastTarget, packet);
+    if (m_Config.m_ProxyReconnect) m_UDPMainServer->Broadcast(m_ProxyBroadcastTarget, packet);
   } else {
     if (m_UDPDeafSocket->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
-    if (m_Config->m_ProxyReconnect) {
+    if (m_Config.m_ProxyReconnect) {
       m_UDPDeafSocket->Broadcast(m_ProxyBroadcastTarget, packet);
     }
   }
@@ -588,7 +588,7 @@ void CNet::Send(const string& addressLiteral, const uint16_t port, const vector<
 void CNet::SendLoopback(const vector<uint8_t>& packet)
 {
   Send("127.0.0.1", m_UDP4TargetPort, packet);
-  if (m_Config->m_ProxyReconnect) {
+  if (m_Config.m_ProxyReconnect) {
     Send("127.0.0.1", m_UDP4TargetProxyPort, packet);
   }
 }
@@ -602,12 +602,12 @@ void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t por
   sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, port);
 
-  if (m_Config->m_UDPBroadcastEnabled)
+  if (m_Config.m_UDPBroadcastEnabled)
     PropagateBroadcastEnabled(false);
 
   Send(address, packet);
 
-  if (m_Config->m_UDPBroadcastEnabled)
+  if (m_Config.m_UDPBroadcastEnabled)
     PropagateBroadcastEnabled(true);
 }
 
@@ -616,17 +616,17 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const vector<sockadd
   SendBroadcast(packet);
 
   if (!clientIps.empty()) {
-    if (m_Config->m_UDPBroadcastEnabled)
+    if (m_Config.m_UDPBroadcastEnabled)
       PropagateBroadcastEnabled(false);
 
     for (auto& clientIp : clientIps)
       Send(&clientIp, packet);
 
-    if (m_Config->m_UDPBroadcastEnabled)
+    if (m_Config.m_UDPBroadcastEnabled)
       PropagateBroadcastEnabled(true);
   }
 
-  if (m_Config->m_EnableTCPWrapUDP || m_Config->m_VLANEnabled) {
+  if (m_Config.m_EnableTCPWrapUDP || m_Config.m_VLANEnabled) {
     for (auto& serverConnections : m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
@@ -641,7 +641,7 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const vector<sockadd
 bool CNet::IsIgnoredDatagramSource(string sourceIp)
 {
   string element(sourceIp);
-  return m_Config->m_UDPBlockedIPs.find(element) != m_Config->m_UDPBlockedIPs.end();
+  return m_Config.m_UDPBlockedIPs.find(element) != m_Config.m_UDPBlockedIPs.end();
 }
 
 GameUser::CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const uint8_t UID) const
@@ -694,7 +694,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  if (m_Config->m_UDPForwardTraffic) {
+  if (m_Config.m_UDPForwardTraffic) {
     RelayUDPPacket(pkt, ipAddress, remotePort);
   }
 
@@ -735,14 +735,14 @@ void CNet::RelayUDPPacket(const UDPPkt* pkt, const string& fromAddress, const ui
   memset(relayPacket.data() + portOffset + 2, 0, 4); // Game version unknown at this layer.
   memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
   AssignLength(relayPacket);
-  Send(&(m_Config->m_UDPForwardAddress), relayPacket);
+  Send(&(m_Config.m_UDPForwardAddress), relayPacket);
 }
 
 sockaddr_storage* CNet::GetPublicIPv4()
 {
-  switch (m_Config->m_PublicIPv4Algorithm) {
+  switch (m_Config.m_PublicIPv4Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      if (m_IPv4SelfCacheV.first == m_Config->m_PublicIPv4Value && m_IPv4SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
+      if (m_IPv4SelfCacheV.first == m_Config.m_PublicIPv4Value && m_IPv4SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
         return m_IPv4SelfCacheV.second;
       }
       if (m_IPv4SelfCacheV.second != nullptr) {
@@ -750,16 +750,16 @@ sockaddr_storage* CNet::GetPublicIPv4()
         m_IPv4SelfCacheV = make_pair(string(), nullptr);
       }
 
-      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv4Value, ACCEPT_IPV4);
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config.m_PublicIPv4Value, ACCEPT_IPV4);
       if (!maybeAddress.has_value()) return nullptr; // should never happen
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv4SelfCacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4SelfCacheV = make_pair(m_Config.m_PublicIPv4Value, cachedAddress);
       m_IPv4SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
       return m_IPv4SelfCacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (m_IPv4SelfCacheV.first == m_Config->m_PublicIPv4Value && m_IPv4SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+      if (m_IPv4SelfCacheV.first == m_Config.m_PublicIPv4Value && m_IPv4SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
         return m_IPv4SelfCacheV.second;
       }
       if (m_IPv4SelfCacheV.second != nullptr) {
@@ -767,7 +767,7 @@ sockaddr_storage* CNet::GetPublicIPv4()
         m_IPv4SelfCacheV = make_pair(string(), nullptr);
       }
 #ifndef DISABLE_CPR
-      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv4Value}, cpr::Timeout{3000});
+      auto response = cpr::Get(cpr::Url{m_Config.m_PublicIPv4Value}, cpr::Timeout{3000});
       if (response.status_code != 200) {
         return nullptr;
       }
@@ -776,7 +776,7 @@ sockaddr_storage* CNet::GetPublicIPv4()
       if (!maybeAddress.has_value()) return nullptr;
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv4SelfCacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
+      m_IPv4SelfCacheV = make_pair(m_Config.m_PublicIPv4Value, cachedAddress);
       m_IPv4SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
 #endif
       return m_IPv4SelfCacheV.second;
@@ -789,9 +789,9 @@ sockaddr_storage* CNet::GetPublicIPv4()
 
 sockaddr_storage* CNet::GetPublicIPv6()
 {
-  switch (m_Config->m_PublicIPv6Algorithm) {
+  switch (m_Config.m_PublicIPv6Algorithm) {
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL: {
-      if (m_IPv6SelfCacheV.first == m_Config->m_PublicIPv6Value && m_IPv6SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
+      if (m_IPv6SelfCacheV.first == m_Config.m_PublicIPv6Value && m_IPv6SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL) {
         return m_IPv6SelfCacheV.second;
       }
       if (m_IPv6SelfCacheV.second != nullptr) {
@@ -799,16 +799,16 @@ sockaddr_storage* CNet::GetPublicIPv6()
         m_IPv6SelfCacheV = make_pair(string(), nullptr);
       }
 
-      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config->m_PublicIPv6Value, ACCEPT_IPV6);
+      optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(m_Config.m_PublicIPv6Value, ACCEPT_IPV6);
       if (!maybeAddress.has_value()) return nullptr; // should never happen
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv6SelfCacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6SelfCacheV = make_pair(m_Config.m_PublicIPv6Value, cachedAddress);
       m_IPv6SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL;
       return m_IPv6SelfCacheV.second;
     }
     case NET_PUBLIC_IP_ADDRESS_ALGORITHM_API: {
-      if (m_IPv6SelfCacheV.first == m_Config->m_PublicIPv6Value && m_IPv6SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+      if (m_IPv6SelfCacheV.first == m_Config.m_PublicIPv6Value && m_IPv6SelfCacheT == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
         return m_IPv6SelfCacheV.second;
       }
       if (m_IPv6SelfCacheV.second != nullptr) {
@@ -816,7 +816,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
         m_IPv6SelfCacheV = make_pair(string(), nullptr);
       }
 #ifndef DISABLE_CPR
-      auto response = cpr::Get(cpr::Url{m_Config->m_PublicIPv6Value}, cpr::Timeout{3000});
+      auto response = cpr::Get(cpr::Url{m_Config.m_PublicIPv6Value}, cpr::Timeout{3000});
       if (response.status_code != 200) {
         return nullptr;
       }
@@ -827,7 +827,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
       }
       sockaddr_storage* cachedAddress = new sockaddr_storage();
       memcpy(cachedAddress, &(maybeAddress.value()), sizeof(sockaddr_storage));
-      m_IPv6SelfCacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
+      m_IPv6SelfCacheV = make_pair(m_Config.m_PublicIPv6Value, cachedAddress);
       m_IPv6SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_API;
 #endif
       return m_IPv6SelfCacheV.second;
@@ -961,10 +961,10 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
 
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
   sockaddr_storage* publicIPv6 = GetPublicIPv6();
-  if (publicIPv4 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV4)) && m_Config->m_PublicIPv4Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
+  if (publicIPv4 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV4)) && m_Config.m_PublicIPv4Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
     Print("[NET] Public IPv4 address unknown - check <net.ipv4.public_address.algorithm>, <net.ipv4.public_address.value>");
   }
-  if (publicIPv6 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6)) && m_Config->m_PublicIPv6Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
+  if (publicIPv6 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6)) && m_Config.m_PublicIPv6Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
     Print("[NET] Public IPv6 address unknown - check <net.ipv6.public_address.algorithm>, <net.ipv6.public_address.value>");
   }
 
@@ -973,7 +973,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     if ((0 == (checkMode & HEALTH_CHECK_REALM)) && realm != targetRealm) {
       continue;
     }
-    sockaddr_storage* selfIPInThisRealm = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIPv4;
+    const sockaddr_storage* selfIPInThisRealm = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIPv4;
     if (publicIPv4 == nullptr) {
       continue;
     }
@@ -994,7 +994,7 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     SetAddressPort(&targetHost, port);
     m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, realm, targetHost, hostCounter, connectionType, realm->GetUniqueDisplayName()));
 
-    if (reinterpret_cast<sockaddr_in*>(selfIPInThisRealm)->sin_addr.s_addr == reinterpret_cast<sockaddr_in*>(publicIPv4)->sin_addr.s_addr) {
+    if (reinterpret_cast<const sockaddr_in*>(selfIPInThisRealm)->sin_addr.s_addr == reinterpret_cast<const sockaddr_in*>(publicIPv4)->sin_addr.s_addr) {
       anySendsPublicIp = true;
     }
   }
@@ -1152,13 +1152,13 @@ bool CNet::QueryIPAddress()
     return false;
   }
 
-  if (m_Config->m_PublicIPv4Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-    if (m_IPv4SelfCacheV.first != m_Config->m_PublicIPv4Value || m_IPv4SelfCacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+  if (m_Config.m_PublicIPv4Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+    if (m_IPv4SelfCacheV.first != m_Config.m_PublicIPv4Value || m_IPv4SelfCacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
       if (m_IPv4SelfCacheV.second != nullptr) {
         delete m_IPv4SelfCacheV.second;
         m_IPv4SelfCacheV = make_pair(string(), nullptr);
       }
-      optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config->m_PublicIPv4Value);
+      optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config.m_PublicIPv4Value);
       if (parsedURL.has_value() && get<0>(parsedURL.value()) == "http:") {
         string hostName = get<1>(parsedURL.value());
         uint16_t port = get<2>(parsedURL.value());
@@ -1172,13 +1172,13 @@ bool CNet::QueryIPAddress()
       }
     }
   }
-  if (m_Config->m_PublicIPv6Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
-    if (m_IPv6SelfCacheV.first != m_Config->m_PublicIPv6Value || m_IPv6SelfCacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+  if (m_Config.m_PublicIPv6Algorithm == NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
+    if (m_IPv6SelfCacheV.first != m_Config.m_PublicIPv6Value || m_IPv6SelfCacheT != NET_PUBLIC_IP_ADDRESS_ALGORITHM_API) {
       if (m_IPv6SelfCacheV.second != nullptr) {
         delete m_IPv6SelfCacheV.second;
         m_IPv6SelfCacheV = make_pair(string(), nullptr);
       }
-      optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config->m_PublicIPv6Value);
+      optional<tuple<string, string, uint16_t, string>> parsedURL = CNet::ParseURL(m_Config.m_PublicIPv6Value);
       if (parsedURL.has_value() && get<0>(parsedURL.value()) == "http:") {
         string hostName = get<1>(parsedURL.value());
         uint16_t port = get<2>(parsedURL.value());
@@ -1219,11 +1219,11 @@ void CNet::HandleIPAddressFetchDone()
     sockaddr_storage* cachedAddress = new sockaddr_storage();
     memcpy(cachedAddress, &(apiClient->m_Result.value()), sizeof(sockaddr_storage));
     if (apiClient->m_TargetHost.ss_family == AF_INET6) {
-      m_IPv6SelfCacheV = make_pair(m_Config->m_PublicIPv6Value, cachedAddress);
-      m_IPv6SelfCacheT = m_Config->m_PublicIPv6Algorithm;
+      m_IPv6SelfCacheV = make_pair(m_Config.m_PublicIPv6Value, cachedAddress);
+      m_IPv6SelfCacheT = m_Config.m_PublicIPv6Algorithm;
     } else {
-      m_IPv4SelfCacheV = make_pair(m_Config->m_PublicIPv4Value, cachedAddress);
-      m_IPv4SelfCacheT = m_Config->m_PublicIPv4Algorithm;
+      m_IPv4SelfCacheV = make_pair(m_Config.m_PublicIPv4Value, cachedAddress);
+      m_IPv4SelfCacheT = m_Config.m_PublicIPv4Algorithm;
     }
   }
   ResetIPAddressFetch();
@@ -1273,8 +1273,8 @@ uint16_t CNet::GetUDPPort(const uint8_t protocol) const
 uint16_t CNet::NextHostPort()
 {
   ++m_LastHostPort;
-  if (m_LastHostPort > m_Config->m_MaxHostPort || m_LastHostPort < m_Config->m_MinHostPort) {
-    m_LastHostPort = m_Config->m_MinHostPort;
+  if (m_LastHostPort > m_Config.m_MaxHostPort || m_LastHostPort < m_Config.m_MinHostPort) {
+    m_LastHostPort = m_Config.m_MinHostPort;
   }
   return m_LastHostPort;
 }
@@ -1295,16 +1295,16 @@ vector<uint16_t> CNet::GetPotentialGamePorts() const
 {
   vector<uint16_t> result;
 
-  uint16_t port = m_Config->m_MinHostPort;
-  if (m_Config->m_UDPEnableCustomPortTCP4 && m_Config->m_UDPCustomPortTCP4 < port) {
-    result.push_back(m_Config->m_UDPCustomPortTCP4);
+  uint16_t port = m_Config.m_MinHostPort;
+  if (m_Config.m_UDPEnableCustomPortTCP4 && m_Config.m_UDPCustomPortTCP4 < port) {
+    result.push_back(m_Config.m_UDPCustomPortTCP4);
   }
-  while (port <= m_Config->m_MaxHostPort) {
+  while (port <= m_Config.m_MaxHostPort) {
     result.push_back(port);
     ++port;
   }
-  if (m_Config->m_UDPEnableCustomPortTCP4 && m_Config->m_UDPCustomPortTCP4 > port) {
-    result.push_back(m_Config->m_UDPCustomPortTCP4);
+  if (m_Config.m_UDPEnableCustomPortTCP4 && m_Config.m_UDPCustomPortTCP4 > port) {
+    result.push_back(m_Config.m_UDPCustomPortTCP4);
   }
   
   return result;
@@ -1441,7 +1441,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
     return it->second;
   }
   CTCPServer* gameServer = new CTCPServer(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
-  if (!gameServer->Listen(m_SupportTCPOverIPv6 ? m_Config->m_BindAddress6 : m_Config->m_BindAddress4, inputPort, false)) {
+  if (!gameServer->Listen(m_SupportTCPOverIPv6 ? m_Config.m_BindAddress6 : m_Config.m_BindAddress4, inputPort, false)) {
     Print("[TCP] " + name + " Error listening on port " + to_string(inputPort));
     delete gameServer;
     return nullptr;
@@ -1515,10 +1515,10 @@ void CNet::PropagateDoNotRouteEnabled(const bool nEnable)
 
 void CNet::OnConfigReload()
 {
-  m_UDP6TargetPort = m_Config->m_UDP6TargetPort;
-  PropagateBroadcastEnabled(m_Config->m_UDPBroadcastEnabled);
-  PropagateDoNotRouteEnabled(m_Config->m_UDPDoNotRouteEnabled);
-  SetBroadcastTarget(m_Config->m_UDPBroadcastTarget);
+  m_UDP6TargetPort = m_Config.m_UDP6TargetPort;
+  PropagateBroadcastEnabled(m_Config.m_UDPBroadcastEnabled);
+  PropagateDoNotRouteEnabled(m_Config.m_UDPDoNotRouteEnabled);
+  SetBroadcastTarget(m_Config.m_UDPBroadcastTarget);
 }
 
 void CNet::OnUserKicked(GameUser::CGameUser* user, bool deferred)
@@ -1575,7 +1575,6 @@ CNet::~CNet()
     Print("[NET] shutting down");
   }
 
-  delete m_Config;
   delete m_UDPMainServer;
   delete m_UDPDeafSocket;
   delete m_UDPIPv6Server;

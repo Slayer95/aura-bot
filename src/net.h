@@ -28,6 +28,7 @@
 
 #include "includes.h"
 #include "socket.h"
+#include "config/config_net.h"
 
 #pragma once
 
@@ -88,11 +89,11 @@ public:
 class CNet
 {
 public:
-  CNet(CAura* nAura);
+  CNet(CAura* nAura, CConfig& nCFG);
   ~CNet();
 
   CAura*                                                      m_Aura;
-  CNetConfig*                                                 m_Config;
+  CNetConfig                                                  m_Config;
 
   // == SECTION START ==
   // Implements non-reloadable config entries.

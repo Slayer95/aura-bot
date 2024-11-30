@@ -62,22 +62,21 @@ using namespace std;
 //// CIRC ////
 //////////////
 
-CIRC::CIRC(CAura* nAura)
+CIRC::CIRC(CAura* nAura, CConfig& nCFG)
   : m_Aura(nAura),
+    m_Config(CIRCConfig(nCFG)),
     m_Socket(new CTCPClient(AF_INET, "IRC")),
-    m_Config(nullptr),
     m_NickName(string()),
     m_LastConnectionAttemptTime(0),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
     m_WaitingToConnect(true)
 {
-    m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
+  m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
 }
 
 CIRC::~CIRC()
 {
-  delete m_Config;
   delete m_Socket;
 
   for (auto& ctx : m_Aura->m_ActiveContexts) {
@@ -112,9 +111,9 @@ void CIRC::Update(void* fd, void* send_fd)
 {
   const int64_t Time = GetTime();
 
-  if (!m_Config->m_Enabled) {
+  if (!m_Config.m_Enabled) {
     if (m_Socket && m_Socket->GetConnected()) {
-      Print("[IRC: " + m_Config->m_HostName + "] disconnected");
+      Print("[IRC: " + m_Config.m_HostName + "] disconnected");
       ResetConnection();
       m_WaitingToConnect = false;
     }
@@ -125,12 +124,12 @@ void CIRC::Update(void* fd, void* send_fd)
   {
     if (m_Socket->HasError()) {
       // the socket has an error
-      Print("[IRC: " + m_Config->m_HostName + "] disconnected due to socket error");
+      Print("[IRC: " + m_Config.m_HostName + "] disconnected due to socket error");
     } else {
       // remote end terminated the connection
-      Print("[IRC: " + m_Config->m_HostName + "] remote terminated the connection");
+      Print("[IRC: " + m_Config.m_HostName + "] remote terminated the connection");
     }
-    Print("[IRC: " + m_Config->m_HostName + "] waiting 60 seconds to reconnect");
+    Print("[IRC: " + m_Config.m_HostName + "] waiting 60 seconds to reconnect");
     ResetConnection();
     m_LastConnectionAttemptTime = Time;
     return;
@@ -142,7 +141,7 @@ void CIRC::Update(void* fd, void* send_fd)
 
     if (Time - m_LastPacketTime > 210)
     {
-      Print("[IRC: " + m_Config->m_HostName + "] ping timeout, reconnecting...");
+      Print("[IRC: " + m_Config.m_HostName + "] ping timeout, reconnecting...");
       ResetConnection();
       return;
     }
@@ -167,7 +166,7 @@ void CIRC::Update(void* fd, void* send_fd)
   {
     // the socket was disconnected
 
-    Print("[IRC: " + m_Config->m_HostName + "] disconnected, waiting 60 seconds to reconnect");
+    Print("[IRC: " + m_Config.m_HostName + "] disconnected, waiting 60 seconds to reconnect");
     ResetConnection();
     m_LastConnectionAttemptTime = Time;
     return;
@@ -181,17 +180,17 @@ void CIRC::Update(void* fd, void* send_fd)
     {
       // the connection attempt completed
 
-      m_NickName = m_Config->m_NickName;
+      m_NickName = m_Config.m_NickName;
 
-      if (m_Config->m_HostName.find("quakenet.org") == string::npos && !m_Config->m_Password.empty())
-        Send("PASS " + m_Config->m_Password);
+      if (m_Config.m_HostName.find("quakenet.org") == string::npos && !m_Config.m_Password.empty())
+        Send("PASS " + m_Config.m_Password);
 
-      Send("NICK " + m_Config->m_NickName);
-      Send("USER " + m_Config->m_UserName + " " + m_Config->m_NickName + " " + m_Config->m_UserName + " :aura-bot");
+      Send("NICK " + m_Config.m_NickName);
+      Send("USER " + m_Config.m_UserName + " " + m_Config.m_NickName + " " + m_Config.m_UserName + " :aura-bot");
 
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
 
-      Print("[IRC: " + m_Config->m_HostName + "] connected");
+      Print("[IRC: " + m_Config.m_HostName + "] connected");
 
       m_LastPacketTime = Time;
 
@@ -201,7 +200,7 @@ void CIRC::Update(void* fd, void* send_fd)
     {
       // the connection attempt timed out (15 seconds)
 
-      Print("[IRC: " + m_Config->m_HostName + "] connect timed out, waiting 60 seconds to reconnect");
+      Print("[IRC: " + m_Config.m_HostName + "] connect timed out, waiting 60 seconds to reconnect");
       ResetConnection();
       m_LastConnectionAttemptTime = Time;
       return;
@@ -211,10 +210,10 @@ void CIRC::Update(void* fd, void* send_fd)
   if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && (Time - m_LastConnectionAttemptTime > 60)) {
     // attempt to connect to irc
 
-    Print("[IRC: " + m_Config->m_HostName + "] connecting to server [" + m_Config->m_HostName + "] on port " + to_string(m_Config->m_Port));
+    Print("[IRC: " + m_Config.m_HostName + "] connecting to server [" + m_Config.m_HostName + "] on port " + to_string(m_Config.m_Port));
     optional<sockaddr_storage> emptyBindAddress;
     sockaddr_storage resolvedAddress;
-    if (m_Aura->m_Net->ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config->m_HostName, m_Config->m_Port)) {
+    if (m_Aura->m_Net->ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config.m_HostName, m_Config.m_Port)) {
       m_Socket->Connect(emptyBindAddress, resolvedAddress);
     } else {
       m_Socket->m_HasError = true;
@@ -265,7 +264,7 @@ void CIRC::ExtractPackets()
 
     if (Packets_Packet.compare(0, 6, "NOTICE") == 0)
     {
-      //Print("[IRC: " + m_Config->m_HostName + "] " + Packets_Packet);
+      //Print("[IRC: " + m_Config.m_HostName + "] " + Packets_Packet);
       continue;
     }
 
@@ -279,7 +278,7 @@ void CIRC::ExtractPackets()
     // in:  :nickname!~username@hostname PRIVMSG #channel :message
     // print the message, check if it's a command then execute if it is
 
-    if (Tokens.size() > 3 && Tokens[1] == "PRIVMSG" && m_Config->m_CommandCFG->m_Enabled)
+    if (Tokens.size() > 3 && Tokens[1] == "PRIVMSG" && m_Config.m_CommandCFG->m_Enabled)
     {
       // don't bother parsing if the message is very short (1 character)
       // since it's surely not a command
@@ -318,10 +317,10 @@ void CIRC::ExtractPackets()
         continue;
 
       string cmdToken, command, payload;
-      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
+      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, payload);
       if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
         const bool isWhisper = channel[0] != '#';
-        CCommandContext* ctx = new CCommandContext(m_Aura, m_Config->m_CommandCFG, this, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+        CCommandContext* ctx = new CCommandContext(m_Aura, m_Config.m_CommandCFG, this, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
         ctx->UpdatePermissions();
         ctx->Run(cmdToken, command, payload);
         m_Aura->UnholdContext(ctx);
@@ -352,14 +351,14 @@ void CIRC::ExtractPackets()
     if (Tokens.size() >= 2 && Tokens[1] == "376") {
       // auth if the server is QuakeNet
 
-      if (m_Config->m_HostName.find("quakenet.org") != string::npos && !m_Config->m_Password.empty()) {
-        SendUser("AUTH " + m_Config->m_UserName + " " + m_Config->m_Password, "Q@CServe.quakenet.org");
-        Send("MODE " + m_Config->m_NickName + " +x");
+      if (m_Config.m_HostName.find("quakenet.org") != string::npos && !m_Config.m_Password.empty()) {
+        SendUser("AUTH " + m_Config.m_UserName + " " + m_Config.m_Password, "Q@CServe.quakenet.org");
+        Send("MODE " + m_Config.m_NickName + " +x");
       }
 
       // join channels
 
-      for (auto& channel : m_Config->m_Channels)
+      for (auto& channel : m_Config.m_Channels)
         Send("JOIN " + channel);
 
       continue;
@@ -410,16 +409,16 @@ void CIRC::SendChannel(const string& message, const string& target)
 
 void CIRC::SendAllChannels(const string& message)
 {
-  for (auto& channel : m_Config->m_Channels)
+  for (auto& channel : m_Config.m_Channels)
     m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
 }
 
 bool CIRC::GetIsModerator(const std::string& nHostName)
 {
-  return m_Config->m_Admins.find(nHostName) != m_Config->m_Admins.end();
+  return m_Config.m_Admins.find(nHostName) != m_Config.m_Admins.end();
 }
 
 bool CIRC::GetIsSudoer(const std::string& nHostName)
 {
-  return m_Config->m_SudoUsers.find(nHostName) != m_Config->m_SudoUsers.end();
+  return m_Config.m_SudoUsers.find(nHostName) != m_Config.m_SudoUsers.end();
 }

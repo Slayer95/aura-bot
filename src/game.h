@@ -53,6 +53,7 @@
 #include "game_setup.h"
 #include "save_game.h"
 #include "socket.h"
+#include "config/config_game.h"
 
 #include <algorithm>
 
@@ -122,7 +123,7 @@ class CGame
 {
 public:
   CAura* m_Aura;
-  CGameConfig* m_Config;
+  CGameConfig m_Config;
 
 private:
   friend class CCommandContext;
@@ -704,7 +705,7 @@ public:
   bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);
   bool SendHMC(const std::string& message);
   bool GetIsCheckJoinable() const;
-  void SetIsCheckJoinable(const bool nCheckIsJoinable) const;
+  void SetIsCheckJoinable(const bool nCheckIsJoinable);
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
   bool GetHasReferees() const;
   inline bool GetUsesCustomReferees() const { return m_UsesCustomReferees; }

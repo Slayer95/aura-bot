@@ -181,7 +181,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
-    m_DownloadTimeout(m_Aura->m_Net->m_Config->m_DownloadTimeout),
+    m_DownloadTimeout(m_Aura->m_Net->m_Config.m_DownloadTimeout),
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
@@ -229,7 +229,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
-    m_DownloadTimeout(m_Aura->m_Net->m_Config->m_DownloadTimeout),
+    m_DownloadTimeout(m_Aura->m_Net->m_Config.m_DownloadTimeout),
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
@@ -404,8 +404,8 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
 {
   string fileExtension = ParseFileExtension(m_SearchTarget.second);
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    filesystem::path testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapPath.parent_path()) {
+    filesystem::path testPath = (m_Aura->m_Config.m_MapPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
+    if (testPath.parent_path() != m_Aura->m_Config.m_MapPath.parent_path()) {
       return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if ((fileExtension == ".w3m" || fileExtension == ".w3x") && FileExists(testPath)) {
@@ -413,8 +413,8 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalExact()
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
+    filesystem::path testPath = (m_Aura->m_Config.m_MapCFGPath / filesystem::path(m_SearchTarget.second)).lexically_normal();
+    if (testPath.parent_path() != m_Aura->m_Config.m_MapCFGPath.parent_path()) {
       return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if ((fileExtension == ".ini") && FileExists(testPath)) {
@@ -432,21 +432,21 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalTryExtensions()
     return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    filesystem::path testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second + ".w3x")).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapPath.parent_path()) {
+    filesystem::path testPath = (m_Aura->m_Config.m_MapPath / filesystem::path(m_SearchTarget.second + ".w3x")).lexically_normal();
+    if (testPath.parent_path() != m_Aura->m_Config.m_MapPath.parent_path()) {
       return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if (FileExists(testPath)) {
       return SEARCH_RESULT(MATCH_TYPE_MAP, testPath);
     }
-    testPath = (m_Aura->m_Config->m_MapPath / filesystem::path(m_SearchTarget.second + ".w3m")).lexically_normal();
+    testPath = (m_Aura->m_Config.m_MapPath / filesystem::path(m_SearchTarget.second + ".w3m")).lexically_normal();
     if (FileExists(testPath)) {
       return SEARCH_RESULT(MATCH_TYPE_MAP, testPath);
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    filesystem::path testPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(m_SearchTarget.second + ".ini")).lexically_normal();
-    if (testPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
+    filesystem::path testPath = (m_Aura->m_Config.m_MapCFGPath / filesystem::path(m_SearchTarget.second + ".ini")).lexically_normal();
+    if (testPath.parent_path() != m_Aura->m_Config.m_MapCFGPath.parent_path()) {
       return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
     }
     if (FileExists(testPath)) {
@@ -460,14 +460,14 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
 {
   vector<pair<string, int>> allResults;
   if (m_SearchType == SEARCH_TYPE_ONLY_MAP || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    vector<pair<string, int>> mapResults = FuzzySearchFiles(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP, m_SearchTarget.second);
+    vector<pair<string, int>> mapResults = FuzzySearchFiles(m_Aura->m_Config.m_MapPath, FILE_EXTENSIONS_MAP, m_SearchTarget.second);
     for (const auto& result : mapResults) {
       // Whether 0x80 is set flags the type of result: If it is there, it's a map
       allResults.push_back(make_pair(result.first, result.second | 0x80));
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
-    vector<pair<string, int>> cfgResults = FuzzySearchFiles(m_Aura->m_Config->m_MapCFGPath, FILE_EXTENSIONS_CONFIG, m_SearchTarget.second);
+    vector<pair<string, int>> cfgResults = FuzzySearchFiles(m_Aura->m_Config.m_MapCFGPath, FILE_EXTENSIONS_CONFIG, m_SearchTarget.second);
     allResults.insert(allResults.end(), cfgResults.begin(), cfgResults.end());
   }
   if (allResults.empty()) {
@@ -486,9 +486,9 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
 
   if (m_LuckyMode || allResults.size() == 1) {
     if (allResults[0].second & 0x80) {
-      return SEARCH_RESULT(MATCH_TYPE_MAP, m_Aura->m_Config->m_MapPath / filesystem::path(allResults[0].first));
+      return SEARCH_RESULT(MATCH_TYPE_MAP, m_Aura->m_Config.m_MapPath / filesystem::path(allResults[0].first));
     } else {
-      return SEARCH_RESULT(MATCH_TYPE_CONFIG, m_Aura->m_Config->m_MapCFGPath / filesystem::path(allResults[0].first));
+      return SEARCH_RESULT(MATCH_TYPE_CONFIG, m_Aura->m_Config.m_MapCFGPath / filesystem::path(allResults[0].first));
     }
   }
 
@@ -532,7 +532,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocal(vector<string>& fuz
     return plusExtensionResult;
   }
   // 3. Fuzzy search
-  if (!m_Aura->m_Config->m_StrictSearch) {
+  if (!m_Aura->m_Config.m_StrictSearch) {
     pair<uint8_t, filesystem::path> fuzzyResult = SearchInputLocalFuzzy(fuzzyMatches);
     if (fuzzyResult.first == MATCH_TYPE_MAP || fuzzyResult.first == MATCH_TYPE_CONFIG) {
       return fuzzyResult;
@@ -572,7 +572,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
       return result;
     }
 
-    if (m_Aura->m_Config->m_MapSearchShowSuggestions) {
+    if (m_Aura->m_Config.m_MapSearchShowSuggestions) {
       if (m_Aura->m_StartedGames.empty()) {
         // Synchronous download, only if there are no ongoing games.
 #ifndef DISABLE_CPR
@@ -590,8 +590,8 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
   // Input corresponds to a namespace, such as epicwar.
   // Gotta find a matching config file.
   string resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini";
-  filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCFGPath / filesystem::path(resolvedCFGName)).lexically_normal();
-  if (PathHasNullBytes(resolvedCFGPath) || resolvedCFGPath.parent_path() != m_Aura->m_Config->m_MapCFGPath.parent_path()) {
+  filesystem::path resolvedCFGPath = (m_Aura->m_Config.m_MapCFGPath / filesystem::path(resolvedCFGName)).lexically_normal();
+  if (PathHasNullBytes(resolvedCFGPath) || resolvedCFGPath.parent_path() != m_Aura->m_Config.m_MapCFGPath.parent_path()) {
     return SEARCH_RESULT(MATCH_TYPE_FORBIDDEN, filesystem::path());
   }
   if (FileExists(resolvedCFGPath)) {
@@ -637,7 +637,7 @@ CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, con
 
 CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const bool silent)
 {
-  bool isInMapsFolder = filePath.parent_path() == m_Aura->m_Config->m_MapPath.parent_path();
+  bool isInMapsFolder = filePath.parent_path() == m_Aura->m_Config.m_MapPath.parent_path();
   string fileName = PathToString(filePath.filename());
   if (fileName.empty()) return nullptr;
   string baseFileName;
@@ -679,14 +679,14 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     return nullptr;
   }
 
-  if (m_Aura->m_Config->m_EnableCFGCache && isInMapsFolder && !m_StandardPaths) {
+  if (m_Aura->m_Config.m_EnableCFGCache && isInMapsFolder && !m_StandardPaths) {
     string resolvedCFGName;
     if (m_SearchTarget.first == "local") {
       resolvedCFGName = m_SearchTarget.first + "-" + fileName + ".ini";
     } else {
       resolvedCFGName = m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini";
     }
-    filesystem::path resolvedCFGPath = (m_Aura->m_Config->m_MapCachePath / filesystem::path(resolvedCFGName)).lexically_normal();
+    filesystem::path resolvedCFGPath = (m_Aura->m_Config.m_MapCachePath / filesystem::path(resolvedCFGName)).lexically_normal();
 
     vector<uint8_t> bytes = MapCFG.Export();
     FileWrite(resolvedCFGPath, bytes.data(), bytes.size());
@@ -702,14 +702,14 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
 {
   string fileName = PathToString(mapPath.filename());
   if (fileName.empty()) return nullptr;
-  if (m_Aura->m_Config->m_EnableCFGCache) {
+  if (m_Aura->m_Config.m_EnableCFGCache) {
     bool cacheSuccess = false;
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
       Print("[AURA] Searching map in cache [" + fileName + "]");
     }
     if (m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
       string cfgName = m_Aura->m_CachedMaps[fileName];
-      filesystem::path cfgPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(cfgName);
+      filesystem::path cfgPath = m_Aura->m_Config.m_MapCachePath / filesystem::path(cfgName);
       CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
       if (cachedResult && FileNameEquals(cachedResult->GetServerPath(), fileName)) {
         cacheSuccess = true;
@@ -774,7 +774,7 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
 #ifndef DISABLE_CPR
 uint32_t CGameSetup::ResolveMapRepositoryTask()
 {
-  if (m_Aura->m_Net->m_Config->m_MapRepositories.find(m_SearchTarget.first) == m_Aura->m_Net->m_Config->m_MapRepositories.end()) {
+  if (m_Aura->m_Net->m_Config.m_MapRepositories.find(m_SearchTarget.first) == m_Aura->m_Net->m_Config.m_MapRepositories.end()) {
     m_ErrorMessage = "Downloads from  " + m_SearchTarget.first + " are disabled.";
     return RESOLUTION_ERR;
   }
@@ -954,7 +954,7 @@ bool CGameSetup::PrepareDownloadMap()
     Print("Error!! trying to download from unsupported repository [" + m_SearchTarget.first + "] !!");
     return false;
   }
-  if (!m_Aura->m_Net->m_Config->m_AllowDownloads) {
+  if (!m_Aura->m_Net->m_Config.m_AllowDownloads) {
     m_Ctx->ErrorReply("Map downloads are not allowed.", CHAT_SEND_SOURCE_ALL);
     return false;
   }
@@ -968,7 +968,7 @@ bool CGameSetup::PrepareDownloadMap()
       mapSuffix = "~" + to_string(i);
     }
     string testFileName = fileNameFragmentPre + mapSuffix + fileNameFragmentPost;
-    filesystem::path testFilePath = m_Aura->m_Config->m_MapPath / filesystem::path(testFileName);
+    filesystem::path testFilePath = m_Aura->m_Config.m_MapPath / filesystem::path(testFileName);
     if (FileExists(testFilePath)) {
       // Map already exists.
       // I'd rather directly open the file with wx flags to avoid racing conditions,
@@ -1122,8 +1122,8 @@ void CGameSetup::LoadMap()
       OnLoadMapError();
       return;
     }
-    if (m_Aura->m_Config->m_EnableCFGCache) {
-      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini");
+    if (m_Aura->m_Config.m_EnableCFGCache) {
+      filesystem::path cachePath = m_Aura->m_Config.m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini");
       m_Map = GetBaseMapFromConfigFile(cachePath, true, true);
       if (m_Map) {
         DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map loaded from cache.")
@@ -1193,7 +1193,7 @@ void CGameSetup::OnLoadMapSuccess()
       m_Ctx->ErrorReply("Failed to add alias.");
     }
   } else if (m_MapReadyCallbackAction == MAP_ONREADY_HOST) {
-    /*if (m_Aura->m_StartedGames.size() > m_Aura->m_Config->m_MaxStartedGames || m_Aura->m_StartedGames.size() == m_Aura->m_Config->m_MaxStartedGames && !m_Aura->m_Config->m_DoNotCountReplaceableLobby) {
+    /*if (m_Aura->m_StartedGames.size() > m_Aura->m_Config.m_MaxStartedGames || m_Aura->m_StartedGames.size() == m_Aura->m_Config.m_MaxStartedGames && !m_Aura->m_Config.m_DoNotCountReplaceableLobby) {
       m_Ctx->ErrorReply("Games hosted quota reached.", CHAT_SEND_SOURCE_ALL);
       return;
 	}*/
@@ -1207,7 +1207,7 @@ void CGameSetup::OnLoadMapSuccess()
       ++m_Aura->m_ReplacingLobbiesCounter;
     }
     CRealm* sourceRealm = m_Ctx->GetSourceRealm();
-    if (m_Aura->m_Config->m_AutomaticallySetGameOwner) {
+    if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
       SetOwner(m_Ctx->GetSender(), sourceRealm);
     }
     if (sourceGame) {
@@ -1287,8 +1287,8 @@ bool CGameSetup::LoadMapSync()
     if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable) {
       return false;
     }
-    if (m_Aura->m_Config->m_EnableCFGCache) {
-      filesystem::path cachePath = m_Aura->m_Config->m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini");
+    if (m_Aura->m_Config.m_EnableCFGCache) {
+      filesystem::path cachePath = m_Aura->m_Config.m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini");
       m_Map = GetBaseMapFromConfigFile(cachePath, true, true);
       if (m_Map) return true;
     }
@@ -1548,7 +1548,7 @@ void CGameSetup::SetGameSavedFile(const std::filesystem::path& filePath)
   } else if (filePath != filePath.filename()) {
     m_SaveFile = filePath;
   } else {
-    m_SaveFile = m_Aura->m_Config->m_GameSavePath / filePath;
+    m_SaveFile = m_Aura->m_Config.m_GameSavePath / filePath;
   }
 }
 

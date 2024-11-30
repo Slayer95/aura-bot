@@ -475,7 +475,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Net(nullptr),
 
     m_ConfigPath(CFG.GetFile()),
-    m_Config(nullptr),
+    m_Config(CBotConfig(CFG)),
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
     m_CommandDefaultConfig(new CCommandConfig()),
@@ -511,13 +511,13 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     return;
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
-  m_Net = new CNet(this);
-  m_Discord = new CDiscord(this);
-  m_IRC = new CIRC(this);
+  m_Net = new CNet(this, CFG);
+  m_Discord = new CDiscord(this, CFG);
+  m_IRC = new CIRC(this, CFG);
 
   CRC32::Initialize();
 
-  if (!LoadConfigs(CFG)) {
+  if (!CFG.GetSuccess() || !LoadDefaultConfigs(CFG, &m_Net->m_Config)) {
     Print("[CONFIG] Error: Critical errors found in " + PathToString(m_ConfigPath.filename()));
     m_Ready = false;
     return;
@@ -549,48 +549,48 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     return;
   }
 
-  if (m_Net->m_Config->m_UDPEnableCustomPortTCP4) {
-    Print("[AURA] broadcasting games port " + to_string(m_Net->m_Config->m_UDPCustomPortTCP4) + " over LAN");
+  if (m_Net->m_Config.m_UDPEnableCustomPortTCP4) {
+    Print("[AURA] broadcasting games port " + to_string(m_Net->m_Config.m_UDPCustomPortTCP4) + " over LAN");
   }
 
   m_RealmsIdentifiers.resize(16);
-  if (m_Config->m_EnableBNET.has_value()) {
-    if (m_Config->m_EnableBNET.value()) {
+  if (m_Config.m_EnableBNET.has_value()) {
+    if (m_Config.m_EnableBNET.value()) {
       Print("[AURA] all realms forcibly set to ENABLED <bot.toggle_every_realm = on>");
     } else {
       Print("[AURA] all realms forcibly set to DISABLED <bot.toggle_every_realm = off>");
     }
   }
   bitset<120> definedRealms;
-  if (m_Config->m_EnableBNET.value_or(true)) {
+  if (m_Config.m_EnableBNET.value_or(true)) {
     LoadBNETs(CFG, definedRealms);
   }
 
   try {
-    filesystem::create_directory(m_Config->m_MapPath);
+    filesystem::create_directory(m_Config.m_MapPath);
   } catch (...) {
     Print("[AURA] warning - <bot.maps_path> is not a valid directory");
   }
 
   try {
-    filesystem::create_directory(m_Config->m_MapCFGPath);
+    filesystem::create_directory(m_Config.m_MapCFGPath);
   } catch (...) {
     Print("[AURA] warning - <bot.map.configs_path> is not a valid directory");
   }
 
   try {
-    filesystem::create_directory(m_Config->m_MapCachePath);
+    filesystem::create_directory(m_Config.m_MapCachePath);
   } catch (...) {
     Print("[AURA] warning - <bot.map.cache_path> is not a valid directory");
   }
 
   try {
-    filesystem::create_directory(m_Config->m_JASSPath);
+    filesystem::create_directory(m_Config.m_JASSPath);
   } catch (...) {
     Print("[AURA] warning - <bot.jass_path> is not a valid directory");
   }
 
-  if (m_Config->m_ExtractJASS) {
+  if (m_Config.m_ExtractJASS) {
     // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
     // these two files are necessary for calculating <map.weak_hash>, and <map.sha1> when loading maps so we make sure they are available
     // see CMap :: Load for more information
@@ -603,7 +603,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     }
   }
 
-  if (m_Config->m_EnableCFGCache) {
+  if (m_Config.m_EnableCFGCache) {
     CacheMapPresets();
   }
 
@@ -617,14 +617,14 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     Print("[CONFIG] warning - some keys are misnamed: " + JoinVector(invalidKeys, false));
   }
 
-  if (m_Realms.empty() && m_Config->m_EnableBNET.value_or(true))
+  if (m_Realms.empty() && m_Config.m_EnableBNET.value_or(true))
     Print("[AURA] notice - no enabled battle.net connections configured");
-  if (!m_IRC->m_Config->m_Enabled)
+  if (!m_IRC->m_Config.m_Enabled)
     Print("[AURA] notice - no irc connection configured");
-  if (!m_Discord->m_Config->m_Enabled)
+  if (!m_Discord->m_Config.m_Enabled)
     Print("[AURA] notice - no discord connection configured");
 
-  if (m_Realms.empty() && !m_IRC->m_Config->m_Enabled && !m_Discord->m_Config->m_Enabled && m_PendingActions.empty()) {
+  if (m_Realms.empty() && !m_IRC->m_Config.m_Enabled && !m_Discord->m_Config.m_Enabled && m_PendingActions.empty()) {
     Print("[AURA] error - no inputs connected");
     m_Ready = false;
     return;
@@ -648,8 +648,8 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
       continue;
     }
     CRealmConfig* ThisConfig = new CRealmConfig(CFG, m_RealmDefaultConfig, i);
-    if (m_Config->m_EnableBNET.has_value()) {
-      ThisConfig->m_Enabled = m_Config->m_EnableBNET.value();
+    if (m_Config.m_EnableBNET.has_value()) {
+      ThisConfig->m_Enabled = m_Config.m_EnableBNET.value();
     }
     if (ThisConfig->m_UserName.empty() || ThisConfig->m_PassWord.empty()) {
       ThisConfig->m_Enabled = false;
@@ -724,6 +724,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
       longestGamePrefixSize = realmConfig->m_GamePrefix.length();
 
     m_RealmsByHostCounter[matchingRealm->GetHostCounterID()] = matchingRealm;
+    delete realmConfig;
   }
 
   m_MaxGameNameSize = 31 - longestGamePrefixSize;
@@ -733,8 +734,8 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
 bool CAura::CopyScripts()
 {
   // Try to use manually extracted files already available in bot.map.configs_path
-  filesystem::path autoExtractedCommonPath = m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j");
-  filesystem::path autoExtractedBlizzardPath = m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j");
+  filesystem::path autoExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j");
+  filesystem::path autoExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j");
   bool commonExists = FileExists(autoExtractedCommonPath);
   bool blizzardExists = FileExists(autoExtractedBlizzardPath);
   if (commonExists && blizzardExists) {
@@ -742,7 +743,7 @@ bool CAura::CopyScripts()
   }
 
   if (!commonExists) {
-    filesystem::path manuallyExtractedCommonPath = m_Config->m_JASSPath / filesystem::path("common.j");
+    filesystem::path manuallyExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common.j");
     try {
       filesystem::copy_file(manuallyExtractedCommonPath, autoExtractedCommonPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
@@ -751,7 +752,7 @@ bool CAura::CopyScripts()
     }
   }
   if (!blizzardExists) {
-    filesystem::path manuallyExtractedBlizzardPath = m_Config->m_JASSPath / filesystem::path("blizzard.j");
+    filesystem::path manuallyExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard.j");
     try {
       filesystem::copy_file(manuallyExtractedBlizzardPath, autoExtractedBlizzardPath, filesystem::copy_options::skip_existing);
     } catch (const exception& e) {
@@ -804,7 +805,6 @@ CAura::~CAura()
   UnholdContext(m_ReloadContext),
   m_ReloadContext = nullptr;
 
-  delete m_Config;
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
   delete m_CommandDefaultConfig;
@@ -996,7 +996,7 @@ bool CAura::Update()
     !m_AutoRehostGameSetup
   );
 
-  if (isStandby && (m_Config->m_ExitOnStandby || (m_ExitingSoon && CheckGracefulExit()))) {
+  if (isStandby && (m_Config.m_ExitOnStandby || (m_ExitingSoon && CheckGracefulExit()))) {
     return true;
   }
 
@@ -1123,7 +1123,7 @@ bool CAura::Update()
     }
     CStreamIOSocket* socket = server.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
-      if (m_Net->m_Config->m_ProxyReconnect > 0) {
+      if (m_Net->m_Config.m_ProxyReconnect > 0) {
         CConnection* incomingConnection = new CConnection(this, localPort, socket);
 #ifdef DEBUG
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
@@ -1308,7 +1308,7 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
   Print("[GAME: " + game->GetGameName() + "] Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
 
   bool earlyExit = false;
-  switch (game->m_Config->m_BroadcastErrorHandler) {
+  switch (game->m_Config.m_BroadcastErrorHandler) {
     case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR:
       if (!errorRealm->GetIsMain()) break;
       // fall through
@@ -1331,7 +1331,7 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
     return;
   }
 
-  if (game->m_Config->m_BroadcastErrorHandler == ON_ADV_ERROR_EXIT_ON_MAX_ERRORS) {
+  if (game->m_Config.m_BroadcastErrorHandler == ON_ADV_ERROR_EXIT_ON_MAX_ERRORS) {
     for (auto& realm : m_Realms) {
       if (!realm->GetEnabled()) {
         continue;
@@ -1437,15 +1437,15 @@ bool CAura::ReloadConfigs()
 {
   bool success = true;
   uint8_t WasVersion = m_GameVersion;
-  bool WasCacheEnabled = m_Config->m_EnableCFGCache;
-  filesystem::path WasMapPath = m_Config->m_MapPath;
-  filesystem::path WasCFGPath = m_Config->m_MapCFGPath;
-  filesystem::path WasCachePath = m_Config->m_MapCachePath;
-  filesystem::path WasJASSPath = m_Config->m_JASSPath;
+  bool WasCacheEnabled = m_Config.m_EnableCFGCache;
+  filesystem::path WasMapPath = m_Config.m_MapPath;
+  filesystem::path WasCFGPath = m_Config.m_MapCFGPath;
+  filesystem::path WasCachePath = m_Config.m_MapCachePath;
+  filesystem::path WasJASSPath = m_Config.m_JASSPath;
   CConfig CFG;
   if (!CFG.Read(m_ConfigPath)) {
     Print("[CONFIG] warning - failed to read config file");
-  } else if (!LoadConfigs(CFG)) {
+  } else if (!LoadAllConfigs(CFG)) {
     Print("[CONFIG] error - bot configuration invalid: not reloaded");
     success = false;
   }
@@ -1464,7 +1464,7 @@ bool CAura::ReloadConfigs()
     Print("[AURA] Running game version 1." + to_string(m_GameVersion));
   }
 
-  if (m_Config->m_ExtractJASS) {
+  if (m_Config.m_ExtractJASS) {
     if (!m_ScriptsExtracted || m_GameVersion != WasVersion) {
       m_ScriptsExtracted = ExtractScripts() == 2;
       if (!m_ScriptsExtracted) {
@@ -1473,39 +1473,39 @@ bool CAura::ReloadConfigs()
     }
   }
 
-  bool reCachePresets = WasCacheEnabled != m_Config->m_EnableCFGCache;
-  if (WasMapPath != m_Config->m_MapPath) {
+  bool reCachePresets = WasCacheEnabled != m_Config.m_EnableCFGCache;
+  if (WasMapPath != m_Config.m_MapPath) {
     try {
-      filesystem::create_directory(m_Config->m_MapPath);
+      filesystem::create_directory(m_Config.m_MapPath);
     } catch (...) {
       Print("[AURA] warning - <bot.maps_path> is not a valid directory");
     }
     reCachePresets = true;
   }
-  if (WasCachePath != m_Config->m_MapCachePath) {
+  if (WasCachePath != m_Config.m_MapCachePath) {
     try {
-      filesystem::create_directory(m_Config->m_MapCachePath);
+      filesystem::create_directory(m_Config.m_MapCachePath);
     } catch (...) {
       Print("[AURA] warning - <bot.map.cache_path> is not a valid directory");
     }
     reCachePresets = true;
   }
-  if (WasCFGPath != m_Config->m_MapCFGPath) {
+  if (WasCFGPath != m_Config.m_MapCFGPath) {
     try {
-      filesystem::create_directory(m_Config->m_MapCFGPath);
+      filesystem::create_directory(m_Config.m_MapCFGPath);
     } catch (...) {
       Print("[AURA] warning - <bot.map.configs_path> is not a valid directory");
     }
   }
-  if (WasJASSPath != m_Config->m_JASSPath) {
+  if (WasJASSPath != m_Config.m_JASSPath) {
     try {
-      filesystem::create_directory(m_Config->m_JASSPath);
+      filesystem::create_directory(m_Config.m_JASSPath);
     } catch (...) {
       Print("[AURA] warning - <bot.jass_path> is not a valid directory");
     }
   }
 
-  if (!m_Config->m_EnableCFGCache) {
+  if (!m_Config.m_EnableCFGCache) {
     m_CachedMaps.clear();
   } else if (reCachePresets) {
     CacheMapPresets();
@@ -1529,48 +1529,54 @@ void CAura::TryReloadConfigs()
   m_ReloadContext = nullptr;
 }
 
-bool CAura::LoadConfigs(CConfig& CFG)
+bool CAura::LoadDefaultConfigs(CConfig& CFG, CNetConfig* netConfig)
 {
-  CBotConfig* BotConfig = new CBotConfig(CFG);
-  CNetConfig* NetConfig = new CNetConfig(CFG);
-  CIRCConfig* IRCConfig = new CIRCConfig(CFG);
-  CDiscordConfig* DiscordConfig = new CDiscordConfig(CFG);
-  CRealmConfig* RealmDefaultConfig = new CRealmConfig(CFG, NetConfig);
+  CRealmConfig* RealmDefaultConfig = new CRealmConfig(CFG, netConfig);
   CGameConfig* GameDefaultConfig = new CGameConfig(CFG);
 
   if (!CFG.GetSuccess()) {
-    delete BotConfig;
-    delete NetConfig;
-    delete IRCConfig;
-    delete DiscordConfig;
     delete RealmDefaultConfig;
     delete GameDefaultConfig;
     return false;
   }
   
-  delete m_Config;
-  delete m_Net->m_Config;
-  delete m_IRC->m_Config;
-  delete m_Discord->m_Config;
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
 
-  m_Config = BotConfig;
-  m_Net->m_Config = NetConfig;
-  m_IRC->m_Config = IRCConfig;
-  m_Discord->m_Config = DiscordConfig;
   m_RealmDefaultConfig = RealmDefaultConfig;
   m_GameDefaultConfig = GameDefaultConfig;
 
   return true;
 }
 
+bool CAura::LoadAllConfigs(CConfig& CFG)
+{
+  CBotConfig BotConfig = CBotConfig(CFG);
+  CNetConfig NetConfig = CNetConfig(CFG);
+  CIRCConfig IRCConfig = CIRCConfig(CFG);
+  CDiscordConfig DiscordConfig = CDiscordConfig(CFG);
+
+  if (!CFG.GetSuccess()) {
+    return false;
+  }
+
+  if (!LoadDefaultConfigs(CFG, &NetConfig)) {
+    return false;
+  }
+
+  m_Config = BotConfig;
+  m_Net->m_Config = NetConfig;
+  m_IRC->m_Config = IRCConfig;
+  m_Discord->m_Config = DiscordConfig;
+  return true;
+}
+
 void CAura::OnLoadConfigs()
 {
-  m_LogLevel = m_Config->m_LogLevel;
+  m_LogLevel = m_Config.m_LogLevel;
 
-  if (m_Config->m_Warcraft3Path.has_value()) {
-    m_GameInstallPath = m_Config->m_Warcraft3Path.value();
+  if (m_Config.m_Warcraft3Path.has_value()) {
+    m_GameInstallPath = m_Config.m_Warcraft3Path.value();
   } else if (m_GameInstallPath.empty()) {
 #ifdef _WIN32
     size_t valueSize;
@@ -1618,8 +1624,8 @@ void CAura::OnLoadConfigs()
     }
   }
 
-  if (m_Config->m_War3Version.has_value()) {
-    m_GameVersion = m_Config->m_War3Version.value();
+  if (m_Config.m_War3Version.has_value()) {
+    m_GameVersion = m_Config.m_War3Version.value();
   } else if (m_GameVersion == 0 && !m_GameInstallPath.empty() && htons(0xe017) == 0x17e0) {
     optional<uint8_t> AutoVersion = CBNCSUtilInterface::GetGameVersion(m_GameInstallPath);
     if (AutoVersion.has_value()) {
@@ -1628,8 +1634,8 @@ void CAura::OnLoadConfigs()
   }
 
   m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
-  m_Lobbies.reserve(m_Config->m_MaxLobbies);
-  m_StartedGames.reserve(m_Config->m_MaxStartedGames);
+  m_Lobbies.reserve(m_Config.m_MaxLobbies);
+  m_StartedGames.reserve(m_Config.m_MaxStartedGames);
 }
 
 uint8_t CAura::ExtractScripts()
@@ -1648,8 +1654,8 @@ uint8_t CAura::ExtractScripts()
 
   void* MPQ;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
     CloseMPQArchive(MPQ);
   } else {
 #ifdef _WIN32
@@ -1674,7 +1680,7 @@ uint8_t CAura::ExtractScripts()
 void CAura::LoadMapAliases()
 {
   CConfig aliases;
-  if (!aliases.Read(m_Config->m_AliasesPath)) {
+  if (!aliases.Read(m_Config.m_AliasesPath)) {
     return;
   }
 
@@ -1800,13 +1806,13 @@ void CAura::CacheMapPresets()
   m_CachedMaps.clear();
 
   // Preload map.Localpath -> mapcache entries
-  const vector<filesystem::path> cacheFiles = FilesMatch(m_Config->m_MapCachePath, FILE_EXTENSIONS_CONFIG);
+  const vector<filesystem::path> cacheFiles = FilesMatch(m_Config.m_MapCachePath, FILE_EXTENSIONS_CONFIG);
   for (const auto& cfgName : cacheFiles) {
-    string localPathString = CConfig::ReadString(m_Config->m_MapCachePath / cfgName, "map.local_path");
+    string localPathString = CConfig::ReadString(m_Config.m_MapCachePath / cfgName, "map.local_path");
     filesystem::path localPath = localPathString;
     localPath = localPath.lexically_normal();
     try {
-      if (localPath == localPath.filename() || filesystem::absolute(localPath.parent_path()) == filesystem::absolute(m_Config->m_MapPath.parent_path())) {
+      if (localPath == localPath.filename() || filesystem::absolute(localPath.parent_path()) == filesystem::absolute(m_Config.m_MapPath.parent_path())) {
         string mapString = PathToString(localPath.filename());
         string cfgString = PathToString(cfgName);
         if (mapString.empty() || cfgString.empty()) continue;
@@ -1821,7 +1827,7 @@ void CAura::CacheMapPresets()
 void CAura::LogPersistent(const string& logText)
 {
   ofstream writeStream;
-  writeStream.open(m_Config->m_LogPath.native().c_str(), ios::binary | ios::app );
+  writeStream.open(m_Config.m_LogPath.native().c_str(), ios::binary | ios::app );
 
   if (writeStream.fail( )) {
     return;
@@ -1834,7 +1840,7 @@ void CAura::LogPersistent(const string& logText)
 void CAura::GracefulExit()
 {
   m_ExitingSoon = true;
-  m_Config->m_Enabled = false;
+  m_Config.m_Enabled = false;
 
   ClearAutoRehost();
 
@@ -1858,10 +1864,10 @@ void CAura::GracefulExit()
   }
 
   if (m_IRC) {
-    m_IRC->m_Config->m_Enabled = false;
+    m_IRC->m_Config.m_Enabled = false;
   }
   if (m_Discord) {
-    m_Discord->m_Config->m_Enabled = false;
+    m_Discord->m_Config.m_Enabled = false;
   }
 }
 
@@ -1900,29 +1906,29 @@ bool CAura::CheckGracefulExit()
 
 bool CAura::GetNewGameIsInQuota() const
 {
-  if (m_Lobbies.size() - m_ReplacingLobbiesCounter >= m_Config->m_MaxLobbies) return false;
-  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config->m_MaxTotalGames) return false;
+  if (m_Lobbies.size() - m_ReplacingLobbiesCounter >= m_Config.m_MaxLobbies) return false;
+  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config.m_MaxTotalGames) return false;
   return true;
 }
 
 bool CAura::GetNewGameIsInQuotaReplace() const
 {
-  if (m_Lobbies.size() - m_ReplacingLobbiesCounter > m_Config->m_MaxLobbies) return false;
-  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config->m_MaxTotalGames) return false;
+  if (m_Lobbies.size() - m_ReplacingLobbiesCounter > m_Config.m_MaxLobbies) return false;
+  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config.m_MaxTotalGames) return false;
   return true;
 }
 
 bool CAura::GetNewGameIsInQuotaConservative() const
 {
-  if (m_Lobbies.size() >= m_Config->m_MaxLobbies) return false;
-  if (m_StartedGames.size() >= m_Config->m_MaxStartedGames) return false;
-  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config->m_MaxTotalGames) return false;
+  if (m_Lobbies.size() >= m_Config.m_MaxLobbies) return false;
+  if (m_StartedGames.size() >= m_Config.m_MaxStartedGames) return false;
+  if (m_Lobbies.size() + m_StartedGames.size() >= m_Config.m_MaxTotalGames) return false;
   return true;
 }
 
 bool CAura::GetNewGameIsInQuotaAutoReHost() const
 {
-  if (m_Config->m_AutoRehostQuotaConservative) {
+  if (m_Config.m_AutoRehostQuotaConservative) {
     return GetNewGameIsInQuotaConservative();
   } else {
     return GetNewGameIsInQuota();
@@ -1937,7 +1943,7 @@ bool CAura::GetIsAutoHostThrottled() const
 
 bool CAura::CreateGame(CGameSetup* gameSetup)
 {
-  if (!m_Config->m_Enabled) {
+  if (!m_Config.m_Enabled) {
     gameSetup->m_Ctx->ErrorReply("The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }
@@ -1993,7 +1999,7 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   UpdateMetaData();
 
 #ifndef DISABLE_MINIUPNP
-  if (m_Net->m_Config->m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
+  if (m_Net->m_Config.m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // This is a long synchronous network call.
     // TODO: Cache UPnP per-port
     m_Net->RequestUPnP("TCP", createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
@@ -2139,8 +2145,8 @@ void CAura::UnholdContext(CCommandContext* nCtx)
 uint32_t CAura::NextHostCounter()
 {
   m_HostCounter = (m_HostCounter + 1) & 0x00FFFFFF;
-  if (m_HostCounter < m_Config->m_MinHostCounter) {
-    m_HostCounter = m_Config->m_MinHostCounter;
+  if (m_HostCounter < m_Config.m_MinHostCounter) {
+    m_HostCounter = m_Config.m_MinHostCounter;
   }
   return m_HostCounter;
 }

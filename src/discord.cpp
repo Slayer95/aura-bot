@@ -45,10 +45,10 @@ using namespace std;
 //// CDiscord ////
 //////////////////
 
-CDiscord::CDiscord(CAura* nAura)
+CDiscord::CDiscord(CAura* nAura, CConfig& nCFG)
   : m_Aura(nAura),
+    m_Config(CDiscordConfig(nCFG)),
     m_Client(nullptr),
-    m_Config(nullptr),
     m_NickName(string()),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
@@ -64,8 +64,6 @@ CDiscord::~CDiscord()
       ctx->SetPartiallyDestroyed();
     }
   }
-
-  delete m_Config;
 
 #ifndef DISABLE_DPP
   // dpp has a tendency to crash on shutdown
@@ -112,7 +110,7 @@ CDiscord::~CDiscord()
 #ifndef DISABLE_DPP
 bool CDiscord::Init()
 {
-  m_Client = new dpp::cluster(m_Config->m_Token);
+  m_Client = new dpp::cluster(m_Config.m_Token);
   if (!m_Client) {
     return false;
   }
@@ -161,7 +159,7 @@ bool CDiscord::Init()
 void CDiscord::RegisterCommands()
 {
   vector<dpp::slashcommand> commands;
-  dpp::slashcommand nameSpace(m_Config->m_CommandCFG->m_NameSpace, "Run any of Aura's commands.", m_Client->me.id);
+  dpp::slashcommand nameSpace(m_Config.m_CommandCFG->m_NameSpace, "Run any of Aura's commands.", m_Client->me.id);
   nameSpace.add_option(
     dpp::command_option(dpp::co_string, "command", "The command to be executed.", true)
   );
@@ -171,7 +169,7 @@ void CDiscord::RegisterCommands()
   nameSpace.set_dm_permission(true);
   commands.push_back(nameSpace);
 
-  if (m_Config->m_CommandCFG->m_HostPermissions != COMMAND_PERMISSIONS_DISABLED) {
+  if (m_Config.m_CommandCFG->m_HostPermissions != COMMAND_PERMISSIONS_DISABLED) {
     dpp::slashcommand hostShortcut("host", "Let Aura host a Warcraft 3 game.", m_Client->me.id);
     hostShortcut.add_option(
       dpp::command_option(dpp::co_string, "map", "Map to be hosted.", true)
@@ -188,12 +186,12 @@ void CDiscord::RegisterCommands()
 
 void CDiscord::Update()
 {
-  if (m_Config->m_Enabled == (m_Client == nullptr)) {
-    if (m_Config->m_Enabled) {
+  if (m_Config.m_Enabled == (m_Client == nullptr)) {
+    if (m_Config.m_Enabled) {
 #ifndef DISABLE_DPP
       if (!Init()){
         // For example, we ran out of logins today (Discord limits to 1000 logins daily.)
-        m_Config->m_Enabled = false;
+        m_Config.m_Enabled = false;
         return;
       }
 #else
@@ -244,14 +242,14 @@ void CDiscord::Update()
 #ifndef DISABLE_DPP
   while (!m_CommandQueue.empty()) {
     string cmdToken, command, payload;
-    cmdToken = "/" + m_Config->m_CommandCFG->m_NameSpace + " ";
+    cmdToken = "/" + m_Config.m_CommandCFG->m_NameSpace + " ";
     dpp::slashcommand_t* event = m_CommandQueue.front();
-    if (!m_Config->m_Enabled) {
+    if (!m_Config.m_Enabled) {
       delete event;
       m_CommandQueue.pop();
       continue;
     }
-    if (event->command.get_command_name() == m_Config->m_CommandCFG->m_NameSpace) {
+    if (event->command.get_command_name() == m_Config.m_CommandCFG->m_NameSpace) {
       dpp::command_value maybePayload = event->get_parameter("payload");
       if (holds_alternative<string>(maybePayload)) {
         payload = get<string>(maybePayload);
@@ -301,15 +299,15 @@ void CDiscord::SendUser(const string& message, const uint64_t target)
 
 bool CDiscord::GetIsServerAllowed(const uint64_t target) const
 {
-  switch (m_Config->m_FilterJoinServersMode) {
+  switch (m_Config.m_FilterJoinServersMode) {
   case FILTER_ALLOW_ALL:
     return true;
   case FILTER_DENY_ALL:
     return false;
   case FILTER_ALLOW_LIST:
-    return m_Config->m_FilterJoinServersList.find(target) != m_Config->m_FilterJoinServersList.end();
+    return m_Config.m_FilterJoinServersList.find(target) != m_Config.m_FilterJoinServersList.end();
   case FILTER_DENY_LIST:
-    return m_Config->m_FilterJoinServersList.find(target) == m_Config->m_FilterJoinServersList.end();
+    return m_Config.m_FilterJoinServersList.find(target) == m_Config.m_FilterJoinServersList.end();
   default:
     return false;
   }
@@ -317,15 +315,15 @@ bool CDiscord::GetIsServerAllowed(const uint64_t target) const
 
 bool CDiscord::GetIsUserAllowed(const uint64_t target) const
 {
-  switch (m_Config->m_FilterInstallUsersMode) {
+  switch (m_Config.m_FilterInstallUsersMode) {
   case FILTER_ALLOW_ALL:
     return true;
   case FILTER_DENY_ALL:
     return false;
   case FILTER_ALLOW_LIST:
-    return m_Config->m_FilterInstallUsersList.find(target) != m_Config->m_FilterInstallUsersList.end();
+    return m_Config.m_FilterInstallUsersList.find(target) != m_Config.m_FilterInstallUsersList.end();
   case FILTER_DENY_LIST:
-    return m_Config->m_FilterInstallUsersList.find(target) == m_Config->m_FilterInstallUsersList.end();
+    return m_Config.m_FilterInstallUsersList.find(target) == m_Config.m_FilterInstallUsersList.end();
   default:
     return false;
   }
@@ -347,7 +345,7 @@ void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool
 
 bool CDiscord::GetIsSudoer(const uint64_t nIdentifier)
 {
-  return m_Config->m_SudoUsers.find(nIdentifier) != m_Config->m_SudoUsers.end();
+  return m_Config.m_SudoUsers.find(nIdentifier) != m_Config.m_SudoUsers.end();
 }
 
 bool CDiscord::GetIsConnected() const

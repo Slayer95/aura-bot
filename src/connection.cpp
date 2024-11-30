@@ -131,7 +131,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               Abort = true;
               break;
             }
-            joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
+            joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
               result = INCON_UPDATE_PROMOTED;
               m_Type = INCON_TYPE_PLAYER;
@@ -156,7 +156,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case GPSProtocol::Magic::GPS_HEADER: {
-          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config->m_ProxyReconnect > 0) {
+          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config.m_ProxyReconnect > 0) {
             const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
             const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
             GameUser::CGameUser* targetUser = nullptr;
@@ -175,7 +175,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               result = INCON_UPDATE_RECONNECTED;
               Abort = true;
             }          
-          } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::UDPSYN && m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
+          } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::UDPSYN && m_Aura->m_Net->m_Config.m_EnableTCPWrapUDP) {
             // in-house extension
             m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_UDP_TUNNEL);
             result = INCON_UPDATE_PROMOTED;
@@ -185,7 +185,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
         }
 
         case VLANProtocol::Magic::VLAN_HEADER: {
-          if (m_Type != INCON_TYPE_NONE || !m_Aura->m_Net->m_Config->m_VLANEnabled) {
+          if (m_Type != INCON_TYPE_NONE || !m_Aura->m_Net->m_Config.m_VLANEnabled) {
             Abort = true;
             break;
           }

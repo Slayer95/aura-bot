@@ -135,7 +135,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
 
     m_Permissions(0),
 
-    m_ServerName(ircNetwork->m_Config->m_HostName),
+    m_ServerName(ircNetwork->m_Config.m_HostName),
     m_ReverseHostName(reverseHostName),
     m_ChannelName(channelName),
 
@@ -257,7 +257,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* irc
     m_IsBroadcast(nIsBroadcast),
     m_Permissions(0),
 
-    m_ServerName(ircNetwork->m_Config->m_HostName),
+    m_ServerName(ircNetwork->m_Config.m_HostName),
     m_ReverseHostName(reverseHostName),
     m_ChannelName(channelName),
 
@@ -391,10 +391,10 @@ void CCommandContext::UpdatePermissions()
   m_Permissions = 0;
 
   if (m_IRC) {
-    string::size_type suffixSize = m_IRC->m_Config->m_VerifiedDomain.length();
+    string::size_type suffixSize = m_IRC->m_Config.m_VerifiedDomain.length();
     if (suffixSize > 0) {
       if (m_ReverseHostName.length() > suffixSize &&
-        m_ReverseHostName.substr(0, m_ReverseHostName.length() - suffixSize) == m_IRC->m_Config->m_VerifiedDomain
+        m_ReverseHostName.substr(0, m_ReverseHostName.length() - suffixSize) == m_IRC->m_Config.m_VerifiedDomain
       ) {
         m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
       }
@@ -1214,16 +1214,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     SendReply("Sudo command requested. See Aura's console for further steps.");
     Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + cmdToken + Payload + "\"");
     if (m_SourceRealm && m_FromWhisper) {
-      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config->m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC || m_DiscordAPI) {
-      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + m_Aura->m_Config->m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
-      Print("[AURA] Confirm from the game client with: \"" + cmdToken + m_Aura->m_Config->m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from the game client with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     }
     return;
   }
 
-  if (CommandHash == HashCode(m_Aura->m_Config->m_SudoKeyWord)) {
+  if (CommandHash == HashCode(m_Aura->m_Config.m_SudoKeyWord)) {
     optional<pair<string, string>> runOverride = CheckSudo(Payload);
     if (runOverride.has_value()) {
       Command = runOverride->first;
@@ -1394,7 +1394,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         IPVersionFragment = ", IPv4";
       }
       string FromFragment;
-      if (m_Aura->m_Net->m_Config->m_EnableGeoLocalization) {
+      if (m_Aura->m_Net->m_Config.m_EnableGeoLocalization) {
         FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true));
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + targetPlayer->GetReconnectionText() + FromFragment + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
@@ -1442,7 +1442,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (kickPing.has_value())
-        m_TargetGame->m_Config->m_AutoKickPing = kickPing.value();
+        m_TargetGame->m_Config.m_AutoKickPing = kickPing.value();
 
       // copy the m_Users vector so we can sort by descending ping so it's easier to find players with high pings
 
@@ -1469,7 +1469,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (anyPing) {
         SendReply(JoinVector(pingsText, false), !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
-      } else if (m_Aura->m_Net->m_Config->m_HasBufferBloat && m_TargetGame->IsDownloading()) {
+      } else if (m_Aura->m_Net->m_Config.m_HasBufferBloat && m_TargetGame->IsDownloading()) {
         SendReply("Ping not measured yet (wait for map download.)", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       } else {
         SendReply("Ping not measured yet.", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
@@ -1478,10 +1478,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       const uint16_t internalLatency = m_TargetGame->GetLatency();
       const bool suggestLowerLatency = 0 < maxPing && maxPing < internalLatency && REFRESH_PERIOD_MIN_SUGGESTED < internalLatency;
       const bool suggestHigherLatency = 0 < maxPing && internalLatency < maxPing / 4 && REFRESH_PERIOD_MAX_SUGGESTED > internalLatency;
-      if (m_TargetGame->m_Config->m_LatencyEqualizerEnabled || suggestLowerLatency || suggestHigherLatency) {
+      if (m_TargetGame->m_Config.m_LatencyEqualizerEnabled || suggestLowerLatency || suggestHigherLatency) {
         string refreshText = "Internal latency is " + to_string(m_TargetGame->GetLatency()) + "ms.";
         string equalizerHeader;
-        if (m_TargetGame->m_Config->m_LatencyEqualizerEnabled) {
+        if (m_TargetGame->m_Config.m_LatencyEqualizerEnabled) {
           equalizerHeader = "Ping equalizer ENABLED. ";
         }
         string suggestionText;
@@ -1687,7 +1687,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SendReply("Votekick against [" + m_TargetGame->m_KickVotePlayer + "] started by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
       if (m_GameUser && m_GameUser != targetPlayer) {
         m_GameUser->SetKickVote(true);
-        SendAll("[" + m_GameUser->GetDisplayName() + "] voted to kick [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config->m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
+        SendAll("[" + m_GameUser->GetDisplayName() + "] voted to kick [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config.m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
       }
       SendAll("Type " + cmdToken + "yes or " + cmdToken + "no to vote.");
 
@@ -1702,7 +1702,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_GameUser || m_TargetGame->m_KickVotePlayer.empty() || m_GameUser->GetKickVote().value_or(false))
         break;
 
-      uint32_t VotesNeeded = static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config->m_VoteKickPercentage) / 100));
+      uint32_t VotesNeeded = static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config.m_VoteKickPercentage) / 100));
       m_GameUser->SetKickVote(true);
       m_TargetGame->SendAllChat("[" + m_GameUser->GetDisplayName() + "] voted for kicking [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(VotesNeeded) + " affirmative votes required to pass");
       m_TargetGame->CountKickVotes();
@@ -2094,7 +2094,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (!m_Aura->m_Net->m_Config->m_EnableGeoLocalization) {
+      if (!m_Aura->m_Net->m_Config.m_EnableGeoLocalization) {
         ErrorReply("Geolocalization is disabled.");
         break;
       }
@@ -2295,7 +2295,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("reconnect"):
     case HashCode("gproxy"): {
-      SendReply("Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">");
+      SendReply("Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">");
       break;
     }
 
@@ -2546,7 +2546,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       double refreshTime = static_cast<double>(Args[0]);
-      double refreshFactor = /*m_TargetGame->m_Config->m_LatencyEqualizerEnabled ? 2. : */1.;
+      double refreshFactor = /*m_TargetGame->m_Config.m_LatencyEqualizerEnabled ? 2. : */1.;
       optional<double> tolerance;
       if (Args.size() >= 2) {
         tolerance = static_cast<double>(Args[1]);
@@ -2582,9 +2582,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (syncLimitSafe < syncLimit / 2) syncLimitSafe = syncLimit / 2;
       if (syncLimitSafe < 1) syncLimitSafe = 1;
 
-      m_TargetGame->m_Config->m_Latency = static_cast<uint16_t>(refreshTime * refreshFactor);
-      m_TargetGame->m_Config->m_SyncLimit = static_cast<uint16_t>(syncLimit);
-      m_TargetGame->m_Config->m_SyncLimitSafe = static_cast<uint16_t>(syncLimitSafe);
+      m_TargetGame->m_Config.m_Latency = static_cast<uint16_t>(refreshTime * refreshFactor);
+      m_TargetGame->m_Config.m_SyncLimit = static_cast<uint16_t>(syncLimit);
+      m_TargetGame->m_Config.m_SyncLimitSafe = static_cast<uint16_t>(syncLimitSafe);
 
       const uint32_t finalToleranceMilliseconds = (
         static_cast<uint32_t>(m_TargetGame->GetLatency()) *
@@ -2627,7 +2627,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->m_Config->m_LatencyEqualizerEnabled == targetValue.value()) {
+      if (m_TargetGame->m_Config.m_LatencyEqualizerEnabled == targetValue.value()) {
         if (targetValue.value()) {
           ErrorReply("Latency equalizer is already enabled.");
         } else {
@@ -2636,7 +2636,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->m_Config->m_LatencyEqualizerEnabled = targetValue.value();
+      m_TargetGame->m_Config.m_LatencyEqualizerEnabled = targetValue.value();
 
       if (!targetValue.value()) {
         if (m_TargetGame->GetGameLoaded()) {
@@ -2803,7 +2803,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_Aura->m_GameSetup->SetContext(this);
         m_Aura->m_GameSetup->SetBaseName(Payload);
         m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
-        if (m_Aura->m_Config->m_AutomaticallySetGameOwner) {
+        if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
           m_Aura->m_GameSetup->SetOwner(m_FromName, m_SourceRealm);
         }
         if (m_SourceRealm) {
@@ -3261,7 +3261,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool IsMapAvailable = !m_TargetGame->GetMap()->GetMapData()->empty() && !m_TargetGame->GetMap()->HasMismatch();
-      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames) {
+      if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
@@ -4035,11 +4035,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_Aura->m_IRC) {
-        message += "[" + m_Aura->m_IRC->m_Config->m_HostName + (!m_Aura->m_IRC->m_WaitingToConnect ? " - online]" : " - offline]");
+        message += "[" + m_Aura->m_IRC->m_Config.m_HostName + (!m_Aura->m_IRC->m_WaitingToConnect ? " - online]" : " - offline]");
       }
 
       if (m_Aura->m_Discord) {
-        message += m_Aura->m_Discord->m_Config->m_HostName + (m_Aura->m_Discord->GetIsConnected() ? " [online]" : " [offline]");
+        message += m_Aura->m_Discord->m_Config.m_HostName + (m_Aura->m_Discord->GetIsConnected() ? " [online]" : " [offline]");
       }
 
       SendReply(message);
@@ -4114,12 +4114,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> or use sudo if you are sure about this.");
           break;
         }
-        if (m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.size() >= UDP_DISCOVERY_MAX_EXTRA_ADDRESSES) {
+        if (m_TargetGame->m_Config.m_ExtraDiscoveryAddresses.size() >= UDP_DISCOVERY_MAX_EXTRA_ADDRESSES) {
           ErrorReply("Max sendlan addresses reached.");
           break;
         }
         bool alreadySending = false;
-        for (auto& existingAddress : m_TargetGame->m_Config->m_ExtraDiscoveryAddresses) {
+        for (auto& existingAddress : m_TargetGame->m_Config.m_ExtraDiscoveryAddresses) {
           if (GetSameAddressesAndPorts(&existingAddress, address)) {
             alreadySending = true;
             break;
@@ -4134,7 +4134,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         m_TargetGame->SetUDPEnabled(true);
         if (!alreadySending) {
-          m_TargetGame->m_Config->m_ExtraDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
+          m_TargetGame->m_Config.m_ExtraDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
         }
         SendReply("This lobby will be displayed in the Local Area Network game list for IP " + Payload + ". Make sure your peer has done UDP hole-punching.");
       }
@@ -5973,7 +5973,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "virtualhost <PLAYERNAME>");
         break;
       }
-      if (m_TargetGame->m_Config->m_LobbyVirtualHostName == targetName) {
+      if (m_TargetGame->m_Config.m_LobbyVirtualHostName == targetName) {
         ErrorReply("Virtual host [" + targetName + "] is already in the game.");
         break;
       }
@@ -5982,7 +5982,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->m_Config->m_LobbyVirtualHostName = targetName;
+      m_TargetGame->m_Config.m_LobbyVirtualHostName = targetName;
       if (m_TargetGame->DeleteVirtualHost()) {
         m_TargetGame->CreateVirtualHost();
       }
@@ -6076,7 +6076,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      vector<filesystem::path> AllMaps = FilesMatch(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP);
+      vector<filesystem::path> AllMaps = FilesMatch(m_Aura->m_Config.m_MapPath, FILE_EXTENSIONS_MAP);
       int goodCounter = 0;
       int badCounter = 0;
       
@@ -6120,7 +6120,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
 
         string CFGName = "local-" + nameString + ".ini";
-        filesystem::path CFGPath = m_Aura->m_Config->m_MapCachePath / filesystem::path(CFGName);
+        filesystem::path CFGPath = m_Aura->m_Config.m_MapCachePath / filesystem::path(CFGName);
 
         vector<uint8_t> OutputBytes = MapCFG.Export();
         FileWrite(CFGPath, OutputBytes.data(), OutputBytes.size());
@@ -6143,8 +6143,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const auto MapCount = FilesMatch(m_Aura->m_Config->m_MapPath, FILE_EXTENSIONS_MAP).size();
-      const auto CFGCount = FilesMatch(m_Aura->m_Config->m_MapCFGPath, FILE_EXTENSIONS_CONFIG).size();
+      const auto MapCount = FilesMatch(m_Aura->m_Config.m_MapPath, FILE_EXTENSIONS_MAP).size();
+      const auto CFGCount = FilesMatch(m_Aura->m_Config.m_MapCFGPath, FILE_EXTENSIONS_CONFIG).size();
 
       SendReply(to_string(MapCount) + " maps on disk, " + to_string(CFGCount) + " presets on disk, " + to_string(m_Aura->m_CachedMaps.size()) + " preloaded.");
       return;
@@ -6165,7 +6165,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         return;
 
       string DeletionType = CommandHash == HashCode("deletecfg") ? "ini" : "map";
-      filesystem::path Folder = DeletionType == "ini" ? m_Aura->m_Config->m_MapCFGPath : m_Aura->m_Config->m_MapPath;
+      filesystem::path Folder = DeletionType == "ini" ? m_Aura->m_Config.m_MapCFGPath : m_Aura->m_Config.m_MapPath;
 
       if ((DeletionType == "ini" && !IsValidCFGName(Payload)) || (DeletionType == "map" &&!IsValidMapName(Payload))) {
         ErrorReply("Removal failed");
@@ -6263,7 +6263,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       SendReply("Creation of new games has been disabled. (Active lobbies will not be unhosted.)");
-      m_Aura->m_Config->m_Enabled = false;
+      m_Aura->m_Config.m_Enabled = false;
       break;
     }
 
@@ -6277,7 +6277,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       SendReply("Creation of new games has been enabled");
-      m_Aura->m_Config->m_Enabled = true;
+      m_Aura->m_Config.m_Enabled = true;
       break;
     }
 
@@ -6299,12 +6299,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
-      if (!targetRealm->m_Config->m_CommandCFG->m_Enabled) {
+      if (!targetRealm->m_Config.m_CommandCFG->m_Enabled) {
         ErrorReply("All commands are already completely disabled in " + targetRealm->GetCanonicalDisplayName());
         break;
       }
       SendReply("Creation of new games has been temporarily disabled for non-staff at " + targetRealm->GetCanonicalDisplayName() + ". (Active lobbies will not be unhosted.)");
-      targetRealm->m_Config->m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
+      targetRealm->m_Config.m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
       break;
     }
 
@@ -6326,12 +6326,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
-      if (!targetRealm->m_Config->m_CommandCFG->m_Enabled) {
+      if (!targetRealm->m_Config.m_CommandCFG->m_Enabled) {
         ErrorReply("All commands are completely disabled in " + targetRealm->GetCanonicalDisplayName());
         break;
       }
       SendReply("Creation of new games has been enabled for non-staff at " + targetRealm->GetCanonicalDisplayName());
-      targetRealm->m_Config->m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
+      targetRealm->m_Config.m_CommandCFG->m_HostPermissions = COMMAND_PERMISSIONS_VERIFIED;
       break;
     }
 
@@ -6342,9 +6342,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("setdownloads"):
     case HashCode("maptransfers"): {
       if (Payload.empty()) {
-        if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
+        if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
           SendReply("Map transfers are disabled");
-        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
+        } else if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
           SendReply("Map transfers are enabled");
         } else {
           SendReply("Map transfers are set to manual");
@@ -6373,10 +6373,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_Aura->m_Net->m_Config->m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
-      if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_NEVER) {
+      m_Aura->m_Net->m_Config.m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
+      if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
         SendAll("Map transfers disabled.");
-      } else if (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
+      } else if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
         SendAll("Map transfers enabled.");
       } else {
         SendAll("Map transfers set to manual.");
@@ -6502,7 +6502,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to list staff in arbitrary realms.");
         break;
       }
-      vector<string> admins = vector<string>(targetRealm->m_Config->m_Admins.begin(), targetRealm->m_Config->m_Admins.end());
+      vector<string> admins = vector<string>(targetRealm->m_Config.m_Admins.begin(), targetRealm->m_Config.m_Admins.end());
       vector<string> moderators = m_Aura->m_DB->ListModerators(m_SourceRealm->GetDataBaseID());
       if (admins.empty() && moderators.empty()) {
         ErrorReply("No staff has been designated in " + targetRealm->GetCanonicalDisplayName());
@@ -6716,7 +6716,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!FileExists(m_Aura->m_Config->m_MapCFGPath)) {
+      if (!FileExists(m_Aura->m_Config.m_MapCFGPath)) {
         ErrorReply("Map config path doesn't exist", CHAT_LOG_CONSOLE);
         break;
       }
@@ -6917,7 +6917,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         const bool isReplace = m_TargetGame && !m_TargetGame->GetCountDownStarted() && m_TargetGame->GetIsReplaceable() && !m_TargetGame->GetIsBeingReplaced();
         if (!(isReplace ? m_Aura->GetNewGameIsInQuotaReplace() : m_Aura->GetNewGameIsInQuota())) {
-          ErrorReply("Other lobbies are already being hosted (maximum is " + to_string(m_Aura->m_Config->m_MaxLobbies) + ").");
+          ErrorReply("Other lobbies are already being hosted (maximum is " + to_string(m_Aura->m_Config.m_MaxLobbies) + ").");
           break;
         }
 
@@ -7045,20 +7045,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_Aura->m_Discord->m_Config->m_InviteUrl.empty()) {
+      if (m_Aura->m_Discord->m_Config.m_InviteUrl.empty()) {
         ErrorReply("This bot is invite-only. Ask the owner for an invitation link.");
         break;
       }
 
-      switch (m_Aura->m_Discord->m_Config->m_FilterJoinServersMode) {
+      switch (m_Aura->m_Discord->m_Config.m_FilterJoinServersMode) {
         case FILTER_DENY_ALL:
-          SendReply("Install me to your user (DM-only) at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
+          SendReply("Install me to your user (DM-only) at <" + m_Aura->m_Discord->m_Config.m_InviteUrl + ">");
           break;
         case FILTER_ALLOW_LIST:
-          SendReply("Install me to your server (requires approval) at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
+          SendReply("Install me to your server (requires approval) at <" + m_Aura->m_Discord->m_Config.m_InviteUrl + ">");
           break;
         default:
-          SendReply("Install me to your server at <" + m_Aura->m_Discord->m_Config->m_InviteUrl + ">");
+          SendReply("Install me to your server at <" + m_Aura->m_Discord->m_Config.m_InviteUrl + ">");
       }
       break;
     }

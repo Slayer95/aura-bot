@@ -254,7 +254,7 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
 
 CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
   : m_Aura(nAura),
-    m_Config(nullptr),
+    m_Config(CGameConfig(nAura->m_GameDefaultConfig, nGameSetup->m_Map, nGameSetup)),
     m_Verbose(nGameSetup->m_Verbose),
     m_Socket(nullptr),
     m_LastLeaverBannable(nullptr),
@@ -362,8 +362,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
-  m_Config = new CGameConfig(nAura->m_GameDefaultConfig, m_Map, nGameSetup);
-  m_IsHiddenPlayerNames = m_Config->m_HideLobbyNames;
+  m_IsHiddenPlayerNames = m_Config.m_HideLobbyNames;
   m_SupportedGameVersionsMin = m_Aura->m_GameVersion;
   m_SupportedGameVersionsMax = m_Aura->m_GameVersion;
   m_SupportedGameVersions.set(m_Aura->m_GameVersion);
@@ -385,10 +384,10 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
   }
 
-  if (m_Config->m_LoadInGame) {
+  if (m_Config.m_LoadInGame) {
     m_BufferingEnabled |= BUFFERING_ENABLED_LOADING;
   }
-  if (m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress) {
+  if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
     m_BufferingEnabled |= BUFFERING_ENABLED_ALL;
   }
 
@@ -417,7 +416,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     // wait time of 2 minutes = 1 empty action required...
 
     if (m_GProxyEmptyActions > 0) {
-      m_GProxyEmptyActions = m_Aura->m_Net->m_Config->m_ReconnectWaitTicksLegacy / 60000 - 1;
+      m_GProxyEmptyActions = m_Aura->m_Net->m_Config.m_ReconnectWaitTicksLegacy / 60000 - 1;
       if (m_GProxyEmptyActions > 9) {
         m_GProxyEmptyActions = 9;
       }
@@ -470,7 +469,7 @@ void CGame::Reset()
 
   ClearActions();
 
-  if (m_GameLoaded && m_Config->m_SaveStats) {
+  if (m_GameLoaded && m_Config.m_SaveStats) {
     // store the CDBGamePlayers in the database
     // add non-dota stats
     if (!m_DBGamePlayers.empty()) {
@@ -552,8 +551,8 @@ bool CGame::ReleaseMap()
     const filesystem::path localPath = localPathString;
     m_Aura->m_BusyMaps.erase(localPathString);
     const bool deleteTooLarge = (
-      m_Aura->m_Config->m_EnableDeleteOversizedMaps &&
-      (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config->m_MaxSavedMapSize * 1024)
+      m_Aura->m_Config.m_EnableDeleteOversizedMaps &&
+      (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config.m_MaxSavedMapSize * 1024)
     );
     if (deleteTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
       // Ensure the mapcache ini file has been created before trying to delete from disk
@@ -607,8 +606,6 @@ void CGame::StartGameOverTimer(bool isMMD)
 
 CGame::~CGame()
 {
-  delete m_Config;
-
   Reset();
   if (ReleaseMap()) {
     delete m_Map;
@@ -1294,7 +1291,7 @@ void CGame::UpdateJoinable()
       if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
         ++Downloaders;
 
-        if (m_Aura->m_Net->m_Config->m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net->m_Config->m_MaxDownloaders) {
+        if (m_Aura->m_Net->m_Config.m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net->m_Config.m_MaxDownloaders) {
           break;
         }
 
@@ -1314,7 +1311,7 @@ void CGame::UpdateJoinable()
 
         const uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
-        while (user->GetLastMapPartSent() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net->m_Config->m_MaxParallelMapPackets && user->GetLastMapPartSent() < MapSize)
+        while (user->GetLastMapPartSent() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net->m_Config.m_MaxParallelMapPackets && user->GetLastMapPartSent() < MapSize)
         {
           if (user->GetLastMapPartSent() == 0)
           {
@@ -1327,7 +1324,7 @@ void CGame::UpdateJoinable()
           // limit the download speed if we're sending too much data
           // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
 
-          if (m_Aura->m_Net->m_Config->m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net->m_Config->m_MaxUploadSpeed * 1024)
+          if (m_Aura->m_Net->m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net->m_Config.m_MaxUploadSpeed * 1024)
             break;
 
           Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapData()));
@@ -1365,7 +1362,7 @@ bool CGame::UpdateLobby()
 
   // countdown every m_LobbyCountDownInterval ms (default 500 ms)
 
-  if (m_CountDownStarted && Ticks - m_LastCountDownTicks >= m_Config->m_LobbyCountDownInterval) {
+  if (m_CountDownStarted && Ticks - m_LastCountDownTicks >= m_Config.m_LobbyCountDownInterval) {
     bool shouldStartLoading = false;
     if (m_CountDownCounter > 0) {
       // we use a countdown counter rather than a "finish countdown time" here because it might alternately round up or down the count
@@ -1426,7 +1423,7 @@ void CGame::UpdateLoading()
 
   if (finishedLoading) {
     if (anyLoaded) {
-      if (!m_Config->m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
+      if (!m_Config.m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
         // CGame::UpdateLoading: Fake users loaded
         // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
         // it will also contain load packets for real users who didn't actually load the game,
@@ -1445,15 +1442,15 @@ void CGame::UpdateLoading()
       SendAllActionsCallback();
     }
   } else {
-    if (m_Config->m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
-      if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config->m_LoadingTimeout)) {
-        StopLaggers("was automatically dropped after " + to_string(m_Config->m_LoadingTimeout / 1000) + " seconds");
+    if (m_Config.m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
+      if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config.m_LoadingTimeout)) {
+        StopLaggers("was automatically dropped after " + to_string(m_Config.m_LoadingTimeout / 1000) + " seconds");
         ResetDropVotes();
       }
     }
 
     // Warcraft III disconnects if it doesn't receive an action packet for more than ~65 seconds
-    if (m_Config->m_LoadInGame && anyLoaded && Time - m_LastLagScreenResetTime >= 60 ) {
+    if (m_Config.m_LoadInGame && anyLoaded && Time - m_LastLagScreenResetTime >= 60 ) {
       ResetLagScreen();
     }
   }
@@ -1620,7 +1617,7 @@ void CGame::UpdateLoaded()
       ReportAllPings();
       ++m_PingReportedSinceLagTimes;
     }
-    if (m_Config->m_SyncNormalize) {
+    if (m_Config.m_SyncNormalize) {
       if (m_PingReportedSinceLagTimes == 2 && Ticks - m_FinishedLoadingTicks < 60000) {
         NormalizeSyncCounters();
       } else if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 180000) {
@@ -1629,18 +1626,18 @@ void CGame::UpdateLoaded()
     }
   }
 
-  switch (m_Config->m_PlayingTimeoutMode) {
+  switch (m_Config.m_PlayingTimeoutMode) {
     case GAME_PLAYING_TIMEOUT_NEVER:
       break;
     case GAME_PLAYING_TIMEOUT_DRY:
     case GAME_PLAYING_TIMEOUT_STRICT:
-      if (Ticks - m_FinishedLoadingTicks > static_cast<int64_t>(m_Config->m_PlayingTimeout)) {
-        if (m_Config->m_PlayingTimeoutMode == GAME_PLAYING_TIMEOUT_STRICT) {
+      if (Ticks - m_FinishedLoadingTicks > static_cast<int64_t>(m_Config.m_PlayingTimeout)) {
+        if (m_Config.m_PlayingTimeoutMode == GAME_PLAYING_TIMEOUT_STRICT) {
           m_GameOverTolerance = 0;
           StartGameOverTimer();
         } else {
-          Log("game timed out after " + to_string(m_Config->m_PlayingTimeout / 1000) + " seconds");
-          m_Config->m_PlayingTimeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
+          Log("game timed out after " + to_string(m_Config.m_PlayingTimeout / 1000) + " seconds");
+          m_Config.m_PlayingTimeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
         }
       }
       break;
@@ -1676,7 +1673,7 @@ bool CGame::Update(void* fd, void* send_fd)
     // however we only want to broadcast if the countdown hasn't started
 
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
-      if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Net->m_Config->m_UDPBroadcastStrictMode) {
+      if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Net->m_Config.m_UDPBroadcastStrictMode) {
         SendGameDiscoveryRefresh();
       } else {
         SendGameDiscoveryInfo();
@@ -1767,7 +1764,7 @@ bool CGame::Update(void* fd, void* send_fd)
     if (RemainingPlayers == 0) {
       LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: 0 p | " + ToDecString(GetNumJoinedObservers()) + " obs | 0 fake")
       StartGameOverTimer();
-    } else if (RemainingPlayers <= m_Config->m_NumPlayersToStartGameOver) {
+    } else if (RemainingPlayers <= m_Config.m_NumPlayersToStartGameOver) {
       LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
       StartGameOverTimer();
     }
@@ -1822,35 +1819,35 @@ void CGame::UpdatePost(void* send_fd) const
 void CGame::CheckLobbyTimeouts()
 {
   if (HasOwnerSet()) {
-    switch (m_Config->m_LobbyOwnerTimeoutMode) {
+    switch (m_Config.m_LobbyOwnerTimeoutMode) {
       case LOBBY_OWNER_TIMEOUT_NEVER:
         break;
       case LOBBY_OWNER_TIMEOUT_ABSENT:
-        if (m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyOwnerTimeout) < GetTicks()) {
+        if (m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout) < GetTicks()) {
           ReleaseOwner();
         }
         break;
       case LOBBY_OWNER_TIMEOUT_STRICT:
-        if (m_LastOwnerAssigned + static_cast<int64_t>(m_Config->m_LobbyOwnerTimeout) < GetTicks()) {
+        if (m_LastOwnerAssigned + static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout) < GetTicks()) {
           ReleaseOwner();
         }
         break;
     }
   }
 
-  if (!m_Aura->m_Net->m_HealthCheckInProgress && (!m_IsMirror || m_Config->m_LobbyTimeoutMode == LOBBY_TIMEOUT_STRICT)) {
+  if (!m_Aura->m_Net->m_HealthCheckInProgress && (!m_IsMirror || m_Config.m_LobbyTimeoutMode == LOBBY_TIMEOUT_STRICT)) {
     bool timedOut = false;
-    switch (m_Config->m_LobbyTimeoutMode) {
+    switch (m_Config.m_LobbyTimeoutMode) {
     case LOBBY_TIMEOUT_NEVER:
       break;
     case LOBBY_TIMEOUT_EMPTY:
-      timedOut = m_LastUserSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTicks();
+      timedOut = m_LastUserSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
       break;
     case LOBBY_TIMEOUT_OWNERLESS:
-      timedOut = m_LastOwnerSeen + static_cast<int64_t>(m_Config->m_LobbyTimeout) < GetTicks();
+      timedOut = m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
       break;
     case LOBBY_TIMEOUT_STRICT:
-      timedOut = m_CreationTime + (static_cast<int64_t>(m_Config->m_LobbyTimeout) / 1000) < GetTime();
+      timedOut = m_CreationTime + (static_cast<int64_t>(m_Config.m_LobbyTimeout) / 1000) < GetTime();
       break;
     }
     if (timedOut) {
@@ -1868,7 +1865,7 @@ void CGame::RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8
     const int64_t ExpectedSendInterval = GetLatency() - m_LastActionLateBy;
     int64_t ThisActionLateBy = ActualSendInterval - ExpectedSendInterval;
 
-    if (ThisActionLateBy > m_Config->m_PerfThreshold && !GetIsSinglePlayerMode()) {
+    if (ThisActionLateBy > m_Config.m_PerfThreshold && !GetIsSinglePlayerMode()) {
       // something is going terribly wrong - Aura is probably starved of resources
       // print a message because even though this will take more resources it should provide some information to the administrator for future reference
       // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
@@ -1919,7 +1916,7 @@ void CGame::UpdateLogs()
   int64_t ticks = m_GameTicks;
   while (!m_PendingLogs.empty()) {
     CGameLogRecord* record = m_PendingLogs.front();
-    if (ticks + static_cast<int64_t>(m_Config->m_LogDelay) < record->GetTicks()) {
+    if (ticks + static_cast<int64_t>(m_Config.m_LogDelay) < record->GetTicks()) {
       break;
     }
     Print(GetLogPrefix() + record->ToString());
@@ -2060,7 +2057,7 @@ void CGame::SendChat(uint8_t toUID, const string& message, const uint8_t logLeve
 
 bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
 {
-  if (m_GameLoading && !m_Config->m_LoadInGame)
+  if (m_GameLoading && !m_Config.m_LoadInGame)
     return false;
 
   if (message.empty())
@@ -2852,7 +2849,7 @@ bool CGame::GetIsAutoStartDue() const
   if (m_Users.empty() || m_CountDownStarted || m_AutoStartRequirements.empty()) {
     return false;
   }
-  if (!m_ControllersBalanced && m_Config->m_AutoStartRequiresBalance) {
+  if (!m_ControllersBalanced && m_Config.m_AutoStartRequiresBalance) {
     return false;
   }
 
@@ -2897,10 +2894,10 @@ string CGame::GetReadyStatusText() const
 {
   string notReadyFragment;
   if (m_ControllersNotReadyCount > 0) {
-    if (m_Config->m_BroadcastCmdToken.empty()) {
-      notReadyFragment = " Use " + m_Config->m_PrivateCmdToken + "ready when you are.";
+    if (m_Config.m_BroadcastCmdToken.empty()) {
+      notReadyFragment = " Use " + m_Config.m_PrivateCmdToken + "ready when you are.";
     } else {
-      notReadyFragment = " Use " + m_Config->m_BroadcastCmdToken + "ready when you are.";
+      notReadyFragment = " Use " + m_Config.m_BroadcastCmdToken + "ready when you are.";
     }
   }
   if (m_ControllersReadyCount == 0) {
@@ -2916,7 +2913,7 @@ string CGame::GetReadyStatusText() const
 
 string CGame::GetCmdToken() const
 {
-  return m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken;
+  return m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken;
 }
 
 void CGame::SendAllAutoStart() const
@@ -3036,9 +3033,9 @@ void CGame::SendIncomingPlayerInfo(GameUser::CGameUser* user) const
 
 void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
 {
-  for (size_t i = 0; i < m_Aura->m_Config->m_Greeting.size(); i++) {
+  for (size_t i = 0; i < m_Aura->m_Config.m_Greeting.size(); i++) {
     string::size_type matchIndex;
-    string Line = m_Aura->m_Config->m_Greeting[i];
+    string Line = m_Aura->m_Config.m_Greeting[i];
     if (Line.substr(0, 12) == "{SHORTDESC?}") {
       if (m_Map->GetMapShortDesc().empty()) {
         continue;
@@ -3156,7 +3153,7 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       if (m_CreatedFromType == GAMESETUP_ORIGIN_REALM) {
         Line.replace(matchIndex, 11, "@" + reinterpret_cast<CRealm*>(m_CreatedFrom)->GetCanonicalDisplayName());
       } else if (m_CreatedFromType == GAMESETUP_ORIGIN_IRC) {
-        Line.replace(matchIndex, 11, "@" + reinterpret_cast<CIRC*>(m_CreatedFrom)->m_Config->m_HostName);
+        Line.replace(matchIndex, 11, "@" + reinterpret_cast<CIRC*>(m_CreatedFrom)->m_Config.m_HostName);
       } else if (m_CreatedFromType == GAMESETUP_ORIGIN_DISCORD) {
         // TODO: {HOSTREALM} Discord
       } else {
@@ -3170,16 +3167,16 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       Line.replace(matchIndex, 12, "@" + ToFormattedRealm(m_OwnerRealm));
     }
     while ((matchIndex = Line.find("{TRIGGER_PRIVATE}")) != string::npos) {
-      Line.replace(matchIndex, 17, m_Config->m_PrivateCmdToken);
+      Line.replace(matchIndex, 17, m_Config.m_PrivateCmdToken);
     }
     while ((matchIndex = Line.find("{TRIGGER_BROADCAST}")) != string::npos) {
-      Line.replace(matchIndex, 19, m_Config->m_BroadcastCmdToken);
+      Line.replace(matchIndex, 19, m_Config.m_BroadcastCmdToken);
     }
     while ((matchIndex = Line.find("{TRIGGER_PREFER_PRIVATE}")) != string::npos) {
-      Line.replace(matchIndex, 24, m_Config->m_PrivateCmdToken.empty() ? m_Config->m_BroadcastCmdToken : m_Config->m_PrivateCmdToken);
+      Line.replace(matchIndex, 24, m_Config.m_PrivateCmdToken.empty() ? m_Config.m_BroadcastCmdToken : m_Config.m_PrivateCmdToken);
     }
     while ((matchIndex = Line.find("{TRIGGER_PREFER_BROADCAST}")) != string::npos) {
-      Line.replace(matchIndex, 26, m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken);
+      Line.replace(matchIndex, 26, m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken);
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
       Line.replace(matchIndex, 5, GetMapSiteURL());
@@ -3351,11 +3348,11 @@ uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
 {
   // Uses <net.game_discovery.udp.tcp4_custom_port.value>
   if (protocol == AF_INET)
-    return m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP4 ? m_Aura->m_Net->m_Config->m_UDPCustomPortTCP4 : m_HostPort;
+    return m_Aura->m_Net->m_Config.m_UDPEnableCustomPortTCP4 ? m_Aura->m_Net->m_Config.m_UDPCustomPortTCP4 : m_HostPort;
 
   // Uses <net.game_discovery.udp.tcp6_custom_port.value>
   if (protocol == AF_INET6)
-    return m_Aura->m_Net->m_Config->m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net->m_Config->m_UDPCustomPortTCP6 : m_HostPort;
+    return m_Aura->m_Net->m_Config.m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net->m_Config.m_UDPCustomPortTCP6 : m_HostPort;
 
   return m_HostPort;
 }
@@ -3414,7 +3411,7 @@ bool CGame::CalcAnyUsingGProxyLegacy() const
 }
 
 uint8_t CGame::GetPlayersReadyMode() const {
-  return m_Config->m_PlayersReadyMode;
+  return m_Config.m_PlayersReadyMode;
 }
 
 CQueuedActionsFrame& CGame::GetFirstActionFrame()
@@ -3481,7 +3478,7 @@ void CGame::ResetUserPingEqualizerDelays()
 
 bool CGame::CheckUpdatePingEqualizer()
 {
-  if (!m_Config->m_LatencyEqualizerEnabled) return false;
+  if (!m_Config.m_LatencyEqualizerEnabled) return false;
   // Use m_GameTicks instead of GetTicks() to ensure we don't drift while lag screen is displayed.
   if (m_GameTicks - m_LastPingEqualizerGameTicks < PING_EQUALIZER_PERIOD_TICKS) {
     return false;
@@ -3504,7 +3501,7 @@ uint8_t CGame::UpdatePingEqualizer()
     uint32_t framesAheadNow;
     if (framesAheadNowDiscriminator > framesAheadBefore) {
       framesAheadNow = framesAheadBefore + 1;
-      if (!addedFrame && m_MaxPingEqualizerDelayFrames < framesAheadNow && framesAheadNow < m_Config->m_LatencyEqualizerFrames) {
+      if (!addedFrame && m_MaxPingEqualizerDelayFrames < framesAheadNow && framesAheadNow < m_Config.m_LatencyEqualizerFrames) {
         m_Actions.emplaceAfter(GetLastActionFrameNode());
         addedFrame = true;
       }
@@ -3639,7 +3636,7 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t game
 void CGame::SendGameDiscoveryCreate(uint8_t gameVersion) const
 {
   vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(gameVersion, m_HostCounter);
-  m_Aura->m_Net->SendGameDiscovery(packet, m_Config->m_ExtraDiscoveryAddresses);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 }
 
 void CGame::SendGameDiscoveryCreate() const
@@ -3656,7 +3653,7 @@ void CGame::SendGameDiscoveryCreate() const
 void CGame::SendGameDiscoveryDecreate() const
 {
   vector<uint8_t> packet = GameProtocol::SEND_W3GS_DECREATEGAME(m_HostCounter);
-  m_Aura->m_Net->SendGameDiscovery(packet, m_Config->m_ExtraDiscoveryAddresses);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 }
 
 void CGame::SendGameDiscoveryRefresh() const
@@ -3666,10 +3663,10 @@ void CGame::SendGameDiscoveryRefresh() const
     static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen()),
     static_cast<uint32_t>(m_Slots.size())
   );
-  m_Aura->m_Net->SendGameDiscovery(packet, m_Config->m_ExtraDiscoveryAddresses);
+  m_Aura->m_Net->SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 
   // Send to active VLAN connections
-  if (m_Aura->m_Net->m_Config->m_VLANEnabled) {
+  if (m_Aura->m_Net->m_Config.m_VLANEnabled) {
     for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
@@ -3691,7 +3688,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
     m_Aura->m_Net->SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
   }
 
-  for (auto& address : m_Config->m_ExtraDiscoveryAddresses) {
+  for (auto& address : m_Config.m_ExtraDiscoveryAddresses) {
     if (isLoopbackAddress(&address)) continue; // We already ensure sending loopback packets above.
     bool isIPv6 = GetInnerIPVersion(&address) == AF_INET6;
     if (isIPv6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) {
@@ -3701,7 +3698,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
   }
 
   // Send to active UDP in TCP tunnels and VLAN connections
-  if (m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config->m_VLANEnabled) {
+  if (m_Aura->m_Net->m_Config.m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config.m_VLANEnabled) {
     for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
@@ -3778,7 +3775,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
     }
     m_SyncPlayers.erase(user);
     m_HadLeaver = true;
-  } else if (!m_LobbyLoading && m_Config->m_LobbyOwnerReleaseLANLeaver) {
+  } else if (!m_LobbyLoading && m_Config.m_LobbyOwnerReleaseLANLeaver) {
     if (MatchOwnerName(user->GetName()) && m_OwnerRealm == user->GetRealmHostName() && user->GetRealmHostName().empty()) {
       ReleaseOwner();
     }
@@ -3988,7 +3985,7 @@ pair<int64_t, int64_t> CGame::GetReconnectWaitTicks() const
 {
   return make_pair(
     static_cast<int64_t>(m_GProxyEmptyActions + 1) * 60000,
-    m_Aura->m_Net->m_Config->m_ReconnectWaitTicks
+    m_Aura->m_Net->m_Config.m_ReconnectWaitTicks
   );
 }
 
@@ -4039,7 +4036,7 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
     QueueLeftMessage(user);
   }
 
-  if (m_GameLoading && !user->GetFinishedLoading() && !m_Config->m_LoadInGame) {
+  if (m_GameLoading && !user->GetFinishedLoading() && !m_Config.m_LoadInGame) {
     const vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     m_LoadingVirtualBuffer.reserve(m_LoadingVirtualBuffer.size() + packet.size());
     AppendByteArrayFast(m_LoadingVirtualBuffer, packet);
@@ -4208,7 +4205,7 @@ void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
 
 void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const
 {
-  if (m_GameLoading && !m_Config->m_LoadInGame) {
+  if (m_GameLoading && !m_Config.m_LoadInGame) {
     return;
   }
 
@@ -4361,21 +4358,21 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
   }
 
   string GProxyFragment;
-  if (m_Aura->m_Net->m_Config->m_AnnounceGProxy && GetIsProxyReconnectable()) {
+  if (m_Aura->m_Net->m_Config.m_AnnounceGProxy && GetIsProxyReconnectable()) {
     if (user->GetGProxyExtended()) {
-      GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
+      GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">";
     } else if (user->GetGProxyAny()) {
       if (GetIsProxyReconnectableLong()) {
-        GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
+        GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">";
       } else {
-        GProxyFragment = " is using GProxy, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config->m_AnnounceGProxySite + ">";
+        GProxyFragment = " is using GProxy, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">";
       }
     }
   }
   
   user->SetStatusMessageSent(true);
   if (OwnerFragment.empty() && GProxyFragment.empty()) {
-    if (m_Aura->m_Net->m_Config->m_AnnounceIPv6 && user->GetUsingIPv6()) {
+    if (m_Aura->m_Net->m_Config.m_AnnounceIPv6 && user->GetUsingIPv6()) {
       SendAllChat(user->GetDisplayName() + " joined the game over IPv6.");
     }
     return;
@@ -4479,7 +4476,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   AddProvisionalBannableUser(Player);
 
   string notifyString = "";
-  if (m_Config->m_NotifyJoins && m_Config->m_IgnoredNotifyJoinPlayers.find(joinRequest->GetName()) == m_Config->m_IgnoredNotifyJoinPlayers.end()) {
+  if (m_Config.m_NotifyJoins && m_Config.m_IgnoredNotifyJoinPlayers.find(joinRequest->GetName()) == m_Config.m_IgnoredNotifyJoinPlayers.end()) {
     notifyString = "\x07";
   }
 
@@ -4510,7 +4507,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
     return true;
   }
 
-  uint8_t maxPlayersFromSameIp = isLoopbackAddress(sourceAddress) ? m_Config->m_MaxPlayersLoopback : m_Config->m_MaxPlayersSameIP;
+  uint8_t maxPlayersFromSameIp = isLoopbackAddress(sourceAddress) ? m_Config.m_MaxPlayersLoopback : m_Config.m_MaxPlayersSameIP;
   if (static_cast<uint8_t>(usersSameIP.size()) >= maxPlayersFromSameIp) {
     if (GetIPFloodHandler() == ON_IPFLOOD_NOTIFY) {
       SendAllChat("Player [" + joinName + "] has the same IP address as: " + ToNameListSentence(usersSameIP));
@@ -4531,7 +4528,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
   }
-  if (joinRequest->GetIsCensored() && m_Config->m_UnsafeNameHandler == ON_UNSAFE_NAME_DENY) {
+  if (joinRequest->GetIsCensored() && m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_DENY) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] unsafe name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return false;
@@ -4856,7 +4853,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   user->SetLagging(false);
   user->SetStartedLaggingTicks(0);
 
-  if (!m_Config->m_LoadInGame) {
+  if (!m_Config.m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
       AppendByteArrayFast(m_LoadingRealBuffer, packet);
@@ -4919,14 +4916,14 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
   }
 
-  if (actionType == ACTION_CHAT_TRIGGER && (m_Config->m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
+  if (actionType == ACTION_CHAT_TRIGGER && (m_Config.m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
     const vector<uint8_t>& actionBytes = action.GetImmutableAction();
     if (actionBytes.size() >= 10) {
       const uint8_t* chatMessageStart = actionBytes.data() + 9;
       const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
       if (chatMessageStart < chatMessageEnd) {
         const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
-        if (m_Config->m_LogCommands) {
+        if (m_Config.m_LogCommands) {
           m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
         }
         // Enable --log-level debug to figure out HMC map-specific constants
@@ -5059,7 +5056,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     string desyncListText = ToNameListSentence(DesyncedPlayers);
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
       LogApp("===== !! Desync detected !! ======================================");
-      if (m_Config->m_LoadInGame) {
+      if (m_Config.m_LoadInGame) {
         LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: ENABLED");
       } else {
         LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: DISABLED");
@@ -5132,7 +5129,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
       // handle bot commands
       {
         CRealm* realm = user->GetRealm(false);
-        CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config->m_LANCommandCFG;
+        CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config.m_LANCommandCFG;
         const bool commandsEnabled = commandCFG->m_Enabled && (
           !realm || !(commandCFG->m_RequireVerified && !user->IsRealmVerified())
         );
@@ -5142,7 +5139,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
         if (commandsEnabled) {
           const string message = chatPlayer->GetMessage();
           string cmdToken, command, payload;
-          uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config->m_PrivateCmdToken, m_Config->m_BroadcastCmdToken, cmdToken, command, payload);
+          uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, payload);
           isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
           if (isCommand) {
             user->SetUsedAnyCommands(true);
@@ -5159,7 +5156,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
               shouldRelay = false;
             }
-            SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, false);
+            SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, false);
           } else if (message == "/p" || message == "/ping" || message == "/game") {
             // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
             // Therefore, these commands are only effective over LAN.
@@ -5168,7 +5165,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
               shouldRelay = false;
             }
             CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
-            cmdToken = m_Config->m_PrivateCmdToken;
+            cmdToken = m_Config.m_PrivateCmdToken;
             command = message.substr(1);
             ctx->Run(cmdToken, command, payload);
             m_Aura->UnholdContext(ctx);
@@ -5183,7 +5180,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
                 if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
               }
               if (!anySentCommands) {
-                SendCommandsHelp(m_Config->m_BroadcastCmdToken.empty() ? m_Config->m_PrivateCmdToken : m_Config->m_BroadcastCmdToken, user, true);
+                SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, true);
               }
             }
           }
@@ -5196,7 +5193,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
           shouldRelay = false;
         }
         bool logMessage = false;
-        for (const auto& word : m_Config->m_LoggedWords) {
+        for (const auto& word : m_Config.m_LoggedWords) {
           if (chatPlayer->GetMessage().find(word) != string::npos) {
             logMessage = true;
             break;
@@ -5401,7 +5398,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
   uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
   CRealm* JoinedRealm = user->GetRealm(false);
-  uint32_t MaxUploadSize = m_Aura->m_Net->m_Config->m_MaxUploadSize;
+  uint32_t MaxUploadSize = m_Aura->m_Net->m_Config.m_MaxUploadSize;
   if (JoinedRealm)
     MaxUploadSize = JoinedRealm->GetMaxUploadSize();
 
@@ -5412,10 +5409,10 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
     bool IsMapAvailable = !MapData->empty() && !m_Map->HasMismatch();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
     bool ShouldTransferMap = (
-      IsMapAvailable && m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER &&
-      (user->GetDownloadAllowed() || (m_Aura->m_Net->m_Config->m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
-      (m_Aura->m_StartedGames.size() < m_Aura->m_Config->m_MaxStartedGames) &&
-      (m_Aura->m_StartedGames.empty() || !m_Aura->m_Net->m_Config->m_HasBufferBloat)
+      IsMapAvailable && m_Aura->m_Net->m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
+      (user->GetDownloadAllowed() || (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
+      (m_Aura->m_StartedGames.size() < m_Aura->m_Config.m_MaxStartedGames) &&
+      (m_Aura->m_StartedGames.empty() || !m_Aura->m_Net->m_Config.m_HasBufferBloat)
     );
     if (ShouldTransferMap) {
       if (!user->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
@@ -5430,14 +5427,14 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
       }
     } else if (!user->GetMapKicked()) {
       user->AddKickReason(GameUser::KickReason::MAP_MISSING);
-      user->KickAtLatest(GetTicks() + m_Config->m_LacksMapKickDelay);
+      user->KickAtLatest(GetTicks() + m_Config.m_LacksMapKickDelay);
       if (!user->HasLeftReason()) {
         if (m_Remade) {
           user->SetLeftReason("autokicked - they don't have the map (remade game)");
-        } else if (m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
+        } else if (m_Aura->m_Net->m_Config.m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-        } else if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames || (m_Aura->m_StartedGames.size() > 0 && m_Aura->m_Net->m_Config->m_HasBufferBloat)) {
+        } else if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames || (m_Aura->m_StartedGames.size() > 0 && m_Aura->m_Net->m_Config.m_HasBufferBloat)) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
@@ -5448,9 +5445,9 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
         }
       }
       if (GetMapSiteURL().empty()) {
-        SendChat(user, "" + user->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Config->m_LacksMapKickDelay / 1000) + " seconds...)");
+        SendChat(user, "" + user->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
       } else {
-        SendChat(user, "" + user->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Config->m_LacksMapKickDelay / 1000) + " seconds...)");
+        SendChat(user, "" + user->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
       }
     }
   } else if (user->GetDownloadStarted()) {
@@ -5500,7 +5497,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   }
 
   if ((!user->GetIsReady() && user->GetMapReady() && !user->GetIsObserver()) &&
-    (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_StartedGames.size() < m_Aura->m_Config->m_MaxStartedGames) &&
+    (!m_CountDownStarted && !m_ChatOnly && m_Aura->m_StartedGames.size() < m_Aura->m_Config.m_MaxStartedGames) &&
     (user->GetReadyReminderIsDue() && user->GetIsRTTMeasuredConsistent())) {
     if (!m_AutoStartRequirements.empty()) {
       switch (GetPlayersReadyMode()) {
@@ -5521,7 +5518,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   // see the Update function for where we send pings
 
   uint32_t LatencyMilliseconds = user->GetOperationalRTT();
-  if (LatencyMilliseconds >= m_Config->m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner(nullopt)) {
+  if (LatencyMilliseconds >= m_Config.m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner(nullopt)) {
     if (m_Users.size() > 1 && user->GetIsRTTMeasuredBadConsistent()) {
       user->SetHasHighPing(true);
       if (!user->HasLeftReason()) {
@@ -5537,17 +5534,17 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
       user->ClearKickByTicks();
     }
     if (user->GetHasHighPing()) {
-      bool HasHighPing = LatencyMilliseconds >= m_Config->m_SafeHighPing;
+      bool HasHighPing = LatencyMilliseconds >= m_Config.m_SafeHighPing;
       if (!HasHighPing) {
         user->SetHasHighPing(HasHighPing);
         SendAllChat("Player [" + user->GetDisplayName() + "] ping went down to " + to_string(LatencyMilliseconds) + "ms");
-      } else if (LatencyMilliseconds >= m_Config->m_WarnHighPing && user->GetPongCounter() % 4 == 0) {
+      } else if (LatencyMilliseconds >= m_Config.m_WarnHighPing && user->GetPongCounter() % 4 == 0) {
         // Still high ping. We need to keep sending these intermittently (roughly every 20-25 seconds), so that
         // users don't assume that lack of news is good news.
         SendChat(user, user->GetName() + ", you have a high ping of " + to_string(LatencyMilliseconds) + "ms");
       }
     } else {
-      bool HasHighPing = LatencyMilliseconds >= m_Config->m_WarnHighPing;
+      bool HasHighPing = LatencyMilliseconds >= m_Config.m_WarnHighPing;
       if (HasHighPing) {
         user->SetHasHighPing(HasHighPing);
         SendAllChat("Player [" + user->GetDisplayName() + "] has a high ping of " + to_string(LatencyMilliseconds) + "ms");
@@ -5649,7 +5646,7 @@ void CGame::EventGameStartedLoading()
     }
   }
 
-  if (m_IsHiddenPlayerNames && m_Config->m_HideInGameNames != HIDE_IGN_ALWAYS) {
+  if (m_IsHiddenPlayerNames && m_Config.m_HideInGameNames != HIDE_IGN_ALWAYS) {
     ShowPlayerNamesGameStartLoading();
   }
 
@@ -5661,7 +5658,7 @@ void CGame::EventGameStartedLoading()
     // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
 
     if (m_Map->GetMapType() == "evergreen" && GetNumComputers() > 0) {
-      m_Config->m_LobbyVirtualHostName = "AMAI Insane";
+      m_Config.m_LobbyVirtualHostName = "AMAI Insane";
     }
 
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
@@ -5676,7 +5673,7 @@ void CGame::EventGameStartedLoading()
     }
   }
 
-  if (m_Config->m_EnableJoinObserversInProgress && !GetIsCustomForces()) {
+  if (m_Config.m_EnableJoinObserversInProgress && !GetIsCustomForces()) {
     // TODO: Join-in-progress select observer slot
     // Let's also choose the virtual host fake player, if it exists.
   }
@@ -5809,7 +5806,7 @@ void CGame::EventGameStartedLoading()
     m_LoadingRealBuffer.reserve(5 * m_Users.size());
   }
 
-  if (m_Config->m_LoadInGame) {
+  if (m_Config.m_LoadInGame) {
     for (const auto& user : m_Users) {
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
       AppendByteArray(m_LoadingRealBuffer, packet);
@@ -5902,10 +5899,10 @@ void CGame::UpdateBannableUsers()
 
 bool CGame::ResolvePlayerObfuscation() const
 {
-  if (m_Config->m_HideInGameNames == HIDE_IGN_ALWAYS || m_Config->m_HideInGameNames == HIDE_IGN_HOST) {
+  if (m_Config.m_HideInGameNames == HIDE_IGN_ALWAYS || m_Config.m_HideInGameNames == HIDE_IGN_HOST) {
     return true;
   }
-  if (m_Config->m_HideInGameNames == HIDE_IGN_NEVER) {
+  if (m_Config.m_HideInGameNames == HIDE_IGN_NEVER) {
     return false;
   }
 
@@ -5958,7 +5955,7 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
     if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
       if (activeCmd == SMART_COMMAND_GO) {
         CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
-        string cmdToken = m_Config->m_PrivateCmdToken;
+        string cmdToken = m_Config.m_PrivateCmdToken;
         string command = "start";
         string payload;
         ctx->Run(cmdToken, command, payload);
@@ -6056,7 +6053,7 @@ void CGame::EventGameLoaded()
   }
 
   // move the game to the games in progress vector
-  if (m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress) {
+  if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
     m_Aura->TrackGameJoinInProgress(this);
   }
 
@@ -6065,7 +6062,7 @@ void CGame::EventGameLoaded()
 
 void CGame::HandleGameLoadedStats()
 {
-  if (!m_Config->m_SaveStats) {
+  if (!m_Config.m_SaveStats) {
     return;
   }
   vector<string> exportPlayerNames;
@@ -6140,7 +6137,7 @@ bool CGame::GetIsRemakeable()
 
 void CGame::Remake()
 {
-  m_Config->m_SaveStats = false;
+  m_Config.m_SaveStats = false;
 
   Reset();
 
@@ -8020,9 +8017,9 @@ void CGame::ResetLagScreen()
 
 void CGame::ResetLatency()
 {
-  m_Config->m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
-  m_Config->m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
-  m_Config->m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+  m_Config.m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
+  m_Config.m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
+  m_Config.m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
   for (auto& user : m_Users)  {
     user->ResetSyncCounterOffset();
   }
@@ -8047,14 +8044,14 @@ bool CGame::GetIsReserved(const string& name) const
 
 bool CGame::GetIsProxyReconnectable() const
 {
-  if (m_IsMirror) return 0 != m_Config->m_ReconnectionMode;
-  return 0 != (m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Config->m_ReconnectionMode);
+  if (m_IsMirror) return 0 != m_Config.m_ReconnectionMode;
+  return 0 != (m_Aura->m_Net->m_Config.m_ProxyReconnect & m_Config.m_ReconnectionMode);
 }
 
 bool CGame::GetIsProxyReconnectableLong() const
 {
-  if (m_IsMirror) return 0 != (m_Config->m_ReconnectionMode & RECONNECT_ENABLED_GPROXY_EXTENDED);
-  return 0 != ((m_Aura->m_Net->m_Config->m_ProxyReconnect & m_Config->m_ReconnectionMode) & RECONNECT_ENABLED_GPROXY_EXTENDED);
+  if (m_IsMirror) return 0 != (m_Config.m_ReconnectionMode & RECONNECT_ENABLED_GPROXY_EXTENDED);
+  return 0 != ((m_Aura->m_Net->m_Config.m_ProxyReconnect & m_Config.m_ReconnectionMode) & RECONNECT_ENABLED_GPROXY_EXTENDED);
 }
 
 bool CGame::IsDownloading() const
@@ -8150,7 +8147,7 @@ void CGame::ResetSync()
 
 void CGame::CountKickVotes()
 {
-  uint32_t Votes = 0, VotesNeeded = static_cast<uint32_t>(ceil((GetNumJoinedPlayers() - 1) * static_cast<float>(m_Config->m_VoteKickPercentage) / 100));
+  uint32_t Votes = 0, VotesNeeded = static_cast<uint32_t>(ceil((GetNumJoinedPlayers() - 1) * static_cast<float>(m_Config.m_VoteKickPercentage) / 100));
   for (auto& eachPlayer : m_Users) {
     if (eachPlayer->GetKickVote().value_or(false))
       ++Votes;
@@ -8183,7 +8180,7 @@ bool CGame::GetCanStartGracefulCountDown() const
     return false;
   }
 
-  if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames) {
+  if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) {
     return false;
   }
 
@@ -8259,8 +8256,8 @@ void CGame::StartCountDown(bool fromUser, bool force)
     return;
   }
 
-  if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config->m_MaxStartedGames) {
-    SendAllChat("This game cannot be started while there are " +  to_string(m_Aura->m_Config->m_MaxStartedGames) + " additional games in progress.");
+  if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) {
+    SendAllChat("This game cannot be started while there are " +  to_string(m_Aura->m_Config.m_MaxStartedGames) + " additional games in progress.");
     return;
   }
 
@@ -8398,7 +8395,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   m_Replaceable = false;
   m_CountDownStarted = true;
   m_CountDownUserInitiated = fromUser;
-  m_CountDownCounter = m_Config->m_LobbyCountDownStartValue;
+  m_CountDownCounter = m_Config.m_LobbyCountDownStartValue;
 
   if (!m_KickVotePlayer.empty()) {
     m_KickVotePlayer.clear();
@@ -8699,12 +8696,12 @@ bool CGame::SendHMC(const string& message)
 
 bool CGame::GetIsCheckJoinable() const
 {
-  return m_Config->m_CheckJoinable;
+  return m_Config.m_CheckJoinable;
 }
 
-void CGame::SetIsCheckJoinable(const bool nCheckIsJoinable) const 
+void CGame::SetIsCheckJoinable(const bool nCheckIsJoinable) 
 {
-  m_Config->m_CheckJoinable = nCheckIsJoinable;
+  m_Config.m_CheckJoinable = nCheckIsJoinable;
 }
 
 bool CGame::GetHasReferees() const
@@ -9045,52 +9042,52 @@ bool CGame::GetIsStageAcceptingJoins() const
   if (m_LobbyLoading || m_Exiting || GetIsGameOver()) return false;
   if (!m_CountDownStarted) return true;
   if (!m_GameLoaded) return false;
-  return m_Config->m_EnableJoinObserversInProgress || m_Config->m_EnableJoinPlayersInProgress;
+  return m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress;
 }
 
 bool CGame::GetUDPEnabled() const
 {
-  return m_Config->m_UDPEnabled;
+  return m_Config.m_UDPEnabled;
 }
 
 void CGame::SetUDPEnabled(bool nEnabled)
 {
-  m_Config->m_UDPEnabled = nEnabled;
+  m_Config.m_UDPEnabled = nEnabled;
 }
 
 bool CGame::GetHasDesyncHandler() const
 {
-  return m_Config->m_DesyncHandler == ON_DESYNC_DROP || m_Config->m_DesyncHandler == ON_DESYNC_NOTIFY;
+  return m_Config.m_DesyncHandler == ON_DESYNC_DROP || m_Config.m_DesyncHandler == ON_DESYNC_NOTIFY;
 }
 
 bool CGame::GetAllowsDesync() const
 {
-  return m_Config->m_DesyncHandler != ON_DESYNC_DROP;
+  return m_Config.m_DesyncHandler != ON_DESYNC_DROP;
 }
 
 uint8_t CGame::GetIPFloodHandler() const
 {
-  return m_Config->m_IPFloodHandler;
+  return m_Config.m_IPFloodHandler;
 }
 
 bool CGame::GetAllowsIPFlood() const
 {
-  return m_Config->m_IPFloodHandler != ON_IPFLOOD_DENY;
+  return m_Config.m_IPFloodHandler != ON_IPFLOOD_DENY;
 }
 
 string CGame::GetIndexVirtualHostName() const
 {
-  return m_Config->m_IndexVirtualHostName;
+  return m_Config.m_IndexVirtualHostName;
 }
 
 string CGame::GetLobbyVirtualHostName() const
 {
-  return m_Config->m_LobbyVirtualHostName;
+  return m_Config.m_LobbyVirtualHostName;
 }
 
 uint8_t CGame::CalcMaxEqualizerDelayFrames() const
 {
-  if (!m_Config->m_LatencyEqualizerEnabled) return 0;
+  if (!m_Config.m_LatencyEqualizerEnabled) return 0;
   uint8_t max = 0;
   for (const auto& user : m_Users) {
     uint8_t thisOffset = user->GetPingEqualizerOffset();
@@ -9102,16 +9099,16 @@ uint8_t CGame::CalcMaxEqualizerDelayFrames() const
 
 uint16_t CGame::GetLatency() const
 {
-  //if (m_Config->m_LatencyEqualizerEnabled) return m_Config->m_Latency / 2;
-  return m_Config->m_Latency;
+  //if (m_Config.m_LatencyEqualizerEnabled) return m_Config.m_Latency / 2;
+  return m_Config.m_Latency;
 }
 
 uint32_t CGame::GetSyncLimit() const
 {
-  return m_Config->m_SyncLimit;
+  return m_Config.m_SyncLimit;
 }
 
 uint32_t CGame::GetSyncLimitSafe() const
 {
-  return m_Config->m_SyncLimitSafe;
+  return m_Config.m_SyncLimitSafe;
 }

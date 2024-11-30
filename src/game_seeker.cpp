@@ -124,7 +124,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
 
       switch (Bytes[0]) {
         case GameProtocol::Magic::W3GS_HEADER:
-          if (m_Type != INCON_TYPE_UDP_TUNNEL || !m_Aura->m_Net->m_Config->m_EnableTCPWrapUDP) {
+          if (m_Type != INCON_TYPE_UDP_TUNNEL || !m_Aura->m_Net->m_Config.m_EnableTCPWrapUDP) {
             Abort = true;
             break;
           }
@@ -139,7 +139,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
               delete joinRequest;
               break;
             }
-            joinRequest->UpdateCensored(targetLobby->m_Config->m_UnsafeNameHandler, targetLobby->m_Config->m_PipeConsideredHarmful);
+            joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
               result = GAMESEEKER_PROMOTED;
               m_Type = INCON_TYPE_PLAYER;
@@ -164,7 +164,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case VLANProtocol::Magic::VLAN_HEADER: {
-          if (m_Type != INCON_TYPE_VLAN || !m_Aura->m_Net->m_Config->m_VLANEnabled) {
+          if (m_Type != INCON_TYPE_VLAN || !m_Aura->m_Net->m_Config.m_VLANEnabled) {
             Abort = true;
             break;
           }

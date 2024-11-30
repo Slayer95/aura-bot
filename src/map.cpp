@@ -404,16 +404,16 @@ void CMap::Load(CConfig* CFG)
   m_MapData.clear();
 
   bool isPartial = CFG->GetBool("map.cfg.partial", false);
-  bool ignoreMPQ = m_MapServerPath.empty() || (!isPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
+  bool ignoreMPQ = m_MapServerPath.empty() || (!isPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   size_t RawMapSize = 0;
-  if (isPartial || m_Aura->m_Net->m_Config->m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+  if (isPartial || m_Aura->m_Net->m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapServerPath.empty()) {
       return;
     }
     filesystem::path mapServerPath(m_MapServerPath);
     if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
-      m_MapData = FileRead(m_Aura->m_Config->m_MapPath / mapServerPath, &RawMapSize);
+      m_MapData = FileRead(m_Aura->m_Config.m_MapPath / mapServerPath, &RawMapSize);
     } else {
       m_MapData = FileRead(m_MapServerPath, &RawMapSize);
     }
@@ -437,13 +437,13 @@ void CMap::Load(CConfig* CFG)
 
   if (!ignoreMPQ) {
     if (MapMPQFilePath.filename() == MapMPQFilePath && !m_UseStandardPaths) {
-      MapMPQFilePath = m_Aura->m_Config->m_MapPath / MapMPQFilePath;
+      MapMPQFilePath = m_Aura->m_Config.m_MapPath / MapMPQFilePath;
     } else {
       MapMPQFilePath = m_MapServerPath;
     }    
     FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
     ignoreMPQ = (
-      !isPartial && m_Aura->m_Config->m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
+      !isPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
         !FileModifiedTime.has_value() || (
           CachedModifiedTime.has_value() && FileModifiedTime.has_value() &&
           FileModifiedTime.value() <= CachedModifiedTime.value()
@@ -500,14 +500,14 @@ void CMap::Load(CConfig* CFG)
     // calculate <map.weak_hash>, and <map.sha1>
     // a big thank you to Strilanc for figuring the <map.weak_hash> algorithm out
 
-    filesystem::path commonPath = m_Aura->m_Config->m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
+    filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
     string CommonJ = FileRead(commonPath, nullptr);
 
     if (CommonJ.empty())
       Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(commonPath) + "]");
     else
     {
-      filesystem::path blizzardPath = m_Aura->m_Config->m_JASSPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
+      filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
       string BlizzardJ = FileRead(blizzardPath, nullptr);
 
       if (BlizzardJ.empty())
@@ -1259,7 +1259,7 @@ bool CMap::UnlinkFile()
   if (mapLocalPath.is_absolute()) {
     return FileDelete(mapLocalPath);
   }
-  filesystem::path resolvedPath =  m_Aura->m_Config->m_MapPath / mapLocalPath;
+  filesystem::path resolvedPath =  m_Aura->m_Config.m_MapPath / mapLocalPath;
   return FileDelete(resolvedPath.lexically_normal());
 }
 

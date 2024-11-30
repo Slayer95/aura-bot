@@ -87,7 +87,7 @@ public:
   CNet*                                              m_Net;                        // network manager
 
   std::filesystem::path                              m_ConfigPath;
-  CBotConfig*                                        m_Config;
+  CBotConfig                                         m_Config;
   CRealmConfig*                                      m_RealmDefaultConfig;
   CGameConfig*                                       m_GameDefaultConfig;
   CCommandConfig*                                    m_CommandDefaultConfig;
@@ -195,7 +195,8 @@ public:
 
   [[nodiscard]] bool ReloadConfigs();
   void TryReloadConfigs();
-  bool LoadConfigs(CConfig& CFG);
+  bool LoadDefaultConfigs(CConfig& CFG, CNetConfig* netConfig);
+  bool LoadAllConfigs(CConfig& CFG);
   void OnLoadConfigs();
   bool LoadBNETs(CConfig& CFG, std::bitset<120>& definedConfigs);
 

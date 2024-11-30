@@ -48,6 +48,7 @@
 
 #include "includes.h"
 #include "socket.h"
+#include "config/config_realm.h"
 
 #include <fstream>
 
@@ -73,7 +74,7 @@ public:
   CAura* m_Aura;
 
 private:
-  CRealmConfig*                    m_Config;
+  CRealmConfig                     m_Config;
   CTCPClient*                      m_Socket;                    // the connection to battle.net
   CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
 
@@ -192,7 +193,7 @@ public:
   bool                 GetUsesCustomIPAddress() const;
   bool                 GetUsesCustomPort() const;
   uint16_t             GetPublicHostPort() const;
-  sockaddr_storage*    GetPublicHostAddress() const;
+  const sockaddr_storage*    GetPublicHostAddress() const;
   uint32_t             GetMaxUploadSize() const;
   bool                 GetIsFloodImmune() const;
   std::string          GetCommandToken() const;

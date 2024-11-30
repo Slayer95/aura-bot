@@ -504,47 +504,47 @@ void CCLI::RunEarlyOptions() const
 void CCLI::OverrideConfig(CAura* nAura) const
 {
   if (m_War3Version.has_value())
-    nAura->m_Config->m_War3Version = m_War3Version.value();
+    nAura->m_Config.m_War3Version = m_War3Version.value();
   if (m_War3Path.has_value())
-    nAura->m_Config->m_Warcraft3Path = m_War3Path.value();
+    nAura->m_Config.m_Warcraft3Path = m_War3Path.value();
   if (m_MapPath.has_value())
-    nAura->m_Config->m_MapPath = m_MapPath.value();
+    nAura->m_Config.m_MapPath = m_MapPath.value();
   if (m_MapCFGPath.has_value())
-    nAura->m_Config->m_MapCFGPath = m_MapCFGPath.value();
+    nAura->m_Config.m_MapCFGPath = m_MapCFGPath.value();
   if (m_MapCachePath.has_value())
-    nAura->m_Config->m_MapCachePath = m_MapCachePath.value();
+    nAura->m_Config.m_MapCachePath = m_MapCachePath.value();
   if (m_JASSPath.has_value())
-    nAura->m_Config->m_JASSPath = m_JASSPath.value();
+    nAura->m_Config.m_JASSPath = m_JASSPath.value();
   if (m_GameSavePath.has_value())
-    nAura->m_Config->m_GameSavePath = m_GameSavePath.value();
+    nAura->m_Config.m_GameSavePath = m_GameSavePath.value();
 
   if (m_ExtractJASS.has_value())
-    nAura->m_Config->m_ExtractJASS = m_ExtractJASS.value();
+    nAura->m_Config.m_ExtractJASS = m_ExtractJASS.value();
 
   if (m_ExitOnStandby.has_value()) {
-    nAura->m_Config->m_ExitOnStandby = m_ExitOnStandby.value();
+    nAura->m_Config.m_ExitOnStandby = m_ExitOnStandby.value();
   }
   if (m_BNET.has_value()) {
-    nAura->m_Config->m_EnableBNET = m_BNET.value();
+    nAura->m_Config.m_EnableBNET = m_BNET.value();
   }
   if (m_IRC.has_value()) {
-    nAura->m_IRC->m_Config->m_Enabled = m_IRC.value();
+    nAura->m_IRC->m_Config.m_Enabled = m_IRC.value();
   }
   if (m_Discord.has_value()) {
-    nAura->m_Discord->m_Config->m_Enabled = m_Discord.value();
+    nAura->m_Discord->m_Config.m_Enabled = m_Discord.value();
   }
   if (m_LAN.has_value()) {
     nAura->m_GameDefaultConfig->m_UDPEnabled = m_LAN.value();
   }
   if (m_UseMapCFGCache.has_value()) {
-    nAura->m_Config->m_EnableCFGCache = m_UseMapCFGCache.value();
+    nAura->m_Config.m_EnableCFGCache = m_UseMapCFGCache.value();
   }
   if (m_LogLevel.has_value()) {
     vector<string> logLevels = {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"};
     uint8_t maxIndex = static_cast<uint8_t>(logLevels.size());
     for (uint8_t i = 0; i < maxIndex; ++i) {
       if (m_LogLevel.value() == logLevels[i]) {
-        nAura->m_Config->m_LogLevel = 1 + i;
+        nAura->m_Config.m_LogLevel = 1 + i;
         break;
       }
     }
@@ -552,26 +552,26 @@ void CCLI::OverrideConfig(CAura* nAura) const
 
   if (m_LANMode.has_value()) {
     const bool isMainServerEnabled = m_LANMode.value() != "free";
-    nAura->m_Net->m_Config->m_UDPMainServerEnabled = isMainServerEnabled;
+    nAura->m_Net->m_Config.m_UDPMainServerEnabled = isMainServerEnabled;
     if (!isMainServerEnabled) {
-      nAura->m_Net->m_Config->m_UDPBroadcastStrictMode = m_LANMode.value() == "strict";
+      nAura->m_Net->m_Config.m_UDPBroadcastStrictMode = m_LANMode.value() == "strict";
     }
   }
 
   if (m_BindAddress.has_value()) {
     optional<sockaddr_storage> address = CNet::ParseAddress(m_BindAddress.value(), ACCEPT_IPV4);
     if (address.has_value()) {
-      nAura->m_Net->m_Config->m_BindAddress4 = address.value();
+      nAura->m_Net->m_Config.m_BindAddress4 = address.value();
     }
   }
   if (m_HostPort.has_value()) {
-    nAura->m_Net->m_Config->m_MinHostPort = m_HostPort.value();
-    nAura->m_Net->m_Config->m_MaxHostPort = m_HostPort.value();
+    nAura->m_Net->m_Config.m_MinHostPort = m_HostPort.value();
+    nAura->m_Net->m_Config.m_MaxHostPort = m_HostPort.value();
   }
 
 #ifndef DISABLE_MINIUPNP
   if (m_EnableUPnP.has_value()) {
-    nAura->m_Net->m_Config->m_EnableUPnP = m_EnableUPnP.value();
+    nAura->m_Net->m_Config.m_EnableUPnP = m_EnableUPnP.value();
   }
 #endif
 }
