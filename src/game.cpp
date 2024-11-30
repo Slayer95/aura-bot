@@ -7914,7 +7914,7 @@ void CGame::ResetLagScreen()
     if (user->GetFinishedLoading()) {
       for (auto& otherUser : m_Users) {
         if (!otherUser->GetLagging()) continue;
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (-" + other->GetName() + ")")
+        DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (-" + otherUser->GetName() + ")")
         Send(user, GameProtocol::SEND_W3GS_STOP_LAG(otherUser));
       }
 
