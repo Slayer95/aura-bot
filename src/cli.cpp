@@ -528,7 +528,7 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_Config.m_EnableBNET = m_BNET.value();
   }
   if (m_IRC.has_value()) {
-    nAura->m_IRC->m_Config.m_Enabled = m_IRC.value();
+    nAura->m_IRC.m_Config.m_Enabled = m_IRC.value();
   }
   if (m_Discord.has_value()) {
     nAura->m_Discord->m_Config.m_Enabled = m_Discord.value();

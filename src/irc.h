@@ -64,14 +64,16 @@ public:
   int64_t                  m_LastAntiIdleTime;
   bool                     m_WaitingToConnect;
 
-  CIRC(CAura* nAura, CConfig& nCFG);
+  CIRC(CConfig& nCFG);
   ~CIRC();
   CIRC(CIRC&) = delete;
 
   [[nodiscard]] inline CTCPClient* GetSocket() const { return m_Socket; }
+  [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }
 
   [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds) const;
   void ResetConnection();
+  void Disable() { m_Config.m_Enabled = false; }
   void Update(void* fd, void* send_fd);
   void ExtractPackets();
   void Send(const std::string& message);

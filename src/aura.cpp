@@ -471,7 +471,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   : m_LogLevel(LOG_LEVEL_DEBUG),
     m_SHA(new CSHA1()),
     m_Discord(nullptr),
-    m_IRC(nullptr),
+    m_IRC(CIRC(CFG)),
     m_Net(CNet(CFG)),
 
     m_ConfigPath(CFG.GetFile()),
@@ -503,6 +503,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_ReloadContext(nullptr),
     m_SudoContext(nullptr)
 {
+  m_IRC.m_Aura = this;
   m_Net.m_Aura = this;
 
   Print("[AURA] Aura version " + m_Version);
@@ -514,7 +515,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
   m_Discord = new CDiscord(this, CFG);
-  m_IRC = new CIRC(this, CFG);
 
   CRC32::Initialize();
 
@@ -620,12 +620,12 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   if (m_Realms.empty() && m_Config.m_EnableBNET.value_or(true))
     Print("[AURA] notice - no enabled battle.net connections configured");
-  if (!m_IRC->m_Config.m_Enabled)
+  if (!m_IRC.GetIsEnabled())
     Print("[AURA] notice - no irc connection configured");
   if (!m_Discord->m_Config.m_Enabled)
     Print("[AURA] notice - no discord connection configured");
 
-  if (m_Realms.empty() && !m_IRC->m_Config.m_Enabled && !m_Discord->m_Config.m_Enabled && m_PendingActions.empty()) {
+  if (m_Realms.empty() && !m_IRC.GetIsEnabled() && !m_Discord->m_Config.m_Enabled && m_PendingActions.empty()) {
     Print("[AURA] error - no inputs connected");
     m_Ready = false;
     return;
@@ -834,7 +834,6 @@ CAura::~CAura()
   m_JoinInProgressGames.clear();
 
   delete m_DB;
-  delete m_IRC;
   delete m_Discord;
 }
 
@@ -1059,8 +1058,8 @@ bool CAura::Update()
   }
 
   // 8. irc socket
-  if (m_IRC) {
-    NumFDs += m_IRC->SetFD(&fd, &send_fd, &nfds);
+  if (m_IRC.GetIsEnabled()) {
+    NumFDs += m_IRC.SetFD(&fd, &send_fd, &nfds);
   }
 
   // 9. UDP sockets, outgoing test connections
@@ -1241,10 +1240,7 @@ bool CAura::Update()
   }
 
   // update irc
-
-  if (m_IRC) {
-    m_IRC->Update(&fd, &send_fd);
-  }
+  m_IRC.Update(&fd, &send_fd);
 
   // update discord
   if (m_Discord) {
@@ -1566,7 +1562,7 @@ bool CAura::LoadAllConfigs(CConfig& CFG)
 
   m_Config = BotConfig;
   m_Net.m_Config = NetConfig;
-  m_IRC->m_Config = IRCConfig;
+  m_IRC.m_Config = IRCConfig;
   m_Discord->m_Config = DiscordConfig;
   return true;
 }
@@ -1863,9 +1859,8 @@ void CAura::GracefulExit()
     realm->Disable();
   }
 
-  if (m_IRC) {
-    m_IRC->m_Config.m_Enabled = false;
-  }
+  m_IRC.Disable();
+
   if (m_Discord) {
     m_Discord->m_Config.m_Enabled = false;
   }
@@ -1880,7 +1875,7 @@ bool CAura::CheckGracefulExit()
     m_PendingActions.empty())
   */
 
-  if (m_IRC && m_IRC->GetSocket()->GetConnected()) {
+  if (m_IRC.GetIsEnabled() && m_IRC.GetSocket()->GetConnected()) {
     return false;
   }
   for (auto& realm : m_Realms) {
@@ -2067,8 +2062,8 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   }
 
   if (createdLobby->GetDisplayMode() == GAME_PUBLIC) {
-    if (m_IRC) {
-     m_IRC->SendAllChannels(createdLobby->GetAnnounceText());
+    if (m_IRC.GetIsEnabled()) {
+     m_IRC.SendAllChannels(createdLobby->GetAnnounceText());
     }
     if (m_Discord) {
       //TODO: Discord game created announcement

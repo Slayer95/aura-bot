@@ -62,8 +62,8 @@ using namespace std;
 //// CIRC ////
 //////////////
 
-CIRC::CIRC(CAura* nAura, CConfig& nCFG)
-  : m_Aura(nAura),
+CIRC::CIRC(CConfig& nCFG)
+  : m_Aura(nullptr),
     m_Config(CIRCConfig(nCFG)),
     m_Socket(new CTCPClient(AF_INET, "IRC")),
     m_NickName(string()),
@@ -109,8 +109,6 @@ void CIRC::ResetConnection()
 
 void CIRC::Update(void* fd, void* send_fd)
 {
-  const int64_t Time = GetTime();
-
   if (!m_Config.m_Enabled) {
     if (m_Socket && m_Socket->GetConnected()) {
       Print("[IRC: " + m_Config.m_HostName + "] disconnected");
@@ -119,6 +117,8 @@ void CIRC::Update(void* fd, void* send_fd)
     }
     return;
   }
+
+  const int64_t Time = GetTime();
 
   if (m_Socket->HasError() || m_Socket->HasFin())
   {
