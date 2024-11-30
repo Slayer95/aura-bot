@@ -407,7 +407,7 @@ void CMap::Load(CConfig* CFG)
   bool ignoreMPQ = m_MapServerPath.empty() || (!isPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   size_t RawMapSize = 0;
-  if (isPartial || m_Aura->m_Net->m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+  if (isPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
     if (m_MapServerPath.empty()) {
       return;
     }

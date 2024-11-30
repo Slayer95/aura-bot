@@ -84,7 +84,7 @@ public:
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
   CDiscord*                                          m_Discord;                    // Discord client
   CIRC*                                              m_IRC;                        // IRC client
-  CNet*                                              m_Net;                        // network manager
+  CNet                                               m_Net;                        // network manager
 
   std::filesystem::path                              m_ConfigPath;
   CBotConfig                                         m_Config;

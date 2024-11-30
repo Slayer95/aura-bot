@@ -89,7 +89,7 @@ public:
 class CNet
 {
 public:
-  CNet(CAura* nAura, CConfig& nCFG);
+  CNet(CConfig& nCFG);
   ~CNet();
 
   CAura*                                                      m_Aura;

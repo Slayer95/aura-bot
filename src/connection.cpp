@@ -148,7 +148,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
             pkt.sender = &(m_Socket->m_RemoteHost);
             memcpy(pkt.buf, Bytes.data(), Length);
             pkt.length = Length;
-            m_Aura->m_Net->HandleUDP(&pkt);
+            m_Aura->m_Net.HandleUDP(&pkt);
           } else {
             Abort = true;
             break;
@@ -156,14 +156,14 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case GPSProtocol::Magic::GPS_HEADER: {
-          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net->m_Config.m_ProxyReconnect > 0) {
+          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::RECONNECT && m_Type == INCON_TYPE_NONE && m_Aura->m_Net.m_Config.m_ProxyReconnect > 0) {
             const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
             const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
             GameUser::CGameUser* targetUser = nullptr;
             if (Length >= 17) {
-              targetUser = m_Aura->m_Net->GetReconnectTargetUser(ByteArrayToUInt32(Bytes, false, 13), Bytes[4]);
+              targetUser = m_Aura->m_Net.GetReconnectTargetUser(ByteArrayToUInt32(Bytes, false, 13), Bytes[4]);
             } else {
-              targetUser = m_Aura->m_Net->GetReconnectTargetUserLegacy(Bytes[4], reconnectKey);
+              targetUser = m_Aura->m_Net.GetReconnectTargetUserLegacy(Bytes[4], reconnectKey);
             }
             if (!targetUser || targetUser->GetGProxyReconnectKey() != reconnectKey) {
               m_Socket->PutBytes(GPSProtocol::SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
@@ -175,9 +175,9 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               result = INCON_UPDATE_RECONNECTED;
               Abort = true;
             }          
-          } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::UDPSYN && m_Aura->m_Net->m_Config.m_EnableTCPWrapUDP) {
+          } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::UDPSYN && m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
             // in-house extension
-            m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_UDP_TUNNEL);
+            m_Aura->m_Net.RegisterGameSeeker(this, INCON_TYPE_UDP_TUNNEL);
             result = INCON_UPDATE_PROMOTED;
             Abort = true;
           }
@@ -185,11 +185,11 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
         }
 
         case VLANProtocol::Magic::VLAN_HEADER: {
-          if (m_Type != INCON_TYPE_NONE || !m_Aura->m_Net->m_Config.m_VLANEnabled) {
+          if (m_Type != INCON_TYPE_NONE || !m_Aura->m_Net.m_Config.m_VLANEnabled) {
             Abort = true;
             break;
           }
-          m_Aura->m_Net->RegisterGameSeeker(this, INCON_TYPE_VLAN);
+          m_Aura->m_Net.RegisterGameSeeker(this, INCON_TYPE_VLAN);
           result = INCON_UPDATE_PROMOTED_PASSTHROUGH;
           Abort = true;
           break;

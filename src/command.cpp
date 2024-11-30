@@ -1394,7 +1394,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         IPVersionFragment = ", IPv4";
       }
       string FromFragment;
-      if (m_Aura->m_Net->m_Config.m_EnableGeoLocalization) {
+      if (m_Aura->m_Net.m_Config.m_EnableGeoLocalization) {
         FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true));
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + targetPlayer->GetReconnectionText() + FromFragment + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
@@ -1469,7 +1469,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (anyPing) {
         SendReply(JoinVector(pingsText, false), !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
-      } else if (m_Aura->m_Net->m_Config.m_HasBufferBloat && m_TargetGame->IsDownloading()) {
+      } else if (m_Aura->m_Net.m_Config.m_HasBufferBloat && m_TargetGame->IsDownloading()) {
         SendReply("Ping not measured yet (wait for map download.)", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       } else {
         SendReply("Ping not measured yet.", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
@@ -2094,7 +2094,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (!m_Aura->m_Net->m_Config.m_EnableGeoLocalization) {
+      if (!m_Aura->m_Net.m_Config.m_EnableGeoLocalization) {
         ErrorReply("Geolocalization is disabled.");
         break;
       }
@@ -2295,7 +2295,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("reconnect"):
     case HashCode("gproxy"): {
-      SendReply("Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">");
+      SendReply("Protect against disconnections using GProxyDLL, a Warcraft III plugin. See: <" + m_Aura->m_Net.m_Config.m_AnnounceGProxySite + ">");
       break;
     }
 
@@ -3261,7 +3261,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool IsMapAvailable = !m_TargetGame->GetMap()->GetMapData()->empty() && !m_TargetGame->GetMap()->HasMismatch();
-      if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) {
+      if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {
@@ -3472,7 +3472,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       uint8_t checkMode = HEALTH_CHECK_ALL | HEALTH_CHECK_VERBOSE;
-      if (!m_Aura->m_Net->m_SupportTCPOverIPv6) {
+      if (!m_Aura->m_Net.m_SupportTCPOverIPv6) {
         checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
         checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
       }
@@ -3492,7 +3492,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
-      if (!m_Aura->m_Net->QueryHealthCheck(this, checkMode, targetRealm, m_TargetGame)) {
+      if (!m_Aura->m_Net.QueryHealthCheck(this, checkMode, targetRealm, m_TargetGame)) {
         ErrorReply("Already testing the network.");
         break;
       }
@@ -3540,7 +3540,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint16_t intPort = static_cast<uint16_t>(Args[1]);
 
       SendReply("Trying to forward external port " + to_string(extPort) + " to internal port " + to_string(intPort) + "...");
-      uint8_t result = m_Aura->m_Net->RequestUPnP(protocol, extPort, intPort);
+      uint8_t result = m_Aura->m_Net.RequestUPnP(protocol, extPort, intPort);
       if (result == 0) {
         ErrorReply("Universal Plug and Play is not supported by the host router.");
       } else if (0 != (result & 1)) {
@@ -4081,7 +4081,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (targetValue) {
           m_TargetGame->SendGameDiscoveryCreate();
           m_TargetGame->SendGameDiscoveryRefresh();
-          if (!m_Aura->m_Net->m_UDPMainServerEnabled)
+          if (!m_Aura->m_Net.m_UDPMainServerEnabled)
             m_TargetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
         }
         if (m_TargetGame->GetUDPEnabled()) {
@@ -4105,7 +4105,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         SetAddressPort(&(maybeAddress.value()), port);
         sockaddr_storage* address = &(maybeAddress.value());
-        if (GetInnerIPVersion(address) == AF_INET6 && !(m_Aura->m_Net->m_SupportUDPOverIPv6 && m_Aura->m_Net->m_SupportTCPOverIPv6)) {
+        if (GetInnerIPVersion(address) == AF_INET6 && !(m_Aura->m_Net.m_SupportUDPOverIPv6 && m_Aura->m_Net.m_SupportTCPOverIPv6)) {
           ErrorReply("IPv6 support hasn't been enabled. Set <net.ipv6.tcp.enabled = yes>, and <net.udp_ipv6.enabled = yes> if you want to enable it.");
           break;
         }
@@ -6342,9 +6342,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("setdownloads"):
     case HashCode("maptransfers"): {
       if (Payload.empty()) {
-        if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
+        if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
           SendReply("Map transfers are disabled");
-        } else if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
+        } else if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
           SendReply("Map transfers are enabled");
         } else {
           SendReply("Map transfers are set to manual");
@@ -6373,10 +6373,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_Aura->m_Net->m_Config.m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
-      if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
+      m_Aura->m_Net.m_Config.m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
+      if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
         SendAll("Map transfers disabled.");
-      } else if (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
+      } else if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
         SendAll("Map transfers enabled.");
       } else {
         SendAll("Map transfers set to manual.");
@@ -6740,7 +6740,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      m_Aura->m_Net->FlushDNSCache();
+      m_Aura->m_Net.FlushDNSCache();
       SendReply("Cleared DNS entries");
       break;
     }

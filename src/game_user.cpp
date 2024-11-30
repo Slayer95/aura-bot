@@ -196,7 +196,7 @@ uint32_t CGameUser::GetDisplayRTT() const
 
 uint32_t CGameUser::GetRTT() const
 {
-  if (m_Game->m_Aura->m_Net->m_Config.m_LiteralRTT) {
+  if (m_Game->m_Aura->m_Net.m_Config.m_LiteralRTT) {
     return GetOperationalRTT();
   }
   return GetOperationalRTT() * 2;
@@ -319,7 +319,7 @@ void CGameUser::CloseConnection(bool fromOpen)
 
 void CGameUser::UnrefConnection(bool deferred)
 {
-  m_Game->m_Aura->m_Net->OnUserKicked(this, deferred);
+  m_Game->m_Aura->m_Net.OnUserKicked(this, deferred);
 
   if (!m_Disconnected) {
     m_LastDisconnectTicks = GetTicks();
@@ -342,7 +342,7 @@ void CGameUser::RefreshUID()
 bool CGameUser::Update(void* fd, int64_t timeout)
 {
   if (m_Disconnected) {
-    if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net->m_Config.m_ReconnectWaitTicks) {
+    if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net.m_Config.m_ReconnectWaitTicks) {
       m_Game->EventUserKickGProxyExtendedTimeout(this);
     }
     return m_DeleteMe;
@@ -476,9 +476,9 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           case GameProtocol::Magic::PONG_TO_HOST: {
             uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
 
-            const bool bufferBloatForbidden = m_Game->m_Aura->m_Net->m_Config.m_HasBufferBloat && m_Game->IsDownloading();
-            bool useSystemRTT = !m_Socket->GetIsLoopback() && m_Game->GetGameLoaded() && m_Game->m_Aura->m_Net->m_Config.m_UseSystemRTT;
-            const bool useLiteralRTT = m_Game->m_Aura->m_Net->m_Config.m_LiteralRTT;
+            const bool bufferBloatForbidden = m_Game->m_Aura->m_Net.m_Config.m_HasBufferBloat && m_Game->IsDownloading();
+            bool useSystemRTT = !m_Socket->GetIsLoopback() && m_Game->GetGameLoaded() && m_Game->m_Aura->m_Net.m_Config.m_UseSystemRTT;
+            const bool useLiteralRTT = m_Game->m_Aura->m_Net.m_Config.m_LiteralRTT;
 
             // discard pong values when anyone else is downloading if we're configured to do so
             if (!bufferBloatForbidden) {
@@ -543,7 +543,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           if (MyRealm) {
             m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
           } else if (m_RealmInternalId == 0) {
-            m_GProxyPort = m_Game->m_Aura->m_Net->m_Config.m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Net->m_Config.m_UDPCustomPortTCP4 : m_Game->GetHostPort();
+            m_GProxyPort = m_Game->m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_Game->GetHostPort();
           } else {
             m_GProxyPort = 6112;
           }
@@ -553,7 +553,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
           }
           m_Socket->PutBytes(GPSProtocol::SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
           if (m_GProxyVersion >= 2) {
-            m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net->m_Config.m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
+            m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
           }
           // the port to which the client directly connects
           // (proxy port if it uses a proxy; the hosted game port otherwise)
@@ -780,7 +780,7 @@ string CGameUser::GetDelayText(bool displaySync) const
       pingText = "*" + to_string(rtt);
     }
     if (equalizerDelay > 0) {
-      if (!m_Game->m_Aura->m_Net->m_Config.m_LiteralRTT) equalizerDelay /= 2;
+      if (!m_Game->m_Aura->m_Net.m_Config.m_LiteralRTT) equalizerDelay /= 2;
       pingText += "(" + to_string(equalizerDelay) + ")";
     }
   }

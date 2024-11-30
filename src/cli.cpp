@@ -552,26 +552,26 @@ void CCLI::OverrideConfig(CAura* nAura) const
 
   if (m_LANMode.has_value()) {
     const bool isMainServerEnabled = m_LANMode.value() != "free";
-    nAura->m_Net->m_Config.m_UDPMainServerEnabled = isMainServerEnabled;
+    nAura->m_Net.m_Config.m_UDPMainServerEnabled = isMainServerEnabled;
     if (!isMainServerEnabled) {
-      nAura->m_Net->m_Config.m_UDPBroadcastStrictMode = m_LANMode.value() == "strict";
+      nAura->m_Net.m_Config.m_UDPBroadcastStrictMode = m_LANMode.value() == "strict";
     }
   }
 
   if (m_BindAddress.has_value()) {
     optional<sockaddr_storage> address = CNet::ParseAddress(m_BindAddress.value(), ACCEPT_IPV4);
     if (address.has_value()) {
-      nAura->m_Net->m_Config.m_BindAddress4 = address.value();
+      nAura->m_Net.m_Config.m_BindAddress4 = address.value();
     }
   }
   if (m_HostPort.has_value()) {
-    nAura->m_Net->m_Config.m_MinHostPort = m_HostPort.value();
-    nAura->m_Net->m_Config.m_MaxHostPort = m_HostPort.value();
+    nAura->m_Net.m_Config.m_MinHostPort = m_HostPort.value();
+    nAura->m_Net.m_Config.m_MaxHostPort = m_HostPort.value();
   }
 
 #ifndef DISABLE_MINIUPNP
   if (m_EnableUPnP.has_value()) {
-    nAura->m_Net->m_Config.m_EnableUPnP = m_EnableUPnP.value();
+    nAura->m_Net.m_Config.m_EnableUPnP = m_EnableUPnP.value();
   }
 #endif
 }

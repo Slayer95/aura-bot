@@ -416,7 +416,7 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     // wait time of 2 minutes = 1 empty action required...
 
     if (m_GProxyEmptyActions > 0) {
-      m_GProxyEmptyActions = m_Aura->m_Net->m_Config.m_ReconnectWaitTicksLegacy / 60000 - 1;
+      m_GProxyEmptyActions = m_Aura->m_Net.m_Config.m_ReconnectWaitTicksLegacy / 60000 - 1;
       if (m_GProxyEmptyActions > 9) {
         m_GProxyEmptyActions = 9;
       }
@@ -424,8 +424,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
 
     // start listening for connections
 
-    uint16_t hostPort = nAura->m_Net->NextHostPort();
-    m_Socket = m_Aura->m_Net->GetOrCreateTCPServer(hostPort, "Game <<" + m_GameName + ">>");
+    uint16_t hostPort = nAura->m_Net.NextHostPort();
+    m_Socket = m_Aura->m_Net.GetOrCreateTCPServer(hostPort, "Game <<" + m_GameName + ">>");
 
     if (m_Socket) {
       m_HostPort = m_Socket->GetPort();
@@ -1291,7 +1291,7 @@ void CGame::UpdateJoinable()
       if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
         ++Downloaders;
 
-        if (m_Aura->m_Net->m_Config.m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net->m_Config.m_MaxDownloaders) {
+        if (m_Aura->m_Net.m_Config.m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net.m_Config.m_MaxDownloaders) {
           break;
         }
 
@@ -1311,7 +1311,7 @@ void CGame::UpdateJoinable()
 
         const uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
-        while (user->GetLastMapPartSent() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net->m_Config.m_MaxParallelMapPackets && user->GetLastMapPartSent() < MapSize)
+        while (user->GetLastMapPartSent() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets && user->GetLastMapPartSent() < MapSize)
         {
           if (user->GetLastMapPartSent() == 0)
           {
@@ -1324,7 +1324,7 @@ void CGame::UpdateJoinable()
           // limit the download speed if we're sending too much data
           // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
 
-          if (m_Aura->m_Net->m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net->m_Config.m_MaxUploadSpeed * 1024)
+          if (m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024)
             break;
 
           Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapData()));
@@ -1673,7 +1673,7 @@ bool CGame::Update(void* fd, void* send_fd)
     // however we only want to broadcast if the countdown hasn't started
 
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
-      if (m_Aura->m_Net->m_UDPMainServerEnabled && m_Aura->m_Net->m_Config.m_UDPBroadcastStrictMode) {
+      if (m_Aura->m_Net.m_UDPMainServerEnabled && m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
         SendGameDiscoveryRefresh();
       } else {
         SendGameDiscoveryInfo();
@@ -1688,7 +1688,7 @@ bool CGame::Update(void* fd, void* send_fd)
   for (auto i = begin(m_Users); i != end(m_Users);) {
     if ((*i)->Update(fd, (*i)->GetGProxyAny() ? GAME_USER_TIMEOUT_RECONNECTABLE : GAME_USER_TIMEOUT_VANILLA)) {
       EventUserDeleted(*i, fd, send_fd);
-      m_Aura->m_Net->OnUserKicked(*i);
+      m_Aura->m_Net.OnUserKicked(*i);
       delete *i;
       i = m_Users.erase(i);
     } else {
@@ -1835,7 +1835,7 @@ void CGame::CheckLobbyTimeouts()
     }
   }
 
-  if (!m_Aura->m_Net->m_HealthCheckInProgress && (!m_IsMirror || m_Config.m_LobbyTimeoutMode == LOBBY_TIMEOUT_STRICT)) {
+  if (!m_Aura->m_Net.m_HealthCheckInProgress && (!m_IsMirror || m_Config.m_LobbyTimeoutMode == LOBBY_TIMEOUT_STRICT)) {
     bool timedOut = false;
     switch (m_Config.m_LobbyTimeoutMode) {
     case LOBBY_TIMEOUT_NEVER:
@@ -3348,11 +3348,11 @@ uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
 {
   // Uses <net.game_discovery.udp.tcp4_custom_port.value>
   if (protocol == AF_INET)
-    return m_Aura->m_Net->m_Config.m_UDPEnableCustomPortTCP4 ? m_Aura->m_Net->m_Config.m_UDPCustomPortTCP4 : m_HostPort;
+    return m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_HostPort;
 
   // Uses <net.game_discovery.udp.tcp6_custom_port.value>
   if (protocol == AF_INET6)
-    return m_Aura->m_Net->m_Config.m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net->m_Config.m_UDPCustomPortTCP6 : m_HostPort;
+    return m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net.m_Config.m_UDPCustomPortTCP6 : m_HostPort;
 
   return m_HostPort;
 }
@@ -3535,7 +3535,7 @@ vector<pair<GameUser::CGameUser*, uint32_t>> CGame::GetDescendingSortedRTT() con
 
 uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
 {
-  return m_Aura->m_Net->GetUDPPort(protocol);
+  return m_Aura->m_Net.GetUDPPort(protocol);
 }
 
 vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint8_t gameVersion, const uint16_t hostPort)
@@ -3617,9 +3617,9 @@ void CGame::AnnounceToAddress(string& addressLiteral, uint8_t gameVersion)
   sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, 6112);
   if (isLoopbackAddress(address)) {
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
+    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
   } else {
-    m_Aura->m_Net->Send(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
+    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
 
@@ -3636,7 +3636,7 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t game
 void CGame::SendGameDiscoveryCreate(uint8_t gameVersion) const
 {
   vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(gameVersion, m_HostCounter);
-  m_Aura->m_Net->SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
+  m_Aura->m_Net.SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 }
 
 void CGame::SendGameDiscoveryCreate() const
@@ -3653,7 +3653,7 @@ void CGame::SendGameDiscoveryCreate() const
 void CGame::SendGameDiscoveryDecreate() const
 {
   vector<uint8_t> packet = GameProtocol::SEND_W3GS_DECREATEGAME(m_HostCounter);
-  m_Aura->m_Net->SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
+  m_Aura->m_Net.SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 }
 
 void CGame::SendGameDiscoveryRefresh() const
@@ -3663,11 +3663,11 @@ void CGame::SendGameDiscoveryRefresh() const
     static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? 1 : m_Slots.size() - GetSlotsOpen()),
     static_cast<uint32_t>(m_Slots.size())
   );
-  m_Aura->m_Net->SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
+  m_Aura->m_Net.SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 
   // Send to active VLAN connections
-  if (m_Aura->m_Net->m_Config.m_VLANEnabled) {
-    for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
+  if (m_Aura->m_Net.m_Config.m_VLANEnabled) {
+    for (auto& serverConnections : m_Aura->m_Net.m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsVLAN() && connection->GetGameVersion() > 0 && GetIsSupportedGameVersion(connection->GetGameVersion())) {
@@ -3682,24 +3682,24 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
 {
   // See CNet::SendGameDiscovery()
 
-  if (!m_Aura->m_Net->SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(AF_INET)))) {
+  if (!m_Aura->m_Net.SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(AF_INET)))) {
     // Ensure the game is available at loopback.
     DLOG_APP_IF(LOG_LEVEL_TRACE2, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
-    m_Aura->m_Net->SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
+    m_Aura->m_Net.SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
   }
 
   for (auto& address : m_Config.m_ExtraDiscoveryAddresses) {
     if (isLoopbackAddress(&address)) continue; // We already ensure sending loopback packets above.
     bool isIPv6 = GetInnerIPVersion(&address) == AF_INET6;
-    if (isIPv6 && !m_Aura->m_Net->m_SupportTCPOverIPv6) {
+    if (isIPv6 && !m_Aura->m_Net.m_SupportTCPOverIPv6) {
       continue;
     }
-    m_Aura->m_Net->Send(&address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(isIPv6 ? AF_INET6 : AF_INET)));
+    m_Aura->m_Net.Send(&address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(isIPv6 ? AF_INET6 : AF_INET)));
   }
 
   // Send to active UDP in TCP tunnels and VLAN connections
-  if (m_Aura->m_Net->m_Config.m_EnableTCPWrapUDP || m_Aura->m_Net->m_Config.m_VLANEnabled) {
-    for (auto& serverConnections : m_Aura->m_Net->m_ManagedConnections) {
+  if (m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP || m_Aura->m_Net.m_Config.m_VLANEnabled) {
+    for (auto& serverConnections : m_Aura->m_Net.m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsUDPTunnel()) {
@@ -3985,7 +3985,7 @@ pair<int64_t, int64_t> CGame::GetReconnectWaitTicks() const
 {
   return make_pair(
     static_cast<int64_t>(m_GProxyEmptyActions + 1) * 60000,
-    m_Aura->m_Net->m_Config.m_ReconnectWaitTicks
+    m_Aura->m_Net.m_Config.m_ReconnectWaitTicks
   );
 }
 
@@ -4358,21 +4358,21 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
   }
 
   string GProxyFragment;
-  if (m_Aura->m_Net->m_Config.m_AnnounceGProxy && GetIsProxyReconnectable()) {
+  if (m_Aura->m_Net.m_Config.m_AnnounceGProxy && GetIsProxyReconnectable()) {
     if (user->GetGProxyExtended()) {
-      GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">";
+      GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net.m_Config.m_AnnounceGProxySite + ">";
     } else if (user->GetGProxyAny()) {
       if (GetIsProxyReconnectableLong()) {
-        GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">";
+        GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net.m_Config.m_AnnounceGProxySite + ">";
       } else {
-        GProxyFragment = " is using GProxy, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net->m_Config.m_AnnounceGProxySite + ">";
+        GProxyFragment = " is using GProxy, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net.m_Config.m_AnnounceGProxySite + ">";
       }
     }
   }
   
   user->SetStatusMessageSent(true);
   if (OwnerFragment.empty() && GProxyFragment.empty()) {
-    if (m_Aura->m_Net->m_Config.m_AnnounceIPv6 && user->GetUsingIPv6()) {
+    if (m_Aura->m_Net.m_Config.m_AnnounceIPv6 && user->GetUsingIPv6()) {
       SendAllChat(user->GetDisplayName() + " joined the game over IPv6.");
     }
     return;
@@ -5398,7 +5398,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
   uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
   CRealm* JoinedRealm = user->GetRealm(false);
-  uint32_t MaxUploadSize = m_Aura->m_Net->m_Config.m_MaxUploadSize;
+  uint32_t MaxUploadSize = m_Aura->m_Net.m_Config.m_MaxUploadSize;
   if (JoinedRealm)
     MaxUploadSize = JoinedRealm->GetMaxUploadSize();
 
@@ -5409,10 +5409,10 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
     bool IsMapAvailable = !MapData->empty() && !m_Map->HasMismatch();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
     bool ShouldTransferMap = (
-      IsMapAvailable && m_Aura->m_Net->m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
-      (user->GetDownloadAllowed() || (m_Aura->m_Net->m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
+      IsMapAvailable && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
+      (user->GetDownloadAllowed() || (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
       (m_Aura->m_StartedGames.size() < m_Aura->m_Config.m_MaxStartedGames) &&
-      (m_Aura->m_StartedGames.empty() || !m_Aura->m_Net->m_Config.m_HasBufferBloat)
+      (m_Aura->m_StartedGames.empty() || !m_Aura->m_Net.m_Config.m_HasBufferBloat)
     );
     if (ShouldTransferMap) {
       if (!user->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
@@ -5431,10 +5431,10 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
       if (!user->HasLeftReason()) {
         if (m_Remade) {
           user->SetLeftReason("autokicked - they don't have the map (remade game)");
-        } else if (m_Aura->m_Net->m_Config.m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
+        } else if (m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-        } else if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames || (m_Aura->m_StartedGames.size() > 0 && m_Aura->m_Net->m_Config.m_HasBufferBloat)) {
+        } else if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames || (m_Aura->m_StartedGames.size() > 0 && m_Aura->m_Net.m_Config.m_HasBufferBloat)) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
@@ -8045,13 +8045,13 @@ bool CGame::GetIsReserved(const string& name) const
 bool CGame::GetIsProxyReconnectable() const
 {
   if (m_IsMirror) return 0 != m_Config.m_ReconnectionMode;
-  return 0 != (m_Aura->m_Net->m_Config.m_ProxyReconnect & m_Config.m_ReconnectionMode);
+  return 0 != (m_Aura->m_Net.m_Config.m_ProxyReconnect & m_Config.m_ReconnectionMode);
 }
 
 bool CGame::GetIsProxyReconnectableLong() const
 {
   if (m_IsMirror) return 0 != (m_Config.m_ReconnectionMode & RECONNECT_ENABLED_GPROXY_EXTENDED);
-  return 0 != ((m_Aura->m_Net->m_Config.m_ProxyReconnect & m_Config.m_ReconnectionMode) & RECONNECT_ENABLED_GPROXY_EXTENDED);
+  return 0 != ((m_Aura->m_Net.m_Config.m_ProxyReconnect & m_Config.m_ReconnectionMode) & RECONNECT_ENABLED_GPROXY_EXTENDED);
 }
 
 bool CGame::IsDownloading() const

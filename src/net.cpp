@@ -319,8 +319,8 @@ bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
 // CNet
 //
 
-CNet::CNet(CAura* nAura, CConfig& nCFG)
-  : m_Aura(nAura),
+CNet::CNet(CConfig& nCFG)
+  : m_Aura(nullptr),
     m_Config(CNetConfig(nCFG)),
     m_SupportUDPOverIPv6(false),
     m_UDPMainServerEnabled(false),

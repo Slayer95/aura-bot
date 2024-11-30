@@ -472,7 +472,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_SHA(new CSHA1()),
     m_Discord(nullptr),
     m_IRC(nullptr),
-    m_Net(nullptr),
+    m_Net(CNet(CFG)),
 
     m_ConfigPath(CFG.GetFile()),
     m_Config(CBotConfig(CFG)),
@@ -503,6 +503,8 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_ReloadContext(nullptr),
     m_SudoContext(nullptr)
 {
+  m_Net.m_Aura = this;
+
   Print("[AURA] Aura version " + m_Version);
 
   if (m_DB->HasError()) {
@@ -511,13 +513,12 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     return;
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
-  m_Net = new CNet(this, CFG);
   m_Discord = new CDiscord(this, CFG);
   m_IRC = new CIRC(this, CFG);
 
   CRC32::Initialize();
 
-  if (!CFG.GetSuccess() || !LoadDefaultConfigs(CFG, &m_Net->m_Config)) {
+  if (!CFG.GetSuccess() || !LoadDefaultConfigs(CFG, &m_Net.m_Config)) {
     Print("[CONFIG] Error: Critical errors found in " + PathToString(m_ConfigPath.filename()));
     m_Ready = false;
     return;
@@ -543,14 +544,14 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
   Print("[AURA] running game version 1." + to_string(m_GameVersion));
 
-  if (!m_Net->Init()) {
+  if (!m_Net.Init()) {
     Print("[AURA] error - close active instances of Warcraft, and/or pause LANViewer to initialize Aura.");
     m_Ready = false;
     return;
   }
 
-  if (m_Net->m_Config.m_UDPEnableCustomPortTCP4) {
-    Print("[AURA] broadcasting games port " + to_string(m_Net->m_Config.m_UDPCustomPortTCP4) + " over LAN");
+  if (m_Net.m_Config.m_UDPEnableCustomPortTCP4) {
+    Print("[AURA] broadcasting games port " + to_string(m_Net.m_Config.m_UDPCustomPortTCP4) + " over LAN");
   }
 
   m_RealmsIdentifiers.resize(16);
@@ -808,7 +809,6 @@ CAura::~CAura()
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
   delete m_CommandDefaultConfig;
-  delete m_Net;
   delete m_SHA;
 
   ClearAutoRehost();
@@ -945,7 +945,7 @@ bool CAura::HandleAction(vector<string> action)
   } else if (action[0] == "port-forward") {
     uint16_t externalPort = static_cast<uint16_t>(stoi(action[2]));
     uint16_t internalPort = static_cast<uint16_t>(stoi(action[3]));
-    m_Net->RequestUPnP(action[1], externalPort, internalPort, LOG_LEVEL_DEBUG);
+    m_Net.RequestUPnP(action[1], externalPort, internalPort, LOG_LEVEL_DEBUG);
 #endif
   } else if (!action.empty()) {
     Print("[AURA] Action type " + action[0] + " unsupported");
@@ -990,7 +990,7 @@ bool CAura::Update()
 
   bool isStandby = (
     m_Lobbies.empty() && m_StartedGames.empty() &&
-    !m_Net->m_HealthCheckInProgress &&
+    !m_Net.m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     m_PendingActions.empty() &&
     !m_AutoRehostGameSetup
@@ -1011,14 +1011,14 @@ bool CAura::Update()
 
   // 2. all running game servers
 
-  for (const auto& server : m_Net->m_GameServers) {
+  for (const auto& server : m_Net.m_GameServers) {
     server.second->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
     ++NumFDs;
   }
 
   // 3. all unassigned incoming TCP connections
 
-  for (const auto& serverConnections : m_Net->m_IncomingConnections) {
+  for (const auto& serverConnections : m_Net.m_IncomingConnections) {
     // std::pair<uint16_t, vector<CConnection*>>
     for (const auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
@@ -1030,7 +1030,7 @@ bool CAura::Update()
 
   // 4. all managed TCP connections
 
-  for (const auto& serverConnections : m_Net->m_ManagedConnections) {
+  for (const auto& serverConnections : m_Net.m_ManagedConnections) {
     // std::pair<uint16_t, vector<CConnection*>>
     for (const auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
@@ -1064,7 +1064,7 @@ bool CAura::Update()
   }
 
   // 9. UDP sockets, outgoing test connections
-  NumFDs += m_Net->SetFD(&fd, &send_fd, &nfds);
+  NumFDs += m_Net.SetFD(&fd, &send_fd, &nfds);
 
   // before we call select we need to determine how long to block for
   // 50 ms is the hard maximum
@@ -1111,26 +1111,26 @@ bool CAura::Update()
 
   // if hosting a lobby, accept new connections to its game server
 
-  for (const auto& server : m_Net->m_GameServers) {
+  for (const auto& server : m_Net.m_GameServers) {
     if (m_ExitingSoon) {
       server.second->Discard(static_cast<fd_set*>(&fd));
       continue;
     }
     uint16_t localPort = server.first;
-    if (m_Net->m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
+    if (m_Net.m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
       server.second->Discard(static_cast<fd_set*>(&fd));
       continue;
     }
     CStreamIOSocket* socket = server.second->Accept(static_cast<fd_set*>(&fd));
     if (socket) {
-      if (m_Net->m_Config.m_ProxyReconnect > 0) {
+      if (m_Net.m_Config.m_ProxyReconnect > 0) {
         CConnection* incomingConnection = new CConnection(this, localPort, socket);
 #ifdef DEBUG
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }
 #endif
-        m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
+        m_Net.m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (m_Lobbies.empty() && m_JoinInProgressGames.empty()) {
 #ifdef DEBUG
         if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
@@ -1145,10 +1145,10 @@ bool CAura::Update()
           Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
         }
 #endif
-        m_Net->m_IncomingConnections[localPort].push_back(incomingConnection);
+        m_Net.m_IncomingConnections[localPort].push_back(incomingConnection);
       }
-      if (m_Net->m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-        Print("[AURA] " + to_string(m_Net->m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections");
+      if (m_Net.m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
+        Print("[AURA] " + to_string(m_Net.m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections");
       }
     }
 
@@ -1158,7 +1158,7 @@ bool CAura::Update()
   }
 
   // update unassigned incoming connections
-  for (auto& serverConnections : m_Net->m_IncomingConnections) {
+  for (auto& serverConnections : m_Net.m_IncomingConnections) {
     int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
@@ -1178,7 +1178,7 @@ bool CAura::Update()
   }
 
   // update managed connections
-  for (auto& serverConnections : m_Net->m_ManagedConnections) {
+  for (auto& serverConnections : m_Net.m_ManagedConnections) {
     int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
@@ -1252,10 +1252,10 @@ bool CAura::Update()
   }
 
   // update UDP sockets, outgoing test connections
-  m_Net->Update(&fd, &send_fd);
+  m_Net.Update(&fd, &send_fd);
 
   // move stuff from pending vectors to their intended places
-  m_Net->MergeDownGradedConnections();
+  m_Net.MergeDownGradedConnections();
   if (MergePendingLobbies()) {
     metaDataNeedsUpdate = true;
   }
@@ -1510,7 +1510,7 @@ bool CAura::ReloadConfigs()
   } else if (reCachePresets) {
     CacheMapPresets();
   }
-  m_Net->OnConfigReload();
+  m_Net.OnConfigReload();
 
   return success;
 }
@@ -1565,7 +1565,7 @@ bool CAura::LoadAllConfigs(CConfig& CFG)
   }
 
   m_Config = BotConfig;
-  m_Net->m_Config = NetConfig;
+  m_Net.m_Config = NetConfig;
   m_IRC->m_Config = IRCConfig;
   m_Discord->m_Config = DiscordConfig;
   return true;
@@ -1857,7 +1857,7 @@ void CAura::GracefulExit()
     lobby->SetExiting(true);
   }
 
-  m_Net->GracefulExit();
+  m_Net.GracefulExit();
 
   for (auto& realm : m_Realms) {
     realm->Disable();
@@ -1875,7 +1875,7 @@ bool CAura::CheckGracefulExit()
 {
   /* Already checked:
     (m_Lobbies.empty() && m_StartedGames.empty() &&
-    !m_Net->m_HealthCheckInProgress &&
+    !m_Net.m_HealthCheckInProgress &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     m_PendingActions.empty())
   */
@@ -1888,17 +1888,17 @@ bool CAura::CheckGracefulExit()
       return false;
     }
   }
-  for (auto& serverConnections : m_Net->m_IncomingConnections) {
+  for (auto& serverConnections : m_Net.m_IncomingConnections) {
     if (!serverConnections.second.empty()) {
       return false;
     }
   }
-  for (auto& serverConnections : m_Net->m_ManagedConnections) {
+  for (auto& serverConnections : m_Net.m_ManagedConnections) {
     if (!serverConnections.second.empty()) {
       return false;
     }
   }
-  if (!m_Net->m_DownGradedConnections.empty()) {
+  if (!m_Net.m_DownGradedConnections.empty()) {
     return false;
   }
   return true;
@@ -1999,23 +1999,23 @@ bool CAura::CreateGame(CGameSetup* gameSetup)
   UpdateMetaData();
 
 #ifndef DISABLE_MINIUPNP
-  if (m_Net->m_Config.m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
+  if (m_Net.m_Config.m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // This is a long synchronous network call.
     // TODO: Cache UPnP per-port
-    m_Net->RequestUPnP("TCP", createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
+    m_Net.RequestUPnP("TCP", createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
 #endif
 
-  if (createdLobby->GetIsCheckJoinable() && !m_Net->GetIsFetchingIPAddresses()) {
+  if (createdLobby->GetIsCheckJoinable() && !m_Net.GetIsFetchingIPAddresses()) {
     uint8_t checkMode = HEALTH_CHECK_ALL;
-    if (!m_Net->m_SupportTCPOverIPv6) {
+    if (!m_Net.m_SupportTCPOverIPv6) {
       checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
       checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
     }
     if (createdLobby->GetIsVerbose()) {
       checkMode |= HEALTH_CHECK_VERBOSE;
     }
-    m_Net->QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, createdLobby);
+    m_Net.QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, createdLobby);
     createdLobby->SetIsCheckJoinable(false);
   }
 

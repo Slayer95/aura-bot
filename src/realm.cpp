@@ -230,7 +230,7 @@ void CRealm::Update(void* fd, void* send_fd)
               break;
 
             case BNETProtocol::Magic::GETADVLISTEX:
-              if (m_Aura->m_Net->m_Config.m_UDPForwardGameLists) {
+              if (m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
                 std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
                 std::vector<uint8_t> War3Version = {m_GameVersion, 0, 0, 0};
                 std::string ipString = m_Socket->GetIPString();
@@ -239,8 +239,8 @@ void CRealm::Update(void* fd, void* send_fd)
                 AppendByteArray(relayPacket, War3Version);
                 AppendByteArrayFast(relayPacket, Data);
                 AssignLength(relayPacket);
-                DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net->m_Config.m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)")
-                m_Aura->m_Net->Send(&(m_Aura->m_Net->m_Config.m_UDPForwardAddress), relayPacket);
+                DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net.m_Config.m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)")
+                m_Aura->m_Net.Send(&(m_Aura->m_Net.m_Config.m_UDPForwardAddress), relayPacket);
               }
 
               break;
@@ -566,7 +566,7 @@ void CRealm::Update(void* fd, void* send_fd)
     m_ReconnectNextTick = false;
 
     sockaddr_storage resolvedAddress;
-    if (m_Aura->m_Net->ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config.m_HostName, m_Config.m_ServerPort)) {
+    if (m_Aura->m_Net.ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config.m_HostName, m_Config.m_ServerPort)) {
       m_Socket->Connect(m_Config.m_BindAddress, resolvedAddress);
     } else {
       m_Socket->m_HasError = true;
@@ -660,7 +660,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
       if (isWhisper) {
         string tokenName = GetTokenName(m_Config.m_PrivateCmdToken);
-        string example = m_Aura->m_Net->m_Config.m_AllowDownloads ? "host wc3maps-8" : "host castle";
+        string example = m_Aura->m_Net.m_Config.m_AllowDownloads ? "host wc3maps-8" : "host castle";
         QueueWhisper("Hi, " + fromUser + ". Use " + m_Config.m_PrivateCmdToken + tokenName + " for commands. Example: " + m_Config.m_PrivateCmdToken + example, fromUser);
       }
       return;

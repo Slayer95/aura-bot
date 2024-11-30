@@ -181,7 +181,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
-    m_DownloadTimeout(m_Aura->m_Net->m_Config.m_DownloadTimeout),
+    m_DownloadTimeout(m_Aura->m_Net.m_Config.m_DownloadTimeout),
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
@@ -229,7 +229,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
-    m_DownloadTimeout(m_Aura->m_Net->m_Config.m_DownloadTimeout),
+    m_DownloadTimeout(m_Aura->m_Net.m_Config.m_DownloadTimeout),
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
@@ -774,7 +774,7 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
 #ifndef DISABLE_CPR
 uint32_t CGameSetup::ResolveMapRepositoryTask()
 {
-  if (m_Aura->m_Net->m_Config.m_MapRepositories.find(m_SearchTarget.first) == m_Aura->m_Net->m_Config.m_MapRepositories.end()) {
+  if (m_Aura->m_Net.m_Config.m_MapRepositories.find(m_SearchTarget.first) == m_Aura->m_Net.m_Config.m_MapRepositories.end()) {
     m_ErrorMessage = "Downloads from  " + m_SearchTarget.first + " are disabled.";
     return RESOLUTION_ERR;
   }
@@ -954,7 +954,7 @@ bool CGameSetup::PrepareDownloadMap()
     Print("Error!! trying to download from unsupported repository [" + m_SearchTarget.first + "] !!");
     return false;
   }
-  if (!m_Aura->m_Net->m_Config.m_AllowDownloads) {
+  if (!m_Aura->m_Net.m_Config.m_AllowDownloads) {
     m_Ctx->ErrorReply("Map downloads are not allowed.", CHAT_SEND_SOURCE_ALL);
     return false;
   }

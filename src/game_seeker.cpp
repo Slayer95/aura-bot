@@ -124,7 +124,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
 
       switch (Bytes[0]) {
         case GameProtocol::Magic::W3GS_HEADER:
-          if (m_Type != INCON_TYPE_UDP_TUNNEL || !m_Aura->m_Net->m_Config.m_EnableTCPWrapUDP) {
+          if (m_Type != INCON_TYPE_UDP_TUNNEL || !m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
             Abort = true;
             break;
           }
@@ -156,7 +156,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
             pkt.sender = &(m_Socket->m_RemoteHost);
             memcpy(pkt.buf, Bytes.data(), Length);
             pkt.length = Length;
-            m_Aura->m_Net->HandleUDP(&pkt);
+            m_Aura->m_Net.HandleUDP(&pkt);
           } else {
             Abort = true;
             break;
@@ -164,7 +164,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
           break;
 
         case VLANProtocol::Magic::VLAN_HEADER: {
-          if (m_Type != INCON_TYPE_VLAN || !m_Aura->m_Net->m_Config.m_VLANEnabled) {
+          if (m_Type != INCON_TYPE_VLAN || !m_Aura->m_Net.m_Config.m_VLANEnabled) {
             Abort = true;
             break;
           }
