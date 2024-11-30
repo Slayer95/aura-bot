@@ -133,6 +133,8 @@ struct CRealmConfig
   CRealmConfig(CConfig& CFG, CNetConfig* nNetConfig);
   CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex);
   ~CRealmConfig();
+
+  void Reset();
 };
 
 #endif

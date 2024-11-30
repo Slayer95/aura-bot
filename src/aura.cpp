@@ -721,6 +721,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
       longestGamePrefixSize = realmConfig->m_GamePrefix.length();
 
     m_RealmsByHostCounter[matchingRealm->GetHostCounterID()] = matchingRealm;
+    realmConfig->Reset();
     delete realmConfig;
   }
 
@@ -1547,10 +1548,15 @@ bool CAura::LoadAllConfigs(CConfig& CFG)
     return false;
   }
 
+  // Copy, but prevent double free of CCommandConfig* members
   m_Config = BotConfig;
-  m_Net.m_Config = NetConfig;
   m_IRC.m_Config = IRCConfig;
   m_Discord.m_Config = DiscordConfig;
+  m_Net.m_Config = NetConfig;
+
+  BotConfig.Reset();
+  IRCConfig.Reset();
+  DiscordConfig.Reset();
   return true;
 }
 

@@ -53,6 +53,8 @@ struct CIRCConfig
 
   explicit CIRCConfig(CConfig& CFG);
   ~CIRCConfig();
+
+  void Reset();
 };
 
 #endif

@@ -106,7 +106,12 @@ CBotConfig::CBotConfig(CConfig& CFG)
   CFG.Accept("db.storage_file");
 }
 
+void CBotConfig::Reset()
+{
+  m_LANCommandCFG = nullptr;
+}
+
 CBotConfig::~CBotConfig()
 {
- delete m_LANCommandCFG;
+  delete m_LANCommandCFG;
 }

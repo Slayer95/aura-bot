@@ -1474,6 +1474,6 @@ void CRealm::ResetLogin()
   m_FailedSignup = false;
 }
 
-void CRealm::SetConfig(CRealmConfig* CFG) {
-  m_Config = *CFG;
+void CRealm::SetConfig(CRealmConfig* realmConfig) {
+  m_Config = *realmConfig;
 }

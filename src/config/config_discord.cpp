@@ -73,6 +73,11 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   }
 }
 
+void CDiscordConfig::Reset()
+{
+  m_CommandCFG = nullptr;
+}
+
 CDiscordConfig::~CDiscordConfig()
 {
   delete m_CommandCFG;

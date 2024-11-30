@@ -417,7 +417,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_BindAddress            = customBindAddress.value();
 }
 
+void CRealmConfig::Reset()
+{
+  m_CommandCFG = nullptr;
+}
+
 CRealmConfig::~CRealmConfig()
 {
- delete m_CommandCFG;
+  delete m_CommandCFG;
 }

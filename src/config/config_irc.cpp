@@ -87,6 +87,11 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
   }
 }
 
+void CIRCConfig::Reset()
+{
+  m_CommandCFG = nullptr;
+}
+
 CIRCConfig::~CIRCConfig()
 {
   delete m_CommandCFG;

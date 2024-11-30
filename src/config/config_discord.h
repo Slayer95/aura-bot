@@ -49,6 +49,8 @@ struct CDiscordConfig
 
   explicit CDiscordConfig(CConfig& CFG);
   ~CDiscordConfig();
+
+  void Reset();
 };
 
 #endif

@@ -79,6 +79,8 @@ struct CBotConfig
   
   explicit CBotConfig(CConfig& CFG);
   ~CBotConfig();
+
+  void Reset();
 };
 
 #endif
