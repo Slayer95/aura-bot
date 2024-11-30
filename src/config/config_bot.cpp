@@ -62,7 +62,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   m_MaxLobbies                   = CFG.GetInt("hosting.games_quota.max_lobbies", 1);
   m_MaxStartedGames              = CFG.GetInt("hosting.games_quota.max_started", 20);
-  m_MaxJoinInProgressGames     = CFG.GetInt("hosting.games_quota.max_join_in_progress", 0);
+  m_MaxJoinInProgressGames       = CFG.GetInt("hosting.games_quota.max_join_in_progress", 0);
   m_MaxTotalGames                = CFG.GetInt("hosting.games_quota.max_total", 20);
   m_AutoRehostQuotaConservative  = CFG.GetBool("hosting.games_quota.auto_rehost.conservative", false);
 
