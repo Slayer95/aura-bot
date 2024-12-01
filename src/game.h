@@ -471,6 +471,7 @@ public:
   void                      SendWelcomeMessage(GameUser::CGameUser* user) const;
   void                      SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
   void                      SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
+  void                      QueueLeftMessage(GameUser::CGameUser* user) const;
   void                      SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
   void                      SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const;
   void                      SendGProxyEmptyActions();
@@ -656,10 +657,10 @@ public:
   bool RemoveScopeBan(const std::string& name, const std::string& hostName);
 
   std::vector<uint32_t> GetPlayersFramesBehind() const;
-  UserList GetLaggingPlayers() const;
+  UserList GetLaggingUsers() const;
   uint8_t CountLaggingPlayers() const;
   UserList CalculateNewLaggingPlayers() const;
-  void RemoveFromLagScreens(GameUser::CGameUser* user);
+  void RemoveFromLagScreens(GameUser::CGameUser* user) const;
   void ResetLagScreen();
   void ResetLatency();
   void NormalizeSyncCounters() const;

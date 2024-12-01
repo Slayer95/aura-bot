@@ -4002,8 +4002,7 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
   } else {
     // Let's avoid sending leave messages during game load.
     // Also, once the game is loaded, ensure all the users' actions will be sent before the leave message is sent.
-    CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
-    frame.leavers.push_back(user);
+    QueueLeftMessage(user);
   }
 
   if (m_GameLoading && !user->GetFinishedLoading() && !m_Config->m_LoadInGame) {
@@ -4210,6 +4209,13 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
   } else {
     Send(chatPlayer->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
   }
+}
+
+void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
+{
+  CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
+  frame.leavers.push_back(user);
+  user->TrySetEnding();
 }
 
 void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const
@@ -4792,6 +4798,11 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     dbPlayer->SetLoadingTime(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks);
   }
 
+  // Reset lagging flag regardless of whether load-in-game is enabled or not.
+  // i.e. don't care whether we are in an actual lag screen.
+  user->SetLagging(false);
+  user->SetStartedLaggingTicks(0);
+
   if (!m_Config->m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
@@ -4818,11 +4829,9 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     user->AddSyncCounterOffset(1);
     */
 
-    user->SetLagging(false);
-    user->SetStartedLaggingTicks(0);
     user->SetStatus(USERSTATUS_PLAYING);
     RemoveFromLagScreens(user);
-    UserList laggingPlayers = GetLaggingPlayers();
+    UserList laggingPlayers = GetLaggingUsers();
     if (laggingPlayers.empty()) {
       m_Lagging = false;
     }
@@ -5752,8 +5761,8 @@ void CGame::EventGameStartedLoading()
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
       AppendByteArray(m_LoadingRealBuffer, packet);
     }
-    SetEveryoneLagging();
   }
+  SetEveryoneLagging();
 
   // and finally reenter battle.net chat
   AnnounceDecreateToRealms();
@@ -7842,7 +7851,7 @@ vector<uint32_t> CGame::GetPlayersFramesBehind() const
   return framesBehind;
 }
 
-UserList CGame::GetLaggingPlayers() const
+UserList CGame::GetLaggingUsers() const
 {
   UserList laggingPlayers;
   if (!m_Lagging) return laggingPlayers;
@@ -7886,9 +7895,9 @@ UserList CGame::CalculateNewLaggingPlayers() const
   return laggingPlayers;
 }
 
-void CGame::RemoveFromLagScreens(GameUser::CGameUser* user)
+void CGame::RemoveFromLagScreens(GameUser::CGameUser* user) const
 {
-  for (auto& otherUser : m_Users) {
+  for (const auto& otherUser : m_Users) {
     if (user == otherUser || otherUser->GetLagging()) {
       continue;
     }
@@ -7899,7 +7908,7 @@ void CGame::RemoveFromLagScreens(GameUser::CGameUser* user)
 
 void CGame::ResetLagScreen()
 {
-  const UserList laggingPlayers = GetLaggingPlayers();
+  const UserList laggingPlayers = GetLaggingUsers();
   if (laggingPlayers.empty()) {
     return;
   }
@@ -8406,24 +8415,27 @@ bool CGame::StopPlayers(const string& reason) const
 
 void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
 {
+  RemoveFromLagScreens(user);
   user->SetLeftReason(reason);
   user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
-  user->TrySetEnding();
   user->DisableReconnect();
   user->CloseConnection();
   user->SetLagging(false);
+
+  if (!user->GetIsEndingOrEnded()) {
+    QueueLeftMessage(user);
+  }
 }
 
 void CGame::StopLaggers(const string& reason)
 {
+  UserList laggingUsers = GetLaggingUsers();
   bool savedAny = false;
-  for (auto& user : m_Users) {
-    if (user->GetLagging() || !user->GetFinishedLoading()) {
-      if (!savedAny && TrySaveOnDisconnect(user, false)) {
-        savedAny = true;
-      }
-      StopLagger(user, reason);
+  for (auto& user : laggingUsers) {
+    if (!savedAny && TrySaveOnDisconnect(user, false)) {
+      savedAny = true;
     }
+    StopLagger(user, reason);
   }
 }
 
@@ -8445,9 +8457,12 @@ void CGame::StopDesynchronized(const string& reason) const
     if ((it->second).size() < majorityThreshold) {
       user->SetLeftReason(reason);
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
-      user->TrySetEnding();
       user->DisableReconnect();
       user->CloseConnection();
+
+      if (!user->GetIsEndingOrEnded()) {
+        QueueLeftMessage(user);
+      }
     }
   }
 }
