@@ -465,7 +465,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
 
             const bool bufferBloatForbidden = m_Game->m_Aura->m_Net->m_Config->m_HasBufferBloat && m_Game->IsDownloading();
-            bool useSystemRTT = m_Game->GetGameLoaded() && m_Game->m_Aura->m_Net->m_Config->m_UseSystemRTT;
+            bool useSystemRTT = !m_Socket->GetIsLoopback() && m_Game->GetGameLoaded() && m_Game->m_Aura->m_Net->m_Config->m_UseSystemRTT;
             const bool useLiteralRTT = m_Game->m_Aura->m_Net->m_Config->m_LiteralRTT;
 
             // discard pong values when anyone else is downloading if we're configured to do so
