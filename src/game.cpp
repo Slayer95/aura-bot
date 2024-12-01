@@ -975,7 +975,7 @@ uint8_t CGame::GetNumFakePlayers() const
 {
   uint8_t counter = 0;
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-    if (!GetIsFakeObserver(fakeUser)) {
+    if (!fakeUser.GetIsObserver()) {
       ++counter;
     }
   }
@@ -986,7 +986,7 @@ uint8_t CGame::GetNumFakeObservers() const
 {
   uint8_t counter = 0;
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-    if (GetIsFakeObserver(fakeUser)) {
+    if (fakeUser.GetIsObserver()) {
       ++counter;
     }
   }
@@ -3244,7 +3244,7 @@ void CGame::SendAllActionsCallback()
   }
   for (GameUser::CGameUser* user : frame.leavers) {
     // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
-    DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion")
+    DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] running scheduled deletion")
     user->SetDeleteMe(true);
   }
   frame.Reset();
@@ -4052,7 +4052,7 @@ void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
       user->UnrefConnection();
       user->SetGProxyDisconnectNoticeSent(true);
       if (user->GetGProxyExtended()) {
-        SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxyDLL and may reconnect while others keep playing");
+        SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxyDLL and may reconnect");
       } else {
         SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxy++ and may reconnect");
       }
@@ -4259,7 +4259,7 @@ void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
   CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
   frame.leavers.push_back(user);
   user->TrySetEnding();
-  LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] scheduled for deletion in " + ToDecString(user->GetPingEqualizerOffset()) + " frames")
+  DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion in " + ToDecString(user->GetPingEqualizerOffset()) + " frames")
 }
 
 void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const
@@ -5790,7 +5790,7 @@ void CGame::EventGameStartedLoading()
     const CGameSlot* slot = InspectSlot(SID);
     if (slot && slot->GetIsPlayerOrFake() && !GetUserFromSID(SID)) {
       const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
-      if (virtualUserMatch && !GetIsFakeObserver(*virtualUserMatch)) {
+      if (virtualUserMatch && !virtualUserMatch->GetIsObserver()) {
         m_HMCEnabled = true;
       }
     }
@@ -6698,7 +6698,7 @@ uint8_t CGame::GetPublicHostUID() const
       return m_FakeUsers.back().GetUID();
     }
     for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-      if (GetIsFakeObserver(fakeUser) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+      if (fakeUser.GetIsObserver() && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
         continue;
       }
       return fakeUser.GetUID();
@@ -6752,10 +6752,10 @@ uint8_t CGame::GetHiddenHostUID() const
 
   if (!m_GameLoading && !m_FakeUsers.empty()) {
     for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-      if (GetIsFakeObserver(fakeUser) && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+      if (fakeUser.GetIsObserver() && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
         continue;
       }
-      if (GetIsFakeObserver(fakeUser)) {
+      if (fakeUser.GetIsObserver()) {
         //availableRefereeUIDs.push_back(static_cast<uint8_t>(fakePlayer));
         return fakeUser.GetUID();
       } else {
@@ -8269,7 +8269,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
       return;
     }
     const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
-    if (virtualUserMatch && GetIsFakeObserver(*virtualUserMatch)) {
+    if (virtualUserMatch && virtualUserMatch->GetIsObserver()) {
       SendAllChat("This game requires a fake player (not observer) on slot " + ToDecString(SID + 1));
       return;
     }
@@ -8928,29 +8928,6 @@ bool CGame::DeleteFakeUser(uint8_t SID)
     }
   }
   return false;
-}
-
-bool CGame::GetIsFakeObserver(const CGameVirtualUser& fakeUser) const
-{
-  bool result;
-  const CGameSlot* slot = InspectSlot(fakeUser.GetSID());
-  result = slot != nullptr && slot->GetTeam() == m_Map->GetVersionMaxSlots();
-#ifdef DEBUG
-  if (result == fakeUser.GetIsObserver()) {
-    if (result) {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache OK (observer)")
-    } else {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache OK (player)")
-    }
-  } else {
-    if (result) {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache mismatch (should be observer)")
-    } else {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "Fake user [" + fakeUser.GetName() + "] cache mismatch (should be player)")
-    }
-  }
-#endif
-  return result;
 }
 
 uint8_t CGame::FakeAllSlots()

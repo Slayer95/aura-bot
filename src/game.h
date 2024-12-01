@@ -631,7 +631,6 @@ public:
   bool CreateFakePlayer(const bool useVirtualHostName);
   bool CreateFakeObserver(const bool useVirtualHostName);
   bool DeleteFakeUser(uint8_t SID);
-  bool GetIsFakeObserver(const CGameVirtualUser& fakeUser) const;
 
   uint8_t FakeAllSlots();
   void DeleteFakeUsersLobby();
