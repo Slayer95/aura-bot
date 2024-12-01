@@ -72,33 +72,9 @@ CDiscord::~CDiscord()
   }
   if (m_Client) {
     m_Client->shutdown();
-    /*
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      Print("[DISCORD] shutdown ok");
-      if (m_Client->get_rest()) {
-        Print("[DISCORD] rest exists");
-        // may have been deleted, though
-      } else {
-        Print("[DISCORD] rest does not exist");
-      }
-      if (m_Client->get_raw_rest()) {
-        Print("[DISCORD] raw_rest exists");
-        // may have been deleted, though
-      } else {
-        Print("[DISCORD] raw_rest does not exist");
-      }
-      Print("[DISCORD] deallocating");
-    }*/
-
     // Crashes in Debug build only.
     delete m_Client;
     m_Client = nullptr;
-
-    /*
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      Print("[DISCORD] deallocated ok");
-    }
-    */
   }
 #endif
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
@@ -200,39 +176,9 @@ void CDiscord::Update()
     } else {
 #ifndef DISABLE_DPP
       if (m_Client) {
-        /*
-        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-          Print("[DISCORD] shutting down");
-        }
-        */
         m_Client->shutdown();
-        /*
-        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-          Print("[DISCORD] shutdown ok");
-        }
-        if (m_Client->get_rest()) {
-          Print("[DISCORD] rest exists");
-          // may have been deleted, though
-        } else {
-          Print("[DISCORD] rest does not exist");
-        }
-        if (m_Client->get_raw_rest()) {
-          Print("[DISCORD] raw_rest exists");
-          // may have been deleted, though
-        } else {
-          Print("[DISCORD] raw_rest does not exist");
-        }
-        Print("[DISCORD] deallocating");
-        */
-
         delete m_Client;
         m_Client = nullptr;
-
-        /*
-        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-          Print("[DISCORD] deallocated ok");
-        }
-        */
       }
 #endif
     }
