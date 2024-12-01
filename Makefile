@@ -13,7 +13,7 @@ endif
 
 CCFLAGS += -fno-builtin
 CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti
-DFLAGS =
+DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
 
