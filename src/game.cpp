@@ -634,7 +634,7 @@ void CGame::InitSlots()
 {
   if (m_RestoredGame) {
     m_Slots = m_RestoredGame->GetSlots();
-		// reset user slots
+    // reset user slots
     for (auto& slot : m_Slots) {
       if (slot.GetIsPlayerOrFake()) {
         slot.SetUID(0);
@@ -8216,7 +8216,12 @@ bool CGame::GetCanStartGracefulCountDown() const
 
   if (GetNumJoinedPlayers() >= 2) {
     for (const auto& user : m_Users) {
-      if (!user->GetIsReserved() && !user->GetIsObserver() && user->GetStoredRTTCount() < 3) {
+      if (user->GetIsReserved() || user->GetIsOwner(nullopt) || user->GetIsObserver()) {
+        continue;
+      }
+      if (!user->GetIsRTTMeasuredConsistent()) {
+        return false;
+      } else if (user->GetPingKicked()) {
         return false;
       }
     }
@@ -8311,17 +8316,13 @@ void CGame::StartCountDown(bool fromUser, bool force)
       ChecksPassed = false;
     }
 
+    UserList downloadingUsers;
+
     // check if everyone has the map
-    string StillDownloading;
     for (const auto& slot : m_Slots) {
       if (slot.GetIsPlayerOrFake() && slot.GetDownloadStatus() != 100) {
-        GameUser::CGameUser* Player = GetUserFromUID(slot.GetUID());
-        if (Player) {
-          if (StillDownloading.empty())
-            StillDownloading = Player->GetDisplayName();
-          else
-            StillDownloading += ", " + Player->GetDisplayName();
-        }
+        GameUser::CGameUser* player = GetUserFromUID(slot.GetUID());
+        if (player) downloadingUsers.push_back(player);
       }
       if (slot.GetTeam() != m_Map->GetVersionMaxSlots()) {
         if (sameTeam == m_Map->GetVersionMaxSlots()) {
@@ -8331,8 +8332,8 @@ void CGame::StartCountDown(bool fromUser, bool force)
         }
       }
     }
-    if (!StillDownloading.empty()) {
-      SendAllChat("Players still downloading the map: " + StillDownloading);
+    if (!downloadingUsers.empty()) {
+      SendAllChat("Players still downloading the map: " + ToNameListSentence(downloadingUsers));
       ChecksPassed = false;
     } else if (0 == m_ControllersWithMap) {
       SendAllChat("Nobody has downloaded the map yet.");
@@ -8345,21 +8346,24 @@ void CGame::StartCountDown(bool fromUser, bool force)
       ChecksPassed = false;
     }
 
-    // check if everyone has been pinged enough (3 times) that the autokicker would have kicked them by now
-    // see function EventUserPongToHost for the autokicker code
-    string NotPinged;
+    UserList highPingUsers;
+    UserList pingNotMeasuredUsers;
+    UserList unverifiedUsers;
+
+    // check if everyone's ping is measured and acceptable
     if (GetNumJoinedPlayers() >= 2) {
       for (const auto& user : m_Users) {
-        if (!user->GetIsReserved() && !user->GetIsObserver() && user->GetStoredRTTCount() < 3) {
-          if (NotPinged.empty())
-            NotPinged = user->GetDisplayName();
-          else
-            NotPinged += ", " + user->GetDisplayName();
+        if (user->GetIsReserved() || user->GetIsOwner(nullopt) || user->GetIsObserver()) {
+          continue;
+        }
+        if (!user->GetIsRTTMeasuredConsistent()) {
+          pingNotMeasuredUsers.push_back(user);
+        } else if (user->GetPingKicked()) {
+          highPingUsers.push_back(user);
         }
       }
     }
 
-    string NotVerified;
     for (const auto& user : m_Users) {
       // Skip non-referee observers
       if (!user->GetIsOwner(nullopt) && user->GetIsObserver()) {
@@ -8368,19 +8372,20 @@ void CGame::StartCountDown(bool fromUser, bool force)
       }
       CRealm* realm = user->GetRealm(false);
       if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
-        if (NotVerified.empty())
-          NotVerified = user->GetDisplayName();
-        else
-          NotVerified += ", " + user->GetDisplayName();
+        unverifiedUsers.push_back(user);
       }
     }
 
-    if (!NotPinged.empty()) {
-      SendAllChat("Players NOT yet pinged thrice: " + NotPinged);
+    if (!highPingUsers.empty()) {
+      SendAllChat("Players with high ping: " + ToNameListSentence(highPingUsers));
       ChecksPassed = false;
     }
-    if (!NotVerified.empty()) {
-      SendAllChat("Players NOT verified (whisper sc): " + NotVerified);
+    if (!pingNotMeasuredUsers.empty()) {
+      SendAllChat("Players NOT yet pinged thrice: " + ToNameListSentence(pingNotMeasuredUsers));
+      ChecksPassed = false;
+    }
+    if (!unverifiedUsers.empty()) {
+      SendAllChat("Players NOT verified (whisper sc): " + ToNameListSentence(unverifiedUsers));
       ChecksPassed = false;
     }
     if (m_LastPlayerLeaveTicks.has_value() && GetTicks() < m_LastPlayerLeaveTicks.value() + 2000) {
