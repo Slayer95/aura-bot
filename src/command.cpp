@@ -579,8 +579,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     } else {
       Command = m_Aura->m_SudoExecCommand;
     }
-    transform(begin(Command), end(Command), begin(Command), [](char c) { return static_cast<char>(std::tolower(c)); });
-    Result = make_pair(Command, Payload);
+    Result.emplace(ToLowerCase(Command), Payload);
     //m_Permissions |= USER_PERMISSIONS_BOT_SUDO_OK;
     m_Permissions = SET_USER_PERMISSIONS_ALL;
   }
@@ -1225,10 +1224,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
   }
 
   if (CommandHash == HashCode("sudo")) {
-    optional<pair<string, string>> RunOverride = CheckSudo(Payload);
-    if (RunOverride.has_value()) {
-      Command = RunOverride.value().first;
-      Payload = RunOverride.value().second;
+    optional<pair<string, string>> runOverride = CheckSudo(Payload);
+    if (runOverride.has_value()) {
+      Command = runOverride->first;
+      Payload = runOverride->second;
       CommandHash = HashCode(Command);
     } else {
       if (m_Aura->m_SudoExecCommand.empty()) {
