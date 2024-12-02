@@ -74,6 +74,8 @@ struct CBotConfig
   uint8_t                                 m_LogLevel;
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                  // master switch to enable/disable ALL bnet configs on startup
+
+  std::string                             m_SudoKeyWord;                 // something to send as confirmation for !su commands
   
   explicit CBotConfig(CConfig& CFG);
   ~CBotConfig();

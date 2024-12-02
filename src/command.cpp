@@ -1214,16 +1214,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     SendReply("Sudo command requested. See Aura's console for further steps.");
     Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + cmdToken + Payload + "\"");
     if (m_SourceRealm && m_FromWhisper) {
-      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config->m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC || m_DiscordAPI) {
-      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + m_Aura->m_Config->m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
-      Print("[AURA] Confirm from the game client with: \"" + cmdToken + "sudo " + m_Aura->m_SudoAuthPayload + "\"");
+      Print("[AURA] Confirm from the game client with: \"" + cmdToken + m_Aura->m_Config->m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     }
     return;
   }
 
-  if (CommandHash == HashCode("sudo")) {
+  if (CommandHash == HashCode(m_Aura->m_Config->m_SudoKeyWord)) {
     optional<pair<string, string>> runOverride = CheckSudo(Payload);
     if (runOverride.has_value()) {
       Command = runOverride->first;
@@ -1231,7 +1231,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       CommandHash = HashCode(Command);
     } else {
       if (m_Aura->m_SudoExecCommand.empty()) {
-        Print("[AURA] " + GetUserAttribution() + " sent command [" + cmdToken + command + "] with payload [" + payload + "], but " + cmdToken + "sudo was not requested.");
+        Print("[AURA] " + GetUserAttribution() + " sent command [" + cmdToken + command + "] with payload [" + payload + "], but " + cmdToken + "su was not requested.");
       } else {
         Print("[AURA] " + GetUserAttribution() + " failed sudo authentication.");
       }

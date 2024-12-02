@@ -101,6 +101,8 @@ CBotConfig::CBotConfig(CConfig& CFG)
   // Master switch mainly intended for CLI. CFG key provided for completeness.
   m_EnableBNET                   = CFG.GetMaybeBool("bot.toggle_every_realm");
 
+  m_SudoKeyWord                  = CFG.GetString("bot.keywords.sudo", "sudo");
+
   CFG.Accept("db.storage_file");
 }
 
