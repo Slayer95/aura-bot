@@ -15,6 +15,11 @@ Config
 - Default value: Aura home directory
 - Error handling: Use default value
 
+## \`bot.keywords.sudo\`
+- Type: string
+- Default value: sudo
+- Error handling: Use default value
+
 ## \`bot.latency\`
 - Type: uint16
 - Default value: 100
