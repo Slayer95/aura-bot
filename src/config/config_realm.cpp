@@ -59,7 +59,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 {
   const static string emptyString;
 
-  m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", "PE");
+  m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", "PER");
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", "Peru");
   m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", "system");
 
