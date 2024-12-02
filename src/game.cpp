@@ -5689,6 +5689,16 @@ void CGame::EventGameStartedLoading()
     UpdateReadyCounters();
   }
 
+  m_ReconnectProtocols = CalcActiveReconnectProtocols();
+  if (m_GProxyEmptyActions > 0 && m_ReconnectProtocols == RECONNECT_ENABLED_GPROXY_EXTENDED) {
+    m_GProxyEmptyActions = 0;
+    for (const auto& user : m_Users) {
+      if (user->GetGProxyAny()) {
+        user->UpdateGProxyEmptyActions();
+      }
+    }
+  }
+
   m_GameLoading = true;
 
   // since we use a fake countdown to deal with leavers during countdown the COUNTDOWN_START and COUNTDOWN_END packets are sent in quick succession

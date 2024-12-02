@@ -539,35 +539,10 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             }
           }
         } else if (Bytes[1] == GPSProtocol::Magic::INIT) {
-          CRealm* MyRealm = GetRealm(false);
-          if (MyRealm) {
-            m_GProxyPort = MyRealm->GetUsesCustomPort() ? MyRealm->GetPublicHostPort() : m_Game->GetHostPort();
-          } else if (m_RealmInternalId == 0) {
-            m_GProxyPort = m_Game->m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_Game->GetHostPort();
-          } else {
-            m_GProxyPort = 6112;
-          }
-          m_GProxy = true;
-          if (Length >= 8) {
-            m_GProxyVersion = ByteArrayToUInt32(Bytes, false, 4);
-          }
-          m_Socket->PutBytes(GPSProtocol::SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
-          if (m_GProxyVersion >= 2) {
-            m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
-          }
-          // the port to which the client directly connects
-          // (proxy port if it uses a proxy; the hosted game port otherwise)
-          Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
+          InitGProxy(Length >= 8 ? ByteArrayToUInt32(Bytes, false, 4) : 0);
         } else if (Bytes[1] == GPSProtocol::Magic::SUPPORT_EXTENDED && Length >= 8) {
-          //uint32_t seconds = ByteArrayToUInt32(Bytes, false, 4);
           if (m_GProxy && m_Game->GetIsProxyReconnectableLong()) {
-            m_GProxyExtended = true;
-            if (Length >= 12) {
-              m_GProxyCheckGameID = true;
-              Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
-            } else {
-              Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
-            }
+            ConfirmGProxyExtended(Data);
           }
         } else if (Bytes[1] == GPSProtocol::Magic::CHANGEKEY && Length >= 8) {
           m_GProxyReconnectKey = ByteArrayToUInt32(Bytes, false, 4);
@@ -683,6 +658,53 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
 
   if (!m_Disconnected && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);
+  }
+}
+
+void CGameUser::InitGProxy(const uint32_t version)
+{
+  CRealm* realm = GetRealm(false);
+
+  m_GProxy = true;
+  m_GProxyVersion = version;
+
+  // the port to which the client directly connects
+  // this means that if Aura is behind a reverse proxy,
+  // this port should match its publicly visible port
+  if (realm) {
+    m_GProxyPort = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : m_Game->GetHostPort();
+  } else if (m_RealmInternalId == 0) {
+    m_GProxyPort = m_Game->m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_Game->GetHostPort();
+  } else {
+    m_GProxyPort = 6112;
+  }
+
+  UpdateGProxyEmptyActions();
+  CheckGProxyExtendedStartHandShake();
+
+  Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
+}
+
+void CGameUser::ConfirmGProxyExtended(const vector<uint8_t>& data)
+{
+  m_GProxyExtended = true;
+  if (data.size() >= 12) {
+    m_GProxyCheckGameID = true;
+    Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
+  } else {
+    Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
+  }
+}
+
+void CGameUser::UpdateGProxyEmptyActions() const
+{
+  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
+}
+
+void CGameUser::CheckGProxyExtendedStartHandShake() const
+{
+  if (m_GProxyVersion >= 2 && m_Game->GetIsProxyReconnectableLong()) {
+    m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
   }
 }
 

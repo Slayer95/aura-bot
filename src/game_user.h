@@ -361,11 +361,17 @@ namespace GameUser
     // other functions
 
     void Send(const std::vector<uint8_t>& data) final;
+
     void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
     void EventGProxyReconnectInvalid();
     void RotateGProxyReconnectKey() const;
     void CloseConnection(bool fromOpen = false);
     void UnrefConnection(bool deferred = false);
+
+    void InitGProxy(const uint32_t version);
+    void ConfirmGProxyExtended(const std::vector<uint8_t>& data);
+    void UpdateGProxyEmptyActions() const;
+    void CheckGProxyExtendedStartHandShake() const;
   };
 
   [[nodiscard]] inline std::string ToNameListSentence(ImmutableUserList userList, bool useRealNames = false) {
