@@ -1541,7 +1541,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to look up stats.");
         break;
       }
-      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayerNames()) {
+      if (Payload.empty() && (!m_TargetGame || m_TargetGame->GetIsHiddenPlayerNames())) {
         ErrorReply("Usage: " + cmdToken + "stats <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "statsdota <PLAYER>");
         break;
@@ -1934,7 +1934,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("eras"): {
-      if (Payload.empty() && m_TargetGame->GetIsHiddenPlayerNames()) {
+      if (Payload.empty() && m_TargetGame && m_TargetGame->GetIsHiddenPlayerNames()) {
         ErrorReply("Usage: " + cmdToken + "eras <PLAYER|COUNTRY|COLOR>");
         break;
       }
