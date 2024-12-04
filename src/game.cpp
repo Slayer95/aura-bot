@@ -263,7 +263,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_CurrentActionsFrame(nullptr),
     m_Map(nGameSetup->m_Map),
-    m_PauseUser(nullptr),
+    m_PauseUser(nullptr), // TODO: Track m_PauseUser
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
     m_FromAutoReHost(nGameSetup->m_LobbyAutoRehosted),
@@ -1645,6 +1645,28 @@ void CGame::UpdateLoaded()
       // impossible path
       break;
   }
+
+  // TODO: Implement game timeout warnings
+  // m_PlayingTimeoutWarningShortCountDown    = CFG.GetUint8("hosting.expiry.playing.timeout.soon_warnings", 10);
+  // m_PlayingTimeoutWarningShortInterval     = CFG.GetUint32("hosting.expiry.playing.timeout.soon_interval", 60);
+  // m_PlayingTimeoutWarningLargeCountDown    = CFG.GetUint8("hosting.expiry.playing.timeout.eager_warnings", 3);
+  // m_PlayingTimeoutWarningLargeInterval     = CFG.GetUint32("hosting.expiry.playing.timeout.eager_interval", 1200);
+
+  // TODO: Implement game pause timeout (and also warnings)
+  // On timeout:
+  // Warnings are needed in order for other players to unpause if so they wish.
+  /*
+  Resume(m_PauseUser, m_PauseUser->GetPingEqualizerFrame(), true);
+
+  // Must disconnect, because unpausing as m_PauseUser would desync them anyway
+  m_PauseUser->SetLeftReason("pause time limit exceeded");
+  m_PauseUser->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+  m_PauseUser->DisableReconnect();
+  m_PauseUser->CloseConnection();
+  if (!user->GetIsEndingOrEnded()) {
+    QueueLeftMessage(m_PauseUser);
+  }
+  */
 }
 
 bool CGame::Update(void* fd, void* send_fd)
