@@ -46,7 +46,7 @@ using namespace std;
 // CQueuedChatMessage
 //
 
-CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, const bool isProxy)
+CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, shared_ptr<CCommandContext> nCtx, const bool isProxy)
   : m_Realm(nRealm),
     m_QueuedTime(0),
     m_ReceiverSelector(0),
@@ -67,15 +67,13 @@ CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, co
     m_ProxySenderCtx = nCtx;
     const string& fromName = nCtx->GetSender();
     m_ProxySenderName = vector<uint8_t>(fromName.begin(), fromName.end());
-    m_Realm->m_Aura->HoldContext(nCtx);
   }
 }
 
 CQueuedChatMessage::~CQueuedChatMessage()
 {
   if (m_ProxySenderCtx) {
-    m_Realm->m_Aura->UnholdContext(m_ProxySenderCtx);
-    m_ProxySenderCtx = nullptr;
+    m_ProxySenderCtx.reset();
   }
 }
 

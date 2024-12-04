@@ -80,9 +80,9 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ga
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 /* Command received from BNET but targetting a game */
@@ -110,9 +110,9 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
     m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 /* Command received from IRC but targetting a game */
@@ -140,9 +140,9 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 #ifndef DISABLE_DPP
@@ -167,7 +167,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
     m_Permissions(0),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
   try {
@@ -176,6 +175,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
   } catch (...) {
     m_FromWhisper = true;
   }
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 #endif
 
@@ -203,9 +203,9 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CGame* ta
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 /* BNET command */
@@ -233,9 +233,9 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* f
     m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 /* IRC command */
@@ -262,9 +262,9 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* irc
     m_ChannelName(channelName),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 #ifndef DISABLE_DPP
@@ -288,7 +288,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slas
     m_Permissions(0),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
   try {
@@ -300,6 +299,7 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slas
     m_ServerName = "users.discord.com";
     m_FromWhisper = true;
   }
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 #endif
 
@@ -327,9 +327,9 @@ CCommandContext::CCommandContext(CAura* nAura, const bool& nIsBroadcast, ostream
     m_ChannelName(string()),
 
     m_Output(nOutputStream),
-    m_RefCount(1),
     m_PartiallyDestroyed(false)
 {
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 void CCommandContext::SetIdentity(const string& userName)
@@ -553,8 +553,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     return Result;
   }
   if (m_Aura->m_SudoContext->GetPartiallyDestroyed()) {
-    m_Aura->UnholdContext(m_Aura->m_SudoContext);
-    m_Aura->m_SudoContext = nullptr;
+    m_Aura->m_SudoContext.reset();
     m_Aura->m_SudoAuthPayload.clear();
     m_Aura->m_SudoExecCommand.clear();
     return Result;
@@ -583,8 +582,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     //m_Permissions |= USER_PERMISSIONS_BOT_SUDO_OK;
     m_Permissions = SET_USER_PERMISSIONS_ALL;
   }
-  m_Aura->UnholdContext(m_Aura->m_SudoContext);
-  m_Aura->m_SudoContext = nullptr;
+  m_Aura->m_SudoContext.reset();
   m_Aura->m_SudoAuthPayload.clear();
   m_Aura->m_SudoExecCommand.clear();
   return Result;
@@ -660,7 +658,7 @@ void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxF
 
     case FROM_BNET: {
       if (m_SourceRealm) {
-        m_SourceRealm->TryQueueChat(message, m_FromName, true, this, ctxFlags);
+        m_SourceRealm->TryQueueChat(message, m_FromName, true, shared_from_this(), ctxFlags);
       }
       break;
     }
@@ -699,7 +697,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       }
     }
     if (m_TargetRealm) {
-      m_TargetRealm->TryQueueChat(message, m_FromName, false, this, ctxFlags);
+      m_TargetRealm->TryQueueChat(message, m_FromName, false, shared_from_this(), ctxFlags);
       if (m_TargetRealm == m_SourceRealm) {
         AllSourceSuccess = true;
       }
@@ -712,7 +710,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       AllSourceSuccess = true;
     }
     if (m_SourceRealm && !AllSourceSuccess) {
-      m_SourceRealm->TryQueueChat(message, m_FromName, false, this, ctxFlags);
+      m_SourceRealm->TryQueueChat(message, m_FromName, false, shared_from_this(), ctxFlags);
       AllSourceSuccess = true;
     }
     if (m_IRC) {
@@ -1206,8 +1204,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       ErrorReply("Forbidden");
       return;
     }
-    m_Aura->HoldContext(this);
-    m_Aura->m_SudoContext = this;
+    m_Aura->m_SudoContext = shared_from_this();
     // TODO(IceSandslash): GetSudoAuthPayload should only be executed after some local input.
     m_Aura->m_SudoAuthPayload = m_Aura->GetSudoAuthPayload(Payload);
     m_Aura->m_SudoExecCommand = Payload;
@@ -1762,7 +1759,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_ActionMessage = targetName + ", " + m_FromName + " invites you to join game \"" + m_TargetGame->m_GameName + "\"";
       }
 
-      targetRealm->QueueWhisper(m_ActionMessage, targetName, this, true);
+      targetRealm->QueueWhisper(m_ActionMessage, targetName, shared_from_this(), true);
       break;
     }
 
@@ -2800,7 +2797,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Already hosting a game.");
           break;
         }
-        m_Aura->m_GameSetup->SetContext(this);
+        m_Aura->m_GameSetup->SetContext(shared_from_this());
         m_Aura->m_GameSetup->SetBaseName(Payload);
         m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
         if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
@@ -2863,7 +2860,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
-      m_Aura->m_GameSetup->SetContext(this);
+      m_Aura->m_GameSetup->SetContext(shared_from_this());
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
       m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
@@ -3492,7 +3489,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       }
 
-      if (!m_Aura->m_Net.QueryHealthCheck(this, checkMode, targetRealm, m_TargetGame)) {
+      if (!m_Aura->m_Net.QueryHealthCheck(shared_from_this(), checkMode, targetRealm, m_TargetGame)) {
         ErrorReply("Already testing the network.");
         break;
       }
@@ -4426,11 +4423,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         for (auto& bnet : m_Aura->m_Realms) {
           if (!m_TargetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
           bnet->ResetGameBroadcastData();
-          bnet->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
+          bnet->QueueGameChatAnnouncement(m_TargetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
         }
       } else {
         targetRealm->ResetGameBroadcastData();
-        targetRealm->QueueGameChatAnnouncement(m_TargetGame, this, true)->SetEarlyFeedback(earlyFeedback);
+        targetRealm->QueueGameChatAnnouncement(m_TargetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
       }
       break;
     }
@@ -5833,7 +5830,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         } else {
           m_ActionMessage = inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>";
         }
-        matchingRealm->QueueWhisper(m_ActionMessage, inputName, this, true);
+        matchingRealm->QueueWhisper(m_ActionMessage, inputName, shared_from_this(), true);
       } else if (targetType == CHAT_ORIGIN_GAME) {
         CGame* matchingGame = reinterpret_cast<CGame*>(location);
         if (matchingGame->GetGameLoaded() && !GetIsSudo()) {
@@ -6049,15 +6046,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       size_t PayloadStart = ExecString.find(' ');
       const string SubCmd = PayloadStart == string::npos ? ExecString : ExecString.substr(0, PayloadStart);
       const string SubPayload = PayloadStart == string::npos ? string() : ExecString.substr(PayloadStart + 1);
-      CCommandContext* ctx;
+      shared_ptr<CCommandContext> ctx = nullptr;
       if (m_IRC) {
-        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
+        ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
       } else if (m_DiscordAPI) {
-        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_DiscordAPI, &std::cout);
+        ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_DiscordAPI, &std::cout);
       } else if (m_SourceRealm) {
-        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, m_IsBroadcast, &std::cout);
+        ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, m_IsBroadcast, &std::cout);
       } else {
-        ctx = new CCommandContext(m_Aura, m_Config, targetGame, m_IsBroadcast, &std::cout);
+        ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_IsBroadcast, &std::cout);
       }
       // Without permission overrides, sudoer would need to type
       // !eg GAMEID, su COMMAND
@@ -6067,7 +6064,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       ctx->SetPermissions(SET_USER_PERMISSIONS_ALL);
       ctx->UpdatePermissions();
       ctx->Run(cmdToken, SubCmd, SubPayload);
-      m_Aura->UnholdContext(ctx);
       break;
     }
 
@@ -6392,7 +6388,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      if (!m_Aura->QueueConfigReload(this)) {
+      if (!m_Aura->QueueConfigReload(shared_from_this())) {
         ErrorReply("Reload already scheduled. See the console output.");
       } else {
         SendReply("Reloading configuration files...");
@@ -6720,7 +6716,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, true, true);
+      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, shared_from_this(), Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, true, true);
       /*
       if (!gameSetup) {
         ErrorReply("Unable to host game");
@@ -6943,7 +6939,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (4 <= Args.size()) options->ParseMapRandomRaces(Args[3]);
       if (5 <= Args.size()) options->ParseMapRandomHeroes(Args[4]);
 
-      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true /* skip version check for convenience */);
+      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, shared_from_this(), Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true /* skip version check for convenience */);
       /*
       if (!gameSetup) {
         delete options;
@@ -7014,7 +7010,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string gameName = Args[5];
       SetAddressPort(&(maybeAddress.value()), gamePort);
-      m_Aura->m_GameSetup->SetContext(this);
+      m_Aura->m_GameSetup->SetContext(shared_from_this());
       m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter);
       m_Aura->m_GameSetup->SetBaseName(gameName);
       if (excludedServer) m_Aura->m_GameSetup->AddIgnoredRealm(excludedServer);

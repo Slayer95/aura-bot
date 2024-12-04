@@ -161,7 +161,7 @@ CGameExtraOptions::~CGameExtraOptions() = default;
 // CGameSetup
 //
 
-CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
+CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* nMapCFG)
   : m_Aura(nAura),
     m_RestoredGame(nullptr),
     //m_Map(nullptr),
@@ -205,11 +205,10 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
     m_DeleteMe(false)
 {
   memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
-  m_Aura->HoldContext(nCtx);
   m_Map = GetBaseMapFromConfig(nMapCFG, false);
 }
 
-CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck)
+CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck)
   : m_Aura(nAura),
     m_RestoredGame(nullptr),
     //m_Map(nullptr),
@@ -254,7 +253,6 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearch
     
 {
   memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
-  m_Aura->HoldContext(nCtx);
 }
 
 std::string CGameSetup::GetInspectName() const
@@ -1629,13 +1627,7 @@ CGameSetup::~CGameSetup()
 {
   ClearExtraOptions();
 
-  if (m_Aura) {
-    m_Aura->UnholdContext(m_Ctx);
-    PRINT_IF(LOG_LEVEL_DEBUG, "[GAMESETUP] Releasing...")
-  } else {
-    delete m_Ctx;
-  }
-  m_Ctx = nullptr;
+  m_Ctx.reset();
 
   delete m_RestoredGame;
   m_RestoredGame = nullptr;

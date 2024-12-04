@@ -520,7 +520,9 @@ void CGame::Reset()
   delete m_DotaStats;
   m_DotaStats = nullptr;
 
-  for (auto& ctx : m_Aura->m_ActiveContexts) {
+  for (const auto& ptr : m_Aura->m_ActiveContexts) {
+    auto ctx = ptr.lock();
+    if (!ctx) continue;
     if (ctx->m_SourceGame == this) {
       ctx->SetPartiallyDestroyed();
       ctx->m_SourceGame = nullptr;
@@ -5146,9 +5148,8 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
               shouldRelay = false;
             }
-            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+            shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             ctx->Run(cmdToken, command, payload);
-            m_Aura->UnholdContext(ctx);
           } else if (message == "?trigger") {
             if (shouldRelay) {
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
@@ -5162,11 +5163,10 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
               shouldRelay = false;
             }
-            CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
+            shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
             cmdToken = m_Config.m_PrivateCmdToken;
             command = message.substr(1);
             ctx->Run(cmdToken, command, payload);
-            m_Aura->UnholdContext(ctx);
           } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
             if (shouldRelay) {
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
@@ -5962,12 +5962,11 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
     string prefix = ToLowerCase(message.substr(0, 2));
     if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
       if (activeCmd == SMART_COMMAND_GO) {
-        CCommandContext* ctx = new CCommandContext(m_Aura, commandCFG, this, user, false, &std::cout);
+        shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
         string cmdToken = m_Config.m_PrivateCmdToken;
         string command = "start";
         string payload;
         ctx->Run(cmdToken, command, payload);
-        m_Aura->UnholdContext(ctx);
       } else {
         user->SetSmartCommand(SMART_COMMAND_GO);
         SendChat(user, "You may type [" + message + "] again to start the game.");

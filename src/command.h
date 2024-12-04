@@ -34,7 +34,7 @@
 // CCommandContext
 //
 
-class CCommandContext
+class CCommandContext : public std::enable_shared_from_this<CCommandContext>
 {
 public:
   CAura*                        m_Aura;
@@ -43,7 +43,7 @@ public:
   CRealm*                       m_TargetRealm;
   CGame*                        m_SourceGame;
   CGame*                        m_TargetGame;
-  GameUser::CGameUser*                    m_GameUser;
+  GameUser::CGameUser*          m_GameUser;
   CIRC*                         m_IRC;
 #ifndef DISABLE_DPP
   dpp::slashcommand_t*          m_DiscordAPI;
@@ -70,7 +70,6 @@ protected:
   std::optional<bool>           m_OverrideVerified;
   std::optional<uint8_t>        m_OverridePermissions;
 
-  uint16_t                      m_RefCount; // How many pointers exist to this CCommandContext? The one in CAura::m_ActiveContexts is not counted.
   bool                          m_PartiallyDestroyed;
 
 public:
@@ -153,8 +152,6 @@ public:
   void UseImplicitReplaceable();
   void UseImplicitHostedGame();
   void Run(const std::string& token, const std::string& command, const std::string& payload);
-  void Ref() { ++m_RefCount; }
-  bool Unref() { return --m_RefCount == 0; }
   void SetPartiallyDestroyed() { m_PartiallyDestroyed = true; }
   bool GetPartiallyDestroyed() const { return m_PartiallyDestroyed; }
 

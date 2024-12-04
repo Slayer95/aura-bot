@@ -93,7 +93,7 @@ public:
   CAura*                                          m_Aura;
   CSaveGame*                                      m_RestoredGame;
   std::shared_ptr<CMap>                           m_Map;
-  CCommandContext*                                m_Ctx;
+  std::shared_ptr<CCommandContext>                m_Ctx;
 
   std::string                                     m_Attribution;
   std::string                                     m_SearchRawTarget;
@@ -206,8 +206,8 @@ public:
   bool                                            m_ExitingSoon;
   bool                                            m_DeleteMe;
 
-  CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* mapCFG);
-  CGameSetup(CAura* nAura, CCommandContext* nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck);
+  CGameSetup(CAura* nAura, std::shared_ptr<CCommandContext> nCtx, CConfig* mapCFG);
+  CGameSetup(CAura* nAura, std::shared_ptr<CCommandContext> nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck);
   ~CGameSetup();
 
   [[nodiscard]] std::string GetInspectName() const;
@@ -310,7 +310,7 @@ public:
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetNotifyJoins(const bool nNotifyJoins) { m_NotifyJoins = nNotifyJoins; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
-  void SetContext(CCommandContext* nCtx) { m_Ctx = nCtx; }
+  void SetContext(std::shared_ptr<CCommandContext> nCtx) { m_Ctx = nCtx; }
   void SetMapReadyCallback(const uint8_t action, const std::string& data) {
     m_MapReadyCallbackAction = action;
     m_MapReadyCallbackData = data;

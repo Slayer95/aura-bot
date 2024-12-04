@@ -600,7 +600,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     }
 
     const uint8_t searchType = GetGameSearchType();
-    CCommandContext* ctx = new CCommandContext(nAura, false, &cout);
+    shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(nAura, false, &cout);
     optional<string> userName = GetUserMultiPlayerName();
     if (userName.has_value()) {
       ctx->SetIdentity(userName.value());
@@ -619,17 +619,14 @@ bool CCLI::QueueActions(CAura* nAura) const
         } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
           ctx->ErrorReply("Input does not refer to a valid map config file (.ini)");
         }
-        nAura->UnholdContext(ctx);
         return false;
       }
       if (!gameSetup->ApplyMapModifiers(&options)) {
         ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
-        nAura->UnholdContext(ctx);
         return false;
       }
       if (!gameSetup->m_SaveFile.empty()) {
         if (!CheckGameLoadParameters(gameSetup)) {
-          nAura->UnholdContext(ctx);
           return false;
         }
       }
@@ -653,7 +650,6 @@ bool CCLI::QueueActions(CAura* nAura) const
       if (m_MirrorSource.has_value()) {
         if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
           Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-          nAura->UnholdContext(ctx);
           return false;
         }
       }

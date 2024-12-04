@@ -125,7 +125,9 @@ CRealm::~CRealm()
   delete m_Socket;
   delete m_BNCSUtil;
 
-  for (auto& ctx : m_Aura->m_ActiveContexts) {
+  for (const auto& ptr : m_Aura->m_ActiveContexts) {
+    auto ctx = ptr.lock();
+    if (!ctx) continue;
     if (ctx->m_SourceRealm == this) {
       ctx->SetPartiallyDestroyed();
       ctx->m_SourceRealm = nullptr;
@@ -435,7 +437,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got invalid SID_HOSTGAME message")
                 break;
               }
-              CCommandContext* ctx = new CCommandContext(m_Aura, false, &cout);
+              shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, false, &cout);
               shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, ctx, hostedGameConfig);
               if (!gameSetup->GetMapLoaded()) {
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
@@ -665,9 +667,8 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       }
       return;
     }
-    CCommandContext* ctx = new CCommandContext(m_Aura, m_Config.m_CommandCFG, this, fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+    shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, this, fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
     ctx->Run(cmdToken, command, payload);
-    m_Aura->UnholdContext(ctx);
   }
   else if (eventType == BNETProtocol::IncomingChatEvent::CHANNEL)
   {
@@ -678,7 +679,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     if (!m_ChatSentWhispers.empty()) {
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
-        CCommandContext* fromCtx = oldestWhisper->GetProxyCtx();
+        shared_ptr<CCommandContext> fromCtx = oldestWhisper->GetProxyCtx();
         if (fromCtx->CheckActionMessage(message) && !fromCtx->GetPartiallyDestroyed()) {
           fromCtx->SendReply("message sent to " + oldestWhisper->GetReceiver() + ".");
         }
@@ -737,7 +738,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       m_AnyWhisperRejected = true;
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
-        CCommandContext* fromCtx = oldestWhisper->GetProxyCtx();
+        shared_ptr<CCommandContext> fromCtx = oldestWhisper->GetProxyCtx();
         if (!fromCtx->GetPartiallyDestroyed()) {
           fromCtx->SendReply(oldestWhisper->GetReceiver() + " is offline.");
         }
@@ -1133,7 +1134,7 @@ void CRealm::OnSignupOkay()
   //Login();
 }
 
-CQueuedChatMessage* CRealm::QueueCommand(const string& message, CCommandContext* fromCtx, const bool isProxy)
+CQueuedChatMessage* CRealm::QueueCommand(const string& message, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
 {
   if (message.empty() || !m_LoggedIn)
     return nullptr;
@@ -1173,7 +1174,7 @@ CQueuedChatMessage* CRealm::QueuePriorityWhois(const string& message)
   return m_ChatQueueGameHostWhois;
 }
 
-CQueuedChatMessage* CRealm::QueueChatChannel(const string& message, CCommandContext* fromCtx, const bool isProxy)
+CQueuedChatMessage* CRealm::QueueChatChannel(const string& message, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
 {
   if (message.empty() || !m_LoggedIn)
     return nullptr;
@@ -1192,7 +1193,7 @@ CQueuedChatMessage* CRealm::QueueChatChannel(const string& message, CCommandCont
   return entry;
 }
 
-CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const string& message, const string& user, const uint8_t selector, CCommandContext* fromCtx, const bool isProxy)
+CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const string& message, const string& user, const uint8_t selector, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
 {
   if (message.empty() || !m_LoggedIn)
     return nullptr;
@@ -1207,7 +1208,7 @@ CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const str
   return entry;
 }
 
-CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& user, CCommandContext* fromCtx, const bool isProxy)
+CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& user, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
 {
   if (message.empty() || !m_LoggedIn)
     return nullptr;
@@ -1248,7 +1249,7 @@ void CRealm::TryQueueGameChatAnnouncement(const CGame* game)
   }
 }
 
-CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CCommandContext* fromCtx, const bool isProxy)
+CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
 {
   if (!m_LoggedIn)
     return nullptr;
@@ -1268,7 +1269,7 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CComman
   return m_ChatQueueJoinCallback;
 }
 
-void CRealm::TryQueueChat(const string& message, const string& user, bool isPrivate, CCommandContext* fromCtx, const uint8_t ctxFlags)
+void CRealm::TryQueueChat(const string& message, const string& user, bool isPrivate, shared_ptr<CCommandContext> fromCtx, const uint8_t ctxFlags)
 {
   // TODO(IceSandslash): TryQueueChat ctxFlags
   // don't respond to non admins if there are more than 25 messages already in the queue

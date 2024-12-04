@@ -132,7 +132,7 @@ public:
   std::vector<CIPAddressAPIConnection*>                       m_IPAddressFetchClients;
   bool                                                        m_HealthCheckVerbose;
   bool                                                        m_HealthCheckInProgress;
-  CCommandContext*                                            m_HealthCheckContext;
+  std::shared_ptr<CCommandContext>                                            m_HealthCheckContext;
   bool                                                        m_IPAddressFetchInProgress;
   uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
 
@@ -165,7 +165,7 @@ public:
 #ifndef DISABLE_MINIUPNP
   uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel = LOG_LEVEL_INFO);
 #endif
-  bool QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* realm, const CGame* game);
+  bool QueryHealthCheck(std::shared_ptr<CCommandContext> ctx, const uint8_t checkMode, CRealm* realm, const CGame* game);
   void ResetHealthCheck();
   void ReportHealthCheck();
 

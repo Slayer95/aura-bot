@@ -929,7 +929,7 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
 }
 #endif
 
-bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CRealm* targetRealm, const CGame* game)
+bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t checkMode, CRealm* targetRealm, const CGame* game)
 {
   if (m_Aura->m_ExitingSoon || m_HealthCheckInProgress) {
     return false;
@@ -1019,7 +1019,6 @@ bool CNet::QueryHealthCheck(CCommandContext* ctx, const uint8_t checkMode, CReal
     return false;
   }
 
-  m_Aura->HoldContext(ctx);
   m_HealthCheckVerbose = isVerbose;
   m_HealthCheckContext = ctx;
   m_HealthCheckInProgress = true;
@@ -1040,8 +1039,7 @@ void CNet::ResetHealthCheck()
   }
   m_HealthCheckClients.clear();
   m_HealthCheckInProgress = false;
-  m_Aura->UnholdContext(m_HealthCheckContext);
-  m_HealthCheckContext = nullptr;
+  m_HealthCheckContext.reset();
 }
 
 void CNet::ReportHealthCheck()
@@ -1250,9 +1248,8 @@ void CNet::CheckJoinableLobbies()
       if (lobby->GetIsVerbose()) {
         checkMode |= HEALTH_CHECK_VERBOSE;
       }
-      CCommandContext* ctx = new CCommandContext(m_Aura, false, &cout);
+      shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, false, &cout);
       QueryHealthCheck(ctx, checkMode, nullptr, lobby);
-      m_Aura->UnholdContext(ctx);
       lobby->SetIsCheckJoinable(false);
     }
   }
@@ -1596,8 +1593,7 @@ CNet::~CNet()
   FlushSelfIPCache();
   ResetHealthCheck();
   ResetIPAddressFetch();
-  m_Aura->UnholdContext(m_HealthCheckContext);
-  m_HealthCheckContext = nullptr;
+  m_HealthCheckContext.reset();
 
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
     Print("[NET] shutdown ok");

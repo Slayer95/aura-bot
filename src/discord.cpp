@@ -58,8 +58,9 @@ CDiscord::CDiscord(CConfig& nCFG)
 
 CDiscord::~CDiscord()
 {
-  for (auto& ctx : m_Aura->m_ActiveContexts) {
-    if (ctx->m_DiscordAPI) {
+  for (const auto& ptr : m_Aura->m_ActiveContexts) {
+    auto ctx = ptr.lock();
+    if (ctx && ctx->m_DiscordAPI) {
       ctx->m_DiscordAPI = nullptr;
       ctx->SetPartiallyDestroyed();
     }
@@ -212,9 +213,8 @@ void CDiscord::Update()
       m_CommandQueue.pop();
       continue;
     }
-    CCommandContext* ctx = new CCommandContext(m_Aura, m_Aura->m_CommandDefaultConfig, event, &std::cout);
+    shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, m_Aura->m_CommandDefaultConfig, event, &std::cout);
     ctx->Run(cmdToken, command, payload);
-    m_Aura->UnholdContext(ctx);
     m_CommandQueue.pop();
   }
 #endif

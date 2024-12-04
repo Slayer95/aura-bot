@@ -771,11 +771,8 @@ void CAura::ClearAutoRehost()
 
 CAura::~CAura()
 {
-  UnholdContext(m_SudoContext);
-  m_SudoContext = nullptr;
-
-  UnholdContext(m_ReloadContext),
-  m_ReloadContext = nullptr;
+  m_SudoContext.reset();
+  m_ReloadContext.reset();
 
   delete m_RealmDefaultConfig;
   delete m_GameDefaultConfig;
@@ -1211,6 +1208,23 @@ bool CAura::Update()
     UpdateMetaData();
   }
 
+  // house-keeping
+  {
+    auto it = m_ActiveContexts.rbegin();
+    auto itEnd = m_ActiveContexts.rend();
+    while (it != itEnd) {
+      if (it->expired()) {
+        it = vector<weak_ptr<CCommandContext>>::reverse_iterator(m_ActiveContexts.erase((++it).base()));
+      } else {
+        ++it;
+      }
+    }
+
+    if (m_ActiveContexts.size() > 5) {
+      Print("[DEBUG] weak_ptr<CCommandContext> leak detected (m_ActiveContexts size is " + to_string(m_ActiveContexts.size()) + ")");
+    }
+  }
+
   return m_Exiting;
 }
 
@@ -1472,8 +1486,7 @@ void CAura::TryReloadConfigs()
       m_ReloadContext->ErrorReply("Reload failed. See the console output.");
     }
   }
-  UnholdContext(m_ReloadContext);
-  m_ReloadContext = nullptr;
+  m_ReloadContext.reset();
 }
 
 bool CAura::LoadDefaultConfigs(CConfig& CFG, CNetConfig* netConfig)
@@ -2060,34 +2073,11 @@ void CAura::UntrackGameJoinInProgress(CGame* game)
   }
 }
 
-bool CAura::QueueConfigReload(CCommandContext* nCtx)
+bool CAura::QueueConfigReload(shared_ptr<CCommandContext> nCtx)
 {
-  if (m_ReloadContext != nullptr) return false;
-  HoldContext(nCtx);
+  if (m_ReloadContext) return false;
   m_ReloadContext = nCtx;
   return true;
-}
-
-void CAura::HoldContext(CCommandContext* nCtx)
-{
-  nCtx->Ref();
-  m_ActiveContexts.insert(nCtx);
-}
-
-void CAura::UnholdContext(CCommandContext* nCtx)
-{
-  if (nCtx == nullptr)
-    return;
-
-  if (nCtx->Unref()) {
-#ifdef DEBUG
-    if (MatchLogLevel(LOG_LEVEL_TRACE)) {
-      Print("[AURA] deleting ctx for message sent by [" + nCtx->GetSender() + "].");
-    }
-#endif
-    m_ActiveContexts.erase(nCtx);
-    delete nCtx;
-  }
 }
 
 uint32_t CAura::NextHostCounter()

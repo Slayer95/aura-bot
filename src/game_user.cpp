@@ -151,8 +151,9 @@ CGameUser::~CGameUser()
     UnrefConnection();
   }
 
-  for (auto& ctx : m_Game->m_Aura->m_ActiveContexts) {
-    if (ctx->m_GameUser == this) {
+  for (const auto& ptr : m_Game->m_Aura->m_ActiveContexts) {
+    auto ctx = ptr.lock();
+    if (ctx && ctx->m_GameUser == this) {
       ctx->SetPartiallyDestroyed();
       ctx->m_GameUser = nullptr;
     }

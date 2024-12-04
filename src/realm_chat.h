@@ -39,7 +39,7 @@ private:
   std::vector<uint8_t>  m_Message;
   uint8_t               m_MessageValue; // If m_Message is too long, Aura MAY replace it by a shorter one, respecting this value.
 
-  CCommandContext*      m_ProxySenderCtx;
+  std::shared_ptr<CCommandContext>      m_ProxySenderCtx;
   std::vector<uint8_t>  m_ProxySenderName; // !whois, !tell, !invite, !say, !announce
   std::string           m_EarlyFeedback;
 
@@ -89,13 +89,13 @@ public:
   void SetEarlyFeedback(const std::string& body) { m_EarlyFeedback = body; }
   inline std::string GetEarlyFeedback() const { return m_EarlyFeedback; }
   bool IsProxySent() const { return m_ProxySenderCtx != nullptr; }
-  CCommandContext* GetProxyCtx() const { return m_ProxySenderCtx; }
+  std::shared_ptr<CCommandContext> GetProxyCtx() const { return m_ProxySenderCtx; }
   std::string GetReceiver() const { return std::string(m_ReceiverName.begin(), m_ReceiverName.end()); }
   inline uint8_t GetCallback() const { return m_Callback; }
   inline uint32_t GetCallbackData() const { return m_CallbackData; }
   inline bool GetWasThrottled() const { return m_WasThrottled; }
 
-  CQueuedChatMessage(CRealm* nRealm, CCommandContext* nCtx, const bool isProxy);
+  CQueuedChatMessage(CRealm* nRealm, std::shared_ptr<CCommandContext> nCtx, const bool isProxy);
   ~CQueuedChatMessage();
 };
 

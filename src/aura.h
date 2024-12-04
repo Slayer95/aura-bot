@@ -104,8 +104,8 @@ public:
   std::shared_ptr<CGameSetup>                        m_GameSetup;                  // the currently loaded map
   std::shared_ptr<CGameSetup>                        m_AutoRehostGameSetup;        // game setup to be rehosted whenever free
 
-  CCommandContext*                                   m_ReloadContext;
-  CCommandContext*                                   m_SudoContext;
+  std::shared_ptr<CCommandContext>                   m_ReloadContext;
+  std::shared_ptr<CCommandContext>                   m_SudoContext;
 
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
@@ -117,7 +117,7 @@ public:
   std::string                                        m_RepositoryURL;              // Aura repository URL
   std::string                                        m_IssuesURL;                  // Aura issues URL
 
-  std::set<CCommandContext*>                         m_ActiveContexts;             // declare before command sources, to ensure m_ActiveContexts is destroyed after them
+  std::vector<std::weak_ptr<CCommandContext>>        m_ActiveContexts;             // declare before command sources, to ensure m_ActiveContexts is destroyed after them
 
   CSHA1                                              m_SHA;                        // for calculating SHA1's
   CDiscord                                           m_Discord;                    // Discord client
@@ -159,9 +159,7 @@ public:
   void TrackGameJoinInProgress(CGame* game);
   void UntrackGameJoinInProgress(CGame* game);
 
-  bool QueueConfigReload(CCommandContext* nCtx);
-  void HoldContext(CCommandContext* nCtx);
-  void UnholdContext(CCommandContext* nCtx);
+  bool QueueConfigReload(std::shared_ptr<CCommandContext> nCtx);
 
   // identifier generators
 
