@@ -129,301 +129,299 @@ private:
   friend class CCommandContext;
 
 protected:
-  bool                                m_Verbose;
-  CTCPServer*                         m_Socket;                        // listening socket
-  CDBBan*                             m_LastLeaverBannable;            // last ban for the !banlast command - this is a pointer to one of the items in m_Bannables
-  std::vector<CDBBan*>                m_Bannables;                     // std::vector of potential ban data for the database
-  std::vector<CDBBan*>                m_ScopeBans;                     // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
-  CW3MMD*                             m_CustomStats;
-  CDotaStats*                         m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
-  CSaveGame*                          m_RestoredGame;
-  std::vector<CGameSlot>              m_Slots;                         // std::vector of slots
-  std::vector<CDBGamePlayer*>         m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
-  UserList                            m_Users;                         // std::vector of players
-  std::vector<CConnection*>           m_Observers;
-  CircleDoubleLinkedList<CQueuedActionsFrame>    m_Actions;            // actions to be sent
-  QueuedActionsFrameNode*     m_CurrentActionsFrame;
-  uint16_t                            m_ActionsLatency;
-  std::vector<std::string>            m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
-  std::set<std::string>               m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
-  std::vector<CGameVirtualUser>       m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
-  CMap*                               m_Map;                           // map data
-  GameUser::CGameUser*                m_PauseUser;
-  std::string                         m_GameName;                      // game name
-  uint64_t                            m_GameHistoryId;
-  std::string                         m_LastOwner;                     // name of the player who was owner last time the owner was released
-  bool                                m_FromAutoReHost;
-  bool                                m_OwnerLess;
-  std::string                         m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
-  std::string                         m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
-  std::string                         m_CreatorText;                   // who created this game
-  std::string                         m_CreatedBy;                     // name of the battle.net user who created this game
-  void*                               m_CreatedFrom;                   // battle.net or IRC server the player who created this game was on
-  uint8_t                             m_CreatedFromType;               // type of server m_CreatedFrom is
-  std::set<std::string>               m_RealmsExcluded;                // battle.net servers where the mirrored game is not to be broadcasted
-  std::string                         m_PlayedBy;
-  std::string                         m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
-  std::string                         m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
-  std::string                         m_MapPath;                       // store the map path to save in the database on game end
-  std::string                         m_MapSiteURL;
-  int64_t                             m_GameTicks;                     // ingame ticks
-  int64_t                             m_CreationTime;                  // GetTime when the game was created
-  int64_t                             m_LastPingTime;                  // GetTime when the last ping was sent
-  int64_t                             m_LastRefreshTime;               // GetTime when the last game refresh was sent
-  int64_t                             m_LastDownloadTicks;             // GetTicks when the last map download cycle was performed
-  int64_t                             m_LastDownloadCounterResetTicks; // GetTicks when the download counter was last reset
-  int64_t                             m_LastCountDownTicks;            // GetTicks when the last countdown message was sent
-  int64_t                             m_StartedLoadingTicks;           // GetTicks when the game started loading
-  int64_t                             m_FinishedLoadingTicks;          // GetTicks when the game finished loading
-  int64_t                             m_LastActionSentTicks;           // GetTicks when the last action packet was sent
-  int64_t                             m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
-  int64_t                             m_LastPausedTicks;               // GetTicks when the game was last paused
-  int64_t                             m_PausedTicksDeltaSum;           // Sum of GetTicks deltas for every game pause
-  int64_t                             m_StartedLaggingTime;            // GetTime when the last lag screen started
-  int64_t                             m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
-  uint32_t                            m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
-  int64_t                             m_LastUserSeen;                  // GetTicks when any user was last seen in the lobby
-  int64_t                             m_LastOwnerSeen;                 // GetTicks when the game owner was last seen in the lobby
-  int64_t                             m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
-  int64_t                             m_StartedKickVoteTime;           // GetTime when the kick vote was started
-  int64_t                             m_LastCustomStatsUpdateTime;
-  uint8_t                             m_GameOver;
-  std::optional<int64_t>              m_GameOverTime;                  // GetTime when the game was over
-  std::optional<int64_t>              m_GameOverTolerance;
-  std::optional<int64_t>              m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
-  int64_t                             m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
-  uint32_t                            m_RandomSeed;                    // the random seed sent to the Warcraft III clients
-  uint32_t                            m_HostCounter;                   // a unique game number
-  uint32_t                            m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
-  uint32_t                            m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
-  uint32_t                            m_SyncCounterChecked;            // the number of verified keepalive packets
-  uint8_t                             m_MaxPingEqualizerDelayFrames;
-  int64_t                             m_LastPingEqualizerGameTicks;    // m_GameTicks when ping equalizer was last run
+  bool                                                   m_Verbose;
+  CTCPServer*                                            m_Socket;                        // listening socket
+  CDBBan*                                                m_LastLeaverBannable;            // last ban for the !banlast command - this is a pointer to one of the items in m_Bannables
+  std::vector<CDBBan*>                                   m_Bannables;                     // std::vector of potential ban data for the database
+  std::vector<CDBBan*>                                   m_ScopeBans;                     // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
+  CW3MMD*                                                m_CustomStats;
+  CDotaStats*                                            m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
+  CSaveGame*                                             m_RestoredGame;
+  std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
+  std::vector<CDBGamePlayer*>                            m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
+  UserList                                               m_Users;                         // std::vector of players
+  std::vector<CConnection*>                              m_Observers;
+  CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;            // actions to be sent
+  QueuedActionsFrameNode*                                m_CurrentActionsFrame;
+  uint16_t                                               m_ActionsLatency;
+  std::vector<std::string>                               m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
+  std::set<std::string>                                  m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
+  std::vector<CGameVirtualUser>                          m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
+  std::shared_ptr<CMap>                                  m_Map;                           // map data
+  GameUser::CGameUser*                                   m_PauseUser;
+  std::string                                            m_GameName;                      // game name
+  uint64_t                                               m_GameHistoryId;
+  std::string                                            m_LastOwner;                     // name of the player who was owner last time the owner was released
+  bool                                                   m_FromAutoReHost;
+  bool                                                   m_OwnerLess;
+  std::string                                            m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
+  std::string                                            m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
+  std::string                                            m_CreatorText;                   // who created this game
+  std::string                                            m_CreatedBy;                     // name of the battle.net user who created this game
+  void*                                                  m_CreatedFrom;                   // battle.net or IRC server the player who created this game was on
+  uint8_t                                                m_CreatedFromType;               // type of server m_CreatedFrom is
+  std::set<std::string>                                  m_RealmsExcluded;                // battle.net servers where the mirrored game is not to be broadcasted
+  std::string                                            m_PlayedBy;
+  std::string                                            m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
+  std::string                                            m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
+  std::string                                            m_MapPath;                       // store the map path to save in the database on game end
+  std::string                                            m_MapSiteURL;
+  int64_t                                                m_GameTicks;                     // ingame ticks
+  int64_t                                                m_CreationTime;                  // GetTime when the game was created
+  int64_t                                                m_LastPingTime;                  // GetTime when the last ping was sent
+  int64_t                                                m_LastRefreshTime;               // GetTime when the last game refresh was sent
+  int64_t                                                m_LastDownloadTicks;             // GetTicks when the last map download cycle was performed
+  int64_t                                                m_LastDownloadCounterResetTicks; // GetTicks when the download counter was last reset
+  int64_t                                                m_LastCountDownTicks;            // GetTicks when the last countdown message was sent
+  int64_t                                                m_StartedLoadingTicks;           // GetTicks when the game started loading
+  int64_t                                                m_FinishedLoadingTicks;          // GetTicks when the game finished loading
+  int64_t                                                m_LastActionSentTicks;           // GetTicks when the last action packet was sent
+  int64_t                                                m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
+  int64_t                                                m_LastPausedTicks;               // GetTicks when the game was last paused
+  int64_t                                                m_PausedTicksDeltaSum;           // Sum of GetTicks deltas for every game pause
+  int64_t                                                m_StartedLaggingTime;            // GetTime when the last lag screen started
+  int64_t                                                m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
+  uint32_t                                              m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
+  int64_t                                                m_LastUserSeen;                  // GetTicks when any user was last seen in the lobby
+  int64_t                                                m_LastOwnerSeen;                 // GetTicks when the game owner was last seen in the lobby
+  int64_t                                                m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
+  int64_t                                                m_StartedKickVoteTime;           // GetTime when the kick vote was started
+  int64_t                                                m_LastCustomStatsUpdateTime;
+  uint8_t                                                m_GameOver;
+  std::optional<int64_t>                                 m_GameOverTime;                  // GetTime when the game was over
+  std::optional<int64_t>                                 m_GameOverTolerance;
+  std::optional<int64_t>                                 m_LastPlayerLeaveTicks;          // GetTicks when the most recent player left the game
+  int64_t                                                m_LastLagScreenResetTime;        // GetTime when the "lag" screen was last reset
+  uint32_t                                               m_RandomSeed;                    // the random seed sent to the Warcraft III clients
+  uint32_t                                               m_HostCounter;                   // a unique game number
+  uint32_t                                               m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
+  uint32_t                                               m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
+  uint32_t                                               m_SyncCounterChecked;            // the number of verified keepalive packets
+  uint8_t                                                m_MaxPingEqualizerDelayFrames;
+  int64_t                                                m_LastPingEqualizerGameTicks;    // m_GameTicks when ping equalizer was last run
 
-  uint32_t                            m_DownloadCounter;               // # of map bytes downloaded in the last second
-  uint32_t                            m_CountDownCounter;              // the countdown is finished when this reaches zero
-  uint8_t                             m_StartPlayers;                  // number of players when the game started
-  std::vector<std::pair<uint8_t, int64_t>> m_AutoStartRequirements;
-  bool                                m_ControllersBalanced;
-  uint8_t                             m_ControllersReadyCount;
-  uint8_t                             m_ControllersNotReadyCount;
-  uint8_t                             m_ControllersWithMap;
-  uint8_t                             m_CustomLayout;
-  std::pair<uint8_t, uint8_t>         m_CustomLayoutData;
-  uint16_t                            m_HostPort;                      // the port to host games on
-  bool                                m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
-  std::array<uint8_t, 4>              m_PublicHostAddress;
-  uint16_t                            m_PublicHostPort;
-  uint8_t                             m_DisplayMode;                   // game state, public or private
-  bool                                m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
-  uint8_t                             m_VirtualHostUID;                // host's UID
-  uint8_t                             m_GProxyEmptyActions;            // empty actions used for gproxy protocol
-  bool                                m_Exiting;                       // set to true and this instance will be deleted next update
-  bool                                m_ExitingSoon;                   // set to true and this instance will be deleted when no players remain
-  uint8_t                             m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
-  uint8_t                             m_JoinedVirtualHosts;
-  uint8_t                             m_ReconnectProtocols;
-  bool                                m_Replaceable;                   // whether this game can be destroyed when !host command is used inside
-  bool                                m_Replacing;
-  bool                                m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
-  bool                                m_Locked;                        // if the game owner is the only one allowed to run game commands or not
-  bool                                m_ChatOnly;                      // if we should ignore game start commands
-  bool                                m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
-  bool                                m_MuteLobby;                     // if we should stop forwarding lobby chat messages
-  bool                                m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
-  bool                                m_CountDownStarted;              // if the game start countdown has started or not
-  bool                                m_CountDownFast;
-  bool                                m_CountDownUserInitiated;
-  bool                                m_GameLoading;                   // if the game is currently loading or not
-  bool                                m_GameLoaded;                    // if the game has loaded or not
-  bool                                m_LobbyLoading;                  // if the lobby is being setup asynchronously
-  bool                                m_Lagging;                       // if the lag screen is active or not
-  bool                                m_Paused;                        // if the game is paused or not
-  bool                                m_Desynced;                      // if the game has desynced or not
-  bool                                m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
-  bool                                m_IsHiddenPlayerNames;           // if players names are to be obfuscated in most circumstances
-  bool                                m_HadLeaver;                     // if the game had a leaver after it started
-  bool                                m_HasMapLock;                    // ensures that the map isn't deleted while the game lobby is active
-  bool                                m_CheckReservation;
-  bool                                m_UsesCustomReferees;
-  bool                                m_SentPriorityWhois;
-  bool                                m_Remaking;
-  bool                                m_Remade;
-  uint8_t                             m_SaveOnLeave;
-  bool                                m_HMCEnabled;
-  uint8_t                             m_BufferingEnabled;
-  uint32_t                            m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
+  uint32_t                                               m_DownloadCounter;               // # of map bytes downloaded in the last second
+  uint32_t                                               m_CountDownCounter;              // the countdown is finished when this reaches zero
+  uint8_t                                                m_StartPlayers;                  // number of players when the game started
+  std::vector<std::pair<uint8_t, int64_t>>               m_AutoStartRequirements;
+  bool                                                   m_ControllersBalanced;
+  uint8_t                                                m_ControllersReadyCount;
+  uint8_t                                                m_ControllersNotReadyCount;
+  uint8_t                                                m_ControllersWithMap;
+  uint8_t                                                m_CustomLayout;
+  std::pair<uint8_t, uint8_t>                            m_CustomLayoutData;
+  uint16_t                                               m_HostPort;                      // the port to host games on
+  bool                                                   m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
+  std::array<uint8_t, 4>                                 m_PublicHostAddress;
+  uint16_t                                               m_PublicHostPort;
+  uint8_t                                                m_DisplayMode;                   // game state, public or private
+  bool                                                   m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
+  uint8_t                                                m_VirtualHostUID;                // host's UID
+  uint8_t                                                m_GProxyEmptyActions;            // empty actions used for gproxy protocol
+  bool                                                   m_Exiting;                       // set to true and this instance will be deleted next update
+  bool                                                   m_ExitingSoon;                   // set to true and this instance will be deleted when no players remain
+  uint8_t                                                m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
+  uint8_t                                                m_JoinedVirtualHosts;
+  uint8_t                                                m_ReconnectProtocols;
+  bool                                                   m_Replaceable;                   // whether this game can be destroyed when !host command is used inside
+  bool                                                   m_Replacing;
+  bool                                                   m_PublicStart;                   // if the game owner is the only one allowed to run game commands or not
+  bool                                                   m_Locked;                        // if the game owner is the only one allowed to run game commands or not
+  bool                                                   m_ChatOnly;                      // if we should ignore game start commands
+  bool                                                   m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
+  bool                                                   m_MuteLobby;                     // if we should stop forwarding lobby chat messages
+  bool                                                   m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
+  bool                                                   m_CountDownStarted;              // if the game start countdown has started or not
+  bool                                                   m_CountDownFast;
+  bool                                                   m_CountDownUserInitiated;
+  bool                                                   m_GameLoading;                   // if the game is currently loading or not
+  bool                                                   m_GameLoaded;                    // if the game has loaded or not
+  bool                                                   m_LobbyLoading;                  // if the lobby is being setup asynchronously
+  bool                                                   m_Lagging;                       // if the lag screen is active or not
+  bool                                                   m_Paused;                        // if the game is paused or not
+  bool                                                   m_Desynced;                      // if the game has desynced or not
+  bool                                                   m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
+  bool                                                   m_IsHiddenPlayerNames;           // if players names are to be obfuscated in most circumstances
+  bool                                                   m_HadLeaver;                     // if the game had a leaver after it started
+  bool                                                   m_CheckReservation;
+  bool                                                   m_UsesCustomReferees;
+  bool                                                   m_SentPriorityWhois;
+  bool                                                   m_Remaking;
+  bool                                                   m_Remade;
+  uint8_t                                                m_SaveOnLeave;
+  bool                                                   m_HMCEnabled;
+  uint8_t                                                m_BufferingEnabled;
+  uint32_t                                               m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
 
-  std::vector<uint8_t>                m_LobbyBuffer;
-  std::vector<uint8_t>                m_SlotsBuffer;
-  std::vector<uint8_t>                m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
-  std::vector<uint8_t>                m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
-  std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
+  std::vector<uint8_t>                                   m_LobbyBuffer;
+  std::vector<uint8_t>                                   m_SlotsBuffer;
+  std::vector<uint8_t>                                   m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
+  std::vector<uint8_t>                                   m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
+  std::vector<std::vector<uint8_t>>                      m_PlayingBuffer;
 
-  std::bitset<64>                       m_SupportedGameVersions;
-  uint8_t                               m_SupportedGameVersionsMin;
-  uint8_t                               m_SupportedGameVersionsMax;
+  std::bitset<64>                                        m_SupportedGameVersions;
+  uint8_t                                                m_SupportedGameVersionsMin;
+  uint8_t                                                m_SupportedGameVersionsMax;
 
-  bool                                  m_GameDiscoveryInfoChanged;
-  std::vector<uint8_t>                  m_GameDiscoveryInfo;
-  uint16_t                              m_GameDiscoveryInfoVersionOffset;
-  uint16_t                              m_GameDiscoveryInfoDynamicOffset;
-  std::map<const GameUser::CGameUser*, UserList>  m_SyncPlayers;     //
+  bool                                                   m_GameDiscoveryInfoChanged;
+  std::vector<uint8_t>                                   m_GameDiscoveryInfo;
+  uint16_t                                               m_GameDiscoveryInfoVersionOffset;
+  uint16_t                                               m_GameDiscoveryInfoDynamicOffset;
+  std::map<const GameUser::CGameUser*, UserList>         m_SyncPlayers;     //
 
-  std::queue<CGameLogRecord*>    m_PendingLogs;
+  std::queue<CGameLogRecord*>                            m_PendingLogs;
   
 
 public:
-  CGame(CAura* nAura, CGameSetup* nGameSetup);
+  CGame(CAura* nAura, std::shared_ptr<CGameSetup> nGameSetup);
   ~CGame();
   CGame(CGame&) = delete;
 
-  bool                      GetExiting() const { return m_Exiting; }
-  inline QueuedActionsFrameNode* GetFirstActionFrameNode() { return m_CurrentActionsFrame; }
-  inline QueuedActionsFrameNode* GetLastActionFrameNode() { return m_CurrentActionsFrame->prev; }
-  inline CQueuedActionsFrame& GetFirstActionFrame();
-  inline CQueuedActionsFrame& GetLastActionFrame();
-  std::vector<QueuedActionsFrameNode*> GetFrameNodesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset);
-  std::vector<QueuedActionsFrameNode*> GetAllFrameNodes();
-  void                      MergeFrameNodes(std::vector<QueuedActionsFrameNode*>& frameNodes);
-  void                      ResetUserPingEqualizerDelays();
-  bool                      CheckUpdatePingEqualizer();
-  uint8_t                   UpdatePingEqualizer();
+  bool                                                   GetExiting() const { return m_Exiting; }
+  inline QueuedActionsFrameNode*                         GetFirstActionFrameNode() { return m_CurrentActionsFrame; }
+  inline QueuedActionsFrameNode*                         GetLastActionFrameNode() { return m_CurrentActionsFrame->prev; }
+  inline CQueuedActionsFrame&                            GetFirstActionFrame();
+  inline CQueuedActionsFrame&                            GetLastActionFrame();
+  std::vector<QueuedActionsFrameNode*>                   GetFrameNodesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset);
+  std::vector<QueuedActionsFrameNode*>                   GetAllFrameNodes();
+  void                                                   MergeFrameNodes(std::vector<QueuedActionsFrameNode*>& frameNodes);
+  void                                                   ResetUserPingEqualizerDelays();
+  bool                                                   CheckUpdatePingEqualizer();
+  uint8_t                                                UpdatePingEqualizer();
   std::vector<std::pair<GameUser::CGameUser*, uint32_t>> GetDescendingSortedRTT() const;
-  inline CMap*              GetMap() const { return m_Map; }
-  inline uint32_t           GetEntryKey() const { return m_EntryKey; }
-  inline uint16_t           GetHostPort() const { return m_HostPort; }
-  uint16_t                  GetDiscoveryPort(const uint8_t protocol) const;
-  bool                      GetIsStageAcceptingJoins() const;
-  bool                      GetUDPEnabled() const;
-  inline bool               GetPublicHostOverride() const { return m_PublicHostOverride; }
-  inline std::array<uint8_t, 4> GetPublicHostAddress() const { return m_PublicHostAddress; }
-  inline uint16_t           GetPublicHostPort() const { return m_PublicHostPort; }
-  inline uint8_t            GetDisplayMode() const { return m_DisplayMode; }
-  inline uint8_t            GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
-  inline std::string        GetGameName() const { return m_GameName; }
-  inline uint64_t           GetGameID() const { return m_GameHistoryId; }
-  inline uint8_t            GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
-  std::string               GetIndexVirtualHostName() const;
-  std::string               GetLobbyVirtualHostName() const;
-  std::string               GetPrefixedGameName(const CRealm* realm = nullptr) const;
-  std::string               GetAnnounceText(const CRealm* realm = nullptr) const;
-  inline bool               GetFromAutoReHost() const { return m_FromAutoReHost; }
-  inline bool               GetLockedOwnerLess() const { return m_OwnerLess; }
-  inline std::string        GetOwnerName() const { return m_OwnerName; }
-  inline std::string        GetOwnerRealm() const { return m_OwnerRealm; }
-  inline std::string        GetCreatorName() const { return m_CreatedBy; }
-  inline uint8_t            GetCreatedFromType() const { return m_CreatedFromType; }
-  inline void*              GetCreatedFrom() const { return m_CreatedFrom; }
-  bool                      MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
-  inline uint32_t           GetHostCounter() const { return m_HostCounter; }
-  inline int64_t            GetLastLagScreenTime() const { return m_LastLagScreenTime; }
-  inline bool               GetIsReplaceable() const { return m_Replaceable;}
-  inline bool               GetIsBeingReplaced() const { return m_Replacing;}
-  inline bool               GetIsPublicStartable() const { return m_PublicStart; }
-  inline bool               GetLocked() const { return m_Locked; }
-  inline bool               GetMuteAll() const { return m_MuteAll; }
-  inline bool               GetCountDownStarted() const { return m_CountDownStarted; }
-  inline bool               GetCountDownFast() const { return m_CountDownFast; }
-  inline bool               GetCountDownUserInitiated() const { return m_CountDownUserInitiated; }
-  inline bool               GetIsMirror() const { return m_IsMirror; }
-  inline bool               GetIsDraftMode() const { return m_IsDraftMode; }
-  bool                      GetIsHiddenPlayerNames() const;
-  inline bool               GetGameLoading() const { return m_GameLoading; }
-  inline bool               GetGameLoaded() const { return m_GameLoaded; }
-  inline bool               GetLobbyLoading() const { return m_LobbyLoading; }
-  inline bool               GetIsLobby() const { return !m_GameLoading && !m_GameLoaded; }
-  inline bool               GetIsLobbyStrict() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
-  inline bool               GetIsRestored() const { return m_RestoredGame != nullptr; }
-  inline uint32_t           GetSyncCounter() const { return m_SyncCounter; }
-  uint8_t                   GetMaxEqualizerDelayFrames() const { return m_MaxPingEqualizerDelayFrames; }
-  uint8_t                   CalcMaxEqualizerDelayFrames() const;
-  uint16_t                  GetLatency() const;
-  uint32_t                  GetSyncLimit() const;
-  uint32_t                  GetSyncLimitSafe() const;
-  inline bool               GetLagging() const { return m_Lagging; }
-  inline bool               GetPaused() const { return m_Paused; }
-  inline bool               GetIsGameOver() const { return m_GameOver != GAME_ONGOING; }
-  inline bool               GetIsGameOverTrusted() const { return m_GameOver == GAME_OVER_TRUSTED; }
-  uint8_t                   GetLayout() const;
-  uint8_t                   GetCustomLayout() const { return m_CustomLayout; }
-  bool                      GetIsCustomForces() const;
-  int64_t                   GetNextTimedActionMicroSeconds() const;
-  uint32_t                  GetSlotsOccupied() const;
-  uint32_t                  GetSlotsOpen() const;
-  bool                      HasSlotsOpen() const;
-  bool                      GetIsSinglePlayerMode() const;
-  bool                      GetHasAnyFullObservers() const;
-  bool                      GetHasChatSendHost() const;
-  bool                      GetHasChatRecvHost() const;
-  bool                      GetHasChatSendPermaHost() const;
-  bool                      GetHasChatRecvPermaHost() const;
-  uint32_t                  GetNumJoinedUsers() const;
-  uint32_t                  GetNumJoinedUsersOrFake() const;
-  uint8_t                   GetNumJoinedPlayers() const;
-  uint8_t                   GetNumJoinedPlayersOrFake() const;
-  uint8_t                   GetNumJoinedObservers() const;
-  uint8_t                   GetNumJoinedObserversOrFake() const;
-  uint8_t                   GetNumJoinedPlayersOrFakeUsers() const;
-  uint8_t                   GetNumFakePlayers() const;
-  uint8_t                   GetNumFakeObservers() const;
-  uint8_t                   GetNumOccupiedSlots() const;
-  uint8_t                   GetNumPotentialControllers() const;
-  uint8_t                   GetNumControllers() const;
-  uint8_t                   GetNumComputers() const;
-  uint8_t                   GetNumTeamControllersOrOpen(const uint8_t team) const;
-  std::string               GetClientFileName() const;
-  std::string               GetMapSiteURL() const { return m_MapSiteURL; }
-  inline int64_t            GetGameTicks() const { return m_GameTicks; }
-  inline int64_t            GetLastPausedTicks() const { return m_LastPausedTicks; }
-  inline int64_t            GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
-  inline bool               GetChatOnly() const { return m_ChatOnly; }
-  inline bool               GetAnyUsingGProxy() { return m_ReconnectProtocols > 0; }
-  std::string               GetStatusDescription() const;
-  std::string               GetEndDescription() const;
-  std::string               GetCategory() const;
-  uint32_t                  GetGameType() const;
-  uint32_t                  GetGameFlags() const;
-  std::string               GetSourceFilePath() const;
-  std::array<uint8_t, 4>    GetSourceFileHash() const;
-  std::array<uint8_t, 20>   GetSourceFileSHA1() const;
-  std::array<uint8_t, 2>    GetAnnounceWidth() const;
-  std::array<uint8_t, 2>    GetAnnounceHeight() const;
+  inline std::shared_ptr<CMap>                           GetMap() const { return m_Map; }
+  inline uint32_t                                        GetEntryKey() const { return m_EntryKey; }
+  inline uint16_t                                        GetHostPort() const { return m_HostPort; }
+  uint16_t                                               GetDiscoveryPort(const uint8_t protocol) const;
+  bool                                                   GetIsStageAcceptingJoins() const;
+  bool                                                   GetUDPEnabled() const;
+  inline bool                                            GetPublicHostOverride() const { return m_PublicHostOverride; }
+  inline std::array<uint8_t, 4>                          GetPublicHostAddress() const { return m_PublicHostAddress; }
+  inline uint16_t                                        GetPublicHostPort() const { return m_PublicHostPort; }
+  inline uint8_t                                         GetDisplayMode() const { return m_DisplayMode; }
+  inline uint8_t                                         GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
+  inline std::string                                     GetGameName() const { return m_GameName; }
+  inline uint64_t                                        GetGameID() const { return m_GameHistoryId; }
+  inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
+  std::string                                            GetIndexVirtualHostName() const;
+  std::string                                            GetLobbyVirtualHostName() const;
+  std::string                                            GetPrefixedGameName(const CRealm* realm = nullptr) const;
+  std::string                                            GetAnnounceText(const CRealm* realm = nullptr) const;
+  inline bool                                            GetFromAutoReHost() const { return m_FromAutoReHost; }
+  inline bool                                            GetLockedOwnerLess() const { return m_OwnerLess; }
+  inline std::string                                     GetOwnerName() const { return m_OwnerName; }
+  inline std::string                                     GetOwnerRealm() const { return m_OwnerRealm; }
+  inline std::string                                     GetCreatorName() const { return m_CreatedBy; }
+  inline uint8_t                                         GetCreatedFromType() const { return m_CreatedFromType; }
+  inline void*                                           GetCreatedFrom() const { return m_CreatedFrom; }
+  bool                                                   MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
+  inline uint32_t                                        GetHostCounter() const { return m_HostCounter; }
+  inline int64_t                                         GetLastLagScreenTime() const { return m_LastLagScreenTime; }
+  inline bool                                            GetIsReplaceable() const { return m_Replaceable;}
+  inline bool                                            GetIsBeingReplaced() const { return m_Replacing;}
+  inline bool                                            GetIsPublicStartable() const { return m_PublicStart; }
+  inline bool                                            GetLocked() const { return m_Locked; }
+  inline bool                                            GetMuteAll() const { return m_MuteAll; }
+  inline bool                                            GetCountDownStarted() const { return m_CountDownStarted; }
+  inline bool                                            GetCountDownFast() const { return m_CountDownFast; }
+  inline bool                                            GetCountDownUserInitiated() const { return m_CountDownUserInitiated; }
+  inline bool                                            GetIsMirror() const { return m_IsMirror; }
+  inline bool                                            GetIsDraftMode() const { return m_IsDraftMode; }
+  bool                                                   GetIsHiddenPlayerNames() const;
+  inline bool                                            GetGameLoading() const { return m_GameLoading; }
+  inline bool                                            GetGameLoaded() const { return m_GameLoaded; }
+  inline bool                                            GetLobbyLoading() const { return m_LobbyLoading; }
+  inline bool                                            GetIsLobby() const { return !m_GameLoading && !m_GameLoaded; }
+  inline bool                                            GetIsLobbyStrict() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
+  inline bool                                            GetIsRestored() const { return m_RestoredGame != nullptr; }
+  inline uint32_t                                        GetSyncCounter() const { return m_SyncCounter; }
+  uint8_t                                                GetMaxEqualizerDelayFrames() const { return m_MaxPingEqualizerDelayFrames; }
+  uint8_t                                                CalcMaxEqualizerDelayFrames() const;
+  uint16_t                                               GetLatency() const;
+  uint32_t                                               GetSyncLimit() const;
+  uint32_t                                               GetSyncLimitSafe() const;
+  inline bool                                            GetLagging() const { return m_Lagging; }
+  inline bool                                            GetPaused() const { return m_Paused; }
+  inline bool                                            GetIsGameOver() const { return m_GameOver != GAME_ONGOING; }
+  inline bool                                            GetIsGameOverTrusted() const { return m_GameOver == GAME_OVER_TRUSTED; }
+  uint8_t                                                GetLayout() const;
+  uint8_t                                                GetCustomLayout() const { return m_CustomLayout; }
+  bool                                                   GetIsCustomForces() const;
+  int64_t                                                GetNextTimedActionMicroSeconds() const;
+  uint32_t                                               GetSlotsOccupied() const;
+  uint32_t                                               GetSlotsOpen() const;
+  bool                                                   HasSlotsOpen() const;
+  bool                                                   GetIsSinglePlayerMode() const;
+  bool                                                   GetHasAnyFullObservers() const;
+  bool                                                   GetHasChatSendHost() const;
+  bool                                                   GetHasChatRecvHost() const;
+  bool                                                   GetHasChatSendPermaHost() const;
+  bool                                                   GetHasChatRecvPermaHost() const;
+  uint32_t                                               GetNumJoinedUsers() const;
+  uint32_t                                               GetNumJoinedUsersOrFake() const;
+  uint8_t                                                GetNumJoinedPlayers() const;
+  uint8_t                                                GetNumJoinedPlayersOrFake() const;
+  uint8_t                                                GetNumJoinedObservers() const;
+  uint8_t                                                GetNumJoinedObserversOrFake() const;
+  uint8_t                                                GetNumJoinedPlayersOrFakeUsers() const;
+  uint8_t                                                GetNumFakePlayers() const;
+  uint8_t                                                GetNumFakeObservers() const;
+  uint8_t                                                GetNumOccupiedSlots() const;
+  uint8_t                                                GetNumPotentialControllers() const;
+  uint8_t                                                GetNumControllers() const;
+  uint8_t                                                GetNumComputers() const;
+  uint8_t                                                GetNumTeamControllersOrOpen(const uint8_t team) const;
+  std::string                                            GetClientFileName() const;
+  std::string                                            GetMapSiteURL() const { return m_MapSiteURL; }
+  inline int64_t                                         GetGameTicks() const { return m_GameTicks; }
+  inline int64_t                                         GetLastPausedTicks() const { return m_LastPausedTicks; }
+  inline int64_t                                         GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
+  inline bool                                            GetChatOnly() const { return m_ChatOnly; }
+  inline bool                                            GetAnyUsingGProxy() { return m_ReconnectProtocols > 0; }
+  std::string                                            GetStatusDescription() const;
+  std::string                                            GetEndDescription() const;
+  std::string                                            GetCategory() const;
+  uint32_t                                               GetGameType() const;
+  uint32_t                                               GetGameFlags() const;
+  std::string                                            GetSourceFilePath() const;
+  std::array<uint8_t, 4>                                 GetSourceFileHash() const;
+  std::array<uint8_t, 20>                                GetSourceFileSHA1() const;
+  std::array<uint8_t, 2>                                 GetAnnounceWidth() const;
+  std::array<uint8_t, 2>                                 GetAnnounceHeight() const;
 
-  std::string               GetLogPrefix() const;
-  ImmutableUserList         GetPlayers() const;
-  ImmutableUserList         GetObservers() const;
-  ImmutableUserList         GetUnreadyPlayers() const;
-  ImmutableUserList         GetWaitingReconnectPlayers() const;
+  std::string                                            GetLogPrefix() const;
+  ImmutableUserList                                      GetPlayers() const;
+  ImmutableUserList                                      GetObservers() const;
+  ImmutableUserList                                      GetUnreadyPlayers() const;
+  ImmutableUserList                                      GetWaitingReconnectPlayers() const;
+  bool                                                   GetIsAutoStartDue() const;
+  std::string                                            GetAutoStartText() const;
+  std::string                                            GetReadyStatusText() const;
+  std::string                                            GetCmdToken() const;
+  CTCPServer*                                            GetSocket() const { return m_Socket; };
 
-  bool                      GetIsAutoStartDue() const;
-  std::string               GetAutoStartText() const;
-  std::string               GetReadyStatusText() const;
-  std::string               GetCmdToken() const;
-  CTCPServer*               GetSocket() const { return m_Socket; };
+  uint16_t                                               GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
+  inline bool                                            GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
+  uint8_t                                                CalcActiveReconnectProtocols() const;
+  std::string                                            GetActiveReconnectProtocolsDetails() const;
+  bool                                                   CalcAnyUsingGProxy() const;
+  bool                                                   CalcAnyUsingGProxyLegacy() const;
+  uint8_t                                                GetPlayersReadyMode() const;
 
-  uint16_t                  GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
-  inline bool               GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
-  uint8_t                   CalcActiveReconnectProtocols() const;
-  std::string               GetActiveReconnectProtocolsDetails() const;
-  bool                      CalcAnyUsingGProxy() const;
-  bool                      CalcAnyUsingGProxyLegacy() const;
-  uint8_t                   GetPlayersReadyMode() const;
+  inline void                                            SetExiting(bool nExiting) { m_Exiting = nExiting; }
+  inline void                                            SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
+  inline void                                            SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
+  void                                                   SetUDPEnabled(bool nEnabled);
+  bool                                                   GetHasDesyncHandler() const;
+  bool                                                   GetAllowsDesync() const;
+  uint8_t                                                GetIPFloodHandler() const;
+  bool                                                   GetAllowsIPFlood() const;
+  void                                                   UpdateReadyCounters();
+  void                                                   ResetDropVotes();
+  void                                                   ResetOwnerSeen();
+  void                                                   UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = true; }
 
-  inline void               SetExiting(bool nExiting) { m_Exiting = nExiting; }
-  inline void               SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
-  inline void               SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
-  void                      SetUDPEnabled(bool nEnabled);
-  bool                      GetHasDesyncHandler() const;
-  bool                      GetAllowsDesync() const;
-  uint8_t                   GetIPFloodHandler() const;
-  bool                      GetAllowsIPFlood() const;
-  void                      UpdateReadyCounters();
-  void                      ResetDropVotes();
-  void                      ResetOwnerSeen();
-  void                      UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = true; }
-
-  inline uint32_t           GetUptime() const {
+  inline uint32_t                                        GetUptime() const {
     int64_t time = GetTime();
     if (time < m_CreationTime) return 0;
     return static_cast<uint32_t>(time - m_CreationTime);
@@ -431,72 +429,72 @@ public:
 
   // processing functions
 
-  uint32_t                  SetFD(void* fd, void* send_fd, int32_t* nfds) const;
-  void                      UpdateJoinable();
-  bool                      UpdateLobby();
-  void                      UpdateLoading();
-  void                      UpdateLoaded();
-  bool                      Update(void* fd, void* send_fd);
-  void                      UpdatePost(void* send_fd) const;
-  void                      CheckLobbyTimeouts();
-  void                      RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
+  uint32_t                                               SetFD(void* fd, void* send_fd, int32_t* nfds) const;
+  void                                                   UpdateJoinable();
+  bool                                                   UpdateLobby();
+  void                                                   UpdateLoading();
+  void                                                   UpdateLoaded();
+  bool                                                   Update(void* fd, void* send_fd);
+  void                                                   UpdatePost(void* send_fd) const;
+  void                                                   CheckLobbyTimeouts();
+  void                                                   RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
 
   // logging
-  void                      LogApp(const std::string& logText) const;
-  void                      Log(const std::string& logText);
-  void                      Log(const std::string& logText, int64_t gameTicks);
-  void                      UpdateLogs();
-  void                      FlushLogs();
-  void                      LogSlots();
+  void                                                   LogApp(const std::string& logText) const;
+  void                                                   Log(const std::string& logText);
+  void                                                   Log(const std::string& logText, int64_t gameTicks);
+  void                                                   UpdateLogs();
+  void                                                   FlushLogs();
+  void                                                   LogSlots();
 
   // generic functions to send packets to players
 
-  void                      Send(CConnection* player, const std::vector<uint8_t>& data) const;
-  void                      Send(uint8_t UID, const std::vector<uint8_t>& data) const;
-  void                      Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
-  void                      SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
-  void                      SendAll(const std::vector<uint8_t>& data) const;
-  bool                      SendAllAsChat(const std::vector<uint8_t>& data) const;
+  void                                                   Send(CConnection* player, const std::vector<uint8_t>& data) const;
+  void                                                   Send(uint8_t UID, const std::vector<uint8_t>& data) const;
+  void                                                   Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
+  void                                                   SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
+  void                                                   SendAll(const std::vector<uint8_t>& data) const;
+  bool                                                   SendAllAsChat(const std::vector<uint8_t>& data) const;
  
 
   // functions to send packets to players
 
-  void                      SendChat(uint8_t fromUID, GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
-  void                      SendChat(uint8_t fromUID, uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
-  void                      SendChat(GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
-  void                      SendChat(uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
-  bool                      SendAllChat(uint8_t fromUID, const std::string& message) const;
-  bool                      SendAllChat(const std::string& message) const;
-  void                      SendAllSlotInfo();
-  void                      SendVirtualHostPlayerInfo(CConnection* player) const;
-  void                      SendFakeUsersInfo(CConnection* player) const;
-  void                      SendJoinedPlayersInfo(CConnection* player) const;
-  void                      SendWelcomeMessage(GameUser::CGameUser* user) const;
-  void                      SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
-  void                      SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
-  void                      QueueLeftMessage(GameUser::CGameUser* user) const;
-  void                      SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
-  void                      SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const;
-  void                      SendGProxyEmptyActions();
-  void                      SendAllActionsCallback();
-  void                      SendAllActions();
-  void                      SendAllAutoStart() const;
+  void                                                   SendChat(uint8_t fromUID, GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void                                                   SendChat(uint8_t fromUID, uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void                                                   SendChat(GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void                                                   SendChat(uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  bool                                                   SendAllChat(uint8_t fromUID, const std::string& message) const;
+  bool                                                   SendAllChat(const std::string& message) const;
+  void                                                   SendAllSlotInfo();
+  void                                                   SendVirtualHostPlayerInfo(CConnection* player) const;
+  void                                                   SendFakeUsersInfo(CConnection* player) const;
+  void                                                   SendJoinedPlayersInfo(CConnection* player) const;
+  void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
+  void                                                   SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
+  void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
+  void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
+  void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
+  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const;
+  void                                                   SendGProxyEmptyActions();
+  void                                                   SendAllActionsCallback();
+  void                                                   SendAllActions();
+  void                                                   SendAllAutoStart() const;
 
-  std::vector<uint8_t>      GetGameDiscoveryInfo(const uint8_t gameVersion, const uint16_t hostPort);
-  std::vector<uint8_t>*     GetGameDiscoveryInfoTemplate();
-  std::vector<uint8_t>      GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
+  std::vector<uint8_t>                                   GetGameDiscoveryInfo(const uint8_t gameVersion, const uint16_t hostPort);
+  std::vector<uint8_t>*                                  GetGameDiscoveryInfoTemplate();
+  std::vector<uint8_t>                                   GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
 
-  void                      AnnounceToRealm(CRealm* realm);
-  void                      AnnounceDecreateToRealms();
-  void                      AnnounceToAddress(std::string& address, uint8_t gameVersion);
-  void                      ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion);
-  void                      SendGameDiscoveryInfo(uint8_t gameVersion);
-  void                      SendGameDiscoveryInfo();
-  void                      SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const;
-  void                      SendGameDiscoveryRefresh() const;
-  void                      SendGameDiscoveryCreate(uint8_t gameVersion) const;
-  void                      SendGameDiscoveryCreate() const;
-  void                      SendGameDiscoveryDecreate() const;
+  void                                                   AnnounceToRealm(CRealm* realm);
+  void                                                   AnnounceDecreateToRealms();
+  void                                                   AnnounceToAddress(std::string& address, uint8_t gameVersion);
+  void                                                   ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion);
+  void                                                   SendGameDiscoveryInfo(uint8_t gameVersion);
+  void                                                                                SendGameDiscoveryInfo();
+  void                                                   SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const;
+  void                                                   SendGameDiscoveryRefresh() const;
+  void                                                   SendGameDiscoveryCreate(uint8_t gameVersion) const;
+  void                                                   SendGameDiscoveryCreate() const;
+  void                                                   SendGameDiscoveryDecreate() const;
 
   // events
   // note: these are only called while iterating through the m_Potentials or m_Users std::vectors

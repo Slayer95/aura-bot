@@ -101,8 +101,8 @@ public:
   CCommandConfig*                                    m_CommandDefaultConfig;
 
   CAuraDB*                                           m_DB;                         // database
-  CGameSetup*                                        m_GameSetup;                  // the currently loaded map
-  CGameSetup*                                        m_AutoRehostGameSetup;        // game setup to be rehosted whenever free
+  std::shared_ptr<CGameSetup>                        m_GameSetup;                  // the currently loaded map
+  std::shared_ptr<CGameSetup>                        m_AutoRehostGameSetup;        // game setup to be rehosted whenever free
 
   CCommandContext*                                   m_ReloadContext;
   CCommandContext*                                   m_SudoContext;
@@ -181,7 +181,7 @@ public:
   bool GetNewGameIsInQuotaReplace() const;
   bool GetNewGameIsInQuotaConservative() const;
   bool GetNewGameIsInQuotaAutoReHost() const;
-  bool CreateGame(CGameSetup* gameSetup);
+  bool CreateGame(std::shared_ptr<CGameSetup> gameSetup);
   bool GetIsAutoHostThrottled() const;
 
   inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
@@ -206,7 +206,6 @@ public:
 
   uint8_t ExtractScripts();
   bool CopyScripts();
-  bool GetAutoReHostMapHasRefs() const;
   void ClearAutoRehost();
 
   void LoadMapAliases();

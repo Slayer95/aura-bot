@@ -155,7 +155,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_SupportedGameVersions = vector<uint8_t>(supportedGameVersions.begin(), supportedGameVersions.end());
 }
 
-CGameConfig::CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGameSetup)
+CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared_ptr<CGameSetup> nGameSetup)
 {
   INHERIT(m_VoteKickPercentage)
 

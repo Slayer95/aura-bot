@@ -164,7 +164,7 @@ CGameExtraOptions::~CGameExtraOptions() = default;
 CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
   : m_Aura(nAura),
     m_RestoredGame(nullptr),
-    m_Map(nullptr),
+    //m_Map(nullptr),
     m_Ctx(nCtx),
 
     m_Attribution(nCtx->GetUserAttribution()),
@@ -212,7 +212,7 @@ CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, CConfig* nMapCFG)
 CGameSetup::CGameSetup(CAura* nAura, CCommandContext* nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck)
   : m_Aura(nAura),
     m_RestoredGame(nullptr),
-    m_Map(nullptr),
+    //m_Map(nullptr),
     m_Ctx(nCtx),
 
     m_Attribution(nCtx->GetUserAttribution()),
@@ -600,30 +600,31 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
   return SEARCH_RESULT(MATCH_TYPE_NONE, resolvedCFGPath);
 }
 
-CMap* CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
+shared_ptr<CMap> CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
 {
-  CMap* map = new CMap(m_Aura, mapCFG, m_SkipVersionCheck);
+  shared_ptr<CMap> map = make_shared<CMap>(m_Aura, mapCFG, m_SkipVersionCheck);
+  /*
   if (!map) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map config", CHAT_SEND_SOURCE_ALL);
     return nullptr;
   }
+  */
   string errorMessage = map->CheckProblems();
   if (!errorMessage.empty()) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map config: " + errorMessage, CHAT_SEND_SOURCE_ALL);
-    delete map;
     return nullptr;
   }
   return map;
 }
 
-CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, const bool isCache, const bool silent)
+shared_ptr<CMap> CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, const bool isCache, const bool silent)
 {
   CConfig MapCFG;
   if (!MapCFG.Read(filePath)) {
     if (!silent) m_Ctx->ErrorReply("Map config file [" + PathToString(filePath.filename()) + "] not found.", CHAT_SEND_SOURCE_ALL);
     return nullptr;
   }
-  CMap* map = GetBaseMapFromConfig(&MapCFG, silent);
+  shared_ptr<CMap> map = GetBaseMapFromConfig(&MapCFG, silent);
   if (!map) return nullptr;
   if (isCache) {
     if (MapCFG.GetIsModified()) {
@@ -635,7 +636,7 @@ CMap* CGameSetup::GetBaseMapFromConfigFile(const filesystem::path& filePath, con
   return map;
 }
 
-CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const bool silent)
+shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const bool silent)
 {
   bool isInMapsFolder = filePath.parent_path() == m_Aura->m_Config.m_MapPath.parent_path();
   string fileName = PathToString(filePath.filename());
@@ -667,15 +668,16 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
     MapCFG.Set("map.type", "dota");
   }
 
-  CMap* baseMap = new CMap(m_Aura, &MapCFG, m_SkipVersionCheck);
+  shared_ptr<CMap> baseMap = make_shared<CMap>(m_Aura, &MapCFG, m_SkipVersionCheck);
+  /*
   if (!baseMap) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map.", CHAT_SEND_SOURCE_ALL);
     return nullptr;
   }
+  */
   string errorMessage = baseMap->CheckProblems();
   if (!errorMessage.empty()) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map: " + errorMessage, CHAT_SEND_SOURCE_ALL);
-    delete baseMap;
     return nullptr;
   }
 
@@ -698,7 +700,7 @@ CMap* CGameSetup::GetBaseMapFromMapFile(const filesystem::path& filePath, const 
   return baseMap;
 }
 
-CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, const bool silent)
+shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, const bool silent)
 {
   string fileName = PathToString(mapPath.filename());
   if (fileName.empty()) return nullptr;
@@ -710,7 +712,7 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
     if (m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
       string cfgName = m_Aura->m_CachedMaps[fileName];
       filesystem::path cfgPath = m_Aura->m_Config.m_MapCachePath / filesystem::path(cfgName);
-      CMap* cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
+      shared_ptr<CMap> cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
       if (cachedResult && FileNameEquals(cachedResult->GetServerPath(), fileName)) {
         cacheSuccess = true;
       }
@@ -721,7 +723,6 @@ CMap* CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, 
         if (!silent) m_Ctx->SendReply("Loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
         return cachedResult;
       } else {
-        delete cachedResult;
         m_Aura->m_CachedMaps.erase(fileName);
       }
     }
@@ -1322,16 +1323,13 @@ bool CGameSetup::LoadMapSync()
 void CGameSetup::SetActive()
 {
   if (m_Aura->m_GameSetup) {
-    if (m_Aura->m_AutoRehostGameSetup != m_Aura->m_GameSetup) {
+    if (!m_Aura->m_AutoRehostGameSetup || m_Aura->m_AutoRehostGameSetup.get() != m_Aura->m_GameSetup.get()) {
       DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Pending game setup destroyed")
-      m_Aura->UnholdContext(m_Aura->m_GameSetup->m_Ctx);
-      m_Aura->m_GameSetup->m_Ctx = nullptr;
-      delete m_Aura->m_GameSetup;
-    } else if (this != m_Aura->m_AutoRehostGameSetup) {
+    } else if (this != m_Aura->m_AutoRehostGameSetup.get()) {
       DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Auto-rehost game setup deprioritized")
     }
   }
-  m_Aura->m_GameSetup = this;
+  m_Aura->m_GameSetup = shared_from_this();
   m_ActiveTicks = GetTicks();
 }
 
@@ -1354,7 +1352,7 @@ bool CGameSetup::RestoreFromSaveFile()
 
 bool CGameSetup::RunHost()
 {
-  return m_Aura->CreateGame(this);
+  return m_Aura->CreateGame(shared_from_this());
 }
 
 bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier)
@@ -1644,5 +1642,6 @@ CGameSetup::~CGameSetup()
 
   m_CreatedFrom = nullptr;
   m_Aura = nullptr;
-  m_Map = nullptr;
+
+  m_Map.reset();
 }

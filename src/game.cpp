@@ -252,7 +252,7 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
 // CGame
 //
 
-CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
+CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
   : m_Aura(nAura),
     m_Config(CGameConfig(nAura->m_GameDefaultConfig, nGameSetup->m_Map, nGameSetup)),
     m_Verbose(nGameSetup->m_Verbose),
@@ -346,7 +346,6 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
     m_IsDraftMode(false),
     m_IsHiddenPlayerNames(false),
     m_HadLeaver(false),
-    m_HasMapLock(false),
     m_CheckReservation(nGameSetup->m_ChecksReservation.has_value() ? nGameSetup->m_ChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false),
@@ -439,7 +438,8 @@ CGame::CGame(CAura* nAura, CGameSetup* nGameSetup)
       if (isFileName) {
         // Only maps with paths that are filenames but not standard set map lock
         // implied: only maps in <bot.maps_path>
-        m_HasMapLock = true;
+        // m_HasMapLock = true;
+        // TODO: Be more clever about busy maps
         m_Aura->m_BusyMaps.insert(m_Map->GetServerPath());
       }
     }
@@ -540,10 +540,8 @@ bool CGame::ReleaseMap()
 {
   if (!m_Map) return false;
 
-  if (m_Aura->m_AutoRehostGameSetup && m_Aura->m_AutoRehostGameSetup->m_Map == m_Map) {
-    return false;
-  }
-
+  /*
+  // TODO: Reimplement m_EnableDeleteOversizedMaps
   if (m_HasMapLock) {
     // Only maps with paths that are filenames but not standard set map lock
     // implied: only maps in <bot.maps_path>
@@ -564,6 +562,7 @@ bool CGame::ReleaseMap()
   }
 
   m_HasMapLock = false;
+  */
 
   if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > 0x100000) {
     // Release from memory
@@ -608,8 +607,7 @@ CGame::~CGame()
 {
   Reset();
   if (ReleaseMap()) {
-    delete m_Map;
-    m_Map = nullptr;
+    m_Map.reset();
   }
   for (auto& user : m_Users) {
     delete user;
@@ -6213,7 +6211,6 @@ void CGame::Remake()
   m_IsDraftMode = false;
   m_IsHiddenPlayerNames = false;
   m_HadLeaver = false;
-  m_HasMapLock = false;
   m_UsesCustomReferees = false;
   m_SentPriorityWhois = false;
   m_Remaking = true;

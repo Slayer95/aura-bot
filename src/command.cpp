@@ -6110,11 +6110,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         MapCFG.Set("downloaded_by", m_FromName);
 
-        CMap* ParsedMap = new CMap(m_Aura, &MapCFG, true);
+        shared_ptr<CMap> ParsedMap = make_shared<CMap>(m_Aura, &MapCFG, true);
         const bool isValid = ParsedMap->GetValid();
         if (!isValid) {
           Print("[AURA] warning - map [" + nameString + "] is not valid.");
-          delete ParsedMap;
           badCounter++;
           continue;
         }
@@ -6721,11 +6720,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, true, true);
+      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, this, Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, true, true);
+      /*
       if (!gameSetup) {
         ErrorReply("Unable to host game");
         break;
       }
+      */
       gameSetup->SetActive();
       gameSetup->LoadMap();
       break;
@@ -6942,12 +6943,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (4 <= Args.size()) options->ParseMapRandomRaces(Args[3]);
       if (5 <= Args.size()) options->ParseMapRandomHeroes(Args[4]);
 
-      CGameSetup* gameSetup = new CGameSetup(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true /* skip version check for convenience */);
+      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, this, Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true /* skip version check for convenience */);
+      /*
       if (!gameSetup) {
         delete options;
         ErrorReply("Unable to host game", CHAT_SEND_SOURCE_ALL);
         break;
       }
+      */
       if (isHostCommand) {
         gameSetup->SetDisplayMode(isHostPrivate ? GAME_PRIVATE : GAME_PUBLIC);
         gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, gameName);

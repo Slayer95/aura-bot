@@ -464,7 +464,7 @@ bool CCLI::CheckGameParameters() const
   return true;
 }
 
-bool CCLI::CheckGameLoadParameters(CGameSetup* gameSetup) const
+bool CCLI::CheckGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
 {
   if (!gameSetup->RestoreFromSaveFile()) {
     Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
@@ -605,7 +605,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     if (userName.has_value()) {
       ctx->SetIdentity(userName.value());
     }
-    CGameSetup* gameSetup = new CGameSetup(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
+    shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
     if (gameSetup) {
       if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
       if (m_GameMapDownloadTimeout.has_value()) gameSetup->SetDownloadTimeout(m_GameMapDownloadTimeout.value());
@@ -619,19 +619,16 @@ bool CCLI::QueueActions(CAura* nAura) const
         } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
           ctx->ErrorReply("Input does not refer to a valid map config file (.ini)");
         }
-        delete gameSetup;
         nAura->UnholdContext(ctx);
         return false;
       }
       if (!gameSetup->ApplyMapModifiers(&options)) {
         ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
-        delete gameSetup;
         nAura->UnholdContext(ctx);
         return false;
       }
       if (!gameSetup->m_SaveFile.empty()) {
         if (!CheckGameLoadParameters(gameSetup)) {
-          delete gameSetup;
           nAura->UnholdContext(ctx);
           return false;
         }
@@ -656,7 +653,6 @@ bool CCLI::QueueActions(CAura* nAura) const
       if (m_MirrorSource.has_value()) {
         if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
           Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-          delete gameSetup;
           nAura->UnholdContext(ctx);
           return false;
         }

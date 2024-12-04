@@ -483,8 +483,8 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_CommandDefaultConfig(new CCommandConfig()),
 
     m_DB(new CAuraDB(CFG)),
-    m_GameSetup(nullptr),
-    m_AutoRehostGameSetup(nullptr),
+    //m_GameSetup(nullptr),
+    //m_AutoRehostGameSetup(nullptr),
 
     m_ReloadContext(nullptr),
     m_SudoContext(nullptr),
@@ -761,38 +761,12 @@ bool CAura::CopyScripts()
   return true;
 }
 
-bool CAura::GetAutoReHostMapHasRefs() const
-{
-  // TODO: Smart pointers really
-  for (auto& lobby : m_Lobbies) {
-    if (lobby->GetMap() == m_AutoRehostGameSetup->m_Map) {
-      return true;
-    }
-  }
-  for (auto& game : m_StartedGames) {
-    if (game->GetMap() == m_AutoRehostGameSetup->m_Map) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void CAura::ClearAutoRehost()
 {
   if (!m_AutoRehostGameSetup) {
     return;
   }
-  if (m_GameSetup == m_AutoRehostGameSetup) {
-    m_GameSetup = nullptr;
-  }
-  if (!GetAutoReHostMapHasRefs()) {
-    delete m_AutoRehostGameSetup->m_Map;
-  }
-  m_AutoRehostGameSetup->m_Map = nullptr;
-  UnholdContext(m_AutoRehostGameSetup->m_Ctx);
-  m_AutoRehostGameSetup->m_Ctx = nullptr;
-  delete m_AutoRehostGameSetup;
-  m_AutoRehostGameSetup = nullptr;
+  m_AutoRehostGameSetup.reset();
 }
 
 CAura::~CAura()
@@ -916,17 +890,7 @@ bool CAura::HandleAction(vector<string> action)
     Print("[AURA] Exec cli unsupported yet");
     return false;
   } else if (action[0] == "host" || action[0] == "rehost") {
-    bool success = false;
-    if (m_GameSetup && (action[0] != "rehost" || m_GameSetup == m_AutoRehostGameSetup)) {
-      success = m_GameSetup->RunHost();
-      if (!m_GameSetup->m_LobbyAutoRehosted) {
-        UnholdContext(m_GameSetup->m_Ctx);
-        m_GameSetup->m_Ctx = nullptr;
-        delete m_GameSetup;
-      }
-      m_GameSetup = nullptr;
-    }
-
+    bool success = m_GameSetup->RunHost();
     if (!success) {
       // Delete all other pending actions
       return false;
@@ -1098,8 +1062,7 @@ bool CAura::Update()
   // update map downloads
   if (m_GameSetup) {
     if (m_GameSetup->Update()) {
-      delete m_GameSetup;
-      m_GameSetup = nullptr;
+      m_GameSetup.reset();
     }
   }
 
@@ -1926,7 +1889,7 @@ bool CAura::GetIsAutoHostThrottled() const
   return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= GetTicks();
 }
 
-bool CAura::CreateGame(CGameSetup* gameSetup)
+bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 {
   if (!m_Config.m_Enabled) {
     gameSetup->m_Ctx->ErrorReply("The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);

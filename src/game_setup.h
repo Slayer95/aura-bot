@@ -87,12 +87,12 @@ public:
 // CGameSetup
 //
 
-class CGameSetup
+class CGameSetup : public std::enable_shared_from_this<CGameSetup>
 {
 public:
   CAura*                                          m_Aura;
   CSaveGame*                                      m_RestoredGame;
-  CMap*                                           m_Map;
+  std::shared_ptr<CMap>                           m_Map;
   CCommandContext*                                m_Ctx;
 
   std::string                                     m_Attribution;
@@ -226,11 +226,11 @@ public:
 #endif
   [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInputLocal(std::vector<std::string>& fuzzyMatches);
   [[nodiscard]] std::pair<uint8_t, std::filesystem::path> SearchInput();
-  inline CMap* GetMap() const { return m_Map; }
-  [[nodiscard]] CMap* GetBaseMapFromConfig(CConfig* mapCFG, const bool silent);
-  [[nodiscard]] CMap* GetBaseMapFromConfigFile(const std::filesystem::path& filePath, const bool isCache, const bool silent);
-  [[nodiscard]] CMap* GetBaseMapFromMapFile(const std::filesystem::path& filePath, const bool silent);
-  [[nodiscard]] CMap* GetBaseMapFromMapFileOrCache(const std::filesystem::path& mapPath, const bool silent);
+  inline std::shared_ptr<CMap> GetMap() const { return m_Map; }
+  [[nodiscard]] std::shared_ptr<CMap> GetBaseMapFromConfig(CConfig* mapCFG, const bool silent);
+  [[nodiscard]] std::shared_ptr<CMap> GetBaseMapFromConfigFile(const std::filesystem::path& filePath, const bool isCache, const bool silent);
+  [[nodiscard]] std::shared_ptr<CMap> GetBaseMapFromMapFile(const std::filesystem::path& filePath, const bool silent);
+  [[nodiscard]] std::shared_ptr<CMap> GetBaseMapFromMapFileOrCache(const std::filesystem::path& mapPath, const bool silent);
   bool ApplyMapModifiers(CGameExtraOptions* extraOptions);
 #ifndef DISABLE_CPR
   [[nodiscard]] uint32_t ResolveMapRepositoryTask();

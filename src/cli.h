@@ -180,7 +180,7 @@ public:
   [[nodiscard]] uint8_t GetGameBroadcastErrorHandler() const;
   [[nodiscard]] uint8_t GetGameHideLoadedNames() const;
   [[nodiscard]] bool CheckGameParameters() const;
-  [[nodiscard]] bool CheckGameLoadParameters(CGameSetup* nGameSetup) const;
+  [[nodiscard]] bool CheckGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;
 
   void RunEarlyOptions() const;
   void OverrideConfig(CAura* nAura) const;

@@ -114,7 +114,7 @@ struct CGameConfig
   std::vector<uint8_t>     m_SupportedGameVersions;
 
   explicit CGameConfig(CConfig& CFG);
-  explicit CGameConfig(CGameConfig* nRootConfig, CMap* nMap, CGameSetup* nGameSetup);
+  explicit CGameConfig(CGameConfig* nRootConfig, std::shared_ptr<CMap> nMap, std::shared_ptr<CGameSetup> nGameSetup);
   ~CGameConfig();
 };
 

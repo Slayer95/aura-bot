@@ -436,7 +436,7 @@ void CRealm::Update(void* fd, void* send_fd)
                 break;
               }
               CCommandContext* ctx = new CCommandContext(m_Aura, false, &cout);
-              CGameSetup* gameSetup = new CGameSetup(m_Aura, ctx, hostedGameConfig);
+              shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, ctx, hostedGameConfig);
               if (!gameSetup->GetMapLoaded()) {
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
                 delete hostedGameConfig;
