@@ -2781,8 +2781,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           }
 
           // unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
-          // TODO: this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
-          // we assume this won't happen very often since the only downside is a potential false positive
+          // this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
+          // we assume this won't happen very often since the only downside is a potential false positive, which will soon be corrected
+          // (CAura::EventBNETGameRefreshSuccess doesn't do much)
 
           realm->ResetGameBroadcastData();
         }
