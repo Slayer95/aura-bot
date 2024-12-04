@@ -6624,8 +6624,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("sumode"): {
-      string inputLower = Payload;
-      transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+      string inputLower = ToLowerCase(Payload);
 
       bool targetValue = false;
       if (inputLower.empty() || inputLower == "on" || inputLower == "start") {
@@ -6637,16 +6636,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (targetValue == m_GameUser->CheckSudoMode()) {
-        if (targetValue) {
-          ErrorReply("SU mode is already ENABLED.");
-        } else {
-          ErrorReply("SU mode is already DISABLED.");
-        }
-        break;
-      }
-
-      if (targetValue && !GetIsSudo()) {
+      if (!GetIsSudo()) {
         if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
           ErrorReply("Requires sudo permissions.");
         } else if (!m_GameUser) {
@@ -6659,6 +6649,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!m_GameUser) {
         ErrorReply("SU mode can only be toggled in a game.");
+        break;
+      }
+
+      if (targetValue == m_GameUser->CheckSudoMode()) {
+        if (targetValue) {
+          ErrorReply("SU mode is already ENABLED.");
+        } else {
+          ErrorReply("SU mode is already DISABLED.");
+        }
         break;
       }
 
