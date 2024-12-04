@@ -231,7 +231,7 @@ namespace BNETProtocol
   [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);
   [[nodiscard]] std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);
   [[nodiscard]] std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
-  [[nodiscard]] CConfig* RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
+  [[nodiscard]] std::optional<CConfig> RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
 
   // send functions
 

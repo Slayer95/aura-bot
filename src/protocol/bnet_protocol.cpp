@@ -403,9 +403,9 @@ namespace BNETProtocol
     return ClanList;
   }
 
-  CConfig* RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& packet)
+  optional<CConfig> RECEIVE_HOSTED_GAME_CONFIG(const vector<uint8_t>& packet)
   {
-    CConfig* gameConfig = nullptr;
+    optional<CConfig> gameConfig;
     if (packet.size() < 64 || !ValidateLength(packet)) {
       Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad packet size");
       return gameConfig;
@@ -420,7 +420,7 @@ namespace BNETProtocol
       Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad slot count");
       return gameConfig;
     }
-    gameConfig = new CConfig();
+    gameConfig.emplace();
     gameConfig->SetUint32("rehost.unknown_1", ByteArrayToUInt32(packet, false, 4));
     gameConfig->SetUint32("rehost.unknown_2", ByteArrayToUInt32(packet, false, 8));
 

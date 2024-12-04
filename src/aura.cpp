@@ -159,13 +159,13 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
 {
   const filesystem::path configPath = GetConfigPath(cliApp, homeDir);
   const bool isCustomConfigFile = cliApp.m_CFGPath.has_value();
+  bool isDirectSuccess = false;
 
   // Config adapter is a back-compat mechanism
-  CConfig* configAdapter = nullptr;
   if (cliApp.m_CFGAdapterPath.has_value()) {
-    configAdapter = new CConfig();
+    CConfig configAdapter;
     const filesystem::path configAdapterPath = GetConfigAdapterPath(cliApp, homeDir);
-    const bool adapterSuccess = configAdapter->Read(configAdapterPath);
+    const bool adapterSuccess = configAdapter.Read(configAdapterPath);
     if (!adapterSuccess) {
       filesystem::path cwd;
       try {
@@ -178,14 +178,12 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
         Print("[HINT] --config-adapter was resolved relative to [" + PathToAbsoluteString(homeDir) + "]");
         Print("[HINT] use --stdpaths to read [" + PathToString(cwd / configAdapterPath.filename()) + "]");
       }
-      delete configAdapter;
       return false;
     }
+    isDirectSuccess = CFG.Read(configPath, &configAdapter);
+  } else {
+    isDirectSuccess = CFG.Read(configPath, nullptr);
   }
-
-  const bool isDirectSuccess = CFG.Read(configPath, configAdapter);
-  delete configAdapter;
-  //configAdapter = nullptr;
 
   if (!isDirectSuccess && isCustomConfigFile) {
     filesystem::path cwd;

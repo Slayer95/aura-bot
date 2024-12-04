@@ -432,23 +432,21 @@ void CRealm::Update(void* fd, void* send_fd)
                 break;
               }
 
-              CConfig* hostedGameConfig = BNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(Data);
-              if (!hostedGameConfig) {
+              optional<CConfig> hostedGameConfig = BNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(Data);
+              if (!hostedGameConfig.has_value()) {
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got invalid SID_HOSTGAME message")
                 break;
               }
               shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, false, &cout);
-              shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, ctx, hostedGameConfig);
+              shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, ctx, &(hostedGameConfig.value()));
               if (!gameSetup->GetMapLoaded()) {
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
-                delete hostedGameConfig;
                 break;
               }
               gameSetup->SetDisplayMode(hostedGameConfig->GetBool("rehost.game.private", false) ? GAME_PRIVATE : GAME_PUBLIC);
               gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, hostedGameConfig->GetString("rehost.game.name", 1, 31, "Rehosted Game"));
               gameSetup->SetActive();
               gameSetup->LoadMap();
-              delete hostedGameConfig;
               break;
             }
           }
