@@ -3888,15 +3888,25 @@ void CGame::ReportAllPings() const
     GameUser::CGameUser* worstLagger = SortedPlayers[0];
     if (worstLagger->GetDisconnected() && worstLagger->GetGProxyAny()) {
       ImmutableUserList waitingReconnectPlayers = GetWaitingReconnectPlayers();
+      uint8_t laggerCount = CountLaggingPlayers() - static_cast<uint8_t>(waitingReconnectPlayers.size());
+      string laggerText;
+      if (laggerCount > 0) {
+        laggerText = " (+" + ToDecString(laggerCount) + " other laggers)";
+      }
       if (waitingReconnectPlayers.size() == 1) {
-        SendAllChat("[" + worstLagger->GetDisplayName() + "] is disconnected, but may reconnect");
+        SendAllChat("[" + worstLagger->GetDisplayName() + "] is disconnected, but may reconnect" + laggerText);
       } else {
-        SendAllChat(ToNameListSentence(waitingReconnectPlayers) + " are disconnected, but may reconnect");
+        SendAllChat(ToNameListSentence(waitingReconnectPlayers) + " are disconnected, but may reconnect" + laggerText);
       }
     } else {
       string syncDelayText = worstLagger->GetSyncText();
       if (!syncDelayText.empty()) {
-        SendAllChat("[" + worstLagger->GetDisplayName() + "] is " + syncDelayText);
+        uint8_t laggerCount = CountLaggingPlayers();
+        if (laggerCount > 1) {
+          SendAllChat(ToDecString(laggerCount) + " laggers - [" + worstLagger->GetDisplayName() + "] is " + syncDelayText);
+        } else {
+          SendAllChat("[" + worstLagger->GetDisplayName() + "] is " + syncDelayText);
+        }
       }
     }
   }
