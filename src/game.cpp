@@ -4232,6 +4232,7 @@ void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
   CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
   frame.leavers.push_back(user);
   user->TrySetEnding();
+  LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] scheduled for deletion in " + ToDecString(user->GetPingEqualizerOffset()) + " frames")
 }
 
 void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const
