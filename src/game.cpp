@@ -4846,8 +4846,8 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     user->AddSyncCounterOffset(1);
     */
 
-    user->SetStatus(USERSTATUS_PLAYING);
     RemoveFromLagScreens(user);
+    user->SetStatus(USERSTATUS_PLAYING);
     UserList laggingPlayers = GetLaggingUsers();
     if (laggingPlayers.empty()) {
       m_Lagging = false;
@@ -7915,7 +7915,7 @@ UserList CGame::CalculateNewLaggingPlayers() const
 void CGame::RemoveFromLagScreens(GameUser::CGameUser* user) const
 {
   for (const auto& otherUser : m_Users) {
-    if (user == otherUser || otherUser->GetLagging()) {
+    if (user == otherUser || otherUser->GetIsInLoadingScreen()) {
       continue;
     }
     LOG_APP_IF(LOG_LEVEL_INFO, "@[" + otherUser->GetName() + "] lagger update (-" + user->GetName() + ")")
