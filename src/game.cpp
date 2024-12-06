@@ -1506,7 +1506,7 @@ void CGame::UpdateLoaded()
 
       if (!laggingPlayers.empty()) {
         // start the lag screen
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+        LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
         SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
         ResetDropVotes();
 
@@ -1571,7 +1571,7 @@ void CGame::UpdateLoaded()
       }
 
       if (user->GetDisconnectedUnrecoverably()) {
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
+        LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
         SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
@@ -1579,7 +1579,7 @@ void CGame::UpdateLoaded()
       } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
         ++playersLaggingCounter;
       } else {
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
+        LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
         SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
@@ -3775,7 +3775,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
   // in some cases we're forced to send the left message early so don't send it again
   if (!user->GetLeftMessageSent()) {
     if (user->GetLagging()) {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
+      LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
     SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetIsLeaver() && user->GetAnyKicked()));
@@ -3940,7 +3940,7 @@ void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
       laggingPlayer->SetStartedLaggingTicks(Ticks);
       laggingPlayer->ClearStalePings();
     }
-    DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+    LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
     SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
   }
 }
@@ -4852,7 +4852,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
       m_Lagging = false;
     }
     if (m_Lagging) {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+      LOG_APP_IF(LOG_LEVEL_INFO, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
       Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
       LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...");
 
@@ -7917,7 +7917,7 @@ void CGame::RemoveFromLagScreens(GameUser::CGameUser* user) const
     if (user == otherUser || otherUser->GetLagging()) {
       continue;
     }
-    DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + otherUser->GetName() + "] lagger update (-" + user->GetName() + ")")
+    LOG_APP_IF(LOG_LEVEL_INFO, "@[" + otherUser->GetName() + "] lagger update (-" + user->GetName() + ")")
     Send(otherUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
   }
 }
@@ -7939,7 +7939,7 @@ void CGame::ResetLagScreen()
     if (user->GetFinishedLoading()) {
       for (auto& otherUser : m_Users) {
         if (!otherUser->GetLagging()) continue;
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (-" + otherUser->GetName() + ")")
+        LOG_APP_IF(LOG_LEVEL_INFO, "@[" + user->GetName() + "] lagger update (-" + otherUser->GetName() + ")")
         Send(user, GameProtocol::SEND_W3GS_STOP_LAG(otherUser));
       }
 
@@ -7960,7 +7960,7 @@ void CGame::ResetLagScreen()
         */
       }
 
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+      LOG_APP_IF(LOG_LEVEL_INFO, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
       Send(user, startLagPacket);
 
       if (m_GameLoading) {
