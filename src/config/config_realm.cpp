@@ -45,9 +45,11 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
     // Inheritable
     m_Enabled(true),
+    m_AutoRegister(false),
+    m_UserNameCaseSensitive(false),
+    m_PassWordCaseSensitive(false),
     m_UserName(string()),
     m_PassWord(string()),
-    m_AutoRegister(false),
 
     m_Admins({}),
     m_GamePrefix(string()),
@@ -107,9 +109,13 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name", emptyString);
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", 6112);
+
+  m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
+  m_UserNameCaseSensitive  = CFG.GetBool(m_CFGKeyPrefix + "username.case_sensitive", false);
+  m_PassWordCaseSensitive  = CFG.GetBool(m_CFGKeyPrefix + "password.case_sensitive", false);
+
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
-  m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
 
   m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
@@ -223,9 +229,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
     m_HostName(nRootConfig->m_HostName),
     m_ServerPort(nRootConfig->m_ServerPort),
+
+    m_AutoRegister(nRootConfig->m_AutoRegister),
+    m_UserNameCaseSensitive(nRootConfig->m_UserNameCaseSensitive),
+    m_PassWordCaseSensitive(nRootConfig->m_PassWordCaseSensitive),
     m_UserName(nRootConfig->m_UserName),
     m_PassWord(nRootConfig->m_PassWord),
-    m_AutoRegister(nRootConfig->m_AutoRegister),
 
     m_AuthUseCustomVersion(nRootConfig->m_AuthUseCustomVersion),
     m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
@@ -319,9 +328,14 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   if (m_EnableCustomPort)
     CFG.FailIfErrorLast();
 
+  m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
+  m_UserNameCaseSensitive  = CFG.GetBool(m_CFGKeyPrefix + "username.case_sensitive", m_UserNameCaseSensitive);
+  m_PassWordCaseSensitive  = CFG.GetBool(m_CFGKeyPrefix + "password.case_sensitive", m_PassWordCaseSensitive);
+
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
-  m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
+  if (!m_UserNameCaseSensitive) m_UserName = ToLowerCase(m_UserName);
+  if (!m_PassWordCaseSensitive) m_PassWord = ToLowerCase(m_PassWord);
 
   m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", m_AuthUseCustomVersion);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);

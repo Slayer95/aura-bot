@@ -97,9 +97,12 @@ struct CRealmConfig
 
   std::string m_HostName;                        // server address to connect to
   uint16_t    m_ServerPort;
+
+  bool m_AutoRegister;
+  bool m_UserNameCaseSensitive;
+  bool m_PassWordCaseSensitive;
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
-  bool m_AutoRegister;
 
   bool m_AuthUseCustomVersion;
   uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net
