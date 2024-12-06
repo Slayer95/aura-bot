@@ -59,8 +59,6 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_WhisperErrorReply("That user is not logged on."),
     m_QueryGameLists(false)
 {
-  const static string emptyString;
-
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", "PER");
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", "Peru");
   m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", "system");
@@ -81,7 +79,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "commands.trigger> - slash (/) is reserved by Battle.net");
     CFG.SetFailed();
   }
-  m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", emptyString);
+  m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger");
   if (!m_BroadcastCmdToken.empty() && m_BroadcastCmdToken[0] == '/') {
     Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "commands.broadcast.trigger> - slash (/) is reserved by Battle.net");
     CFG.SetFailed();
@@ -107,7 +105,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   if (m_EnableCustomPort)
     CFG.FailIfErrorLast();
 
-  m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name", emptyString);
+  m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name");
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", 6112);
 
   m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
@@ -125,7 +123,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
   if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
-  m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", emptyString);
+  m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info");
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
@@ -346,7 +344,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
   if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
-  string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info", emptyString);
+  string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info");
 
   if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
   if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();

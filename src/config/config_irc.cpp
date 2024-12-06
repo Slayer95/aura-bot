@@ -40,17 +40,16 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
     m_PrivateCmdToken("!"),
     m_BroadcastCmdToken(string())
 {
-  const static string emptyString;
-  m_HostName               = CFG.GetString("irc.host_name", emptyString);
+  m_HostName               = CFG.GetString("irc.host_name");
   m_Port                   = CFG.GetUint16("irc.port", 6667);
-  m_NickName               = CFG.GetString("irc.nickname", emptyString);
-  m_UserName               = CFG.GetString("irc.username", emptyString);
-  m_Password               = CFG.GetString("irc.password", emptyString);
+  m_NickName               = CFG.GetString("irc.nickname");
+  m_UserName               = CFG.GetString("irc.username");
+  m_Password               = CFG.GetString("irc.password");
   m_Enabled                = CFG.GetBool("irc.enabled", false);
-  m_VerifiedDomain         = CFG.GetString("irc.verified_domain", emptyString);
+  m_VerifiedDomain         = CFG.GetString("irc.verified_domain");
 
   m_PrivateCmdToken        = CFG.GetString("irc.commands.trigger", "!");
-  m_BroadcastCmdToken      = CFG.GetString("irc.commands.broadcast.trigger", emptyString);
+  m_BroadcastCmdToken      = CFG.GetString("irc.commands.broadcast.trigger");
   m_EnableBroadcast        = CFG.GetBool("irc.commands.broadcast.enabled", false);
 
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};

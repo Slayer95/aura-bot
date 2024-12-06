@@ -37,10 +37,9 @@ using namespace std;
 
 CDiscordConfig::CDiscordConfig(CConfig& CFG)
 {
-  const static string emptyString;
   m_HostName               = CFG.GetString("discord.host_name", "discord.com");
-  m_Token                  = CFG.GetString("discord.token", emptyString);
-  m_InviteUrl              = CFG.GetString("discord.invites.url", emptyString);
+  m_Token                  = CFG.GetString("discord.token");
+  m_InviteUrl              = CFG.GetString("discord.invites.url");
   m_Enabled                = CFG.GetBool("discord.enabled", false);
 
 #ifdef DISABLE_DPP

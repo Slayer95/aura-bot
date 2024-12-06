@@ -57,6 +57,40 @@
 #pragma once
 
 //
+// MapEssentials
+//
+
+struct MapEssentials
+{
+  bool melee;
+  uint8_t numPlayers;
+  uint8_t numDisabled;
+  uint8_t numTeams;
+  uint8_t minCompatibleGameVersion;
+  uint8_t minSuggestedGameVersion;
+  uint32_t editorVersion;
+  uint32_t options;
+  std::optional<std::array<uint8_t, 4>> weakHash;
+  std::optional<std::array<uint8_t, 4>> sha1;
+  std::optional<std::array<uint8_t, 2>> width;
+  std::optional<std::array<uint8_t, 2>> height;
+  std::vector<CGameSlot> slots;
+
+  MapEssentials()
+   : melee(false),
+     numPlayers(0),
+     numDisabled(0),
+     numTeams(0),
+     minCompatibleGameVersion(0),
+     minSuggestedGameVersion(0),
+     editorVersion(0),
+     options(0)
+  {
+  }
+  ~MapEssentials() = default;
+};
+
+//
 // CMap
 //
 
@@ -133,6 +167,8 @@ private:
   std::string                     m_MapData;       // the map data itself, for sending the map to players
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;
+  uint32_t                        m_MapLocale;
+  bool                            m_MapLoaderIsPartial;
   uint8_t                         m_MapMinGameVersion;
   uint8_t                         m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
   uint8_t                         m_MapNumControllers; // config value: max map number of players
@@ -147,8 +183,8 @@ private:
   uint8_t                         m_MapFilterSize;
   uint8_t                         m_MapFilterObs;
   std::array<uint8_t, 4>          m_MapContentMismatch;
-  bool                            m_MapMPQLoaded;
-  bool                            m_MapMPQErrored;
+  void*                           m_MapMPQ;
+  std::optional<bool>             m_MapMPQResult;
   bool                            m_UseStandardPaths;
   bool                            m_SkipVersionCheck;
   bool                            m_Valid;
@@ -165,6 +201,8 @@ public:
 
   [[nodiscard]] inline bool                       GetValid() const { return m_Valid; }
   [[nodiscard]] inline bool                       HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0; }
+  [[nodiscard]] inline bool                       GetMPQSucceeded() const { return m_MapMPQResult.has_value() && m_MapMPQResult.value(); }
+  [[nodiscard]] inline bool                       GetMPQErrored() const { return m_MapMPQResult.has_value() && !m_MapMPQResult.value(); }
   [[nodiscard]] inline std::string                GetConfigName() const { return m_CFGName; }
   [[nodiscard]] inline std::string                GetClientPath() const { return m_ClientMapPath; }
   [[nodiscard]] inline std::array<uint8_t, 4>     GetMapSize() const { return m_MapSize; }
@@ -220,8 +258,13 @@ public:
   bool                                            NormalizeSlots();
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
+  std::optional<std::array<uint8_t, 4>>           CalculateCRC() const;
+  void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const char* fileSubPath) const;
+  std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
+  std::optional<MapEssentials>                    ParseMPQ() const;
   void Load(CConfig* CFG);
   void LoadGameConfigOverrides(CConfig& CFG);
+  void LoadMapSpecificConfig(CConfig& CFG);
 
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();

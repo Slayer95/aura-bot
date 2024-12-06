@@ -116,6 +116,7 @@ public:
   [[nodiscard]] inline bool GetIsModified() const { return m_IsModified; };
   [[nodiscard]] inline const std::map<std::string, std::string>& GetEntries() const { return m_CFG; }
 
+  [[nodiscard]] std::string GetString(const std::string& key);
   [[nodiscard]] std::string GetString(const std::string& key, const std::string& x);
   [[nodiscard]] std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
 
@@ -160,8 +161,8 @@ public:
   [[nodiscard]] std::set<std::string> GetSetInsensitive(const std::string& key, char separator, const std::set<std::string> x);
   [[nodiscard]] std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
 
-  [[nodiscard]] std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count, const std::vector<uint8_t>& x);
-  [[nodiscard]] std::set<uint8_t> GetUint8Set(const std::string& key, char separator, const std::set<uint8_t> x);
+  [[nodiscard]] std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count);
+  [[nodiscard]] std::set<uint8_t> GetUint8Set(const std::string& key, char separator);
   [[nodiscard]] std::vector<uint8_t> GetIPv4(const std::string& key, const std::array<uint8_t, 4>& x);
   [[nodiscard]] std::set<std::string> GetIPStringSet(const std::string& key, char separator, const std::set<std::string> x);
   [[nodiscard]] std::vector<sockaddr_storage> GetHostListWithImplicitPort(const std::string& key, const uint16_t defaultPort, char separator);
@@ -177,6 +178,7 @@ public:
   [[nodiscard]] std::optional<bool> GetMaybeBool(const std::string& key);
   [[nodiscard]] std::optional<uint8_t> GetMaybeUint8(const std::string& key);
   [[nodiscard]] std::optional<uint16_t> GetMaybeUint16(const std::string& key);
+  [[nodiscard]] std::optional<uint32_t> GetMaybeUint32(const std::string& key);
   [[nodiscard]] std::optional<int64_t> GetMaybeInt64(const std::string& key);
   [[nodiscard]] std::optional<uint64_t> GetMaybeUint64(const std::string& key);
   [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);

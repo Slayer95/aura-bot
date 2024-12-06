@@ -62,8 +62,6 @@ using namespace std;
 
 CGameConfig::CGameConfig(CConfig& CFG)
 {
-  const static string emptyString;
-
   m_VoteKickPercentage                     = CFG.GetUint8("hosting.vote_kick.min_percent", 70);
   m_NumPlayersToStartGameOver              = CFG.GetUint8("hosting.game_over.player_count", 1);
   m_MaxPlayersLoopback                     = CFG.GetUint8("hosting.ip_filter.max_loopback", 8);
@@ -121,7 +119,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
     Print("[CONFIG] Error - invalid value provided for <hosting.commands.trigger> - slash (/) is reserved by Battle.net");
     CFG.SetFailed();
   }
-  m_BroadcastCmdToken                      = CFG.GetString("hosting.commands.broadcast.trigger", emptyString);
+  m_BroadcastCmdToken                      = CFG.GetString("hosting.commands.broadcast.trigger");
   if (!m_BroadcastCmdToken.empty() && m_BroadcastCmdToken[0] == '/') {
     Print("[CONFIG] Error - invalid value provided for <hosting.commands.broadcast.trigger> - slash (/) is reserved by Battle.net");
     CFG.SetFailed();
@@ -131,7 +129,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   if (!m_EnableBroadcast)
     m_BroadcastCmdToken.clear();
 
-  m_IndexVirtualHostName                   = CFG.GetString("hosting.index.creator_name", 1, 15, emptyString);
+  m_IndexVirtualHostName                   = CFG.GetString("hosting.index.creator_name", 1, 15);
   m_LobbyVirtualHostName                   = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
   m_NotifyJoins                            = CFG.GetBool("ui.notify_joins.enabled", false);

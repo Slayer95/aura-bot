@@ -221,6 +221,17 @@ vector<string> CConfig::GetInvalidKeys(const bitset<120> definedRealms) const
   return invalidKeys;
 }
 
+string CConfig::GetString(const string& key)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(string())
+  }
+
+  SUCCESS(it->second)
+}
+
 string CConfig::GetString(const string& key, const string& x)
 {
   m_ValidKeys.insert(key);
@@ -515,28 +526,28 @@ set<uint64_t> CConfig::GetUint64Set(const string& key, char separator, const set
   END(Output)
 }
 
-vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count, const std::vector<uint8_t> &x)
+vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
-    SUCCESS(x)
+    SUCCESS(vector<uint8_t>())
   }
 
   vector<uint8_t> Output = ExtractNumbers(it->second, count);
   if (Output.size() != count) {
-    CONFIG_ERROR(key, x)
+    CONFIG_ERROR(key, vector<uint8_t>())
   }
 
   SUCCESS(Output)
 }
 
-set<uint8_t> CConfig::GetUint8Set(const string& key, char separator, const std::set<uint8_t> x)
+set<uint8_t> CConfig::GetUint8Set(const string& key, char separator)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
-    SUCCESS(x)
+    SUCCESS(set<uint8_t>())
   }
 
   bool errored = false;
@@ -557,7 +568,7 @@ set<uint8_t> CConfig::GetUint8Set(const string& key, char separator, const std::
         errored = true;
       }
     } catch (...) {
-      CONFIG_ERROR(key, x)
+      CONFIG_ERROR(key, set<uint8_t>())
     }
   }
 
@@ -807,6 +818,29 @@ optional<uint16_t> CConfig::GetMaybeUint16(const string& key)
       CONFIG_ERROR(key, result)
     }
     result = static_cast<uint16_t>(Value);
+  } catch (...) {
+    CONFIG_ERROR(key, result)
+  }
+
+  SUCCESS(result)
+}
+
+optional<uint32_t> CConfig::GetMaybeUint32(const string& key)
+{
+  m_ValidKeys.insert(key);
+  optional<uint32_t> result;
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
+
+  try {
+    int64_t Value = stol(it->second);
+    if (Value < 0 || 0xFFFFFFFF < Value) {
+      CONFIG_ERROR(key, result)
+    }
+    result = static_cast<uint32_t>(Value);
   } catch (...) {
     CONFIG_ERROR(key, result)
   }

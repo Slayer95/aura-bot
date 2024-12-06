@@ -85,6 +85,7 @@ bool FileDelete(const std::filesystem::path& File);
 [[nodiscard]] std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
 [[nodiscard]] bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
-bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath);
+void ReadMPQFile(void* MPQ, const char* archiveFile, std::vector<uint8_t>& container, const uint32_t locale = 0);
+bool ExtractMPQFile(void* MPQ, const char* archivedFile, const std::filesystem::path& outPath, const uint32_t locale = 0);
 
 #endif // AURA_FILEUTIL_H_

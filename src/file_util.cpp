@@ -436,39 +436,47 @@ void CloseMPQArchive(void* MPQ)
   SFileCloseArchive(MPQ);
 }
 
-bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& outPath)
+void ReadMPQFile(void* MPQ, const char* archiveFile, vector<uint8_t>& container, const uint32_t locale)
 {
-  SFileSetLocale(0);
-  void* SubFile;
-  if (!SFileOpenFileEx(MPQ, archiveFile, 0, &SubFile)) {
-    return false;
-  }
-  const uint32_t FileLength = SFileGetFileSize(SubFile, nullptr);
-  bool success = false;
+  container.clear();
+  SFileSetLocale(locale);
 
-  if (FileLength > 0 && FileLength != 0xFFFFFFFF) {
-    auto  SubFileData = new int8_t[FileLength];
+  void* subFile = nullptr;
+  // override common.j
+  if (SFileOpenFileEx(m_MapMPQ, archiveFile, 0, &subFile)) {
+    const uint32_t fileLength = SFileGetFileSize(subFile, nullptr);
 
+    if (fileLength > 0 && fileLength != 0xFFFFFFFF) {
+      container.resize(fileLength);
 #ifdef _WIN32
-    unsigned long BytesRead = 0;
+      unsigned long bytesRead = 0;
 #else
-    uint32_t BytesRead = 0;
+      uint32_t bytesRead = 0;
 #endif
 
-    if (SFileReadFile(SubFile, SubFileData, FileLength, &BytesRead, nullptr)) {
-      if (FileWrite(outPath, reinterpret_cast<uint8_t*>(SubFileData), BytesRead)) {
-        Print("[AURA] extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
-        success = true;
-      } else {
-        Print("[AURA] warning - unable to save extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
+      if (SFileReadFile(subFile, container.data(), fileLength, &bytesRead, nullptr)) {
+        if (bytesRead < fileLength) {
+          Print("[AURA] error reading " + string(archiveFile) + " - bytes read is " + to_string(bytesRead) + "; file length is " + to_string(fileLength));
+          container.clear();
+        }
       }
-    } else {
-      Print("[AURA] warning - unable to extract " + string(archiveFile) + " from MPQ file");
     }
-
-    delete[] SubFileData;
+    SFileCloseFile(subFile);
   }
+}
 
-  SFileCloseFile(SubFile);
-  return success;
+bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& outPath, const uint32_t locale)
+{
+  vector<uint8_t> container;
+  ReadMPQFile(MPQ, archiveFile, container, locale);
+  if (container.empty()) {
+    Print("[AURA] warning - unable to extract " + string(archiveFile) + " from MPQ file");
+    return false;
+  } else if (FileWrite(outPath, container.data(), container.size())) {
+    Print("[AURA] extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
+    return true;
+  } else {
+    Print("[AURA] warning - unable to save extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
+    return false;
+  }
 }
