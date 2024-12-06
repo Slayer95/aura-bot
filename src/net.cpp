@@ -102,7 +102,7 @@ bool CGameTestConnection::GetIsRealmListed() const
 
 uint32_t CGameTestConnection::GetHostCounter() const
 {
-  const CGame* lobby = m_Aura->GetLobbyByHostCounter(m_BaseHostCounter);
+  const CGame* lobby = m_Aura->GetLobbyByHostCounterExact(m_BaseHostCounter);
   if (lobby && lobby->GetIsMirror()) {
     return m_BaseHostCounter;
   }
@@ -135,7 +135,7 @@ bool CGameTestConnection::QueryGameInfo()
     return false;
   }
 
-  const CGame* lobby = m_Aura->GetLobbyByHostCounter(m_BaseHostCounter);
+  const CGame* lobby = m_Aura->GetLobbyByHostCounterExact(m_BaseHostCounter);
   if (!lobby || (!lobby->GetIsLobbyStrict() && !lobby->GetIsMirror())) {
     return false;
   }

@@ -144,6 +144,7 @@ public:
   CGame* GetMostRecentLobby(bool allowPending = false) const;
   CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
   CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
+  CGame* GetLobbyByHostCounterExact(uint32_t hostCounter) const;
   CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
 
   CRealm* GetRealmByInputId(const std::string& inputId) const;

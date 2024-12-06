@@ -820,7 +820,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   switch (message->GetCallback()) {
     case CHAT_CALLBACK_REFRESH_GAME: {
       m_ChatQueuedGameAnnouncement = false;
-      CGame* matchLobby = m_Aura->GetLobbyByHostCounter(message->GetCallbackData());
+      CGame* matchLobby = m_Aura->GetLobbyByHostCounterExact(message->GetCallbackData());
       if (!matchLobby) {
         Print(GetLogPrefix() + " !! lobby not found !! host counter 0x" + ToHexString(message->GetCallbackData()));
         if (message->GetIsStale()) {
@@ -1260,7 +1260,9 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, CComman
   m_ChatQueueJoinCallback->SetMessage(game->GetAnnounceText(this));
   m_ChatQueueJoinCallback->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
   m_ChatQueueJoinCallback->SetCallback(CHAT_CALLBACK_REFRESH_GAME, game->GetHostCounter());
-  m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_LOBBY_JOINABLE, game->GetHostCounter());
+  if (!game->GetIsMirror()) {
+    m_ChatQueueJoinCallback->SetValidator(CHAT_VALIDATOR_LOBBY_JOINABLE, game->GetHostCounter());
+  }
   m_HadChatActivity = true;
 
   DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued game announcement")

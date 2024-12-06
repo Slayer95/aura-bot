@@ -1250,7 +1250,6 @@ void CGame::UpdateJoinable()
         }
         if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
           continue;
-
         }
         if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
           continue;
@@ -1260,7 +1259,7 @@ void CGame::UpdateJoinable()
       }
     }
 
-    if (!m_IsMirror && m_Aura->m_StartedGames.empty()) {
+    if (m_Aura->m_StartedGames.empty()) {
       // This is a lobby. Take the chance to update the detailed console title
       m_Aura->UpdateMetaData();
     }

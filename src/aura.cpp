@@ -866,6 +866,16 @@ CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
   return nullptr;
 }
 
+CGame* CAura::GetLobbyByHostCounterExact(uint32_t hostCounter) const
+{
+  for (const auto& lobby : m_Lobbies) {
+    if (lobby->GetHostCounter() == hostCounter) {
+      return lobby;
+    }
+  }
+  return nullptr;
+}
+
 CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
 {
   for (const auto& lobby : m_Lobbies) {
