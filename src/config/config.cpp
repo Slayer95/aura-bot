@@ -562,7 +562,7 @@ set<uint8_t> CConfig::GetUint8Set(const string& key, char separator)
     try {
       long Value = stol(element);
       if (Value < 0 || Value > 0xFF) {
-        CONFIG_ERROR(key, x)
+        CONFIG_ERROR(key, set<uint8_t>())
       }
       if (!Output.insert(static_cast<uint8_t>(Value)).second) {
         errored = true;

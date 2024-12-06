@@ -443,7 +443,7 @@ void ReadMPQFile(void* MPQ, const char* archiveFile, vector<uint8_t>& container,
 
   void* subFile = nullptr;
   // override common.j
-  if (SFileOpenFileEx(m_MapMPQ, archiveFile, 0, &subFile)) {
+  if (SFileOpenFileEx(MPQ, archiveFile, 0, &subFile)) {
     const uint32_t fileLength = SFileGetFileSize(subFile, nullptr);
 
     if (fileLength > 0 && fileLength != 0xFFFFFFFF) {

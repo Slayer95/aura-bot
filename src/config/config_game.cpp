@@ -129,7 +129,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   if (!m_EnableBroadcast)
     m_BroadcastCmdToken.clear();
 
-  m_IndexVirtualHostName                   = CFG.GetString("hosting.index.creator_name", 1, 15);
+  m_IndexVirtualHostName                   = CFG.GetString("hosting.index.creator_name", 1, 15, "");
   m_LobbyVirtualHostName                   = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
   m_NotifyJoins                            = CFG.GetBool("ui.notify_joins.enabled", false);
@@ -149,7 +149,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_PipeConsideredHarmful                  = CFG.GetBool("hosting.name_filter.is_pipe_harmful", true);
   m_UDPEnabled                             = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
-  set<uint8_t> supportedGameVersions       = CFG.GetUint8Set("hosting.crossplay.versions", ',', {});
+  set<uint8_t> supportedGameVersions       = CFG.GetUint8Set("hosting.crossplay.versions", ',');
   m_SupportedGameVersions = vector<uint8_t>(supportedGameVersions.begin(), supportedGameVersions.end());
 }
 

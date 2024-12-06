@@ -89,7 +89,11 @@ CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const boo
   m_StatsPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_stats.permissions", commandPermissions, moderatorPermissions);
 
   m_Enabled = CFG.GetBool(m_CFGKeyPrefix + "commands.enabled", true);
-  m_NameSpace = CFG.GetString(m_CFGKeyPrefix + "commands.namespace", useDefaultNamespace ? "aura" : emptyString);
+  if (useDefaultNamespace) {
+    m_NameSpace = CFG.GetString(m_CFGKeyPrefix + "commands.namespace", "aura");
+  } else {
+    m_NameSpace = CFG.GetString(m_CFGKeyPrefix + "commands.namespace");
+  }
   m_RequireVerified = requireVerified;
 }
 
