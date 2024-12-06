@@ -1201,6 +1201,17 @@ ImmutableUserList CGame::GetUnreadyPlayers() const
   return players;
 }
 
+ImmutableUserList CGame::GetWaitingReconnectPlayers() const
+{
+  ImmutableUserList players;
+  for (const auto& user : m_Users) {
+    if (!user->GetLeftMessageSent() && user->GetDisconnected() && user->GetGProxyAny()) {
+      players.push_back(user);
+    }
+  }
+  return players;
+}
+
 uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds) const
 {
   uint32_t NumFDs = 0;
@@ -3876,7 +3887,12 @@ void CGame::ReportAllPings() const
   if (m_Lagging) {
     GameUser::CGameUser* worstLagger = SortedPlayers[0];
     if (worstLagger->GetDisconnected() && worstLagger->GetGProxyAny()) {
-      SendAllChat("[" + worstLagger->GetDisplayName() + "] is disconnected, but may reconnect");
+      ImmutableUserList waitingReconnectPlayers = GetWaitingReconnectPlayers();
+      if (waitingReconnectPlayers.size() == 1) {
+        SendAllChat("[" + worstLagger->GetDisplayName() + "] is disconnected, but may reconnect");
+      } else {
+        SendAllChat(ToNameListSentence(waitingReconnectPlayers) + " are disconnected, but may reconnect");
+      }
     } else {
       string syncDelayText = worstLagger->GetSyncText();
       if (!syncDelayText.empty()) {

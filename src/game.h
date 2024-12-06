@@ -393,6 +393,8 @@ public:
   ImmutableUserList         GetPlayers() const;
   ImmutableUserList         GetObservers() const;
   ImmutableUserList         GetUnreadyPlayers() const;
+  ImmutableUserList         GetWaitingReconnectPlayers() const;
+
   bool                      GetIsAutoStartDue() const;
   std::string               GetAutoStartText() const;
   std::string               GetReadyStatusText() const;
