@@ -3893,11 +3893,7 @@ void CGame::ReportAllPings() const
       if (laggerCount > 0) {
         laggerText = " (+" + ToDecString(laggerCount) + " other laggers)";
       }
-      if (waitingReconnectPlayers.size() == 1) {
-        SendAllChat("[" + worstLagger->GetDisplayName() + "] is disconnected, but may reconnect" + laggerText);
-      } else {
-        SendAllChat(ToNameListSentence(waitingReconnectPlayers) + " are disconnected, but may reconnect" + laggerText);
-      }
+      SendAllChat(ToNameListSentence(waitingReconnectPlayers) + " disconnected, but may reconnect" + laggerText);
     } else {
       string syncDelayText = worstLagger->GetSyncText();
       if (!syncDelayText.empty()) {
