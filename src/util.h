@@ -227,28 +227,28 @@ inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, cons
     };
 }
 
-[[nodiscard]] inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 1>> optArray, const uint8_t c)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 1>> optArray, const uint8_t c)
 {
   std::array<uint8_t, 1> val = CreateFixedByteArray(c);
   optArray.emplace();
   optArray->swap(val);
 }
 
-[[nodiscard]] inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 2>> optArray, const uint16_t i, bool bigEndian)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 2>> optArray, const uint16_t i, bool bigEndian)
 {
   std::array<uint8_t, 2> val = CreateFixedByteArray(i, bigEndian);
   optArray.emplace();
   optArray->swap(val);
 }
 
-[[nodiscard]] inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>> optArray, const uint32_t i, bool bigEndian)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>> optArray, const uint32_t i, bool bigEndian)
 {
   std::array<uint8_t, 4> val = CreateFixedByteArray(i, bigEndian);
   optArray.emplace();
   optArray->swap(val);
 }
 
-[[nodiscard]] inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>> optArray, const int64_t i, bool bigEndian)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>> optArray, const int64_t i, bool bigEndian)
 {
   std::array<uint8_t, 4> val = CreateFixedByteArray(i, bigEndian);
   optArray.emplace();

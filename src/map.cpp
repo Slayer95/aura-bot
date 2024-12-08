@@ -768,6 +768,8 @@ optional<MapEssentials> CMap::ParseMPQ() const
     DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
   }
 
+  fileContents.clear();
+
   if (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12) {
     mapEssentials->minCompatibleGameVersion = 29;
   }
@@ -879,7 +881,8 @@ void CMap::Load(CConfig* CFG)
 
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
-    mapEssentials.swap(ParseMPQFromPath(MapMPQFilePath));
+    optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(MapMPQFilePath);
+    mapEssentials.swap(mapEssentialsParsed);
     if (!mapEssentials.has_value()) {
       if (m_MapLoaderIsPartial) {
         Print("[MAP] failed to parse map");
