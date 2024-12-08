@@ -414,7 +414,10 @@ optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
 {
   m_MapMPQResult = OpenMPQArchive(&m_MapMPQ, filePath);
   if (GetMPQSucceeded()) {
-    return ParseMPQ();
+    optional<MapEssentials> mapEssentials = ParseMPQ();
+    SFileCloseArchive(m_MapMPQ);
+    m_MapMPQ = nullptr;
+    return mapEssentials;
   }
 
   m_MapMPQ = nullptr;
@@ -450,13 +453,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
   mapEssentials.emplace();
 
-  // try to calculate <map.size>, <map.crc32>, <map.weak_hash>, <map.sha1>
-
-  std::vector<uint8_t> MapSize, MapScriptsWeakHash, MapScriptsSHA1;
-
   m_Aura->m_SHA.Reset();
-
-  // calculate <map.crc32>
 
   // calculate <map.weak_hash>, and <map.sha1>
   // a big thank you to Strilanc for figuring the <map.weak_hash> algorithm out
@@ -892,11 +889,6 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  if (GetMPQSucceeded()) {
-    SFileCloseArchive(m_MapMPQ);
-    m_MapMPQ = nullptr;
-  }
-
   if (mapEssentials.has_value()) {
     // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
     m_MapFilterType = mapEssentials->melee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO;
@@ -965,7 +957,7 @@ void CMap::Load(CConfig* CFG)
     }
   } else if (crc32.has_value()) {
     CFG->SetUint8Array("map.crc32", crc32->data(), 4);
-    copy_n(crc32.value().begin(), 4, m_MapCRC32.begin());
+    copy_n(crc32->begin(), 4, m_MapCRC32.begin());
   } else {
     copy_n(cfgCRC32.begin(), 4, m_MapCRC32.begin());
   }
@@ -987,7 +979,7 @@ void CMap::Load(CConfig* CFG)
     }
   } else if (mapEssentials.has_value() && mapEssentials->weakHash.has_value()) {
     CFG->SetUint8Array("map.weak_hash", mapEssentials->weakHash->data(), 4);
-    copy_n(mapEssentials->weakHash.value().begin(), 4, m_MapScriptsWeakHash.begin());
+    copy_n(mapEssentials->weakHash->begin(), 4, m_MapScriptsWeakHash.begin());
   } else {
     copy_n(cfgWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
   }
@@ -1009,7 +1001,7 @@ void CMap::Load(CConfig* CFG)
     }
   } else if (mapEssentials.has_value() && mapEssentials->sha1.has_value()) {
     CFG->SetUint8Array("map.sha1", mapEssentials->sha1->data(), 20);
-    copy_n(mapEssentials->sha1.value().begin(), 20, m_MapScriptsSHA1.begin());
+    copy_n(mapEssentials->sha1->begin(), 20, m_MapScriptsSHA1.begin());
   } else {
     copy_n(cfgSHA1.begin(), 20, m_MapScriptsSHA1.begin());
   }
