@@ -143,11 +143,11 @@ protected:
   std::vector<CConnection*>                              m_Observers;
   CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;            // actions to be sent
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
-  uint16_t                                               m_ActionsLatency;
   std::vector<std::string>                               m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>                                  m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
   std::vector<CGameVirtualUser>                          m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   std::shared_ptr<CMap>                                  m_Map;                           // map data
+  uint32_t                                               m_GameFlags;
   GameUser::CGameUser*                                   m_PauseUser;
   std::string                                            m_GameName;                      // game name
   uint64_t                                               m_GameHistoryId;
@@ -181,7 +181,7 @@ protected:
   int64_t                                                m_PausedTicksDeltaSum;           // Sum of GetTicks deltas for every game pause
   int64_t                                                m_StartedLaggingTime;            // GetTime when the last lag screen started
   int64_t                                                m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
-  uint32_t                                              m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
+  uint32_t                                               m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
   int64_t                                                m_LastUserSeen;                  // GetTicks when any user was last seen in the lobby
   int64_t                                                m_LastOwnerSeen;                 // GetTicks when the game owner was last seen in the lobby
   int64_t                                                m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
@@ -382,7 +382,8 @@ public:
   std::string                                            GetEndDescription() const;
   std::string                                            GetCategory() const;
   uint32_t                                               GetGameType() const;
-  uint32_t                                               GetGameFlags() const;
+  inline uint32_t                                        GetGameFlags() const { return m_GameFlags; }
+  uint32_t                                               CalcGameFlags() const;
   std::string                                            GetSourceFilePath() const;
   std::array<uint8_t, 4>                                 GetSourceFileHash() const;
   std::array<uint8_t, 20>                                GetSourceFileSHA1() const;

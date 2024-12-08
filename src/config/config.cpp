@@ -1078,6 +1078,11 @@ void CConfig::SetUint8Vector(const string& key, const vector<uint8_t> &x)
   m_CFG[key] = ByteArrayToDecString(x);
 }
 
+void CConfig::SetUint8Array(const string& key, const uint8_t* start, const size_t size)
+{
+  m_CFG[key] = ByteArrayToDecString(vector<uint8_t>(start, start + size));
+}
+
 std::vector<uint8_t> CConfig::Export() const
 {
   std::ostringstream SS;

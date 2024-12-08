@@ -1340,7 +1340,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
     displayMode,
     game->GetGameType(),
-    game->GetMap()->GetMapGameFlags(),
+    game->GetGameFlags(),
     game->GetAnnounceWidth(),
     game->GetAnnounceHeight(),
     GetPrefixedGameName(game->GetGameName()), m_Config.m_UserName,

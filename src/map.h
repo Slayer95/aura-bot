@@ -56,6 +56,9 @@
 
 #pragma once
 
+#define ROTL(x, n) ((x) << (n)) | ((x) >> (32 - (n))) // this won't work with signed types
+#define ROTR(x, n) ((x) >> (n)) | ((x) << (32 - (n))) // this won't work with signed types
+
 //
 // MapEssentials
 //
@@ -70,10 +73,10 @@ struct MapEssentials
   uint8_t minSuggestedGameVersion;
   uint32_t editorVersion;
   uint32_t options;
-  std::optional<std::array<uint8_t, 4>> weakHash;
-  std::optional<std::array<uint8_t, 4>> sha1;
   std::optional<std::array<uint8_t, 2>> width;
   std::optional<std::array<uint8_t, 2>> height;
+  std::optional<std::array<uint8_t, 4>> weakHash;
+  std::optional<std::array<uint8_t, 20>> sha1;
   std::vector<CGameSlot> slots;
 
   MapEssentials()
@@ -165,19 +168,20 @@ private:
   std::string                     m_MapSiteURL;
   std::string                     m_MapShortDesc;
   std::string                     m_MapData;       // the map data itself, for sending the map to players
+  bool                            m_MapLoaderIsPartial;
+  uint32_t                        m_MapLocale;
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;
-  uint32_t                        m_MapLocale;
-  bool                            m_MapLoaderIsPartial;
   uint8_t                         m_MapMinGameVersion;
-  uint8_t                         m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
+  uint8_t                         m_MapMinSuggestedGameVersion;
   uint8_t                         m_MapNumControllers; // config value: max map number of players
+  uint8_t                         m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
   uint8_t                         m_MapNumTeams;   // config value: max map number of teams
   uint8_t                         m_MapVersionMaxSlots;
   uint8_t                         m_MapSpeed;
   uint8_t                         m_MapVisibility;
   uint8_t                         m_MapObservers;
-  uint8_t                         m_MapFlags;
+  uint8_t                         m_GameFlags;
   uint8_t                         m_MapFilterMaker;
   uint8_t                         m_MapFilterType;
   uint8_t                         m_MapFilterSize;
@@ -215,8 +219,8 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
   [[nodiscard]] inline uint8_t                    GetMapSpeed() const { return m_MapSpeed; }
   [[nodiscard]] inline uint8_t                    GetMapObservers() const { return m_MapObservers; }
-  [[nodiscard]] inline uint8_t                    GetMapFlags() const { return m_MapFlags; }
-  [[nodiscard]] uint32_t                          GetMapGameFlags() const;
+  [[nodiscard]] inline uint8_t                    GetMapFlags() const { return m_GameFlags; }
+  [[nodiscard]] uint32_t                          GetGameConvertedFlags() const;
   [[nodiscard]] uint32_t                          GetMapGameType() const;
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapMinGameVersion() const { return m_MapMinGameVersion; }
@@ -259,7 +263,7 @@ public:
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
   std::optional<std::array<uint8_t, 4>>           CalculateCRC() const;
-  void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const char* fileSubPath) const;
+  void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
   std::optional<MapEssentials>                    ParseMPQ() const;
   void Load(CConfig* CFG);
@@ -268,7 +272,31 @@ public:
 
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
-  [[nodiscard]] uint32_t                          XORRotateLeft(const uint8_t* data, const uint32_t length);
 };
+
+[[nodiscard]] inline uint32_t XORRotateLeft(const uint8_t* data, const uint32_t length)
+{
+  // a big thank you to Strilanc for figuring this out
+
+  uint32_t i   = 0;
+  uint32_t Val = 0;
+
+  if (length > 3) {
+    while (i < length - 3) {
+      Val = ROTL(Val ^ ((uint32_t)data[i] + (uint32_t)(data[i + 1] << 8) + (uint32_t)(data[i + 2] << 16) + (uint32_t)(data[i + 3] << 24)), 3);
+      i += 4;
+    }
+  }
+
+  while (i < length) {
+    Val = ROTL(Val ^ data[i], 3);
+    ++i;
+  }
+
+  return Val;
+}
+
+#undef ROTL
+#undef ROTR
 
 #endif // AURA_MAP_H_

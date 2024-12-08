@@ -68,9 +68,18 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
   : m_Aura(nAura),
-    m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)),
+    m_MapLocale(CFG->GetUint32("map.locale", 0)),
+    m_MapOptions(0),
+    m_MapEditorVersion(0),
+    m_MapMinGameVersion(0),
+    m_MapMinSuggestedGameVersion(0),
+    m_MapNumControllers(0),
+    m_MapNumDisabled(0),
+    m_MapNumTeams(0),
     m_MapObservers(MAPOBS_NONE),
+    m_GameFlags(MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS),
+    m_MapFilterType(MAPFILTER_TYPE_SCENARIO),
     m_MapFilterObs(MAPFILTER_OBS_NONE),
     m_MapMPQ(nullptr),
     m_UseStandardPaths(false),
@@ -90,63 +99,63 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
 
 CMap::~CMap() = default;
 
-uint32_t CMap::GetMapGameFlags() const
+uint32_t CMap::GetGameConvertedFlags() const
 {
-  uint32_t GameFlags = 0;
+  uint32_t gameFlags = 0;
 
   // speed
 
   if (m_MapSpeed == MAPSPEED_SLOW)
-    GameFlags = 0x00000000;
+    gameFlags = 0x00000000;
   else if (m_MapSpeed == MAPSPEED_NORMAL)
-    GameFlags = 0x00000001;
+    gameFlags = 0x00000001;
   else
-    GameFlags = 0x00000002;
+    gameFlags = 0x00000002;
 
   // visibility
 
   if (m_MapVisibility == MAPVIS_HIDETERRAIN)
-    GameFlags |= 0x00000100;
+    gameFlags |= 0x00000100;
   else if (m_MapVisibility == MAPVIS_EXPLORED)
-    GameFlags |= 0x00000200;
+    gameFlags |= 0x00000200;
   else if (m_MapVisibility == MAPVIS_ALWAYSVISIBLE)
-    GameFlags |= 0x00000400;
+    gameFlags |= 0x00000400;
   else
-    GameFlags |= 0x00000800;
+    gameFlags |= 0x00000800;
 
   // observers
 
   if (m_MapObservers == MAPOBS_ONDEFEAT)
-    GameFlags |= 0x00002000;
+    gameFlags |= 0x00002000;
   else if (m_MapObservers == MAPOBS_ALLOWED)
-    GameFlags |= 0x00003000;
+    gameFlags |= 0x00003000;
   else if (m_MapObservers == MAPOBS_REFEREES)
-    GameFlags |= 0x40000000;
+    gameFlags |= 0x40000000;
 
   // teams/units/hero/race
 
-  if (m_MapFlags & MAPFLAG_TEAMSTOGETHER) {
-    GameFlags |= 0x00004000;
+  if (m_GameFlags & MAPFLAG_TEAMSTOGETHER) {
+    gameFlags |= 0x00004000;
   }
 
-  if (m_MapFlags & MAPFLAG_FIXEDTEAMS)
-    GameFlags |= 0x00060000;
+  if (m_GameFlags & MAPFLAG_FIXEDTEAMS)
+    gameFlags |= 0x00060000;
 
-  if (m_MapFlags & MAPFLAG_UNITSHARE)
-    GameFlags |= 0x01000000;
+  if (m_GameFlags & MAPFLAG_UNITSHARE)
+    gameFlags |= 0x01000000;
 
-  if (m_MapFlags & MAPFLAG_RANDOMHERO)
-    GameFlags |= 0x02000000;
+  if (m_GameFlags & MAPFLAG_RANDOMHERO)
+    gameFlags |= 0x02000000;
 
   if (!(m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
     // WC3 GUI is misleading in displaying the Random Races tickbox when creating LAN games.
     // It even shows Random Races: Yes in the game lobby.
     // However, this flag is totally ignored when Fixed Player Settings is enabled.
-    if (m_MapFlags & MAPFLAG_RANDOMRACES)
-      GameFlags |= 0x04000000;
+    if (m_GameFlags & MAPFLAG_RANDOMRACES)
+      gameFlags |= 0x04000000;
   }
 
-  return GameFlags;
+  return gameFlags;
 }
 
 uint32_t CMap::GetMapGameType() const
@@ -342,9 +351,9 @@ bool CMap::SetMapSpeed(const uint8_t nMapSpeed)
 bool CMap::SetTeamsLocked(const bool nEnable)
 {
   if (nEnable) {
-    m_MapFlags |= MAPFLAG_FIXEDTEAMS;
+    m_GameFlags |= MAPFLAG_FIXEDTEAMS;
   } else {
-    m_MapFlags &= ~MAPFLAG_FIXEDTEAMS;
+    m_GameFlags &= ~MAPFLAG_FIXEDTEAMS;
   }
   return true;
 }
@@ -352,9 +361,9 @@ bool CMap::SetTeamsLocked(const bool nEnable)
 bool CMap::SetTeamsTogether(const bool nEnable)
 {
   if (nEnable) {
-    m_MapFlags |= MAPFLAG_TEAMSTOGETHER;
+    m_GameFlags |= MAPFLAG_TEAMSTOGETHER;
   } else {
-    m_MapFlags &= ~MAPFLAG_TEAMSTOGETHER;
+    m_GameFlags &= ~MAPFLAG_TEAMSTOGETHER;
   }
   return true;
 }
@@ -362,9 +371,9 @@ bool CMap::SetTeamsTogether(const bool nEnable)
 bool CMap::SetAdvancedSharedUnitControl(const bool nEnable)
 {
   if (nEnable) {
-    m_MapFlags |= MAPFLAG_UNITSHARE;
+    m_GameFlags |= MAPFLAG_UNITSHARE;
   } else {
-    m_MapFlags &= ~MAPFLAG_UNITSHARE;
+    m_GameFlags &= ~MAPFLAG_UNITSHARE;
   }
   return true;
 }
@@ -372,9 +381,9 @@ bool CMap::SetAdvancedSharedUnitControl(const bool nEnable)
 bool CMap::SetRandomHeroes(const bool nEnable)
 {
   if (nEnable) {
-    m_MapFlags |= MAPFLAG_RANDOMHERO;
+    m_GameFlags |= MAPFLAG_RANDOMHERO;
   } else {
-    m_MapFlags &= ~MAPFLAG_RANDOMHERO;
+    m_GameFlags &= ~MAPFLAG_RANDOMHERO;
   }
   return true;
 }
@@ -385,9 +394,9 @@ bool CMap::SetRandomRaces(const bool nEnable)
     return false;
   }
   if (nEnable) {
-    m_MapFlags |= MAPFLAG_RANDOMRACES;
+    m_GameFlags |= MAPFLAG_RANDOMRACES;
   } else {
-    m_MapFlags &= ~MAPFLAG_RANDOMRACES;
+    m_GameFlags &= ~MAPFLAG_RANDOMRACES;
   }
   return true;
 }
@@ -423,14 +432,15 @@ optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
   int32_t errorCode = static_cast<int32_t>(GetLastOSError());
   string errorCodeString = "Error code " + to_string(errorCode);
 #endif
-  Print("[MAP] warning - unable to load MPQ file [" + PathToString(MapMPQFilePath) + "] - " + errorCodeString);
+  Print("[MAP] warning - unable to load MPQ file [" + PathToString(filePath) + "] - " + errorCodeString);
 
   return nullopt;
 }
 
-void CMap::ReadFileFromArchive(vector<uint8_t>& container, const char* fileSubPath) const
+void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSubPath) const
 {
-  ReadMPQFile(m_MPQ, fileSubPath, container, m_MapLocale);
+  const char* path = fileSubPath.c_str();
+  ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
 }
 
 optional<MapEssentials> CMap::ParseMPQ() const
@@ -467,7 +477,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
       m_Aura->m_SHA.Update((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
     }
-    hashError = hashError || commonJ.empty();
+    hashError = hashError || CommonJ.empty();
   } else {
     Print("[MAP] overriding default common.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
@@ -534,14 +544,13 @@ optional<MapEssentials> CMap::ParseMPQ() const
     }
 
     EnsureFixedByteArray(mapEssentials->weakHash, weakHashVal, false);
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.weak_hash = " + ByteArrayToDecString(mapEssentials->weakHash) + ">")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.weak_hash = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
 
     m_Aura->m_SHA.Final();
-    uint8_t SHA1[20];
-    memset(SHA1, 0, sizeof(uint8_t) * 20);
-    m_Aura->m_SHA.GetHash(SHA1);
-    EnsureFixedByteArray(mapEssentials->sha1, SHA1, false);
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.sha1 = " + ByteArrayToDecString(mapEssentials->sha1) + ">")
+    mapEssentials->sha1.emplace();
+    mapEssentials->sha1->fill(0);
+    m_Aura->m_SHA.GetHash(mapEssentials->sha1->data());
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.sha1 = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
   }
 
   // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>, <map.filter_type>
@@ -551,7 +560,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
     if (fileContents.empty()) {
       Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams> - unable to extract war3map.w3i from map file");
     } else {
-      istringstream ISS(string(fileContents.data(), fileContents.size()));
+      istringstream ISS(string(fileContents.data(), fileContents.data() + fileContents.size()));
 
       // war3map.w3i format found at http://www.wc3campaigns.net/tools/specs/index.html by Zepir/PitzerMike
 
@@ -733,15 +742,15 @@ optional<MapEssentials> CMap::ParseMPQ() const
           if (!(mapEssentials->options & MAPOPT_FIXEDPLAYERSETTINGS)) {
             // make races selectable
 
-            for (const auto& slot : mapEssentials->slots)
+            for (auto& slot : mapEssentials->slots)
               slot.SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
           }
 
 #ifdef DEBUG
           uint32_t SlotNum = 1;
           if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-            Print("[MAP] calculated <map.width = " + ByteArrayToDecString(mapEssentials->width) + ">");
-            Print("[MAP] calculated <map.height = " + ByteArrayToDecString(mapEssentials->height) + ">");
+            Print("[MAP] calculated <map.width = " + ByteArrayToDecString(mapEssentials->width.value()) + ">");
+            Print("[MAP] calculated <map.height = " + ByteArrayToDecString(mapEssentials->height.value()) + ">");
             Print("[MAP] calculated <map.num_players = " + ToDecString(mapEssentials->numPlayers) + ">");
             Print("[MAP] calculated <map.num_disabled = " + ToDecString(mapEssentials->numDisabled) + ">");
             Print("[MAP] calculated <map.num_teams = " + ToDecString(mapEssentials->numTeams) + ">");
@@ -870,7 +879,7 @@ void CMap::Load(CConfig* CFG)
 
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
-    mapEssentials->swap(ParseMPQFromPath(MapMPQFilePath));
+    mapEssentials.swap(ParseMPQFromPath(MapMPQFilePath));
     if (!mapEssentials.has_value()) {
       if (m_MapLoaderIsPartial) {
         Print("[MAP] failed to parse map");
@@ -885,13 +894,38 @@ void CMap::Load(CConfig* CFG)
     m_MapMPQ = nullptr;
   }
 
+  if (mapEssentials.has_value()) {
+    // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
+    m_MapFilterType = mapEssentials->melee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO;
+    if (m_MapFilterType == MAPFILTER_TYPE_MELEE) {
+      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] found melee map")
+    }
+
+    m_MapNumControllers = mapEssentials->numPlayers;
+    m_MapNumDisabled = mapEssentials->numDisabled;
+    m_MapNumTeams = mapEssentials->numTeams;
+    m_MapMinGameVersion = mapEssentials->minCompatibleGameVersion;
+    m_MapMinSuggestedGameVersion = mapEssentials->minSuggestedGameVersion;
+    m_MapEditorVersion = mapEssentials->editorVersion;
+    m_MapOptions = mapEssentials->options;
+
+    if (mapEssentials->width.has_value()) {
+      copy_n(mapEssentials->width->begin(), 2, m_MapWidth.begin());
+    }
+    if (mapEssentials->height.has_value()) {
+      copy_n(mapEssentials->height->begin(), 2, m_MapHeight.begin());
+    }
+
+    m_Slots = mapEssentials->slots;
+  }
+
   array<uint8_t, 4> mapContentMismatch = {0, 0, 0, 0};
 
   vector<uint8_t> cfgFileSize = CFG->GetUint8Vector("map.size", 4);
   if (cfgFileSize.empty() == !mapFileSize.has_value()) {
     if (cfgFileSize.empty()) {
       CFG->SetFailed();
-      if (!m_ErrorMessage) {
+      if (m_ErrorMessage.empty()) {
         if (CFG->Exists("map.size")) {
           m_ErrorMessage = "invalid <map.size> detected";
         } else {
@@ -915,7 +949,7 @@ void CMap::Load(CConfig* CFG)
   if (cfgCRC32.empty() == !crc32.has_value()) {
     if (cfgCRC32.empty()) {
       CFG->SetFailed();
-      if (!m_ErrorMessage) {
+      if (m_ErrorMessage.empty()) {
         if (CFG->Exists("map.crc32")) {
           m_ErrorMessage = "invalid <map.crc32> detected";
         } else {
@@ -923,11 +957,11 @@ void CMap::Load(CConfig* CFG)
         }
       }
     } else {
-      mapContentMismatch[1] = ByteArrayToUInt32(cfgCRC32, 0, false) != crc32.value();
+      mapContentMismatch[1] = ByteArrayToUInt32(cfgCRC32, 0, false) != ByteArrayToUInt32(crc32.value(), false);
       copy_n(cfgCRC32.begin(), 4, m_MapCRC32.begin());
     }
   } else if (crc32.has_value()) {
-    CFG->SetUint8Array<4>("map.crc32", crc32.value());
+    CFG->SetUint8Array("map.crc32", crc32->data(), 4);
     copy_n(crc32.value().begin(), 4, m_MapCRC32.begin());
   } else {
     copy_n(cfgCRC32.begin(), 4, m_MapCRC32.begin());
@@ -937,7 +971,7 @@ void CMap::Load(CConfig* CFG)
   if (cfgWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
     if (cfgWeakHash.empty()) {
       CFG->SetFailed();
-      if (!m_ErrorMessage) {
+      if (m_ErrorMessage.empty()) {
         if (CFG->Exists("map.weak_hash")) {
           m_ErrorMessage = "invalid <map.weak_hash> detected";
         } else {
@@ -945,11 +979,11 @@ void CMap::Load(CConfig* CFG)
         }
       }
     } else {
-      mapContentMismatch[2] = ByteArrayToUInt32(cfgWeakHash, 0, false) != mapEssentials->weakHash.value();
+      mapContentMismatch[2] = ByteArrayToUInt32(cfgWeakHash, 0, false) != ByteArrayToUInt32(mapEssentials->weakHash.value(), false);
       copy_n(cfgWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
     }
   } else if (mapEssentials.has_value() && mapEssentials->weakHash.has_value()) {
-    CFG->SetUint8Array<4>("map.weak_hash", mapEssentials->weakHash.value());
+    CFG->SetUint8Array("map.weak_hash", mapEssentials->weakHash->data(), 4);
     copy_n(mapEssentials->weakHash.value().begin(), 4, m_MapScriptsWeakHash.begin());
   } else {
     copy_n(cfgWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
@@ -959,7 +993,7 @@ void CMap::Load(CConfig* CFG)
   if (cfgSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
     if (cfgSHA1.empty()) {
       CFG->SetFailed();
-      if (!m_ErrorMessage) {
+      if (m_ErrorMessage.empty()) {
         if (CFG->Exists("map.sha1")) {
           m_ErrorMessage = "invalid <map.sha1> detected";
         } else {
@@ -967,11 +1001,11 @@ void CMap::Load(CConfig* CFG)
         }
       }
     } else {
-      mapContentMismatch[3] = ByteArrayToUInt32(cfgSHA1, 0, false) != mapEssentials->sha1.value();
+      mapContentMismatch[3] = memcmp(cfgSHA1.data(), mapEssentials->sha1->data(), 20) != 0;
       copy_n(cfgSHA1.begin(), 20, m_MapScriptsSHA1.begin());
     }
   } else if (mapEssentials.has_value() && mapEssentials->sha1.has_value()) {
-    CFG->SetUint8Array<20>("map.sha1", mapEssentials->sha1.value());
+    CFG->SetUint8Array("map.sha1", mapEssentials->sha1->data(), 20);
     copy_n(mapEssentials->sha1.value().begin(), 20, m_MapScriptsSHA1.begin());
   } else {
     copy_n(cfgSHA1.begin(), 20, m_MapScriptsSHA1.begin());
@@ -984,174 +1018,142 @@ void CMap::Load(CConfig* CFG)
 
   if (CFG->Exists("map.filter_type")) {
     // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
-    m_MapFilterType = CFG->GetUint8("map.filter_type", mapEssentials.has_value() && mapEssentials->melee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO);
-    if (m_MapFilterType == MAPFILTER_TYPE_MELEE) {
-      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] found melee map")
-    }
+    m_MapFilterType = CFG->GetUint8("map.filter_type", m_MapFilterType);
   } else {
-    CFG->SetUint8("map.filter_type", MapFilterType);
-  }
+    CFG->SetUint8("map.filter_type", m_MapFilterType);
+  }  
 
   if (CFG->Exists("map.options")) {
-    mapEssentials.options = CFG->GetUint32("map.options", 0);
-    if (mapEssentials.options & MAPOPT_FIXEDPLAYERSETTINGS) mapEssentials.options |= MAPOPT_CUSTOMFORCES;
+    // Note: maps with any given layout style defined from WorldEdit
+    // may have their layout further constrained arbitrarily when hosting games
+    m_MapOptions = CFG->GetUint32("map.options", m_MapOptions);
+    if (m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) m_MapOptions |= MAPOPT_CUSTOMFORCES;
   } else {
-    CFG->SetUint32("map.options", mapEssentials.options);
+    CFG->SetUint32("map.options", m_MapOptions);
   }
 
-  m_MapOptions = mapEssentials.options;
-  m_MapFlags = CFG->GetUint8("map.flags", MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS);
-  if (!CFG->Exists("map.flags")) {
-    CFG->SetUint8("map.flags", m_MapFlags);
+  if (CFG->Exists("map.flags")) {
+    m_GameFlags = CFG->GetUint8("map.flags", m_GameFlags);
+  } else {
+    CFG->SetUint8("map.flags", m_GameFlags);
   }
 
-  if (CFG->Exists("map.width")) {
-    MapWidth = ExtractNumbers(CFG->GetString("map.width"), 2);
+  vector<uint8_t> cfgWidth = CFG->GetUint8Vector("map.width", 2);
+  if (cfgWidth.size() == 2) {
+    copy_n(cfgWidth.begin(), 2, m_MapWidth.begin());
   } else {
-    CFG->SetUint8Vector("map.width", MapWidth);
+    CFG->SetUint8Array("map.width", m_MapWidth.data(), 2);
+    // already copied to m_MapWidth
+  }
+  if (ByteArrayToUInt16(m_MapWidth, false) == 0) {
+    // Default invalid <map.width> values to 1
+    m_MapWidth = {1, 0};
   }
 
-  if (MapWidth.size() != 2) {
-    CFG->SetFailed();
-    m_ErrorMessage = "invalid <map.width> detected";
+  vector<uint8_t> cfgHeight = CFG->GetUint8Vector("map.height", 2);
+  if (cfgHeight.size() == 2) {
+    copy_n(cfgHeight.begin(), 2, m_MapHeight.begin());
   } else {
-    copy_n(MapWidth.begin(), 2, m_MapWidth.begin());
+    CFG->SetUint8Array("map.height", m_MapHeight.data(), 2);
   }
-
-  if (CFG->Exists("map.height")) {
-    MapHeight = ExtractNumbers(CFG->GetString("map.height"), 2);
-  } else {
-    CFG->SetUint8Vector("map.height", MapHeight);
-  }
-
-  if (MapHeight.size() != 2) {
-    CFG->SetFailed();
-    m_ErrorMessage = "invalid <map.height> detected";
-  } else {
-    copy_n(MapHeight.begin(), 2, m_MapHeight.begin());
+  if (ByteArrayToUInt16(m_MapHeight, false) == 0) {
+    // Default invalid <map.height> values to 1
+    m_MapHeight = {1, 0};
   }
 
   if (CFG->Exists("map.editor_version")) {
-    MapEditorVersion = CFG->GetUint32("map.editor_version", 0);
+    m_MapEditorVersion = CFG->GetUint32("map.editor_version", m_MapEditorVersion);
   } else {
-    CFG->SetUint32("map.editor_version", MapEditorVersion);
+    CFG->SetUint32("map.editor_version", m_MapEditorVersion);
   }
-
-  m_MapEditorVersion = MapEditorVersion;
 
   if (CFG->Exists("map.num_disabled")) {
-    MapNumDisabled = CFG->GetUint8("map.num_disabled", 0);
+    m_MapNumDisabled = CFG->GetUint8("map.num_disabled", m_MapNumDisabled);
   } else {
-    CFG->SetUint8("map.num_disabled", MapNumDisabled);
+    CFG->SetUint8("map.num_disabled", m_MapNumDisabled);
   }
-
-  m_MapNumDisabled = MapNumDisabled;
 
   if (CFG->Exists("map.num_players")) {
-    MapNumPlayers = CFG->GetUint8("map.num_players", 0);
+    m_MapNumControllers = CFG->GetUint8("map.num_players", m_MapNumControllers);
   } else {
-    CFG->SetUint8("map.num_players", MapNumPlayers);
+    CFG->SetUint8("map.num_players", m_MapNumControllers);
   }
-
-  m_MapNumControllers = MapNumPlayers;
 
   if (CFG->Exists("map.num_teams")) {
-    MapNumTeams = CFG->GetUint8("map.num_teams", 0);
+    m_MapNumTeams = CFG->GetUint8("map.num_teams", m_MapNumTeams);
   } else {
-    CFG->SetUint8("map.num_teams", MapNumTeams);
+    CFG->SetUint8("map.num_teams", m_MapNumTeams);
   }
 
-  m_MapNumTeams = static_cast<uint8_t>(MapNumTeams);
-
+  // Game version compatibility and suggestions
   if (CFG->Exists("map.game_version.min")) {
-    MapMinGameVersion = CFG->GetUint8("map.game_version.min", 0);
-  } else {
-    MapMinGameVersion = 0;
-    if (6060 <= MapEditorVersion || Slots.size() > 12 || MapNumPlayers > 12 || MapNumTeams > 12) {
-      MapMinGameVersion = 29;
-    } else if (6059 <= MapEditorVersion) {
-      MapMinGameVersion = 24;
-    } else if (6058 <= MapEditorVersion) {
-      MapMinGameVersion = 23;
-    } else if (6057 <= MapEditorVersion) {
-      MapMinGameVersion = 22;
-    } else if (6053 <= MapEditorVersion && MapEditorVersion <= 6056) {
-      MapMinGameVersion = 22; // not released
-    } else if (6050 <= MapEditorVersion && MapEditorVersion <= 6052) {
-      MapMinGameVersion = 17 + static_cast<uint8_t>(MapEditorVersion - 6050);
-    } else if (6046 <= MapEditorVersion) {
-      MapMinGameVersion = 16;
-    } else if (6043 <= MapEditorVersion) {
-      MapMinGameVersion = 15;
-    } else if (6039 <= MapEditorVersion) {
-      MapMinGameVersion = 14;
-    } else if (6038 <= MapEditorVersion) {
-      MapMinGameVersion = 14; // not released
-    } else if (6034 <= MapEditorVersion && MapEditorVersion <= 6037) {
-      MapMinGameVersion = 10 + static_cast<uint8_t>(MapEditorVersion - 6034);
-    } else if (6031 <= MapEditorVersion) {
-      MapMinGameVersion = 7;
-    }
-    CFG->SetUint32("map.game_version.min", MapMinGameVersion);
+    m_MapMinGameVersion = CFG->GetUint8("map.game_version.min", m_MapMinGameVersion);
   }
-  m_MapMinGameVersion = MapMinGameVersion;
 
-  if (MapMinGameVersion >= 29) {
+  if (CFG->Exists("map.game_version.suggested.min")) {
+    m_MapMinSuggestedGameVersion = CFG->GetUint8("map.game_version.suggested.min", m_MapMinSuggestedGameVersion);
+  }
+
+  if (m_MapMinSuggestedGameVersion < m_MapMinGameVersion) {
+    m_MapMinSuggestedGameVersion = m_MapMinGameVersion;
+  }
+
+  if (!CFG->Exists("map.game_version.min")) {
+    CFG->SetUint8("map.game_version.min", m_MapMinGameVersion);
+  }
+
+  if (!CFG->Exists("map.game_version.suggested.min")) {
+    CFG->SetUint8("map.game_version.suggested.min", m_MapMinSuggestedGameVersion);
+  }
+
+  if (m_MapMinGameVersion >= 29) {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_MODERN);
   } else {
     // TODO: Verify. Allegedly, old maps are limited to 12 slots even when hosted in Reforged.
+    // But see also https://www.hiveworkshop.com/threads/success-hybrid-12-24-player-map-backwards-compatible-1-24-1-28-5-1-31.339722/
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_LEGACY);
   }
+
   if (m_Aura->m_MaxSlots < m_MapVersionMaxSlots) {
-    Print("[MAP] " + ToDecString(m_Aura->m_MaxSlots) + " player limit enforced in modern map (editor version " + to_string(MapEditorVersion) + ")");
+    Print("[MAP] " + ToDecString(m_Aura->m_MaxSlots) + " player limit enforced in modern map (editor version " + to_string(m_MapEditorVersion) + ")");
     m_MapVersionMaxSlots = m_Aura->m_MaxSlots;
   }
 
   if (CFG->Exists("map.slot_1")) {
-    Slots.clear();
+    vector<CGameSlot> cfgSlots;
 
-    for (uint32_t Slot = 1; Slot <= m_MapVersionMaxSlots; ++Slot) {
-      string SlotString = CFG->GetString("map.slot_" + to_string(Slot));
-
-      if (SlotString.empty())
+    for (uint32_t slotNum = 1; slotNum <= m_MapVersionMaxSlots; ++slotNum) {
+      vector<uint8_t> slotData = CFG->GetUint8Vector("map.slot_" + to_string(slotNum), 10);
+      if (slotData.empty()) {
         break;
-
-      std::vector<uint8_t> SlotData = ExtractNumbers(SlotString, 10);
-      Slots.emplace_back(SlotData);
+      }
+      cfgSlots.emplace_back(slotData);
     }
-  } else if (!Slots.empty()) {
-    uint32_t SlotNum = 0;
-    for (auto& Slot : Slots) {
-      CFG->SetUint8Vector("map.slot_" + to_string(++SlotNum), Slot.GetByteArray());
+    if (!cfgSlots.empty()) {
+      if (m_Slots.empty() || cfgSlots.size() == m_MapVersionMaxSlots) {
+        // No slot data from MPQ - or config supports observers
+        m_Slots.swap(cfgSlots);
+      } else if (m_Slots.size() == cfgSlots.size()) {
+        // Override MPQ slot data with slots from config
+        m_Slots.swap(cfgSlots);
+      } else {
+        // Slots from config are not compatible with slots parsed from MPQ
+        CFG->SetFailed();
+        if (m_ErrorMessage.empty()) {
+          m_ErrorMessage = "<map.slots> do not match the map";
+        }
+      }
     }
-  }
-
-  // END
-
-  m_Slots = Slots;
-
-  // if random races is set force every slot's race to random
-
-  if (!(MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) && (m_MapFlags & MAPFLAG_RANDOMRACES)) {
-    Print("[MAP] forcing races to random");
-
-    for (auto& slot : m_Slots)
-      slot.SetRace(SLOTRACE_RANDOM);
+  } else {
+    uint32_t slotNum = 0;
+    for (const auto& slot : m_Slots) {
+      CFG->SetUint8Vector("map.slot_" + to_string(++slotNum), slot.GetByteArray());
+    }
   }
 
   // Maps supporting observer slots enable them by default.
   if (m_Slots.size() + m_MapNumDisabled < m_MapVersionMaxSlots) {
-    m_MapObservers = MAPOBS_ALLOWED;
-    m_MapFilterObs = MAPFILTER_OBS_FULL; 
-  }
-
-  if (CFG->Exists("map.observers")) {
-    SetMapObservers(CFG->GetUint8("map.observers", m_MapObservers));
-    CFG->FailIfErrorLast();
-  }
-  if (CFG->Exists("map.filter_obs")) {
-    m_MapFilterObs = CFG->GetUint8("map.filter_obs", m_MapFilterObs);
-    CFG->FailIfErrorLast();
+    SetMapObservers(MAPOBS_ALLOWED);
   }
 
   LoadGameConfigOverrides(*CFG);
@@ -1382,31 +1384,6 @@ string CMap::CheckProblems()
   return string();
 }
 
-uint32_t CMap::XORRotateLeft(const uint8_t* data, const uint32_t length)
-{
-  // a big thank you to Strilanc for figuring this out
-
-  uint32_t i   = 0;
-  uint32_t Val = 0;
-
-  if (length > 3)
-  {
-    while (i < length - 3)
-    {
-      Val = ROTL(Val ^ ((uint32_t)data[i] + (uint32_t)(data[i + 1] << 8) + (uint32_t)(data[i + 2] << 16) + (uint32_t)(data[i + 3] << 24)), 3);
-      i += 4;
-    }
-  }
-
-  while (i < length)
-  {
-    Val = ROTL(Val ^ data[i], 3);
-    ++i;
-  }
-
-  return Val;
-}
-
 void CMap::LoadGameConfigOverrides(CConfig& CFG)
 {
   const bool wasStrict = CFG.GetStrictMode();
@@ -1551,8 +1528,18 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   // Note: m_ClientMapPath can be computed from m_MapServerPath - this is a cache
   m_ClientMapPath = CFG.GetString("map.path");
 
+  // These aren't necessarily passed verbatim to CGameConfig
+  // (CGameSetup members may be used instead)
   m_MapSpeed = CFG.GetUint8("map.speed", MAPSPEED_FAST);
   m_MapVisibility = CFG.GetUint8("map.visibility", MAPVIS_DEFAULT);
+  if (CFG.Exists("map.observers")) {
+    SetMapObservers(CFG.GetUint8("map.observers", m_MapObservers));
+    CFG.FailIfErrorLast();
+  }
+  if (CFG.Exists("map.filter_obs")) {
+    m_MapFilterObs = CFG.GetUint8("map.filter_obs", m_MapFilterObs);
+    CFG.FailIfErrorLast();
+  }
   m_MapFilterMaker = CFG.GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize = CFG.GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
 

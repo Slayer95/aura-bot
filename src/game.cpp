@@ -263,6 +263,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_CurrentActionsFrame(nullptr),
     m_Map(nGameSetup->m_Map),
+    m_GameFlags(0),
     m_PauseUser(nullptr), // TODO: Track m_PauseUser
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
@@ -389,6 +390,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
   if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
     m_BufferingEnabled |= BUFFERING_ENABLED_ALL;
   }
+
+  m_GameFlags = CalcGameFlags();
 
   if (!nGameSetup->GetIsMirror()) {
     for (const auto& userName : nGameSetup->m_Reservations) {
@@ -747,9 +750,6 @@ void CGame::InitSlots()
 
     // When Fixed Player Settings is enabled, MAPFLAG_RANDOMRACES cannot be turned on.
     if (!fixedPlayers && (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)) {
-      // default user-customizable slot is always random
-      // only when users join do we assign them the selectable race bit
-      // (if they leave, the slots are reset to pure random)
       slot.SetRace(SLOTRACE_RANDOM);
     } else {
       // Ensure race is unambiguous. It's defined as a bitfield,
@@ -2956,10 +2956,9 @@ uint32_t CGame::GetGameType() const
   return mapGameType;
 }
 
-uint32_t CGame::GetGameFlags() const
+uint32_t CGame::CalcGameFlags() const
 {
-  uint32_t mapGameFlags = m_Map->GetMapGameFlags();
-  return mapGameFlags;
+  return m_Map->GetGameConvertedFlags();
 }
 
 string CGame::GetSourceFilePath() const {
