@@ -1634,7 +1634,7 @@ uint8_t CAura::ExtractScripts()
 #else
     string errorCodeString = "Error code " + to_string(errno);
 #endif
-    Print("[AURA] warning - unable to load MPQ file [" + PathToString(MPQFilePath) + "] - " + errorCodeString);
+    Print("[AURA] warning - unable to load MPQ archive [" + PathToString(MPQFilePath) + "] - " + errorCodeString);
   }
 
   return FilesExtracted;

@@ -424,9 +424,9 @@ bool OpenMPQArchive(void** MPQ, const filesystem::path& filePath)
 {
   uint32_t locale = SFileGetLocale();
   if (locale == 0) {
-    Print("[AURA] loading MPQ file [" + PathToString(filePath) + "]");
+    Print("[AURA] loading MPQ archive [" + PathToString(filePath) + "]");
   } else {
-    Print("[AURA] loading MPQ file [" + PathToString(filePath) + "] using locale " + to_string(locale));
+    Print("[AURA] loading MPQ archive [" + PathToString(filePath) + "] using locale " + to_string(locale));
   }
   return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, MPQ);
 }
@@ -436,14 +436,14 @@ void CloseMPQArchive(void* MPQ)
   SFileCloseArchive(MPQ);
 }
 
-void ReadMPQFile(void* MPQ, const char* archiveFile, vector<uint8_t>& container, const uint32_t locale)
+void ReadMPQFile(void* MPQ, const char* packedFileName, vector<uint8_t>& container, const uint32_t locale)
 {
   container.clear();
   SFileSetLocale(locale);
 
   void* subFile = nullptr;
   // override common.j
-  if (SFileOpenFileEx(MPQ, archiveFile, 0, &subFile)) {
+  if (SFileOpenFileEx(MPQ, packedFileName, 0, &subFile)) {
     const uint32_t fileLength = SFileGetFileSize(subFile, nullptr);
 
     if (fileLength > 0 && fileLength != 0xFFFFFFFF) {
@@ -456,7 +456,7 @@ void ReadMPQFile(void* MPQ, const char* archiveFile, vector<uint8_t>& container,
 
       if (SFileReadFile(subFile, container.data(), fileLength, &bytesRead, nullptr)) {
         if (bytesRead < fileLength) {
-          Print("[AURA] error reading " + string(archiveFile) + " - bytes read is " + to_string(bytesRead) + "; file length is " + to_string(fileLength));
+          Print("[AURA] error reading " + string(packedFileName) + " - bytes read is " + to_string(bytesRead) + "; file length is " + to_string(fileLength));
           container.clear();
         }
       }
@@ -465,18 +465,18 @@ void ReadMPQFile(void* MPQ, const char* archiveFile, vector<uint8_t>& container,
   }
 }
 
-bool ExtractMPQFile(void* MPQ, const char* archiveFile, const filesystem::path& outPath, const uint32_t locale)
+bool ExtractMPQFile(void* MPQ, const char* packedFileName, const filesystem::path& outPath, const uint32_t locale)
 {
   vector<uint8_t> container;
-  ReadMPQFile(MPQ, archiveFile, container, locale);
+  ReadMPQFile(MPQ, packedFileName, container, locale);
   if (container.empty()) {
-    Print("[AURA] warning - unable to extract " + string(archiveFile) + " from MPQ file");
+    Print("[AURA] warning - unable to extract " + string(packedFileName) + " from MPQ archive");
     return false;
   } else if (FileWrite(outPath, container.data(), container.size())) {
-    Print("[AURA] extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
+    Print("[AURA] extracted " + string(packedFileName) + " to [" + PathToString(outPath) + "]");
     return true;
   } else {
-    Print("[AURA] warning - unable to save extracted " + string(archiveFile) + " to [" + PathToString(outPath) + "]");
+    Print("[AURA] warning - unable to save extracted " + string(packedFileName) + " to [" + PathToString(outPath) + "]");
     return false;
   }
 }

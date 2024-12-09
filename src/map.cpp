@@ -436,21 +436,19 @@ optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
   int32_t errorCode = static_cast<int32_t>(GetLastOSError());
   string errorCodeString = "Error code " + to_string(errorCode);
 #endif
-  Print("[MAP] warning - unable to load MPQ file [" + PathToString(filePath) + "] - " + errorCodeString);
+  Print("[MAP] warning - unable to load MPQ archive [" + PathToString(filePath) + "] - " + errorCodeString);
 
   return nullopt;
 }
 
 void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSubPath) const
 {
-  Print("[DEBUG] CMap::ReadFileFromArchive(..., " + fileSubPath + ")");
   const char* path = fileSubPath.c_str();
   ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
 }
 
 optional<MapEssentials> CMap::ParseMPQ() const
 {
-  Print("[DEBUG] CMap::ParseMPQ()");
   optional<MapEssentials> mapEssentials;
   if (!m_MapMPQ) return mapEssentials;
 
@@ -540,7 +538,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
     }
 
     if (!foundScript) {
-      Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ file, calculated <map.weak_hash>, and <map.sha1> is probably wrong)");
+      Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ archive, calculated <map.weak_hash>, and <map.sha1> is probably wrong)");
     }
 
     EnsureFixedByteArray(mapEssentials->weakHash, weakHashVal, false);
@@ -810,7 +808,6 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
 void CMap::Load(CConfig* CFG)
 {
-  Print("[DEBUG] CMap::Load()");
   m_Valid   = true;
   m_CFGName = PathToString(CFG->GetFile().filename());
 
@@ -821,9 +818,8 @@ void CMap::Load(CConfig* CFG)
 
   optional<uint32_t> mapFileSize;
   if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
-    Print("[DEBUG] Map data load block");
     if (m_MapServerPath.empty()) {
-      Print("[DEBUG] m_MapServerPath is empty");
+      DPRINT_IF(LOG_LEVEL_TRACE, "m_MapServerPath missing - map data not loaded")
       return;
     }
     size_t fileSize = 0;
@@ -834,7 +830,7 @@ void CMap::Load(CConfig* CFG)
       m_MapData = FileRead(m_MapServerPath, &fileSize);
     }
     if (m_MapLoaderIsPartial && m_MapData.empty()) {
-      Print("[AURA] Local map not found for partial config file");
+      Print("[AURA] Map designated by partial config file is missing from local file system");
       return;
     }
     if (fileSize > 0x18000000) {
@@ -858,7 +854,6 @@ void CMap::Load(CConfig* CFG)
   filesystem::path MapMPQFilePath(m_MapServerPath);
 
   if (!ignoreMPQ) {
-    Print("[DEBUG] L857");
     if (MapMPQFilePath.filename() == MapMPQFilePath && !m_UseStandardPaths) {
       MapMPQFilePath = m_Aura->m_Config.m_MapPath / MapMPQFilePath;
     } else {
@@ -883,12 +878,9 @@ void CMap::Load(CConfig* CFG)
 
   // calculate <map.crc32>
   optional<array<uint8_t, 4>> crc32 = CalculateCRC();
-  Print("CalculateCRC() done");
 
   optional<MapEssentials> mapEssentials;
-  Print("mapEssentials initialized to nullopt");
   if (!ignoreMPQ) {
-    Print("[DEBUG] L885");
     optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(MapMPQFilePath);
     mapEssentials.swap(mapEssentialsParsed);
     if (!mapEssentials.has_value()) {
@@ -899,11 +891,10 @@ void CMap::Load(CConfig* CFG)
       Print("[MAP] failed to parse map, using config file for <map.weak_hash>, <map.sha1>");
     }
   } else {
-    Print("[DEBUG] L897");
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] MPQ archive ignored");
   }
 
   if (mapEssentials.has_value()) {
-    Print("[DEBUG] mapEssentials has value");
     // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
     m_MapFilterType = mapEssentials->melee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO;
     if (m_MapFilterType == MAPFILTER_TYPE_MELEE) {
@@ -927,12 +918,10 @@ void CMap::Load(CConfig* CFG)
 
     m_Slots = mapEssentials->slots;
   } else {
-    Print("[DEBUG] mapEssentials has no value");
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] MPQ archive missing or failed to parse");
   }
 
   array<uint8_t, 4> mapContentMismatch = {0, 0, 0, 0};
-
-  Print("[DEBUG] size");
 
   vector<uint8_t> cfgFileSize = CFG->GetUint8Vector("map.size", 4);
   if (cfgFileSize.empty() == !mapFileSize.has_value()) {
@@ -958,8 +947,6 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgFileSize.begin(), 4, m_MapSize.begin());
   }
 
-  Print("[DEBUG] crc32");
-
   vector<uint8_t> cfgCRC32 = CFG->GetUint8Vector("map.crc32", 4);
   if (cfgCRC32.empty() == !crc32.has_value()) {
     if (cfgCRC32.empty()) {
@@ -982,8 +969,6 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgCRC32.begin(), 4, m_MapCRC32.begin());
   }
 
-  Print("[DEBUG] weak_hash");
-
   vector<uint8_t> cfgWeakHash = CFG->GetUint8Vector("map.weak_hash", 4);
   if (cfgWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
     if (cfgWeakHash.empty()) {
@@ -1005,8 +990,6 @@ void CMap::Load(CConfig* CFG)
   } else {
     copy_n(cfgWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
   }
-
-  Print("[DEBUG] sha1");
 
   vector<uint8_t> cfgSHA1 = CFG->GetUint8Vector("map.sha1", 20);
   if (cfgSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
@@ -1033,8 +1016,6 @@ void CMap::Load(CConfig* CFG)
   if (HasMismatch()) {
     m_MapContentMismatch.swap(mapContentMismatch);
     Print("[CACHE] error - map content mismatch");
-  } else {
-    Print("[DEBUG] no mismatch");
   }
 
   if (CFG->Exists("map.filter_type")) {
