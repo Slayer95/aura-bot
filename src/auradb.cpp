@@ -990,8 +990,11 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, con
         const uint64_t Left        = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 2);
         const uint64_t Duration    = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 3);
 
-        float AvgLoadingTime = static_cast<float>(static_cast<double>(LoadingTime) / TotalGames / 1000);
+        float AvgLoadingTime = 0.;
         uint32_t AvgLeftPercent = static_cast<uint32_t>(static_cast<double>(Duration) / Left * 100);
+        if (TotalGames > 0) {
+          AvgLoadingTime = static_cast<float>(static_cast<double>(LoadingTime) / TotalGames / 1000);
+        }
 
         GamePlayerSummary = new CDBGamePlayerSummary(TotalGames, AvgLoadingTime, AvgLeftPercent);
       }
@@ -1001,7 +1004,7 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, con
     else if (RC == SQLITE_ERROR)
       Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
 
-    m_DB->Finalize(m_StmtCache[PLAYER_SUMMARY_IDX]);
+    m_DB->Reset(m_StmtCache[PLAYER_SUMMARY_IDX]);
   }
   else
     Print("[SQLITE3] prepare error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
