@@ -447,6 +447,12 @@ void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSub
   ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
 }
 
+void CMap::ReadFileFromArchive(string& container, const string& fileSubPath) const
+{
+  const char* path = fileSubPath.c_str();
+  ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
+}
+
 optional<MapEssentials> CMap::ParseMPQ() const
 {
   optional<MapEssentials> mapEssentials;
@@ -462,20 +468,18 @@ optional<MapEssentials> CMap::ParseMPQ() const
   bool hashError = false;
   uint32_t weakHashVal = 0;
 
-  vector<uint8_t> fileContents;
+  string fileContents;
   ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
 
   if (fileContents.empty()) {
     filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
-    string CommonJ = FileRead(commonPath, nullptr);
-
-    if (CommonJ.empty()) {
+    if (!FileRead(commonPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
       Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(commonPath) + "]");
     } else {
-      weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
-      m_Aura->m_SHA.Update((uint8_t*)CommonJ.c_str(), static_cast<uint32_t>(CommonJ.size()));
+      weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+      m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
-    hashError = hashError || CommonJ.empty();
+    hashError = hashError || fileContents.empty();
   } else {
     Print("[MAP] overriding default common.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
@@ -486,15 +490,13 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
   if (fileContents.empty()) {
     filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
-    string BlizzardJ = FileRead(blizzardPath, nullptr);
-
-    if (BlizzardJ.empty()) {
+    if (!FileRead(blizzardPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
       Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(blizzardPath) + "]");
     } else {
-      weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)BlizzardJ.c_str(), static_cast<uint32_t>(BlizzardJ.size()));
-      m_Aura->m_SHA.Update((uint8_t*)BlizzardJ.c_str(), static_cast<uint32_t>(BlizzardJ.size()));
+      weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+      m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
-    hashError = hashError || BlizzardJ.empty();
+    hashError = hashError || fileContents.empty();
   } else {
     Print("[MAP] overriding default blizzard.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
@@ -504,9 +506,6 @@ optional<MapEssentials> CMap::ParseMPQ() const
   weakHashVal = ROTL(weakHashVal, 3);
   weakHashVal = ROTL(weakHashVal ^ 0x03F1379E, 3);
   m_Aura->m_SHA.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
-
-  filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
-  string CommonJ = FileRead(commonPath, nullptr);
 
   if (!hashError) {
     bool foundScript = false;
@@ -558,7 +557,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
     if (fileContents.empty()) {
       Print("[MAP] unable to calculate <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams> - unable to extract war3map.w3i from map file");
     } else {
-      istringstream ISS(string(fileContents.data(), fileContents.data() + fileContents.size()));
+      istringstream ISS(fileContents);
 
       // war3map.w3i format found at http://www.wc3campaigns.net/tools/specs/index.html by Zepir/PitzerMike
 
@@ -811,9 +810,6 @@ void CMap::Load(CConfig* CFG)
   m_Valid   = true;
   m_CFGName = PathToString(CFG->GetFile().filename());
 
-  // load the map data
-  m_MapData.clear();
-
   bool ignoreMPQ = m_MapServerPath.empty() || (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   optional<uint32_t> mapFileSize;
@@ -822,26 +818,19 @@ void CMap::Load(CConfig* CFG)
       DPRINT_IF(LOG_LEVEL_TRACE, "m_MapServerPath missing - map data not loaded")
       return;
     }
-    size_t fileSize = 0;
     filesystem::path mapServerPath(m_MapServerPath);
+    filesystem::path resolvedPath(mapServerPath);
     if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
-      m_MapData = FileRead(m_Aura->m_Config.m_MapPath / mapServerPath, &fileSize);
-    } else {
-      m_MapData = FileRead(m_MapServerPath, &fileSize);
+      resolvedPath = m_Aura->m_Config.m_MapPath / mapServerPath, m_MapData;
     }
-    if (m_MapLoaderIsPartial && m_MapData.empty()) {
-      Print("[AURA] Map designated by partial config file is missing from local file system");
-      return;
-    }
-    if (fileSize > 0x18000000) {
-      Print("[AURA] warning - map exceeds maximum file size");
-      m_MapData.clear();
-      return;
-    }
-    if (fileSize == 0) {
+    if (!FileRead(resolvedPath, m_MapData, MAX_READ_FILE_SIZE) || m_MapData.empty()) {
+      PRINT_IF(LOG_LEVEL_INFO, "Failed to read map [" + PathToString(resolvedPath) + "]")
+      if (m_MapLoaderIsPartial) {
+        return;
+      }
       ignoreMPQ = true;
     } else {
-      mapFileSize = static_cast<uint32_t>(fileSize);
+      mapFileSize = static_cast<uint32_t>(m_MapData.size());
 #ifdef DEBUG
       array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(mapFileSize.value(), false);
       DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")

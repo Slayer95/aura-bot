@@ -268,15 +268,14 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
 
   const filesystem::path configExamplePath = homeDir / filesystem::path("config-example.ini");
 
-  size_t FileSize = 0;
-  const string exampleContents = FileRead(configExamplePath, &FileSize);
-  if (exampleContents.empty()) {
+  vector<uint8_t> exampleContents;
+  if (!FileRead(configExamplePath, exampleContents, MAX_READ_FILE_SIZE) || exampleContents.empty()) {
     // But Aura can actually work without a config file ;)
     Print("[AURA] config.ini, config-example.ini not found within home dir [" + PathToString(homeDir) + "].");
     Print("[AURA] using automatic configuration");
   } else {
     Print("[AURA] copying config-example.ini to config.ini...");
-    FileWrite(configPath, reinterpret_cast<const uint8_t*>(exampleContents.c_str()), exampleContents.size());
+    FileWrite(configPath, reinterpret_cast<const uint8_t*>(exampleContents.data()), exampleContents.size());
     if (!CFG.Read(configPath)) {
       Print("[AURA] error initializing config.ini");
       return false;

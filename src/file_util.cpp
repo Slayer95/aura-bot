@@ -54,9 +54,6 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <locale>
 #include <system_error>
 
-#define __STORMLIB_SELF__
-#include <StormLib.h>
-
 using namespace std;
 
 bool FileExists(const filesystem::path& file)
@@ -168,84 +165,6 @@ vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<P
 #endif
 
   return Files;
-}
-
-string FileRead(const filesystem::path& file, size_t start, size_t length, size_t* byteSize)
-{
-  ifstream IS;
-  IS.open(file.native().c_str(), ios::binary | ios::in);
-
-  if (IS.fail())
-  {
-    Print("[UTIL] warning - unable to read file part [" + PathToString(file) + "]");
-    return string();
-  }
-
-  // get length of file
-
-  IS.seekg(0, ios::end);
-
-  size_t FileLength = static_cast<long unsigned int>(IS.tellg());
-  if (FileLength > 0x18000000) {
-    Print("[UTIL] error - refusing to load huge file [" + PathToString(file) + "]");
-    return string();
-  }
-  if (byteSize != nullptr) {
-    (*byteSize) = FileLength;
-  }
-  if (start > FileLength) {
-    IS.close();
-    return string();
-  }
-
-  IS.seekg(start, ios::beg);
-
-  // read data
-
-  auto Buffer = new char[length];
-  IS.read(Buffer, length);
-  string BufferString = string(Buffer, static_cast<long unsigned int>(IS.gcount()));
-  IS.close();
-  delete[] Buffer;
-  return BufferString;
-}
-
-string FileRead(const filesystem::path& file, size_t* byteSize)
-{
-  ifstream IS;
-  IS.open(file.native().c_str(), ios::binary | ios::in);
-
-  if (IS.fail())
-  {
-    Print("[UTIL] warning - unable to read file [" + PathToString(file) + "]");
-    return string();
-  }
-
-  // get length of file
-
-  IS.seekg(0, ios::end);
-  size_t FileLength = static_cast<long unsigned int>(IS.tellg());
-  if (FileLength > 0x18000000) {
-    Print("[UTIL] error - refusing to load huge file [" + PathToString(file) + "]");
-    return string();
-  }
-  if (byteSize != nullptr) {
-    (*byteSize) = FileLength;
-  }
-  IS.seekg(0, ios::beg);
-
-  // read data
-
-  auto Buffer = new char[FileLength];
-  IS.read(Buffer, FileLength);
-  string BufferString = string(Buffer, static_cast<long unsigned int>(IS.gcount()));
-  IS.close();
-  delete[] Buffer;
-
-  if (BufferString.size() == FileLength)
-    return BufferString;
-  else
-    return string();
 }
 
 bool FileWrite(const filesystem::path& file, const uint8_t* data, size_t length)
@@ -434,35 +353,6 @@ bool OpenMPQArchive(void** MPQ, const filesystem::path& filePath)
 void CloseMPQArchive(void* MPQ)
 {
   SFileCloseArchive(MPQ);
-}
-
-void ReadMPQFile(void* MPQ, const char* packedFileName, vector<uint8_t>& container, const uint32_t locale)
-{
-  container.clear();
-  SFileSetLocale(locale);
-
-  void* subFile = nullptr;
-  // override common.j
-  if (SFileOpenFileEx(MPQ, packedFileName, 0, &subFile)) {
-    const uint32_t fileLength = SFileGetFileSize(subFile, nullptr);
-
-    if (fileLength > 0 && fileLength != 0xFFFFFFFF) {
-      container.resize(fileLength);
-#ifdef _WIN32
-      unsigned long bytesRead = 0;
-#else
-      uint32_t bytesRead = 0;
-#endif
-
-      if (SFileReadFile(subFile, container.data(), fileLength, &bytesRead, nullptr)) {
-        if (bytesRead < fileLength) {
-          Print("[AURA] error reading " + string(packedFileName) + " - bytes read is " + to_string(bytesRead) + "; file length is " + to_string(fileLength));
-          container.clear();
-        }
-      }
-    }
-    SFileCloseFile(subFile);
-  }
 }
 
 bool ExtractMPQFile(void* MPQ, const char* packedFileName, const filesystem::path& outPath, const uint32_t locale)

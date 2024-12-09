@@ -45,6 +45,8 @@
 #define ANTI_SPOOF_EXTENDED 2
 #define ANTI_SPOOF_FULL 3
 
+#define MAX_READ_FILE_SIZE 0x18000000
+
 // map.h
 
 #define MAPSPEED_SLOW 1

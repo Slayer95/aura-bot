@@ -33,8 +33,6 @@ class CPacked
 protected:
   CAura* m_Aura;
 	bool m_Valid;
-	std::string m_Compressed;
-	std::string m_Decompressed;
 	uint32_t m_HeaderSize;
 	uint32_t m_CompressedSize;
 	uint32_t m_HeaderVersion;
@@ -45,6 +43,8 @@ protected:
 	uint16_t m_BuildNumber;
 	uint16_t m_Flags;
 	uint32_t m_ReplayLength;
+	std::string m_Compressed;
+	std::string m_Decompressed;
 
 public:
   CPacked(CAura* nAura);

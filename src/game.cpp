@@ -5539,13 +5539,15 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   uint32_t LatencyMilliseconds = user->GetOperationalRTT();
   if (LatencyMilliseconds >= m_Config.m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner(nullopt)) {
     if (m_Users.size() > 1 && user->GetIsRTTMeasuredBadConsistent()) {
-      user->SetHasHighPing(true);
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
       }
       user->AddKickReason(GameUser::KickReason::HIGH_PING);
       user->KickAtLatest(GetTicks() + HIGH_PING_KICK_DELAY);
-      SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
+      if (!user->GetHasHighPing()) {
+        SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
+        user->SetHasHighPing(true);
+      }
     }
   } else {
     user->RemoveKickReason(GameUser::KickReason::HIGH_PING);

@@ -55,6 +55,9 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <system_error>
 #include <cstdio>
 
+#define __STORMLIB_SELF__
+#include <StormLib.h>
+
 #ifdef _WIN32
 #pragma once
 #include <windows.h>
@@ -67,25 +70,116 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <limits.h>
 #endif
 
-// unistd.h and limits.h
-
 [[nodiscard]] bool FileExists(const std::filesystem::path& file);
 [[nodiscard]] PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
 [[nodiscard]] PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
 [[nodiscard]] std::string PathToString(const std::filesystem::path& file);
 [[nodiscard]] std::string PathToAbsoluteString(const std::filesystem::path& file);
 [[nodiscard]] std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
-[[nodiscard]] std::string FileRead(const std::filesystem::path& file, size_t start, size_t length, size_t* byteSize);
-[[nodiscard]] std::string FileRead(const std::filesystem::path& file, size_t* byteSize);
+
+template <typename Container>
+[[nodiscard]] bool FileRead(const std::filesystem::path& filePath, Container& container, const size_t maxSize) noexcept
+{
+  std::ifstream IS;
+  container.clear();
+  IS.open(filePath.native().c_str(), std::ios::binary | std::ios::in);
+
+  if (IS.fail())  {
+    Print("[FILE] warning - unable to read file [" + PathToString(filePath) + "]");
+    return false;
+  }
+
+  // get length of file
+  IS.seekg(0, std::ios::end);
+  size_t fileSize = static_cast<long unsigned int>(IS.tellg());
+  if (fileSize > maxSize) {
+    Print("[FILE] error - refusing to load huge file [" + PathToString(filePath) + "]");
+    return false;
+  }
+
+  // read data
+  IS.seekg(0, std::ios::beg);
+  try {
+    container.reserve(fileSize);
+    container.resize(fileSize);
+  } catch (...) {
+    container.clear();
+    try {
+      container.shrink_to_fit();
+    } catch (...) {}
+    Print("[FILE] error - insufficient memory for loading file [" + PathToString(filePath) + "]");
+    return false;
+  }
+  IS.read(reinterpret_cast<char*>(container.data()), fileSize);
+  if (IS.gcount() < fileSize) {
+    container.clear();
+    try {
+      container.shrink_to_fit();
+    } catch (...) {}
+    Print("[FILE] error - stream failed to read all data from file [" + PathToString(filePath) + "]");
+    return false;
+  }
+  return true;
+}
+
 bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileAppend(const std::filesystem::path& file, const uint8_t* data, size_t length);
-bool FileDelete(const std::filesystem::path& File);
+bool FileDelete(const std::filesystem::path& file);
 [[nodiscard]] std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
 [[nodiscard]] std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
 [[nodiscard]] std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
+
 [[nodiscard]] bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
-void ReadMPQFile(void* MPQ, const char* packedFileName, std::vector<uint8_t>& container, const uint32_t locale = 0);
+
+template <typename Container>
+bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, const uint32_t locale)
+{
+  container.clear();
+  SFileSetLocale(locale);
+
+  void* subFile = nullptr;
+  // override common.j
+  if (SFileOpenFileEx(MPQ, packedFileName, 0, &subFile)) {
+    const uint32_t fileLength = SFileGetFileSize(subFile, nullptr);
+
+    if (fileLength > 0 && fileLength < MAX_READ_FILE_SIZE) {
+      try {
+        container.reserve(fileLength);
+        container.resize(fileLength);
+      } catch (...) {
+        container.clear();
+        try {
+          container.shrink_to_fit();
+        } catch (...) {}
+        SFileCloseFile(subFile);
+        Print("[FILE] error - insufficient memory for loading from archive [" + std::string(packedFileName) + "]");
+        return false;
+      }
+#ifdef _WIN32
+      unsigned long bytesRead = 0;
+#else
+      uint32_t bytesRead = 0;
+#endif
+
+      if (SFileReadFile(subFile, container.data(), fileLength, &bytesRead, nullptr)) {
+        if (bytesRead < fileLength) {
+          Print("[FILE] error reading " + std::string(packedFileName) + " - bytes read is " + std::to_string(bytesRead) + "; file length is " + std::to_string(fileLength));
+          container.clear();
+          try {
+            container.shrink_to_fit();
+          } catch (...) {}
+          SFileCloseFile(subFile);
+          return false;
+        }
+      }
+    }
+
+    SFileCloseFile(subFile);
+  }
+  return true;
+}
+
 bool ExtractMPQFile(void* MPQ, const char* packedFileName, const std::filesystem::path& outPath, const uint32_t locale = 0);
 
 #endif // AURA_FILEUTIL_H_

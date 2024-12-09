@@ -264,6 +264,7 @@ public:
 
   std::optional<std::array<uint8_t, 4>>           CalculateCRC() const;
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
+  void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
   std::optional<MapEssentials>                    ParseMPQ() const;
   void Load(CConfig* CFG);

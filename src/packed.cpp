@@ -95,12 +95,13 @@ CPacked::~CPacked()
 bool CPacked::Load(const filesystem::path& filePath, const bool allBlocks)
 {
 	m_Valid = true;
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    Print("[PACKED] loading data from file [" + PathToString(filePath) + "]");
+  if (!FileRead(filePath, m_Compressed, MAX_READ_FILE_SIZE)) {
+    PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] load failed to load data from file [" + PathToString(filePath) + "]")
+    m_Valid = false;
+    return m_Valid;
   }
-	m_Compressed = FileRead(filePath, nullptr);
+  PRINT_IF(LOG_LEVEL_INFO, "[PACKED] loading data from file [" + PathToString(filePath) + "]")
   Decompress(allBlocks);
-
   return m_Valid;
 }
 
@@ -109,32 +110,32 @@ bool CPacked::Save(const bool TFT, const filesystem::path& filePath)
 	Compress(TFT);
 
 	if (!m_Valid) return false;
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    Print("[PACKED] saving data to file [" + PathToString(filePath) + "]" );
-  }
+  PRINT_IF(LOG_LEVEL_INFO, "[PACKED] saving data to file [" + PathToString(filePath) + "]" );
   return FileWrite(filePath, (unsigned char *)m_Compressed.c_str(), m_Compressed.size());
 }
 
 bool CPacked::Extract(const filesystem::path& inputPath, const filesystem::path& outputPath)
 {
 	m_Valid = true;
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    Print("[PACKED] extracting data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]");
+  if (!FileRead(inputPath, m_Compressed, MAX_READ_FILE_SIZE)) {
+    PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] extract failed to load data from file [" + PathToString(inputPath) + "]")
+    m_Valid = false;
+    return m_Valid;
   }
-	m_Compressed = FileRead(inputPath, nullptr);
+  PRINT_IF(LOG_LEVEL_INFO, "[PACKED] extracting data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]")
   Decompress(true);
-
-	if (!m_Valid) return false;
   return FileWrite(outputPath, (unsigned char *)m_Decompressed.c_str(), m_Decompressed.size());
 }
 
 bool CPacked::Pack(const bool TFT, const filesystem::path& inputPath, const filesystem::path& outputPath)
 {
 	m_Valid = true;
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-    Print("[PACKET] packing data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]");
+  if (!FileRead(inputPath, m_Decompressed, MAX_READ_FILE_SIZE)) {
+    PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] pack failed to load data from file [" + PathToString(inputPath) + "]")
+    m_Valid = false;
+    return m_Valid;
   }
-	m_Decompressed = FileRead(inputPath, nullptr);
+  PRINT_IF(LOG_LEVEL_INFO, "[PACKET] packing data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]")
 	Compress(TFT);
 
 	if (!m_Valid) return false;
@@ -157,9 +158,7 @@ void CPacked::Decompress(const bool allBlocks)
 	getline(ISS, GarbageString, '\0');
 
 	if (GarbageString != "Warcraft III recorded game\x01A") {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print("[PACKED] not a valid packed file");
-    }
+    PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] not a valid packed file")
 		m_Valid = false;
 		return;
 	}
@@ -174,9 +173,7 @@ void CPacked::Decompress(const bool allBlocks)
 		ISS.seekg(2, ios::cur);					// unknown
 		ISS.seekg(2, ios::cur);					// version number
 
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print("[PACKED] header version is too old");
-    }
+    PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] header version is too old")
 		m_Valid = false;
 		return;
 	} else {
@@ -190,9 +187,7 @@ void CPacked::Decompress(const bool allBlocks)
 	ISS.seekg(4, ios::cur);						// CRC
 
 	if (ISS.fail()) {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print("[PACKED] failed to read header");
-    }
+    PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] failed to read header")
 		m_Valid = false;
 		return;
 	}
@@ -215,9 +210,7 @@ void CPacked::Decompress(const bool allBlocks)
 		ISS.seekg(4, ios::cur);	// checksum
 
 		if (ISS.fail()) {
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-        Print("[PACKED] failed to read block header");
-      }
+      PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] failed to read block header")
 			m_Valid = false;
 			return;
 		}
@@ -241,9 +234,7 @@ void CPacked::Decompress(const bool allBlocks)
 		int Result = tzuncompress(DecompressedData, &BlockDecompressedLong, CompressedData, BlockCompressedLong);
 
 		if (Result != Z_OK) {
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-        Print("[PACKED] tzuncompress error " + to_string(Result));
-      }
+      PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] tzuncompress error " + to_string(Result))
 			delete[] DecompressedData;
 			delete[] CompressedData;
 			m_Valid = false;
@@ -251,9 +242,7 @@ void CPacked::Decompress(const bool allBlocks)
 		}
 
 		if (BlockDecompressedLong != (uLongf)BlockDecompressed) {
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-        Print("[PACKED] block decompressed size mismatch, actual = " + to_string(BlockDecompressedLong) + ", expected = " + to_string(BlockDecompressed));
-      }
+      PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] block decompressed size mismatch, actual = " + to_string(BlockDecompressedLong) + ", expected = " + to_string(BlockDecompressed))
 			delete[] DecompressedData;
 			delete[] CompressedData;
 			m_Valid = false;
@@ -274,9 +263,7 @@ void CPacked::Decompress(const bool allBlocks)
 
 	if (allBlocks || m_NumBlocks == 1) {
 		if (m_DecompressedSize > m_Decompressed.size()) {
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-        Print("[PACKED] not enough decompressed data");
-      }
+      PRINT_IF(LOG_LEVEL_WARNING, "[PACKED] not enough decompressed data")
 			m_Valid = false;
 			return;
 		}
