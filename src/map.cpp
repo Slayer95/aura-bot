@@ -821,7 +821,7 @@ void CMap::Load(CConfig* CFG)
     filesystem::path mapServerPath(m_MapServerPath);
     filesystem::path resolvedPath(mapServerPath);
     if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
-      resolvedPath = m_Aura->m_Config.m_MapPath / mapServerPath, m_MapData;
+      resolvedPath = m_Aura->m_Config.m_MapPath / mapServerPath;
     }
     if (!FileRead(resolvedPath, m_MapData, MAX_READ_FILE_SIZE) || m_MapData.empty()) {
       PRINT_IF(LOG_LEVEL_INFO, "Failed to read map [" + PathToString(resolvedPath) + "]")
