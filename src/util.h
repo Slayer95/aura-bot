@@ -227,28 +227,28 @@ inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, cons
     };
 }
 
-inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 1>> optArray, const uint8_t c)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 1>>& optArray, const uint8_t c)
 {
   std::array<uint8_t, 1> val = CreateFixedByteArray(c);
   optArray.emplace();
   optArray->swap(val);
 }
 
-inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 2>> optArray, const uint16_t i, bool bigEndian)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 2>>& optArray, const uint16_t i, bool bigEndian)
 {
   std::array<uint8_t, 2> val = CreateFixedByteArray(i, bigEndian);
   optArray.emplace();
   optArray->swap(val);
 }
 
-inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>> optArray, const uint32_t i, bool bigEndian)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const uint32_t i, bool bigEndian)
 {
   std::array<uint8_t, 4> val = CreateFixedByteArray(i, bigEndian);
   optArray.emplace();
   optArray->swap(val);
 }
 
-inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>> optArray, const int64_t i, bool bigEndian)
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const int64_t i, bool bigEndian)
 {
   std::array<uint8_t, 4> val = CreateFixedByteArray(i, bigEndian);
   optArray.emplace();
@@ -492,7 +492,7 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   return 0;
 }
 
-[[nodiscard]] inline std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t count)
+[[nodiscard]] inline std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t maxCount)
 {
   // consider the std::string to contain a bytearray in dec-text form, e.g. "52 99 128 1"
 
@@ -501,7 +501,7 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   std::stringstream    SS;
   SS << s;
 
-  for (uint32_t i = 0; i < count; ++i)
+  for (uint32_t i = 0; i < maxCount; ++i)
   {
     if (SS.eof())
       break;

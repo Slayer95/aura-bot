@@ -68,6 +68,7 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
   : m_Aura(nAura),
+    m_MapServerPath(CFG->GetString("map.local_path")),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)),
     m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapOptions(0),
@@ -82,7 +83,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
     m_MapFilterType(MAPFILTER_TYPE_SCENARIO),
     m_MapFilterObs(MAPFILTER_OBS_NONE),
     m_MapMPQ(nullptr),
-    m_UseStandardPaths(false),
+    m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
     m_SkipVersionCheck(skipVersionCheck),
     m_HMCMode(W3HMC_MODE_DISABLED)
 {
@@ -442,12 +443,14 @@ optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
 
 void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSubPath) const
 {
+  Print("[DEBUG] CMap::ReadFileFromArchive(..., " + fileSubPath + ")");
   const char* path = fileSubPath.c_str();
   ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
 }
 
 optional<MapEssentials> CMap::ParseMPQ() const
 {
+  Print("[DEBUG] CMap::ParseMPQ()");
   optional<MapEssentials> mapEssentials;
   if (!m_MapMPQ) return mapEssentials;
 
@@ -807,20 +810,20 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
 void CMap::Load(CConfig* CFG)
 {
+  Print("[DEBUG] CMap::Load()");
   m_Valid   = true;
   m_CFGName = PathToString(CFG->GetFile().filename());
 
   // load the map data
-
-  m_UseStandardPaths = CFG->GetBool("map.standard_path", false);
-  m_MapServerPath = CFG->GetString("map.local_path");
   m_MapData.clear();
 
   bool ignoreMPQ = m_MapServerPath.empty() || (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   optional<uint32_t> mapFileSize;
   if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+    Print("[DEBUG] Map data load block");
     if (m_MapServerPath.empty()) {
+      Print("[DEBUG] m_MapServerPath is empty");
       return;
     }
     size_t fileSize = 0;
@@ -843,6 +846,10 @@ void CMap::Load(CConfig* CFG)
       ignoreMPQ = true;
     } else {
       mapFileSize = static_cast<uint32_t>(fileSize);
+#ifdef DEBUG
+      array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(mapFileSize.value(), false);
+      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
+#endif
     }
   }
 
@@ -851,6 +858,7 @@ void CMap::Load(CConfig* CFG)
   filesystem::path MapMPQFilePath(m_MapServerPath);
 
   if (!ignoreMPQ) {
+    Print("[DEBUG] L857");
     if (MapMPQFilePath.filename() == MapMPQFilePath && !m_UseStandardPaths) {
       MapMPQFilePath = m_Aura->m_Config.m_MapPath / MapMPQFilePath;
     } else {
@@ -875,9 +883,12 @@ void CMap::Load(CConfig* CFG)
 
   // calculate <map.crc32>
   optional<array<uint8_t, 4>> crc32 = CalculateCRC();
+  Print("CalculateCRC() done");
 
   optional<MapEssentials> mapEssentials;
+  Print("mapEssentials initialized to nullopt");
   if (!ignoreMPQ) {
+    Print("[DEBUG] L885");
     optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(MapMPQFilePath);
     mapEssentials.swap(mapEssentialsParsed);
     if (!mapEssentials.has_value()) {
@@ -887,9 +898,12 @@ void CMap::Load(CConfig* CFG)
       }
       Print("[MAP] failed to parse map, using config file for <map.weak_hash>, <map.sha1>");
     }
+  } else {
+    Print("[DEBUG] L897");
   }
 
   if (mapEssentials.has_value()) {
+    Print("[DEBUG] mapEssentials has value");
     // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
     m_MapFilterType = mapEssentials->melee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO;
     if (m_MapFilterType == MAPFILTER_TYPE_MELEE) {
@@ -912,9 +926,13 @@ void CMap::Load(CConfig* CFG)
     }
 
     m_Slots = mapEssentials->slots;
+  } else {
+    Print("[DEBUG] mapEssentials has no value");
   }
 
   array<uint8_t, 4> mapContentMismatch = {0, 0, 0, 0};
+
+  Print("[DEBUG] size");
 
   vector<uint8_t> cfgFileSize = CFG->GetUint8Vector("map.size", 4);
   if (cfgFileSize.empty() == !mapFileSize.has_value()) {
@@ -940,6 +958,8 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgFileSize.begin(), 4, m_MapSize.begin());
   }
 
+  Print("[DEBUG] crc32");
+
   vector<uint8_t> cfgCRC32 = CFG->GetUint8Vector("map.crc32", 4);
   if (cfgCRC32.empty() == !crc32.has_value()) {
     if (cfgCRC32.empty()) {
@@ -962,6 +982,8 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgCRC32.begin(), 4, m_MapCRC32.begin());
   }
 
+  Print("[DEBUG] weak_hash");
+
   vector<uint8_t> cfgWeakHash = CFG->GetUint8Vector("map.weak_hash", 4);
   if (cfgWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
     if (cfgWeakHash.empty()) {
@@ -983,6 +1005,8 @@ void CMap::Load(CConfig* CFG)
   } else {
     copy_n(cfgWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
   }
+
+  Print("[DEBUG] sha1");
 
   vector<uint8_t> cfgSHA1 = CFG->GetUint8Vector("map.sha1", 20);
   if (cfgSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
@@ -1009,6 +1033,8 @@ void CMap::Load(CConfig* CFG)
   if (HasMismatch()) {
     m_MapContentMismatch.swap(mapContentMismatch);
     Print("[CACHE] error - map content mismatch");
+  } else {
+    Print("[DEBUG] no mismatch");
   }
 
   if (CFG->Exists("map.filter_type")) {
@@ -1118,8 +1144,14 @@ void CMap::Load(CConfig* CFG)
     vector<CGameSlot> cfgSlots;
 
     for (uint32_t slotNum = 1; slotNum <= m_MapVersionMaxSlots; ++slotNum) {
-      vector<uint8_t> slotData = CFG->GetUint8Vector("map.slot_" + to_string(slotNum), 10);
-      if (slotData.empty()) {
+      string encodedSlot = CFG->GetString("map.slot_" + to_string(slotNum));
+      if (encodedSlot.empty()) {
+        break;
+      }
+      vector<uint8_t> slotData = ExtractNumbers(encodedSlot, 10);
+      if (slotData.size() < 9) {
+        // Last (10th) element is optional for backwards-compatibility
+        // it's the type of slot (SLOTTYPE_USER by default)
         break;
       }
       cfgSlots.emplace_back(slotData);
