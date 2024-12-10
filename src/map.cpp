@@ -270,6 +270,13 @@ string CMap::GetClientFileName() const
   return m_ClientMapPath.substr(LastSlash + 1);
 }
 
+bool CMap::GetMapFileIsFromManagedFolder() const
+{
+  if (m_UseStandardPaths) return false;
+  if (m_MapServerPath.empty()) return false;
+  return m_MapServerPath == GetServerFileName();
+}
+
 bool CMap::IsObserverSlot(const CGameSlot* slot) const
 {
   if (slot->GetUID() != 0 || slot->GetDownloadStatus() != 255) {
@@ -993,7 +1000,7 @@ void CMap::Load(CConfig* CFG)
 
   if (HasMismatch()) {
     m_MapContentMismatch.swap(mapContentMismatch);
-    Print("[CACHE] error - map content mismatch");
+    PRINT_IF(LOG_LEVEL_WARNING, "[CACHE] error - map content mismatch");
   }
 
   if (CFG->Exists("map.filter_type")) {
@@ -1220,13 +1227,18 @@ bool CMap::TryReloadMapFile()
 bool CMap::UnlinkFile()
 {
   if (m_MapServerPath.empty()) return false;
-  Print("Deleting " + m_MapServerPath + "...");
+  bool result = false;
   filesystem::path mapLocalPath = m_MapServerPath;
   if (mapLocalPath.is_absolute()) {
-    return FileDelete(mapLocalPath);
+    result = FileDelete(mapLocalPath);
+  } else {
+    filesystem::path resolvedPath =  m_Aura->m_Config.m_MapPath / mapLocalPath;
+    result = FileDelete(resolvedPath.lexically_normal());
   }
-  filesystem::path resolvedPath =  m_Aura->m_Config.m_MapPath / mapLocalPath;
-  return FileDelete(resolvedPath.lexically_normal());
+  if (result) {
+    PRINT_IF(LOG_LEVEL_NOTICE, "[MAP] Deleted [" + m_MapServerPath + "]");
+  }
+  return result;
 }
 
 string CMap::CheckProblems()

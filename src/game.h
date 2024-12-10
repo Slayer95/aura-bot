@@ -542,7 +542,7 @@ public:
   void                      EventGameStartedLoading();
   void                      EventGameLoaded();
   void                      HandleGameLoadedStats();
-  bool                      ReleaseMap();
+  void                      ReleaseMapBusyTimedLock() const;
   void                      StartGameOverTimer(bool isMMD = false);
   void                      ClearActions();
   void                      Reset();

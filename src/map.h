@@ -231,10 +231,12 @@ public:
   [[nodiscard]] inline bool                       GetMapMetaDataEnabled() const { return m_MapMetaDataEnabled; }
   [[nodiscard]] inline std::string                GetMapDefaultHCL() const { return m_MapDefaultHCL; }
   [[nodiscard]] inline std::string                GetServerPath() const { return m_MapServerPath; }
+  [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
-  [[nodiscard]] inline SharedByteArray            GetMapFileContents() { return m_MapFileContents; }
-  [[nodiscard]] inline bool                       HasMapFileContents() { return m_MapFileContents != nullptr && !m_MapFileContents->empty(); }
+  [[nodiscard]] inline const SharedByteArray&     GetMapFileContents() { return m_MapFileContents; }
+  [[nodiscard]] inline bool                       HasMapFileContents() const { return m_MapFileContents != nullptr && !m_MapFileContents->empty(); }
+  [[nodiscard]] bool                              GetMapFileIsFromManagedFolder() const;
   [[nodiscard]] inline uint8_t                    GetMapNumDisabled() const { return m_MapNumDisabled; }
   [[nodiscard]] inline uint8_t                    GetMapNumControllers() const { return m_MapNumControllers; }
   [[nodiscard]] inline uint8_t                    GetMapNumTeams() const { return m_MapNumTeams; }
