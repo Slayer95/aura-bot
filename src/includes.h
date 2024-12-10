@@ -56,20 +56,16 @@
 #include <chrono>
 #include <iostream>
 #include <iomanip>
-#include <memory>
 #include <sstream>
-#include <utility>
 
 #include <array>
 #include <bitset>
 #include <string>
 #include <map>
-#include <optional>
 #include <queue>
 #include <set>
 #include <tuple>
 #include <unordered_set>
-#include <vector>
 
 #include "constants.h"
 #include "forward.h"

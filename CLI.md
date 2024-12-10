@@ -408,12 +408,6 @@ This flag enables automatic connectivity checks to ensure hosted games are joina
 
 This flag is disabled by default.
 
-## \`--check-version\`, \`--no-check-version\`
-
-This flag enables version checks to ensure hosted games are compatible with the used game version.
-
-This flag is enabled by default when hosting from the CLI.
-
 ## \`--check-reservation\`, \`--no-check-reservation\`
 
 This flag enables reservation checks to ensure only players with reservations may join games.

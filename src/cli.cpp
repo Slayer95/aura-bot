@@ -186,7 +186,6 @@ uint8_t CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--join-in-progress-players,--no-join-in-progress-players{false}", m_GameEnableJoinPlayersInProgress, "Whether to allow players to join the game after it has already started.");
   app.add_flag(  "--log-game-commands,--no-log-game-commands{false}", m_GameLogCommands, "Whether to log usage of chat triggers in a hosted game lobby.");
 
-  app.add_flag(  "--check-version,--no-check-version{false}", m_CheckMapVersion, "Whether Aura checks whether the map properly states it's compatible with current game version.");
   app.add_flag(  "--replaceable,--no-replaceable{false}", m_GameLobbyReplaceable, "Whether users can use the !host command to replace the lobby.");
   app.add_flag(  "--auto-rehost,--no-auto-rehost{false}", m_GameLobbyAutoRehosted, "Registers the provided game setup, and rehosts it whenever there is no active lobby.");
 
@@ -605,7 +604,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     if (userName.has_value()) {
       ctx->SetIdentity(userName.value());
     }
-    shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true, !m_CheckMapVersion.value_or(true));
+    shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true /* lucky mode */);
     if (gameSetup) {
       if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
       if (m_GameMapDownloadTimeout.has_value()) gameSetup->SetDownloadTimeout(m_GameMapDownloadTimeout.value());

@@ -66,7 +66,7 @@ using namespace std;
 // CMap
 //
 
-CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
+CMap::CMap(CAura* nAura, CConfig* CFG)
   : m_Aura(nAura),
     m_MapServerPath(CFG->GetString("map.local_path")),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)),
@@ -84,7 +84,6 @@ CMap::CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck)
     m_MapFilterObs(MAPFILTER_OBS_NONE),
     m_MapMPQ(nullptr),
     m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
-    m_SkipVersionCheck(skipVersionCheck),
     m_HMCMode(W3HMC_MODE_DISABLED)
 {
   m_MapScriptsSHA1.fill(0);
@@ -405,7 +404,7 @@ bool CMap::SetRandomRaces(const bool nEnable)
 optional<array<uint8_t, 4>> CMap::CalculateCRC() const
 {
   optional<array<uint8_t, 4>> result;
-  const uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)m_MapData.c_str(), m_MapData.size());
+  const uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)m_MapData->data(), m_MapData->size());
   EnsureFixedByteArray(result, crc32, false);
   DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(result.value()) + ">")
   return result;
@@ -823,14 +822,15 @@ void CMap::Load(CConfig* CFG)
     if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
       resolvedPath = m_Aura->m_Config.m_MapPath / mapServerPath;
     }
-    if (!FileRead(resolvedPath, m_MapData, MAX_READ_FILE_SIZE) || m_MapData.empty()) {
+    m_MapData = m_Aura->ReadFileCacheable(resolvedPath, MAX_READ_FILE_SIZE);
+    if (!HasMapData()) {
       PRINT_IF(LOG_LEVEL_INFO, "Failed to read map [" + PathToString(resolvedPath) + "]")
       if (m_MapLoaderIsPartial) {
         return;
       }
       ignoreMPQ = true;
     } else {
-      mapFileSize = static_cast<uint32_t>(m_MapData.size());
+      mapFileSize = static_cast<uint32_t>(m_MapData->size());
 #ifdef DEBUG
       array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(mapFileSize.value(), false);
       DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
@@ -1230,7 +1230,7 @@ string CMap::CheckProblems()
     m_ErrorMessage = "invalid <map.size> detected";
     return m_ErrorMessage;
   }
-  else if (!m_MapData.empty() && m_MapData.size() != ByteArrayToUInt32(m_MapSize, false))
+  else if (HasMapData() && m_MapData->size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
     m_ErrorMessage = "nonmatching <map.size> detected";
@@ -1240,7 +1240,7 @@ string CMap::CheckProblems()
   if (m_MapCRC32.size() != 4)
   {
     m_Valid = false;
-    if (m_MapCRC32.empty() && m_MapData.empty()) {
+    if (m_MapCRC32.empty() && !HasMapData()) {
       m_ErrorMessage = "map file not found";
     } else {
       m_ErrorMessage = "invalid <map.crc32> detected";
@@ -1368,7 +1368,7 @@ string CMap::CheckProblems()
     return m_ErrorMessage;
   }
 
-  if (!m_SkipVersionCheck && m_Aura->m_GameVersion < m_MapMinGameVersion) {
+  if (m_Aura->m_GameVersion < m_MapMinGameVersion) {
     m_Valid = false;
     m_ErrorMessage = "map requires v1." + to_string(m_MapMinGameVersion) + " (using v1." + to_string(m_Aura->m_GameVersion) + ")";
     return m_ErrorMessage;

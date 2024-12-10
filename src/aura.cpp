@@ -598,7 +598,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
 
   if (m_Config.m_EnableCFGCache) {
-    CacheMapPresets();
+    UpdateCFGCacheEntries();
   }
 
   if (!nCLI.QueueActions(this)) {
@@ -1464,9 +1464,9 @@ bool CAura::ReloadConfigs()
   }
 
   if (!m_Config.m_EnableCFGCache) {
-    m_CachedMaps.clear();
+    m_CFGCacheNamesByMapNames.clear();
   } else if (reCachePresets) {
-    CacheMapPresets();
+    UpdateCFGCacheEntries();
   }
   m_Net.OnConfigReload();
 
@@ -1763,9 +1763,9 @@ void CAura::UpdateMetaData()
   UpdateWindowTitle();
 }
 
-void CAura::CacheMapPresets()
+void CAura::UpdateCFGCacheEntries()
 {
-  m_CachedMaps.clear();
+  m_CFGCacheNamesByMapNames.clear();
 
   // Preload map.Localpath -> mapcache entries
   const vector<filesystem::path> cacheFiles = FilesMatch(m_Config.m_MapCachePath, FILE_EXTENSIONS_CONFIG);
@@ -1778,7 +1778,7 @@ void CAura::CacheMapPresets()
         string mapString = PathToString(localPath.filename());
         string cfgString = PathToString(cfgName);
         if (mapString.empty() || cfgString.empty()) continue;
-        m_CachedMaps[mapString] = cfgString;
+        m_CFGCacheNamesByMapNames[mapString] = cfgString;
       }
     } catch (...) {
       // filesystem::absolute may throw errors
@@ -2039,7 +2039,10 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     Print("[AURA] warning - hosting game beyond 8MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
   }
   if (m_GameVersion < createdLobby->GetMap()->GetMapMinGameVersion()) {
-    Print("[AURA] warning - hosting game that may require version 1." + to_string(createdLobby->GetMap()->GetMapMinGameVersion()));
+    Print("[AURA] warning - hosting game that requires version 1." + to_string(createdLobby->GetMap()->GetMapMinGameVersion()));
+  }
+  if (m_GameVersion < createdLobby->GetMap()->GetMapMinSuggestedGameVersion()) {
+    Print("[AURA] warning - hosting game that MAY require version 1." + to_string(createdLobby->GetMap()->GetMapMinSuggestedGameVersion()));
   }
 
   return true;
@@ -2100,6 +2103,53 @@ uint32_t CAura::NextServerID()
     m_LastServerID = 0;
   }
   return m_LastServerID;
+}
+
+SharedByteArray CAura::ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)
+{
+  SharedByteArray fileContentsPtr/* = make_shared<vector<uint8_t>>()*/;
+  bool isCached = false;
+  auto it = m_CachedFileContents.find(filePath);
+  if (it != m_CachedFileContents.end()) {
+    WeakByteArray maybeCachedPtr = it->second;
+    if (!maybeCachedPtr.expired()) {
+      Print("[DEBUG] Reusing cached map data for [" + PathToString(filePath) + "]");
+      fileContentsPtr = maybeCachedPtr.lock();
+      isCached = true;
+    }
+  }
+
+  if (!isCached) {
+    fileContentsPtr = make_shared<vector<uint8_t>>();
+    if (FileRead(filePath, *(fileContentsPtr.get()), MAX_READ_FILE_SIZE) && !fileContentsPtr->empty()) {
+      Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + "]");
+      m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
+
+      // Try to dedupe across maps with different names but same content.
+      for (const auto& cacheEntries : m_CachedFileContents) {
+        if (cacheEntries.first == filePath) continue;
+        WeakByteArray maybeCachedPtr = cacheEntries.second;
+        if (!maybeCachedPtr.expired()) {
+          SharedByteArray otherFileContents = maybeCachedPtr.lock();
+          if (otherFileContents->size() != fileContentsPtr->size()) {
+            continue;
+          }
+          if (memcmp(otherFileContents->data(), fileContentsPtr->data(), fileContentsPtr->size()) == 0) {
+            Print("[DEBUG] Reusing cached map contents from [" + PathToString(cacheEntries.first) + "] for [" + PathToString(filePath) + "]");
+            fileContentsPtr = otherFileContents;
+            m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
+            // Iterator is invalid now
+            break;
+          }
+        }
+      }
+    } else {
+      m_CachedFileContents.erase(filePath);
+      fileContentsPtr.reset();
+    }
+  }
+
+  return fileContentsPtr;
 }
 
 string CAura::GetSudoAuthPayload(const string& payload)

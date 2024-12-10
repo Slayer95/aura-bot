@@ -167,7 +167,7 @@ private:
   std::string                     m_MapURL;
   std::string                     m_MapSiteURL;
   std::string                     m_MapShortDesc;
-  std::string                     m_MapData;       // the map data itself, for sending the map to players
+  SharedByteArray                 m_MapData;       // the map data itself, for sending the map to players
   bool                            m_MapLoaderIsPartial;
   uint32_t                        m_MapLocale;
   uint32_t                        m_MapOptions;
@@ -190,7 +190,6 @@ private:
   void*                           m_MapMPQ;
   std::optional<bool>             m_MapMPQResult;
   bool                            m_UseStandardPaths;
-  bool                            m_SkipVersionCheck;
   bool                            m_Valid;
   std::string                     m_ErrorMessage;
   uint8_t                         m_HMCMode;
@@ -200,7 +199,7 @@ private:
   std::string                     m_HMCPlayerName;
 
 public:
-  CMap(CAura* nAura, CConfig* CFG, const bool skipVersionCheck = false);
+  CMap(CAura* nAura, CConfig* CFG);
   ~CMap();
 
   [[nodiscard]] inline bool                       GetValid() const { return m_Valid; }
@@ -224,6 +223,7 @@ public:
   [[nodiscard]] uint32_t                          GetMapGameType() const;
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapMinGameVersion() const { return m_MapMinGameVersion; }
+  [[nodiscard]] inline uint8_t                    GetMapMinSuggestedGameVersion() const { return m_MapMinSuggestedGameVersion; }
   [[nodiscard]] uint8_t                           GetMapLayoutStyle() const;
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapWidth() const { return m_MapWidth; }
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapHeight() const { return m_MapHeight; }
@@ -233,7 +233,8 @@ public:
   [[nodiscard]] inline std::string                GetServerPath() const { return m_MapServerPath; }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
-  [[nodiscard]] inline std::string*               GetMapData() { return &m_MapData; }
+  [[nodiscard]] inline SharedByteArray            GetMapData() { return m_MapData; }
+  [[nodiscard]] inline bool                       HasMapData() { return m_MapData != nullptr && !m_MapData->empty(); }
   [[nodiscard]] inline uint8_t                    GetMapNumDisabled() const { return m_MapNumDisabled; }
   [[nodiscard]] inline uint8_t                    GetMapNumControllers() const { return m_MapNumControllers; }
   [[nodiscard]] inline uint8_t                    GetMapNumTeams() const { return m_MapNumTeams; }
@@ -248,7 +249,7 @@ public:
   [[nodiscard]] std::string                       GetHMCPlayerName() const { return m_HMCPlayerName; }
   [[nodiscard]] uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
   [[nodiscard]] bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
-  void                                            ClearMapData() { m_MapData.clear(); }
+  void                                            ClearMapData() { m_MapData.reset(); }
   bool                                            SetTeamsLocked(const bool nEnable);
   bool                                            SetTeamsTogether(const bool nEnable);
   bool                                            SetAdvancedSharedUnitControl(const bool nEnable);

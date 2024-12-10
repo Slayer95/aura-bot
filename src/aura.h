@@ -133,9 +133,10 @@ public:
   std::vector<CGame*>                                m_Lobbies;                    // all games before they are started
   std::vector<CGame*>                                m_LobbiesPending;             // vector for just-created lobbies before they get into m_Lobbies
   std::vector<CGame*>                                m_JoinInProgressGames;        // started games that can be joined in-progress (either as observer or player)
-  std::map<std::string, std::string>                 m_CachedMaps;
-  std::unordered_multiset<std::string>               m_BusyMaps;
-  std::map<std::string, std::string>                 m_LastMapSuggestions;
+  std::map<std::string, std::string>                 m_CFGCacheNamesByMapNames;
+  std::unordered_multiset<std::string>               m_MapNamesHostCounter;
+  std::map<std::string, std::string>                 m_LastMapIdentifiersFromSuggestions;
+  std::map<std::filesystem::path, WeakByteArray>     m_CachedFileContents;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;
@@ -214,7 +215,9 @@ public:
   void UpdateWindowTitle();
   void UpdateMetaData();
 
-  void CacheMapPresets();
+  [[nodiscard]] SharedByteArray ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)/* noexcept*/;
+  void UpdateCFGCacheEntries();
+  
   
   inline bool MatchLogLevel(const uint8_t logLevel) { return logLevel <= m_LogLevel; } // 1: emergency ... 9: trace
   void LogPersistent(const std::string& logText);

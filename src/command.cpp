@@ -3258,7 +3258,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      bool IsMapAvailable = !m_TargetGame->GetMap()->GetMapData()->empty() && !m_TargetGame->GetMap()->HasMismatch();
+      bool IsMapAvailable = m_TargetGame->GetMap()->HasMapData() && !m_TargetGame->GetMap()->HasMismatch();
       if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
@@ -6080,7 +6080,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (const auto& fileName : AllMaps) {
         string nameString = PathToString(fileName);
         if (nameString.empty()) continue;
-        if (CommandHash != HashCode("synccfg") && m_Aura->m_CachedMaps.find(nameString) != m_Aura->m_CachedMaps.end()) {
+        if (CommandHash != HashCode("synccfg") && m_Aura->m_CFGCacheNamesByMapNames.find(nameString) != m_Aura->m_CFGCacheNamesByMapNames.end()) {
           continue;
         }
         if (nameString.find(Payload) == string::npos) {
@@ -6107,7 +6107,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         MapCFG.Set("downloaded_by", m_FromName);
 
-        shared_ptr<CMap> ParsedMap = make_shared<CMap>(m_Aura, &MapCFG, true);
+        shared_ptr<CMap> ParsedMap = make_shared<CMap>(m_Aura, &MapCFG);
         const bool isValid = ParsedMap->GetValid();
         if (!isValid) {
           Print("[AURA] warning - map [" + nameString + "] is not valid.");
@@ -6120,7 +6120,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         vector<uint8_t> OutputBytes = MapCFG.Export();
         FileWrite(CFGPath, OutputBytes.data(), OutputBytes.size());
-        m_Aura->m_CachedMaps[nameString] = CFGName;
+        m_Aura->m_CFGCacheNamesByMapNames[nameString] = CFGName;
         goodCounter++;
       }
       SendReply("Initialized " + to_string(goodCounter) + " map config files. " + to_string(badCounter) + " invalid maps found.");
@@ -6142,7 +6142,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       const auto MapCount = FilesMatch(m_Aura->m_Config.m_MapPath, FILE_EXTENSIONS_MAP).size();
       const auto CFGCount = FilesMatch(m_Aura->m_Config.m_MapCFGPath, FILE_EXTENSIONS_CONFIG).size();
 
-      SendReply(to_string(MapCount) + " maps on disk, " + to_string(CFGCount) + " presets on disk, " + to_string(m_Aura->m_CachedMaps.size()) + " preloaded.");
+      SendReply(to_string(MapCount) + " maps on disk, " + to_string(CFGCount) + " presets on disk, " + to_string(m_Aura->m_CFGCacheNamesByMapNames.size()) + " preloaded.");
       return;
     }
 
@@ -6717,7 +6717,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, shared_from_this(), Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, true, true);
+      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, shared_from_this(), Payload, SEARCH_TYPE_ONLY_CONFIG, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, true /* lucky mode */);
       /*
       if (!gameSetup) {
         ErrorReply("Unable to host game");
@@ -6940,7 +6940,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (4 <= Args.size()) options->ParseMapRandomRaces(Args[3]);
       if (5 <= Args.size()) options->ParseMapRandomHeroes(Args[4]);
 
-      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, shared_from_this(), Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */, true /* skip version check for convenience */);
+      shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, shared_from_this(), Args[0], SEARCH_TYPE_ANY, SETUP_PROTECT_ARBITRARY_TRAVERSAL, SETUP_PROTECT_ARBITRARY_TRAVERSAL, isHostCommand /* lucky mode */);
       /*
       if (!gameSetup) {
         delete options;

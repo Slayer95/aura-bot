@@ -185,7 +185,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
-    m_SkipVersionCheck(false),
     m_IsMapDownloaded(false),
 
     m_OwnerLess(false),
@@ -208,7 +207,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
   m_Map = GetBaseMapFromConfig(nMapCFG, false);
 }
 
-CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck)
+CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode)
   : m_Aura(nAura),
     m_RestoredGame(nullptr),
     //m_Map(nullptr),
@@ -232,7 +231,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
-    m_SkipVersionCheck(nSkipVersionCheck),
     m_IsMapDownloaded(false),
 
     m_OwnerLess(false),
@@ -294,11 +292,10 @@ void CGameSetup::ParseInput()
     lower = m_SearchRawTarget;
     transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
   } else {
-    auto it = m_Aura->m_LastMapSuggestions.find(lower);
-    if (it != m_Aura->m_LastMapSuggestions.end()) {
+    auto it = m_Aura->m_LastMapIdentifiersFromSuggestions.find(lower);
+    if (it != m_Aura->m_LastMapIdentifiersFromSuggestions.end()) {
       m_SearchRawTarget = it->second;
-      lower = m_SearchRawTarget;
-      transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
+      lower = ToLowerCase(m_SearchRawTarget);
     }
   }
 
@@ -507,11 +504,10 @@ void CGameSetup::SearchInputRemoteFuzzy(vector<string>& fuzzyMatches) {
   }
   // Return suggestions through passed argument.
   m_FoundSuggestions = true;
-  m_Aura->m_LastMapSuggestions.clear();
+  m_Aura->m_LastMapIdentifiersFromSuggestions.clear();
   for (const auto& suggestion : remoteSuggestions) {
-    string lowerName = suggestion.first;
-    transform(begin(lowerName), end(lowerName), begin(lowerName), [](char c) { return static_cast<char>(std::tolower(c)); });
-    m_Aura->m_LastMapSuggestions[lowerName] = suggestion.second;
+    string lowerName = ToLowerCase(suggestion.first);
+    m_Aura->m_LastMapIdentifiersFromSuggestions[lowerName] = suggestion.second;
     fuzzyMatches.push_back(suggestion.first + " (" + suggestion.second + ")");
   }
 }
@@ -600,7 +596,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
 
 shared_ptr<CMap> CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
 {
-  shared_ptr<CMap> map = make_shared<CMap>(m_Aura, mapCFG, m_SkipVersionCheck);
+  shared_ptr<CMap> map = make_shared<CMap>(m_Aura, mapCFG);
   /*
   if (!map) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map config", CHAT_SEND_SOURCE_ALL);
@@ -666,7 +662,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
     MapCFG.Set("map.type", "dota");
   }
 
-  shared_ptr<CMap> baseMap = make_shared<CMap>(m_Aura, &MapCFG, m_SkipVersionCheck);
+  shared_ptr<CMap> baseMap = make_shared<CMap>(m_Aura, &MapCFG);
   /*
   if (!baseMap) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map.", CHAT_SEND_SOURCE_ALL);
@@ -690,7 +686,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
 
     vector<uint8_t> bytes = MapCFG.Export();
     FileWrite(resolvedCFGPath, bytes.data(), bytes.size());
-    m_Aura->m_CachedMaps[fileName] = resolvedCFGName;
+    m_Aura->m_CFGCacheNamesByMapNames[fileName] = resolvedCFGName;
     Print("[AURA] Cached map config for [" + fileName + "] as [" + PathToString(resolvedCFGPath) + "]");
   }
 
@@ -707,8 +703,8 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
       Print("[AURA] Searching map in cache [" + fileName + "]");
     }
-    if (m_Aura->m_CachedMaps.find(fileName) != m_Aura->m_CachedMaps.end()) {
-      string cfgName = m_Aura->m_CachedMaps[fileName];
+    if (m_Aura->m_CFGCacheNamesByMapNames.find(fileName) != m_Aura->m_CFGCacheNamesByMapNames.end()) {
+      string cfgName = m_Aura->m_CFGCacheNamesByMapNames[fileName];
       filesystem::path cfgPath = m_Aura->m_Config.m_MapCachePath / filesystem::path(cfgName);
       shared_ptr<CMap> cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
       if (cachedResult && FileNameEquals(cachedResult->GetServerPath(), fileName)) {
@@ -721,7 +717,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
         if (!silent) m_Ctx->SendReply("Loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
         return cachedResult;
       } else {
-        m_Aura->m_CachedMaps.erase(fileName);
+        m_Aura->m_CFGCacheNamesByMapNames.erase(fileName);
       }
     }
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
@@ -974,7 +970,7 @@ bool CGameSetup::PrepareDownloadMap()
       // but there is no standard C++ way to do this, and cstdio isn't very helpful.
       continue;
     }
-    if (m_Aura->m_BusyMaps.find(testFileName) != m_Aura->m_BusyMaps.end()) {
+    if (m_Aura->m_MapNamesHostCounter.find(testFileName) != m_Aura->m_MapNamesHostCounter.end()) {
       // Map already hosted.
       continue;
     }

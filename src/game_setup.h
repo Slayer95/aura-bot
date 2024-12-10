@@ -123,7 +123,6 @@ public:
   std::string                                     m_ErrorMessage;
   uint8_t                                         m_AsyncStep;
 
-  bool                                            m_SkipVersionCheck;
   bool                                            m_IsMapDownloaded;
 
   std::filesystem::path                           m_SaveFile;
@@ -207,7 +206,7 @@ public:
   bool                                            m_DeleteMe;
 
   CGameSetup(CAura* nAura, std::shared_ptr<CCommandContext> nCtx, CConfig* mapCFG);
-  CGameSetup(CAura* nAura, std::shared_ptr<CCommandContext> nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode, const bool nSkipVersionCheck);
+  CGameSetup(CAura* nAura, std::shared_ptr<CCommandContext> nCtx, const std::string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode);
   ~CGameSetup();
 
   [[nodiscard]] std::string GetInspectName() const;

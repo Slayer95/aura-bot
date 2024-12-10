@@ -435,7 +435,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       m_Exiting = true;
     }
 
-    if (!m_Map->GetUseStandardPaths() && !m_Map->GetMapData()->empty()) {
+    if (!m_Map->GetUseStandardPaths() && m_Map->HasMapData()) {
       filesystem::path localPath = m_Map->GetServerPath();
       const bool isFileName = localPath == localPath.filename();
       if (isFileName) {
@@ -443,7 +443,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
         // implied: only maps in <bot.maps_path>
         // m_HasMapLock = true;
         // TODO: Be more clever about busy maps
-        m_Aura->m_BusyMaps.insert(m_Map->GetServerPath());
+        m_Aura->m_MapNamesHostCounter.insert(m_Map->GetServerPath());
       }
     }
   } else {
@@ -552,14 +552,14 @@ bool CGame::ReleaseMap()
     // implied: only maps in <bot.maps_path>
     const string localPathString = m_Map->GetServerPath();
     const filesystem::path localPath = localPathString;
-    m_Aura->m_BusyMaps.erase(localPathString);
+    m_Aura->m_MapNamesHostCounter.erase(localPathString);
     const bool deleteTooLarge = (
       m_Aura->m_Config.m_EnableDeleteOversizedMaps &&
       (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config.m_MaxSavedMapSize * 1024)
     );
-    if (deleteTooLarge && m_Aura->m_BusyMaps.find(localPathString) == m_Aura->m_BusyMaps.end()) {
+    if (deleteTooLarge && m_Aura->m_MapNamesHostCounter.find(localPathString) == m_Aura->m_MapNamesHostCounter.end()) {
       // Ensure the mapcache ini file has been created before trying to delete from disk
-      if (m_Aura->m_CachedMaps.find(localPathString) != m_Aura->m_CachedMaps.end()) {
+      if (m_Aura->m_CFGCacheNamesByMapNames.find(localPathString) != m_Aura->m_CFGCacheNamesByMapNames.end()) {
         // Release from disk
         m_Map->UnlinkFile();
       }
@@ -5424,8 +5424,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
   if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != MapSize) {
     // the user doesn't have the map
 
-    string* MapData = m_Map->GetMapData();
-    bool IsMapAvailable = !MapData->empty() && !m_Map->HasMismatch();
+    bool IsMapAvailable = m_Map->HasMapData() && !m_Map->HasMismatch();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
     bool ShouldTransferMap = (
       IsMapAvailable && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
@@ -5457,7 +5456,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
-        } else if (MapData->empty()) {
+        } else if (!m_Map->HasMapData()) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
         } else {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");

@@ -700,35 +700,34 @@ namespace GameProtocol
     return std::vector<uint8_t>{GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::STARTDOWNLOAD, 9, 0, 1, 0, 0, 0, fromUID};
   }
 
-  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, uint32_t start, const string* mapData)
+  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, uint32_t start, const SharedByteArray& mapFileContents)
   {
-    if (start < mapData->size())
-    {
-      std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::MAPPART, 0, 0, toUID, fromUID, 1, 0, 0, 0};
-      AppendByteArray(packet, start, false); // start position
-
-      // calculate end position (don't send more than 1442 map bytes in one packet)
-
-      uint32_t end = start + 1442;
-
-      if (end > static_cast<uint32_t>(mapData->size()) || end < start)
-        end = static_cast<uint32_t>(mapData->size());
-
-      // calculate crc
-
-      const std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC((uint8_t*)mapData->c_str() + start, static_cast<uint32_t>(end - start)), false);
-      AppendByteArrayFast(packet, crc32);
-
-      // map data
-
-      const std::vector<uint8_t> data = CreateByteArray((uint8_t*)mapData->c_str() + start, static_cast<uint32_t>(end - start));
-      AppendByteArrayFast(packet, data);
-      AssignLength(packet);
-      return packet;
+    if (!mapFileContents || mapFileContents->size() < start) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART");
+      return std::vector<uint8_t>();
     }
 
-    Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART");
-    return std::vector<uint8_t>();
+    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::MAPPART, 0, 0, toUID, fromUID, 1, 0, 0, 0};
+    AppendByteArray(packet, start, false); // start position
+
+    // calculate end position (don't send more than 1442 map bytes in one packet)
+
+    uint32_t end = start + 1442;
+
+    if (end > static_cast<uint32_t>(mapFileContents->size()) || end < start)
+      end = static_cast<uint32_t>(mapFileContents->size());
+
+    // calculate crc
+
+    const std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC(mapFileContents->data() + (size_t)(start), (uint32_t)(end - start)), false);
+    AppendByteArrayFast(packet, crc32);
+
+    // map data
+
+    const std::vector<uint8_t> data = CreateByteArray(mapFileContents->data() + (size_t)(start), (uint32_t)(end - start));
+    AppendByteArrayFast(packet, data);
+    AssignLength(packet);
+    return packet;
   }
 
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(const ActionQueue& actions)

@@ -26,6 +26,7 @@
 #ifndef AURA_FORWARD_H_
 #define AURA_FORWARD_H_
 
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -111,5 +112,7 @@ typedef std::vector<CIncomingAction>                ActionQueue;
 typedef DoubleLinkedListNode<CQueuedActionsFrame>   QueuedActionsFrameNode;
 typedef std::optional<std::pair<int64_t, uint32_t>> OptionalTimedUint32;
 typedef std::optional<int64_t>                      OptionalTime;
+typedef std::weak_ptr<std::vector<uint8_t>>         WeakByteArray;
+typedef std::shared_ptr<std::vector<uint8_t>>       SharedByteArray;
 
 #endif // AURA_FORWARD_H_
