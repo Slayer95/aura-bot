@@ -435,7 +435,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       m_Exiting = true;
     }
 
-    if (!m_Map->GetUseStandardPaths() && m_Map->HasMapData()) {
+    if (!m_Map->GetUseStandardPaths() && m_Map->HasMapFileContents()) {
       filesystem::path localPath = m_Map->GetServerPath();
       const bool isFileName = localPath == localPath.filename();
       if (isFileName) {
@@ -572,7 +572,7 @@ bool CGame::ReleaseMap()
   if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > 0x100000) {
     // Release from memory
     // TODO: Ensure we back it up to disk, and keep the file locked?
-    m_Map->ClearMapData();
+    m_Map->ClearMapFileContents();
   }
   return true;
 }
@@ -1327,7 +1327,7 @@ void CGame::UpdateJoinable()
           if (m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024)
             break;
 
-          Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapData()));
+          Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapFileContents()));
           user->SetLastMapPartSent(user->GetLastMapPartSent() + 1442);
           m_DownloadCounter += 1442;
         }
@@ -5424,7 +5424,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
   if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != MapSize) {
     // the user doesn't have the map
 
-    bool IsMapAvailable = m_Map->HasMapData() && !m_Map->HasMismatch();
+    bool IsMapAvailable = m_Map->HasMapFileContents() && !m_Map->HasMismatch();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
     bool ShouldTransferMap = (
       IsMapAvailable && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
@@ -5456,7 +5456,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
-        } else if (!m_Map->HasMapData()) {
+        } else if (!m_Map->HasMapFileContents()) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
         } else {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");

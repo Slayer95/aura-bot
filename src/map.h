@@ -167,7 +167,7 @@ private:
   std::string                     m_MapURL;
   std::string                     m_MapSiteURL;
   std::string                     m_MapShortDesc;
-  SharedByteArray                 m_MapData;       // the map data itself, for sending the map to players
+  SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
   bool                            m_MapLoaderIsPartial;
   uint32_t                        m_MapLocale;
   uint32_t                        m_MapOptions;
@@ -233,8 +233,8 @@ public:
   [[nodiscard]] inline std::string                GetServerPath() const { return m_MapServerPath; }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
-  [[nodiscard]] inline SharedByteArray            GetMapData() { return m_MapData; }
-  [[nodiscard]] inline bool                       HasMapData() { return m_MapData != nullptr && !m_MapData->empty(); }
+  [[nodiscard]] inline SharedByteArray            GetMapFileContents() { return m_MapFileContents; }
+  [[nodiscard]] inline bool                       HasMapFileContents() { return m_MapFileContents != nullptr && !m_MapFileContents->empty(); }
   [[nodiscard]] inline uint8_t                    GetMapNumDisabled() const { return m_MapNumDisabled; }
   [[nodiscard]] inline uint8_t                    GetMapNumControllers() const { return m_MapNumControllers; }
   [[nodiscard]] inline uint8_t                    GetMapNumTeams() const { return m_MapNumTeams; }
@@ -249,7 +249,7 @@ public:
   [[nodiscard]] std::string                       GetHMCPlayerName() const { return m_HMCPlayerName; }
   [[nodiscard]] uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
   [[nodiscard]] bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
-  void                                            ClearMapData() { m_MapData.reset(); }
+  void                                            ClearMapFileContents() { m_MapFileContents.reset(); }
   bool                                            SetTeamsLocked(const bool nEnable);
   bool                                            SetTeamsTogether(const bool nEnable);
   bool                                            SetAdvancedSharedUnitControl(const bool nEnable);
@@ -272,6 +272,7 @@ public:
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
 
+  bool                                            TryLoadMapFile();
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 };

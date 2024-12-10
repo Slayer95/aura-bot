@@ -404,7 +404,7 @@ bool CMap::SetRandomRaces(const bool nEnable)
 optional<array<uint8_t, 4>> CMap::CalculateCRC() const
 {
   optional<array<uint8_t, 4>> result;
-  const uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)m_MapData->data(), m_MapData->size());
+  const uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)m_MapFileContents->data(), m_MapFileContents->size());
   EnsureFixedByteArray(result, crc32, false);
   DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(result.value()) + ">")
   return result;
@@ -813,28 +813,16 @@ void CMap::Load(CConfig* CFG)
 
   optional<uint32_t> mapFileSize;
   if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
-    if (m_MapServerPath.empty()) {
-      DPRINT_IF(LOG_LEVEL_TRACE, "m_MapServerPath missing - map data not loaded")
-      return;
-    }
-    filesystem::path mapServerPath(m_MapServerPath);
-    filesystem::path resolvedPath(mapServerPath);
-    if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
-      resolvedPath = m_Aura->m_Config.m_MapPath / mapServerPath;
-    }
-    m_MapData = m_Aura->ReadFileCacheable(resolvedPath, MAX_READ_FILE_SIZE);
-    if (!HasMapData()) {
-      PRINT_IF(LOG_LEVEL_INFO, "Failed to read map [" + PathToString(resolvedPath) + "]")
-      if (m_MapLoaderIsPartial) {
-        return;
-      }
-      ignoreMPQ = true;
-    } else {
-      mapFileSize = static_cast<uint32_t>(m_MapData->size());
+    if (TryLoadMapFile()) {
+      mapFileSize = static_cast<uint32_t>(m_MapFileContents->size());
 #ifdef DEBUG
       array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(mapFileSize.value(), false);
       DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
 #endif
+    } else if (m_MapLoaderIsPartial) {
+      return;
+    } else {
+      ignoreMPQ = true;
     }
   }
 
@@ -880,7 +868,7 @@ void CMap::Load(CConfig* CFG)
       Print("[MAP] failed to parse map, using config file for <map.weak_hash>, <map.sha1>");
     }
   } else {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] MPQ archive ignored");
+    DPRINT_IF(LOG_LEVEL_TRACE2, "[MAP] MPQ archive ignored");
   }
 
   if (mapEssentials.has_value()) {
@@ -907,7 +895,7 @@ void CMap::Load(CConfig* CFG)
 
     m_Slots = mapEssentials->slots;
   } else {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] MPQ archive missing or failed to parse");
+    DPRINT_IF(LOG_LEVEL_TRACE2, "[MAP] MPQ archive ignored/missing/errored");
   }
 
   array<uint8_t, 4> mapContentMismatch = {0, 0, 0, 0};
@@ -1190,8 +1178,28 @@ void CMap::Load(CConfig* CFG)
   }
 }
 
+bool CMap::TryLoadMapFile()
+{
+  if (m_MapServerPath.empty()) {
+    DPRINT_IF(LOG_LEVEL_TRACE2, "m_MapServerPath missing - map data not loaded")
+    return false;
+  }
+  filesystem::path mapServerPath(m_MapServerPath);
+  filesystem::path resolvedPath(mapServerPath);
+  if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
+    resolvedPath = m_Aura->m_Config.m_MapPath / mapServerPath;
+  }
+  m_MapFileContents = m_Aura->ReadFileCacheable(resolvedPath, MAX_READ_FILE_SIZE);
+  if (!HasMapFileContents()) {
+    PRINT_IF(LOG_LEVEL_INFO, "Failed to read map [" + PathToString(resolvedPath) + "]")
+    return false;
+  }
+  return true;
+}
+
 bool CMap::UnlinkFile()
 {
+  if (m_MapServerPath.empty()) return false;
   Print("Deleting " + m_MapServerPath + "...");
   filesystem::path mapLocalPath = m_MapServerPath;
   if (mapLocalPath.is_absolute()) {
@@ -1230,7 +1238,7 @@ string CMap::CheckProblems()
     m_ErrorMessage = "invalid <map.size> detected";
     return m_ErrorMessage;
   }
-  else if (HasMapData() && m_MapData->size() != ByteArrayToUInt32(m_MapSize, false))
+  else if (HasMapFileContents() && m_MapFileContents->size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
     m_ErrorMessage = "nonmatching <map.size> detected";
@@ -1240,7 +1248,7 @@ string CMap::CheckProblems()
   if (m_MapCRC32.size() != 4)
   {
     m_Valid = false;
-    if (m_MapCRC32.empty() && !HasMapData()) {
+    if (m_MapCRC32.empty() && !HasMapFileContents()) {
       m_ErrorMessage = "map file not found";
     } else {
       m_ErrorMessage = "invalid <map.crc32> detected";

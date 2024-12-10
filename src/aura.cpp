@@ -2107,45 +2107,41 @@ uint32_t CAura::NextServerID()
 
 SharedByteArray CAura::ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)
 {
-  SharedByteArray fileContentsPtr/* = make_shared<vector<uint8_t>>()*/;
-  bool isCached = false;
   auto it = m_CachedFileContents.find(filePath);
   if (it != m_CachedFileContents.end()) {
     WeakByteArray maybeCachedPtr = it->second;
     if (!maybeCachedPtr.expired()) {
       Print("[DEBUG] Reusing cached map data for [" + PathToString(filePath) + "]");
-      fileContentsPtr = maybeCachedPtr.lock();
-      isCached = true;
+      return maybeCachedPtr.lock();
     }
   }
 
-  if (!isCached) {
-    fileContentsPtr = make_shared<vector<uint8_t>>();
-    if (FileRead(filePath, *(fileContentsPtr.get()), MAX_READ_FILE_SIZE) && !fileContentsPtr->empty()) {
-      Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + "]");
-      m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
+  SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
+  if (!FileRead(filePath, *(fileContentsPtr.get()), MAX_READ_FILE_SIZE) && !fileContentsPtr->empty()) {
+    m_CachedFileContents.erase(filePath);
+    fileContentsPtr.reset();
+    return fileContentsPtr;
+  }
 
-      // Try to dedupe across maps with different names but same content.
-      for (const auto& cacheEntries : m_CachedFileContents) {
-        if (cacheEntries.first == filePath) continue;
-        WeakByteArray maybeCachedPtr = cacheEntries.second;
-        if (!maybeCachedPtr.expired()) {
-          SharedByteArray otherFileContents = maybeCachedPtr.lock();
-          if (otherFileContents->size() != fileContentsPtr->size()) {
-            continue;
-          }
-          if (memcmp(otherFileContents->data(), fileContentsPtr->data(), fileContentsPtr->size()) == 0) {
-            Print("[DEBUG] Reusing cached map contents from [" + PathToString(cacheEntries.first) + "] for [" + PathToString(filePath) + "]");
-            fileContentsPtr = otherFileContents;
-            m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
-            // Iterator is invalid now
-            break;
-          }
-        }
+  Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + "]");
+  m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
+
+  // Try to dedupe across maps with different names but same content.
+  for (const auto& cacheEntries : m_CachedFileContents) {
+    if (cacheEntries.first == filePath) continue;
+    WeakByteArray maybeCachedPtr = cacheEntries.second;
+    if (!maybeCachedPtr.expired()) {
+      SharedByteArray otherFileContents = maybeCachedPtr.lock();
+      if (otherFileContents->size() != fileContentsPtr->size()) {
+        continue;
       }
-    } else {
-      m_CachedFileContents.erase(filePath);
-      fileContentsPtr.reset();
+      if (memcmp(otherFileContents->data(), fileContentsPtr->data(), fileContentsPtr->size()) == 0) {
+        Print("[DEBUG] Reusing cached map contents from [" + PathToString(cacheEntries.first) + "] for [" + PathToString(filePath) + "]");
+        fileContentsPtr = otherFileContents;
+        m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
+        // Iterator is invalid now
+        break;
+      }
     }
   }
 
