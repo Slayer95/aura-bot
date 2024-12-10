@@ -355,17 +355,19 @@ public:
   [[nodiscard]] CDBBan*                       IPBanCheck(std::string ip, const std::string& authserver);
   [[nodiscard]] bool                          GetIsUserBanned(const std::string& user, const std::string& server, const std::string& authserver);
   [[nodiscard]] bool                          GetIsIPBanned(std::string ip, const std::string& authserver);
-  bool                          BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
-  bool                          BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
-  bool                          BanAddPermanent(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  bool                                        BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  /*
+  bool                                        BanAdd(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason, const std::string& expiry);
+  bool                                        BanAddPermanent(const std::string& user, const std::string& server, const std::string& authserver, const std::string& ip, const std::string& moderator, const std::string& reason);
+  */
   [[nodiscard]] bool                          BanRemove(const std::string& user, const std::string& server, const std::string& authserver);
   [[nodiscard]] std::vector<std::string>      ListBans(const std::string& authserver);
 
   // Players
-  void                          UpdateGamePlayerOnStart(const std::string& name, const std::string& server, const std::string& ip, uint64_t gameId);
-  void                          UpdateGamePlayerOnEnd(const std::string& name, const std::string& server, const std::string& ip, uint64_t loadingtime, uint64_t duration, uint64_t left);
+  void                                        UpdateGamePlayerOnStart(const std::string& name, const std::string& server, const std::string& ip, uint64_t gameId);
+  void                                        UpdateGamePlayerOnEnd(const std::string& name, const std::string& server, const std::string& ip, uint64_t loadingtime, uint64_t duration, uint64_t left);
   [[nodiscard]] CDBGamePlayerSummary*         GamePlayerSummaryCheck(const std::string& name, const std::string& server);
-  void                          UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
+  void                                        UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills);
   [[nodiscard]] CDBDotAPlayerSummary*         DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
   [[nodiscard]] std::string                   GetInitialIP(const std::string& name, const std::string& server);
   [[nodiscard]] std::string                   GetLatestIP(const std::string& name, const std::string& server);

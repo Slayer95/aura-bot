@@ -4604,7 +4604,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
   if (GetUserFromName(joinRequest->GetName(), false)/* && !m_IsHiddenPlayerNames*/) {
     if (m_ReportedJoinFailNames.find(joinRequest->GetName()) == end(m_ReportedJoinFailNames)) {
       if (!m_IsHiddenPlayerNames) {
-        // Note: Someone can probably figure out whether a given player has joined a lobby by trying to impersonate them, and failing to.
+        // FIXME: Someone can probably figure out whether a given player has joined a lobby by trying to impersonate them, and failing to.
         // An alternative would be no longer preventing joins and, potentially, disambiguating their names at CGame::ShowPlayerNamesGameStartLoading.
         SendAllChat("Entry denied for another user with the same name: [" + joinRequest->GetName() + "@" + JoinedRealm + "]");
       }
