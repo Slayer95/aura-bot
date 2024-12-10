@@ -1352,6 +1352,7 @@ void CAura::EventGameDeleted(CGame* game)
 
 void CAura::EventGameRemake(CGame* game)
 {
+  // Only called from CGame::Update() while iterating m_StartedGames
   Print("[AURA] remaking game [" + game->GetGameName() + "]");
   m_LobbiesPending.push_back(game);
 
@@ -1372,7 +1373,7 @@ void CAura::EventGameRemake(CGame* game)
 
 void CAura::EventGameStarted(CGame* game)
 {
-  // Always called from CGame::Update() while iterating m_Lobbies
+  // Only called from CGame::Update() while iterating m_Lobbies
   Print("[AURA] started game [" + game->GetGameName() + "]");
   m_StartedGames.push_back(game);
 
