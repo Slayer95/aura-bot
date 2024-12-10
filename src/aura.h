@@ -134,8 +134,7 @@ public:
   std::vector<CGame*>                                m_LobbiesPending;             // vector for just-created lobbies before they get into m_Lobbies
   std::vector<CGame*>                                m_JoinInProgressGames;        // started games that can be joined in-progress (either as observer or player)
   std::map<std::string, std::string>                 m_CFGCacheNamesByMapNames;
-  std::map<std::string, TimedUint16>                 m_MapFilesTimedBusyLocks;
-  //std::map<std::filesystem::path, TimedUint16>       m_MapFilesTimedBusyLocks;
+  std::map<std::filesystem::path, TimedUint16>       m_MapFilesTimedBusyLocks;
   std::map<std::string, std::string>                 m_LastMapIdentifiersFromSuggestions;
   std::map<std::filesystem::path, WeakByteArray>     m_CachedFileContents;
 
