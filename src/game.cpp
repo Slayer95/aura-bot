@@ -3351,9 +3351,9 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   }
 
   if (m_IsMirror) {
-    return versionPrefix + typeWord + " mirrored: " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
+    return versionPrefix + typeWord + " mirrored: " + m_Map->GetServerFileName() + startedPhrase;
   } else {
-    return versionPrefix + typeWord + " hosted: " + ParseFileName(m_Map->GetServerPath()) + startedPhrase;
+    return versionPrefix + typeWord + " hosted: " + m_Map->GetServerFileName() + startedPhrase;
   }
 }
 

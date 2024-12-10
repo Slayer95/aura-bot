@@ -1364,9 +1364,9 @@ void CAura::EventGameRemake(CGame* game)
 
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
-    realm->QueueChatChannel("Game remake: " + ParseFileName(game->GetMap()->GetServerPath()));
+    realm->QueueChatChannel("Game remake: " + game->GetMap()->GetServerFileName());
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-      realm->QueueWhisper("Game remake: " + ParseFileName(game->GetMap()->GetServerPath()), game->GetCreatorName());
+      realm->QueueWhisper("Game remake: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
     }
   }
 }
@@ -1384,9 +1384,9 @@ void CAura::EventGameStarted(CGame* game)
   /*
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
-    realm->QueueChatChannel("Game started: " + ParseFileName(game->GetMap()->GetServerPath()));
+    realm->QueueChatChannel("Game started: " + game->GetMap()->GetServerFileName());
     if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
-      realm->QueueWhisper("Game started: " + ParseFileName(game->GetMap()->GetServerPath()), game->GetCreatorName());
+      realm->QueueWhisper("Game started: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
     }
   }
   */

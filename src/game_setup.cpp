@@ -707,7 +707,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
       string cfgName = m_Aura->m_CFGCacheNamesByMapNames[fileName];
       filesystem::path cfgPath = m_Aura->m_Config.m_MapCachePath / filesystem::path(cfgName);
       shared_ptr<CMap> cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
-      if (cachedResult && FileNameEquals(cachedResult->GetServerPath(), fileName)) {
+      if (cachedResult && FileNameEquals(PathToString(cachedResult->GetServerPath()), fileName)) {
         cacheSuccess = true;
       }
       if (cacheSuccess) {

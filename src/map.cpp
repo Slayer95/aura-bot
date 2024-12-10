@@ -68,7 +68,7 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG)
   : m_Aura(nAura),
-    m_MapServerPath(CFG->GetString("map.local_path")),
+    m_MapServerPath(CFG->GetPath("map.local_path", filesystem::path()),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)),
     m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapOptions(0),
@@ -257,8 +257,7 @@ uint8_t CMap::GetMapLayoutStyle() const
 
 string CMap::GetServerFileName() const
 {
-  filesystem::path filePath = m_MapServerPath;
-  return PathToString(filePath.filename());
+  return PathToString(m_MapServerPath.filename());
 }
 
 string CMap::GetClientFileName() const
@@ -274,7 +273,7 @@ bool CMap::GetMapFileIsFromManagedFolder() const
 {
   if (m_UseStandardPaths) return false;
   if (m_MapServerPath.empty()) return false;
-  return m_MapServerPath == GetServerFileName();
+  return m_MapServerPath == m_MapServerPath.filename();
 }
 
 bool CMap::IsObserverSlot(const CGameSlot* slot) const
@@ -817,7 +816,7 @@ void CMap::Load(CConfig* CFG)
   m_Valid   = true;
   m_CFGName = PathToString(CFG->GetFile().filename());
 
-  bool ignoreMPQ = m_MapServerPath.empty() || (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
+  bool ignoreMPQ = !HasServerPath() || (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   optional<uint32_t> mapFileSize;
   if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
@@ -834,30 +833,31 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  optional<int64_t> CachedModifiedTime = CFG->GetMaybeInt64("map.local_mod_time");
-  optional<int64_t> FileModifiedTime;
-  filesystem::path MapMPQFilePath(m_MapServerPath);
+  filesystem::path resolvedFilePath(m_MapServerPath);
 
-  if (!ignoreMPQ) {
-    if (MapMPQFilePath.filename() == MapMPQFilePath && !m_UseStandardPaths) {
-      MapMPQFilePath = m_Aura->m_Config.m_MapPath / MapMPQFilePath;
-    } else {
-      MapMPQFilePath = m_MapServerPath;
-    }    
-    FileModifiedTime = GetMaybeModifiedTime(MapMPQFilePath);
-    ignoreMPQ = (
-      !m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
-        !FileModifiedTime.has_value() || (
-          CachedModifiedTime.has_value() && FileModifiedTime.has_value() &&
-          FileModifiedTime.value() <= CachedModifiedTime.value()
+  {
+    optional<int64_t> cachedModifiedTime = CFG->GetMaybeInt64("map.local_mod_time");
+    optional<int64_t> fileModifiedTime;
+
+    if (!ignoreMPQ) {
+      if (resolvedFilePath.filename() == resolvedFilePath && !m_UseStandardPaths) {
+        resolvedFilePath = m_Aura->m_Config.m_MapPath / resolvedFilePath;
+      }    
+      fileModifiedTime = GetMaybeModifiedTime(resolvedFilePath);
+      ignoreMPQ = (
+        !m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
+          !fileModifiedTime.has_value() || (
+            cachedModifiedTime.has_value() && fileModifiedTime.has_value() &&
+            fileModifiedTime.value() <= cachedModifiedTime.value()
+          )
         )
-      )
-    );
-  }
-  if (FileModifiedTime.has_value()) {
-    if (!CachedModifiedTime.has_value() || FileModifiedTime.value() != CachedModifiedTime.value()) {
-      CFG->SetInt64("map.local_mod_time", FileModifiedTime.value());
-      CFG->SetIsModified();
+      );
+    }
+    if (fileModifiedTime.has_value()) {
+      if (!cachedModifiedTime.has_value() || fileModifiedTime.value() != cachedModifiedTime.value()) {
+        CFG->SetInt64("map.local_mod_time", fileModifiedTime.value());
+        CFG->SetIsModified();
+      }
     }
   }
 
@@ -866,7 +866,7 @@ void CMap::Load(CConfig* CFG)
 
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
-    optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(MapMPQFilePath);
+    optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(resolvedFilePath);
     mapEssentials.swap(mapEssentialsParsed);
     if (!mapEssentials.has_value()) {
       if (m_MapLoaderIsPartial) {
@@ -1192,10 +1192,9 @@ bool CMap::TryLoadMapFile()
     DPRINT_IF(LOG_LEVEL_TRACE2, "m_MapServerPath missing - map data not loaded")
     return false;
   }
-  filesystem::path mapServerPath(m_MapServerPath);
-  filesystem::path resolvedPath(mapServerPath);
-  if (mapServerPath.filename() == mapServerPath && !m_UseStandardPaths) {
-    resolvedPath = m_Aura->m_Config.m_MapPath / mapServerPath;
+  filesystem::path resolvedPath(m_MapServerPath);
+  if (m_MapServerPath.filename() == m_MapServerPath && !m_UseStandardPaths) {
+    resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
   }
   m_MapFileContents = m_Aura->ReadFileCacheable(resolvedPath, MAX_READ_FILE_SIZE);
   if (!HasMapFileContents()) {
@@ -1217,7 +1216,7 @@ bool CMap::TryReloadMapFile()
   optional<array<uint8_t, 4>> reloadedCRC = CalculateCRC();
   if (!reloadedCRC.has_value() || ByteArrayToUInt32(reloadedCRC.value(), false) != ByteArrayToUInt32(m_MapCRC32, false)) {
     ClearMapFileContents();
-    PRINT_IF(LOG_LEVEL_WARNING, "Map file [" + m_MapServerPath + "] has been modified - reload rejected")
+    PRINT_IF(LOG_LEVEL_WARNING, "Map file [" + PathToString(m_MapServerPath) + "] has been modified - reload rejected")
     return false;
   }
 
@@ -1236,7 +1235,7 @@ bool CMap::UnlinkFile()
     result = FileDelete(resolvedPath.lexically_normal());
   }
   if (result) {
-    PRINT_IF(LOG_LEVEL_NOTICE, "[MAP] Deleted [" + m_MapServerPath + "]");
+    PRINT_IF(LOG_LEVEL_NOTICE, "[MAP] Deleted [" + PathToString(m_MapServerPath) + "]");
   }
   return result;
 }

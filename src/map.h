@@ -163,7 +163,7 @@ private:
   std::string                     m_MapType;       // config value: map type (for stats class)
   bool                            m_MapMetaDataEnabled;
   std::string                     m_MapDefaultHCL; // config value: map default HCL to use
-  std::string                     m_MapServerPath;  // config value: map local path
+  std::filesystem::path           m_MapServerPath;  // config value: map local path
   std::string                     m_MapURL;
   std::string                     m_MapSiteURL;
   std::string                     m_MapShortDesc;
@@ -230,7 +230,7 @@ public:
   [[nodiscard]] inline std::string                GetMapType() const { return m_MapType; }
   [[nodiscard]] inline bool                       GetMapMetaDataEnabled() const { return m_MapMetaDataEnabled; }
   [[nodiscard]] inline std::string                GetMapDefaultHCL() const { return m_MapDefaultHCL; }
-  [[nodiscard]] inline std::string                GetServerPath() const { return m_MapServerPath; }
+  [[nodiscard]] inline const std::filesystem::path&     GetServerPath() const { return m_MapServerPath; }
   [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
