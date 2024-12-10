@@ -1200,6 +1200,9 @@ bool CMap::TryLoadMapFile()
 
 bool CMap::TryReloadMapFile()
 {
+  if (HasMapFileContents()) {
+    return false;
+  }
   if (!TryLoadMapFile()) {
     return false;
   }
