@@ -569,11 +569,8 @@ bool CGame::ReleaseMap()
   m_HasMapLock = false;
   */
 
-  if (ByteArrayToUInt32(m_Map->GetMapSize(), false) > 0x100000) {
-    // Release from memory
-    // TODO: Ensure we back it up to disk, and keep the file locked?
-    m_Map->ClearMapFileContents();
-  }
+  // Release from memory
+  m_Map->ClearMapFileContents();
   return true;
 }
 
@@ -611,9 +608,8 @@ void CGame::StartGameOverTimer(bool isMMD)
 CGame::~CGame()
 {
   Reset();
-  if (ReleaseMap()) {
-    m_Map.reset();
-  }
+  ReleaseMap();
+
   for (auto& user : m_Users) {
     delete user;
   }
@@ -6242,6 +6238,9 @@ void CGame::Remake()
   m_BeforePlayingEmptyActions = 0;
 
   m_HostCounter = m_Aura->NextHostCounter();
+  if (m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+    m_Map->TryReloadMapFile();
+  }
   InitPRNG();
   InitSlots();
 

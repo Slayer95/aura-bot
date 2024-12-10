@@ -273,6 +273,7 @@ public:
   void LoadMapSpecificConfig(CConfig& CFG);
 
   bool                                            TryLoadMapFile();
+  bool                                            TryReloadMapFile();
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 };
