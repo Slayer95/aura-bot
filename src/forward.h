@@ -112,6 +112,7 @@ typedef std::vector<CIncomingAction>                ActionQueue;
 typedef DoubleLinkedListNode<CQueuedActionsFrame>   QueuedActionsFrameNode;
 typedef std::optional<std::pair<int64_t, uint32_t>> OptionalTimedUint32;
 typedef std::optional<int64_t>                      OptionalTime;
+typedef std::pair<int64_t, uint16_t>                TimedUint16;
 typedef std::weak_ptr<std::vector<uint8_t>>         WeakByteArray;
 typedef std::shared_ptr<std::vector<uint8_t>>       SharedByteArray;
 

@@ -970,7 +970,7 @@ bool CGameSetup::PrepareDownloadMap()
       // but there is no standard C++ way to do this, and cstdio isn't very helpful.
       continue;
     }
-    if (m_Aura->m_MapNamesHostCounter.find(testFileName) != m_Aura->m_MapNamesHostCounter.end()) {
+    if (m_Aura->m_MapFilesTimedBusyLocks.find(testFileName) != m_Aura->m_MapFilesTimedBusyLocks.end()) {
       // Map already hosted.
       continue;
     }

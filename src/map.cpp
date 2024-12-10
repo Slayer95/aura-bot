@@ -404,7 +404,7 @@ bool CMap::SetRandomRaces(const bool nEnable)
 optional<array<uint8_t, 4>> CMap::CalculateCRC() const
 {
   optional<array<uint8_t, 4>> result;
-  if (!HasMapData()) return result;
+  if (!HasMapFileContents()) return result;
   const uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)m_MapFileContents->data(), m_MapFileContents->size());
   EnsureFixedByteArray(result, crc32, false);
   DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(result.value()) + ">")
@@ -1210,7 +1210,7 @@ bool CMap::TryReloadMapFile()
   optional<array<uint8_t, 4>> reloadedCRC = CalculateCRC();
   if (!reloadedCRC.has_value() || ByteArrayToUInt32(reloadedCRC.value(), false) != ByteArrayToUInt32(m_MapCRC32, false)) {
     ClearMapFileContents();
-    PRINT_IF(LOG_LEVEL_WARNING, "Map file [" + PathToString(resolvedPath) + "] has been modified - reload rejected")
+    PRINT_IF(LOG_LEVEL_WARNING, "Map file [" + m_MapServerPath + "] has been modified - reload rejected")
     return false;
   }
 
