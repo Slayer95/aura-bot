@@ -68,7 +68,7 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG)
   : m_Aura(nAura),
-    m_MapServerPath(CFG->GetPath("map.local_path", filesystem::path()),
+    m_MapServerPath(CFG->GetPath("map.local_path", filesystem::path())),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)),
     m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapOptions(0),
