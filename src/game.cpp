@@ -6122,7 +6122,7 @@ void CGame::HandleGameLoadedStats()
     m_GameHistoryId,
     m_CreatorText,
     m_Map->GetClientPath(),
-    m_Map->GetServerPath(),
+    PathToString(m_Map->GetServerPath()),
     m_Map->GetMapCRC32(),
     exportPlayerNames,
     exportPlayerIDs,

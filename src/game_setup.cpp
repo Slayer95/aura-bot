@@ -696,25 +696,29 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
 
 shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, const bool silent)
 {
-  string fileName = PathToString(mapPath.filename());
   if (fileName.empty()) return nullptr;
   if (m_Aura->m_Config.m_EnableCFGCache) {
     bool cacheSuccess = false;
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      Print("[AURA] Searching map in cache [" + fileName + "]");
+      Print("[AURA] Searching map in cache [" + PathToString(fileName) + "]");
     }
     if (m_Aura->m_CFGCacheNamesByMapNames.find(fileName) != m_Aura->m_CFGCacheNamesByMapNames.end()) {
       string cfgName = m_Aura->m_CFGCacheNamesByMapNames[fileName];
       filesystem::path cfgPath = m_Aura->m_Config.m_MapCachePath / filesystem::path(cfgName);
       shared_ptr<CMap> cachedResult = GetBaseMapFromConfigFile(cfgPath, true, true);
-      if (cachedResult && FileNameEquals(PathToString(cachedResult->GetServerPath()), fileName)) {
+      if (cachedResult &&
+        (
+          cachedResult->GetServerPath() == fileName ||
+          FileNameEquals(PathToString(cachedResult->GetServerPath()), PathToString(fileName))
+        )
+      ) {
         cacheSuccess = true;
       }
       if (cacheSuccess) {
         if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
           Print("[AURA] Map cache success");
         }
-        if (!silent) m_Ctx->SendReply("Loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+        if (!silent) m_Ctx->SendReply("Loaded OK [" + PathToString(fileName) + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
         return cachedResult;
       } else {
         m_Aura->m_CFGCacheNamesByMapNames.erase(fileName);

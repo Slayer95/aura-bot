@@ -6080,7 +6080,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (const auto& fileName : AllMaps) {
         string nameString = PathToString(fileName);
         if (nameString.empty()) continue;
-        if (CommandHash != HashCode("synccfg") && m_Aura->m_CFGCacheNamesByMapNames.find(nameString) != m_Aura->m_CFGCacheNamesByMapNames.end()) {
+        if (CommandHash != HashCode("synccfg") && m_Aura->m_CFGCacheNamesByMapNames.find(fileName) != m_Aura->m_CFGCacheNamesByMapNames.end()) {
           continue;
         }
         if (nameString.find(Payload) == string::npos) {
@@ -6120,7 +6120,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         vector<uint8_t> OutputBytes = MapCFG.Export();
         FileWrite(CFGPath, OutputBytes.data(), OutputBytes.size());
-        m_Aura->m_CFGCacheNamesByMapNames[nameString] = CFGName;
+        m_Aura->m_CFGCacheNamesByMapNames[fileName] = CFGName;
         goodCounter++;
       }
       SendReply("Initialized " + to_string(goodCounter) + " map config files. " + to_string(badCounter) + " invalid maps found.");

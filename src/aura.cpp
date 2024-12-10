@@ -1779,7 +1779,7 @@ void CAura::UpdateCFGCacheEntries()
         string mapString = PathToString(localPath.filename());
         string cfgString = PathToString(cfgName);
         if (mapString.empty() || cfgString.empty()) continue;
-        m_CFGCacheNamesByMapNames[mapString] = cfgString;
+        m_CFGCacheNamesByMapNames[localPath.filename()] = cfgString;
       }
     } catch (...) {
       // filesystem::absolute may throw errors
