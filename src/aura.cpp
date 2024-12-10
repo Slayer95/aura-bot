@@ -2118,7 +2118,7 @@ SharedByteArray CAura::ReadFileCacheable(const std::filesystem::path& filePath, 
   }
 
   SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
-  if (!FileRead(filePath, *(fileContentsPtr.get()), MAX_READ_FILE_SIZE) && !fileContentsPtr->empty()) {
+  if (!FileRead(filePath, *(fileContentsPtr.get()), maxSize) && !fileContentsPtr->empty()) {
     m_CachedFileContents.erase(filePath);
     fileContentsPtr.reset();
     return fileContentsPtr;
