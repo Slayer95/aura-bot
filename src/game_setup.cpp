@@ -696,6 +696,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
 
 shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path& mapPath, const bool silent)
 {
+  filesystem::path fileName = mapPath.filename();
   if (fileName.empty()) return nullptr;
   if (m_Aura->m_Config.m_EnableCFGCache) {
     bool cacheSuccess = false;
