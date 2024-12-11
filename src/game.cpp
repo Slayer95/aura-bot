@@ -4379,6 +4379,7 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
     return;
   }
 
+  bool hideNames = m_IsHiddenPlayerNames || m_Config.m_HideInGameNames != HIDE_IGN_ALWAYS;
   bool IsOwnerName = MatchOwnerName(user->GetName());
   string OwnerFragment;
   if (user->GetIsOwner(nullopt)) {
@@ -4388,7 +4389,7 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
   }
 
   string GProxyFragment;
-  if (m_Aura->m_Net.m_Config.m_AnnounceGProxy && GetIsProxyReconnectable()) {
+  if (m_Aura->m_Net.m_Config.m_AnnounceGProxy && GetIsProxyReconnectable() && !hideNames) {
     if (user->GetGProxyExtended()) {
       GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net.m_Config.m_AnnounceGProxySite + ">";
     } else if (user->GetGProxyAny()) {
@@ -4402,14 +4403,19 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
   
   user->SetStatusMessageSent(true);
   if (OwnerFragment.empty() && GProxyFragment.empty()) {
-    if (m_Aura->m_Net.m_Config.m_AnnounceIPv6 && user->GetUsingIPv6()) {
+    if (m_Aura->m_Net.m_Config.m_AnnounceIPv6 && user->GetUsingIPv6() && !hideNames) {
       SendAllChat(user->GetDisplayName() + " joined the game over IPv6.");
     }
     return;
   }
 
+  if (hideNames) {
+    SendChat(user, "[" + user->GetName() + "]" + OwnerFragment + " joined the game as [" + user->GetDisplayName() + "]");
+    return;
+  }
+
   string IPv6Fragment;
-  if (user->GetUsingIPv6()) {
+  if (user->GetUsingIPv6() && !hideNames) {
     IPv6Fragment = ". (Joined over IPv6).";
   }
   if (!OwnerFragment.empty() && !GProxyFragment.empty()) {
