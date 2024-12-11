@@ -467,13 +467,12 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
   mapEssentials.emplace();
 
-  m_Aura->m_SHA.Reset();
-
   // calculate <map.weak_hash>, and <map.sha1>
   // a big thank you to Strilanc for figuring the <map.weak_hash> algorithm out
 
   bool hashError = false;
   uint32_t weakHashVal = 0;
+  m_Aura->m_SHA.Reset();
 
   string fileContents;
   ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
@@ -539,7 +538,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
         foundScript = true;
       }
 
-      weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
+      weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
       m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     }
 

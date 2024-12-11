@@ -2127,7 +2127,7 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
     if (chunk.start <= start && start < chunk.end) {
       WeakByteArray maybeCachedPtr = chunk.bytes;
       if (!maybeCachedPtr.expired()) {
-        Print("[DEBUG] Reusing cached map data for [" + PathToString(filePath) + "] (" + to_string((chunk.end - chunk.start) / 1024) + " / " + to_string(chunk.fileSize / 1024) + " KB)");
+        //Print("[DEBUG] Reusing cached map data for [" + PathToString(filePath) + ":" + to_string(chunk.start) + "] (" + to_string((chunk.end - chunk.start) / 1024) + " / " + to_string(chunk.fileSize / 1024) + " KB)");
         return FileChunkTransient(chunk);
       }
     }
@@ -2136,13 +2136,13 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
   SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
   size_t fileSize = 0;
   size_t actualReadSize = 0;
-  if (!FileReadPartial(filePath, *(fileContentsPtr.get()), start, end - start, &fileSize, &actualReadSize) && !fileContentsPtr->empty()) {
+  if (!FileReadPartial(filePath, *(fileContentsPtr.get()), start, end - start, &fileSize, &actualReadSize) || fileContentsPtr->empty()) {
     m_CachedFileContents.erase(filePath);
     fileContentsPtr.reset();
     return FileChunkTransient();
   }
 
-  Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + "] (" + to_string(actualReadSize / 1024) + " / " + to_string(fileSize / 1024) + " KB)");
+  Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + ":" + to_string(start) + "] ( " + to_string(actualReadSize / 1024) + " / " + to_string(fileSize / 1024) + " KB)");
   m_CachedFileContents[filePath] = FileChunkCached(fileSize, start, start + actualReadSize, fileContentsPtr);
 
   // Try to dedupe across maps with different names but same content.
@@ -2158,7 +2158,7 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
       continue;
     }
     if (memcmp(otherContentsPtr->data(), fileContentsPtr->data(), fileContentsPtr->size()) == 0) {
-      Print("[DEBUG] Reusing cached " + to_string((otherFileChunk.end - otherFileChunk.start) / 1024) + " KB from [" + PathToString(cacheEntries.first) + "] for [" + PathToString(filePath) + "]");
+      //Print("[DEBUG] Reusing cached " + to_string((otherFileChunk.end - otherFileChunk.start) / 1024) + " KB from [" + PathToString(cacheEntries.first) + "] for [" + PathToString(filePath) + "]");
       //fileContentsPtr = otherContentsPtr;
       m_CachedFileContents[filePath] = FileChunkCached(otherFileChunk.fileSize, otherFileChunk.start, otherFileChunk.end, otherContentsPtr);
       // Iterator is invalid now

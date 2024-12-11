@@ -1278,6 +1278,7 @@ void CGame::UpdateJoinable()
 
   if (Ticks - m_LastDownloadTicks >= 100) {
     uint32_t Downloaders = 0;
+    uint32_t prevDownloadCounter = m_DownloadCounter;
 
     for (auto& user : m_Users) {
       if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
@@ -1326,6 +1327,7 @@ void CGame::UpdateJoinable()
           uint32_t lastOffsetEnd = user->GetLastMapPartSentOffsetEnd();
           const FileChunkTransient cachedChunk = GetMapChunk(lastOffsetEnd);
           if (!cachedChunk.bytes) {
+            DLOG_APP_IF(LOG_LEVEL_TRACE, "Failed to retrieve map chunk from [" + PathToString(m_Map->GetServerPath()) + "]")
             break;
           }
           const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, cachedChunk);
