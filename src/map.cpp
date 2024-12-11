@@ -483,7 +483,6 @@ optional<MapEssentials> CMap::ParseMPQ() const
       Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(commonPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-      Print("weakHashVal = " + to_string(weakHashVal));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
@@ -501,7 +500,6 @@ optional<MapEssentials> CMap::ParseMPQ() const
       Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(blizzardPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-      Print("weakHashVal = " + to_string(weakHashVal));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
@@ -512,9 +510,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
   }
 
   weakHashVal = ROTL(weakHashVal, 3);
-  Print("weakHashVal = " + to_string(weakHashVal));
   weakHashVal = ROTL(weakHashVal ^ 0x03F1379E, 3);
-  Print("weakHashVal = " + to_string(weakHashVal));
   m_Aura->m_SHA.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
 
   if (!hashError) {
@@ -538,12 +534,14 @@ optional<MapEssentials> CMap::ParseMPQ() const
         continue;
 
       ReadFileFromArchive(fileContents, fileName);
-      if (!fileContents.empty() && (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)")) {
+      if (fileContents.empty()) {
+        continue;
+      }
+      if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
         foundScript = true;
       }
 
       weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
-      Print("weakHashVal = " + to_string(weakHashVal));
       m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     }
 
@@ -1207,7 +1205,7 @@ bool CMap::TryLoadMapFile()
   }
   m_MapFileContents = m_Aura->ReadFileCacheable(resolvedPath, MAX_READ_FILE_SIZE);
   if (!HasMapFileContents()) {
-    PRINT_IF(LOG_LEVEL_INFO, "Failed to read map [" + PathToString(resolvedPath) + "]")
+    PRINT_IF(LOG_LEVEL_INFO, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
     return false;
   }
   return true;

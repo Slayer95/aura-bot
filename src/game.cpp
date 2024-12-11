@@ -5430,7 +5430,6 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
 
   if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != MapSize) {
     // the user doesn't have the map
-
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
     bool ShouldTransferMap = (
       m_Map->GetMapFileIsValid() && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
@@ -5490,7 +5489,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
     EventUserMapReady(user);
   }
 
-  uint8_t       NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / MapSize * 100.f);
+  uint8_t NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / MapSize * 100.f);
   if (NewDownloadStatus > 100) {
     NewDownloadStatus = 100;
   }
