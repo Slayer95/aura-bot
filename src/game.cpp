@@ -4847,6 +4847,8 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
     if (!user->HasLeftReason()) {
       user->SetLeftReason("Leaving the game voluntarily");
       user->SetLeftCode(PLAYERLEAVE_LOST);
+    } else if (user->GetLeftReason().size() > 10 && user->GetLeftReason().substr(0, 10) == "autokicked") {
+      user->SetLeftReason("left" + user->GetLeftReason().substr(10));
     }
     user->SetIsLeaver(true);
   }
@@ -7740,7 +7742,7 @@ void CGame::ReportSpoofed(const string& server, GameUser::CGameUser* user)
   }
   if (GetIsLobbyStrict() && MatchOwnerName(user->GetName())) {
     if (!user->HasLeftReason()) {
-      user->SetLeftReason("was autokicked for spoofing the game owner");
+      user->SetLeftReason("autokicked - spoofing the game owner");
     }
     user->CloseConnection();
   }
