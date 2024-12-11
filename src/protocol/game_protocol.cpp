@@ -703,7 +703,7 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start_abs, const FileChunkTransient& mapFileChunk)
   {
-    if (mapFileChunk.start > start_abs) {
+    if (mapFileChunk.start > start_abs || !mapFileChunk.bytes) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART (L707)");
       return std::vector<uint8_t>();
     }

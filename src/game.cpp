@@ -1324,10 +1324,14 @@ void CGame::UpdateJoinable()
           }
 
           uint32_t lastOffsetEnd = user->GetLastMapPartSentOffsetEnd();
-          const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, GetMapChunk(lastOffsetEnd));
-          uint32_t chunkSize = static_cast<uint32_t>(packet.size() - 18);
-          user->SetLastMapPartSentOffsetEnd(lastOffsetEnd + chunkSize);
-          m_DownloadCounter += chunkSize;
+          const FileChunkTransient cachedChunk = GetMapChunk(lastOffsetEnd);
+          if (!cachedChunk.bytes) {
+            break;
+          }
+          const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, cachedChunk);
+          uint32_t chunkSendSize = static_cast<uint32_t>(packet.size() - 18);
+          user->SetLastMapPartSentOffsetEnd(lastOffsetEnd + chunkSendSize);
+          m_DownloadCounter += chunkSendSize;
           Send(user, packet);
         }
       }
@@ -6244,9 +6248,6 @@ void CGame::Remake()
   m_BeforePlayingEmptyActions = 0;
 
   m_HostCounter = m_Aura->NextHostCounter();
-  if (m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
-    m_Map->TryReloadMapFile();
-  }
   InitPRNG();
   InitSlots();
 

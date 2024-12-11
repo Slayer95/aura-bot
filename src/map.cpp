@@ -1188,7 +1188,7 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  //ClearMapFileContents();
+  ClearMapFileContents();
 }
 
 bool CMap::TryLoadMapFile()
@@ -1240,7 +1240,7 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
       resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
     }
     // Load up to 8 MB at a time
-    return m_Aura->ReadFileChunkCacheable(resolvedPath, start, start + 0x1000000);
+    return m_Aura->ReadFileChunkCacheable(resolvedPath, start, start + 0x800000);
   }
 }
 
