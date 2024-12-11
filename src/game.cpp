@@ -5455,8 +5455,8 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
           // Even if manual, claim they are disabled.
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
         } else if (
-          m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames ||
-          !(m_Aura->m_StartedGames.empty() && m_Aura->m_Net.m_Config.m_HasBufferBloat)
+          (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) ||
+          (!m_Aura->m_StartedGames.empty() && m_Aura->m_Net.m_Config.m_HasBufferBloat)
         ) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
