@@ -1239,7 +1239,7 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
     if (m_MapServerPath.filename() == m_MapServerPath && !m_UseStandardPaths) {
       resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
     }
-    // Load up to 16 MB at a time
+    // Load up to 8 MB at a time
     return m_Aura->ReadFileChunkCacheable(resolvedPath, start, start + 0x1000000);
   }
 }
