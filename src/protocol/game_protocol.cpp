@@ -752,7 +752,7 @@ namespace GameProtocol
     }
 
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::MAPPART, 0, 0, toUID, fromUID, 1, 0, 0, 0};
-    AppendByteArray(packet, start, false); // start position
+    AppendByteArray(packet, static_cast<uint32_t>(start), false); // start position
 
     // calculate end position (don't send more than 1442 map bytes in one packet)
 
