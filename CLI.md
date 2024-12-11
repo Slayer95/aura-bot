@@ -1154,7 +1154,7 @@ By customizing this parameter, players names may effectively be hidden or reveal
 
 - never: Players names are revealed.
 - host: Players names are hidden in the output of many commands and status reports.
-- always: Players names are hidden  in the output of many commands and status reports. Additionally, 
+- always: Players names are hidden in the output of many commands and status reports. Additionally, 
 when used together with --hide-ign, any hosted map will also be unaware of the identities of non-local 
 players. When used this way, games running certain maps may desync.
 - auto: This is the default. Players names are obfuscated in FFA games where there are 3 or more players.

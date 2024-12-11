@@ -309,12 +309,12 @@ uint8_t CCLI::GetGameLobbyTimeoutMode() const
 uint8_t CCLI::GetGameLobbyOwnerTimeoutMode() const
 {
   uint8_t timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
-  if (m_GameLobbyTimeoutMode.has_value()) {
-    if (m_GameLobbyTimeoutMode.value() == "never") {
+  if (m_GameLobbyOwnerTimeoutMode.has_value()) {
+    if (m_GameLobbyOwnerTimeoutMode.value() == "never") {
       timeoutMode = LOBBY_OWNER_TIMEOUT_NEVER;
-    } else if (m_GameLobbyTimeoutMode.value() == "absent") {
+    } else if (m_GameLobbyOwnerTimeoutMode.value() == "absent") {
       timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
-    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
+    } else if (m_GameLobbyOwnerTimeoutMode.value() == "strict") {
       timeoutMode = LOBBY_OWNER_TIMEOUT_STRICT;
     } else {
       timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
@@ -326,10 +326,10 @@ uint8_t CCLI::GetGameLobbyOwnerTimeoutMode() const
 uint8_t CCLI::GetGameLoadingTimeoutMode() const
 {
   uint8_t timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
-  if (m_GameLobbyTimeoutMode.has_value()) {
-    if (m_GameLobbyTimeoutMode.value() == "never") {
+  if (m_GameLoadingTimeoutMode.has_value()) {
+    if (m_GameLoadingTimeoutMode.value() == "never") {
       timeoutMode = GAME_LOADING_TIMEOUT_NEVER;
-    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
+    } else if (m_GameLoadingTimeoutMode.value() == "strict") {
       timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
     } else {
       timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
@@ -341,12 +341,12 @@ uint8_t CCLI::GetGameLoadingTimeoutMode() const
 uint8_t CCLI::GetGamePlayingTimeoutMode() const
 {
   uint8_t timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
-  if (m_GameLobbyTimeoutMode.has_value()) {
-    if (m_GameLobbyTimeoutMode.value() == "never") {
+  if (m_GamePlayingTimeoutMode.has_value()) {
+    if (m_GamePlayingTimeoutMode.value() == "never") {
       timeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
-    } else if (m_GameLobbyTimeoutMode.value() == "dry") {
+    } else if (m_GamePlayingTimeoutMode.value() == "dry") {
       timeoutMode = GAME_PLAYING_TIMEOUT_DRY;
-    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
+    } else if (m_GamePlayingTimeoutMode.value() == "strict") {
       timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
     } else {
       timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
@@ -441,14 +441,14 @@ uint8_t CCLI::GetGameBroadcastErrorHandler() const
 uint8_t CCLI::GetGameHideLoadedNames() const
 {
   uint8_t hideNamesMode = HIDE_IGN_AUTO;
-  if (m_GameUnsafeNameHandler.has_value()) {
-    if (m_GameUnsafeNameHandler.value() == "never") {
+  if (m_GameHideLoadedNames.has_value()) {
+    if (m_GameHideLoadedNames.value() == "never") {
       hideNamesMode = HIDE_IGN_NEVER;
-    } else if (m_GameUnsafeNameHandler.value() == "host") {
+    } else if (m_GameHideLoadedNames.value() == "host") {
       hideNamesMode = HIDE_IGN_HOST;
-    } else if (m_GameUnsafeNameHandler.value() == "always") {
+    } else if (m_GameHideLoadedNames.value() == "always") {
       hideNamesMode = HIDE_IGN_ALWAYS;
-    } else if (m_GameUnsafeNameHandler.value() == "auto") {
+    } else if (m_GameHideLoadedNames.value() == "auto") {
       hideNamesMode = HIDE_IGN_AUTO;
     }
   }
