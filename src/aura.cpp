@@ -1206,21 +1206,7 @@ bool CAura::Update()
   }
 
   // house-keeping
-  {
-    auto it = m_ActiveContexts.rbegin();
-    auto itEnd = m_ActiveContexts.rend();
-    while (it != itEnd) {
-      if (it->expired()) {
-        it = vector<weak_ptr<CCommandContext>>::reverse_iterator(m_ActiveContexts.erase((++it).base()));
-      } else {
-        ++it;
-      }
-    }
-
-    if (m_ActiveContexts.size() > 5) {
-      Print("[DEBUG] weak_ptr<CCommandContext> leak detected (m_ActiveContexts size is " + to_string(m_ActiveContexts.size()) + ")");
-    }
-  }
+  ClearStaleContexts();
 
   return m_Exiting;
 }
@@ -1787,6 +1773,36 @@ void CAura::UpdateCFGCacheEntries()
   }
 }
 
+void CAura::ClearStaleContexts()
+{
+  auto it = m_ActiveContexts.rbegin();
+  auto itEnd = m_ActiveContexts.rend();
+  while (it != itEnd) {
+    if (it->expired()) {
+      it = vector<weak_ptr<CCommandContext>>::reverse_iterator(m_ActiveContexts.erase((++it).base()));
+    } else {
+      ++it;
+    }
+  }
+
+  if (m_ActiveContexts.size() > 5) {
+    Print("[DEBUG] weak_ptr<CCommandContext> leak detected (m_ActiveContexts size is " + to_string(m_ActiveContexts.size()) + ")");
+  }
+}
+
+void CAura::ClearStaleFileChunks()
+{
+  vector<filesystem::path> staleCacheKeys;
+  for (const auto& cacheEntries : m_CachedFileContents) {
+    if (cacheEntries.second.bytes.expired()) {
+      staleCacheKeys.push_back(cacheEntries.first);
+    }
+  }
+  for (const auto& staleCacheKey : staleCacheKeys) {
+    m_CachedFileContents.erase(staleCacheKey);
+  }
+}
+
 void CAura::LogPersistent(const string& logText)
 {
   ofstream writeStream;
@@ -2149,6 +2165,9 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
       break;
     }
   }
+
+  // Prevent the cache from being filled with stale chunk data
+  ClearStaleFileChunks();
 
   return FileChunkTransient(m_CachedFileContents[filePath]);
 }

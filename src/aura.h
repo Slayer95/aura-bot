@@ -219,7 +219,9 @@ public:
   [[nodiscard]] FileChunkTransient ReadFileChunkCacheable(const std::filesystem::path& filePath, const size_t start, const size_t end)/* noexcept*/;
   [[nodiscard]] SharedByteArray ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)/* noexcept*/;
   void UpdateCFGCacheEntries();
-  
+
+  void ClearStaleContexts();
+  void ClearStaleFileChunks();
   
   inline bool MatchLogLevel(const uint8_t logLevel) { return logLevel <= m_LogLevel; } // 1: emergency ... 9: trace
   void LogPersistent(const std::string& logText);
