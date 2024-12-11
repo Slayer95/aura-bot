@@ -49,6 +49,7 @@
 #include "game_protocol.h"
 #include <crc32/crc32.h>
 #include "../util.h"
+#include "../file_util.h"
 #include "../game_user.h"
 #include "../game_slot.h"
 #include "../game.h"
@@ -700,7 +701,50 @@ namespace GameProtocol
     return std::vector<uint8_t>{GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::STARTDOWNLOAD, 9, 0, 1, 0, 0, 0, fromUID};
   }
 
-  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, uint32_t start, const SharedByteArray& mapFileContents)
+  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start_abs, const FileChunkTransient& mapFileChunk)
+  {
+    if (mapFileChunk.start > start_abs) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART (L707)");
+      return std::vector<uint8_t>();
+    }
+
+    size_t max_end_abs = mapFileChunk.start + mapFileChunk.bytes->size();
+    if (max_end_abs <= start_abs) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART (L707)");
+      return std::vector<uint8_t>();
+    }
+
+    // calculate end position (don't send more than 1442 map bytes in one packet)
+    size_t end_abs = start_abs + 1442;
+    if (max_end_abs < end_abs) {
+      end_abs = max_end_abs;
+    }
+
+    if (end_abs < start_abs) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART (L718)");
+      return std::vector<uint8_t>();
+    }
+
+    size_t start_rel = start_abs - mapFileChunk.start;
+    size_t end_rel = end_abs - mapFileChunk.start;
+
+    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::MAPPART, 0, 0, toUID, fromUID, 1, 0, 0, 0}; // 10 bytes
+    AppendByteArray(packet, static_cast<uint32_t>(start_abs), false); // start position, 4 bytes
+
+    // calculate crc
+
+    const std::vector<uint8_t> crc32 = CreateByteArray(CRC32::CalculateCRC(mapFileChunk.bytes->data() + start_rel, (uint32_t)(end_rel - start_rel)), false);
+    AppendByteArrayFast(packet, crc32);
+
+    // map data
+
+    const std::vector<uint8_t> data = CreateByteArray(mapFileChunk.bytes->data() + start_rel, (uint32_t)(end_rel - start_rel));
+    AppendByteArrayFast(packet, data);
+    AssignLength(packet);
+    return packet;
+  }
+
+  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const SharedByteArray& mapFileContents)
   {
     if (!mapFileContents || mapFileContents->size() < start) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART");

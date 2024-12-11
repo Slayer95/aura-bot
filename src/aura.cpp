@@ -2103,47 +2103,59 @@ uint32_t CAura::NextServerID()
   return m_LastServerID;
 }
 
-SharedByteArray CAura::ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)
+FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& filePath, const size_t start, const size_t end)
 {
   auto it = m_CachedFileContents.find(filePath);
   if (it != m_CachedFileContents.end()) {
-    WeakByteArray maybeCachedPtr = it->second;
-    if (!maybeCachedPtr.expired()) {
-      Print("[DEBUG] Reusing cached map data for [" + PathToString(filePath) + "]");
-      return maybeCachedPtr.lock();
+    const FileChunkCached& chunk = it->second;
+    if (chunk.start <= start && start < chunk.end) {
+      WeakByteArray maybeCachedPtr = chunk.bytes;
+      if (!maybeCachedPtr.expired()) {
+        Print("[DEBUG] Reusing cached map data for [" + PathToString(filePath) + "] (" + to_string((chunk.end - chunk.start) / 1024) + " / " + to_string(chunk.fileSize / 1024) + " KB)");
+        return FileChunkTransient(chunk);
+      }
     }
   }
 
   SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
-  if (!FileRead(filePath, *(fileContentsPtr.get()), maxSize) && !fileContentsPtr->empty()) {
+  size_t fileSize = 0;
+  size_t actualReadSize = 0;
+  if (!FileReadPartial(filePath, *(fileContentsPtr.get()), start, end - start, &fileSize, &actualReadSize) && !fileContentsPtr->empty()) {
     m_CachedFileContents.erase(filePath);
     fileContentsPtr.reset();
-    return fileContentsPtr;
+    return FileChunkTransient();
   }
 
-  Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + "]");
-  m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
+  Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + "] (" + to_string(actualReadSize / 1024) + " / " + to_string(fileSize / 1024) + " KB)");
+  m_CachedFileContents[filePath] = FileChunkCached(fileSize, start, start + actualReadSize, fileContentsPtr);
 
   // Try to dedupe across maps with different names but same content.
   for (const auto& cacheEntries : m_CachedFileContents) {
     if (cacheEntries.first == filePath) continue;
-    WeakByteArray maybeCachedPtr = cacheEntries.second;
-    if (!maybeCachedPtr.expired()) {
-      SharedByteArray otherFileContents = maybeCachedPtr.lock();
-      if (otherFileContents->size() != fileContentsPtr->size()) {
-        continue;
-      }
-      if (memcmp(otherFileContents->data(), fileContentsPtr->data(), fileContentsPtr->size()) == 0) {
-        Print("[DEBUG] Reusing cached map contents from [" + PathToString(cacheEntries.first) + "] for [" + PathToString(filePath) + "]");
-        fileContentsPtr = otherFileContents;
-        m_CachedFileContents[filePath] = WeakByteArray(fileContentsPtr);
-        // Iterator is invalid now
-        break;
-      }
+    const FileChunkCached& otherFileChunk = cacheEntries.second;
+    WeakByteArray maybeCachedPtr = otherFileChunk.bytes;
+    if (maybeCachedPtr.expired()) {
+      continue;
+    }
+    SharedByteArray otherContentsPtr = maybeCachedPtr.lock();
+    if (otherContentsPtr->size() != fileContentsPtr->size()) {
+      continue;
+    }
+    if (memcmp(otherContentsPtr->data(), fileContentsPtr->data(), fileContentsPtr->size()) == 0) {
+      Print("[DEBUG] Reusing cached " + to_string((otherFileChunk.end - otherFileChunk.start) / 1024) + " KB from [" + PathToString(cacheEntries.first) + "] for [" + PathToString(filePath) + "]");
+      //fileContentsPtr = otherContentsPtr;
+      m_CachedFileContents[filePath] = FileChunkCached(otherFileChunk.fileSize, otherFileChunk.start, otherFileChunk.end, otherContentsPtr);
+      // Iterator is invalid now
+      break;
     }
   }
 
-  return fileContentsPtr;
+  return FileChunkTransient(m_CachedFileContents[filePath]);
+}
+
+SharedByteArray CAura::ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)
+{
+  return ReadFileChunkCacheable(filePath, 0, 0xFFFFFFFF).bytes;
 }
 
 string CAura::GetSudoAuthPayload(const string& payload)

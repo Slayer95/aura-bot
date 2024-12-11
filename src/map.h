@@ -168,6 +168,7 @@ private:
   std::string                     m_MapSiteURL;
   std::string                     m_MapShortDesc;
   SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
+  bool                            m_MapFileIsValid;
   bool                            m_MapLoaderIsPartial;
   uint32_t                        m_MapLocale;
   uint32_t                        m_MapOptions;
@@ -221,6 +222,7 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapFlags() const { return m_GameFlags; }
   [[nodiscard]] uint32_t                          GetGameConvertedFlags() const;
   [[nodiscard]] uint32_t                          GetMapGameType() const;
+  [[nodiscard]] inline uint32_t                   GetMapLocale() const { return m_MapLocale; }
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapMinGameVersion() const { return m_MapMinGameVersion; }
   [[nodiscard]] inline uint8_t                    GetMapMinSuggestedGameVersion() const { return m_MapMinSuggestedGameVersion; }
@@ -234,6 +236,7 @@ public:
   [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
+  [[nodiscard]] inline bool                       GetMapFileIsValid() const { return m_MapFileIsValid; }
   [[nodiscard]] inline const SharedByteArray&     GetMapFileContents() { return m_MapFileContents; }
   [[nodiscard]] inline bool                       HasMapFileContents() const { return m_MapFileContents != nullptr && !m_MapFileContents->empty(); }
   [[nodiscard]] bool                              GetMapFileIsFromManagedFolder() const;
@@ -276,6 +279,7 @@ public:
 
   bool                                            TryLoadMapFile();
   bool                                            TryReloadMapFile();
+  FileChunkTransient                              GetMapFileChunk(size_t start);
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 };

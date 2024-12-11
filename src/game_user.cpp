@@ -83,7 +83,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
     m_JoinTicks(GetTicks()),
-    m_LastMapPartSent(0),
+    m_LastMapPartSentOffsetEnd(0),
     m_LastMapPartAcked(0),
     m_StartedDownloadingTicks(0),
     m_FinishedDownloadingTime(0),

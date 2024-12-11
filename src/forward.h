@@ -98,6 +98,8 @@ struct CQueuedActionsFrame;
 struct CIncomingVLanGameInfo;
 struct CIncomingVLanSearchGame;
 
+struct FileChunkCached;
+struct FileChunkTransient;
 struct UDPPkt;
 
 template <typename T>

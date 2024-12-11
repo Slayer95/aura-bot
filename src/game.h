@@ -253,6 +253,7 @@ protected:
   uint8_t                                                m_BufferingEnabled;
   uint32_t                                               m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
 
+  SharedByteArray                                        m_LoadedMapChunk;
   std::vector<uint8_t>                                   m_LobbyBuffer;
   std::vector<uint8_t>                                   m_SlotsBuffer;
   std::vector<uint8_t>                                   m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
@@ -600,6 +601,12 @@ public:
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;
+
+  // Map transfer
+  inline SharedByteArray    GetLoadedMapChunk() { return m_LoadedMapChunk; }
+  void                      SetLoadedMapChunk(SharedByteArray nLoadedMapChunk) { m_LoadedMapChunk = nLoadedMapChunk; }
+  void                      ClearLoadedMapChunk() { m_LoadedMapChunk.reset(); }
+  FileChunkTransient        GetMapChunk(size_t start);
 
   // Slot manipulation
 

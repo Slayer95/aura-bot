@@ -136,7 +136,7 @@ public:
 
   std::map<std::filesystem::path, std::string>       m_CFGCacheNamesByMapNames;
   std::map<std::filesystem::path, TimedUint16>       m_MapFilesTimedBusyLocks;
-  std::map<std::filesystem::path, WeakByteArray>     m_CachedFileContents;
+  std::map<std::filesystem::path, FileChunkCached>   m_CachedFileContents;
   std::map<std::string, std::string>                 m_LastMapIdentifiersFromSuggestions;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
@@ -216,6 +216,7 @@ public:
   void UpdateWindowTitle();
   void UpdateMetaData();
 
+  [[nodiscard]] FileChunkTransient ReadFileChunkCacheable(const std::filesystem::path& filePath, const size_t start, const size_t end)/* noexcept*/;
   [[nodiscard]] SharedByteArray ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)/* noexcept*/;
   void UpdateCFGCacheEntries();
   

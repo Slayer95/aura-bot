@@ -1303,25 +1303,32 @@ void CGame::UpdateJoinable()
 
         const uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
-        while (user->GetLastMapPartSent() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets && user->GetLastMapPartSent() < MapSize)
-        {
-          if (user->GetLastMapPartSent() == 0)
-          {
-            // overwrite the "started download ticks" since this is the first time we've sent any map data to the user
-            // prior to this we've only determined if the user needs to download the map but it's possible we could have delayed sending any data due to download limits
+        if (user->GetLastMapPartSentOffsetEnd() == 0 && (
+            user->GetLastMapPartSentOffsetEnd() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
+            user->GetLastMapPartSentOffsetEnd() < MapSize
+          )
+        ) {
+          // overwrite the "started download ticks" since this is the first time we've sent any map data to the user
+          // prior to this we've only determined if the user needs to download the map but it's possible we could have delayed sending any data due to download limits
 
-            user->SetStartedDownloadingTicks(Ticks);
+          user->SetStartedDownloadingTicks(Ticks);
+        }
+        while (
+          user->GetLastMapPartSentOffsetEnd() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
+          user->GetLastMapPartSentOffsetEnd() < MapSize
+        ) {
+          if (m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024) {
+            // limit the download speed if we're sending too much data
+            // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
+            break;
           }
 
-          // limit the download speed if we're sending too much data
-          // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
-
-          if (m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024)
-            break;
-
-          Send(user, GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), user->GetLastMapPartSent(), m_Map->GetMapFileContents()));
-          user->SetLastMapPartSent(user->GetLastMapPartSent() + 1442);
-          m_DownloadCounter += 1442;
+          uint32_t lastOffsetEnd = user->GetLastMapPartSentOffsetEnd();
+          const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, GetMapChunk(lastOffsetEnd));
+          uint32_t chunkSize = static_cast<uint32_t>(packet.size() - 18);
+          user->SetLastMapPartSentOffsetEnd(lastOffsetEnd + chunkSize);
+          m_DownloadCounter += chunkSize;
+          Send(user, packet);
         }
       }
     }
@@ -5416,10 +5423,9 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
   if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != MapSize) {
     // the user doesn't have the map
 
-    bool IsMapAvailable = m_Map->HasMapFileContents() && !m_Map->HasMismatch();
     bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
     bool ShouldTransferMap = (
-      IsMapAvailable && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
+      m_Map->GetMapFileIsValid() && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
       (user->GetDownloadAllowed() || (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
       (m_Aura->m_StartedGames.size() < m_Aura->m_Config.m_MaxStartedGames) &&
       (m_Aura->m_StartedGames.empty() || !m_Aura->m_Net.m_Config.m_HasBufferBloat)
@@ -5444,14 +5450,17 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
         } else if (m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
           // Even if manual, claim they are disabled.
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-        } else if (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames || (m_Aura->m_StartedGames.size() > 0 && m_Aura->m_Net.m_Config.m_HasBufferBloat)) {
+        } else if (
+          m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames ||
+          !(m_Aura->m_StartedGames.empty() && m_Aura->m_Net.m_Config.m_HasBufferBloat)
+        ) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
         } else if (IsMapTooLarge) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
-        } else if (!m_Map->HasMapFileContents()) {
-          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
-        } else {
+        } else if (m_Map->HasMismatch()) {
           user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");
+        } else if (!m_Map->GetMapFileIsValid()) {
+          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
         }
       }
       if (GetMapSiteURL().empty()) {
@@ -5821,6 +5830,7 @@ void CGame::EventGameStartedLoading()
   m_ReconnectProtocols = CalcActiveReconnectProtocols();
 
   // release map data from memory
+  ClearLoadedMapChunk();
   m_Map->ClearMapFileContents();
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
@@ -6828,6 +6838,14 @@ uint8_t CGame::GetHostUID() const
   } else {
     return GetPublicHostUID();
   }
+}
+
+FileChunkTransient CGame::GetMapChunk(size_t start)
+{
+  FileChunkTransient chunk = m_Map->GetMapFileChunk(start);
+  // Ensure the SharedByteArray isn't deallocated
+  SetLoadedMapChunk(chunk.bytes);
+  return chunk;
 }
 
 CGameSlot* CGame::GetSlot(const uint8_t SID)

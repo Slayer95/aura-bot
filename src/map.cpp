@@ -69,6 +69,7 @@ using namespace std;
 CMap::CMap(CAura* nAura, CConfig* CFG)
   : m_Aura(nAura),
     m_MapServerPath(CFG->GetPath("map.local_path", filesystem::path())),
+    m_MapFileIsValid(false),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)),
     m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapOptions(0),
@@ -1001,6 +1002,8 @@ void CMap::Load(CConfig* CFG)
   if (HasMismatch()) {
     m_MapContentMismatch.swap(mapContentMismatch);
     PRINT_IF(LOG_LEVEL_WARNING, "[CACHE] error - map content mismatch");
+  } else if (crc32.has_value()) {
+    m_MapFileIsValid = true;
   }
 
   if (CFG->Exists("map.filter_type")) {
@@ -1184,6 +1187,8 @@ void CMap::Load(CConfig* CFG)
       m_MapLoaderIsPartial = false;
     }
   }
+
+  //ClearMapFileContents();
 }
 
 bool CMap::TryLoadMapFile()
@@ -1221,6 +1226,22 @@ bool CMap::TryReloadMapFile()
   }
 
   return true;
+}
+
+FileChunkTransient CMap::GetMapFileChunk(size_t start)
+{
+  if (HasMapFileContents()) {
+    return FileChunkTransient(0, GetMapFileContents());
+  } else if (m_MapServerPath.empty()) {
+    return FileChunkTransient(0, SharedByteArray());
+  } else {
+    filesystem::path resolvedPath(m_MapServerPath);
+    if (m_MapServerPath.filename() == m_MapServerPath && !m_UseStandardPaths) {
+      resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
+    }
+    // Load up to 16 MB at a time
+    return m_Aura->ReadFileChunkCacheable(resolvedPath, start, start + 0x1000000);
+  }
 }
 
 bool CMap::UnlinkFile()

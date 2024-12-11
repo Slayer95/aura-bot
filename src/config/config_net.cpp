@@ -213,10 +213,10 @@ CNetConfig::CNetConfig(CConfig& CFG)
   m_DownloadTimeout              = CFG.GetUint32("hosting.map_downloads.timeout", 15000);
   m_MapRepositories              = CFG.GetSetInsensitive("hosting.map_downloads.repositories", ',', {"epicwar", "wc3maps"});
   m_AllowTransfers               = CFG.GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
-  m_MaxDownloaders               = CFG.GetInt("hosting.map_transfers.max_players", 3);
-  m_MaxUploadSize                = CFG.GetInt("hosting.map_transfers.max_size", 8192);
-  m_MaxUploadSpeed               = CFG.GetInt("hosting.map_transfers.max_speed", 1024);
-  m_MaxParallelMapPackets        = CFG.GetInt("hosting.map_transfers.max_parallel_packets", 1000);
+  m_MaxDownloaders               = CFG.GetUint32("hosting.map_transfers.max_players", 3);
+  m_MaxUploadSize                = CFG.GetUint32("hosting.map_transfers.max_size", 8192);
+  m_MaxUploadSpeed               = CFG.GetUint32("hosting.map_transfers.max_speed", 1024);
+  m_MaxParallelMapPackets        = CFG.GetUint32("hosting.map_transfers.max_parallel_packets", 1000);
   m_HasBufferBloat               = CFG.GetBool("net.has_buffer_bloat", false);
 
   m_AnnounceGProxy               = CFG.GetBool("net.tcp_extensions.gproxy.announce_chat", true);

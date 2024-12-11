@@ -56,6 +56,45 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 
 using namespace std;
 
+//
+// FileChunkCached
+//
+
+FileChunkCached::FileChunkCached()
+ : fileSize(0),
+   start(0),
+   end(0)
+{
+};
+FileChunkCached::FileChunkCached(size_t nFileSize, size_t nStart, size_t nEnd, SharedByteArray nBytes)
+ : fileSize(nFileSize),
+   start(nStart),
+   end(nEnd),
+   bytes(nBytes)
+{
+};
+
+//
+// FileChunkTransient
+//
+
+FileChunkTransient::FileChunkTransient()
+ : start(0)
+{
+};
+
+FileChunkTransient::FileChunkTransient(size_t nStart, SharedByteArray nBytes)
+ : start(nStart),
+   bytes(nBytes)
+{
+};
+
+FileChunkTransient::FileChunkTransient(const FileChunkCached& cached)
+ : start(cached.start),
+   bytes(cached.bytes.lock())
+{
+};
+
 bool FileExists(const filesystem::path& file)
 {
   error_code ec;

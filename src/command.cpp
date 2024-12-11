@@ -3258,8 +3258,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      bool IsMapAvailable = m_TargetGame->GetMap()->HasMapFileContents() && !m_TargetGame->GetMap()->HasMismatch();
-      if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER || !IsMapAvailable || m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) {
+      if (
+        m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER ||
+        !m_TargetGame->GetMap()->GetMapFileIsValid() ||
+        m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames
+      ) {
         if (m_TargetGame->GetMapSiteURL().empty()) {
           ErrorAll("Cannot transfer the map.");
         } else {

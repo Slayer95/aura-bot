@@ -88,7 +88,7 @@ namespace GameUser
     uint32_t                         m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
     uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
     int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
-    uint32_t                         m_LastMapPartSent;              // the last mappart sent to the player (for sending more than one part at a time)
+    uint32_t                         m_LastMapPartSentOffsetEnd;     // the last mappart sent to the player (for sending more than one part at a time)
     uint32_t                         m_LastMapPartAcked;             // the last mappart acknowledged by the player
     int64_t                          m_StartedDownloadingTicks;      // GetTicks when the player started downloading the map
     int64_t                          m_FinishedDownloadingTime;      // GetTime when the player finished downloading the map
@@ -205,7 +205,7 @@ namespace GameUser
     [[nodiscard]] inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
     [[nodiscard]] bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
     [[nodiscard]] inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
-    [[nodiscard]] inline uint32_t              GetLastMapPartSent() const { return m_LastMapPartSent; }
+    [[nodiscard]] inline uint32_t              GetLastMapPartSentOffsetEnd() const { return m_LastMapPartSentOffsetEnd; }
     [[nodiscard]] inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
     [[nodiscard]] inline int64_t               GetStartedDownloadingTicks() const { return m_StartedDownloadingTicks; }
     [[nodiscard]] inline int64_t               GetFinishedDownloadingTime() const { return m_FinishedDownloadingTime; }
@@ -285,7 +285,7 @@ namespace GameUser
     inline void SetSyncCounter(uint32_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
     inline void AddSyncCounterOffset(const uint32_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
-    inline void SetLastMapPartSent(uint32_t nLastMapPartSent) { m_LastMapPartSent = nLastMapPartSent; }
+    inline void SetLastMapPartSentOffsetEnd(uint32_t nLastMapPartSentOffsetEnd) { m_LastMapPartSentOffsetEnd = nLastMapPartSentOffsetEnd; }
     inline void SetLastMapPartAcked(uint32_t nLastMapPartAcked) { m_LastMapPartAcked = nLastMapPartAcked; }
     inline void SetStartedDownloadingTicks(uint64_t nStartedDownloadingTicks) { m_StartedDownloadingTicks = nStartedDownloadingTicks; }
     inline void SetFinishedDownloadingTime(uint64_t nFinishedDownloadingTime) { m_FinishedDownloadingTime = nFinishedDownloadingTime; }

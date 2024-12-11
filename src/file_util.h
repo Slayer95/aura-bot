@@ -70,6 +70,29 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #include <limits.h>
 #endif
 
+struct FileChunkCached
+{
+  size_t fileSize;
+  size_t start;
+  size_t end;
+  WeakByteArray bytes;
+
+  FileChunkCached();
+  FileChunkCached(size_t nFileSize, size_t nStart, size_t nEnd, SharedByteArray nBytes);
+  ~FileChunkCached() = default;
+};
+
+struct FileChunkTransient
+{
+  size_t start;
+  SharedByteArray bytes;
+
+  FileChunkTransient();
+  FileChunkTransient(size_t nStart, SharedByteArray nBytes);
+  FileChunkTransient(const FileChunkCached& cached);
+  ~FileChunkTransient() = default;
+};
+
 [[nodiscard]] bool FileExists(const std::filesystem::path& file);
 [[nodiscard]] PLATFORM_STRING_TYPE GetFileName(const PLATFORM_STRING_TYPE& inputPath);
 [[nodiscard]] PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
@@ -117,6 +140,54 @@ template <typename Container>
       container.shrink_to_fit();
     } catch (...) {}
     Print("[FILE] error - stream failed to read all data from file [" + PathToString(filePath) + "]");
+    return false;
+  }
+  return true;
+}
+
+template <typename Container>
+[[nodiscard]] bool FileReadPartial(const std::filesystem::path& filePath, Container& container, const size_t start, size_t maxReadSize, size_t* fileSize, size_t* actualReadSize) noexcept
+{
+  std::ifstream IS;
+  container.clear();
+  IS.open(filePath.native().c_str(), std::ios::binary | std::ios::in);
+
+  if (IS.fail())  {
+    Print("[FILE] warning - unable to read file [" + PathToString(filePath) + "]");
+    return false;
+  }
+
+  // get length of file
+  IS.seekg(0, std::ios::end);
+  *fileSize = static_cast<long unsigned int>(IS.tellg());
+  if (start >= *fileSize) {
+    Print("[FILE] error - cannot read pos (" + to_string(start) + " >= " + to_string(*fileSize) + ") from file [" + PathToString(filePath) + "]");
+    return false;
+  }
+  if (maxReadSize > *fileSize - start) {
+    maxReadSize = *fileSize - start;
+  }
+
+  // read data
+  IS.seekg(start, std::ios::beg);
+  try {
+    container.reserve(maxReadSize);
+    container.resize(maxReadSize);
+  } catch (...) {
+    container.clear();
+    try {
+      container.shrink_to_fit();
+    } catch (...) {}
+    Print("[FILE] error - insufficient memory for loading " + to_string(maxReadSize / 1024) + " KB chunk from file [" + PathToString(filePath) + "]");
+    return false;
+  }
+  IS.read(reinterpret_cast<char*>(container.data()), maxReadSize);
+  if (IS.gcount() < maxReadSize) {
+    container.clear();
+    try {
+      container.shrink_to_fit();
+    } catch (...) {}
+    Print("[FILE] error - stream failed to read all data (" + to_string(maxReadSize / 1024) + " KB) from file [" + PathToString(filePath) + "]");
     return false;
   }
   return true;
