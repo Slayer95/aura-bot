@@ -161,7 +161,7 @@ template <typename Container>
   IS.seekg(0, std::ios::end);
   *fileSize = static_cast<long unsigned int>(IS.tellg());
   if (start >= *fileSize) {
-    Print("[FILE] error - cannot read pos (" + to_string(start) + " >= " + to_string(*fileSize) + ") from file [" + PathToString(filePath) + "]");
+    Print("[FILE] error - cannot read pos (" + std::to_string(start) + " >= " + std::to_string(*fileSize) + ") from file [" + PathToString(filePath) + "]");
     return false;
   }
   if (maxReadSize > *fileSize - start) {
@@ -178,7 +178,7 @@ template <typename Container>
     try {
       container.shrink_to_fit();
     } catch (...) {}
-    Print("[FILE] error - insufficient memory for loading " + to_string(maxReadSize / 1024) + " KB chunk from file [" + PathToString(filePath) + "]");
+    Print("[FILE] error - insufficient memory for loading " + std::to_string(maxReadSize / 1024) + " KB chunk from file [" + PathToString(filePath) + "]");
     return false;
   }
   IS.read(reinterpret_cast<char*>(container.data()), maxReadSize);
@@ -188,7 +188,7 @@ template <typename Container>
     try {
       container.shrink_to_fit();
     } catch (...) {}
-    Print("[FILE] error - stream failed to read all data (" + to_string(maxReadSize / 1024) + " KB) from file [" + PathToString(filePath) + "]");
+    Print("[FILE] error - stream failed to read all data (" + std::to_string(maxReadSize / 1024) + " KB) from file [" + PathToString(filePath) + "]");
     return false;
   }
   return true;
