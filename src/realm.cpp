@@ -120,7 +120,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
 
 CRealm::~CRealm()
 {
-  ResetConnection(false);
+  StopConnection(false);
 
   delete m_Socket;
   delete m_BNCSUtil;
@@ -175,14 +175,14 @@ void CRealm::Update(void* fd, void* send_fd)
 
   if (!m_Config.m_Enabled) {
     if (m_Socket && m_Socket->GetConnected()) {
-      ResetConnection(false);
+      StopConnection(false);
     }
     return;
   }
 
   if (!m_Socket) {
     m_Socket = new CTCPClient(AF_INET, m_Config.m_HostName);
-    m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
+    //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
   }
 
   if (m_Socket->HasError() || m_Socket->HasFin())
@@ -582,8 +582,9 @@ void CRealm::Update(void* fd, void* send_fd)
     if (m_Socket->CheckConnect())
     {
       // the connection attempt completed
-
       ++m_SessionID;
+      m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
+
       PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "connected to [" + m_HostName + "]")
       SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
       m_GameVersion = m_Config.m_AuthWar3Version.has_value() ? m_Config.m_AuthWar3Version.value() : m_Aura->m_GameVersion;
@@ -599,7 +600,7 @@ void CRealm::Update(void* fd, void* send_fd)
       PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "failed to connect to [" + m_HostName + ":" + to_string(m_Config.m_ServerPort) + "]")
       PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting 90 seconds to retry...")
       m_Socket->Reset();
-      m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
+      //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
       m_LastDisconnectedTime = Time;
       m_WaitingToConnect     = true;
       return;
@@ -1372,25 +1373,24 @@ void CRealm::ResetGameBroadcastData()
   SendEnterChat();
 }
 
-void CRealm::ResetConnection(bool Errored)
+void CRealm::StopConnection(bool hadError)
 {
   m_LastDisconnectedTime = GetTime();
   m_BNCSUtil->Reset(m_Config.m_UserName, m_Config.m_PassWord);
 
   if (m_Socket) {
     if (m_Socket->GetConnected()) {
-      if (m_Aura->MatchLogLevel(Errored ? LOG_LEVEL_WARNING : LOG_LEVEL_NOTICE)) {
+      if (m_Aura->MatchLogLevel(hadError ? LOG_LEVEL_WARNING : LOG_LEVEL_NOTICE)) {
         if (m_Socket->HasFin()) {
           Print(GetLogPrefix() + "remote terminated the connection");
-        } else if (Errored) {
+        } else if (hadError) {
           Print(GetLogPrefix() + "disconnected - " + m_Socket->GetErrorString());
         } else {
           Print(GetLogPrefix() + "disconnected");
         }
       }
+      m_Socket->Close();
     }
-    m_Socket->Reset();
-    m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
   }
 
   m_LoggedIn = false;
@@ -1415,6 +1415,16 @@ void CRealm::ResetConnection(bool Errored)
   while (!m_ChatSentWhispers.empty()) {
     delete m_ChatSentWhispers.front();
     m_ChatSentWhispers.pop();
+  }
+}
+
+void CRealm::ResetConnection(bool hadError)
+{
+  StopConnection(hadError);
+
+  if (m_Socket) {
+    m_Socket->Reset();
+    //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
   }
 }
 

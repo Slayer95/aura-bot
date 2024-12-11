@@ -175,6 +175,7 @@ public:
 
   bool HandleAction(std::vector<std::string> action);
   bool Update();
+  void AwaitSettled();
   inline bool GetReady() const { return m_Ready; }
 
   bool GetNewGameIsInQuota() const;

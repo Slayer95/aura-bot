@@ -1538,6 +1538,13 @@ bool CGameSetup::Update()
   return m_DeleteMe;
 }
 
+void CGameSetup::AwaitSettled()
+{
+  if (m_IsStepDownloading) {
+    m_DownloadFuture.wait();
+  }
+}
+
 void CGameSetup::SetGameSavedFile(const std::filesystem::path& filePath)
 {
   if (m_StandardPaths) {

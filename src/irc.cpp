@@ -72,7 +72,7 @@ CIRC::CIRC(CConfig& nCFG)
     m_NickName(string()),
     m_Config(CIRCConfig(nCFG))
 {
-  m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
+  //m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
 }
 
 CIRC::~CIRC()
@@ -104,7 +104,7 @@ uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds) const
 void CIRC::ResetConnection()
 {
   m_Socket->Reset();
-  m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
+  //m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
   m_WaitingToConnect = true;
 }
 
@@ -180,6 +180,7 @@ void CIRC::Update(void* fd, void* send_fd)
     if (m_Socket->CheckConnect())
     {
       // the connection attempt completed
+      m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
 
       m_NickName = m_Config.m_NickName;
 

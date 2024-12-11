@@ -246,11 +246,14 @@ public:
   void TrySendEnterChat();
   void TrySendGetGamesList();
 
+  void StopConnection(bool hadError);
+
   void ResolveGameBroadcastStatus(bool nResult) { m_GameBroadcastStatus = nResult; }
   void ResetGameBroadcastData();
   void ResetConnection(bool hadError);
   void ResetGameChatAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
   void ResetGameBroadcastStatus() { m_GameBroadcastStatus = std::nullopt; }
+
   inline void SetReconnectNextTick(bool nReconnectNextTick) { m_ReconnectNextTick = nReconnectNextTick; };
 
   // other functions

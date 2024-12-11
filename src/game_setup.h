@@ -29,6 +29,7 @@
 #include "includes.h"
 #include "socket.h"
 
+#include <atomic>
 #include <filesystem>
 #include <regex>
 
@@ -202,7 +203,7 @@ public:
   uint8_t                                         m_MapReadyCallbackAction;
   std::string                                     m_MapReadyCallbackData;
 
-  bool                                            m_ExitingSoon;
+  std::atomic<bool>                               m_ExitingSoon;
   bool                                            m_DeleteMe;
 
   CGameSetup(CAura* nAura, std::shared_ptr<CCommandContext> nCtx, CConfig* mapCFG);
@@ -352,6 +353,7 @@ public:
 
   void OnGameCreate();
   [[nodiscard]] bool Update();
+  void AwaitSettled();
 };
 
 #endif // AURA_GAMESETUP_H_
