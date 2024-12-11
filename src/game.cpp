@@ -1327,7 +1327,11 @@ void CGame::UpdateJoinable()
           uint32_t lastOffsetEnd = user->GetLastMapPartSentOffsetEnd();
           const FileChunkTransient cachedChunk = GetMapChunk(lastOffsetEnd);
           if (!cachedChunk.bytes) {
-            DLOG_APP_IF(LOG_LEVEL_TRACE, "Failed to retrieve map chunk from [" + PathToString(m_Map->GetServerPath()) + "]")
+            user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+            if (!user->HasLeftReason()) {
+              user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (deleted)");
+            }
+            user->CloseConnection(false);
             break;
           }
           const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, cachedChunk);
