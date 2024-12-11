@@ -398,20 +398,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       AddToReserved(userName);
     }
 
-    if (nGameSetup->m_AutoStartSeconds.has_value() || nGameSetup->m_AutoStartPlayers.has_value()) {
-      uint8_t autoStartPlayers = nGameSetup->m_AutoStartPlayers.value_or(0);
-      m_AutoStartRequirements.push_back(make_pair(
-        autoStartPlayers,
-        m_CreationTime + (int64_t)nGameSetup->m_AutoStartSeconds.value_or(0)
-      ));
-    } else if (m_Map->m_AutoStartSeconds.has_value() || m_Map->m_AutoStartPlayers.has_value()) {
-      uint8_t autoStartPlayers = m_Map->m_AutoStartPlayers.value_or(0);
-      m_AutoStartRequirements.push_back(make_pair(
-        autoStartPlayers,
-        m_CreationTime + (int64_t)m_Map->m_AutoStartSeconds.value_or(0)
-      ));
-    }
-
     InitPRNG();
 
     // wait time of 1 minute  = 0 empty actions required
@@ -452,6 +438,29 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
   }
 
   InitSlots();
+  UpdateReadyCounters();
+
+  if (!m_IsMirror) {
+    if (nGameSetup->m_AutoStartSeconds.has_value() || nGameSetup->m_AutoStartPlayers.has_value()) {
+      uint8_t autoStartPlayers = nGameSetup->m_AutoStartPlayers.value_or(0);
+      int64_t autoStartSeconds = (int64_t)nGameSetup->m_AutoStartSeconds.value_or(0);
+      if (!nGameSetup->m_AutoStartPlayers.has_value() || autoStartPlayers > m_ControllersReadyCount) {
+        m_AutoStartRequirements.push_back(make_pair(
+          autoStartPlayers,
+          m_CreationTime + autoStartSeconds
+        ));
+      }
+    } else if (m_Map->m_AutoStartSeconds.has_value() || m_Map->m_AutoStartPlayers.has_value()) {
+      uint8_t autoStartPlayers = m_Map->m_AutoStartPlayers.value_or(0);
+      int64_t autoStartSeconds = (int64_t)m_Map->m_AutoStartSeconds.value_or(0);
+      if (m_Map->m_AutoStartPlayers.has_value() || autoStartPlayers > m_ControllersReadyCount) {
+        m_AutoStartRequirements.push_back(make_pair(
+          autoStartPlayers,
+          m_CreationTime + autoStartSeconds
+        ));
+      }
+    }
+  }
 }
 
 void CGame::ClearActions()
