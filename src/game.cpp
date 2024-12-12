@@ -1540,7 +1540,7 @@ void CGame::UpdateLoaded()
         }
       }
     }
-  } else if (!m_Users.empty()) { // m_Lagging == true
+  } else if (!m_Users.empty()) { // m_Lagging == true (context: CGame::UpdateLoaded())
     pair<int64_t, int64_t> waitTicks = GetReconnectWaitTicks();
     UserList droppedUsers;
     for (auto& user : m_Users) {
@@ -1596,13 +1596,9 @@ void CGame::UpdateLoaded()
       if (user->GetDisconnectedUnrecoverably()) {
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
-        if (user->GetCanBeListedInLagScreen()) {
-          LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
-          SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
-          LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
-        } else {
-          LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] failed to load the game and was dropped")
-        }
+        LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
+        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+        LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
       } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
         ++playersLaggingCounter;
       } else {
@@ -3829,7 +3825,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
 
   // send the left message if we haven't sent it already
   if (!user->GetLeftMessageSent()) {
-    if (user->GetLagging()/* && user->GetCanBeListedInLagScreen()*/) {
+    if (user->GetLagging()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
@@ -4902,11 +4898,6 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     dbPlayer->SetLoadingTime(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks);
   }
 
-  // Reset lagging flag regardless of whether load-in-game is enabled or not.
-  // i.e. don't care whether we are in an actual lag screen.
-  user->SetLagging(false);
-  user->SetStartedLaggingTicks(0);
-
   if (!m_Config.m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
@@ -4933,6 +4924,8 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     user->AddSyncCounterOffset(1);
     */
 
+    user->SetLagging(false);
+    user->SetStartedLaggingTicks(0);
     RemoveFromLagScreens(user);
     user->SetStatus(USERSTATUS_PLAYING);
     UserList laggingPlayers = GetLaggingUsers();
@@ -5876,8 +5869,11 @@ void CGame::EventGameStartedLoading()
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
       AppendByteArray(m_LoadingRealBuffer, packet);
     }
+
+    // Only when load-in-game is enabled, initialize everyone's m_Lagging flag to true
+    // this ensures CGame::UpdateLoaded() will send W3GS_STOP_LAG messages only when appropriate.
+    SetEveryoneLagging();
   }
-  SetEveryoneLagging();
 
   // and finally reenter battle.net chat
   AnnounceDecreateToRealms();
