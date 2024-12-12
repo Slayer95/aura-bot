@@ -256,7 +256,7 @@ protected:
   std::vector<uint8_t>                m_LobbyBuffer;
   std::vector<uint8_t>                m_SlotsBuffer;
   std::vector<uint8_t>                m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
-  std::vector<uint8_t>                m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players
+  std::vector<uint8_t>                m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
   std::vector<std::vector<uint8_t>>   m_PlayingBuffer;
 
   std::bitset<64>                       m_SupportedGameVersions;

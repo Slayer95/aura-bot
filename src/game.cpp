@@ -1427,8 +1427,12 @@ void CGame::UpdateLoading()
   if (finishedLoading) {
     if (anyLoaded) {
       if (!m_Config->m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
-        // Fake players loaded
-        SendAll(m_LoadingVirtualBuffer);
+        // CGame::UpdateLoading: Fake users loaded
+        // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
+        // it will also contain load packets for real users who didn't actually load the game,
+        // but these packets were already sent to real users
+        vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_LoadingVirtualBuffer.begin(), m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
+        SendAll(onlyFakeUsersLoaded);
       }
 
       m_LastActionSentTicks = Ticks;
@@ -4835,10 +4839,10 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
       AppendByteArrayFast(m_LoadingRealBuffer, packet);
     }
     SendAll(packet);
-  } else {
+  } else { // load-in-game
     Send(user, m_LoadingRealBuffer);
     if (!m_LoadingVirtualBuffer.empty()) {
-      // Fake users loaded
+      // CGame::EventUserLoaded - Fake users loaded
       Send(user, m_LoadingVirtualBuffer);
     }
     // GProxy sends m_GProxyEmptyActions additional empty actions for every action received.
