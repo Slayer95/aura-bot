@@ -1443,11 +1443,15 @@ void CGame::UpdateLoading()
     if (anyLoaded) {
       if (!m_Config.m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
         // CGame::UpdateLoading: Fake users loaded
-        // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
-        // it will also contain load packets for real users who didn't actually load the game,
-        // but these packets were already sent to real users
-        vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_LoadingVirtualBuffer.begin(), m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
-        SendAll(onlyFakeUsersLoaded);
+        if (m_LoadingVirtualBuffer.size() == 5 * m_FakeUsers.size()) {
+          SendAll(m_LoadingVirtualBuffer);
+        } else {
+          // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
+          // it will also contain load packets for real users who didn't actually load the game,
+          // but these packets were already sent to real users
+          vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_LoadingVirtualBuffer.begin(), m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
+          SendAll(onlyFakeUsersLoaded);
+        }
       }
 
       m_LastActionSentTicks = Ticks;
