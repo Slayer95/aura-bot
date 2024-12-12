@@ -3789,6 +3789,13 @@ void CGame::SendGameDiscoveryInfo()
   }
 }
 
+/*
+ * EventUserDeleted is called when CGame event loop identifies that a CGameUser has the m_DeleteMe flag
+ * This flag is set by
+ * - SendAllActionsCallback (after the game started, or failed to start)
+ * - StopPlayers
+ * - EventUserAfterDisconnect (only in the game lobby)
+ */
 void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
 {
   if (m_Exiting) {
