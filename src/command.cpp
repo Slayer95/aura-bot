@@ -1205,7 +1205,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       return;
     }
     m_Aura->m_SudoContext = shared_from_this();
-    // TODO(IceSandslash): GetSudoAuthPayload should only be executed after some local input.
     m_Aura->m_SudoAuthPayload = m_Aura->GetSudoAuthPayload(Payload);
     m_Aura->m_SudoExecCommand = Payload;
     SendReply("Sudo command requested. See Aura's console for further steps.");
