@@ -167,16 +167,6 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.auth_exe_info\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.auth_exe_info\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.auth_exe_version\`
 - Type: uint8vector
 - Error handling: Abort operation
@@ -281,11 +271,6 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.commands.broadcast.trigger\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.commands.common.permissions\`
 - Type: enum
 - Default value: auto
@@ -338,7 +323,7 @@ Config
 
 ## \`global_realm.country_short\`
 - Type: string
-- Default value: PE
+- Default value: PER
 - Error handling: Use default value
 
 ## \`global_realm.country_short\`
@@ -496,11 +481,6 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.host_name\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.input_id\`
 - Type: string
 - Default value: Empty
@@ -558,6 +538,16 @@ Config
 
 ## \`global_realm.password\`
 - Type: string
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.password.case_sensitive\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`global_realm.password.case_sensitive\`
+- Type: bool
 - Default value: Empty
 - Error handling: Use default value
 
@@ -666,6 +656,16 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
+## \`global_realm.username.case_sensitive\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`global_realm.username.case_sensitive\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.vpn\`
 - Type: bool
 - Default value: false
@@ -686,11 +686,6 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`hosting.commands.broadcast.trigger\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`hosting.commands.trigger\`
 - Type: string
 - Default value: !
@@ -698,7 +693,7 @@ Config
 
 ## \`hosting.crossplay.versions\`
 - Type: uint8set
-- Default value: 
+- Default value: '
 - Error handling: Use default value
 
 ## \`hosting.desync.handler\`
@@ -849,7 +844,7 @@ Config
 ## \`hosting.index.creator_name\`
 - Type: string
 - Constraints: Min length: 1. Max length: 15.
-- Default value: Empty
+- Default value: 
 - Error handling: Use default value
 
 ## \`hosting.ip_filter.flood_handler\`
@@ -913,22 +908,22 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.map_transfers.max_parallel_packets\`
-- Type: int
+- Type: uint32
 - Default value: 1000
 - Error handling: Use default value
 
 ## \`hosting.map_transfers.max_players\`
-- Type: int
+- Type: uint32
 - Default value: 3
 - Error handling: Use default value
 
 ## \`hosting.map_transfers.max_size\`
-- Type: int
+- Type: uint32
 - Default value: 8192
 - Error handling: Use default value
 
 ## \`hosting.map_transfers.max_speed\`
-- Type: int
+- Type: uint32
 - Default value: 1024
 - Error handling: Use default value
 
@@ -1008,11 +1003,6 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`irc.commands.broadcast.trigger\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`irc.commands.common.permissions\`
 - Type: enum
 - Default value: auto
@@ -1038,21 +1028,6 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`irc.host_name\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`irc.nickname\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`irc.password\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`irc.port\`
 - Type: uint16
 - Default value: 6667
@@ -1066,16 +1041,6 @@ Config
 ## \`irc.unverified_users.reject_commands\`
 - Type: bool
 - Default value: false
-- Error handling: Use default value
-
-## \`irc.username\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`irc.verified_domain\`
-- Type: string
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`lan_realm.commands.admin.permissions\`

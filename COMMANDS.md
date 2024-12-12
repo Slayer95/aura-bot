@@ -86,6 +86,8 @@ Commands
 ## \`disablepub\`
 - Syntax: disablepub \<REALM\>
 
+## \`disconnect\`
+
 ## \`discord\`
 
 ## \`dl\`
