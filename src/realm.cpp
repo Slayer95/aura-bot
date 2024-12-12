@@ -1270,7 +1270,6 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, shared_
 
 void CRealm::TryQueueChat(const string& message, const string& user, bool isPrivate, shared_ptr<CCommandContext> fromCtx, const uint8_t ctxFlags)
 {
-  // TODO(IceSandslash): TryQueueChat ctxFlags
   // don't respond to non admins if there are more than 25 messages already in the queue
   // this prevents malicious users from filling up the bot's chat queue and crippling the bot
   // in some cases the queue may be full of legitimate messages but we don't really care if the bot ignores one of these commands once in awhile

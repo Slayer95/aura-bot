@@ -1101,8 +1101,6 @@ void CMap::Load(CConfig* CFG)
   if (m_MapMinGameVersion >= 29) {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_MODERN);
   } else {
-    // TODO: Verify. Allegedly, old maps are limited to 12 slots even when hosted in Reforged.
-    // But see also https://www.hiveworkshop.com/threads/success-hybrid-12-24-player-map-backwards-compatible-1-24-1-28-5-1-31.339722/
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_LEGACY);
   }
 
@@ -1411,7 +1409,6 @@ string CMap::CheckProblems()
       continue;
     }
     if (slot.GetTeam() > m_MapNumTeams) {
-      // TODO: Or just enforce usedTeams.count() <= m_MapNumTeams?
       m_Valid = false;
       m_ErrorMessage = "invalid <map.slot_N> detected";
       return m_ErrorMessage;

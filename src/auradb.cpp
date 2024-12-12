@@ -825,14 +825,14 @@ bool CAuraDB::BanAdd(const string& rawName, const string& server, const string& 
 /*
 bool CAuraDB::BanAdd(const string& user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason, const string& expiry)
 {
-  // TODO: CAuraDB::BanAdd (arbitrary expiry) not implemented
+  // CAuraDB::BanAdd (arbitrary expiry) not implemented
   Print("[SQLITE3] Custom-expiry bans not implemented.");
   return false;
 }
 
 bool CAuraDB::BanAddPermanent(const string& user, const string& server, const string& authserver, const string& ip, const string& moderator, const string& reason)
 {
-  // TODO: CAuraDB::BanAddPermanent not implemented
+  // CAuraDB::BanAddPermanent not implemented
   Print("[SQLITE3] Permanent bans not implemented.");
   return false;
 }

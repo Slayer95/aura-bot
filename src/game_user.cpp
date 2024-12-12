@@ -769,7 +769,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
 void CGameUser::EventGProxyReconnectInvalid()
 {
   if (m_Disconnected) return;
-  // TODO: Do we need different logic?
+  // TODO: Do we need different logic for rotating GProxy keys?
   RotateGProxyReconnectKey();
 }
 
