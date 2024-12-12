@@ -4868,8 +4868,8 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
     if (!user->HasLeftReason()) {
       user->SetLeftReason("Leaving the game voluntarily");
       user->SetLeftCode(PLAYERLEAVE_LOST);
-    } else if (user->GetLeftReason().size() > 10 && user->GetLeftReason().substr(0, 10) == "autokicked") {
-      user->SetLeftReason("left" + user->GetLeftReason().substr(10));
+    } else {
+      user->SetLeftReason("left (" + user->GetLeftReason() + ")");
     }
     user->SetIsLeaver(true);
   }
