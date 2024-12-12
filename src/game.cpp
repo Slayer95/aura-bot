@@ -1462,8 +1462,7 @@ void CGame::UpdateLoading()
   } else {
     if (m_Config.m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
       if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config.m_LoadingTimeout)) {
-        StopLaggers("was automatically dropped after " + to_string(m_Config.m_LoadingTimeout / 1000) + " seconds");
-        ResetDropVotes();
+        StopLoadPending("was automatically dropped after " + to_string(m_Config.m_LoadingTimeout / 1000) + " seconds");
       }
     }
 
@@ -5428,7 +5427,6 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 
     if (static_cast<uint8_t>(m_Users.size()) < 2 * votesCount) {
       StopLaggers("lagged out (dropped by vote)");
-      ResetDropVotes();
     }
   }
 }
@@ -8549,6 +8547,10 @@ void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
   }
 }
 
+/*
+ * CGame::StopLaggers(const string& reason)
+ * When load-in-game is enabled, this will also drop users that haven't finished loading.
+ */
 void CGame::StopLaggers(const string& reason)
 {
   UserList laggingUsers = GetLaggingUsers();
@@ -8560,6 +8562,7 @@ void CGame::StopLaggers(const string& reason)
       break;
     }
   }
+  ResetDropVotes();
 }
 
 void CGame::ResetDropVotes() const
@@ -8586,6 +8589,23 @@ void CGame::StopDesynchronized(const string& reason) const
       if (!user->GetIsEndingOrEnded()) {
         QueueLeftMessage(user);
       }
+    }
+  }
+}
+
+void CGame::StopLoadPending(const string& reason)
+{
+  if (m_Config->m_LoadInGame) {
+    StopLaggers(reason);
+  } else {
+    for (GameUser::CGameUser* user : m_Users) {
+      if (user->GetFinishedLoading()) {
+        continue;
+      }
+      user->SetLeftReason(reason);
+      user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
+      user->DisableReconnect();
+      user->CloseConnection();
     }
   }
 }

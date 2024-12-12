@@ -3312,7 +3312,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       m_TargetGame->StopLaggers("lagged out (dropped by admin)");
-      m_TargetGame->ResetDropVotes();
       break;
     }
 

@@ -694,6 +694,7 @@ public:
   void StopLagger(GameUser::CGameUser* user, const std::string& reason) const;
   void StopLaggers(const std::string& reason);
   void StopDesynchronized(const std::string& reason) const;
+  void StopLoadPending(const std::string& reason);
   void ResetDropVotes() const;
   std::string GetSaveFileName(const uint8_t UID) const;
   bool Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
