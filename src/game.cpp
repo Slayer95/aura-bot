@@ -8599,7 +8599,7 @@ void CGame::StopDesynchronized(const string& reason) const
 
 void CGame::StopLoadPending(const string& reason)
 {
-  if (m_Config->m_LoadInGame) {
+  if (m_Config.m_LoadInGame) {
     StopLaggers(reason);
   } else {
     for (GameUser::CGameUser* user : m_Users) {
