@@ -184,6 +184,7 @@ namespace GameUser
     [[nodiscard]] inline bool                     GetIsEnded() const { return m_Status == USERSTATUS_ENDED; }
     [[nodiscard]] inline bool                     GetIsEndingOrEnded() const { return m_Status == USERSTATUS_ENDING || m_Status == USERSTATUS_ENDED; }
     [[nodiscard]] inline bool                     GetIsLobbyOrPlaying() const { return m_Status == USERSTATUS_LOBBY || m_Status == USERSTATUS_PLAYING; }
+    [[nodiscard]] bool                            GetCanBeListedInLagScreen() const;
     [[nodiscard]] inline uint8_t                  GetPingEqualizerOffset() const { return m_PingEqualizerOffset; }
     [[nodiscard]] uint32_t                        GetPingEqualizerDelay() const;
     [[nodiscard]] inline QueuedActionsFrameNode*  GetPingEqualizerFrameNode() const { return m_PingEqualizerFrameNode; }

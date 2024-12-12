@@ -232,6 +232,18 @@ string CGameUser::GetDisplayName() const
   return m_Name;
 }
 
+/*
+ * If and only if, for a CGameUser user, it holds that
+ * (user->GetLagging() && user->GetCanBeListedInLagScreen())
+ * then we must send W3GS_STOP_LAG to cancel their lagger status
+ */
+bool CGameUser::GetCanBeListedInLagScreen() const
+{
+  if (user->GetFinishedLoading()) return true;
+  if (m_Game->m_Config->m_LoadInGame) return true;
+  return false;
+}
+
 uint32_t CGameUser::GetPingEqualizerDelay() const
 {
   if (!m_Game->GetGameLoaded()) return 0u;

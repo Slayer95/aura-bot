@@ -1570,11 +1570,15 @@ void CGame::UpdateLoaded()
       }
 
       if (user->GetDisconnectedUnrecoverably()) {
-        LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
-        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
-        LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
+        if (user->GetCanBeListedInLagScreen()) {
+          LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
+          SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+          LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
+        } else {
+          LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] failed to load the game and was dropped")
+        }
       } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
         ++playersLaggingCounter;
       } else {
@@ -3771,9 +3775,9 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
     }
   }
 
-  // in some cases we're forced to send the left message early so don't send it again
+  // send the left message if we haven't sent it already
   if (!user->GetLeftMessageSent()) {
-    if (user->GetLagging()) {
+    if (user->GetLagging()/* && user->GetCanBeListedInLagScreen()*/) {
       LOG_APP_IF(LOG_LEVEL_INFO, "global lagger update (-" + user->GetName() + ")")
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
