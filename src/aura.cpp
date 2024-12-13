@@ -2155,7 +2155,11 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
     return FileChunkTransient();
   }
 
-  Print("[DEBUG] Added weak reference to cached map data for [" + PathToString(filePath) + ":" + to_string(start) + "] ( " + to_string(actualReadSize / 1024) + " / " + to_string(fileSize / 1024) + " KB)");
+#ifdef DEBUG
+  if (MatchLogLevel(LOG_LEVEL_TRACE)) {
+    Print("[AURA] Cached map file contents in-memory for [" + PathToString(filePath) + ":" + to_string(start) + "] ( " + to_string(actualReadSize / 1024) + " / " + to_string(fileSize / 1024) + " KB)");
+  }
+#endif
   m_CachedFileContents[filePath] = FileChunkCached(fileSize, start, start + actualReadSize, fileContentsPtr);
 
   // Try to dedupe across maps with different names but same content.
