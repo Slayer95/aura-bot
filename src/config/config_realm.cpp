@@ -248,6 +248,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_GamePrefix(nRootConfig->m_GamePrefix),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
 
+    m_ConsoleLogChat(nRootConfig->m_ConsoleLogChat),
     m_FloodQuotaLines(nRootConfig->m_FloodQuotaLines),
     m_FloodQuotaTime(nRootConfig->m_FloodQuotaTime),
     m_VirtualLineLength(nRootConfig->m_VirtualLineLength),
@@ -357,6 +358,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
 
+  m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", m_ConsoleLogChat);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", m_FloodQuotaLines + 1) - 1;
   m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", m_FloodQuotaTime);
   m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", m_VirtualLineLength);

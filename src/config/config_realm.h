@@ -124,7 +124,6 @@ struct CRealmConfig
   uint16_t m_VirtualLineLength;                  // - PvPGN: corresponds to bnetd.conf: quota_wrapline (default 40)
   uint16_t m_MaxLineLength;                      // - PvPGN: corresponds to bnetd.conf: quota_maxline (default 200)
   bool m_FloodImmune;                            // whether we are allowed to send unlimited commands to the server - PvPGN: corresponds to lua/confg.lua: flood_immunity, or ghost_bots
-  bool m_HostFloodImmune;                        // whether we are allowed to send unlimited commands to the server - PvPGN: corresponds to lua/confg.lua: flood_immunity, or ghost_bots
 
   std::string m_WhisperErrorReply;
 
