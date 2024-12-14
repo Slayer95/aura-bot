@@ -4146,7 +4146,11 @@ void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool
   }
 
   if (!user->HasLeftReason()) {
-    user->SetLeftReason("has lost the connection (protocol error)");
+    if (canRecover) {
+      user->SetLeftReason("has lost the connection (protocol error)");
+    } else {
+      user->SetLeftReason("has lost the connection (unrecoverable protocol error)");
+    }
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
   if (user->GetLagging()) {
