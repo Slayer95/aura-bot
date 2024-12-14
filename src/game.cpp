@@ -4819,7 +4819,7 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
   // however, clients not only send the leave packet by a user clicking on Quit Game
   // clients also will send a leave packet if the server sends unexpected data
 
-  if (user->GetGProxyAny() && clientReason == PLAYERLEAVE_GPROXY) {
+  if (clientReason == PLAYERLEAVE_GPROXY && (user->GetGProxyAny() || GetIsLobbyStrict() /* in case GProxy handshake could not be completed*/)) {
     user->SetLeftReason("Game client disconnected automatically");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   } else {
