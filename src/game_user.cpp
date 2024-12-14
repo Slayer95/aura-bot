@@ -239,7 +239,7 @@ string CGameUser::GetDisplayName() const
  */
 bool CGameUser::GetCanBeListedInLagScreen() const
 {
-  if (user->GetFinishedLoading()) return true;
+  if (GetFinishedLoading()) return true;
   if (m_Game->m_Config->m_LoadInGame) return true;
   return false;
 }
