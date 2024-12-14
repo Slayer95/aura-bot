@@ -5432,6 +5432,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->GetLagging()) {
+        ErrorReply("This command cannot be used while the game is lagging.");
+        break;
+      }
+
       if (!m_TargetGame->Pause(m_GameUser, false)) {
         ErrorReply("Max pauses reached.");
         break;
@@ -5464,6 +5469,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
+        if (m_TargetGame->GetLagging()) {
+          ErrorReply("This command cannot be used while the game is lagging.");
+          break;
+        }
+
         if (!m_TargetGame->Save(m_GameUser, false)) {
           ErrorReply("Can only save once per player per game session.");
           break;
@@ -5505,6 +5515,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!m_TargetGame->GetPaused()) {
         ErrorReply("Game is not paused.");
+        break;
+      }
+
+      if (m_TargetGame->GetLagging()) {
+        ErrorReply("This command cannot be used while the game is lagging.");
         break;
       }
 
