@@ -1527,7 +1527,7 @@ void CGame::UpdateLoaded()
     }
   } else if (!m_Users.empty()) { // m_Lagging == true
     pair<int64_t, int64_t> waitTicks = GetReconnectWaitTicks();
-    bool anyDropped = false;
+    UserList droppedUsers;
     for (auto& user : m_Users) {
       if (!user->GetLagging()) {
         continue;
@@ -1546,10 +1546,15 @@ void CGame::UpdateLoaded()
         } else {
           StopLagger(user, "was automatically dropped after " + to_string((Ticks - user->GetStartedLaggingTicks()) / 1000) + " seconds");
         }
-        anyDropped = true;
+        droppedUsers.push_back(user);
       }
     }
-    if (anyDropped) {
+    if (!droppedUsers.empty()) {
+      for (const auto& user : droppedUsers) {
+        if (TrySaveOnDisconnect(user, false)) {
+          break;
+        }
+      }
       ResetDropVotes();
     }
 
@@ -4092,7 +4097,11 @@ void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
     user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
+  if (user->GetLagging()) {
+    StopLagger(user, user->GetLeftReason());
+  } else {
+    user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
+  }
   TrySaveOnDisconnect(user, false);
 }
 
@@ -4114,7 +4123,11 @@ void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
     user->SetLeftReason("has terminated the connection");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
+  if (user->GetLagging()) {
+    StopLagger(user, user->GetLeftReason());
+  } else {
+    user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
+  }
   TrySaveOnDisconnect(user, false);
 }
 
@@ -4133,15 +4146,15 @@ void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool
   }
 
   if (!user->HasLeftReason()) {
-    if (canRecover) {
-      user->SetLeftReason("has lost the connection (protocol error)");
-    } else {
-      user->SetLeftReason("has lost the connection (unrecoverable protocol error)");
-    }
+    user->SetLeftReason("has lost the connection (protocol error)");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  user->DisableReconnect();
-  user->CloseConnection(); // automatically sets ended
+  if (user->GetLagging()) {
+    StopLagger(user, user->GetLeftReason());
+  } else {
+    user->DisableReconnect();
+    user->CloseConnection(); // automatically sets ended
+  }
   TrySaveOnDisconnect(user, false);
 }
 
@@ -4160,8 +4173,8 @@ void CGame::EventUserDisconnectGameAbuse(GameUser::CGameUser* user)
 void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
 {
   if (user->GetDeleteMe()) return;
-  TrySaveOnDisconnect(user, false);
   StopLagger(user, "failed to reconnect in time");
+  TrySaveOnDisconnect(user, false);
   ResetDropVotes();
 }
 
@@ -4810,8 +4823,12 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
     }
     user->SetIsLeaver(true);
   }
-  user->DisableReconnect();
-  user->CloseConnection();
+  if (user->GetLagging()) {
+    StopLagger(user, user->GetLeftReason());
+  } else {
+    user->DisableReconnect();
+    user->CloseConnection();
+  }
   TrySaveOnDisconnect(user, true);
   return true;
 }
@@ -8460,12 +8477,13 @@ void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
 void CGame::StopLaggers(const string& reason)
 {
   UserList laggingUsers = GetLaggingUsers();
-  bool savedAny = false;
-  for (auto& user : laggingUsers) {
-    if (!savedAny && TrySaveOnDisconnect(user, false)) {
-      savedAny = true;
-    }
+  for (const auto& user : laggingUsers) {
     StopLagger(user, reason);
+  }
+  for (const auto& user : laggingUsers) {
+    if (TrySaveOnDisconnect(user, false)) {
+      break;
+    }
   }
 }
 
@@ -8576,6 +8594,10 @@ bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntar
   if (GetNumControllers() <= 2) {
     // 1v1 never auto-saves, not even if there are observers,
     // not even if !save enable is active.
+    return false;
+  }
+
+  if (!GetLaggingUsers().empty()) {
     return false;
   }
 
