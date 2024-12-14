@@ -159,23 +159,23 @@ namespace GameProtocol
   {
     switch (leftCode) {
       case PLAYERLEAVE_DISCONNECT:
-        return "on disconnect";
+        return "disconnect";
       case PLAYERLEAVE_LOST:
-        return "on lost";
+        return "lost";
       case PLAYERLEAVE_LOSTBUILDINGS:
-        return "on lost buildings";
+        return "lost buildings";
       case PLAYERLEAVE_WON:
-        return "on win";
+        return "won";
       case PLAYERLEAVE_DRAW:
-        return "on draw";
+        return "drew";
       case PLAYERLEAVE_OBSERVER:
-        return "as observer";
+        return "observer";
       case PLAYERLEAVE_LOBBY:
         return "from lobby";
       case PLAYERLEAVE_GPROXY:
-        return "after they lost connection to their local GProxy instance";
+        return "lost connection to their local GProxy instance";
       default:
-        return "(code " + std::to_string(leftCode) + ")";
+        return "code " + std::to_string(leftCode);
     }
   }
 };
