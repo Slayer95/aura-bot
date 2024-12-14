@@ -4469,6 +4469,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !COMP (computer slot)
     //
 
+    case HashCode("bot"):
     case HashCode("comp"): {
       UseImplicitHostedGame();
 
