@@ -8550,6 +8550,7 @@ bool CGame::StopPlayers(const string& reason) const
     user->SetDeleteMe(true);
     anyStopped = true;
   }
+  m_PauseUser = nullptr;
   return anyStopped;
 }
 
