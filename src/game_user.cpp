@@ -233,7 +233,7 @@ string CGameUser::GetDisplayName() const
   return m_Name;
 }
 
-uint32_t CGameUser::GetPingEqualizerDelay() const;
+uint32_t CGameUser::GetPingEqualizerDelay() const
 {
   if (!m_Game->GetGameLoaded()) return 0u;
   return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game->GetLatency());

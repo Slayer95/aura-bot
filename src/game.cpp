@@ -8553,7 +8553,7 @@ bool CGame::StopPlayers(const string& reason) const
   return anyStopped;
 }
 
-void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
+void CGame::StopLagger(GameUser::CGameUser* user, const string& reason)
 {
   RemoveFromLagScreens(user);
   user->SetLeftReason(reason);
@@ -8593,7 +8593,7 @@ void CGame::ResetDropVotes() const
   }
 }
 
-void CGame::StopDesynchronized(const string& reason) const
+void CGame::StopDesynchronized(const string& reason)
 {
   uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
   for (GameUser::CGameUser* user : m_Users) {
