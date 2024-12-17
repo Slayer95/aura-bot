@@ -89,7 +89,10 @@ struct CGameLogRecord
 struct CQueuedActionsFrame
 {
   // action to be performed after this frame is sent: ON_SEND_ACTIONS_PAUSE, ON_SEND_ACTIONS_RESUME
-  uint8_t callback;   
+  uint8_t callback;
+
+  // UID of last user that sent a pause action
+  uint8_t pauseUID;
 
   // total size of the active ActionQueue  
   uint16_t bufferSize;

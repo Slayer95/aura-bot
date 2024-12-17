@@ -126,6 +126,7 @@ CGameLogRecord::~CGameLogRecord() = default;
 
 CQueuedActionsFrame::CQueuedActionsFrame()
  : callback(ON_SEND_ACTIONS_NONE),
+   pauseUID(0xFF),
    bufferSize(0),
    activeQueue(nullptr)
  {
@@ -264,7 +265,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_CurrentActionsFrame(nullptr),
     m_Map(nGameSetup->m_Map),
     m_GameFlags(0),
-    m_PauseUser(nullptr), // TODO: Track m_PauseUser
+    m_PauseUser(nullptr),
     m_GameName(nGameSetup->m_Name),
     m_GameHistoryId(nAura->NextHistoryGameID()),
     m_FromAutoReHost(nGameSetup->m_LobbyAutoRehosted),
@@ -1673,8 +1674,6 @@ void CGame::UpdateLoaded()
   // On timeout:
   // Warnings are needed in order for other players to unpause if so they wish.
   /*
-  Resume(m_PauseUser, m_PauseUser->GetPingEqualizerFrame(), true);
-
   // Must disconnect, because unpausing as m_PauseUser would desync them anyway
   m_PauseUser->SetLeftReason("pause time limit exceeded");
   m_PauseUser->SetLeftCode(PLAYERLEAVE_DISCONNECT);
@@ -3272,10 +3271,12 @@ void CGame::SendAllActionsCallback()
   switch (frame.callback) {
     case ON_SEND_ACTIONS_PAUSE:
       m_Paused = true;
+      m_PauseUser = GetUserFromUID(frame.pauseUID);
       m_LastPausedTicks = GetTicks();
       break;
     case ON_SEND_ACTIONS_RESUME:
       m_Paused = false;
+      m_PauseUser = nullptr;
       break;
     default:
       break;
@@ -3808,6 +3809,12 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
     m_LastPingEqualizerGameTicks = 0;
   }
 
+  if (m_PauseUser == user) {
+    // TODO: m_PauseUser should not be the user in EventUserDeleted
+    Print("[DEBUG] m_PauseUser matches EventUserDeleted event user; setting to nullptr");
+    m_PauseUser = nullptr;
+  }
+
   if (m_GameLoading || m_GameLoaded) {
     for (auto& otherPlayer : m_SyncPlayers[user]) {
       UserList& BackList = m_SyncPlayers[otherPlayer];
@@ -4302,6 +4309,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
 void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
 {
   CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
+  Resume(user, frame, true);
   frame.leavers.push_back(user);
   user->TrySetEnding();
   DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion in " + ToDecString(user->GetPingEqualizerOffset()) + " frames")
@@ -5021,10 +5029,17 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
       if (!user->GetIsNativeReferee()) {
         user->DropRemainingPauses();
       }
-      actionFrame.callback =  ON_SEND_ACTIONS_PAUSE;
+      if (actionFrame.callback != ON_SEND_ACTIONS_PAUSE) {
+        actionFrame.callback =  ON_SEND_ACTIONS_PAUSE;
+        actionFrame.pauseUID = user->GetUID();
+      }
       break;
     case ACTION_RESUME:
-      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
+      if (m_PauseUser) {
+        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game (was paused by [" + m_PauseUser->GetName() + "])")
+      } else {
+        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
+      }
       actionFrame.callback =  ON_SEND_ACTIONS_RESUME;
       break;
     case ACTION_CHAT_TRIGGER: {
@@ -8665,7 +8680,10 @@ bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, c
   if (UID == 0xFF) return false;
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_PAUSE)));
-  actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
+  if (actionFrame.callback != ON_SEND_ACTIONS_PAUSE) {
+    actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
+    actionFrame.pauseUID = user->GetUID();
+  }
   return true;
 }
 
