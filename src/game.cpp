@@ -1680,6 +1680,7 @@ void CGame::UpdateLoaded()
   m_PauseUser->DisableReconnect();
   m_PauseUser->CloseConnection();
   if (!user->GetIsEndingOrEnded()) {
+    Resume(user, user->GetPingEqualizerFrame(), true);
     QueueLeftMessage(m_PauseUser);
   }
   */
@@ -4085,6 +4086,7 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
   } else {
     // Let's avoid sending leave messages during game load.
     // Also, once the game is loaded, ensure all the users' actions will be sent before the leave message is sent.
+    Resume(user, user->GetPingEqualizerFrame(), true);
     QueueLeftMessage(user);
   }
 
@@ -4309,7 +4311,6 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
 void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
 {
   CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
-  Resume(user, frame, true);
   frame.leavers.push_back(user);
   user->TrySetEnding();
   DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion in " + ToDecString(user->GetPingEqualizerOffset()) + " frames")
@@ -5030,7 +5031,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
         user->DropRemainingPauses();
       }
       if (actionFrame.callback != ON_SEND_ACTIONS_PAUSE) {
-        actionFrame.callback =  ON_SEND_ACTIONS_PAUSE;
+        actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
         actionFrame.pauseUID = user->GetUID();
       }
       break;
@@ -5040,7 +5041,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
       } else {
         LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
       }
-      actionFrame.callback =  ON_SEND_ACTIONS_RESUME;
+      actionFrame.callback = ON_SEND_ACTIONS_RESUME;
       break;
     case ACTION_CHAT_TRIGGER: {
       // Already logged. Do not extract action here, since it has already been moved.
@@ -8562,6 +8563,7 @@ void CGame::StopLagger(GameUser::CGameUser* user, const string& reason) const
   user->SetLagging(false);
 
   if (!user->GetIsEndingOrEnded()) {
+    Resume(user, user->GetPingEqualizerFrame(), true);
     QueueLeftMessage(user);
   }
 }
@@ -8606,6 +8608,7 @@ void CGame::StopDesynchronized(const string& reason) const
       user->CloseConnection();
 
       if (!user->GetIsEndingOrEnded()) {
+        Resume(user, user->GetPingEqualizerFrame(), true);
         QueueLeftMessage(user);
       }
     }
