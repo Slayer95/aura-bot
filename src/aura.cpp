@@ -938,6 +938,8 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
       return HandleLazyCommandContext(std::get<LazyCommandContext>(genAction));
     }
   }
+
+  return APP_ACTION_ERROR;
 }
 
 bool CAura::Update()
