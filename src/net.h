@@ -121,6 +121,8 @@ public:
   std::map<uint16_t, std::vector<CConnection*>>               m_IncomingConnections;        // connections that haven't identified their protocol yet
   std::map<uint16_t, std::vector<CGameSeeker*>>               m_ManagedConnections;         // connections that use complementary protocols, such as VLAN, or UDP over TCP
   std::queue<std::pair<uint16_t, CConnection*>>               m_DownGradedConnections;      // connections that are waiting for insertion into m_IncomingConnections, built from a stale CStreamIOSocket
+  std::map<std::pair<uint16_t, uint16_t>, TimedUint8>         m_UPnPTCPCache;
+  std::map<std::pair<uint16_t, uint16_t>, TimedUint8>         m_UPnPUDPCache;
   std::map<std::string, sockaddr_storage*>                    m_IPv4DNSCache;
   std::map<std::string, sockaddr_storage*>                    m_IPv6DNSCache;
   std::pair<std::string, sockaddr_storage*>                   m_IPv4SelfCacheV;
@@ -163,7 +165,7 @@ public:
   void                                          FlushSelfIPCache();
 
 #ifndef DISABLE_MINIUPNP
-  uint8_t RequestUPnP(const std::string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel = LOG_LEVEL_INFO);
+  uint8_t RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel, bool ignoreCache = false);
 #endif
   bool QueryHealthCheck(std::shared_ptr<CCommandContext> ctx, const uint8_t checkMode, CRealm* realm, const CGame* game);
   void ResetHealthCheck();

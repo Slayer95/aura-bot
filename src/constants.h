@@ -47,6 +47,18 @@
 
 #define MAX_READ_FILE_SIZE 0x18000000
 
+// aura.h
+
+#define APP_ACTION_DONE 0u
+#define APP_ACTION_ERROR 1u
+#define APP_ACTION_WAIT 2u
+
+#define APP_ACTION_TYPE_UPNP 0u
+#define APP_ACTION_TYPE_HOST 1u
+
+#define APP_ACTION_MODE_TCP 0u
+#define APP_ACTION_MODE_UDP 1u
+
 // map.h
 
 #define MAPSPEED_SLOW 1
@@ -532,6 +544,9 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 
 #define GAME_DEFAULT_UDP_PORT 6112u
 #define UDP_DISCOVERY_MAX_EXTRA_ADDRESSES 30u
+
+#define NET_PROTOCOL_TCP 0u
+#define NET_PROTOCOL_UDP 1u
 
 // realm_chat.h
 

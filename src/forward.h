@@ -29,6 +29,7 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 class CAsyncObserver;
@@ -98,8 +99,10 @@ struct CQueuedActionsFrame;
 struct CIncomingVLanGameInfo;
 struct CIncomingVLanSearchGame;
 
+struct AppAction;
 struct FileChunkCached;
 struct FileChunkTransient;
+struct LazyCommandContext;
 struct UDPPkt;
 
 template <typename T>
@@ -114,8 +117,10 @@ typedef std::vector<CIncomingAction>                ActionQueue;
 typedef DoubleLinkedListNode<CQueuedActionsFrame>   QueuedActionsFrameNode;
 typedef std::optional<std::pair<int64_t, uint32_t>> OptionalTimedUint32;
 typedef std::optional<int64_t>                      OptionalTime;
+typedef std::pair<int64_t, uint8_t>                 TimedUint8;
 typedef std::pair<int64_t, uint16_t>                TimedUint16;
 typedef std::weak_ptr<std::vector<uint8_t>>         WeakByteArray;
 typedef std::shared_ptr<std::vector<uint8_t>>       SharedByteArray;
+typedef std::variant<AppAction, LazyCommandContext> GenericAppAction;
 
 #endif // AURA_FORWARD_H_

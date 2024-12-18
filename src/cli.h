@@ -37,6 +37,44 @@
 #define CLI_ACTION_ABOUT 1
 #define CLI_ACTION_EXAMPLES 2
 
+struct AppAction
+{
+  uint8_t type;
+  uint8_t mode;
+  uint32_t value_1;
+  uint32_t value_2;
+
+  AppAction(uint8_t nType, uint8_t nMode = 0, uint32_t nValue1 = 0, uint32_t nValue2 = 0)
+   : type(nType),
+     mode(nMode),
+     value_1(nValue1),
+     value_2(nValue2)
+  {
+  };
+
+  ~AppAction() = default;
+};
+
+struct LazyCommandContext
+{
+  bool broadcast;
+  std::string commandAndPayload;
+  std::string scope;
+  std::string identity;
+  std::string auth;
+
+  LazyCommandContext(bool nBroadcast, const std::string& nCommandAndPayload, const std::string& nScope, const std::string& nIdentity, const std::string& nAuth)
+   : broadcast(nBroadcast),
+     commandAndPayload(nCommandAndPayload),
+     scope(nScope),
+     identity(nIdentity),
+     auth(nAuth)
+  {
+  };
+
+  ~LazyCommandContext() = default;
+};
+
 //
 // CCLI
 //

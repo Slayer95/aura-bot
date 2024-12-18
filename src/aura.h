@@ -72,7 +72,6 @@
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
-
 //
 // CAura
 //
@@ -127,7 +126,7 @@ public:
   std::filesystem::path                              m_ConfigPath;
   std::filesystem::path                              m_GameInstallPath;
 
-  std::queue<std::vector<std::string>>               m_PendingActions;
+  std::queue<GenericAppAction>                       m_PendingActions;
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
   std::vector<CGame*>                                m_StartedGames;               // all games after they have started
   std::vector<CGame*>                                m_Lobbies;                    // all games before they are started
@@ -173,7 +172,9 @@ public:
 
   // processing functions
 
-  bool HandleAction(std::vector<std::string> action);
+  uint8_t HandleAction(const AppAction& action);
+  uint8_t HandleLazyCommandContext(const LazyCommandContext& lazyCtx);
+  uint8_t HandleGenericAction(const GenericAppAction& genAction);
   bool Update();
   void AwaitSettled();
   inline bool GetReady() const { return m_Ready; }

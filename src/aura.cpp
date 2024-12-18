@@ -880,33 +880,64 @@ CRealm* CAura::GetRealmByHostName(const string& hostName) const
   return nullptr;
 }
 
-bool CAura::HandleAction(vector<string> action)
+uint8_t CAura::HandleAction(const AppAction& action)
 {
-  if (action[0] == "exec") {
-    // TODO: CLI --exec
-    Print("[AURA] Exec cli unsupported yet");
-    return false;
-  } else if (action[0] == "host" || action[0] == "rehost") {
-    bool success = m_GameSetup->RunHost();
-    if (!success) {
-      // Delete all other pending actions
-      return false;
-    }
-    MergePendingLobbies();
-  } else if (action[0] == "lazy") {
-    vector<string> lazyAction(action.begin() + 1, action.end());
-    m_PendingActions.push(lazyAction);
+  switch (action.type) {
 #ifndef DISABLE_MINIUPNP
-  } else if (action[0] == "port-forward") {
-    uint16_t externalPort = static_cast<uint16_t>(stoi(action[2]));
-    uint16_t internalPort = static_cast<uint16_t>(stoi(action[3]));
-    m_Net.RequestUPnP(action[1], externalPort, internalPort, LOG_LEVEL_DEBUG);
+    case APP_ACTION_TYPE_UPNP: {
+      uint16_t externalPort = static_cast<uint16_t>(action.value_1);
+      uint16_t internalPort = static_cast<uint16_t>(action.value_2);
+      if (action.type == APP_ACTION_MODE_TCP) {
+        m_Net.RequestUPnP(NET_PROTOCOL_TCP, externalPort, internalPort, LOG_LEVEL_DEBUG);
+      } else if (action.type == APP_ACTION_MODE_UDP) {
+        m_Net.RequestUPnP(NET_PROTOCOL_UDP, externalPort, internalPort, LOG_LEVEL_DEBUG);
+      }
+      break;
+    }
 #endif
-  } else if (!action.empty()) {
-    Print("[AURA] Action type " + action[0] + " unsupported");
-    return false;
+    case APP_ACTION_TYPE_HOST: {
+      bool success = m_GameSetup->RunHost();
+      if (!success) {
+        // Delete all other pending actions
+        return APP_ACTION_ERROR;
+      }
+      MergePendingLobbies();
+      break;
+    }
   }
-  return true;
+
+  return APP_ACTION_ERROR;
+}
+
+uint8_t CAura::HandleLazyCommandContext(const LazyCommandContext& lazyCtx)
+{
+  Print("[AURA] --exec CLI not implemented yet.");
+  /*
+  lazyCtx.broadcast;
+  lazyCtx.commandAndPayload;
+  lazyCtx.identity;
+  lazyCtx.scope;
+  lazyCtx.auth;
+
+  shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(
+    m_Aura, commandCFG, this, user, lazyCtx.broadcast, &std::cout
+  );
+  ctx->Run(cmdToken, command, payload);
+  */
+
+  return APP_ACTION_ERROR;
+}
+
+uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
+{
+  switch (genAction.index()) {
+    case 0: { // AppAction
+      return HandleAction(std::get<AppAction>(genAction));
+    }
+    case 1: { // LazyCommandContext
+      return HandleLazyCommandContext(std::get<LazyCommandContext>(genAction));
+    }
+  }
 }
 
 bool CAura::Update()
@@ -919,11 +950,18 @@ bool CAura::Update()
   // 1. pending actions
   bool skipActions = false;
   while (!m_PendingActions.empty()) {
-    if (skipActions || HandleAction(m_PendingActions.front())) {
+    if (skipActions) {
       m_PendingActions.pop();
-    } else {
+      continue;
+    }
+    uint8_t actionResult = HandleGenericAction(m_PendingActions.front());
+    if (actionResult == APP_ACTION_WAIT) {
+      break;
+    }
+    if (actionResult == APP_ACTION_ERROR) {
       skipActions = true;
     }
+    m_PendingActions.pop();
   }
 
   bool metaDataNeedsUpdate = false;
@@ -938,8 +976,8 @@ bool CAura::Update()
       (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
     ) {
       m_AutoRehostGameSetup->SetActive();
-      vector<string> hostAction{"rehost"};
-      m_PendingActions.push(hostAction);
+      AppAction rehostAction = AppAction(APP_ACTION_TYPE_HOST);
+      m_PendingActions.push(rehostAction);
     }
   }
 
@@ -1988,9 +2026,8 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 
 #ifndef DISABLE_MINIUPNP
   if (m_Net.m_Config.m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
-    // This is a long synchronous network call.
-    // TODO: Cache UPnP per-port
-    m_Net.RequestUPnP("TCP", createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
+    // FIXME? This is a long synchronous network call.
+    m_Net.RequestUPnP(NET_PROTOCOL_TCP, createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
 #endif
 

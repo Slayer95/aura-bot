@@ -8532,7 +8532,7 @@ void CGame::StopCountDown()
   m_CountDownCounter = 0;
 }
 
-bool CGame::StopPlayers(const string& reason) const
+bool CGame::StopPlayers(const string& reason)
 {
   // disconnect every user and set their left reason to the passed string
   // we use this function when we want the code in the Update function to run before the destructor (e.g. saving users to the database)

@@ -392,7 +392,7 @@ bool CNet::Init()
     }
 #ifndef DISABLE_MINIUPNP
     if (m_Config.m_EnableUPnP) {
-      RequestUPnP("UDP", 6112, 6112, LOG_LEVEL_DEBUG);
+      RequestUPnP(NET_PROTOCOL_UDP, 6112, 6112, LOG_LEVEL_DEBUG);
     }
 #endif
   }
@@ -839,16 +839,39 @@ sockaddr_storage* CNet::GetPublicIPv6()
 }
 
 #ifndef DISABLE_MINIUPNP
-uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel)
+uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel, bool ignoreCache)
 {
-  struct UPNPDev* devlist = NULL;
+  struct UPNPDev* devlist = nullptr;
   struct UPNPDev* device;
   struct UPNPUrls urls;
   struct IGDdatas data;
   char lanaddr[64] = "unset";
   char wanaddr[64] = "unset";
 
-  devlist = upnpDiscover(2000, NULL, NULL, 0, 0, 2, 0);
+  string protocol;
+  if (protocolCode == NET_PROTOCOL_TCP) {
+    protocol = "TCP";
+    if (!ignoreCache) {
+      auto cacheEntry = m_UPnPTCPCache.find(make_pair(externalPort, internalPort));
+      if (cacheEntry != m_UPnPTCPCache.end() && GetTime() < cacheEntry->second.first + 10800) {
+        return cacheEntry->second.second;
+      }
+    }
+  } else if (protocolCode == NET_PROTOCOL_UDP) {
+    protocol = "UDP";
+    if (!ignoreCache) {
+      auto cacheEntry = m_UPnPUDPCache.find(make_pair(externalPort, internalPort));
+      if (cacheEntry != m_UPnPUDPCache.end() && GetTime() < cacheEntry->second.first+ 10800) {
+        return cacheEntry->second.second;
+      }
+    }
+  } else {
+    return 0;
+  }
+
+  PRINT_IF(LOG_LEVEL_NOTICE, "[NET] Requesting UPnP port-mapping (" + protocol + ") " + to_string(externalPort) + " -> " + to_string(internalPort))
+
+  devlist = upnpDiscover(2000, nullptr, nullptr, 0, 0, 2, 0);
   uint8_t success = 0;
 
   string extPort = to_string(externalPort);
@@ -884,7 +907,7 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
 
     if (logLevel >= LOG_LEVEL_INFO) Print("[UPNP] trying to forward traffic to LAN address " + string(lanaddr) + "...");
 
-    int result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), NULL, "86400");
+    int result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), nullptr, "86400");
     if (result == UPNPCOMMAND_SUCCESS) {
       success = success | (1 << (type - 1));
     } else if (logLevel >= LOG_LEVEL_INFO) {
@@ -923,6 +946,12 @@ uint8_t CNet::RequestUPnP(const string& protocol, const uint16_t externalPort, c
     } else {
       Print("[UPNP] warning - multi-layer NAT detected, port-forwarding may fail.");
     }
+  }
+
+  if (protocolCode == NET_PROTOCOL_TCP) {
+    m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
+  } else if (protocolCode == NET_PROTOCOL_UDP) {
+    m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
   }
 
   return success;

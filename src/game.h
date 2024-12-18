@@ -693,7 +693,7 @@ public:
   bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
   void ShowPlayerNamesGameStartLoading();
   void ShowPlayerNamesInGame();
-  bool StopPlayers(const std::string& reason) const;
+  bool StopPlayers(const std::string& reason);
   void StopLagger(GameUser::CGameUser* user, const std::string& reason);
   void StopLaggers(const std::string& reason);
   void StopDesynchronized(const std::string& reason);

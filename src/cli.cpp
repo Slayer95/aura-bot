@@ -578,17 +578,13 @@ void CCLI::OverrideConfig(CAura* nAura) const
 bool CCLI::QueueActions(CAura* nAura) const
 {
   for (const auto& port : m_PortForwardTCP) {
-    vector<string> action{
-      "port-forward", "TCP", to_string(port), to_string(port)
-    };
-    nAura->m_PendingActions.push(action);
+    AppAction upnpAction = AppAction(APP_ACTION_TYPE_UPNP, APP_ACTION_MODE_TCP, port, port);
+    nAura->m_PendingActions.push(upnpAction);
   }
 
   for (const auto& port : m_PortForwardUDP) {
-    vector<string> action{
-      "port-forward", "UDP", to_string(port), to_string(port)
-    };
-    nAura->m_PendingActions.push(action);
+    AppAction upnpAction = AppAction(APP_ACTION_TYPE_UPNP, APP_ACTION_MODE_UDP, port, port);
+    nAura->m_PendingActions.push(upnpAction);
   }
 
   if (m_SearchTarget.has_value()) {
@@ -679,16 +675,14 @@ bool CCLI::QueueActions(CAura* nAura) const
       }
       gameSetup->AcquireCLISimple(this);
       gameSetup->SetActive();
-      vector<string> hostAction{"host"};
+      AppAction hostAction = AppAction(APP_ACTION_TYPE_HOST, 0);
       nAura->m_PendingActions.push(hostAction);
     }
   }
 
   for (const auto& execEntry : m_ExecCommands) {
-    vector<string> action{
-        "exec", execEntry, m_ExecAs.value(), m_ExecScope, m_ExecAuth, m_ExecBroadcast ? "1" : "0"
-    };
-    nAura->m_PendingActions.push(action);
+    LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, execEntry, m_ExecAs.value(), m_ExecScope, m_ExecAuth);
+    nAura->m_PendingActions.push(lazyCommand);
   }
 
   return true;
