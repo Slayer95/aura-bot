@@ -1197,19 +1197,17 @@ This parameter sets the authentication mode for executing commands specified by 
 - rootadmin: Treats the user as a root admin of their server.
 - sudo: Treats the user as a bot sudoer. These are the highest privileges.
 
-## \`--exec-scope \<SCOPE\>\`
+## \`--exec-game \<IDENTIFIER\>\`
 
 This parameter determines where the command specified by --exec will be run.
 
 **Options:**
 
-- none: The command runs without any specific scope. This is the default behavior.
-- lobby: The command runs in the currently hosted game lobby.
-- server: The command runs in the user's realm or server.
-- game#<GAME>: The command runs in the game with the specified ID.
+- lobby: The command runs in the hosted lobby.
+- game#\<GAME\>: The command runs in the game with the specified ID.
 
-Choose the appropriate scope based on where you want the command to be executed.
-
+Set the appropriate game based on where you want the command to be executed, or
+leave empty.
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://gitlab.com/ivojulca/aura-bot/NETWORKING.md

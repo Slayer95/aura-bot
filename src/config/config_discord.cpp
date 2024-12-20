@@ -37,7 +37,7 @@ using namespace std;
 
 CDiscordConfig::CDiscordConfig(CConfig& CFG)
 {
-  m_HostName               = CFG.GetString("discord.host_name", "discord.com");
+  m_HostName               = ToLowerCase(CFG.GetString("discord.host_name", "discord.com"));
   m_Token                  = CFG.GetString("discord.token");
   m_InviteUrl              = CFG.GetString("discord.invites.url");
   m_Enabled                = CFG.GetBool("discord.enabled", false);

@@ -856,6 +856,49 @@ CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
   return nullptr;
 }
 
+CGame* CAura::GetGameByString(const string& rawInput) const
+{
+  // See also util.h:CheckTargetGameSyntax
+  if (rawInput.empty()) {
+    return nullptr;
+  }
+  string inputGame = ToLowerCase(rawInput);
+  if (inputGame == "lobby" || inputGame == "game#lobby") {
+    return GetMostRecentLobby();
+  }
+  if (inputGame == "oldest" || inputGame == "game#oldest") {
+    if (m_StartedGames.empty()) return nullptr;
+    return m_StartedGames[0];
+  }
+  if (inputGame == "newest" || inputGame == "latest" || inputGame == "game#newest" || inputGame == "game#latest") {
+    if (m_StartedGames.empty()) return nullptr;
+    return m_StartedGames[m_StartedGames.size() - 1];
+  }
+  if (inputGame == "lobby#oldest") {
+    if (m_Lobbies.empty()) return nullptr;
+    return m_Lobbies[0];
+  }
+  if (inputGame == "lobby#newest") {
+    return GetMostRecentLobby();
+  }
+  if (inputGame.substr(0, 5) == "game#") {
+    inputGame = inputGame.substr(5);
+  } else if (inputGame.substr(0, 6) == "lobby#") {
+    inputGame = inputGame.substr(6);
+  }
+
+  uint64_t gameID = 0;
+  try {
+    long long value = stoll(inputGame);
+    if (value < 0) return nullptr;
+    gameID = static_cast<uint64_t>(value);
+  } catch (const exception& e) {
+    return nullptr;
+  }
+
+  return GetGameByIdentifier(gameID);
+}
+
 CRealm* CAura::GetRealmByInputId(const string& inputId) const
 {
   auto it = m_RealmsByInputID.find(inputId);
@@ -880,6 +923,25 @@ CRealm* CAura::GetRealmByHostName(const string& hostName) const
   return nullptr;
 }
 
+uint8_t CAura::FindServiceFromHostName(const string& hostName, void*& location) const
+{
+  if (hostName.empty()) {
+    return SERVICE_TYPE_NONE;
+  }
+  if (m_IRC.MatchHostName(hostName)) {
+    return SERVICE_TYPE_IRC;
+  }
+  if (m_Discord.MatchHostName(hostName)) {
+    return SERVICE_TYPE_DISCORD;
+  }
+  for (const auto& realm : m_Realms) {
+    if (realm->GetServer() == hostName) {
+      return SERVICE_TYPE_REALM;
+    }
+  }
+  return SERVICE_TYPE_INVALID;
+}
+
 uint8_t CAura::HandleAction(const AppAction& action)
 {
   switch (action.type) {
@@ -892,7 +954,7 @@ uint8_t CAura::HandleAction(const AppAction& action)
       } else if (action.type == APP_ACTION_MODE_UDP) {
         m_Net.RequestUPnP(NET_PROTOCOL_UDP, externalPort, internalPort, LOG_LEVEL_DEBUG);
       }
-      break;
+      return APP_ACTION_DONE;
     }
 #endif
     case APP_ACTION_TYPE_HOST: {
@@ -902,7 +964,7 @@ uint8_t CAura::HandleAction(const AppAction& action)
         return APP_ACTION_ERROR;
       }
       MergePendingLobbies();
-      break;
+      return APP_ACTION_DONE;
     }
   }
 
@@ -911,21 +973,74 @@ uint8_t CAura::HandleAction(const AppAction& action)
 
 uint8_t CAura::HandleLazyCommandContext(const LazyCommandContext& lazyCtx)
 {
-  Print("[AURA] --exec CLI not implemented yet.");
-  /*
-  lazyCtx.broadcast;
-  lazyCtx.commandAndPayload;
-  lazyCtx.identity;
-  lazyCtx.scope;
-  lazyCtx.auth;
+  Print("CAura::HandleLazyCommandContext()");
 
-  shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(
-    m_Aura, commandCFG, this, user, lazyCtx.broadcast, &std::cout
-  );
-  ctx->Run(cmdToken, command, payload);
-  */
+  string cmdToken;
+  CGame* targetGame = nullptr;
+  CRealm* sourceRealm = nullptr;
+  CCommandConfig* commandCFG = m_Config.m_LANCommandCFG;
+  shared_ptr<CCommandContext> ctx = nullptr;
 
-  return APP_ACTION_ERROR;
+  void* servicePtr = nullptr;
+  uint8_t serviceType = FindServiceFromHostName(lazyCtx.identityLoc, servicePtr);
+  if (serviceType == SERVICE_TYPE_INVALID) {
+    Print("[AURA] --exec parsed user at service invalid.");
+    return APP_ACTION_ERROR;
+  }
+
+  if (!lazyCtx.targetGame.empty()) {
+    targetGame = GetGameByString(lazyCtx.targetGame);
+    if (!targetGame) {
+      return APP_ACTION_WAIT;
+    }
+  }
+
+  switch (serviceType) {
+    case SERVICE_TYPE_GAME:
+    case SERVICE_TYPE_DISCORD:
+      Print("[AURA] --exec-as: @service not supported [" + lazyCtx.identityLoc + "]");
+      return APP_ACTION_ERROR;
+    case SERVICE_TYPE_NONE:
+      try {
+        if (targetGame) {
+          ctx = make_shared<CCommandContext>(
+            this, commandCFG, targetGame, lazyCtx.identityName, lazyCtx.broadcast, &std::cout
+          );
+        } else {
+          ctx = make_shared<CCommandContext>(
+            this, lazyCtx.identityName, lazyCtx.broadcast, &std::cout
+          );
+        }
+      } catch (...) {
+      }
+      break;
+    case SERVICE_TYPE_IRC:
+      if (!m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
+      if (!m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
+      return APP_ACTION_ERROR; // TODO
+      break;
+    case SERVICE_TYPE_REALM:
+      Print("[AURA] --exec parsed user at service is realm.");
+      CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
+      Print("[AURA] --exec parsed user at service is realm " + sourceRealm->GetCanonicalDisplayName() + ".");
+      if (!sourceRealm->GetLoggedIn()) {
+        Print("[AURA] --exec realm not logged in yet...");
+        return APP_ACTION_WAIT;
+      }
+      commandCFG = sourceRealm->GetCommandConfig();
+      Print("[AURA] --exec realm not implemented yet...");
+      return APP_ACTION_ERROR; // TODO
+      break;
+  }
+
+  //lazyCtx.auth;
+
+  if (!ctx) {
+    return APP_ACTION_ERROR;
+  }
+
+  ctx->Run(cmdToken, lazyCtx.command, lazyCtx.payload);
+  return APP_ACTION_DONE;
 }
 
 uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)

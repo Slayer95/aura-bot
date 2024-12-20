@@ -501,6 +501,11 @@ Config
 - Default value: true
 - Error handling: Use default value
 
+## \`global_realm.logs.console.chat\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.main\`
 - Type: bool
 - Default value: false

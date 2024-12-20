@@ -81,8 +81,8 @@ public:
   CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // IRC, IRC->Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, std::string& channelName, std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
 
 #ifndef DISABLE_DPP
   // Discord, Discord->Game
@@ -91,8 +91,8 @@ public:
 #endif
 
   // Arbitrary, Arbitrary->Game
-  CCommandContext(CAura* nAura, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
 
   [[nodiscard]] inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; }
 
@@ -188,34 +188,31 @@ public:
 
 [[nodiscard]] inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchPayload)
 {
+  matchPayload.clear();
   if (message.empty()) return false;
   std::string::size_type tokenSize = token.length();
-  if (message.length() > tokenSize && message.substr(0, tokenSize) == token) {
-    std::string::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
-    matchPadding = cmdStart > tokenSize;
-    if (cmdStart != std::string::npos) {
-      std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
-      if (cmdEnd == std::string::npos) {
-        matchCmd = message.substr(cmdStart);
-        matchPayload.clear();
-      } else {
-        matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
-        std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
-        if (payloadStart == std::string::npos) {
-          matchPayload.clear();
-        } else {
-          std::string::size_type payloadEnd = message.find_last_not_of(' ');
-          if (payloadEnd == std::string::npos) {
-            matchPayload.clear();
-          } else {
-            matchPayload = message.substr(payloadStart, payloadEnd + 1 - payloadStart);
-          }
-        }
+  if (message.length() <= tokenSize || (tokenSize > 0 && message.substr(0, tokenSize) != token)) {
+    return false;
+  }
+  std::string::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
+  matchPadding = cmdStart > tokenSize;
+  if (cmdStart == std::string::npos) {
+    return false;
+  }
+  std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
+  if (cmdEnd == std::string::npos) {
+    matchCmd = message.substr(cmdStart);
+  } else {
+    matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
+    std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
+    if (payloadStart != std::string::npos) {
+      std::string::size_type payloadEnd = message.find_last_not_of(' ');
+      if (payloadEnd != std::string::npos) {
+        matchPayload = message.substr(payloadStart, payloadEnd + 1 - payloadStart);
       }
-      return true;
     }
   }
-  return false;
+  return true;
 }
 
 [[nodiscard]] inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchPayload)

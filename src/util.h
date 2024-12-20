@@ -1289,6 +1289,53 @@ inline void NormalizeDirectory(std::filesystem::path& filePath)
   return container;
 }
 
+[[nodiscard]] inline std::pair<std::string, std::string> SplitAddress(const std::string& fqName)
+{
+  std::string::size_type atSignPos = fqName.find('@');
+  if (atSignPos == std::string::npos) {
+    return make_pair(fqName, std::string());
+  }
+  return make_pair(
+    TrimString(fqName.substr(0, atSignPos)),
+    TrimString(fqName.substr(atSignPos + 1))
+  );
+}
+
+[[nodiscard]] inline bool CheckTargetGameSyntax(const std::string& rawInput)
+{
+  if (rawInput.empty()) {
+    return false;
+  }
+  std::string inputGame = ToLowerCase(rawInput);
+  if (inputGame == "lobby" || inputGame == "game#lobby") {
+    return true;
+  }
+  if (inputGame == "oldest" || inputGame == "game#oldest") {
+    return true;
+  }
+  if (inputGame == "newest" || inputGame == "latest" || inputGame == "game#newest" || inputGame == "game#latest") {
+    return true;
+  }
+  if (inputGame == "lobby#oldest") {
+    return true;
+  }
+  if (inputGame == "lobby#newest") {
+    return true;
+  }
+  if (inputGame.substr(0, 5) == "game#") {
+    inputGame = inputGame.substr(5);
+  } else if (inputGame.substr(0, 6) == "lobby#") {
+    inputGame = inputGame.substr(6);
+  }
+
+  try {
+    long long value = std::stoll(inputGame);
+    return value >= 0;
+  } catch (...) {
+    return false;
+  }
+}
+
 inline bool ReplaceText(std::string& input, const std::string& fragment, const std::string& replacement)
 {
   std::string::size_type matchIndex = input.find(fragment);

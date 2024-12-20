@@ -258,9 +258,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_WhisperErrorReply(nRootConfig->m_WhisperErrorReply),
     m_QueryGameLists(nRootConfig->m_QueryGameLists)
 {
-  const static string emptyString;
-
-  m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name", m_HostName);
+  m_HostName               = ToLowerCase(CFG.GetString(m_CFGKeyPrefix + "host_name", m_HostName));
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", m_ServerPort);
   m_UniqueName             = CFG.GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
   m_CanonicalName          = CFG.GetString(m_CFGKeyPrefix + "canonical_name", m_UniqueName); // may be shared by several servers

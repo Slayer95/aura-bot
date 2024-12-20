@@ -65,6 +65,7 @@ Commands
 - Syntax: color \<PLAYER\> , \<COLOR\> - Color goes from 1 to 12
 
 ## \`comp\`
+- Aliases: bot
 - Syntax: comp \<SLOT\> , \<SKILL\> - Skill is any of: easy, normal, insane
 
 ## \`countcfgs\`

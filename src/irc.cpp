@@ -69,6 +69,7 @@ CIRC::CIRC(CConfig& nCFG)
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
     m_WaitingToConnect(true),
+    m_LoggedIn(false),
     m_NickName(string()),
     m_Config(CIRCConfig(nCFG))
 {
@@ -86,6 +87,13 @@ CIRC::~CIRC()
       ctx->SetPartiallyDestroyed();
     }
   }
+}
+
+bool CIRC::MatchHostName(const string& hostName) const
+{
+  if (hostName == m_Config.m_HostName) return true;
+  if (hostName == m_Config.m_VerifiedDomain) return true;
+  return false;
 }
 
 uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds) const
@@ -106,6 +114,7 @@ void CIRC::ResetConnection()
   m_Socket->Reset();
   //m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
   m_WaitingToConnect = true;
+  m_LoggedIn = false;
 }
 
 void CIRC::Update(void* fd, void* send_fd)
@@ -192,6 +201,7 @@ void CIRC::Update(void* fd, void* send_fd)
 
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
 
+      m_LoggedIn = true;
       Print("[IRC: " + m_Config.m_HostName + "] connected");
 
       m_LastPacketTime = Time;
@@ -322,9 +332,15 @@ void CIRC::ExtractPackets()
       uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, payload);
       if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
         const bool isWhisper = channel[0] != '#';
-        shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, this, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
-        ctx->UpdatePermissions();
-        ctx->Run(cmdToken, command, payload);
+        shared_ptr<CCommandContext> ctx = nullptr;
+        try {
+          ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, this, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+        } catch (...) {
+        }
+        if (ctx) {
+          ctx->UpdatePermissions();
+          ctx->Run(cmdToken, command, payload);
+        }
       }
 
       continue;

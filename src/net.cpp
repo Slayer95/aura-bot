@@ -1277,8 +1277,14 @@ void CNet::CheckJoinableLobbies()
       if (lobby->GetIsVerbose()) {
         checkMode |= HEALTH_CHECK_VERBOSE;
       }
-      shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, false, &cout);
-      QueryHealthCheck(ctx, checkMode, nullptr, lobby);
+      shared_ptr<CCommandContext> ctx = nullptr;
+      try {
+        ctx = make_shared<CCommandContext>(m_Aura, string(), false, &cout);
+      } catch (...) {
+      }
+      if (ctx) {
+        QueryHealthCheck(ctx, checkMode, nullptr, lobby);
+      }
       lobby->SetIsCheckJoinable(false);
     }
   }

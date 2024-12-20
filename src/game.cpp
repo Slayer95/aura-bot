@@ -5214,8 +5214,11 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
               shouldRelay = false;
             }
-            shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
-            ctx->Run(cmdToken, command, payload);
+            shared_ptr<CCommandContext> ctx = nullptr;
+            try {
+              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+            } catch (...) {}
+            if (ctx) ctx->Run(cmdToken, command, payload);
           } else if (message == "?trigger") {
             if (shouldRelay) {
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
@@ -5229,10 +5232,15 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
               shouldRelay = false;
             }
-            shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
-            cmdToken = m_Config.m_PrivateCmdToken;
-            command = message.substr(1);
-            ctx->Run(cmdToken, command, payload);
+            shared_ptr<CCommandContext> ctx = nullptr;
+            try {
+              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
+            } catch (...) {}
+            if (ctx) {
+              cmdToken = m_Config.m_PrivateCmdToken;
+              command = message.substr(1);
+              ctx->Run(cmdToken, command, payload);
+            }
           } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
             if (shouldRelay) {
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
@@ -6033,7 +6041,12 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
     string prefix = ToLowerCase(message.substr(0, 2));
     if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
       if (activeCmd == SMART_COMMAND_GO) {
-        shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
+        shared_ptr<CCommandContext> ctx = nullptr;
+        try {
+          ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
+        } catch (...) {
+          return true;
+        }
         string cmdToken = m_Config.m_PrivateCmdToken;
         string command = "start";
         string payload;

@@ -29,6 +29,7 @@
 #include "includes.h"
 
 #include <filesystem>
+#include <CLI11/CLI11.hpp>
 
 #define CLI_OK 0
 #define CLI_ERROR 1
@@ -58,16 +59,20 @@ struct AppAction
 struct LazyCommandContext
 {
   bool broadcast;
-  std::string commandAndPayload;
-  std::string scope;
-  std::string identity;
+  std::string command;
+  std::string payload;
+  std::string targetGame;
+  std::string identityName;
+  std::string identityLoc;
   std::string auth;
 
-  LazyCommandContext(bool nBroadcast, const std::string& nCommandAndPayload, const std::string& nScope, const std::string& nIdentity, const std::string& nAuth)
+  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nPayload, const std::string& nTargetGame, const std::string& nIdentityName, const std::string& nIdentityLoc, const std::string& nAuth)
    : broadcast(nBroadcast),
-     commandAndPayload(nCommandAndPayload),
-     scope(nScope),
-     identity(nIdentity),
+     command(nCommand),
+     payload(nPayload),
+     targetGame(nTargetGame),
+     identityName(nIdentityName),
+     identityLoc(nIdentityLoc),
      auth(nAuth)
   {
   };
@@ -197,7 +202,7 @@ public:
   // Command queue
   std::optional<std::string>            m_ExecAs;
   std::string                           m_ExecAuth;
-  std::string                           m_ExecScope;
+  std::string                           m_ExecGame;
   std::vector<std::string>              m_ExecCommands;
   bool                                  m_ExecBroadcast;
 
@@ -205,6 +210,7 @@ public:
   ~CCLI();
 
   // Parsing stuff
+  //CLI::Validator GetIsFullyQualifiedUserValidator();
   uint8_t Parse(const int argc, char** argv);
   [[nodiscard]] uint8_t GetGameSearchType() const;
   [[nodiscard]] uint8_t GetGameLobbyTimeoutMode() const;

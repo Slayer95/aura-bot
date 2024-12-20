@@ -146,15 +146,17 @@ public:
   ~CAura();
   CAura(CAura&) = delete;
 
-  CGame* GetMostRecentLobby(bool allowPending = false) const;
-  CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
-  CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
-  CGame* GetLobbyByHostCounterExact(uint32_t hostCounter) const;
-  CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
+  [[nodiscard]] CGame* GetMostRecentLobby(bool allowPending = false) const;
+  [[nodiscard]] CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
+  [[nodiscard]] CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
+  [[nodiscard]] CGame* GetLobbyByHostCounterExact(uint32_t hostCounter) const;
+  [[nodiscard]] CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
+  [[nodiscard]] CGame* GetGameByString(const std::string& targetGame) const;
 
-  CRealm* GetRealmByInputId(const std::string& inputId) const;
-  CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
-  CRealm* GetRealmByHostName(const std::string& hostName) const;
+  [[nodiscard]] CRealm* GetRealmByInputId(const std::string& inputId) const;
+  [[nodiscard]] CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
+  [[nodiscard]] CRealm* GetRealmByHostName(const std::string& hostName) const;
+  [[nodiscard]] uint8_t FindServiceFromHostName(const std::string& hostName, void*& location) const;
 
   [[nodiscard]] bool MergePendingLobbies();
   void TrackGameJoinInProgress(CGame* game);

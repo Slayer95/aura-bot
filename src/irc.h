@@ -61,6 +61,7 @@ public:
   int64_t                  m_LastPacketTime;
   int64_t                  m_LastAntiIdleTime;
   bool                     m_WaitingToConnect;
+  bool                     m_LoggedIn;
   std::string              m_NickName;
   CIRCConfig               m_Config;
 
@@ -70,6 +71,8 @@ public:
 
   [[nodiscard]] inline CTCPClient* GetSocket() const { return m_Socket; }
   [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }
+  [[nodiscard]] bool MatchHostName(const std::string& hostName) const;
+  [[nodiscard]] inline bool GetIsLoggedIn() const { return m_LoggedIn; }
 
   [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds) const;
   void ResetConnection();

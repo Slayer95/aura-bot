@@ -213,7 +213,14 @@ void CDiscord::Update()
       m_CommandQueue.pop();
       continue;
     }
-    shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, m_Aura->m_CommandDefaultConfig, event, &std::cout);
+    shared_ptr<CCommandContext> ctx = nullptr;
+    try {
+      ctx = make_shared<CCommandContext>(m_Aura, m_Aura->m_CommandDefaultConfig, event, &std::cout);
+    } catch (...) {
+      delete event;
+      m_CommandQueue.pop();
+      continue;
+    }
     ctx->Run(cmdToken, command, payload);
     m_CommandQueue.pop();
   }
@@ -240,6 +247,15 @@ void CDiscord::SendUser(const string& message, const uint64_t target)
 #endif
     }
   });
+}
+
+bool CDiscord::MatchHostName(const string& hostName) const
+{
+  if (hostName == m_Config.m_HostName) return true;
+  if (hostName == "users." + m_Config.m_HostName) {
+    return true;
+  }
+  return false;
 }
 
 bool CDiscord::GetIsServerAllowed(const uint64_t target) const

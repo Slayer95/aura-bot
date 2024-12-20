@@ -35,7 +35,6 @@
 #include "game_setup.h"
 #include "realm.h"
 #include "util.h"
-#include <CLI11/CLI11.hpp>
 
 #include "aura.h"
 
@@ -49,16 +48,32 @@ CCLI::CCLI()
  : m_UseStandardPaths(false),
    m_EarlyAction(0),
    m_Verbose(false),
-   m_ExecAuth("verified"),
-   m_ExecScope("none")
+   m_ExecAuth("verified")
 {
 }
 
 CCLI::~CCLI() = default;
 
+/*
+CLI::Validator CCLI::GetIsFullyQualifiedUserValidator()
+{
+  return CLI::Validator(
+    [](string &input) -> string {
+      if (input.find('@') == string::npos) {
+        return "Username must contain '@' to specify realm (trailing @ means no realm)";
+      }
+      return string{}; // Return an empty string for valid input
+    },
+    "Username must contain '@' to specify realm (trailing @ means no realm)",
+    "IsFullyQualifiedUser"
+  );
+}
+*/
+
 uint8_t CCLI::Parse(const int argc, char** argv)
 {
   CLI::App app{AURA_APP_NAME};
+  //CLI::Validator IsFullyQualifiedUser = GetIsFullyQualifiedUserValidator();
   argv = app.ensure_utf8(argv);
 
   bool examples = false;
@@ -116,7 +131,7 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 #endif
 
   // Game hosting
-  app.add_option("--owner", m_GameOwner, "Customizes the game owner when hosting from the CLI.");
+  app.add_option("--owner", m_GameOwner, "Customizes the game owner when hosting from the CLI.")/*->check(IsFullyQualifiedUser)*/;
   app.add_flag("--no-owner", m_GameOwnerLess, "Disables the game owner feature when hosting from the CLI.");
   app.add_flag("--lock-teams,--no-lock-teams{false}", m_GameTeamsLocked, "Toggles 'Lock Teams' setting when hosting from the CLI.");
   app.add_flag("--teams-together,--no-teams-together{false}", m_GameTeamsTogether, "Toggles 'Teams Together' setting when hosting from the CLI.");
@@ -191,9 +206,9 @@ uint8_t CCLI::Parse(const int argc, char** argv)
 
   // Command execution
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
-  app.add_option("--exec-as", m_ExecAs, "Customizes the user identity when running commands from the CLI.");
+  app.add_option("--exec-as", m_ExecAs, "Customizes the user identity when running commands from the CLI.")/*->check(IsFullyQualifiedUser)*/;
   app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember({"spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("verified");
-  app.add_option("--exec-scope", m_ExecScope, "Customizes the channel when running commands from the CLI. Values: none, lobby, server, game#IDX")->default_val("none");
+  app.add_option("--exec-game", m_ExecGame, "Customizes the channel when running commands from the CLI. Values: lobby, game#IDX");
   app.add_flag(  "--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
 
   // Port-forwarding
@@ -222,22 +237,9 @@ uint8_t CCLI::Parse(const int argc, char** argv)
     return CLI_ERROR;
   }
 
-  if (m_ExecScope != "none" && m_ExecScope != "lobby" && m_ExecScope != "server") {
-    if (m_ExecScope.substr(0, 5) != "game#") {
-      Print("[AURA] Option --exec-scope accepts values: none, lobby, server, game#IDX");
-      return CLI_ERROR;
-    }
-    string gameNumber = m_ExecScope.substr(5);
-    try {
-      int value = stoul(gameNumber);
-      if (value < 0) {
-        Print("[AURA] Option --exec-scope accepts values: none, lobby, server, game#IDX");
-        return CLI_ERROR;
-      }
-    } catch (...) {
-      Print("[AURA] Option --exec-scope accepts values: none, lobby, server, game#IDX");
-      return CLI_ERROR;
-    }
+  if (!m_ExecGame.empty() && !CheckTargetGameSyntax(m_ExecGame)) {
+    Print("[AURA] Option --exec-game accepts values: lobby, game#IDX");
+    return CLI_ERROR;
   }
 
   if (about || examples) {
@@ -595,93 +597,94 @@ bool CCLI::QueueActions(CAura* nAura) const
     }
 
     const uint8_t searchType = GetGameSearchType();
-    shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(nAura, false, &cout);
     optional<string> userName = GetUserMultiPlayerName();
-    if (userName.has_value()) {
-      ctx->SetIdentity(userName.value());
+    shared_ptr<CCommandContext> ctx = nullptr;
+    try {
+      ctx = make_shared<CCommandContext>(nAura, userName.value_or(string()), false, &cout);
+    } catch (...) {
+      return false;
     }
-    shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true /* lucky mode */);
-    if (gameSetup) {
-      if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
-      if (m_GameMapDownloadTimeout.has_value()) gameSetup->SetDownloadTimeout(m_GameMapDownloadTimeout.value());
-      if (!gameSetup->LoadMapSync()) {
-        if (searchType == SEARCH_TYPE_ANY) {
-          ctx->ErrorReply("Input does not refer to a valid map, config, or URL.");
-        } else if (searchType == SEARCH_TYPE_ONLY_FILE) {
-          ctx->ErrorReply("Input does not refer to a valid file");
-        } else if (searchType == SEARCH_TYPE_ONLY_MAP) {
-          ctx->ErrorReply("Input does not refer to a valid map (.w3x, .w3m)");
-        } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
-          ctx->ErrorReply("Input does not refer to a valid map config file (.ini)");
-        }
+    shared_ptr<CGameSetup> gameSetup = nullptr;
+    try {
+      gameSetup = make_shared<CGameSetup>(nAura, ctx, m_SearchTarget.value(), searchType, true, m_UseStandardPaths, true /* lucky mode */);
+    } catch (...) {
+      return false;
+    }
+    if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
+    if (m_GameMapDownloadTimeout.has_value()) gameSetup->SetDownloadTimeout(m_GameMapDownloadTimeout.value());
+    if (!gameSetup->LoadMapSync()) {
+      if (searchType == SEARCH_TYPE_ANY) {
+        ctx->ErrorReply("Input does not refer to a valid map, config, or URL.");
+      } else if (searchType == SEARCH_TYPE_ONLY_FILE) {
+        ctx->ErrorReply("Input does not refer to a valid file");
+      } else if (searchType == SEARCH_TYPE_ONLY_MAP) {
+        ctx->ErrorReply("Input does not refer to a valid map (.w3x, .w3m)");
+      } else if (searchType == SEARCH_TYPE_ONLY_CONFIG) {
+        ctx->ErrorReply("Input does not refer to a valid map config file (.ini)");
+      }
+      return false;
+    }
+    if (!gameSetup->ApplyMapModifiers(&options)) {
+      ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
+      return false;
+    }
+    if (!gameSetup->m_SaveFile.empty()) {
+      if (!CheckGameLoadParameters(gameSetup)) {
         return false;
       }
-      if (!gameSetup->ApplyMapModifiers(&options)) {
-        ctx->ErrorReply("Invalid map options. Map has fixed player settings.");
-        return false;
-      }
-      if (!gameSetup->m_SaveFile.empty()) {
-        if (!CheckGameLoadParameters(gameSetup)) {
-          return false;
-        }
-      }
-      for (const auto& id : m_ExcludedRealms) {
-        CRealm* excludedRealm = nAura->GetRealmByInputId(id);
-        if (excludedRealm) {
-          gameSetup->AddIgnoredRealm(excludedRealm);
-        } else {
-          Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
-        }
-      }
-      if (m_GameMapAlias.has_value()) {
-        string normalizedAlias = GetNormalizedAlias(m_GameMapAlias.value());
-        string mapFileName = gameSetup->GetMap()->GetServerFileName();
-        if (nAura->m_DB->AliasAdd(normalizedAlias, mapFileName)) {
-          Print("[AURA] Alias <<" + m_GameMapAlias.value() + ">> added for [" + mapFileName + "]");
-        } else {
-          Print("Failed to add alias.");
-        }
-      }
-      if (m_MirrorSource.has_value()) {
-        if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
-          Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-          return false;
-        }
-      }
-      if (m_GameName.has_value()) {
-        gameSetup->SetBaseName(m_GameName.value());
+    }
+    for (const auto& id : m_ExcludedRealms) {
+      CRealm* excludedRealm = nAura->GetRealmByInputId(id);
+      if (excludedRealm) {
+        gameSetup->AddIgnoredRealm(excludedRealm);
       } else {
-        if (userName.has_value()) {
-          gameSetup->SetBaseName(userName.value() + "'s game");
-        } else {
-          gameSetup->SetBaseName("Join and play");
-        }
+        Print("[AURA] Unrecognized realm [" + id + "] ignored by --exclude");
       }
-      if (userName.has_value()) {
-        gameSetup->SetCreator(userName.value());
-      }
-      if (m_GameOwner.has_value()) {
-        string::size_type realmStart = m_GameOwner.value().find('@');
-        string ownerName, ownerRealm;
-        if (realmStart != string::npos) {
-          ownerName = TrimString(m_GameOwner.value().substr(0, realmStart));
-          ownerRealm = TrimString(m_GameOwner.value().substr(realmStart + 1));
-        } else {
-          ownerName = m_GameOwner.value();
-        }
-        gameSetup->SetOwner(ownerName, ownerRealm);
-      } else if (m_GameOwnerLess.value_or(false)) {
-        gameSetup->SetOwnerLess(true);
-      }
-      gameSetup->AcquireCLISimple(this);
-      gameSetup->SetActive();
-      AppAction hostAction = AppAction(APP_ACTION_TYPE_HOST, 0);
-      nAura->m_PendingActions.push(hostAction);
     }
+    if (m_GameMapAlias.has_value()) {
+      string normalizedAlias = GetNormalizedAlias(m_GameMapAlias.value());
+      string mapFileName = gameSetup->GetMap()->GetServerFileName();
+      if (nAura->m_DB->AliasAdd(normalizedAlias, mapFileName)) {
+        Print("[AURA] Alias <<" + m_GameMapAlias.value() + ">> added for [" + mapFileName + "]");
+      } else {
+        Print("Failed to add alias.");
+      }
+    }
+    if (m_MirrorSource.has_value()) {
+      if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
+        Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
+        return false;
+      }
+    }
+    if (m_GameName.has_value()) {
+      gameSetup->SetBaseName(m_GameName.value());
+    } else {
+      if (userName.has_value()) {
+        gameSetup->SetBaseName(userName.value() + "'s game");
+      } else {
+        gameSetup->SetBaseName("Join and play");
+      }
+    }
+    if (userName.has_value()) {
+      gameSetup->SetCreator(userName.value());
+    }
+    if (m_GameOwner.has_value()) {
+      pair<string, string> owner = SplitAddress(m_GameOwner.value());
+      gameSetup->SetOwner(ToLowerCase(owner.first), ToLowerCase(owner.second));
+    } else if (m_GameOwnerLess.value_or(false)) {
+      gameSetup->SetOwnerLess(true);
+    }
+    gameSetup->AcquireCLISimple(this);
+    gameSetup->SetActive();
+    AppAction hostAction = AppAction(APP_ACTION_TYPE_HOST, 0);
+    nAura->m_PendingActions.push(hostAction);
   }
 
   for (const auto& execEntry : m_ExecCommands) {
-    LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, execEntry, m_ExecAs.value(), m_ExecScope, m_ExecAuth);
+    string cmdToken, command, payload;
+    uint8_t tokenMatch = ExtractMessageTokensAny(execEntry, cmdToken, cmdToken, cmdToken, command, payload);
+    pair<string, string> identity = SplitAddress(m_ExecAs.value());
+    LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, command, payload, ToLowerCase(identity.first), ToLowerCase(identity.second), m_ExecGame, m_ExecAuth);
     nAura->m_PendingActions.push(lazyCommand);
   }
 

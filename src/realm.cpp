@@ -437,8 +437,15 @@ void CRealm::Update(void* fd, void* send_fd)
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got invalid SID_HOSTGAME message")
                 break;
               }
-              shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, false, &cout);
-              shared_ptr<CGameSetup> gameSetup = make_shared<CGameSetup>(m_Aura, ctx, &(hostedGameConfig.value()));
+              shared_ptr<CCommandContext> ctx = nullptr;
+              shared_ptr<CGameSetup> gameSetup = nullptr;
+              try {
+                ctx = make_shared<CCommandContext>(m_Aura, string(), false, &cout);
+                gameSetup = make_shared<CGameSetup>(m_Aura, ctx, &(hostedGameConfig.value()));
+              } catch (...) {
+                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "hostgame memory allocation failure")
+                break;
+              }
               if (!gameSetup->GetMapLoaded()) {
                 PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
                 break;
@@ -666,8 +673,14 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       }
       return;
     }
-    shared_ptr<CCommandContext> ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, this, fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
-    ctx->Run(cmdToken, command, payload);
+    shared_ptr<CCommandContext> ctx = nullptr;
+    try {
+      ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, this, fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+    } catch (...) {
+    }
+    if (ctx) {
+      ctx->Run(cmdToken, command, payload);
+    }
   }
   else if (eventType == BNETProtocol::IncomingChatEvent::CHANNEL)
   {

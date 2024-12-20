@@ -40,7 +40,7 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
     m_PrivateCmdToken("!"),
     m_BroadcastCmdToken(string())
 {
-  m_HostName               = CFG.GetString("irc.host_name");
+  m_HostName               = ToLowerCase(CFG.GetString("irc.host_name"));
   m_Port                   = CFG.GetUint16("irc.port", 6667);
   m_NickName               = CFG.GetString("irc.nickname");
   m_UserName               = CFG.GetString("irc.username");

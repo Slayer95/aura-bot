@@ -596,7 +596,12 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
 
 shared_ptr<CMap> CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
 {
-  shared_ptr<CMap> map = make_shared<CMap>(m_Aura, mapCFG);
+  shared_ptr<CMap> map = nullptr;
+  try {
+    map = make_shared<CMap>(m_Aura, mapCFG);
+  } catch (...) {
+    return map;
+  }
   /*
   if (!map) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map config", CHAT_SEND_SOURCE_ALL);
@@ -606,7 +611,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool si
   string errorMessage = map->CheckProblems();
   if (!errorMessage.empty()) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map config: " + errorMessage, CHAT_SEND_SOURCE_ALL);
-    return nullptr;
+    return map;
   }
   return map;
 }
@@ -662,13 +667,13 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
     MapCFG.Set("map.type", "dota");
   }
 
-  shared_ptr<CMap> baseMap = make_shared<CMap>(m_Aura, &MapCFG);
-  /*
-  if (!baseMap) {
+  shared_ptr<CMap> baseMap = nullptr;
+  try {
+    baseMap = make_shared<CMap>(m_Aura, &MapCFG);
+  } catch (...) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map.", CHAT_SEND_SOURCE_ALL);
-    return nullptr;
+    return baseMap;
   }
-  */
   string errorMessage = baseMap->CheckProblems();
   if (!errorMessage.empty()) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map: " + errorMessage, CHAT_SEND_SOURCE_ALL);
