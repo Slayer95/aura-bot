@@ -86,6 +86,7 @@ public:
 
   [[nodiscard]] bool GetIsModerator(const std::string& nHostName);
   [[nodiscard]] bool GetIsSudoer(const std::string& nHostName);
+  [[nodiscard]] CCommandConfig* GetCommandConfig() const;
 };
 
 #endif // AURA_IRC_H_

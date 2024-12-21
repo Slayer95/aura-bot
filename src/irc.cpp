@@ -426,8 +426,14 @@ void CIRC::SendChannel(const string& message, const string& target)
 
 void CIRC::SendAllChannels(const string& message)
 {
-  for (auto& channel : m_Config.m_Channels)
+  for (auto& channel : m_Config.m_Channels) {
     m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
+  }
+}
+
+CCommandConfig* CIRC::GetCommandConfig() const
+{
+  return m_Config.m_CommandCFG;
 }
 
 bool CIRC::GetIsModerator(const std::string& nHostName)

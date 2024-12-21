@@ -892,7 +892,7 @@ CGame* CAura::GetGameByString(const string& rawInput) const
     long long value = stoll(inputGame);
     if (value < 0) return nullptr;
     gameID = static_cast<uint64_t>(value);
-  } catch (const exception& e) {
+  } catch (...) {
     return nullptr;
   }
 
@@ -977,7 +977,6 @@ uint8_t CAura::HandleLazyCommandContext(const LazyCommandContext& lazyCtx)
 
   string cmdToken;
   CGame* targetGame = nullptr;
-  CRealm* sourceRealm = nullptr;
   CCommandConfig* commandCFG = m_Config.m_LANCommandCFG;
   shared_ptr<CCommandContext> ctx = nullptr;
 
@@ -1016,8 +1015,27 @@ uint8_t CAura::HandleLazyCommandContext(const LazyCommandContext& lazyCtx)
       break;
     case SERVICE_TYPE_IRC:
       if (!m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
+      if (m_IRC.m_Config.m_Channels.empty()) return APP_ACTION_ERROR;
       if (!m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
-      return APP_ACTION_ERROR; // TODO
+
+      try {
+         if (targetGame) {
+          ctx = make_shared<CCommandContext>(
+            this, commandCFG, &m_IRC,
+            m_IRC.m_Config.m_Channels[0], lazyCtx.identityName,
+            false, lazyCtx.identityName + m_IRC.m_Config.m_VerifiedDomain,
+            lazyCtx.broadcast, &std::cout
+          );
+         } else {
+           ctx = make_shared<CCommandContext>(
+            this, commandCFG, targetGame, &m_IRC,
+            m_IRC.m_Config.m_Channels[0], lazyCtx.identityName,
+            false, lazyCtx.identityName + m_IRC.m_Config.m_VerifiedDomain,
+            lazyCtx.broadcast, &std::cout
+          );
+         }
+      } catch (...) {
+      }
       break;
     case SERVICE_TYPE_REALM:
       Print("[AURA] --exec parsed user at service is realm.");
@@ -1027,18 +1045,35 @@ uint8_t CAura::HandleLazyCommandContext(const LazyCommandContext& lazyCtx)
         Print("[AURA] --exec realm not logged in yet...");
         return APP_ACTION_WAIT;
       }
+
       commandCFG = sourceRealm->GetCommandConfig();
-      Print("[AURA] --exec realm not implemented yet...");
-      return APP_ACTION_ERROR; // TODO
+      try {
+         if (targetGame) {
+          ctx = make_shared<CCommandContext>(
+            this, commandCFG, targetGame, sourceRealm,
+            lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
+          );
+         } else {
+           ctx = make_shared<CCommandContext>(
+            this, commandCFG, sourceRealm,
+            lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
+          );
+         }
+      } catch (...) {
+      }
       break;
   }
-
-  //lazyCtx.auth;
 
   if (!ctx) {
     return APP_ACTION_ERROR;
   }
 
+  // TODO: --exec-auth
+  //app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember(
+  //{"spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("verified");
+  if (lazyCtx.auth == "sudo") {
+    ctx->SetPermissions(SET_USER_PERMISSIONS_ALL);
+  }
   ctx->Run(cmdToken, lazyCtx.command, lazyCtx.payload);
   return APP_ACTION_DONE;
 }
@@ -1047,10 +1082,20 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
 {
   switch (genAction.index()) {
     case 0: { // AppAction
-      return HandleAction(std::get<AppAction>(genAction));
+      const AppAction& action = std::get<AppAction>(genAction);
+      uint8_t result = HandleAction(action);
+      if (result == APP_ACTION_WAIT && GetTicks() < action.queuedTime + 20000) {
+        result = APP_ACTION_TIMEOUT;
+      }
+      return result;
     }
     case 1: { // LazyCommandContext
-      return HandleLazyCommandContext(std::get<LazyCommandContext>(genAction));
+      const LazyCommandContext& lazyCtx = std::get<LazyCommandContext>(genAction);
+      uint8_t result = HandleLazyCommandContext(lazyCtx);
+      if (result == APP_ACTION_WAIT && GetTicks() < lazyCtx.queuedTime + 20000) {
+        result = APP_ACTION_TIMEOUT;
+      }
+      return result;
     }
   }
 
@@ -1076,6 +1121,10 @@ bool CAura::Update()
       break;
     }
     if (actionResult == APP_ACTION_ERROR) {
+      Print("[AURA] Queued action errored. Pending actions aborted.");
+      skipActions = true;
+    } else if (actionResult == APP_ACTION_TIMEOUT) {
+      Print("[AURA] Queued action timed out. Pending actions aborted.");
       skipActions = true;
     }
     m_PendingActions.pop();
@@ -1269,7 +1318,7 @@ bool CAura::Update()
   // update unassigned incoming connections
 
   for (auto& serverConnections : m_Net.m_IncomingConnections) {
-    int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
+    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
       uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
@@ -1290,7 +1339,7 @@ bool CAura::Update()
   // update CGameSeeker incoming connections
 
   for (auto& serverConnections : m_Net.m_ManagedConnections) {
-    int64_t timeout = LinearInterpolation(serverConnections.second.size(), 1, MAX_INCOMING_CONNECTIONS, GAME_USER_CONNECTION_MAX_TIMEOUT, GAME_USER_CONNECTION_MIN_TIMEOUT);
+    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
       uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
