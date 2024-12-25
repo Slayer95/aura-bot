@@ -166,7 +166,7 @@ public:
 
   // Command queue
   std::optional<std::string>            m_ExecAs;
-  std::string                           m_ExecAuth;
+  CommandAuth                           m_ExecAuth;
   std::string                           m_ExecGame;
   std::vector<std::string>              m_ExecCommands;
   bool                                  m_ExecBroadcast;

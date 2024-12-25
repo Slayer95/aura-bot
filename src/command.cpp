@@ -567,7 +567,7 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     m_TargetGame == m_Aura->m_SudoContext->m_TargetGame &&
     m_GameUser == m_Aura->m_SudoContext->m_GameUser &&
     m_IRC == m_Aura->m_SudoContext->m_IRC &&
-    m_DiscordAPI == m_Aura->m_Discord->m_Client
+    (!m_DiscordAPI) == (!m_Aura->m_SudoContext->m_DiscordAPI)
   );
   if (isValidCaller && message == m_Aura->m_SudoAuthPayload) {
     LogStream(*m_Output, "[AURA] Confirmed " + m_FromName + " command \"" + m_Aura->m_SudoExecCommand + "\"");
