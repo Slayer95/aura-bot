@@ -204,7 +204,6 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
     Print("[HINT] both alternatives auto-initialize \"config.ini\" from \"config-example.ini\" in the same folder");
     return false;
   }
-  // TODO: Make sure <bot.home_path.allow_mismatch> is documented in CONFIG.md.
   const bool homePathMatchRequired = CFG.GetBool("bot.home_path.allow_mismatch", false);
   if (isCustomConfigFile) {
     bool pathsMatch = configPath.parent_path() == homeDir.parent_path();
