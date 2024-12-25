@@ -48,7 +48,7 @@ CCLI::CCLI()
  : m_UseStandardPaths(false),
    m_InfoAction(0),
    m_Verbose(false),
-   m_ExecAuth("verified")
+   m_ExecAuth("auto")
 {
 }
 
@@ -207,7 +207,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   // Command execution
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
   app.add_option("--exec-as", m_ExecAs, "Customizes the user identity when running commands from the CLI.")/*->check(IsFullyQualifiedUser)*/;
-  app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember({"spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("verified");
+  app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember({"auto", "spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("auto");
   app.add_option("--exec-game", m_ExecGame, "Customizes the channel when running commands from the CLI. Values: lobby, game#IDX");
   app.add_flag(  "--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
 

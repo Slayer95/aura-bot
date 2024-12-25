@@ -440,7 +440,7 @@ void CCommandContext::UpdatePermissions()
   bool IsAdmin = IsRootAdmin || (IsRealmVerified && m_SourceRealm != nullptr && (!m_TargetGame || IsCreatorRealm) && m_SourceRealm->GetIsModerator(m_FromName));
   bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
 
-  // Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
+  // GOTCHA: Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
   if (m_GameUser || (IsOwner && m_TargetGame && m_TargetGame->GetIsLobbyStrict())) {
     m_Permissions |= USER_PERMISSIONS_GAME_PLAYER;
   }
@@ -7308,11 +7308,24 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
     return APP_ACTION_ERROR;
   }
 
-  // TODO: --exec-auth
-  //app.add_option("--exec-auth", nAura->m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember(
-  //{"spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("verified");
-  if (lazyCtx.auth == "sudo") {
-    ctx->SetPermissions(SET_USER_PERMISSIONS_ALL);
+  switch (lazyCtx.auth) {
+    case CommandAuth::kAuto:
+      break;
+    case CommandAuth::kSpoofed:
+      ctx->SetPermissions(0u);
+      break;
+    case CommandAuth::kVerified:
+      ctx->SetPermissions(USER_PERMISSIONS_CHANNEL_VERIFIED);
+      break;
+    case CommandAuth::kAdmin:
+      ctx->SetPermissions(USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_CHANNEL_VERIFIED);
+      break;
+    case CommandAuth::kRootAdmin:
+      ctx->SetPermissions(USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_CHANNEL_ADMIN | USER_PERMISSIONS_CHANNEL_VERIFIED);
+      break;
+    case CommandAuth::kSudo:
+      ctx->SetPermissions(SET_USER_PERMISSIONS_ALL);
+      break;
   }
   ctx->Run(cmdToken, lazyCtx.command, lazyCtx.payload);
   return APP_ACTION_DONE;

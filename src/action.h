@@ -28,6 +28,16 @@
 
 #include "includes.h"
 
+enum class CommandAuth : uint8_t
+{
+  kAuto = 0u,
+  kSpoofed = 1u,
+  kVerified = 2u,
+  kAdmin = 3u,
+  kRootAdmin = 4u,
+  kSudo = 5u,
+};
+
 struct AppAction
 {
   uint8_t type;
@@ -57,9 +67,9 @@ struct LazyCommandContext
   std::string targetGame;
   std::string identityName;
   std::string identityLoc;
-  std::string auth;
+  CommandAuth auth;
 
-  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nPayload, const std::string& nTargetGame, const std::string& nIdentityName, const std::string& nIdentityLoc, const std::string& nAuth)
+  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nPayload, const std::string& nTargetGame, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
    : broadcast(nBroadcast),
      queuedTime(GetTicks()),
      command(nCommand),
