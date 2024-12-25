@@ -230,6 +230,9 @@
     <ClInclude Include="net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="action.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="auradb.h">
       <Filter>Header Files</Filter>
     </ClInclude>

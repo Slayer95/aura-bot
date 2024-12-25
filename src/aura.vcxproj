@@ -502,6 +502,7 @@
     <ClInclude Include="os_util.h" />
     <ClInclude Include="socket.h" />
     <ClInclude Include="net.h" />
+    <ClInclude Include="action.h" />
     <ClInclude Include="auradb.h" />
     <ClInclude Include="bncsutil_interface.h" />
     <ClInclude Include="realm.h" />
