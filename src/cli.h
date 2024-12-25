@@ -32,12 +32,18 @@
 #include <filesystem>
 #include <CLI11/CLI11.hpp>
 
-#define CLI_OK 0
-#define CLI_ERROR 1
-#define CLI_EARLY_RETURN 2
-
 #define CLI_ACTION_ABOUT 1
 #define CLI_ACTION_EXAMPLES 2
+
+// CLIExitCode
+
+enum class CLIExitCode : uint8_t
+{
+  kOk            = 0u,
+  kError         = 1u,
+  kInfoAndQuit   = 2u,
+  kConfigAndQuit = 3u,
+};
 
 //
 // CCLI
@@ -51,7 +57,7 @@ public:
   std::optional<std::filesystem::path>  m_HomePath;
   bool                                  m_UseStandardPaths;
 
-  uint8_t                               m_EarlyAction;
+  uint8_t                               m_InfoAction;
 
   bool                                  m_Verbose;
   std::optional<bool>                   m_LAN;
@@ -170,7 +176,7 @@ public:
 
   // Parsing stuff
   //CLI::Validator GetIsFullyQualifiedUserValidator();
-  uint8_t Parse(const int argc, char** argv);
+  CLIExitCode Parse(const int argc, char** argv);
   [[nodiscard]] uint8_t GetGameSearchType() const;
   [[nodiscard]] uint8_t GetGameLobbyTimeoutMode() const;
   [[nodiscard]] uint8_t GetGameLobbyOwnerTimeoutMode() const;
@@ -185,7 +191,7 @@ public:
   [[nodiscard]] bool CheckGameParameters() const;
   [[nodiscard]] bool CheckGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;
 
-  void RunEarlyOptions() const;
+  void RunInfoActions() const;
   void OverrideConfig(CAura* nAura) const;
   bool QueueActions(CAura* nAura) const;
   [[nodiscard]] inline std::optional<bool> GetInitSystem() const { return m_InitSystem; };

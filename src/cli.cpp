@@ -46,7 +46,7 @@ using namespace std;
 
 CCLI::CCLI()
  : m_UseStandardPaths(false),
-   m_EarlyAction(0),
+   m_InfoAction(0),
    m_Verbose(false),
    m_ExecAuth("verified")
 {
@@ -70,7 +70,7 @@ CLI::Validator CCLI::GetIsFullyQualifiedUserValidator()
 }
 */
 
-uint8_t CCLI::Parse(const int argc, char** argv)
+CLIExitCode CCLI::Parse(const int argc, char** argv)
 {
   CLI::App app{AURA_APP_NAME};
   //CLI::Validator IsFullyQualifiedUser = GetIsFullyQualifiedUserValidator();
@@ -224,31 +224,31 @@ uint8_t CCLI::Parse(const int argc, char** argv)
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
     if (0 == app.exit(e)) {
-      return CLI_EARLY_RETURN;
+      return CLIExitCode::kInfoAndQuit;
     }
-    return CLI_ERROR;
+    return CLIExitCode::kError;
   } catch (...) {
     Print("[AURA] CLI unhandled exception");
-    return CLI_ERROR;
+    return CLIExitCode::kError;
   }
 
   if (!m_ExecCommands.empty() && !m_ExecAs.has_value()) {
     Print("[AURA] Option --exec-as is required");
-    return CLI_ERROR;
+    return CLIExitCode::kError;
   }
 
   if (!m_ExecGame.empty() && !CheckTargetGameSyntax(m_ExecGame)) {
     Print("[AURA] Option --exec-game accepts values: lobby, game#IDX");
-    return CLI_ERROR;
+    return CLIExitCode::kError;
   }
 
   if (about || examples) {
     if (about) {
-      m_EarlyAction = CLI_ACTION_ABOUT;
+      m_InfoAction = CLI_ACTION_ABOUT;
     } else if (examples) {
-      m_EarlyAction = CLI_ACTION_EXAMPLES;
+      m_InfoAction = CLI_ACTION_EXAMPLES;
     }
-    return CLI_EARLY_RETURN;
+    return CLIExitCode::kInfoAndQuit;
   }
 
   // Make sure directories have a trailing slash.
@@ -266,7 +266,11 @@ uint8_t CCLI::Parse(const int argc, char** argv)
     if (!m_UseMapCFGCache.has_value()) m_UseMapCFGCache = !m_UseStandardPaths;
   }
 
-  return CLI_OK;
+  if (m_CFGAdapterPath.has_value()) {
+    return CLIExitCode::kConfigAndQuit;
+  }
+
+  return CLIExitCode::kOk;
 }
 
 uint8_t CCLI::GetGameSearchType() const
@@ -483,9 +487,9 @@ bool CCLI::CheckGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
   return true;
 }
 
-void CCLI::RunEarlyOptions() const
+void CCLI::RunInfoActions() const
 {
-  switch (m_EarlyAction) {
+  switch (m_InfoAction) {
     case CLI_ACTION_ABOUT: {
       Print("Aura " + string(AURA_VERSION));
       Print("Aura is a permissive-licensed open source project.");

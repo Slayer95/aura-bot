@@ -255,12 +255,12 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
       Print("[AURA] exporting updated configuration to [" + PathToString(migratedPath) + "]...");
       if (!FileWrite(migratedPath, migratedBytes.data(), migratedBytes.size())) {
         Print("[AURA] error exporting configuration file");
-      } else {
-        Print("[AURA] configuration exported OK");
-        Print("[AURA] before starting Aura again, please check the contents of the exported file, and rename it");
-        Print("[AURA] see the CONFIG.md file for up-to-date documentation on supported config keys, and their accepted values");
+        return false;
       }
-      return false;
+      Print("[AURA] configuration exported OK");
+      Print("[AURA] before starting Aura again, please check the contents of the exported file, and rename it");
+      Print("[AURA] see the CONFIG.md file for up-to-date documentation on supported config keys, and their accepted values");
+      return true;
     }
 
     return true;
@@ -389,31 +389,36 @@ int main(const int argc, char** argv)
     optional<CAura> gAura;
     {
       CCLI cliApp;
-      uint8_t cliResult = cliApp.Parse(argc, argv);
-      if (cliResult == CLI_EARLY_RETURN) {
-        cliApp.RunEarlyOptions();
-        exitCode = 0;
-      } else if (cliResult != CLI_OK) {
-        Print("[AURA] invalid CLI usage - please see CLI.md");
-        exitCode = 1;
-      } else {
-        CConfig CFG;
-        filesystem::path homeDir;
-        GetAuraHome(cliApp, homeDir);
-        if (LoadConfig(CFG, cliApp, homeDir)) {
+      CLIExitCode cliResult = cliApp.Parse(argc, argv);
+      switch (cliResult) {
+        case CLIExitCode::kInfoAndQuit:
+          cliApp.RunInfoActions();
+          exitCode = 0;
+          break;
+        case CLIExitCode::kError:
+          Print("[AURA] invalid CLI usage - please see CLI.md");
+          exitCode = 1;
+          break;
+        case CLIExitCode::kOk:
+        case CLIExitCode::kConfigAndQuit: {
+          CConfig CFG;
+          filesystem::path homeDir;
+          GetAuraHome(cliApp, homeDir);
+          if (!LoadConfig(CFG, cliApp, homeDir)) {
+            Print("[AURA] error loading configuration");
+            exitCode = 1;
+            break;
+          }
+          if (cliResult == CLIExitCode::kConfigAndQuit) {
+            exitCode = 0;
+            break;
+          }
           // initialize aura
           gAura.emplace(CFG, cliApp);
           if (!gAura->GetReady()) {
             exitCode = 1;
             Print("[AURA] initialization failure");
           }
-        } else {
-          if (!cliApp.m_CFGAdapterPath.has_value()) {
-            // TODO: In fact, --config-adapter should be treated as CLI_EARLY_RETURN, or CLI_SPECIAL_CASE_WHATEVER
-            // It should also be possible for it to return a variable exit code.
-            Print("[AURA] error loading configuration");
-          }
-          exitCode = 1;
         }
       }
     }
