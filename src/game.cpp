@@ -800,11 +800,11 @@ bool CGame::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) co
 {
   if (m_CreatedFromType != fromType) return false;
   switch (fromType) {
-    case GAMESETUP_ORIGIN_REALM:
+    case SERVICE_TYPE_REALM:
       return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
-    case GAMESETUP_ORIGIN_IRC:
+    case SERVICE_TYPE_IRC:
       return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
-    case GAMESETUP_ORIGIN_DISCORD:
+    case SERVICE_TYPE_DISCORD:
       return reinterpret_cast<const CDiscord*>(m_CreatedFrom) == reinterpret_cast<const CDiscord*>(fromThing);
   }
   return false;
@@ -3188,11 +3188,11 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       Line.replace(matchIndex, 9, m_CreatorText);
     }
     while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      if (m_CreatedFromType == GAMESETUP_ORIGIN_REALM) {
+      if (m_CreatedFromType == SERVICE_TYPE_REALM) {
         Line.replace(matchIndex, 11, "@" + reinterpret_cast<CRealm*>(m_CreatedFrom)->GetCanonicalDisplayName());
-      } else if (m_CreatedFromType == GAMESETUP_ORIGIN_IRC) {
+      } else if (m_CreatedFromType == SERVICE_TYPE_IRC) {
         Line.replace(matchIndex, 11, "@" + reinterpret_cast<CIRC*>(m_CreatedFrom)->m_Config.m_HostName);
-      } else if (m_CreatedFromType == GAMESETUP_ORIGIN_DISCORD) {
+      } else if (m_CreatedFromType == SERVICE_TYPE_DISCORD) {
         // TODO: {HOSTREALM} Discord
       } else {
         Line.replace(matchIndex, 11, "@" + ToFormattedRealm());
@@ -4801,10 +4801,10 @@ bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinR
   // check if the new user's name is banned
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), hostName);
   bool isBanned = isSelfServerBanned;
-  if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
+  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
     isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedPlayer(joinRequest->GetName(), hostName);
   }
-  if (!isBanned && m_CreatedFromType != GAMESETUP_ORIGIN_REALM) {
+  if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
     isBanned = m_Aura->m_DB->GetIsUserBanned(joinRequest->GetName(), hostName, string());
   }
   if (isBanned) {
@@ -4837,10 +4837,10 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   // check if the new user's IP is banned
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedIP(connection->GetIPStringStrict());
   bool isBanned = isSelfServerBanned;
-  if (!isBanned && m_CreatedFromType == GAMESETUP_ORIGIN_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
+  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
     isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedIP(connection->GetIPStringStrict());
   }
-  if (!isBanned && m_CreatedFromType != GAMESETUP_ORIGIN_REALM) {
+  if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
     isBanned = m_Aura->m_DB->GetIsIPBanned(connection->GetIPStringStrict(), string());
   }
   if (isBanned) {
@@ -9141,7 +9141,7 @@ void CGame::RemoveCreator()
 {
   m_CreatedBy.clear();
   m_CreatedFrom = nullptr;
-  m_CreatedFromType = GAMESETUP_ORIGIN_INVALID;
+  m_CreatedFromType = SERVICE_TYPE_INVALID;
 }
 
 bool CGame::GetIsStageAcceptingJoins() const

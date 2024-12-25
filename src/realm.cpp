@@ -139,17 +139,17 @@ CRealm::~CRealm()
   }
 
   for (auto& lobby: m_Aura->m_Lobbies) {
-    if (lobby->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+    if (lobby->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
       lobby->RemoveCreator();
     }
   }
   for (auto& game : m_Aura->m_StartedGames) {
-    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
       game->RemoveCreator();
     }
   }
 
-  if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+  if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
     m_Aura->m_GameSetup->RemoveCreator();
   }
 }

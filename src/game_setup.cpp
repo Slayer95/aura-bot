@@ -195,7 +195,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_CreationCounter(0),
 
     m_CreatedFrom(nullptr),
-    m_CreatedFromType(GAMESETUP_ORIGIN_NONE),
+    m_CreatedFromType(SERVICE_TYPE_NONE),
 
     m_MapExtraOptions(nullptr),
     m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
@@ -241,7 +241,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_CreationCounter(0),
 
     m_CreatedFrom(nullptr),
-    m_CreatedFromType(GAMESETUP_ORIGIN_NONE),
+    m_CreatedFromType(SERVICE_TYPE_NONE),
 
     m_MapExtraOptions(nullptr),
     m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
@@ -1438,28 +1438,28 @@ void CGameSetup::SetCreator(const string& nCreator)
 {
   m_CreatedBy = nCreator;
   m_CreatedFrom = nullptr;
-  m_CreatedFromType = GAMESETUP_ORIGIN_NONE;
+  m_CreatedFromType = SERVICE_TYPE_NONE;
 }
 
 void CGameSetup::SetCreator(const string& nCreator, CGame* nGame)
 {
   m_CreatedBy = nCreator;
   m_CreatedFrom = reinterpret_cast<void*>(nGame);
-  m_CreatedFromType = GAMESETUP_ORIGIN_GAME;
+  m_CreatedFromType = SERVICE_TYPE_GAME;
 }
 
 void CGameSetup::SetCreator(const string& nCreator, CRealm* nRealm)
 {
   m_CreatedBy = nCreator;
   m_CreatedFrom = reinterpret_cast<void*>(nRealm);
-  m_CreatedFromType = GAMESETUP_ORIGIN_REALM;
+  m_CreatedFromType = SERVICE_TYPE_REALM;
 }
 
 void CGameSetup::SetCreator(const string& nCreator, CIRC* nIRC)
 {
   m_CreatedBy = nCreator;
   m_CreatedFrom = reinterpret_cast<void*>(nIRC);
-  m_CreatedFromType = GAMESETUP_ORIGIN_IRC;
+  m_CreatedFromType = SERVICE_TYPE_IRC;
 }
 
 void CGameSetup::SetCreator(const string& nCreator, CDiscord* nDiscord)
@@ -1467,25 +1467,25 @@ void CGameSetup::SetCreator(const string& nCreator, CDiscord* nDiscord)
   // TODO: CGameSetup::SetCreator() - Discord case
   m_CreatedBy = nCreator;
   m_CreatedFrom = reinterpret_cast<void*>(nDiscord);
-  m_CreatedFromType = GAMESETUP_ORIGIN_DISCORD;
+  m_CreatedFromType = SERVICE_TYPE_DISCORD;
 }
 
 void CGameSetup::RemoveCreator()
 {
   m_CreatedBy.clear();
   m_CreatedFrom = nullptr;
-  m_CreatedFromType = GAMESETUP_ORIGIN_INVALID;
+  m_CreatedFromType = SERVICE_TYPE_INVALID;
 }
 
 bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const
 {
   if (m_CreatedFromType != fromType) return false;
   switch (fromType) {
-    case GAMESETUP_ORIGIN_REALM:
+    case SERVICE_TYPE_REALM:
       return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
-    case GAMESETUP_ORIGIN_IRC:
+    case SERVICE_TYPE_IRC:
       return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
-    case GAMESETUP_ORIGIN_DISCORD:
+    case SERVICE_TYPE_DISCORD:
       return reinterpret_cast<const CDiscord*>(m_CreatedFrom) == reinterpret_cast<const CDiscord*>(fromThing);
   }
   return false;

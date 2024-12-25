@@ -27,6 +27,7 @@
 #define AURA_CLI_H_
 
 #include "includes.h"
+#include "action.h"
 
 #include <filesystem>
 #include <CLI11/CLI11.hpp>
@@ -37,52 +38,6 @@
 
 #define CLI_ACTION_ABOUT 1
 #define CLI_ACTION_EXAMPLES 2
-
-struct AppAction
-{
-  uint8_t type;
-  uint8_t mode;
-  uint32_t value_1;
-  uint32_t value_2;
-  int64_t queuedTime;
-
-  AppAction(uint8_t nType, uint8_t nMode = 0, uint32_t nValue1 = 0, uint32_t nValue2 = 0)
-   : type(nType),
-     mode(nMode),
-     value_1(nValue1),
-     value_2(nValue2),
-     queuedTime(GetTicks())
-  {
-  };
-
-  ~AppAction() = default;
-};
-
-struct LazyCommandContext
-{
-  bool broadcast;
-  int64_t queuedTime;
-  std::string command;
-  std::string payload;
-  std::string targetGame;
-  std::string identityName;
-  std::string identityLoc;
-  std::string auth;
-
-  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nPayload, const std::string& nTargetGame, const std::string& nIdentityName, const std::string& nIdentityLoc, const std::string& nAuth)
-   : broadcast(nBroadcast),
-     queuedTime(GetTicks()),
-     command(nCommand),
-     payload(nPayload),
-     targetGame(nTargetGame),
-     identityName(nIdentityName),
-     identityLoc(nIdentityLoc),
-     auth(nAuth)
-  {
-  };
-
-  ~LazyCommandContext() = default;
-};
 
 //
 // CCLI

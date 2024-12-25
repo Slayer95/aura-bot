@@ -25,6 +25,7 @@
 
 #include "aura.h"
 #include "auradb.h"
+#include "action.h"
 #include "protocol/bnet_protocol.h"
 #include "command.h"
 #include "config/config_commands.h"
@@ -399,7 +400,7 @@ void CCommandContext::UpdatePermissions()
         m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
       }
       const bool IsCreatorIRC = (
-        m_TargetGame && m_TargetGame->GetCreatedFromType() == GAMESETUP_ORIGIN_IRC &&
+        m_TargetGame && m_TargetGame->GetCreatedFromType() == SERVICE_TYPE_IRC &&
         reinterpret_cast<CIRC*>(m_TargetGame->GetCreatedFrom()) == m_IRC
       );
       if ((!m_TargetGame || IsCreatorIRC) && m_IRC->GetIsModerator(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
@@ -434,7 +435,7 @@ void CCommandContext::UpdatePermissions()
   } else if (m_TargetGame) {
     IsOwner = IsRealmVerified && m_TargetGame->MatchOwnerName(m_FromName) && m_ServerName == m_TargetGame->GetOwnerRealm();
   }
-  bool IsCreatorRealm = m_TargetGame && m_SourceRealm && m_TargetGame->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(m_SourceRealm));
+  bool IsCreatorRealm = m_TargetGame && m_SourceRealm && m_TargetGame->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(m_SourceRealm));
   bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && (!m_TargetGame || IsCreatorRealm) && m_SourceRealm->GetIsAdmin(m_FromName);
   bool IsAdmin = IsRootAdmin || (IsRealmVerified && m_SourceRealm != nullptr && (!m_TargetGame || IsCreatorRealm) && m_SourceRealm->GetIsModerator(m_FromName));
   bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
@@ -7211,6 +7212,111 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
   }
 }
 
+
+uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& lazyCtx)
+{
+  string cmdToken;
+  CGame* targetGame = nullptr;
+  CCommandConfig* commandCFG = nAura->m_Config.m_LANCommandCFG;
+  shared_ptr<CCommandContext> ctx = nullptr;
+
+  void* servicePtr = nullptr;
+  uint8_t serviceType = nAura->FindServiceFromHostName(lazyCtx.identityLoc, servicePtr);
+  if (serviceType == SERVICE_TYPE_INVALID) {
+    Print("[AURA] --exec parsed user at service invalid.");
+    return APP_ACTION_ERROR;
+  }
+
+  if (!lazyCtx.targetGame.empty()) {
+    targetGame = nAura->GetGameByString(lazyCtx.targetGame);
+    if (!targetGame) {
+      return APP_ACTION_WAIT;
+    }
+  }
+
+  switch (serviceType) {
+    case SERVICE_TYPE_GAME:
+    case SERVICE_TYPE_DISCORD:
+      Print("[AURA] --exec-as: @service not supported [" + lazyCtx.identityLoc + "]");
+      return APP_ACTION_ERROR;
+    case SERVICE_TYPE_NONE:
+      try {
+        if (targetGame) {
+          ctx = make_shared<CCommandContext>(
+            nAura, commandCFG, targetGame, lazyCtx.identityName, lazyCtx.broadcast, &std::cout
+          );
+        } else {
+          ctx = make_shared<CCommandContext>(
+            nAura, lazyCtx.identityName, lazyCtx.broadcast, &std::cout
+          );
+        }
+      } catch (...) {
+      }
+      break;
+    case SERVICE_TYPE_IRC:
+      if (!nAura->m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
+      if (nAura->m_IRC.m_Config.m_Channels.empty()) return APP_ACTION_ERROR;
+      if (!nAura->m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
+
+      try {
+         if (targetGame) {
+          ctx = make_shared<CCommandContext>(
+            nAura, commandCFG, &nAura->m_IRC,
+            nAura->m_IRC.m_Config.m_Channels[0], lazyCtx.identityName,
+            false, lazyCtx.identityName + nAura->m_IRC.m_Config.m_VerifiedDomain,
+            lazyCtx.broadcast, &std::cout
+          );
+         } else {
+           ctx = make_shared<CCommandContext>(
+            nAura, commandCFG, targetGame, &nAura->m_IRC,
+            nAura->m_IRC.m_Config.m_Channels[0], lazyCtx.identityName,
+            false, lazyCtx.identityName + nAura->m_IRC.m_Config.m_VerifiedDomain,
+            lazyCtx.broadcast, &std::cout
+          );
+         }
+      } catch (...) {
+      }
+      break;
+    case SERVICE_TYPE_REALM:
+      Print("[AURA] --exec parsed user at service is realm.");
+      CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
+      Print("[AURA] --exec parsed user at service is realm " + sourceRealm->GetCanonicalDisplayName() + ".");
+      if (!sourceRealm->GetLoggedIn()) {
+        Print("[AURA] --exec realm not logged in yet...");
+        return APP_ACTION_WAIT;
+      }
+
+      commandCFG = sourceRealm->GetCommandConfig();
+      try {
+         if (targetGame) {
+          ctx = make_shared<CCommandContext>(
+            nAura, commandCFG, targetGame, sourceRealm,
+            lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
+          );
+         } else {
+           ctx = make_shared<CCommandContext>(
+            nAura, commandCFG, sourceRealm,
+            lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
+          );
+         }
+      } catch (...) {
+      }
+      break;
+  }
+
+  if (!ctx) {
+    return APP_ACTION_ERROR;
+  }
+
+  // TODO: --exec-auth
+  //app.add_option("--exec-auth", nAura->m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember(
+  //{"spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("verified");
+  if (lazyCtx.auth == "sudo") {
+    ctx->SetPermissions(SET_USER_PERMISSIONS_ALL);
+  }
+  ctx->Run(cmdToken, lazyCtx.command, lazyCtx.payload);
+  return APP_ACTION_DONE;
+}
 
 CCommandContext::~CCommandContext()
 {

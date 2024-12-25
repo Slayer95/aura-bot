@@ -971,111 +971,9 @@ uint8_t CAura::HandleAction(const AppAction& action)
   return APP_ACTION_ERROR;
 }
 
-uint8_t CAura::HandleLazyCommandContext(const LazyCommandContext& lazyCtx)
+uint8_t CAura::HandleDeferredCommandContext(const LazyCommandContext& lazyCtx)
 {
-  Print("CAura::HandleLazyCommandContext()");
-
-  string cmdToken;
-  CGame* targetGame = nullptr;
-  CCommandConfig* commandCFG = m_Config.m_LANCommandCFG;
-  shared_ptr<CCommandContext> ctx = nullptr;
-
-  void* servicePtr = nullptr;
-  uint8_t serviceType = FindServiceFromHostName(lazyCtx.identityLoc, servicePtr);
-  if (serviceType == SERVICE_TYPE_INVALID) {
-    Print("[AURA] --exec parsed user at service invalid.");
-    return APP_ACTION_ERROR;
-  }
-
-  if (!lazyCtx.targetGame.empty()) {
-    targetGame = GetGameByString(lazyCtx.targetGame);
-    if (!targetGame) {
-      return APP_ACTION_WAIT;
-    }
-  }
-
-  switch (serviceType) {
-    case SERVICE_TYPE_GAME:
-    case SERVICE_TYPE_DISCORD:
-      Print("[AURA] --exec-as: @service not supported [" + lazyCtx.identityLoc + "]");
-      return APP_ACTION_ERROR;
-    case SERVICE_TYPE_NONE:
-      try {
-        if (targetGame) {
-          ctx = make_shared<CCommandContext>(
-            this, commandCFG, targetGame, lazyCtx.identityName, lazyCtx.broadcast, &std::cout
-          );
-        } else {
-          ctx = make_shared<CCommandContext>(
-            this, lazyCtx.identityName, lazyCtx.broadcast, &std::cout
-          );
-        }
-      } catch (...) {
-      }
-      break;
-    case SERVICE_TYPE_IRC:
-      if (!m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
-      if (m_IRC.m_Config.m_Channels.empty()) return APP_ACTION_ERROR;
-      if (!m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
-
-      try {
-         if (targetGame) {
-          ctx = make_shared<CCommandContext>(
-            this, commandCFG, &m_IRC,
-            m_IRC.m_Config.m_Channels[0], lazyCtx.identityName,
-            false, lazyCtx.identityName + m_IRC.m_Config.m_VerifiedDomain,
-            lazyCtx.broadcast, &std::cout
-          );
-         } else {
-           ctx = make_shared<CCommandContext>(
-            this, commandCFG, targetGame, &m_IRC,
-            m_IRC.m_Config.m_Channels[0], lazyCtx.identityName,
-            false, lazyCtx.identityName + m_IRC.m_Config.m_VerifiedDomain,
-            lazyCtx.broadcast, &std::cout
-          );
-         }
-      } catch (...) {
-      }
-      break;
-    case SERVICE_TYPE_REALM:
-      Print("[AURA] --exec parsed user at service is realm.");
-      CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
-      Print("[AURA] --exec parsed user at service is realm " + sourceRealm->GetCanonicalDisplayName() + ".");
-      if (!sourceRealm->GetLoggedIn()) {
-        Print("[AURA] --exec realm not logged in yet...");
-        return APP_ACTION_WAIT;
-      }
-
-      commandCFG = sourceRealm->GetCommandConfig();
-      try {
-         if (targetGame) {
-          ctx = make_shared<CCommandContext>(
-            this, commandCFG, targetGame, sourceRealm,
-            lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
-          );
-         } else {
-           ctx = make_shared<CCommandContext>(
-            this, commandCFG, sourceRealm,
-            lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
-          );
-         }
-      } catch (...) {
-      }
-      break;
-  }
-
-  if (!ctx) {
-    return APP_ACTION_ERROR;
-  }
-
-  // TODO: --exec-auth
-  //app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember(
-  //{"spoofed", "verified", "admin", "rootadmin", "sudo"}))->default_val("verified");
-  if (lazyCtx.auth == "sudo") {
-    ctx->SetPermissions(SET_USER_PERMISSIONS_ALL);
-  }
-  ctx->Run(cmdToken, lazyCtx.command, lazyCtx.payload);
-  return APP_ACTION_DONE;
+  return CCommandContext::TryDeferred(this, lazyCtx);
 }
 
 uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
@@ -1091,7 +989,7 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
     }
     case 1: { // LazyCommandContext
       const LazyCommandContext& lazyCtx = std::get<LazyCommandContext>(genAction);
-      uint8_t result = HandleLazyCommandContext(lazyCtx);
+      uint8_t result = HandleDeferredCommandContext(lazyCtx);
       if (result == APP_ACTION_WAIT && GetTicks() < lazyCtx.queuedTime + 20000) {
         result = APP_ACTION_TIMEOUT;
       }
@@ -1450,15 +1348,15 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
     game->SendAllChat("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
   } else {
     switch (game->GetCreatedFromType()) {
-      case GAMESETUP_ORIGIN_REALM:
+      case SERVICE_TYPE_REALM:
         reinterpret_cast<CRealm*>(game->GetCreatedFrom())->QueueWhisper("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
-      case GAMESETUP_ORIGIN_IRC:
+      case SERVICE_TYPE_IRC:
         reinterpret_cast<CIRC*>(game->GetCreatedFrom())->SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
       /*
       // TODO: CAura::EventBNETGameRefreshError SendUser()
-      case GAMESETUP_ORIGIN_DISCORD:
+      case SERVICE_TYPE_DISCORD:
         reinterpret_cast<CDiscord*>(game->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;*/
       default:
@@ -1545,7 +1443,7 @@ void CAura::EventGameDeleted(CGame* game)
       if (!realm->GetAnnounceHostToChat()) continue;
       if (game->GetGameLoaded()) {
         realm->QueueChatChannel("Game ended: " + game->GetEndDescription());
-        if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+        if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
           realm->QueueWhisper("Game ended: " + game->GetEndDescription(), game->GetCreatorName());
         }
       }
@@ -1568,7 +1466,7 @@ void CAura::EventGameRemake(CGame* game)
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     realm->QueueChatChannel("Game remake: " + game->GetMap()->GetServerFileName());
-    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
       realm->QueueWhisper("Game remake: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
     }
   }
@@ -1588,7 +1486,7 @@ void CAura::EventGameStarted(CGame* game)
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     realm->QueueChatChannel("Game started: " + game->GetMap()->GetServerFileName());
-    if (game->MatchesCreatedFrom(GAMESETUP_ORIGIN_REALM, reinterpret_cast<void*>(this))) {
+    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
       realm->QueueWhisper("Game started: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
     }
   }
@@ -2252,7 +2150,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   }
 
   if (createdLobby->GetDisplayMode() != GAME_PUBLIC ||
-    gameSetup->m_CreatedFromType != GAMESETUP_ORIGIN_REALM ||
+    gameSetup->m_CreatedFromType != SERVICE_TYPE_REALM ||
     gameSetup->m_Ctx->GetIsWhisper()) {
     gameSetup->m_Ctx->SendPrivateReply(createdLobby->GetAnnounceText());
   }

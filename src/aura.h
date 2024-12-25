@@ -175,7 +175,7 @@ public:
   // processing functions
 
   uint8_t HandleAction(const AppAction& action);
-  uint8_t HandleLazyCommandContext(const LazyCommandContext& lazyCtx);
+  uint8_t HandleDeferredCommandContext(const LazyCommandContext& lazyCtx);
   uint8_t HandleGenericAction(const GenericAppAction& genAction);
   bool Update();
   void AwaitSettled();
