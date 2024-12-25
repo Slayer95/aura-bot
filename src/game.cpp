@@ -3810,9 +3810,9 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
     m_LastPingEqualizerGameTicks = 0;
   }
 
+  // W3GS_PLAYERLEAVE messages may follow ACTION_PAUSE or ACTION_RESUME (or none),
+  // so ensure we don't leave m_PauseUser as a dangling pointer.
   if (m_PauseUser == user) {
-    // TODO: m_PauseUser should not be the user in EventUserDeleted
-    Print("[DEBUG] m_PauseUser matches EventUserDeleted event user; setting to nullptr");
     m_PauseUser = nullptr;
   }
 
