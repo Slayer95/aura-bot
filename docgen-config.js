@@ -6,7 +6,16 @@ const util = require('util');
 const path = require('path');
 
 const OUTPUT_PATH = `CONFIG.md`;
-const COMMAND_FILES = ['src/auradb.cpp', 'src/net.cpp', 'src/config/config_bot.cpp', 'src/config/config_game.cpp', 'src/config/config_irc.cpp', 'src/config/config_net.cpp', 'src/config/config_realm.cpp', 'src/config/config_commands.cpp'];
+const FILE_LIST = [
+  'src/aura.cpp', 'src/auradb.cpp', 'src/net.cpp',
+  'src/config/config_bot.cpp',
+  'src/config/config_discord.cpp',
+  'src/config/config_game.cpp',
+  'src/config/config_irc.cpp',
+  'src/config/config_net.cpp',
+  'src/config/config_realm.cpp',
+  'src/config/config_commands.cpp',
+];
 const configMaybeKeyRegexp = /CFG\.(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
 const configKeyRegexp = /CFG\.(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
 
@@ -70,7 +79,7 @@ async function main() {
   const optionsMeta = new Map();
   const configOptions = [];
   let isCannotBeReloadedOn = false;
-  for (const fileName of COMMAND_FILES) {
+  for (const fileName of FILE_LIST) {
     isCannotBeReloadedOn = false;
     const filePath = path.resolve(__dirname, fileName);
     const fileContent = await fs.readFile(filePath, 'utf8');

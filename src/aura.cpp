@@ -1360,7 +1360,7 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
         reinterpret_cast<CIRC*>(game->GetCreatedFrom())->SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
       /*
-      // TODO: CAura::EventBNETGameRefreshError SendUser()
+      // FIXME: CAura::EventBNETGameRefreshError SendUser() - Discord case
       case SERVICE_TYPE_DISCORD:
         reinterpret_cast<CDiscord*>(game->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;*/
@@ -2165,7 +2165,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
      m_IRC.SendAllChannels(createdLobby->GetAnnounceText());
     }
     if (m_Discord.GetIsEnabled()) {
-      //TODO: Discord game created announcement
+      // TODO: Announce game created to all supported Discord guilds+channels
       //m_Discord.SendAnnouncementChannels(createdLobby->GetAnnounceText());
     }
   }

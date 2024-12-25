@@ -10,6 +10,11 @@ Config
 - Type: path
 - Error handling: Use default value
 
+## \`bot.home_path.allow_mismatch\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
 ## \`bot.jass_path\`
 - Type: directory
 - Default value: Aura home directory
@@ -117,6 +122,71 @@ Config
 ## \`db.wal_autocheckpoint\`
 - Type: uint16
 - Default value: 1000
+- Error handling: Use default value
+
+## \`discord.commands.admin.permissions\`
+- Type: enum
+- Default value: auto
+- Error handling: Use default value
+
+## \`discord.commands.bot_owner.permissions\`
+- Type: enum
+- Default value: auto
+- Error handling: Use default value
+
+## \`discord.commands.common.permissions\`
+- Type: enum
+- Default value: auto
+- Error handling: Use default value
+
+## \`discord.commands.hosting.permissions\`
+- Type: enum
+- Default value: auto
+- Error handling: Use default value
+
+## \`discord.commands.moderator.permissions\`
+- Type: enum
+- Default value: auto
+- Error handling: Use default value
+
+## \`discord.direct_messages.list\`
+- Type: uint64set
+- Default value: 
+- Error handling: Use default value
+
+## \`discord.direct_messages.mode\`
+- Type: enum
+- Default value: FILTER_ALLOW_ALL
+- Error handling: Use default value
+
+## \`discord.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`discord.host_name\`
+- Type: string
+- Default value: discord.com
+- Error handling: Use default value
+
+## \`discord.invites.list\`
+- Type: uint64set
+- Default value: 
+- Error handling: Use default value
+
+## \`discord.invites.mode\`
+- Type: enum
+- Default value: FILTER_ALLOW_ALL
+- Error handling: Use default value
+
+## \`discord.sudo_users\`
+- Type: uint64set
+- Default value: 
+- Error handling: Use default value
+
+## \`discord.unverified_users.reject_commands\`
+- Type: bool
+- Default value: false
 - Error handling: Use default value
 
 ## \`game_data.twrpg_path\`
