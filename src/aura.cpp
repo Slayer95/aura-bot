@@ -389,18 +389,18 @@ int main(const int argc, char** argv)
     optional<CAura> gAura;
     {
       CCLI cliApp;
-      CLIExitCode cliResult = cliApp.Parse(argc, argv);
+      CLIResult cliResult = cliApp.Parse(argc, argv);
       switch (cliResult) {
-        case CLIExitCode::kInfoAndQuit:
+        case CLIResult::kInfoAndQuit:
           cliApp.RunInfoActions();
           exitCode = 0;
           break;
-        case CLIExitCode::kError:
+        case CLIResult::kError:
           Print("[AURA] invalid CLI usage - please see CLI.md");
           exitCode = 1;
           break;
-        case CLIExitCode::kOk:
-        case CLIExitCode::kConfigAndQuit: {
+        case CLIResult::kOk:
+        case CLIResult::kConfigAndQuit: {
           CConfig CFG;
           filesystem::path homeDir;
           GetAuraHome(cliApp, homeDir);
@@ -409,7 +409,7 @@ int main(const int argc, char** argv)
             exitCode = 1;
             break;
           }
-          if (cliResult == CLIExitCode::kConfigAndQuit) {
+          if (cliResult == CLIResult::kConfigAndQuit) {
             exitCode = 0;
             break;
           }

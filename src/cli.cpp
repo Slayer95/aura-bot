@@ -70,7 +70,7 @@ CLI::Validator CCLI::GetIsFullyQualifiedUserValidator()
 }
 */
 
-CLIExitCode CCLI::Parse(const int argc, char** argv)
+CLIResult CCLI::Parse(const int argc, char** argv)
 {
   CLI::App app{AURA_APP_NAME};
   //CLI::Validator IsFullyQualifiedUser = GetIsFullyQualifiedUserValidator();
@@ -224,22 +224,22 @@ CLIExitCode CCLI::Parse(const int argc, char** argv)
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
     if (0 == app.exit(e)) {
-      return CLIExitCode::kInfoAndQuit;
+      return CLIResult::kInfoAndQuit;
     }
-    return CLIExitCode::kError;
+    return CLIResult::kError;
   } catch (...) {
     Print("[AURA] CLI unhandled exception");
-    return CLIExitCode::kError;
+    return CLIResult::kError;
   }
 
   if (!m_ExecCommands.empty() && !m_ExecAs.has_value()) {
     Print("[AURA] Option --exec-as is required");
-    return CLIExitCode::kError;
+    return CLIResult::kError;
   }
 
   if (!m_ExecGame.empty() && !CheckTargetGameSyntax(m_ExecGame)) {
     Print("[AURA] Option --exec-game accepts values: lobby, game#IDX");
-    return CLIExitCode::kError;
+    return CLIResult::kError;
   }
 
   if (about || examples) {
@@ -248,7 +248,7 @@ CLIExitCode CCLI::Parse(const int argc, char** argv)
     } else if (examples) {
       m_InfoAction = CLI_ACTION_EXAMPLES;
     }
-    return CLIExitCode::kInfoAndQuit;
+    return CLIResult::kInfoAndQuit;
   }
 
   // Make sure directories have a trailing slash.
@@ -267,10 +267,10 @@ CLIExitCode CCLI::Parse(const int argc, char** argv)
   }
 
   if (m_CFGAdapterPath.has_value()) {
-    return CLIExitCode::kConfigAndQuit;
+    return CLIResult::kConfigAndQuit;
   }
 
-  return CLIExitCode::kOk;
+  return CLIResult::kOk;
 }
 
 uint8_t CCLI::GetGameSearchType() const

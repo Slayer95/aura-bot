@@ -35,9 +35,9 @@
 #define CLI_ACTION_ABOUT 1
 #define CLI_ACTION_EXAMPLES 2
 
-// CLIExitCode
+// CLIResult
 
-enum class CLIExitCode : uint8_t
+enum class CLIResult : uint8_t
 {
   kOk            = 0u,
   kError         = 1u,
@@ -176,7 +176,7 @@ public:
 
   // Parsing stuff
   //CLI::Validator GetIsFullyQualifiedUserValidator();
-  CLIExitCode Parse(const int argc, char** argv);
+  CLIResult Parse(const int argc, char** argv);
   [[nodiscard]] uint8_t GetGameSearchType() const;
   [[nodiscard]] uint8_t GetGameLobbyTimeoutMode() const;
   [[nodiscard]] uint8_t GetGameLobbyOwnerTimeoutMode() const;
