@@ -1702,7 +1702,6 @@ bool CGame::Update(void* fd, void* send_fd)
     vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST();
     for (auto& user : m_Users) {
       // Avoid ping-spamming GProxy-reconnected players
-      // TODO: Check whether this desyncs!
       if (!user->GetDisconnected()) {
         user->Send(pingPacket);
       }
