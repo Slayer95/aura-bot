@@ -4437,7 +4437,11 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
   }
 
   if (hideNames) {
-    SendChat(user, "[" + user->GetName() + "]" + OwnerFragment + " joined the game as [" + user->GetDisplayName() + "]");
+    if (m_IsHiddenPlayerNames) {
+      SendChat(user, "[" + user->GetName() + "]" + OwnerFragment + " joined the game as [" + user->GetDisplayName() + "]");
+    } else {
+      SendChat(user, "[" + user->GetName() + "]" + OwnerFragment + " joined the game.");
+    }
     return;
   }
 
