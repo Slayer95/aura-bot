@@ -1475,7 +1475,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<string> output;
       output.push_back("Game#" + to_string(m_TargetGame->GetGameID()));
 
-      // TODO: /game - If names are hidden, leavers info should also be displayed
+      // GOTCHA: /game - Leavers info is omitted. This affects games with name obfuscation.
       vector<const GameUser::CGameUser*> players = m_TargetGame->GetPlayers();
       for (const auto& player : players) {
         const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromUID(player->GetUID()));
