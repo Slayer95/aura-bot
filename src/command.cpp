@@ -1475,6 +1475,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<string> output;
       output.push_back("Game#" + to_string(m_TargetGame->GetGameID()));
 
+      // TODO: /game - If names are hidden, leavers info should also be displayed
       vector<const GameUser::CGameUser*> players = m_TargetGame->GetPlayers();
       for (const auto& player : players) {
         const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromUID(player->GetUID()));
@@ -2333,13 +2334,21 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      for (auto& PlayerName: Args) {
-        if (PlayerName.empty())
+      vector<string> addedList;
+      for (auto& targetName: Args) {
+        if (targetName.empty())
           continue;
-        m_TargetGame->AddToReserved(PlayerName);
+        const GameUser::CGameUser targetUser = GetTargetUser(targetName);
+        if (targetUser) {
+          m_TargetGame->AddToReserved(targetUser->GetName());
+          addedList.push_back(targetUser->GetDisplayName());
+        } else {
+          m_TargetGame->AddToReserved(targetName);
+          addedList.push_back(targetName);
+        }
       }
 
-      SendAll("Added user(s) to the hold list: " + JoinVector(Args, false));
+      SendAll("Added user(s) to the hold list: " + JoinVector(addedList, false));
       break;
     }
 
