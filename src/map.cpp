@@ -1537,13 +1537,13 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     if (m_ReconnectionMode.value() == RECONNECT_ENABLED_GPROXY_EXTENDED) m_ReconnectionMode = m_ReconnectionMode.value() | RECONNECT_ENABLED_GPROXY_BASIC;
   }
   if (CFG.Exists("map.hosting.ip_filter.flood_handler")) {
-    m_IPFloodHandler = CFG.GetUint8("map.hosting.ip_filter.flood_handler", ON_IPFLOOD_DENY);
+    m_IPFloodHandler = CFG.GetStringIndex("map.hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
   }
   if (CFG.Exists("map.hosting.name_filter.unsafe_handler")) {
-    m_UnsafeNameHandler = CFG.GetUint8("map.hosting.name_filter.unsafe_handler", ON_UNSAFE_NAME_DENY);
+    m_UnsafeNameHandler = CFG.GetStringIndex("map.hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);
   }
   if (CFG.Exists("map.hosting.realm_broadcast.error_handler")) {
-    m_BroadcastErrorHandler = CFG.GetUint8("map.hosting.realm_broadcast.error_handler", ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
+    m_BroadcastErrorHandler = CFG.GetStringIndex("map.hosting.realm_broadcast.error_handler", {"ignore", "exit_main_error", "exit_empty_main_error", "exit_any_error", "exit_empty_any_error", "exit_max_errors"}, ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
   }
   if (CFG.Exists("map.hosting.name_filter.is_pipe_harmful")) {
     m_PipeConsideredHarmful = CFG.GetBool("map.hosting.name_filter.is_pipe_harmful", false);
