@@ -6026,8 +6026,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       try {
         if (m_IRC) {
           ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_IRC, m_ChannelName, m_FromName, m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
+#ifndef DISABLE_DPP
         } else if (m_DiscordAPI) {
           ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_DiscordAPI, &std::cout);
+#endif
         } else if (m_SourceRealm) {
           ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, m_IsBroadcast, &std::cout);
         } else {
