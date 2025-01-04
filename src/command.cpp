@@ -2338,7 +2338,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (auto& targetName: Args) {
         if (targetName.empty())
           continue;
-        const GameUser::CGameUser targetUser = GetTargetUser(targetName);
+        const GameUser::CGameUser* targetUser = GetTargetUser(targetName);
         if (targetUser) {
           m_TargetGame->AddToReserved(targetUser->GetName());
           addedList.push_back(targetUser->GetDisplayName());

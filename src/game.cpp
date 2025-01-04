@@ -4402,7 +4402,7 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
     return;
   }
 
-  bool hideNames = m_IsHiddenPlayerNames || m_Config.m_HideInGameNames == HIDE_IGN_ALWAYS || m_Config.m_HideInGameNames = HIDE_IGN_HOST;
+  bool hideNames = m_IsHiddenPlayerNames || m_Config.m_HideInGameNames == HIDE_IGN_ALWAYS || m_Config.m_HideInGameNames == HIDE_IGN_HOST;
   if (m_Config.m_HideInGameNames == HIDE_IGN_AUTO && m_Map->GetMapNumControllers() >= 3) {
     hideNames = true;
   }
