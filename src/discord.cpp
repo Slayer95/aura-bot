@@ -249,15 +249,6 @@ void CDiscord::SendUser(const string& message, const uint64_t target)
   });
 }
 
-bool CDiscord::MatchHostName(const string& hostName) const
-{
-  if (hostName == m_Config.m_HostName) return true;
-  if (hostName == "users." + m_Config.m_HostName) {
-    return true;
-  }
-  return false;
-}
-
 bool CDiscord::GetIsServerAllowed(const uint64_t target) const
 {
   switch (m_Config.m_FilterJoinServersMode) {
@@ -318,6 +309,17 @@ bool CDiscord::GetIsConnected() const
     if ((shardEntry.second)->is_connected()) {
       return true;
     }
+  }
+#endif
+  return false;
+}
+
+bool CDiscord::MatchHostName(const string& hostName) const
+{
+#ifndef DISABLE_DPP
+  if (hostName == m_Config.m_HostName) return true;
+  if (hostName == "users." + m_Config.m_HostName) {
+    return true;
   }
 #endif
   return false;

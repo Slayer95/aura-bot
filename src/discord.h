@@ -76,10 +76,10 @@ public:
   [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }
   [[nodiscard]] bool MatchHostName(const std::string& hostName) const;
 
-  bool GetIsServerAllowed(const uint64_t target) const;
-  bool GetIsUserAllowed(const uint64_t target) const;
-  bool GetIsSudoer(const uint64_t nIdentifier);
-  bool GetIsConnected() const;
+  [[nodiscard]] bool GetIsServerAllowed(const uint64_t target) const;
+  [[nodiscard]] bool GetIsUserAllowed(const uint64_t target) const;
+  [[nodiscard]] bool GetIsSudoer(const uint64_t nIdentifier);
+  [[nodiscard]] bool GetIsConnected() const;
 
   void Disable() { m_Config.m_Enabled = false; }  
 };
