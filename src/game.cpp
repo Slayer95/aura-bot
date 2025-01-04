@@ -4552,6 +4552,9 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   } else {
     LOG_APP_IF(LOG_LEVEL_NOTICE, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
   }
+  if (joinRequest->GetIsCensored()) {
+    LOG_APP_IF(LOG_LEVEL_NOTICE, "user [" + joinRequest->GetName() + "] is censored name - was [" + joinRequest->GetOriginalName() + "]")
+  }
   return Player;
 }
 
@@ -4606,7 +4609,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
   // the client sends the host counter when it joins so we can extract the ID value here
   // note: this is not a replacement for spoof checking since it doesn't verify the user's name and it can be spoofed anyway
 
-  string         JoinedRealm;
+  string JoinedRealm;
   uint8_t HostCounterID = joinRequest->GetHostCounter() >> 24;
   bool IsUnverifiedAdmin = false;
 
