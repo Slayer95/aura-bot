@@ -1545,9 +1545,11 @@ bool CGameSetup::Update()
 
 void CGameSetup::AwaitSettled()
 {
+#ifndef DISABLE_DPP
   if (m_IsStepDownloading) {
     m_DownloadFuture.wait();
   }
+#endif
 }
 
 void CGameSetup::SetGameSavedFile(const std::filesystem::path& filePath)
