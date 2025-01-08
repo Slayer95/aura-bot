@@ -47,6 +47,7 @@ Thumbs.db
 ####################
 
 **/.msvc/
+**/.msvc.tmp/
 **/Debug/
 **/Debug-x64/
 **/Release/
