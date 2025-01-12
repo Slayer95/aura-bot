@@ -1258,7 +1258,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("Not allowed to inspect raw slots.");
+        ErrorReply("Not allowed to inspect game net configuration.");
         break;
       }
 
@@ -1486,6 +1486,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (const auto& line : replyLines) {
         SendReply(line);
       }
+	  if (CommandHash == HashCode("gamedetails")) {
+	  }
       break;
     }
 
