@@ -125,32 +125,32 @@ COBJS = lib/sqlite3/sqlite3.o
 PROG = aura
 
 all: $(OBJS) $(COBJS) $(PROG)
-  @echo "Used CFLAGS: $(CXXFLAGS)"
+	@echo "Used CFLAGS: $(CXXFLAGS)"
 
 $(PROG): $(OBJS) $(COBJS)
-  @$(CXX) -o aura $(OBJS) $(COBJS) $(CXXFLAGS) $(LFLAGS)
-  @echo "[BIN] $@ created."
-  @strip "$(PROG)"
-  @echo "[BIN] Stripping the binary."
+	@$(CXX) -o aura $(OBJS) $(COBJS) $(CXXFLAGS) $(LFLAGS)
+	@echo "[BIN] $@ created."
+	@strip "$(PROG)"
+	@echo "[BIN] Stripping the binary."
 
 clean:
-  @rm -f $(OBJS) $(COBJS) $(PROG)
-  @echo "Binary and object files cleaned."
+	@rm -f $(OBJS) $(COBJS) $(PROG)
+	@echo "Binary and object files cleaned."
 
 install:
-  @install -d "$(DESTDIR)$(INSTALL_DIR)/bin"
-  @install $(PROG) "$(DESTDIR)$(INSTALL_DIR)/bin/$(PROG)"
-  @echo "Binary $(PROG) installed to $(DESTDIR)$(INSTALL_DIR)/bin"
+	@install -d "$(DESTDIR)$(INSTALL_DIR)/bin"
+	@install $(PROG) "$(DESTDIR)$(INSTALL_DIR)/bin/$(PROG)"
+	@echo "Binary $(PROG) installed to $(DESTDIR)$(INSTALL_DIR)/bin"
 
 $(OBJS): %.o: %.cpp
-  @$(CXX) -o $@ $(CXXFLAGS) -c $<
-  @echo "[$(CXX)] $@"
+	@$(CXX) -o $@ $(CXXFLAGS) -c $<
+	@echo "[$(CXX)] $@"
 
 $(COBJS): %.o: %.c
-  @$(CC) -o $@ $(CCFLAGS) -c $<
-  @echo "[$(CC)] $@"
+	@$(CC) -o $@ $(CCFLAGS) -c $<
+	@echo "[$(CC)] $@"
 
 clang-tidy:
-  @for file in $(OBJS); do \
-    clang-tidy "src/$$(basename $$file .o).cpp" -fix -checks=* -header-filter=src/* -- $(CXXFLAGS) $(DFLAGS); \
-  done;
+	@for file in $(OBJS); do \
+		clang-tidy "src/$$(basename $$file .o).cpp" -fix -checks=* -header-filter=src/* -- $(CXXFLAGS) $(DFLAGS); \
+	done;
