@@ -17,34 +17,34 @@ DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
 
-ifeq ($(AURASTATIC),1)
+ifeq ($(strip $(AURASTATIC)),1)
   LFLAGS += -static
 endif
 
-ifeq ($(AURALINKMINIUPNP),0)
+ifeq ($(strip $(AURALINKMINIUPNP)),0)
   CXXFLAGS += -DDISABLE_MINIUPNP
 else
-  ifeq ($(AURASTATIC),1)
+  ifeq ($(strip $(AURASTATIC)),1)
     LFLAGS += -lminiupnpc
   else
     LFLAGS += -lminiupnpc
   endif
 endif
 
-ifeq ($(AURALINKCPR),0)
+ifeq $(strip ($(AURALINKCPR)),0)
   CXXFLAGS += -DDISABLE_CPR
 else
-  ifeq ($(AURASTATIC),1)
+  ifeq ($(strip $(AURASTATIC)),1)
     LFLAGS += -lcpr
   else
     LFLAGS += -lcpr
   endif
 endif
 
-ifeq ($(AURALINKDPP),0)
+ifeq ($(strip $(AURALINKDPP)),0)
   CXXFLAGS += -DDISABLE_DPP
 else
-  ifeq ($(AURASTATIC),1)
+  ifeq ($(strip $(AURASTATIC)),1)
     LFLAGS += -ldpp
   else
     LFLAGS += -ldpp
