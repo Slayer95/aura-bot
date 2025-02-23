@@ -38,7 +38,6 @@
 #include <dpp/queues.h>
 #include <dpp/cache.h>
 #include <dpp/intents.h>
-#include <dpp/sync.h>
 #include <algorithm>
 #include <iostream>
 #include <shared_mutex>
@@ -52,6 +51,11 @@ namespace dpp {
  * @brief A list of shards
  */
 typedef std::map<uint32_t, class discord_client*> shard_list;
+
+/**
+ * @brief List of shards awaiting reconnection, by id with earliest possible reconnect time
+ */
+typedef std::map<uint32_t, time_t> reconnect_list;
 
 /**
  * @brief Represents the various information from the 'get gateway bot' api call
@@ -156,6 +160,7 @@ typedef std::variant<
 		ban_map,
 		voiceregion,
 		voiceregion_map,
+		voicestate,
 		integration,
 		integration_map,
 		webhook,
@@ -334,4 +339,4 @@ typedef std::function<void(const confirmation_callback_t&)> command_completion_e
  * @brief Automatically JSON encoded HTTP result
  */
 typedef std::function<void(json&, const http_request_completion_t&)> json_encode_t;
-} // namespace dpp
+}

@@ -20,6 +20,9 @@ Windows users must use VS2019 or later. Visual Studio 2019 Community edition wor
 **Note**: If you have trouble getting some components to build, you may use the ``ReleaseLite`` configuration instead. Alternatively, 
 you may manually disable troublesome components in the project ``"Configuration Properties"``. Find instructions below. [3] 
 
+**Note**: For the optional component D++, version 10.0.31 is the latest version supporting Windows 7. 
+By default, the MSVC solution provided uses DPP 10.1. For an Aura version supporting Windows 7, see the ``w7`` branch. [4]
+
 ### Linux
 
 Linux users will probably need some packages for it to build:
@@ -133,3 +136,4 @@ When using MSVC, follow these steps to disable components.
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://github.com/libcpr/cpr
 [3]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components
+[4]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7

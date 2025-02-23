@@ -30,7 +30,7 @@ struct coroutine_dummy {
 
 }
 
-#ifdef DPP_CORO
+#ifndef DPP_NO_CORO
 
 #include <dpp/coro/coro.h>
 #include <dpp/coro/awaitable.h>
@@ -393,7 +393,7 @@ namespace detail::coroutine {
 DPP_CHECK_ABI_COMPAT(coroutine<void>, coroutine_dummy)
 DPP_CHECK_ABI_COMPAT(coroutine<uint64_t>, coroutine_dummy)
 
-} // namespace dpp
+}
 
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise type from a coroutine function.
@@ -403,4 +403,4 @@ struct dpp::detail::std_coroutine::coroutine_traits<dpp::coroutine<R>, Args...> 
 	using promise_type = dpp::detail::coroutine::promise_t<R>;
 };
 
-#endif /* DPP_CORO */
+#endif /* DPP_NO_CORO */

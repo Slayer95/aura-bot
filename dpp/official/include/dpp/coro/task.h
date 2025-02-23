@@ -31,7 +31,7 @@ struct task_dummy : awaitable_dummy {
 
 }
 
-#ifdef DPP_CORO
+#ifndef DPP_NO_CORO
 
 #include <dpp/coro/coro.h>
 
@@ -433,7 +433,7 @@ std_coroutine::coroutine_handle<> final_awaiter<R>::await_suspend(handle_t<R> ha
 DPP_CHECK_ABI_COMPAT(task<void>, task_dummy)
 DPP_CHECK_ABI_COMPAT(task<uint64_t>, task_dummy)
 
-} // namespace dpp
+}
 
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise_t type from a coroutine function.
@@ -443,4 +443,4 @@ struct dpp::detail::std_coroutine::coroutine_traits<dpp::task<T>, Args...> {
 	using promise_type = dpp::detail::task::promise_t<T>;
 };
 
-#endif /* DPP_CORO */
+#endif /* DPP_NO_CORO */
