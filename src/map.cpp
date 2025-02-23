@@ -727,6 +727,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
             if (!(mapEssentials->options & MAPOPT_CUSTOMFORCES)) {
               PlayerMask = 1 << i;
             }
+            DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated team " + to_string(i) + " mask = " + ToHexString(PlayerMask))
 
             for (auto& Slot : mapEssentials->slots) {
               if (0 != (PlayerMask & (1 << static_cast<uint32_t>((Slot).GetColor())))) {
