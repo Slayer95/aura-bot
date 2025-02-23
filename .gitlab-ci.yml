@@ -70,12 +70,12 @@ Assemble:
   ## Shared library
   - cp /usr/local/lib/libcpr.so* dist/bin-shared
   # DPP (shared, .so)
-  - git clone https://github.com/brainboxdotcc/DPP.git dpp-src
-  - cd dpp-src && mkdir build && cd build
-  - cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
-  - cmake --build . -j4
-  - make install
-  - cd $CI_PROJECT_DIR
+  # - git clone https://github.com/brainboxdotcc/DPP.git dpp-src
+  # - cd dpp-src && mkdir build && cd build
+  # - cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
+  # - cmake --build . -j4
+  # - make install
+  # - cd $CI_PROJECT_DIR
   ## Shared library
   # - cp /usr/local/lib/libdpp.so* dist/bin-shared
   ## Log all library locations
