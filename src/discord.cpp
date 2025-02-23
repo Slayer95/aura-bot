@@ -114,12 +114,12 @@ bool CDiscord::Init()
   });
 
   m_Client->on_guild_create([this](const dpp::guild_create_t& event) {
-    if (!GetIsServerAllowed(event.created->id)) {
-      LeaveServer(event.created->id, event.created->name, true);
+    if (!GetIsServerAllowed(event.created.id)) {
+      LeaveServer(event.created.id, event.created.name, true);
       return;
     }
     if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-      Print("[DISCORD] Joined server <<" + event.created->name + ">> (#" + to_string(event.created->id) + ").");
+      Print("[DISCORD] Joined server <<" + event.created.name + ">> (#" + to_string(event.created.id) + ").");
     }
   });
 
