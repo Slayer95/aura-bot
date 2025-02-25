@@ -974,7 +974,7 @@ bool CRealm::GetIsDueReconnect() const
   if (GetTime() - m_LastDisconnectedTime < m_MinReconnectDelay) {
     return false;
   }
-  return m_Aura->m_Net.GetIsOutgoingThrottled(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
+  return !m_Aura->m_Net.GetIsOutgoingThrottled(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
 }
 
 string CRealm::GetPrefixedGameName(const string& gameName) const

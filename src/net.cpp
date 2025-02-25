@@ -230,11 +230,11 @@ uint32_t CIPAddressAPIConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
 
 int64_t CNet::GetThrottleTime(const NetworkHost& host, int64_t minTime) const
 {
-  auto it = m_OutgoingThrottles.find(host);
+  const auto it = m_OutgoingThrottles.find(host);
   if (it == m_OutgoingThrottles.end()) {
     return minTime;
   }
-  TimedUint8 throttled = it->second;
+  const TimedUint8 throttled = it->second;
   if (throttled.second == 0) {
     return minTime;
   }
@@ -243,21 +243,21 @@ int64_t CNet::GetThrottleTime(const NetworkHost& host, int64_t minTime) const
 
 bool CNet::GetIsOutgoingThrottled(const NetworkHost& host) const
 {
-  if (m_OutgoingPendingConnections.find(host) != m_OutgoingPendingConnections.end()) {
+  if (m_OutgoingPendingConnections.count(host) > 0) {
     // Only one concurrent connection attempt per throttable host is allowed.
     return true;
   }
 
   {
-    auto it = m_OutgoingThrottles.find(host);
+    const auto it = m_OutgoingThrottles.find(host);
     if (it == m_OutgoingThrottles.end()) {
       return false;
     }
-    TimedUint8 throttled = it->second;
+    const TimedUint8& throttled = it->second;
     if (throttled.second == 0) {
       return false;
     }
-    int64_t dueTime = throttled.first + ((int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second);
+    const int64_t dueTime = throttled.first + ((int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second);
     return GetTime() < dueTime;
   }
 
@@ -283,15 +283,16 @@ void CNet::OnThrottledConnectionSuccess(const NetworkHost& host)
 void CNet::OnThrottledConnectionError(const NetworkHost& host)
 {
   m_OutgoingPendingConnections.erase(host);
-  auto it = m_OutgoingThrottles.find(host);
+  auto& it = m_OutgoingThrottles.find(host);
   if (it == m_OutgoingThrottles.end()) {
+    m_OutgoingThrottles[host] = TimedUint8(GetTime(), 0);
     return;
   }
-  TimedUint8 throttled = it->second;
+  TimedUint8& throttled = it->second;
   throttled.first = GetTime();
   if (throttled.second < NET_RECONNECT_MAX_BACKOFF) {
     // Max delay 45 << 12 seconds ~ 2 days
-    ++throttled.second;
+    throttled.second = throttled.second + 1;
   }
 }
 
