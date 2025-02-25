@@ -2355,9 +2355,38 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !HOLDALL (hold slots for everyone in the lobby)
+    //
+
+    case HashCode("reserveall"):
+    case HashCode("holdall"): {
+      UseImplicitHostedGame();
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetIsRestored() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot edit this game's configuration.");
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+        break;
+      }
+
+      if (!m_TargetGame->ReserveAll()) {
+        SendAll("All users in the lobby are already reserved.");
+        break;
+      }
+      SendAll("Added all users in the lobby to the hold list.");
+      break;
+    }
+
+    //
     // !UNHOLD
     //
 
+    case HashCode("unholdall"):
     case HashCode("unhold"): {
       UseImplicitHostedGame();
       if (!m_TargetGame)
@@ -2376,7 +2405,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       vector<string> Args = SplitArgs(Payload, 1u, m_TargetGame->GetMap()->GetVersionMaxSlots());
 
       if (Args.empty()) {
-        m_TargetGame->RemoveAllReserved();
+        if (!m_TargetGame->RemoveAllReserved()) {
+          SendAll("Reservations list was already empty.");
+          break;
+        }
         SendAll("Cleared the reservations list.");
         break;
       }

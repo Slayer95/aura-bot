@@ -657,7 +657,8 @@ public:
   void AddToRealmVerified(const std::string& server, GameUser::CGameUser* user, bool sendMessage);
   void AddToReserved(const std::string& name);
   void RemoveFromReserved(const std::string& name);
-  void RemoveAllReserved();
+  bool ReserveAll();
+  bool RemoveAllReserved();
   bool MatchOwnerName(const std::string& name) const;
   uint8_t GetReservedIndex(const std::string& name) const;
 

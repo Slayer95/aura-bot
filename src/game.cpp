@@ -7878,12 +7878,26 @@ void CGame::RemoveFromReserved(const string& name)
   }
 }
 
-void CGame::RemoveAllReserved()
+bool CGame::ReserveAll()
 {
+  bool anyAdded = false;
+  for (auto& user : m_Users) {
+    if (user->GetIsReserved()) continue;
+    user->SetReserved(true);
+    m_Reserved.push_back(user->GetLowerName());
+    anyAdded = true;
+  }
+  return anyAdded;
+}
+
+bool CGame::RemoveAllReserved()
+{
+  bool anyRemoved = !m_Reserved.empty();
   m_Reserved.clear();
   for (auto& user : m_Users) {
     user->SetReserved(false);
   }
+  return anyRemoved;
 }
 
 bool CGame::MatchOwnerName(const string& name) const
