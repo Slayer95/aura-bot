@@ -228,6 +228,19 @@ uint32_t CIPAddressAPIConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return 0;
 }
 
+int64_t CNet::GetThrottleTime(const NetworkHost& host, int64_t minTime) const
+{
+  auto it = m_OutgoingThrottles.find(host);
+  if (it == m_OutgoingThrottles.end()) {
+    return false;
+  }
+  TimedUint8 throttled = it->second;
+  if (throttled.second == 0) {
+    return minTime;
+  }
+  return (int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second;
+}
+
 bool CNet::GetIsOutgoingThrottled(const NetworkHost& host) const
 {
   if (m_OutgoingPendingConnections.find(host) != m_OutgoingPendingConnections.end()) {

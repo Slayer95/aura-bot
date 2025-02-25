@@ -174,6 +174,7 @@ public:
   void ResetHealthCheck();
   void ReportHealthCheck();
 
+  int64_t GetThrottleTime(const NetworkHost& host, int64_t minTime = 0) const;
   bool GetIsOutgoingThrottled(const NetworkHost& host) const;
   void ResetOutgoingThrottled(const NetworkHost& host);
   void OnThrottledConnectionStart(const NetworkHost& host);

@@ -188,8 +188,12 @@ void CRealm::Update(void* fd, void* send_fd)
   if (m_Socket->HasError() || m_Socket->HasFin())
   {
     // the socket has an error, or the server terminated the connection
+    NetworkHost host = NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort);
+    if (m_Socket->GetConnecting()) {
+      m_Aura->m_Net.OnThrottledConnectionError(host);
+    }
     ResetConnection(true);
-    PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting " + to_string(m_MinReconnectDelay) + " seconds to reconnect")
+    PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting " + to_string(m_Aura->m_Net.GetThrottleTime(host, m_MinReconnectDelay)) + " seconds to reconnect")
     return;
   }
 
@@ -605,9 +609,10 @@ void CRealm::Update(void* fd, void* send_fd)
     else if (Time - m_LastConnectionAttemptTime >= 10)
     {
       // the connection attempt timed out (10 seconds)
-      m_Aura->m_Net.OnThrottledConnectionError(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
+      NetworkHost host = NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort);
+      m_Aura->m_Net.OnThrottledConnectionError(host);
       PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "failed to connect to [" + m_HostName + ":" + to_string(m_Config.m_ServerPort) + "]")
-      PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting 90 seconds to retry...")
+      PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting " + to_string(m_Aura->m_Net.GetThrottleTime(host, m_MinReconnectDelay)) + " seconds to retry")
       m_Socket->Reset();
       //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
       m_LastDisconnectedTime = Time;
