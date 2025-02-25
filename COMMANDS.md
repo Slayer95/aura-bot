@@ -164,6 +164,9 @@ Commands
 - Aliases: reserve
 - Syntax: hold \<PLAYER1\> , \<PLAYER2\>, ...
 
+## \`holdall\`
+- Aliases: reserveall
+
 ## \`host\`
 - Aliases: map, load, hostpriv
 - Syntax: host \<MAP NAME\> , \<GAME NAME\>
@@ -377,6 +380,7 @@ Commands
 - Syntax: unban \<PLAYERNAME\>@\<REALM\>
 
 ## \`unhold\`
+- Aliases: unholdall
 
 ## \`unlock\`
 
