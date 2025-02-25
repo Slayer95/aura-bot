@@ -232,7 +232,7 @@ int64_t CNet::GetThrottleTime(const NetworkHost& host, int64_t minTime) const
 {
   auto it = m_OutgoingThrottles.find(host);
   if (it == m_OutgoingThrottles.end()) {
-    return false;
+    return minTime;
   }
   TimedUint8 throttled = it->second;
   if (throttled.second == 0) {
