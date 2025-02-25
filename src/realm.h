@@ -93,7 +93,8 @@ private:
   int64_t                          m_LastGameListTime;          // GetTime when the last game list request was sent
   int64_t                          m_LastAdminRefreshTime;      // GetTime when the admin list was last refreshed from the database
   int64_t                          m_LastBanRefreshTime;        // GetTime when the ban list was last refreshed from the database
-  int64_t                          m_ReconnectDelay;            // interval between two consecutive connect attempts
+  int64_t                          m_MinReconnectDelay;
+  int64_t                          m_BaseReconnectDelay;        // interval between two consecutive connect attempts
   uint32_t                         m_SessionID;                 // reconnection counter
   uint32_t                         m_NullPacketsSent;
   bool                             m_FirstConnect;              // if we haven't tried to connect to battle.net yet
@@ -181,6 +182,7 @@ public:
   const sockaddr_storage*    GetPublicHostAddress() const;
   uint32_t             GetMaxUploadSize() const;
   bool                 GetIsFloodImmune() const;
+  bool                 GetIsDueReconnect() const;
   std::string          GetCommandToken() const;
   std::string          GetPrefixedGameName(const std::string& gameName) const;
   bool                 GetAnnounceHostToChat() const;

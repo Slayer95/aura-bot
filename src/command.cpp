@@ -6756,15 +6756,21 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     //
     // !FLUSHDNS
+    // !FLUSHIP
+    // !FLUSHNET
     //
 
-    case HashCode("flushdns"): {
+    case HashCode("flushdns"):
+    case HashCode("fluship"):
+    case HashCode("flushnet"): {
       if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
       }
       m_Aura->m_Net.FlushDNSCache();
-      SendReply("Cleared DNS entries");
+      m_Aura->m_Net.FlushSelfIPCache();
+      m_Aura->m_Net.FlushOutgoingThrottles();
+      SendReply("Cleared network data (DNS, IP, throttle.)");
       break;
     }
 

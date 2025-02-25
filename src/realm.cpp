@@ -91,6 +91,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_LastGameListTime(0),
     m_LastAdminRefreshTime(GetTime()),
     m_LastBanRefreshTime(GetTime()),
+    m_MinReconnectDelay(5),
     m_SessionID(0),
     m_NullPacketsSent(0),
     m_FirstConnect(true),
@@ -115,7 +116,6 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_ChatQueueJoinCallback(nullptr),
     m_ChatQueueGameHostWhois(nullptr)
 {
-  m_ReconnectDelay = GetPvPGN() ? 90 : 240;
 }
 
 CRealm::~CRealm()
@@ -189,7 +189,7 @@ void CRealm::Update(void* fd, void* send_fd)
   {
     // the socket has an error, or the server terminated the connection
     ResetConnection(true);
-    PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting " + to_string(m_ReconnectDelay) + " seconds to reconnect")
+    PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting " + to_string(m_MinReconnectDelay) + " seconds to reconnect")
     return;
   }
 
@@ -556,7 +556,7 @@ void CRealm::Update(void* fd, void* send_fd)
     return;
   }
 
-  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && (m_ReconnectNextTick || (Time - m_LastDisconnectedTime >= m_ReconnectDelay)))
+  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && GetIsDueReconnect())
   {
     // attempt to connect to battle.net
 
@@ -574,6 +574,7 @@ void CRealm::Update(void* fd, void* send_fd)
 
     sockaddr_storage resolvedAddress;
     if (m_Aura->m_Net.ResolveHostName(resolvedAddress, ACCEPT_ANY, m_Config.m_HostName, m_Config.m_ServerPort)) {
+      m_Aura->m_Net.OnThrottledConnectionStart(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
       m_Socket->Connect(m_Config.m_BindAddress, resolvedAddress);
     } else {
       m_Socket->m_HasError = true;
@@ -589,6 +590,7 @@ void CRealm::Update(void* fd, void* send_fd)
     if (m_Socket->CheckConnect())
     {
       // the connection attempt completed
+      m_Aura->m_Net.OnThrottledConnectionSuccess(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
       ++m_SessionID;
       m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
 
@@ -603,7 +605,7 @@ void CRealm::Update(void* fd, void* send_fd)
     else if (Time - m_LastConnectionAttemptTime >= 10)
     {
       // the connection attempt timed out (10 seconds)
-
+      m_Aura->m_Net.OnThrottledConnectionError(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
       PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "failed to connect to [" + m_HostName + ":" + to_string(m_Config.m_ServerPort) + "]")
       PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting 90 seconds to retry...")
       m_Socket->Reset();
@@ -957,6 +959,17 @@ uint32_t CRealm::GetMaxUploadSize() const
 bool CRealm::GetIsFloodImmune() const
 {
   return m_Config.m_FloodImmune;
+}
+
+bool CRealm::GetIsDueReconnect() const
+{
+  if (m_ReconnectNextTick) {
+    return true;
+  }
+  if (GetTime() - m_LastDisconnectedTime < m_MinReconnectDelay) {
+    return false;
+  }
+  return m_Aura->m_Net.GetIsOutgoingThrottled(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
 }
 
 string CRealm::GetPrefixedGameName(const string& gameName) const

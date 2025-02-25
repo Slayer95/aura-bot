@@ -129,12 +129,14 @@ public:
   uint8_t                                                     m_IPv4SelfCacheT;
   std::pair<std::string, sockaddr_storage*>                   m_IPv6SelfCacheV;
   uint8_t                                                     m_IPv6SelfCacheT;
+  std::multiset<NetworkHost>                                  m_OutgoingPendingConnections;
+  std::map<NetworkHost, TimedUint8>                           m_OutgoingThrottles;
 
   std::vector<CGameTestConnection*>                           m_HealthCheckClients;
   std::vector<CIPAddressAPIConnection*>                       m_IPAddressFetchClients;
   bool                                                        m_HealthCheckVerbose;
   bool                                                        m_HealthCheckInProgress;
-  std::shared_ptr<CCommandContext>                                            m_HealthCheckContext;
+  std::shared_ptr<CCommandContext>                            m_HealthCheckContext;
   bool                                                        m_IPAddressFetchInProgress;
   uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
 
@@ -163,6 +165,7 @@ public:
   [[nodiscard]] CTCPServer*                     GetOrCreateTCPServer(uint16_t, const std::string& name);
   void                                          FlushDNSCache();
   void                                          FlushSelfIPCache();
+  void                                          FlushOutgoingThrottles();
 
 #ifndef DISABLE_MINIUPNP
   uint8_t RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel, bool ignoreCache = false);
@@ -171,12 +174,17 @@ public:
   void ResetHealthCheck();
   void ReportHealthCheck();
 
+  bool GetIsOutgoingThrottled(const NetworkHost& host) const;
+  void ResetOutgoingThrottled(const NetworkHost& host);
+  void OnThrottledConnectionStart(const NetworkHost& host);
+  void OnThrottledConnectionSuccess(const NetworkHost& host);
+  void OnThrottledConnectionError(const NetworkHost& host);
   bool QueryIPAddress();
   void ResetIPAddressFetch();
   void HandleIPAddressFetchDone();
   void HandleIPAddressFetchDoneCallback();
   void CheckJoinableLobbies();
-
+  
   uint16_t NextHostPort();
   void     MergeDownGradedConnections();
 

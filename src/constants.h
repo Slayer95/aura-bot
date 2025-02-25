@@ -542,6 +542,10 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 #define NET_PROTOCOL_TCP 0u
 #define NET_PROTOCOL_UDP 1u
 
+// Exponential backoff starts at twice this value (45x2=90 seconds)
+constexpr int64_t NET_BASE_RECONNECT_DELAY = 45;
+constexpr uint8_t NET_RECONNECT_MAX_BACKOFF = 12;
+
 // realm_chat.h
 
 #define RECV_SELECTOR_SYSTEM 1

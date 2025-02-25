@@ -228,6 +228,60 @@ uint32_t CIPAddressAPIConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
   return 0;
 }
 
+bool CNet::GetIsOutgoingThrottled(const NetworkHost& host) const
+{
+  if (m_OutgoingPendingConnections.find(host) != m_OutgoingPendingConnections.end()) {
+    // Only one concurrent connection attempt per throttable host is allowed.
+    return true;
+  }
+
+  {
+    auto it = m_OutgoingThrottles.find(host);
+    if (it == m_OutgoingThrottles.end()) {
+      return false;
+    }
+    TimedUint8 throttled = it->second;
+    if (throttled.second == 0) {
+      return false;
+    }
+    int64_t dueTime = throttled.first + ((int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second);
+    return GetTime() < dueTime;
+  }
+
+  return false;
+}
+
+void CNet::ResetOutgoingThrottled(const NetworkHost& host)
+{
+  m_OutgoingThrottles.erase(host);
+}
+
+void CNet::OnThrottledConnectionStart(const NetworkHost& host)
+{
+  m_OutgoingPendingConnections.insert(host);
+}
+
+void CNet::OnThrottledConnectionSuccess(const NetworkHost& host)
+{
+  m_OutgoingPendingConnections.erase(host);
+  ResetOutgoingThrottled(host);
+}
+
+void CNet::OnThrottledConnectionError(const NetworkHost& host)
+{
+  m_OutgoingPendingConnections.erase(host);
+  auto it = m_OutgoingThrottles.find(host);
+  if (it == m_OutgoingThrottles.end()) {
+    return;
+  }
+  TimedUint8 throttled = it->second;
+  throttled.first = GetTime();
+  if (throttled.second < NET_RECONNECT_MAX_BACKOFF) {
+    // Max delay 45 << 12 seconds ~ 2 days
+    ++throttled.second;
+  }
+}
+
 bool CIPAddressAPIConnection::QueryIPAddress()
 {
   if (m_Socket->HasError() || !m_Socket->GetConnected()) {
@@ -1523,6 +1577,11 @@ void CNet::FlushSelfIPCache()
   m_IPv6SelfCacheT = NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID;
 }
 
+void CNet::FlushOutgoingThrottles()
+{
+  m_OutgoingThrottles.clear();
+}
+
 void CNet::PropagateBroadcastEnabled(const bool nEnable)
 {
   if (m_UDPMainServerEnabled) {
@@ -1628,6 +1687,7 @@ CNet::~CNet()
   FlushSelfIPCache();
   ResetHealthCheck();
   ResetIPAddressFetch();
+  FlushOutgoingThrottles();
   m_HealthCheckContext.reset();
 
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
