@@ -1308,7 +1308,7 @@ bool CAura::Update()
   m_Net.MergeDownGradedConnections();
   if (MergePendingLobbies()) {
     Print("[AURA] pending lobbies merged");
-    Print("[GAME] Remake step 2");
+    Print("[GAME] Remake step 5");
     metaDataNeedsUpdate = true;
   }
 

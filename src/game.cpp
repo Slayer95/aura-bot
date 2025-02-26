@@ -1736,17 +1736,19 @@ bool CGame::Update(void* fd, void* send_fd)
 
   if (m_Remaking) {
     if (!m_Users.empty()) {
+      Print("[GAME] Remake step 2");
       for (auto& user : m_Users) {
-        Print("[GAME] Remake step 3");
         user->SetDeleteMe(true);
       }
       return false;
     }
-    Print("[GAME] Remake step 4");
+    Print("[GAME] Remake step 3");
     m_Remaking = false;
     if (m_Aura->GetNewGameIsInQuota()) {
+      Print("[GAME] Remake step 4 OK");
       Remake();
     } else {
+      Print("[GAME] Remake step 4 ERROR");
       // Cannot remake
       m_Exiting = true;
     }
@@ -6299,6 +6301,7 @@ void CGame::Remake()
 
   m_IsAutoVirtualPlayers = false;
   m_VirtualHostUID = 0xFF;
+  m_ExitingSoon = false;
   m_SlotInfoChanged = 0;
   m_JoinedVirtualHosts = 0;
   m_ReconnectProtocols = 0;
