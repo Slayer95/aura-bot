@@ -1307,6 +1307,8 @@ bool CAura::Update()
   // move stuff from pending vectors to their intended places
   m_Net.MergeDownGradedConnections();
   if (MergePendingLobbies()) {
+    Print("[AURA] pending lobbies merged");
+    Print("[GAME] Remake step 2");
     metaDataNeedsUpdate = true;
   }
 

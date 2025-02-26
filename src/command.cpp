@@ -2909,7 +2909,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       m_TargetGame->SendAllChat("Please rejoin the remade game <<" + m_TargetGame->GetGameName() + ">>.");
       m_TargetGame->SendEveryoneElseLeftAndDisconnect("was disconnected (admin remade game)");
-      m_TargetGame->Remake();
+      Print("[GAME] Remake step 1");
+      m_TargetGame->RemakeStart();
       // TODO: Debug - broadcast seems broken
       break;
     }

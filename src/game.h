@@ -551,6 +551,7 @@ public:
   void                      ClearActions();
   void                      Reset();
   bool                      GetIsRemakeable();
+  void                      RemakeStart();
   void                      Remake();
 
   void                      AddProvisionalBannableUser(const GameUser::CGameUser* user);

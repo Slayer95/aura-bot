@@ -1735,9 +1735,17 @@ bool CGame::Update(void* fd, void* send_fd)
   }
 
   if (m_Remaking) {
+    if (!m_Users.empty()) {
+      for (auto& user : m_Users) {
+        Print("[GAME] Remake step 3");
+        user->SetDeleteMe(true);
+      }
+      return false;
+    }
+    Print("[GAME] Remake step 4");
     m_Remaking = false;
     if (m_Aura->GetNewGameIsInQuota()) {
-      m_Remade = true;
+      Remake();
     } else {
       // Cannot remake
       m_Exiting = true;
@@ -6236,10 +6244,15 @@ bool CGame::GetIsRemakeable()
   return true;
 }
 
-void CGame::Remake()
+void CGame::RemakeStart()
 {
   m_Config.m_SaveStats = false;
+  m_Remaking = true;
+  m_Remade = false;
+}
 
+void CGame::Remake()
+{
   Reset();
 
   int64_t Time = GetTime();
@@ -6306,8 +6319,8 @@ void CGame::Remake()
   m_HadLeaver = false;
   m_UsesCustomReferees = false;
   m_SentPriorityWhois = false;
-  m_Remaking = true;
-  m_Remade = false;
+  m_Remaking = false;
+  m_Remade = true;
   m_GameDiscoveryInfoChanged = true;
   m_HMCEnabled = false;
   m_BufferingEnabled = BUFFERING_ENABLED_NONE;
