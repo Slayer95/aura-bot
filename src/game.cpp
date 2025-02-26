@@ -1741,11 +1741,11 @@ bool CGame::Update(void* fd, void* send_fd)
       }
       return false;
     }
-    m_Remaking = false;
     if (m_Aura->GetNewGameIsInQuota()) {
       Remake();
     } else {
       // Cannot remake
+      m_Remaking = false;
       m_Exiting = true;
     }
     if (m_CustomStats) m_CustomStats->FlushQueue();
