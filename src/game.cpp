@@ -1756,22 +1756,13 @@ bool CGame::Update(void* fd, void* send_fd)
     return true;
   }
 
-  if (m_LobbyLoading) {
-    if (!m_Users.empty()) {
-      return m_Exiting;
-    }
-    // This is a remake.
-    // All users left the original game, and they can rejoin now.
-    m_LobbyLoading = false;
-    LOG_APP_IF(LOG_LEVEL_INFO, "finished loading after remake")
-    CreateVirtualHost();
-  }
-
   // keep track of the largest sync counter (the number of keepalive packets received by each user)
   // if anyone falls behind by more than m_SyncLimit keepalives we start the lag screen
 
   if (m_GameLoaded) {
+    if (m_Remade) Print("UpdateLoaded() BEFORE");
     UpdateLoaded();
+    if (m_Remade) Print("UpdateLoaded() BEFORE");
   }
 
   // send actions every m_Latency milliseconds
@@ -1781,7 +1772,9 @@ bool CGame::Update(void* fd, void* send_fd)
   if (m_GameLoaded && !m_Lagging && Ticks - m_LastActionSentTicks >= GetLatency() - m_LastActionLateBy)
     SendAllActions();
 
+  if (m_Remade) Print("UpdateLogs() BEFORE");
   UpdateLogs();
+  if (m_Remade) Print("UpdateLogs() AFTER");
 
   // end the game if there aren't any users left
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
@@ -6251,6 +6244,7 @@ void CGame::RemakeStart()
   m_Config.m_SaveStats = false;
   m_Remaking = true;
   m_Remade = false;
+  m_LobbyLoading = true;
 }
 
 void CGame::Remake()
@@ -6314,7 +6308,6 @@ void CGame::Remake()
   m_CountDownUserInitiated = false;
   m_GameLoading = false;
   m_GameLoaded = false;
-  m_LobbyLoading = true;
   m_Lagging = false;
   m_Desynced = false;
   m_IsDraftMode = false;
@@ -6334,6 +6327,12 @@ void CGame::Remake()
   InitSlots();
 
   m_KickVotePlayer.clear();
+
+  m_LobbyLoading = false;
+  LOG_APP_IF(LOG_LEVEL_INFO, "finished loading after remake")
+  Print("CreateVirtualHost() BEFORE");
+  CreateVirtualHost();
+  Print("CreateVirtualHost() AFTER");
 }
 
 uint8_t CGame::GetSIDFromUID(uint8_t UID) const
