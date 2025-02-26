@@ -1736,19 +1736,15 @@ bool CGame::Update(void* fd, void* send_fd)
 
   if (m_Remaking) {
     if (!m_Users.empty()) {
-      Print("[GAME] Remake step 2");
       for (auto& user : m_Users) {
         user->SetDeleteMe(true);
       }
       return false;
     }
-    Print("[GAME] Remake step 3");
     m_Remaking = false;
     if (m_Aura->GetNewGameIsInQuota()) {
-      Print("[GAME] Remake step 4 OK");
       Remake();
     } else {
-      Print("[GAME] Remake step 4 ERROR");
       // Cannot remake
       m_Exiting = true;
     }
@@ -1760,9 +1756,7 @@ bool CGame::Update(void* fd, void* send_fd)
   // if anyone falls behind by more than m_SyncLimit keepalives we start the lag screen
 
   if (m_GameLoaded) {
-    if (m_Remade) Print("UpdateLoaded() BEFORE");
     UpdateLoaded();
-    if (m_Remade) Print("UpdateLoaded() BEFORE");
   }
 
   // send actions every m_Latency milliseconds
@@ -1772,9 +1766,7 @@ bool CGame::Update(void* fd, void* send_fd)
   if (m_GameLoaded && !m_Lagging && Ticks - m_LastActionSentTicks >= GetLatency() - m_LastActionLateBy)
     SendAllActions();
 
-  if (m_Remade) Print("UpdateLogs() BEFORE");
   UpdateLogs();
-  if (m_Remade) Print("UpdateLogs() AFTER");
 
   // end the game if there aren't any users left
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
@@ -1797,6 +1789,7 @@ bool CGame::Update(void* fd, void* send_fd)
     m_KickVotePlayer.clear();
     m_StartedKickVoteTime = 0;
   }
+
 
   // start the gameover timer if there's only a configured number of players left
   // do not count observers, but fake users are counted regardless
@@ -6275,6 +6268,7 @@ void CGame::Remake()
   m_LastOwnerSeen = Ticks;
   m_StartedKickVoteTime = 0;
   m_LastCustomStatsUpdateTime = 0;
+  m_GameOver = GAME_ONGOING;
   m_GameOverTime = nullopt;
   m_LastPlayerLeaveTicks = nullopt;
   m_LastLagScreenResetTime = 0;
