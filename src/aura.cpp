@@ -2170,10 +2170,15 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   }
 
   uint32_t mapSize = ByteArrayToUInt32(createdLobby->GetMap()->GetMapSize(), false);
-  if (m_GameVersion <= 28 && mapSize > 0x8000000) {
+  if (mapSize > 0x20000000) {
+    // Reforged
+    Print("[AURA] warning - hosting game beyond 512 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
+  } else if (m_GameVersion <= 28 && mapSize > 0x8000000) {
     Print("[AURA] warning - hosting game beyond 128 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
   } else if (m_GameVersion <= 26 && mapSize > 0x800000) {
     Print("[AURA] warning - hosting game beyond 8 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
+  } else if (m_GameVersion <= 23 && mapSize > 0x400000) {
+    Print("[AURA] warning - hosting game beyond 4 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
   }
   if (m_GameVersion < createdLobby->GetMap()->GetMapMinSuggestedGameVersion()) {
     Print("[AURA] warning - hosting game that MAY require version 1." + to_string(createdLobby->GetMap()->GetMapMinSuggestedGameVersion()));
