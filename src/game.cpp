@@ -1349,16 +1349,17 @@ void CGame::UpdateJoinable()
             break;
           }
 
-          // Update CRC32 for map parts sent to this user
-          user->SetLastMapPartCRC32(CRC32::CalculateCRC(
-            cachedChunk.GetDataAtCursor(lastOffsetEnd),
-            cachedChunk.GetSizeFromCursor(lastOffsetEnd),
-            user->GetLastMapPartCRC32()
-          ));
-
           const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, cachedChunk);
           uint32_t chunkSendSize = static_cast<uint32_t>(packet.size() - 18);
           user->SetLastMapPartSentOffsetEnd(lastOffsetEnd + chunkSendSize);
+
+          // Update CRC32 for map parts sent to this user
+          user->SetLastMapPartCRC32(CRC32::CalculateCRC(
+            cachedChunk.GetDataAtCursor(lastOffsetEnd),
+            chunkSendSize,
+            user->GetLastMapPartCRC32()
+          ));
+
           bool fullySent = user->GetLastMapPartSentOffsetEnd() == MapSize;
           m_DownloadCounter += chunkSendSize;
           Send(user, packet);
@@ -1368,7 +1369,7 @@ void CGame::UpdateJoinable()
             uint32_t sentCRC32 = user->GetLastMapPartCRC32();
             vector<uint8_t> expectedCRC32Bytes = CreateByteArray(expectedCRC32, false);
             vector<uint8_t> expectedSentCRC32Bytes = CreateByteArray(sentCRC32, false);
-            LogApp("Map corrupted - expected [" + ByteArrayToDecString(expectedCRC32Bytes) + " = " + ByteArrayToHexString(expectedCRC32Bytes) + "] but got [" + ByteArrayToHexString(expectedSentCRC32Bytes) + "])");
+            LogApp("Map corrupted - expected [" + ByteArrayToDecString(expectedCRC32Bytes) + "] but got [" + ByteArrayToDecString(expectedSentCRC32Bytes) + "])");
           }
         }
       }
