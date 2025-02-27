@@ -1073,22 +1073,8 @@ void CMap::Load(CConfig* CFG)
   // Game version compatibility and suggestions
   if (CFG->Exists("map.game_version.min")) {
     m_MapMinGameVersion = CFG->GetUint8("map.game_version.min", m_MapMinGameVersion);
-  }
-
-  if (CFG->Exists("map.game_version.suggested.min")) {
-    m_MapMinSuggestedGameVersion = CFG->GetUint8("map.game_version.suggested.min", m_MapMinSuggestedGameVersion);
-  }
-
-  if (m_MapMinSuggestedGameVersion < m_MapMinGameVersion) {
-    m_MapMinSuggestedGameVersion = m_MapMinGameVersion;
-  }
-
-  if (!CFG->Exists("map.game_version.min")) {
+  } else {
     CFG->SetUint8("map.game_version.min", m_MapMinGameVersion);
-  }
-
-  if (!CFG->Exists("map.game_version.suggested.min")) {
-    CFG->SetUint8("map.game_version.suggested.min", m_MapMinSuggestedGameVersion);
   }
 
   if (m_MapMinGameVersion >= 29) {
@@ -1141,7 +1127,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   {
-    uint32_t resolvedMapSize = ByteArrayToUInt32(m_MapSize);
+    uint32_t resolvedMapSize = ByteArrayToUInt32(m_MapSize, false);
     uint32_t minVanillaVersionFromMapSize = 0;
     if (resolvedMapSize > 0x8000000) {
       minVanillaVersionFromMapSize = 29;
