@@ -701,7 +701,7 @@ namespace GameProtocol
     return std::vector<uint8_t>{GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::STARTDOWNLOAD, 9, 0, 1, 0, 0, 0, fromUID};
   }
 
-  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start_abs, const FileChunkTransient& mapFileChunk)
+  std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start_abs /* offset in map file */, const FileChunkTransient& mapFileChunk)
   {
     if (mapFileChunk.start > start_abs || !mapFileChunk.bytes) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPPART (L707)");
@@ -725,6 +725,7 @@ namespace GameProtocol
       return std::vector<uint8_t>();
     }
 
+    // start_rel, end_rel are offsets relative to the cached chunk
     size_t start_rel = start_abs - mapFileChunk.start;
     size_t end_rel = end_abs - mapFileChunk.start;
 
