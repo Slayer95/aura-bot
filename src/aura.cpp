@@ -1931,7 +1931,7 @@ void CAura::LogPersistent(const string& logText)
     return;
   }
   
-  LogStream(writeStream, logText);
+  LogStream(writeStream, logText, true);
   writeStream.close( );
 }
 

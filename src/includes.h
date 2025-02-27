@@ -133,7 +133,7 @@ inline int64_t GetTicks()
   return std::chrono::duration_cast<std::chrono::milliseconds>(time_now.time_since_epoch()).count();
 }
 
-inline void LogStream(std::ostream& outStream, const std::string& message)
+inline void LogStream(std::ostream& outStream, const std::string& message, bool details = false)
 {
   auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   struct tm timeinfo;
@@ -142,11 +142,15 @@ inline void LogStream(std::ostream& outStream, const std::string& message)
 #else
   localtime_r(&now, &timeinfo);
 #endif
-  outStream << "[" << std::put_time(&timeinfo, "%H:%M:%S") << "] " << message << std::endl;
+  if (details) {
+    outStream << "[" << std::put_time(&timeinfo, "%Y:%m:%d %H:%M:%S") << "] " << message << std::endl;
+  } else {
+    outStream << "[" << std::put_time(&timeinfo, "%H:%M:%S") << "] " << message << std::endl;
+  }
   outStream << std::flush;
 }
 
-inline void LogStream(std::ostream& outStream, const char* message)
+inline void LogStream(std::ostream& outStream, const char* message, bool details = false)
 {
   auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   struct tm timeinfo;
@@ -155,7 +159,11 @@ inline void LogStream(std::ostream& outStream, const char* message)
 #else
   localtime_r(&now, &timeinfo);
 #endif
-  outStream << "[" << std::put_time(&timeinfo, "%H:%M:%S") << "] " << message << std::endl;
+  if (details) {
+    outStream << "[" << std::put_time(&timeinfo, "%Y:%m:%d %H:%M:%S") << "] " << message << std::endl;
+  } else {
+    outStream << "[" << std::put_time(&timeinfo, "%H:%M:%S") << "] " << message << std::endl;
+  }
   outStream << std::flush;
 }
 
