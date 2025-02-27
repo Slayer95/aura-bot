@@ -80,6 +80,18 @@ struct FileChunkCached
   FileChunkCached();
   FileChunkCached(size_t nFileSize, size_t nStart, size_t nEnd, SharedByteArray nBytes);
   ~FileChunkCached() = default;
+
+  uint8_t* GetDataAtCursor(size_t cursor) const
+  {
+    if (bytes.expired()) return nullptr;
+    return bytes.lock()->data() + cursor - start;
+  };
+
+  size_t GetSizeFromCursor(size_t cursor) const
+  {
+    if (bytes.expired()) return 0;
+    return start + bytes.lock()->size() - cursor;
+  };
 };
 
 struct FileChunkTransient
@@ -91,6 +103,16 @@ struct FileChunkTransient
   FileChunkTransient(size_t nStart, SharedByteArray nBytes);
   FileChunkTransient(const FileChunkCached& cached);
   ~FileChunkTransient() = default;
+
+  uint8_t* GetDataAtCursor(size_t cursor) const
+  {
+    return bytes->data() + cursor - start;
+  };
+
+  size_t GetSizeFromCursor(size_t cursor) const
+  {
+    return start + bytes->size() - cursor;
+  };
 };
 
 [[nodiscard]] bool FileExists(const std::filesystem::path& file);

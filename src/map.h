@@ -268,7 +268,6 @@ public:
   bool                                            NormalizeSlots();
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
-  std::optional<std::array<uint8_t, 4>>           CalculateCRC() const;
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
@@ -277,11 +276,12 @@ public:
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
 
-  bool                                            TryLoadMapFile(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
-  bool                                            TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
-  //bool                                            TryReloadMapFile();
-  FileChunkTransient                              GetMapFileChunk(size_t start);
-  std::pair<bool, uint32_t>                       ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient)> processChunk);
+  [[nodiscard]] bool                              TryLoadMapFilePersistent(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
+  [[nodiscard]] bool                              TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
+  [[nodiscard]] bool                              CheckMapFileIntegrity();
+  void                                            InvalidateMapFile() { m_MapFileIsValid = false; }
+  [[nodiscard]] FileChunkTransient                GetMapFileChunk(size_t start);
+  [[nodiscard]] std::pair<bool, uint32_t>         ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient, size_t)> processChunk);
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 };

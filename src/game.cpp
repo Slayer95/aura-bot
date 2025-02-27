@@ -1289,6 +1289,7 @@ void CGame::UpdateJoinable()
   }
 
   if (Ticks - m_LastDownloadTicks >= 100) {
+    bool mapIsInvalid = false;
     uint32_t Downloaders = 0;
     uint32_t prevDownloadCounter = m_DownloadCounter;
 
@@ -1328,7 +1329,8 @@ void CGame::UpdateJoinable()
         }
         while (
           user->GetLastMapPartSentOffsetEnd() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
-          user->GetLastMapPartSentOffsetEnd() < MapSize
+          user->GetLastMapPartSentOffsetEnd() < MapSize &&
+          !mapIsInvalid
         ) {
           if (m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024) {
             // limit the download speed if we're sending too much data
@@ -1346,7 +1348,14 @@ void CGame::UpdateJoinable()
             user->CloseConnection(false);
             break;
           }
-          user->SetLastMapPartCRC32(CRC32::CalculateCRC(cachedChunk.bytes->data(), cachedChunk.bytes->size(), user->GetLastMapPartCRC32()));
+
+          // Update CRC32 for map parts sent to this user
+          user->SetLastMapPartCRC32(CRC32::CalculateCRC(
+            cachedChunk.GetDataAtCursor(lastOffsetEnd),
+            cachedChunk.GetSizeFromCursor(lastOffsetEnd),
+            user->GetLastMapPartCRC32()
+          ));
+
           const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, cachedChunk);
           uint32_t chunkSendSize = static_cast<uint32_t>(packet.size() - 18);
           user->SetLastMapPartSentOffsetEnd(lastOffsetEnd + chunkSendSize);
@@ -1354,18 +1363,38 @@ void CGame::UpdateJoinable()
           m_DownloadCounter += chunkSendSize;
           Send(user, packet);
           if (fullySent && user->GetLastMapPartCRC32() != ByteArrayToUInt32(m_Map->GetMapCRC32(), false)) {
-            user->AddKickReason(GameUser::KickReason::MAP_MISSING);
-            if (!user->HasLeftReason()) {
-              user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
-            }
-            user->CloseConnection(false);
-            break;
+            mapIsInvalid = true;
+            uint32_t expectedCRC32 = ByteArrayToUInt32(m_Map->GetMapCRC32(), false);
+            uint32_t sentCRC32 = user->GetLastMapPartCRC32();
+            vector<uint8_t> expectedCRC32Bytes = CreateByteArray(expectedCRC32, false);
+            vector<uint8_t> expectedSentCRC32Bytes = CreateByteArray(sentCRC32, false);
+            LogApp("Map corrupted - expected [" + ByteArrayToDecString(expectedCRC32Bytes) + " = " + ByteArrayToHexString(expectedCRC32Bytes) + "] but got [" + ByteArrayToHexString(expectedSentCRC32Bytes) + "])");
           }
         }
       }
     }
 
+    if (mapIsInvalid) {
+      // Flag the map as invalid so that new users joining the lobby get a notice that the map cannot be transferred (and get eventually kicked.)
+      m_Map->InvalidateMapFile();
+
+      // Something is wrong with the map in disk - immediately kick everyone that is still downloading it to prevent confusion
+      for (auto& user : m_Users) {
+        if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
+          user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+          if (!user->HasLeftReason()) {
+            user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
+          }
+          user->CloseConnection(false);
+        }
+      }
+    }
+
     m_LastDownloadTicks = Ticks;
+
+    if (Downloaders == 0) {
+      ClearLoadedMapChunk();
+    }
   }
 }
 
@@ -5901,7 +5930,7 @@ void CGame::EventGameStartedLoading()
 
   // release map data from memory
   ClearLoadedMapChunk();
-  m_Map->ClearMapFileContents();
+  //m_Map->ClearMapFileContents();
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
     // Preallocate memory for all SEND_W3GS_GAMELOADED_OTHERS packets

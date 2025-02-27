@@ -408,16 +408,6 @@ bool CMap::SetRandomRaces(const bool nEnable)
   return true;
 }
 
-optional<array<uint8_t, 4>> CMap::CalculateCRC() const
-{
-  optional<array<uint8_t, 4>> result;
-  if (!HasMapFileContents()) return result;
-  const uint32_t crc32 = CRC32::CalculateCRC((uint8_t*)m_MapFileContents->data(), m_MapFileContents->size());
-  EnsureFixedByteArray(result, crc32, false);
-  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(result.value()) + ">")
-  return result;
-}
-
 optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
 {
   m_MapMPQResult = OpenMPQArchive(&m_MapMPQ, filePath);
@@ -1191,10 +1181,11 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  ClearMapFileContents();
+  //ClearMapFileContents();
 }
 
-bool CMap::TryLoadMapFile(optional<uint32_t>& fileSize, optional<uint32_t>& crc32)
+// @deprecated
+bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint32_t>& crc32)
 {
   if (m_MapServerPath.empty()) {
     DPRINT_IF(LOG_LEVEL_TRACE2, "m_MapServerPath missing - map data not loaded")
@@ -1236,8 +1227,8 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
   }
 
   uint32_t rollingCRC32 = 0;
-  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [&rollingCRC32](FileChunkTransient chunk) {
-    rollingCRC32 = CRC32::CalculateCRC(chunk.bytes->data(), chunk.bytes->size(), rollingCRC32);
+  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [&rollingCRC32](FileChunkTransient cachedChunk, size_t cursor) {
+    rollingCRC32 = CRC32::CalculateCRC(cachedChunk.GetDataAtCursor(cursor), cachedChunk.GetSizeFromCursor(cursor), rollingCRC32);
   });
   if (!result.first || result.second == 0) {
     PRINT_IF(LOG_LEVEL_INFO, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
@@ -1258,26 +1249,32 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
   return true;
 }
 
-/*
-bool CMap::TryReloadMapFile()
+bool CMap::CheckMapFileIntegrity()
 {
-  if (HasMapFileContents()) {
-    return false;
+  if (!m_MapFileIsValid) {
+    return m_MapFileIsValid;
   }
-  if (!TryLoadMapFile()) {
-    return false;
-  }
-  
-  optional<array<uint8_t, 4>> reloadedCRC = CalculateCRC();
-  if (!reloadedCRC.has_value() || ByteArrayToUInt32(reloadedCRC.value(), false) != ByteArrayToUInt32(m_MapCRC32, false)) {
-    ClearMapFileContents();
-    PRINT_IF(LOG_LEVEL_WARNING, "Map file [" + PathToString(m_MapServerPath) + "] has been modified - reload rejected")
-    return false;
+  optional<uint32_t> reloadedFileSize, reloadedCRC;
+  if (!TryLoadMapFileChunked(reloadedFileSize, reloadedCRC)) {
+    m_MapFileIsValid = false;
+    return m_MapFileIsValid;
   }
 
-  return true;
+  bool sizeOK = reloadedFileSize.has_value() && reloadedFileSize.value() == ByteArrayToUInt32(m_MapSize, false);
+  bool crcOK = reloadedCRC.has_value() && reloadedCRC.value() == ByteArrayToUInt32(m_MapCRC32, false);
+  if (!sizeOK) {
+    m_MapContentMismatch[0] = 1;
+    m_MapFileIsValid = false;
+  }
+  if (!crcOK) {
+    m_MapContentMismatch[1] = 1;
+    m_MapFileIsValid = false;
+  }
+  if (!sizeOK || !crcOK) {
+    PRINT_IF(LOG_LEVEL_WARNING, "Map file [" + PathToString(m_MapServerPath) + "] integrity check failure - file has been tampered")
+  }
+  return m_MapFileIsValid;
 }
-*/
 
 FileChunkTransient CMap::GetMapFileChunk(size_t start)
 {
@@ -1295,7 +1292,7 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
   }
 }
 
-pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient)> processChunk)
+pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t)> processChunk)
 {
   uint32_t fileSize = FileSize(filePath);
   uint32_t readByteSize = 0;
@@ -1303,12 +1300,13 @@ pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, f
   uint32_t chunkCount = (fileSize - 1) / MAP_FILE_MAX_CHUNK_SIZE;
   uint32_t chunkIndex = 0;
   while (chunkIndex <= chunkCount) {
-    FileChunkTransient cachedChunk = GetMapFileChunk(chunkIndex * MAP_FILE_MAX_CHUNK_SIZE);
+    size_t cursor = chunkIndex * MAP_FILE_MAX_CHUNK_SIZE;
+    FileChunkTransient cachedChunk = GetMapFileChunk(cursor);
     if (!cachedChunk.bytes) {
       return make_pair(false, readByteSize);
     }
     readByteSize += cachedChunk.bytes->size();
-    processChunk(cachedChunk);
+    processChunk(cachedChunk, cursor);
     ++chunkIndex;
   }
   return make_pair(fileSize == readByteSize, readByteSize);
@@ -1360,12 +1358,12 @@ string CMap::CheckProblems()
     m_ErrorMessage = "invalid <map.size> detected";
     return m_ErrorMessage;
   }
-  else if (HasMapFileContents() && m_MapFileContents->size() != ByteArrayToUInt32(m_MapSize, false))
+  else/* if (HasMapFileContents() && m_MapFileContents->size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
     m_ErrorMessage = "nonmatching <map.size> detected";
     return m_ErrorMessage;
-  }
+  }*/
 
   if (m_MapCRC32.size() != 4)
   {
