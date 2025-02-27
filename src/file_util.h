@@ -100,6 +100,8 @@ struct FileChunkTransient
 [[nodiscard]] std::string PathToAbsoluteString(const std::filesystem::path& file);
 [[nodiscard]] std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
 
+[[nodiscard]] std::uintmax_t FileSize(const std::filesystem::path& filePath) noexcept;
+
 template <typename Container>
 [[nodiscard]] bool FileRead(const std::filesystem::path& filePath, Container& container, const size_t maxSize) noexcept
 {

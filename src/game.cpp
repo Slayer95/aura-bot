@@ -43,6 +43,8 @@
 
  */
 
+#include <crc32/crc32.h>
+
 #include "game.h"
 #include "command.h"
 #include "aura.h"
@@ -1344,11 +1346,21 @@ void CGame::UpdateJoinable()
             user->CloseConnection(false);
             break;
           }
+          user->SetLastMapPartCRC32(CRC32::CalculateCRC(cachedChunk.bytes->data(), cachedChunk.bytes->size(), user->GetLastMapPartCRC32()));
           const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, cachedChunk);
           uint32_t chunkSendSize = static_cast<uint32_t>(packet.size() - 18);
           user->SetLastMapPartSentOffsetEnd(lastOffsetEnd + chunkSendSize);
+          bool fullySent = user->GetLastMapPartSentOffsetEnd() == MapSize;
           m_DownloadCounter += chunkSendSize;
           Send(user, packet);
+          if (fullySent && user->GetLastMapPartCRC32() != ByteArrayToUInt32(m_Map->GetMapCRC32(), false)) {
+            user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+            if (!user->HasLeftReason()) {
+              user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
+            }
+            user->CloseConnection(false);
+            break;
+          }
         }
       }
     }

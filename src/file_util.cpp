@@ -206,6 +206,16 @@ vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<P
   return Files;
 }
 
+uintmax_t FileSize(const filesystem::path& filePath) noexcept
+{
+  error_code e;
+  uintmax_t size = filesystem::file_size(filePath, e);
+  if (size == static_cast<std::uintmax_t>(-1)) {
+    return 0;
+  }
+  return size;
+}
+
 bool FileWrite(const filesystem::path& file, const uint8_t* data, size_t length)
 {
   ofstream OS;

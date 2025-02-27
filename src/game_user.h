@@ -90,6 +90,7 @@ namespace GameUser
     int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
     uint32_t                         m_LastMapPartSentOffsetEnd;     // the last mappart sent to the player (for sending more than one part at a time)
     uint32_t                         m_LastMapPartAcked;             // the last mappart acknowledged by the player
+    uint32_t                         m_LastMapPartCRC32;             // the cumulative CRC32 value calculated
     int64_t                          m_StartedDownloadingTicks;      // GetTicks when the player started downloading the map
     int64_t                          m_FinishedDownloadingTime;      // GetTime when the player finished downloading the map
     int64_t                          m_FinishedLoadingTicks;         // GetTicks when the player finished loading the game
@@ -206,6 +207,7 @@ namespace GameUser
     [[nodiscard]] inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
     [[nodiscard]] inline uint32_t              GetLastMapPartSentOffsetEnd() const { return m_LastMapPartSentOffsetEnd; }
     [[nodiscard]] inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
+    [[nodiscard]] inline uint32_t              GetLastMapPartCRC32() const { return m_LastMapPartCRC32; }
     [[nodiscard]] inline int64_t               GetStartedDownloadingTicks() const { return m_StartedDownloadingTicks; }
     [[nodiscard]] inline int64_t               GetFinishedDownloadingTime() const { return m_FinishedDownloadingTime; }
     [[nodiscard]] inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
@@ -286,6 +288,7 @@ namespace GameUser
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
     inline void SetLastMapPartSentOffsetEnd(uint32_t nLastMapPartSentOffsetEnd) { m_LastMapPartSentOffsetEnd = nLastMapPartSentOffsetEnd; }
     inline void SetLastMapPartAcked(uint32_t nLastMapPartAcked) { m_LastMapPartAcked = nLastMapPartAcked; }
+    inline void SetLastMapPartCRC32(uint32_t nLastMapPartCRC32) { m_LastMapPartCRC32 = nLastMapPartCRC32; }
     inline void SetStartedDownloadingTicks(uint64_t nStartedDownloadingTicks) { m_StartedDownloadingTicks = nStartedDownloadingTicks; }
     inline void SetFinishedDownloadingTime(uint64_t nFinishedDownloadingTime) { m_FinishedDownloadingTime = nFinishedDownloadingTime; }
     inline void SetStartedLaggingTicks(uint64_t nStartedLaggingTicks) { m_StartedLaggingTicks = nStartedLaggingTicks; }

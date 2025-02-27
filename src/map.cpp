@@ -823,17 +823,16 @@ void CMap::Load(CConfig* CFG)
   bool ignoreMPQ = !HasServerPath() || (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   optional<uint32_t> mapFileSize;
+  optional<uint32_t> mapFileCRC32;
   if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
-    if (TryLoadMapFile()) {
-      mapFileSize = static_cast<uint32_t>(m_MapFileContents->size());
-#ifdef DEBUG
-      array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(mapFileSize.value(), false);
-      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
-#endif
-    } else if (m_MapLoaderIsPartial) {
-      return;
-    } else {
-      ignoreMPQ = true;
+    if (!TryLoadMapFileChunked(mapFileSize, mapFileCRC32)) {
+      if (m_MapLoaderIsPartial) {
+        // We are trying to figure out what this map is about - map config provided is a stub.
+        // Since there is no actual map file, map loading fails.
+        return;
+      } else {
+        ignoreMPQ = true;
+      }
     }
   }
 
@@ -866,7 +865,10 @@ void CMap::Load(CConfig* CFG)
   }
 
   // calculate <map.crc32>
-  optional<array<uint8_t, 4>> crc32 = CalculateCRC();
+  optional<array<uint8_t, 4>> crc32;
+  if (mapFileCRC32.has_value()) {
+    EnsureFixedByteArray(crc32, mapFileCRC32.value(), false);
+  }
 
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
@@ -1192,7 +1194,7 @@ void CMap::Load(CConfig* CFG)
   ClearMapFileContents();
 }
 
-bool CMap::TryLoadMapFile()
+bool CMap::TryLoadMapFile(optional<uint32_t>& fileSize, optional<uint32_t>& crc32)
 {
   if (m_MapServerPath.empty()) {
     DPRINT_IF(LOG_LEVEL_TRACE2, "m_MapServerPath missing - map data not loaded")
@@ -1207,9 +1209,56 @@ bool CMap::TryLoadMapFile()
     PRINT_IF(LOG_LEVEL_INFO, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
     return false;
   }
+
+  fileSize = m_MapFileContents->size();
+#ifdef DEBUG
+  array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(fileSize.value(), false);
+  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
+#endif
+
+  crc32 = CRC32::CalculateCRC((uint8_t*)m_MapFileContents->data(), m_MapFileContents->size());
+  optional<array<uint8_t, 4>> crc32Bytes;
+  EnsureFixedByteArray(crc32Bytes, crc32.value(), false);
+  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
+
   return true;
 }
 
+bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t>& crc32)
+{
+  if (m_MapServerPath.empty()) {
+    DPRINT_IF(LOG_LEVEL_TRACE2, "m_MapServerPath missing - map data not loaded")
+    return false;
+  }
+  filesystem::path resolvedPath(m_MapServerPath);
+  if (m_MapServerPath.filename() == m_MapServerPath && !m_UseStandardPaths) {
+    resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
+  }
+
+  uint32_t rollingCRC32 = 0;
+  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [&rollingCRC32](FileChunkTransient chunk) {
+    rollingCRC32 = CRC32::CalculateCRC(chunk.bytes->data(), chunk.bytes->size(), rollingCRC32);
+  });
+  if (!result.first || result.second == 0) {
+    PRINT_IF(LOG_LEVEL_INFO, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
+    return false;
+  }
+
+  fileSize = result.second;
+#ifdef DEBUG
+  array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(fileSize.value(), false);
+  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
+#endif
+
+  crc32 = rollingCRC32;
+  optional<array<uint8_t, 4>> crc32Bytes;
+  EnsureFixedByteArray(crc32Bytes, rollingCRC32, false);
+  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
+
+  return true;
+}
+
+/*
 bool CMap::TryReloadMapFile()
 {
   if (HasMapFileContents()) {
@@ -1228,6 +1277,7 @@ bool CMap::TryReloadMapFile()
 
   return true;
 }
+*/
 
 FileChunkTransient CMap::GetMapFileChunk(size_t start)
 {
@@ -1241,8 +1291,27 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
       resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
     }
     // Load up to 8 MB at a time
-    return m_Aura->ReadFileChunkCacheable(resolvedPath, start, start + 0x800000);
+    return m_Aura->ReadFileChunkCacheable(resolvedPath, start, start + MAP_FILE_MAX_CHUNK_SIZE);
   }
+}
+
+pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient)> processChunk)
+{
+  uint32_t fileSize = FileSize(filePath);
+  uint32_t readByteSize = 0;
+  if (fileSize == 0) return make_pair(false, readByteSize);
+  uint32_t chunkCount = (fileSize - 1) / MAP_FILE_MAX_CHUNK_SIZE;
+  uint32_t chunkIndex = 0;
+  while (chunkIndex <= chunkCount) {
+    FileChunkTransient cachedChunk = GetMapFileChunk(chunkIndex * MAP_FILE_MAX_CHUNK_SIZE);
+    if (!cachedChunk.bytes) {
+      return make_pair(false, readByteSize);
+    }
+    readByteSize += cachedChunk.bytes->size();
+    processChunk(cachedChunk);
+    ++chunkIndex;
+  }
+  return make_pair(fileSize == readByteSize, readByteSize);
 }
 
 bool CMap::UnlinkFile()

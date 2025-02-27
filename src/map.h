@@ -277,9 +277,11 @@ public:
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
 
-  bool                                            TryLoadMapFile();
-  bool                                            TryReloadMapFile();
+  bool                                            TryLoadMapFile(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
+  bool                                            TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
+  //bool                                            TryReloadMapFile();
   FileChunkTransient                              GetMapFileChunk(size_t start);
+  std::pair<bool, uint32_t>                       ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient)> processChunk);
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 };

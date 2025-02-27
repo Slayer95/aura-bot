@@ -148,6 +148,8 @@
 #define W3HMC_MODE_OPTIONAL 1
 #define W3HMC_MODE_REQUIRED 2
 
+constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;
+
 // game.h
 #define SLOTS_ALIGNMENT_CHANGED (1 << 0)
 #define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)
@@ -211,6 +213,8 @@
 #define BUFFERING_ENABLED_SLOTS 4u
 #define BUFFERING_ENABLED_LOBBY 8u
 #define BUFFERING_ENABLED_ALL 15u
+
+
 
 // game_slot.h
 
