@@ -283,7 +283,7 @@ void CNet::OnThrottledConnectionSuccess(const NetworkHost& host)
 void CNet::OnThrottledConnectionError(const NetworkHost& host)
 {
   m_OutgoingPendingConnections.erase(host);
-  auto& it = m_OutgoingThrottles.find(host);
+  auto it = m_OutgoingThrottles.find(host);
   if (it == m_OutgoingThrottles.end()) {
     m_OutgoingThrottles[host] = TimedUint8(GetTime(), 0);
     return;
