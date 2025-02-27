@@ -302,6 +302,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", m_Country);
+  m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", m_Locale);
 
   if (CFG.Exists(m_CFGKeyPrefix + "locale_short")) {
     string localeShort       = CFG.GetString(m_CFGKeyPrefix + "locale_short", 4, 4, "esPE");
