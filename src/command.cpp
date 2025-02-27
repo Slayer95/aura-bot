@@ -4041,7 +4041,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_Aura->m_IRC.GetIsEnabled()) {
-        message += "[" + m_Aura->m_IRC.m_Config.m_HostName + (!m_Aura->m_IRC.m_WaitingToConnect ? " - online]" : " - offline]");
+        message += "[" + m_Aura->m_IRC.m_Config.m_HostName + (!m_Aura->m_IRC.m_WaitingToConnect ? " - online]" : " - offline] ");
       }
 
       if (m_Aura->m_Discord.GetIsEnabled()) {
