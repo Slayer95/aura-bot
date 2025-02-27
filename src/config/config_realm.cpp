@@ -45,6 +45,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
     // Inheritable
     m_Enabled(true),
+    m_LocaleShort({69, 80, 115, 101}), // esPE, reversed
     m_AutoRegister(false),
     m_UserNameCaseSensitive(false),
     m_PassWordCaseSensitive(false),
@@ -62,6 +63,26 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", "PER");
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", "Peru");
   m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", "system");
+
+  string localeShort = CFG.GetString(m_CFGKeyPrefix + "locale_short", 4, 4, "esPE"); // esPE reversed
+  copy_n(localeShort.rbegin(), 4, m_LocaleShort.begin());
+
+  {
+    bool localeError = CFG.GetErrorLast();
+    if (!localeError) {
+      if (
+        m_LocaleShort[0] < 0x41 || m_LocaleShort[1] < 0x41 || m_LocaleShort[2] < 0x61 || m_LocaleShort[3] < 0x61 ||
+        m_LocaleShort[0] > 0x5a || m_LocaleShort[1] > 0x5a || m_LocaleShort[2] > 0x7a || m_LocaleShort[3] > 0x7a
+      )
+      {
+        localeError = true;
+      }
+    }
+    if (localeError) {
+      Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "locale_short> - must provide a valid pair of ISO 639-1, ISO 3166 alpha-2 identifiers (e.g. enUS)");
+      CFG.SetFailed();
+    }
+  }
 
   if (m_Locale == "system") {
     m_LocaleID = 10250;
@@ -116,6 +137,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
   m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", false);
+  m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
   m_AuthWar3Version        = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
@@ -207,6 +229,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_Country(nRootConfig->m_Country),
     m_Locale(nRootConfig->m_Locale),
     m_LocaleID(nRootConfig->m_LocaleID),
+    m_LocaleShort(nRootConfig->m_LocaleShort),
 
     m_PrivateCmdToken(nRootConfig->m_PrivateCmdToken),
     m_BroadcastCmdToken(nRootConfig->m_BroadcastCmdToken),
@@ -235,6 +258,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_PassWord(nRootConfig->m_PassWord),
 
     m_AuthUseCustomVersion(nRootConfig->m_AuthUseCustomVersion),
+    m_AuthIgnoreVersionError(nRootConfig->m_AuthIgnoreVersionError),
     m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
 
     m_AuthWar3Version(nRootConfig->m_AuthWar3Version),
@@ -278,7 +302,25 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", m_Country);
-  m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", m_Locale);
+
+  if (CFG.Exists(m_CFGKeyPrefix + "locale_short")) {
+    string localeShort       = CFG.GetString(m_CFGKeyPrefix + "locale_short", 4, 4, "esPE");
+    bool localeError = CFG.GetErrorLast();
+    if (!localeError) {
+      copy_n(localeShort.rbegin(), 4, m_LocaleShort.begin());
+      if (
+        m_LocaleShort[0] < 0x41 || m_LocaleShort[1] < 0x41 || m_LocaleShort[2] < 0x61 || m_LocaleShort[3] < 0x61 ||
+        m_LocaleShort[0] > 0x5a || m_LocaleShort[1] > 0x5a || m_LocaleShort[2] > 0x7a || m_LocaleShort[3] > 0x7a
+      )
+      {
+        localeError = true;
+      }
+    }
+    if (localeError) {
+      Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "locale_short> - must provide a valid pair of ISO 639-1, ISO 3166 alpha-2 identifiers (e.g. enUS)");
+      CFG.SetFailed();
+    }
+  }
 
   if (m_Locale == "system") {
     m_LocaleID = 10250;
@@ -335,6 +377,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   if (!m_PassWordCaseSensitive) m_PassWord = ToLowerCase(m_PassWord);
 
   m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", m_AuthUseCustomVersion);
+  m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", m_AuthIgnoreVersionError);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
 
   // These are optional, since they can be figured out with bncsutil.

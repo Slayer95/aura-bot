@@ -72,10 +72,11 @@ struct CRealmConfig
 
   // Inheritable
 
-  std::string m_CountryShort;                    // 2-3 letter country code for pvpgn servers
+  std::string m_CountryShort;                    // ISO 3166 alpha-3 country code
   std::string m_Country;                         // country name
   std::string m_Locale;                          // locale used: numeric or "system"
   uint32_t m_LocaleID;                           // see: http://msdn.microsoft.com/en-us/library/0h88fahh%28VS.85%29.aspx
+  std::array<uint8_t, 4> m_LocaleShort;          // language (ISO 639-1 concatenated with ISO 3166 alpha-2) - reversed internally
 
   std::string m_PrivateCmdToken;                 // a symbol prefix to identify commands and send a private reply
   std::string m_BroadcastCmdToken;               // a symbol prefix to identify commands and send the reply to everyone
@@ -105,9 +106,10 @@ struct CRealmConfig
   std::string m_PassWord;                        //
 
   bool m_AuthUseCustomVersion;
+  bool m_AuthIgnoreVersionError;
   uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net
 
-  std::optional<uint8_t> m_AuthWar3Version;                  // WC3 minor version
+  std::optional<uint8_t> m_AuthWar3Version;                   // WC3 minor version
   std::optional<std::vector<uint8_t>> m_AuthExeVersion;       // 4 bytes: WC3 version as {patch, minor, major, build}
   std::optional<std::vector<uint8_t>> m_AuthExeVersionHash;   // 4 bytes
   std::string m_AuthExeInfo;                                  // filename.exe dd/MM/yy hh::mm:ss size

@@ -339,7 +339,7 @@ void CRealm::Update(void* fd, void* send_fd)
 
             case BNETProtocol::Magic::AUTH_CHECK: {
               BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(Data);
-              if (checkResult.state == BNETProtocol::KeyResult::GOOD)
+              if (m_Config.m_AuthIgnoreVersionError || checkResult.state == BNETProtocol::KeyResult::GOOD)
               {
                 // cd keys accepted
                 DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
@@ -601,7 +601,7 @@ void CRealm::Update(void* fd, void* send_fd)
       PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "connected to [" + m_HostName + "]")
       SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
       m_GameVersion = m_Config.m_AuthWar3Version.has_value() ? m_Config.m_AuthWar3Version.value() : m_Aura->m_GameVersion;
-      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameVersion, m_Config.m_LocaleID, m_Config.m_CountryShort, m_Config.m_Country));
+      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameVersion, m_Config.m_LocaleID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
       m_Socket->DoSend(static_cast<fd_set*>(send_fd));
       m_LastGameListTime       = Time;
       return;

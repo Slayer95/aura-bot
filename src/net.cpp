@@ -248,20 +248,16 @@ bool CNet::GetIsOutgoingThrottled(const NetworkHost& host) const
     return true;
   }
 
-  {
-    const auto it = m_OutgoingThrottles.find(host);
-    if (it == m_OutgoingThrottles.end()) {
-      return false;
-    }
-    const TimedUint8& throttled = it->second;
-    if (throttled.second == 0) {
-      return false;
-    }
-    const int64_t dueTime = throttled.first + ((int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second);
-    return GetTime() < dueTime;
+  const auto it = m_OutgoingThrottles.find(host);
+  if (it == m_OutgoingThrottles.end()) {
+    return false;
   }
-
-  return false;
+  const TimedUint8& throttled = it->second;
+  if (throttled.second == 0) {
+    return false;
+  }
+  const int64_t dueTime = throttled.first + ((int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second);
+  return GetTime() < dueTime;
 }
 
 void CNet::ResetOutgoingThrottled(const NetworkHost& host)
