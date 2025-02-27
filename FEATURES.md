@@ -31,6 +31,7 @@
 
 # Hosting:
 - Automatically identifies maps larger than the vanilla map size limit
+- Large maps do not cause RAM starvation
 - Automatically verifies identity ("spoofcheck") in private games in PvPGNs
 - Supports custom lobby layouts: FFA, One-VS-All, Humans-VS-AI
 - Supports assigning team captains and drafting players in the game lobby
