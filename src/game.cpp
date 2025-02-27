@@ -1365,11 +1365,6 @@ void CGame::UpdateJoinable()
           Send(user, packet);
           if (fullySent && user->GetLastMapPartCRC32() != ByteArrayToUInt32(m_Map->GetMapCRC32(), false)) {
             mapIsInvalid = true;
-            uint32_t expectedCRC32 = ByteArrayToUInt32(m_Map->GetMapCRC32(), false);
-            uint32_t sentCRC32 = user->GetLastMapPartCRC32();
-            vector<uint8_t> expectedCRC32Bytes = CreateByteArray(expectedCRC32, false);
-            vector<uint8_t> expectedSentCRC32Bytes = CreateByteArray(sentCRC32, false);
-            LogApp("Map corrupted - expected [" + ByteArrayToDecString(expectedCRC32Bytes) + "] but got [" + ByteArrayToDecString(expectedSentCRC32Bytes) + "])");
           }
         }
       }
