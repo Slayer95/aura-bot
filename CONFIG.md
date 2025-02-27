@@ -261,6 +261,16 @@ Config
 - Type: uint8
 - Error handling: Use default value
 
+## \`global_realm.auth_ignore_version_error\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`global_realm.auth_ignore_version_error\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.auth_password_hash_type\`
 - Type: enum
 - Default value: pvpgn
@@ -561,9 +571,16 @@ Config
 - Default value: system
 - Error handling: Use default value
 
-## \`global_realm.locale\`
+## \`global_realm.locale_short\`
 - Type: string
-- Default value: Empty
+- Constraints: Min length: 4. Max length: 4.
+- Default value: esPE
+- Error handling: Use default value
+
+## \`global_realm.locale_short\`
+- Type: string
+- Constraints: Min length: 4. Max length: 4.
+- Default value: esPE
 - Error handling: Use default value
 
 ## \`global_realm.logs.console.chat\`

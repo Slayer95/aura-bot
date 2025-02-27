@@ -132,7 +132,8 @@ Commands
 - Aliases: coin, coinflip
 - Syntax: flip \<CHANCE%\>
 
-## \`flushdns\`
+## \`flushnet\`
+- Aliases: flushdns, fluship
 
 ## \`fp\`
 - Aliases: fakeplayer
