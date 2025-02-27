@@ -1098,7 +1098,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   if (m_Aura->m_MaxSlots < m_MapVersionMaxSlots) {
-    Print("[MAP] " + ToDecString(m_Aura->m_MaxSlots) + " player limit enforced in modern map (editor version " + to_string(m_MapEditorVersion) + ")");
+    Print("[MAP] " + ToDecString(m_Aura->m_MaxSlots) + " player limit enforced in modern map");
     m_MapVersionMaxSlots = m_Aura->m_MaxSlots;
   }
 
@@ -1137,6 +1137,25 @@ void CMap::Load(CConfig* CFG)
     uint32_t slotNum = 0;
     for (const auto& slot : m_Slots) {
       CFG->SetUint8Vector("map.slot_" + to_string(++slotNum), slot.GetByteArray());
+    }
+  }
+
+  {
+    uint32_t resolvedMapSize = ByteArrayToUInt32(m_MapSize);
+    uint32_t minVanillaVersionFromMapSize = 0;
+    if (resolvedMapSize > 0x8000000) {
+      minVanillaVersionFromMapSize = 29;
+    } else if (resolvedMapSize > 0x800000) {
+      minVanillaVersionFromMapSize = 27;
+    } else if (resolvedMapSize > 0x400000) {
+      minVanillaVersionFromMapSize = 24;
+    }
+    if (m_MapMinSuggestedGameVersion < minVanillaVersionFromMapSize) {
+      m_MapMinSuggestedGameVersion = minVanillaVersionFromMapSize;
+    }
+
+    if (m_Slots.size() > MAX_SLOTS_LEGACY && m_MapMinSuggestedGameVersion < 29) {
+      m_MapMinSuggestedGameVersion = 29;
     }
   }
 
