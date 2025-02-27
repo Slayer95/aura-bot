@@ -3387,7 +3387,7 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   uint8_t gameVersion = realm ? realm->GetGameVersion() : m_Aura->m_GameVersion;
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
-  if (gameVersion <= 26 && mapSize > 0x800000) {
+  if (gameVersion <= 26 && mapSize > 0x800000 || gameVersion <= 28 && mapSize > 0x8000000 ) {
     versionPrefix = "[1." + ToDecString(gameVersion) + ".UnlockMapSize] ";
   } else {
     versionPrefix = "[1." + ToDecString(gameVersion) + "] ";
