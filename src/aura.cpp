@@ -1930,7 +1930,7 @@ void CAura::LogPersistent(const string& logText)
   if (writeStream.fail( )) {
     return;
   }
-  
+
   LogStream(writeStream, logText, true);
   writeStream.close( );
 }

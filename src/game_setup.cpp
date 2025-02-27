@@ -672,11 +672,17 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
     baseMap = make_shared<CMap>(m_Aura, &MapCFG);
   } catch (...) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map.", CHAT_SEND_SOURCE_ALL);
+    vector<uint8_t> bytes = MapCFG.Export();
+    m_Aura->LogPersistent("[MAP] Failed to load [" + PathToString(filePath) + "] - config was:");
+    m_Aura->LogPersistent(string(begin(bytes), end(bytes));
     return baseMap;
   }
   string errorMessage = baseMap->CheckProblems();
   if (!errorMessage.empty()) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map: " + errorMessage, CHAT_SEND_SOURCE_ALL);
+    vector<uint8_t> bytes = MapCFG.Export();
+    m_Aura->LogPersistent("[MAP] Failed to load [" + PathToString(filePath) + "] - config was:");
+    m_Aura->LogPersistent(string(begin(bytes), end(bytes));
     return nullptr;
   }
 
