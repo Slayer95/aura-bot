@@ -813,7 +813,7 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
         m_ErrorMessage = "Failed to access repository (status code " + to_string(response.status_code) + ").";
         return RESOLUTION_ERR;
       }
-      Print("[AURA] resolved " + m_SearchTarget.first + " entry in " + to_string(static_cast<float>(response.elapsed * 1000)) + " ms");
+      Print("[AURA] resolved " + m_SearchTarget.first + " entry in " + ToFormattedString(static_cast<float>(response.elapsed)) + " seconds");
       
       size_t downloadUriStartIndex = response.text.find("<a href=\"/maps/download/");
       if (downloadUriStartIndex == string::npos) return RESOLUTION_ERR;
@@ -859,7 +859,7 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
         m_ErrorMessage = "Failed to access repository (status code " + to_string(response.status_code) + ").";
         return RESOLUTION_ERR;
       }
-      Print("[AURA] Resolved " + m_SearchTarget.first + " entry in " + to_string(static_cast<float>(response.elapsed * 1000)) + " ms");
+      Print("[AURA] Resolved " + m_SearchTarget.first + " entry in " + ToFormattedString(static_cast<float>(response.elapsed)) + " seconds");
       downloadUri = response.header["location"];
       size_t lastSlashIndex = downloadUri.rfind("/");
       if (lastSlashIndex == string::npos) {
@@ -1043,7 +1043,7 @@ uint32_t CGameSetup::DownloadMapTask()
     FileDelete(m_DownloadFilePath);
     return 0;
   }
-  Print("[AURA] download task completed in " + to_string(static_cast<float>(response.elapsed * 1000)) + " ms");
+  Print("[AURA] download finished in " + ToFormattedString(static_cast<float>(response.elapsed)) + " seconds");
   // Signals completion.
   m_IsStepDownloaded = true;
 
