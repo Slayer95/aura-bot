@@ -1201,7 +1201,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
   }
 
-  const bool isLocked = m_TargetGame && (m_GameUser->GetIsActionLocked() || m_TargetGame->GetLocked());
+  const bool isLocked = m_TargetGame && ((m_GameUser && m_GameUser->GetIsActionLocked()) || m_TargetGame->GetLocked());
   if (isLocked && 0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
     LogStream(*m_Output, m_TargetGame->GetLogPrefix() + "Command ignored, the game is locked");
     ErrorReply("Only the game owner and root admins can run game commands when the game is locked.");
@@ -3171,7 +3171,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
         if (slotOne->GetTeam() != slotTwo->GetTeam()) {
           // Ensure user is already captain of the targetted player, or captain of the team we want to move it to.
-          if (!m_GameUser->GetIsDraftCaptainOf(slotOne->GetTeam()) && !m_GameUser->GetIsDraftCaptainOf(slotTwo->GetTeam())) {
+          if (!m_GameUser || (!m_GameUser->GetIsDraftCaptainOf(slotOne->GetTeam()) && !m_GameUser->GetIsDraftCaptainOf(slotTwo->GetTeam()))) {
             // Attempting to swap two slots of different unauthorized teams.
             ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
             break;
@@ -3198,7 +3198,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
               break;
             }
           }
-        } else if (!m_GameUser->GetIsDraftCaptainOf(slotOne->GetTeam())) {
+        } else if (!m_GameUser || !m_GameUser->GetIsDraftCaptainOf(slotOne->GetTeam())) {
           // Both targetted slots belong to the same team, but not to the authorized team.
           ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
           break;
