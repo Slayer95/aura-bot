@@ -141,6 +141,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_EnableJoinPlayersInProgress            = CFG.GetBool("hosting.join_in_progress.players", false);
 
   m_LoggedWords                            = CFG.GetSetInsensitive("hosting.log_words", ',', {});
+  m_LogChatTypes                           = CFG.GetBool("hosting.log_non_ascii", false) ? LOG_CHAT_TYPE_NON_ASCII : 0;
   m_LogCommands                            = CFG.GetBool("hosting.log_commands", false);
   m_DesyncHandler                          = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_IPFloodHandler                         = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
@@ -239,6 +240,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_EnableJoinPlayersInProgress, m_EnableJoinPlayersInProgress, m_EnableJoinPlayersInProgress)
 
   INHERIT(m_LoggedWords)
+  INHERIT(m_LogChatTypes)
   INHERIT_MAP_OR_CUSTOM(m_LogCommands, m_LogCommands, m_LogCommands)
   INHERIT(m_DesyncHandler)
   INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)
@@ -250,6 +252,10 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
     m_UDPEnabled = false;
   } else {
     INHERIT(m_UDPEnabled)
+  }
+
+  if (m_LogCommands) {
+    m_LogChatTypes |= LOG_CHAT_TYPE_COMMANDS;
   }
 
   INHERIT(m_SupportedGameVersions)

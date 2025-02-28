@@ -103,6 +103,7 @@ struct CGameConfig
   bool                     m_EnableJoinPlayersInProgress;
 
   std::set<std::string>    m_LoggedWords;
+  uint8_t                  m_LogChatTypes;
   bool                     m_LogCommands;
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;

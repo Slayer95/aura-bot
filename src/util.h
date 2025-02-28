@@ -1122,6 +1122,15 @@ constexpr std::array<std::string, N> StringArray(const char* const (&strings)[N]
   return false;
 }
 
+[[nodiscard]] inline bool IsASCII(const std::string& unsafeInput) {
+  for (const auto& c : unsafeInput) {
+    if ((c & 0x80) != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 [[nodiscard]] inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)
 {
   std::string pattern = rawPattern;

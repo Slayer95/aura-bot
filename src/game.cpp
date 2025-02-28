@@ -5018,14 +5018,14 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
   }
 
-  if (actionType == ACTION_CHAT_TRIGGER && (m_Config.m_LogCommands || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
+  if (actionType == ACTION_CHAT_TRIGGER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
     const vector<uint8_t>& actionBytes = action.GetImmutableAction();
     if (actionBytes.size() >= 10) {
       const uint8_t* chatMessageStart = actionBytes.data() + 9;
       const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
       if (chatMessageStart < chatMessageEnd) {
         const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
-        if (m_Config.m_LogCommands) {
+        if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
           m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
         }
         // Enable --log-level debug to figure out HMC map-specific constants
@@ -5209,6 +5209,9 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
       string chatTypeFragment;
       if (isLobbyChat) {
         Log("[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
+        if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_NON_ASCII) && !IsASCII(chatPlayer->GetMessage())) {
+          m_Aura->LogPersistent(GetLogPrefix() + "[Lobby] ["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
+        }
         if (m_MuteLobby) {
           shouldRelay = false;
         }

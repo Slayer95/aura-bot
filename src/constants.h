@@ -470,6 +470,10 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 #define GAME_PLAYING_TIMEOUT_DRY 1u
 #define GAME_PLAYING_TIMEOUT_STRICT 2u
 
+#define LOG_CHAT_TYPE_ASCII 1u
+#define LOG_CHAT_TYPE_NON_ASCII 2u
+#define LOG_CHAT_TYPE_COMMANDS 4u
+
 // config_discord.h
 
 #define FILTER_ALLOW_ALL 0
