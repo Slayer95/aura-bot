@@ -1232,8 +1232,8 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
   }
 
   uint32_t rollingCRC32 = 0;
-  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [&rollingCRC32](FileChunkTransient cachedChunk, size_t cursor) {
-    rollingCRC32 = CRC32::CalculateCRC(cachedChunk.GetDataAtCursor(cursor), cachedChunk.GetSizeFromCursor(cursor), rollingCRC32);
+  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [&rollingCRC32](FileChunkTransient cachedChunk, size_t cursor, size_t size) {
+    rollingCRC32 = CRC32::CalculateCRC(cachedChunk.GetDataAtCursor(cursor), size, rollingCRC32);
   });
   if (!result.first || result.second == 0) {
     PRINT_IF(LOG_LEVEL_INFO, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
@@ -1297,24 +1297,25 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
   }
 }
 
-pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t)> processChunk)
+pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t, size_t)> processChunk)
 {
   uint32_t fileSize = FileSize(filePath);
-  uint32_t readByteSize = 0;
-  if (fileSize == 0) return make_pair(false, readByteSize);
-  uint32_t chunkCount = (fileSize - 1) / MAP_FILE_MAX_CHUNK_SIZE;
-  uint32_t chunkIndex = 0;
-  while (chunkIndex <= chunkCount) {
-    size_t cursor = chunkIndex * MAP_FILE_MAX_CHUNK_SIZE;
+  size_t cursor = 0;
+  if (fileSize == 0) return make_pair(false, cursor);
+  while (cursor < fileSize) {
     FileChunkTransient cachedChunk = GetMapFileChunk(cursor);
     if (!cachedChunk.bytes) {
-      return make_pair(false, readByteSize);
+      return make_pair(false, cursor);
     }
-    readByteSize += cachedChunk.bytes->size();
-    processChunk(cachedChunk, cursor);
-    ++chunkIndex;
+    size_t availableBytes = cachedChunk.GetSizeFromCursor(cursor);
+    size_t stepBytes = MAP_FILE_PROCESSING_CHUNK_SIZE;
+    if (stepBytes > availableBytes) {
+      stepBytes = availableBytes;
+    }
+    processChunk(cachedChunk, cursor, stepBytes);
+    cursor += stepBytes;
   }
-  return make_pair(fileSize == readByteSize, readByteSize);
+  return make_pair(fileSize == cursor, cursor);
 }
 
 bool CMap::UnlinkFile()

@@ -148,7 +148,10 @@
 #define W3HMC_MODE_OPTIONAL 1
 #define W3HMC_MODE_REQUIRED 2
 
+// Load map fragments in memory max 8 MB at a time.
 constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;
+// May also choose a chunk size different from the max cache chunk size.
+constexpr uint32_t MAP_FILE_PROCESSING_CHUNK_SIZE = 0x800000;
 
 // game.h
 #define SLOTS_ALIGNMENT_CHANGED (1 << 0)
