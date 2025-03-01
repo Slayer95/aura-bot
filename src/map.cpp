@@ -842,7 +842,7 @@ void CMap::Load(CConfig* CFG)
       fileModifiedTime = GetMaybeModifiedTime(resolvedFilePath);
       ignoreMPQ = (
         !m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
-          !fileModifiedTime.has_value() || (
+          !isLatestSchema || !fileModifiedTime.has_value() || (
             cachedModifiedTime.has_value() && fileModifiedTime.has_value() &&
             fileModifiedTime.value() <= cachedModifiedTime.value()
           )
