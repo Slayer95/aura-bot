@@ -6103,7 +6103,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
 
         CConfig MapCFG;
-        MapCFG.Set("map.cfg.partial", "1");
+        MapCFG.SetBool("map.cfg.partial", true);
+        MapCFG.SetUint8("map.cfg.schema_number", MAP_CONFIG_SCHEMA_NUMBER);
         MapCFG.Set("map.path", R"(Maps\Download\)" + nameString);
         MapCFG.Set("map.local_path", nameString);
         string mapType;

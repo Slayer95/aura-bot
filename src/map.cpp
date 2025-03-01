@@ -811,19 +811,20 @@ void CMap::Load(CConfig* CFG)
   m_Valid   = true;
   m_CFGName = PathToString(CFG->GetFile().filename());
 
+  bool isLatestSchema = CFG->GetUint8("map.cfg.schema_number", 0) == MAP_CONFIG_SCHEMA_NUMBER;
   bool ignoreMPQ = !HasServerPath() || (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
 
   optional<uint32_t> mapFileSize;
   optional<uint32_t> mapFileCRC32;
   optional<array<uint8_t, 20>> mapFileSHA1;
-  if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
+  if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER || !isLatestSchema) {
     if (!TryLoadMapFileChunked(mapFileSize, mapFileCRC32, mapFileSHA1)) {
       if (m_MapLoaderIsPartial) {
         // We are trying to figure out what this map is about - map config provided is a stub.
         // Since there is no actual map file, map loading fails.
         return;
       } else {
-        ignoreMPQ = true;
+        ignoreMPQ = isLatestSchema;
       }
     }
   }

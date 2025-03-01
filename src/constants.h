@@ -153,6 +153,8 @@ constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;
 // May also choose a chunk size different from the max cache chunk size.
 constexpr uint32_t MAP_FILE_PROCESSING_CHUNK_SIZE = 0x800000;
 
+constexpr uint8_t MAP_CONFIG_SCHEMA_NUMBER = 3;
+
 // game.h
 #define SLOTS_ALIGNMENT_CHANGED (1 << 0)
 #define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)

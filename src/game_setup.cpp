@@ -649,6 +649,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
 
   CConfig MapCFG;
   MapCFG.SetBool("map.cfg.partial", true);
+  MapCFG.SetUint8("map.cfg.schema_number", MAP_CONFIG_SCHEMA_NUMBER);
   if (m_StandardPaths) MapCFG.SetBool("map.standard_path", true);
   MapCFG.Set("map.path", R"(Maps\Download\)" + baseFileName);
   string localPath = isInMapsFolder && !m_StandardPaths ? fileName : PathToString(filePath);
