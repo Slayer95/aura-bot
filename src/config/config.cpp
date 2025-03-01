@@ -1083,6 +1083,16 @@ void CConfig::SetUint8Array(const string& key, const uint8_t* start, const size_
   m_CFG[key] = ByteArrayToDecString(vector<uint8_t>(start, start + size));
 }
 
+void CConfig::SetUint8VectorReverse(const string& key, const vector<uint8_t> &x)
+{
+  m_CFG[key] = ReverseByteArrayToDecString(x);
+}
+
+void CConfig::SetUint8ArrayReverse(const string& key, const uint8_t* start, const size_t size)
+{
+  m_CFG[key] = ReverseByteArrayToDecString(vector<uint8_t>(start, start + size));
+}
+
 std::vector<uint8_t> CConfig::Export() const
 {
   std::ostringstream SS;

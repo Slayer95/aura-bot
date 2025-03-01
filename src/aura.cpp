@@ -593,7 +593,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   if (m_Config.m_ExtractJASS) {
     // extract common.j and blizzard.j from War3Patch.mpq or War3.mpq (depending on version) if we can
-    // these two files are necessary for calculating <map.weak_hash>, and <map.sha1> when loading maps so we make sure they are available
+    // these two files are necessary for calculating <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> when loading maps so we make sure they are available
     // see CMap :: Load for more information
     m_ScriptsExtracted = ExtractScripts() == 2;
     if (!m_ScriptsExtracted) {

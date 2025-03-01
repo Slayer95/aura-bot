@@ -434,13 +434,13 @@ namespace BNETProtocol
     gameConfig->SetUint8Vector("map.size", mapSize);
 
     copy_n(packet.begin() + 16, 4, mapCRC32.begin());
-    gameConfig->SetUint8Vector("map.crc32", mapCRC32);
+    gameConfig->SetUint8Vector("map.file_hash.crc32", mapCRC32);
 
     copy_n(packet.begin() + 20, 4, mapWeakHash.begin());
-    gameConfig->SetUint8Vector("map.weak_hash", mapWeakHash);
+    gameConfig->SetUint8Vector("map.scripts_hash.blizz", mapWeakHash);
 
     copy_n(packet.begin() + 24, 20, mapSHA1.begin());
-    gameConfig->SetUint8Vector("map.sha1", mapSHA1);
+    gameConfig->SetUint8Vector("map.scripts_hash.sha1", mapSHA1);
 
     uint16_t cursor = 44u;
 

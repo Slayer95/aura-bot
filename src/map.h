@@ -151,12 +151,13 @@ public:
   std::optional<bool>                   m_PipeConsideredHarmful;
 
 private:
-  std::array<uint8_t, 20>   m_MapScriptsSHA1;   // config value: map sha1 (20 bytes)
-  std::array<uint8_t, 4>    m_MapSize;   // config value: map size (4 bytes)
-  std::array<uint8_t, 4>    m_MapCRC32;   // config value: map info (4 bytes) -> this is the real CRC
-  std::array<uint8_t, 4>    m_MapScriptsWeakHash;    // config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
-  std::array<uint8_t, 2>    m_MapWidth;  // config value: map width (2 bytes)
-  std::array<uint8_t, 2>    m_MapHeight; // config value: map height (2 bytes)
+  std::array<uint8_t, 20>   m_MapScriptsSHA1;         // config value: <map.scripts_hash.sha1> (20 bytes)
+  std::array<uint8_t, 4>    m_MapSize;                // config value: <map.size> (4 bytes)
+  std::array<uint8_t, 4>    m_MapCRC32;               // config value: <map.file_hash.crc32> (4 bytes) -> this is the real full CRC
+  std::array<uint8_t, 20>   m_MapSHA1;                // config value: <map.file_hash.sha1> (20 bytes) -> this is the real full SHA1
+  std::array<uint8_t, 4>    m_MapScriptsWeakHash;     // config value: <map.scripts_hash.crc32> (4 bytes) -> this is not the real CRC, it's the "xoro" value
+  std::array<uint8_t, 2>    m_MapWidth;               // config value: <map.width> (2 bytes)
+  std::array<uint8_t, 2>    m_MapHeight;              // config value: <map.height> (2 bytes)
   std::vector<CGameSlot> m_Slots;
   std::string                     m_CFGName;
   std::string                     m_ClientMapPath;       // config value: map path
@@ -187,7 +188,7 @@ private:
   uint8_t                         m_MapFilterType;
   uint8_t                         m_MapFilterSize;
   uint8_t                         m_MapFilterObs;
-  std::array<uint8_t, 4>          m_MapContentMismatch;
+  std::array<uint8_t, 5>          m_MapContentMismatch;
   void*                           m_MapMPQ;
   std::optional<bool>             m_MapMPQResult;
   bool                            m_UseStandardPaths;
@@ -204,15 +205,16 @@ public:
   ~CMap();
 
   [[nodiscard]] inline bool                       GetValid() const { return m_Valid; }
-  [[nodiscard]] inline bool                       HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0; }
+  [[nodiscard]] inline bool                       HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0 || m_MapContentMismatch[4] != 0; }
   [[nodiscard]] inline bool                       GetMPQSucceeded() const { return m_MapMPQResult.has_value() && m_MapMPQResult.value(); }
   [[nodiscard]] inline bool                       GetMPQErrored() const { return m_MapMPQResult.has_value() && !m_MapMPQResult.value(); }
   [[nodiscard]] inline std::string                GetConfigName() const { return m_CFGName; }
   [[nodiscard]] inline std::string                GetClientPath() const { return m_ClientMapPath; }
   [[nodiscard]] inline std::array<uint8_t, 4>     GetMapSize() const { return m_MapSize; }
-  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapCRC32() const { return m_MapCRC32; } // <map.crc32>, but also legacy <map_hash>
-  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.weak_hash>, but also legacy <map_crc>
-  [[nodiscard]] inline std::array<uint8_t, 20>    GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.sha1>
+  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapCRC32() const { return m_MapCRC32; } // <map.file_hash.crc32>, but also legacy <map_hash> and <map.crc32>
+  [[nodiscard]] inline std::array<uint8_t, 20>    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
+  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
+  [[nodiscard]] inline std::array<uint8_t, 20>    GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.scripts_hash.sha1>, but also legacy <map.sha1>
   [[nodiscard]] std::string                       GetMapURL() const { return m_MapURL; }
   [[nodiscard]] std::string                       GetMapSiteURL() const { return m_MapSiteURL; }
   [[nodiscard]] std::string                       GetMapShortDesc() const { return m_MapShortDesc; }
@@ -277,7 +279,7 @@ public:
   void LoadMapSpecificConfig(CConfig& CFG);
 
   [[nodiscard]] bool                              TryLoadMapFilePersistent(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
-  [[nodiscard]] bool                              TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
+  [[nodiscard]] bool                              TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32, std::optional<std::array<uint8_t, 20>>& sha1);
   [[nodiscard]] bool                              CheckMapFileIntegrity();
   void                                            InvalidateMapFile() { m_MapFileIsValid = false; }
   [[nodiscard]] FileChunkTransient                GetMapFileChunk(size_t start);

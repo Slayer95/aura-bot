@@ -351,6 +351,64 @@ template <size_t SIZE>
   return result;
 }
 
+[[nodiscard]] inline std::string ReverseByteArrayToDecString(const std::vector<uint8_t>& b)
+{
+  if (b.empty())
+    return std::string();
+
+  std::string result = std::to_string(b.back());
+
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
+    result += " " + std::to_string(*i);
+
+  return result;
+}
+
+template <size_t SIZE>
+[[nodiscard]] inline std::string ReverseByteArrayToDecString(const std::array<uint8_t, SIZE>& b)
+{
+  std::string result = std::to_string(b.back());
+
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
+    result += " " + std::to_string(*i);
+
+  return result;
+}
+
+[[nodiscard]] inline std::string ReverseByteArrayToHexString(const std::vector<uint8_t>& b)
+{
+  if (b.empty())
+    return std::string();
+
+  std::string result = ToHexString(b.back());
+
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
+  {
+    if (*i < 0x10)
+      result += " 0" + ToHexString(*i);
+    else
+      result += " " + ToHexString(*i);
+  }
+
+  return result;
+}
+
+template <size_t SIZE>
+[[nodiscard]] inline std::string ReverseByteArrayToHexString(const std::array<uint8_t, SIZE>& b)
+{
+  std::string result = ToHexString(b.back());
+
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
+  {
+    if (*i < 0x10)
+      result += " 0" + ToHexString(*i);
+    else
+      result += " " + ToHexString(*i);
+  }
+
+  return result;
+}
+
 inline void AppendByteArray(std::vector<uint8_t>& b, const std::vector<uint8_t>& append)
 {
   b.insert(end(b), begin(append), end(append));

@@ -90,6 +90,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
   m_MapScriptsSHA1.fill(0);
   m_MapSize.fill(0);
   m_MapCRC32.fill(0);
+  m_MapSHA1.fill(0);
   m_MapScriptsWeakHash.fill(0);
   m_MapWidth.fill(0);
   m_MapHeight.fill(0);
@@ -457,8 +458,8 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
   mapEssentials.emplace();
 
-  // calculate <map.weak_hash>, and <map.sha1>
-  // a big thank you to Strilanc for figuring the <map.weak_hash> algorithm out
+  // calculate <map.scripts_hash.blizz>, and <map.scripts_hash.sha1>
+  // a big thank you to Strilanc for figuring the <map.scripts_hash.blizz> algorithm out
 
   bool hashError = false;
   uint32_t weakHashVal = 0;
@@ -470,14 +471,14 @@ optional<MapEssentials> CMap::ParseMPQ() const
   if (fileContents.empty()) {
     filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
     if (!FileRead(commonPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(commonPath) + "]");
+      Print("[MAP] unable to calculate <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> - unable to read file [" + PathToString(commonPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
   } else {
-    Print("[MAP] overriding default common.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
+    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz>, and <map.scripts_hash.sha1>");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
@@ -487,14 +488,14 @@ optional<MapEssentials> CMap::ParseMPQ() const
   if (fileContents.empty()) {
     filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
     if (!FileRead(blizzardPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.weak_hash>, and <map.sha1> - unable to read file [" + PathToString(blizzardPath) + "]");
+      Print("[MAP] unable to calculate <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> - unable to read file [" + PathToString(blizzardPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
   } else {
-    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.weak_hash>, and <map.sha1>");
+    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz>, and <map.scripts_hash.sha1>");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
@@ -536,17 +537,17 @@ optional<MapEssentials> CMap::ParseMPQ() const
     }
 
     if (!foundScript) {
-      Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ archive, calculated <map.weak_hash>, and <map.sha1> is probably wrong)");
+      Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> is probably wrong)");
     }
 
     EnsureFixedByteArray(mapEssentials->weakHash, weakHashVal, false);
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.weak_hash = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
 
     m_Aura->m_SHA.Final();
     mapEssentials->sha1.emplace();
     mapEssentials->sha1->fill(0);
     m_Aura->m_SHA.GetHash(mapEssentials->sha1->data());
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.sha1 = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1 = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
   }
 
   // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>, <map.filter_type>
@@ -814,8 +815,9 @@ void CMap::Load(CConfig* CFG)
 
   optional<uint32_t> mapFileSize;
   optional<uint32_t> mapFileCRC32;
+  optional<array<uint8_t, 20>> mapFileSHA1;
   if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER) {
-    if (!TryLoadMapFileChunked(mapFileSize, mapFileCRC32)) {
+    if (!TryLoadMapFileChunked(mapFileSize, mapFileCRC32, mapFileSHA1)) {
       if (m_MapLoaderIsPartial) {
         // We are trying to figure out what this map is about - map config provided is a stub.
         // Since there is no actual map file, map loading fails.
@@ -854,10 +856,16 @@ void CMap::Load(CConfig* CFG)
     }
   }
 
-  // calculate <map.crc32>
+  // calculate <map.file_hash.crc32>
   optional<array<uint8_t, 4>> crc32;
   if (mapFileCRC32.has_value()) {
-    EnsureFixedByteArray(crc32, mapFileCRC32.value(), false);
+    EnsureFixedByteArray(crc32, mapFileCRC32.value(), true); // big-endian, matching SHA1
+  }
+
+  // calculate <map.file_hash.sha1>
+  optional<array<uint8_t, 20>> sha1;
+  if (mapFileSHA1.has_value()) {
+    sha1 = mapFileSHA1.value();
   }
 
   optional<MapEssentials> mapEssentials;
@@ -869,7 +877,7 @@ void CMap::Load(CConfig* CFG)
         Print("[MAP] failed to parse map");
         return;
       }
-      Print("[MAP] failed to parse map, using config file for <map.weak_hash>, <map.sha1>");
+      Print("[MAP] failed to parse map, using config file for <map.scripts_hash.blizz>, <map.scripts_hash.sha1>");
     }
   } else {
     DPRINT_IF(LOG_LEVEL_TRACE2, "[MAP] MPQ archive ignored");
@@ -902,7 +910,7 @@ void CMap::Load(CConfig* CFG)
     DPRINT_IF(LOG_LEVEL_TRACE2, "[MAP] MPQ archive ignored/missing/errored");
   }
 
-  array<uint8_t, 4> mapContentMismatch = {0, 0, 0, 0};
+  array<uint8_t, 5> mapContentMismatch = {0, 0, 0, 0, 0};
 
   vector<uint8_t> cfgFileSize = CFG->GetUint8Vector("map.size", 4);
   if (cfgFileSize.empty() == !mapFileSize.has_value()) {
@@ -928,76 +936,98 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgFileSize.begin(), 4, m_MapSize.begin());
   }
 
-  vector<uint8_t> cfgCRC32 = CFG->GetUint8Vector("map.crc32", 4);
+  vector<uint8_t> cfgCRC32 = CFG->GetUint8Vector("map.file_hash.crc32", 4);
   if (cfgCRC32.empty() == !crc32.has_value()) {
     if (cfgCRC32.empty()) {
       CFG->SetFailed();
       if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.crc32")) {
-          m_ErrorMessage = "invalid <map.crc32> detected";
+        if (CFG->Exists("map.file_hash.crc32")) {
+          m_ErrorMessage = "invalid <map.file_hash.crc32> detected";
         } else {
-          m_ErrorMessage = "cannot calculate <map.crc32>";
+          m_ErrorMessage = "cannot calculate <map.file_hash.crc32>";
         }
       }
     } else {
-      mapContentMismatch[1] = ByteArrayToUInt32(cfgCRC32, 0, false) != ByteArrayToUInt32(crc32.value(), false);
-      copy_n(cfgCRC32.begin(), 4, m_MapCRC32.begin());
+      mapContentMismatch[1] = ByteArrayToUInt32(cfgCRC32, 0, true) != ByteArrayToUInt32(crc32.value(), true);
+      copy_n(cfgCRC32.rbegin(), 4, m_MapCRC32.begin());
     }
   } else if (crc32.has_value()) {
-    CFG->SetUint8Array("map.crc32", crc32->data(), 4);
-    copy_n(crc32->begin(), 4, m_MapCRC32.begin());
+    CFG->SetUint8Array("map.file_hash.crc32", crc32->data(), 4);
+    copy_n(crc32->rbegin(), 4, m_MapCRC32.begin());
   } else {
-    copy_n(cfgCRC32.begin(), 4, m_MapCRC32.begin());
+    copy_n(cfgCRC32.rbegin(), 4, m_MapCRC32.begin());
   }
 
-  vector<uint8_t> cfgWeakHash = CFG->GetUint8Vector("map.weak_hash", 4);
-  if (cfgWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
-    if (cfgWeakHash.empty()) {
-      CFG->SetFailed();
-      if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.weak_hash")) {
-          m_ErrorMessage = "invalid <map.weak_hash> detected";
-        } else {
-          m_ErrorMessage = "cannot calculate <map.weak_hash>";
-        }
-      }
-    } else {
-      mapContentMismatch[2] = ByteArrayToUInt32(cfgWeakHash, 0, false) != ByteArrayToUInt32(mapEssentials->weakHash.value(), false);
-      copy_n(cfgWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
-    }
-  } else if (mapEssentials.has_value() && mapEssentials->weakHash.has_value()) {
-    CFG->SetUint8Array("map.weak_hash", mapEssentials->weakHash->data(), 4);
-    copy_n(mapEssentials->weakHash->begin(), 4, m_MapScriptsWeakHash.begin());
-  } else {
-    copy_n(cfgWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
-  }
-
-  vector<uint8_t> cfgSHA1 = CFG->GetUint8Vector("map.sha1", 20);
-  if (cfgSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
+  vector<uint8_t> cfgSHA1 = CFG->GetUint8Vector("map.file_hash.sha1", 20);
+  if (cfgSHA1.empty() == !sha1.has_value()) {
     if (cfgSHA1.empty()) {
       CFG->SetFailed();
       if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.sha1")) {
-          m_ErrorMessage = "invalid <map.sha1> detected";
+        if (CFG->Exists("map.file_hash.sha1")) {
+          m_ErrorMessage = "invalid <map.file_hash.sha1> detected";
         } else {
-          m_ErrorMessage = "cannot calculate <map.sha1>";
+          m_ErrorMessage = "cannot calculate <map.file_hash.sha1>";
         }
       }
     } else {
-      mapContentMismatch[3] = memcmp(cfgSHA1.data(), mapEssentials->sha1->data(), 20) != 0;
-      copy_n(cfgSHA1.begin(), 20, m_MapScriptsSHA1.begin());
+      mapContentMismatch[2] = memcmp(cfgSHA1.data(), sha1->data(), 20) != 0;
+      copy_n(cfgSHA1.begin(), 20, m_MapSHA1.begin());
+    }
+  } else if (sha1.has_value()) {
+    CFG->SetUint8Array("map.file_hash.sha1", sha1->data(), 20);
+    copy_n(sha1->begin(), 20, m_MapSHA1.begin());
+  } else {
+    copy_n(cfgSHA1.begin(), 20, m_MapSHA1.begin());
+  }
+
+  vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz", 4);
+  if (cfgScriptsWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
+    if (cfgScriptsWeakHash.empty()) {
+      CFG->SetFailed();
+      if (m_ErrorMessage.empty()) {
+        if (CFG->Exists("map.scripts_hash.blizz")) {
+          m_ErrorMessage = "invalid <map.scripts_hash.blizz> detected";
+        } else {
+          m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz>";
+        }
+      }
+    } else {
+      mapContentMismatch[3] = ByteArrayToUInt32(cfgScriptsWeakHash, 0, false) != ByteArrayToUInt32(mapEssentials->weakHash.value(), false);
+      copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
+    }
+  } else if (mapEssentials.has_value() && mapEssentials->weakHash.has_value()) {
+    CFG->SetUint8Array("map.scripts_hash.blizz", mapEssentials->weakHash->data(), 4);
+    copy_n(mapEssentials->weakHash->begin(), 4, m_MapScriptsWeakHash.begin());
+  } else {
+    copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
+  }
+
+  vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1", 20);
+  if (cfgScriptsSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
+    if (cfgScriptsSHA1.empty()) {
+      CFG->SetFailed();
+      if (m_ErrorMessage.empty()) {
+        if (CFG->Exists("map.scripts_hash.sha1")) {
+          m_ErrorMessage = "invalid <map.scripts_hash.sha1> detected";
+        } else {
+          m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1>";
+        }
+      }
+    } else {
+      mapContentMismatch[4] = memcmp(cfgScriptsSHA1.data(), mapEssentials->sha1->data(), 20) != 0;
+      copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
     }
   } else if (mapEssentials.has_value() && mapEssentials->sha1.has_value()) {
-    CFG->SetUint8Array("map.sha1", mapEssentials->sha1->data(), 20);
+    CFG->SetUint8Array("map.scripts_hash.sha1", mapEssentials->sha1->data(), 20);
     copy_n(mapEssentials->sha1->begin(), 20, m_MapScriptsSHA1.begin());
   } else {
-    copy_n(cfgSHA1.begin(), 20, m_MapScriptsSHA1.begin());
+    copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
   }
 
   if (HasMismatch()) {
     m_MapContentMismatch.swap(mapContentMismatch);
     PRINT_IF(LOG_LEVEL_WARNING, "[CACHE] error - map content mismatch");
-  } else if (crc32.has_value()) {
+  } else if (crc32.has_value() && sha1.has_value()) {
     m_MapFileIsValid = true;
   }
 
@@ -1214,13 +1244,13 @@ bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint3
 
   crc32 = CRC32::CalculateCRC((uint8_t*)m_MapFileContents->data(), m_MapFileContents->size());
   optional<array<uint8_t, 4>> crc32Bytes;
-  EnsureFixedByteArray(crc32Bytes, crc32.value(), false);
-  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
+  EnsureFixedByteArray(crc32Bytes, crc32.value(), true); // Big endian, matching SHA1
+  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
 
   return true;
 }
 
-bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t>& crc32)
+bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t>& crc32, optional<array<uint8_t, 20>>& sha1)
 {
   if (m_MapServerPath.empty()) {
     DPRINT_IF(LOG_LEVEL_TRACE2, "m_MapServerPath missing - map data not loaded")
@@ -1231,12 +1261,17 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
     resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
   }
 
+  m_Aura->m_SHA.Reset();
   uint32_t rollingCRC32 = 0;
-  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [&rollingCRC32](FileChunkTransient cachedChunk, size_t cursor, size_t size) {
+  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [this, &rollingCRC32](FileChunkTransient cachedChunk, size_t cursor, size_t size) {
     rollingCRC32 = CRC32::CalculateCRC(cachedChunk.GetDataAtCursor(cursor), size, rollingCRC32);
+    m_Aura->m_SHA.Update(cachedChunk.GetDataAtCursor(cursor), size);
   });
+  m_Aura->m_SHA.Final();
+
   if (!result.first || result.second == 0) {
     PRINT_IF(LOG_LEVEL_INFO, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
+    m_Aura->m_SHA.Reset();
     return false;
   }
 
@@ -1248,9 +1283,15 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
 
   crc32 = rollingCRC32;
   optional<array<uint8_t, 4>> crc32Bytes;
-  EnsureFixedByteArray(crc32Bytes, rollingCRC32, false);
-  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
+  EnsureFixedByteArray(crc32Bytes, rollingCRC32, true); // Big endian, matching SHA1
+  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
 
+  sha1.emplace();
+  sha1->fill(0);
+  m_Aura->m_SHA.GetHash(sha1->data());
+  DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.file_hash.sha1 = " + ByteArrayToDecString(sha1.value()) + ">")
+
+  m_Aura->m_SHA.Reset();
   return true;
 }
 
@@ -1260,13 +1301,15 @@ bool CMap::CheckMapFileIntegrity()
     return m_MapFileIsValid;
   }
   optional<uint32_t> reloadedFileSize, reloadedCRC;
-  if (!TryLoadMapFileChunked(reloadedFileSize, reloadedCRC)) {
+  optional<array<uint8_t, 20>> reloadedSHA1;
+  if (!TryLoadMapFileChunked(reloadedFileSize, reloadedCRC, reloadedSHA1)) {
     m_MapFileIsValid = false;
     return m_MapFileIsValid;
   }
 
   bool sizeOK = reloadedFileSize.has_value() && reloadedFileSize.value() == ByteArrayToUInt32(m_MapSize, false);
-  bool crcOK = reloadedCRC.has_value() && reloadedCRC.value() == ByteArrayToUInt32(m_MapCRC32, false);
+  bool crcOK = reloadedCRC.has_value() && reloadedCRC.value() == ByteArrayToUInt32(m_MapCRC32, true);
+  bool shaOK = reloadedSHA1.has_value() && memcmp(reloadedSHA1->data(), m_MapSHA1.data(), 20) == 0;
   if (!sizeOK) {
     m_MapContentMismatch[0] = 1;
     m_MapFileIsValid = false;
@@ -1275,7 +1318,11 @@ bool CMap::CheckMapFileIntegrity()
     m_MapContentMismatch[1] = 1;
     m_MapFileIsValid = false;
   }
-  if (!sizeOK || !crcOK) {
+  if (!shaOK) {
+    m_MapContentMismatch[2] = 1;
+    m_MapFileIsValid = false;
+  }
+  if (!sizeOK || !crcOK || !shaOK) {
     PRINT_IF(LOG_LEVEL_WARNING, "Map file [" + PathToString(m_MapServerPath) + "] integrity check failure - file has been tampered")
   }
   return m_MapFileIsValid;
@@ -1358,51 +1405,12 @@ string CMap::CheckProblems()
   if (m_ClientMapPath.find('/') != string::npos)
     Print(R"(warning - map.path contains forward slashes '/' but it must use Windows style back slashes '\')");
 
-  if (m_MapSize.size() != 4)
-  {
-    m_Valid = false;
-    m_ErrorMessage = "invalid <map.size> detected";
-    return m_ErrorMessage;
-  }
   else/* if (HasMapFileContents() && m_MapFileContents->size() != ByteArrayToUInt32(m_MapSize, false))
   {
     m_Valid = false;
     m_ErrorMessage = "nonmatching <map.size> detected";
     return m_ErrorMessage;
   }*/
-
-  if (m_MapCRC32.size() != 4)
-  {
-    m_Valid = false;
-    if (m_MapCRC32.empty() && !HasMapFileContents()) {
-      m_ErrorMessage = "map file not found";
-    } else {
-      m_ErrorMessage = "invalid <map.crc32> detected";
-    }
-    return m_ErrorMessage;
-  }
-
-  if (m_MapScriptsWeakHash.size() != 4)
-  {
-    m_Valid = false;
-    if (m_MapScriptsWeakHash.empty() && GetMPQErrored()) {
-      m_ErrorMessage = "cannot load map file as MPQ archive";
-    } else {
-      m_ErrorMessage = "invalid <map.weak_hash> detected";
-    }
-    return m_ErrorMessage;
-  }
-
-  if (m_MapScriptsSHA1.size() != 20)
-  {
-    m_Valid = false;
-    if (m_MapScriptsSHA1.empty() && GetMPQErrored()) {
-      m_ErrorMessage = "cannot load map file as MPQ archive";
-    } else {
-      m_ErrorMessage = "invalid <map.sha1> detected";
-    }
-    return m_ErrorMessage;
-  }
 
   if (m_MapSpeed != MAPSPEED_SLOW && m_MapSpeed != MAPSPEED_NORMAL && m_MapSpeed != MAPSPEED_FAST)
   {

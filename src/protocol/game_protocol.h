@@ -147,8 +147,8 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REFRESHGAME(const uint32_t hostCounter, const uint32_t players, const uint32_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_DECREATEGAME(const uint32_t hostCounter);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapHash);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapHash, const std::array<uint8_t, 20>& mapSHA1);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::array<uint8_t, 20>& mapScriptsHashSHA1);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const FileChunkTransient& mapFileChunk);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const SharedByteArray& mapFileContents);

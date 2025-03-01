@@ -202,6 +202,8 @@ public:
   void SetFloat(const std::string& key, const float& x);
   void SetUint8Vector(const std::string& key, const std::vector<uint8_t>& x);
   void SetUint8Array(const std::string& key, const uint8_t* start, const size_t end);
+  void SetUint8VectorReverse(const std::string& key, const std::vector<uint8_t>& x);
+  void SetUint8ArrayReverse(const std::string& key, const uint8_t* start, const size_t end);
   [[nodiscard]] std::vector<uint8_t> Export() const;
 
   [[nodiscard]] static std::string ReadString(const std::filesystem::path& file, const std::string& key);
