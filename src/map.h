@@ -309,6 +309,16 @@ public:
 
   return Val;
 }
+[[nodiscard]] inline uint32_t ChunkedChecksum(const uint8_t* data, const int32_t length, uint32_t checksum)
+{
+  int32_t cursor = 0;
+  int32_t t = length - 0x400;
+  while (cursor <= t) {
+    checksum = ROTL(checksum ^ XORRotateLeft(data + cursor, 0x400), 3);
+    cursor += 0x400;
+  }
+  return checksum;
+}
 
 #undef ROTL
 #undef ROTR

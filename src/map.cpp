@@ -530,9 +530,21 @@ optional<MapEssentials> CMap::ParseMPQ() const
       }
       if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
         foundScript = true;
+        if (m_Aura->m_GameVersion >= 32) {
+          // Credits to Fingon for the checksum algorithm
+          weakHashVal = XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
+        } else {
+          weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
+        }
+      } else {
+        // Credits to Fingon, BogdanW3 for the checksum algorithm
+        if (m_Aura->m_GameVersion == 32) {
+          weakHashVal = ChunkedChecksum(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size(), weakHashVal);
+        } else {
+          weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
+        }
       }
 
-      weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
       m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     }
 
