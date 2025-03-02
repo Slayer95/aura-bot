@@ -288,6 +288,17 @@ public:
   [[nodiscard]] std::string                       CheckProblems();
 };
 
+[[nodiscard]] inline std::string GetScriptsVersionRange(const uint8_t version)
+{
+  if (19 <= version && version <= 21) {
+    return "19to21";
+  }
+  if (24 <= version && version <= 28) {
+    return "24to28";
+  }
+  return ToDecString(version);
+}
+
 [[nodiscard]] inline uint32_t XORRotateLeft(const uint8_t* data, const uint32_t length)
 {
   // a big thank you to Strilanc for figuring this out

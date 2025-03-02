@@ -258,6 +258,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
     m_LogChatTypes |= LOG_CHAT_TYPE_COMMANDS;
   }
 
+  // NOTE: Must be a subset of root m_SupportedGameVersions
   INHERIT(m_SupportedGameVersions)
   INHERIT(m_VoteKickPercentage)
 }

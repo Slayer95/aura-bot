@@ -736,8 +736,8 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
 bool CAura::CopyScripts()
 {
   // Try to use manually extracted files already available in bot.map.configs_path
-  filesystem::path autoExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j");
-  filesystem::path autoExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j");
+  filesystem::path autoExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRange(m_GameVersion) + ".j");
+  filesystem::path autoExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRange(m_GameVersion) + ".j");
   bool commonExists = FileExists(autoExtractedCommonPath);
   bool blizzardExists = FileExists(autoExtractedBlizzardPath);
   if (commonExists && blizzardExists) {
@@ -1722,8 +1722,8 @@ uint8_t CAura::ExtractScripts()
 
   void* MPQ;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_GameVersion) + ".j"));
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_GameVersion) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRange(m_GameVersion) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRange(m_GameVersion) + ".j"));
     CloseMPQArchive(MPQ);
   } else {
 #ifdef _WIN32

@@ -458,27 +458,28 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
   mapEssentials.emplace();
 
-  // calculate <map.scripts_hash.blizz>, and <map.scripts_hash.sha1>
-  // a big thank you to Strilanc for figuring the <map.scripts_hash.blizz> algorithm out
+  // calculate <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN>
+  // a big thank you to Strilanc for figuring the <map.scripts_hash.blizz.vN> algorithm out
 
   bool hashError = false;
   uint32_t weakHashVal = 0;
   m_Aura->m_SHA.Reset();
 
   string fileContents;
+  string scriptsVersionRange = GetScriptsVersionRange(m_Aura->m_GameVersion);
   ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
 
   if (fileContents.empty()) {
-    filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + to_string(m_Aura->m_GameVersion) +".j");
+    filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + scriptsVersionRange +".j");
     if (!FileRead(commonPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> - unable to read file [" + PathToString(commonPath) + "]");
+      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + "> - unable to read file [" + PathToString(commonPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
   } else {
-    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz>, and <map.scripts_hash.sha1>");
+    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + ">");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
@@ -486,16 +487,16 @@ optional<MapEssentials> CMap::ParseMPQ() const
   ReadFileFromArchive(fileContents, R"(Scripts\blizzard.j)");
 
   if (fileContents.empty()) {
-    filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + to_string(m_Aura->m_GameVersion) +".j");
+    filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + scriptsVersionRange +".j");
     if (!FileRead(blizzardPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> - unable to read file [" + PathToString(blizzardPath) + "]");
+      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + "> - unable to read file [" + PathToString(blizzardPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
   } else {
-    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz>, and <map.scripts_hash.sha1>");
+    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + ">");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
@@ -549,17 +550,17 @@ optional<MapEssentials> CMap::ParseMPQ() const
     }
 
     if (!foundScript) {
-      Print(R"([MAP] couldn't find war3map.j or scripts\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> is probably wrong)");
+      Print("[MAP] couldn't find war3map.j or scripts\\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + "> is probably wrong");
     }
 
     EnsureFixedByteArray(mapEssentials->weakHash, weakHashVal, false);
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz.v" + scriptsVersionRange + " = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
 
     m_Aura->m_SHA.Final();
     mapEssentials->sha1.emplace();
     mapEssentials->sha1->fill(0);
     m_Aura->m_SHA.GetHash(mapEssentials->sha1->data());
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1 = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1.v" + scriptsVersionRange + " = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
   }
 
   // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>, <map.filter_type>
@@ -881,6 +882,7 @@ void CMap::Load(CConfig* CFG)
     sha1 = mapFileSHA1.value();
   }
 
+  string scriptsVersionRange = GetScriptsVersionRange(m_Aura->m_GameVersion);
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
     optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(resolvedFilePath);
@@ -890,7 +892,7 @@ void CMap::Load(CConfig* CFG)
         Print("[MAP] failed to parse map");
         return;
       }
-      Print("[MAP] failed to parse map, using config file for <map.scripts_hash.blizz>, <map.scripts_hash.sha1>");
+      Print("[MAP] failed to parse map, using config file for <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, <map.scripts_hash.sha1.v" + scriptsVersionRange + ">");
     }
   } else {
     DPRINT_IF(LOG_LEVEL_TRACE2, "[MAP] MPQ archive ignored");
@@ -993,15 +995,15 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgSHA1.begin(), 20, m_MapSHA1.begin());
   }
 
-  vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz", 4);
+  vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz.v" + scriptsVersionRange, 4);
   if (cfgScriptsWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
     if (cfgScriptsWeakHash.empty()) {
       CFG->SetFailed();
       if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.scripts_hash.blizz")) {
-          m_ErrorMessage = "invalid <map.scripts_hash.blizz> detected";
+        if (CFG->Exists("map.scripts_hash.blizz.v" + scriptsVersionRange)) {
+          m_ErrorMessage = "invalid <map.scripts_hash.blizz.v" + scriptsVersionRange + "> detected";
         } else {
-          m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz>";
+          m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz.v" + scriptsVersionRange + ">";
         }
       }
     } else {
@@ -1009,21 +1011,21 @@ void CMap::Load(CConfig* CFG)
       copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
     }
   } else if (mapEssentials.has_value() && mapEssentials->weakHash.has_value()) {
-    CFG->SetUint8Array("map.scripts_hash.blizz", mapEssentials->weakHash->data(), 4);
+    CFG->SetUint8Array("map.scripts_hash.blizz.v" + scriptsVersionRange, mapEssentials->weakHash->data(), 4);
     copy_n(mapEssentials->weakHash->begin(), 4, m_MapScriptsWeakHash.begin());
   } else {
     copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
   }
 
-  vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1", 20);
+  vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1.v" + scriptsVersionRange, 20);
   if (cfgScriptsSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
     if (cfgScriptsSHA1.empty()) {
       CFG->SetFailed();
       if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.scripts_hash.sha1")) {
-          m_ErrorMessage = "invalid <map.scripts_hash.sha1> detected";
+        if (CFG->Exists("map.scripts_hash.sha1.v" + scriptsVersionRange)) {
+          m_ErrorMessage = "invalid <map.scripts_hash.sha1.v" + scriptsVersionRange + "> detected";
         } else {
-          m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1>";
+          m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1.v" + scriptsVersionRange + ">";
         }
       }
     } else {
@@ -1031,7 +1033,7 @@ void CMap::Load(CConfig* CFG)
       copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
     }
   } else if (mapEssentials.has_value() && mapEssentials->sha1.has_value()) {
-    CFG->SetUint8Array("map.scripts_hash.sha1", mapEssentials->sha1->data(), 20);
+    CFG->SetUint8Array("map.scripts_hash.sha1.v" + scriptsVersionRange, mapEssentials->sha1->data(), 20);
     copy_n(mapEssentials->sha1->begin(), 20, m_MapScriptsSHA1.begin());
   } else {
     copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
