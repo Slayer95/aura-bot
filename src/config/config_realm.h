@@ -109,7 +109,7 @@ struct CRealmConfig
   bool m_AuthIgnoreVersionError;
   uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net
 
-  std::optional<uint8_t> m_AuthWar3Version;                   // WC3 minor version
+  std::optional<Version> m_AuthWar3Version;                   // WC3 major+minor version
   std::optional<std::vector<uint8_t>> m_AuthExeVersion;       // 4 bytes: WC3 version as {patch, minor, major, build}
   std::optional<std::vector<uint8_t>> m_AuthExeVersionHash;   // 4 bytes
   std::string m_AuthExeInfo;                                  // filename.exe dd/MM/yy hh::mm:ss size

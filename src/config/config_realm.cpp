@@ -140,7 +140,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
-  m_AuthWar3Version        = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
+  m_AuthWar3Version        = CFG.GetMaybeVersion(m_CFGKeyPrefix + "auth_game_version");
   m_AuthExeVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
@@ -382,17 +382,19 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
 
   // These are optional, since they can be figured out with bncsutil.
-  optional<uint8_t> authWar3Version            = CFG.GetMaybeUint8(m_CFGKeyPrefix + "auth_game_version");
+  optional<Version> authWar3Version            = CFG.GetMaybeVersion(m_CFGKeyPrefix + "auth_game_version");
   optional<vector<uint8_t>> authExeVersion     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
   if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
   string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info");
 
-  if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
-  if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();
-  if (authExeVersionHash.has_value()) m_AuthExeVersionHash = authExeVersionHash.value();
-  if (!authExeInfo.empty()) m_AuthExeInfo = authExeInfo;
+  if (m_AuthUseCustomVersion) {
+    if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
+    if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();
+    if (authExeVersionHash.has_value()) m_AuthExeVersionHash = authExeVersionHash.value();
+    if (!authExeInfo.empty()) m_AuthExeInfo = authExeInfo;
+  }
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);

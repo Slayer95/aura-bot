@@ -264,8 +264,8 @@ protected:
   std::vector<std::vector<uint8_t>>                      m_PlayingBuffer;
 
   std::bitset<64>                                        m_SupportedGameVersions;
-  uint8_t                                                m_SupportedGameVersionsMin;
-  uint8_t                                                m_SupportedGameVersionsMax;
+  Version                                                m_SupportedGameVersionsMin;
+  Version                                                m_SupportedGameVersionsMax;
 
   bool                                                   m_GameDiscoveryInfoChanged;
   std::vector<uint8_t>                                   m_GameDiscoveryInfo;
@@ -485,19 +485,19 @@ public:
   void                                                   SendAllActions();
   void                                                   SendAllAutoStart() const;
 
-  std::vector<uint8_t>                                   GetGameDiscoveryInfo(const uint8_t gameVersion, const uint16_t hostPort);
+  std::vector<uint8_t>                                   GetGameDiscoveryInfo(const Version& gameVersion, const uint16_t hostPort);
   std::vector<uint8_t>*                                  GetGameDiscoveryInfoTemplate();
   std::vector<uint8_t>                                   GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
 
   void                                                   AnnounceToRealm(CRealm* realm);
   void                                                   AnnounceDecreateToRealms();
-  void                                                   AnnounceToAddress(std::string& address, uint8_t gameVersion);
-  void                                                   ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion);
-  void                                                   SendGameDiscoveryInfo(uint8_t gameVersion);
-  void                                                                                SendGameDiscoveryInfo();
+  void                                                   AnnounceToAddress(std::string& address, const std::optional<Version>& customGameVersion);
+  void                                                   ReplySearch(sockaddr_storage* address, CSocket* socket, const std::optional<Version>& customGameVersion);
+  void                                                   SendGameDiscoveryInfo(const Version& gameVersion);
+  void                                                   SendGameDiscoveryInfo();
   void                                                   SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const;
   void                                                   SendGameDiscoveryRefresh() const;
-  void                                                   SendGameDiscoveryCreate(uint8_t gameVersion) const;
+  void                                                   SendGameDiscoveryCreate(const Version& gameVersion) const;
   void                                                   SendGameDiscoveryCreate() const;
   void                                                   SendGameDiscoveryDecreate() const;
 
@@ -720,11 +720,11 @@ public:
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
   bool GetHasReferees() const;
   inline bool GetUsesCustomReferees() const { return m_UsesCustomReferees; }
-  bool GetIsSupportedGameVersion(uint8_t nVersion) const;
+  bool GetIsSupportedGameVersion(const Version& nVersion) const;
   inline void SetSentPriorityWhois(const bool nValue) { m_SentPriorityWhois = nValue; }
   inline void SetCheckReservation(const bool nValue) { m_CheckReservation = nValue; }
   inline void SetUsesCustomReferees(const bool nValue) { m_UsesCustomReferees = nValue; }
-  inline void SetSupportedGameVersion(uint8_t nVersion);
+  inline void SetSupportedGameVersion(const Version& nVersion);
   inline void SetSaveOnLeave(const uint8_t nValue) { m_SaveOnLeave = nValue; }
 
   inline void SetIsReplaceable(const bool nValue) { m_Replaceable = nValue; }

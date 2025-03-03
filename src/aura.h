@@ -86,7 +86,7 @@ public:
   bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
 
   uint8_t                                            m_LogLevel;
-  uint8_t                                            m_GameVersion;
+  std::optional<Version>                             m_GameDataVersion;
   uint8_t                                            m_MaxSlots;
 
   uint32_t                                           m_LastServerID;
@@ -210,6 +210,7 @@ public:
 
   uint8_t ExtractScripts();
   bool CopyScripts();
+  void CheckScripts();
   void ClearAutoRehost();
 
   void LoadMapAliases();

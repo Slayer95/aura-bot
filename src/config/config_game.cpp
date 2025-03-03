@@ -150,8 +150,9 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_PipeConsideredHarmful                  = CFG.GetBool("hosting.name_filter.is_pipe_harmful", true);
   m_UDPEnabled                             = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
-  set<uint8_t> supportedGameVersions       = CFG.GetUint8Set("hosting.crossplay.versions", ',');
-  m_SupportedGameVersions = vector<uint8_t>(supportedGameVersions.begin(), supportedGameVersions.end());
+  // m_GameVersion is nominally optional, but aura.cpp makes sure it's initialized.
+  m_GameVersion                            = CFG.GetMaybeVersion("hosting.game_version");
+  m_CrossPlayMode                          = CFG.GetStringIndex("hosting.crossplay.mode", {"none", "conservative", "optimistic", "force"}, CROSSPLAY_MODE_CONSERVATIVE);
 }
 
 CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared_ptr<CGameSetup> nGameSetup)
@@ -258,8 +259,9 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
     m_LogChatTypes |= LOG_CHAT_TYPE_COMMANDS;
   }
 
-  // NOTE: Must be a subset of root m_SupportedGameVersions
-  INHERIT(m_SupportedGameVersions)
+  // TODO: INHERIT_MAP_OR_CUSTOM(m_GameVersion, m_GameVersion, m_GameVersion)
+  INHERIT_CUSTOM(m_GameVersion, m_GameVersion);
+  INHERIT_CUSTOM(m_CrossPlayMode, m_CrossPlayMode);
   INHERIT(m_VoteKickPercentage)
 }
 

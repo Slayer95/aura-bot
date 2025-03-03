@@ -79,7 +79,7 @@ private:
   CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
 
   CGame*                           m_GameBroadcast;
-  uint8_t                          m_GameVersion;
+  Version                          m_GameVersion;
   std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
   std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted or not, or it is pending
   uint16_t                         m_LastGamePort;              // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
@@ -150,25 +150,27 @@ public:
   inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
-  inline CGame*        GetGameBroadcast() const { return m_GameBroadcast; }
-  inline uint8_t       GetGameVersion() const { return m_GameVersion; }
-  inline bool          GetLoggedIn() const { return m_LoggedIn; }
-  inline bool          GetFailedLogin() const { return m_FailedLogin; }
-  inline bool          GetFailedSignup() const { return m_FailedSignup; }
-  inline CTCPClient*   GetSocket() const { return m_Socket; }
-  bool                 GetShouldLogChatToConsole() const;
-  inline bool          GetInChat() const { return !m_CurrentChannel.empty(); }
-  inline std::string   GetCurrentChannel() const { return m_CurrentChannel; }
+  inline CGame*                           GetGameBroadcast() const { return m_GameBroadcast; }
+  inline const Version&                   GetGameVersion() const { return m_GameVersion; }
+  inline bool                             GetLoggedIn() const { return m_LoggedIn; }
+  inline bool                             GetFailedLogin() const { return m_FailedLogin; }
+  inline bool                             GetFailedSignup() const { return m_FailedSignup; }
+  inline CTCPClient*                      GetSocket() const { return m_Socket; }
+  bool                                    GetShouldLogChatToConsole() const;
+  inline bool                             GetInChat() const { return !m_CurrentChannel.empty(); }
+  inline std::string                      GetCurrentChannel() const { return m_CurrentChannel; }
 
-  bool                 GetEnabled() const;
-  bool                 GetPvPGN() const;
-  std::string          GetServer() const;
-  uint16_t             GetServerPort() const;
-  std::string          GetInputID() const;
-  std::string          GetUniqueDisplayName() const;
-  std::string          GetCanonicalDisplayName() const;
-  std::string          GetDataBaseID() const;
-  std::string          GetLogPrefix() const;
+  bool                                    GetEnabled() const;
+  bool                                    GetPvPGN() const;
+  std::string                             GetServer() const;
+  uint16_t                                GetServerPort() const;
+  std::string                             GetInputID() const;
+  std::string                             GetUniqueDisplayName() const;
+  std::string                             GetCanonicalDisplayName() const;
+  std::string                             GetDataBaseID() const;
+  std::string                             GetLogPrefix() const;
+  std::optional<Version>                  CalcGameVersion() const;
+  std::optional<bool>                     GetIsGameVersionCompatible(const CGame* game) const;
   inline uint8_t       GetHostCounterID() const { return m_PublicServerID; }
   inline uint32_t      GetInternalID() const { return m_InternalServerID; }
   std::string          GetLoginName() const;

@@ -117,6 +117,7 @@ typedef std::vector<CIncomingAction>                ActionQueue;
 typedef DoubleLinkedListNode<CQueuedActionsFrame>   QueuedActionsFrameNode;
 typedef std::optional<std::pair<int64_t, uint32_t>> OptionalTimedUint32;
 typedef std::optional<int64_t>                      OptionalTime;
+typedef std::pair<uint8_t, uint8_t>                 Version;
 typedef std::pair<int64_t, uint8_t>                 TimedUint8;
 typedef std::pair<int64_t, uint16_t>                TimedUint16;
 typedef std::pair<std::string, uint16_t>            NetworkHost;

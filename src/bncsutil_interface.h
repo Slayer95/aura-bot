@@ -96,12 +96,12 @@ public:
 
   void                                    Reset(const std::string& userName, const std::string& userPassword);
 
-  bool                                    HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const CRealmConfig* realmConfig, const std::string& valueStringFormula, const std::string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken, const uint8_t war3Version);
+  bool                                    HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const CRealmConfig* realmConfig, const std::string& valueStringFormula, const std::string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken, const std::optional<Version>& war3DataVersion);
   bool                                    HELP_SID_AUTH_ACCOUNTLOGON();
   bool                                    HELP_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 32>& salt, const std::array<uint8_t, 32>& serverKey);
   bool                                    HELP_PvPGNPasswordHash(const std::string& userPassword);
 
-  static                                  std::optional<uint8_t> GetGameVersion(const std::filesystem::path& war3Path);
+  static                                  std::optional<Version> GetGameVersion(const std::filesystem::path& war3Path);
 
 private:
   std::vector<uint8_t>                    CreateKeyInfo(const std::string& key, uint32_t clientToken, uint32_t serverToken);

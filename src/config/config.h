@@ -181,6 +181,7 @@ public:
   [[nodiscard]] std::optional<uint32_t> GetMaybeUint32(const std::string& key);
   [[nodiscard]] std::optional<int64_t> GetMaybeInt64(const std::string& key);
   [[nodiscard]] std::optional<uint64_t> GetMaybeUint64(const std::string& key);
+  [[nodiscard]] std::optional<Version> GetMaybeVersion(const std::string& key);
   [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);
   [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
   [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);

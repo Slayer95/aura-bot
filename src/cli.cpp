@@ -113,13 +113,13 @@ CLIResult CCLI::Parse(const int argc, char** argv)
 #endif
   app.add_option("--config", m_CFGPath, "Customizes the main Aura config file. File names resolve from home dir, unless --stdpaths.");
   app.add_option("--config-adapter", m_CFGAdapterPath, "Customizes an adapter file for migrating legacy Aura config files. File names resolve from home dir, unless --stdpaths.");
-  app.add_option("--w3version", m_War3Version, "Customizes the game version.");
   app.add_option("--w3dir", m_War3Path, "Customizes the game install directory.");
   app.add_option("--mapdir", m_MapPath, "Customizes the maps directory.");
   app.add_option("--cfgdir", m_MapCFGPath, "Customizes the map configs directory.");
   app.add_option("--cachedir", m_MapCachePath, "Customizes the map cache directory.");
   app.add_option("--jassdir", m_JASSPath, "Customizes the directory where extracted JASS files are stored.");
   app.add_option("--savedir", m_GameSavePath, "Customizes the game save directory.");
+  app.add_option("--data-version", m_War3DataVersion, "Customizes the game version to be used when reading the game install directory.");
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
   app.add_option("--bind-address", m_BindAddress, "Restricts connections to the game server, only allowing the input IPv4 address.")->check(CLI::ValidIPV4);
   app.add_option("--host-port", m_HostPort, "Customizes the game server to only listen in the specified port.");
@@ -144,7 +144,9 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
   app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
   app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")->check(CLI::IsMember({"none", "censor", "deny"}));
-  app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")->check(CLI::IsMember({"ignore", "exit-main-error", "exit-empty-main-error", "exit-any-error", "exit-empty-any-error", "exit-max-errors"}));
+  app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")->check(CLI::IsMember({"ignore", "exit-main-error", "exit-empty-main-error", "exit-any-error", "exit-empty-any-error", "exit-max-errors"}));
+  app.add_option("--game-version", m_GameVersion, "Customizes the main version for the hosted lobby.");
+  app.add_option("--crossplay", m_GameCrossPlayMode, "Customizes the crossplay capabilities of the hosted lobby. Values: none, conservative, optimistic, force")->check(CLI::IsMember({"none", "conservative", "optimistic", "force"}));
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
@@ -188,7 +190,6 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--reconnection", m_GameReconnectionMode, "Customizes GProxy support for the hosted game. Values: disabled, basic, extended.")->check(CLI::IsMember({"disabled", "basic", "extended"}));
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
-  app.add_option("--crossplay", m_GameCrossplayVersions, "Adds support for game clients on the given version to crossplay. Repeatable.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--notify-joins,--no-notify-joins}", m_GameNotifyJoins, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
@@ -453,6 +454,23 @@ uint8_t CCLI::GetGameBroadcastErrorHandler() const
   return errorHandler;
 }
 
+uint8_t CCLI::GetGameCrossPlayMode() const
+{
+  uint8_t mode = CROSSPLAY_MODE_NONE;
+  if (m_GameBroadcastErrorHandler.has_value()) {
+    if (m_GameCrossPlayMode.value() == "none") {
+      mode = CROSSPLAY_MODE_NONE;
+    } else if (m_GameCrossPlayMode.value() == "conservative") {
+      mode = CROSSPLAY_MODE_CONSERVATIVE;
+    } else if (m_GameCrossPlayMode.value() == "optimistic") {
+      mode = CROSSPLAY_MODE_OPTIMISTIC;
+    } else if (m_GameCrossPlayMode.value() == "force") {
+      mode = CROSSPLAY_MODE_FORCE;
+    }
+  }
+  return mode;
+}
+
 uint8_t CCLI::GetGameHideLoadedNames() const
 {
   uint8_t hideNamesMode = HIDE_IGN_AUTO;
@@ -468,6 +486,11 @@ uint8_t CCLI::GetGameHideLoadedNames() const
     }
   }
   return hideNamesMode;
+}
+
+optional<Version> CCLI::GetGameVersion() const
+{
+  return ParseGameVersion(m_GameVersion.value());
 }
 
 bool CCLI::CheckGameParameters() const
@@ -518,8 +541,8 @@ void CCLI::RunInfoActions() const
 
 void CCLI::OverrideConfig(CAura* nAura) const
 {
-  if (m_War3Version.has_value())
-    nAura->m_Config.m_War3Version = m_War3Version.value();
+  if (m_War3DataVersion.has_value())
+    nAura->m_Config.m_Warcraft3DataVersion = ParseGameVersion(m_War3DataVersion.value());
   if (m_War3Path.has_value())
     nAura->m_Config.m_Warcraft3Path = m_War3Path.value();
   if (m_MapPath.has_value())

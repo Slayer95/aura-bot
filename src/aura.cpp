@@ -473,7 +473,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_AutoReHosted(false),
 
     m_LogLevel(LOG_LEVEL_DEBUG),
-    m_GameVersion(0u),
     m_MaxSlots(MAX_SLOTS_LEGACY),
 
     m_LastServerID(0xFu),
@@ -537,13 +536,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     InitSystem();
   }
 
-  if (m_GameVersion == 0) {
-    Print("[CONFIG] Game version and path are missing.");
-    m_Ready = false;
-    return;
-  }
-  Print("[AURA] running game version 1." + to_string(m_GameVersion));
-
   if (!m_Net.Init()) {
     Print("[AURA] error - close active instances of Warcraft, and/or pause LANViewer to initialize Aura.");
     m_Ready = false;
@@ -602,6 +594,8 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
         return;
       }
     }
+  } else {
+    CheckScripts();
   }
 
   if (m_Config.m_EnableCFGCache) {
@@ -735,34 +729,66 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
 
 bool CAura::CopyScripts()
 {
-  // Try to use manually extracted files already available in bot.map.configs_path
-  filesystem::path autoExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRange(m_GameVersion) + ".j");
-  filesystem::path autoExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRange(m_GameVersion) + ".j");
-  bool commonExists = FileExists(autoExtractedCommonPath);
-  bool blizzardExists = FileExists(autoExtractedBlizzardPath);
-  if (commonExists && blizzardExists) {
-    return true;
-  }
+  set<filesystem::path> checkedPaths;
+  for (const auto& version : m_Config.m_SupportedGameVersions) {
+    // Try to use manually extracted files already available in <bot.map.configs_path>
+    filesystem::path autoExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRangeHeadString(version) + ".j");
+    filesystem::path autoExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRangeHeadString(version) + ".j");
+    if (checkedPaths.find(autoExtractedCommonPath) != checkedPaths.end() || checkedPaths.find(autoExtractedBlizzardPath) != checkedPaths.end()) {
+      continue;
+    }
+    bool commonExists = FileExists(autoExtractedCommonPath);
+    bool blizzardExists = FileExists(autoExtractedBlizzardPath);
+    if (commonExists && blizzardExists) {
+      checkedPaths.insert(autoExtractedCommonPath);
+      checkedPaths.insert(autoExtractedBlizzardPath);
+      return true;
+    }
 
-  if (!commonExists) {
-    filesystem::path manuallyExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common.j");
-    try {
-      filesystem::copy_file(manuallyExtractedCommonPath, autoExtractedCommonPath, filesystem::copy_options::skip_existing);
-    } catch (const exception& e) {
-      Print("[AURA] " + string(e.what()));
-      return false;
+    if (!commonExists) {
+      filesystem::path manuallyExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common.j");
+      try {
+        filesystem::copy_file(manuallyExtractedCommonPath, autoExtractedCommonPath, filesystem::copy_options::skip_existing);
+      } catch (const exception& e) {
+        Print("[AURA] " + string(e.what()));
+        return false;
+      }
     }
-  }
-  if (!blizzardExists) {
-    filesystem::path manuallyExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard.j");
-    try {
-      filesystem::copy_file(manuallyExtractedBlizzardPath, autoExtractedBlizzardPath, filesystem::copy_options::skip_existing);
-    } catch (const exception& e) {
-      Print("[AURA] " + string(e.what()));
-      return false;
+    if (!blizzardExists) {
+      filesystem::path manuallyExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard.j");
+      try {
+        filesystem::copy_file(manuallyExtractedBlizzardPath, autoExtractedBlizzardPath, filesystem::copy_options::skip_existing);
+      } catch (const exception& e) {
+        Print("[AURA] " + string(e.what()));
+        return false;
+      }
     }
+    checkedPaths.insert(autoExtractedCommonPath);
+    checkedPaths.insert(autoExtractedBlizzardPath);
   }
   return true;
+}
+
+void CAura::CheckScripts()
+{
+  set<filesystem::path> checkedPaths;
+  for (const auto& version : m_Config.m_SupportedGameVersions) {
+    filesystem::path autoExtractedCommonPath = m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRangeHeadString(version) + ".j");
+    filesystem::path autoExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRangeHeadString(version) + ".j");
+    if (checkedPaths.find(autoExtractedCommonPath) != checkedPaths.end() || checkedPaths.find(autoExtractedBlizzardPath) != checkedPaths.end()) {
+      continue;
+    }
+    bool commonExists = FileExists(autoExtractedCommonPath);
+    bool blizzardExists = FileExists(autoExtractedBlizzardPath);
+    if (!commonExists && MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print("[AURA] Support for v" + ToVersionString(version) + " requires missing file [" + PathToString(autoExtractedCommonPath) + "]");
+    }
+    if (!blizzardExists && MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print("[AURA] Support for v" + ToVersionString(version) + " requires missing file [" + PathToString(autoExtractedBlizzardPath) + "]");
+    }
+    checkedPaths.insert(autoExtractedCommonPath);
+    checkedPaths.insert(autoExtractedBlizzardPath);
+  }
 }
 
 void CAura::ClearAutoRehost()
@@ -1404,7 +1430,7 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
       // Do not display external games in those realms.
         continue;
       }
-      if (realm->GetGameVersion() > 0 && !game->GetIsSupportedGameVersion(realm->GetGameVersion())) {
+      if (!realm->GetIsGameVersionCompatible(game).value_or(true)) {
         continue;
       }
       if (game->GetIsRealmExcluded(realm->GetServer())) {
@@ -1500,7 +1526,7 @@ void CAura::EventGameStarted(CGame* game)
 bool CAura::ReloadConfigs()
 {
   bool success = true;
-  uint8_t WasVersion = m_GameVersion;
+  set<Version> WasVersions = set<Version>(m_Config.m_SupportedGameVersions.begin(), m_Config.m_SupportedGameVersions.end());
   bool WasCacheEnabled = m_Config.m_EnableCFGCache;
   filesystem::path WasMapPath = m_Config.m_MapPath;
   filesystem::path WasCFGPath = m_Config.m_MapCFGPath;
@@ -1524,17 +1550,16 @@ bool CAura::ReloadConfigs()
     Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinVector(invalidKeys, false));
   }
 
-  if (m_GameVersion != WasVersion) {
-    Print("[AURA] Running game version 1." + to_string(m_GameVersion));
-  }
-
+  set<Version> NowVersions = set<Version>(m_Config.m_SupportedGameVersions.begin(), m_Config.m_SupportedGameVersions.end());
   if (m_Config.m_ExtractJASS) {
-    if (!m_ScriptsExtracted || m_GameVersion != WasVersion) {
+    if (!m_ScriptsExtracted || NowVersions != WasVersions) {
       m_ScriptsExtracted = ExtractScripts() == 2;
       if (!m_ScriptsExtracted) {
         CopyScripts();
       }
     }
+  } else {
+    CheckScripts();
   }
 
   bool reCachePresets = WasCacheEnabled != m_Config.m_EnableCFGCache;
@@ -1692,29 +1717,30 @@ void CAura::OnLoadConfigs()
     }
   }
 
-  if (m_Config.m_War3Version.has_value()) {
-    m_GameVersion = m_Config.m_War3Version.value();
-  } else if (m_GameVersion == 0 && !m_GameInstallPath.empty() && htons(0xe017) == 0x17e0) {
-    optional<uint8_t> AutoVersion = CBNCSUtilInterface::GetGameVersion(m_GameInstallPath);
+  if (m_Config.m_Warcraft3DataVersion.has_value()) {
+    m_GameDataVersion = m_Config.m_Warcraft3DataVersion.value();
+  } else if (!m_GameDataVersion.has_value() && !m_GameInstallPath.empty() && htons(0xe017) == 0x17e0) {
+    optional<Version> AutoVersion = CBNCSUtilInterface::GetGameVersion(m_GameInstallPath);
     if (AutoVersion.has_value()) {
-      m_GameVersion = AutoVersion.value();
+      m_GameDataVersion = AutoVersion.value();
     }
   }
 
-  m_MaxSlots = m_GameVersion >= 29 ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
+  // TODO: m_Aura->m_MaxSlots???
+  m_MaxSlots = m_GameDataVersion.has_value() && m_GameDataVersion.value() >= Version(1, 29) ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
   m_Lobbies.reserve(m_Config.m_MaxLobbies);
   m_StartedGames.reserve(m_Config.m_MaxStartedGames);
 }
 
 uint8_t CAura::ExtractScripts()
 {
-  if (m_GameInstallPath.empty()) {
+  if (m_GameInstallPath.empty() || !m_GameDataVersion.has_value()) {
     return 0;
   }
 
   uint8_t FilesExtracted = 0;
   const filesystem::path MPQFilePath = [&]() {
-    if (m_GameVersion >= 28)
+    if (m_GameDataVersion.value() >= Version(1, 28))
       return m_GameInstallPath / filesystem::path("War3.mpq");
     else
       return m_GameInstallPath / filesystem::path("War3Patch.mpq");
@@ -1722,8 +1748,8 @@ uint8_t CAura::ExtractScripts()
 
   void* MPQ;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRange(m_GameVersion) + ".j"));
-    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRange(m_GameVersion) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRangeHeadString(m_GameDataVersion.value()) + ".j"));
+    FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRangeHeadString(m_GameDataVersion.value()) + ".j"));
     CloseMPQArchive(MPQ);
   } else {
 #ifdef _WIN32
@@ -2056,6 +2082,16 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     return false;
   }
 
+  if (!gameSetup->m_GameVersion.has_value() && !m_GameDefaultConfig->m_GameVersion.has_value()) {
+    gameSetup->m_Ctx->ErrorReply("The game version has not been specified", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    return false;
+  }
+  Version targetVersion = gameSetup->m_GameVersion.value_or(m_GameDefaultConfig->m_GameVersion.value());
+  if (targetVersion < gameSetup->GetMap()->GetMapMinGameVersion()) {
+    gameSetup->m_Ctx->ErrorReply("map requires v" + ToVersionString(gameSetup->GetMap()->GetMapMinGameVersion()), CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    return false;
+  }
+
   if (!GetNewGameIsInQuota()) {
     if (m_Lobbies.size() == 1) {
       gameSetup->m_Ctx->ErrorReply("Another game lobby [" + GetMostRecentLobby()->GetStatusDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
@@ -2130,9 +2166,9 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
       continue;
     }
-    if (realm->GetGameVersion() > 0 && !createdLobby->GetIsSupportedGameVersion(realm->GetGameVersion())) {
+    if (!realm->GetIsGameVersionCompatible(createdLobby).value_or(true)) {
       if (MatchLogLevel(LOG_LEVEL_WARNING)) {
-        Print(realm->GetLogPrefix() + "skipping announcement for v 1." + ToDecString(realm->GetGameVersion()) + "(check <hosting.crossplay.versions>)");
+        Print(realm->GetLogPrefix() + "skipping announcement for v" + ToVersionString(realm->GetGameVersion()) + "(check <hosting.crossplay.mode>)");
       }
       continue;
     }
@@ -2169,19 +2205,20 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     }
   }
 
+  Version gameVersion = createdLobby->m_Config.m_GameVersion.value();
   uint32_t mapSize = ByteArrayToUInt32(createdLobby->GetMap()->GetMapSize(), false);
   if (mapSize > 0x20000000) {
     // Reforged
     Print("[AURA] warning - hosting game beyond 512 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (m_GameVersion <= 28 && mapSize > 0x8000000) {
+  } else if (gameVersion <= Version(1, 28) && mapSize > 0x8000000) {
     Print("[AURA] warning - hosting game beyond 128 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (m_GameVersion <= 26 && mapSize > 0x800000) {
+  } else if (gameVersion <= Version(1, 26) && mapSize > 0x800000) {
     Print("[AURA] warning - hosting game beyond 8 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (m_GameVersion <= 23 && mapSize > 0x400000) {
+  } else if (gameVersion <= Version(1, 23) && mapSize > 0x400000) {
     Print("[AURA] warning - hosting game beyond 4 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
   }
-  if (m_GameVersion < createdLobby->GetMap()->GetMapMinSuggestedGameVersion()) {
-    Print("[AURA] warning - hosting game that MAY require version 1." + to_string(createdLobby->GetMap()->GetMapMinSuggestedGameVersion()));
+  if (gameVersion < createdLobby->GetMap()->GetMapMinSuggestedGameVersion()) {
+    Print("[AURA] warning - hosting game that MAY require version " + ToVersionString(createdLobby->GetMap()->GetMapMinSuggestedGameVersion()));
   }
 
   return true;

@@ -136,11 +136,11 @@ public:
   std::optional<uint32_t>                         m_ChannelKey;
   std::optional<bool>                             m_ChecksReservation;
   std::vector<std::string>                        m_Reservations;
+  std::optional<uint8_t>                          m_CrossPlayMode;
   bool                                            m_IsMirror;
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
-  std::vector<uint8_t>                            m_SupportedGameVersions;
 
   bool                                            m_LobbyReplaceable;
   bool                                            m_LobbyAutoRehosted;
@@ -183,6 +183,7 @@ public:
   std::optional<bool>                             m_NotifyJoins;
   std::optional<bool>                             m_HideLobbyNames;
   std::optional<uint8_t>                          m_HideInGameNames;
+  std::optional<Version>                          m_GameVersion;
   std::optional<bool>                             m_LoadInGame;
   std::optional<bool>                             m_EnableJoinObserversInProgress;
   std::optional<bool>                             m_EnableJoinPlayersInProgress;
@@ -319,7 +320,7 @@ public:
   void SetGameSavedFile(const std::filesystem::path& filePath);
   void SetCheckReservation(const bool nChecksReservation) { m_ChecksReservation = nChecksReservation; }
   void SetReservations(const std::vector<std::string>& nReservations) { m_Reservations = nReservations; }
-  void SetSupportedGameVersions(const std::vector<uint8_t>& nVersions) { m_SupportedGameVersions = nVersions; }
+  void SetCrossPlayMode(const uint8_t nValue) { m_CrossPlayMode = nValue; }
   void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
   void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
   void SetReconnectionMode(const uint8_t nValue) { m_ReconnectionMode = nValue;}
@@ -341,6 +342,7 @@ public:
   void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
   void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
   void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
+  void SetGameVersion(const Version& nGameVersion) { m_GameVersion = nGameVersion; }
   void SetLoadInGame(const bool nGameLoadInGame) { m_LoadInGame = nGameLoadInGame; }
   void SetEnableJoinObserversInProgress(const bool nGameEnableJoinObserversInProgress) { m_EnableJoinObserversInProgress = nGameEnableJoinObserversInProgress; }
   void SetEnableJoinPlayersInProgress(const bool nGameEnableJoinPlayersInProgress) { m_EnableJoinPlayersInProgress = nGameEnableJoinPlayersInProgress; }

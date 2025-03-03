@@ -44,10 +44,8 @@ CBotConfig::CBotConfig(CConfig& CFG)
 {
   m_Enabled                      = CFG.GetBool("hosting.enabled", true);
   m_ExtractJASS                  = CFG.GetBool("game.extract_jass.enabled", true);
-  m_War3Version                  = CFG.GetMaybeUint8("game.version");
-  CFG.FailIfErrorLast();
   m_Warcraft3Path                = CFG.GetMaybeDirectory("game.install_path");
-
+  m_Warcraft3DataVersion         = CFG.GetMaybeVersion("game.install_version");
   m_MapPath                      = CFG.GetDirectory("bot.maps_path", CFG.GetHomeDir() / filesystem::path("maps"));
   m_MapCFGPath                   = CFG.GetDirectory("bot.map_configs_path", CFG.GetHomeDir() / filesystem::path("mapcfgs"));
   m_MapCachePath                 = CFG.GetDirectory("bot.map_cache_path", CFG.GetHomeDir() / filesystem::path("mapcache"));
@@ -58,6 +56,18 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_AliasesPath                  = CFG.GetHomeDir() / filesystem::path("aliases.ini");
   m_LogPath                      = CFG.GetHomeDir() / filesystem::path("aura.log");
 
+  set<string> supportedGameVersionStrings = CFG.GetSet("hosting.game_versions.supported", ',', {});
+  set<Version> supportedGameVersions;
+  for (const auto& versionString : supportedGameVersionStrings) {
+    optional<Version> maybeVersion = ParseGameVersion(versionString);
+    if (!maybeVersion.has_value()) {
+      Print("[CONFIG] <hosting.game_versions.supported> invalid entry <<" + versionString + ">>.");
+      CFG.SetFailed();
+    } else {
+      supportedGameVersions.insert(maybeVersion.value());
+    }
+  }
+  m_SupportedGameVersions        = vector<Version>(supportedGameVersions.begin(), supportedGameVersions.end());
   m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
 
   m_MaxLobbies                   = CFG.GetInt("hosting.games_quota.max_lobbies", 1);
@@ -67,6 +77,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_AutoRehostQuotaConservative  = CFG.GetBool("hosting.games_quota.auto_rehost.conservative", false);
 
   m_AutomaticallySetGameOwner    = CFG.GetBool("hosting.game_owner.from_creator", true);
+
   m_EnableDeleteOversizedMaps    = CFG.GetBool("bot.persistence.delete_huge_maps.enabled", false);
   m_MaxSavedMapSize              = CFG.GetInt("bot.persistence.delete_huge_maps.size", 0x6400); // 25 MiB
 

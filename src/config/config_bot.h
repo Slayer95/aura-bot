@@ -38,7 +38,7 @@ struct CBotConfig
 {
   bool                                    m_Enabled;                     // set to false to prevent new games from being created
   bool                                    m_ExtractJASS;
-  std::optional<uint8_t>                  m_War3Version;                 // warcraft 3 version
+  std::optional<Version>                  m_Warcraft3DataVersion;        // warcraft 3 version
   std::optional<std::filesystem::path>    m_Warcraft3Path;               // Warcraft 3 path
   std::filesystem::path                   m_MapPath;                     // map path
   std::filesystem::path                   m_MapCFGPath;                  // map config path
@@ -52,6 +52,7 @@ struct CBotConfig
   std::filesystem::path                   m_GreetingPath;                // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
+  std::vector<Version>                    m_SupportedGameVersions;       // all game versions the bot will support either through LAN or bnet
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
 
   uint32_t                                m_MaxLobbies;                  // maximum number of non-started games

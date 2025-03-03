@@ -66,11 +66,12 @@
 struct MapEssentials
 {
   bool melee;
+  uint8_t dataSet;
   uint8_t numPlayers;
   uint8_t numDisabled;
   uint8_t numTeams;
-  uint8_t minCompatibleGameVersion;
-  uint8_t minSuggestedGameVersion;
+  Version minCompatibleGameVersion;
+  Version minSuggestedGameVersion;
   uint32_t editorVersion;
   uint32_t options;
   std::optional<std::array<uint8_t, 2>> width;
@@ -84,8 +85,8 @@ struct MapEssentials
      numPlayers(0),
      numDisabled(0),
      numTeams(0),
-     minCompatibleGameVersion(0),
-     minSuggestedGameVersion(0),
+     minCompatibleGameVersion(Version(1, 0)),
+     minSuggestedGameVersion(Version(1, 0)),
      editorVersion(0),
      options(0)
   {
@@ -174,8 +175,9 @@ private:
   uint32_t                        m_MapLocale;
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;
-  uint8_t                         m_MapMinGameVersion;
-  uint8_t                         m_MapMinSuggestedGameVersion;
+  uint8_t                         m_MapDataSet;
+  Version                         m_MapMinGameVersion;
+  Version                         m_MapMinSuggestedGameVersion;
   uint8_t                         m_MapNumControllers; // config value: max map number of players
   uint8_t                         m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
   uint8_t                         m_MapNumTeams;   // config value: max map number of teams
@@ -226,8 +228,9 @@ public:
   [[nodiscard]] uint32_t                          GetMapGameType() const;
   [[nodiscard]] inline uint32_t                   GetMapLocale() const { return m_MapLocale; }
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
-  [[nodiscard]] inline uint8_t                    GetMapMinGameVersion() const { return m_MapMinGameVersion; }
-  [[nodiscard]] inline uint8_t                    GetMapMinSuggestedGameVersion() const { return m_MapMinSuggestedGameVersion; }
+  [[nodiscard]] inline uint8_t                    GetMapDataSet() const { return m_MapDataSet; }
+  [[nodiscard]] inline const Version&             GetMapMinGameVersion() const { return m_MapMinGameVersion; }
+  [[nodiscard]] inline const Version&             GetMapMinSuggestedGameVersion() const { return m_MapMinSuggestedGameVersion; }
   [[nodiscard]] uint8_t                           GetMapLayoutStyle() const;
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapWidth() const { return m_MapWidth; }
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapHeight() const { return m_MapHeight; }
@@ -288,15 +291,38 @@ public:
   [[nodiscard]] std::string                       CheckProblems();
 };
 
-[[nodiscard]] inline std::string GetScriptsVersionRange(const uint8_t version)
+[[nodiscard]] inline Version GetNextVersion(const Version& version)
 {
-  if (19 <= version && version <= 21) {
-    return "19to21";
+  if (version.first == 1 && version.second == 36) {
+    // v1.36 .. v2.0
+    return Version(2, 0);
+  } else {
+    return Version(version.first, version.second + 1);
   }
-  if (24 <= version && version <= 28) {
-    return "24to28";
+}
+
+[[nodiscard]] inline Version GetScriptsVersionRangeHead(const std::pair<uint8_t, uint8_t>& version)
+{
+  if (version.first != 1) return version;
+  if (19 <= version.second && version.second <= 21) {
+    return Version(1, 19);
   }
-  return ToDecString(version);
+  if (24 <= version.second && version.second <= 28) {
+    return Version(1, 24);
+  }
+  return version;
+}
+
+[[nodiscard]] inline std::string GetScriptsVersionRangeHeadString(const Version& version)
+{
+  if (version.first != 1) return ToVersionString(version);
+  if (19 <= version.second && version.second <= 21) {
+    return ToVersionString(Version(1, 19));
+  }
+  if (24 <= version.second && version.second <= 28) {
+    return ToVersionString(Version(1, 24));
+  }
+  return ToVersionString(version);
 }
 
 [[nodiscard]] inline uint32_t XORRotateLeft(const uint8_t* data, const uint32_t length)

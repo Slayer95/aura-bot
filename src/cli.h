@@ -72,7 +72,7 @@ public:
   std::optional<std::string>            m_LogLevel;
   std::optional<bool>                   m_InitSystem;
 
-  std::optional<uint8_t>                m_War3Version;
+  std::optional<std::string>            m_War3DataVersion;
   std::optional<std::filesystem::path>  m_War3Path;
   std::optional<std::filesystem::path>  m_MapPath;
   std::optional<std::filesystem::path>  m_MapCFGPath;
@@ -85,6 +85,7 @@ public:
   std::optional<std::string>            m_SearchTarget;
   std::optional<std::string>            m_SearchType;
   std::optional<std::string>            m_GameName;
+  std::optional<std::string>            m_GameVersion;
   std::optional<bool>                   m_GameTeamsLocked;
   std::optional<bool>                   m_GameTeamsTogether;
   std::optional<bool>                   m_GameAdvancedSharedUnitControl;
@@ -142,7 +143,6 @@ public:
   std::optional<uint32_t>               m_GameSafeHighPing;
   std::optional<bool>                   m_GameSyncNormalize;
   std::vector<std::string>              m_GameReservations;
-  std::vector<uint8_t>                  m_GameCrossplayVersions;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;
   std::optional<std::string>            m_GameReconnectionMode;
@@ -151,6 +151,7 @@ public:
   std::optional<std::string>            m_GameIPFloodHandler;
   std::optional<std::string>            m_GameUnsafeNameHandler;
   std::optional<std::string>            m_GameBroadcastErrorHandler;
+  std::optional<std::string>            m_GameCrossPlayMode;
   std::optional<bool>                   m_GameHideLobbyNames;
   std::optional<std::string>            m_GameHideLoadedNames;
   std::optional<bool>                   m_GameLoadInGame;
@@ -187,7 +188,9 @@ public:
   [[nodiscard]] uint8_t GetGameIPFloodHandler() const;
   [[nodiscard]] uint8_t GetGameUnsafeNameHandler() const;
   [[nodiscard]] uint8_t GetGameBroadcastErrorHandler() const;
+  [[nodiscard]] uint8_t GetGameCrossPlayMode() const;
   [[nodiscard]] uint8_t GetGameHideLoadedNames() const;
+  [[nodiscard]] std::optional<Version> GetGameVersion() const;
   [[nodiscard]] bool CheckGameParameters() const;
   [[nodiscard]] bool CheckGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;
 

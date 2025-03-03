@@ -1629,6 +1629,10 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 
   if (nCLI->m_GameHideLobbyNames.has_value()) SetHideLobbyNames(nCLI->m_GameHideLobbyNames.value());
   if (nCLI->m_GameHideLoadedNames.has_value()) SetHideInGameNames(nCLI->GetGameHideLoadedNames());
+  if (nCLI->m_GameVersion.has_value()) {
+    optional<Version> maybeVersion = nCLI->GetGameVersion();
+    if (maybeVersion.has_value()) SetGameVersion(maybeVersion.value());
+  }
   if (nCLI->m_GameLoadInGame.has_value()) SetLoadInGame(nCLI->m_GameLoadInGame.value());
   if (nCLI->m_GameEnableJoinObserversInProgress.has_value()) SetEnableJoinObserversInProgress(nCLI->m_GameEnableJoinObserversInProgress.value());
   if (nCLI->m_GameEnableJoinPlayersInProgress.has_value()) SetEnableJoinPlayersInProgress(nCLI->m_GameEnableJoinPlayersInProgress.value());
@@ -1636,13 +1640,13 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameLogCommands.has_value()) SetLogCommands(nCLI->m_GameLogCommands.value());
 
   SetReservations(nCLI->m_GameReservations);
-  SetSupportedGameVersions(nCLI->m_GameCrossplayVersions);
   SetVerbose(nCLI->m_Verbose);
   SetDisplayMode(nCLI->GetGameDisplayType());
   if (nCLI->m_GameReconnectionMode.has_value()) SetReconnectionMode(nCLI->GetGameReconnectionMode());
   if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
   if (nCLI->m_GameUnsafeNameHandler.has_value()) SetUnsafeNameHandler(nCLI->GetGameUnsafeNameHandler());
   if (nCLI->m_GameBroadcastErrorHandler.has_value()) SetBroadcastErrorHandler(nCLI->GetGameBroadcastErrorHandler());
+  if (nCLI->m_GameCrossPlayMode.has_value()) SetCrossPlayMode(nCLI->GetGameCrossPlayMode());
 }
 
 CGameSetup::~CGameSetup()

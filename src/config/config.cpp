@@ -892,6 +892,35 @@ optional<uint64_t> CConfig::GetMaybeUint64(const string& key)
   SUCCESS(result)
 }
 
+optional<Version> CConfig::GetMaybeVersion(const string& key)
+{
+  optional<pair<uint8_t, uint8_t>> result;
+  m_ValidKeys.insert(key);
+
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(result)
+  }
+
+  optional<Version> maybeResult = ParseGameVersion(it->second);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, result);
+  }
+
+  if (maybeResult->first == 0 || maybeResult->first > 2) {
+    Print("[CONFIG] Bad version. It must be 1.x or 2.x");
+    CONFIG_ERROR(key, result);
+  }
+
+  if (maybeResult->second >= 100) {
+    Print("[CONFIG] Bad version. It must be 1.x or 2.x");
+    CONFIG_ERROR(key, result);
+  }
+
+  result.swap(maybeResult);
+  SUCCESS(result)
+}
+
 optional<vector<uint8_t>> CConfig::GetMaybeUint8Vector(const string &key, const uint32_t count)
 {
   m_ValidKeys.insert(key);

@@ -359,32 +359,35 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_BeforePlayingEmptyActions(0),
-    m_SupportedGameVersionsMin(nAura->m_GameVersion),
-    m_SupportedGameVersionsMax(nAura->m_GameVersion),
     m_GameDiscoveryInfoChanged(false),
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
   m_IsHiddenPlayerNames = m_Config.m_HideLobbyNames;
-  m_SupportedGameVersionsMin = m_Aura->m_GameVersion;
-  m_SupportedGameVersionsMax = m_Aura->m_GameVersion;
-  m_SupportedGameVersions.set(m_Aura->m_GameVersion);
-  vector<uint8_t> supportedGameVersions = !nGameSetup->m_SupportedGameVersions.empty() ? nGameSetup->m_SupportedGameVersions : m_Aura->m_GameDefaultConfig->m_SupportedGameVersions;
-  for (const auto& version : supportedGameVersions) {
-    if (version >= 64) continue;
-    if (m_Aura->m_GameVersion >= 29) {
-      if (version < 29) continue;
-    } else {
-      if (version >= 29) continue;
+  m_SupportedGameVersionsMin = m_Config.m_GameVersion.value();
+  m_SupportedGameVersionsMax = m_Config.m_GameVersion.value();
+  // TODO: Support v2.x
+  m_SupportedGameVersions.set(m_Config.m_GameVersion->second);
+  bool canCrossPlay = !(
+    (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_NONE) ||
+    (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_CONSERVATIVE && m_Map->GetMapDataSet() == MAP_DATASET_MELEE)
+  );
+  if (canCrossPlay) {
+    Version headVersion = GetScriptsVersionRangeHead(m_Config.m_GameVersion.value());
+    for (const auto& version : m_Aura->m_Config.m_SupportedGameVersions) {
+      switch (m_Config.m_CrossPlayMode) {
+        case CROSSPLAY_MODE_CONSERVATIVE:
+        case CROSSPLAY_MODE_OPTIMISTIC:
+          if (GetScriptsVersionRangeHead(version) != headVersion) {
+            continue;
+          }
+          break;
+      }
+      // TODO: Support v2.x
+      m_SupportedGameVersions.set(version.second);
+      if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
+      if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
     }
-    if (m_Aura->m_GameVersion >= 23) {
-      if (version < 23) continue;
-    } else {
-      if (version >= 23) continue;
-    }
-    m_SupportedGameVersions.set(version);
-    if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
-    if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
   }
 
   if (m_Config.m_LoadInGame) {
@@ -3384,13 +3387,16 @@ std::string CGame::GetPrefixedGameName(const CRealm* realm) const
 
 std::string CGame::GetAnnounceText(const CRealm* realm) const
 {
-  uint8_t gameVersion = realm ? realm->GetGameVersion() : m_Aura->m_GameVersion;
+  Version gameVersion = m_Config.m_GameVersion.value();
+  if (realm) {
+    gameVersion = realm->GetGameVersion();
+  }
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
-  if (mapSize > 0x20000000 || gameVersion <= 28 && mapSize > 0x8000000 || gameVersion <= 26 && mapSize > 0x800000 || gameVersion <= 23 && mapSize > 0x400000) {
-    versionPrefix = "[1." + ToDecString(gameVersion) + ".UnlockMapSize] ";
+  if (mapSize > 0x20000000 || gameVersion <= Version(1, 28) && mapSize > 0x8000000 || gameVersion <= Version(1, 26) && mapSize > 0x800000 || gameVersion <= Version(1, 23) && mapSize > 0x400000) {
+    versionPrefix = "[" + ToVersionString(gameVersion) + ".UnlockMapSize] ";
   } else {
-    versionPrefix = "[1." + ToDecString(gameVersion) + "] ";
+    versionPrefix = "[" + ToVersionString(gameVersion) + "] ";
 
 }
   string startedPhrase;
@@ -3610,10 +3616,11 @@ uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
   return m_Aura->m_Net.GetUDPPort(protocol);
 }
 
-vector<uint8_t> CGame::GetGameDiscoveryInfo(const uint8_t gameVersion, const uint16_t hostPort)
+vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const uint16_t hostPort)
 {
   vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
-  WriteUint32(info, gameVersion, m_GameDiscoveryInfoVersionOffset);
+  // TODO: Support v2.x
+  WriteUint32(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
   uint32_t slotsOff = static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1);
   uint32_t uptime = GetUptime();
   WriteUint32(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
@@ -3679,9 +3686,12 @@ void CGame::AnnounceDecreateToRealms()
   }
 }
 
-void CGame::AnnounceToAddress(string& addressLiteral, uint8_t gameVersion)
+void CGame::AnnounceToAddress(string& addressLiteral, const optional<Version>& customGameVersion)
 {
-  if (gameVersion == 0) gameVersion = m_Aura->m_GameVersion;
+  Version gameVersion = m_Config.m_GameVersion.value();
+  if (customGameVersion.has_value()) {
+    gameVersion = customGameVersion.value();
+  }
   optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(addressLiteral);
   if (!maybeAddress.has_value())
     return;
@@ -3695,9 +3705,12 @@ void CGame::AnnounceToAddress(string& addressLiteral, uint8_t gameVersion)
   }
 }
 
-void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t gameVersion)
+void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, const optional<Version>& customGameVersion)
 {
-  if (gameVersion == 0) gameVersion = m_Aura->m_GameVersion;
+  Version gameVersion = m_Config.m_GameVersion.value();
+  if (customGameVersion.has_value()) {
+    gameVersion = customGameVersion.value();
+  }
   if (isLoopbackAddress(address)) {
     socket->SendReply(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
   } else {
@@ -3705,7 +3718,7 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, uint8_t game
   }
 }
 
-void CGame::SendGameDiscoveryCreate(uint8_t gameVersion) const
+void CGame::SendGameDiscoveryCreate(const Version& gameVersion) const
 {
   vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(gameVersion, m_HostCounter);
   m_Aura->m_Net.SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
@@ -3713,12 +3726,12 @@ void CGame::SendGameDiscoveryCreate(uint8_t gameVersion) const
 
 void CGame::SendGameDiscoveryCreate() const
 {
-  uint8_t version = m_SupportedGameVersionsMin;
+  Version version = m_SupportedGameVersionsMin;
   while (version <= m_SupportedGameVersionsMax) {
     if (GetIsSupportedGameVersion(version)) {
       SendGameDiscoveryCreate(version);
     }
-    ++version;
+    version = GetNextVersion(version);
   }
 }
 
@@ -3742,7 +3755,7 @@ void CGame::SendGameDiscoveryRefresh() const
     for (auto& serverConnections : m_Aura->m_Net.m_ManagedConnections) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
-        if (connection->GetIsVLAN() && connection->GetGameVersion() > 0 && GetIsSupportedGameVersion(connection->GetGameVersion())) {
+        if (connection->GetIsVLAN() && connection->HasGameVersion() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
           SendGameDiscoveryInfoVLAN(connection);
         }
       }
@@ -3750,7 +3763,7 @@ void CGame::SendGameDiscoveryRefresh() const
   }
 }
 
-void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
+void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 {
   // See CNet::SendGameDiscovery()
 
@@ -3777,7 +3790,7 @@ void CGame::SendGameDiscoveryInfo(uint8_t gameVersion)
         if (connection->GetIsUDPTunnel()) {
           connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
         }
-        if (connection->GetIsVLAN() && connection->GetGameVersion() > 0 && GetIsSupportedGameVersion(connection->GetGameVersion())) {
+        if (connection->GetIsVLAN() && connection->HasGameVersion() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
           SendGameDiscoveryInfoVLAN(connection);
         }
       }
@@ -3813,12 +3826,12 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
 
 void CGame::SendGameDiscoveryInfo()
 {
-  uint8_t version = m_SupportedGameVersionsMin;
+  Version version = m_SupportedGameVersionsMin;
   while (version <= m_SupportedGameVersionsMax) {
     if (GetIsSupportedGameVersion(version)) {
       SendGameDiscoveryInfo(version);
     }
-    ++version;
+    version = GetNextVersion(version);
   }
 }
 
@@ -4544,7 +4557,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
 
   // send a map check packet to the new user.
 
-  if (m_Aura->m_GameVersion >= 23) {
+  if (m_Config.m_GameVersion >= Version(1, 23)) {
     Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
   } else {
     Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
@@ -5844,6 +5857,7 @@ void CGame::EventGameStartedLoading()
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
+  // TODO(debug) - started loading: 6 p | 0 comp | 1 obs | 0 fake | 1 vhost | 7 controllers
 
   // When load-in-game is disabled, m_LoadingVirtualBuffer also includes
   // load messages for disconnected real players, but we let automatic resizing handle that.
@@ -8913,12 +8927,17 @@ bool CGame::GetHasReferees() const
   return m_Map->GetMapObservers() == MAPOBS_REFEREES;
 }
 
-bool CGame::GetIsSupportedGameVersion(uint8_t nVersion) const {
-  return nVersion < 64 && m_SupportedGameVersions.test(nVersion);
+bool CGame::GetIsSupportedGameVersion(const Version& nVersion) const
+{
+  // TODO: GetIsSupportedGameVersion() Support v2.x
+  if (nVersion.first > 1) return false;
+  return nVersion.second < 64 && m_SupportedGameVersions.test(nVersion.second);
 }
 
-void CGame::SetSupportedGameVersion(uint8_t nVersion) {
-  if (nVersion < 64) m_SupportedGameVersions.set(nVersion);
+void CGame::SetSupportedGameVersion(const Version& nVersion) {
+  // TODO: SetSupportedGameVersion() Support v2.x
+  if (nVersion.first > 1) return;
+  if (nVersion.second < 64) m_SupportedGameVersions.set(nVersion.second);
 }
 
 void CGame::OpenObserverSlots()

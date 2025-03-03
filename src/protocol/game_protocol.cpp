@@ -537,7 +537,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const uint8_t war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::vector<uint8_t>& mapWidth, const std::vector<uint8_t>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::vector<uint8_t>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
     if (mapWidth.size() != 2 || mapHeight.size() != 2) {
       Print("[GAMEPROTO] invalid dimensions passed to SEND_W3GS_GAMEINFO");
@@ -572,7 +572,7 @@ namespace GameProtocol
     std::vector<uint8_t> packet = {
       GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::GAMEINFO, 0, 0,
       80, 88, 51, 87,
-      war3Version, 0, 0, 0
+      war3Version.second, 0, 0, 0
     };
     AppendByteArray(packet, hostCounter, false);             // Host Counter
     AppendByteArray(packet, entryKey, false);                // Entry Key
@@ -640,9 +640,9 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CREATEGAME(const uint8_t war3Version, const uint32_t hostCounter)
+  std::vector<uint8_t> SEND_W3GS_CREATEGAME(const Version& war3Version, const uint32_t hostCounter)
   {
-    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version, 0, 0, 0};
+    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version.second, 0, 0, 0};
     AppendByteArray(packet, hostCounter, false); // Host Counter
     return packet;
   }

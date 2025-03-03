@@ -203,7 +203,7 @@ Config
 - Type: directory
 - Error handling: Use default value
 
-## \`game.version\`
+## \`game.install_version\`
 - Type: uint8
 - Error handling: Abort operation
 

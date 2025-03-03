@@ -99,7 +99,7 @@ namespace VLANProtocol
   // SEND FUNCTIONS //
   ////////////////////
 
-  vector<uint8_t> SEND_VLAN_SEARCHGAME(bool TFT, uint32_t war3Version)
+  vector<uint8_t> SEND_VLAN_SEARCHGAME(bool TFT, const Version& war3Version)
   {
     unsigned char ProductID_ROC[]  = {51, 82, 65, 87};    // "WAR3"
     unsigned char ProductID_TFT[]  = {80, 88, 51, 87};    // "W3XP"
@@ -115,14 +115,14 @@ namespace VLANProtocol
     else
       AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
 
-    AppendByteArray(packet, war3Version, false);          // Version
+    AppendByteArray(packet, static_cast<uint32_t>(war3Version.second), false);          // Version
     AssignLength(packet);
     // DEBUG_Print("SENT W3GS_SEARCHGAME");
     // DEBUG_Print(packet);
     return packet;
   }
 
-  vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, uint32_t war3Version, uint32_t mapGameType, uint32_t mapFlags, array<uint8_t, 2> mapWidth, array<uint8_t, 2> mapHeight, string gameName, string hostName, uint32_t elapsedTime, string mapPath, array<uint8_t, 4> mapCRC, uint32_t slotsTotal, uint32_t slotsOpen, array<uint8_t, 4> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+  vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, const Version& war3Version, uint32_t mapGameType, uint32_t mapFlags, array<uint8_t, 2> mapWidth, array<uint8_t, 2> mapHeight, string gameName, string hostName, uint32_t elapsedTime, string mapPath, array<uint8_t, 4> mapCRC, uint32_t slotsTotal, uint32_t slotsOpen, array<uint8_t, 4> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
     unsigned char ProductID_ROC[]  = {51, 82, 65, 87};    // "WAR3"
     unsigned char ProductID_TFT[]  = {80, 88, 51, 87};    // "W3XP"
@@ -158,7 +158,7 @@ namespace VLANProtocol
     else
       AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
 
-    AppendByteArray(packet, war3Version, false);          // Version
+    AppendByteArray(packet, static_cast<uint32_t>(war3Version.second), false);          // Version
     AppendByteArray(packet, hostCounter, false);          // Host Counter
     AppendByteArray(packet, entryKey, false);             // Entry Key
     AppendByteArrayFast(packet, gameName);                // Game Name
@@ -178,7 +178,7 @@ namespace VLANProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_VLAN_CREATEGAME(bool TFT, uint32_t war3Version, uint32_t hostCounter, array<uint8_t, 4> ip, uint16_t port)
+  vector<uint8_t> SEND_VLAN_CREATEGAME(bool TFT, const Version& war3Version, uint32_t hostCounter, array<uint8_t, 4> ip, uint16_t port)
   {
     unsigned char ProductID_ROC[]  = {51, 82, 65, 87};     // "WAR3"
     unsigned char ProductID_TFT[]  = {80, 88, 51, 87};     // "W3XP"
@@ -194,7 +194,7 @@ namespace VLANProtocol
     else
       AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
 
-    AppendByteArray(packet, war3Version, false);          // Version
+    AppendByteArray(packet, static_cast<uint32_t>(war3Version.second), false);          // Version
     AppendByteArray(packet, hostCounter, false);          // Host Counter
     AppendByteArrayFast(packet, ip);                      // IP - added by h3rmit
     AppendByteArray(packet, port, false);                 // Port - added by h3rmit

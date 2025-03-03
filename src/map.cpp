@@ -74,8 +74,9 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapOptions(0),
     m_MapEditorVersion(0),
-    m_MapMinGameVersion(0),
-    m_MapMinSuggestedGameVersion(0),
+    m_MapDataSet(0),
+    m_MapMinGameVersion(Version(1, 0)),
+    m_MapMinSuggestedGameVersion(Version(1, 0)),
     m_MapNumControllers(0),
     m_MapNumDisabled(0),
     m_MapNumTeams(0),
@@ -466,20 +467,20 @@ optional<MapEssentials> CMap::ParseMPQ() const
   m_Aura->m_SHA.Reset();
 
   string fileContents;
-  string scriptsVersionRange = GetScriptsVersionRange(m_Aura->m_GameVersion);
+  Version scriptsVersionHead = GetScriptsVersionRangeHead(m_Aura->m_GameDataVersion.value());
   ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
 
   if (fileContents.empty()) {
-    filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + scriptsVersionRange +".j");
+    filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(scriptsVersionHead) +".j");
     if (!FileRead(commonPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + "> - unable to read file [" + PathToString(commonPath) + "]");
+      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> - unable to read file [" + PathToString(commonPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
   } else {
-    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + ">");
+    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
@@ -487,16 +488,16 @@ optional<MapEssentials> CMap::ParseMPQ() const
   ReadFileFromArchive(fileContents, R"(Scripts\blizzard.j)");
 
   if (fileContents.empty()) {
-    filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + scriptsVersionRange +".j");
+    filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(scriptsVersionHead) +".j");
     if (!FileRead(blizzardPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + "> - unable to read file [" + PathToString(blizzardPath) + "]");
+      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> - unable to read file [" + PathToString(blizzardPath) + "]");
     } else {
       weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
       m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
     }
     hashError = hashError || fileContents.empty();
   } else {
-    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + ">");
+    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">");
     weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
     m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
@@ -531,7 +532,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
       }
       if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
         foundScript = true;
-        if (m_Aura->m_GameVersion >= 32) {
+        if (scriptsVersionHead >= Version(1, 32)) {
           // Credits to Fingon for the checksum algorithm
           weakHashVal = XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
         } else {
@@ -539,7 +540,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
         }
       } else {
         // Credits to Fingon, BogdanW3 for the checksum algorithm
-        if (m_Aura->m_GameVersion == 32) {
+        if (scriptsVersionHead == Version(1, 32)) {
           weakHashVal = ChunkedChecksum(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size(), weakHashVal);
         } else {
           weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
@@ -550,17 +551,17 @@ optional<MapEssentials> CMap::ParseMPQ() const
     }
 
     if (!foundScript) {
-      Print("[MAP] couldn't find war3map.j or scripts\\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, and <map.scripts_hash.sha1.v" + scriptsVersionRange + "> is probably wrong");
+      Print("[MAP] couldn't find war3map.j or scripts\\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> is probably wrong");
     }
 
     EnsureFixedByteArray(mapEssentials->weakHash, weakHashVal, false);
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz.v" + scriptsVersionRange + " = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + " = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
 
     m_Aura->m_SHA.Final();
     mapEssentials->sha1.emplace();
     mapEssentials->sha1->fill(0);
     m_Aura->m_SHA.GetHash(mapEssentials->sha1->data());
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1.v" + scriptsVersionRange + " = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
+    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + " = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
   }
 
   // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>, <map.filter_type>
@@ -580,6 +581,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
       uint32_t RawMapFlags;
       uint32_t RawMapWidth, RawMapHeight;
       uint32_t RawMapNumPlayers, RawMapNumTeams;
+      uint32_t RawGameDataSet = MAP_DATASET_DEFAULT;
 
       ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT)
 
@@ -614,7 +616,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
           ISS.seekg(4, ios::cur); // map loading screen number
         else if (FileFormat == 25)
         {
-          ISS.seekg(4, ios::cur);            // used game data set
+          ISS.read(reinterpret_cast<char*>(&RawGameDataSet), 4);  // used game data set
           getline(ISS, GarbageString, '\0'); // prologue screen path
         }
 
@@ -641,6 +643,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
           ISS.seekg(1, ios::cur);            // custom water tinting alpha value
         }
 
+        mapEssentials->dataSet = static_cast<uint8_t>(RawGameDataSet);
         mapEssentials->editorVersion = RawEditorVersion;
 
         ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
@@ -782,34 +785,34 @@ optional<MapEssentials> CMap::ParseMPQ() const
   fileContents.clear();
 
   if (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12) {
-    mapEssentials->minCompatibleGameVersion = 29;
+    mapEssentials->minCompatibleGameVersion = Version(1, 29);
   }
   
   if (mapEssentials->editorVersion > 0) {
     if (6060 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 29;
+      mapEssentials->minSuggestedGameVersion = Version(1, 29);
     } else if (6059 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 24;
+      mapEssentials->minSuggestedGameVersion = Version(1, 24);
     } else if (6058 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 23;
+      mapEssentials->minSuggestedGameVersion = Version(1, 23);
     } else if (6057 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 22;
+      mapEssentials->minSuggestedGameVersion = Version(1, 22);
     } else if (6053 <= mapEssentials->editorVersion && mapEssentials->editorVersion <= 6056) {
-      mapEssentials->minSuggestedGameVersion = 22; // not released
+      mapEssentials->minSuggestedGameVersion = Version(1, 22); // not released
     } else if (6050 <= mapEssentials->editorVersion && mapEssentials->editorVersion <= 6052) {
-      mapEssentials->minSuggestedGameVersion = 17 + static_cast<uint8_t>(mapEssentials->editorVersion - 6050);
+      mapEssentials->minSuggestedGameVersion = Version(1, 17 + static_cast<uint8_t>(mapEssentials->editorVersion - 6050));
     } else if (6046 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 16;
+      mapEssentials->minSuggestedGameVersion = Version(1, 16);
     } else if (6043 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 15;
+      mapEssentials->minSuggestedGameVersion = Version(1, 15);
     } else if (6039 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 14;
+      mapEssentials->minSuggestedGameVersion = Version(1, 14);
     } else if (6038 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 14; // not released
+      mapEssentials->minSuggestedGameVersion = Version(1, 14); // not released
     } else if (6034 <= mapEssentials->editorVersion && mapEssentials->editorVersion <= 6037) {
-      mapEssentials->minSuggestedGameVersion = 10 + static_cast<uint8_t>(mapEssentials->editorVersion - 6034);
+      mapEssentials->minSuggestedGameVersion = Version(1, 10 + static_cast<uint8_t>(mapEssentials->editorVersion - 6034));
     } else if (6031 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = 7;
+      mapEssentials->minSuggestedGameVersion = Version(1, 7);
     }
   }
 
@@ -882,7 +885,7 @@ void CMap::Load(CConfig* CFG)
     sha1 = mapFileSHA1.value();
   }
 
-  string scriptsVersionRange = GetScriptsVersionRange(m_Aura->m_GameVersion);
+  Version scriptsVersionHead = GetScriptsVersionRangeHead(m_Aura->m_GameDataVersion.value());
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
     optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(resolvedFilePath);
@@ -892,7 +895,7 @@ void CMap::Load(CConfig* CFG)
         Print("[MAP] failed to parse map");
         return;
       }
-      Print("[MAP] failed to parse map, using config file for <map.scripts_hash.blizz.v" + scriptsVersionRange + ">, <map.scripts_hash.sha1.v" + scriptsVersionRange + ">");
+      Print("[MAP] failed to parse map, using config file for <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">");
     }
   } else {
     DPRINT_IF(LOG_LEVEL_TRACE2, "[MAP] MPQ archive ignored");
@@ -905,6 +908,11 @@ void CMap::Load(CConfig* CFG)
       DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] found melee map")
     }
 
+    if (mapEssentials->dataSet == 0) {
+      m_MapDataSet = mapEssentials->melee ? MAP_DATASET_MELEE : MAP_DATASET_CUSTOM;
+    } else {
+      m_MapDataSet = mapEssentials->dataSet;
+    }
     m_MapNumControllers = mapEssentials->numPlayers;
     m_MapNumDisabled = mapEssentials->numDisabled;
     m_MapNumTeams = mapEssentials->numTeams;
@@ -995,15 +1003,15 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgSHA1.begin(), 20, m_MapSHA1.begin());
   }
 
-  vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz.v" + scriptsVersionRange, 4);
+  vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead), 4);
   if (cfgScriptsWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
     if (cfgScriptsWeakHash.empty()) {
       CFG->SetFailed();
       if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.scripts_hash.blizz.v" + scriptsVersionRange)) {
-          m_ErrorMessage = "invalid <map.scripts_hash.blizz.v" + scriptsVersionRange + "> detected";
+        if (CFG->Exists("map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead))) {
+          m_ErrorMessage = "invalid <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + "> detected";
         } else {
-          m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz.v" + scriptsVersionRange + ">";
+          m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">";
         }
       }
     } else {
@@ -1011,21 +1019,21 @@ void CMap::Load(CConfig* CFG)
       copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
     }
   } else if (mapEssentials.has_value() && mapEssentials->weakHash.has_value()) {
-    CFG->SetUint8Array("map.scripts_hash.blizz.v" + scriptsVersionRange, mapEssentials->weakHash->data(), 4);
+    CFG->SetUint8Array("map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead), mapEssentials->weakHash->data(), 4);
     copy_n(mapEssentials->weakHash->begin(), 4, m_MapScriptsWeakHash.begin());
   } else {
     copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
   }
 
-  vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1.v" + scriptsVersionRange, 20);
+  vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead), 20);
   if (cfgScriptsSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
     if (cfgScriptsSHA1.empty()) {
       CFG->SetFailed();
       if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.scripts_hash.sha1.v" + scriptsVersionRange)) {
-          m_ErrorMessage = "invalid <map.scripts_hash.sha1.v" + scriptsVersionRange + "> detected";
+        if (CFG->Exists("map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead))) {
+          m_ErrorMessage = "invalid <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> detected";
         } else {
-          m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1.v" + scriptsVersionRange + ">";
+          m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">";
         }
       }
     } else {
@@ -1033,7 +1041,7 @@ void CMap::Load(CConfig* CFG)
       copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
     }
   } else if (mapEssentials.has_value() && mapEssentials->sha1.has_value()) {
-    CFG->SetUint8Array("map.scripts_hash.sha1.v" + scriptsVersionRange, mapEssentials->sha1->data(), 20);
+    CFG->SetUint8Array("map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead), mapEssentials->sha1->data(), 20);
     copy_n(mapEssentials->sha1->begin(), 20, m_MapScriptsSHA1.begin());
   } else {
     copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
@@ -1091,6 +1099,12 @@ void CMap::Load(CConfig* CFG)
     m_MapHeight = {1, 0};
   }
 
+  if (CFG->Exists("map.data_set")) {
+    m_MapDataSet = CFG->GetUint8("map.data_set", m_MapDataSet);
+  } else {
+    CFG->SetUint8("map.data_set", m_MapDataSet);
+  }
+
   if (CFG->Exists("map.editor_version")) {
     m_MapEditorVersion = CFG->GetUint32("map.editor_version", m_MapEditorVersion);
   } else {
@@ -1116,13 +1130,14 @@ void CMap::Load(CConfig* CFG)
   }
 
   // Game version compatibility and suggestions
-  if (CFG->Exists("map.game_version.min")) {
-    m_MapMinGameVersion = CFG->GetUint8("map.game_version.min", m_MapMinGameVersion);
+  optional<Version> minGameVersion = CFG->GetMaybeVersion("map.game_version.min");
+  if (minGameVersion.has_value()) {
+    m_MapMinGameVersion = minGameVersion.value();
   } else {
-    CFG->SetUint8("map.game_version.min", m_MapMinGameVersion);
+    CFG->SetString("map.game_version.min", ToVersionString(m_MapMinGameVersion));
   }
 
-  if (m_MapMinGameVersion >= 29) {
+  if (m_MapMinGameVersion >= Version(1, 29)) {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_MODERN);
   } else {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_LEGACY);
@@ -1173,21 +1188,28 @@ void CMap::Load(CConfig* CFG)
 
   {
     uint32_t resolvedMapSize = ByteArrayToUInt32(m_MapSize, false);
-    uint32_t minVanillaVersionFromMapSize = 0;
+    Version minVanillaVersionFromMapSize = Version(1, 0);
     if (resolvedMapSize > 0x8000000) {
-      minVanillaVersionFromMapSize = 29;
+      minVanillaVersionFromMapSize = Version(1, 29);
     } else if (resolvedMapSize > 0x800000) {
-      minVanillaVersionFromMapSize = 27;
+      minVanillaVersionFromMapSize = Version(1, 27);
     } else if (resolvedMapSize > 0x400000) {
-      minVanillaVersionFromMapSize = 24;
+      minVanillaVersionFromMapSize = Version(1, 24);
     }
     if (m_MapMinSuggestedGameVersion < minVanillaVersionFromMapSize) {
       m_MapMinSuggestedGameVersion = minVanillaVersionFromMapSize;
     }
 
-    if (m_Slots.size() > MAX_SLOTS_LEGACY && m_MapMinSuggestedGameVersion < 29) {
-      m_MapMinSuggestedGameVersion = 29;
+    if (m_Slots.size() > MAX_SLOTS_LEGACY && m_MapMinSuggestedGameVersion < Version(1, 29)) {
+      m_MapMinSuggestedGameVersion = Version(1, 29);
     }
+  }
+
+  optional<Version> overrideMinSuggestedVersion = CFG->GetMaybeVersion("map.game_version.suggested.min");
+  if (overrideMinSuggestedVersion.has_value()) {
+    m_MapMinSuggestedGameVersion = overrideMinSuggestedVersion.value();
+  } else {
+    CFG->SetString("map.game_version.suggested.min", ToVersionString(m_MapMinSuggestedGameVersion));
   }
 
   // Maps supporting observer slots enable them by default.
@@ -1361,9 +1383,9 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
 
 pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t, size_t)> processChunk)
 {
-  uint32_t fileSize = FileSize(filePath);
+  uintmax_t fileSize = FileSize(filePath);
   size_t cursor = 0;
-  if (fileSize == 0) return make_pair(false, cursor);
+  if (fileSize == 0 || fileSize > 0xFFFFFFFF) return make_pair(false, cursor);
   while (cursor < fileSize) {
     FileChunkTransient cachedChunk = GetMapFileChunk(cursor);
     if (!cachedChunk.bytes) {
@@ -1521,12 +1543,6 @@ string CMap::CheckProblems()
   if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && usedTeams.count() <= 1) {
     m_Valid = false;
     m_ErrorMessage = "invalid <map.slot_N> detected";
-    return m_ErrorMessage;
-  }
-
-  if (m_Aura->m_GameVersion < m_MapMinGameVersion) {
-    m_Valid = false;
-    m_ErrorMessage = "map requires v1." + to_string(m_MapMinGameVersion) + " (using v1." + to_string(m_Aura->m_GameVersion) + ")";
     return m_ErrorMessage;
   }
 

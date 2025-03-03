@@ -257,16 +257,6 @@ After manually fixing any remaining issues, a generated config file should be re
 
 **Note**: Paths in any configuration file are resolved relative to Aura's home directory.
 
-## \`--w3version \<NUMBER\>\`
-
-Specifies the version that is to be used when hosting Warcraft 3 games. This parameter allows Aura to switch 
-versions on the spot.
-
-Note that, while Aura supports some degree of cross-version compatibility, the version specified by this parameter is assumed in 
-case Aura cannot figure out the version used by a game client.
-
-This option is equivalent to ``<game.version>`` in `config.ini`
-
 ## \`--w3dir \<DIRECTORY\>\` 
 
 Specifies the directory where the Warcraft 3 game files are located. This parameter allows Aura 
@@ -317,6 +307,16 @@ This option is equivalent to ``<bot.jass_path>`` in `config.ini`
 Specifies the directory where Warcraft 3 save files (``.w3z``) are stored.
 
 This option is equivalent to ``<bot.save_path>`` in `config.ini`
+
+## \`--data-version \<VERSION\>\`
+
+Specifies the version that is to be used when hosting Warcraft 3 games. This parameter allows Aura to switch 
+versions on the spot.
+
+Note that, while Aura supports some degree of cross-version compatibility, the version specified by this parameter is assumed in 
+case Aura cannot figure out the version used by a game client.
+
+This option is equivalent to ``<game.install_version>`` in `config.ini`
 
 ## \`--bind-address \<IPv4>\`
 
@@ -1083,16 +1083,30 @@ Specifies the location of a saved game a game lobby will resume.
 
 Makes a reservation for a player to join the game lobby. This is required for loaded games to properly work.
 
-## \`--crossplay \<VERSION\>\`
+## \`--game-version \<VERSION\>\`
 
-Adds support for clients running the given game version to join the game lobby. Note that crossplay has an 
-inherent risk of desynchronization between game clients. Usage of this feature is only recommended when hosting 
-well-tested maps with custom game data.
+Specifies the main version targetted by a game lobby.
+
+This option is equivalent to ``<hosting.game_versions.main>`` in `config.ini`
+
+## \`--crossplay \<MODE\>\`
+
+Crossplay adds support for clients running game versions other than the main game version to join the lobby. 
+Note that crossplay has an inherent risk of desynchronization between game clients. Usage of this feature is 
+only recommended when hosting well-tested maps with custom game data.
 
 Avoid using crossplay for melee or altered melee maps, in order to minimize potential issues. Note, however, that 
 maps using SLK optimization, such as those optimized with [W3x2Lni][5], are likely immune against desynchronizations.
 
-Note also that versions 1.29, and 1.23 are not compatible with earlier game versions.
+**Options:**
+- none: Disables crossplay feature entirely.
+- conservative: Crossplay is only enabled when Aura is reasonably sure that the map may properly work under crossplay. Note, 
+however, that Aura's detection of crossplay capabilities is imperfect.
+- optimistic: Crossplay is enabled across a wide range of versions, regardless of the map. In particular, this enables crossplay 
+for all game versions ranging from 1.24 to 1.28e.
+- force: Crossplay is enabled across all versions enabled, even if they are very likely to desync.
+
+This option is equivalent to ``<hosting.crossplay.mode>`` in `config.ini`
 
 ## \`--on-ipflood \<ACTION\>\`
 

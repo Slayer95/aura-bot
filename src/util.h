@@ -126,6 +126,11 @@
   return hostName;
 }
 
+[[nodiscard]] inline std::string ToVersionString(const Version& version)
+{
+  return ToDecString(version.first) + "." + ToDecString(version.second);
+}
+
 inline void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const uint32_t offset, bool bigEndian = false)
 {
   if (!bigEndian) {
@@ -961,7 +966,7 @@ inline void AssignLength(std::vector<uint8_t>& content)
   return s;
 }
 
-[[nodiscard]] inline bool IsBase10Number(const std::string& s) {
+[[nodiscard]] inline bool IsBase10NaturalOrZero(const std::string& s) {
   if (s.empty()) return false;
   if (s[0] == '0') return s.length() == 1;
 
@@ -972,7 +977,38 @@ inline void AssignLength(std::vector<uint8_t>& content)
 }
 
 [[nodiscard]] inline std::string MaybeBase10(const std::string s) {
-  return IsBase10Number(s) ? s : std::string();
+  return IsBase10NaturalOrZero(s) ? s : std::string();
+}
+
+[[nodiscard]] inline std::optional<Version> ParseGameVersion(std::string versionString) {
+  std::optional<Version> result;
+  std::string::size_type periodIndex = versionString.find('.');
+  std::string::size_type periodIndex2;
+  if (periodIndex == std::string::npos) {
+    return ParseGameVersion("1." + versionString);
+  }
+
+  periodIndex = versionString.find('.');
+  periodIndex2 = versionString.find('.', periodIndex + 1);
+  if (periodIndex2 == std::string::npos) {
+    periodIndex2 = versionString.size();
+  }
+
+  std::string majorVersionString = versionString.substr(0, periodIndex);
+  std::string minorVersionString = versionString.substr(periodIndex + 1, periodIndex2 - (periodIndex + 1));
+
+  if (!IsBase10NaturalOrZero(majorVersionString)) {
+    return result;
+  }
+
+  if (!IsBase10NaturalOrZero(minorVersionString)) {
+    return result;
+  }
+
+  uint32_t majorVersion = stol(majorVersionString);
+  uint32_t minorVersion = stol(minorVersionString);
+  result = Version((uint8_t)majorVersion, (uint8_t)minorVersion);
+  return result;
 }
 
 [[nodiscard]] inline std::string JoinVector(const std::vector<std::string>& list, const std::string connector, const bool trailingConnector) {
@@ -1360,9 +1396,9 @@ inline void NormalizeDirectory(std::filesystem::path& filePath)
 {
   std::string::size_type atSignPos = fqName.find('@');
   if (atSignPos == std::string::npos) {
-    return make_pair(fqName, std::string());
+    return std::make_pair(fqName, std::string());
   }
-  return make_pair(
+  return std::make_pair(
     TrimString(fqName.substr(0, atSignPos)),
     TrimString(fqName.substr(atSignPos + 1))
   );

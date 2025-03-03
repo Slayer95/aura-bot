@@ -80,7 +80,7 @@ CPacked::CPacked(CAura* nAura)
     m_DecompressedSize(0),
     m_NumBlocks(0),
     m_War3Identifier(0),
-    m_War3Version(0),
+    m_War3Version(Version(1, 0)),
     m_BuildNumber(0),
     m_Flags(0),
     m_ReplayLength(0)
@@ -177,8 +177,10 @@ void CPacked::Decompress(const bool allBlocks)
 		m_Valid = false;
 		return;
 	} else {
+    uint32_t RawGameVersion;
 		ISS.read((char *)&m_War3Identifier, 4);	// version identifier
-		ISS.read((char *)&m_War3Version, 4);		// version number
+		ISS.read((char *)&RawGameVersion, 4);		// version number
+    m_War3Version = Version(1, static_cast<uint8_t>(RawGameVersion));
 	}
 
 	ISS.read((char *)&m_BuildNumber, 2);			// build number
@@ -329,7 +331,7 @@ void CPacked::Compress(const bool TFT)
     AppendByteArray(Header, ProductID_ROC, 4);
   }
 
-	AppendByteArray(Header, m_War3Version, false);
+	AppendByteArray(Header, static_cast<uint32_t>(m_War3Version.second), false);
 	AppendByteArray(Header, m_BuildNumber, false);
 	AppendByteArray(Header, m_Flags, false);
 	AppendByteArray(Header, m_ReplayLength, false);

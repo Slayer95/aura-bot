@@ -747,12 +747,12 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_INFO(uint8_t ver, uint32_t localeID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
+  vector<uint8_t> SEND_SID_AUTH_INFO(const Version& ver, uint32_t localeID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
   {
     const uint8_t ProtocolID[]    = {0, 0, 0, 0};
     const uint8_t PlatformID[]    = {54, 56, 88, 73};              // "IX86"
     const uint8_t ProductID_TFT[] = {80, 88, 51, 87};              // "W3XP"
-    const uint8_t Version[]       = {ver, 0, 0, 0};
+    const uint8_t Version[]       = {ver.second, 0, 0, 0};
     const uint8_t LocalIP[]       = {127, 0, 0, 1};
     const uint8_t TimeZoneBias[]  = {60, 0, 0, 0};                 // 60 minutes (GMT +0100) but this is probably -0100
 
