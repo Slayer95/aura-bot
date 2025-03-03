@@ -3887,7 +3887,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
       // e.g. this allows m_ControllersWithMap to remain unchanged.
       const uint8_t replaceSID = GetEmptyObserverSID();
       const uint8_t replaceUID = GetNewUID();
-      CreateFakeUserInner(replaceSID, replaceUID, "User[" + ToDecString(replaceSID + 1) + "]");
+      CreateFakeUserInner(replaceSID, replaceUID, "User[" + ToDecString(replaceSID + 1) + "]", false);
       m_FakeUsers.back().SetObserver(true);
       CGameSlot* slot = GetSlot(replaceSID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
@@ -9018,7 +9018,7 @@ const CGameVirtualUser* CGame::InspectVirtualUserFromSID(const uint8_t SID) cons
   return nullptr;
 }
 
-void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const string& name)
+void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const string& name, bool asObserver)
 {
   const bool isCustomForces = GetIsCustomForces();
   if (!m_Users.empty()) {
@@ -9035,7 +9035,7 @@ void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const stri
     isCustomForces ? m_Slots[SID].GetColor() : m_Map->GetVersionMaxSlots(),
     m_Map->GetLobbyRace(&m_Slots[SID])
   );
-  if (!isCustomForces) SetSlotTeamAndColorAuto(SID);
+  if (!isCustomForces && !asObserver) SetSlotTeamAndColorAuto(SID);
 
   m_FakeUsers.emplace_back(this, SID, UID, name).SetObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
@@ -9051,7 +9051,7 @@ bool CGame::CreateFakeUser(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"));
+  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"), false);
   return true;
 }
 
@@ -9070,7 +9070,7 @@ bool CGame::CreateFakePlayer(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"));
+  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"), false);
   return true;
 }
 
@@ -9093,7 +9093,7 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"));
+  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"), true);
   return true;
 }
 
@@ -9107,7 +9107,7 @@ bool CGame::CreateHMCPlayer()
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName());
+  CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
   return true;
 }
 
@@ -9151,7 +9151,7 @@ uint8_t CGame::FakeAllSlots()
       }
       if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
         const CGameSlot* savedSlot = m_RestoredGame->InspectSlot(SID);
-        CreateFakeUserInner(SID, savedSlot->GetUID(), m_Reserved[reservedIndex]);
+        CreateFakeUserInner(SID, savedSlot->GetUID(), m_Reserved[reservedIndex], false);
         ++addedCounter;
         if (++reservedIndex >= reservedEnd) break;
       }
@@ -9165,7 +9165,7 @@ uint8_t CGame::FakeAllSlots()
       if (m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OPEN) {
         continue;
       }
-      CreateFakeUserInner(SID, GetNewUID(), "User[" + ToDecString(SID + 1) + "]");
+      CreateFakeUserInner(SID, GetNewUID(), "User[" + ToDecString(SID + 1) + "]", false);
       ++addedCounter;
       if (0 == --remainingControllers) {
         break;
