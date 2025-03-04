@@ -2168,7 +2168,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     }
     if (!realm->GetIsGameVersionCompatible(createdLobby).value_or(true)) {
       if (MatchLogLevel(LOG_LEVEL_WARNING)) {
-        Print(realm->GetLogPrefix() + "skipping announcement for v" + ToVersionString(realm->GetGameVersion()) + "(check <hosting.crossplay.mode>)");
+        Print(realm->GetLogPrefix() + "skipping announcement for v" + ToVersionString(realm->GetGameVersion()) + " (check <hosting.crossplay.mode>)");
       }
       continue;
     }

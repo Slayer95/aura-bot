@@ -936,10 +936,6 @@ optional<Version> CRealm::CalcGameVersion() const
 optional<bool> CRealm::GetIsGameVersionCompatible(const CGame* game) const
 {
   Version realmGameVersion = GetGameVersion();
-  if (realmGameVersion.first == 0) {
-    optional<Version> maybeVersion = CalcGameVersion();
-    realmGameVersion = maybeVersion.value();
-  }
   if (realmGameVersion.first == 0) return nullopt;
   return game->GetIsSupportedGameVersion(realmGameVersion);
 }
