@@ -151,7 +151,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_UDPEnabled                             = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
   // m_GameVersion is nominally optional, but aura.cpp makes sure it's initialized.
-  m_GameVersion                            = CFG.GetMaybeVersion("hosting.game_version");
+  m_GameVersion                            = CFG.GetMaybeVersion("hosting.game_versions.main");
   m_CrossPlayMode                          = CFG.GetStringIndex("hosting.crossplay.mode", {"none", "conservative", "optimistic", "force"}, CROSSPLAY_MODE_CONSERVATIVE);
 }
 
