@@ -204,8 +204,8 @@ Config
 - Error handling: Use default value
 
 ## \`game.install_version\`
-- Type: uint8
-- Error handling: Abort operation
+- Type: version
+- Error handling: Use default value
 
 ## \`global_realm.admins\`
 - Type: setinsensitive
@@ -254,11 +254,11 @@ Config
 - Error handling: Abort operation
 
 ## \`global_realm.auth_game_version\`
-- Type: uint8
+- Type: version
 - Error handling: Use default value
 
 ## \`global_realm.auth_game_version\`
-- Type: uint8
+- Type: version
 - Error handling: Use default value
 
 ## \`global_realm.auth_ignore_version_error\`
@@ -571,6 +571,11 @@ Config
 - Default value: system
 - Error handling: Use default value
 
+## \`global_realm.locale\`
+- Type: string
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.locale_short\`
 - Type: string
 - Constraints: Min length: 4. Max length: 4.
@@ -783,9 +788,9 @@ Config
 - Default value: !
 - Error handling: Use default value
 
-## \`hosting.crossplay.versions\`
-- Type: uint8set
-- Default value: '
+## \`hosting.crossplay.mode\`
+- Type: enum
+- Default value: CROSSPLAY_MODE_CONSERVATIVE
 - Error handling: Use default value
 
 ## \`hosting.desync.handler\`
@@ -888,6 +893,15 @@ Config
 - Default value: 5
 - Error handling: Use default value
 
+## \`hosting.game_versions.main\`
+- Type: version
+- Error handling: Use default value
+
+## \`hosting.game_versions.supported\`
+- Type: set
+- Default value: 
+- Error handling: Use default value
+
 ## \`hosting.games_quota.auto_rehost.conservative\`
 - Type: bool
 - Default value: false
@@ -977,6 +991,11 @@ Config
 ## \`hosting.log_delay\`
 - Type: uint32
 - Default value: 180
+- Error handling: Use default value
+
+## \`hosting.log_non_ascii\`
+- Type: bool
+- Default value: false
 - Error handling: Use default value
 
 ## \`hosting.log_words\`

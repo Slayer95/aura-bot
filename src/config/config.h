@@ -157,8 +157,8 @@ public:
   }
 
   [[nodiscard]] std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
-  [[nodiscard]] std::set<std::string> GetSet(const std::string& key, char separator, const std::set<std::string> x);
-  [[nodiscard]] std::set<std::string> GetSetInsensitive(const std::string& key, char separator, const std::set<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSet(const std::string& key, char separator, bool trimElements, const std::set<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSetInsensitive(const std::string& key, char separator, bool trimElements, const std::set<std::string> x);
   [[nodiscard]] std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
 
   [[nodiscard]] std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count);

@@ -56,7 +56,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_AliasesPath                  = CFG.GetHomeDir() / filesystem::path("aliases.ini");
   m_LogPath                      = CFG.GetHomeDir() / filesystem::path("aura.log");
 
-  set<string> supportedGameVersionStrings = CFG.GetSet("hosting.game_versions.supported", ',', {});
+  set<string> supportedGameVersionStrings = CFG.GetSet("hosting.game_versions.supported", ',', true, {});
   set<Version> supportedGameVersions;
   for (const auto& versionString : supportedGameVersionStrings) {
     optional<Version> maybeVersion = ParseGameVersion(versionString);

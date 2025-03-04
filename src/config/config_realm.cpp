@@ -148,8 +148,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info");
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
-  m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', m_Admins);
+  m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
+  m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
 
@@ -397,8 +397,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
-  m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', m_SudoUsers);
-  m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', m_Admins);
+  m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
+  m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
   m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
 

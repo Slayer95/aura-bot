@@ -68,8 +68,8 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
     m_NickName = m_UserName;
 
   m_Channels = CFG.GetList("irc.channels", ',', m_Channels);
-  m_Admins = CFG.GetSet("irc.admins", ',', m_Admins);
-  m_SudoUsers = CFG.GetSet("irc.sudo_users", ',', m_SudoUsers);
+  m_Admins = CFG.GetSet("irc.admins", ',', true, m_Admins);
+  m_SudoUsers = CFG.GetSet("irc.sudo_users", ',', true, m_SudoUsers);
 
   for (uint8_t i = 0; i < m_Channels.size(); ++i) {
     if (m_Channels[i].length() > 0 && m_Channels[i][0] != '#') {

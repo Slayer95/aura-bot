@@ -133,14 +133,14 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyVirtualHostName                   = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
   m_NotifyJoins                            = CFG.GetBool("ui.notify_joins.enabled", false);
-  m_IgnoredNotifyJoinPlayers               = CFG.GetSet("ui.notify_joins.exceptions", ',', {});
+  m_IgnoredNotifyJoinPlayers               = CFG.GetSet("ui.notify_joins.exceptions", ',', false, {}); /* do not trim, because LAN names may have trailing whitespace */
   m_HideLobbyNames                         = CFG.GetBool("hosting.nicknames.hide_lobby", false);
   m_HideInGameNames                        = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoadInGame                             = CFG.GetBool("hosting.load_in_game.enabled", false);
   m_EnableJoinObserversInProgress          = CFG.GetBool("hosting.join_in_progress.observers", false);
   m_EnableJoinPlayersInProgress            = CFG.GetBool("hosting.join_in_progress.players", false);
 
-  m_LoggedWords                            = CFG.GetSetInsensitive("hosting.log_words", ',', {});
+  m_LoggedWords                            = CFG.GetSetInsensitive("hosting.log_words", ',', true, {});
   m_LogChatTypes                           = CFG.GetBool("hosting.log_non_ascii", false) ? LOG_CHAT_TYPE_NON_ASCII : 0;
   m_LogCommands                            = CFG.GetBool("hosting.log_commands", false);
   m_DesyncHandler                          = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);

@@ -446,7 +446,7 @@ vector<string> CConfig::GetList(const string& key, char separator, const vector<
   SUCCESS(Output)
 }
 
-set<string> CConfig::GetSet(const string& key, char separator, const set<string> x)
+set<string> CConfig::GetSet(const string& key, char separator, bool trimElements, const set<string> x)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
@@ -460,6 +460,9 @@ set<string> CConfig::GetSet(const string& key, char separator, const set<string>
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
+    if (trimElements) {
+      element = TrimString(element);
+    }
     if (element.empty())
       continue;
     if (!Output.insert(element).second)
@@ -469,7 +472,7 @@ set<string> CConfig::GetSet(const string& key, char separator, const set<string>
   END(Output)
 }
 
-set<string> CConfig::GetSetInsensitive(const string& key, char separator, const set<string> x)
+set<string> CConfig::GetSetInsensitive(const string& key, char separator, bool trimElements, const set<string> x)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
@@ -483,6 +486,9 @@ set<string> CConfig::GetSetInsensitive(const string& key, char separator, const 
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
+    if (trimElements) {
+      element = TrimString(element);
+    }
     if (element.empty())
       continue;
     transform(begin(element), end(element), begin(element), [](char c) { return static_cast<char>(std::tolower(c)); });
@@ -605,6 +611,7 @@ set<string> CConfig::GetIPStringSet(const string& key, char separator, const set
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
+    element = TrimString(element);
     if (element.empty())
       continue;
 

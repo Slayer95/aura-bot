@@ -630,6 +630,8 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
 }
 
 [[nodiscard]] inline std::string TrimString(const std::string& str) {
+  if (str.empty()) return std::string();
+
   size_t firstNonSpace = str.find_first_not_of(" ");
   size_t lastNonSpace = str.find_last_not_of(" ");
 
