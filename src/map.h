@@ -313,7 +313,7 @@ public:
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
-  std::optional<MapEssentials>                    ParseMPQ() const;
+  std::optional<MapEssentials>                    ParseMPQ();
   bool AcquireGameVersion(CConfig* CFG);
   void Load(CConfig* CFG);
   void LoadGameConfigOverrides(CConfig& CFG);

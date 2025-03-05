@@ -478,7 +478,7 @@ void CMap::ReadFileFromArchive(string& container, const string& fileSubPath) con
   ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
 }
 
-optional<MapEssentials> CMap::ParseMPQ() const
+optional<MapEssentials> CMap::ParseMPQ()
 {
   optional<MapEssentials> mapEssentials;
   if (!m_MapMPQ) return mapEssentials;
@@ -613,18 +613,20 @@ optional<MapEssentials> CMap::ParseMPQ() const
       // war3map.w3i format found at http://www.wc3campaigns.net/tools/specs/index.html by Zepir/PitzerMike
 
       string   GarbageString;
-      uint32_t FileFormat;
-      uint32_t RawEditorVersion;
-      uint32_t RawMapFlags;
-      uint32_t RawMapWidth, RawMapHeight;
-      uint32_t RawMapNumPlayers, RawMapNumTeams;
+      uint32_t FileFormat = 0;
+      uint32_t RawEditorVersion = 0;
+      uint32_t RawMapFlags = 0;
+      uint32_t RawMapWidth = 0, RawMapHeight = 0;
+      uint32_t RawMapNumPlayers = 0, RawMapNumTeams = 0;
       uint32_t RawGameDataSet = MAP_DATASET_DEFAULT;
 
-      ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT)
+      ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT, 28 = TFT+, 31 = RF)
 
-      if (FileFormat == 18 || FileFormat == 25)
-      {
+      if (FileFormat == 18 || FileFormat == 25 || FileFormat == 28 || FileFormat == 31) {
         ISS.seekg(4, ios::cur);            // number of saves
+        if (FileFormat >= 28) {
+          ISS.seekg(16, ios::cur);         // game version
+        }
         ISS.read(reinterpret_cast<char*>(&RawEditorVersion), 4); // editor version
         getline(ISS, GarbageString, '\0'); // map name
         getline(ISS, GarbageString, '\0'); // map author
@@ -637,32 +639,29 @@ optional<MapEssentials> CMap::ParseMPQ() const
         ISS.read(reinterpret_cast<char*>(&RawMapFlags), 4);  // flags
         ISS.seekg(1, ios::cur);            // map main ground type
 
-        if (FileFormat == 18)
-          ISS.seekg(4, ios::cur); // campaign background number
-        else if (FileFormat == 25)
-        {
+        if (FileFormat >= 25) {
           ISS.seekg(4, ios::cur);            // loading screen background number
           getline(ISS, GarbageString, '\0'); // path of custom loading screen model
+        } else {
+          ISS.seekg(4, ios::cur);            // campaign background number
         }
 
         getline(ISS, GarbageString, '\0'); // map loading screen text
         getline(ISS, GarbageString, '\0'); // map loading screen title
         getline(ISS, GarbageString, '\0'); // map loading screen subtitle
 
-        if (FileFormat == 18)
-          ISS.seekg(4, ios::cur); // map loading screen number
-        else if (FileFormat == 25)
-        {
+        if (FileFormat >= 25) {
           ISS.read(reinterpret_cast<char*>(&RawGameDataSet), 4);  // used game data set
-          getline(ISS, GarbageString, '\0'); // prologue screen path
+          getline(ISS, GarbageString, '\0');                      // prologue screen path
+        } else {
+          ISS.seekg(4, ios::cur);                                 // map loading screen number
         }
 
         getline(ISS, GarbageString, '\0'); // prologue screen text
         getline(ISS, GarbageString, '\0'); // prologue screen title
         getline(ISS, GarbageString, '\0'); // prologue screen subtitle
 
-        if (FileFormat == 25)
-        {
+        if (FileFormat >= 25) {
           ISS.seekg(4, ios::cur);            // uses terrain fog
           ISS.seekg(4, ios::cur);            // fog start z height
           ISS.seekg(4, ios::cur);            // fog end z height
@@ -680,6 +679,14 @@ optional<MapEssentials> CMap::ParseMPQ() const
           ISS.seekg(1, ios::cur);            // custom water tinting alpha value
         }
 
+        if (FileFormat >= 28) {
+          ISS.seekg(4, std::ios :: cur);     // scripting language
+        }
+        if (FileFormat >= 31) {
+          ISS.seekg(4, std::ios :: cur);     // supported graphics modes
+          ISS.seekg(4, std::ios :: cur);     // game data version
+        }
+
         mapEssentials->dataSet = static_cast<uint8_t>(RawGameDataSet);
         mapEssentials->editorVersion = RawEditorVersion;
 
@@ -691,7 +698,7 @@ optional<MapEssentials> CMap::ParseMPQ() const
         for (uint32_t i = 0; i < RawMapNumPlayers; ++i)
         {
           CGameSlot Slot(SLOTTYPE_AUTO, 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, 0, 1, SLOTRACE_RANDOM);
-          uint32_t  Color, Type, Race;
+          uint32_t  Color = 0, Type = 0, Race = 0;
           ISS.read(reinterpret_cast<char*>(&Color), 4); // colour
           Slot.SetColor(static_cast<uint8_t>(Color));
           ISS.read(reinterpret_cast<char*>(&Type), 4); // type
@@ -740,6 +747,10 @@ optional<MapEssentials> CMap::ParseMPQ() const
           ISS.seekg(4, ios::cur);            // start position y
           ISS.seekg(4, ios::cur);            // ally low priorities
           ISS.seekg(4, ios::cur);            // ally high priorities
+          if (FileFormat >= 31) {
+            ISS.seekg(4, std::ios::cur);			// enemy low priorities
+            ISS.seekg(4, std::ios::cur);			// enemy high priorities
+          }
 
           if (Slot.GetSlotStatus() != SLOTSTATUS_CLOSED)
             mapEssentials->slots.push_back(Slot);
@@ -813,6 +824,11 @@ optional<MapEssentials> CMap::ParseMPQ() const
           }
 #endif
         }
+      } else {
+        // Some rare maps with other file formats exist 8 10 11 15 23 24 26 27
+        // See https://www.hiveworkshop.com/threads/parsing-metadata-from-w3m-w3x-w3n.322007/
+        m_Valid = false;
+        m_ErrorMessage = "unsupported map file format " + to_string(FileFormat);
       }
     }
   } else {
