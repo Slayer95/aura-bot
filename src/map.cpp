@@ -500,11 +500,12 @@ optional<MapEssentials> CMap::ParseMPQ()
   ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
   for (const auto& version : supportedVersionHeads) {
     if (fileContents.empty()) {
+      string baseFileContents;
       filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j");
-      if (!FileRead(commonPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
+      if (!FileRead(commonPath, baseFileContents, MAX_READ_FILE_SIZE) || baseFileContents.empty()) {
         Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(commonPath) + "]");
       } else {
-        UpdateCrypto(cryptos, fileContents);
+        UpdateCrypto(cryptos, baseFileContents);
       }
       hashError = hashError || fileContents.empty();
     } else {
@@ -516,11 +517,12 @@ optional<MapEssentials> CMap::ParseMPQ()
   ReadFileFromArchive(fileContents, R"(Scripts\blizzard.j)");
   for (const auto& version : supportedVersionHeads) {
     if (fileContents.empty()) {
+      string baseFileContents;
       filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j");
-      if (!FileRead(blizzardPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
+      if (!FileRead(blizzardPath, baseFileContents, MAX_READ_FILE_SIZE) || baseFileContents.empty()) {
         Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(blizzardPath) + "]");
       } else {
-        UpdateCrypto(cryptos, fileContents);
+        UpdateCrypto(cryptos, baseFileContents);
       }
       hashError = hashError || fileContents.empty();
     } else {
