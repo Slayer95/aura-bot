@@ -473,7 +473,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_AutoReHosted(false),
 
     m_LogLevel(LOG_LEVEL_DEBUG),
-    m_MaxSlots(MAX_SLOTS_LEGACY),
+    m_SupportsModernSlots(false),
 
     m_LastServerID(0xFu),
     m_HostCounter(0u),
@@ -1735,8 +1735,13 @@ void CAura::OnLoadConfigs()
     }
   }
 
-  // TODO: m_Aura->m_MaxSlots???
-  m_MaxSlots = m_GameDataVersion.has_value() && m_GameDataVersion.value() >= Version(1, 29) ? MAX_SLOTS_MODERN : MAX_SLOTS_LEGACY;
+  m_SupportsModernSlots = false;
+  for (const auto& version : m_Config.m_SupportedGameVersions) {
+    if (version >= Version(1, 29)) {
+      m_SupportsModernSlots = true;
+      break;
+    }
+  }
   m_Lobbies.reserve(m_Config.m_MaxLobbies);
   m_StartedGames.reserve(m_Config.m_MaxStartedGames);
 }

@@ -1196,11 +1196,6 @@ void CMap::Load(CConfig* CFG)
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_LEGACY);
   }
 
-  if (m_Aura->m_MaxSlots < m_MapVersionMaxSlots) {
-    Print("[MAP] " + ToDecString(m_Aura->m_MaxSlots) + " player limit enforced in modern map");
-    m_MapVersionMaxSlots = m_Aura->m_MaxSlots;
-  }
-
   if (CFG->Exists("map.slot_1")) {
     vector<CGameSlot> cfgSlots;
 
@@ -1590,12 +1585,20 @@ string CMap::CheckProblems()
     m_Slots.size() > m_MapVersionMaxSlots
   ) {
     m_Valid = false;
-    if (m_MapVersionMaxSlots == MAX_SLOTS_LEGACY) {
-      m_ErrorMessage = "map uses too many slots - v1.29+ required";
-    } else {
-      m_ErrorMessage = "map uses an invalid amount of slots";
-    }
+    m_ErrorMessage = "map uses an invalid amount of slots";
     return m_ErrorMessage;
+  }
+
+  if (!m_Aura->m_SupportsModernSlots) {
+    if (
+      m_MapNumControllers + m_MapNumDisabled > MAX_SLOTS_LEGACY ||
+      m_MapNumTeams > MAX_SLOTS_LEGACY ||
+      m_Slots.size() > MAX_SLOTS_LEGACY
+    ) {
+      m_Valid = false;
+      m_ErrorMessage = "map uses too many slots - v1.29+ required";
+      return m_ErrorMessage;
+    }
   }
 
   bitset<MAX_SLOTS_MODERN> usedTeams;
@@ -1603,11 +1606,12 @@ string CMap::CheckProblems()
   for (const auto& slot : m_Slots) {
     if (slot.GetTeam() > m_MapVersionMaxSlots || slot.GetColor() > m_MapVersionMaxSlots) {
       m_Valid = false;
-      if (m_MapVersionMaxSlots == MAX_SLOTS_LEGACY) {
-        m_ErrorMessage = "map uses too many players - v1.29+ required";
-      } else {
-        m_ErrorMessage = "map uses an invalid amount of players";
-      }
+      m_ErrorMessage = "map uses an invalid amount of players";
+      return m_ErrorMessage;
+    }
+    if (!m_Aura->m_SupportsModernSlots && (slot.GetTeam() > MAX_SLOTS_LEGACY || slot.GetColor() > MAX_SLOTS_LEGACY)) {
+      m_Valid = false;
+      m_ErrorMessage = "map uses too many players - v1.29+ required";
       return m_ErrorMessage;
     }
     if (slot.GetTeam() == m_MapVersionMaxSlots) {

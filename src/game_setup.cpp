@@ -599,7 +599,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool si
   if (m_GameVersion.has_value()) {
     // <map.cfg.hosting.game_versions.main> is temporary
     // overrides <map.hosting.game_versions.main>
-    MapCFG->SetString("map.cfg.hosting.game_versions.main", ToVersionString(m_GameVersion.value()));
+    mapCFG->SetString("map.cfg.hosting.game_versions.main", ToVersionString(m_GameVersion.value()));
   }
 
   shared_ptr<CMap> map = nullptr;

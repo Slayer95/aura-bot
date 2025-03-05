@@ -133,6 +133,7 @@ class CMap
 public:
   CAura* m_Aura;
 
+  std::optional<Version>                m_MapTargetGameVersion;
   std::optional<uint8_t>                m_NumPlayersToStartGameOver;
   std::optional<uint8_t>                m_PlayersReadyMode;
   std::optional<bool>                   m_AutoStartRequiresBalance;
@@ -202,7 +203,6 @@ private:
   SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
   bool                            m_MapFileIsValid;
   bool                            m_MapLoaderIsPartial;
-  std::optional<Version>          m_MapTargetGameVersion;
   uint32_t                        m_MapLocale;
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;

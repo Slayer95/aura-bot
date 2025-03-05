@@ -87,7 +87,7 @@ public:
 
   uint8_t                                            m_LogLevel;
   std::optional<Version>                             m_GameDataVersion;
-  uint8_t                                            m_MaxSlots;
+  bool                                               m_SupportsModernSlots;
 
   uint32_t                                           m_LastServerID;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)

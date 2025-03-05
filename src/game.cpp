@@ -319,7 +319,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_ControllersNotReadyCount(0),
     m_ControllersWithMap(0),
     m_CustomLayout(nGameSetup->m_CustomLayout.has_value() ? nGameSetup->m_CustomLayout.value() : MAPLAYOUT_ANY),
-    m_CustomLayoutData(make_pair(nAura->m_MaxSlots, nAura->m_MaxSlots)),
+    m_CustomLayoutData(make_pair(nGameSetup->m_Map->GetVersionMaxSlots(), nGameSetup->m_Map->GetVersionMaxSlots())),
     m_HostPort(0),
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
     m_DisplayMode(nGameSetup->m_RealmsDisplayMode),
@@ -5857,7 +5857,6 @@ void CGame::EventGameStartedLoading()
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
-  // TODO(debug) - started loading: 6 p | 0 comp | 1 obs | 0 fake | 1 vhost | 7 controllers
 
   // When load-in-game is disabled, m_LoadingVirtualBuffer also includes
   // load messages for disconnected real players, but we let automatic resizing handle that.

@@ -99,12 +99,19 @@ bool CSaveGame::Parse()
 	ISS.read(reinterpret_cast<char*>(&Garbage2), 2);				// ???
 	ISS.read(reinterpret_cast<char*>(&m_NumSlots), 1);			// number of slots
 
-	if (m_NumSlots == 0 || m_NumSlots > m_Aura->m_MaxSlots) {
+	if (m_NumSlots == 0 || m_NumSlots > MAX_SLOTS_MODERN) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
       Print("[SAVEGAME] invalid savegame (slot count invalid)");
     }
 		return false;
 	}
+
+  if (m_NumSlots > MAX_SLOTS_LEGACY && !m_Aura->m_SupportsModernSlots) {
+    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print("[SAVEGAME] invalid savegame (more than 12 slots requires support for v1.29+)");
+    }
+		return false;
+  }
 
 	for (uint8_t i = 0; i < m_NumSlots; i++) {
 		uint8_t SlotData[9];
