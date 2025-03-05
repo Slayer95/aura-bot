@@ -366,8 +366,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
   m_IsHiddenPlayerNames = m_Config.m_HideLobbyNames;
   m_SupportedGameVersionsMin = m_Config.m_GameVersion.value();
   m_SupportedGameVersionsMax = m_Config.m_GameVersion.value();
-  // TODO: Support v2.x
-  m_SupportedGameVersions.set(m_Config.m_GameVersion->second);
+  SetSupportedGameVersion(m_Config.m_GameVersion.value());
   bool canCrossPlay = !(
     (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_NONE) ||
     (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_CONSERVATIVE && m_Map->GetMapDataSet() == MAP_DATASET_MELEE)
@@ -383,8 +382,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
           }
           break;
       }
-      // TODO: Support v2.x
-      m_SupportedGameVersions.set(version.second);
+      SetSupportedGameVersion(version);
       if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
       if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
     }
