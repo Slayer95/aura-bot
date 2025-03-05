@@ -337,7 +337,7 @@ public:
   }
 }
 
-[[nodiscard]] inline Version GetScriptsVersionRangeHead(const std::pair<uint8_t, uint8_t>& version)
+[[nodiscard]] inline Version GetScriptsVersionRangeHead(const Version& version)
 {
   if (version.first != 1) return version;
   if (19 <= version.second && version.second <= 21) {

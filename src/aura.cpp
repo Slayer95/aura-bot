@@ -837,7 +837,7 @@ vector<Version> CAura::GetSupportedVersionsCrossPlayRangeHeads() const
 {
   set<Version> versionHeads;
   for (const auto& version : m_Config.m_SupportedGameVersions) {
-    versionHeads.insert(version);
+    versionHeads.insert(GetScriptsVersionRangeHead(version));
   }
   return vector<Version>(versionHeads.begin(), versionHeads.end());
 }
