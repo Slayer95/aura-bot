@@ -1747,14 +1747,14 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_LobbyCountDownStartValue = CFG.GetUint32("map.hosting.game_start.count_down_ticks", 5);
   }
 
-  if (CFG.Exists("map.bot.latency")) {
-    m_Latency = CFG.GetUint16("map.bot.latency", 100);
+  if (CFG.Exists("map.hosting.latency")) {
+    m_Latency = CFG.GetUint16("map.hosting.latency", 100);
   }
-  if (CFG.Exists("map.bot.latency.equalizer.enabled")) {
-    m_LatencyEqualizerEnabled = CFG.GetBool("map.bot.latency.equalizer.enabled", false);
+  if (CFG.Exists("map.hosting.latency.equalizer.enabled")) {
+    m_LatencyEqualizerEnabled = CFG.GetBool("map.hosting.latency.equalizer.enabled", false);
   }
-  if (CFG.Exists("map.bot.latency.equalizer.frames")) {
-    m_LatencyEqualizerFrames = CFG.GetUint8("map.bot.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
+  if (CFG.Exists("map.hosting.latency.equalizer.frames")) {
+    m_LatencyEqualizerFrames = CFG.GetUint8("map.hosting.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
   }
 
   if (CFG.Exists("map.reconnection.mode")) {
