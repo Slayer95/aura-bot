@@ -499,7 +499,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
   ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
   if (!fileContents.empty()) {
-    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
+    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN>");
   }
   for (const auto& version : supportedVersionHeads) {
     if (fileContents.empty()) {
