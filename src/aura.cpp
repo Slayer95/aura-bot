@@ -588,11 +588,9 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     // these two files are necessary for calculating <map.scripts_hash.blizz>, and <map.scripts_hash.sha1> when loading maps so we make sure they are available
     // see CMap :: Load for more information
     m_ScriptsExtracted = ExtractScripts() == 2;
-    if (!m_ScriptsExtracted) {
-      if (!CopyScripts()) {
-        m_Ready = false;
-        return;
-      }
+    if (!CopyScripts()) {
+      m_Ready = false;
+      return;
     }
   } else {
     CheckScripts();
@@ -742,7 +740,7 @@ bool CAura::CopyScripts()
     if (commonExists && blizzardExists) {
       checkedPaths.insert(autoExtractedCommonPath);
       checkedPaths.insert(autoExtractedBlizzardPath);
-      return true;
+      continue;
     }
 
     if (!commonExists) {
@@ -1535,6 +1533,7 @@ void CAura::EventGameStarted(CGame* game)
 bool CAura::ReloadConfigs()
 {
   bool success = true;
+  optional<Version> WasDataVersion = m_Config.m_Warcraft3DataVersion;
   set<Version> WasVersions = set<Version>(m_Config.m_SupportedGameVersions.begin(), m_Config.m_SupportedGameVersions.end());
   bool WasCacheEnabled = m_Config.m_EnableCFGCache;
   filesystem::path WasMapPath = m_Config.m_MapPath;
@@ -1559,13 +1558,14 @@ bool CAura::ReloadConfigs()
     Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinVector(invalidKeys, false));
   }
 
+  optional<Version> NowDataVersion = m_Config.m_Warcraft3DataVersion;
   set<Version> NowVersions = set<Version>(m_Config.m_SupportedGameVersions.begin(), m_Config.m_SupportedGameVersions.end());
   if (m_Config.m_ExtractJASS) {
-    if (!m_ScriptsExtracted || NowVersions != WasVersions) {
+    if (!m_ScriptsExtracted || WasDataVersion != NowDataVersion) {
       m_ScriptsExtracted = ExtractScripts() == 2;
-      if (!m_ScriptsExtracted) {
-        CopyScripts();
-      }
+    }
+    if (NowVersions != WasVersions) {
+      CopyScripts();
     }
   } else {
     CheckScripts();

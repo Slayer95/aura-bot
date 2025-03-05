@@ -507,7 +507,7 @@ optional<MapEssentials> CMap::ParseMPQ()
       } else {
         UpdateCrypto(cryptos, baseFileContents);
       }
-      hashError = hashError || fileContents.empty();
+      hashError = hashError || baseFileContents.empty();
     } else {
       Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
       UpdateCrypto(cryptos, fileContents);
@@ -524,7 +524,7 @@ optional<MapEssentials> CMap::ParseMPQ()
       } else {
         UpdateCrypto(cryptos, baseFileContents);
       }
-      hashError = hashError || fileContents.empty();
+      hashError = hashError || baseFileContents.empty();
     } else {
       Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
       UpdateCrypto(cryptos, fileContents);
