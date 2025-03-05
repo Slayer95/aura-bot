@@ -46,6 +46,8 @@
 #ifndef AURA_MAP_H_
 #define AURA_MAP_H_
 
+#include <sha1/sha1.h>
+
 #include "includes.h"
 #include "file_util.h"
 #include "game_slot.h"
@@ -58,6 +60,35 @@
 
 #define ROTL(x, n) ((x) << (n)) | ((x) >> (32 - (n))) // this won't work with signed types
 #define ROTR(x, n) ((x) >> (n)) | ((x) << (32 - (n))) // this won't work with signed types
+
+//
+// MapCrypto
+//
+
+struct MapCrypto
+{
+  bool errored;
+  CSHA1 sha1;
+  uint32_t blizz;
+
+  MapCrypto()
+   : errored(false),
+     blizz(0)
+  {
+  }
+
+  ~MapCrypto() = default;
+};
+
+//
+// MapFragmentHashes
+//
+
+struct MapFragmentHashes
+{
+  std::optional<std::array<uint8_t, 4>> blizz;
+  std::optional<std::array<uint8_t, 20>> sha1;
+};
 
 //
 // MapEssentials
@@ -76,8 +107,7 @@ struct MapEssentials
   uint32_t options;
   std::optional<std::array<uint8_t, 2>> width;
   std::optional<std::array<uint8_t, 2>> height;
-  std::optional<std::array<uint8_t, 4>> weakHash;
-  std::optional<std::array<uint8_t, 20>> sha1;
+  std::map<Version, MapFragmentHashes> fragmentHashes;
   std::vector<CGameSlot> slots;
 
   MapEssentials()
@@ -172,6 +202,7 @@ private:
   SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
   bool                            m_MapFileIsValid;
   bool                            m_MapLoaderIsPartial;
+  std::optional<Version>          m_MapTargetGameVersion;
   uint32_t                        m_MapLocale;
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;
@@ -273,10 +304,15 @@ public:
   bool                                            NormalizeSlots();
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
+  void                                            UpdateCrypto(std::map<Version, MapCrypto>& cryptos, const std::string& fileContents) const;
+  void                                            UpdateCryptoEndModules(std::map<Version, MapCrypto>& cryptos) const;
+  void                                            ErroredCrypto(std::map<Version, MapCrypto>& cryptos) const;
+
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
   std::optional<MapEssentials>                    ParseMPQ() const;
+  bool AcquireGameVersion(CConfig* CFG);
   void Load(CConfig* CFG);
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
@@ -346,6 +382,7 @@ public:
 
   return Val;
 }
+
 [[nodiscard]] inline uint32_t ChunkedChecksum(const uint8_t* data, const int32_t length, uint32_t checksum)
 {
   int32_t cursor = 0;

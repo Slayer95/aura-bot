@@ -146,6 +146,7 @@ public:
   ~CAura();
   CAura(CAura&) = delete;
 
+  [[nodiscard]] std::vector<Version> GetSupportedVersionsCrossPlayRangeHeads() const;
   [[nodiscard]] CGame* GetMostRecentLobby(bool allowPending = false) const;
   [[nodiscard]] CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
   [[nodiscard]] CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;

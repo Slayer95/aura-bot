@@ -70,7 +70,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
   : m_Aura(nAura),
     m_MapServerPath(CFG->GetPath("map.local_path", filesystem::path())),
     m_MapFileIsValid(false),
-    m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)),
+    m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)), // from CGameSetup or !cachemaps
     m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapOptions(0),
     m_MapEditorVersion(0),
@@ -440,6 +440,32 @@ optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
   return nullopt;
 }
 
+void CMap::UpdateCrypto(map<Version, MapCrypto>& cryptos, const string& fileContents) const
+{
+  for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
+    auto mapCrypto = cryptos.find(version);
+    mapCrypto->second.blizz = mapCrypto->second.blizz ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+    mapCrypto->second.sha1.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+  }
+}
+
+void CMap::UpdateCryptoEndModules(map<Version, MapCrypto>& cryptos) const
+{
+  for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
+    auto mapCrypto = cryptos.find(version);
+    mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz, 3);
+    mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz ^ 0x03F1379E, 3);
+    mapCrypto->second.sha1.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
+  }
+}
+
+void CMap::ErroredCrypto(map<Version, MapCrypto>& cryptos) const
+{
+  for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
+    cryptos[version].errored = true;
+  }
+}
+
 void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSubPath) const
 {
   const char* path = fileSubPath.c_str();
@@ -462,51 +488,52 @@ optional<MapEssentials> CMap::ParseMPQ() const
   // calculate <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN>
   // a big thank you to Strilanc for figuring the <map.scripts_hash.blizz.vN> algorithm out
 
+  vector<Version> supportedVersionHeads = m_Aura->GetSupportedVersionsCrossPlayRangeHeads();
+  map<Version, MapCrypto> cryptos;
+  for (const auto& version : supportedVersionHeads) {
+    cryptos[version] = MapCrypto();
+  }
+
   bool hashError = false;
-  uint32_t weakHashVal = 0;
-  m_Aura->m_SHA.Reset();
-
   string fileContents;
-  Version scriptsVersionHead = GetScriptsVersionRangeHead(m_Aura->m_GameDataVersion.value());
-  ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
 
-  if (fileContents.empty()) {
-    filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(scriptsVersionHead) +".j");
-    if (!FileRead(commonPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> - unable to read file [" + PathToString(commonPath) + "]");
+  ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
+  for (const auto& version : supportedVersionHeads) {
+    if (fileContents.empty()) {
+      filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j");
+      if (!FileRead(commonPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
+        Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(commonPath) + "]");
+      } else {
+        UpdateCrypto(cryptos, fileContents);
+      }
+      hashError = hashError || fileContents.empty();
     } else {
-      weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-      m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+      Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
+      UpdateCrypto(cryptos, fileContents);
     }
-    hashError = hashError || fileContents.empty();
-  } else {
-    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">");
-    weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
-    m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
 
   ReadFileFromArchive(fileContents, R"(Scripts\blizzard.j)");
-
-  if (fileContents.empty()) {
-    filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(scriptsVersionHead) +".j");
-    if (!FileRead(blizzardPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
-      Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> - unable to read file [" + PathToString(blizzardPath) + "]");
+  for (const auto& version : supportedVersionHeads) {
+    if (fileContents.empty()) {
+      filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j");
+      if (!FileRead(blizzardPath, fileContents, MAX_READ_FILE_SIZE) || fileContents.empty()) {
+        Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(blizzardPath) + "]");
+      } else {
+        UpdateCrypto(cryptos, fileContents);
+      }
+      hashError = hashError || fileContents.empty();
     } else {
-      weakHashVal = weakHashVal ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-      m_Aura->m_SHA.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+      Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
+      UpdateCrypto(cryptos, fileContents);
     }
-    hashError = hashError || fileContents.empty();
-  } else {
-    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">");
-    weakHashVal = weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
-    m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
   }
 
-  weakHashVal = ROTL(weakHashVal, 3);
-  weakHashVal = ROTL(weakHashVal ^ 0x03F1379E, 3);
-  m_Aura->m_SHA.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
+  UpdateCryptoEndModules(cryptos);
 
-  if (!hashError) {
+  if (hashError) {
+    ErroredCrypto(cryptos);
+  } else {
     bool foundScript = false;
     vector<string> fileList;
     fileList.emplace_back("war3map.j");
@@ -530,38 +557,47 @@ optional<MapEssentials> CMap::ParseMPQ() const
       if (fileContents.empty()) {
         continue;
       }
+
       if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
         foundScript = true;
-        if (scriptsVersionHead >= Version(1, 32)) {
-          // Credits to Fingon for the checksum algorithm
-          weakHashVal = XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
-        } else {
-          weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
-        }
-      } else {
-        // Credits to Fingon, BogdanW3 for the checksum algorithm
-        if (scriptsVersionHead == Version(1, 32)) {
-          weakHashVal = ChunkedChecksum(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size(), weakHashVal);
-        } else {
-          weakHashVal = ROTL(weakHashVal ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
-        }
       }
-
-      m_Aura->m_SHA.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
+      for (const auto& version : supportedVersionHeads) {
+        auto mapCrypto = cryptos.find(version);
+        if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
+          if (version >= Version(1, 32)) {
+            // Credits to Fingon for the checksum algorithm
+            mapCrypto->second.blizz = XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
+          } else {
+            mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
+          }
+        } else {
+          // Credits to Fingon, BogdanW3 for the checksum algorithm
+          if (version == Version(1, 32)) {
+            mapCrypto->second.blizz = ChunkedChecksum(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size(), mapCrypto->second.blizz);
+          } else {
+            mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
+          }
+        }
+        mapCrypto->second.sha1.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
+      }
     }
 
     if (!foundScript) {
-      Print("[MAP] couldn't find war3map.j or scripts\\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> is probably wrong");
+      Print("[MAP] couldn't find war3map.j or scripts\\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN> is probably wrong");
     }
 
-    EnsureFixedByteArray(mapEssentials->weakHash, weakHashVal, false);
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + " = " + ByteArrayToDecString(mapEssentials->weakHash.value()) + ">")
+    for (const auto& version : supportedVersionHeads) {
+      auto mapCryptoProcessor = cryptos.find(version);
+      auto mapCryptoResults = mapEssentials->fragmentHashes[version];
+      EnsureFixedByteArray(mapCryptoResults.blizz, mapCryptoProcessor->second.blizz, false);
+      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults.blizz.value()) + ">")
 
-    m_Aura->m_SHA.Final();
-    mapEssentials->sha1.emplace();
-    mapEssentials->sha1->fill(0);
-    m_Aura->m_SHA.GetHash(mapEssentials->sha1->data());
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + " = " + ByteArrayToDecString(mapEssentials->sha1.value()) + ">")
+      mapCryptoProcessor->second.sha1.Final();
+      mapCryptoResults.sha1.emplace();
+      mapCryptoResults.sha1->fill(0);
+      mapCryptoProcessor->second.sha1.GetHash(mapCryptoResults.sha1->data());
+      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults.sha1.value()) + ">")
+    }
   }
 
   // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>, <map.filter_type>
@@ -826,10 +862,8 @@ void CMap::Load(CConfig* CFG)
 {
   m_Valid   = true;
   m_CFGName = PathToString(CFG->GetFile().filename());
-
   bool isLatestSchema = CFG->GetUint8("map.cfg.schema_number", 0) == MAP_CONFIG_SCHEMA_NUMBER;
-  bool ignoreMPQ = !HasServerPath() || (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER);
-
+  bool ignoreMPQ = false;
   optional<uint32_t> mapFileSize;
   optional<uint32_t> mapFileCRC32;
   optional<array<uint8_t, 20>> mapFileSHA1;
@@ -843,6 +877,13 @@ void CMap::Load(CConfig* CFG)
         ignoreMPQ = isLatestSchema;
       }
     }
+  }
+
+  if (!ignoreMPQ) {
+    ignoreMPQ = (
+      !HasServerPath() ||
+      (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER)
+    );
   }
 
   filesystem::path resolvedFilePath(m_MapServerPath);
@@ -885,7 +926,8 @@ void CMap::Load(CConfig* CFG)
     sha1 = mapFileSHA1.value();
   }
 
-  Version scriptsVersionHead = GetScriptsVersionRangeHead(m_Aura->m_GameDataVersion.value());
+  AcquireGameVersion(CFG);
+
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
     optional<MapEssentials> mapEssentialsParsed = ParseMPQFromPath(resolvedFilePath);
@@ -895,7 +937,7 @@ void CMap::Load(CConfig* CFG)
         Print("[MAP] failed to parse map");
         return;
       }
-      Print("[MAP] failed to parse map, using config file for <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">, <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">");
+      Print("[MAP] failed to parse map, using config file for <map.scripts_hash.blizz.vN>, <map.scripts_hash.sha1.vN>");
     }
   } else {
     DPRINT_IF(LOG_LEVEL_TRACE2, "[MAP] MPQ archive ignored");
@@ -1003,48 +1045,58 @@ void CMap::Load(CConfig* CFG)
     copy_n(cfgSHA1.begin(), 20, m_MapSHA1.begin());
   }
 
-  vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead), 4);
-  if (cfgScriptsWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->weakHash.has_value())) {
-    if (cfgScriptsWeakHash.empty()) {
-      CFG->SetFailed();
-      if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead))) {
-          m_ErrorMessage = "invalid <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + "> detected";
-        } else {
-          m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead) + ">";
+  optional<Version> targetGameVersionRangeHead;
+  if (m_MapTargetGameVersion.has_value()) {
+    targetGameVersionRangeHead = GetScriptsVersionRangeHead(m_MapTargetGameVersion.value());
+  }
+  for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
+    vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz.v" + ToVersionString(version), 4);
+    if (cfgScriptsWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->fragmentHashes[version].blizz.has_value())) {
+      if (cfgScriptsWeakHash.empty()) {
+        CFG->SetFailed();
+        if (m_ErrorMessage.empty()) {
+          if (CFG->Exists("map.scripts_hash.blizz.v" + ToVersionString(version))) {
+            m_ErrorMessage = "invalid <map.scripts_hash.blizz.v" + ToVersionString(version) + "> detected";
+          } else if (targetGameVersionRangeHead.has_value() && version == targetGameVersionRangeHead.value()) {
+            m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">";
+          }
         }
+      } else {
+        if (mapContentMismatch[3] == 0) {
+          mapContentMismatch[3] = ByteArrayToUInt32(cfgScriptsWeakHash, 0, false) != ByteArrayToUInt32(mapEssentials->fragmentHashes[version].blizz.value(), false);
+        }
+        copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
       }
+    } else if (mapEssentials.has_value() && mapEssentials->fragmentHashes[version].blizz.has_value()) {
+      CFG->SetUint8Array("map.scripts_hash.blizz.v" + ToVersionString(version), mapEssentials->fragmentHashes[version].blizz->data(), 4);
+      copy_n(mapEssentials->fragmentHashes[version].blizz->begin(), 4, m_MapScriptsWeakHash.begin());
     } else {
-      mapContentMismatch[3] = ByteArrayToUInt32(cfgScriptsWeakHash, 0, false) != ByteArrayToUInt32(mapEssentials->weakHash.value(), false);
       copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
     }
-  } else if (mapEssentials.has_value() && mapEssentials->weakHash.has_value()) {
-    CFG->SetUint8Array("map.scripts_hash.blizz.v" + ToVersionString(scriptsVersionHead), mapEssentials->weakHash->data(), 4);
-    copy_n(mapEssentials->weakHash->begin(), 4, m_MapScriptsWeakHash.begin());
-  } else {
-    copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
-  }
 
-  vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead), 20);
-  if (cfgScriptsSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->sha1.has_value())) {
-    if (cfgScriptsSHA1.empty()) {
-      CFG->SetFailed();
-      if (m_ErrorMessage.empty()) {
-        if (CFG->Exists("map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead))) {
-          m_ErrorMessage = "invalid <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + "> detected";
-        } else {
-          m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead) + ">";
+    vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1.v" + ToVersionString(version), 20);
+    if (cfgScriptsSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->fragmentHashes[version].sha1.has_value())) {
+      if (cfgScriptsSHA1.empty()) {
+        CFG->SetFailed();
+        if (m_ErrorMessage.empty()) {
+          if (CFG->Exists("map.scripts_hash.sha1.v" + ToVersionString(version))) {
+            m_ErrorMessage = "invalid <map.scripts_hash.sha1.v" + ToVersionString(version) + "> detected";
+          } else if (targetGameVersionRangeHead.has_value() && version == targetGameVersionRangeHead.value()) {
+            m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1.v" + ToVersionString(version) + ">";
+          }
         }
+      } else {
+        if (mapContentMismatch[4] == 0) {
+          mapContentMismatch[4] = memcmp(cfgScriptsSHA1.data(), mapEssentials->fragmentHashes[version].sha1->data(), 20) != 0;
+        }
+        copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
       }
+    } else if (mapEssentials.has_value() && mapEssentials->fragmentHashes[version].sha1.has_value()) {
+      CFG->SetUint8Array("map.scripts_hash.sha1.v" + ToVersionString(version), mapEssentials->fragmentHashes[version].sha1->data(), 20);
+      copy_n(mapEssentials->fragmentHashes[version].sha1->begin(), 20, m_MapScriptsSHA1.begin());
     } else {
-      mapContentMismatch[4] = memcmp(cfgScriptsSHA1.data(), mapEssentials->sha1->data(), 20) != 0;
       copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
     }
-  } else if (mapEssentials.has_value() && mapEssentials->sha1.has_value()) {
-    CFG->SetUint8Array("map.scripts_hash.sha1.v" + ToVersionString(scriptsVersionHead), mapEssentials->sha1->data(), 20);
-    copy_n(mapEssentials->sha1->begin(), 20, m_MapScriptsSHA1.begin());
-  } else {
-    copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
   }
 
   if (HasMismatch()) {
@@ -1249,11 +1301,33 @@ void CMap::Load(CConfig* CFG)
       Print("[MAP] " + ErrorMessage);
     } else if (m_MapLoaderIsPartial) {
       CFG->Delete("map.cfg.partial");
+      CFG->Delete("map.cfg.hosting.game_versions.main");
       m_MapLoaderIsPartial = false;
     }
   }
 
   //ClearMapFileContents();
+}
+
+
+bool CMap::AcquireGameVersion(CConfig* CFG)
+{
+  if (CFG->Exists("map.cfg.hosting.game_versions.main")) { // from CGameSetup
+    optional<Version> version = CFG->GetMaybeVersion("map.cfg.hosting.game_versions.main");
+    if (version.has_value()) {
+      m_MapTargetGameVersion.swap(version);
+    }
+  }
+  if (!m_MapTargetGameVersion.has_value() && CFG->Exists("map.hosting.game_versions.main")) { // from map.ini
+    optional<Version> version = CFG->GetMaybeVersion("map.hosting.game_versions.main");
+    if (version.has_value()) {
+      m_MapTargetGameVersion.swap(version);
+    }
+  }
+  if (!m_MapTargetGameVersion.has_value() && m_Aura->m_GameDefaultConfig->m_GameVersion.has_value()) { // from config.ini
+    m_MapTargetGameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
+  }
+  return m_MapTargetGameVersion.has_value();
 }
 
 // @deprecated
@@ -1425,17 +1499,28 @@ string CMap::CheckProblems()
     return m_ErrorMessage;
   }
 
-  if (m_ClientMapPath.empty())
-  {
+  if (m_ClientMapPath.empty()) {
     m_Valid = false;
     m_ErrorMessage = "<map.path> not found";
     return m_ErrorMessage;
   }
 
-  if (m_ClientMapPath.length() > 53)
-  {
+  if (m_ClientMapPath.length() > 53) {
     m_Valid = false;
     m_ErrorMessage = "<map.path> too long";
+    return m_ErrorMessage;
+  }
+
+  if (
+    m_MapTargetGameVersion.has_value() &&
+    find(
+      m_Aura->m_Config.m_SupportedGameVersions.begin(),
+      m_Aura->m_Config.m_SupportedGameVersions.end(),
+      m_MapTargetGameVersion.value()
+    ) == m_Aura->m_Config.m_SupportedGameVersions.end()
+  ) {
+    m_Valid = false;
+    m_ErrorMessage = "hosting in v" + ToVersionString(m_MapTargetGameVersion.value()) + " is not supported";
     return m_ErrorMessage;
   }
 

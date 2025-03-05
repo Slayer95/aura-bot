@@ -1089,6 +1089,8 @@ Specifies the main version targetted by a game lobby.
 
 This option is equivalent to ``<hosting.game_versions.main>`` in `config.ini`
 
+This option is equivalent to ``<map.hosting.game_versions.main>`` in map configuration
+
 ## \`--crossplay \<MODE\>\`
 
 Crossplay adds support for clients running game versions other than the main game version to join the lobby. 

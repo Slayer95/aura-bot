@@ -833,6 +833,15 @@ CAura::~CAura()
   delete m_DB;
 }
 
+vector<Version> CAura::GetSupportedVersionsCrossPlayRangeHeads() const
+{
+  set<Version> versionHeads;
+  for (const auto& version : m_Config.m_SupportedGameVersions) {
+    versionHeads.insert(version);
+  }
+  return vector<Version>(versionHeads.begin(), versionHeads.end());
+}
+
 CGame* CAura::GetMostRecentLobby(bool allowPending) const
 {
   if (allowPending && !m_LobbiesPending.empty()) return m_LobbiesPending.back();
