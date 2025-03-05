@@ -1739,6 +1739,9 @@ void CAura::OnLoadConfigs()
   if (!m_GameDefaultConfig->m_GameVersion.has_value()) {
     if (m_Config.m_SupportedGameVersions.size() == 1) {
       m_GameDefaultConfig->m_GameVersion = m_Config.m_SupportedGameVersions[0];
+    } else if (m_Config.m_SupportedGameVersions.empty() && m_GameDataVersion.has_value()) {
+      m_Config.m_SupportedGameVersions.push_back(m_GameDataVersion.value());
+      m_GameDefaultConfig->m_GameVersion = m_GameDataVersion.value();
     }
   } else if (!GetIsSupportedGameVersion(m_GameDefaultConfig->m_GameVersion.value())) {
     m_Config.m_SupportedGameVersions.push_back(m_GameDefaultConfig->m_GameVersion.value());
@@ -2048,7 +2051,7 @@ bool CAura::CheckGracefulExit()
   return true;
 }
 
-bool CGame::GetIsSupportedGameVersion(const Version& version) const
+bool CAura::GetIsSupportedGameVersion(const Version& version) const
 {
   return find(
     m_Config.m_SupportedGameVersions.begin(),
