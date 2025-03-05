@@ -152,7 +152,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_GameVersion                            = CFG.GetMaybeVersion("hosting.game_versions.main");
   CFG.FailIfErrorLast();
-  m_CrossPlayMode                          = CFG.GetStringIndex("hosting.crossplay.mode", {"none", "conservative", "optimistic", "force"}, CROSSPLAY_MODE_CONSERVATIVE);
+  m_CrossPlayMode                          = CFG.GetStringIndex("hosting.game_versions.crossplay.mode", {"none", "conservative", "optimistic", "force"}, CROSSPLAY_MODE_CONSERVATIVE);
 }
 
 CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared_ptr<CGameSetup> nGameSetup)

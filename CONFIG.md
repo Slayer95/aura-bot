@@ -25,21 +25,6 @@ Config
 - Default value: sudo
 - Error handling: Use default value
 
-## \`bot.latency\`
-- Type: uint16
-- Default value: 100
-- Error handling: Use default value
-
-## \`bot.latency.equalizer.enabled\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
-## \`bot.latency.equalizer.frames\`
-- Type: uint8
-- Default value: PING_EQUALIZER_DEFAULT_FRAMES
-- Error handling: Use default value
-
 ## \`bot.load_maps.cache.enabled\`
 - Type: bool
 - Default value: true
@@ -205,7 +190,7 @@ Config
 
 ## \`game.install_version\`
 - Type: version
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`global_realm.admins\`
 - Type: setinsensitive
@@ -788,11 +773,6 @@ Config
 - Default value: !
 - Error handling: Use default value
 
-## \`hosting.crossplay.mode\`
-- Type: enum
-- Default value: CROSSPLAY_MODE_CONSERVATIVE
-- Error handling: Use default value
-
 ## \`hosting.desync.handler\`
 - Type: enum
 - Default value: ON_DESYNC_NOTIFY
@@ -893,9 +873,14 @@ Config
 - Default value: 5
 - Error handling: Use default value
 
+## \`hosting.game_versions.crossplay.mode\`
+- Type: enum
+- Default value: CROSSPLAY_MODE_CONSERVATIVE
+- Error handling: Use default value
+
 ## \`hosting.game_versions.main\`
 - Type: version
-- Error handling: Use default value
+- Error handling: Abort operation
 
 ## \`hosting.game_versions.supported\`
 - Type: set
@@ -976,6 +961,21 @@ Config
 ## \`hosting.join_in_progress.players\`
 - Type: bool
 - Default value: false
+- Error handling: Use default value
+
+## \`hosting.latency\`
+- Type: uint16
+- Default value: 100
+- Error handling: Use default value
+
+## \`hosting.latency.equalizer.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`hosting.latency.equalizer.frames\`
+- Type: uint8
+- Default value: PING_EQUALIZER_DEFAULT_FRAMES
 - Error handling: Use default value
 
 ## \`hosting.load_in_game.enabled\`

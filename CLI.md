@@ -1108,7 +1108,7 @@ however, that Aura's detection of crossplay capabilities is imperfect.
 for all game versions ranging from 1.24 to 1.28e.
 - force: Crossplay is enabled across all versions enabled, even if they are very likely to desync.
 
-This option is equivalent to ``<hosting.crossplay.mode>`` in `config.ini`
+This option is equivalent to ``<hosting.game_versions.crossplay.mode>`` in `config.ini`
 
 ## \`--on-ipflood \<ACTION\>\`
 
