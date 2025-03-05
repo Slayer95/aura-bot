@@ -588,15 +588,16 @@ optional<MapEssentials> CMap::ParseMPQ() const
 
     for (const auto& version : supportedVersionHeads) {
       auto mapCryptoProcessor = cryptos.find(version);
-      auto mapCryptoResults = mapEssentials->fragmentHashes[version];
-      EnsureFixedByteArray(mapCryptoResults.blizz, mapCryptoProcessor->second.blizz, false);
-      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults.blizz.value()) + ">")
+      mapEssentials->fragmentHashes[version] = MapFragmentHashes();
+      auto mapCryptoResults = mapEssentials->fragmentHashes.find(version);
+      EnsureFixedByteArray(mapCryptoResults->second.blizz, mapCryptoProcessor->second.blizz, false);
+      PRINT_IF(LOG_LEVEL_DEBUG, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.blizz.value()) + ">")
 
       mapCryptoProcessor->second.sha1.Final();
-      mapCryptoResults.sha1.emplace();
-      mapCryptoResults.sha1->fill(0);
-      mapCryptoProcessor->second.sha1.GetHash(mapCryptoResults.sha1->data());
-      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults.sha1.value()) + ">")
+      mapCryptoResults->second.sha1.emplace();
+      mapCryptoResults->second.sha1->fill(0);
+      mapCryptoProcessor->second.sha1.GetHash(mapCryptoResults->second.sha1->data());
+      PRINT_IF(LOG_LEVEL_DEBUG, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.sha1.value()) + ">")
     }
   }
 
