@@ -754,8 +754,8 @@ optional<MapEssentials> CMap::ParseMPQ()
           ISS.seekg(4, ios::cur);            // ally low priorities
           ISS.seekg(4, ios::cur);            // ally high priorities
           if (FileFormat >= 31) {
-            ISS.seekg(4, std::ios::cur);			// enemy low priorities
-            ISS.seekg(4, std::ios::cur);			// enemy high priorities
+            ISS.seekg(4, std::ios::cur);     // enemy low priorities
+            ISS.seekg(4, std::ios::cur);     // enemy high priorities
           }
 
           if (Slot.GetSlotStatus() != SLOTSTATUS_CLOSED)
