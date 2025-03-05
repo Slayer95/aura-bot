@@ -150,7 +150,6 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_PipeConsideredHarmful                  = CFG.GetBool("hosting.name_filter.is_pipe_harmful", true);
   m_UDPEnabled                             = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
-  // m_GameVersion is nominally optional, but aura.cpp makes sure it's initialized.
   m_GameVersion                            = CFG.GetMaybeVersion("hosting.game_versions.main");
   CFG.FailIfErrorLast();
   m_CrossPlayMode                          = CFG.GetStringIndex("hosting.crossplay.mode", {"none", "conservative", "optimistic", "force"}, CROSSPLAY_MODE_CONSERVATIVE);

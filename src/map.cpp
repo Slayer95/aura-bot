@@ -1529,14 +1529,7 @@ string CMap::CheckProblems()
     return m_ErrorMessage;
   }
 
-  if (
-    m_MapTargetGameVersion.has_value() &&
-    find(
-      m_Aura->m_Config.m_SupportedGameVersions.begin(),
-      m_Aura->m_Config.m_SupportedGameVersions.end(),
-      m_MapTargetGameVersion.value()
-    ) == m_Aura->m_Config.m_SupportedGameVersions.end()
-  ) {
+  if (m_MapTargetGameVersion.has_value() && !m_Aura->GetIsSupportedGameVersion(m_MapTargetGameVersion.value())) {
     m_Valid = false;
     m_ErrorMessage = "hosting in v" + ToVersionString(m_MapTargetGameVersion.value()) + " is not supported";
     return m_ErrorMessage;

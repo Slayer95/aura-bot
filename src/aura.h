@@ -171,26 +171,27 @@ public:
   uint64_t NextHistoryGameID();
   uint32_t NextServerID();
 
-  std::string GetSudoAuthPayload(const std::string& payload);
+  [[nodiscard]] std::string GetSudoAuthPayload(const std::string& payload);
 
   // processing functions
 
-  uint8_t HandleAction(const AppAction& action);
-  uint8_t HandleDeferredCommandContext(const LazyCommandContext& lazyCtx);
-  uint8_t HandleGenericAction(const GenericAppAction& genAction);
+  [[nodiscard]] uint8_t HandleAction(const AppAction& action);
+  [[nodiscard]] uint8_t HandleDeferredCommandContext(const LazyCommandContext& lazyCtx);
+  [[nodiscard]] uint8_t HandleGenericAction(const GenericAppAction& genAction);
   bool Update();
   void AwaitSettled();
-  inline bool GetReady() const { return m_Ready; }
+  [[nodiscard]] inline bool GetReady() const { return m_Ready; }
 
-  bool GetNewGameIsInQuota() const;
-  bool GetNewGameIsInQuotaReplace() const;
-  bool GetNewGameIsInQuotaConservative() const;
-  bool GetNewGameIsInQuotaAutoReHost() const;
+  [[nodiscard]] bool GetIsSupportedGameVersion(const Version& version) const;
+  [[nodiscard]] bool GetNewGameIsInQuota() const;
+  [[nodiscard]] bool GetNewGameIsInQuotaReplace() const;
+  [[nodiscard]] bool GetNewGameIsInQuotaConservative() const;
+  [[nodiscard]] bool GetNewGameIsInQuotaAutoReHost() const;
   bool CreateGame(std::shared_ptr<CGameSetup> gameSetup);
-  bool GetIsAutoHostThrottled() const;
+  [[nodiscard]] bool GetIsAutoHostThrottled() const;
 
-  inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
-  inline bool GetHasGames() { return !m_StartedGames.empty() || !m_Lobbies.empty(); }
+  [[nodiscard]] inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
+  [[nodiscard]] inline bool GetHasGames() { return !m_StartedGames.empty() || !m_Lobbies.empty(); }
 
   // events
 

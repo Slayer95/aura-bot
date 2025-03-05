@@ -1735,6 +1735,16 @@ void CAura::OnLoadConfigs()
     }
   }
 
+  // Hosting basics: autocomplete <hosting.game_versions.main>, and <hosting.game_versions.supported>
+  if (!m_GameDefaultConfig->m_GameVersion.has_value()) {
+    if (m_Config.m_SupportedGameVersions.size() == 1) {
+      m_GameDefaultConfig->m_GameVersion = m_Config.m_SupportedGameVersions[0];
+    }
+  } else if (!GetIsSupportedGameVersion(m_GameDefaultConfig->m_GameVersion.value())) {
+    m_Config.m_SupportedGameVersions.push_back(m_GameDefaultConfig->m_GameVersion.value());
+    stable_sort(m_Config.m_SupportedGameVersions.begin(), m_Config.m_SupportedGameVersions.end());
+  }
+
   m_SupportsModernSlots = false;
   for (const auto& version : m_Config.m_SupportedGameVersions) {
     if (version >= Version(1, 29)) {
@@ -2036,6 +2046,15 @@ bool CAura::CheckGracefulExit()
     return false;
   }
   return true;
+}
+
+bool CGame::GetIsSupportedGameVersion(const Version& version) const
+{
+  return find(
+    m_Config.m_SupportedGameVersions.begin(),
+    m_Config.m_SupportedGameVersions.end(),
+    version
+  ) != m_Config.m_SupportedGameVersions.end();
 }
 
 bool CAura::GetNewGameIsInQuota() const
