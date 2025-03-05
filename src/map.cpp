@@ -498,6 +498,9 @@ optional<MapEssentials> CMap::ParseMPQ()
   string fileContents;
 
   ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
+  if (!fileContents.empty()) {
+    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
+  }
   for (const auto& version : supportedVersionHeads) {
     if (fileContents.empty()) {
       string baseFileContents;
@@ -509,12 +512,14 @@ optional<MapEssentials> CMap::ParseMPQ()
       }
       hashError = hashError || baseFileContents.empty();
     } else {
-      Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
       UpdateCrypto(cryptos, fileContents);
     }
   }
 
   ReadFileFromArchive(fileContents, R"(Scripts\blizzard.j)");
+  if (!fileContents.empty()) {
+    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN>");
+  }
   for (const auto& version : supportedVersionHeads) {
     if (fileContents.empty()) {
       string baseFileContents;
@@ -526,7 +531,6 @@ optional<MapEssentials> CMap::ParseMPQ()
       }
       hashError = hashError || baseFileContents.empty();
     } else {
-      Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
       UpdateCrypto(cryptos, fileContents);
     }
   }
