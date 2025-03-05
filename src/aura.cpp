@@ -2091,15 +2091,14 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     return false;
   }
 
-  if (!gameSetup->m_GameVersion.has_value() && !m_GameDefaultConfig->m_GameVersion.has_value()) {
+  if (!gameSetup->m_Map->GetMapHasGameVersion()) {
     gameSetup->m_Ctx->ErrorReply("The game version has not been specified", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     if (MatchLogLevel(LOG_LEVEL_WARNING)) {
       Print("[CONFIG] Game cannot be hosted because <hosting.game_versions.main> is missing.");
     }
     return false;
   }
-  Version targetVersion = gameSetup->m_GameVersion.value_or(m_GameDefaultConfig->m_GameVersion.value());
-  if (targetVersion < gameSetup->GetMap()->GetMapMinGameVersion()) {
+  if (gameSetup->GetMap()->GetMapTargetGameVersion() < gameSetup->GetMap()->GetMapMinGameVersion()) {
     gameSetup->m_Ctx->ErrorReply("map requires v" + ToVersionString(gameSetup->GetMap()->GetMapMinGameVersion()), CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
     return false;
   }

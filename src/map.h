@@ -257,6 +257,8 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapFlags() const { return m_GameFlags; }
   [[nodiscard]] uint32_t                          GetGameConvertedFlags() const;
   [[nodiscard]] uint32_t                          GetMapGameType() const;
+  [[nodiscard]] inline bool                       GetMapHasGameVersion() const { return m_MapTargetGameVersion.has_value(); }
+  [[nodiscard]] inline Version                    GetMapTargetGameVersion() const { return m_MapTargetGameVersion.value(); }
   [[nodiscard]] inline uint32_t                   GetMapLocale() const { return m_MapLocale; }
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapDataSet() const { return m_MapDataSet; }
