@@ -140,7 +140,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       optional<uint32_t> SID = ToUint32(Tokens[2]);
       if (!SID.has_value()) return false;
 
-      CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, *SID);
+      CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, (uint8_t)*SID);
       if (m_Game->m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_CENSOR_MAY_DESYNC) {
         def->SetName(CIncomingJoinRequest::CensorName(Tokens[3], m_Game->m_Config.m_PipeConsideredHarmful));
       } else {
@@ -190,7 +190,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "unknown VarP operation [" + Tokens[3] + "] found, ignoring");
       return false;
     }
-    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, *SID);
+    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, (uint8_t)*SID);
     action->SetName(Tokens[2]);
     action->AddValue(Tokens[4]);
     m_ActionQueue.push(action);
@@ -225,7 +225,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       return false;
     }
 
-    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_FLAG, subType, *SID);
+    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_FLAG, subType, (uint8_t)*SID);
     m_ActionQueue.push(action);
   } else if (actionType == "DefEvent" && Tokens.size() >= 4) {
     // Tokens[1] = name
@@ -234,7 +234,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
     // Tokens[n+3] = format
 
     optional<uint32_t> arity = ToUint32(Tokens[2]);
-    if (!arity.has_value()) {
+    if (!arity.has_value() || arity.value() > MMD_MAX_ARITY) {
       Print(GetLogPrefix() + "DefEvent invalid arity [" + Tokens[2] + "] found, ignoring");
       return false;
     }
@@ -242,7 +242,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "DefEvent [" + Tokens[2] + "] tokens missing, ignoring");
       return false;
     }
-    CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, arity.value());
+    CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, (uint8_t)*arity);
     def->SetName(Tokens[1]);
     uint8_t i = 2;
     while (++i < Tokens.size()) {

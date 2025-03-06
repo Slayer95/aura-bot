@@ -3868,7 +3868,7 @@ void CGame::SendGameDiscoveryInfo()
  * - StopPlayers
  * - EventUserAfterDisconnect (only in the game lobby)
  */
-void CGame::EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd)
+void CGame::EventUserDeleted(GameUser::CGameUser* user, void* /*fd*/, void* send_fd)
 {
   if (m_Exiting) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())

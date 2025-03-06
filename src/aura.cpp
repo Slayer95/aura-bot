@@ -2380,7 +2380,13 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
 
 SharedByteArray CAura::ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)
 {
-  return ReadFileChunkCacheable(filePath, 0, 0xFFFFFFFF).bytes;
+  SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
+  size_t fileSize = 0;
+  size_t actualReadSize = 0;
+  if (!FileReadPartial(filePath, *(fileContentsPtr.get()), 0, maxSize, &fileSize, &actualReadSize) || fileContentsPtr->empty() || actualReadSize < fileSize) {
+    fileContentsPtr.reset();
+  }
+  return fileContentsPtr;
 }
 
 string CAura::GetSudoAuthPayload(const string& payload)

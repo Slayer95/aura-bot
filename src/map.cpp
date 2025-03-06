@@ -75,8 +75,8 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapOptions(0),
     m_MapEditorVersion(0),
     m_MapDataSet(0),
-    m_MapMinGameVersion(Version(1, 0)),
-    m_MapMinSuggestedGameVersion(Version(1, 0)),
+    m_MapMinGameVersion(Version(1u, 0u)),
+    m_MapMinSuggestedGameVersion(Version(1u, 0u)),
     m_MapNumControllers(0),
     m_MapNumDisabled(0),
     m_MapNumTeams(0),
@@ -570,7 +570,7 @@ optional<MapEssentials> CMap::ParseMPQ()
       for (const auto& version : supportedVersionHeads) {
         auto mapCrypto = cryptos.find(version);
         if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
-          if (version >= Version(1, 32)) {
+          if (version >= Version(1u, 32u)) {
             // Credits to Fingon for the checksum algorithm
             mapCrypto->second.blizz = XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
           } else {
@@ -578,7 +578,7 @@ optional<MapEssentials> CMap::ParseMPQ()
           }
         } else {
           // Credits to Fingon, BogdanW3 for the checksum algorithm
-          if (version == Version(1, 32)) {
+          if (version == Version(1u, 32u)) {
             mapCrypto->second.blizz = ChunkedChecksum(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size(), mapCrypto->second.blizz);
           } else {
             mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
@@ -710,7 +710,7 @@ optional<MapEssentials> CMap::ParseMPQ()
           ISS.read(reinterpret_cast<char*>(&Type), 4); // type
 
           if (Type == SLOTTYPE_NONE) {
-            Slot.SetType(Type);
+            Slot.SetType(static_cast<uint8_t>(Type));
             Slot.SetSlotStatus(SLOTSTATUS_CLOSED);
             ++closedSlots;
           } else {
@@ -719,7 +719,7 @@ optional<MapEssentials> CMap::ParseMPQ()
               Type = SLOTTYPE_USER;
             }
             if (Type <= SLOTTYPE_RESCUEABLE) {
-              Slot.SetType(Type);
+              Slot.SetType(static_cast<uint8_t>(Type));
             }
             if (Type == SLOTTYPE_USER) {
               Slot.SetSlotStatus(SLOTSTATUS_OPEN);
@@ -844,34 +844,34 @@ optional<MapEssentials> CMap::ParseMPQ()
   fileContents.clear();
 
   if (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12) {
-    mapEssentials->minCompatibleGameVersion = Version(1, 29);
+    mapEssentials->minCompatibleGameVersion = Version(1u, 29u);
   }
   
   if (mapEssentials->editorVersion > 0) {
     if (6060 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 29);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 29u);
     } else if (6059 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 24);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 24u);
     } else if (6058 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 23);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 23u);
     } else if (6057 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 22);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 22u);
     } else if (6053 <= mapEssentials->editorVersion && mapEssentials->editorVersion <= 6056) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 22); // not released
+      mapEssentials->minSuggestedGameVersion = Version(1u, 22u); // not released
     } else if (6050 <= mapEssentials->editorVersion && mapEssentials->editorVersion <= 6052) {
       mapEssentials->minSuggestedGameVersion = Version(1, 17 + static_cast<uint8_t>(mapEssentials->editorVersion - 6050));
     } else if (6046 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 16);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 16u);
     } else if (6043 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 15);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 15u);
     } else if (6039 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 14);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 14u);
     } else if (6038 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 14); // not released
+      mapEssentials->minSuggestedGameVersion = Version(1u, 14u); // not released
     } else if (6034 <= mapEssentials->editorVersion && mapEssentials->editorVersion <= 6037) {
       mapEssentials->minSuggestedGameVersion = Version(1, 10 + static_cast<uint8_t>(mapEssentials->editorVersion - 6034));
     } else if (6031 <= mapEssentials->editorVersion) {
-      mapEssentials->minSuggestedGameVersion = Version(1, 7);
+      mapEssentials->minSuggestedGameVersion = Version(1u, 7u);
     }
   }
 
@@ -1212,7 +1212,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetString("map.game_version.min", ToVersionString(m_MapMinGameVersion));
   }
 
-  if (m_MapMinGameVersion >= Version(1, 29)) {
+  if (m_MapMinGameVersion >= Version(1u, 29u)) {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_MODERN);
   } else {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_LEGACY);
@@ -1258,20 +1258,20 @@ void CMap::Load(CConfig* CFG)
 
   {
     uint32_t resolvedMapSize = ByteArrayToUInt32(m_MapSize, false);
-    Version minVanillaVersionFromMapSize = Version(1, 0);
+    Version minVanillaVersionFromMapSize = Version(1u, 0u);
     if (resolvedMapSize > 0x8000000) {
-      minVanillaVersionFromMapSize = Version(1, 29);
+      minVanillaVersionFromMapSize = Version(1u, 29u);
     } else if (resolvedMapSize > 0x800000) {
-      minVanillaVersionFromMapSize = Version(1, 27);
+      minVanillaVersionFromMapSize = Version(1u, 27u);
     } else if (resolvedMapSize > 0x400000) {
-      minVanillaVersionFromMapSize = Version(1, 24);
+      minVanillaVersionFromMapSize = Version(1u, 24u);
     }
     if (m_MapMinSuggestedGameVersion < minVanillaVersionFromMapSize) {
       m_MapMinSuggestedGameVersion = minVanillaVersionFromMapSize;
     }
 
-    if (m_Slots.size() > MAX_SLOTS_LEGACY && m_MapMinSuggestedGameVersion < Version(1, 29)) {
-      m_MapMinSuggestedGameVersion = Version(1, 29);
+    if (m_Slots.size() > MAX_SLOTS_LEGACY && m_MapMinSuggestedGameVersion < Version(1u, 29u)) {
+      m_MapMinSuggestedGameVersion = Version(1u, 29u);
     }
   }
 

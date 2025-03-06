@@ -813,7 +813,7 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
         cpr::Url{m_MapSiteUri},
         cpr::Timeout{m_DownloadTimeout},
         cpr::ProgressCallback(
-          [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+          [this](cpr::cpr_off_t /* downloadTotal*/, cpr::cpr_off_t /* downloadNow*/, cpr::cpr_off_t /* uploadTotal*/, cpr::cpr_off_t /* uploadNow*/, intptr_t /* userdata*/) -> bool
           {
             return !this->m_ExitingSoon;
           }
@@ -859,7 +859,7 @@ uint32_t CGameSetup::ResolveMapRepositoryTask()
         cpr::Timeout{m_DownloadTimeout},
         cpr::Redirect{0, false, false, cpr::PostRedirectFlags::POST_ALL},
         cpr::ProgressCallback(
-          [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+          [this](cpr::cpr_off_t /* downloadTotal*/, cpr::cpr_off_t /* downloadNow*/, cpr::cpr_off_t /* uploadTotal*/, cpr::cpr_off_t /* uploadNow*/, intptr_t /* userdata*/) -> bool
           {
             return !this->m_ExitingSoon;
           }
@@ -1031,7 +1031,7 @@ uint32_t CGameSetup::DownloadMapTask()
     cpr::Header{{"user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"}},
     cpr::Timeout{m_DownloadTimeout},
     cpr::ProgressCallback(
-      [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+      [this](cpr::cpr_off_t /* downloadTotal*/, cpr::cpr_off_t /* downloadNow*/, cpr::cpr_off_t /* uploadTotal*/, cpr::cpr_off_t /* uploadNow*/, intptr_t /* userdata*/) -> bool
       {
         return !this->m_ExitingSoon;
       }
@@ -1100,7 +1100,7 @@ vector<pair<string, string>> CGameSetup::GetMapRepositorySuggestions(const strin
     cpr::Url{searchUri},
     cpr::Timeout{m_SuggestionsTimeout},
     cpr::ProgressCallback(
-      [this](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata) -> bool
+      [this](cpr::cpr_off_t /* downloadTotal*/, cpr::cpr_off_t /* downloadNow*/, cpr::cpr_off_t /* uploadTotal*/, cpr::cpr_off_t /* uploadNow*/, intptr_t /* userdata*/) -> bool
       {
         return !this->m_ExitingSoon;
       }

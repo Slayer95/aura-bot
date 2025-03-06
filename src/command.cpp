@@ -6624,7 +6624,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       try {
         long long value = stoll(Payload);
         gameID = static_cast<uint64_t>(value);
-      } catch (const exception& e) {
+      } catch (...) {
         ErrorReply("Invalid game identifier.");
         break;
       }
@@ -7025,7 +7025,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string gameName = Args[5];
       SetAddressPort(&(maybeAddress.value()), gamePort);
       m_Aura->m_GameSetup->SetContext(shared_from_this());
-      m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter);
+      if (!m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter)) {
+        ErrorReply("Cannot mirror game at the provided address.");
+        break;
+      }
       m_Aura->m_GameSetup->SetBaseName(gameName);
       if (excludedServer) m_Aura->m_GameSetup->AddIgnoredRealm(excludedServer);
       m_Aura->m_GameSetup->RunHost();

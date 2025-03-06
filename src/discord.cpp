@@ -108,7 +108,7 @@ bool CDiscord::Init()
     m_CommandQueue.push(new dpp::slashcommand_t(event));
   });
 
-  m_Client->on_ready([this](const dpp::ready_t& event) {
+  m_Client->on_ready([this](const dpp::ready_t&) {
     if (!dpp::run_once<struct register_bot_commands>()) return;
     RegisterCommands();
   });
@@ -283,9 +283,11 @@ bool CDiscord::GetIsUserAllowed(const uint64_t target) const
 
 void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool isJoining)
 {
-  m_Client->current_user_leave_guild(target, [this, target, name, isJoining](const dpp::confirmation_callback_t& callback){
+  m_Client->current_user_leave_guild(target, [this, target, name, isJoining](const dpp::confirmation_callback_t& result){
     if (m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
-      if (isJoining) {
+      if (result.is_error()) {
+        Print("[DISCORD] Error while trying to leave server <<" + name + ">> (#" + to_string(target) + ").");
+      } else if (isJoining) {
         Print("[DISCORD] Refused to join server <<" + name + ">> (#" + to_string(target) + ").");
       } else {
         Print("[DISCORD] Left server <<" + name + ">> (#" + to_string(target) + ").");
