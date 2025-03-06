@@ -103,8 +103,10 @@ struct MapEssentials
   uint8_t numTeams;
   Version minCompatibleGameVersion;
   Version minSuggestedGameVersion;
+  bool isLua;
   uint32_t editorVersion;
   uint32_t options;
+  std::string name;
   std::optional<std::array<uint8_t, 2>> width;
   std::optional<std::array<uint8_t, 2>> height;
   std::map<Version, MapFragmentHashes> fragmentHashes;
@@ -117,6 +119,7 @@ struct MapEssentials
      numTeams(0),
      minCompatibleGameVersion(Version(1u, 0u)),
      minSuggestedGameVersion(Version(1u, 0u)),
+     isLua(false),
      editorVersion(0),
      options(0)
   {
@@ -197,6 +200,7 @@ private:
   bool                            m_MapMetaDataEnabled;
   std::string                     m_MapDefaultHCL; // config value: map default HCL to use
   std::filesystem::path           m_MapServerPath;  // config value: map local path
+  std::string                     m_MapTitle;
   std::string                     m_MapURL;
   std::string                     m_MapSiteURL;
   std::string                     m_MapShortDesc;
@@ -207,6 +211,7 @@ private:
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;
   uint8_t                         m_MapDataSet;
+  bool                            m_MapIsLua;
   Version                         m_MapMinGameVersion;
   Version                         m_MapMinSuggestedGameVersion;
   uint8_t                         m_MapNumControllers; // config value: max map number of players
@@ -248,9 +253,10 @@ public:
   [[nodiscard]] inline std::array<uint8_t, 20>    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
   [[nodiscard]] inline std::array<uint8_t, 4>     GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
   [[nodiscard]] inline std::array<uint8_t, 20>    GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.scripts_hash.sha1>, but also legacy <map.sha1>
-  [[nodiscard]] std::string                       GetMapURL() const { return m_MapURL; }
-  [[nodiscard]] std::string                       GetMapSiteURL() const { return m_MapSiteURL; }
-  [[nodiscard]] std::string                       GetMapShortDesc() const { return m_MapShortDesc; }
+  [[nodiscard]] inline std::string                GetMapTitle() const { return m_MapTitle.empty() ? "Another Warcraft 3 Map" : m_MapTitle; }
+  [[nodiscard]] inline std::string                GetMapURL() const { return m_MapURL; }
+  [[nodiscard]] inline std::string                GetMapSiteURL() const { return m_MapSiteURL; }
+  [[nodiscard]] inline std::string                GetMapShortDesc() const { return m_MapShortDesc; }
   [[nodiscard]] inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
   [[nodiscard]] inline uint8_t                    GetMapSpeed() const { return m_MapSpeed; }
   [[nodiscard]] inline uint8_t                    GetMapObservers() const { return m_MapObservers; }
@@ -361,6 +367,29 @@ public:
     return ToVersionString(Version(1u, 24u));
   }
   return ToVersionString(version);
+}
+
+[[nodiscard]] inline std::optional<std::string> GetWarcraftTextString(const std::string& fileContents, const uint32_t num)
+{
+  if (fileContents.empty()) {
+    return std::nullopt;
+  }
+  std::optional<std::string> result;
+
+  // TODO: Write a proper parser for war3map.wts
+  std::string startStringMarker = "STRING " + std::to_string(num);
+  std::string::size_type startMarkerIndex = fileContents.find(startStringMarker);
+  if (startMarkerIndex == std::string::npos) {
+    return std::nullopt;
+  }
+
+  std::string::size_type startBraceIndex = fileContents.find('{', startMarkerIndex + startStringMarker.size());
+  std::string::size_type endBraceIndex = fileContents.find('}', startMarkerIndex + startStringMarker.size());
+  if (startBraceIndex != std::string::npos && endBraceIndex != std::string::npos && startBraceIndex < endBraceIndex) {
+    result = TrimStringExtended(fileContents.substr(startBraceIndex + 1, endBraceIndex - (startBraceIndex + 1)));
+  }
+
+  return result;
 }
 
 [[nodiscard]] inline uint32_t XORRotateLeft(const uint8_t* data, const uint32_t length)

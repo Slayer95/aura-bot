@@ -647,6 +647,19 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   }
 }
 
+[[nodiscard]] inline std::string TrimStringExtended(const std::string& str) {
+  if (str.empty()) return std::string();
+
+  size_t firstNonSpace = str.find_first_not_of(" \r\n");
+  size_t lastNonSpace = str.find_last_not_of(" \r\n");
+
+  if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
+    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  } else {
+    return std::string();
+  }
+}
+
 [[nodiscard]] inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;

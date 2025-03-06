@@ -75,6 +75,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapOptions(0),
     m_MapEditorVersion(0),
     m_MapDataSet(0),
+    m_MapIsLua(false),
     m_MapMinGameVersion(Version(1u, 0u)),
     m_MapMinSuggestedGameVersion(Version(1u, 0u)),
     m_MapNumControllers(0),
@@ -619,12 +620,14 @@ optional<MapEssentials> CMap::ParseMPQ()
       // war3map.w3i format found at http://www.wc3campaigns.net/tools/specs/index.html by Zepir/PitzerMike
 
       string   GarbageString;
+      string   RawMapName;
       uint32_t FileFormat = 0;
       uint32_t RawEditorVersion = 0;
       uint32_t RawMapFlags = 0;
       uint32_t RawMapWidth = 0, RawMapHeight = 0;
       uint32_t RawMapNumPlayers = 0, RawMapNumTeams = 0;
       uint32_t RawGameDataSet = MAP_DATASET_DEFAULT;
+      uint32_t RawScriptingLanguage = 0;
 
       ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT, 28 = TFT+, 31 = RF)
 
@@ -634,7 +637,7 @@ optional<MapEssentials> CMap::ParseMPQ()
           ISS.seekg(16, ios::cur);         // game version
         }
         ISS.read(reinterpret_cast<char*>(&RawEditorVersion), 4); // editor version
-        getline(ISS, GarbageString, '\0'); // map name
+        getline(ISS, RawMapName, '\0'); // map name
         getline(ISS, GarbageString, '\0'); // map author
         getline(ISS, GarbageString, '\0'); // map description
         getline(ISS, GarbageString, '\0'); // players recommended
@@ -686,15 +689,18 @@ optional<MapEssentials> CMap::ParseMPQ()
         }
 
         if (FileFormat >= 28) {
-          ISS.seekg(4, std::ios :: cur);     // scripting language
+          ISS.read(reinterpret_cast<char*>(&RawScriptingLanguage), 4);   // scripting language
         }
+
         if (FileFormat >= 31) {
-          ISS.seekg(4, std::ios :: cur);     // supported graphics modes
-          ISS.seekg(4, std::ios :: cur);     // game data version
+          ISS.seekg(4, ios::cur);            // supported graphics modes
+          ISS.seekg(4, ios::cur);            // game data version
         }
 
         mapEssentials->dataSet = static_cast<uint8_t>(RawGameDataSet);
         mapEssentials->editorVersion = RawEditorVersion;
+        mapEssentials->isLua = RawScriptingLanguage > 0;
+        mapEssentials->name = RawMapName;
 
         ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
         if (RawMapNumPlayers > MAX_SLOTS_MODERN) RawMapNumPlayers = 0;
@@ -836,6 +842,29 @@ optional<MapEssentials> CMap::ParseMPQ()
         m_Valid = false;
         m_ErrorMessage = "unsupported map file format " + to_string(FileFormat);
       }
+
+      if (FileFormat > 25) {
+        mapEssentials->minCompatibleGameVersion = Version(1u, 31u);
+      } else if (FileFormat > 18) {
+        mapEssentials->minCompatibleGameVersion = Version(1u, 7u);
+      }
+
+      if (mapEssentials->name.size() >= 9 && mapEssentials->name.substr(0, 8) == "TRIGSTR_") {
+        string encodedNum = mapEssentials->name.substr(8);
+        optional<int64_t> num;
+        try {
+          num = stol(encodedNum);
+        } catch (...) {
+        }
+        if (num.has_value() && num.value() <= 0xFFFFFFFF) {
+          ReadFileFromArchive(fileContents, "war3map.wts");
+          optional<string> parsedString = GetWarcraftTextString(fileContents, static_cast<uint32_t>(num.value()));
+          if (parsedString.has_value()) {
+            Print("[MAP] Converted <<" + mapEssentials->name + ">> to <<" + parsedString.value() + ">>");
+            mapEssentials->name = parsedString.value();
+          }
+        }
+      }
     }
   } else {
     DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
@@ -843,7 +872,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
   fileContents.clear();
 
-  if (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12) {
+  if (mapEssentials->minCompatibleGameVersion < Version(1u, 29u) && (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12)) {
     mapEssentials->minCompatibleGameVersion = Version(1u, 29u);
   }
   
@@ -978,11 +1007,13 @@ void CMap::Load(CConfig* CFG)
     } else {
       m_MapDataSet = mapEssentials->dataSet;
     }
+    m_MapTitle = mapEssentials->name;
     m_MapNumControllers = mapEssentials->numPlayers;
     m_MapNumDisabled = mapEssentials->numDisabled;
     m_MapNumTeams = mapEssentials->numTeams;
     m_MapMinGameVersion = mapEssentials->minCompatibleGameVersion;
     m_MapMinSuggestedGameVersion = mapEssentials->minSuggestedGameVersion;
+    m_MapIsLua = mapEssentials->isLua;
     m_MapEditorVersion = mapEssentials->editorVersion;
     m_MapOptions = mapEssentials->options;
 
@@ -1180,10 +1211,22 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8("map.data_set", m_MapDataSet);
   }
 
+  if (CFG->Exists("map.lua")) {
+    m_MapIsLua = CFG->GetUint32("map.lua", m_MapIsLua);
+  } else {
+    CFG->SetBool("map.lua", m_MapIsLua);
+  }
+
   if (CFG->Exists("map.editor_version")) {
     m_MapEditorVersion = CFG->GetUint32("map.editor_version", m_MapEditorVersion);
   } else {
     CFG->SetUint32("map.editor_version", m_MapEditorVersion);
+  }
+
+  if (CFG->Exists("map.title")) {
+    m_MapTitle = CFG->GetString("map.title", "Another Warcraft 3 Map");
+  } else {
+    CFG->SetString("map.title", m_MapTitle);
   }
 
   if (CFG->Exists("map.num_disabled")) {
