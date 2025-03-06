@@ -166,7 +166,7 @@ void CDiscord::Update()
   if (m_Config.m_Enabled == (m_Client == nullptr)) {
     if (m_Config.m_Enabled) {
 #ifndef DISABLE_DPP
-      if (!Init()){
+      if (!Init()) {
         // For example, we ran out of logins today (Discord limits to 1000 logins daily.)
         m_Config.m_Enabled = false;
         return;
@@ -231,14 +231,13 @@ void CDiscord::Update()
 #ifndef DISABLE_DPP
 void CDiscord::SendUser(const string& message, const uint64_t target)
 {
-  m_Client->direct_message_create(target, dpp::message(message), [this](const dpp::confirmation_callback_t& callback){
-    if (callback.is_error()) {
+  m_Client->direct_message_create(target, dpp::message(message), [this](const dpp::confirmation_callback_t& result) {
+    if (result.is_error()) {
 #ifdef DEBUG
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
         Print("[DISCORD] Failed to send direct message.");
       }
 #endif
-      return;
     } else {
 #ifdef DEBUG
       if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
@@ -283,7 +282,7 @@ bool CDiscord::GetIsUserAllowed(const uint64_t target) const
 
 void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool isJoining)
 {
-  m_Client->current_user_leave_guild(target, [this, target, name, isJoining](const dpp::confirmation_callback_t& result){
+  m_Client->current_user_leave_guild(target, [this, target, name, isJoining](const dpp::confirmation_callback_t& result) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
       if (result.is_error()) {
         Print("[DISCORD] Error while trying to leave server <<" + name + ">> (#" + to_string(target) + ").");
@@ -295,6 +294,38 @@ void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool
     }
   });
 }
+
+void CDiscord::SetStatusHosting(const string& message) const
+{
+  m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_game, message));
+}
+
+void CDiscord::SetStatusIdle() const
+{
+  m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_watching, "eSports"));
+}
+
+void CDiscord::SendAllChannels(const string& message) const
+{
+  for (const auto& channel : m_Config.m_LogChannels) {
+    m_Client->message_create(dpp::message(message).set_channel_id(channel), [](const dpp::confirmation_callback_t& result) {
+      if (result.is_error()) {
+#ifdef DEBUG
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+          Print("[DISCORD] Failed to send message to channel.");
+        }
+#endif
+      } else {
+#ifdef DEBUG
+        if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+          Print("[DISCORD] Message sent to channel OK.");
+        }
+#endif
+      }
+    });
+  }
+}
+
 #endif
 
 bool CDiscord::GetIsSudoer(const uint64_t nIdentifier)

@@ -1347,6 +1347,16 @@ bool CAura::Update()
 
   if (m_MetaDataNeedsUpdate) {
     UpdateMetaData();
+#ifndef DISABLE_DPP
+    if (m_Discord.GetIsEnabled()) {
+      CGame* lobby = GetMostRecentLobby();
+      if (lobby) {
+        m_Discord.SetStatusHosting(lobby->GetMap()->GetMapTitle());
+      } else {
+        m_Discord.SetStatusIdle();
+      }
+#endif
+    }
   }
 
   // house-keeping
@@ -2239,10 +2249,11 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     if (m_IRC.GetIsEnabled() && m_IRC.GetIsAnnounceGames()) {
      m_IRC.SendAllChannels(createdLobby->GetAnnounceText());
     }
+#ifndef DISABLE_DPP
     if (m_Discord.GetIsEnabled() && m_Discord.GetIsAnnounceGames()) {
-      // TODO: Announce game created to all supported Discord guilds+channels
-      //m_Discord.SendAnnouncementChannels(createdLobby->GetAnnounceText());
+      m_Discord.SendAllChannels(createdLobby->GetAnnounceText());
     }
+#endif
   }
 
   Version gameVersion = createdLobby->m_Config.m_GameVersion.value();

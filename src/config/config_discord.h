@@ -46,6 +46,7 @@ struct CDiscordConfig
   uint8_t                             m_FilterInstallUsersMode;
   std::set<uint64_t>                  m_FilterInstallUsersList;
   std::set<uint64_t>                  m_SudoUsers;
+  std::set<uint64_t>                  m_LogChannels;
   CCommandConfig*                     m_CommandCFG;
 
   explicit CDiscordConfig(CConfig& CFG);

@@ -1095,10 +1095,10 @@ string CGame::GetClientFileName() const
 string CGame::GetStatusDescription() const
 {
   if (m_IsMirror)
-     return "[" + GetClientFileName() + "] (Mirror) \"" + m_GameName + "\"";
+     return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + m_GameName + "\"";
 
   string Description = (
-    "[" + GetClientFileName() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " +
+    "[" + GetMap()->GetMapTitle() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " +
     ToDecString(GetNumJoinedPlayersOrFake()) + "/" + ToDecString(m_GameLoading || m_GameLoaded ? m_ControllersWithMap : static_cast<uint8_t>(m_Slots.size()))
   );
 
@@ -1113,7 +1113,7 @@ string CGame::GetStatusDescription() const
 string CGame::GetEndDescription() const
 {
   if (m_IsMirror)
-     return "[" + GetClientFileName() + "] (Mirror) \"" + m_GameName + "\"";
+     return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + m_GameName + "\"";
 
   string winnersFragment;
   if (m_CustomStats) {
@@ -1129,7 +1129,7 @@ string CGame::GetEndDescription() const
   }
 
   string Description = (
-    "[" + GetClientFileName() + "] \"" + m_GameName + "\". " + (winnersFragment.empty() ? ("Players: " + m_PlayedBy) : winnersFragment)
+    "[" + GetMap()->GetMapTitle() + "] \"" + m_GameName + "\". " + (winnersFragment.empty() ? ("Players: " + m_PlayedBy) : winnersFragment)
   );
 
   if (m_GameLoading || m_GameLoaded)
@@ -1974,9 +1974,11 @@ void CGame::LogApp(const string& logText, const uint8_t logTargets) const
     if (m_Aura->m_IRC.m_Config.m_LogGames) {
       m_Aura->m_IRC.SendAllChannels(GetLogPrefix() + logText);
     }
+#ifndef DISABLE_DPP
     if (m_Aura->m_Discord.m_Config.m_LogGames) {
-      // TODO: CGame::LogApp() Discord endpoint
+      m_Aura->m_Discord.SendAllChannels(GetLogPrefix() + logText);
     }
+#endif
   }
 }
 
@@ -1990,9 +1992,11 @@ void CGame::Log(const string& text)
     if (m_Aura->m_IRC.m_Config.m_LogGames) {
       m_Aura->m_IRC.SendAllChannels(logText);
     }
+#ifndef DISABLE_DPP
     if (m_Aura->m_Discord.m_Config.m_LogGames) {
-      // TODO: CGame::UpdateLogs() Discord endpoint
+      m_Aura->m_Discord.SendAllChannels(logText);
     }
+#endif
   }
 }
 
@@ -2007,9 +2011,11 @@ void CGame::LogRemote(const string& text) const
   if (m_Aura->m_IRC.m_Config.m_LogGames) {
     m_Aura->m_IRC.SendAllChannels(logText);
   }
+#ifndef DISABLE_DPP
   if (m_Aura->m_Discord.m_Config.m_LogGames) {
-    // TODO: CGame::UpdateLogs() Discord endpoint
+    m_Aura->m_Discord.SendAllChannels(logText);
   }
+#endif
 }
 
 void CGame::UpdateLogs()
@@ -2025,9 +2031,11 @@ void CGame::UpdateLogs()
     if (m_Aura->m_IRC.m_Config.m_LogGames) {
       m_Aura->m_IRC.SendAllChannels(logText);
     }
+#ifndef DISABLE_DPP
     if (m_Aura->m_Discord.m_Config.m_LogGames) {
-      // TODO: CGame::UpdateLogs() Discord endpoint
+      m_Aura->m_Discord.SendAllChannels(logText);
     }
+#endif
     delete record;
     m_PendingLogs.pop();
   }

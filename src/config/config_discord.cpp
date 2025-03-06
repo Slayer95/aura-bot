@@ -67,6 +67,7 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   m_FilterInstallUsersMode = CFG.GetStringIndex("discord.direct_messages.mode", invitesMode, FILTER_ALLOW_ALL);
   m_FilterInstallUsersList = CFG.GetUint64Set("discord.direct_messages.list", ',', {});
   m_SudoUsers = CFG.GetUint64Set("discord.sudo_users", ',', {});
+  m_LogChannels = CFG.GetUint64Set("discord.log_channels", ',', {});
 
   if (m_Enabled && m_Token.empty()) {
     CFG.SetFailed();
