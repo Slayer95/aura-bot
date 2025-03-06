@@ -963,6 +963,7 @@ CRealm* CAura::GetRealmByHostName(const string& hostName) const
 
 uint8_t CAura::FindServiceFromHostName(const string& hostName, void*& location) const
 {
+  // TODO: CAura::FindServiceFromHostName() location ptr
   if (hostName.empty()) {
     return SERVICE_TYPE_NONE;
   }
@@ -1751,7 +1752,7 @@ void CAura::OnLoadConfigs()
 
   m_SupportsModernSlots = false;
   for (const auto& version : m_Config.m_SupportedGameVersions) {
-    if (version >= Version(1, 29)) {
+    if (version >= Version(1u, 29u)) {
       m_SupportsModernSlots = true;
       break;
     }
@@ -1768,7 +1769,7 @@ uint8_t CAura::ExtractScripts()
 
   uint8_t FilesExtracted = 0;
   const filesystem::path MPQFilePath = [&]() {
-    if (m_GameDataVersion.value() >= Version(1, 28))
+    if (m_GameDataVersion.value() >= Version(1u, 28u))
       return m_GameInstallPath / filesystem::path("War3.mpq");
     else
       return m_GameInstallPath / filesystem::path("War3Patch.mpq");
@@ -2249,11 +2250,11 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   if (mapSize > 0x20000000) {
     // Reforged
     Print("[AURA] warning - hosting game beyond 512 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (gameVersion <= Version(1, 28) && mapSize > 0x8000000) {
+  } else if (gameVersion <= Version(1u, 28u) && mapSize > 0x8000000) {
     Print("[AURA] warning - hosting game beyond 128 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (gameVersion <= Version(1, 26) && mapSize > 0x800000) {
+  } else if (gameVersion <= Version(1u, 26u) && mapSize > 0x800000) {
     Print("[AURA] warning - hosting game beyond 8 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (gameVersion <= Version(1, 23) && mapSize > 0x400000) {
+  } else if (gameVersion <= Version(1u, 23u) && mapSize > 0x400000) {
     Print("[AURA] warning - hosting game beyond 4 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
   }
   if (gameVersion < createdLobby->GetMap()->GetMapMinSuggestedGameVersion()) {

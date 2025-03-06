@@ -79,7 +79,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
 
     m_GameBroadcast(nullptr),
-    m_GameVersion(Version(0, 0)),
+    m_GameVersion(Version(0u, 0u)),
     m_LastGamePort(6112),
     m_LastGameHostCounter(0),
 

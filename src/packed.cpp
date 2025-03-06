@@ -80,7 +80,7 @@ CPacked::CPacked(CAura* nAura)
     m_DecompressedSize(0),
     m_NumBlocks(0),
     m_War3Identifier(0),
-    m_War3Version(Version(1, 0)),
+    m_War3Version(Version(1u, 0u)),
     m_BuildNumber(0),
     m_Flags(0),
     m_ReplayLength(0)

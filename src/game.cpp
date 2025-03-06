@@ -139,7 +139,7 @@ CQueuedActionsFrame::~CQueuedActionsFrame() = default;
 
 void CQueuedActionsFrame::AddAction(CIncomingAction&& action)
 {
-  const uint16_t actionSize = action.GetLength();
+  const uint16_t actionSize = static_cast<uint16_t>(action.GetLength());
 
   // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
   // check if adding the next action to the sub actions queue would put us over the limit
@@ -408,7 +408,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     // wait time of 2 minutes = 1 empty action required...
 
     if (m_GProxyEmptyActions > 0) {
-      m_GProxyEmptyActions = m_Aura->m_Net.m_Config.m_ReconnectWaitTicksLegacy / 60000 - 1;
+      m_GProxyEmptyActions = static_cast<uint8_t>(m_Aura->m_Net.m_Config.m_ReconnectWaitTicksLegacy / 60000 - 1);
       if (m_GProxyEmptyActions > 9) {
         m_GProxyEmptyActions = 9;
       }
@@ -1292,8 +1292,6 @@ void CGame::UpdateJoinable()
   if (Ticks - m_LastDownloadTicks >= 100) {
     bool mapIsInvalid = false;
     uint32_t Downloaders = 0;
-    uint32_t prevDownloadCounter = m_DownloadCounter;
-
     for (auto& user : m_Users) {
       if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
         ++Downloaders;
@@ -1982,12 +1980,19 @@ void CGame::LogApp(const string& logText, const uint8_t logTargets) const
   }
 }
 
-void CGame::Log(const string& logText)
+void CGame::Log(const string& text)
 {
   if (m_GameLoaded) {
-    Log(logText, m_GameTicks);
+    Log(text, m_GameTicks);
   } else {
-    Print(GetLogPrefix() + logText);
+    string logText = GetLogPrefix() + text;
+    Print(logText);
+    if (m_Aura->m_IRC.m_Config.m_LogGames) {
+      m_Aura->m_IRC.SendAllChannels(logText);
+    }
+    if (m_Aura->m_Discord.m_Config.m_LogGames) {
+      // TODO: CGame::UpdateLogs() Discord endpoint
+    }
   }
 }
 
@@ -2189,7 +2194,6 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
         success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
     }
   } else {
-    bool success = false;
     string leftMessage = message;
     while (leftMessage.size() > maxSize) {
       if (!m_GameLoading && !m_GameLoaded) {
@@ -3416,7 +3420,7 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   }
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
-  if (mapSize > 0x20000000 || gameVersion <= Version(1, 28) && mapSize > 0x8000000 || gameVersion <= Version(1, 26) && mapSize > 0x800000 || gameVersion <= Version(1, 23) && mapSize > 0x400000) {
+  if (mapSize > 0x20000000 || gameVersion <= Version(1u, 28u) && mapSize > 0x8000000 || gameVersion <= Version(1u, 26u) && mapSize > 0x800000 || gameVersion <= Version(1u, 23u) && mapSize > 0x400000) {
     versionPrefix = "[" + ToVersionString(gameVersion) + ".UnlockMapSize] ";
   } else {
     versionPrefix = "[" + ToVersionString(gameVersion) + "] ";
@@ -4579,7 +4583,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
 
   // send a map check packet to the new user.
 
-  if (m_Config.m_GameVersion >= Version(1, 23)) {
+  if (m_Config.m_GameVersion >= Version(1u, 23u)) {
     Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
   } else {
     Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
