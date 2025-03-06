@@ -84,14 +84,14 @@ using namespace std;
 #define LOG_APP_IF(T, U) \
     static_assert(T < LOG_LEVEL_TRACE, "Use DLOG_APP_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        LogApp(U); \
+        LogApp(U, LOG_C | LOG_P); \
     }
 
 #ifdef DEBUG
 #define DLOG_APP_IF(T, U) \
     static_assert(T >= LOG_LEVEL_TRACE, "Use LOG_APP_IF for regular log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        LogApp(U); \
+        LogApp(U, LOG_C | LOG_P); \
     }
 #else
 #define DLOG_APP_IF(T, U)
@@ -1577,8 +1577,8 @@ void CGame::UpdateLoaded()
         // print debug information
         double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(GetLatency()) / static_cast<double>(1000.);
         if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-          LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".");
-          LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)");
+          LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".", LOG_ALL);
+          LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)", LOG_C);
         }
       }
     }
@@ -1964,9 +1964,22 @@ void CGame::RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8
   }
 }
 
-void CGame::LogApp(const string& logText) const
+void CGame::LogApp(const string& logText, const uint8_t logTargets) const
 {
-  Print(GetLogPrefix() + logText);
+  if (logTargets & LOG_C) {
+    Print(GetLogPrefix() + logText);
+  }
+  if (logTargets & LOG_P) {
+    m_Aura->LogPersistent(GetLogPrefix() + logText);
+  }
+  if (logTargets & LOG_R) {
+    if (m_Aura->m_IRC.m_Config.m_LogGames) {
+      m_Aura->m_IRC.SendAllChannels(GetLogPrefix() + logText);
+    }
+    if (m_Aura->m_Discord.m_Config.m_LogGames) {
+      // TODO: CGame::LogApp() Discord endpoint
+    }
+  }
 }
 
 void CGame::Log(const string& logText)
@@ -1991,7 +2004,14 @@ void CGame::UpdateLogs()
     if (ticks + static_cast<int64_t>(m_Config.m_LogDelay) < record->GetTicks()) {
       break;
     }
-    Print(GetLogPrefix() + record->ToString());
+    string logText = GetLogPrefix() + record->ToString();
+    Print(logText);
+    if (m_Aura->m_IRC.m_Config.m_LogGames) {
+      m_Aura->m_IRC.SendAllChannels(logText);
+    }
+    if (m_Aura->m_Discord.m_Config.m_LogGames) {
+      // TODO: CGame::UpdateLogs() Discord endpoint
+    }
     delete record;
     m_PendingLogs.pop();
   }
@@ -2007,11 +2027,16 @@ void CGame::FlushLogs()
   }
 }
 
+/*
+ * LogSlots() - for debugging purposes
+ *
+ * Not used anywhere.
+ */
 void CGame::LogSlots()
 {
   uint8_t i = 0;
   while (i < static_cast<uint8_t>(m_Slots.size())) {
-    LogApp("slot_" + ToDecString(i) + " = <" + ByteArrayToHexString(m_Slots[i].GetProtocolArray()) + ">");
+    LogApp("slot_" + ToDecString(i) + " = <" + ByteArrayToHexString(m_Slots[i].GetProtocolArray()) + ">", LOG_C);
     ++i;
   }
 }
@@ -2077,16 +2102,16 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
   if (m_Aura->MatchLogLevel(logLevel)) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
     if (fromUser) {
-      LogApp("sent as [" + fromUser->GetName() + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>");
+      LogApp("sent as [" + fromUser->GetName() + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>", LOG_C);
     } else if (fromUID == m_VirtualHostUID) {
-      LogApp("sent as Virtual Host -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>");
+      LogApp("sent as Virtual Host -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>", LOG_C);
     } else {
-      LogApp("sent as [UID:" + ToDecString(fromUID) + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>");
+      LogApp("sent as [UID:" + ToDecString(fromUID) + "] -> [" + user->GetName() + " (UID:" + ToDecString(user->GetUID()) + ")] <<" + message + ">>", LOG_C);
     }
   }
 #else
   if (m_Aura->MatchLogLevel(logLevel)) {
-    LogApp("sent to [" + user->GetName() + "] <<" + message + ">>");
+    LogApp("sent to [" + user->GetName() + "] <<" + message + ">>", LOG_C);
   }
 #endif
 
@@ -2143,11 +2168,11 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
   if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
     if (fromUser) {
-      LogApp("sent as [" + fromUser->GetName() + "] <<" + message + ">>");
+      LogApp("sent as [" + fromUser->GetName() + "] <<" + message + ">>", LOG_C);
     } else if (fromUID == m_VirtualHostUID) {
-      LogApp("sent as Virtual Host <<" + message + ">>");
+      LogApp("sent as Virtual Host <<" + message + ">>", LOG_C);
     } else {
-      LogApp("sent as [UID:" + ToDecString(fromUID) + "] <<" + message + ">>");
+      LogApp("sent as [UID:" + ToDecString(fromUID) + "] <<" + message + ">>", LOG_C);
     }
   } else {
     LOG_APP_IF(LOG_LEVEL_INFO, "sent <<" + message + ">>")
@@ -4313,7 +4338,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
   );
   const vector<uint8_t>& extraFlags = chatPlayer->GetExtraFlags();
   if (forceOnlyToObservers) {
-    vector<uint8_t> overrideObserverUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID());
+    vector<uint8_t> overrideObserverUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
     vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
     if (overrideObserverUIDs.empty()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening to [" + user->GetName() + "] --")
@@ -4323,7 +4348,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
   } else if (forcePrivateChat) {
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
       if (!m_MuteAll) {
-        vector<uint8_t> overrideTargetUIDs = GetChatUIDs(chatPlayer->GetFromUID());
+        vector<uint8_t> overrideTargetUIDs = GetChatUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
         vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
         if (!overrideTargetUIDs.empty()) {
           Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
@@ -4336,7 +4361,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
       }
     } else {
       // enforce observer-only chat, just in case rogue clients are doing funny things
-      vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID());
+      vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
       vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
       if (!overrideTargetUIDs.empty()) {
         Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
@@ -5000,7 +5025,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     if (m_Lagging) {
       LOG_APP_IF(LOG_LEVEL_INFO, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
       Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
-      LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...");
+      LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...", LOG_C);
 
       if (laggingPlayers.size() >= 3) {
         SendChat(user, "[" + user->GetName() + "], please wait for " + to_string(laggingPlayers.size()) + " players to load the game...");
@@ -5030,7 +5055,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
 
   if (actionType == ACTION_CHAT_TRIGGER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
     const vector<uint8_t>& actionBytes = action.GetImmutableAction();
-    if (actionBytes.size() >= 10) {
+    if (actionBytes.size() >= 10 && m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
       const uint8_t* chatMessageStart = actionBytes.data() + 9;
       const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
       if (chatMessageStart < chatMessageEnd) {
@@ -5174,19 +5199,19 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     string syncListText = ToNameListSentence(m_SyncPlayers[user]);
     string desyncListText = ToNameListSentence(DesyncedPlayers);
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-      LogApp("===== !! Desync detected !! ======================================");
+      LogApp("===== !! Desync detected !! ======================================", LOG_ALL);
       if (m_Config.m_LoadInGame) {
-        LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: ENABLED");
+        LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: ENABLED", LOG_C | LOG_P);
       } else {
-        LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: DISABLED");
+        LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: DISABLED", LOG_C | LOG_P);
       }
-      LogApp("User [" + user->GetName() + "] (" + user->GetDelayText(true) + ") Reconnection: " + user->GetReconnectionText());
-      LogApp("User [" + user->GetName() + "] is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText);
-      LogApp("User [" + user->GetName() + "] is no longer synchronized with " + desyncListText);
+      LogApp("User [" + user->GetName() + "] (" + user->GetDelayText(true) + ") Reconnection: " + user->GetReconnectionText(), LOG_C | LOG_P);
+      LogApp("User [" + user->GetName() + "] is synchronized with " + to_string(m_SyncPlayers[user].size()) + " user(s): " + syncListText, LOG_C | LOG_P);
+      LogApp("User [" + user->GetName() + "] is no longer synchronized with " + desyncListText, LOG_ALL);
       if (GetAnyUsingGProxy()) {
-        LogApp("GProxy: " + GetActiveReconnectProtocolsDetails());
+        LogApp("GProxy: " + GetActiveReconnectProtocolsDetails(), LOG_C);
       }
-      LogApp("==================================================================");
+      LogApp("==================================================================", LOG_C);
     }
 
     if (GetHasDesyncHandler()) {
@@ -5218,9 +5243,11 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
 
       string chatTypeFragment;
       if (isLobbyChat) {
-        Log("[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
-        if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_NON_ASCII) && !IsASCII(chatPlayer->GetMessage())) {
-          m_Aura->LogPersistent(GetLogPrefix() + "[Lobby] ["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
+        if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
+          Log("[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
+          if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_NON_ASCII) && !IsASCII(chatPlayer->GetMessage())) {
+            m_Aura->LogPersistent(GetLogPrefix() + "[Lobby] ["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
+          }
         }
         if (m_MuteLobby) {
           shouldRelay = false;
@@ -5245,7 +5272,9 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
           chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
 
-        Log(chatTypeFragment + "[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
+        if (m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
+          Log(chatTypeFragment + "[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
+        }
       }
 
       // handle bot commands
@@ -5320,15 +5349,17 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* 
           SendChatMessage(user, chatPlayer);
           shouldRelay = false;
         }
-        bool logMessage = false;
-        for (const auto& word : m_Config.m_LoggedWords) {
-          if (chatPlayer->GetMessage().find(word) != string::npos) {
-            logMessage = true;
-            break;
+        if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
+          bool logMessage = false;
+          for (const auto& word : m_Config.m_LoggedWords) {
+            if (chatPlayer->GetMessage().find(word) != string::npos) {
+              logMessage = true;
+              break;
+            }
           }
-        }
-        if (logMessage) {
-          m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
+          if (logMessage) {
+            m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
+          }
         }
       }
     }
@@ -8930,7 +8961,7 @@ bool CGame::GetIsSupportedGameVersion(const Version& nVersion) const
 }
 
 void CGame::SetSupportedGameVersion(const Version& nVersion) {
-  if (nVersion.first > 1 || nVersion.second > 36) return false;
+  if (nVersion.first > 1 || nVersion.second > 36) return;
   m_SupportedGameVersions.set(ToVersionOrdinal(nVersion));
 }
 
@@ -8955,7 +8986,7 @@ void CGame::CloseObserverSlots()
     }
   }
   if (count > 0 && m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
-    LogApp("deleted " + to_string(count) + " observer slots");
+    LogApp("deleted " + to_string(count) + " observer slots", LOG_C);
   }
 }
 

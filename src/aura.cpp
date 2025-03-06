@@ -2100,41 +2100,41 @@ bool CAura::GetIsAutoHostThrottled() const
 bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 {
   if (!m_Config.m_Enabled) {
-    gameSetup->m_Ctx->ErrorReply("The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The bot is disabled", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
 
   if (gameSetup->m_Name.size() > m_MaxGameNameSize) {
-    gameSetup->m_Ctx->ErrorReply("The game name is too long (max " + to_string(m_MaxGameNameSize) + " characters)", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The game name is too long (max " + to_string(m_MaxGameNameSize) + " characters)", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
 
   if (!gameSetup->m_Map) {
-    gameSetup->m_Ctx->ErrorReply("The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
   if (!gameSetup->m_Map || !gameSetup->m_Map->GetValid()) {
-    gameSetup->m_Ctx->ErrorReply("The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
 
   if (!gameSetup->m_Map->GetMapHasGameVersion()) {
-    gameSetup->m_Ctx->ErrorReply("The game version has not been specified", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("The game version has not been specified", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     if (MatchLogLevel(LOG_LEVEL_WARNING)) {
       Print("[CONFIG] Game cannot be hosted because <hosting.game_versions.main> is missing.");
     }
     return false;
   }
   if (gameSetup->GetMap()->GetMapTargetGameVersion() < gameSetup->GetMap()->GetMapMinGameVersion()) {
-    gameSetup->m_Ctx->ErrorReply("map requires v" + ToVersionString(gameSetup->GetMap()->GetMapMinGameVersion()), CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("map requires v" + ToVersionString(gameSetup->GetMap()->GetMapMinGameVersion()), CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
 
   if (!GetNewGameIsInQuota()) {
     if (m_Lobbies.size() == 1) {
-      gameSetup->m_Ctx->ErrorReply("Another game lobby [" + GetMostRecentLobby()->GetStatusDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+      gameSetup->m_Ctx->ErrorReply("Another game lobby [" + GetMostRecentLobby()->GetStatusDescription() + "] is currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     } else {
-      gameSetup->m_Ctx->ErrorReply("Too many lobbies (" + to_string(m_Lobbies.size()) + ") are currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+      gameSetup->m_Ctx->ErrorReply("Too many lobbies (" + to_string(m_Lobbies.size()) + ") are currently hosted.", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     }
     return false;
   }
@@ -2160,7 +2160,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   if (createdLobby->GetExiting()) {
     delete createdLobby;
     createdLobby = nullptr;
-    gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_Name + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_Name + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
 
@@ -2234,10 +2234,10 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   }
 
   if (createdLobby->GetDisplayMode() == GAME_PUBLIC) {
-    if (m_IRC.GetIsEnabled()) {
+    if (m_IRC.GetIsEnabled() && m_IRC.GetIsAnnounceGames()) {
      m_IRC.SendAllChannels(createdLobby->GetAnnounceText());
     }
-    if (m_Discord.GetIsEnabled()) {
+    if (m_Discord.GetIsEnabled() && m_Discord.GetIsAnnounceGames()) {
       // TODO: Announce game created to all supported Discord guilds+channels
       //m_Discord.SendAnnouncementChannels(createdLobby->GetAnnounceText());
     }

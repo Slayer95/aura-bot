@@ -67,6 +67,11 @@
 #define SERVICE_TYPE_DISCORD 4
 #define SERVICE_TYPE_INVALID 255
 
+constexpr uint8_t LOG_C = 1u;
+constexpr uint8_t LOG_P = 2u;
+constexpr uint8_t LOG_R = 4u;
+constexpr uint8_t LOG_ALL = LOG_C | LOG_P | LOG_R;
+
 // map.h
 
 #define MAPSPEED_SLOW 1
@@ -394,11 +399,11 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 
 #define CHAT_SEND_SOURCE_ALL (1 << 0)
 #define CHAT_SEND_TARGET_ALL (1 << 1)
-#define CHAT_LOG_CONSOLE (1 << 2)
+#define CHAT_LOG_INCIDENT (1 << 2)
 #define CHAT_TYPE_INFO (1 << 3)
 #define CHAT_TYPE_DONE (1 << 4)
 #define CHAT_TYPE_ERROR (1 << 5)
-#define CHAT_WRITE_TARGETS (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE)
+#define CHAT_WRITE_TARGETS (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT)
 #define CHAT_RESPONSE_TYPES (CHAT_TYPE_INFO | CHAT_TYPE_DONE | CHAT_TYPE_ERROR)
 
 #define USER_PERMISSIONS_GAME_PLAYER (1 << 0)
@@ -414,6 +419,11 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 #define COMMAND_TOKEN_MATCH_NONE 0
 #define COMMAND_TOKEN_MATCH_PRIVATE 1
 #define COMMAND_TOKEN_MATCH_BROADCAST 2
+
+// config_bot.h
+constexpr uint8_t LOG_GAME_CHAT_NEVER = 0u;
+constexpr uint8_t LOG_GAME_CHAT_ALLOWED = 1u;
+constexpr uint8_t LOG_GAME_CHAT_ALWAYS = 2u;
 
 // config_realm.h
 

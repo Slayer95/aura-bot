@@ -53,6 +53,8 @@ struct CBotConfig
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
   std::vector<Version>                    m_SupportedGameVersions;       // all game versions the bot will support either through LAN or bnet
+
+  uint8_t                                 m_LogGameChat;
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
 
   uint32_t                                m_MaxLobbies;                  // maximum number of non-started games

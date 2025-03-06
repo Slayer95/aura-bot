@@ -729,8 +729,8 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
     SendPrivateReply(message, ctxFlags);
   }
 
-  // Write to console if CHAT_LOG_CONSOLE, but only if we haven't written to it in SendPrivateReply
-  if (m_FromType != FROM_OTHER && (ctxFlags & CHAT_LOG_CONSOLE)) {
+  // Write to console if CHAT_LOG_INCIDENT, but only if we haven't written to it in SendPrivateReply
+  if (m_FromType != FROM_OTHER && (ctxFlags & CHAT_LOG_INCIDENT)) {
     if (m_TargetGame) {
       LogStream(*m_Output, m_TargetGame->GetLogPrefix() + message);
     } else if (m_SourceRealm) {
@@ -1648,7 +1648,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (auto& it : m_TargetGame->m_Users)
         it->SetKickVote(false);
 
-      SendReply("Votekick against [" + m_TargetGame->m_KickVotePlayer + "] started by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      SendReply("Votekick against [" + m_TargetGame->m_KickVotePlayer + "] started by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
       if (m_GameUser && m_GameUser != targetPlayer) {
         m_GameUser->SetKickVote(true);
         SendAll("[" + m_GameUser->GetDisplayName() + "] voted to kick [" + m_TargetGame->m_KickVotePlayer + "]. " + to_string(static_cast<uint32_t>(ceil(static_cast<float>(m_TargetGame->GetNumJoinedPlayers() - 1) * static_cast<float>(m_TargetGame->m_Config.m_VoteKickPercentage) / 100)) - 1) + " more votes are needed to pass");
@@ -2759,7 +2759,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (m_TargetGame) {
-        SendReply("Trying to rehost with name [" + Payload + "].", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+        SendReply("Trying to rehost with name [" + Payload + "].", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
       }
 
       bool IsPrivate = CommandHash == HashCode("priv");
@@ -3276,11 +3276,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       const CGameSlot* slot = m_TargetGame->InspectSlot(m_TargetGame->GetSIDFromUID(targetPlayer->GetUID()));
       if (!slot || slot->GetDownloadStatus() == 100) {
-        ErrorReply("Map transfer failed unexpectedly.", CHAT_LOG_CONSOLE);
+        ErrorReply("Map transfer failed unexpectedly.", CHAT_LOG_INCIDENT);
         break;
       }
 
-      SendReply("Map download started for [" + targetPlayer->GetName() + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      SendReply("Map download started for [" + targetPlayer->GetName() + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
       m_TargetGame->Send(targetPlayer, GameProtocol::SEND_W3GS_STARTDOWNLOAD(m_TargetGame->GetHostUID()));
       targetPlayer->SetDownloadAllowed(true);
       targetPlayer->SetDownloadStarted(true);
@@ -4253,7 +4253,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendAll("[" + targetName + "@" + ToFormattedRealm(targetHostName) + "] is already the owner of this game.");
       } else {
         m_TargetGame->SetOwner(targetName, targetHostName);
-        SendReply("Setting game owner to [" + targetName + "@" + ToFormattedRealm(targetHostName) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+        SendReply("Setting game owner to [" + targetName + "@" + ToFormattedRealm(targetHostName) + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
       }
       break;
     }
@@ -5773,7 +5773,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      SendReply("A votekick against [" + m_TargetGame->m_KickVotePlayer + "] has been cancelled by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_CONSOLE);
+      SendReply("A votekick against [" + m_TargetGame->m_KickVotePlayer + "] has been cancelled by [" + m_FromName + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
       m_TargetGame->m_KickVotePlayer.clear();
       m_TargetGame->m_StartedKickVoteTime = 0;
       break;
@@ -6722,7 +6722,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!FileExists(m_Aura->m_Config.m_MapCFGPath)) {
-        ErrorReply("Map config path doesn't exist", CHAT_LOG_CONSOLE);
+        ErrorReply("Map config path doesn't exist", CHAT_LOG_INCIDENT);
         break;
       }
 
@@ -6863,7 +6863,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply("No games hosted.");
         break;
       }
-      SendReply(JoinVector(currentGames, false), CHAT_LOG_CONSOLE);
+      SendReply(JoinVector(currentGames, false), CHAT_LOG_INCIDENT);
       break;
     }
 

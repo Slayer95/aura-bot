@@ -71,6 +71,7 @@ public:
 
   [[nodiscard]] inline CTCPClient* GetSocket() const { return m_Socket; }
   [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }
+  [[nodiscard]] inline bool GetIsAnnounceGames() const { return m_Config.m_LogGames; }
   [[nodiscard]] bool MatchHostName(const std::string& hostName) const;
   [[nodiscard]] inline bool GetIsLoggedIn() const { return m_LoggedIn; }
 

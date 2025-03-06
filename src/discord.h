@@ -74,6 +74,7 @@ public:
 #endif
 
   [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }
+  [[nodiscard]] inline bool GetIsAnnounceGames() const { return m_Config.m_LogGames; }
   [[nodiscard]] bool MatchHostName(const std::string& hostName) const;
 
   [[nodiscard]] bool GetIsServerAllowed(const uint64_t target) const;

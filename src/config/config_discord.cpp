@@ -41,6 +41,7 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   m_Token                  = CFG.GetString("discord.token");
   m_InviteUrl              = CFG.GetString("discord.invites.url");
   m_Enabled                = CFG.GetBool("discord.enabled", false);
+  m_LogGames               = CFG.GetBool("discord.log_games", false);
 
 #ifdef DISABLE_DPP
   if (m_Enabled) {

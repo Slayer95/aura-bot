@@ -713,7 +713,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
     Print("[AURA] Cached map config for [" + fileName + "] as [" + PathToString(resolvedCFGPath) + "]");
   }
 
-  if (!silent) m_Ctx->SendReply("Loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+  if (!silent) m_Ctx->SendReply("Loaded OK [" + fileName + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
   return baseMap;
 }
 
@@ -742,7 +742,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
         if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
           Print("[AURA] Map cache success");
         }
-        if (!silent) m_Ctx->SendReply("Loaded OK [" + PathToString(fileName) + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+        if (!silent) m_Ctx->SendReply("Loaded OK [" + PathToString(fileName) + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
         return cachedResult;
       } else {
         m_Aura->m_CFGCacheNamesByMapNames.erase(fileName);
@@ -948,7 +948,7 @@ uint32_t CGameSetup::RunResolveMapRepositorySync()
   uint32_t result = ResolveMapRepositoryTask();
   m_IsStepDownloading = false;
   if (!m_IsStepDownloaded) {
-    m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return 0;
   }
   m_IsStepDownloading = false;
@@ -1082,7 +1082,7 @@ uint32_t CGameSetup::RunDownloadMapSync()
   uint32_t byteSize = DownloadMapTask();
   m_IsStepDownloading = false;
   if (!m_IsStepDownloaded) {
-    m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return 0;
   }
   m_IsMapDownloaded = true;
@@ -1536,7 +1536,7 @@ bool CGameSetup::Update()
   m_IsStepDownloaded = false;
   m_AsyncStep = GAMESETUP_STEP_MAIN;
   if (!success && finishedStep != GAMESETUP_STEP_SUGGESTIONS) {
-    m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_CONSOLE);
+    m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     PRINT_IF(LOG_LEVEL_DEBUG, "[GAMESETUP] Task failed. Releasing game setup...")
     m_DeleteMe = true;
     return m_DeleteMe;

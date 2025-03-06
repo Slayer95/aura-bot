@@ -41,6 +41,7 @@ struct CIRCConfig
   std::string                         m_UserName;
   std::string                         m_Password;
   bool                                m_Enabled;
+  bool                                m_LogGames;
   std::vector<std::string>            m_Channels;
   std::set<std::string>               m_Admins;
   std::set<std::string>               m_SudoUsers;

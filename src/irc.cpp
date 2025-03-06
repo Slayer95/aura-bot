@@ -375,7 +375,7 @@ void CIRC::ExtractPackets()
 
       // join channels
 
-      for (auto& channel : m_Config.m_Channels)
+      for (const auto& channel : m_Config.m_Channels)
         Send("JOIN " + channel);
 
       continue;
@@ -426,7 +426,7 @@ void CIRC::SendChannel(const string& message, const string& target)
 
 void CIRC::SendAllChannels(const string& message)
 {
-  for (auto& channel : m_Config.m_Channels) {
+  for (const auto& channel : m_Config.m_Channels) {
     m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
   }
 }

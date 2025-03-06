@@ -40,6 +40,7 @@ struct CDiscordConfig
   std::string                         m_Token;
   std::string                         m_InviteUrl;
   bool                                m_Enabled;
+  bool                                m_LogGames;
   uint8_t                             m_FilterJoinServersMode;
   std::set<uint64_t>                  m_FilterJoinServersList;
   uint8_t                             m_FilterInstallUsersMode;

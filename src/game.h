@@ -445,7 +445,7 @@ public:
   void                                                   RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
 
   // logging
-  void                                                   LogApp(const std::string& logText) const;
+  void                                                   LogApp(const std::string& logText, const uint8_t logTargets) const;
   void                                                   Log(const std::string& logText);
   void                                                   Log(const std::string& logText, int64_t gameTicks);
   void                                                   UpdateLogs();

@@ -71,6 +71,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_SupportedGameVersions        = vector<Version>(supportedGameVersions.begin(), supportedGameVersions.end());
   stable_sort(m_SupportedGameVersions.begin(), m_SupportedGameVersions.end());
 
+  m_LogGameChat                  = CFG.GetStringIndex("hosting.log_chat", {"never", "allowed", "always"}, LOG_GAME_CHAT_NEVER);
   m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
 
   m_MaxLobbies                   = CFG.GetInt("hosting.games_quota.max_lobbies", 1);
