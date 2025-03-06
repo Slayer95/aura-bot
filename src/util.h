@@ -131,6 +131,11 @@
   return ToDecString(version.first) + "." + ToDecString(version.second);
 }
 
+[[nodiscard]] inline uint8_t ToVersionOrdinal(const Version& version)
+{
+  return (version.first - 1) * 37 + version.second;
+}
+
 inline void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const uint32_t offset, bool bigEndian = false)
 {
   if (!bigEndian) {

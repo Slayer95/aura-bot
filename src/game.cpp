@@ -3617,7 +3617,6 @@ uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
 vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const uint16_t hostPort)
 {
   vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
-  // TODO: Support v2.x
   WriteUint32(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
   uint32_t slotsOff = static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1);
   uint32_t uptime = GetUptime();
@@ -8926,15 +8925,13 @@ bool CGame::GetHasReferees() const
 
 bool CGame::GetIsSupportedGameVersion(const Version& nVersion) const
 {
-  // TODO: GetIsSupportedGameVersion() Support v2.x
-  if (nVersion.first > 1) return false;
-  return nVersion.second < 64 && m_SupportedGameVersions.test(nVersion.second);
+  if (nVersion.first > 1 || nVersion.second > 36) return false;
+  return m_SupportedGameVersions.test(ToVersionOrdinal(nVersion));
 }
 
 void CGame::SetSupportedGameVersion(const Version& nVersion) {
-  // TODO: SetSupportedGameVersion() Support v2.x
-  if (nVersion.first > 1) return;
-  if (nVersion.second < 64) m_SupportedGameVersions.set(nVersion.second);
+  if (nVersion.first > 1 || nVersion.second > 36) return false;
+  m_SupportedGameVersions.set(ToVersionOrdinal(nVersion));
 }
 
 void CGame::OpenObserverSlots()

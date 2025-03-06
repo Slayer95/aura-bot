@@ -263,7 +263,7 @@ protected:
   std::vector<uint8_t>                                   m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
   std::vector<std::vector<uint8_t>>                      m_PlayingBuffer;
 
-  std::bitset<64>                                        m_SupportedGameVersions;
+  std::bitset<128>                                       m_SupportedGameVersions;
   Version                                                m_SupportedGameVersionsMin;
   Version                                                m_SupportedGameVersionsMax;
 
