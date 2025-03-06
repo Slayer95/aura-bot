@@ -448,7 +448,7 @@ public:
   void                                                   LogApp(const std::string& logText, const uint8_t logTargets) const;
   void                                                   Log(const std::string& logText);
   void                                                   Log(const std::string& logText, int64_t gameTicks);
-  void                                                   LogRemote(const std::string& logText);
+  void                                                   LogRemote(const std::string& logText) const;
   void                                                   UpdateLogs();
   void                                                   FlushLogs();
   void                                                   LogSlots();

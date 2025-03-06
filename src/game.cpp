@@ -2001,7 +2001,7 @@ void CGame::Log(const string& logText, int64_t gameTicks)
   m_PendingLogs.push(new CGameLogRecord(gameTicks, logText));
 }
 
-void CGame::LogRemote(const string& text)
+void CGame::LogRemote(const string& text) const
 {
   string logText = GetLogPrefix() + text;
   if (m_Aura->m_IRC.m_Config.m_LogGames) {
