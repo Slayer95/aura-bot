@@ -471,6 +471,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_ExitingSoon(false),
     m_Ready(true),
     m_AutoReHosted(false),
+    m_MetaDataNeedsUpdate(false),
 
     m_LogLevel(LOG_LEVEL_DEBUG),
     m_SupportsModernSlots(false),
@@ -1000,7 +1001,9 @@ uint8_t CAura::HandleAction(const AppAction& action)
         // Delete all other pending actions
         return APP_ACTION_ERROR;
       }
-      MergePendingLobbies();
+      if (MergePendingLobbies()) {
+        m_MetaDataNeedsUpdate = true;
+      }
       return APP_ACTION_DONE;
     }
   }
@@ -1064,8 +1067,6 @@ bool CAura::Update()
     }
     m_PendingActions.pop();
   }
-
-  bool metaDataNeedsUpdate = false;
 
   if (m_ReloadContext) {
     TryReloadConfigs();
@@ -1303,7 +1304,7 @@ bool CAura::Update()
         EventGameStarted(*it);
       }
       it = m_Lobbies.erase(it);
-      metaDataNeedsUpdate = true;
+      m_MetaDataNeedsUpdate = true;
     } else {
       (*it)->UpdatePost(&send_fd);
       ++it;
@@ -1320,7 +1321,7 @@ bool CAura::Update()
         EventGameRemake(*it);
       }
       it = m_StartedGames.erase(it);
-      metaDataNeedsUpdate = true;
+      m_MetaDataNeedsUpdate = true;
     } else {
       (*it)->UpdatePost(&send_fd);
       ++it;
@@ -1340,10 +1341,10 @@ bool CAura::Update()
   // move stuff from pending vectors to their intended places
   m_Net.MergeDownGradedConnections();
   if (MergePendingLobbies()) {
-    metaDataNeedsUpdate = true;
+    m_MetaDataNeedsUpdate = true;
   }
 
-  if (metaDataNeedsUpdate) {
+  if (m_MetaDataNeedsUpdate) {
     UpdateMetaData();
   }
 
