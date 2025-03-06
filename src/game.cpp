@@ -2001,6 +2001,17 @@ void CGame::Log(const string& logText, int64_t gameTicks)
   m_PendingLogs.push(new CGameLogRecord(gameTicks, logText));
 }
 
+void CGame::LogRemote(const string& text)
+{
+  string logText = GetLogPrefix() + text;
+  if (m_Aura->m_IRC.m_Config.m_LogGames) {
+    m_Aura->m_IRC.SendAllChannels(logText);
+  }
+  if (m_Aura->m_Discord.m_Config.m_LogGames) {
+    // TODO: CGame::UpdateLogs() Discord endpoint
+  }
+}
+
 void CGame::UpdateLogs()
 {
   int64_t ticks = m_GameTicks;
@@ -4401,6 +4412,7 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
       SendAllChat(user->GetUID(), user->GetLeftReason());
     }
   }
+  LogRemote(user->GetExtendedName() + " " + user->GetLeftReason());
   SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode()));
   user->SetLeftMessageSent(true);
   user->SetStatus(USERSTATUS_ENDED);
@@ -4619,6 +4631,8 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
     notifyString = "\x07";
   }
 
+  LogRemote("[" + Player->GetExtendedName() + "] joined (" + ToDecString(GetNumJoinedPlayersOrFakeUsers()) + " / " + to_string(m_Map->GetMapNumControllers()) + ")");
+
   if (notifyString.empty()) {
     LOG_APP_IF(LOG_LEVEL_INFO, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
   } else {
@@ -4627,6 +4641,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   if (joinRequest->GetIsCensored()) {
     LOG_APP_IF(LOG_LEVEL_NOTICE, "user [" + joinRequest->GetName() + "] is censored name - was [" + joinRequest->GetOriginalName() + "]")
   }
+
   return Player;
 }
 
