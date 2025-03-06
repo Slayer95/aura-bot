@@ -336,7 +336,7 @@ public:
   void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
 
   void SetNumPlayersToStartGameOver(const uint8_t nNumPlayersToStartGameOver) { m_NumPlayersToStartGameOver = nNumPlayersToStartGameOver; }
-  void SetAutoKickPing(const uint8_t nAutoKickPing) { m_AutoKickPing = nAutoKickPing; }
+  void SetAutoKickPing(const uint32_t nAutoKickPing) { m_AutoKickPing = nAutoKickPing; }
   void SetWarnKickPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
   void SetSafeKickPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
   void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }

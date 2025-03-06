@@ -1516,9 +1516,9 @@ void CGameSetup::OnGameCreate()
   if (m_LobbyAutoRehosted) {
     // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
     if (m_CreationCounter < 10) {
-      SetName(m_BaseName + "-" + string(1, 48 + m_CreationCounter));
+      SetName(m_BaseName + "-" + string(1, static_cast<uint16_t>(48u + m_CreationCounter)));
     } else {
-      SetName(m_BaseName + "-" + string(1, 87 + m_CreationCounter));
+      SetName(m_BaseName + "-" + string(1, static_cast<uint16_t>(87u + m_CreationCounter)));
     }
     m_CreationCounter = (m_CreationCounter + 1) % 36;
   }
