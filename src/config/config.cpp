@@ -1077,7 +1077,7 @@ void CConfig::SetString(const string& key, const vector<uint8_t>& x)
 
 void CConfig::SetBool(const string& key, const bool& x)
 {
-  m_CFG[key] = x ? "1" : "0";
+  m_CFG[key] = x ? "yes" : "no";
 }
 
 void CConfig::SetInt32(const string& key, const int32_t& x)
