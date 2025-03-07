@@ -169,7 +169,7 @@ uint8_t CGameSeeker::Update(void* fd, void* send_fd, int64_t timeout)
           if (Bytes[1] == VLANProtocol::Magic::SEARCHGAME) {
             CIncomingVLanSearchGame vlanSearch = VLANProtocol::RECEIVE_VLAN_SEARCHGAME(Data);
             if (vlanSearch.isValid) {
-              m_GameVersion = Version(1, vlanSearch.gameVersion);
+              m_GameVersion = GAMEVER(1, vlanSearch.gameVersion);
               for (const auto& lobby : m_Aura->m_Lobbies) {
                 if (!lobby->GetIsMirror() && lobby->GetIsStageAcceptingJoins()) {
                   lobby->SendGameDiscoveryInfoVLAN(this);

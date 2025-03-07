@@ -770,7 +770,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  const Version requestVersion = Version(1, pkt->buf[8]);
+  const Version requestVersion = GAMEVER(1, pkt->buf[8]);
 
   DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
 

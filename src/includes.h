@@ -119,6 +119,8 @@
 #define DPRINT_IF(T, U)
 #endif
 
+#define GAMEVER(T, U) Version((uint8_t)(T), (uint8_t)(U))
+
 // time
 
 inline int64_t GetTime()

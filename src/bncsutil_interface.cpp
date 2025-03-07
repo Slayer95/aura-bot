@@ -148,7 +148,7 @@ optional<Version> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
     return version;
   }
 
-  version = Version(1, readVersion);
+  version = GAMEVER(1, readVersion);
   return version;
 }
 
@@ -181,7 +181,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   }
 
   const filesystem::path FileWar3EXE = [&]() {
-    if (war3DataVersion.value() >= Version(1u, 28u))
+    if (war3DataVersion.value() >= GAMEVER(1u, 28u))
       return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe");
     else
       return CaseInsensitiveFileExists(war3Path, "war3.exe");
@@ -189,7 +189,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   const filesystem::path FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll");
   const filesystem::path FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll");
 
-  if (!FileWar3EXE.empty() && (war3DataVersion.value() >= Version(1u, 29u) || (!FileStormDLL.empty() && !FileGameDLL.empty())))
+  if (!FileWar3EXE.empty() && (war3DataVersion.value() >= GAMEVER(1u, 29u) || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {
     int bufferSize = 512;
     int requiredSize = 0;
@@ -208,7 +208,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
       return false;
     }
 
-    if (war3DataVersion.value() >= Version(1u, 29u))
+    if (war3DataVersion.value() >= GAMEVER(1u, 29u))
     {
       const char* filesArray[] = {PathToString(FileWar3EXE).c_str()};
       checkRevision(valueStringFormula.c_str(), filesArray, 1, extractMPQNumber(mpqFileName.c_str()), &EXEVersionHash);
@@ -228,9 +228,9 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
     if (FileWar3EXE.empty())
       Print("[BNCS] unable to open War3EXE [" + PathToString(FileWar3EXE) + "]");
 
-    if (FileStormDLL.empty() && war3DataVersion.value() < Version(1u, 29u))
+    if (FileStormDLL.empty() && war3DataVersion.value() < GAMEVER(1u, 29u))
       Print("[BNCS] unable to open StormDLL [" + PathToString(FileStormDLL) + "]");
-    if (FileGameDLL.empty() && war3DataVersion.value() < Version(1u, 29u))
+    if (FileGameDLL.empty() && war3DataVersion.value() < GAMEVER(1u, 29u))
       Print("[BNCS] unable to open GameDLL [" + PathToString(FileGameDLL) + "]");
   }
 

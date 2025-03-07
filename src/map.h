@@ -123,8 +123,8 @@ struct MapEssentials
      numPlayers(0),
      numDisabled(0),
      numTeams(0),
-     minCompatibleGameVersion(Version(1u, 0u)),
-     minSuggestedGameVersion(Version(1u, 0u)),
+     minCompatibleGameVersion(GAMEVER(1u, 0u)),
+     minSuggestedGameVersion(GAMEVER(1u, 0u)),
      isLua(false),
      editorVersion(0),
      options(0),
@@ -388,9 +388,9 @@ public:
 {
   if (version.first == 1 && version.second == 36) {
     // v1.36 .. v2.0
-    return Version(2u, 0u);
+    return GAMEVER(2u, 0u);
   } else {
-    return Version(version.first, version.second + 1);
+    return GAMEVER(version.first, version.second + 1);
   }
 }
 
@@ -398,10 +398,10 @@ public:
 {
   if (version.first != 1) return version;
   if (19 <= version.second && version.second <= 21) {
-    return Version(1u, 19u);
+    return GAMEVER(1u, 19u);
   }
   if (24 <= version.second && version.second <= 28) {
-    return Version(1u, 24u);
+    return GAMEVER(1u, 24u);
   }
   return version;
 }
@@ -410,10 +410,10 @@ public:
 {
   if (version.first != 1) return ToVersionString(version);
   if (19 <= version.second && version.second <= 21) {
-    return ToVersionString(Version(1u, 19u));
+    return ToVersionString(GAMEVER(1u, 19u));
   }
   if (24 <= version.second && version.second <= 28) {
-    return ToVersionString(Version(1u, 24u));
+    return ToVersionString(GAMEVER(1u, 24u));
   }
   return ToVersionString(version);
 }

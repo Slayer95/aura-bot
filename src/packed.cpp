@@ -80,7 +80,7 @@ CPacked::CPacked(CAura* nAura)
     m_DecompressedSize(0),
     m_NumBlocks(0),
     m_War3Identifier(0),
-    m_War3Version(Version(1u, 0u)),
+    m_War3Version(GAMEVER(1u, 0u)),
     m_BuildNumber(0),
     m_Flags(0),
     m_ReplayLength(0)
@@ -180,7 +180,7 @@ void CPacked::Decompress(const bool allBlocks)
     uint32_t RawGameVersion;
 		ISS.read((char *)&m_War3Identifier, 4);	// version identifier
 		ISS.read((char *)&RawGameVersion, 4);		// version number
-    m_War3Version = Version(1, static_cast<uint8_t>(RawGameVersion));
+    m_War3Version = GAMEVER(1, static_cast<uint8_t>(RawGameVersion));
 	}
 
 	ISS.read((char *)&m_BuildNumber, 2);			// build number

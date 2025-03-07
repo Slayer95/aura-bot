@@ -3439,7 +3439,7 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   }
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
-  if (mapSize > 0x20000000 || gameVersion <= Version(1u, 28u) && mapSize > 0x8000000 || gameVersion <= Version(1u, 26u) && mapSize > 0x800000 || gameVersion <= Version(1u, 23u) && mapSize > 0x400000) {
+  if (mapSize > 0x20000000 || gameVersion <= GAMEVER(1u, 28u) && mapSize > 0x8000000 || gameVersion <= GAMEVER(1u, 26u) && mapSize > 0x800000 || gameVersion <= GAMEVER(1u, 23u) && mapSize > 0x400000) {
     versionPrefix = "[" + ToVersionString(gameVersion) + ".UnlockMapSize] ";
   } else {
     versionPrefix = "[" + ToVersionString(gameVersion) + "] ";
@@ -4603,7 +4603,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
 
   // send a map check packet to the new user.
 
-  if (m_Config.m_GameVersion >= Version(1u, 23u)) {
+  if (m_Config.m_GameVersion >= GAMEVER(1u, 23u)) {
     Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
   } else {
     Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
