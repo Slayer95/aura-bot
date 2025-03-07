@@ -6233,6 +6233,7 @@ void CGame::EventGameLoaded()
   if (!DesyncedPlayers.empty()) {
     if (GetHasDesyncHandler()) {
       SendAllChat("Some users desynchronized during game load: " + ToNameListSentence(DesyncedPlayers));
+      LogRemote("Some users desynchronized during game load: " + ToNameListSentence(DesyncedPlayers));
       if (!GetAllowsDesync()) {
         StopDesynchronized("was automatically dropped after desync");
       }
