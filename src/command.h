@@ -68,7 +68,7 @@ protected:
   std::ostream*                 m_Output;
 
   std::optional<bool>           m_OverrideVerified;
-  std::optional<uint8_t>        m_OverridePermissions;
+  std::optional<uint16_t>       m_OverridePermissions;
 
   bool                          m_PartiallyDestroyed;
 

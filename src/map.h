@@ -375,7 +375,7 @@ public:
     if (num < 0 || num > 0xFFFFFFFF) {
       return result;
     }
-    result = num;
+    result = static_cast<uint32_t>(num);
     return result;
   }
 

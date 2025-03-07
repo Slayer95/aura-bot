@@ -2337,7 +2337,7 @@ pair<uint8_t, uint8_t> CGame::GetLargestPotentialTeam() const
   // Only for Custom Forces
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes = GetPotentialTeamSizes();
-  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
+  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), (uint8_t)0u);
   for (uint8_t team = 0; team < numTeams; ++team) {
     if (teamSizes[team] > largestTeam.second) {
       largestTeam = make_pair(team, teamSizes[team]);

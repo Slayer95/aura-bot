@@ -74,25 +74,25 @@ constexpr uint8_t LOG_ALL = LOG_C | LOG_P | LOG_R;
 
 // map.h
 
-#define MAPSPEED_SLOW 1
-#define MAPSPEED_NORMAL 2
-#define MAPSPEED_FAST 3
+constexpr uint8_t MAPSPEED_SLOW = 1u;
+constexpr uint8_t MAPSPEED_NORMAL = 2u;
+constexpr uint8_t MAPSPEED_FAST = 3u;
 
-#define MAPVIS_HIDETERRAIN 1
-#define MAPVIS_EXPLORED 2
-#define MAPVIS_ALWAYSVISIBLE 3
-#define MAPVIS_DEFAULT 4
+constexpr uint8_t MAPVIS_HIDETERRAIN = 1u;
+constexpr uint8_t MAPVIS_EXPLORED = 2u;
+constexpr uint8_t MAPVIS_ALWAYSVISIBLE = 3u;
+constexpr uint8_t MAPVIS_DEFAULT = 4u;
 
-#define MAPOBS_NONE 1u
-#define MAPOBS_ONDEFEAT 2u
-#define MAPOBS_ALLOWED 3u
-#define MAPOBS_REFEREES 4u
+constexpr uint8_t MAPOBS_NONE = 1u;
+constexpr uint8_t MAPOBS_ONDEFEAT = 2u;
+constexpr uint8_t MAPOBS_ALLOWED = 3u;
+constexpr uint8_t MAPOBS_REFEREES = 4u;
 
-#define MAPFLAG_TEAMSTOGETHER 1
-#define MAPFLAG_FIXEDTEAMS 2
-#define MAPFLAG_UNITSHARE 4
-#define MAPFLAG_RANDOMHERO 8
-#define MAPFLAG_RANDOMRACES 16
+constexpr uint8_t MAPFLAG_TEAMSTOGETHER = 1u;
+constexpr uint8_t MAPFLAG_FIXEDTEAMS = 2u;
+constexpr uint8_t MAPFLAG_UNITSHARE = 4u;
+constexpr uint8_t MAPFLAG_RANDOMHERO = 8u;
+constexpr uint8_t MAPFLAG_RANDOMRACES = 16u;
 
 #define MAPOPT_HIDEMINIMAP (1 << 0)
 #define MAPOPT_MODIFYALLYPRIORITIES (1 << 1)
@@ -111,19 +111,19 @@ constexpr uint8_t LOG_ALL = LOG_C | LOG_P | LOG_R;
 #define MAPOPT_ACCURATERANDOM (1 << 16)
 #define MAPOPT_ABILITYSKINS (1 << 17)
 
-#define MAPFILTER_MAKER_USER 1
-#define MAPFILTER_MAKER_BLIZZARD 2
+constexpr uint8_t MAPFILTER_MAKER_USER = 1;
+constexpr uint8_t MAPFILTER_MAKER_BLIZZARD = 2;
 
-#define MAPFILTER_TYPE_MELEE 1
-#define MAPFILTER_TYPE_SCENARIO 2
+constexpr uint8_t MAPFILTER_TYPE_MELEE = 1;
+constexpr uint8_t MAPFILTER_TYPE_SCENARIO = 2;
 
-#define MAPFILTER_SIZE_SMALL 1
-#define MAPFILTER_SIZE_MEDIUM 2
-#define MAPFILTER_SIZE_LARGE 4
+constexpr uint8_t MAPFILTER_SIZE_SMALL = 1;
+constexpr uint8_t MAPFILTER_SIZE_MEDIUM = 2;
+constexpr uint8_t MAPFILTER_SIZE_LARGE = 4;
 
-#define MAPFILTER_OBS_FULL 1
-#define MAPFILTER_OBS_ONDEATH 2
-#define MAPFILTER_OBS_NONE 4
+constexpr uint8_t MAPFILTER_OBS_FULL = 1;
+constexpr uint8_t MAPFILTER_OBS_ONDEATH = 2;
+constexpr uint8_t MAPFILTER_OBS_NONE = 4;
 
 #define MAPGAMETYPE_UNKNOWN0 (1) // always set except for saved games?
 #define MAPGAMETYPE_BLIZZARD (1 << 3)
@@ -141,21 +141,21 @@ constexpr uint8_t LOG_ALL = LOG_C | LOG_P | LOG_R;
 #define MAPGAMETYPE_OBSONDEATH (1 << 21)
 #define MAPGAMETYPE_OBSNONE (1 << 22)
 
-#define MAPLAYOUT_ANY 0u
-#define MAPLAYOUT_CUSTOM_FORCES 1u
-#define MAPLAYOUT_FIXED_PLAYERS 3u
+constexpr uint8_t MAPLAYOUT_ANY = 0u;
+constexpr uint8_t MAPLAYOUT_CUSTOM_FORCES = 1u;
+constexpr uint8_t MAPLAYOUT_FIXED_PLAYERS = 3u;
 
-#define MAP_DATASET_DEFAULT 0u
-#define MAP_DATASET_CUSTOM 1u
-#define MAP_DATASET_MELEE 2u
+constexpr uint8_t MAP_DATASET_DEFAULT = 0u;
+constexpr uint8_t MAP_DATASET_CUSTOM = 1u;
+constexpr uint8_t MAP_DATASET_MELEE = 2u;
 
-#define CACHE_REVALIDATION_NEVER 0
-#define CACHE_REVALIDATION_ALWAYS 1
-#define CACHE_REVALIDATION_MODIFIED 2
+constexpr uint8_t CACHE_REVALIDATION_NEVER = 0;
+constexpr uint8_t CACHE_REVALIDATION_ALWAYS = 1u;
+constexpr uint8_t CACHE_REVALIDATION_MODIFIED = 2u;
 
-#define W3HMC_MODE_DISABLED 0
-#define W3HMC_MODE_OPTIONAL 1
-#define W3HMC_MODE_REQUIRED 2
+constexpr uint8_t W3HMC_MODE_DISABLED = 0u;
+constexpr uint8_t W3HMC_MODE_OPTIONAL = 1u;
+constexpr uint8_t W3HMC_MODE_REQUIRED = 2u;
 
 // Load map fragments in memory max 8 MB at a time.
 constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;

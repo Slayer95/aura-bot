@@ -2098,8 +2098,11 @@ map<uint32_t, string> CMap::GetTrigStrMulti(const string& fileContents, const se
         try {
           strNum = stol(line.substr(7));
         } catch (...) {}
-        if (strNum.has_value() && strNum >= 0 && strNum <= 0xFFFFFFFF && captureTargets.find(strNum.value()) != captureTargets.end()) {
-          currentTarget = make_pair((uint32_t)strNum.value(), string());
+        if (strNum.has_value() && strNum >= 0 && strNum <= 0xFFFFFFFF) {
+          uint32_t num = static_cast<uint32_t>(strNum.value());
+          if (captureTargets.find(num) != captureTargets.end()) {
+            currentTarget = make_pair(num, string());
+          }
         }
       }
     } else {
