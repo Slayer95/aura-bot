@@ -85,7 +85,10 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_GameFlags(MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS),
     m_MapFilterType(MAPFILTER_TYPE_SCENARIO),
     m_MapFilterObs(MAPFILTER_OBS_NONE),
-    m_MapPrologueImageSize(0),
+    m_MapPreviewImageSize(0),
+    m_MapPreviewImagePathType(MAP_FILE_SOURCE_CATEGORY_NONE),
+    //m_MapPrologueImageSize(0),
+    //m_MapLoadingImageSize(0),
     m_MapMPQ(nullptr),
     m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
     m_HMCMode(W3HMC_MODE_DISABLED)
@@ -511,7 +514,6 @@ void CMap::ReplaceTriggerStrings(string& container, vector<string*>& maybeWTSRef
   for (const auto& mapping : mappings) {
     auto wtsBackRefs = numToStrings.find(mapping.first);
     for (string* wtsRef : wtsBackRefs->second) {
-      Print("[MAP] Converted <<" + (*wtsRef) + ">> to <<" + mapping.second + ">>");
       *wtsRef = mapping.second;
     }
   }
@@ -898,22 +900,27 @@ optional<MapEssentials> CMap::ParseMPQ()
       maybeTriggerStrings.push_back(&mapEssentials->desc);
       ReplaceTriggerStrings(fileContents, maybeTriggerStrings);
 
+      /*
       if (!mapEssentials->prologueImgPath.empty()) {
-        Print("[MAP] Reading prologue image from [" + mapEssentials->prologueImgPath + "]");
         ReadFileFromArchive(fileContents, mapEssentials->prologueImgPath);
         if (!fileContents.empty()) {
           mapEssentials->prologueImgSize = fileContents.size();
         }
       }
       if (!mapEssentials->loadingImgPath.empty()) {
-        Print("[MAP] Reading loading image from [" + mapEssentials->loadingImgPath + "]");
         ReadFileFromArchive(fileContents, mapEssentials->loadingImgPath);
         if (!fileContents.empty()) {
           mapEssentials->loadingImgSize = fileContents.size();
         }
       }
+      */
+    } // end war3map.w3i
+
+    ReadFileFromArchive(fileContents, "war3mapPreview.tga");
+    if (!fileContents.empty()) {
+      mapEssentials->previewImgSize = fileContents.size();
     }
-  } else {
+  } else { // end m_MapLoaderIsPartial
     DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
   }
 
@@ -1057,10 +1064,13 @@ void CMap::Load(CConfig* CFG)
     m_MapTitle = mapEssentials->name;
     m_MapAuthor = mapEssentials->author;
     m_MapDescription = mapEssentials->desc;
+    m_MapPreviewImageSize = mapEssentials->previewImgSize;
+    /*
     m_MapPrologueImageSize = mapEssentials->prologueImgSize;
     m_MapPrologueImagePath = mapEssentials->prologueImgPath;
     m_MapLoadingImageSize = mapEssentials->loadingImgSize;
     m_MapLoadingImagePath = mapEssentials->loadingImgPath;
+    */
     m_MapNumControllers = mapEssentials->numPlayers;
     m_MapNumDisabled = mapEssentials->numDisabled;
     m_MapNumTeams = mapEssentials->numTeams;
@@ -1294,6 +1304,31 @@ void CMap::Load(CConfig* CFG)
     CFG->SetString("map.meta.desc", m_MapDescription);
   }
 
+  if (CFG->Exists("map.preview.image.size")) {
+    m_MapPreviewImageSize = CFG->GetUint32("map.preview.image.size", 0);
+  } else {
+    CFG->SetUint32("map.preview.image.size", m_MapPreviewImageSize);
+  }
+
+  if (CFG->Exists("map.preview.image.path")) {
+    m_MapPreviewImagePath = CFG->GetString("map.preview.image.path", string());
+  } else {
+    CFG->SetString("map.preview.image.path", m_MapPreviewImageSize > 0 ? "war3mapPreview.tga" : string());
+  }
+
+  if (CFG->Exists("map.preview.image.path_type")) {
+    m_MapPreviewImagePathType = CFG->GetStringIndex("map.preview.image.source", {"none", "mpq", "fs"}, MAP_FILE_SOURCE_CATEGORY_NONE);
+  } else {
+    CFG->SetUint8("map.preview.image.path_type", m_MapPreviewImageSize > 0 ? MAP_FILE_SOURCE_CATEGORY_MPQ : MAP_FILE_SOURCE_CATEGORY_NONE);
+  }
+
+  if (CFG->Exists("map.preview.image.mime_type")) {
+    m_MapPreviewImageMimeType = CFG->GetString("map.preview.image.mime_type", string());
+  } else {
+    CFG->SetString("map.preview.image.mime_type", m_MapPreviewImageSize > 0 ? "image/tga" : "example/example");
+  }
+
+  /*
   if (CFG->Exists("map.prologue.image.size")) {
     m_MapPrologueImageSize = CFG->GetUint32("map.prologue.image.size", 0);
   } else {
@@ -1329,6 +1364,7 @@ void CMap::Load(CConfig* CFG)
   } else {
     CFG->SetString("map.load_screen.image.mime_type", !m_MapLoadingImagePath.empty() && m_MapLoadingImageMimeType.empty() ? "image/" : m_MapLoadingImageMimeType);
   }
+  */
 
   if (CFG->Exists("map.num_disabled")) {
     m_MapNumDisabled = CFG->GetUint8("map.num_disabled", m_MapNumDisabled);

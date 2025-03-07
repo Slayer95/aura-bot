@@ -106,8 +106,9 @@ struct MapEssentials
   bool isLua;
   uint32_t editorVersion;
   uint32_t options;
-  uint32_t loadingImgSize;
-  uint32_t prologueImgSize;
+  uint32_t previewImgSize;
+  //uint32_t loadingImgSize;
+  //uint32_t prologueImgSize;
   std::string prologueImgPath;
   std::string loadingImgPath;
   std::string name;
@@ -128,8 +129,9 @@ struct MapEssentials
      isLua(false),
      editorVersion(0),
      options(0),
+     previewImgSize(0)/*,
      loadingImgSize(0),
-     prologueImgSize(0)
+     prologueImgSize(0)*/
   {
   }
   ~MapEssentials() = default;
@@ -231,12 +233,18 @@ private:
   uint8_t                         m_MapFilterSize;
   uint8_t                         m_MapFilterObs;
   std::array<uint8_t, 5>          m_MapContentMismatch;
+  uint32_t                        m_MapPreviewImageSize;
+  uint8_t                         m_MapPreviewImagePathType;
+  std::string                     m_MapPreviewImagePath;
+  std::string                     m_MapPreviewImageMimeType;
+  /*
   uint32_t                        m_MapPrologueImageSize;
-  uint32_t                        m_MapLoadingImageSize;
   std::string                     m_MapPrologueImagePath;
-  std::string                     m_MapLoadingImagePath;
   std::string                     m_MapPrologueImageMimeType;
+  uint32_t                        m_MapLoadingImageSize;
+  std::string                     m_MapLoadingImagePath;
   std::string                     m_MapLoadingImageMimeType;
+  */
   std::string                     m_MapTitle;
   std::string                     m_MapAuthor;
   std::string                     m_MapDescription;
@@ -292,12 +300,18 @@ public:
   [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
+  /*
   [[nodiscard]] inline uint32_t                   GetMapPrologueImageSize() const { return m_MapPrologueImageSize; }
-  [[nodiscard]] inline uint32_t                   GetMapLoadingImageSize() const { return m_MapLoadingImageSize; }
   [[nodiscard]] inline std::string                GetMapPrologueImagePath() const { return m_MapPrologueImagePath; }
-  [[nodiscard]] inline std::string                GetMapLoadingImagePath() const { return m_MapLoadingImagePath; }
   [[nodiscard]] inline std::string                GetMapPrologueImageMimeType() const { return m_MapPrologueImageMimeType; }
+  [[nodiscard]] inline uint32_t                   GetMapLoadingImageSize() const { return m_MapLoadingImageSize; }
+  [[nodiscard]] inline std::string                GetMapLoadingImagePath() const { return m_MapLoadingImagePath; }
   [[nodiscard]] inline std::string                GetMapLoadingImageMimeType() const { return m_MapLoadingImageMimeType; }
+  */
+  [[nodiscard]] inline uint32_t                   GetMapPreviewImageSize() const { return m_MapPreviewImageSize; }
+  [[nodiscard]] inline uint8_t                    GetMapPreviewImagePathType() const { return m_MapPreviewImagePathType; }
+  [[nodiscard]] inline std::string                GetMapPreviewImagePath() const { return m_MapPreviewImagePath; }
+  [[nodiscard]] inline std::string                GetMapPreviewImageMimeType() const { return m_MapPreviewImageMimeType; }
   [[nodiscard]] inline std::string                GetMapTitle() const { return m_MapTitle.empty() ? "Just another Warcraft 3 Map" : m_MapTitle; }
   [[nodiscard]] inline std::string                GetMapAuthor() const { return m_MapAuthor.empty() ? "Unknown" : m_MapAuthor; }
   [[nodiscard]] inline std::string                GetMapDescription() const { return m_MapDescription.empty() ? "Nondescript" : m_MapDescription; }

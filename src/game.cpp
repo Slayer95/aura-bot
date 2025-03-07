@@ -429,7 +429,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     if (m_Map->GetMapFileIsFromManagedFolder()) {
       auto it = m_Aura->m_MapFilesTimedBusyLocks.find(m_Map->GetServerPath());
       if (it == m_Aura->m_MapFilesTimedBusyLocks.end()) {
-        m_Aura->m_MapFilesTimedBusyLocks[m_Map->GetServerPath()] = make_pair<int64_t, uint16_t>(GetTicks(), 0u);
+        m_Aura->m_MapFilesTimedBusyLocks[m_Map->GetServerPath()] = make_pair<int64_t, uint16_t>(GetTicks(), (uint16_t)0u);
       } else {
         it->second.first = GetTicks();
         it->second.second++;
@@ -2502,7 +2502,7 @@ bool CGame::FindHumanVsAITeams(const uint8_t humanCount, const uint8_t computerC
   {
     const uint8_t numTeams = m_Map->GetMapNumTeams();
     vector<uint8_t> teamSizes = GetPotentialTeamSizes();
-    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
+    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), (uint8_t)0u);
     pair<uint8_t, uint8_t> smallestTeam = make_pair(m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots());
     for (uint8_t team = 0; team < numTeams; ++team) {
       if (team == forcedComputerTeam) continue;
@@ -2608,7 +2608,7 @@ bool CGame::SetLayoutCompact()
 
   const uint8_t numTeams = m_Map->GetMapNumTeams();
   vector<uint8_t> teamSizes = GetActiveTeamSizes();
-  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
+  pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), (uint8_t)0u);
   for (uint8_t team = 0; team < numTeams; ++team) {
     if (largestTeam.second < teamSizes[team]) {
       largestTeam = make_pair(team, teamSizes[team]);
@@ -2847,7 +2847,7 @@ uint8_t CGame::GetOneVsAllTeamAll() const
 
   vector<uint8_t> teamSizes = GetPotentialTeamSizes();
   if (resultTeam == 0xFF) {
-    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), 0u);
+    pair<uint8_t, uint8_t> largestTeam = make_pair(m_Map->GetVersionMaxSlots(), (uint8_t)0u);
     for (uint8_t team = 0; team < mapNumTeams; ++team) {
       if (teamSizes[team] > largestTeam.second) {
         largestTeam = make_pair(team, teamSizes[team]);

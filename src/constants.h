@@ -164,6 +164,10 @@ constexpr uint32_t MAP_FILE_PROCESSING_CHUNK_SIZE = 0x800000;
 
 constexpr uint8_t MAP_CONFIG_SCHEMA_NUMBER = 3;
 
+constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_NONE = 0u;
+constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_MPQ = 1u;
+constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_FS = 2u;
+
 // game.h
 #define SLOTS_ALIGNMENT_CHANGED (1 << 0)
 #define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)
