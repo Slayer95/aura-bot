@@ -659,7 +659,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
       string   GarbageString;
       string   RawMapName, RawMapAuthor, RawMapDescription;
-      string   RawMapPrologue;
+      string   RawMapLoadingScreen, RawMapPrologue;
       uint32_t FileFormat = 0;
       uint32_t RawEditorVersion = 0;
       uint32_t RawMapFlags = 0;
@@ -688,10 +688,10 @@ optional<MapEssentials> CMap::ParseMPQ()
         ISS.seekg(1, ios::cur);                 // map main ground type
 
         if (FileFormat >= 25) {
-          ISS.seekg(4, ios::cur);            // loading screen background number
-          getline(ISS, GarbageString, '\0'); // path of custom loading screen model
+          ISS.seekg(4, ios::cur);                   // loading screen background number
+          getline(ISS, RawMapLoadingScreen, '\0');  // path of custom loading screen model
         } else {
-          ISS.seekg(4, ios::cur);            // campaign background number
+          ISS.seekg(4, ios::cur);                   // campaign background number
         }
 
         getline(ISS, GarbageString, '\0'); // map loading screen text
@@ -743,6 +743,7 @@ optional<MapEssentials> CMap::ParseMPQ()
         mapEssentials->author = RawMapAuthor;
         mapEssentials->desc = RawMapDescription;
         mapEssentials->prologueImgPath = RawMapPrologue;
+        mapEssentials->loadingImgPath = RawMapLoadingScreen;
 
         ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
         if (RawMapNumPlayers > MAX_SLOTS_MODERN) RawMapNumPlayers = 0;
@@ -904,6 +905,13 @@ optional<MapEssentials> CMap::ParseMPQ()
           mapEssentials->prologueImgSize = fileContents.size();
         }
       }
+      if (!mapEssentials->loadingImgPath.empty()) {
+        Print("[MAP] Reading loading image from [" + mapEssentials->loadingImgPath + "]");
+        ReadFileFromArchive(fileContents, mapEssentials->loadingImgPath);
+        if (!fileContents.empty()) {
+          mapEssentials->loadingImgSize = fileContents.size();
+        }
+      }
     }
   } else {
     DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
@@ -1051,6 +1059,8 @@ void CMap::Load(CConfig* CFG)
     m_MapDescription = mapEssentials->desc;
     m_MapPrologueImageSize = mapEssentials->prologueImgSize;
     m_MapPrologueImagePath = mapEssentials->prologueImgPath;
+    m_MapLoadingImageSize = mapEssentials->loadingImgSize;
+    m_MapLoadingImagePath = mapEssentials->loadingImgPath;
     m_MapNumControllers = mapEssentials->numPlayers;
     m_MapNumDisabled = mapEssentials->numDisabled;
     m_MapNumTeams = mapEssentials->numTeams;
@@ -1300,6 +1310,24 @@ void CMap::Load(CConfig* CFG)
     m_MapPrologueImageMimeType = CFG->GetString("map.prologue.image.mime_type", string());
   } else {
     CFG->SetString("map.prologue.image.mime_type", !m_MapPrologueImagePath.empty() && m_MapPrologueImageMimeType.empty() ? "image/" : m_MapPrologueImageMimeType);
+  }
+
+  if (CFG->Exists("map.load_screen.image.size")) {
+    m_MapLoadingImageSize = CFG->GetUint32("map.load_screen.image.size", 0);
+  } else {
+    CFG->SetUint32("map.load_screen.image.size", m_MapLoadingImageSize);
+  }
+
+  if (CFG->Exists("map.load_screen.image.path")) {
+    m_MapLoadingImagePath = CFG->GetString("map.load_screen.image.path", string());
+  } else {
+    CFG->SetString("map.load_screen.image.path", m_MapLoadingImagePath);
+  }
+
+  if (CFG->Exists("map.load_screen.image.mime_type")) {
+    m_MapLoadingImageMimeType = CFG->GetString("map.load_screen.image.mime_type", string());
+  } else {
+    CFG->SetString("map.load_screen.image.mime_type", !m_MapLoadingImagePath.empty() && m_MapLoadingImageMimeType.empty() ? "image/" : m_MapLoadingImageMimeType);
   }
 
   if (CFG->Exists("map.num_disabled")) {

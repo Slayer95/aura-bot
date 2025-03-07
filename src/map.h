@@ -106,8 +106,10 @@ struct MapEssentials
   bool isLua;
   uint32_t editorVersion;
   uint32_t options;
+  uint32_t loadingImgSize;
   uint32_t prologueImgSize;
   std::string prologueImgPath;
+  std::string loadingImgPath;
   std::string name;
   std::string author;
   std::string desc;
@@ -126,6 +128,7 @@ struct MapEssentials
      isLua(false),
      editorVersion(0),
      options(0),
+     loadingImgSize(0),
      prologueImgSize(0)
   {
   }
@@ -229,8 +232,11 @@ private:
   uint8_t                         m_MapFilterObs;
   std::array<uint8_t, 5>          m_MapContentMismatch;
   uint32_t                        m_MapPrologueImageSize;
+  uint32_t                        m_MapLoadingImageSize;
   std::string                     m_MapPrologueImagePath;
+  std::string                     m_MapLoadingImagePath;
   std::string                     m_MapPrologueImageMimeType;
+  std::string                     m_MapLoadingImageMimeType;
   std::string                     m_MapTitle;
   std::string                     m_MapAuthor;
   std::string                     m_MapDescription;
@@ -287,8 +293,11 @@ public:
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
   [[nodiscard]] inline uint32_t                   GetMapPrologueImageSize() const { return m_MapPrologueImageSize; }
+  [[nodiscard]] inline uint32_t                   GetMapLoadingImageSize() const { return m_MapLoadingImageSize; }
   [[nodiscard]] inline std::string                GetMapPrologueImagePath() const { return m_MapPrologueImagePath; }
+  [[nodiscard]] inline std::string                GetMapLoadingImagePath() const { return m_MapLoadingImagePath; }
   [[nodiscard]] inline std::string                GetMapPrologueImageMimeType() const { return m_MapPrologueImageMimeType; }
+  [[nodiscard]] inline std::string                GetMapLoadingImageMimeType() const { return m_MapLoadingImageMimeType; }
   [[nodiscard]] inline std::string                GetMapTitle() const { return m_MapTitle.empty() ? "Just another Warcraft 3 Map" : m_MapTitle; }
   [[nodiscard]] inline std::string                GetMapAuthor() const { return m_MapAuthor.empty() ? "Unknown" : m_MapAuthor; }
   [[nodiscard]] inline std::string                GetMapDescription() const { return m_MapDescription.empty() ? "Nondescript" : m_MapDescription; }
