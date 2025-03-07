@@ -4639,7 +4639,12 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
     notifyString = "\x07";
   }
 
-  LogRemote("[" + Player->GetExtendedName() + "] joined (" + ToDecString(GetNumJoinedPlayersOrFakeUsers()) + " / " + to_string(m_Map->GetMapNumControllers()) + ")");
+  size_t observerCount = GetObservers().size();
+  if (observerCount > 0) {
+    LogRemote("[" + Player->GetExtendedName() + "] joined (" + ToDecString(GetNumControllers()) + " / " + to_string(m_Map->GetMapNumControllers()) + ") + " + to_string(observerCount)+ " obs");
+  } else {
+    LogRemote("[" + Player->GetExtendedName() + "] joined (" + ToDecString(GetNumControllers()) + " / " + to_string(m_Map->GetMapNumControllers()) + ")");
+  }
 
   if (notifyString.empty()) {
     LOG_APP_IF(LOG_LEVEL_INFO, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest->GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
