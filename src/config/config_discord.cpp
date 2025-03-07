@@ -41,7 +41,6 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   m_Token                  = CFG.GetString("discord.token");
   m_InviteUrl              = CFG.GetString("discord.invites.url");
   m_Enabled                = CFG.GetBool("discord.enabled", false);
-  m_LogGames               = CFG.GetBool("discord.log_games", false);
 
 #ifdef DISABLE_DPP
   if (m_Enabled) {
@@ -67,7 +66,9 @@ CDiscordConfig::CDiscordConfig(CConfig& CFG)
   m_FilterInstallUsersMode = CFG.GetStringIndex("discord.direct_messages.mode", invitesMode, FILTER_ALLOW_ALL);
   m_FilterInstallUsersList = CFG.GetUint64Set("discord.direct_messages.list", ',', {});
   m_SudoUsers = CFG.GetUint64Set("discord.sudo_users", ',', {});
-  m_LogChannels = CFG.GetUint64Set("discord.log_channels", ',', {});
+
+  m_LogGames               = CFG.GetBool("discord.log_games.enabled", false);
+  m_LogChannels            = CFG.GetUint64Set("discord.log_games.channels", ',', {});
 
   if (m_Enabled && m_Token.empty()) {
     CFG.SetFailed();

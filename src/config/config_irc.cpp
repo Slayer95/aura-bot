@@ -46,7 +46,7 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
   m_UserName               = CFG.GetString("irc.username");
   m_Password               = CFG.GetString("irc.password");
   m_Enabled                = CFG.GetBool("irc.enabled", false);
-  m_LogGames               = CFG.GetBool("irc.log_games", false);
+  m_LogGames               = CFG.GetBool("irc.log_games.enabled", false);
   m_VerifiedDomain         = CFG.GetString("irc.verified_domain");
 
   m_PrivateCmdToken        = CFG.GetString("irc.commands.trigger", "!");

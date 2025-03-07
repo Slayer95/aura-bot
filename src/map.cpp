@@ -85,6 +85,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_GameFlags(MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS),
     m_MapFilterType(MAPFILTER_TYPE_SCENARIO),
     m_MapFilterObs(MAPFILTER_OBS_NONE),
+    m_MapPrologueImageSize(0),
     m_MapMPQ(nullptr),
     m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
     m_HMCMode(W3HMC_MODE_DISABLED)
@@ -479,6 +480,43 @@ void CMap::ReadFileFromArchive(string& container, const string& fileSubPath) con
   ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
 }
 
+void CMap::ReplaceTriggerStrings(string& container, vector<string*>& maybeWTSRefs) const
+{
+  set<uint32_t> trigStrTargets;
+  map<uint32_t, vector<string*>> numToStrings;
+  for (string* maybeWTSRef : maybeWTSRefs) {
+    optional<uint32_t> maybeWTSNum = CMap::GetTrigStrNum(*maybeWTSRef);
+    if (!maybeWTSNum.has_value()) {
+      continue;
+    }
+    uint32_t num = maybeWTSNum.value();
+    if (trigStrTargets.find(num) == trigStrTargets.end()) {
+      numToStrings[num] = vector<string*>();
+      trigStrTargets.insert(num);
+    }
+    auto it = numToStrings.find(num);
+    it->second.push_back(maybeWTSRef);
+  }
+  if (trigStrTargets.empty()) {
+    return;
+  }
+
+  ReadFileFromArchive(container, "war3map.wts");
+  if (container.empty()) {
+    return;
+  }
+
+  map<uint32_t, string> mappings = CMap::GetTrigStrMulti(container, trigStrTargets);
+
+  for (const auto& mapping : mappings) {
+    auto wtsBackRefs = numToStrings.find(mapping.first);
+    for (string* wtsRef : wtsBackRefs->second) {
+      Print("[MAP] Converted <<" + (*wtsRef) + ">> to <<" + mapping.second + ">>");
+      *wtsRef = mapping.second;
+    }
+  }
+}
+
 optional<MapEssentials> CMap::ParseMPQ()
 {
   optional<MapEssentials> mapEssentials;
@@ -620,7 +658,8 @@ optional<MapEssentials> CMap::ParseMPQ()
       // war3map.w3i format found at http://www.wc3campaigns.net/tools/specs/index.html by Zepir/PitzerMike
 
       string   GarbageString;
-      string   RawMapName;
+      string   RawMapName, RawMapAuthor, RawMapDescription;
+      string   RawMapPrologue;
       uint32_t FileFormat = 0;
       uint32_t RawEditorVersion = 0;
       uint32_t RawMapFlags = 0;
@@ -637,16 +676,16 @@ optional<MapEssentials> CMap::ParseMPQ()
           ISS.seekg(16, ios::cur);         // game version
         }
         ISS.read(reinterpret_cast<char*>(&RawEditorVersion), 4); // editor version
-        getline(ISS, RawMapName, '\0'); // map name
-        getline(ISS, GarbageString, '\0'); // map author
-        getline(ISS, GarbageString, '\0'); // map description
-        getline(ISS, GarbageString, '\0'); // players recommended
-        ISS.seekg(32, ios::cur);           // camera bounds
-        ISS.seekg(16, ios::cur);           // camera bounds complements
+        getline(ISS, RawMapName, '\0');         // map name
+        getline(ISS, RawMapAuthor, '\0');       // map author
+        getline(ISS, RawMapDescription, '\0');  // map description
+        getline(ISS, GarbageString, '\0');      // players recommended
+        ISS.seekg(32, ios::cur);                // camera bounds
+        ISS.seekg(16, ios::cur);                // camera bounds complements
         ISS.read(reinterpret_cast<char*>(&RawMapWidth), 4);  // map width
         ISS.read(reinterpret_cast<char*>(&RawMapHeight), 4); // map height
         ISS.read(reinterpret_cast<char*>(&RawMapFlags), 4);  // flags
-        ISS.seekg(1, ios::cur);            // map main ground type
+        ISS.seekg(1, ios::cur);                 // map main ground type
 
         if (FileFormat >= 25) {
           ISS.seekg(4, ios::cur);            // loading screen background number
@@ -661,7 +700,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
         if (FileFormat >= 25) {
           ISS.read(reinterpret_cast<char*>(&RawGameDataSet), 4);  // used game data set
-          getline(ISS, GarbageString, '\0');                      // prologue screen path
+          getline(ISS, RawMapPrologue, '\0');                     // prologue screen path
         } else {
           ISS.seekg(4, ios::cur);                                 // map loading screen number
         }
@@ -701,6 +740,9 @@ optional<MapEssentials> CMap::ParseMPQ()
         mapEssentials->editorVersion = RawEditorVersion;
         mapEssentials->isLua = RawScriptingLanguage > 0;
         mapEssentials->name = RawMapName;
+        mapEssentials->author = RawMapAuthor;
+        mapEssentials->desc = RawMapDescription;
+        mapEssentials->prologueImgPath = RawMapPrologue;
 
         ISS.read(reinterpret_cast<char*>(&RawMapNumPlayers), 4); // number of players
         if (RawMapNumPlayers > MAX_SLOTS_MODERN) RawMapNumPlayers = 0;
@@ -849,20 +891,17 @@ optional<MapEssentials> CMap::ParseMPQ()
         mapEssentials->minCompatibleGameVersion = Version(1u, 7u);
       }
 
-      if (mapEssentials->name.size() >= 9 && mapEssentials->name.substr(0, 8) == "TRIGSTR_") {
-        string encodedNum = mapEssentials->name.substr(8);
-        optional<int64_t> num;
-        try {
-          num = stol(encodedNum);
-        } catch (...) {
-        }
-        if (num.has_value() && num.value() <= 0xFFFFFFFF) {
-          ReadFileFromArchive(fileContents, "war3map.wts");
-          optional<string> parsedString = GetWarcraftTextString(fileContents, static_cast<uint32_t>(num.value()));
-          if (parsedString.has_value()) {
-            Print("[MAP] Converted <<" + mapEssentials->name + ">> to <<" + parsedString.value() + ">>");
-            mapEssentials->name = parsedString.value();
-          }
+      vector<string*> maybeTriggerStrings;
+      maybeTriggerStrings.push_back(&mapEssentials->name);
+      maybeTriggerStrings.push_back(&mapEssentials->author);
+      maybeTriggerStrings.push_back(&mapEssentials->desc);
+      ReplaceTriggerStrings(fileContents, maybeTriggerStrings);
+
+      if (!mapEssentials->prologueImgPath.empty()) {
+        Print("[MAP] Reading prologue image from [" + mapEssentials->prologueImgPath + "]");
+        ReadFileFromArchive(fileContents, mapEssentials->prologueImgPath);
+        if (!fileContents.empty()) {
+          mapEssentials->prologueImgSize = fileContents.size();
         }
       }
     }
@@ -1008,6 +1047,10 @@ void CMap::Load(CConfig* CFG)
       m_MapDataSet = mapEssentials->dataSet;
     }
     m_MapTitle = mapEssentials->name;
+    m_MapAuthor = mapEssentials->author;
+    m_MapDescription = mapEssentials->desc;
+    m_MapPrologueImageSize = mapEssentials->prologueImgSize;
+    m_MapPrologueImagePath = mapEssentials->prologueImgPath;
     m_MapNumControllers = mapEssentials->numPlayers;
     m_MapNumDisabled = mapEssentials->numDisabled;
     m_MapNumTeams = mapEssentials->numTeams;
@@ -1224,9 +1267,39 @@ void CMap::Load(CConfig* CFG)
   }
 
   if (CFG->Exists("map.title")) {
-    m_MapTitle = CFG->GetString("map.title", "Another Warcraft 3 Map");
+    m_MapTitle = CFG->GetString("map.title", "Just another Warcraft 3 Map");
   } else {
     CFG->SetString("map.title", m_MapTitle);
+  }
+
+  if (CFG->Exists("map.meta.author")) {
+    m_MapAuthor = CFG->GetString("map.meta.author", "Unknown");
+  } else {
+    CFG->SetString("map.meta.author", m_MapAuthor);
+  }
+
+  if (CFG->Exists("map.meta.desc")) {
+    m_MapDescription = CFG->GetString("map.meta.desc", "Nondescript");
+  } else {
+    CFG->SetString("map.meta.desc", m_MapDescription);
+  }
+
+  if (CFG->Exists("map.prologue.image.size")) {
+    m_MapPrologueImageSize = CFG->GetUint32("map.prologue.image.size", 0);
+  } else {
+    CFG->SetUint32("map.prologue.image.size", m_MapPrologueImageSize);
+  }
+
+  if (CFG->Exists("map.prologue.image.path")) {
+    m_MapPrologueImagePath = CFG->GetString("map.prologue.image.path", string());
+  } else {
+    CFG->SetString("map.prologue.image.path", m_MapPrologueImagePath);
+  }
+
+  if (CFG->Exists("map.prologue.image.mime_type")) {
+    m_MapPrologueImageMimeType = CFG->GetString("map.prologue.image.mime_type", string());
+  } else {
+    CFG->SetString("map.prologue.image.mime_type", !m_MapPrologueImagePath.empty() && m_MapPrologueImageMimeType.empty() ? "image/" : m_MapPrologueImageMimeType);
   }
 
   if (CFG->Exists("map.num_disabled")) {
@@ -1860,9 +1933,9 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_MapFilterMaker = CFG.GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize = CFG.GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
 
-  m_MapSiteURL = CFG.GetString("map.site");
-  m_MapShortDesc = CFG.GetString("map.short_desc");
-  m_MapURL = CFG.GetString("map.url");
+  m_MapSiteURL = CFG.GetString("map.meta.site");
+  m_MapShortDesc = CFG.GetString("map.meta.short_desc");
+  m_MapURL = CFG.GetString("map.meta.url");
 
   m_MapType = CFG.GetString("map.type");
   m_MapMetaDataEnabled = CFG.GetBool("map.meta_data.enabled", m_MapType == "dota" || m_MapType == "evergreen");
@@ -1891,4 +1964,137 @@ uint8_t CMap::GetLobbyRace(const CGameSlot* slot) const
   if (isRandomRace) return SLOTRACE_RANDOM;
   // Note: If the slot was never selectable, it isn't promoted to selectable.
   return slot->GetRaceSelectable();
+}
+
+string CMap::SanitizeTrigStr(const string& input)
+{
+  string::size_type cursor = 0;
+  string::size_type end = input.size();
+  string output;
+  while (cursor < end) {
+    if (input[cursor] == '\\') {
+      if (cursor + 1 < end) {
+        output.push_back(input[cursor + 1]);
+        cursor += 2;
+        continue;
+      }
+      output.push_back(input[cursor]);
+    } else if (input[cursor] == '|') {
+      if (cursor + 1 < end && static_cast<char>(tolower(input[cursor + 1])) == 'r') {
+        cursor += 2;
+        continue;
+      }
+      if (cursor + 1 < end && static_cast<char>(tolower(input[cursor + 1])) == 'n') {
+        output.push_back('\n');
+        cursor += 2;
+        continue;
+      }
+      if (cursor + 1 < end && static_cast<char>(tolower(input[cursor + 1])) == 'c') {
+        cursor += 10;
+        continue;
+      }
+    }
+    if (input[cursor] == '\r') {
+      cursor += 1;
+      continue;
+    }
+    output.push_back(input[cursor]);
+    cursor += 1;
+  }
+  return TrimStringExtended(output);
+}
+
+optional<string> CMap::GetTrigStr(const string& fileContents, const uint32_t targetNum)
+{
+  constexpr char openToken = '{';
+  constexpr char closeToken = '}';
+
+  optional<string> result;
+  string line;
+  istringstream ISS(fileContents);
+  optional<uint32_t> stringCtx;
+  bool inBraces = false;
+  bool inTarget = false;
+  while (true) {
+    getline(ISS, line);
+    if (ISS.fail()) {
+      break;
+    }
+    if (!stringCtx.has_value()) {
+      if (line.size() >= 8 && line.substr(0, 7) == "STRING ") {
+        try {
+          stringCtx = stol(line.substr(7));
+        } catch (...) {}
+      }
+      if (stringCtx.has_value()) {
+        inTarget = stringCtx.value() == targetNum;
+      }
+    } else {
+      string trimmed = TrimStringExtended(line);
+      if (!inBraces && trimmed.size() == 1 && trimmed[0] == openToken) {
+        inBraces = true;
+        if (inTarget) result.emplace();
+      } else if (inBraces && trimmed.size() == 1 && trimmed[0] == closeToken) {
+        inBraces = false;
+        stringCtx.reset();
+      } else if (inTarget && inBraces) {
+        result->append(line);
+      }
+    }
+  }
+
+  result = CMap::SanitizeTrigStr(result.value());
+  return result;
+}
+
+map<uint32_t, string> CMap::GetTrigStrMulti(const string& fileContents, const set<uint32_t> captureTargets)
+{
+  constexpr char openToken = '{';
+  constexpr char closeToken = '}';
+
+  map<uint32_t, string> result;
+  optional<pair<uint32_t, string>> currentTarget;
+
+  bool inBraces = false;
+  string line;
+  istringstream ISS(fileContents);
+
+  while (true) {
+    getline(ISS, line);
+    if (ISS.fail()) {
+      break;
+    }
+    if (!currentTarget.has_value()) {
+      if (line.size() >= 8 && line.substr(0, 7) == "STRING ") {
+        optional<int64_t> strNum;
+        try {
+          strNum = stol(line.substr(7));
+        } catch (...) {}
+        if (strNum.has_value() && strNum >= 0 && strNum <= 0xFFFFFFFF && captureTargets.find(strNum.value()) != captureTargets.end()) {
+          currentTarget = make_pair((uint32_t)strNum.value(), string());
+        }
+      }
+    } else {
+      string trimmed = TrimStringExtended(line);
+      if (!inBraces && trimmed.size() == 1 && trimmed[0] == openToken) {
+        inBraces = true;
+      } else if (inBraces && trimmed.size() == 1 && trimmed[0] == closeToken) {
+        inBraces = false;
+        if (currentTarget.has_value()) {
+          currentTarget->second = CMap::SanitizeTrigStr(currentTarget->second);
+          auto it = result.find(currentTarget->first);
+          if (it == result.end()) {
+            result[currentTarget->first] = currentTarget->second;
+          } else {
+            it->second = currentTarget->second;
+          }
+          currentTarget.reset();
+        }
+      } else if (currentTarget.has_value() && inBraces) {
+        currentTarget->second.append(line);
+      }
+    }
+  }
+
+  return result;
 }

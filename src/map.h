@@ -106,7 +106,11 @@ struct MapEssentials
   bool isLua;
   uint32_t editorVersion;
   uint32_t options;
+  uint32_t prologueImgSize;
+  std::string prologueImgPath;
   std::string name;
+  std::string author;
+  std::string desc;
   std::optional<std::array<uint8_t, 2>> width;
   std::optional<std::array<uint8_t, 2>> height;
   std::map<Version, MapFragmentHashes> fragmentHashes;
@@ -121,7 +125,8 @@ struct MapEssentials
      minSuggestedGameVersion(Version(1u, 0u)),
      isLua(false),
      editorVersion(0),
-     options(0)
+     options(0),
+     prologueImgSize(0)
   {
   }
   ~MapEssentials() = default;
@@ -200,10 +205,6 @@ private:
   bool                            m_MapMetaDataEnabled;
   std::string                     m_MapDefaultHCL; // config value: map default HCL to use
   std::filesystem::path           m_MapServerPath;  // config value: map local path
-  std::string                     m_MapTitle;
-  std::string                     m_MapURL;
-  std::string                     m_MapSiteURL;
-  std::string                     m_MapShortDesc;
   SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
   bool                            m_MapFileIsValid;
   bool                            m_MapLoaderIsPartial;
@@ -227,6 +228,15 @@ private:
   uint8_t                         m_MapFilterSize;
   uint8_t                         m_MapFilterObs;
   std::array<uint8_t, 5>          m_MapContentMismatch;
+  uint32_t                        m_MapPrologueImageSize;
+  std::string                     m_MapPrologueImagePath;
+  std::string                     m_MapPrologueImageMimeType;
+  std::string                     m_MapTitle;
+  std::string                     m_MapAuthor;
+  std::string                     m_MapDescription;
+  std::string                     m_MapURL;
+  std::string                     m_MapSiteURL;
+  std::string                     m_MapShortDesc;
   void*                           m_MapMPQ;
   std::optional<bool>             m_MapMPQResult;
   bool                            m_UseStandardPaths;
@@ -253,10 +263,6 @@ public:
   [[nodiscard]] inline std::array<uint8_t, 20>    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
   [[nodiscard]] inline std::array<uint8_t, 4>     GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
   [[nodiscard]] inline std::array<uint8_t, 20>    GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.scripts_hash.sha1>, but also legacy <map.sha1>
-  [[nodiscard]] inline std::string                GetMapTitle() const { return m_MapTitle.empty() ? "Another Warcraft 3 Map" : m_MapTitle; }
-  [[nodiscard]] inline std::string                GetMapURL() const { return m_MapURL; }
-  [[nodiscard]] inline std::string                GetMapSiteURL() const { return m_MapSiteURL; }
-  [[nodiscard]] inline std::string                GetMapShortDesc() const { return m_MapShortDesc; }
   [[nodiscard]] inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
   [[nodiscard]] inline uint8_t                    GetMapSpeed() const { return m_MapSpeed; }
   [[nodiscard]] inline uint8_t                    GetMapObservers() const { return m_MapObservers; }
@@ -280,6 +286,15 @@ public:
   [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
+  [[nodiscard]] inline uint32_t                   GetMapPrologueImageSize() const { return m_MapPrologueImageSize; }
+  [[nodiscard]] inline std::string                GetMapPrologueImagePath() const { return m_MapPrologueImagePath; }
+  [[nodiscard]] inline std::string                GetMapPrologueImageMimeType() const { return m_MapPrologueImageMimeType; }
+  [[nodiscard]] inline std::string                GetMapTitle() const { return m_MapTitle.empty() ? "Just another Warcraft 3 Map" : m_MapTitle; }
+  [[nodiscard]] inline std::string                GetMapAuthor() const { return m_MapAuthor.empty() ? "Unknown" : m_MapAuthor; }
+  [[nodiscard]] inline std::string                GetMapDescription() const { return m_MapDescription.empty() ? "Nondescript" : m_MapDescription; }
+  [[nodiscard]] inline std::string                GetMapURL() const { return m_MapURL; }
+  [[nodiscard]] inline std::string                GetMapSiteURL() const { return m_MapSiteURL; }
+  [[nodiscard]] inline std::string                GetMapShortDesc() const { return m_MapShortDesc; }
   [[nodiscard]] inline bool                       GetMapFileIsValid() const { return m_MapFileIsValid; }
   [[nodiscard]] inline const SharedByteArray&     GetMapFileContents() { return m_MapFileContents; }
   [[nodiscard]] inline bool                       HasMapFileContents() const { return m_MapFileContents != nullptr && !m_MapFileContents->empty(); }
@@ -318,6 +333,7 @@ public:
 
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
+  void                                            ReplaceTriggerStrings(std::string& container, std::vector<std::string*>& maybeWTSRefs) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
   std::optional<MapEssentials>                    ParseMPQ();
   bool AcquireGameVersion(CConfig* CFG);
@@ -333,6 +349,30 @@ public:
   [[nodiscard]] std::pair<bool, uint32_t>         ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient, size_t, size_t)> processChunk);
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
+
+  [[nodiscard]] inline static std::optional<uint32_t> GetTrigStrNum(const std::string& text)
+  {
+    std::optional<uint32_t> result;
+    if (text.size() < 9 || text.substr(0, 8) != "TRIGSTR_") {
+      return result;
+    }
+    std::string encodedNum = text.substr(8);
+    int64_t num;
+    try {
+      num = std::stol(encodedNum);
+    } catch (...) {
+      return result;
+    }
+    if (num < 0 || num > 0xFFFFFFFF) {
+      return result;
+    }
+    result = num;
+    return result;
+  }
+
+  [[nodiscard]] static std::string SanitizeTrigStr(const std::string& input);
+  [[nodiscard]] static std::optional<std::string> GetTrigStr(const std::string& fileContents, const uint32_t targetNum);
+  [[nodiscard]] static std::map<uint32_t, std::string> GetTrigStrMulti(const std::string& fileContents, const std::set<uint32_t> captureTargets);
 };
 
 [[nodiscard]] inline Version GetNextVersion(const Version& version)
@@ -367,29 +407,6 @@ public:
     return ToVersionString(Version(1u, 24u));
   }
   return ToVersionString(version);
-}
-
-[[nodiscard]] inline std::optional<std::string> GetWarcraftTextString(const std::string& fileContents, const uint32_t num)
-{
-  if (fileContents.empty()) {
-    return std::nullopt;
-  }
-  std::optional<std::string> result;
-
-  // TODO: Write a proper parser for war3map.wts
-  std::string startStringMarker = "STRING " + std::to_string(num);
-  std::string::size_type startMarkerIndex = fileContents.find(startStringMarker);
-  if (startMarkerIndex == std::string::npos) {
-    return std::nullopt;
-  }
-
-  std::string::size_type startBraceIndex = fileContents.find('{', startMarkerIndex + startStringMarker.size());
-  std::string::size_type endBraceIndex = fileContents.find('}', startMarkerIndex + startStringMarker.size());
-  if (startBraceIndex != std::string::npos && endBraceIndex != std::string::npos && startBraceIndex < endBraceIndex) {
-    result = TrimStringExtended(fileContents.substr(startBraceIndex + 1, endBraceIndex - (startBraceIndex + 1)));
-  }
-
-  return result;
 }
 
 [[nodiscard]] inline uint32_t XORRotateLeft(const uint8_t* data, const uint32_t length)

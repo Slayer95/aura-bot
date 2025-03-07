@@ -6103,11 +6103,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           MapCFG.Set("map.type", mapType);
         }
         if (mapType == "evergreen") {
-          MapCFG.Set("map.site", "https://www.hiveworkshop.com/threads/351924/");
-          MapCFG.Set("map.short_desc", "This map uses Warcraft 3: Reforged game mechanics.");
+          MapCFG.Set("map.meta.site", "https://www.hiveworkshop.com/threads/351924/");
+          MapCFG.Set("map.meta.short_desc", "This map uses Warcraft 3: Reforged game mechanics.");
         }
 
-        MapCFG.Set("downloaded_by", m_FromName);
+        MapCFG.Set("map.downloaded.by", m_FromName);
 
         shared_ptr<CMap> parsedMap = nullptr;
         try {

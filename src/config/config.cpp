@@ -1133,6 +1133,8 @@ std::vector<uint8_t> CConfig::Export() const
 {
   std::ostringstream SS;
   for (auto it = m_CFG.begin(); it != m_CFG.end(); ++it) {
+    std::string value = it->second;
+    value.erase(remove(begin(value), end(value), '\n'), end(value));
     SS << (it->first + " = " + it->second + "\n");
   }
 
