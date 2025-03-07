@@ -71,7 +71,7 @@ public:
   void RegisterCommands();
   void SendUser(const std::string& message, const uint64_t target);
   void LeaveServer(const uint64_t target, const std::string& name, const bool isJoining);
-  void SetStatusHostingGame(const std::string& message, const int64_t startTime) const;
+  void SetStatusHostingGame(const std::string& message, const std::string& players, const int64_t startTime) const;
   void SetStatusHostingLobby(const std::string& message, const int64_t startTime) const;
   void SetStatusIdle() const;
   void SendAllChannels(const std::string& text) const;

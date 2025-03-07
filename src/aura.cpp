@@ -1354,7 +1354,7 @@ bool CAura::Update()
         m_Discord.SetStatusHostingLobby(game->GetMap()->GetMapTitle(), game->GetCreationTime());
       } else if (!m_StartedGames.empty()) {
         game = m_StartedGames.back();
-        m_Discord.SetStatusHostingGame(game->GetMap()->GetMapTitle() + " - " + ToNameListSentence(game->GetPlayers()), game->GetCreationTime());
+        m_Discord.SetStatusHostingGame(game->GetMap()->GetMapTitle(), ToNameListSentence(game->GetPlayers()), game->GetCreationTime());
       } else {
         m_Discord.SetStatusIdle();
       }
