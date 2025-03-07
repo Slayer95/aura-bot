@@ -426,6 +426,7 @@ public:
   void                                                   ResetOwnerSeen();
   void                                                   UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = true; }
 
+  inline int64_t                                         GetCreationTime() const { return m_CreationTime; }
   inline uint32_t                                        GetUptime() const {
     int64_t time = GetTime();
     if (time < m_CreationTime) return 0;

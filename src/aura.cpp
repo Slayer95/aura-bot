@@ -1350,9 +1350,11 @@ bool CAura::Update()
 #ifndef DISABLE_DPP
     if (m_Discord.GetIsEnabled()) {
       CGame* game = GetMostRecentLobby();
-      if (!game && !m_StartedGames.empty()) game = m_StartedGames.back();
       if (game) {
-        m_Discord.SetStatusHosting(game->GetMap()->GetMapTitle());
+        m_Discord.SetStatusHostingLobby(game->GetMap()->GetMapTitle(), game->GetCreationTime());
+      } else if (!m_StartedGames.empty()) {
+        game = m_StartedGames.back();
+        m_Discord.SetStatusHostingGame(game->GetMap()->GetMapTitle() + " - " + ToNameListSentence(game->GetPlayers()), game->GetCreationTime());
       } else {
         m_Discord.SetStatusIdle();
       }

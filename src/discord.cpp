@@ -295,13 +295,42 @@ void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool
   });
 }
 
-void CDiscord::SetStatusHosting(const string& message) const
+void CDiscord::SetStatusHostingGame(const string& message, const int64_t /*seconds*/) const
 {
+  /*
+  // DPP doesn't support setting rich presence - gotta use game SDK instead
+  dpp::activity activity(dpp::activity_type::at_game, "Warcraft III", "Hosting " + message, string());
+  activity.emoji = dpp::emoji("\U0001f3ae");
+  activity.created_at = time();
+  activity.start = time();
+  activity.flags = dpp::activity_flags::af_play;
+  */
+  m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_game, message));
+}
+
+void CDiscord::SetStatusHostingLobby(const string& message, const int64_t /*seconds*/) const
+{
+  /*
+  // DPP doesn't support setting rich presence - gotta use game SDK instead
+  dpp::activity activity(dpp::activity_type::at_game, "Warcraft III", "Waiting for " + message, string());
+  activity.emoji = dpp::emoji("\U0001f6f0\uFE0F");
+  activity.created_at = time();
+  activity.start = time();
+  activity.flags = dpp::activity_flags::af_play;
+  */
   m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_game, message));
 }
 
 void CDiscord::SetStatusIdle() const
 {
+  /*
+  // DPP doesn't support setting rich presence - gotta use game SDK instead
+  dpp::activity activity(dpp::activity_type::at_game, "Warcraft III", "Idle", string());
+  activity.emoji = dpp::emoji("\U0001f4ac");
+  activity.created_at = time();
+  activity.start = time();
+  activity.flags = dpp::activity_flags::af_play;
+  */
   m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_watching, "eSports"));
 }
 
