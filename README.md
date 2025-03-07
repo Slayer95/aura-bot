@@ -111,7 +111,7 @@ following:
 ### Aura
 This work is licensed under the MIT license, reproduced below.
 
-Copyright [2024] [Leonardo Julca]
+Copyright [2024-2025] [Leonardo Julca]
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
