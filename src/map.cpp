@@ -1319,7 +1319,7 @@ void CMap::Load(CConfig* CFG)
   if (CFG->Exists("map.preview.image.path_type")) {
     m_MapPreviewImagePathType = CFG->GetStringIndex("map.preview.image.source", {"none", "mpq", "fs"}, MAP_FILE_SOURCE_CATEGORY_NONE);
   } else {
-    CFG->SetUint8("map.preview.image.path_type", m_MapPreviewImageSize > 0 ? MAP_FILE_SOURCE_CATEGORY_MPQ : MAP_FILE_SOURCE_CATEGORY_NONE);
+    CFG->SetString("map.preview.image.path_type", m_MapPreviewImageSize > 0 ? "mpq" : "none");
   }
 
   if (CFG->Exists("map.preview.image.mime_type")) {
