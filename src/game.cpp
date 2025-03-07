@@ -6226,6 +6226,9 @@ void CGame::EventGameLoaded()
   const uint8_t numDisconnectedPlayers = m_StartPlayers + m_JoinedVirtualHosts - GetNumJoinedPlayersOrFakeUsers();
   if (0 < numDisconnectedPlayers) {
     SendAllChat(ToDecString(numDisconnectedPlayers) + " user(s) disconnected during game load.");
+    LogRemote("game finished loaded - " + to_string(players.size()) + " players - " + ToDecString(numDisconnectedPlayers) + " user(s) disconnected");
+  } else {
+    LogRemote("game finished loaded - " + to_string(players.size()) + " players");
   }
   if (!DesyncedPlayers.empty()) {
     if (GetHasDesyncHandler()) {
