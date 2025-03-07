@@ -4420,7 +4420,7 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
       SendAllChat(user->GetUID(), user->GetLeftReason());
     }
   }
-  LogRemote(user->GetExtendedName() + " " + user->GetLeftReason());
+  LogRemote("[" + user->GetExtendedName() + "] " + user->GetLeftReason());
   SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode()));
   user->SetLeftMessageSent(true);
   user->SetStatus(USERSTATUS_ENDED);
@@ -6226,9 +6226,9 @@ void CGame::EventGameLoaded()
   const uint8_t numDisconnectedPlayers = m_StartPlayers + m_JoinedVirtualHosts - GetNumJoinedPlayersOrFakeUsers();
   if (0 < numDisconnectedPlayers) {
     SendAllChat(ToDecString(numDisconnectedPlayers) + " user(s) disconnected during game load.");
-    LogRemote("game finished loaded - " + to_string(players.size()) + " players - " + ToDecString(numDisconnectedPlayers) + " user(s) disconnected");
+    LogRemote("Fully loaded. - " + to_string(players.size()) + " players - " + ToDecString(numDisconnectedPlayers) + " user(s) disconnected");
   } else {
-    LogRemote("game finished loaded - " + to_string(players.size()) + " players");
+    LogRemote("Fully loaded. - " + to_string(players.size()) + " players");
   }
   if (!DesyncedPlayers.empty()) {
     if (GetHasDesyncHandler()) {
