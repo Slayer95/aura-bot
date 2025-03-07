@@ -305,10 +305,12 @@ void CDiscord::SetStatusIdle() const
   m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_watching, "eSports"));
 }
 
-void CDiscord::SendAllChannels(const string& message) const
+void CDiscord::SendAllChannels(const string& text) const
 {
   for (const auto& channel : m_Config.m_LogChannels) {
-    m_Client->message_create(dpp::message(message).set_channel_id(channel), [](const dpp::confirmation_callback_t& result) {
+    dpp::message announce(text);
+    announce.set_channel_id(channel);
+    m_Client->message_create(announce, [this](const dpp::confirmation_callback_t& result) {
       if (result.is_error()) {
 #ifdef DEBUG
         if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {

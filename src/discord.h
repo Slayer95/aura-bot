@@ -73,7 +73,7 @@ public:
   void LeaveServer(const uint64_t target, const std::string& name, const bool isJoining);
   void SetStatusHosting(const std::string& message) const;
   void SetStatusIdle() const;
-  void SendAllChannels(const std::string& message) const;
+  void SendAllChannels(const std::string& text) const;
 #endif
 
   [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }

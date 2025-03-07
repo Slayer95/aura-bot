@@ -1349,9 +1349,10 @@ bool CAura::Update()
     UpdateMetaData();
 #ifndef DISABLE_DPP
     if (m_Discord.GetIsEnabled()) {
-      CGame* lobby = GetMostRecentLobby();
-      if (lobby) {
-        m_Discord.SetStatusHosting(lobby->GetMap()->GetMapTitle());
+      CGame* game = GetMostRecentLobby();
+      if (!game && !m_StartedGames.empty()) game = m_StartedGames.back();
+      if (game) {
+        m_Discord.SetStatusHosting(game->GetMap()->GetMapTitle());
       } else {
         m_Discord.SetStatusIdle();
       }
