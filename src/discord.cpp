@@ -308,7 +308,7 @@ void CDiscord::SetStatusHostingGame(const string& mapTitle, const string& /*play
   m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_game, mapTitle));
 }
 
-void CDiscord::SetStatusHostingLobby(const string& /*message*/, const int64_t /*seconds*/) const
+void CDiscord::SetStatusHostingLobby(const string& mapTitle, const int64_t /*seconds*/) const
 {
   // DPP doesn't support setting rich presence - gotta use game SDK instead
   // dpp::emoji("\U0001f6f0\uFE0F");
