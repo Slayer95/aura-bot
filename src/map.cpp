@@ -969,7 +969,7 @@ void CMap::Load(CConfig* CFG)
   m_Valid   = true;
   m_CFGName = PathToString(CFG->GetFile().filename());
   bool isLatestSchema = CFG->GetUint8("map.cfg.schema_number", 0) == MAP_CONFIG_SCHEMA_NUMBER;
-  bool ignoreMPQ = false;
+  bool ignoreMPQ = !HasServerPath();
   optional<uint32_t> mapFileSize;
   optional<uint32_t> mapFileCRC32;
   optional<array<uint8_t, 20>> mapFileSHA1;
@@ -979,7 +979,7 @@ void CMap::Load(CConfig* CFG)
         // We are trying to figure out what this map is about - map config provided is a stub.
         // Since there is no actual map file, map loading fails.
         return;
-      } else {
+      } else if (!ignoreMPQ) {
         ignoreMPQ = isLatestSchema;
       }
     }
@@ -987,8 +987,8 @@ void CMap::Load(CConfig* CFG)
 
   if (!ignoreMPQ) {
     ignoreMPQ = (
-      !HasServerPath() ||
-      (!m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER)
+      (!m_MapLoaderIsPartial && isLatestSchema) &&
+      m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER
     );
   }
 
@@ -1004,10 +1004,12 @@ void CMap::Load(CConfig* CFG)
       }    
       fileModifiedTime = GetMaybeModifiedTime(resolvedFilePath);
       ignoreMPQ = (
-        !m_MapLoaderIsPartial && m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
-          !isLatestSchema || !fileModifiedTime.has_value() || (
-            cachedModifiedTime.has_value() && fileModifiedTime.has_value() &&
-            fileModifiedTime.value() <= cachedModifiedTime.value()
+        (!m_MapLoaderIsPartial && isLatestSchema) && (
+          m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
+            !isLatestSchema || !fileModifiedTime.has_value() || (
+              cachedModifiedTime.has_value() && fileModifiedTime.has_value() &&
+              fileModifiedTime.value() <= cachedModifiedTime.value()
+            )
           )
         )
       );
