@@ -3070,7 +3070,7 @@ array<uint8_t, 4> CGame::GetMapHashBlizz(const Version& version) const
   if (m_RestoredGame) {
     return m_RestoredGame->GetSaveHash();
   } else {
-    return m_Map->GetMapScriptsBlizz(version);
+    return m_Map->GetMapScriptsBlizz(GetScriptsVersionRangeHead(version));
   }
 }
 
@@ -3079,7 +3079,7 @@ array<uint8_t, 20> CGame::GetMapSHA1(const Version& version) const
   if (version >= GAMEVER(1u, 31u)) {
     return m_Map->GetMapSHA1();
   } else {
-    return m_Map->GetMapScriptsSHA1(version);
+    return m_Map->GetMapScriptsSHA1(GetScriptsVersionRangeHead(version));
   }
 }
 
