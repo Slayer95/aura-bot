@@ -307,7 +307,7 @@ SharedByteArray CMap::GetMapPreviewContents()
     case MAP_FILE_SOURCE_CATEGORY_FS:
       return m_Aura->ReadFileCacheable(GetMapPreviewImagePath(), GetMapPreviewImageSize());
     default:
-    return nullptr;
+      return nullptr;
   }
 }
 
