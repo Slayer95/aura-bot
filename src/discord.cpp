@@ -333,10 +333,8 @@ void CDiscord::SendAllChannels(const string& text)
 {
   if (m_ExitingSoon) return;
   for (const auto& channel : m_Config.m_LogChannels) {
-    dpp::message announce(text);
-    announce.set_channel_id(channel);
     m_PendingCallbackCount++;
-    m_Client->message_create(announce, [this](const dpp::confirmation_callback_t& result) {
+    m_Client->message_create(dpp::message(dpp::snowflake(channel), text), [this](const dpp::confirmation_callback_t& result) {
       if (result.is_error()) {
         PRINT_IF(LOG_LEVEL_WARNING, "[DISCORD] Failed to send message to channel.");
       } else {
