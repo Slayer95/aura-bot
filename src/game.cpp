@@ -1971,14 +1971,7 @@ void CGame::LogApp(const string& logText, const uint8_t logTargets) const
     m_Aura->LogPersistent(GetLogPrefix() + logText);
   }
   if (logTargets & LOG_R) {
-    if (m_Aura->m_IRC.m_Config.m_LogGames) {
-      m_Aura->m_IRC.SendAllChannels(GetLogPrefix() + logText);
-    }
-#ifndef DISABLE_DPP
-    if (m_Aura->m_Discord.m_Config.m_LogGames) {
-      m_Aura->m_Discord.SendAllChannels(GetLogPrefix() + logText);
-    }
-#endif
+    LogRemote(logText);
   }
 }
 
@@ -1989,14 +1982,7 @@ void CGame::Log(const string& text)
   } else {
     string logText = GetLogPrefix() + text;
     Print(logText);
-    if (m_Aura->m_IRC.m_Config.m_LogGames) {
-      m_Aura->m_IRC.SendAllChannels(logText);
-    }
-#ifndef DISABLE_DPP
-    if (m_Aura->m_Discord.m_Config.m_LogGames) {
-      m_Aura->m_Discord.SendAllChannels(logText);
-    }
-#endif
+    LogRemote(text);
   }
 }
 
@@ -2007,17 +1993,21 @@ void CGame::Log(const string& logText, int64_t gameTicks)
 
 void CGame::LogRemote(const string& text) const
 {
-  string logText = GetLogPrefix() + text;
+  LogRemoteRaw(GetLogPrefix() + text);
+}
+
+void CGame::LogRemoteRaw(const string& text) const
+{
   if (m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_FILE || m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_MIXED) {
     m_Aura->LogRemoteFile(text);
   }
   if (m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_NETWORK || m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_MIXED) {
     if (m_Aura->m_IRC.m_Config.m_LogGames) {
-      m_Aura->m_IRC.SendAllChannels(logText);
+      m_Aura->m_IRC.SendAllChannels(text);
     }
 #ifndef DISABLE_DPP
     if (m_Aura->m_Discord.m_Config.m_LogGames) {
-      m_Aura->m_Discord.SendAllChannels(logText);
+      m_Aura->m_Discord.SendAllChannels(text);
     }
 #endif
   }
@@ -2033,14 +2023,7 @@ void CGame::UpdateLogs()
     }
     string logText = GetLogPrefix() + record->ToString();
     Print(logText);
-    if (m_Aura->m_IRC.m_Config.m_LogGames) {
-      m_Aura->m_IRC.SendAllChannels(logText);
-    }
-#ifndef DISABLE_DPP
-    if (m_Aura->m_Discord.m_Config.m_LogGames) {
-      m_Aura->m_Discord.SendAllChannels(logText);
-    }
-#endif
+    LogRemoteRaw(logText);
     delete record;
     m_PendingLogs.pop();
   }
@@ -2050,7 +2033,9 @@ void CGame::FlushLogs()
 {
   while (!m_PendingLogs.empty()) {
     CGameLogRecord* record = m_PendingLogs.front();
-    Print(GetLogPrefix() + record->ToString());
+    string logText = GetLogPrefix() + record->ToString();
+    Print(logText);
+    LogRemoteRaw(logText);
     delete record;
     m_PendingLogs.pop();
   }
