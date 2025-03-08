@@ -382,6 +382,11 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
           }
           break;
       }
+      if (!m_Map->GetMapIsGameVersionSupported(version)) {
+        // map is too recent,
+        // or we failed to calculate hashes for this game version
+        continue;
+      }
       SetSupportedGameVersion(version);
       if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
       if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
@@ -3060,18 +3065,22 @@ string CGame::GetSourceFilePath() const {
   }
 }
 
-array<uint8_t, 4> CGame::GetSourceFileHash() const
+array<uint8_t, 4> CGame::GetMapHashBlizz(const Version& version) const
 {
   if (m_RestoredGame) {
     return m_RestoredGame->GetSaveHash();
   } else {
-    return m_Map->GetMapScriptsWeakHash();
+    return m_Map->GetMapScriptsBlizz(version);
   }
 }
 
-array<uint8_t, 20> CGame::GetSourceFileSHA1() const
+array<uint8_t, 20> CGame::GetMapSHA1(const Version& version) const
 {
-  return m_Map->GetMapScriptsSHA1();
+  if (version >= GAMEVER(1u, 31u)) {
+    return m_Map->GetMapSHA1();
+  } else {
+    return m_Map->GetMapScriptsSHA1(version);
+  }
 }
 
 array<uint8_t, 2> CGame::GetAnnounceWidth() const
@@ -3135,9 +3144,9 @@ void CGame::SendMapCheck(GameUser::CGameUser* user) const
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
   if (m_Config.m_GameVersion >= GAMEVER(1u, 23u)) {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(m_Config.m_GameVersion.value()), GetMapSHA1(m_Config.m_GameVersion.value())));
   } else {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(m_Config.m_GameVersion.value())));
   }
 }
 
@@ -3668,14 +3677,35 @@ uint16_t CGame::GetDiscoveryPort(const uint8_t protocol) const
 
 vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const uint16_t hostPort)
 {
-  vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
-  WriteUint32(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
   uint32_t slotsOff = static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1);
   uint32_t uptime = GetUptime();
-  WriteUint32(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
-  WriteUint32(info, uptime, m_GameDiscoveryInfoDynamicOffset + 4);
-  WriteUint16(info, hostPort, m_GameDiscoveryInfoDynamicOffset + 8);
-  return info;
+  if (m_Config.m_CrossPlayMode != CROSSPLAY_MODE_FORCE || (GAMEVER(1u, 24u) <= m_SupportedGameVersionsMin && m_SupportedGameVersionsMax <= GAMEVER(1u, 28u))) {
+    vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
+    WriteUint32(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
+    WriteUint32(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
+    WriteUint32(info, uptime, m_GameDiscoveryInfoDynamicOffset + 4);
+    WriteUint16(info, hostPort, m_GameDiscoveryInfoDynamicOffset + 8);
+    return info;    
+  } else {
+    vector<uint8_t> info = GameProtocol::SEND_W3GS_GAMEINFO(
+      gameVersion,
+      GetGameType(),
+      GetGameFlags(),
+      GetAnnounceWidth(),
+      GetAnnounceHeight(),
+      m_GameName,
+      GetIndexVirtualHostName(),
+      uptime,
+      GetSourceFilePath(),
+      GetMapHashBlizz(gameVersion),
+      static_cast<uint32_t>(m_Slots.size()), // Total Slots
+      slotsOff,
+      hostPort,
+      m_HostCounter,
+      m_EntryKey
+    );
+    return info;
+  }
 }
 
 vector<uint8_t>* CGame::GetGameDiscoveryInfoTemplate()
@@ -3711,7 +3741,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     m_GameName,
     GetIndexVirtualHostName(),
     GetSourceFilePath(),
-    GetSourceFileHash(),
+    GetMapHashBlizz(m_Config.m_GameVersion.value()),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
     m_HostCounter,
     m_EntryKey
@@ -3862,7 +3892,7 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       GetIndexVirtualHostName(),
       GetUptime(), // dynamic
       GetSourceFilePath(),
-      GetSourceFileHash(),
+      GetMapHashBlizz(m_Config.m_GameVersion.value()),
       static_cast<uint32_t>(m_Slots.size()), // Total Slots
       static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1),
       IP,

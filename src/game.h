@@ -389,8 +389,8 @@ public:
   inline uint32_t                                        GetGameFlags() const { return m_GameFlags; }
   uint32_t                                               CalcGameFlags() const;
   std::string                                            GetSourceFilePath() const;
-  std::array<uint8_t, 4>                                 GetSourceFileHash() const;
-  std::array<uint8_t, 20>                                GetSourceFileSHA1() const;
+  std::array<uint8_t, 4>                                 GetMapHashBlizz(const Version& version) const;
+  std::array<uint8_t, 20>                                GetMapSHA1(const Version& version) const;
   std::array<uint8_t, 2>                                 GetAnnounceWidth() const;
   std::array<uint8_t, 2>                                 GetAnnounceHeight() const;
 

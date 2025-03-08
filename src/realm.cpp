@@ -1402,6 +1402,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
 
   m_GameBroadcast = game;
 
+  Version version = GetGameVersion();
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
     displayMode,
     game->GetGameType(),
@@ -1411,8 +1412,8 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
     GetPrefixedGameName(game->GetGameName()), m_Config.m_UserName,
     game->GetUptime(),
     game->GetSourceFilePath(),
-    game->GetSourceFileHash(),
-    game->GetSourceFileSHA1(),
+    game->GetMapHashBlizz(version),
+    game->GetMapSHA1(version),
     hostCounter,
     game->GetMap()->GetVersionMaxSlots()
   ));

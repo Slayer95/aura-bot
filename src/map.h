@@ -196,14 +196,14 @@ public:
   std::optional<bool>                   m_PipeConsideredHarmful;
 
 private:
-  std::array<uint8_t, 20>   m_MapScriptsSHA1;         // config value: <map.scripts_hash.sha1> (20 bytes)
-  std::array<uint8_t, 4>    m_MapSize;                // config value: <map.size> (4 bytes)
-  std::array<uint8_t, 4>    m_MapCRC32;               // config value: <map.file_hash.crc32> (4 bytes) -> this is the real full CRC
-  std::array<uint8_t, 20>   m_MapSHA1;                // config value: <map.file_hash.sha1> (20 bytes) -> this is the real full SHA1
-  std::array<uint8_t, 4>    m_MapScriptsWeakHash;     // config value: <map.scripts_hash.crc32> (4 bytes) -> this is not the real CRC, it's the "xoro" value
-  std::array<uint8_t, 2>    m_MapWidth;               // config value: <map.width> (2 bytes)
-  std::array<uint8_t, 2>    m_MapHeight;              // config value: <map.height> (2 bytes)
-  std::vector<CGameSlot> m_Slots;
+  std::array<uint8_t, 4>                       m_MapSize;                // config value: <map.size> (4 bytes)
+  std::array<uint8_t, 2>                       m_MapWidth;               // config value: <map.width> (2 bytes)
+  std::array<uint8_t, 2>                       m_MapHeight;              // config value: <map.height> (2 bytes)
+  std::array<uint8_t, 4>                       m_MapCRC32;               // config value: <map.file_hash.crc32> (4 bytes) -> this is the real full CRC
+  std::array<uint8_t, 20>                      m_MapSHA1;                // config value: <map.file_hash.sha1> (20 bytes) -> this is the real full SHA1
+  std::map<Version, std::array<uint8_t, 20>>   m_MapScriptsSHA1;         // config value: <map.scripts_hash.sha1> (20 bytes)
+  std::map<Version, std::array<uint8_t, 4>>    m_MapScriptsBlizz;        // config value: <map.scripts_hash.crc32> (4 bytes) -> this is not the real CRC, it's the "xoro" value
+  std::vector<CGameSlot>                       m_Slots;
   std::string                     m_CFGName;
   std::string                     m_ClientMapPath;       // config value: map path
   std::string                     m_MapType;       // config value: map type (for stats class)
@@ -275,8 +275,11 @@ public:
   [[nodiscard]] inline std::array<uint8_t, 4>     GetMapSize() const { return m_MapSize; }
   [[nodiscard]] inline std::array<uint8_t, 4>     GetMapCRC32() const { return m_MapCRC32; } // <map.file_hash.crc32>, but also legacy <map_hash> and <map.crc32>
   [[nodiscard]] inline std::array<uint8_t, 20>    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
-  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapScriptsWeakHash() const { return m_MapScriptsWeakHash; } // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
-  [[nodiscard]] inline std::array<uint8_t, 20>    GetMapScriptsSHA1() const { return m_MapScriptsSHA1; } // <map.scripts_hash.sha1>, but also legacy <map.sha1>
+  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapScriptsBlizz(const Version& nVersion) { return m_MapScriptsBlizz[nVersion]; } // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
+  [[nodiscard]] inline std::array<uint8_t, 20>    GetMapScriptsSHA1(const Version& nVersion) { return m_MapScriptsSHA1[nVersion]; } // <map.scripts_hash.sha1>, but also legacy <map.sha1>
+  [[nodiscard]] inline bool                       GetMapIsGameVersionSupported(const Version& nVersion) {
+    return m_MapMinGameVersion < nVersion && (m_MapScriptsBlizz.find(nVersion) != m_MapScriptsBlizz.end()) && (m_MapScriptsSHA1.find(nVersion) != m_MapScriptsSHA1.end());
+  };
   [[nodiscard]] inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
   [[nodiscard]] inline uint8_t                    GetMapSpeed() const { return m_MapSpeed; }
   [[nodiscard]] inline uint8_t                    GetMapObservers() const { return m_MapObservers; }
@@ -352,7 +355,7 @@ public:
   bool                                            NormalizeSlots();
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
-  void                                            UpdateCrypto(std::map<Version, MapCrypto>& cryptos, const std::string& fileContents) const;
+  void                                            UpdateCrypto(std::map<Version, MapCrypto>& cryptos, const Version& version, const std::string& fileContents) const;
   void                                            UpdateCryptoEndModules(std::map<Version, MapCrypto>& cryptos) const;
   void                                            ErroredCrypto(std::map<Version, MapCrypto>& cryptos) const;
 

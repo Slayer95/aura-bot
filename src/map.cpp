@@ -93,13 +93,11 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
     m_HMCMode(W3HMC_MODE_DISABLED)
 {
-  m_MapScriptsSHA1.fill(0);
   m_MapSize.fill(0);
-  m_MapCRC32.fill(0);
-  m_MapSHA1.fill(0);
-  m_MapScriptsWeakHash.fill(0);
   m_MapWidth.fill(0);
   m_MapHeight.fill(0);
+  m_MapCRC32.fill(0);
+  m_MapSHA1.fill(0);
   m_MapContentMismatch.fill(0);
 
   Load(CFG);
@@ -479,22 +477,22 @@ optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
   return nullopt;
 }
 
-void CMap::UpdateCrypto(map<Version, MapCrypto>& cryptos, const string& fileContents) const
+void CMap::UpdateCrypto(map<Version, MapCrypto>& cryptos, const Version& version, const string& fileContents) const
 {
-  for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
-    auto mapCrypto = cryptos.find(version);
-    mapCrypto->second.blizz = mapCrypto->second.blizz ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-    mapCrypto->second.sha1.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-  }
+  auto match = cryptos.find(version);
+  if (match == cryptos.end()) return; // should never happen
+  match->second.blizz = match->second.blizz ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+  match->second.sha1.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
 }
 
 void CMap::UpdateCryptoEndModules(map<Version, MapCrypto>& cryptos) const
 {
   for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
-    auto mapCrypto = cryptos.find(version);
-    mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz, 3);
-    mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz ^ 0x03F1379E, 3);
-    mapCrypto->second.sha1.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
+    auto match = cryptos.find(version);
+    if (match == cryptos.end()) continue; // should never happen
+    match->second.blizz = ROTL(match->second.blizz, 3);
+    match->second.blizz = ROTL(match->second.blizz ^ 0x03F1379E, 3);
+    match->second.sha1.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
   }
 }
 
@@ -583,11 +581,11 @@ optional<MapEssentials> CMap::ParseMPQ()
       if (!FileRead(commonPath, baseFileContents, MAX_READ_FILE_SIZE) || baseFileContents.empty()) {
         Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(commonPath) + "]");
       } else {
-        UpdateCrypto(cryptos, baseFileContents);
+        UpdateCrypto(cryptos, version, baseFileContents);
       }
       hashError = hashError || baseFileContents.empty();
     } else {
-      UpdateCrypto(cryptos, fileContents);
+      UpdateCrypto(cryptos, version, fileContents);
     }
   }
 
@@ -602,11 +600,11 @@ optional<MapEssentials> CMap::ParseMPQ()
       if (!FileRead(blizzardPath, baseFileContents, MAX_READ_FILE_SIZE) || baseFileContents.empty()) {
         Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(blizzardPath) + "]");
       } else {
-        UpdateCrypto(cryptos, baseFileContents);
+        UpdateCrypto(cryptos, version, baseFileContents);
       }
       hashError = hashError || baseFileContents.empty();
     } else {
-      UpdateCrypto(cryptos, fileContents);
+      UpdateCrypto(cryptos, version, fileContents);
     }
   }
 
@@ -1201,6 +1199,8 @@ void CMap::Load(CConfig* CFG)
     targetGameVersionRangeHead = GetScriptsVersionRangeHead(m_MapTargetGameVersion.value());
   }
   for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
+    array<uint8_t, 4> scriptsHashBlizz;
+    scriptsHashBlizz.fill(0);
     vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz.v" + ToVersionString(version), 4);
     if (cfgScriptsWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->fragmentHashes[version].blizz.has_value())) {
       if (cfgScriptsWeakHash.empty()) {
@@ -1216,15 +1216,18 @@ void CMap::Load(CConfig* CFG)
         if (mapContentMismatch[3] == 0) {
           mapContentMismatch[3] = ByteArrayToUInt32(cfgScriptsWeakHash, 0, false) != ByteArrayToUInt32(mapEssentials->fragmentHashes[version].blizz.value(), false);
         }
-        copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
+        copy_n(cfgScriptsWeakHash.begin(), 4, scriptsHashBlizz.begin());
       }
     } else if (mapEssentials.has_value() && mapEssentials->fragmentHashes[version].blizz.has_value()) {
       CFG->SetUint8Array("map.scripts_hash.blizz.v" + ToVersionString(version), mapEssentials->fragmentHashes[version].blizz->data(), 4);
-      copy_n(mapEssentials->fragmentHashes[version].blizz->begin(), 4, m_MapScriptsWeakHash.begin());
+      copy_n(mapEssentials->fragmentHashes[version].blizz->begin(), 4, scriptsHashBlizz.begin());
     } else {
-      copy_n(cfgScriptsWeakHash.begin(), 4, m_MapScriptsWeakHash.begin());
+      copy_n(cfgScriptsWeakHash.begin(), 4, scriptsHashBlizz.begin());
     }
+    m_MapScriptsBlizz[version] = scriptsHashBlizz;
 
+    array<uint8_t, 20> scriptsHashSHA1;
+    scriptsHashSHA1.fill(0);
     vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1.v" + ToVersionString(version), 20);
     if (cfgScriptsSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->fragmentHashes[version].sha1.has_value())) {
       if (cfgScriptsSHA1.empty()) {
@@ -1240,14 +1243,15 @@ void CMap::Load(CConfig* CFG)
         if (mapContentMismatch[4] == 0) {
           mapContentMismatch[4] = memcmp(cfgScriptsSHA1.data(), mapEssentials->fragmentHashes[version].sha1->data(), 20) != 0;
         }
-        copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
+        copy_n(cfgScriptsSHA1.begin(), 20, scriptsHashSHA1.begin());
       }
     } else if (mapEssentials.has_value() && mapEssentials->fragmentHashes[version].sha1.has_value()) {
       CFG->SetUint8Array("map.scripts_hash.sha1.v" + ToVersionString(version), mapEssentials->fragmentHashes[version].sha1->data(), 20);
-      copy_n(mapEssentials->fragmentHashes[version].sha1->begin(), 20, m_MapScriptsSHA1.begin());
+      copy_n(mapEssentials->fragmentHashes[version].sha1->begin(), 20, scriptsHashSHA1.begin());
     } else {
-      copy_n(cfgScriptsSHA1.begin(), 20, m_MapScriptsSHA1.begin());
+      copy_n(cfgScriptsSHA1.begin(), 20, scriptsHashSHA1.begin());
     }
+    m_MapScriptsSHA1[version] = scriptsHashSHA1;
   }
 
   if (HasMismatch()) {
