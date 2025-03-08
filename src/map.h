@@ -297,6 +297,7 @@ public:
   [[nodiscard]] inline bool                       GetMapMetaDataEnabled() const { return m_MapMetaDataEnabled; }
   [[nodiscard]] inline std::string                GetMapDefaultHCL() const { return m_MapDefaultHCL; }
   [[nodiscard]] inline const std::filesystem::path&     GetServerPath() const { return m_MapServerPath; }
+  [[nodiscard]] std::filesystem::path             GetResolvedServerPath() const;
   [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }
   [[nodiscard]] std::string                       GetServerFileName() const;
   [[nodiscard]] std::string                       GetClientFileName() const;
@@ -312,6 +313,7 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapPreviewImagePathType() const { return m_MapPreviewImagePathType; }
   [[nodiscard]] inline std::string                GetMapPreviewImagePath() const { return m_MapPreviewImagePath; }
   [[nodiscard]] inline std::string                GetMapPreviewImageMimeType() const { return m_MapPreviewImageMimeType; }
+  [[nodiscard]] SharedByteArray                   GetMapPreviewContents();
   [[nodiscard]] inline std::string                GetMapTitle() const { return m_MapTitle.empty() ? "Just another Warcraft 3 Map" : m_MapTitle; }
   [[nodiscard]] inline std::string                GetMapAuthor() const { return m_MapAuthor.empty() ? "Unknown" : m_MapAuthor; }
   [[nodiscard]] inline std::string                GetMapDescription() const { return m_MapDescription.empty() ? "Nondescript" : m_MapDescription; }

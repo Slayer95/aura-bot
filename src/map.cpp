@@ -277,6 +277,40 @@ string CMap::GetClientFileName() const
   return m_ClientMapPath.substr(LastSlash + 1);
 }
 
+[[nodiscard]] filesystem::path CMap::GetResolvedServerPath() const
+{
+  filesystem::path resolvedFilePath(m_MapServerPath);
+  if (resolvedFilePath.filename() == resolvedFilePath && !m_UseStandardPaths) {
+    resolvedFilePath = m_Aura->m_Config.m_MapPath / resolvedFilePath;
+  }    
+  return resolvedFilePath;
+}
+
+SharedByteArray CMap::GetMapPreviewContents()
+{
+  switch (GetMapPreviewImagePathType()) {
+    case MAP_FILE_SOURCE_CATEGORY_MPQ:
+    {
+      bool isTempMPQ = m_MapMPQ == nullptr;
+      if (isTempMPQ && !OpenMPQArchive(&m_MapMPQ, GetResolvedServerPath())) {
+        return nullptr;
+      }
+      SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
+      fileContentsPtr->reserve(GetMapPreviewImageSize());
+      ReadFileFromArchive(*(fileContentsPtr.get()), GetMapPreviewImagePath());
+      if (isTempMPQ) {
+        SFileCloseArchive(m_MapMPQ);
+        m_MapMPQ = nullptr;
+      }
+      return fileContentsPtr;
+    }
+    case MAP_FILE_SOURCE_CATEGORY_FS:
+      return m_Aura->ReadFileCacheable(GetMapPreviewImagePath(), GetMapPreviewImageSize());
+    default:
+    return nullptr;
+  }
+}
+
 bool CMap::GetMapFileIsFromManagedFolder() const
 {
   if (m_UseStandardPaths) return false;
@@ -992,16 +1026,13 @@ void CMap::Load(CConfig* CFG)
     );
   }
 
-  filesystem::path resolvedFilePath(m_MapServerPath);
+  filesystem::path resolvedFilePath = GetResolvedServerPath();
 
   {
     optional<int64_t> cachedModifiedTime = CFG->GetMaybeInt64("map.local_mod_time");
     optional<int64_t> fileModifiedTime;
 
     if (!ignoreMPQ) {
-      if (resolvedFilePath.filename() == resolvedFilePath && !m_UseStandardPaths) {
-        resolvedFilePath = m_Aura->m_Config.m_MapPath / resolvedFilePath;
-      }    
       fileModifiedTime = GetMaybeModifiedTime(resolvedFilePath);
       ignoreMPQ = (
         (!m_MapLoaderIsPartial && isLatestSchema) && (
