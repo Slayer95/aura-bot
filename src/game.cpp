@@ -3143,7 +3143,7 @@ void CGame::SendMapCheck(GameUser::CGameUser* user) const
 {
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
-  if (m_Config.m_GameVersion >= GAMEVER(1u, 23u)) {
+  if (m_Config.m_GameVersion.value() >= GAMEVER(1u, 23u)) {
     user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(m_Config.m_GameVersion.value()), GetMapSHA1(m_Config.m_GameVersion.value())));
   } else {
     user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(m_Config.m_GameVersion.value())));
