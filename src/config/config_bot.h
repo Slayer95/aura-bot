@@ -47,13 +47,15 @@ struct CBotConfig
   std::filesystem::path                   m_GameSavePath;                // save files path
 
   std::filesystem::path                   m_AliasesPath;                 // aliases path
-  std::filesystem::path                   m_LogPath;                     // aliases path
+  std::filesystem::path                   m_MainLogPath;                 // main log path (default aura.log)
+  std::filesystem::path                   m_RemoteLogPath;               // remote log path (default remote.log)
 
   std::filesystem::path                   m_GreetingPath;                // the path of the greeting the bot sends to all players joining a game
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
   std::vector<Version>                    m_SupportedGameVersions;       // all game versions the bot will support either through LAN or bnet
 
+  uint8_t                                 m_LogRemoteMode;
   uint8_t                                 m_LogGameChat;
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
 

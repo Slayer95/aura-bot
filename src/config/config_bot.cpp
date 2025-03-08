@@ -55,7 +55,8 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   // Non-configurable?
   m_AliasesPath                  = CFG.GetHomeDir() / filesystem::path("aliases.ini");
-  m_LogPath                      = CFG.GetHomeDir() / filesystem::path("aura.log");
+  m_MainLogPath                  = CFG.GetHomeDir() / filesystem::path("aura.log");
+  m_RemoteLogPath                = CFG.GetHomeDir() / filesystem::path("remote.log");
 
   set<string> supportedGameVersionStrings = CFG.GetSet("hosting.game_versions.supported", ',', true, {});
   set<Version> supportedGameVersions;
@@ -71,6 +72,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_SupportedGameVersions        = vector<Version>(supportedGameVersions.begin(), supportedGameVersions.end());
   stable_sort(m_SupportedGameVersions.begin(), m_SupportedGameVersions.end());
 
+  m_LogRemoteMode                = CFG.GetStringIndex("hosting.log_remote.mode", {"none", "file", "network", "mixed"}, LOG_REMOTE_MODE_NETWORK);
   m_LogGameChat                  = CFG.GetStringIndex("hosting.log_chat", {"never", "allowed", "always"}, LOG_GAME_CHAT_NEVER);
   m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
 

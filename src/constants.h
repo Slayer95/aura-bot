@@ -429,6 +429,11 @@ constexpr uint8_t LOG_GAME_CHAT_NEVER = 0u;
 constexpr uint8_t LOG_GAME_CHAT_ALLOWED = 1u;
 constexpr uint8_t LOG_GAME_CHAT_ALWAYS = 2u;
 
+constexpr uint8_t LOG_REMOTE_MODE_NONE = 0u;
+constexpr uint8_t LOG_REMOTE_MODE_FILE = 1u;
+constexpr uint8_t LOG_REMOTE_MODE_NETWORK = 2u;
+constexpr uint8_t LOG_REMOTE_MODE_MIXED = 3u;
+
 // config_realm.h
 
 #define REALM_AUTH_PVPGN 0

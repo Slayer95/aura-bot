@@ -233,6 +233,7 @@ public:
   
   inline bool MatchLogLevel(const uint8_t logLevel) { return logLevel <= m_LogLevel; } // 1: emergency ... 9: trace
   void LogPersistent(const std::string& logText);
+  void LogRemoteFile(const std::string& logText);
   void GracefulExit();
   bool CheckGracefulExit();
 };

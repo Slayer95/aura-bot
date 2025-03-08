@@ -2008,14 +2008,19 @@ void CGame::Log(const string& logText, int64_t gameTicks)
 void CGame::LogRemote(const string& text) const
 {
   string logText = GetLogPrefix() + text;
-  if (m_Aura->m_IRC.m_Config.m_LogGames) {
-    m_Aura->m_IRC.SendAllChannels(logText);
+  if (m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_FILE || m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_MIXED) {
+    m_Aura->LogRemoteFile(text);
   }
+  if (m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_NETWORK || m_Aura->m_Config.m_LogRemoteMode == LOG_REMOTE_MODE_MIXED) {
+    if (m_Aura->m_IRC.m_Config.m_LogGames) {
+      m_Aura->m_IRC.SendAllChannels(logText);
+    }
 #ifndef DISABLE_DPP
-  if (m_Aura->m_Discord.m_Config.m_LogGames) {
-    m_Aura->m_Discord.SendAllChannels(logText);
-  }
+    if (m_Aura->m_Discord.m_Config.m_LogGames) {
+      m_Aura->m_Discord.SendAllChannels(logText);
+    }
 #endif
+  }
 }
 
 void CGame::UpdateLogs()

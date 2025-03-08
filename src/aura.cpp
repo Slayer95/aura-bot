@@ -1994,15 +1994,29 @@ void CAura::ClearStaleFileChunks()
 void CAura::LogPersistent(const string& logText)
 {
   ofstream writeStream;
-  writeStream.open(m_Config.m_LogPath.native().c_str(), ios::binary | ios::app );
+  writeStream.open(m_Config.m_MainLogPath.native().c_str(), ios::binary | ios::app);
 
-  if (writeStream.fail( )) {
+  if (writeStream.fail()) {
     return;
   }
 
   LogStream(writeStream, logText, true);
-  writeStream.close( );
+  writeStream.close();
 }
+
+void CAura::LogRemoteFile(const string& logText)
+{
+  ofstream writeStream;
+  writeStream.open(m_Config.m_RemoteLogPath.native().c_str(), ios::binary | ios::app);
+
+  if (writeStream.fail()) {
+    return;
+  }
+
+  LogStream(writeStream, logText, true);
+  writeStream.close();
+}
+
 
 void CAura::GracefulExit()
 {
