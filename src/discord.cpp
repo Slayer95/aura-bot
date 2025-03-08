@@ -50,9 +50,11 @@ CDiscord::CDiscord(CConfig& nCFG)
     m_Client(nullptr),
     m_LastPacketTime(GetTime()),
     m_LastAntiIdleTime(GetTime()),
+    m_PendingCallbackCount(0),
     m_WaitingToConnect(true),
     m_NickName(string()),
-    m_Config(CDiscordConfig(nCFG))
+    m_Config(CDiscordConfig(nCFG)),
+    m_ExitingSoon(false)
 {
 }
 
@@ -228,23 +230,25 @@ void CDiscord::Update()
   return;
 }
 
+void CDiscord::AwaitSettled()
+{
+  while (m_PendingCallbackCount > 0) {
+    this_thread::sleep_for(chrono::milliseconds(20));
+  }
+}
+
 #ifndef DISABLE_DPP
 void CDiscord::SendUser(const string& message, const uint64_t target)
 {
+  if (m_ExitingSoon) return;
+  m_PendingCallbackCount++;
   m_Client->direct_message_create(target, dpp::message(message), [this](const dpp::confirmation_callback_t& result) {
     if (result.is_error()) {
-#ifdef DEBUG
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-        Print("[DISCORD] Failed to send direct message.");
-      }
-#endif
+      PRINT_IF(LOG_LEVEL_WARNING, "[DISCORD] Failed to send direct message.");
     } else {
-#ifdef DEBUG
-      if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-        Print("[DISCORD] Direct message sent OK.");
-      }
-#endif
+      PRINT_IF(LOG_LEVEL_INFO, "[DISCORD] Direct message sent OK.");
     }
+    m_PendingCallbackCount--;
   });
 }
 
@@ -282,6 +286,8 @@ bool CDiscord::GetIsUserAllowed(const uint64_t target) const
 
 void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool isJoining)
 {
+  if (m_ExitingSoon) return;
+  m_PendingCallbackCount++;
   m_Client->current_user_leave_guild(target, [this, target, name, isJoining](const dpp::confirmation_callback_t& result) {
     if (m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
       if (result.is_error()) {
@@ -292,6 +298,7 @@ void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool
         Print("[DISCORD] Left server <<" + name + ">> (#" + to_string(target) + ").");
       }
     }
+    m_PendingCallbackCount--;
   });
 }
 
@@ -322,25 +329,20 @@ void CDiscord::SetStatusIdle() const
   m_Client->set_presence(dpp::presence(dpp::presence_status::ps_online, dpp::activity_type::at_watching, "Warcraft III"));
 }
 
-void CDiscord::SendAllChannels(const string& text) const
+void CDiscord::SendAllChannels(const string& text)
 {
+  if (m_ExitingSoon) return;
   for (const auto& channel : m_Config.m_LogChannels) {
     dpp::message announce(text);
     announce.set_channel_id(channel);
+    m_PendingCallbackCount++;
     m_Client->message_create(announce, [this](const dpp::confirmation_callback_t& result) {
       if (result.is_error()) {
-#ifdef DEBUG
-        if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-          Print("[DISCORD] Failed to send message to channel.");
-        }
-#endif
+        PRINT_IF(LOG_LEVEL_WARNING, "[DISCORD] Failed to send message to channel.");
       } else {
-#ifdef DEBUG
-        if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-          Print("[DISCORD] Message sent to channel OK.");
-        }
-#endif
+        PRINT_IF(LOG_LEVEL_INFO, "[DISCORD] Message sent to channel OK.");
       }
+      m_PendingCallbackCount--;
     });
   }
 }

@@ -1376,6 +1376,7 @@ void CAura::AwaitSettled()
   if (m_AutoRehostGameSetup) {
     m_AutoRehostGameSetup->AwaitSettled();
   }
+  m_Discord.AwaitSettled();
 }
 
 void CAura::EventBNETGameRefreshSuccess(CRealm* successRealm)
@@ -2013,6 +2014,7 @@ void CAura::GracefulExit()
   if (m_GameSetup) {
     m_GameSetup->m_ExitingSoon = true;
   }
+  m_Discord.m_ExitingSoon = true;
 
   for (auto& game : m_StartedGames) {
     game->SendEveryoneElseLeftAndDisconnect("shutdown");

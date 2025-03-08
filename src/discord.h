@@ -36,6 +36,7 @@
 #endif
 
 #include <dpp/dpp.h>
+#include <atomic>
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -45,7 +46,7 @@
 class CDiscord
 {
 public:
-  CAura*                   m_Aura;
+  CAura*                            m_Aura;
 #ifndef DISABLE_DPP
   dpp::cluster*                     m_Client;
 #else
@@ -53,18 +54,21 @@ public:
 #endif
   int64_t                           m_LastPacketTime;
   int64_t                           m_LastAntiIdleTime;
+  int64_t                           m_PendingCallbackCount;
   bool                              m_WaitingToConnect;
   std::string                       m_NickName;
   CDiscordConfig                    m_Config;
 #ifndef DISABLE_DPP
   std::queue<dpp::slashcommand_t*>  m_CommandQueue;
 #endif
+  std::atomic<bool>                 m_ExitingSoon;
 
   CDiscord(CConfig& nCFG);
   ~CDiscord();
   CDiscord(CDiscord&) = delete;
 
   void Update();
+  void AwaitSettled();
 
 #ifndef DISABLE_DPP
   bool Init();
@@ -74,7 +78,7 @@ public:
   void SetStatusHostingGame(const std::string& message, const std::string& players, const int64_t startTime) const;
   void SetStatusHostingLobby(const std::string& message, const int64_t startTime) const;
   void SetStatusIdle() const;
-  void SendAllChannels(const std::string& text) const;
+  void SendAllChannels(const std::string& text);
 #endif
 
   [[nodiscard]] inline bool GetIsEnabled() const { return m_Config.m_Enabled; }
