@@ -3127,6 +3127,17 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
   }
 }
 
+void CGame::SendMapCheck(GameUser::CGameUser* user) const
+{
+  // When the game client receives MAPCHECK packet, it remains if the map is OK.
+  // Otherwise, they immediately leave the lobby.
+  if (m_Config.m_GameVersion >= GAMEVER(1u, 23u)) {
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
+  } else {
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
+  }
+}
+
 void CGame::SendIncomingPlayerInfo(GameUser::CGameUser* user) const
 {
   for (auto& otherPlayer : m_Users) {
@@ -4592,12 +4603,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   SendJoinedPlayersInfo(Player);
 
   // send a map check packet to the new user.
-
-  if (m_Config.m_GameVersion >= GAMEVER(1u, 23u)) {
-    Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash(), m_Map->GetMapScriptsSHA1()));
-  } else {
-    Player->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsWeakHash()));
-  }
+  SendMapCheck(Player);
 
   // send slot info to everyone, so the new user gets this info twice but everyone else still needs to know the new slot layout.
   SendAllSlotInfo();

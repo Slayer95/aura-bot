@@ -477,6 +477,7 @@ public:
   void                                                   SendVirtualHostPlayerInfo(CConnection* player) const;
   void                                                   SendFakeUsersInfo(CConnection* player) const;
   void                                                   SendJoinedPlayersInfo(CConnection* player) const;
+  void                                                   SendMapCheck(GameUser::CGameUser* user) const;
   void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
   void                                                   SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
