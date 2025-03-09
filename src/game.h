@@ -489,6 +489,7 @@ public:
   void                                                   SendAllActions();
   void                                                   SendAllAutoStart() const;
 
+  inline const Version&                                  GetVersion() const { return m_Config.m_GameVersion.value(); }
   std::vector<uint8_t>                                   GetGameDiscoveryInfo(const Version& gameVersion, const uint16_t hostPort);
   std::vector<uint8_t>*                                  GetGameDiscoveryInfoTemplate();
   std::vector<uint8_t>                                   GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;

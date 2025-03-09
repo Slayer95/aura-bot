@@ -364,15 +364,15 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameDiscoveryInfoDynamicOffset(0)
 {
   m_IsHiddenPlayerNames = m_Config.m_HideLobbyNames;
-  m_SupportedGameVersionsMin = m_Config.m_GameVersion.value();
-  m_SupportedGameVersionsMax = m_Config.m_GameVersion.value();
-  SetSupportedGameVersion(m_Config.m_GameVersion.value());
+  m_SupportedGameVersionsMin = GetVersion();
+  m_SupportedGameVersionsMax = GetVersion();
+  SetSupportedGameVersion(GetVersion());
   bool canCrossPlay = !(
     (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_NONE) ||
     (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_CONSERVATIVE && m_Map->GetMapDataSet() == MAP_DATASET_MELEE)
   );
   if (canCrossPlay) {
-    Version headVersion = GetScriptsVersionRangeHead(m_Config.m_GameVersion.value());
+    Version headVersion = GetScriptsVersionRangeHead(GetVersion());
     for (const auto& version : m_Aura->m_Config.m_SupportedGameVersions) {
       switch (m_Config.m_CrossPlayMode) {
         case CROSSPLAY_MODE_CONSERVATIVE:
@@ -3143,10 +3143,11 @@ void CGame::SendMapCheck(GameUser::CGameUser* user) const
 {
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
-  if (m_Config.m_GameVersion.value() >= GAMEVER(1u, 23u)) {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(m_Config.m_GameVersion.value()), GetMapSHA1(m_Config.m_GameVersion.value())));
+  const Version& version = GetVersion();
+  if (version >= GAMEVER(1u, 23u)) {
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
   } else {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(m_Config.m_GameVersion.value())));
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version)));
   }
 }
 
@@ -3446,16 +3447,16 @@ std::string CGame::GetPrefixedGameName(const CRealm* realm) const
 
 std::string CGame::GetAnnounceText(const CRealm* realm) const
 {
-  Version gameVersion = m_Config.m_GameVersion.value();
+  Version version = GetVersion();
   if (realm) {
-    gameVersion = realm->GetGameVersion();
+    version = realm->GetGameVersion();
   }
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
-  if (mapSize > 0x20000000 || gameVersion <= GAMEVER(1u, 28u) && mapSize > 0x8000000 || gameVersion <= GAMEVER(1u, 26u) && mapSize > 0x800000 || gameVersion <= GAMEVER(1u, 23u) && mapSize > 0x400000) {
-    versionPrefix = "[" + ToVersionString(gameVersion) + ".UnlockMapSize] ";
+  if (mapSize > 0x20000000 || version <= GAMEVER(1u, 28u) && mapSize > 0x8000000 || version <= GAMEVER(1u, 26u) && mapSize > 0x800000 || version <= GAMEVER(1u, 23u) && mapSize > 0x400000) {
+    versionPrefix = "[" + ToVersionString(version) + ".UnlockMapSize] ";
   } else {
-    versionPrefix = "[" + ToVersionString(gameVersion) + "] ";
+    versionPrefix = "[" + ToVersionString(version) + "] ";
 
 }
   string startedPhrase;
@@ -3741,7 +3742,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     m_GameName,
     GetIndexVirtualHostName(),
     GetSourceFilePath(),
-    GetMapHashBlizz(m_Config.m_GameVersion.value()),
+    GetMapHashBlizz(GetVersion()),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
     m_HostCounter,
     m_EntryKey
@@ -3767,9 +3768,9 @@ void CGame::AnnounceDecreateToRealms()
 
 void CGame::AnnounceToAddress(string& addressLiteral, const optional<Version>& customGameVersion)
 {
-  Version gameVersion = m_Config.m_GameVersion.value();
+  Version version = GetVersion();
   if (customGameVersion.has_value()) {
-    gameVersion = customGameVersion.value();
+    version = customGameVersion.value();
   }
   optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(addressLiteral);
   if (!maybeAddress.has_value())
@@ -3778,28 +3779,28 @@ void CGame::AnnounceToAddress(string& addressLiteral, const optional<Version>& c
   sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, 6112);
   if (isLoopbackAddress(address)) {
-    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
+    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(version, m_HostPort));
   } else {
-    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
+    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(version, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
 
 void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, const optional<Version>& customGameVersion)
 {
-  Version gameVersion = m_Config.m_GameVersion.value();
+  Version version = GetVersion();
   if (customGameVersion.has_value()) {
-    gameVersion = customGameVersion.value();
+    version = customGameVersion.value();
   }
   if (isLoopbackAddress(address)) {
-    socket->SendReply(address, GetGameDiscoveryInfo(gameVersion, m_HostPort));
+    socket->SendReply(address, GetGameDiscoveryInfo(version, m_HostPort));
   } else {
-    socket->SendReply(address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
+    socket->SendReply(address, GetGameDiscoveryInfo(version, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
   }
 }
 
-void CGame::SendGameDiscoveryCreate(const Version& gameVersion) const
+void CGame::SendGameDiscoveryCreate(const Version& version) const
 {
-  vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(gameVersion, m_HostCounter);
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(version, m_HostCounter);
   m_Aura->m_Net.SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 }
 
@@ -3892,7 +3893,7 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       GetIndexVirtualHostName(),
       GetUptime(), // dynamic
       GetSourceFilePath(),
-      GetMapHashBlizz(m_Config.m_GameVersion.value()),
+      GetMapHashBlizz(GetVersion()),
       static_cast<uint32_t>(m_Slots.size()), // Total Slots
       static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1),
       IP,
