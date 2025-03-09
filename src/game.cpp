@@ -6440,9 +6440,7 @@ void CGame::Remake()
 
   m_LobbyLoading = false;
   LOG_APP_IF(LOG_LEVEL_INFO, "finished loading after remake")
-  Print("CreateVirtualHost() BEFORE");
   CreateVirtualHost();
-  Print("CreateVirtualHost() AFTER");
 }
 
 uint8_t CGame::GetSIDFromUID(uint8_t UID) const
