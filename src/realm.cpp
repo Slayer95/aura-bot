@@ -1412,7 +1412,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
     GetPrefixedGameName(game->GetGameName()), m_Config.m_UserName,
     game->GetUptime(),
     game->GetSourceFilePath(),
-    game->GetMapHashBlizz(version),
+    game->GetSourceFileHashBlizz(version),
     game->GetMapSHA1(version),
     hostCounter,
     game->GetMap()->GetVersionMaxSlots()

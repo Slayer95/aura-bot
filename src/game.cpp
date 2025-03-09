@@ -3062,7 +3062,7 @@ string CGame::GetSourceFilePath() const {
   }
 }
 
-array<uint8_t, 4> CGame::GetMapHashBlizz(const Version& version) const
+array<uint8_t, 4> CGame::GetSourceFileHashBlizz(const Version& version) const
 {
   if (m_RestoredGame) {
     return m_RestoredGame->GetSaveHash();
@@ -3695,7 +3695,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
       GetIndexVirtualHostName(),
       uptime,
       GetSourceFilePath(),
-      GetMapHashBlizz(gameVersion),
+      GetSourceFileHashBlizz(gameVersion),
       static_cast<uint32_t>(m_Slots.size()), // Total Slots
       slotsOff,
       hostPort,
@@ -3739,7 +3739,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     m_GameName,
     GetIndexVirtualHostName(),
     GetSourceFilePath(),
-    GetMapHashBlizz(GetVersion()),
+    GetSourceFileHashBlizz(GetVersion()),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
     m_HostCounter,
     m_EntryKey
@@ -3890,7 +3890,7 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       GetIndexVirtualHostName(),
       GetUptime(), // dynamic
       GetSourceFilePath(),
-      GetMapHashBlizz(GetVersion()),
+      GetSourceFileHashBlizz(GetVersion()),
       static_cast<uint32_t>(m_Slots.size()), // Total Slots
       static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1),
       IP,
