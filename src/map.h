@@ -275,17 +275,9 @@ public:
   [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapSize() const { return m_MapSize; }
   [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapCRC32() const { return m_MapCRC32; } // <map.file_hash.crc32>, but also legacy <map_hash> and <map.crc32>
   [[nodiscard]] inline const std::array<uint8_t, 20>&    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
-  [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapScriptsBlizz(const Version& nVersion) const { // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
-    auto it = m_MapScriptsBlizz.find(nVersion);
-    return it->second;
-  };
-  [[nodiscard]] inline const std::array<uint8_t, 20>&    GetMapScriptsSHA1(const Version& nVersion) const { // <map.scripts_hash.sha1>, but also legacy <map.sha1>
-    auto it = m_MapScriptsSHA1.find(nVersion);
-    return it->second;
-  };
-  [[nodiscard]] inline bool                              GetMapIsGameVersionSupported(const Version& nVersion) {
-    return m_MapMinGameVersion < nVersion && (m_MapScriptsBlizz.find(nVersion) != m_MapScriptsBlizz.end()) && (m_MapScriptsSHA1.find(nVersion) != m_MapScriptsSHA1.end());
-  };
+  [[nodiscard]] const std::array<uint8_t, 4>&            GetMapScriptsBlizz(const Version& nVersion) const; // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
+  [[nodiscard]] const std::array<uint8_t, 20>&           GetMapScriptsSHA1(const Version& nVersion) const; // <map.scripts_hash.sha1>, but also legacy <map.sha1>
+  [[nodiscard]] bool                                     GetMapIsGameVersionSupported(const Version& nVersion) const;
   [[nodiscard]] inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
   [[nodiscard]] inline uint8_t                    GetMapSpeed() const { return m_MapSpeed; }
   [[nodiscard]] inline uint8_t                    GetMapObservers() const { return m_MapObservers; }

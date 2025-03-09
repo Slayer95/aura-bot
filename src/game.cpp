@@ -359,13 +359,13 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_BeforePlayingEmptyActions(0),
+    m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
+    m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
     m_GameDiscoveryInfoChanged(false),
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
   m_IsHiddenPlayerNames = m_Config.m_HideLobbyNames;
-  m_SupportedGameVersionsMin = GetVersion();
-  m_SupportedGameVersionsMax = GetVersion();
   SetSupportedGameVersion(GetVersion());
   bool canCrossPlay = !(
     (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_NONE) ||
@@ -388,8 +388,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
         continue;
       }
       SetSupportedGameVersion(version);
-      if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
-      if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
     }
   }
 
@@ -3067,7 +3065,7 @@ array<uint8_t, 4> CGame::GetSourceFileHashBlizz(const Version& version) const
   if (m_RestoredGame) {
     return m_RestoredGame->GetSaveHash();
   } else {
-    return m_Map->GetMapScriptsBlizz(GetScriptsVersionRangeHead(version));
+    return m_Map->GetMapScriptsBlizz(version);
   }
 }
 
@@ -3076,7 +3074,7 @@ array<uint8_t, 20> CGame::GetMapSHA1(const Version& version) const
   if (version >= GAMEVER(1u, 31u)) {
     return m_Map->GetMapSHA1();
   } else {
-    return m_Map->GetMapScriptsSHA1(GetScriptsVersionRangeHead(version));
+    return m_Map->GetMapScriptsSHA1(version);
   }
 }
 
@@ -9024,6 +9022,8 @@ bool CGame::GetIsSupportedGameVersion(const Version& nVersion) const
 void CGame::SetSupportedGameVersion(const Version& nVersion) {
   if (nVersion.first > 1 || nVersion.second > 36) return;
   m_SupportedGameVersions.set(ToVersionOrdinal(nVersion));
+  if (nVersion < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = nVersion;
+  if (nVersion > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = nVersion;
 }
 
 void CGame::OpenObserverSlots()

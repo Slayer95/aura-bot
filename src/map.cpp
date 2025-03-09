@@ -105,6 +105,26 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
 
 CMap::~CMap() = default;
 
+const array<uint8_t, 4>& CMap::GetMapScriptsBlizz(const Version& nVersion) const
+{
+  Version headVersion = GetScriptsVersionRangeHead(nVersion);
+  auto it = m_MapScriptsBlizz.find(headVersion);
+  return it->second;
+};
+
+const array<uint8_t, 20>& CMap::GetMapScriptsSHA1(const Version& nVersion) const
+{
+  Version headVersion = GetScriptsVersionRangeHead(nVersion);
+  auto it = m_MapScriptsSHA1.find(headVersion);
+  return it->second;
+};
+
+bool CMap::GetMapIsGameVersionSupported(const Version& nVersion) const
+{
+  Version headVersion = GetScriptsVersionRangeHead(nVersion);
+  return m_MapMinGameVersion < nVersion && (m_MapScriptsBlizz.find(headVersion) != m_MapScriptsBlizz.end()) && (m_MapScriptsSHA1.find(headVersion) != m_MapScriptsSHA1.end());
+};
+
 uint32_t CMap::GetGameConvertedFlags() const
 {
   uint32_t gameFlags = 0;
