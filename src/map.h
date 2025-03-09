@@ -266,18 +266,24 @@ public:
   CMap(CAura* nAura, CConfig* CFG);
   ~CMap();
 
-  [[nodiscard]] inline bool                       GetValid() const { return m_Valid; }
-  [[nodiscard]] inline bool                       HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0 || m_MapContentMismatch[4] != 0; }
-  [[nodiscard]] inline bool                       GetMPQSucceeded() const { return m_MapMPQResult.has_value() && m_MapMPQResult.value(); }
-  [[nodiscard]] inline bool                       GetMPQErrored() const { return m_MapMPQResult.has_value() && !m_MapMPQResult.value(); }
-  [[nodiscard]] inline std::string                GetConfigName() const { return m_CFGName; }
-  [[nodiscard]] inline std::string                GetClientPath() const { return m_ClientMapPath; }
-  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapSize() const { return m_MapSize; }
-  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapCRC32() const { return m_MapCRC32; } // <map.file_hash.crc32>, but also legacy <map_hash> and <map.crc32>
-  [[nodiscard]] inline std::array<uint8_t, 20>    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
-  [[nodiscard]] inline std::array<uint8_t, 4>     GetMapScriptsBlizz(const Version& nVersion) { return m_MapScriptsBlizz[nVersion]; } // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
-  [[nodiscard]] inline std::array<uint8_t, 20>    GetMapScriptsSHA1(const Version& nVersion) { return m_MapScriptsSHA1[nVersion]; } // <map.scripts_hash.sha1>, but also legacy <map.sha1>
-  [[nodiscard]] inline bool                       GetMapIsGameVersionSupported(const Version& nVersion) {
+  [[nodiscard]] inline bool                              GetValid() const { return m_Valid; }
+  [[nodiscard]] inline bool                              HasMismatch() const { return m_MapContentMismatch[0] != 0 || m_MapContentMismatch[1] != 0 || m_MapContentMismatch[2] != 0 || m_MapContentMismatch[3] != 0 || m_MapContentMismatch[4] != 0; }
+  [[nodiscard]] inline bool                              GetMPQSucceeded() const { return m_MapMPQResult.has_value() && m_MapMPQResult.value(); }
+  [[nodiscard]] inline bool                              GetMPQErrored() const { return m_MapMPQResult.has_value() && !m_MapMPQResult.value(); }
+  [[nodiscard]] inline const std::string&                GetConfigName() const { return m_CFGName; }
+  [[nodiscard]] inline const std::string&                GetClientPath() const { return m_ClientMapPath; }
+  [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapSize() const { return m_MapSize; }
+  [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapCRC32() const { return m_MapCRC32; } // <map.file_hash.crc32>, but also legacy <map_hash> and <map.crc32>
+  [[nodiscard]] inline const std::array<uint8_t, 20>&    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
+  [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapScriptsBlizz(const Version& nVersion) const { // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
+    auto it = m_MapScriptsBlizz.find(nVersion);
+    return it->second;
+  };
+  [[nodiscard]] inline const std::array<uint8_t, 20>&    GetMapScriptsSHA1(const Version& nVersion) const { // <map.scripts_hash.sha1>, but also legacy <map.sha1>
+    auto it = m_MapScriptsSHA1.find(nVersion);
+    return it->second;
+  };
+  [[nodiscard]] inline bool                              GetMapIsGameVersionSupported(const Version& nVersion) {
     return m_MapMinGameVersion < nVersion && (m_MapScriptsBlizz.find(nVersion) != m_MapScriptsBlizz.end()) && (m_MapScriptsSHA1.find(nVersion) != m_MapScriptsSHA1.end());
   };
   [[nodiscard]] inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
@@ -332,6 +338,7 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapNumTeams() const { return m_MapNumTeams; }
   [[nodiscard]] inline uint8_t                    GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
   [[nodiscard]] inline std::vector<CGameSlot>     GetSlots() const { return m_Slots; }
+  [[nodiscard]] inline const std::vector<CGameSlot>&     InspectSlots() const { return m_Slots; }
   [[nodiscard]] bool                              GetHMCEnabled() const { return m_HMCMode != W3HMC_MODE_DISABLED; }
   [[nodiscard]] bool                              GetHMCRequired() const { return m_HMCMode == W3HMC_MODE_REQUIRED; }
   [[nodiscard]] uint8_t                           GetHMCMode() const { return m_HMCMode; }

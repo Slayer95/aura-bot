@@ -4816,7 +4816,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     CheckIPBanned(connection, joinRequest, matchingRealm, JoinedRealm)) {
     // let banned users "join" the game with an arbitrary UID then immediately close the connection
     // this causes them to be kicked back to the chat channel on battle.net
-    vector<CGameSlot> Slots = m_Map->GetSlots();
+    const vector<CGameSlot>& Slots = m_Map->InspectSlots();
     connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
     return false;
   }
