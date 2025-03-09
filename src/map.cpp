@@ -1009,6 +1009,7 @@ void CMap::Load(CConfig* CFG)
   optional<array<uint8_t, 20>> mapFileSHA1;
   if (m_MapLoaderIsPartial || m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER || !isLatestSchema) {
     if (!TryLoadMapFileChunked(mapFileSize, mapFileCRC32, mapFileSHA1)) {
+      // Map file does not exist or failed to read
       if (m_MapLoaderIsPartial) {
         // We are trying to figure out what this map is about - map config provided is a stub.
         // Since there is no actual map file, map loading fails.
@@ -1037,7 +1038,7 @@ void CMap::Load(CConfig* CFG)
       ignoreMPQ = (
         (!m_MapLoaderIsPartial && isLatestSchema) && (
           m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
-            !isLatestSchema || !fileModifiedTime.has_value() || (
+            !fileModifiedTime.has_value() || (
               cachedModifiedTime.has_value() && fileModifiedTime.has_value() &&
               fileModifiedTime.value() <= cachedModifiedTime.value()
             )
