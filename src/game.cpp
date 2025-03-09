@@ -662,7 +662,10 @@ void CGame::InitSlots()
 
   // Match actual observer slots to set map flags.
   if (!useObservers) {
+    LogApp("observers disabled", LOG_C);
     CloseObserverSlots();
+  } else {
+    LogApp("observers enabled", LOG_C);
   }
 
   const bool customForces = m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES;
