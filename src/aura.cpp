@@ -63,6 +63,7 @@
 #include "map.h"
 #include "game_seeker.h"
 #include "game_user.h"
+#include "pjass.h"
 #include "protocol/game_protocol.h"
 #include "protocol/gps_protocol.h"
 #include "game.h"

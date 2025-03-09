@@ -173,21 +173,24 @@ static void doparse(int _argc, const char **_argv)
     }
 }
 
-int _cdecl parse_jass_files(const int file_count, const char **file_paths, char *output, int* out_size)
+int _cdecl parse_jass_files(const int file_count, const char **file_paths, char *output, int n_max_out_size, int *n_out_size)
 {
+    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
     char buffer[8192];
     init(buffer, sizeof(buffer) - 1);
     doparse(file_count, file_paths); 
 
     if (!haderrors && didparse) {
-        *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse successful: %8d lines: %s", totlines, "<total>");
+        *n_out_size = _snprintf_s(output, n_max_out_size, n_max_out_size - 1, "Parse successful: %8d lines: %s", totlines, "<total>");
+        if (*n_out_size == -1) *n_out_size = n_max_out_size - 1;
         return 0;
     } else {
         if (haderrors) {
-            *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse failed: %d error%s total\n%s", haderrors, haderrors == 1 ? "" : "s", buffer);
+            *n_out_size = _snprintf_s(output, n_max_out_size, n_max_out_size - 1, "Parse failed: %d error%s total\n%s", haderrors, haderrors == 1 ? "" : "s", buffer);
         } else {
-            *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse failed");
+            *n_out_size = _snprintf_s(output, n_max_out_size, n_max_out_size - 1, "Parse failed");
         }
+        if (*n_out_size == -1) *n_out_size = n_max_out_size - 1;
         return 1;
     }
 }

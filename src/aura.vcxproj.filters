@@ -81,6 +81,9 @@
     <ClCompile Include="bncsutil_interface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="pjass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="realm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -237,6 +240,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bncsutil_interface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pjass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="realm.h">

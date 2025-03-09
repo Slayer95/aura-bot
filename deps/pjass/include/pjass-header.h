@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-int _cdecl parse_jass_files(int file_count, const char **file_paths, char *output, int* out_size);
+int _cdecl parse_jass_files(int file_count, const char **file_paths, char *output, int n_max_out_size, int *n_out_size);
 
 #endif
 
