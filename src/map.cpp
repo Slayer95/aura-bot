@@ -1309,7 +1309,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   if (CFG->Exists("map.lua")) {
-    m_MapIsLua = CFG->GetUint32("map.lua", m_MapIsLua);
+    m_MapIsLua = CFG->GetBool("map.lua", m_MapIsLua);
   } else {
     CFG->SetBool("map.lua", m_MapIsLua);
   }
