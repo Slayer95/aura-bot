@@ -26,6 +26,24 @@
 
 #define MAX_IDENT_LENGTH (3958)
 
+#ifdef _MSC_VER
+#include <intrin.h>
+// MSVC does not provide built-ins like GCC, so we will implement manual overflow checks:
+inline bool mul_overflow(int32_t a, int32_t b, int32_t *result) {
+    *result = a * b;
+    return (a != 0 && *result / a != b);  // Overflow check
+}
+
+inline bool add_overflow(int32_t a, int32_t b, int32_t *result) {
+    *result = a + b;
+    return ((a > 0 && b > 0 && *result < 0) || (a < 0 && b < 0 && *result > 0));  // Overflow check
+}
+#else
+    // GCC/MinGW provides __builtin_* functions, so we can directly use them:
+#define mul_overflow(a, b, result) __builtin_mul_overflow(a, b, result)
+#define add_overflow(a, b, result) __builtin_add_overflow(a, b, result)
+#endif
+
 /*
 For some reason flex produces the exact same #ifndef block in the .h and
 the .c file except for these three defines which works out in the normal

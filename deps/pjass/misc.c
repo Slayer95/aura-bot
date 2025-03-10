@@ -828,23 +828,23 @@ static bool validate_real_lit(char *lit)
     if( c == '.')
       break;
 
-    if( __builtin_mul_overflow(result, 10, &result))
+    if( mul_overflow(result, 10, &result))
       return false;
 
-    if( __builtin_add_overflow(result, c - '0', &result)) 
+    if( add_overflow(result, c - '0', &result)) 
       return false;
   }
     
   while( *lit ){
     char c = *lit++;
     nfrac++;
-    if( __builtin_mul_overflow(frac, 10, &frac))
+    if( mul_overflow(frac, 10, &frac))
       return false;
 
-    if( __builtin_add_overflow(frac, c - '0', &frac))
+    if( add_overflow(frac, c - '0', &frac))
       return false;
 
-    if( __builtin_mul_overflow(pow10, 10, &pow10)){
+    if( mul_overflow(pow10, 10, &pow10)){
       if( frac != 0)
         return false;
       if( nfrac == 32 )
