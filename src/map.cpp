@@ -660,6 +660,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
       if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
         foundScript = true;
+        FileWrite(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"), reinterpret_cast<const uint8_t*>(fileContents.data()), fileContents.size());
       }
       for (const auto& version : supportedVersionHeads) {
         auto mapCrypto = cryptos.find(version);
@@ -974,6 +975,25 @@ optional<MapEssentials> CMap::ParseMPQ()
     if (!fileContents.empty()) {
       mapEssentials->previewImgSize = fileContents.size();
     }
+
+#ifndef DISABLE_PJASS
+    if (!supportedVersionHeads.empty() && m_Aura->m_Config.m_ValidateJASS) {
+      Version version = supportedVersionHeads.back();
+      if (mapEssentials->minCompatibleGameVersion <= version) {
+        vector<filesystem::path> scriptFiles;
+        scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j"));
+        scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j"));
+        scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"));
+        pair<bool, string> result = ParseJASS(scriptFiles);
+        if (!result.first) {
+          string firstError = ExtractFirstJASSError(result.second);
+          m_Valid = false;
+          m_ErrorMessage = "map script is not valid JASS - " + firstError;
+        }
+      }
+    }
+#endif
+
   } else { // end m_MapLoaderIsPartial
     DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
   }

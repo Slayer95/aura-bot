@@ -72,6 +72,17 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_SupportedGameVersions        = vector<Version>(supportedGameVersions.begin(), supportedGameVersions.end());
   stable_sort(m_SupportedGameVersions.begin(), m_SupportedGameVersions.end());
 
+#ifdef DISABLE_PJASS
+  m_ValidateJASS                 = CFG.GetBool("hosting.validators.check_jass", false);
+  if (m_ValidateJASS) {
+    Print("[CONFIG] warning - <hosting.validators.check_jass = yes> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <hosting.validators.check_jass = yes> requires compilation without #define DISABLE_PJASS");
+    m_ValidateJASS = false;
+  }
+#else
+  m_ValidateJASS                 = CFG.GetBool("hosting.validators.check_jass", true);
+#endif
+
   m_LogRemoteMode                = CFG.GetStringIndex("hosting.log_remote.mode", {"none", "file", "network", "mixed"}, LOG_REMOTE_MODE_NETWORK);
   m_LogGameChat                  = CFG.GetStringIndex("hosting.log_chat", {"never", "allowed", "always"}, LOG_GAME_CHAT_NEVER);
   m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
