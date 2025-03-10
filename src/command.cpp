@@ -1486,8 +1486,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       for (const auto& line : replyLines) {
         SendReply(line);
       }
-	  if (CommandHash == HashCode("gamedetails")) {
-	  }
       break;
     }
 
