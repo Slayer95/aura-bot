@@ -47,12 +47,13 @@
 #include "aura.h"
 #include "util.h"
 #include "file_util.h"
+#include "game_slot.h"
+#include "pjass.h"
 #include <crc32/crc32.h>
 #include <sha1/sha1.h>
 #include "config/config.h"
 #include "config/config_bot.h"
 #include "config/config_game.h"
-#include "game_slot.h"
 
 #define __STORMLIB_SELF__
 #include <StormLib.h>
@@ -682,7 +683,8 @@ optional<MapEssentials> CMap::ParseMPQ()
     }
 
     if (!foundScript) {
-      Print("[MAP] couldn't find war3map.j or scripts\\war3map.j in MPQ archive, calculated <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN> is probably wrong");
+      m_Valid = false;
+      m_ErrorMessage = "war3map.j or scripts\\war3map.j not found in MPQ archive";
     }
 
     for (const auto& version : supportedVersionHeads) {
