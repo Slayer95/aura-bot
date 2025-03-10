@@ -3,12 +3,12 @@
 #include "grammar.tab.h"
 
 #include "misc.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 #ifndef VERSIONSTR
 #define VERSIONSTR "1.0-git"
 #endif
+
+#include "main.h"
 
 static struct typenode* addPrimitiveType(const char *name)
 {
@@ -237,25 +237,19 @@ static void doparse(int argc, char **argv)
     }
 }
 
-int main(int argc, char **argv)
+int _cdecl parse_jass_files(const int file_count, const char **file_paths, char *output, int* out_size)
 {
     init();
-    doparse(argc, argv);
+    doparse(file_count, file_paths); 
 
     if (!haderrors && didparse) {
-        printf("Parse successful: %8d lines: %s\n", totlines, "<total>");
-        if (ignorederrors) {
-            printf("%d errors ignored\n", ignorederrors);
-        }
+        *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse successful: %8d lines: %s", totlines, "<total>");
         return 0;
     } else {
         if (haderrors) {
-            printf("Parse failed: %d error%s total\n", haderrors, haderrors == 1 ? "" : "s");
+          *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse failed: %d error%s total", haderrors, haderrors == 1 ? "" : "s");
         } else {
-            printf("Parse failed\n");
-        }
-        if (ignorederrors) {
-            printf("%d errors ignored\n", ignorederrors);
+          *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse failed");
         }
         return 1;
     }

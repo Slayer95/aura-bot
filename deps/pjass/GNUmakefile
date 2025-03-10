@@ -1,21 +1,19 @@
 CFLAGS += -MMD -g -w
 VERSION ?= $(shell git rev-parse --short HEAD || echo nix)
+ARCHITECTURE ?= x64
 
-# when testing and releasing, we can't run both in parallel
-# but we also don't want to test when we're just making the zip
-# additionaly we want to test before we make any zip file
-# so these rules depend on test just when we're both releasing and testing
-ifneq (,$(findstring release,$(MAKECMDGOALS)))
-  ifneq (,$(findstring test,$(MAKECMDGOALS)))
-
-pjass-git-$(VERSION).zip: | test
-pjass-git-$(VERSION)-src.zip: | test
-
-  endif
+ifeq ($(ARCHITECTURE), x86)
+    CC = i686-w64-mingw32-gcc
+    CFLAGS += -m32
+    LIBRARY_NAME := bin/Win32/pjass.lib
+else
+    CC = x86_64-w64-mingw32-gcc
+    CFLAGS += -m64
+    LIBRARY_NAME := bin/Win64/pjass.lib
 endif
 
 SRC := misc.c hashtable.c paramlist.c funcdecl.c typeandname.c blocks.c tree.c sstrhash.c
-
+    
 OBJS := $(SRC:.c=.o)
 OBJS += main.o token.yy.o grammar.tab.o
 
@@ -24,7 +22,7 @@ OBJS += main.o token.yy.o grammar.tab.o
 .PHONY: binary-release src-release
 .PHONY: help
 
-all: pjass
+all: $(LIBRARY_NAME)
 
 help:
 	@awk -F ':|##' \
@@ -36,6 +34,9 @@ help:
 
 pjass: $(OBJS) ## Builds pjass
 	$(CC) $(CFLAGS) $^ -o $@
+
+$(LIBRARY_NAME): $(OBJS)  ## Creates the static library
+	ar rcs $@ $^  ## Archive the object files into the static library
 
 test: should-fail should-check map-scripts ## Runs all tests
 
@@ -69,8 +70,7 @@ main.o: main.c | grammar.tab.h
 
 clean-build-files: ## Cleans all build files
 	rm -f grammar.tab.h grammar.tab.c token.yy.c token.yy.h \
-		$(OBJS) $(OBJS:.o=.d) \
-		pjass pjass.exe
+		$(OBJS) $(OBJS:.o=.d)
 
 clean-release-files: ## Cleans all release zipballs
 	rm -f pjass-git-*.zip
@@ -80,24 +80,6 @@ clean-prof-files: ## Cleans all profiling files
           tests/should-fail/*-analysis.txt \
           tests/map-scripts/*-analysis.txt \
           gmon.out
-
-
-
-pjass.exe: CFLAGS=-O3 -march=native
-pjass.exe: CC=i686-w64-mingw32-gcc
-pjass.exe: $(SRC) main.c token.yy.c grammar.tab.c ## Builds a windows executable using mingw
-	find $^ | awk '{ print "#include \"" $$1 "\""}' | $(CC) $(CFLAGS) -x c -o $@ - -DVERSIONSTR="\"git-$(VERSION)\"" -DPJASS_AMALGATION
-
-src-release: pjass-git-$(VERSION)-src.zip ## Builds the source zipball
-binary-release: pjass.exe pjass-git-$(VERSION).zip ## Builds the exe zipball
-
-pjass-git-$(VERSION)-src.zip: main.c grammar.y token.l GNUmakefile readme.md AUTHORS LICENSE $(SRC:.c=.h) $(SRC)
-	zip -q -r pjass-git-$(VERSION)-src.zip $^ tests/should-check/ tests/should-fail/
-
-pjass-git-$(VERSION).zip: pjass.exe
-	i686-w64-mingw32-strip pjass.exe
-	upx --best --ultra-brute pjass.exe > /dev/null
-	zip -q pjass-git-$(VERSION).zip pjass.exe
 
 
 SHOULD_FAIL := $(wildcard tests/should-fail/*.j)
