@@ -148,13 +148,13 @@ void yyerror (const char *s)  /* Called by yyparse on error */
 }
 
 
+#ifndef min
 #define min(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
-int abs(int i){
-    if(i < 0)
-        return -i;
-    return i;
-}
+#ifndef abs
+#define abs(x) ((x) < 0 ? -(x) : (x))
+#endif
 
 void str_append(char *buf, const char *str, size_t buf_size){
     size_t str_len = strlen(str);
@@ -630,9 +630,9 @@ void checkeqtest(const struct typenode *a, const struct typenode *b)
     }
 }
 
-int isflag(char *txt, struct hashtable *flags){
-    txt++; // ignore +/- at the start
-    void *flag = ht_lookup(flags, txt);
+int isflag(const char *txt, struct hashtable *flags){
+    // ignore +/- at the start
+    void *flag = ht_lookup(flags, txt + 1);
     return (int)flag;
 }
 
@@ -653,7 +653,12 @@ int updateflag(int cur, const char *txt, struct hashtable *flags){
 int updateannotation(int cur, char *txt, struct hashtable *flags){
     char sep[] = " \t\r\n";
     char *ann;
+#ifdef _MSC_VER
+    char *ctx;
+    for(ann = strtok_s(txt, sep, &ctx); ann; ann = strtok_s(NULL, sep, &ctx)){
+#else
     for(ann = strtok(txt, sep); ann; ann = strtok(NULL, sep)){
+#endif
         cur = updateflag(cur, ann, flags);
     }
     return cur;

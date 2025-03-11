@@ -1,3 +1,5 @@
+#include <errno.h>
+
 #include "hashtable.h"
 #include "token.yy.h"
 #include "grammar.tab.h"
@@ -18,7 +20,7 @@ static struct typenode* addPrimitiveType(const char *name)
 }
 
 
-static const char **flags_in_order;
+static char **flags_in_order;
 static int count_flags_in_order;
 static int limit_flags_in_order;
 
@@ -162,8 +164,13 @@ static void doparse(int _argc, const char **_argv)
         }
 
         FILE *fp;
+#ifdef _MSC_VER
+        errno_t err = fopen_s(&fp, _argv[i], "rb");
+        if (err != 0) {
+#else
         fp = fopen(_argv[i], "rb");
         if (fp == NULL) {
+#endif
             haderrors++;
             continue;
         }

@@ -13,6 +13,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "hashtable.h"
 #include "tree.h"
@@ -28,18 +29,17 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>
-// MSVC does not provide built-ins like GCC, so we will implement manual overflow checks:
 inline bool mul_overflow(int32_t a, int32_t b, int32_t *result) {
     *result = a * b;
-    return (a != 0 && *result / a != b);  // Overflow check
+    return (a != 0 && *result / a != b);
 }
 
 inline bool add_overflow(int32_t a, int32_t b, int32_t *result) {
     *result = a + b;
-    return ((a > 0 && b > 0 && *result < 0) || (a < 0 && b < 0 && *result > 0));  // Overflow check
+    return ((a > 0 && b > 0 && *result < 0) || (a < 0 && b < 0 && *result > 0));
 }
+#define strdup _strdup
 #else
-    // GCC/MinGW provides __builtin_* functions, so we can directly use them:
 #define mul_overflow(a, b, result) __builtin_mul_overflow(a, b, result)
 #define add_overflow(a, b, result) __builtin_add_overflow(a, b, result)
 #endif
@@ -117,7 +117,7 @@ void checkcomparison(const struct typenode *a, const struct typenode *b);
 void checkcomparisonsimple(const struct typenode *a);
 void checkeqtest(const struct typenode *a, const struct typenode *b);
 
-int isflag(char *txt, struct hashtable *flags);
+int isflag(const char *txt, struct hashtable *flags);
 int updateflag(int cur, const char *txt, struct hashtable *flags);
 int updateannotation(int cur, char *txt, struct hashtable *flags);
 bool flagenabled(int flag);
