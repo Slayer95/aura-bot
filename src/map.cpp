@@ -1246,11 +1246,12 @@ void CMap::Load(CConfig* CFG)
     vector<uint8_t> cfgScriptsWeakHash = CFG->GetUint8Vector("map.scripts_hash.blizz.v" + ToVersionString(version), 4);
     if (cfgScriptsWeakHash.empty() == !(mapEssentials.has_value() && mapEssentials->fragmentHashes[version].blizz.has_value())) {
       if (cfgScriptsWeakHash.empty()) {
-        CFG->SetFailed();
+        bool isTargetVersion = targetGameVersionRangeHead.has_value() && version == targetGameVersionRangeHead.value();
+        if (isTargetVersion) CFG->SetFailed();
         if (m_ErrorMessage.empty()) {
           if (CFG->Exists("map.scripts_hash.blizz.v" + ToVersionString(version))) {
             m_ErrorMessage = "invalid <map.scripts_hash.blizz.v" + ToVersionString(version) + "> detected";
-          } else if (targetGameVersionRangeHead.has_value() && version == targetGameVersionRangeHead.value()) {
+          } else if (isTargetVersion) {
             m_ErrorMessage = "cannot calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">";
           }
         }
@@ -1273,11 +1274,12 @@ void CMap::Load(CConfig* CFG)
     vector<uint8_t> cfgScriptsSHA1 = CFG->GetUint8Vector("map.scripts_hash.sha1.v" + ToVersionString(version), 20);
     if (cfgScriptsSHA1.empty() == !(mapEssentials.has_value() && mapEssentials->fragmentHashes[version].sha1.has_value())) {
       if (cfgScriptsSHA1.empty()) {
-        CFG->SetFailed();
+        bool isTargetVersion = targetGameVersionRangeHead.has_value() && version == targetGameVersionRangeHead.value();
+        if (isTargetVersion) CFG->SetFailed();
         if (m_ErrorMessage.empty()) {
           if (CFG->Exists("map.scripts_hash.sha1.v" + ToVersionString(version))) {
             m_ErrorMessage = "invalid <map.scripts_hash.sha1.v" + ToVersionString(version) + "> detected";
-          } else if (targetGameVersionRangeHead.has_value() && version == targetGameVersionRangeHead.value()) {
+          } else if (isTargetVersion) {
             m_ErrorMessage = "cannot calculate <map.scripts_hash.sha1.v" + ToVersionString(version) + ">";
           }
         }
