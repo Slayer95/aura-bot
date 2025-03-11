@@ -110,7 +110,9 @@ funcdefns: /* empty */
 
 globdefs: /* empty */
          | globals newline vardecls endglobals
-         | globals vardecls endglobals {yyerrorline(syntaxerror, lineno - 1, "Missing linebreak before global declaration");}
+         | globals vardecls endglobals {
+            yyerrorline(syntaxerror, lineno - 1, "Missing linebreak before global declaration");
+        }
 ;
 
 globals: GLOBALS { inglobals = 1; };
@@ -263,7 +265,11 @@ expr: intexpr      { $$.ty = gInteger; }
        }
        $$.ty = tan->ty;
       }
-      | expr EQUALS expr {yyerrorex(syntaxerror, "Single = in expression, should probably be =="); checkeqtest($1.ty, $3.ty); $$.ty = gBoolean;}
+      | expr EQUALS expr {
+          yyerrorex(syntaxerror, "Single = in expression, should probably be ==");
+          checkeqtest($1.ty, $3.ty);
+          $$.ty = gBoolean;
+      }
       | LPAREN expr {yyerrorex(syntaxerror, "Mssing ')'"); $$.ty = $2.ty;}
       
       // incomplete expressions 
@@ -545,7 +551,9 @@ statement:
         yyerrorline(syntaxerror, lineno-1, "Missing 'call'");
         $$.ty = gAny;
     }
-    | error { $$.ty = gAny; }
+    | error {
+        $$.ty = gAny;
+    }
 ;
 
 loopstart: LOOP {
