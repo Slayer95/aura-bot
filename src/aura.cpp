@@ -753,6 +753,7 @@ bool CAura::CopyScripts()
         Print("[AURA] " + string(e.what()));
         return false;
       }
+      Print("[AURA] file copied [" + PathToString(manuallyExtractedCommonPath) + "] -> [" + PathToString(autoExtractedCommonPath) + "]");
     }
     if (!blizzardExists) {
       filesystem::path manuallyExtractedBlizzardPath = m_Config.m_JASSPath / filesystem::path("blizzard.j");
@@ -762,6 +763,7 @@ bool CAura::CopyScripts()
         Print("[AURA] " + string(e.what()));
         return false;
       }
+      Print("[AURA] file copied [" + PathToString(manuallyExtractedBlizzardPath) + "] -> [" + PathToString(autoExtractedBlizzardPath) + "]");
     }
     checkedPaths.insert(autoExtractedCommonPath);
     checkedPaths.insert(autoExtractedBlizzardPath);
