@@ -100,7 +100,7 @@ void checkcomparisonsimple(const struct typenode *a);
 void checkeqtest(const struct typenode *a, const struct typenode *b);
 
 int isflag(char *txt, struct hashtable *flags);
-int updateflag(int cur, char *txt, struct hashtable *flags);
+int updateflag(int cur, const char *txt, struct hashtable *flags);
 int updateannotation(int cur, char *txt, struct hashtable *flags);
 bool flagenabled(int flag);
 
@@ -133,6 +133,10 @@ extern const struct typenode *retval;
 
 extern struct hashtable available_flags;
 extern struct hashtable flags_helpstring;
+
+extern char * output;
+extern int max_out_size;
+extern int out_size;
 
 extern struct hashtable shadowed_variables;
 

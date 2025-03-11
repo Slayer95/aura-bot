@@ -65,7 +65,9 @@ struct funcdecl *fFilter, *fCondition, *fStringHash;
 struct hashtable available_flags;
 struct hashtable flags_helpstring;
 
-
+char * output;
+int max_out_size;
+int out_size;
 
 void check_name_allready_defined(struct hashtable *ht, const char *name, const char *msg)
 {
@@ -125,7 +127,10 @@ void yyerrorline (enum errortype type, int line, const char *s)
     }
 
     haderrors++;
-    printf ("%s:%d: %s\n", curfile, line, s);
+
+    if(out_size < max_out_size){
+      out_size += _snprintf_s(output + out_size, max_out_size - out_size + 1, max_out_size - out_size, "%s:%d: %s\n", curfile, line, s);
+    }
 }
 
 void yyerrorex (enum errortype type, const char *s)
@@ -627,7 +632,7 @@ int isflag(char *txt, struct hashtable *flags){
     return (int)flag;
 }
 
-int updateflag(int cur, char *txt, struct hashtable *flags){
+int updateflag(int cur, const char *txt, struct hashtable *flags){
     char sgn = txt[0];
     int flag = isflag(txt, flags);
 

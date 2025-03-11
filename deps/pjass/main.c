@@ -41,7 +41,7 @@ static int add_flag(struct hashtable *available_flags, struct hashtable *flags_h
     return 1;
 }
 
-static void init()
+static void init(char *n_output, int n_max_out_size)
 {
     ht_init(&builtin_types, 1 << 4);
     ht_init(&functions, 1 << 13);
@@ -97,6 +97,10 @@ static void init()
     ht_init(&available_flags, 16);
     ht_init(&flags_helpstring, 16);
 
+    output = n_output;
+    max_out_size = n_max_out_size;
+    out_size = 0;
+
     limit_flags_in_order = 10;
     count_flags_in_order = 0;
     flags_in_order = malloc(sizeof(char*) * limit_flags_in_order);
@@ -147,7 +151,7 @@ static void dofile(FILE *fp, const char *name)
     fno++;
 }
 
-static void doparse(int _argc, char **_argv)
+static void doparse(int _argc, const char **_argv)
 {
     int i;
     for (i = 0; i < _argc; ++i) {
@@ -171,7 +175,8 @@ static void doparse(int _argc, char **_argv)
 
 int _cdecl parse_jass_files(const int file_count, const char **file_paths, char *output, int* out_size)
 {
-    init();
+    char buffer[8192];
+    init(buffer, sizeof(buffer) - 1);
     doparse(file_count, file_paths); 
 
     if (!haderrors && didparse) {
@@ -179,7 +184,7 @@ int _cdecl parse_jass_files(const int file_count, const char **file_paths, char 
         return 0;
     } else {
         if (haderrors) {
-            *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse failed: %d error%s total", haderrors, haderrors == 1 ? "" : "s");
+            *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse failed: %d error%s total\n%s", haderrors, haderrors == 1 ? "" : "s", buffer);
         } else {
             *out_size = _snprintf_s(output, *out_size, *out_size - 1, "Parse failed");
         }
