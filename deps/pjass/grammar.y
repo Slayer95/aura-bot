@@ -12,7 +12,6 @@
 #include "blocks.h"
 
 #define YYMAXDEPTH 100000
-#define YYDEBUG 1
 
 %}
 
