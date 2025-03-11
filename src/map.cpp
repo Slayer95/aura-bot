@@ -536,6 +536,12 @@ void CMap::ReadFileFromArchive(string& container, const string& fileSubPath) con
   ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
 }
 
+optional<uint32_t> CMap::GetFileSizeFromArchive(const std::string& fileSubPath) const
+{
+  const char* path = fileSubPath.c_str();
+  return GetMPQFileSize(m_MapMPQ, path, m_MapLocale);
+}
+
 void CMap::ReplaceTriggerStrings(string& container, vector<string*>& maybeWTSRefs) const
 {
   set<uint32_t> trigStrTargets;
@@ -971,9 +977,9 @@ optional<MapEssentials> CMap::ParseMPQ()
       */
     } // end war3map.w3i
 
-    ReadFileFromArchive(fileContents, "war3mapPreview.tga");
-    if (!fileContents.empty()) {
-      mapEssentials->previewImgSize = fileContents.size();
+    optional<uint32_t> previewImgSize = GetFileSizeFromArchive("war3mapPreview.tga");
+    if (previewImgSize.has_value()) {
+      mapEssentials->previewImgSize = previewImgSize.value();
     }
 
 #ifndef DISABLE_PJASS
@@ -981,6 +987,7 @@ optional<MapEssentials> CMap::ParseMPQ()
       Version version = supportedVersionHeads.back();
       if (mapEssentials->minCompatibleGameVersion <= version) {
         vector<filesystem::path> scriptFiles;
+        // TODO: Support overrides
         scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j"));
         scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j"));
         scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"));

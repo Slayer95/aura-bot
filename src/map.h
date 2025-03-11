@@ -360,6 +360,7 @@ public:
 
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
+  std::optional<uint32_t>                         GetFileSizeFromArchive(const std::string& fileSubPath) const;
   void                                            ReplaceTriggerStrings(std::string& container, std::vector<std::string*>& maybeWTSRefs) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
   std::optional<MapEssentials>                    ParseMPQ();
