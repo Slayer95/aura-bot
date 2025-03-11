@@ -199,7 +199,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\bin\Win32;..\deps\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\zlib\vcpkg\bin\Release;..\dpp\official\bin\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\Release;..\deps\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\zlib\vcpkg\bin\Release;..\dpp\official\bin\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -284,7 +284,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\bin\Win32;..\deps\miniupnpc\msvc\Debug;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\dpp\official\bin\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\Release;..\deps\miniupnpc\msvc\Debug;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\dpp\official\bin\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -323,7 +323,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\bin\Win64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\msvc\Release-x64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -410,7 +410,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\bin\Win64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\msvc\Release-x64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
