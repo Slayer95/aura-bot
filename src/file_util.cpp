@@ -404,6 +404,18 @@ void CloseMPQArchive(void* MPQ)
   SFileCloseArchive(MPQ);
 }
 
+optional<uint32_t> GetMPQFileSize(void* MPQ, const char* packedFileName, const uint32_t locale)
+{
+  SFileSetLocale(locale);
+  void* subFile = nullptr;
+  optional<uint32_t> fileLength;
+  if (SFileOpenFileEx(MPQ, packedFileName, 0, &subFile)) {
+    fileLength = SFileGetFileSize(subFile, nullptr);
+    SFileCloseFile(subFile);
+  }
+  return fileLength;
+}
+
 bool ExtractMPQFile(void* MPQ, const char* packedFileName, const filesystem::path& outPath, const uint32_t locale)
 {
   vector<uint8_t> container;

@@ -227,6 +227,7 @@ bool FileDelete(const std::filesystem::path& file);
 
 [[nodiscard]] bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
+std::optional<uint32_t> GetMPQFileSize(void* MPQ, const char* packedFileName, const uint32_t locale);
 
 template <typename Container>
 bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, const uint32_t locale)
@@ -235,7 +236,6 @@ bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, co
   SFileSetLocale(locale);
 
   void* subFile = nullptr;
-  // override common.j
   if (SFileOpenFileEx(MPQ, packedFileName, 0, &subFile)) {
     const uint32_t fileLength = SFileGetFileSize(subFile, nullptr);
 
