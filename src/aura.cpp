@@ -1358,8 +1358,8 @@ bool CAura::Update()
       } else {
         m_Discord.SetStatusIdle();
       }
-#endif
     }
+#endif
   }
 
   // house-keeping
