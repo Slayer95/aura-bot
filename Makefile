@@ -12,7 +12,7 @@ ifndef CXX
 endif
 
 CCFLAGS += -fno-builtin
-CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti
+CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti -DDISABLE_PJASS
 DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
@@ -20,6 +20,16 @@ LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -l
 ifeq ($(AURASTATIC),1)
   LFLAGS += -static
 endif
+
+#ifeq ($(AURALINKPJASS),0)
+#  CXXFLAGS += -DDISABLE_PJASS
+#else
+#  ifeq ($(AURASTATIC),1)
+#    LFLAGS += -lpjass
+#  else
+#    LFLAGS += -lpjass
+#  endif
+#endif
 
 ifeq ($(AURALINKMINIUPNP),0)
   CXXFLAGS += -DDISABLE_MINIUPNP
@@ -97,6 +107,7 @@ OBJS = lib/csvparser/csvparser.o \
        src/bncsutil_interface.o \
        src/file_util.o \
        src/os_util.o \
+       src/pjass.o \
        src/map.o \
        src/packed.o \
        src/save_game.o \

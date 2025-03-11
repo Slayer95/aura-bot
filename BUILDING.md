@@ -56,8 +56,8 @@ Continue building miniupnpc
 	sudo make install
 
   (Or disable it by setting an environment variable: ``export AURALINKMINIUPNP=0``)
-
-Afterwards, C++ Requests
+  
+Afterwards, [C++ Requests][2]
 
 	cd ../..
 	git clone https://github.com/libcpr/cpr.git cpr-src
@@ -120,6 +120,10 @@ When using Makefile and setting the appropriate environment variables to disable
 Linux build steps, this section will be automatically taken care of.
 
 When using MSVC, follow these steps to disable components.
+
+- **pjass** is disabled with the preprocessor directive ``DISABLE_PJASS``. The following linked libraries must be removed:
+
+  Windows: pjass.lib
 
 - **C++ Requests** (CPR) is disabled with the preprocessor directive ``DISABLE_CPR``. The following linked libraries must be removed:
 

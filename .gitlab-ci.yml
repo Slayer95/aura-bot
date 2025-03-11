@@ -93,11 +93,13 @@ Assemble:
   # - find . /usr /lib /lib64 /usr/local/lib /usr/lib /usr/local -name libdpp.a*
   # Aura (all shared libraries)
   - cd $CI_PROJECT_DIR
+  - export AURALINKPJASS=0
   - export AURALINKMINIUPNP=1
   - export AURALINKCPR=1
   # This takes too long.
   - export AURALINKDPP=0
   - make && make install
+  - unset AURALINKPJASS
   - unset AURALINKMINIUPNP
   - unset AURALINKCPR
   - unset AURALINKDPP
