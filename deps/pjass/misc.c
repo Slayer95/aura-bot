@@ -68,6 +68,7 @@ struct hashtable flags_helpstring;
 char * output;
 int max_out_size;
 int out_size;
+int abort_parse;
 
 void check_name_allready_defined(struct hashtable *ht, const char *name, const char *msg)
 {
@@ -129,7 +130,10 @@ void yyerrorline (enum errortype type, int line, const char *s)
     haderrors++;
 
     if(out_size < max_out_size){
+      // Fix null terminators, strcat?
       out_size += _snprintf_s(output + out_size, max_out_size - out_size + 1, max_out_size - out_size, "%s:%d: %s\n", curfile, line, s);
+    } else {
+      abort_parse = 1;
     }
 }
 

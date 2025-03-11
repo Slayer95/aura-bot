@@ -155,6 +155,7 @@ extern struct hashtable flags_helpstring;
 extern char * output;
 extern int max_out_size;
 extern int out_size;
+extern int abort_parse;
 
 extern struct hashtable shadowed_variables;
 

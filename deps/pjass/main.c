@@ -100,6 +100,7 @@ static void init(char *n_output, int n_max_out_size)
     output = n_output;
     max_out_size = n_max_out_size;
     out_size = 0;
+    abort_parse = 0;
 
     limit_flags_in_order = 10;
     count_flags_in_order = 0;

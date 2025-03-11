@@ -13,6 +13,13 @@
 
 #define YYMAXDEPTH 100000
 
+#define YYCHECKABORT \
+    do { \
+        if( abort_parse != 0 ) { \
+          YYABORT; \
+        } \
+    } while(0);
+
 %}
 
 %define api.value.type {union node}
@@ -112,6 +119,7 @@ globdefs: /* empty */
          | globals newline vardecls endglobals
          | globals vardecls endglobals {
             yyerrorline(syntaxerror, lineno - 1, "Missing linebreak before global declaration");
+            YYERROR;
         }
 ;
 
@@ -169,6 +177,7 @@ expr: intexpr      { $$.ty = gInteger; }
                     $$.ty = gCodeReturnsNoBoolean;
                 }
             }
+            YYERROR;
 
       }
       | FUNCTION rid {
@@ -178,17 +187,20 @@ expr: intexpr      { $$.ty = gInteger; }
                 snprintf(ebuf, 1024, "Undefined function %s", $2.str);
                 getsuggestions($2.str, ebuf, 1024, 1, &functions);
                 yyerrorex(semanticerror, ebuf);
+                YYERROR;
                 $$.ty = gCode;
             } else {
                 if (fd->p->head != NULL) {
                     char ebuf[1024];
                     snprintf(ebuf, 1024, "Function %s must not take any arguments when used as code", $2.str);
                     yyerrorex(semanticerror, ebuf);
+                    YYERROR;
                 }
                 if( fd->isnative ) {
                     char ebuf[1024];
                     snprintf(ebuf, 1024, "Cannot use native '%s' as code", $2.str);
                     yyerrorline(runtimeerror, islinebreak ? lineno - 1 : lineno, ebuf);
+                    YYERROR;
                 }
                 if( fd->ret == gBoolean) {
                     $$.ty = gCodeReturnsBoolean;
@@ -198,41 +210,45 @@ expr: intexpr      { $$.ty = gInteger; }
             }
          }
       | TNULL { $$.ty = gNull; }
-      | expr LEQ expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; }
-      | expr GEQ expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; }
-      | expr LESS expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; }
-      | expr GREATER expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; }
-      | expr EQCOMP expr { checkeqtest($1.ty, $3.ty); $$.ty = gBoolean; }
-      | expr NEQ expr { checkeqtest($1.ty, $3.ty); $$.ty = gBoolean; }
-      | expr AND expr { canconvert($1.ty, gBoolean, 0); canconvert($3.ty, gBoolean, 0); $$.ty = gBoolean; }
-      | expr OR expr { canconvert($1.ty, gBoolean, 0); canconvert($3.ty, gBoolean, 0); $$.ty = gBoolean; }
-      | NOT expr { canconvert($2.ty, gBoolean, 0); $$.ty = gBoolean; }
-      | expr TIMES expr { $$.ty = binop($1.ty, $3.ty); }
-      | expr DIV expr { $$.ty = binop($1.ty, $3.ty); }
+      | expr LEQ expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr GEQ expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr LESS expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr GREATER expr { checkcomparison($1.ty, $3.ty); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr EQCOMP expr { checkeqtest($1.ty, $3.ty); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr NEQ expr { checkeqtest($1.ty, $3.ty); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr AND expr { canconvert($1.ty, gBoolean, 0); canconvert($3.ty, gBoolean, 0); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr OR expr { canconvert($1.ty, gBoolean, 0); canconvert($3.ty, gBoolean, 0); $$.ty = gBoolean; YYCHECKABORT; }
+      | NOT expr { canconvert($2.ty, gBoolean, 0); $$.ty = gBoolean; YYCHECKABORT; }
+      | expr TIMES expr { $$.ty = binop($1.ty, $3.ty); YYCHECKABORT; }
+      | expr DIV expr { $$.ty = binop($1.ty, $3.ty); YYCHECKABORT; }
       | expr MOD expr {
-	    checkmodulo($1.ty, $3.ty);
-	    $$.ty = gInteger;
-	  }
+          checkmodulo($1.ty, $3.ty);
+          $$.ty = gInteger;
+          YYCHECKABORT;
+      }
       | expr MINUS expr { $$.ty = binop($1.ty, $3.ty); }
       | expr PLUS expr { 
-            if ($1.ty == gString && $3.ty == gString)
+            if ($1.ty == gString && $3.ty == gString) {
                 $$.ty = gString;
-            else
+            } else {
                 $$.ty = binop($1.ty, $3.ty);
+                YYCHECKABORT;
+            }
         }
-      | MINUS expr { isnumeric($2.ty); $$.ty = $2.ty; }
-      | PLUS expr { isnumeric($2.ty); $$.ty = $2.ty; }
+      | MINUS expr { isnumeric($2.ty); $$.ty = $2.ty; YYCHECKABORT; }
+      | PLUS expr { isnumeric($2.ty); $$.ty = $2.ty; YYCHECKABORT; }
       | LPAREN expr RPAREN { $$.ty = $2.ty; }
       | funccall { $$.ty = $1.ty; }
       | rid LBRACKET expr RBRACKET {
           const struct typeandname *tan = getVariable($1.str);
           if (!typeeq(tan->ty, gAny)) {
-	    checkarrayindex(tan->name, $3.ty, lineno);
+            checkarrayindex(tan->name, $3.ty, lineno);
             if (!tan->isarray) {
               char ebuf[1024];
               snprintf(ebuf, 1024, "%s not an array", $1.str);
               yyerrorex(semanticerror, ebuf);
             }
+            YYCHECKABORT;
           }
           $$.ty = tan->ty;
        }
@@ -242,6 +258,7 @@ expr: intexpr      { $$.ty = gInteger; }
             char ebuf[1024];
             snprintf(ebuf, 1024, "Index missing for array variable %s", $1.str);
             yyerrorex(semanticerror, ebuf);
+            YYERROR;
           }
           if( !tan->isarray && !ht_lookup(&initialized, $1.str) ){
             char buf[1024];
@@ -249,19 +266,20 @@ expr: intexpr      { $$.ty = gInteger; }
             if( ht_lookup(&locals, $1.str)){
                 snprintf(buf, 1024, "Variable %s is uninitialized", $1.str);
                 yyerrorline(semanticerror, lineno, buf);
+                YYERROR;
             }else if(ht_lookup(&uninitialized_globals, $1.str)){
                 if(infunction ){
                     if( flagenabled(flag_checkglobalsinit) ){
                         snprintf(buf, 1024, "Variable %s might be uninitalized", $1.str);
                         yyerrorline(semanticerror, lineno, buf);
+                        YYERROR;
                     }
                 }else{
                     snprintf(buf, 1024, "Variable %s is uninitalized", $1.str);
                     yyerrorline(semanticerror, lineno, buf);
+                    YYERROR;
                 }
             }
-
-          
        }
        $$.ty = tan->ty;
       }
@@ -269,27 +287,34 @@ expr: intexpr      { $$.ty = gInteger; }
           yyerrorex(syntaxerror, "Single = in expression, should probably be ==");
           checkeqtest($1.ty, $3.ty);
           $$.ty = gBoolean;
+          YYCHECKABORT;
       }
-      | LPAREN expr {yyerrorex(syntaxerror, "Mssing ')'"); $$.ty = $2.ty;}
+      | LPAREN expr {
+          yyerrorex(syntaxerror, "Missing ')'");
+          $$.ty = $2.ty;
+          YYERROR;
+      }
       
       // incomplete expressions 
-      | expr LEQ { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; }
-      | expr GEQ { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; }
-      | expr LESS { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; }
-      | expr GREATER { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; }
-      | expr EQCOMP { yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; }
-      | expr NEQ { yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; }
-      | expr AND { canconvert($1.ty, gBoolean, 0); yyerrorex(syntaxerror, "Missing expression for logical and"); $$.ty = gBoolean; }
-      | expr OR { canconvert($1.ty, gBoolean, 0); yyerrorex(syntaxerror, "Missing expression for logical or"); $$.ty = gBoolean; }
-      | NOT { yyerrorex(syntaxerror, "Missing expression for logical negation"); $$.ty = gBoolean; }
+      | expr LEQ { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; YYERROR; }
+      | expr GEQ { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; YYERROR; }
+      | expr LESS { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; YYERROR; }
+      | expr GREATER { checkcomparisonsimple($1.ty); yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; YYERROR; }
+      | expr EQCOMP { yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; YYERROR; }
+      | expr NEQ { yyerrorex(syntaxerror, "Missing expression for comparison"); $$.ty = gBoolean; YYERROR; }
+      | expr AND { canconvert($1.ty, gBoolean, 0); yyerrorex(syntaxerror, "Missing expression for logical and"); $$.ty = gBoolean; YYERROR; }
+      | expr OR { canconvert($1.ty, gBoolean, 0); yyerrorex(syntaxerror, "Missing expression for logical or"); $$.ty = gBoolean; YYERROR; }
+      | NOT { yyerrorex(syntaxerror, "Missing expression for logical negation"); $$.ty = gBoolean; YYERROR; }
 ;
 
 funccall: rid LPAREN exprlistcompl RPAREN {
-        $$ = checkfunccall($1.str, $3.pl);    
+        $$ = checkfunccall($1.str, $3.pl);
+        YYCHECKABORT;
     }
     |  rid LPAREN exprlistcompl newline {
         yyerrorex(syntaxerror, "Missing ')'");
         $$ = checkfunccall($1.str, $3.pl);
+        YYERROR;
     }
 ;
 
@@ -306,6 +331,7 @@ stringexpr: STRINGLIT {
     int len = strlen(stringlit_buff);
     if( len > 1023 ){
         yyerrorex(semanticerror, "String literals over 1023 chars long crash the game upon loading a saved game.");
+        YYERROR;
     }
     if(flagenabled(flag_checkstringhash)){
         $$.ty = ht_lookup(&string_literals, stringlit_buff);
@@ -320,8 +346,10 @@ stringexpr: STRINGLIT {
 
 realexpr: REALLIT {
     $$.ty = gReal;
-    if(flagenabled(flag_checknumberliterals))
+    if(flagenabled(flag_checknumberliterals)) {
         checkreallit(yytext);
+        YYCHECKABORT;
+    }
 };
 
 boolexpr: boollit { $$.ty = gBoolean; }
@@ -333,8 +361,10 @@ boollit: TTRUE
 
 intexpr: INTLIT {
     $$.ty = gInteger;
-    if(flagenabled(flag_checknumberliterals))
+    if(flagenabled(flag_checknumberliterals)) {
         checkintlit(yytext);
+        YYCHECKABORT;
+    }
 } | UNITTYPEINT { $$.ty = gInteger; }
 ;
 
@@ -351,6 +381,7 @@ nativefuncdecl: NATIVE rid TAKES optparam_list RETURNS opttype
         yyerrorex(semanticerror, "Native declared after functions");
     }
     $$ = checkfunctionheader($2.str, $4.pl, $6.ty);
+    YYCHECKABORT;
     $$.fd->isconst = isconstant;
     $$.fd->isnative = true;
 
@@ -372,15 +403,21 @@ nativefuncdecl: NATIVE rid TAKES optparam_list RETURNS opttype
 
 funcdefn: newline
        | funcdefncore
-       | statement { yyerrorex(syntaxerror, "Statement outside of function"); }
+       | statement {
+          yyerrorex(syntaxerror, "Statement outside of function");
+          YYERROR;
+      }
 ;
 
 funcdefncore: funcbegin localblock codeblock funcend {
             if(retval != gNothing) {
-                if(!getTypeTag($3.ty))
+                if(!getTypeTag($3.ty)) {
                     yyerrorline(semanticerror, lineno - 1, "Missing return");
-                else if ( flagenabled(flag_rb) )
+                    YYERROR;
+                } else if ( flagenabled(flag_rb) ) {
                     canconvertreturn($3.ty, retval, -1);
+                    YYCHECKABORT;
+                }
             }
             fnannotations = pjass_flags;
         }
@@ -389,6 +426,7 @@ funcdefncore: funcbegin localblock codeblock funcend {
             char msg[1024];
             block_missing_error(msg, 1024);
             yyerrorex(syntaxerror, msg);
+            YYERROR;
             
             ht_clear(&locals);
             ht_clear(&initialized);
@@ -407,12 +445,16 @@ funcend: ENDFUNCTION {
         
         if(! block_pop(Function, msg, 1024)){
             yyerrorex(syntaxerror, msg);
+            YYERROR;
         }
     }
 ;
 
 returnorreturns: RETURNS
-               | RETURN {yyerrorex(syntaxerror,"Expected \"returns\" instead of \"return\"");}
+               | RETURN {
+                  yyerrorex(syntaxerror,"Expected \"returns\" instead of \"return\"");
+                  YYERROR;
+              }
 ;
 
 funcbegin: FUNCTION rid TAKES optparam_list returnorreturns opttype {
@@ -420,6 +462,7 @@ funcbegin: FUNCTION rid TAKES optparam_list returnorreturns opttype {
         infunction = 1;
         encoutered_first_function = 1;
         $$ = checkfunctionheader($2.str, $4.pl, $6.ty);
+        YYCHECKABORT;
         $$.fd->isconst = 0;
         block_push(lineno, Function);
     }
@@ -428,6 +471,7 @@ funcbegin: FUNCTION rid TAKES optparam_list returnorreturns opttype {
         infunction = 1;
         encoutered_first_function = 1;
         $$ = checkfunctionheader($3.str, $5.pl, $7.ty);
+        YYCHECKABORT;
         $$.fd->isconst = 1;
         block_push(lineno, Function);
     }
@@ -448,6 +492,7 @@ statement:
     /*1    2    3     4        5        6        7      8      9 */
     | ifstart expr THEN newline codeblock elsifseq elseseq ifend newline {
         canconvert($2.ty, gBoolean, -1);
+        YYCHECKABORT;
         $$.ty = combinetype($5.ty, combinetype($6.ty, $7.ty));
     }
     | SET rid EQUALS expr newline {
@@ -456,6 +501,7 @@ statement:
             char ebuf[1024];
             snprintf(ebuf, 1024, "Index missing for array variable %s", $2.str);
             yyerrorline(semanticerror, lineno - 1,  ebuf);
+            YYERROR;
         }
         canconvert($4.ty, tan->ty, -1);
         $$.ty = gAny;
@@ -463,9 +509,12 @@ statement:
             char ebuf[1024];
             snprintf(ebuf, 1024, "Cannot assign to constant %s", $2.str);
             yyerrorline(semanticerror, lineno - 1, ebuf);
+            YYERROR;
         }
-        if (inconstant)
+        if (inconstant) {
             validateGlobalAssignment($2.str);
+            YYCHECKABORT;
+        }
         if(infunction && !ht_lookup(&initialized, $2.str)){
             ht_put(&initialized, $2.str, (void*)1);
         }
@@ -474,14 +523,15 @@ statement:
     | SET rid rid EQUALS expr newline {
         char ebuf[1024];
         if(ht_lookup(&types, $2.str) || ht_lookup(&builtin_types, $3.str) ){
-            snprintf(ebuf, 1024, ">%s< %s is an error here. The type only needs to be stated at declartion time", $2.str, $3.str);
+            snprintf(ebuf, 1024, ">%s< %s is an error here. The type only needs to be stated at declaration time", $2.str, $3.str);
         }else if(ht_lookup(&types, $3.str) || ht_lookup(&builtin_types, $3.str) ){
-            snprintf(ebuf, 1024, "%s >%s< is an error here. The type only needs to be stated at declartion time", $2.str, $3.str);
+            snprintf(ebuf, 1024, "%s >%s< is an error here. The type only needs to be stated at declaration time", $2.str, $3.str);
         }else{
             snprintf(ebuf, 1024, "Unexpected '%s'", $3.str);
         }
         yyerrorline(syntaxerror, lineno -1, ebuf);
         $$.ty = gAny;
+        YYERROR;
     }
     | SET rid LBRACKET expr RBRACKET EQUALS expr newline{
         const struct typeandname *tan = getVariable($2.str);
@@ -492,10 +542,13 @@ statement:
                 char ebuf[1024];
                 snprintf(ebuf, 1024, "%s is not an array", $2.str);
                 yyerrorline(semanticerror, lineno - 1, ebuf);
+                YYERROR;
             }
             canconvert($7.ty, tan->ty, -1);
-            if (inconstant)
+            if (inconstant) {
                 validateGlobalAssignment($2.str);
+            }
+            YYCHECKABORT;
         }
         $$.ty = gAny;
     }
@@ -504,24 +557,32 @@ statement:
         char msg[1024];
         block_missing_error(msg, 1024);
         yyerrorex(syntaxerror, msg);
+        YYERROR;
         $$.ty = $3.ty;
      }
     | EXITWHEN expr newline {
         canconvert($2.ty, gBoolean, -1);
-        if (!inloop)
+        if (!inloop) {
             yyerrorline(syntaxerror, lineno - 1, "Exitwhen outside of loop");
+            YYERROR;
+        }
         $$.ty = gAny;
     }
     | RETURN expr newline {
-        if(retval == gNothing)
+        if(retval == gNothing) {
             yyerrorline(semanticerror, lineno - 1, "Cannot return value from function that returns nothing");
-        else if (! flagenabled(flag_rb) )
+            YYERROR;
+        } else if (! flagenabled(flag_rb) ) {
             canconvertreturn($2.ty, retval, 0);
+            YYCHECKABORT;
+        }
         $$.ty = mkretty($2.ty, 1);
      }
     | RETURN newline {
-        if (retval != gNothing)
+        if (retval != gNothing) {
             yyerrorline(semanticerror, lineno - 1, "Return nothing in function that should return value");
+            YYERROR;
+        }
         $$.ty = mkretty(gAny, 1);
     }
     | DEBUG statement { $$.ty = gAny; }
@@ -533,26 +594,32 @@ statement:
         char msg[1024];
         block_missing_error(msg, 1024);
         yyerrorex(syntaxerror, msg);
+        YYERROR;
     }
     | ifstart expr newline {
         canconvert($2.ty, gBoolean, -1);
         $$.ty = gAny;
         yyerrorex(syntaxerror, "Missing then or non valid expression");
+        YYERROR;
     }
     | SET funccall newline {
         $$.ty = gAny;
         yyerrorline(semanticerror, lineno - 1, "Call expected instead of set");
+        YYERROR;
     }
     | lvardecl {
         $$.ty = gAny;
         yyerrorex(semanticerror, "Local declaration after first statement");
+        YYERROR;
     }
     | funccall newline {
         yyerrorline(syntaxerror, lineno-1, "Missing 'call'");
+        YYERROR;
         $$.ty = gAny;
     }
     | error {
         $$.ty = gAny;
+        YYCHECKABORT;
     }
 ;
 
@@ -567,6 +634,7 @@ loopend: ENDLOOP {
     char msg[1024];
     if(! block_pop(Loop, msg, 1024)){
         yyerrorex(syntaxerror, msg);
+        YYERROR;
     }
 };
 
@@ -578,6 +646,7 @@ ifend: ENDIF {
     char msg[1024];
     if(! block_pop(If, msg, 1024)){
         yyerrorex(syntaxerror, msg);
+        YYERROR;
     }
 };
 
@@ -591,6 +660,7 @@ elsifseq: /* empty */ { $$.ty = mkretty(gEmpty, 1); }
         /*   1     2    3    4         5         6 */
         | ELSEIF expr THEN newline codeblock elsifseq {
             canconvert($2.ty, gBoolean, -1);
+            YYCHECKABORT;
             
             if(typeeq($6.ty, gEmpty)){
                 if(typeeq($5.ty, gEmpty)){
@@ -619,14 +689,17 @@ param_list: typeandname { $$.pl = newparamlist(); addParam($$.pl, $1.tan); }
 rid: ID {
         $$.str = strdup(yytext);
         checkidlength($$.str);
+        YYCHECKABORT;
     }
     | ALIAS {
         $$.str = strdup("alias");
         yyerrorex(syntaxerror, "Invalid name \"alias\"");
+        YYERROR;
     }
     | TYPE {
         $$.str = strdup("type");
         yyerrorex(syntaxerror, "Invalid name \"type\"");
+        YYERROR;
     }
 ;
 
@@ -634,20 +707,23 @@ vartypedecl: type rid {
         struct typeandname *tan = newtypeandname($1.ty, $2.str);
         tan->lineno = lineno;
         $$ = checkvartypedecl(tan);
+        YYCHECKABORT;
     }
     | CONSTANT type rid {
         if (infunction) {
             yyerrorex(semanticerror, "Local constants are not allowed");
+            YYERROR;
         }
         struct typeandname *tan = newtypeandname($2.ty, $3.str);
         tan->isconst = 1;
         $$ = checkvartypedecl(tan);
+        YYCHECKABORT;
     }
     | type ARRAY rid {
         struct typeandname *tan = newtypeandname($1.ty, $3.str);
         tan->isarray = 1;
         $$ = checkarraydecl(tan);
-  
+        YYCHECKABORT;
     }
 ;
 
@@ -660,12 +736,22 @@ endlocalsmarker: /* empty */ { fCurrent = NULL; }
 ;
 
 lvardecl: LOCAL vardecl { }
-        | vardecl { yyerrorex(syntaxerror, "Missing 'local'"); }
-        | CONSTANT LOCAL vardecl { yyerrorex(syntaxerror, "Local variables can not be declared constant"); }
-        | typedef { yyerrorex(syntaxerror,"Types can not be extended inside functions"); }
+        | vardecl {
+            yyerrorex(syntaxerror, "Missing 'local'");
+            YYERROR;
+        }
+        | CONSTANT LOCAL vardecl {
+            yyerrorex(syntaxerror, "Local variables can not be declared constant");
+            YYERROR;
+        }
+        | typedef {
+            yyerrorex(syntaxerror,"Types can not be extended inside functions");
+            YYERROR;
+        }
         | funccall newline {
             yyerrorline(syntaxerror, lineno-1, "Missing 'call'");
             $$.ty = gAny;
+            YYERROR;
         }
 ;
 
@@ -673,6 +759,7 @@ vardecl: vartypedecl newline {
              const struct typeandname *tan = getVariable($1.str);
              if (tan->isconst) {
                  yyerrorline(syntaxerror, lineno - 1, "Constants must be initialized");
+                 YYERROR;
              }
              if(inglobals){ 
                 ht_put(&uninitialized_globals, $1.str, (void*)1);
@@ -683,12 +770,14 @@ vardecl: vartypedecl newline {
              const struct typeandname *tan = getVariable($1.str);
              if (tan->isarray) {
                yyerrorex(syntaxerror, "Arrays cannot be directly initialized");
+               YYERROR;
              }
              if(infunction ){
                 ht_put(&initialized, tan->name, (void*)1);
              }
              canconvert($3.ty, tan->ty, -1);
              $$.ty = gNothing;
+             YYCHECKABORT;
            }
         | error
 ;
@@ -699,6 +788,7 @@ typedef: TYPE rid EXTENDS type {
     check_name_allready_defined(&globals, $2.str, "%s already defined as global");
     check_name_allready_defined(&builtin_types, $2.str, "%s already defined as type");
     check_name_allready_defined(&types, $2.str, "%s already defined as type");
+    YYCHECKABORT;
     ht_put(&types, $2.str, newtypenode($2.str, $4.ty));
 }
 ;
@@ -716,6 +806,7 @@ type: rid {
         	getsuggestions($1.str, buf, 1024, 1, &types);
         	yyerrorex(semanticerror, buf);
         	$$.ty = gAny;
+          YYERROR;
         }
     }
 }
