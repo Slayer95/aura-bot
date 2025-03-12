@@ -191,7 +191,7 @@
       <Message>Using winflexbison to generate parser headers</Message>
     </PreBuildEvent>
     <PreLinkEvent>
-      <Command>cd .. &amp;&amp; cl /c /MACHINE:X64 token.yy.c &amp;&amp; cl /c /MACHINE:X64 grammar.tab.c &amp;&amp; move /Y *.obj msvc\build\$(Configuration) &amp;&amp; cd msvc</Command>
+      <Command>cd .. &amp;&amp; cl /c /MACHINE:X64 token.yy.c &amp;&amp; cl /c /MACHINE:X64 grammar.tab.c &amp;&amp; move /Y *.obj msvc\build\$(Configuration)-x64 &amp;&amp; cd msvc</Command>
       <Message>Building winflexbison binary files</Message>
     </PreLinkEvent>
   </ItemDefinitionGroup>
@@ -219,7 +219,7 @@
       <Message>Using winflexbison to generate parser headers</Message>
     </PreBuildEvent>
     <PreLinkEvent>
-      <Command>cd .. &amp;&amp; cl /c /MACHINE:X64 token.yy.c &amp;&amp; cl /c /MACHINE:X64 grammar.tab.c &amp;&amp; move /Y *.obj msvc\build\$(Configuration) &amp;&amp; cd msvc</Command>
+      <Command>cd .. &amp;&amp; cl /c /MACHINE:X64 token.yy.c &amp;&amp; cl /c /MACHINE:X64 grammar.tab.c &amp;&amp; move /Y *.obj msvc\build\$(Configuration)-x64 &amp;&amp; cd msvc</Command>
       <Message>Building winflexbison binary files</Message>
     </PreLinkEvent>
   </ItemDefinitionGroup>
