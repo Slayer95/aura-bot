@@ -808,7 +808,7 @@ union node checkarraydecl(struct typeandname *tan)
     return ret;
 }
 
-void checkidlength(char *name)
+void checkidlength(const char *name)
 {
     
     int len;
