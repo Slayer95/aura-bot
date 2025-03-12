@@ -79,6 +79,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IntDir>build\$(Configuration)\</IntDir>
     <OutDir>$(Configuration)\</OutDir>
+    <CustomBuildBeforeTargets>BuildCompileTraverse</CustomBuildBeforeTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -104,8 +105,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd.. &amp;&amp; flex --wincompat token.l &amp;&amp; bison grammar.y &amp;&amp; cd msvc</Command>
-      <Message>Use winflexbison to generate the parser</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -118,6 +121,11 @@
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <Optimization>Disabled</Optimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,11 +134,39 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd.. &amp;&amp; flex --wincompat token.l &amp;&amp; bison grammar.y &amp;&amp; cd msvc</Command>
+      <Command>flex --wincompat "..\token.l" &amp;&amp; move /Y token.yy.* .. &amp;&amp; bison -d "..\grammar.y" &amp;&amp; move /Y grammar.tab.* ..</Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Use winflexbison to generate the parser</Message>
+      <Message>Using winflexbison to generate parser headers</Message>
     </PreBuildEvent>
+    <Lib>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <Verbose>false</Verbose>
+      <TreatLibWarningAsErrors>false</TreatLibWarningAsErrors>
+    </Lib>
+    <CustomBuild>
+      <Command>cd .. &amp;&amp; cl /c token.yy.c &amp;&amp; cl /c grammar.tab.c &amp;&amp; move /Y *.obj msvc\build\$(Configuration)</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Message>Building winflexbison binaries</Message>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>build\$(Configuration)\token.yy.obj;build\$(Configuration)\grammar.tab.obj</Outputs>
+    </CustomBuild>
+    <CustomBuildStep>
+      <Command>cd .. &amp;&amp; cl /c token.yy.c &amp;&amp; cl /c grammar.tab.c &amp;&amp; move /Y *.obj msvc\build\$(Configuration) &amp;&amp; cd msvc</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Building winflexbison binary files</Message>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>grammar.tab.obj;token.yy.obj</Outputs>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <TreatOutputAsContent>false</TreatOutputAsContent>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -146,8 +182,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd.. &amp;&amp; flex --wincompat token.l &amp;&amp; bison grammar.y &amp;&amp; cd msvc</Command>
-      <Message>Use winflexbison to generate the parser</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -161,6 +199,7 @@
       <LanguageStandard>Default</LanguageStandard>
       <CompileAs>CompileAsC</CompileAs>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -169,8 +208,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd.. &amp;&amp; flex --wincompat token.l &amp;&amp; bison grammar.y &amp;&amp; cd msvc</Command>
-      <Message>Use winflexbison to generate the parser</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -183,8 +224,6 @@
     <ClCompile Include="..\tree.c" />
     <ClCompile Include="..\sstrhash.c" />
     <ClCompile Include="..\main.c" />
-    <ClCompile Include="..\token.yy.c" />
-    <ClCompile Include="..\grammar.tab.c" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\misc.h" />

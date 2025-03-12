@@ -42,12 +42,6 @@
     <ClCompile Include="..\main.c">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\token.yy.c">
-      <Filter>Archivos de origen</Filter>
-    </ClCompile>
-    <ClCompile Include="..\grammar.tab.c">
-      <Filter>Archivos de origen</Filter>
-    </ClCompile>
     <ClCompile Include="..\misc.h">
       <Filter>Archivos de encabezado</Filter>
     </ClCompile>
