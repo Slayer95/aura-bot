@@ -164,6 +164,16 @@ Config
 - Default value: FILTER_ALLOW_ALL
 - Error handling: Use default value
 
+## \`discord.log_games.channels\`
+- Type: uint64set
+- Default value: 
+- Error handling: Use default value
+
+## \`discord.log_games.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
 ## \`discord.sudo_users\`
 - Type: uint64set
 - Default value: 
@@ -983,6 +993,11 @@ Config
 - Default value: false
 - Error handling: Use default value
 
+## \`hosting.log_chat\`
+- Type: enum
+- Default value: LOG_GAME_CHAT_NEVER
+- Error handling: Use default value
+
 ## \`hosting.log_commands\`
 - Type: bool
 - Default value: false
@@ -996,6 +1011,11 @@ Config
 ## \`hosting.log_non_ascii\`
 - Type: bool
 - Default value: false
+- Error handling: Use default value
+
+## \`hosting.log_remote.mode\`
+- Type: enum
+- Default value: LOG_REMOTE_MODE_NETWORK
 - Error handling: Use default value
 
 ## \`hosting.log_words\`
@@ -1084,6 +1104,16 @@ Config
 - Default value: |cFF4080C0Aura
 - Error handling: Use default value
 
+## \`hosting.validators.check_jass\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`hosting.validators.check_jass\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`hosting.vote_kick.min_percent\`
 - Type: uint8
 - Default value: 70
@@ -1135,6 +1165,11 @@ Config
 - Error handling: Use default value
 
 ## \`irc.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`irc.log_games.enabled\`
 - Type: bool
 - Default value: false
 - Error handling: Use default value
