@@ -292,7 +292,34 @@ distribution in the file COPYING.  If you did not receive this copy,
 write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 Boston, MA  02111-1307  USA
 
-#### [MiniUPnP Project][20]
+#### [pjass][20]
+
+BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#### [MiniUPnP Project][21]
 
 Copyright (c) 2005-2017, Thomas BERNARD
 All rights reserved.
@@ -320,7 +347,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-#### [C++ Requests][21]
+#### [C++ Requests][22]
 
 This license applies to everything except the contents of the "test"
 directory and its subdirectories.
@@ -348,7 +375,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-#### [cURL][22]
+#### [cURL][23]
 
 Copyright (C) Daniel Stenberg, <daniel@haxx.se>, and many
 contributors, see the THANKS file.
@@ -367,7 +394,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 OR OTHER DEALINGS IN THE SOFTWARE.
 
-#### [zlib][23]
+#### [zlib][24]
 
 version 1.3, August 18th, 2023
 
@@ -401,7 +428,7 @@ Except as contained in this notice, the name of a copyright holder shall not
 be used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization of the copyright holder.
 
-#### [D++][24]
+#### [D++][25]
 
  D++, A Lightweight C++ library for Discord
  
@@ -421,7 +448,7 @@ in this Software without prior written authorization of the copyright holder.
  See the License for the specific language governing permissions and
  limitations under the License.
 
-#### [JSON for Modern C++][25]
+#### [JSON for Modern C++][26]
 
 MIT License 
 
@@ -464,9 +491,10 @@ SOFTWARE.
 [17]: https://gitlab.com/ivojulca/aura-bot/-/blob/master/src/csvparser.cpp
 [18]: https://github.com/ladislav-zezula/StormLib
 [19]: https://github.com/BNETDocs/bncsutil
-[20]: https://github.com/miniupnp/miniupnp
-[21]: https://github.com/libcpr/cpr
-[22]: https://github.com/curl/curl
-[23]: https://github.com/madler/zlib
-[24]: https://github.com/brainboxdotcc/DPP
-[25]: https://github.com/nlohmann/json/
+[20]: https://github.com/lep/pjass
+[21]: https://github.com/miniupnp/miniupnp
+[22]: https://github.com/libcpr/cpr
+[23]: https://github.com/curl/curl
+[24]: https://github.com/madler/zlib
+[25]: https://github.com/brainboxdotcc/DPP
+[26]: https://github.com/nlohmann/json/
