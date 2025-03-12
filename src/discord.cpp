@@ -35,6 +35,7 @@
 
 #include <utility>
 #include <algorithm>
+#include <thread>
 #include <variant>
 
 #define THINKING_PUBLIC false
