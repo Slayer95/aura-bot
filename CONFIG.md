@@ -1104,12 +1104,12 @@ Config
 - Default value: |cFF4080C0Aura
 - Error handling: Use default value
 
-## \`hosting.validators.check_jass\`
+## \`hosting.validators.jass.enabled\`
 - Type: bool
 - Default value: false
 - Error handling: Use default value
 
-## \`hosting.validators.check_jass\`
+## \`hosting.validators.jass.enabled\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value
