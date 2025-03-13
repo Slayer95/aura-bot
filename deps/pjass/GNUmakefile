@@ -3,10 +3,12 @@ VERSION ?= $(shell git rev-parse --short HEAD || echo nix)
 ARCHITECTURE ?= x64
 CC ?= gcc
 PJASS_TYPE ?= standalone
-TARGET_EXT ?= .exe
 UNAME_S := $(shell uname -s)
 
-ifneq ($(findstring MINGW, $(UNAME_S)), MINGW)
+
+ifeq ($(findstring MINGW, $(UNAME_S)), MINGW)
+    TARGET_EXT = .exe
+else
     ifeq ($(ARCHITECTURE), x86)
         CC = i686-w64-mingw32-gcc
     else
