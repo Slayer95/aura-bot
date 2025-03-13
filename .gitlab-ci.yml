@@ -52,6 +52,16 @@ Assemble:
   ## Header files
   ### - cp /usr/local/include/StormLib.h dist/include/stormlib
   ### - cp /usr/local/include/StormPort.h dist/include/stormlib
+  # pjass (dynamic, .so)
+  #- cd $CI_PROJECT_DIR
+  #- cd deps/pjass
+  #- export PJASS_TYPE=shared
+  #- make && make install
+  #- unset PJASS_TYPE
+  #- cd $CI_PROJECT_DIR
+  ## Shared library
+  #- cp /usr/lib/libpjass.so /usr/local/lib
+  #- cp /usr/lib/libpjass.so* dist/bin-shared
   # MiniUPNP (shared, .so)
   - cd $CI_PROJECT_DIR
   - cd deps/miniupnpc

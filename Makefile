@@ -21,44 +21,28 @@ ifeq ($(AURASTATIC),1)
   LFLAGS += -static
 endif
 
-#ifeq ($(AURALINKPJASS),0)
-#  CXXFLAGS += -DDISABLE_PJASS
-#else
-#  ifeq ($(AURASTATIC),1)
-#    LFLAGS += -lpjass
-#  else
-#    LFLAGS += -lpjass
-#  endif
-#endif
+ifeq ($(AURALINKPJASS),0)
+  CXXFLAGS += -DDISABLE_PJASS
+else
+  LFLAGS += -lpjass
+endif
 
 ifeq ($(AURALINKMINIUPNP),0)
   CXXFLAGS += -DDISABLE_MINIUPNP
 else
-  ifeq ($(AURASTATIC),1)
-    LFLAGS += -lminiupnpc
-  else
-    LFLAGS += -lminiupnpc
-  endif
+  LFLAGS += -lminiupnpc
 endif
 
 ifeq ($(AURALINKCPR),0)
   CXXFLAGS += -DDISABLE_CPR
 else
-  ifeq ($(AURASTATIC),1)
-    LFLAGS += -lcpr
-  else
-    LFLAGS += -lcpr
-  endif
+  LFLAGS += -lcpr
 endif
 
 ifeq ($(AURALINKDPP),0)
   CXXFLAGS += -DDISABLE_DPP
 else
-  ifeq ($(AURASTATIC),1)
-    LFLAGS += -ldpp
-  else
-    LFLAGS += -ldpp
-  endif
+  LFLAGS += -ldpp
 endif
 
 ifeq ($(ARCH),x86_64)
