@@ -39,15 +39,13 @@ endif
 ifeq ($(ARCHITECTURE), x86)
     CFLAGS += -m32
     PJASS_OUT_NAME := pjass$(TARGET_EXT)
-    ifeq ($(PJASS_TYPE), shared)
-      PJASS_OUT_NAME := lib$(PJASS_OUT_NAME)
-    endif
 else
     CFLAGS += -m64
     PJASS_OUT_NAME := pjass64$(TARGET_EXT)
-    ifeq ($(PJASS_TYPE), shared)
-      PJASS_OUT_NAME := lib$(PJASS_OUT_NAME)
-    endif
+endif
+
+ifeq ($(PJASS_TYPE), shared)
+  PJASS_OUT_NAME := lib$(PJASS_OUT_NAME)
 endif
 
 SRC := misc.c hashtable.c paramlist.c funcdecl.c typeandname.c blocks.c tree.c sstrhash.c
