@@ -1,15 +1,51 @@
 CFLAGS += -MMD -g -w
 VERSION ?= $(shell git rev-parse --short HEAD || echo nix)
 ARCHITECTURE ?= x64
+CC ?= gcc
+PJASS_TYPE ?= standalone
+TARGET_EXT ?= .exe
+UNAME_S := $(shell uname -s)
+
+ifneq ($(findstring MINGW, $(UNAME_S)), MINGW)
+    ifeq ($(ARCHITECTURE), x86)
+        CC = i686-w64-mingw32-gcc
+    else
+        CC = x86_64-w64-mingw32-gcc
+    endif
+endif
+
+ifeq ($(PJASS_TYPE), standalone)
+    CFLAGS += -DPJASS_STANDALONE
+else
+  ifeq ($(PJASS_TYPE), static)
+    ifeq ($(findstring MINGW, $(UNAME_S)), MINGW)
+        TARGET_EXT = .lib
+    else
+        TARGET_EXT = .a
+    endif
+  else
+    CFLAGS += -fPIC
+    CFLAGS_EXTRA += -shared
+    ifeq ($(findstring MINGW, $(UNAME_S)), MINGW)
+        TARGET_EXT = .dll
+    else
+        TARGET_EXT = .so
+    endif
+  endif
+endif
 
 ifeq ($(ARCHITECTURE), x86)
-    CC = i686-w64-mingw32-gcc
     CFLAGS += -m32
-    LIBRARY_NAME := bin/Win32/pjass.lib
+    PJASS_OUT_NAME := pjass$(TARGET_EXT)
+    ifeq ($(PJASS_TYPE), shared)
+      PJASS_OUT_NAME := lib$(PJASS_OUT_NAME)
+    endif
 else
-    CC = x86_64-w64-mingw32-gcc
     CFLAGS += -m64
-    LIBRARY_NAME := bin/Win64/pjass.lib
+    PJASS_OUT_NAME := pjass64$(TARGET_EXT)
+    ifeq ($(PJASS_TYPE), shared)
+      PJASS_OUT_NAME := lib$(PJASS_OUT_NAME)
+    endif
 endif
 
 SRC := misc.c hashtable.c paramlist.c funcdecl.c typeandname.c blocks.c tree.c sstrhash.c
@@ -22,7 +58,7 @@ OBJS += main.o token.yy.o grammar.tab.o
 .PHONY: binary-release src-release
 .PHONY: help
 
-all: $(LIBRARY_NAME)
+all: $(PJASS_OUT_NAME)
 
 help:
 	@awk -F ':|##' \
@@ -32,11 +68,13 @@ help:
 
 -include $(OBJS:.o=.d)
 
-pjass: $(OBJS) ## Builds pjass
-	$(CC) $(CFLAGS) $^ -o $@
-
-$(LIBRARY_NAME): $(OBJS)  ## Creates the static library
-	ar rcs $@ $^  ## Archive the object files into the static library
+ifeq ($(PJASS_TYPE), static)
+$(PJASS_OUT_NAME): $(OBJS)
+	ar rcs $@ $^  
+else
+$(PJASS_OUT_NAME): $(OBJS)
+	$(CC) $(CFLAGS) $^ $(CFLAGS_EXTRA) -o $@
+endif
 
 test: should-fail should-check map-scripts ## Runs all tests
 
@@ -70,7 +108,8 @@ main.o: main.c | grammar.tab.h
 
 clean-build-files: ## Cleans all build files
 	rm -f grammar.tab.h grammar.tab.c token.yy.c token.yy.h \
-		$(OBJS) $(OBJS:.o=.d)
+		$(OBJS) $(OBJS:.o=.d) \
+		pjass pjass.exe pjass.lib pjass64.lib libpjass.so libpjass64.so pjass.dll pjass64.dll pjass.a pjass64.a
 
 clean-release-files: ## Cleans all release zipballs
 	rm -f pjass-git-*.zip

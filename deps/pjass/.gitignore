@@ -13,6 +13,8 @@ pjass
 *.sw*
 *.dll
 *.lib
+*.so
+*.a
 *.pdb
 *.idb
 tests/Blizzard.j

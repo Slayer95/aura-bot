@@ -202,3 +202,30 @@ int _cdecl parse_jass_files(const int file_count, const char **file_paths, char 
         return 1;
     }
 }
+
+#ifdef PJASS_STANDALONE
+int main(int argc, char **argv)
+{
+    char buffer[8192];
+    init(buffer, sizeof(buffer) - 1);
+    doparse(argc - 1, (const char **)(void*)argv[1]);
+
+    if (!haderrors && didparse) {
+        printf("Parse successful: %8d lines: %s\n", totlines, "<total>");
+        if (ignorederrors) {
+            printf("%d errors ignored\n", ignorederrors);
+        }
+        return 0;
+    } else {
+        if (haderrors) {
+            printf("Parse failed: %d error%s total\n", haderrors, haderrors == 1 ? "" : "s");
+        } else {
+            printf("Parse failed\n");
+        }
+        if (ignorederrors) {
+            printf("%d errors ignored\n", ignorederrors);
+        }
+        return 1;
+    }
+}
+#endif
