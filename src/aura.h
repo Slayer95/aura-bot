@@ -225,7 +225,7 @@ public:
   void UpdateMetaData();
 
   [[nodiscard]] FileChunkTransient ReadFileChunkCacheable(const std::filesystem::path& filePath, const size_t start, const size_t end)/* noexcept*/;
-  [[nodiscard]] SharedByteArray ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)/* noexcept*/;
+  [[nodiscard]] SharedByteArray ReadFile(const std::filesystem::path& filePath, const size_t maxSize)/* noexcept*/;
   void UpdateCFGCacheEntries();
 
   void ClearStaleContexts();

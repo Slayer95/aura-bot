@@ -2411,7 +2411,7 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
   return FileChunkTransient(m_CachedFileContents[filePath]);
 }
 
-SharedByteArray CAura::ReadFileCacheable(const std::filesystem::path& filePath, const size_t maxSize)
+SharedByteArray CAura::ReadFile(const std::filesystem::path& filePath, const size_t maxSize)
 {
   SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
   size_t fileSize = 0;

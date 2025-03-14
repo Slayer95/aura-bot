@@ -324,7 +324,7 @@ SharedByteArray CMap::GetMapPreviewContents()
       return fileContentsPtr;
     }
     case MAP_FILE_SOURCE_CATEGORY_FS:
-      return m_Aura->ReadFileCacheable(GetMapPreviewImagePath(), GetMapPreviewImageSize());
+      return m_Aura->ReadFile(GetMapPreviewImagePath(), GetMapPreviewImageSize());
     default:
       return nullptr;
   }
@@ -1628,7 +1628,7 @@ bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint3
   if (m_MapServerPath.filename() == m_MapServerPath && !m_UseStandardPaths) {
     resolvedPath = m_Aura->m_Config.m_MapPath / m_MapServerPath;
   }
-  m_MapFileContents = m_Aura->ReadFileCacheable(resolvedPath, MAX_READ_FILE_SIZE);
+  m_MapFileContents = m_Aura->ReadFile(resolvedPath, MAX_READ_FILE_SIZE);
   if (!HasMapFileContents()) {
     PRINT_IF(LOG_LEVEL_INFO, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
     return false;
