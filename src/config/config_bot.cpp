@@ -97,8 +97,8 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   m_AutomaticallySetGameOwner    = CFG.GetBool("hosting.game_owner.from_creator", true);
 
-  m_EnableDeleteOversizedMaps    = CFG.GetBool("bot.persistence.delete_huge_maps.enabled", false);
-  m_MaxSavedMapSize              = CFG.GetInt("bot.persistence.delete_huge_maps.size", 0x6400); // 25 MiB
+  m_EnableDeleteOversizedMaps    = CFG.GetBool("maps.storage.delete_huge.enabled", false);
+  m_MaxSavedMapSize              = CFG.GetInt("maps.storage.delete_huge.size", 0x6400); // 25 MiB
 
   optional<filesystem::path> maybeGreeting = CFG.GetMaybePath("bot.greeting_path");
   if (maybeGreeting.has_value() && !maybeGreeting.value().empty()) {
