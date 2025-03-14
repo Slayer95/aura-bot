@@ -950,7 +950,7 @@ optional<MapEssentials> CMap::ParseMPQ()
       }
 
       if (FileFormat > 25) {
-        mapEssentials->minCompatibleGameVersion = GAMEVER(1u, 31u);
+        mapEssentials->minCompatibleGameVersion = m_Aura->m_Config.m_TargetCommunity ? GAMEVER(1u, 29u) : GAMEVER(1u, 31u);
       } else if (FileFormat > 18) {
         mapEssentials->minCompatibleGameVersion = GAMEVER(1u, 7u);
       }

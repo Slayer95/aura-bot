@@ -37,6 +37,7 @@
 struct CBotConfig
 {
   bool                                    m_Enabled;                     // set to false to prevent new games from being created
+  bool                                    m_TargetCommunity;
   bool                                    m_ExtractJASS;
   bool                                    m_ValidateJASS;
   std::optional<Version>                  m_Warcraft3DataVersion;        // warcraft 3 version

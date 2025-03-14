@@ -72,6 +72,8 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_SupportedGameVersions        = vector<Version>(supportedGameVersions.begin(), supportedGameVersions.end());
   stable_sort(m_SupportedGameVersions.begin(), m_SupportedGameVersions.end());
 
+  m_TargetCommunity              = CFG.GetBool("hosting.game_versions.community", false);
+
 #ifdef DISABLE_PJASS
   m_ValidateJASS                 = CFG.GetBool("hosting.validators.jass.enabled", false);
   if (m_ValidateJASS) {
