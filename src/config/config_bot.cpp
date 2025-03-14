@@ -28,6 +28,7 @@
 #include "../net.h"
 #include "../file_util.h"
 #include "../map.h"
+#include "../pjass.h"
 #include "../command.h"
 
 #include <utility>
@@ -75,15 +76,38 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_TargetCommunity              = CFG.GetBool("hosting.game_versions.community", false);
 
 #ifdef DISABLE_PJASS
-  m_ValidateJASS                 = CFG.GetBool("hosting.validators.jass.enabled", false);
+  m_ValidateJASS                 = CFG.GetBool("maps.validators.jass.enabled", false);
   if (m_ValidateJASS) {
-    Print("[CONFIG] warning - <hosting.validators.jass.enabled = yes> unsupported in this Aura distribution");
-    Print("[CONFIG] warning - <hosting.validators.jass.enabled = yes> requires compilation without #define DISABLE_PJASS");
+    Print("[CONFIG] warning - <maps.validators.jass.enabled = yes> unsupported in this Aura distribution");
+    Print("[CONFIG] warning - <maps.validators.jass.enabled = yes> requires compilation without #define DISABLE_PJASS");
     m_ValidateJASS = false;
   }
 #else
-  m_ValidateJASS                 = CFG.GetBool("hosting.validators.jass.enabled", true);
+  m_ValidateJASS                 = CFG.GetBool("maps.validators.jass.enabled", true);
 #endif
+
+  if (!CFG.GetBool("maps.validators.jass.syntax.enabled", true)) {
+    m_ValidateJASSFlags.set(PJASS_OPTIONS_NOSYNTAXERROR);
+  }
+  if (!CFG.GetBool("maps.validators.jass.semantics.enabled", true)) {
+    m_ValidateJASSFlags.set(PJASS_OPTIONS_NOSEMANTICERROR);
+  }
+  if (!CFG.GetBool("maps.validators.jass.runtime.enabled", true)) {
+    m_ValidateJASSFlags.set(PJASS_OPTIONS_NORUNTIMEERROR);
+  }
+
+  if (CFG.GetStringIndex("maps.validators.jass.filters_signature", {"permissive", "strict"}, PJASS_PERMISSIVE) == PJASS_STRICT) {
+    m_ValidateJASSFlags.set(PJASS_OPTIONS_FILTER);
+  }
+  if (CFG.GetStringIndex("maps.validators.jass.globals_initialization", {"permissive", "strict"}, PJASS_PERMISSIVE) == PJASS_STRICT) {
+    m_ValidateJASSFlags.set(PJASS_OPTIONS_CHECKGLOBALSINIT);
+  }
+  if (CFG.GetStringIndex("maps.validators.jass.string_hashes", {"permissive", "strict"}, PJASS_PERMISSIVE) == PJASS_STRICT) {
+    m_ValidateJASSFlags.set(PJASS_OPTIONS_CHECKSTRINGHASH);
+  }
+  if (CFG.GetStringIndex("maps.validators.jass.overflows", {"permissive", "strict"}, PJASS_PERMISSIVE) == PJASS_STRICT) {
+    m_ValidateJASSFlags.set(PJASS_OPTIONS_CHECKNUMBERLITERALS);
+  }
 
   m_LogRemoteMode                = CFG.GetStringIndex("hosting.log_remote.mode", {"none", "file", "network", "mixed"}, LOG_REMOTE_MODE_NETWORK);
   m_LogGameChat                  = CFG.GetStringIndex("hosting.log_chat", {"never", "allowed", "always"}, LOG_GAME_CHAT_NEVER);

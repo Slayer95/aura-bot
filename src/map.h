@@ -369,6 +369,7 @@ public:
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
 
+  void                                            TryCheckScripts(const std::vector<Version>& versionHeads, std::optional<MapEssentials>& mapEssentials);
   [[nodiscard]] bool                              TryLoadMapFilePersistent(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
   [[nodiscard]] bool                              TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32, std::optional<std::array<uint8_t, 20>>& sha1);
   [[nodiscard]] bool                              CheckMapFileIntegrity();

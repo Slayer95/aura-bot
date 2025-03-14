@@ -28,8 +28,19 @@
 using namespace std;
 
 #ifndef DISABLE_PJASS
-pair<bool, string> ParseJASS(const vector<filesystem::path>& filePaths)
+pair<bool, string> ParseJASS(const vector<filesystem::path>& filePaths, const bitset<11> flags)
 {
+  const static vector<string> pjassFlags = {
+    // pjass error types
+    "+nosyntaxerror", "+nosemanticerror", "+noruntimeerror",
+
+    // jass language features
+    "+rb", "+nomodulooperator", "+shadow", "+checklongnames",
+
+    // linter
+    "+filter", "+checkglobalsinit", "+checkstringhash", "+checknumberliterals"
+  };
+
   bool result = false;
   string details;
   char buffer[1024];
@@ -43,6 +54,14 @@ pair<bool, string> ParseJASS(const vector<filesystem::path>& filePaths)
 
   vector<string> filePathsInner;
   vector<const char*> filePtrs;
+
+  for (size_t i = 0; i < flags.size(); ++i) {
+    if (flags.test(i)) {
+      filePtrs.push_back(pjassFlags[i].c_str());
+      fileCount++;
+    }
+  }
+
   for (const auto& filePath : filePaths) {
     filePathsInner.push_back(filePath.string());
     filePtrs.push_back(filePathsInner.back().c_str());
@@ -59,4 +78,44 @@ pair<bool, string> ParseJASS(const vector<filesystem::path>& filePaths)
   }
   return make_pair(result, details);
 }
+
+pair<bool, string> ParseJASS(const vector<filesystem::path>& filePaths, const bitset<11> baseFlags, const Version& version)
+{
+  bitset<11> flags = baseFlags;
+  if (version < GAMEVER(1u, 24u)) {
+    // https://jass.sourceforge.net/doc/retbug.shtml
+    // Return bug may be used for old patches
+    // Intentionally not implemented <maps.validators.jass.features.return_bug>
+    flags.set(PJASS_OPTIONS_RB);
+  } else {
+    flags.reset(PJASS_OPTIONS_RB);
+  }
+
+  if (version < GAMEVER(1u, 29u)) {
+    // Modulo operator (%) does not exist for old patches
+    // Intentionally not implemented <maps.validators.jass.features.modulo> 
+    flags.set(PJASS_OPTIONS_NOMODULOOPERATOR);
+  } else {
+    flags.reset(PJASS_OPTIONS_NOMODULOOPERATOR);
+  }
+
+  if (version >= GAMEVER(1u, 31u)) {
+    // Intentionally not implemented <maps.validators.jass.features.shadowing>
+    flags.set(PJASS_OPTIONS_SHADOW);
+  } else {
+    // Local variables may be defined with the same name as global variables for old patches
+    flags.reset(PJASS_OPTIONS_SHADOW);
+  }
+
+  if (version < GAMEVER(1u, 31u)) {
+    // Names should be at most 3958 characters long for old patches
+    // Intentionally not implemented <maps.validators.jass.features.long_names>
+    flags.set(PJASS_OPTIONS_CHECKLONGNAMES);
+  } else {
+    flags.reset(PJASS_OPTIONS_CHECKLONGNAMES);
+  }
+
+  return ParseJASS(filePaths, flags);
+}
+
 #endif

@@ -40,6 +40,7 @@ struct CBotConfig
   bool                                    m_TargetCommunity;
   bool                                    m_ExtractJASS;
   bool                                    m_ValidateJASS;
+  std::bitset<11>                         m_ValidateJASSFlags;
   std::optional<Version>                  m_Warcraft3DataVersion;        // warcraft 3 version
   std::optional<std::filesystem::path>    m_Warcraft3Path;               // Warcraft 3 path
   std::filesystem::path                   m_MapPath;                     // map path

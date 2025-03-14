@@ -982,25 +982,7 @@ optional<MapEssentials> CMap::ParseMPQ()
       mapEssentials->previewImgSize = previewImgSize.value();
     }
 
-#ifndef DISABLE_PJASS
-    if (!supportedVersionHeads.empty() && m_Aura->m_Config.m_ValidateJASS) {
-      Version version = supportedVersionHeads.back();
-      if (mapEssentials->minCompatibleGameVersion <= version) {
-        vector<filesystem::path> scriptFiles;
-        // TODO: Support overrides
-        scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j"));
-        scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j"));
-        scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"));
-        pair<bool, string> result = ParseJASS(scriptFiles);
-        if (!result.first) {
-          string firstError = ExtractFirstJASSError(result.second);
-          m_Valid = false;
-          m_ErrorMessage = "map script is not valid JASS - " + firstError;
-        }
-      }
-    }
-#endif
-
+    TryCheckScripts(supportedVersionHeads, mapEssentials);
   } else { // end m_MapLoaderIsPartial
     DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
   }
@@ -1615,6 +1597,45 @@ bool CMap::AcquireGameVersion(CConfig* CFG)
     m_MapTargetGameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
   }
   return m_MapTargetGameVersion.has_value();
+}
+
+void CMap::TryCheckScripts(const vector<Version>& versionHeads, optional<MapEssentials>& mapEssentials)
+{
+#ifndef DISABLE_PJASS
+    if (versionHeads.empty() || !m_Aura->m_Config.m_ValidateJASS) {
+      return;
+    }
+    size_t versionHeadsCount = versionHeads.size();
+    size_t index = 0;
+    while (versionHeads[index] < mapEssentials->minCompatibleGameVersion && index < versionHeadsCount) {
+      ++index;
+    }
+    if (index >= versionHeadsCount) {
+      return;
+    }
+
+    string errorMessage;
+    do {
+      Version version = versionHeads[index];
+      vector<filesystem::path> scriptFiles;
+      // TODO: Support overrides
+      scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j"));
+      scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j"));
+      scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"));
+      pair<bool, string> result = ParseJASS(scriptFiles, m_Aura->m_Config.m_ValidateJASSFlags, version);
+      if (result.first) {
+        mapEssentials->minCompatibleGameVersion = version;
+        return;
+      }
+      // Errors are likelier to be more meaningful for more recent versions,
+      // so we override the error message
+      errorMessage = ExtractFirstJASSError(result.second);
+      ++index;
+    } while (index < versionHeadsCount);
+
+    m_Valid = false;
+    m_ErrorMessage = "map script is not valid JASS - " + errorMessage;
+#endif
 }
 
 // @deprecated

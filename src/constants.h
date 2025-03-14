@@ -607,6 +607,23 @@ constexpr uint8_t NET_RECONNECT_MAX_BACKOFF = 12;
 #define CHAT_VALIDATOR_NONE 0
 #define CHAT_VALIDATOR_LOBBY_JOINABLE 1
 
+// pjass.h
+
+constexpr uint8_t PJASS_PERMISSIVE = 0u;
+constexpr uint8_t PJASS_STRICT = 1u;
+
+constexpr uint8_t PJASS_OPTIONS_NOSYNTAXERROR = 0u;
+constexpr uint8_t PJASS_OPTIONS_NOSEMANTICERROR = 1u;
+constexpr uint8_t PJASS_OPTIONS_NORUNTIMEERROR = 2u;
+constexpr uint8_t PJASS_OPTIONS_RB = 3u;
+constexpr uint8_t PJASS_OPTIONS_NOMODULOOPERATOR = 4u;
+constexpr uint8_t PJASS_OPTIONS_SHADOW = 5u;
+constexpr uint8_t PJASS_OPTIONS_CHECKLONGNAMES = 6u;
+constexpr uint8_t PJASS_OPTIONS_FILTER = 7u;
+constexpr uint8_t PJASS_OPTIONS_CHECKGLOBALSINIT = 8u;
+constexpr uint8_t PJASS_OPTIONS_CHECKSTRINGHASH = 9u;
+constexpr uint8_t PJASS_OPTIONS_CHECKNUMBERLITERALS = 10u;
+
 // w3mmd.h
 
 #define MMD_ACTION_TYPE_VAR 0u

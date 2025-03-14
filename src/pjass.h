@@ -32,7 +32,8 @@
 #ifndef DISABLE_PJASS
 #include "../deps/pjass/include/pjass-header.h"
 
-std::pair<bool, std::string> ParseJASS(const std::vector<std::filesystem::path>& filePaths);
+std::pair<bool, std::string> ParseJASS(const std::vector<std::filesystem::path>& filePaths, const std::bitset<11> flags);
+std::pair<bool, std::string> ParseJASS(const std::vector<std::filesystem::path>& filePaths, const std::bitset<11> baseFlags, const Version& version);
 
 inline std::string ExtractFirstJASSError(const std::string& input)
 {
