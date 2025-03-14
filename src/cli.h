@@ -79,6 +79,7 @@ public:
   std::optional<std::filesystem::path>  m_MapCachePath;
   std::optional<std::filesystem::path>  m_JASSPath;
   std::optional<std::filesystem::path>  m_GameSavePath;
+  std::optional<bool>                   m_CheckJASS;
   std::optional<bool>                   m_ExtractJASS;
 
   // Host flags

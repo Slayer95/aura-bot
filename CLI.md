@@ -193,6 +193,17 @@ Disables caching of map metadata. When caching is disabled, game data is not sto
 each session may experience longer loading times as a result. This option is enabled by default 
 when hosting games from the CLI.
 
+## \`--check-jass\`
+
+When you use this flag, Aura will automatically check map scripts for correctness.
+This improves game experience by disabling hosting of bugged maps.
+
+## \`--no-check-jass\`
+
+By using this flag, you're indicating that you'd like Aura to host maps regardless of their 
+scripts correctness. This can be useful for preliminary map testing or running maps that may 
+not be fully supported by the jass checker.
+
 ## \`--extract-jass\`
 
 When you use this flag, Aura will automatically extract necessary files from your game 

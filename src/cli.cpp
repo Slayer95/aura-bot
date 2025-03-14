@@ -104,6 +104,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag("--about,--version", about, "Display software information.");
   app.add_flag("--example,--examples", examples, "Display CLI hosting examples.");
   app.add_flag("--verbose", m_Verbose, "Outputs detailed information when running CLI actions.");
+  app.add_flag("--check-jass,--no-check-jass{false}", m_CheckJASS, "Checks map scripts for correctness.");
   app.add_flag("--extract-jass,--no-extract-jass{false}", m_ExtractJASS, "Automatically extract files from the game install directory.");
 
 #ifdef _WIN32
@@ -555,6 +556,9 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_Config.m_JASSPath = m_JASSPath.value();
   if (m_GameSavePath.has_value())
     nAura->m_Config.m_GameSavePath = m_GameSavePath.value();
+
+  if (m_CheckJASS.has_value())
+    nAura->m_Config.m_ValidateJASS = m_CheckJASS.value();
 
   if (m_ExtractJASS.has_value())
     nAura->m_Config.m_ExtractJASS = m_ExtractJASS.value();
