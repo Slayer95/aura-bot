@@ -532,7 +532,7 @@ void CCLI::RunInfoActions() const
     }
     case CLI_ACTION_EXAMPLES: {
       Print("Usage: aura [MAP NAME] [GAME NAME]");
-      Print(R"(Example: aura wormwar "worm wars")");
+      Print(R"(Example: aura monolith "creep invasion")");
       Print(R"(Example: aura "lost temple" "2v2")");
       Print("See additional options at CLI.md");
       break;

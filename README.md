@@ -41,10 +41,10 @@ be in the same format as ``LOCATION`` above. See [CONFIG.md][5] for documentatio
 Now, to test your setup, run the command:
 
 ```
-aura wormwar.ini "my first hosted game" -s config
+aura monolith.ini "my first hosted game" -s config
 ```
 
-Open your game client, and go to **Local Area Network**. You should see your Worm War game hosted there. 
+Open your game client, and go to **Local Area Network**. You should see your Monolith game hosted there. 
 Join it and type to the chat ``!owner``. This is a bot command. You may use them from many channels, 
 including Battle.net, PvPGN public chats, whispers, IRC networks, and your system command line.
 
