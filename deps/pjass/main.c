@@ -148,11 +148,13 @@ static void dofile(FILE *fp, const char *name)
     inblock = false;
     encoutered_first_function = false;
     inglobals = false;
-    yy_switch_to_buffer(yy_create_buffer(fp, BUFSIZE));
+    YY_BUFFER_STATE buffer_state = yy_create_buffer(fp, BUFSIZE);
+    yy_switch_to_buffer(buffer_state);
     curfile = name;
     while ( yyparse() ) ;
     totlines += lineno;
     fno++;
+    yy_delete_buffer(buffer_state);
 }
 
 static void dobuffer(char* buf, const int buf_size)
@@ -164,11 +166,12 @@ static void dobuffer(char* buf, const int buf_size)
     inblock = false;
     encoutered_first_function = false;
     inglobals = false;
-    yy_switch_to_buffer(yy_scan_bytes(buf, buf_size));
+    YY_BUFFER_STATE buffer_state = yy_scan_bytes(buf, buf_size);
     curfile = ".j";
     while ( yyparse() ) ;
     totlines += lineno;
     fno++;
+    yy_delete_buffer(buffer_state);
 }
 
 static void tryfile(const char *name)
