@@ -2215,6 +2215,7 @@ map<uint32_t, string> CMap::GetTrigStrMulti(const string& fileContents, const se
   optional<pair<uint32_t, string>> currentTarget;
 
   bool inBraces = false;
+  bool firstLine = true;
   string line;
   istringstream ISS(fileContents);
 
@@ -2222,6 +2223,10 @@ map<uint32_t, string> CMap::GetTrigStrMulti(const string& fileContents, const se
     getline(ISS, line);
     if (ISS.fail()) {
       break;
+    }
+    if (firstLine && line.substr(0, 3) == "\xEF\xBB\xBF") {
+      // Strip UTF-8 BOM
+      line = line.substr(3);
     }
     if (!currentTarget.has_value()) {
       if (line.size() >= 8 && line.substr(0, 7) == "STRING ") {
@@ -2256,6 +2261,7 @@ map<uint32_t, string> CMap::GetTrigStrMulti(const string& fileContents, const se
         currentTarget->second.append(line);
       }
     }
+    firstLine = false;
   }
 
   return result;
