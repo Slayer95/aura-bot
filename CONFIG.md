@@ -75,16 +75,6 @@ Config
 - Default value: 150
 - Error handling: Use default value
 
-## \`bot.persistence.delete_huge_maps.enabled\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
-## \`bot.persistence.delete_huge_maps.size\`
-- Type: int
-- Default value: 25600
-- Error handling: Use default value
-
 ## \`bot.save_path\`
 - Type: directory
 - Default value: Aura home directory
@@ -883,6 +873,11 @@ Config
 - Default value: 5
 - Error handling: Use default value
 
+## \`hosting.game_versions.community\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
 ## \`hosting.game_versions.crossplay.mode\`
 - Type: enum
 - Default value: CROSSPLAY_MODE_CONSERVATIVE
@@ -1104,16 +1099,6 @@ Config
 - Default value: |cFF4080C0Aura
 - Error handling: Use default value
 
-## \`hosting.validators.jass.enabled\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
-## \`hosting.validators.jass.enabled\`
-- Type: bool
-- Default value: true
-- Error handling: Use default value
-
 ## \`hosting.vote_kick.min_percent\`
 - Type: uint8
 - Default value: 70
@@ -1212,6 +1197,61 @@ Config
 ## \`lan_realm.commands.moderator.permissions\`
 - Type: enum
 - Default value: auto
+- Error handling: Use default value
+
+## \`maps.storage.delete_huge.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`maps.storage.delete_huge.size\`
+- Type: int
+- Default value: 25600
+- Error handling: Use default value
+
+## \`maps.validators.jass.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`maps.validators.jass.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`maps.validators.jass.filters_signature\`
+- Type: enum
+- Default value: PJASS_PERMISSIVE
+- Error handling: Use default value
+
+## \`maps.validators.jass.globals_initialization\`
+- Type: enum
+- Default value: PJASS_PERMISSIVE
+- Error handling: Use default value
+
+## \`maps.validators.jass.overflows\`
+- Type: enum
+- Default value: PJASS_PERMISSIVE
+- Error handling: Use default value
+
+## \`maps.validators.jass.runtime.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`maps.validators.jass.semantics.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`maps.validators.jass.string_hashes\`
+- Type: enum
+- Default value: PJASS_PERMISSIVE
+- Error handling: Use default value
+
+## \`maps.validators.jass.syntax.enabled\`
+- Type: bool
+- Default value: true
 - Error handling: Use default value
 
 ## \`metrics.ping.use_rtt\`
