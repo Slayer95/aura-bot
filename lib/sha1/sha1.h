@@ -92,15 +92,15 @@ public:
   void Reset();
 
   // Update the hash value
-  void Update(uint8_t* data, uint32_t len);
+  void Update(const uint8_t* data, uint32_t len);
 
   // Finalize hash and report
   void Final();
-  void GetHash(uint8_t* uDest);
+  void GetHash(uint8_t* uDest) const;
 
 private:
   // Private SHA-1 transformation
-  void Transform(uint32_t state[5], uint8_t buffer[64]);
+  void Transform(uint32_t state[5], const uint8_t buffer[64]);
 };
 
 #endif // AURA_SHA1_H_

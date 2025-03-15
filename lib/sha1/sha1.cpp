@@ -41,7 +41,7 @@ void CSHA1::Reset()
   m_count[1] = 0;
 }
 
-void CSHA1::Transform(uint32_t state[5], uint8_t buffer[64])
+void CSHA1::Transform(uint32_t state[5], const uint8_t buffer[64])
 {
   uint32_t a = 0, b = 0, c = 0, d = 0, e = 0;
 
@@ -149,7 +149,7 @@ void CSHA1::Transform(uint32_t state[5], uint8_t buffer[64])
 
 // Use this function to hash in binary data and strings
 
-void CSHA1::Update(uint8_t* data, uint32_t len)
+void CSHA1::Update(const uint8_t* data, uint32_t len)
 {
   uint32_t i = 0, j = 0;
 
@@ -209,7 +209,7 @@ void CSHA1::Final()
 
 // Get the raw message digest
 
-void CSHA1::GetHash(uint8_t* uDest)
+void CSHA1::GetHash(uint8_t* uDest) const
 {
   memcpy(uDest, m_digest, 20);
 }
