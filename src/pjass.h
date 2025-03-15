@@ -32,12 +32,14 @@
 #ifndef DISABLE_PJASS
 #include "../deps/pjass/include/pjass-header.h"
 
-std::pair<bool, std::string> ParseJASS(const std::vector<std::filesystem::path>& filePaths, const std::bitset<11> flags);
-std::pair<bool, std::string> ParseJASS(const std::vector<std::filesystem::path>& filePaths, const std::bitset<11> baseFlags, const Version& version);
+std::pair<bool, std::string> ParseJASSFiles(const std::vector<std::filesystem::path>& filePaths, const std::bitset<11> flags);
+std::pair<bool, std::string> ParseJASSFiles(const std::vector<std::filesystem::path>& filePaths, const std::bitset<11> baseFlags, const Version& version);
+
+std::pair<bool, std::string> ParseJASS(const std::string& commonJ, const std::string& blizzardJ, const std::bitset<11> flags);
+std::pair<bool, std::string> ParseJASS(const std::string& commonJ, const std::string& blizzardJ, const std::string& war3mapJ, const std::bitset<11> baseFlags, const Version& version);
 
 inline std::string ExtractFirstJASSError(const std::string& input)
 {
-  // TODO: Mask file path
   std::string::size_type nlIndex1 = input.find('\n');
   if (nlIndex1 == std::string::npos) return input;
   std::string::size_type nlIndex2 = input.find('\n', nlIndex1 + 1);

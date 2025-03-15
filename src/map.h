@@ -255,7 +255,9 @@ private:
   std::optional<bool>             m_MapMPQResult;
   bool                            m_UseStandardPaths;
   bool                            m_Valid;
+  bool                            m_JASSValid;
   std::string                     m_ErrorMessage;
+  std::string                     m_JASSErrorMessage;
   uint8_t                         m_HMCMode;
   uint8_t                         m_HMCTrigger1;
   uint8_t                         m_HMCTrigger2;
@@ -354,9 +356,12 @@ public:
   bool                                            NormalizeSlots();
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
-  void                                            UpdateCrypto(std::map<Version, MapCrypto>& cryptos, const Version& version, const std::string& fileContents) const;
-  void                                            UpdateCryptoEndModules(std::map<Version, MapCrypto>& cryptos) const;
-  void                                            ErroredCrypto(std::map<Version, MapCrypto>& cryptos) const;
+  void                                            UpdateCryptoModule(std::map<Version, MapCrypto>::iterator& versionCrypto, const std::string& fileContents) const; // common.j, blizzard.j
+  void                                            UpdateCryptoEndModules(std::map<Version, MapCrypto>::iterator& versionCrypto) const; // Padding sequence between blizzard.j and war3map.j
+  void                                            UpdateCryptoScripts(std::map<Version, MapCrypto>& cryptos, const Version& version, const std::string& commonJ, const std::string& blizzardJ, const std::string& war3mapJ) const; // war3map.j
+  void                                            UpdateCryptoNonScripts(std::map<Version, MapCrypto>& cryptos, const Version& version, const std::string& fileContents) const; // other files
+
+  void                                            OnLoadMPQSubFile(std::optional<MapEssentials>& mapEssentials, std::map<Version, MapCrypto>& cryptos, const std::vector<Version>& supportedVersionHeads, const std::string& fileContents, const bool isMapScript);
 
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
@@ -369,7 +374,6 @@ public:
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
 
-  void                                            TryCheckScripts(const std::vector<Version>& versionHeads, std::optional<MapEssentials>& mapEssentials);
   [[nodiscard]] bool                              TryLoadMapFilePersistent(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
   [[nodiscard]] bool                              TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32, std::optional<std::array<uint8_t, 20>>& sha1);
   [[nodiscard]] bool                              CheckMapFileIntegrity();

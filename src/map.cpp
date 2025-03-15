@@ -92,6 +92,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     //m_MapLoadingImageSize(0),
     m_MapMPQ(nullptr),
     m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
+    m_JASSValid(false),
     m_HMCMode(W3HMC_MODE_DISABLED)
 {
   m_MapSize.fill(0);
@@ -498,29 +499,112 @@ optional<MapEssentials> CMap::ParseMPQFromPath(const filesystem::path& filePath)
   return nullopt;
 }
 
-void CMap::UpdateCrypto(map<Version, MapCrypto>& cryptos, const Version& version, const string& fileContents) const
+void CMap::UpdateCryptoModule(map<Version, MapCrypto>::iterator& versionCrypto, const string& fileContents) const
+{
+  versionCrypto->second.blizz = versionCrypto->second.blizz ^ XORRotateLeft((const uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+  versionCrypto->second.sha1.Update((const uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
+}
+
+void CMap::UpdateCryptoEndModules(map<Version, MapCrypto>::iterator& versionCrypto) const
+{
+  versionCrypto->second.blizz = ROTL(versionCrypto->second.blizz, 3);
+  versionCrypto->second.blizz = ROTL(versionCrypto->second.blizz ^ 0x03F1379E, 3);
+  versionCrypto->second.sha1.Update((const uint8_t*)"\x9E\x37\xF1\x03", 4);
+}
+
+void CMap::UpdateCryptoScripts(map<Version, MapCrypto>& cryptos, const Version& version, const string& commonJ, const string& blizzardJ, const string& war3mapJ) const
 {
   auto match = cryptos.find(version);
   if (match == cryptos.end()) return; // should never happen
-  match->second.blizz = match->second.blizz ^ XORRotateLeft((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-  match->second.sha1.Update((uint8_t*)fileContents.data(), static_cast<uint32_t>(fileContents.size()));
-}
 
-void CMap::UpdateCryptoEndModules(map<Version, MapCrypto>& cryptos) const
-{
-  for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
-    auto match = cryptos.find(version);
-    if (match == cryptos.end()) continue; // should never happen
-    match->second.blizz = ROTL(match->second.blizz, 3);
-    match->second.blizz = ROTL(match->second.blizz ^ 0x03F1379E, 3);
-    match->second.sha1.Update((uint8_t*)"\x9E\x37\xF1\x03", 4);
+  // Scripts\common.j either from map file or from file system
+  if (commonJ.empty()) {
+    match->second.errored = true;
+  } else {
+    UpdateCryptoModule(match, commonJ);
   }
+
+  // Scripts\Blizzard.j either from map file or from file system
+  if (blizzardJ.empty()) {
+    match->second.errored = true;
+  } else {
+    UpdateCryptoModule(match, blizzardJ);
+  }
+
+  // Padding sequence between blizzard.j and war3map.j (0x03F1379E)
+  UpdateCryptoEndModules(match);
+
+  if (version >= GAMEVER(1u, 32u)) {
+    // Credits to Fingon for the checksum algorithm
+    match->second.blizz = XORRotateLeft(reinterpret_cast<const uint8_t*>(war3mapJ.data()), war3mapJ.size());
+  } else {
+    match->second.blizz = ROTL(match->second.blizz ^ XORRotateLeft(reinterpret_cast<const uint8_t*>(war3mapJ.data()), war3mapJ.size()), 3);
+  }
+
+  match->second.sha1.Update(reinterpret_cast<const uint8_t*>(war3mapJ.data()), war3mapJ.size());
 }
 
-void CMap::ErroredCrypto(map<Version, MapCrypto>& cryptos) const
+void CMap::UpdateCryptoNonScripts(map<Version, MapCrypto>& cryptos, const Version& version, const string& fileContents) const
 {
-  for (const auto& version : m_Aura->GetSupportedVersionsCrossPlayRangeHeads()) {
-    cryptos[version].errored = true;
+  auto match = cryptos.find(version);
+  if (match == cryptos.end()) return; // should never happen
+
+  // Credits to Fingon, BogdanW3 for the checksum algorithm
+  if (version == GAMEVER(1u, 32u)) {
+    match->second.blizz = ChunkedChecksum(reinterpret_cast<const uint8_t*>(fileContents.data()), fileContents.size(), match->second.blizz);
+  } else {
+    match->second.blizz = ROTL(match->second.blizz ^ XORRotateLeft(reinterpret_cast<const uint8_t*>(fileContents.data()), fileContents.size()), 3);
+  }
+  match->second.sha1.Update(reinterpret_cast<const uint8_t*>(fileContents.data()), fileContents.size());
+}
+
+void CMap::OnLoadMPQSubFile(optional<MapEssentials>& mapEssentials, map<Version, MapCrypto>& cryptos, const vector<Version>& supportedVersionHeads, const string& fileContents, const bool isMapScript)
+{
+  if (!isMapScript) {
+    for (const auto& version: supportedVersionHeads) {
+      UpdateCryptoNonScripts(cryptos, version, fileContents);
+    }
+  } else {
+    // Load common.j, blizzard.j as soon as we load war3map.j
+    string mapCommonJ, mapBlizzardJ;
+    ReadFileFromArchive(mapCommonJ, R"(Scripts\common.j)");
+    ReadFileFromArchive(mapBlizzardJ, R"(Scripts\blizzard.j)");
+
+    for (const auto& version: supportedVersionHeads) {
+      string baseCommonJ, baseBlizzardJ;
+      string* commonJ = &mapCommonJ;
+      string* blizzardJ = &mapBlizzardJ;
+      if (mapCommonJ.empty()) {
+        filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j");
+        if (FileRead(commonPath, baseCommonJ, MAX_READ_FILE_SIZE) && !baseCommonJ.empty()) {
+          commonJ = &baseCommonJ;
+        }
+      }
+
+      if (mapBlizzardJ.empty()) {
+        filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j");
+        if (FileRead(blizzardPath, baseBlizzardJ, MAX_READ_FILE_SIZE) && !baseBlizzardJ.empty()) {
+          blizzardJ = &baseBlizzardJ;
+        }
+      }
+
+      UpdateCryptoScripts(cryptos, version, *commonJ, *blizzardJ, fileContents);
+
+      if (!m_Aura->m_Config.m_ValidateJASS) {
+        m_JASSValid = true;
+#ifndef DISABLE_PJASS
+      } else if (!m_JASSValid) {
+        pair<bool, string> result = ParseJASS(*commonJ, *blizzardJ, fileContents, m_Aura->m_Config.m_ValidateJASSFlags, version);
+        if (!result.first) {
+          m_JASSErrorMessage = ExtractFirstJASSError(result.second);
+        } else {
+          mapEssentials->minCompatibleGameVersion = version;
+          m_JASSValid = true;
+          m_JASSErrorMessage.clear();
+        }
+#endif
+      }
+    }
   }
 }
 
@@ -594,52 +678,8 @@ optional<MapEssentials> CMap::ParseMPQ()
     cryptos[version] = MapCrypto();
   }
 
-  bool hashError = false;
   string fileContents;
-
-  ReadFileFromArchive(fileContents, R"(Scripts\common.j)");
-  if (!fileContents.empty()) {
-    Print("[MAP] overriding default common.j with map copy while calculating <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN>");
-  }
-  for (const auto& version : supportedVersionHeads) {
-    if (fileContents.empty()) {
-      string baseFileContents;
-      filesystem::path commonPath = m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j");
-      if (!FileRead(commonPath, baseFileContents, MAX_READ_FILE_SIZE) || baseFileContents.empty()) {
-        Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(commonPath) + "]");
-      } else {
-        UpdateCrypto(cryptos, version, baseFileContents);
-      }
-      hashError = hashError || baseFileContents.empty();
-    } else {
-      UpdateCrypto(cryptos, version, fileContents);
-    }
-  }
-
-  ReadFileFromArchive(fileContents, R"(Scripts\blizzard.j)");
-  if (!fileContents.empty()) {
-    Print("[MAP] overriding default blizzard.j with map copy while calculating <map.scripts_hash.blizz.vN>, and <map.scripts_hash.sha1.vN>");
-  }
-  for (const auto& version : supportedVersionHeads) {
-    if (fileContents.empty()) {
-      string baseFileContents;
-      filesystem::path blizzardPath = m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j");
-      if (!FileRead(blizzardPath, baseFileContents, MAX_READ_FILE_SIZE) || baseFileContents.empty()) {
-        Print("[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + "> - unable to read file [" + PathToString(blizzardPath) + "]");
-      } else {
-        UpdateCrypto(cryptos, version, baseFileContents);
-      }
-      hashError = hashError || baseFileContents.empty();
-    } else {
-      UpdateCrypto(cryptos, version, fileContents);
-    }
-  }
-
-  UpdateCryptoEndModules(cryptos);
-
-  if (hashError) {
-    ErroredCrypto(cryptos);
-  } else {
+  {
     bool foundScript = false;
     vector<string> fileList;
     fileList.emplace_back("war3map.j");
@@ -654,52 +694,30 @@ optional<MapEssentials> CMap::ParseMPQ()
     fileList.emplace_back("war3map.w3q");
 
     for (const auto& fileName : fileList) {
-      // don't use scripts\war3map.j if we've already used war3map.j (yes, some maps have both but only war3map.j is used)
       const bool isMapScript = GetMPQPathIsMapScript(fileName);
-
-      if (foundScript && isMapScript) {
-        continue;
-      }
-
-      ReadFileFromArchive(fileContents, fileName);
-      if (fileContents.empty()) {
-        continue;
-      }
-
       if (isMapScript) {
-        foundScript = true;
-        FileWrite(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"), reinterpret_cast<const uint8_t*>(fileContents.data()), fileContents.size());
+        // only war3map.j is used when a map has more than one map script file
+        if (foundScript) continue;
+      } else if (!foundScript) {
+        m_Valid = false;
+        m_ErrorMessage = "war3map.j or scripts\\war3map.j not found in MPQ archive";
+        break;
       }
-      for (const auto& version : supportedVersionHeads) {
-        auto mapCrypto = cryptos.find(version);
-        if (isMapScript) {
-          // TODO: Move common.j, Blizzard.j processing down here
-          if (version >= GAMEVER(1u, 32u)) {
-            // Credits to Fingon for the checksum algorithm
-            mapCrypto->second.blizz = XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
-          } else {
-            mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
-          }
-        } else {
-          // Credits to Fingon, BogdanW3 for the checksum algorithm
-          if (version == GAMEVER(1u, 32u)) {
-            mapCrypto->second.blizz = ChunkedChecksum(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size(), mapCrypto->second.blizz);
-          } else {
-            mapCrypto->second.blizz = ROTL(mapCrypto->second.blizz ^ XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size()), 3);
-          }
-        }
-        mapCrypto->second.sha1.Update(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
-      }
-    }
-
-    if (!foundScript) {
-      m_Valid = false;
-      m_ErrorMessage = "war3map.j or scripts\\war3map.j not found in MPQ archive";
+      ReadFileFromArchive(fileContents, fileName);
+      if (fileContents.empty()) continue;
+      if (isMapScript) foundScript = true;
+      OnLoadMPQSubFile(mapEssentials, cryptos, supportedVersionHeads, fileContents, isMapScript);
     }
 
     for (const auto& version : supportedVersionHeads) {
       auto mapCryptoProcessor = cryptos.find(version);
       mapEssentials->fragmentHashes[version] = MapFragmentHashes();
+      // make sure to instantiate MapFragmentHashes anyway, so that mapEssentials is in a valid state
+      // (note: contents are wrapped in std::optional)
+      if (mapCryptoProcessor->second.errored) {
+        PRINT_IF(LOG_LEVEL_WARNING, "[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">")
+        continue;
+      }
       auto mapCryptoResults = mapEssentials->fragmentHashes.find(version);
       EnsureFixedByteArray(mapCryptoResults->second.blizz, mapCryptoProcessor->second.blizz, false);
       DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.blizz.value()) + ">")
@@ -709,6 +727,11 @@ optional<MapEssentials> CMap::ParseMPQ()
       mapCryptoResults->second.sha1->fill(0);
       mapCryptoProcessor->second.sha1.GetHash(mapCryptoResults->second.sha1->data());
       DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.sha1.value()) + ">")
+    }
+
+    if (!m_JASSValid && m_ErrorMessage.empty()) {
+      m_Valid = false;
+      m_ErrorMessage = "map script is not valid JASS - " + m_JASSErrorMessage;
     }
   }
 
@@ -984,8 +1007,6 @@ optional<MapEssentials> CMap::ParseMPQ()
     if (previewImgSize.has_value()) {
       mapEssentials->previewImgSize = previewImgSize.value();
     }
-
-    TryCheckScripts(supportedVersionHeads, mapEssentials);
   } else { // end m_MapLoaderIsPartial
     DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
   }
@@ -1600,45 +1621,6 @@ bool CMap::AcquireGameVersion(CConfig* CFG)
     m_MapTargetGameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
   }
   return m_MapTargetGameVersion.has_value();
-}
-
-void CMap::TryCheckScripts(const vector<Version>& versionHeads, optional<MapEssentials>& mapEssentials)
-{
-#ifndef DISABLE_PJASS
-    if (versionHeads.empty() || !m_Aura->m_Config.m_ValidateJASS) {
-      return;
-    }
-    size_t versionHeadsCount = versionHeads.size();
-    size_t index = 0;
-    while (versionHeads[index] < mapEssentials->minCompatibleGameVersion && index < versionHeadsCount) {
-      ++index;
-    }
-    if (index >= versionHeadsCount) {
-      return;
-    }
-
-    string errorMessage;
-    do {
-      Version version = versionHeads[index];
-      vector<filesystem::path> scriptFiles;
-      // TODO: Support overrides
-      scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("common-" + ToVersionString(version) +".j"));
-      scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("blizzard-" + ToVersionString(version) +".j"));
-      scriptFiles.emplace_back(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"));
-      pair<bool, string> result = ParseJASS(scriptFiles, m_Aura->m_Config.m_ValidateJASSFlags, version);
-      if (result.first) {
-        mapEssentials->minCompatibleGameVersion = version;
-        return;
-      }
-      // Errors are likelier to be more meaningful for more recent versions,
-      // so we override the error message
-      errorMessage = ExtractFirstJASSError(result.second);
-      ++index;
-    } while (index < versionHeadsCount);
-
-    m_Valid = false;
-    m_ErrorMessage = "map script is not valid JASS - " + errorMessage;
-#endif
 }
 
 // @deprecated
