@@ -404,6 +404,13 @@ public:
   [[nodiscard]] static std::map<uint32_t, std::string> GetTrigStrMulti(const std::string& fileContents, const std::set<uint32_t> captureTargets);
 };
 
+[[nodiscard]] inline bool GetMPQPathIsMapScript(const std::string& fileName)
+{
+  if (fileName == "war3map.j") return true;
+  if (fileName == R"(scripts\war3map.j)") return true;
+  return false;
+}
+
 [[nodiscard]] inline Version GetNextVersion(const Version& version)
 {
   if (version.first == 1 && version.second == 36) {

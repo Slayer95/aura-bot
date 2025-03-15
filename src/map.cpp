@@ -655,22 +655,25 @@ optional<MapEssentials> CMap::ParseMPQ()
 
     for (const auto& fileName : fileList) {
       // don't use scripts\war3map.j if we've already used war3map.j (yes, some maps have both but only war3map.j is used)
+      const bool isMapScript = GetMPQPathIsMapScript(fileName);
 
-      if (foundScript && fileName == R"(scripts\war3map.j)")
+      if (foundScript && isMapScript) {
         continue;
+      }
 
       ReadFileFromArchive(fileContents, fileName);
       if (fileContents.empty()) {
         continue;
       }
 
-      if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
+      if (isMapScript) {
         foundScript = true;
         FileWrite(m_Aura->m_Config.m_JASSPath / filesystem::path("war3map.j"), reinterpret_cast<const uint8_t*>(fileContents.data()), fileContents.size());
       }
       for (const auto& version : supportedVersionHeads) {
         auto mapCrypto = cryptos.find(version);
-        if (fileName == "war3map.j" || fileName == R"(scripts\war3map.j)") {
+        if (isMapScript) {
+          // TODO: Move common.j, Blizzard.j processing down here
           if (version >= GAMEVER(1u, 32u)) {
             // Credits to Fingon for the checksum algorithm
             mapCrypto->second.blizz = XORRotateLeft(reinterpret_cast<uint8_t*>(fileContents.data()), fileContents.size());
