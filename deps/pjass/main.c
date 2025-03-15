@@ -171,6 +171,30 @@ static void dobuffer(char* buf, const int buf_size)
     fno++;
 }
 
+static void tryfile(const char *name)
+{
+    FILE *fp;
+#ifdef _MSC_VER
+    errno_t err = fopen_s(&fp, name, "rb");
+    if (err != 0) {
+#else
+    fp = fopen(name, "rb");
+    if (fp == NULL) {
+#endif
+        haderrors++;
+        return;
+    }
+    dofile(fp, name);
+    fclose(fp);
+    didparse = 1;
+}
+
+static void trybuffer(char* buf, const int buf_size)
+{
+  dobuffer(buf, buf_size);
+  didparse = 1;
+}
+
 static void doparse(const int targets_count, const int* targets_sizes, const char **targets, const char **flags)
 {
     int i;
@@ -188,23 +212,10 @@ static void doparse(const int targets_count, const int* targets_sizes, const cha
         }
 
         if ( flagenabled(flag_filesystem) ) {
-            FILE *fp;
-#ifdef _MSC_VER
-            errno_t err = fopen_s(&fp, targets[i], "rb");
-            if (err != 0) {
-#else
-            fp = fopen(targets[i], "rb");
-            if (fp == NULL) {
-#endif
-                haderrors++;
-                continue;
-            }
-            dofile(fp, targets[i]);
-            fclose(fp);
+          tryfile(targets[i]);
         } else {
-          dobuffer(targets[i], targets_sizes[i]);
+          trybuffer(targets[i], targets_sizes[i]);
         }
-        didparse = 1;
     }
 }
 
@@ -220,21 +231,7 @@ static void doparse_r(int _argc, const char **_argv)
             continue;
         }
 
-        FILE *fp;
-#ifdef _MSC_VER
-        errno_t err = fopen_s(&fp, _argv[i], "rb");
-        if (err != 0) {
-#else
-        fp = fopen(_argv[i], "rb");
-        if (fp == NULL) {
-#endif
-            haderrors++;
-            continue;
-        }
-
-        dofile(fp, _argv[i]);
-        didparse = 1;
-        fclose(fp);
+        tryfile(_argv[i]);
     }
 }
 
