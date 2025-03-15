@@ -121,6 +121,7 @@ static void init(char *n_output, int n_max_out_size)
       & add_flag(&available_flags, &flags_helpstring, "nosemanticerror", (void*)flag_semanticerror, "Toggle semantic error reporting")
       & add_flag(&available_flags, &flags_helpstring, "checknumberliterals", (void*)flag_checknumberliterals, "Error on overflowing number literals")
       & add_flag(&available_flags, &flags_helpstring, "oldpatch", (void*)(flag_verylongnames | flag_nomodulo | flag_filter | flag_rb), "Combined options for older patches")
+      & add_flag(&available_flags, &flags_helpstring, "f", (void*)(flag_filesystem), "Toggle treating the argument as a file path")
     )) {
       // Abort on realloc error
       return;
@@ -154,10 +155,66 @@ static void dofile(FILE *fp, const char *name)
     fno++;
 }
 
-static void doparse(int _argc, const char **_argv)
+static void dobuffer(char* buf, const int buf_size)
+{
+    lineno = 1;
+    islinebreak = 1;
+    isconstant = false;
+    inconstant = false;
+    inblock = false;
+    encoutered_first_function = false;
+    inglobals = false;
+    yy_switch_to_buffer(yy_scan_bytes(buf, buf_size));
+    curfile = ".j";
+    while ( yyparse() ) ;
+    totlines += lineno;
+    fno++;
+}
+
+static void doparse(const int targets_count, const int* targets_sizes, const char **targets, const char **flags)
+{
+    int i;
+    char *part;
+    char *flags_sep = " ";
+
+    for (i = 0; i < targets_count; ++i) {
+#ifdef _MSC_VER
+        char *ctx;
+        for(part = strtok_s(flags[i], flags_sep, &ctx), pjass_flags = 0; part; part = strtok_s(NULL, flags_sep, &ctx)){
+#else
+        for(part = strtok(flags[i], flags_sep), pjass_flags = 0; part; part = strtok(NULL, flags_sep)){
+#endif
+            pjass_flags = updateflag(pjass_flags, part, &available_flags);
+        }
+
+        if ( flagenabled(flag_filesystem) ) {
+            FILE *fp;
+#ifdef _MSC_VER
+            errno_t err = fopen_s(&fp, targets[i], "rb");
+            if (err != 0) {
+#else
+            fp = fopen(targets[i], "rb");
+            if (fp == NULL) {
+#endif
+                haderrors++;
+                continue;
+            }
+            dofile(fp, targets[i]);
+            fclose(fp);
+        } else {
+          dobuffer(targets[i], targets_sizes[i]);
+        }
+        didparse = 1;
+    }
+}
+
+static void doparse_r(int _argc, const char **_argv)
 {
     int i;
     for (i = 0; i < _argc; ++i) {
+        if( strcmp(_argv[i], "+f") == 0 ){
+            continue;
+        }
         if( isflag(_argv[i], &available_flags)){
             pjass_flags = updateflag(pjass_flags, _argv[i], &available_flags);
             continue;
@@ -181,13 +238,8 @@ static void doparse(int _argc, const char **_argv)
     }
 }
 
-int _cdecl parse_jass_files(const int file_count, const char **file_paths, char *output, int n_max_out_size, int *n_out_size)
+static int run_checker_output(char* output, int n_max_out_size, int *n_out_size, char* buffer)
 {
-    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
-    char buffer[8192];
-    init(buffer, sizeof(buffer) - 1);
-    doparse(file_count, file_paths); 
-
     if (!haderrors && didparse) {
         *n_out_size = _snprintf_s(output, n_max_out_size, n_max_out_size - 1, "Parse successful: %8d lines: %s", totlines, "<total>");
         if (*n_out_size == -1) *n_out_size = n_max_out_size - 1;
@@ -203,12 +255,57 @@ int _cdecl parse_jass_files(const int file_count, const char **file_paths, char 
     }
 }
 
+int _cdecl parse_jass(char *output, int n_max_out_size, int *n_out_size, const char* target, const int target_size)
+{
+    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    char buffer[8192];
+    init(buffer, sizeof(buffer) - 1);
+    dobuffer(target, target_size);
+    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+}
+
+int _cdecl parse_jass_triad(char *output, int n_max_out_size, int *n_out_size, const char* buf_common, const int size_common, const char* buf_blizz, const int size_blizz, const char* buf_script, const int size_script)
+{
+    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    char buffer[8192];
+    init(buffer, sizeof(buffer) - 1);
+    dobuffer(buf_common, size_common);
+    dobuffer(buf_blizz, size_blizz);
+    dobuffer(buf_script, size_script);
+    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+}
+
+int _cdecl parse_jass_custom_r(char *output, int n_max_out_size, int *n_out_size, const int targets_or_opts_count, const char **targets_or_opts)
+{
+    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    char buffer[8192];
+    init(buffer, sizeof(buffer) - 1);
+    doparse_r(targets_or_opts_count, targets_or_opts);
+    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+}
+
+int _cdecl parse_jass_custom(char *output, int n_max_out_size, int *n_out_size, const int targets_count, const int *targets_sizes, const char **targets, const char **flags)
+{
+    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    char buffer[8192];
+    init(buffer, sizeof(buffer) - 1);
+    doparse(targets_count, targets_sizes, targets, flags);
+    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+}
+
+/*
+int _cdecl parse_jass_custom_s(char *output, int n_max_out_size, int *n_out_size, const int targets_count, const int *targets_sizes, const char **targets, const char **flags)
+{
+  return parse_jass_custom(output, n_max_out_size, n_out_size, targets, targets_or_opts_count, flags);
+}
+*/
+
 #ifdef PJASS_STANDALONE
 int main(int argc, char **argv)
 {
     char buffer[8192];
     init(buffer, sizeof(buffer) - 1);
-    doparse(argc - 1, (const char **)(void*)argv[1]);
+    doparse_r(argc - 1, (const char **)(void*)&argv[1]);
 
     if (!haderrors && didparse) {
         printf("Parse successful: %8d lines: %s\n", totlines, "<total>");

@@ -67,7 +67,7 @@ pair<bool, string> ParseJASS(const vector<filesystem::path>& filePaths, const bi
     filePtrs.push_back(filePathsInner.back().c_str());
   }
 
-  result = parse_jass_files(fileCount, filePtrs.data(), buffer, maxOutSize, &outSize) == 0;
+  result = parse_jass_custom_r(buffer, maxOutSize, &outSize, fileCount, filePtrs.data()) == 0;
   if (result) {
     return make_pair(result, details);
   }
