@@ -257,40 +257,40 @@ static int run_checker_output(char* output, int n_max_out_size, int *n_out_size,
 
 int _cdecl parse_jass(char *output, int n_max_out_size, int *n_out_size, const char* target, const int target_size)
 {
-    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    if (n_max_out_size < 0) n_max_out_size = 0; // _snprintf_s returns -1
     char buffer[8192];
     init(buffer, sizeof(buffer) - 1);
     dobuffer(target, target_size);
-    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+    return run_checker_output(output, n_max_out_size, n_out_size, buffer);
 }
 
 int _cdecl parse_jass_triad(char *output, int n_max_out_size, int *n_out_size, const char* buf_common, const int size_common, const char* buf_blizz, const int size_blizz, const char* buf_script, const int size_script)
 {
-    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    if (n_max_out_size < 0) n_max_out_size = 0; // _snprintf_s returns -1
     char buffer[8192];
     init(buffer, sizeof(buffer) - 1);
     dobuffer(buf_common, size_common);
     dobuffer(buf_blizz, size_blizz);
     dobuffer(buf_script, size_script);
-    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+    return run_checker_output(output, n_max_out_size, n_out_size, buffer);
 }
 
 int _cdecl parse_jass_custom_r(char *output, int n_max_out_size, int *n_out_size, const int targets_or_opts_count, const char **targets_or_opts)
 {
-    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    if (n_max_out_size < 0) n_max_out_size = 0; // _snprintf_s returns -1
     char buffer[8192];
     init(buffer, sizeof(buffer) - 1);
     doparse_r(targets_or_opts_count, targets_or_opts);
-    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+    return run_checker_output(output, n_max_out_size, n_out_size, buffer);
 }
 
 int _cdecl parse_jass_custom(char *output, int n_max_out_size, int *n_out_size, const int targets_count, const int *targets_sizes, const char **targets, const char **flags)
 {
-    if (n_max_out_size < 0) n_max_out_size = 0; /* _snprintf_s returns -1 */
+    if (n_max_out_size < 0) n_max_out_size = 0; // _snprintf_s returns -1
     char buffer[8192];
     init(buffer, sizeof(buffer) - 1);
     doparse(targets_count, targets_sizes, targets, flags);
-    return run_checker_output(output, n_out_size, n_max_out_size, buffer);
+    return run_checker_output(output, n_max_out_size, n_out_size, buffer);
 }
 
 /*
