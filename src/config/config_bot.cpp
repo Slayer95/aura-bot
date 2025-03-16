@@ -54,10 +54,11 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_JASSPath                     = CFG.GetDirectory("bot.jass_path", CFG.GetHomeDir() / filesystem::path("jass"));
   m_GameSavePath                 = CFG.GetDirectory("bot.save_path", CFG.GetHomeDir() / filesystem::path("saves"));
 
-  // Non-configurable?
+  // Non-configurable
   m_AliasesPath                  = CFG.GetHomeDir() / filesystem::path("aliases.ini");
-  m_MainLogPath                  = CFG.GetHomeDir() / filesystem::path("aura.log");
-  m_RemoteLogPath                = CFG.GetHomeDir() / filesystem::path("remote.log");
+
+  m_MainLogPath                  = CFG.GetPath("bot.log_path", CFG.GetHomeDir() / filesystem::path("aura.log"));
+  m_RemoteLogPath                = CFG.GetPath("hosting.log_remote.file", CFG.GetHomeDir() / filesystem::path("remote.log"));
 
   set<string> supportedGameVersionStrings = CFG.GetSet("hosting.game_versions.supported", ',', true, {});
   set<Version> supportedGameVersions;
@@ -74,6 +75,9 @@ CBotConfig::CBotConfig(CConfig& CFG)
   stable_sort(m_SupportedGameVersions.begin(), m_SupportedGameVersions.end());
 
   m_TargetCommunity              = CFG.GetBool("hosting.game_versions.community", false);
+
+  m_AllowJASS                    = CFG.GetBool("maps.jass.enabled", true);
+  m_AllowLua                     = CFG.GetStringIndex("maps.lua.enabled", {"never", "always", "auto"}, MAP_ALLOW_LUA_AUTO);
 
 #ifdef DISABLE_PJASS
   m_ValidateJASS                 = CFG.GetBool("maps.validators.jass.enabled", false);
@@ -96,7 +100,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
     m_ValidateJASSFlags.set(PJASS_OPTIONS_NORUNTIMEERROR);
   }
 
-  if (CFG.GetStringIndex("maps.validators.jass.filters_signature", {"permissive", "strict"}, PJASS_PERMISSIVE) == PJASS_STRICT) {
+  if (CFG.GetStringIndex("maps.validators.jass.filters_signatures", {"permissive", "strict"}, PJASS_PERMISSIVE) == PJASS_STRICT) {
     m_ValidateJASSFlags.set(PJASS_OPTIONS_FILTER);
   }
   if (CFG.GetStringIndex("maps.validators.jass.globals_initialization", {"permissive", "strict"}, PJASS_PERMISSIVE) == PJASS_STRICT) {

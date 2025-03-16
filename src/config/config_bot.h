@@ -38,9 +38,11 @@ struct CBotConfig
 {
   bool                                    m_Enabled;                     // set to false to prevent new games from being created
   bool                                    m_TargetCommunity;
+  bool                                    m_AllowJASS;
   bool                                    m_ExtractJASS;
   bool                                    m_ValidateJASS;
   std::bitset<11>                         m_ValidateJASSFlags;
+  uint8_t                                 m_AllowLua;
   std::optional<Version>                  m_Warcraft3DataVersion;        // warcraft 3 version
   std::optional<std::filesystem::path>    m_Warcraft3Path;               // Warcraft 3 path
   std::filesystem::path                   m_MapPath;                     // map path

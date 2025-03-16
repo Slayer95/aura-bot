@@ -1810,6 +1810,30 @@ string CMap::CheckProblems()
     return m_ErrorMessage;
   }
 
+  if (!m_MapIsLua && !m_Aura->m_Config.m_AllowJASS) {
+    m_Valid = false;
+    m_ErrorMessage = "only Lua maps are allowed";
+    return m_ErrorMessage;
+  }
+
+  if (m_MapIsLua) {
+    switch (m_Aura->m_Config.m_AllowLua) {
+      case MAP_ALLOW_LUA_NEVER: {
+        m_Valid = false;
+        m_ErrorMessage = "map script uses Lua, which is not allowed";
+        return m_ErrorMessage;
+      }
+      case MAP_ALLOW_LUA_AUTO: {
+        Version minVersion = m_Aura->m_Config.m_TargetCommunity ? GAMEVER(1u, 29u) : GAMEVER(1u, 31u);
+        if (m_MapTargetGameVersion.has_value() && m_MapTargetGameVersion.value() < minVersion) {
+          m_Valid = false;
+          m_ErrorMessage = "map script uses Lua, which is not allowed";
+          return m_ErrorMessage;
+        }
+      }
+    }
+  }
+
   if (m_ClientMapPath.find('/') != string::npos)
     Print(R"(warning - map.path contains forward slashes '/' but it must use Windows style back slashes '\')");
 
