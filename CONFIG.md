@@ -55,6 +55,11 @@ Config
 - Default value: LOG_LEVEL_INFO - 1
 - Error handling: Use default value
 
+## \`bot.log_path\`
+- Type: path
+- Default value: Aura home directory
+- Error handling: Use default value
+
 ## \`bot.map_cache_path\`
 - Type: directory
 - Default value: Aura home directory
@@ -1008,6 +1013,11 @@ Config
 - Default value: false
 - Error handling: Use default value
 
+## \`hosting.log_remote.file\`
+- Type: path
+- Default value: Aura home directory
+- Error handling: Use default value
+
 ## \`hosting.log_remote.mode\`
 - Type: enum
 - Default value: LOG_REMOTE_MODE_NETWORK
@@ -1199,6 +1209,16 @@ Config
 - Default value: auto
 - Error handling: Use default value
 
+## \`maps.jass.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`maps.lua.enabled\`
+- Type: enum
+- Default value: MAP_ALLOW_LUA_AUTO
+- Error handling: Use default value
+
 ## \`maps.storage.delete_huge.enabled\`
 - Type: bool
 - Default value: false
@@ -1219,7 +1239,7 @@ Config
 - Default value: true
 - Error handling: Use default value
 
-## \`maps.validators.jass.filters_signature\`
+## \`maps.validators.jass.filters_signatures\`
 - Type: enum
 - Default value: PJASS_PERMISSIVE
 - Error handling: Use default value
