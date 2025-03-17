@@ -187,6 +187,9 @@ Commands
 
 ## \`key\`
 
+## \`lanversion\`
+- Syntax: lanversion \<PLAYERNAME\>, \<VERSION\>
+
 ## \`latency\`
 - Syntax: latency [REFRESH]
 - Syntax: latency [REFRESH], [TOLERANCE]
