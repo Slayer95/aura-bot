@@ -102,6 +102,7 @@ namespace GameUser
     uint8_t                          m_UID;                          // the player's UID
     uint8_t                          m_OldUID;
     uint8_t                          m_PseudonymUID;
+    Version                          m_GameVersion;
     bool                             m_Verified;                     // if the player has spoof checked or not
     bool                             m_Owner;                        // if the player has spoof checked or not
     bool                             m_Reserved;                     // if the player is reserved (VIP) or not
@@ -153,7 +154,7 @@ namespace GameUser
     uint8_t                          m_RemainingSaves;
     uint8_t                          m_RemainingPauses;
 
-    CGameUser(CGame* game, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
+    CGameUser(CGame* game, CConnection* connection, uint8_t nUID, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
 
     [[nodiscard]] uint32_t GetOperationalRTT() const;
@@ -164,6 +165,7 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
     [[nodiscard]] inline uint8_t                  GetOldUID() const { return m_OldUID; }
     [[nodiscard]] inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
+    [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
     [[nodiscard]] inline std::string              GetName() const { return m_Name; }
     [[nodiscard]] std::string                     GetLowerName() const;
     [[nodiscard]] std::string                     GetDisplayName() const;

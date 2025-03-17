@@ -169,7 +169,8 @@ public:
   std::string                             GetCanonicalDisplayName() const;
   std::string                             GetDataBaseID() const;
   std::string                             GetLogPrefix() const;
-  std::optional<Version>                  CalcGameVersion() const;
+  std::optional<Version>                  GetExpectedGameVersion() const;
+  std::optional<Version>                  ResolveGameVersion() const;
   std::optional<bool>                     GetIsGameVersionCompatible(const CGame* game) const;
   inline uint8_t       GetHostCounterID() const { return m_PublicServerID; }
   inline uint32_t      GetInternalID() const { return m_InternalServerID; }

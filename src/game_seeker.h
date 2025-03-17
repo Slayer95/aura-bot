@@ -47,6 +47,7 @@ public:
   ~CGameSeeker();
 
   inline const bool HasGameVersion() const { return m_GameVersion.has_value(); }
+  inline const std::optional<Version>& GetMaybeGameVersion() const { return m_GameVersion; }
   inline const Version& GetGameVersion() const { return m_GameVersion.value(); }
 
   // processing functions

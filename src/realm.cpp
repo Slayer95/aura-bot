@@ -599,7 +599,7 @@ void CRealm::Update(void* fd, void* send_fd)
       m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
 
       PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "connected to [" + m_HostName + "]")
-      optional<Version> gameVersion = CalcGameVersion();
+      optional<Version> gameVersion = ResolveGameVersion();
       if (!gameVersion.has_value()) {
         PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "config error - misconfigured <realm_" + to_string(m_ServerIndex) + ".auth_exe_version>")
         Disable();
@@ -913,7 +913,18 @@ string CRealm::GetLogPrefix() const
   return "[BNET: " + m_Config.m_UniqueName + "] ";
 }
 
-optional<Version> CRealm::CalcGameVersion() const
+optional<Version> CRealm::GetExpectedGameVersion() const
+{
+  optional<Version> result;
+  if (m_GameVersion >= GAMEVER(1u, 0u)) {
+    result = m_GameVersion;
+  } else if (m_Config.m_AuthWar3Version.has_value()) {
+    result = m_Config.m_AuthWar3Version.value();
+  }
+  return result;
+}
+
+optional<Version> CRealm::ResolveGameVersion() const
 {
   optional<Version> result;
   if (m_Config.m_AuthWar3Version.has_value()) {

@@ -65,7 +65,7 @@ using namespace GameUser;
 // CGameUser
 //
 
-CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
+CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const Version& gameVersion, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
   : CConnection(*connection),
     m_Game(nGame),
     m_IPv4Internal(std::move(nInternalIP)),
@@ -95,6 +95,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, uint32
     m_UID(nUID),
     m_OldUID(0xFF),
     m_PseudonymUID(0xFF),
+    m_GameVersion(gameVersion),
     m_Verified(false),
     m_Owner(false),
     m_Reserved(nReserved),

@@ -67,6 +67,7 @@ public:
   [[nodiscard]] inline sockaddr_storage*          GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
   [[nodiscard]] inline bool                       GetIsUDPTunnel() const { return m_Type == INCON_TYPE_UDP_TUNNEL; }
   [[nodiscard]] inline bool                       GetIsVLAN() const { return m_Type == INCON_TYPE_VLAN; }
+  [[nodiscard]] inline bool                       GetIsGameSeeker() const { return m_Type == INCON_TYPE_UDP_TUNNEL || m_Type == INCON_TYPE_VLAN; }
   [[nodiscard]] inline uint8_t                    GetType() const { return m_Type; }
   [[nodiscard]] inline uint16_t                   GetPort() const { return m_Port; }
   [[nodiscard]] inline bool                       GetDeleteMe() const { return m_DeleteMe; }

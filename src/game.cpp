@@ -2959,6 +2959,40 @@ bool CGame::SetLayoutOneVsAll(const GameUser::CGameUser* targetPlayer)
   return true;
 }
 
+optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const sockaddr_storage* address) const
+{
+  return nullopt;
+}
+
+Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const
+{
+  optional<Version> maybeVersion;
+  if (user->GetIsGameSeeker()) {
+    const CGameSeeker* seeker = reinterpret_cast<const CGameSeeker*>(user);
+    maybeVersion = seeker->GetMaybeGameVersion();
+    if (maybeVersion.has_value()) {
+      return maybeVersion.value();
+    }
+  }
+
+  if (fromRealm) {
+    maybeVersion = fromRealm->GetExpectedGameVersion();
+    if (maybeVersion.has_value()) {
+      return maybeVersion.value();
+    }
+  }
+
+  {
+    string playerName = TrimString(ToLowerCase(joinRequest->GetName()));
+    maybeVersion = GetOverrideLANVersion(playerName, user->GetRemoteAddress());
+    if (maybeVersion.has_value()) {
+      return maybeVersion.value();
+    }
+  }
+
+  return GetVersion();
+}
+
 bool CGame::GetIsAutoStartDue() const
 {
   if (m_Users.empty() || m_CountDownStarted || m_AutoStartRequirements.empty()) {
@@ -3139,11 +3173,10 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
   }
 }
 
-void CGame::SendMapCheck(CConnection* user, const CIncomingJoinRequest* joinRequest) const
+void CGame::SendMapCheck(CConnection* user, const Version& version) const
 {
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
-  const Version& version = GetVersion();
   if (version >= GAMEVER(1u, 23u)) {
     user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
   } else {
@@ -4589,7 +4622,7 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
   }
 }
 
-GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
+GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin)
 {
   // If realms are reloaded, HostCounter may change.
   // However, internal realm IDs maps to constant realm input IDs.
@@ -4601,7 +4634,20 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
     if (matchingRealm) internalRealmId = matchingRealm->GetInternalID();
   }
 
-  GameUser::CGameUser* Player = new GameUser::CGameUser(this, connection, UID == 0xFF ? GetNewUID() : UID, internalRealmId, JoinedRealm, joinRequest->GetName(), joinRequest->GetIPv4Internal(), IsReserved);
+  Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm);
+
+  GameUser::CGameUser* Player = new GameUser::CGameUser(
+    this,
+    connection, 
+    UID == 0xFF ? GetNewUID() : UID,
+    gameVersion,
+    internalRealmId,
+    JoinedRealm,
+    joinRequest->GetName(),
+    joinRequest->GetIPv4Internal(),
+    IsReserved
+  );
+
   // Now, socket belongs to GameUser::CGameUser. Don't look for it in CConnection.
 
   m_Users.push_back(Player);
@@ -4637,7 +4683,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   SendJoinedPlayersInfo(Player);
 
   // send a map check packet to the new user.
-  SendMapCheck(Player, joinRequest);
+  SendMapCheck(Player, gameVersion);
 
   // send slot info to everyone, so the new user gets this info twice but everyone else still needs to know the new slot layout.
   SendAllSlotInfo();
@@ -4688,14 +4734,16 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   return Player;
 }
 
-void CGame::SimulateJoinAndStart(CConnection* connection, CIncomingJoinRequest* joinRequest)
+void CGame::SimulateJoinAndStart(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm)
 {
   if (m_JoinInProgressSID == 0xFF) return;
   const uint8_t UID = m_Slots[m_JoinInProgressSID].GetUID();
+  const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
+
   connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(UID, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
   SendFakeUsersInfo(connection);
   SendJoinedPlayersInfo(connection);
-  SendMapCheck(connection, joinRequest);
+  SendMapCheck(connection, gameVersion);
   connection->Send(GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   string notice = "Simulating join and start for user [" + joinRequest->GetName() + "]";

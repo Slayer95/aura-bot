@@ -400,6 +400,8 @@ public:
   ImmutableUserList                                      GetObservers() const;
   ImmutableUserList                                      GetUnreadyPlayers() const;
   ImmutableUserList                                      GetWaitingReconnectPlayers() const;
+  std::optional<Version>                                 GetOverrideLANVersion(const std::string& playerName, const sockaddr_storage* address) const;
+  Version                                                GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const;
   bool                                                   GetIsAutoStartDue() const;
   std::string                                            GetAutoStartText() const;
   std::string                                            GetReadyStatusText() const;
@@ -478,7 +480,7 @@ public:
   void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;
   void                                                   SendFakeUsersInfo(CConnection* user) const;
   void                                                   SendJoinedPlayersInfo(CConnection* user) const;
-  void                                                   SendMapCheck(CConnection* user, const CIncomingJoinRequest* joinRequest) const;
+  void                                                   SendMapCheck(CConnection* user, const Version& gameVersion) const;
   void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
   void                                                   SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
@@ -608,8 +610,8 @@ public:
   uint8_t                   GetEmptyObserverSID() const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
-  GameUser::CGameUser*                JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
-  void                      SimulateJoinAndStart(CConnection* connection, CIncomingJoinRequest* joinRequest);
+  GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  void                      SimulateJoinAndStart(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm);
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;
