@@ -603,7 +603,7 @@ void CGame::StartGameOverTimer(bool isMMD)
     SendAllChat("Gameover timer started (disconnecting in " + to_string(m_GameOverTolerance.value_or(60)) + " seconds...)");
   }
 
-  if (GetIsLobby()) {
+  if (GetIsLobbyOrMirror()) {
     if (GetUDPEnabled()) {
       SendGameDiscoveryDecreate();
       SetUDPEnabled(false);

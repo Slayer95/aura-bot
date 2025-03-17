@@ -1479,7 +1479,7 @@ void CAura::EventGameDeleted(CGame* game)
     m_AutoReHosted = false;
   }
 
-  if (game->GetIsLobby()) {
+  if (game->GetIsLobbyOrMirror()) {
     Print("[AURA] deleting lobby [" + game->GetGameName() + "]");
     if (game->GetUDPEnabled()) {
       game->SendGameDiscoveryDecreate();

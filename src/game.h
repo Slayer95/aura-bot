@@ -336,7 +336,7 @@ public:
   inline bool                                            GetGameLoading() const { return m_GameLoading; }
   inline bool                                            GetGameLoaded() const { return m_GameLoaded; }
   inline bool                                            GetLobbyLoading() const { return m_LobbyLoading; }
-  inline bool                                            GetIsLobby() const { return !m_GameLoading && !m_GameLoaded; }
+  inline bool                                            GetIsLobbyOrMirror() const { return !m_GameLoading && !m_GameLoaded; }
   inline bool                                            GetIsLobbyStrict() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool                                            GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline uint32_t                                        GetSyncCounter() const { return m_SyncCounter; }

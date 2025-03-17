@@ -85,9 +85,9 @@ struct CGameConfig
   uint32_t                 m_LacksMapKickDelay;
   uint32_t                 m_LogDelay;
 
-  bool                          m_CheckJoinable;
-  std::vector<sockaddr_storage> m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
-  uint8_t                       m_ReconnectionMode;
+  bool                            m_CheckJoinable;
+  std::vector<sockaddr_storage>   m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
+  uint8_t                         m_ReconnectionMode;
 
   std::string              m_PrivateCmdToken;            // a symbol prefix to identify commands and send a private reply
   std::string              m_BroadcastCmdToken;          // a symbol prefix to identify commands and send the reply to everyone
