@@ -218,7 +218,7 @@ void CDiscord::Update()
     }
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(m_Aura, m_Aura->m_CommandDefaultConfig, event, &std::cout);
+      ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, event, &std::cout);
     } catch (...) {
       delete event;
       m_CommandQueue.pop();
