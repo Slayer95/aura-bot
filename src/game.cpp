@@ -2721,17 +2721,15 @@ bool CGame::SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerT
     CloseAllTeamSlots(computerTeam);
   } else {
     uint8_t remainingSlots = m_Map->GetMapNumControllers() - GetNumControllers();
-    if (remainingSlots > 0) {
-      for (auto& slot : m_Slots) {
-        if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
-        uint8_t targetTeam = slot.GetIsComputer() ? computerTeam : humanTeam;
-        uint8_t wasTeam = slot.GetTeam();
-        if (wasTeam != targetTeam) {
-          slot.SetTeam(targetTeam);
-          m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
-          if (wasTeam == m_Map->GetVersionMaxSlots()) {
-            if (--remainingSlots == 0) break;
-          }
+    for (auto& slot : m_Slots) {
+      if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
+      const uint8_t targetTeam = slot.GetIsComputer() ? computerTeam : humanTeam;
+      const uint8_t wasTeam = slot.GetTeam();
+      if (wasTeam != targetTeam && (remainingSlots > 0 || wasTeam != m_Map->GetVersionMaxSlots())) {
+        slot.SetTeam(targetTeam);
+        m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+        if (wasTeam == m_Map->GetVersionMaxSlots()) {
+          if (--remainingSlots == 0) break;
         }
       }
     }
@@ -2949,7 +2947,7 @@ optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const s
   if (match == m_Config.m_GameVersionsByLANPlayerNames.end()) {
     return nullopt;
   }
-  return optional<Version>(match->second)
+  return optional<Version>(match->second);
 }
 
 Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const
@@ -9471,7 +9469,7 @@ bool CGame::GetAllowsIPFlood() const
 
 string CGame::GetIndexHostName() const
 {
-  return m_Config.m_IndexVirtualHostName;
+  return m_Config.m_IndexHostName;
 }
 
 string CGame::GetLobbyVirtualHostName() const
