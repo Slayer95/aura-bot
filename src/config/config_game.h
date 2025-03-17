@@ -92,7 +92,7 @@ struct CGameConfig
   std::string              m_PrivateCmdToken;            // a symbol prefix to identify commands and send a private reply
   std::string              m_BroadcastCmdToken;          // a symbol prefix to identify commands and send the reply to everyone
   bool                     m_EnableBroadcast;
-  std::string              m_IndexVirtualHostName;       // index virtual host name
+  std::string              m_IndexHostName;       // index virtual host name
   std::string              m_LobbyVirtualHostName;       // lobby virtual host name
   bool                     m_NotifyJoins;                // whether the bot should beep when a user joins a hosted game
   std::set<std::string>    m_IgnoredNotifyJoinPlayers;

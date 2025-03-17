@@ -129,7 +129,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   if (!m_EnableBroadcast)
     m_BroadcastCmdToken.clear();
 
-  m_IndexVirtualHostName                   = CFG.GetString("hosting.index.creator_name", 1, 15, "");
+  m_IndexHostName                   = CFG.GetString("hosting.index.creator_name", 1, 15, "");
   m_LobbyVirtualHostName                   = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
   m_NotifyJoins                            = CFG.GetBool("ui.notify_joins.enabled", false);
@@ -225,9 +225,9 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT(m_BroadcastCmdToken)
   INHERIT(m_EnableBroadcast)
 
-  INHERIT(m_IndexVirtualHostName)
-  if (m_IndexVirtualHostName.empty()) {
-    m_IndexVirtualHostName = nGameSetup->m_CreatedBy.empty() ? "Aura Bot" : nGameSetup->m_CreatedBy;
+  INHERIT(m_IndexHostName)
+  if (m_IndexHostName.empty()) {
+    m_IndexHostName = nGameSetup->m_CreatedBy.empty() ? "Aura Bot" : nGameSetup->m_CreatedBy;
   }
 
   INHERIT(m_LobbyVirtualHostName)

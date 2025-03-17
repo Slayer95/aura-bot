@@ -308,7 +308,7 @@ public:
   inline std::string                                     GetGameName() const { return m_GameName; }
   inline uint64_t                                        GetGameID() const { return m_GameHistoryId; }
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
-  std::string                                            GetIndexVirtualHostName() const;
+  std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
   std::string                                            GetPrefixedGameName(const CRealm* realm = nullptr) const;
   std::string                                            GetAnnounceText(const CRealm* realm = nullptr) const;

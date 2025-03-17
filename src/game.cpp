@@ -3728,7 +3728,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
       GetAnnounceWidth(),
       GetAnnounceHeight(),
       m_GameName,
-      GetIndexVirtualHostName(),
+      GetIndexHostName(),
       uptime,
       GetSourceFilePath(),
       GetSourceFileHashBlizz(gameVersion),
@@ -3773,7 +3773,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     GetAnnounceWidth(),
     GetAnnounceHeight(),
     m_GameName,
-    GetIndexVirtualHostName(),
+    GetIndexHostName(),
     GetSourceFilePath(),
     GetSourceFileHashBlizz(GetVersion()),
     static_cast<uint32_t>(m_Slots.size()), // Total Slots
@@ -3923,7 +3923,7 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       GetAnnounceWidth(),
       GetAnnounceHeight(),
       m_GameName,
-      GetIndexVirtualHostName(),
+      GetIndexHostName(),
       GetUptime(), // dynamic
       GetSourceFilePath(),
       GetSourceFileHashBlizz(GetVersion()),
@@ -9458,7 +9458,7 @@ bool CGame::GetAllowsIPFlood() const
   return m_Config.m_IPFloodHandler != ON_IPFLOOD_DENY;
 }
 
-string CGame::GetIndexVirtualHostName() const
+string CGame::GetIndexHostName() const
 {
   return m_Config.m_IndexVirtualHostName;
 }
