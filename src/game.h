@@ -219,7 +219,8 @@ protected:
   uint16_t                                               m_PublicHostPort;
   uint8_t                                                m_DisplayMode;                   // game state, public or private
   bool                                                   m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
-  uint8_t                                                m_VirtualHostUID;                // host's UID
+  uint8_t                                                m_JoinInProgressSID;
+  uint8_t                                                m_VirtualHostUID;                // virtual host's UID - note that they don't get a SID
   uint8_t                                                m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                                                   m_Exiting;                       // set to true and this instance will be deleted next update
   bool                                                   m_ExitingSoon;                   // set to true and this instance will be deleted when no players remain
@@ -474,10 +475,10 @@ public:
   bool                                                   SendAllChat(uint8_t fromUID, const std::string& message) const;
   bool                                                   SendAllChat(const std::string& message) const;
   void                                                   SendAllSlotInfo();
-  void                                                   SendVirtualHostPlayerInfo(CConnection* player) const;
-  void                                                   SendFakeUsersInfo(CConnection* player) const;
-  void                                                   SendJoinedPlayersInfo(CConnection* player) const;
-  void                                                   SendMapCheck(GameUser::CGameUser* user) const;
+  void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;
+  void                                                   SendFakeUsersInfo(CConnection* user) const;
+  void                                                   SendJoinedPlayersInfo(CConnection* user) const;
+  void                                                   SendMapCheck(CConnection* user) const;
   void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
   void                                                   SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
@@ -548,6 +549,7 @@ public:
 
   // these events are called outside of any iterations
 
+  void                      HandleHCL();
   void                      EventGameStartedLoading();
   void                      EventGameLoaded();
   void                      HandleGameLoadedStats();
@@ -607,6 +609,7 @@ public:
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
   GameUser::CGameUser*                JoinPlayer(CConnection* connection, CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  void                      SimulateJoinAndStart(CConnection* connection, CIncomingJoinRequest* joinRequest);
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;

@@ -324,6 +324,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
     m_DisplayMode(nGameSetup->m_RealmsDisplayMode),
     m_IsAutoVirtualPlayers(false),
+    m_JoinInProgressSID(0xFF),
     m_VirtualHostUID(0xFF),
     m_Exiting(false),
     m_ExitingSoon(false),
@@ -478,6 +479,7 @@ void CGame::ClearActions()
 void CGame::Reset()
 {
   m_PauseUser = nullptr;
+  m_JoinInProgressSID = 0xFF;
   m_FakeUsers.clear();
 
   for (auto& entry : m_SyncPlayers) {
@@ -3115,6 +3117,9 @@ void CGame::SendFakeUsersInfo(CConnection* user) const
   }
 
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    if (fakeUser.GetSID() == m_JoinInProgressSID) {
+      continue;
+    }
     Send(user, fakeUser.GetPlayerInfoBytes());
   }
 }
@@ -3134,7 +3139,7 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
   }
 }
 
-void CGame::SendMapCheck(GameUser::CGameUser* user) const
+void CGame::SendMapCheck(CConnection* user) const
 {
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
@@ -4683,6 +4688,24 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   return Player;
 }
 
+void CGame::SimulateJoinAndStart(CConnection* connection, CIncomingJoinRequest* joinRequest)
+{
+  if (m_JoinInProgressSID == 0xFF) return;
+  const uint8_t UID = m_Slots[m_JoinInProgressSID].GetUID();
+  connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(UID, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+  SendFakeUsersInfo(connection);
+  SendJoinedPlayersInfo(connection);
+  SendMapCheck(connection);
+  connection->Send(GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+
+  string notice = "Simulating join and start for user [" + joinRequest->GetName() + "]";
+  SendAsChat(connection, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(GetHostUID(), CreateByteArray(UID), 16, vector<uint8_t>(), notice));
+  LOG_APP_IF(LOG_LEVEL_NOTICE, notice)
+
+  connection->Send(GameProtocol::SEND_W3GS_COUNTDOWN_START());
+  connection->Send(GameProtocol::SEND_W3GS_COUNTDOWN_END());
+}
+
 bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAddress) const
 {
   // check for multiple IP usage
@@ -5779,12 +5802,8 @@ void CGame::EventUserMapReady(GameUser::CGameUser* user)
   UpdateReadyCounters();
 }
 
-// keyword: EventGameLoading
-void CGame::EventGameStartedLoading()
+void CGame::HandleHCL()
 {
-  if (GetUDPEnabled())
-    SendGameDiscoveryDecreate();
-
   // encode the HCL command string in the slot handicaps
   // here's how it works:
   //  the user inputs a command string to be sent to the map
@@ -5799,48 +5818,57 @@ void CGame::EventGameStartedLoading()
   //  note: if you attempt to use the HCL system on a map that does not support HCL the bot will drastically modify the handicaps
   //  since the map won't automatically restore the original handicaps in this case your game will be ruined
 
-  if (!m_HCLCommandString.empty())
-  {
-    if (m_HCLCommandString.size() <= GetSlotsOccupied())
-    {
-      string HCLChars = "abcdefghijklmnopqrstuvwxyz0123456789 -=,.";
-
-      if (m_HCLCommandString.find_first_not_of(HCLChars) == string::npos)
-      {
-        uint8_t EncodingMap[256];
-        uint8_t j = 0;
-
-        for (auto& encode : EncodingMap)
-        {
-          // the following 7 handicap values are forbidden
-
-          if (j == 0 || j == 50 || j == 60 || j == 70 || j == 80 || j == 90 || j == 100)
-            ++j;
-
-          encode = j++;
-        }
-
-        uint8_t CurrentSlot = 0;
-
-        for (auto& character : m_HCLCommandString)
-        {
-          while (m_Slots[CurrentSlot].GetSlotStatus() != SLOTSTATUS_OCCUPIED)
-            ++CurrentSlot;
-
-          uint8_t HandicapIndex = (m_Slots[CurrentSlot].GetHandicap() - 50) / 10;
-          uint8_t CharIndex     = static_cast<uint8_t>(HCLChars.find(character));
-          m_Slots[CurrentSlot++].SetHandicap(EncodingMap[HandicapIndex + CharIndex * 6]);
-        }
-
-        m_SlotInfoChanged |= SLOTS_HCL_INJECTED;
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "successfully encoded mode as HCL string [" + m_HCLCommandString + "]")
-      } else {
-        LOG_APP_IF(LOG_LEVEL_ERROR, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because it contains invalid characters")
-      }
-    } else {
-      LOG_APP_IF(LOG_LEVEL_INFO, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because there aren't enough occupied slots")
-    }
+  if (m_HCLCommandString.empty()) {
+    return;
   }
+
+  if (m_HCLCommandString.size() > GetSlotsOccupied()) {
+    LOG_APP_IF(LOG_LEVEL_INFO, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because there aren't enough occupied slots")
+    return;
+  }
+
+  string HCLChars = "abcdefghijklmnopqrstuvwxyz0123456789 -=,.";
+
+  if (m_HCLCommandString.find_first_not_of(HCLChars) != string::npos) {
+    LOG_APP_IF(LOG_LEVEL_ERROR, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because it contains invalid characters")
+    return;
+  }
+
+  uint8_t EncodingMap[256];
+  uint8_t j = 0;
+
+  for (auto& encode : EncodingMap) {
+    // the following 7 handicap values are forbidden
+
+    if (j == 0 || j == 50 || j == 60 || j == 70 || j == 80 || j == 90 || j == 100)
+      ++j;
+
+    encode = j++;
+  }
+
+  uint8_t CurrentSlot = 0;
+
+  for (auto& character : m_HCLCommandString) {
+    while (m_Slots[CurrentSlot].GetSlotStatus() != SLOTSTATUS_OCCUPIED)
+      ++CurrentSlot;
+
+    uint8_t HandicapIndex = (m_Slots[CurrentSlot].GetHandicap() - 50) / 10;
+    uint8_t CharIndex     = static_cast<uint8_t>(HCLChars.find(character));
+    m_Slots[CurrentSlot++].SetHandicap(EncodingMap[HandicapIndex + CharIndex * 6]);
+  }
+
+  m_SlotInfoChanged |= SLOTS_HCL_INJECTED;
+  LOG_APP_IF(LOG_LEVEL_DEBUG, "successfully encoded mode as HCL string [" + m_HCLCommandString + "]")
+}
+
+// keyword: EventGameLoading
+void CGame::EventGameStartedLoading()
+{
+  if (GetUDPEnabled()) {
+    SendGameDiscoveryDecreate();
+  }
+
+  HandleHCL();
 
   m_StartedLoadingTicks    = GetTicks();
   m_LastLagScreenResetTime = GetTime();
@@ -5867,6 +5895,7 @@ void CGame::EventGameStartedLoading()
     ShowPlayerNamesGameStartLoading();
   }
 
+  bool virtualHostIsObserver = false;
   if (!m_RestoredGame && GetSlotsOpen() > 0) {
     // Assign an available slot to our virtual host.
     // That makes it a fake user.
@@ -5879,10 +5908,16 @@ void CGame::EventGameStartedLoading()
     }
 
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-      if (CreateFakeObserver(true)) ++m_JoinedVirtualHosts;
+      if (CreateFakeObserver(true)) {
+        ++m_JoinedVirtualHosts;
+        virtualHostIsObserver = true;
+      }
     } else {
       if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() > 0 && GetNumFakeObservers() == 0) {
-        if (CreateFakeObserver(true)) ++m_JoinedVirtualHosts;
+        if (CreateFakeObserver(true)) {
+          ++m_JoinedVirtualHosts;
+          virtualHostIsObserver = true;
+        }
       }
       if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
         if (CreateFakePlayer(true)) ++m_JoinedVirtualHosts;
@@ -5890,9 +5925,17 @@ void CGame::EventGameStartedLoading()
     }
   }
 
-  if (m_Config.m_EnableJoinObserversInProgress && !GetIsCustomForces()) {
-    // TODO: Join-in-progress select observer slot
-    // Let's also choose the virtual host fake player, if it exists.
+  if (m_Config.m_EnableJoinObserversInProgress) {
+    const bool isCustomForces = GetIsCustomForces();
+    for (const auto& fakeUser : m_FakeUsers) {
+      if (virtualHostIsObserver && fakeUser.GetName() != GetLobbyVirtualHostName()) {
+        // Choose the virtual host fake player, if it exists.
+        continue;
+      }
+      if (!isCustomForces || fakeUser.GetIsObserver()) {
+        m_JoinInProgressSID = fakeUser.GetSID();
+      }
+    }
   }
 
   //if (GetNumJoinedUsersOrFake() < 2) {
@@ -6430,6 +6473,7 @@ void CGame::Remake()
   m_CustomLayout = 0;
 
   m_IsAutoVirtualPlayers = false;
+  m_JoinInProgressSID = 0xFF;
   m_VirtualHostUID = 0xFF;
   m_ExitingSoon = false;
   m_SlotInfoChanged = 0;
@@ -9230,6 +9274,9 @@ bool CGame::DeleteFakeUser(uint8_t SID)
       }
       // Ensure this is sent before virtual host rejoins
       SendAll(it->GetGameQuitBytes(PLAYERLEAVE_LOBBY));
+      if (it->GetSID() == m_JoinInProgressSID) {
+        m_JoinInProgressSID = 0xFF;
+      }
       it = m_FakeUsers.erase(it);
       CreateVirtualHost();
       m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -9298,6 +9345,7 @@ void CGame::DeleteFakeUsersLobby()
     SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_LOBBY));
   }
 
+  m_JoinInProgressSID = 0xFF;
   m_FakeUsers.clear();
   CreateVirtualHost();
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -9312,6 +9360,7 @@ void CGame::DeleteFakeUsersLoaded()
     SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_DISCONNECT));
   }
 
+  m_JoinInProgressSID = 0xFF;
   m_FakeUsers.clear();
 }
 
