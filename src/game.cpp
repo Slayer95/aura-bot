@@ -2945,7 +2945,11 @@ bool CGame::SetLayoutOneVsAll(const GameUser::CGameUser* targetPlayer)
 
 optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const sockaddr_storage* address) const
 {
-  return nullopt;
+  auto match = m_Config.m_GameVersionsByLANPlayerNames.find(playerName);
+  if (match == m_Config.m_GameVersionsByLANPlayerNames.end()) {
+    return nullopt;
+  }
+  return optional<Version>(match->second)
 }
 
 Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const

@@ -4167,6 +4167,68 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !LANVERSION
+    //
+
+    case HashCode("lanversion"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame || !m_TargetGame->GetIsLobbyStrict()) {
+        break;
+      }
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore change the game settings.");
+        break;
+      }
+
+      if (!Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "lanversion <PLAYERNAME>, <VERSION>");
+        break;
+      }
+
+      vector<string> Args = SplitArgs(Payload, 2u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "lanversion <PLAYERNAME>, <VERSION>");
+        break;
+      }
+
+      string targetName = ToLowerCase(Args[0]);
+      optional<Version> targetVersion = ParseGameVersion(Args[1]);
+      if (targetName.empty() || targetName.size() > MAX_PLAYER_NAME_SIZE || !targetVersion.has_value()) {
+        ErrorReply("Usage: " + cmdToken + "lanversion <PLAYERNAME>, <VERSION>");
+        break;
+      }
+
+      if (!m_TargetGame->GetIsSupportedGameVersion(targetVersion.value())) {
+        ErrorReply("This lobby does not support crossplay with v" + ToVersionString(targetVersion.value()));
+        break;
+      }
+
+      auto match = m_TargetGame->m_Config.m_GameVersionsByLANPlayerNames.find(targetName);
+      if (match != m_TargetGame->m_Config.m_GameVersionsByLANPlayerNames.end()) {
+        match->second = targetVersion.value();
+      } else if (m_TargetGame->m_Config.m_GameVersionsByLANPlayerNames.size() >= MAX_GAME_VERSION_OVERRIDES) {
+        ErrorReply("Cannot customize additional game versions (limit is " + ToDecString(MAX_GAME_VERSION_OVERRIDES) + ".");
+        break;
+      } else {
+        m_TargetGame->m_Config.m_GameVersionsByLANPlayerNames[targetName] = targetVersion.value();
+      }
+
+      if (!m_TargetGame->GetIsHiddenPlayerNames()) {
+        GameUser::CGameUser* targetPlayer = m_TargetGame->GetUserFromName(targetName, false);
+        if (targetPlayer->GetGameVersion() != targetVersion) {
+          targetPlayer->CloseConnection();
+          targetPlayer->SetLeftReason("was automatically kicked (game version mismatch)");
+          targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
+        }
+      }
+
+      SendReply("[" + targetName + "@@@LAN/VPN] will now be able to join using v" + ToVersionString(targetVersion.value()));
+      break;
+    }
+
+    //
     // !OWNER (set game owner)
     //
 

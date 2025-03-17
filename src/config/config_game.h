@@ -87,6 +87,7 @@ struct CGameConfig
 
   bool                            m_CheckJoinable;
   std::vector<sockaddr_storage>   m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
+  std::map<std::string, Version>  m_GameVersionsByLANPlayerNames;
   uint8_t                         m_ReconnectionMode;
 
   std::string              m_PrivateCmdToken;            // a symbol prefix to identify commands and send a private reply

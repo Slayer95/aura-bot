@@ -508,6 +508,8 @@ constexpr uint8_t LOG_REMOTE_MODE_MIXED = 3u;
 #define LOG_CHAT_TYPE_NON_ASCII 2u
 #define LOG_CHAT_TYPE_COMMANDS 4u
 
+constexpr uint8_t MAX_GAME_VERSION_OVERRIDES = 24;
+
 // config_discord.h
 
 #define FILTER_ALLOW_ALL 0
