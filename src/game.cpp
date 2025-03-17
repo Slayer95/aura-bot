@@ -3139,7 +3139,7 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
   }
 }
 
-void CGame::SendMapCheck(CConnection* user) const
+void CGame::SendMapCheck(CConnection* user, const CIncomingJoinRequest* joinRequest) const
 {
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
@@ -4637,7 +4637,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, CIncomingJoinReq
   SendJoinedPlayersInfo(Player);
 
   // send a map check packet to the new user.
-  SendMapCheck(Player);
+  SendMapCheck(Player, joinRequest);
 
   // send slot info to everyone, so the new user gets this info twice but everyone else still needs to know the new slot layout.
   SendAllSlotInfo();
@@ -4695,7 +4695,7 @@ void CGame::SimulateJoinAndStart(CConnection* connection, CIncomingJoinRequest* 
   connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(UID, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
   SendFakeUsersInfo(connection);
   SendJoinedPlayersInfo(connection);
-  SendMapCheck(connection);
+  SendMapCheck(connection, joinRequest);
   connection->Send(GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   string notice = "Simulating join and start for user [" + joinRequest->GetName() + "]";
