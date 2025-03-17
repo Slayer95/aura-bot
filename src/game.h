@@ -553,6 +553,7 @@ public:
 
   void                      HandleHCL();
   void                      EventGameStartedLoading();
+  void                      EventGameBeforeLoaded();
   void                      EventGameLoaded();
   void                      HandleGameLoadedStats();
   void                      ReleaseMapBusyTimedLock() const;

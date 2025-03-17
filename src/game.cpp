@@ -1483,23 +1483,7 @@ void CGame::UpdateLoading()
 
   if (finishedLoading) {
     if (anyLoaded) {
-      if (!m_Config.m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
-        // CGame::UpdateLoading: Fake users loaded
-        if (m_LoadingVirtualBuffer.size() == 5 * m_FakeUsers.size()) {
-          SendAll(m_LoadingVirtualBuffer);
-        } else {
-          // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
-          // it will also contain load packets for real users who didn't actually load the game,
-          // but these packets were already sent to real users
-          vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_LoadingVirtualBuffer.begin(), m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
-          SendAll(onlyFakeUsersLoaded);
-        }
-      }
-
-      m_LastActionSentTicks = Ticks;
-      m_FinishedLoadingTicks = Ticks;
-      m_GameLoading = false;
-      m_GameLoaded = true;
+      EventGameBeforeLoaded();
       EventGameLoaded();
     } else {
       // Flush leaver queue to allow players and the game itself to be destroyed.
@@ -6296,8 +6280,31 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
   return false;
 }
 
+void CGame::EventGameBeforeLoaded()
+{
+  if (!m_Config.m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
+    // CGame::UpdateLoading: Fake users loaded
+    if (m_LoadingVirtualBuffer.size() == 5 * m_FakeUsers.size()) {
+      SendAll(m_LoadingVirtualBuffer);
+    } else {
+      // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
+      // it will also contain load packets for real users who didn't actually load the game,
+      // but these packets were already sent to real users
+      vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_LoadingVirtualBuffer.begin(), m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
+      SendAll(onlyFakeUsersLoaded);
+    }
+  }
+}
+
 void CGame::EventGameLoaded()
 {
+  const int64_t Time = GetTime(), Ticks = GetTicks();
+
+  m_LastActionSentTicks = Ticks;
+  m_FinishedLoadingTicks = Ticks;
+  m_GameLoading = false;
+  m_GameLoaded = true;
+
   RunPlayerObfuscation();
 
   LOG_APP_IF(LOG_LEVEL_INFO, "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
