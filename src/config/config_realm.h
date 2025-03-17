@@ -105,7 +105,7 @@ struct CRealmConfig
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
 
-  bool m_AuthUseCustomVersion;
+  bool m_AuthUseCustomVersionData;
   bool m_AuthIgnoreVersionError;
   uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net
 

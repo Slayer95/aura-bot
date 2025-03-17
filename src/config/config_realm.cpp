@@ -136,15 +136,15 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
 
-  m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", false);
+  m_AuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", false);
   m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
   m_AuthWar3Version        = CFG.GetMaybeVersion(m_CFGKeyPrefix + "auth_game_version");
   m_AuthExeVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
-  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
+  if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
-  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
+  if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   m_AuthExeInfo            = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info");
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
@@ -257,7 +257,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_UserName(nRootConfig->m_UserName),
     m_PassWord(nRootConfig->m_PassWord),
 
-    m_AuthUseCustomVersion(nRootConfig->m_AuthUseCustomVersion),
+    m_AuthUseCustomVersionData(nRootConfig->m_AuthUseCustomVersionData),
     m_AuthIgnoreVersionError(nRootConfig->m_AuthIgnoreVersionError),
     m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
 
@@ -377,19 +377,19 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   if (!m_UserNameCaseSensitive) m_UserName = ToLowerCase(m_UserName);
   if (!m_PassWordCaseSensitive) m_PassWord = ToLowerCase(m_PassWord);
 
-  m_AuthUseCustomVersion   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", m_AuthUseCustomVersion);
+  m_AuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "auth_custom", m_AuthUseCustomVersionData);
   m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", m_AuthIgnoreVersionError);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
 
   // These are optional, since they can be figured out with bncsutil.
   optional<Version> authWar3Version            = CFG.GetMaybeVersion(m_CFGKeyPrefix + "auth_game_version");
   optional<vector<uint8_t>> authExeVersion     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
-  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
+  if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
-  if (m_AuthUseCustomVersion) CFG.FailIfErrorLast();
+  if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info");
 
-  if (m_AuthUseCustomVersion) {
+  if (m_AuthUseCustomVersionData) {
     if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
     if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();
     if (authExeVersionHash.has_value()) m_AuthExeVersionHash = authExeVersionHash.value();
