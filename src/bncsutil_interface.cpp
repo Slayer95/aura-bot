@@ -63,17 +63,81 @@ CBNCSUtilInterface::CBNCSUtilInterface(const string& userName, const string& use
    m_M1({}),
    m_PvPGNPasswordHash({}),
    m_EXEVersion({}),
-   m_EXEVersionHash({}),
-   m_DefaultEXEVersion({173, 1, 27, 1}),
-   m_DefaultEXEVersionHash({72, 160, 171, 170}),
-   m_DefaultEXEInfo("war3.exe 15/03/16 00:00:00 515048")
+   m_EXEVersionHash({})
 {
   m_NLS = new NLS(userName, userPassword);
+
+  {
+    // v1.22
+    Version version = GAMEVER(1u, 22u);
+    array<uint8_t, 4> patch = {184, 0, 22, 1};
+    array<uint8_t, 4> hash = {219, 152, 153, 144};
+    // Every war3 executable from v1.22 to v1.26 is 471 040 bytes
+    m_DefaultVersionsData.emplace(version, VersionData("war3.exe 30/06/08 20:03:55 471040", patch, hash));
+  }
+
+  {
+    // v1.23
+    Version version = GAMEVER(1u, 23u);
+    array<uint8_t, 4> patch = {208, 0, 23, 1};
+    array<uint8_t, 4> hash = {5, 177, 217, 250};
+    m_DefaultVersionsData.emplace(version, VersionData("war3.exe 21/03/09 20:03:55 471040", patch, hash));
+  }
+
+  {
+    // v1.24
+    Version version = GAMEVER(1u, 24u);
+    array<uint8_t, 4> patch = {253, 4, 25, 1};
+    array<uint8_t, 4> hash = {197, 67, 68, 222};
+    m_DefaultVersionsData.emplace(version, VersionData("war3.exe 05/08/09 20:03:55 471040", patch, hash));
+  }
+
+  {
+    // v1.25
+    Version version = GAMEVER(1u, 25u);
+    array<uint8_t, 4> patch = {253, 1, 25, 1};
+    array<uint8_t, 4> hash = {76, 102, 168, 65};
+    m_DefaultVersionsData.emplace(version, VersionData("war3.exe 09/03/11 20:03:55 471040", patch, hash));
+  }
+
+  {
+    // v1.26
+    Version version = GAMEVER(1u, 26u);
+    array<uint8_t, 4> patch = {1, 0, 26, 1};
+    array<uint8_t, 4> hash = {39, 240, 218, 47};
+    m_DefaultVersionsData.emplace(version, VersionData("war3.exe 03/18/11 20:03:55 471040", patch, hash));
+  }
+
+  {
+    // v1.27
+    Version version = GAMEVER(1u, 27u);
+    array<uint8_t, 4> patch = {173, 1, 27, 1};
+    array<uint8_t, 4> hash = {72, 160, 171, 170};
+    m_DefaultVersionsData.emplace(version, VersionData("war3.exe 15/03/16 00:00:00 515048", patch, hash));
+  }
+
+  {
+    // v1.28
+    Version version = GAMEVER(1u, 28u);
+    array<uint8_t, 4> patch = {0, 5, 28, 1};
+    array<uint8_t, 4> hash = {201, 63, 116, 96};
+    m_DefaultVersionsData.emplace(version, VersionData("war3.exe 05/20/17 13:25:29 558568", patch, hash));
+  }
 }
 
 CBNCSUtilInterface::~CBNCSUtilInterface()
 {
   delete static_cast<NLS*>(m_NLS);
+}
+
+optional<VersionData> CBNCSUtilInterface::GetDefaultVersionData(const Version& version, const bool useFallback)
+{
+  auto match = m_DefaultVersionsData.find(version);
+  if (match == m_DefaultVersionsData.end()) {
+    if (!useFallback) return nullopt;
+    match = m_DefaultVersionsData.find(GAMEVER(1u, 27u));
+  }
+  return optional<VersionData>(match->second);
 }
 
 void CBNCSUtilInterface::Reset(const string& userName, const string& userPassword)
@@ -152,36 +216,15 @@ optional<Version> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
   return version;
 }
 
-bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken, const optional<Version>& war3DataVersion)
+bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, const filesystem::path& war3Path, const string& valueStringFormula, const string& mpqFileName)
 {
-  m_KeyInfoROC     = CreateKeyInfo(realmConfig->m_CDKeyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
-  m_KeyInfoTFT     = CreateKeyInfo(realmConfig->m_CDKeyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
-
-  if (m_KeyInfoROC.size() != 36)
-    Print("[BNCS] unable to create ROC key info - invalid ROC key");
-
-  if (m_KeyInfoTFT.size() != 36)
-    Print("[BNCS] unable to create TFT key info - invalid TFT key");
-
-  if (realmConfig->m_AuthUseCustomVersionData) {
-    if (realmConfig->m_AuthExeVersion.has_value()) {
-      copy_n(realmConfig->m_AuthExeVersion.value().begin(), 4, m_EXEVersion.begin());
-    }
-    if (realmConfig->m_AuthExeVersionHash.has_value()) {
-      copy_n(realmConfig->m_AuthExeVersionHash.value().begin(), 4, m_EXEVersionHash.begin());
-    }
-    if (!realmConfig->m_AuthExeInfo.empty()) {
-      SetEXEInfo(realmConfig->m_AuthExeInfo);
-    }
-    return true;
-  }
-
-  if (war3Path.empty() || !war3DataVersion.has_value()) {
+  Print("ExtractEXEFeatures()");
+  if (war3Path.empty()) {
     return false;
   }
 
   const filesystem::path FileWar3EXE = [&]() {
-    if (war3DataVersion.value() >= GAMEVER(1u, 28u))
+    if (war3DataVersion >= GAMEVER(1u, 28u))
       return CaseInsensitiveFileExists(war3Path, "Warcraft III.exe");
     else
       return CaseInsensitiveFileExists(war3Path, "war3.exe");
@@ -189,7 +232,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   const filesystem::path FileStormDLL = CaseInsensitiveFileExists(war3Path, "storm.dll");
   const filesystem::path FileGameDLL  = CaseInsensitiveFileExists(war3Path, "game.dll");
 
-  if (!FileWar3EXE.empty() && (war3DataVersion.value() >= GAMEVER(1u, 29u) || (!FileStormDLL.empty() && !FileGameDLL.empty())))
+  if (!FileWar3EXE.empty() && (war3DataVersion >= GAMEVER(1u, 29u) || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {
     int bufferSize = 512;
     int requiredSize = 0;
@@ -208,7 +251,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
       return false;
     }
 
-    if (war3DataVersion.value() >= GAMEVER(1u, 29u))
+    if (war3DataVersion >= GAMEVER(1u, 29u))
     {
       const char* filesArray[] = {PathToString(FileWar3EXE).c_str()};
       checkRevision(valueStringFormula.c_str(), filesArray, 1, extractMPQNumber(mpqFileName.c_str()), &EXEVersionHash);
@@ -228,13 +271,58 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
     if (FileWar3EXE.empty())
       Print("[BNCS] unable to open War3EXE [" + PathToString(FileWar3EXE) + "]");
 
-    if (FileStormDLL.empty() && war3DataVersion.value() < GAMEVER(1u, 29u))
+    if (FileStormDLL.empty() && war3DataVersion < GAMEVER(1u, 29u))
       Print("[BNCS] unable to open StormDLL [" + PathToString(FileStormDLL) + "]");
-    if (FileGameDLL.empty() && war3DataVersion.value() < GAMEVER(1u, 29u))
+    if (FileGameDLL.empty() && war3DataVersion < GAMEVER(1u, 29u))
       Print("[BNCS] unable to open GameDLL [" + PathToString(FileGameDLL) + "]");
   }
 
   return false;
+}
+
+bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const optional<Version>& war3DataVersion, const Version& realmGameVersion, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken)
+{
+  m_KeyInfoROC     = CreateKeyInfo(realmConfig->m_CDKeyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
+  m_KeyInfoTFT     = CreateKeyInfo(realmConfig->m_CDKeyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
+
+  if (m_KeyInfoROC.size() != 36)
+    Print("[BNCS] unable to create ROC key info - invalid ROC key");
+
+  if (m_KeyInfoTFT.size() != 36)
+    Print("[BNCS] unable to create TFT key info - invalid TFT key");
+
+  if (realmConfig->m_AuthUseCustomVersionData) {
+    if (realmConfig->m_AuthExeVersion.has_value()) {
+      copy_n(realmConfig->m_AuthExeVersion.value().begin(), 4, m_EXEVersion.begin());
+    }
+    if (realmConfig->m_AuthExeVersionHash.has_value()) {
+      copy_n(realmConfig->m_AuthExeVersionHash.value().begin(), 4, m_EXEVersionHash.begin());
+    }
+    if (!realmConfig->m_AuthExeInfo.empty()) {
+      m_EXEInfo = realmConfig->m_AuthExeInfo;
+    }
+    return true;
+  }
+
+  if (
+    !war3DataVersion.has_value() || war3DataVersion.value() != realmGameVersion ||
+    !ExtractEXEFeatures(realmGameVersion, war3Path, valueStringFormula, mpqFileName)
+  ) {
+    optional<VersionData> versionData = GetDefaultVersionData(realmGameVersion);
+    if (!versionData.has_value()) {
+      return false;
+    }
+    m_EXEInfo = versionData->info;
+    m_EXEVersion = versionData->patch;
+    m_EXEVersionHash = versionData->hash;
+  }
+
+  if (m_EXEInfo.empty()) {
+    // Just in case
+    m_EXEInfo = GetDefaultVersionData(GAMEVER(1u, 27u))->info;
+  }
+
+  return true;
 }
 
 bool CBNCSUtilInterface::HELP_SID_AUTH_ACCOUNTLOGON()

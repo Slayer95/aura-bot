@@ -243,11 +243,11 @@ Config
 - Type: uint8vector
 - Error handling: Abort operation
 
-## \`global_realm.auth_game_version\`
+## \`global_realm.game_version\`
 - Type: version
 - Error handling: Use default value
 
-## \`global_realm.auth_game_version\`
+## \`global_realm.game_version\`
 - Type: version
 - Error handling: Use default value
 

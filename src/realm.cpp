@@ -300,13 +300,8 @@ void CRealm::Update(void* fd, void* send_fd)
               m_InfoIX86VerFileName = vector<uint8_t>(infoResult.verFileNameStart, infoResult.verFileNameEnd);
               m_InfoValueStringFormula = vector<uint8_t>(infoResult.valueStringFormulaStart, infoResult.valueStringFormulaEnd);
 
-              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken(), m_Aura->m_GameDataVersion);
+              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_GameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
               if (versionSuccess) {
-                if (!m_BNCSUtil->CheckValidEXEInfo()) {
-                  m_BNCSUtil->SetEXEInfo(m_BNCSUtil->GetDefaultEXEInfo());
-                  PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "defaulting to <global_realm.auth_exe_info = " + m_BNCSUtil->GetDefaultEXEInfo() + ">")
-                }
-
                 const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
                 const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
                 const string& exeInfo = m_BNCSUtil->GetEXEInfo();

@@ -140,7 +140,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
-  m_AuthWar3Version        = CFG.GetMaybeVersion(m_CFGKeyPrefix + "auth_game_version");
+  m_AuthWar3Version        = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
   m_AuthExeVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
@@ -381,19 +381,31 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", m_AuthIgnoreVersionError);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
 
+  optional<Version> authWar3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
+  if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
+
   // These are optional, since they can be figured out with bncsutil.
-  optional<Version> authWar3Version            = CFG.GetMaybeVersion(m_CFGKeyPrefix + "auth_game_version");
-  optional<vector<uint8_t>> authExeVersion     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
+  optional<vector<uint8_t>> authExeVersion = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
   if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "auth_exe_info");
 
   if (m_AuthUseCustomVersionData) {
-    if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
     if (authExeVersion.has_value()) m_AuthExeVersion = authExeVersion.value();
     if (authExeVersionHash.has_value()) m_AuthExeVersionHash = authExeVersionHash.value();
     if (!authExeInfo.empty()) m_AuthExeInfo = authExeInfo;
+  } else {
+    m_AuthExeVersion.reset();
+    m_AuthExeVersionHash.reset();
+    m_AuthExeInfo.clear();
+  }
+
+  if (m_AuthExeVersion.has_value() && m_AuthWar3Version.has_value()) {
+    if (m_AuthWar3Version->first != m_AuthExeVersion.value()[3] || m_AuthWar3Version->second != m_AuthExeVersion.value()[2]) {
+      Print("[CONFIG] Error - mismatch between <" + m_CFGKeyPrefix + "game_version> and <" + m_CFGKeyPrefix + "auth_exe_version>");
+      CFG.SetFailed();
+    }
   }
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);

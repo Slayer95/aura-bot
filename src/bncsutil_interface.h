@@ -54,6 +54,22 @@
 #include <string>
 #include <optional>
 
+struct VersionData
+{
+  std::array<uint8_t, 4> patch;
+  std::array<uint8_t, 4> hash;
+  std::string info;
+
+  VersionData(const std::string& nInfo, std::array<uint8_t, 4>& nPatch, std::array<uint8_t, 4>& nHash)
+   : patch(std::move(nPatch)),
+     hash(std::move(nHash)),
+     info(nInfo)
+  {
+  };
+
+  ~VersionData() = default;
+};
+
 //
 // CBNCSUtilInterface
 //
@@ -61,18 +77,16 @@
 class CBNCSUtilInterface
 {
 private:
-  std::array<uint8_t, 32>       m_ClientKey;                // set in HELP_SID_AUTH_ACCOUNTLOGON
-  std::array<uint8_t, 20>       m_M1;                       // set in HELP_SID_AUTH_ACCOUNTLOGONPROOF
-  std::array<uint8_t, 20>       m_PvPGNPasswordHash;        // set in HELP_PvPGNPasswordHash
-  std::array<uint8_t, 4>        m_EXEVersion;               // set in HELP_SID_AUTH_CHECK
-  std::array<uint8_t, 4>        m_EXEVersionHash;           // set in HELP_SID_AUTH_CHECK
-  std::array<uint8_t, 4>        m_DefaultEXEVersion;        // set in initialization
-  std::array<uint8_t, 4>        m_DefaultEXEVersionHash;    // set in initialization
-  void*                         m_NLS;
-  std::vector<uint8_t>          m_KeyInfoROC;               // set in HELP_SID_AUTH_CHECK
-  std::vector<uint8_t>          m_KeyInfoTFT;               // set in HELP_SID_AUTH_CHECK
-  std::string                   m_EXEInfo;                  // set in HELP_SID_AUTH_CHECK
-  std::string                   m_DefaultEXEInfo;           // set in initialization
+  std::array<uint8_t, 32>          m_ClientKey;                // set in HELP_SID_AUTH_ACCOUNTLOGON
+  std::array<uint8_t, 20>          m_M1;                       // set in HELP_SID_AUTH_ACCOUNTLOGONPROOF
+  std::array<uint8_t, 20>          m_PvPGNPasswordHash;        // set in HELP_PvPGNPasswordHash
+  std::array<uint8_t, 4>           m_EXEVersion;               // set in HELP_SID_AUTH_CHECK
+  std::array<uint8_t, 4>           m_EXEVersionHash;           // set in HELP_SID_AUTH_CHECK
+  void*                            m_NLS;
+  std::vector<uint8_t>             m_KeyInfoROC;               // set in HELP_SID_AUTH_CHECK
+  std::vector<uint8_t>             m_KeyInfoTFT;               // set in HELP_SID_AUTH_CHECK
+  std::string                      m_EXEInfo;                  // set in HELP_SID_AUTH_CHECK
+  std::map<Version, VersionData>   m_DefaultVersionsData;
 
 public:
   CBNCSUtilInterface(const std::string& userName, const std::string& userPassword);
@@ -82,21 +96,18 @@ public:
   inline const std::array<uint8_t, 4>&    GetEXEVersion() const { return m_EXEVersion; }
   inline const std::array<uint8_t, 4>&    GetEXEVersionHash() const { return m_EXEVersionHash; }
   inline const std::string&               GetEXEInfo() const { return m_EXEInfo; }
-  inline const std::array<uint8_t, 4>&    GetDefaultEXEVersion() const { return m_DefaultEXEVersion; }
-  inline const std::array<uint8_t, 4>&    GetDefaultEXEVersionHash() const { return m_DefaultEXEVersionHash; }
-  inline const std::string&               GetDefaultEXEInfo() const { return m_DefaultEXEInfo; }
   inline const std::vector<uint8_t>&      GetKeyInfoROC() const { return m_KeyInfoROC; }
   inline const std::vector<uint8_t>&      GetKeyInfoTFT() const { return m_KeyInfoTFT; }
   inline const std::array<uint8_t, 32>&   GetClientKey() const { return m_ClientKey; }
   inline const std::array<uint8_t, 20>&   GetM1() const { return m_M1; }
   inline const std::array<uint8_t, 20>&   GetPvPGNPasswordHash() const { return m_PvPGNPasswordHash; }
-  inline bool                             CheckValidEXEInfo() const { return !m_EXEInfo.empty(); }
 
-  inline void                             SetEXEInfo(const std::string& nEXEInfo) { m_EXEInfo = nEXEInfo; }
-
+  std::optional<VersionData>              GetDefaultVersionData(const Version& version, const bool useFallback = false);
+  std::string                             GetDefaultEXEInfo(const Version& version);
   void                                    Reset(const std::string& userName, const std::string& userPassword);
+  bool                                    ExtractEXEFeatures(const Version& war3DataVersion, const std::filesystem::path& war3Path, const std::string& valueStringFormula, const std::string& mpqFileName);
 
-  bool                                    HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const CRealmConfig* realmConfig, const std::string& valueStringFormula, const std::string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken, const std::optional<Version>& war3DataVersion);
+  bool                                    HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const std::optional<Version>& war3DataVersion, const Version& realmGameVersion, const CRealmConfig* realmConfig, const std::string& valueStringFormula, const std::string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken);
   bool                                    HELP_SID_AUTH_ACCOUNTLOGON();
   bool                                    HELP_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 32>& salt, const std::array<uint8_t, 32>& serverKey);
   bool                                    HELP_PvPGNPasswordHash(const std::string& userPassword);
